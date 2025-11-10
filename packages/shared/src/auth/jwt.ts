@@ -1,0 +1,71 @@
+import * as jose from "jose";
+import { AuthenticationError } from "../utils/errors.js";
+
+export interface JwtPayload {
+  sub: string; // User ID
+  iss: string; // Issuer
+  aud: string; // Audience
+  exp: number; // Expiration
+  iat: number; // Issued at
+  scope?: string; // Optional scope
+}
+
+/**
+ * Verify and decode a JWT token
+ */
+export async function verifyJwt(token: string, secret: string): Promise<JwtPayload> {
+  try {
+    const secretKey = new TextEncoder().encode(secret);
+    const { payload } = await jose.jwtVerify(token, secretKey, {
+      issuer: process.env.JWT_ISSUER || "bidshifter-mcp",
+      audience: process.env.JWT_AUDIENCE || "bidshifter-services",
+    });
+
+    return payload as JwtPayload;
+  } catch (error) {
+    if (error instanceof jose.errors.JWTExpired) {
+      throw new AuthenticationError("Token has expired");
+    }
+    if (error instanceof jose.errors.JWTInvalid) {
+      throw new AuthenticationError("Invalid token");
+    }
+    throw new AuthenticationError("Token verification failed");
+  }
+}
+
+/**
+ * Create a new JWT token (for testing/development)
+ */
+export async function createJwt(
+  userId: string,
+  secret: string,
+  expiresIn: string = "24h"
+): Promise<string> {
+  const secretKey = new TextEncoder().encode(secret);
+
+  const token = await new jose.SignJWT({ sub: userId })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setIssuer(process.env.JWT_ISSUER || "bidshifter-mcp")
+    .setAudience(process.env.JWT_AUDIENCE || "bidshifter-services")
+    .setExpirationTime(expiresIn)
+    .sign(secretKey);
+
+  return token;
+}
+
+/**
+ * Extract token from Authorization header
+ */
+export function extractBearerToken(authHeader?: string): string {
+  if (!authHeader) {
+    throw new AuthenticationError("Missing Authorization header");
+  }
+
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0] !== "Bearer") {
+    throw new AuthenticationError("Invalid Authorization header format. Expected: Bearer <token>");
+  }
+
+  return parts[1];
+}

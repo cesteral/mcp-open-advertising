@@ -1,0 +1,35 @@
+{
+  "name": "@bidshifter/bidshifter-mcp",
+  "version": "1.0.0",
+  "description": "BidShifter MCP Server - Optimization intelligence and orchestration",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "dev:http": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@bidshifter/shared": "workspace:*",
+    "@bidshifter/platform-lib": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.2",
+    "express": "^4.21.2",
+    "zod": "^3.23.8",
+    "tsyringe": "^4.10.0",
+    "reflect-metadata": "^0.2.2",
+    "pino": "^10.1.0",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^20.17.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.0"
+  }
+}

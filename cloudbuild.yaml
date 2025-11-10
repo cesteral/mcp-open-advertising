@@ -1,0 +1,142 @@
+# Cloud Build configuration for Campaign Guardian MCP Server
+# Automated CI/CD pipeline: Build Docker image → Push to registry → Deploy to Cloud Run
+
+substitutions:
+  _ENVIRONMENT: 'dev' # Override with trigger substitution variable
+  _REGION: 'europe-west2'
+  _SERVICE_NAME: 'campaign-guardian-mcp'
+  _ARTIFACT_REGISTRY_REPO: 'campaign-guardian'
+
+options:
+  machineType: 'N1_HIGHCPU_8'
+  substitution_option: 'ALLOW_LOOSE'
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+  # Step 1: Install dependencies and run tests (optional, can be enabled later)
+  # - name: 'node:20-slim'
+  #   entrypoint: 'bash'
+  #   args:
+  #     - '-c'
+  #     - |
+  #       cd mcp-ts-quickstart-template
+  #       npm ci
+  #       npm run test
+  #   id: 'test'
+
+  # Step 2: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${_ENVIRONMENT}-latest'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:latest'
+      - '--build-arg'
+      - 'NODE_ENV=production'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-image'
+
+  # Step 3: Push Docker image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server'
+    id: 'push-image'
+    waitFor: ['build-image']
+
+  # Step 4: Initialize Terraform
+  - name: 'hashicorp/terraform:1.5'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd terraform
+        terraform init -backend-config=backend-${_ENVIRONMENT}.conf -reconfigure
+    id: 'terraform-init'
+    waitFor: ['push-image']
+
+  # Step 5: Terraform Plan
+  - name: 'hashicorp/terraform:1.5'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd terraform
+        terraform plan \
+          -var="container_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${SHORT_SHA}" \
+          -var-file=${_ENVIRONMENT}.tfvars \
+          -out=tfplan
+    id: 'terraform-plan'
+    waitFor: ['terraform-init']
+
+  # Step 6: Terraform Apply (auto-approve for automated deployments)
+  - name: 'hashicorp/terraform:1.5'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd terraform
+        terraform apply -auto-approve tfplan
+    id: 'terraform-apply'
+    waitFor: ['terraform-plan']
+
+  # Step 7: Get Cloud Run service URL
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud run services describe ${_SERVICE_NAME} \
+          --region=${_REGION} \
+          --format='value(status.url)' > /workspace/service_url.txt
+        echo "Service URL:"
+        cat /workspace/service_url.txt
+    id: 'get-service-url'
+    waitFor: ['terraform-apply']
+
+  # Step 8: Health check (verify deployment)
+  - name: 'gcr.io/cloud-builders/curl'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        SERVICE_URL=$(cat /workspace/service_url.txt)
+        echo "Testing health endpoint: $SERVICE_URL/health"
+
+        # Wait for service to be ready (max 2 minutes)
+        for i in {1..24}; do
+          if curl -s -o /dev/null -w "%{http_code}" "$SERVICE_URL/health" | grep -q "200"; then
+            echo "✓ Health check passed!"
+            exit 0
+          fi
+          echo "Waiting for service to be ready... (attempt $i/24)"
+          sleep 5
+        done
+
+        echo "✗ Health check failed after 2 minutes"
+        exit 1
+    id: 'health-check'
+    waitFor: ['get-service-url']
+
+# Images to be pushed to Artifact Registry
+images:
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:latest'
+
+# Artifacts to store
+artifacts:
+  objects:
+    location: 'gs://${PROJECT_ID}-build-artifacts/${_ENVIRONMENT}/${BUILD_ID}'
+    paths:
+      - 'terraform/tfplan'
+      - 'service_url.txt'
+
+# Timeout for entire build
+timeout: '1800s' # 30 minutes
