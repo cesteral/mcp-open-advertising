@@ -32,12 +32,6 @@ This library implements the **Hybrid Communication Pattern**:
 - `getLineItems()` - Fetch line items
 - `getCampaignHierarchy()` - Get full advertiser → campaigns → line items tree
 
-### Cache (`/cache`)
-
-**CacheService**
-- Redis caching abstraction with 1-hour TTL
-- Pattern-based cache invalidation
-
 ### Adapters (`/adapters`)
 
 Platform-specific adapters (to be implemented):
@@ -55,7 +49,6 @@ All services are stubs that throw `"Not implemented"` errors. Actual implementat
 1. BigQuery integration for DeliveryService
 2. DV360 SDF/API integration for BidManagementService
 3. Platform API integrations for EntityService
-4. Redis integration for CacheService
 
 ## Usage
 

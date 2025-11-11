@@ -19,9 +19,3 @@ export const gcpConfig = {
   bigQueryLocation: process.env.BIGQUERY_LOCATION || "US",
   gcsBucket: process.env.GCS_BUCKET_NAME || "",
 };
-
-export const redisConfig = {
-  host: process.env.REDIS_HOST || "localhost",
-  port: parseInt(process.env.REDIS_PORT || "6379", 10),
-  password: process.env.REDIS_PASSWORD || undefined,
-};

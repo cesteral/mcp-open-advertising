@@ -54,14 +54,12 @@ Get real-time pacing status for a campaign (actual vs expected delivery).
 
 ### Data Sources
 - BigQuery: Normalized delivery metrics (to be implemented)
-- Redis: 1-hour cache for performance (to be implemented)
 
 ### Current Status
 **Phase: Scaffolding**
 
 All tools return stub/mock data. Actual implementations pending:
 - BigQuery integration for delivery metrics
-- Redis caching layer
 - Platform-specific data normalization
 
 ## Development
@@ -93,8 +91,6 @@ See root `.env.example` for all required variables:
 - `DBM_MCP_HOST`: Server host (default: 0.0.0.0)
 - `GCP_PROJECT_ID`: Google Cloud project ID
 - `BIGQUERY_DATASET_ID`: BigQuery dataset name
-- `REDIS_HOST`: Redis host
-- `REDIS_PORT`: Redis port
 
 ## Testing with MCP Inspector
 

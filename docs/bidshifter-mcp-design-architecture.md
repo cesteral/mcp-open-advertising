@@ -51,7 +51,7 @@ By separating concerns into three distinct MCP servers, we achieve:
 - **Monorepo Structure** - Single repository with shared types, unified deployment
 - **Hybrid Architecture** - Three MCP servers for external API + shared library for internal performance
 - **Platform-Agnostic Design** - Core logic independent of specific ad platforms
-- **GCP-Only Architecture** - Cloud Run services for all compute, BigQuery for all data, Redis for caching
+- **GCP-Only Architecture** - Cloud Run services for all compute, BigQuery for all data
 - **AI-First Interface** - MCP tools as primary interface, humans as supervisors
 - **Event-Driven Coordination** - Pub/Sub for asynchronous service communication
 - **Performance-First** - Zero HTTP overhead for internal optimization workflows via shared library
@@ -59,8 +59,8 @@ By separating concerns into three distinct MCP servers, we achieve:
 ### Expected Outcomes
 
 1. **Multi-Platform Support** - Add new ad platforms in weeks, not months
-2. **Cost Efficiency** - $305-385/month vs $800/month Firebase (52-62% reduction, ~$5,000/year savings)
-3. **High Performance** - 2.6-6.1s saved per optimization via hybrid architecture (zero HTTP overhead internally)
+2. **Cost Efficiency** - GCP-native architecture optimized for cost-effective scaling
+3. **High Performance** - Zero HTTP overhead for internal workflows via hybrid architecture
 4. **Operational Excellence** - AI agents handle routine optimization, humans focus on strategy
 5. **Better Observability** - Complete audit trail of all decisions and platform interactions
 6. **Composability** - External consumers can use MCP servers independently for novel workflows
@@ -69,15 +69,11 @@ By separating concerns into three distinct MCP servers, we achieve:
 
 **Version 2.0 Updates** (January 2025):
 
-This document has been updated to reflect **realistic performance and cost considerations**:
+This document has been updated to reflect **realistic performance considerations**:
 
 1. **Hybrid Communication Pattern**: Added `@bidshifter/platform-lib` shared library to avoid HTTP overhead for internal optimization workflows while maintaining MCP servers for external composability.
 
-2. **Memorystore Redis Cache**: Added 1 GB Redis instance ($35-40/month) to cache BigQuery delivery data and entity hierarchies, reducing query costs by 98% and latency by 2-100 seconds per optimization.
-
-3. **Realistic Cost Projections**: Updated from optimistic $175/month to realistic $305-385/month based on actual workload patterns (cold starts, historical queries, materialized views). Still 52-62% cheaper than Firebase.
-
-4. **Performance Mitigation**: Added strategies for cold start impact (5-13s first-request latency), including minimum instances during business hours, keep-alive pings, and async task patterns.
+2. **Performance Mitigation**: Added strategies for cold start impact (5-13s first-request latency), including minimum instances during business hours, keep-alive pings, and async task patterns.
 
 **Key Architectural Decision**: Keep three separate MCP servers for external API surface (composability, reusability) while using shared library internally for performance. This "best of both worlds" approach delivers MCP benefits without sacrificing optimization workflow speed.
 
@@ -123,7 +119,6 @@ graph TB
         BQ[(BigQuery<br/>All Data Storage)]
         Storage[(Cloud Storage)]
         PubSub[Pub/Sub]
-        Redis[(Memorystore<br/>Redis Cache)]
     end
 
     subgraph "External APIs"
@@ -155,17 +150,13 @@ graph TB
 
     PlatformLib --> BQ
     PlatformLib --> Storage
-    PlatformLib --> Redis
     PlatformLib --> DV360API
     PlatformLib --> GAdsAPI
     PlatformLib --> MetaAPI
     PlatformLib --> PubSub
 
-    Redis -.->|Invalidation| PubSub
-
     style OptSvc fill:#e1f5e1
     style PlatformLib fill:#fff4e1
-    style Redis fill:#e1f0ff
 
     classDef internalPath stroke:#00aa00,stroke-width:3px
     classDef externalPath stroke:#0066cc,stroke-width:2px,stroke-dasharray: 5 5
@@ -184,12 +175,7 @@ graph TB
    - Used by all three MCP servers
    - Enables bidshifter-mcp to bypass HTTP calls for performance
 
-3. **Memorystore (Redis)**:
-   - Caches BigQuery results, entity data
-   - 1-hour TTL with event-driven invalidation
-   - Shared across all services via platform library
-
-4. **Why This Works**:
+3. **Why This Works**:
    - MCP servers remain composable for external consumers
    - Internal optimization workflows get native performance
    - No code duplication - single source of truth in platform library
@@ -623,7 +609,6 @@ Services communicate via Pub/Sub for:
 | MCP tool call → immediate result | Synchronous (direct lib call) | User waiting for response, needs transaction guarantee |
 | Critical business operations (bid adjustments) | Synchronous (direct lib call) | Must be transactional and return status |
 | Notifications after operations | Async (Pub/Sub) | Fire-and-forget, non-critical |
-| Cache invalidation | Synchronous (Redis direct) | Part of transaction, must complete before return |
 | Analytics/reporting updates | Async (Pub/Sub) | Eventual consistency acceptable |
 | Scheduled batch operations | Async (Pub/Sub) | Asynchronous by nature |
 
@@ -802,53 +787,14 @@ export async function handleOptimizeRequest(rawParams: unknown) {
 - Materialized views for common aggregations
 - **Savings**: Reduce query costs from $5/TB to $1/TB with partitioning
 
-**Projected Monthly Costs** (Medium workload: 50 advertisers, 500 campaigns):
+**GCP Infrastructure Components**:
 
-| Component | Optimistic Estimate | Realistic Estimate | Notes |
-|-----------|--------------------|--------------------|-------|
-| Cloud Run (Optimization) | $80 | $120-150 | 2 GiB × 150-200 hours/month with cold starts + retries |
-| Cloud Run (Other services) | $40 | $60-80 | 512 MiB-1 GiB × 250-300 hours/month |
-| Cloud Run (Min instances) | $0 | $15 | Keep bidshifter-mcp warm during business hours |
-| BigQuery (queries) | $25 | $40-60 | 2-3 TB queries/month with historical analysis |
-| BigQuery (storage) | $10 | $15-20 | 50-100 GB with materialized views |
-| Cloud Storage | $5 | $5 | 10 GB SDF files (accurate) |
-| Pub/Sub | $10 | $10 | 1M messages/month (accurate) |
-| Secret Manager | $5 | $5 | OAuth token storage (accurate) |
-| **Memorystore (Redis)** | **$0** | **$35-40** | **1 GB basic tier - MISSING from original estimate** |
-| **Total (without cache)** | **$175/month** | **$270-345/month** | **vs $800/month Firebase** |
-| **Total (with cache - recommended)** | **N/A** | **$305-385/month** | **Still 52-62% cheaper than Firebase** |
-
-**Cost Analysis Notes**:
-
-1. **Cloud Run Reality**: Original estimate assumed perfect scaling and minimal cold starts. Reality includes:
-   - Cold start overhead increases compute time by 20-40%
-   - Retry logic for failed API calls increases total execution time
-   - Peak traffic requires more concurrent instances than average
-
-2. **BigQuery Reality**: Original estimate of 1 TB/month was optimistic. Actual usage:
-   - Historical adjustment queries scan 90 days of data per optimization
-   - 500 campaigns × 20 optimizations/month × 100 MB per query = 1 TB just for optimization
-   - Additional 1-2 TB for reporting queries, daily aggregations, audit queries
-   - Storage grows with materialized views (trading compute cost for storage cost)
-
-3. **Memorystore Required**: Not optional for production performance:
-   - Without cache: 50+ repeated BigQuery queries per optimization = poor UX + high cost
-   - With cache: 1 BigQuery query + 49 cache hits = fast + cheap
-   - Memorystore pays for itself in BigQuery savings + latency improvement
-
-4. **Minimum Instances Trade-off**: $15/month to eliminate cold starts for primary service
-   - Alternative: Accept 5-13s first-request latency
-   - Recommendation: Enable for production, disable for dev/staging
-
-**Revised Cost Comparison**:
-```
-Firebase (current):           $800/month
-GCP with optimizations:       $305-385/month
-Net savings:                  $415-495/month (52-62% reduction)
-Annual savings:               $4,980-5,940/year
-```
-
-**Cost still significantly lower than Firebase, but honest about real-world usage patterns.**
+The architecture leverages GCP-native services for optimal performance:
+- **Cloud Run**: Serverless containers with automatic scaling
+- **BigQuery**: Data warehouse for queries and analytics
+- **Cloud Storage**: Object storage for SDF files
+- **Pub/Sub**: Event streaming for async communication
+- **Secret Manager**: Secure credential storage
 
 ---
 
@@ -1628,37 +1574,34 @@ for (const lineItem of lineItems) {
 // Result: 50 identical BigQuery queries for same data
 ```
 
-**Solution**: Add Memorystore (Redis) caching layer
+**Solution**: Optimize BigQuery queries and reduce redundant calls
 
 **Architecture**:
 ```typescript
 // In @bidshifter/platform-lib
 export class DeliveryService {
-  private redis: Redis;
-
   async getCampaignDelivery(params: GetDeliveryParams): Promise<DeliveryData> {
-    const cacheKey = `delivery:${params.campaignId}:${params.dateRange}`;
-
-    // Try cache first
-    const cached = await this.redis.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    // Cache miss - query BigQuery
+    // Query BigQuery efficiently with optimized queries
     const data = await this.queryBigQuery(params);
-
-    // Store in cache (1 hour TTL)
-    await this.redis.setex(cacheKey, 3600, JSON.stringify(data));
-
     return data;
+  }
+
+  private async queryBigQuery(params: GetDeliveryParams): Promise<DeliveryData> {
+    // Use partitioned and clustered tables for fast queries
+    // Leverage materialized views where appropriate
+    const query = `
+      SELECT * FROM delivery_metrics
+      WHERE campaign_id = @campaignId
+        AND date BETWEEN @startDate AND @endDate
+    `;
+    return await this.bigquery.query({query, params});
   }
 }
 ```
 
-**Cache Invalidation** (synchronous, part of transaction):
+**Bid Adjustment Workflow**:
 ```typescript
-// In optimization workflow - cache invalidation is SYNCHRONOUS
+// In optimization workflow - all operations must complete before returning
 async function applyBidAdjustment(adjustment) {
   // 1. Apply to DV360
   await bidManagementService.adjustLineItemBid(adjustment);
@@ -1666,25 +1609,15 @@ async function applyBidAdjustment(adjustment) {
   // 2. Record to history
   await recordAdjustmentToHistory(adjustment);
 
-  // 3. Invalidate cache BEFORE returning to caller
-  const pattern = `delivery:${adjustment.campaignId}:*`;
-  const keys = await redis.keys(pattern);
-  await redis.del(...keys);
-
-  // All three steps complete before returning success
+  // All operations complete before returning success
   return { status: 'success' };
 }
 ```
 
-**Cache Effectiveness**:
-- **50 line item optimization**: 50 queries → 1 query + 49 cache hits
-- **BigQuery cost savings**: $0.50 per optimization → $0.01 per optimization (98% reduction)
-- **Latency savings**: 50 × 2 seconds = 100s → 2s (98% reduction)
-
-**Memorystore Costs**:
-- **Basic tier**: 1 GB Redis instance = $35/month
-- **Benefit**: Saves $50-100/month in BigQuery costs + massive latency improvement
-- **Net cost**: Actually saves money while improving performance
+**Query Optimization**:
+- Efficient BigQuery query patterns reduce costs and latency
+- Materialized views for common aggregations
+- Partitioned and clustered tables for faster scans
 
 ---
 
@@ -2154,17 +2087,15 @@ async function getCampaignStatus(
 }
 ```
 
-**Caching Strategy**:
+**Query Optimization Strategy**:
 
-- Query results cached in Memorystore (Redis) for 1 hour
 - BigQuery materialized views for common aggregations
-- Partitioned tables reduce query costs
-- Cache invalidation is **synchronous** during optimization, not via events
+- Partitioned and clustered tables reduce query costs
+- Efficient query patterns minimize data scanning
 
 **Key Features**:
 
 - Parameterized BigQuery queries (prevent SQL injection)
-- Query result caching (reduce BigQuery costs)
 - Parallel query execution for multi-advertiser reports
 - Metric calculations (CPM, CTR, CPA, etc.) in application layer
 
@@ -2301,9 +2232,6 @@ async function optimizeCampaignBids(
           status: "applied",
           appliedAt: new Date(),
         });
-
-        // 5c. Invalidate cache (SYNCHRONOUS)
-        await redis.del(`delivery:${insertionOrderId}:*`);
 
         results.push({
           lineItemId: adjustment.lineItemId,
@@ -3221,7 +3149,6 @@ sequenceDiagram
     participant Opt as bidshifter-mcp
     participant Auth as Auth Service (internal)
     participant PLib as @bidshifter/platform-lib
-    participant Redis as Memorystore (Redis)
     participant BQ as BigQuery
     participant API as DV360 API
     participant PubSub as Pub/Sub
@@ -3233,14 +3160,8 @@ sequenceDiagram
     Note over Opt,PLib: Internal calls via shared library - Zero HTTP overhead
 
     Opt->>PLib: DeliveryService.getCampaignDelivery()
-    PLib->>Redis: Check cache for delivery data
-    alt Cache Hit
-        Redis-->>PLib: Cached delivery data
-    else Cache Miss
-        PLib->>BQ: Query delivery metrics
-        BQ-->>PLib: Fresh delivery data
-        PLib->>Redis: Store in cache (1hr TTL)
-    end
+    PLib->>BQ: Query delivery metrics
+    BQ-->>PLib: Fresh delivery data
     PLib-->>Opt: Delivery metrics (0ms HTTP overhead)
 
     Opt->>PLib: HistoricalService.getAdjustments()
@@ -3261,7 +3182,6 @@ sequenceDiagram
         API-->>PLib: Success
 
         Opt->>BQ: Record adjustment to changelog (SYNC)
-        Opt->>Redis: Invalidate cache (SYNC)
     end
 
     Note over Opt: All adjustments complete, ready to return
@@ -3437,7 +3357,6 @@ resource "google_secret_manager_secret_iam_member" "optimization_service_access"
 - **Object Storage**: Cloud Storage (SDF files, snapshots)
 - **Event Streaming**: Pub/Sub
 - **Secrets**: Secret Manager (OAuth tokens, API keys)
-- **Cache**: Memorystore for Redis (1 GB basic tier for delivery data, entity caching)
 
 ### External Integrations
 
@@ -3445,14 +3364,13 @@ resource "google_secret_manager_secret_iam_member" "optimization_service_access"
 - **BigQuery Client**: `@google-cloud/bigquery`
 - **Pub/Sub Client**: `@google-cloud/pubsub`
 - **Secret Manager Client**: `@google-cloud/secret-manager`
-- **Redis Client**: `ioredis` (for Memorystore connections)
 - **MCP SDK**: `@modelcontextprotocol/sdk`
 
 ### Shared Libraries (Internal)
 
 - **`@bidshifter/types`**: Shared TypeScript types and Zod schemas
 - **`@bidshifter/platform-lib`**: Shared business logic for all services
-  - `DeliveryService`: BigQuery delivery queries with Redis caching
+  - `DeliveryService`: BigQuery delivery queries
   - `BidManagementService`: DV360 SDF processing and bid updates
   - `EntityService`: Campaign entity fetching and normalization
   - `HistoricalService`: Adjustment tracking and effectiveness analysis

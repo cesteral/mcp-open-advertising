@@ -271,7 +271,6 @@ if (pacingOffset < -5%) {
 **Data Sync (every 4 hours)**
 - Fetch fresh delivery data from all advertising platforms
 - Run ETL jobs to normalize raw data into BigQuery unified schemas
-- Invalidate cached reports
 
 **Optimization Scan (every 4 hours)**
 - Query all active campaigns for pacing status
@@ -536,15 +535,12 @@ bidshifter-mcp/
 |--------|--------|-------------|
 | MCP Tool Latency (P50) | < 500ms | Cloud Run metrics |
 | MCP Tool Latency (P99) | < 2s | Cloud Run metrics |
-| Cache Hit Rate | > 80% | Cloudflare KV analytics |
-| BigQuery Query Cost | < $50/month | GCP Billing |
 
 ### Business Metrics
 
 | Metric | Target | Measurement |
 |--------|--------|-------------|
 | Time Savings | > 70% reduction in manual optimization time | Survey + time tracking |
-| Infrastructure Cost | < $200/month for 50 advertisers | GCP + Cloudflare billing |
 | Campaign Pacing Accuracy | > 90% of campaigns deliver within ±10% of target | BigQuery analysis of final pacing |
 | Multi-Platform Adoption | Support 3+ platforms (DV360, Google Ads, Meta) | Feature availability |
 

@@ -19,7 +19,7 @@ BidShifter is a **Model Context Protocol (MCP) based optimization platform** tha
 - **🔧 Composable Architecture** - Three independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
-- **💰 Cost-Efficient** - GCP-native architecture: ~$150-230/month (70% cheaper than Firebase Functions)
+- **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
 
 ---
 
@@ -144,7 +144,7 @@ The monorepo architecture is now fully scaffolded with:
 1. Run `pnpm install` to install dependencies
 2. Run `pnpm run build` to verify compilation
 3. Implement actual MCP server logic (tools, services, integrations)
-4. Add BigQuery, Redis, and platform API integrations
+4. Add BigQuery and platform API integrations
 5. Deploy Terraform infrastructure
 6. Deploy servers to GCP Cloud Run
 
@@ -477,24 +477,6 @@ Access Cloud Monitoring dashboards:
 - [DV360 Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/dv360-mcp)
 - [BidShifter Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/bidshifter-mcp)
 
-### Cost Monitoring
-
-```bash
-# View monthly costs by service
-gcloud billing accounts list
-gcloud beta billing projects describe YOUR_PROJECT_ID
-```
-
-**Expected Costs** (50 advertisers, 500 campaigns):
-
-- GCP Cloud Run: $90-120/month (all three servers, scales to zero when idle)
-- BigQuery: $40-70/month (queries + storage for metrics, config, task state)
-- Cloud Storage: $5-10/month (SDF files, entity snapshots, 7-day retention)
-- Pub/Sub: $5-10/month (audit events, < 1M messages/month)
-- VPC/NAT: $10-20/month (controlled egress for API calls)
-- Other: $5-10/month (Secret Manager, Cloud Scheduler, logging)
-- **Total: ~$155-240/month** (70% cheaper than Firebase Functions at $800/month)
-
 ---
 
 ## Development
@@ -639,7 +621,6 @@ For issues or questions:
 - ✅ MCP server templates with HTTP/SSE transport
 - 🚧 DV360 support (reporting + management + optimization)
 - 🚧 BigQuery integration
-- 🚧 Redis caching layer
 - 🚧 Google Ads support
 - 🚧 Meta support
 

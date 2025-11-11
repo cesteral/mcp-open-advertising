@@ -1,6 +1,6 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import express from "express";
+import express, { type Application } from "express";
 import { createLogger, formatErrorForMcp } from "@bidshifter/shared";
 import {
   getCampaignDeliveryTool,
@@ -25,7 +25,7 @@ const logger = createLogger("dbm-mcp:http-transport");
 /**
  * Create and configure the MCP server with HTTP/SSE transport
  */
-export function createMcpHttpServer(): express.Application {
+export function createMcpHttpServer(): Application {
   const app = express();
   app.use(express.json());
 

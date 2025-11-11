@@ -192,7 +192,6 @@ TEAMS_APP_SECRET=<secret>
 - **Machine Type:** `e2-micro` (dev/staging), `e2-micro` (prod)
 - **Instances:** 2-3 (dev), 2-4 (staging), 2-10 (prod)
 - **Throughput:** 200-300 Mbps (dev), 300-1000 Mbps (prod)
-- **Cost:** ~$10-30/month depending on instance count
 
 ### Cloud NAT
 
@@ -396,21 +395,7 @@ hey -n 1000 -c 10 -H "Authorization: Bearer TOKEN" \
 
 ## Cost Optimization
 
-### Cost Breakdown (Estimated Monthly)
-
-| Service | Dev | Staging | Prod | Notes |
-|---------|-----|---------|------|-------|
-| **Cloud Run** | $5-15 | $10-30 | $50-150 | Based on requests and instance time |
-| **VPC Connector** | $15 | $20 | $40 | ~$5/instance/month |
-| **Cloud NAT** | $5-10 | $10-15 | $20-40 | Based on data processed |
-| **Secret Manager** | <$1 | <$1 | <$1 | 8 secrets, minimal access |
-| **Cloud Scheduler** | <$1 | <$1 | <$1 | 2 jobs |
-| **Logging** | $5-10 | $10-20 | $30-60 | Based on log volume |
-| **Monitoring** | Free | Free | Free | Within free tier |
-| **Artifact Registry** | <$5 | <$5 | <$5 | Storage only |
-| **TOTAL** | **$35-50** | **$50-90** | **$140-260** | Approximate |
-
-### Cost Reduction Tips
+### Cost Optimization Tips
 
 **For Non-Production:**
 - Set `min_instances = 0` (scale to zero when idle)
