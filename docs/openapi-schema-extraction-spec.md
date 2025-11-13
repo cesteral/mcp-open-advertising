@@ -17,9 +17,11 @@ This document specifies a hybrid approach for dynamically extracting and generat
 7. [Build Pipeline Integration](#build-pipeline-integration)
 8. [Error Handling](#error-handling)
 9. [Testing Strategy](#testing-strategy)
+   - [Live Response Smoke Tests](#live-response-smoke-tests)
 10. [Examples](#examples)
 11. [Migration Path](#migration-path)
 12. [Performance Considerations](#performance-considerations)
+13. [Second Iteration Validation](#second-iteration-validation)
 
 ---
 
@@ -113,6 +115,47 @@ export interface SchemaExtractionConfig {
    * operations: ['advertisers.insertionOrders.list', 'advertisers.lineItems.patch']
    */
   operations?: string[];
+
+  /**
+   * High-level resource scopes that should automatically include all nested operations.
+   * Format matches the Discovery document resource tree.
+   *
+   * @example
+   * resourceScopes: ['advertisers', 'advertisers.insertionOrders']
+   */
+  resourceScopes?: string[];
+
+  /**
+   * Configure how operations are auto-discovered from the Discovery document and local usage traces.
+   */
+  operationDiscovery?: {
+    /**
+     * Primary discovery mode.
+     * - 'explicit': only use the `operations` array
+     * - 'resourceTree': expand `resourceScopes` to every nested method
+     * - 'usageTrace': scan generated client usage (e.g., via telemetry logs)
+     * @default 'resourceTree'
+     */
+    mode: 'explicit' | 'resourceTree' | 'usageTrace';
+
+    /**
+     * When using resourceTree mode, include recursively nested resources.
+     * @default true
+     */
+    includeSubResources?: boolean;
+
+    /**
+     * Optional glob patterns pointing at trace logs that map operationIds to usage counts.
+     * Used when mode === 'usageTrace'.
+     */
+    usageTraceGlobs?: string[];
+
+    /**
+     * Filter operation HTTP methods (e.g., ['get', 'list']).
+     * When omitted, include all methods exposed by the resource.
+     */
+    allowedMethods?: string[];
+  };
 
   /**
    * Automatically include common primitive types (Date, Money, Status, etc.)
@@ -297,6 +340,21 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
   //   'advertisers.adGroups.bulkListAdGroupAssignedTargetingOptions',
   // ],
 
+  // Strategy 3: Resource-scope discovery (recommended default)
+  resourceScopes: [
+    'partners',
+    'advertisers',
+    'advertisers.insertionOrders',
+    'advertisers.lineItems',
+    'advertisers.adGroups',
+  ],
+
+  operationDiscovery: {
+    mode: 'resourceTree',
+    includeSubResources: true,
+    allowedMethods: ['get', 'list', 'patch', 'bulkList'],
+  },
+
   includeCommonTypes: true,
 
   excludePatterns: [
@@ -347,42 +405,18 @@ async function extractSchemas(
   discoveryDoc: DiscoveryDocument,
   config: SchemaExtractionConfig
 ): Promise<ExtractionResult> {
-
-  // Phase 1: Determine root schemas
-  const rootSchemas = determineRootSchemas(config);
-
-  // Phase 2: Recursive extraction with dependency resolution
   const extractor = new SchemaExtractor(discoveryDoc, config);
-  const extractedSchemas = extractor.extractWithDependencies(rootSchemas);
-
-  // Phase 3: Add common types if requested
-  if (config.includeCommonTypes) {
-    extractor.addCommonTypes();
-  }
-
-  // Phase 4: Apply exclusion filters
-  extractor.applyExclusions(config.excludePatterns);
-
-  // Phase 5: Validate extraction
-  const validation = validateExtraction(extractor, config);
-  if (!validation.valid) {
-    throw new ExtractionError(validation.errors);
-  }
-
-  // Phase 6: Generate report
-  const report = extractor.generateReport();
-
-  return {
-    schemas: extractor.getSchemas(),
-    report,
-  };
+  return extractor.extract();
 }
 ```
 
 ### 4.2 Determining Root Schemas
 
 ```typescript
-function determineRootSchemas(config: SchemaExtractionConfig): Set<string> {
+function determineRootSchemas(
+  config: SchemaExtractionConfig,
+  discoveryDoc: DiscoveryDocument
+): Set<string> {
   const roots = new Set<string>();
 
   // Strategy A: Explicit root schemas
@@ -399,6 +433,14 @@ function determineRootSchemas(config: SchemaExtractionConfig): Set<string> {
     );
     operationSchemas.forEach(schema => roots.add(schema));
     console.log(`🔍 Extracted ${operationSchemas.size} schemas from ${config.operations.length} operations`);
+  }
+
+  // Strategy C: Auto-discover operations from resource scopes or usage traces
+  if (config.operationDiscovery) {
+    const discovered = discoverOperations(config, discoveryDoc);
+    const autoSchemas = extractSchemasFromOperations(Array.from(discovered), discoveryDoc);
+    autoSchemas.forEach(schema => roots.add(schema));
+    console.log(`🤖 Auto-discovered ${autoSchemas.size} schemas from dynamic operation selection`);
   }
 
   // Validation
@@ -450,7 +492,60 @@ function extractSchemasFromOperations(
 
   return schemas;
 }
+
+function extractSchemaNameFromRef(ref: string): string {
+  const match = ref.match(/schemas\/([^/]+)$/);
+  return match ? match[1] : '';
+}
 ```
+
+### 4.4 Automated Operation Discovery
+
+```typescript
+function discoverOperations(
+  config: SchemaExtractionConfig,
+  discoveryDoc: DiscoveryDocument
+): Set<string> {
+  const discovered = new Set<string>();
+  const mode = config.operationDiscovery?.mode ?? 'resourceTree';
+
+  if (mode === 'explicit') {
+    (config.operations ?? []).forEach(op => discovered.add(op));
+    return discovered;
+  }
+
+  if (mode === 'resourceTree') {
+    const scopes = config.resourceScopes ?? [];
+    for (const scope of scopes) {
+      const resourceNode = resolveResourceInDiscovery(discoveryDoc, scope.split('.'));
+      if (!resourceNode) {
+        console.warn(`⚠️  Resource scope not found: ${scope}`);
+        continue;
+      }
+
+      walkResourceTree(resourceNode, {
+        includeSubResources: config.operationDiscovery?.includeSubResources !== false,
+        allowedMethods: config.operationDiscovery?.allowedMethods,
+        onMethod: (operationId: string) => discovered.add(operationId),
+      });
+    }
+  }
+
+  if (mode === 'usageTrace') {
+    const tracePaths = expandGlobs(config.operationDiscovery?.usageTraceGlobs ?? []);
+    for (const tracePath of tracePaths) {
+      const usage = parseUsageTrace(tracePath); // { operationId: count }
+      Object.entries(usage)
+        .filter(([, count]) => count > 0)
+        .forEach(([operationId]) => discovered.add(operationId));
+    }
+  }
+
+  return discovered;
+}
+```
+
+This discovery step runs during every extraction cycle so that new DV360 endpoints are picked up automatically as soon as they appear under an already-tracked resource scope or show up in production usage traces.
 
 ---
 
@@ -465,6 +560,35 @@ class SchemaExtractor {
   private extracted = new Map<string, Schema>();
   private visited = new Set<string>();
   private dependencyGraph = new Map<string, Set<string>>();
+
+  async extract(
+    configOverride?: Partial<SchemaExtractionConfig>
+  ): Promise<ExtractionResult> {
+    const effectiveConfig = { ...this.config, ...configOverride };
+    const rootSchemas = determineRootSchemas(effectiveConfig, this.discoveryDoc);
+
+    this.extractWithDependencies(rootSchemas);
+
+    if (effectiveConfig.includeCommonTypes) {
+      this.addCommonTypes();
+    }
+
+    this.applyExclusions(effectiveConfig.excludePatterns);
+
+    const validation = validateExtraction(this, effectiveConfig);
+    if (!validation.valid) {
+      throw new ExtractionError('Extraction validation failed', ErrorCodes.VALIDATION_FAILED, {
+        errors: validation.errors,
+      });
+    }
+
+    const report = this.generateReport();
+
+    return {
+      schemas: Object.fromEntries(this.extracted),
+      report,
+    };
+  }
 
   extractWithDependencies(rootSchemas: Set<string>): void {
     for (const root of rootSchemas) {
@@ -768,7 +892,28 @@ export type InsertionOrderBudget = z.infer<typeof InsertionOrderBudgetSchema>;
 export * from './types';
 ```
 
-### 6.4 Extraction Report Format
+### 6.4 Discovery-to-OpenAPI Conversion Strategy
+
+The conversion layer is responsible for translating Google Discovery quirks into standards-compliant OpenAPI 3.0 definitions. The implementation MUST adhere to the following mapping rules:
+
+1. **Schema references** — Convert Discovery `$ref: 'SchemaName'` to OpenAPI `$ref: '#/components/schemas/SchemaName'` while preserving description metadata.
+2. **`additionalProperties` maps** — When a schema defines `additionalProperties`, emit an OpenAPI `type: object` with an `additionalProperties` schema, and synthesize a stable component when the value is a `$ref`.
+3. **Union-like constructs** — Discovery sometimes encodes `oneOf` semantics via `type: object` plus discriminators. Normalize these into explicit `oneOf` arrays where possible, or annotate with `x-google-structure` when lossless conversion is not possible.
+4. **Enumerations** — Promote `enum` arrays to OpenAPI enums and copy across `enumDescriptions` as `x-enumDescriptions` extensions for downstream tooling.
+5. **Method parameters** — Inline method-level parameters into `paths` definitions with correct `in` placement (`query`, `path`, etc.) and enforce requiredness flags from the Discovery doc.
+6. **Pagination wrappers** — Mark known pagination patterns (e.g., `nextPageToken`) with an `x-pagination` extension so generated clients can automatically handle cursors.
+7. **Partial updates** — For PATCH operations, set the request body media type to `application/json` and include the `x-google-patch` extension to signal partial semantics.
+8. **Error models** — Normalize `GoogleRpcStatus`-style responses into a single reusable component shared across operations, ensuring consistent runtime validation.
+
+Every conversion run produces a diagnostic artifact (`.tmp-specs/conversion-report.json`) summarizing:
+
+- Unmapped fields that required vendor extensions
+- Any lossy conversions (with severity levels)
+- Newly introduced schemas during transformation
+
+The build fails when new lossy conversions appear without an accompanying allowlist entry, guaranteeing the generated OpenAPI remains faithful to DV360.
+
+### 6.5 Extraction Report Format
 
 ```json
 {
@@ -782,6 +927,18 @@ export * from './types';
   "configuration": {
     "rootSchemas": ["Partner", "Advertiser", "InsertionOrder", "LineItem", "AdGroup"],
     "operations": [],
+    "resourceScopes": [
+      "partners",
+      "advertisers",
+      "advertisers.insertionOrders",
+      "advertisers.lineItems",
+      "advertisers.adGroups"
+    ],
+    "operationDiscovery": {
+      "mode": "resourceTree",
+      "includeSubResources": true,
+      "allowedMethods": ["get", "list", "patch", "bulkList"]
+    },
     "includeCommonTypes": true,
     "excludePatterns": ["*Deprecated*", "Internal*"]
   },
@@ -881,7 +1038,7 @@ export * from './types';
 import { SCHEMA_EXTRACTION_CONFIG } from '../config/schema-extraction.config';
 import { fetchDiscoveryDoc } from './lib/fetch-discovery';
 import { convertToOpenAPI } from './lib/convert-to-openapi';
-import { SchemaExtractor } from './lib/schema-extractor';
+import { extractSchemas } from './lib/extract-schemas';
 import { generateTypeScript } from './lib/generate-typescript';
 import { generateZod } from './lib/generate-zod';
 import { saveReport } from './lib/save-report';
@@ -900,8 +1057,10 @@ async function main() {
 
     // Step 2: Extract Schemas
     console.log('🔍 Step 2/5: Extracting schemas...');
-    const extractor = new SchemaExtractor(discoveryDoc, SCHEMA_EXTRACTION_CONFIG);
-    const { schemas, report } = await extractor.extract();
+    const { schemas, report } = await extractSchemas(
+      discoveryDoc,
+      SCHEMA_EXTRACTION_CONFIG
+    );
     console.log(`   ✓ Extracted ${report.totalSchemas} schemas\n`);
 
     // Step 3: Convert to OpenAPI
@@ -1541,6 +1700,51 @@ async function generateAllVersions() {
 
 ---
 
+### 9.4 Live Response Smoke Tests
+
+```typescript
+// __tests__/live/dv360-smoke.test.ts
+
+import { describe, it, expect, beforeAll } from 'vitest';
+import { google } from 'googleapis';
+import { InsertionOrderSchema } from '../../src/generated/schemas/zod';
+import { recordHttpInteractions } from '../utils/vcr';
+
+describe('DV360 live contract', () => {
+  beforeAll(async () => {
+    await recordHttpInteractions({
+      cassette: 'dv360-insertion-orders',
+      scopes: ['https://www.googleapis.com/auth/display-video'],
+    });
+  });
+
+  it('validates list responses against generated schemas', async () => {
+    const auth = new google.auth.GoogleAuth({
+      scopes: ['https://www.googleapis.com/auth/display-video.readonly'],
+    });
+    const client = google.displayvideo({ version: 'v4', auth: await auth.getClient() });
+
+    const response = await client.advertisers.insertionOrders.list({
+      advertiserId: process.env.TEST_ADVERTISER_ID!,
+      pageSize: 5,
+    });
+
+    const items = response.data.insertionOrders ?? [];
+    items.forEach(order => {
+      const parsed = InsertionOrderSchema.safeParse(order);
+      if (!parsed.success) {
+        console.error(parsed.error.flatten());
+      }
+      expect(parsed.success).toBe(true);
+    });
+  }, 20_000);
+});
+```
+
+These smoke tests execute nightly in CI against recorded HTTP fixtures (falling back to live DV360 when the cassette expires). They ensure that any upstream shape changes surface immediately as validation failures, closing the feedback loop between schema generation and real-world payloads.
+
+---
+
 ## 11. Migration Path
 
 ### Phase 1: Setup Infrastructure (Week 1)
@@ -1751,6 +1955,30 @@ async function generateAllVersions() {
 
 ---
 
+## 13. Second Iteration Validation
+
+**Goal:** Confirm that the refactored pipeline is the most efficient and reliable way to keep DV360-derived schemas synchronized with the MCP server.
+
+### Alignment with Objectives
+
+- ✅ **Minimize repository size** — Automated operation discovery scopes extraction to only the resources we actually touch, while conversion diagnostics prevent unexpected schema bloat.
+- ✅ **Maintain type safety** — The explicit Discovery → OpenAPI mapping plus nightly live smoke tests prove that generated validators continue to reflect real payloads.
+- ✅ **Automate dependencies** — Recursive extraction remains intact, and auto-discovered operations ensure new DV360 endpoints under existing resources are captured without manual updates.
+- ✅ **Enable flexibility** — Configuration now supports explicit, resource-based, or telemetry-driven operation selection, making it easy to tailor coverage per environment.
+- ✅ **Provide observability** — Conversion and extraction reports, along with recorded live-test artifacts, supply actionable metadata whenever the upstream API shifts.
+
+### Residual Risks & Mitigations
+
+- **New DV360 resources outside tracked scopes** — Mitigated by weekly review of conversion reports and low-friction addition of new resource scopes.
+- **Lossy conversions** — Build now fails on previously unseen lossy transformations, forcing explicit remediation instead of silent drift.
+- **Credential churn for live tests** — Use short-lived service accounts in CI and fall back to recorded fixtures to limit external dependencies.
+
+### Conclusion
+
+With the above safeguards, this iteration provides an automated, test-backed loop from Discovery documents to runtime validation. It eliminates manual operation curation, documents the conversion contract, and validates generated schemas against real DV360 traffic, making it the most robust and efficient approach for keeping MCP server types current with Display & Video 360 v4.
+
+---
+
 ## Appendix A: Google Discovery Document Format
 
 ### Structure Overview
@@ -1840,8 +2068,8 @@ async function generateAllVersions() {
 
 ## Document Metadata
 
-- **Version:** 1.0.0
-- **Last Updated:** 2025-01-15
+- **Version:** 1.1.0
+- **Last Updated:** 2025-01-16
 - **Author:** BidShifter Engineering
 - **Status:** Draft
 - **Related Documents:**
