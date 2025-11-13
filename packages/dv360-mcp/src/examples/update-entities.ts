@@ -1,11 +1,50 @@
 import { displayvideo_v3 } from "googleapis";
 import { GaxiosResponse } from "gaxios";
-import { getAuthenticatedService } from "./auth";
-import { throttleRequests, type ApiResponse } from "@/utils/throttle-requests";
-import { sdfDownloadAndUpload } from "./SDF";
-import { LogParams } from "@/types";
-import { LineItem, SDFParams } from "@/platforms/dv360/types";
 import { OAuth2Client, IdTokenClient } from "google-auth-library";
+
+// ===== GENERATED TYPES & SCHEMAS =====
+// Using types and Zod schemas generated from OpenAPI schema extraction
+import type { components } from "@/generated/schemas/types";
+import {
+  LineItem as LineItemSchema,
+  BiddingStrategy as BiddingStrategySchema,
+  PartnerRevenueModel as PartnerRevenueModelSchema,
+} from "@/generated/schemas/zod";
+
+// Type aliases for cleaner usage
+type LineItem = components["schemas"]["LineItem"];
+type BiddingStrategy = components["schemas"]["BiddingStrategy"];
+type PartnerRevenueModel = components["schemas"]["PartnerRevenueModel"];
+
+// ===== TODO: Missing Infrastructure =====
+// The following imports are broken and need to be implemented:
+// import { getAuthenticatedService } from "./auth";
+// import { throttleRequests, type ApiResponse } from "@/utils/throttle-requests";
+// import { sdfDownloadAndUpload } from "./SDF";
+
+// Temporary definitions for demonstration purposes
+type LogParams = { type: "ERROR" | "WARNING" | "INFO"; message: string };
+type ApiResponse<T> = { success: boolean; data?: T; error?: string };
+// SDFParams is custom (not in DV360 API schema) - needs separate definition
+type SDFParams = {
+  advertiserId: string;
+  entityType: "LINE_ITEM" | "INSERTION_ORDER";
+  updates: Record<string, any>[];
+};
+
+// ================================================================================
+// UPDATE FUNCTIONS - Demonstrating Generated Schema Integration
+// ================================================================================
+// This file shows how to use generated types for DV360 entity updates:
+// 1. LineItemConfig uses: Partial<LineItem> (generated type)
+// 2. API responses are validated with: LineItemSchema.parse(data)
+// 3. Type safety throughout the update pipeline
+//
+// For production use, you would:
+// - Implement SDF bulk upload functionality
+// - Add proper retry logic and error handling
+// - Validate request payloads before sending to API
+// ================================================================================
 
 // Custom error handling
 class EntityError extends Error {
@@ -19,11 +58,13 @@ class EntityError extends Error {
   }
 }
 
+// ===== EXAMPLE: Using Generated Types for API Requests =====
+// LineItemConfig uses the generated LineItem type instead of googleapis types
 interface LineItemConfig {
   advertiserId: string;
   lineItemId: string;
   updateMask: string;
-  resource: Partial<displayvideo_v3.Schema$LineItem>;
+  resource: Partial<LineItem>; // Using generated type from schema extraction
 }
 
 interface UpdateResult {
@@ -99,6 +140,30 @@ const updateLineItem = async (
 
   try {
     const response = await authClient.advertisers.lineItems.patch(lineItemConfig);
+
+    // ===== EXAMPLE: Zod Validation of Update Response =====
+    // Validate the updated line item returned from the API
+    if (response.data) {
+      try {
+        const validatedLineItem = LineItemSchema.parse(response.data);
+        logMessage({
+          type: "INFO",
+          message: `Line item ${lineItem.lineItemId} updated and validated successfully`,
+        });
+        return {
+          ...response,
+          data: validatedLineItem,
+        };
+      } catch (zodError) {
+        logMessage({
+          type: "WARNING",
+          message: `Line item updated but validation failed: ${zodError}`,
+        });
+        // Return unvalidated response for demonstration
+        return response;
+      }
+    }
+
     return response;
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : "Unknown error";

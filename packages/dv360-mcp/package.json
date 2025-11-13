@@ -7,28 +7,36 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc --build",
-    "clean": "rm -rf dist *.tsbuildinfo",
+    "prebuild": "pnpm run generate:schemas",
+    "clean": "rm -rf dist *.tsbuildinfo .tmp-specs",
     "dev:http": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "vitest run"
+    "test": "vitest run",
+    "generate:schemas": "tsx scripts/generate-schemas.ts",
+    "generate:schemas:watch": "tsx watch scripts/generate-schemas.ts"
   },
   "dependencies": {
-    "@bidshifter/shared": "workspace:*",
     "@bidshifter/platform-lib": "workspace:*",
+    "@bidshifter/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.2",
+    "dotenv": "^17.2.3",
     "express": "^4.21.2",
-    "zod": "^3.23.8",
-    "tsyringe": "^4.10.0",
-    "reflect-metadata": "^0.2.2",
     "pino": "^10.1.0",
-    "dotenv": "^17.2.3"
+    "reflect-metadata": "^0.2.2",
+    "tsyringe": "^4.10.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.17.6",
-    "tsx": "^4.19.2",
+    "js-yaml": "^4.1.1",
+    "minimatch": "^10.1.1",
+    "openapi-typescript": "^7.10.1",
+    "openapi-zod-client": "^1.18.3",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^1.6.0"
   }

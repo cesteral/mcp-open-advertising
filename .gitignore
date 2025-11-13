@@ -67,3 +67,11 @@ service-account-key.json
 *.pem
 *.crt
 credentials.json
+
+# DV360 MCP Schema Extraction
+# Temporary specs (fetched at build time)
+.tmp-specs/
+*.discovery.json
+
+# DO NOT ignore generated schemas (these are committed)
+# src/generated/schemas/

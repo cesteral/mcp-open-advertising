@@ -1,27 +1,43 @@
 import { google, displayvideo_v3 } from "googleapis";
 import { GaxiosResponse } from "gaxios";
-import { getClient } from "./auth";
-import { CONSTANTS } from "@/constants";
-import {
-  formatDate,
-  convertSchemaDateToDateObject,
-  getCurrentDate,
-  isDateInRange,
-} from "@/utils/date";
-import { throttleRequests, type ApiResponse, isErrorResponse } from "@/utils/throttle-requests";
-import { DISPLAYVIDEO_SECRET_NAME } from "@/constants";
-import { type LogParams } from "@/types";
-import {
-  EntityError,
-  Partner,
-  Advertiser,
-  InsertionOrderResponse,
-  LineItemResponse,
-  AdGroupResponse,
-} from "@/platforms/dv360/types";
 
-// Constants
-const { DEFAULT_AUTH_SCOPES } = CONSTANTS;
+// ===== GENERATED TYPES & SCHEMAS =====
+// Using types and Zod schemas generated from OpenAPI schema extraction
+import type { components } from "@/generated/schemas/types";
+import {
+  Partner as PartnerSchema,
+  Advertiser as AdvertiserSchema,
+  InsertionOrder as InsertionOrderSchema,
+  LineItem as LineItemSchema,
+  AdGroup as AdGroupSchema,
+  schemas,
+} from "@/generated/schemas/zod";
+
+// Type aliases for cleaner usage
+type Partner = components["schemas"]["Partner"];
+type Advertiser = components["schemas"]["Advertiser"];
+type InsertionOrder = components["schemas"]["InsertionOrder"];
+type LineItem = components["schemas"]["LineItem"];
+type AdGroup = components["schemas"]["AdGroup"];
+type BiddingStrategy = components["schemas"]["BiddingStrategy"];
+type DateRange = components["schemas"]["DateRange"];
+type InsertionOrderBudget = components["schemas"]["InsertionOrderBudget"];
+
+// ===== TODO: Missing Infrastructure =====
+// The following imports are broken and need to be implemented:
+// import { getClient } from "./auth";
+// import { CONSTANTS } from "@/constants";
+// import { formatDate, convertSchemaDateToDateObject, getCurrentDate, isDateInRange } from "@/utils/date";
+// import { throttleRequests, type ApiResponse, isErrorResponse } from "@/utils/throttle-requests";
+// import { DISPLAYVIDEO_SECRET_NAME } from "@/constants";
+// import { type LogParams } from "@/types";
+
+// Temporary definitions for demonstration purposes
+type LogParams = { type: "ERROR" | "WARNING" | "INFO"; message: string };
+type EntityError = { type: string; message: string; entityId?: string };
+
+// Constants (TODO: Move to @/constants)
+const DEFAULT_AUTH_SCOPES = ["https://www.googleapis.com/auth/display-video"];
 const MICROS_PER_DOLLAR = 1000000;
 
 // Error creation helper
@@ -74,6 +90,20 @@ const safeFormatDate = (date: displayvideo_v3.Schema$Date | undefined): string =
   }
 };
 
+// ================================================================================
+// API FUNCTIONS - Demonstrating Generated Schema Integration
+// ================================================================================
+// The functions below show how to use generated TypeScript types and Zod schemas:
+// 1. Type annotations use: components["schemas"]["EntityName"]
+// 2. Runtime validation uses: EntityNameSchema.parse(data)
+// 3. Full entity data is returned (no custom transformations)
+//
+// For production use, you would:
+// - Implement missing infrastructure (auth, utils, constants)
+// - Add proper error handling and retry logic
+// - Consider whether to use full schemas or create simplified response types
+// ================================================================================
+
 // Partner functions
 const getPartners = async (accessToken?: string): Promise<Partner[]> => {
   const authClient = await getAuthenticatedClient(accessToken);
@@ -85,10 +115,27 @@ const getPartners = async (accessToken?: string): Promise<Partner[]> => {
       pageSize: 200,
     });
 
-    return (response.data?.partners ?? []).map((partner) => ({
-      id: partner.partnerId || "",
-      partnerId: partner.partnerId || "",
-    }));
+    // ===== EXAMPLE: Zod Validation of API Response =====
+    // Validate each partner against the generated schema
+    const validatedPartners: Partner[] = [];
+
+    for (const partner of response.data?.partners ?? []) {
+      try {
+        // Using generated Zod schema for runtime validation
+        const validated = PartnerSchema.parse(partner);
+        validatedPartners.push(validated);
+      } catch (zodError) {
+        logMessage({
+          type: "WARNING",
+          message: `Partner validation failed for ${partner.partnerId}: ${zodError}`,
+        });
+        // Optionally continue with unvalidated data or skip
+        // For demonstration, we'll push the raw data with a type assertion
+        validatedPartners.push(partner as Partner);
+      }
+    }
+
+    return validatedPartners;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logMessage({
@@ -128,17 +175,22 @@ const getAdvertisers = async ({
         });
 
       const advertisers = response.data.advertisers || [];
-      results.push(
-        ...advertisers.map((advertiser) => ({
-          id: advertiser.advertiserId || "",
-          displayName: advertiser.displayName || "",
-          advertiserId: advertiser.advertiserId || "",
-          generalConfig: {
-            currencyCode: advertiser.generalConfig?.currencyCode || undefined,
-            timeZone: advertiser.generalConfig?.timeZone || undefined,
-          },
-        }))
-      );
+
+      // ===== EXAMPLE: Zod Validation with Pagination =====
+      // Validate each advertiser from the API response
+      for (const advertiser of advertisers) {
+        try {
+          const validated = AdvertiserSchema.parse(advertiser);
+          results.push(validated);
+        } catch (zodError) {
+          logMessage({
+            type: "WARNING",
+            message: `Advertiser validation failed for ${advertiser.advertiserId}: ${zodError}`,
+          });
+          // Continue with unvalidated data for demonstration
+          results.push(advertiser as Advertiser);
+        }
+      }
 
       pageToken = response.data.nextPageToken || undefined;
     } while (pageToken);
