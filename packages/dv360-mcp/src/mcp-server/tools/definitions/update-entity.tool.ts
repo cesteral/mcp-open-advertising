@@ -3,9 +3,30 @@ import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entityMappingDynamic.js";
 import { extractEntityIds } from "../utils/entityIdExtraction.js";
+import { getEntityTypesWithExamples, getExamplesSummary, getEntityExamples, findMatchingExample } from "../utils/entityExamples.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
 
 const TOOL_NAME = "dv360_update_entity";
+
+// Generate dynamic description with examples
+function generateToolDescription(): string {
+  const baseDescription = `Update a DV360 entity with flexible field updates.
+
+Use this tool to update any field on any entity type. Specify the data to update and the updateMask indicating which fields to update.
+
+**Common Update Patterns:**`;
+
+  const entityTypesWithExamples = getEntityTypesWithExamples();
+  const exampleSummaries = entityTypesWithExamples
+    .slice(0, 3) // Show top 3 entities with most examples
+    .map((entityType) => {
+      const summary = getExamplesSummary(entityType);
+      return `\n\n${summary}`;
+    })
+    .join("");
+
+  return baseDescription + exampleSummaries + `\n\nFor more examples, see entity examples utility.`;
+}
 
 export const UpdateEntityInputSchema = z.object({
   entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
@@ -34,27 +55,56 @@ type UpdateEntityOutput = z.infer<typeof UpdateEntityOutputSchema>;
 export async function updateEntityLogic(input: UpdateEntityInput, context: RequestContext): Promise<UpdateEntityOutput> {
   const dv360Service = container.resolve(DV360Service);
   const entityIds = extractEntityIds(input, input.entityType);
-  const current = await dv360Service.getEntity(input.entityType, entityIds, context) as Record<string, any>;
-  const updateFields = input.updateMask.split(",").map(f => f.trim());
-  const previousValues: Record<string, any> = {};
-  for (const field of updateFields) {
-    const parts = field.split(".");
-    let value: any = current;
-    for (const part of parts) { value = value?.[part]; }
-    previousValues[field] = value;
+
+  try {
+    const current = await dv360Service.getEntity(input.entityType, entityIds, context) as Record<string, any>;
+    const updateFields = input.updateMask.split(",").map(f => f.trim());
+    const previousValues: Record<string, any> = {};
+    for (const field of updateFields) {
+      const parts = field.split(".");
+      let value: any = current;
+      for (const part of parts) { value = value?.[part]; }
+      previousValues[field] = value;
+    }
+    const updated = await dv360Service.updateEntity(input.entityType, entityIds, input.data, input.updateMask, context);
+    return { entity: updated as Record<string, any>, previousValues, timestamp: new Date().toISOString() };
+  } catch (error: any) {
+    // Enhance error message with example suggestions
+    const examples = getEntityExamples(input.entityType);
+
+    if (examples.length > 0) {
+      const exampleSuggestions = examples
+        .slice(0, 3)
+        .map((ex) => `  - ${ex.operation}: updateMask="${ex.updateMask}"`)
+        .join("\n");
+
+      const enhancedMessage = `${error.message}\n\nTip: Try one of these common patterns for ${input.entityType}:\n${exampleSuggestions}`;
+      error.message = enhancedMessage;
+    }
+
+    throw error;
   }
-  const updated = await dv360Service.updateEntity(input.entityType, entityIds, input.data, input.updateMask, context);
-  return { entity: updated as Record<string, any>, previousValues, timestamp: new Date().toISOString() };
 }
 
-export function updateEntityResponseFormatter(result: UpdateEntityOutput): any {
-  return [{ type: "text" as const, text: "Entity updated: " + JSON.stringify(result.entity, null, 2) }];
+export function updateEntityResponseFormatter(result: UpdateEntityOutput, input?: UpdateEntityInput): any {
+  let responseText = "Entity updated successfully:\n" + JSON.stringify(result.entity, null, 2);
+
+  // Add helpful note if this matches a known pattern
+  if (input) {
+    const matchingExample = findMatchingExample(input.entityType, input.data, input.updateMask);
+    if (matchingExample) {
+      responseText += `\n\n✓ Applied pattern: ${matchingExample.operation}\n`;
+      responseText += `Note: ${matchingExample.notes}`;
+    }
+  }
+
+  return [{ type: "text" as const, text: responseText }];
 }
 
 export const updateEntityTool = {
   name: TOOL_NAME,
   title: "Update Entity",
-  description: "Update a DV360 entity",
+  description: generateToolDescription(),
   inputSchema: UpdateEntityInputSchema,
   outputSchema: UpdateEntityOutputSchema,
   annotations: { readOnlyHint: false, openWorldHint: false, idempotentHint: true },

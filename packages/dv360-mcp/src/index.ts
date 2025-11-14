@@ -4,10 +4,14 @@ import { mcpConfig } from "./config/index.js";
 import { composeContainer } from "./container/index.js";
 import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { initializeOpenTelemetry } from "./utils/telemetry/index.js";
 import express from "express";
 import type { Request, Response } from "express";
 
 const logger = createLogger("dv360-mcp");
+
+// Initialize OpenTelemetry (must be done before any other imports that might be instrumented)
+initializeOpenTelemetry(mcpConfig, logger);
 
 // Store active SSE transports by session ID
 const activeTransports = new Map<string, SSEServerTransport>();
@@ -69,7 +73,7 @@ async function main() {
           await server.connect(transport);
 
           logger.info(
-            { sessionId: transport.sessionId },
+            { sessionId: transport.sessionId, activeSessions: activeTransports.size },
             "SSE connection established"
           );
         } catch (error) {

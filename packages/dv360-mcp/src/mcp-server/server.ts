@@ -9,6 +9,7 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 import { allTools } from "./tools/definitions/index.js";
 import { createRequestContext } from "../utils/internal/requestContext.js";
 import { ErrorHandler } from "../utils/errors/index.js";
+import { withToolSpan, setSpanAttribute, recordSpanError } from "../utils/telemetry/index.js";
 import type { Logger } from "pino";
 
 /**
@@ -66,57 +67,65 @@ export function createMcpServer(logger: Logger): Server {
       };
     }
 
-    try {
-      // Create request context
-      const context = createRequestContext({
-        operation: `HandleToolRequest:${name}`,
-        additionalContext: {
-          toolName: name,
-          input: args,
-        },
-      });
+    // Wrap tool execution in OpenTelemetry span
+    return withToolSpan(name, args || {}, async () => {
+      try {
+        // Create request context
+        const context = createRequestContext({
+          operation: `HandleToolRequest:${name}`,
+          additionalContext: {
+            toolName: name,
+            input: args,
+          },
+        });
 
-      // Validate input
-      const validatedInput = tool.inputSchema.parse(args);
+        // Validate input
+        const validatedInput = tool.inputSchema.parse(args);
+        setSpanAttribute("tool.input.validated", true);
 
-      // Execute tool logic (cast to any since each tool has unique I/O types)
-      const result = await (tool.logic as any)(validatedInput, context);
+        // Execute tool logic (cast to any since each tool has unique I/O types)
+        const result = await (tool.logic as any)(validatedInput, context);
+        setSpanAttribute("tool.execution.success", true);
 
-      // Format response
-      const content = tool.responseFormatter
-        ? (tool.responseFormatter as any)(result)
-        : [
+        // Format response
+        const content = tool.responseFormatter
+          ? (tool.responseFormatter as any)(result, validatedInput)
+          : [
+              {
+                type: "text" as const,
+                text: JSON.stringify(result, null, 2),
+              },
+            ];
+
+        logger.info({ toolName: name, requestId: context.requestId }, "Tool executed successfully");
+
+        return {
+          content,
+        };
+      } catch (error) {
+        recordSpanError(error as Error);
+        setSpanAttribute("tool.execution.success", false);
+
+        const mcpError = ErrorHandler.handleError(
+          error,
+          {
+            operation: `tool:${name}`,
+            input: args,
+          },
+          logger
+        );
+
+        return {
+          content: [
             {
               type: "text" as const,
-              text: JSON.stringify(result, null, 2),
+              text: `Error: ${mcpError.message}`,
             },
-          ];
-
-      logger.info({ toolName: name, requestId: context.requestId }, "Tool executed successfully");
-
-      return {
-        content,
-      };
-    } catch (error) {
-      const mcpError = ErrorHandler.handleError(
-        error,
-        {
-          operation: `tool:${name}`,
-          input: args,
-        },
-        logger
-      );
-
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Error: ${mcpError.message}`,
-          },
-        ],
-        isError: true,
-      };
-    }
+          ],
+          isError: true,
+        };
+      }
+    });
   });
 
   return server;

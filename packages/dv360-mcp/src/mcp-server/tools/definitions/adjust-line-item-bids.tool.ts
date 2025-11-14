@@ -1,12 +1,33 @@
 import { z } from "zod";
 import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
+import { getEntityExamplesByCategory } from "../utils/entityExamples.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
 
 const TOOL_NAME = "dv360_adjust_line_item_bids";
 const TOOL_TITLE = "Adjust Line Item Bids";
-const TOOL_DESCRIPTION =
-  "Batch update bids for multiple line items in a single operation (Tier 2 workflow tool)";
+
+// Generate dynamic description with bid examples
+function generateBidToolDescription(): string {
+  const bidExamples = getEntityExamplesByCategory("lineItem", "bid");
+
+  let description = `Batch update bids for multiple line items in a single operation (Tier 2 workflow tool).
+
+**Important Notes:**
+- Bid amounts must be in micros (1 USD = 1,000,000 micros)
+- This tool updates fixed bids (fixedBid strategy)
+- For auto-bidding, use the generic update_entity tool
+
+**Supported Bid Updates:**`;
+
+  bidExamples.forEach((ex) => {
+    description += `\n- ${ex.operation}: ${ex.notes}`;
+  });
+
+  return description;
+}
+
+const TOOL_DESCRIPTION = generateBidToolDescription();
 
 /**
  * Bid adjustment specification
@@ -155,10 +176,13 @@ export function adjustLineItemBidsResponseFormatter(result: AdjustLineItemBidsOu
       ? `\n\nFailed adjustments:\n${JSON.stringify(result.failed, null, 2)}`
       : "";
 
+  // Add helpful reminder about bid format
+  const note = `\n\n💡 Reminder: Bid amounts are in micros (1 USD = 1,000,000 micros). This tool updates fixed bids only.`;
+
   return [
     {
       type: "text" as const,
-      text: `${summary}${successList}${failedList}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${successList}${failedList}${note}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

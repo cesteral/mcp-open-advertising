@@ -7,6 +7,7 @@ import {
   getEntitySchemaForOperation,
 } from "../../mcp-server/tools/utils/entityMappingDynamic.js";
 import { fetchWithTimeout } from "../../utils/network/fetchWithTimeout.js";
+import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
 import type { RequestContext } from "../../utils/internal/requestContext.js";
 import type { AppConfig } from "../../config/index.js";
 import * as tokens from "../../container/tokens.js";
@@ -36,40 +37,49 @@ export class DV360Service {
     pageToken?: string,
     context?: RequestContext
   ): Promise<{ entities: unknown[]; nextPageToken?: string }> {
-    await this.ensureAuthenticated(context);
+    return withDV360ApiSpan("listEntities", entityType, async () => {
+      await this.ensureAuthenticated(context);
 
-    const config = getEntityConfigDynamic(entityType);
+      const config = getEntityConfigDynamic(entityType);
 
-    // Construct API path
-    const basePath =
-      typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      // Construct API path
+      const basePath =
+        typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
 
-    // Build query params
-    const params = new URLSearchParams();
-    if (filter && config.supportsFilter) {
-      params.append("filter", filter);
-    }
-    if (pageToken) {
-      params.append("pageToken", pageToken);
-    }
+      // Build query params
+      const params = new URLSearchParams();
+      if (filter && config.supportsFilter) {
+        params.append("filter", filter);
+        setSpanAttribute("dv360.filter", filter);
+      }
+      if (pageToken) {
+        params.append("pageToken", pageToken);
+        setSpanAttribute("dv360.pageToken", "present");
+      }
 
-    const path = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
+      const path = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
+      setSpanAttribute("dv360.apiPath", basePath);
 
-    // Rate limit by advertiser
-    if (ids.advertiserId) {
-      await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-    }
+      // Rate limit by advertiser
+      if (ids.advertiserId) {
+        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
+        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
+      }
 
-    const response = await this.fetch(path, context);
+      const response = await this.fetch(path, context);
 
-    // Validate response with generated schema
-    const schema = getEntitySchemaForOperation(entityType, "list");
-    const validated = schema.parse(response);
+      // Validate response with generated schema
+      const schema = getEntitySchemaForOperation(entityType, "list");
+      const validated = schema.parse(response);
 
-    return {
-      entities: (validated as any)[`${entityType}s`] || [],
-      nextPageToken: (validated as any).nextPageToken,
-    };
+      const entities = (validated as any)[`${entityType}s`] || [];
+      setSpanAttribute("dv360.resultCount", entities.length);
+
+      return {
+        entities,
+        nextPageToken: (validated as any).nextPageToken,
+      };
+    });
   }
 
   /**
@@ -163,55 +173,62 @@ export class DV360Service {
     updateMask: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.ensureAuthenticated(context);
+    return withDV360ApiSpan("updateEntity", entityType, async () => {
+      await this.ensureAuthenticated(context);
 
-    const config = getEntityConfigDynamic(entityType);
+      const config = getEntityConfigDynamic(entityType);
 
-    if (!config.supportsUpdate) {
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `Entity type ${entityType} does not support update operation`,
-        { entityType }
-      );
-    }
+      if (!config.supportsUpdate) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Entity type ${entityType} does not support update operation`,
+          { entityType }
+        );
+      }
 
-    // Get current entity and merge with updates
-    const current = (await this.getEntity(entityType, ids, context)) as Record<
-      string,
-      any
-    >;
-    const merged = { ...current, ...data };
+      setSpanAttribute("dv360.updateMask", updateMask);
+      setSpanAttribute("dv360.updateFieldsCount", updateMask.split(",").length);
 
-    // Validate merged entity
-    const schema = getEntitySchemaForOperation(entityType, "update");
-    const validated = schema.parse(merged);
+      // Get current entity and merge with updates
+      const current = (await this.getEntity(entityType, ids, context)) as Record<
+        string,
+        any
+      >;
+      const merged = { ...current, ...data };
 
-    const basePath =
-      typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
-    const entityId = ids[`${entityType}Id`];
+      // Validate merged entity
+      const schema = getEntitySchemaForOperation(entityType, "update");
+      const validated = schema.parse(merged);
 
-    if (!entityId) {
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `Entity ID is required for ${entityType}`,
-        { entityType, providedIds: Object.keys(ids) }
-      );
-    }
+      const basePath =
+        typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      const entityId = ids[`${entityType}Id`];
 
-    const path = `${basePath}/${entityId}?updateMask=${encodeURIComponent(updateMask)}`;
+      if (!entityId) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Entity ID is required for ${entityType}`,
+          { entityType, providedIds: Object.keys(ids) }
+        );
+      }
 
-    // Rate limit by advertiser
-    if (ids.advertiserId) {
-      await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-    }
+      setSpanAttribute("dv360.entityId", entityId);
+      const path = `${basePath}/${entityId}?updateMask=${encodeURIComponent(updateMask)}`;
 
-    const response = await this.fetch(path, context, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(validated),
+      // Rate limit by advertiser
+      if (ids.advertiserId) {
+        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
+        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
+      }
+
+      const response = await this.fetch(path, context, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validated),
+      });
+
+      return schema.parse(response);
     });
-
-    return schema.parse(response);
   }
 
   /**

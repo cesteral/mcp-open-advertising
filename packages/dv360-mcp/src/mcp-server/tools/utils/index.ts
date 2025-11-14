@@ -7,6 +7,7 @@
 export * from "./schemaIntrospection.js";
 export * from "./entityMappingDynamic.js";
 export * from "./entityIdExtraction.js";
+export * from "./entityExamples.js";
 
 /**
  * Usage Guide
@@ -27,17 +28,24 @@ export * from "./entityIdExtraction.js";
  * - `getSupportedEntityTypesDynamic()` - List all supported entities
  * - `extractEntityIds()` - Extract IDs from tool input
  * - `extractParentIds()` - Extract only parent IDs
+ * - `getEntityExamples()` - Get curated examples for entity type
+ * - `getEntityExamplesByCategory()` - Get examples by category (bid, budget, status, etc.)
+ * - `formatEntityExamplesAsText()` - Format examples as human-readable text
  *
  * Example:
  * ```typescript
  * import {
  *   getEntityConfigDynamic,
  *   getEntitySchemaForOperation,
- *   extractEntityIds
+ *   extractEntityIds,
+ *   getEntityExamples,
+ *   formatEntityExamplesAsText
  * } from './utils';
  *
  * const config = getEntityConfigDynamic('lineItem');
  * const schema = getEntitySchemaForOperation('lineItem', 'create');
  * const ids = extractEntityIds(input, 'lineItem');
+ * const examples = getEntityExamples('lineItem');
+ * const examplesText = formatEntityExamplesAsText('lineItem');
  * ```
  */

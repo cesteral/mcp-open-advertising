@@ -1,12 +1,33 @@
 import { z } from "zod";
 import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
+import { getEntityExamplesByCategory } from "../utils/entityExamples.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
 
 const TOOL_NAME = "dv360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update Entity Status";
-const TOOL_DESCRIPTION =
-  "Batch update entity status (active/paused) for multiple entities in a single operation (Tier 2 workflow tool)";
+
+// Generate dynamic description with status examples
+function generateStatusToolDescription(): string {
+  const statusExamples = getEntityExamplesByCategory("lineItem", "status");
+
+  let description = `Batch update entity status (active/paused) for multiple entities in a single operation (Tier 2 workflow tool).
+
+**Important Notes:**
+- Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_PAUSED, ENTITY_STATUS_ARCHIVED, ENTITY_STATUS_DRAFT
+- Cannot unarchive once archived (status change is irreversible)
+- Pausing a parent entity (campaign, IO) pauses all children
+
+**Common Status Operations:**`;
+
+  statusExamples.forEach((ex) => {
+    description += `\n- ${ex.operation}: ${ex.notes}`;
+  });
+
+  return description;
+}
+
+const TOOL_DESCRIPTION = generateStatusToolDescription();
 
 /**
  * Input schema for bulk update status tool
@@ -146,7 +167,7 @@ export async function bulkUpdateStatusLogic(
 /**
  * Format response for MCP client
  */
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): any {
+export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput, input?: BulkUpdateStatusInput): any {
   const summary = `Bulk status update completed: ${result.totalSuccessful}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0
@@ -157,10 +178,18 @@ export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput
       ? `\n\nFailed updates:\n${JSON.stringify(result.failed, null, 2)}`
       : "";
 
+  // Add helpful note based on status
+  let note = "";
+  if (input?.status === "ENTITY_STATUS_ARCHIVED") {
+    note = `\n\n⚠️  Warning: Archived entities cannot be reactivated. This change is irreversible.`;
+  } else if (input?.status === "ENTITY_STATUS_PAUSED") {
+    note = `\n\n💡 Note: Paused entities can be reactivated later by setting status to ENTITY_STATUS_ACTIVE.`;
+  }
+
   return [
     {
       type: "text" as const,
-      text: `${summary}${successList}${failedList}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${successList}${failedList}${note}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
