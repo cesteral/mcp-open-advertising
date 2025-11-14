@@ -1,6 +1,6 @@
 /**
  * Auto-generated Zod schemas from OpenAPI specification
- * Generated at: 2025-11-13T13:15:53.838Z
+ * Generated at: 2025-11-14T13:37:19.226Z
  * DO NOT EDIT MANUALLY
  */
 
@@ -10,44 +10,26 @@ import { z } from 'zod';
  * A single partner in Display & Video 360 (DV360).
  */
 export const Partner = z.object({
-  /** Settings that control how partner data may be accessed. */
-  dataAccessConfig: z.lazy(() => PartnerDataAccessConfig).optional(),
-  /** Output only. The status of the partner. */
-  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
   /** Ad server related settings of the partner. */
   adServerConfig: z.lazy(() => PartnerAdServerConfig).optional(),
-  /** Output only. The unique ID of the partner. Assigned by the system. */
-  partnerId: z.string().optional(),
   /** Output only. The resource name of the partner. */
   name: z.string().optional(),
-  /** Billing related settings of the partner. */
-  billingConfig: z.lazy(() => PartnerBillingConfig).optional(),
   /** The display name of the partner. Must be UTF-8 encoded with a maximum size of 24 */
   displayName: z.string().optional(),
-  /** Output only. The timestamp when the partner was last updated. Assigned by the sy */
-  updateTime: z.string().optional(),
+  /** Billing related settings of the partner. */
+  billingConfig: z.lazy(() => PartnerBillingConfig).optional(),
   /** General settings of the partner. */
   generalConfig: z.lazy(() => PartnerGeneralConfig).optional(),
+  /** Output only. The unique ID of the partner. Assigned by the system. */
+  partnerId: z.string().optional(),
+  /** Settings that control how partner data may be accessed. */
+  dataAccessConfig: z.lazy(() => PartnerDataAccessConfig).optional(),
   /** Settings that control which exchanges are enabled for the partner. */
   exchangeConfig: z.lazy(() => ExchangeConfig).optional(),
-});
-
-/**
- * Settings that control how partner related data may be accessed.
- */
-export const PartnerDataAccessConfig = z.object({
-  /** Structured Data Files (SDF) settings for the partner. The SDF configuration for  */
-  sdfConfig: z.lazy(() => SdfConfig).optional(),
-});
-
-/**
- * Structured Data File (SDF) related settings.
- */
-export const SdfConfig = z.object({
-  /** An administrator email address to which the SDF processing status reports will b */
-  adminEmail: z.string().optional(),
-  /** Required. The version of SDF being used. */
-  version: z.enum(["SDF_VERSION_UNSPECIFIED", "SDF_VERSION_3_1", "SDF_VERSION_4", "SDF_VERSION_4_1", "SDF_VERSION_4_2", "SDF_VERSION_5", "SDF_VERSION_5_1", "SDF_VERSION_5_2", "SDF_VERSION_5_3", "SDF_VERSION_5_4", "SDF_VERSION_5_5", "SDF_VERSION_6", "SDF_VERSION_7", "SDF_VERSION_7_1", "SDF_VERSION_8", "SDF_VERSION_8_1", "SDF_VERSION_9", "SDF_VERSION_9_1", "SDF_VERSION_9_2"]).optional(),
+  /** Output only. The timestamp when the partner was last updated. Assigned by the sy */
+  updateTime: z.string().optional(),
+  /** Output only. The status of the partner. */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
 });
 
 /**
@@ -80,10 +62,28 @@ export const PartnerBillingConfig = z.object({
  * General settings of a partner.
  */
 export const PartnerGeneralConfig = z.object({
-  /** Immutable. The standard TZ database name of the partner's time zone. For example */
-  timeZone: z.string().optional(),
   /** Immutable. Partner's currency in ISO 4217 format. */
   currencyCode: z.string().optional(),
+  /** Immutable. The standard TZ database name of the partner's time zone. For example */
+  timeZone: z.string().optional(),
+});
+
+/**
+ * Settings that control how partner related data may be accessed.
+ */
+export const PartnerDataAccessConfig = z.object({
+  /** Structured Data Files (SDF) settings for the partner. The SDF configuration for  */
+  sdfConfig: z.lazy(() => SdfConfig).optional(),
+});
+
+/**
+ * Structured Data File (SDF) related settings.
+ */
+export const SdfConfig = z.object({
+  /** Required. The version of SDF being used. */
+  version: z.enum(["SDF_VERSION_UNSPECIFIED", "SDF_VERSION_3_1", "SDF_VERSION_4", "SDF_VERSION_4_1", "SDF_VERSION_4_2", "SDF_VERSION_5", "SDF_VERSION_5_1", "SDF_VERSION_5_2", "SDF_VERSION_5_3", "SDF_VERSION_5_4", "SDF_VERSION_5_5", "SDF_VERSION_6", "SDF_VERSION_7", "SDF_VERSION_7_1", "SDF_VERSION_8", "SDF_VERSION_8_1", "SDF_VERSION_9", "SDF_VERSION_9_1", "SDF_VERSION_9_2"]).optional(),
+  /** An administrator email address to which the SDF processing status reports will b */
+  adminEmail: z.string().optional(),
 });
 
 /**
@@ -98,12 +98,12 @@ export const ExchangeConfig = z.object({
  * An enabled exchange in the partner.
  */
 export const ExchangeConfigEnabledExchange = z.object({
-  /** Output only. Agency ID of Google Ad Manager. The field is only relevant when Goo */
-  googleAdManagerAgencyId: z.string().optional(),
   /** Output only. Network ID of Google Ad Manager. The field is only relevant when Go */
   googleAdManagerBuyerNetworkId: z.string().optional(),
   /** Output only. Seat ID of the enabled exchange. */
   seatId: z.string().optional(),
+  /** Output only. Agency ID of Google Ad Manager. The field is only relevant when Goo */
+  googleAdManagerAgencyId: z.string().optional(),
   /** The enabled exchange. */
   exchange: z.enum(["EXCHANGE_UNSPECIFIED", "EXCHANGE_GOOGLE_AD_MANAGER", "EXCHANGE_APPNEXUS", "EXCHANGE_BRIGHTROLL", "EXCHANGE_ADFORM", "EXCHANGE_ADMETA", "EXCHANGE_ADMIXER", "EXCHANGE_ADSMOGO", "EXCHANGE_ADSWIZZ", "EXCHANGE_BIDSWITCH", "EXCHANGE_BRIGHTROLL_DISPLAY", "EXCHANGE_CADREON", "EXCHANGE_DAILYMOTION", "EXCHANGE_FIVE", "EXCHANGE_FLUCT", "EXCHANGE_FREEWHEEL", "EXCHANGE_GENIEE", "EXCHANGE_GUMGUM", "EXCHANGE_IMOBILE", "EXCHANGE_IBILLBOARD", "EXCHANGE_IMPROVE_DIGITAL", "EXCHANGE_INDEX", "EXCHANGE_KARGO", "EXCHANGE_MICROAD", "EXCHANGE_MOPUB", "EXCHANGE_NEND", "EXCHANGE_ONE_BY_AOL_DISPLAY", "EXCHANGE_ONE_BY_AOL_MOBILE", "EXCHANGE_ONE_BY_AOL_VIDEO", "EXCHANGE_OOYALA", "EXCHANGE_OPENX", "EXCHANGE_PERMODO", "EXCHANGE_PLATFORMONE", "EXCHANGE_PLATFORMID", "EXCHANGE_PUBMATIC", "EXCHANGE_PULSEPOINT", "EXCHANGE_REVENUEMAX", "EXCHANGE_RUBICON", "EXCHANGE_SMARTCLIP", "EXCHANGE_SMARTRTB", "EXCHANGE_SMARTSTREAMTV", "EXCHANGE_SOVRN", "EXCHANGE_SPOTXCHANGE", "EXCHANGE_STROER", "EXCHANGE_TEADSTV", "EXCHANGE_TELARIA", "EXCHANGE_TVN", "EXCHANGE_UNITED", "EXCHANGE_YIELDLAB", "EXCHANGE_YIELDMO", "EXCHANGE_UNRULYX", "EXCHANGE_OPEN8", "EXCHANGE_TRITON", "EXCHANGE_TRIPLELIFT", "EXCHANGE_TABOOLA", "EXCHANGE_INMOBI", "EXCHANGE_SMAATO", "EXCHANGE_AJA", "EXCHANGE_SUPERSHIP", "EXCHANGE_NEXSTAR_DIGITAL", "EXCHANGE_WAZE", "EXCHANGE_SOUNDCAST", "EXCHANGE_SHARETHROUGH", "EXCHANGE_FYBER", "EXCHANGE_RED_FOR_PUBLISHERS", "EXCHANGE_MEDIANET", "EXCHANGE_TAPJOY", "EXCHANGE_VISTAR", "EXCHANGE_DAX", "EXCHANGE_JCD", "EXCHANGE_PLACE_EXCHANGE", "EXCHANGE_APPLOVIN", "EXCHANGE_CONNATIX", "EXCHANGE_RESET_DIGITAL", "EXCHANGE_HIVESTACK", "EXCHANGE_DRAX", "EXCHANGE_APPLOVIN_GBID", "EXCHANGE_FYBER_GBID", "EXCHANGE_UNITY_GBID", "EXCHANGE_CHARTBOOST_GBID", "EXCHANGE_ADMOST_GBID", "EXCHANGE_TOPON_GBID", "EXCHANGE_NETFLIX", "EXCHANGE_CORE", "EXCHANGE_COMMERCE_GRID", "EXCHANGE_SPOTIFY", "EXCHANGE_TUBI", "EXCHANGE_SNAP"]).optional(),
 });
@@ -112,62 +112,50 @@ export const ExchangeConfigEnabledExchange = z.object({
  * A single advertiser in Display & Video 360 (DV360).
  */
 export const Advertiser = z.object({
-  /** Required. Controls whether or not insertion orders and line items of the adverti */
-  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
-  /** Output only. The unique ID of the advertiser. Assigned by the system. */
-  advertiserId: z.string().optional(),
+  /** Optional. Whether this advertiser contains line items that serve European Union  */
+  containsEuPoliticalAds: z.enum(["EU_POLITICAL_ADVERTISING_STATUS_UNKNOWN", "CONTAINS_EU_POLITICAL_ADVERTISING", "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING"]).optional(),
+  /** Required. The display name of the advertiser. Must be UTF-8 encoded with a maxim */
+  displayName: z.string().optional(),
   /** Required. Creative related settings of the advertiser. */
   creativeConfig: z.lazy(() => AdvertiserCreativeConfig).optional(),
   /** Output only. The timestamp when the advertiser was last updated. Assigned by the */
   updateTime: z.string().optional(),
-  /** Required. Immutable. The unique ID of the partner that the advertiser belongs to */
-  partnerId: z.string().optional(),
-  /** Required. The display name of the advertiser. Must be UTF-8 encoded with a maxim */
-  displayName: z.string().optional(),
-  /** Required. General settings of the advertiser. */
-  generalConfig: z.lazy(() => AdvertiserGeneralConfig).optional(),
   /** Integration details of the advertiser. Only integrationCode is currently applica */
   integrationDetails: z.lazy(() => IntegrationDetails).optional(),
+  /** Required. Immutable. The unique ID of the partner that the advertiser belongs to */
+  partnerId: z.string().optional(),
+  /** Targeting settings related to ad serving of the advertiser. */
+  servingConfig: z.lazy(() => AdvertiserTargetingConfig).optional(),
+  /** Required. Immutable. Ad server related settings of the advertiser. */
+  adServerConfig: z.lazy(() => AdvertiserAdServerConfig).optional(),
+  /** Whether integration with Mediaocean (Prisma) is enabled. By enabling this, you a */
+  prismaEnabled: z.boolean().optional(),
+  /** Output only. The unique ID of the advertiser. Assigned by the system. */
+  advertiserId: z.string().optional(),
   /** Required. Billing related settings of the advertiser. */
   billingConfig: z.lazy(() => AdvertiserBillingConfig).optional(),
   /** Output only. The resource name of the advertiser. */
   name: z.string().optional(),
-  /** Targeting settings related to ad serving of the advertiser. */
-  servingConfig: z.lazy(() => AdvertiserTargetingConfig).optional(),
-  /** Optional. Whether this advertiser contains line items that serve European Union  */
-  containsEuPoliticalAds: z.enum(["EU_POLITICAL_ADVERTISING_STATUS_UNKNOWN", "CONTAINS_EU_POLITICAL_ADVERTISING", "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING"]).optional(),
-  /** Required. Immutable. Ad server related settings of the advertiser. */
-  adServerConfig: z.lazy(() => AdvertiserAdServerConfig).optional(),
   /** Settings that control how advertiser data may be accessed. */
   dataAccessConfig: z.lazy(() => AdvertiserDataAccessConfig).optional(),
-  /** Whether integration with Mediaocean (Prisma) is enabled. By enabling this, you a */
-  prismaEnabled: z.boolean().optional(),
+  /** Required. General settings of the advertiser. */
+  generalConfig: z.lazy(() => AdvertiserGeneralConfig).optional(),
+  /** Required. Controls whether or not insertion orders and line items of the adverti */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
 });
 
 /**
  * Creatives related settings of an advertiser.
  */
 export const AdvertiserCreativeConfig = z.object({
+  /** Whether or not the advertiser is enabled for dynamic creatives. */
+  dynamicCreativeEnabled: z.boolean().optional(),
   /** An ID for configuring campaign monitoring provided by Integral Ad Service (IAS). */
   iasClientId: z.string().optional(),
   /** Whether or not to disable Google's About this Ad feature that adds badging (to i */
   obaComplianceDisabled: z.boolean().optional(),
-  /** Whether or not the advertiser is enabled for dynamic creatives. */
-  dynamicCreativeEnabled: z.boolean().optional(),
   /** By setting this field to `true`, you, on behalf of your company, authorize Googl */
   videoCreativeDataSharingAuthorized: z.boolean().optional(),
-});
-
-/**
- * General settings of an advertiser.
- */
-export const AdvertiserGeneralConfig = z.object({
-  /** Output only. The standard TZ database name of the advertiser's time zone. For ex */
-  timeZone: z.string().optional(),
-  /** Required. The domain URL of the advertiser's primary website. The system will se */
-  domainUrl: z.string().optional(),
-  /** Required. Immutable. Advertiser's currency in ISO 4217 format. Accepted codes an */
-  currencyCode: z.string().optional(),
 });
 
 /**
@@ -178,14 +166,6 @@ export const IntegrationDetails = z.object({
   details: z.string().optional(),
   /** An external identifier to be associated with the entry. The integration code wil */
   integrationCode: z.string().optional(),
-});
-
-/**
- * Billing related settings of an advertiser.
- */
-export const AdvertiserBillingConfig = z.object({
-  /** Required. The ID of a billing profile assigned to the advertiser. */
-  billingProfileId: z.string().optional(),
 });
 
 /**
@@ -200,30 +180,10 @@ export const AdvertiserTargetingConfig = z.object({
  * Ad server related settings of an advertiser.
  */
 export const AdvertiserAdServerConfig = z.object({
-  /** The configuration for advertisers that use both Campaign Manager 360 (CM360) and */
-  cmHybridConfig: z.lazy(() => CmHybridConfig).optional(),
   /** The configuration for advertisers that use third-party ad servers only. */
   thirdPartyOnlyConfig: z.lazy(() => ThirdPartyOnlyConfig).optional(),
-});
-
-/**
- * Settings for advertisers that use both Campaign Manager 360 (CM360) and third-party ad servers.
- */
-export const CmHybridConfig = z.object({
-  /** Required. Immutable. Account ID of the CM360 Floodlight configuration linked wit */
-  cmAccountId: z.string().optional(),
-  /** Whether or not to include DV360 data in CM360 data transfer reports. */
-  dv360ToCmDataSharingEnabled: z.boolean().optional(),
-  /** Output only. The set of CM360 Advertiser IDs sharing the CM360 Floodlight config */
-  cmAdvertiserIds: z.array(z.string()).optional(),
-  /** Whether or not to report DV360 cost to CM360. */
-  dv360ToCmCostReportingEnabled: z.boolean().optional(),
-  /** A list of CM360 sites whose placements will be synced to DV360 as creatives. If  */
-  cmSyncableSiteIds: z.array(z.string()).optional(),
-  /** Required. Immutable. ID of the CM360 Floodlight configuration linked with the DV */
-  cmFloodlightConfigId: z.string().optional(),
-  /** Required. Immutable. By setting this field to `true`, you, on behalf of your com */
-  cmFloodlightLinkingAuthorized: z.boolean().optional(),
+  /** The configuration for advertisers that use both Campaign Manager 360 (CM360) and */
+  cmHybridConfig: z.lazy(() => CmHybridConfig).optional(),
 });
 
 /**
@@ -232,6 +192,34 @@ export const CmHybridConfig = z.object({
 export const ThirdPartyOnlyConfig = z.object({
   /** Whether or not order ID reporting for pixels is enabled. This value cannot be ch */
   pixelOrderIdReportingEnabled: z.boolean().optional(),
+});
+
+/**
+ * Settings for advertisers that use both Campaign Manager 360 (CM360) and third-party ad servers.
+ */
+export const CmHybridConfig = z.object({
+  /** Required. Immutable. ID of the CM360 Floodlight configuration linked with the DV */
+  cmFloodlightConfigId: z.string().optional(),
+  /** Output only. The set of CM360 Advertiser IDs sharing the CM360 Floodlight config */
+  cmAdvertiserIds: z.array(z.string()).optional(),
+  /** Required. Immutable. By setting this field to `true`, you, on behalf of your com */
+  cmFloodlightLinkingAuthorized: z.boolean().optional(),
+  /** Whether or not to include DV360 data in CM360 data transfer reports. */
+  dv360ToCmDataSharingEnabled: z.boolean().optional(),
+  /** Whether or not to report DV360 cost to CM360. */
+  dv360ToCmCostReportingEnabled: z.boolean().optional(),
+  /** Required. Immutable. Account ID of the CM360 Floodlight configuration linked wit */
+  cmAccountId: z.string().optional(),
+  /** A list of CM360 sites whose placements will be synced to DV360 as creatives. If  */
+  cmSyncableSiteIds: z.array(z.string()).optional(),
+});
+
+/**
+ * Billing related settings of an advertiser.
+ */
+export const AdvertiserBillingConfig = z.object({
+  /** Required. The ID of a billing profile assigned to the advertiser. */
+  billingProfileId: z.string().optional(),
 });
 
 /**
@@ -253,101 +241,215 @@ export const AdvertiserSdfConfig = z.object({
 });
 
 /**
+ * General settings of an advertiser.
+ */
+export const AdvertiserGeneralConfig = z.object({
+  /** Output only. The standard TZ database name of the advertiser's time zone. For ex */
+  timeZone: z.string().optional(),
+  /** Required. Immutable. Advertiser's currency in ISO 4217 format. Accepted codes an */
+  currencyCode: z.string().optional(),
+  /** Required. The domain URL of the advertiser's primary website. The system will se */
+  domainUrl: z.string().optional(),
+});
+
+/**
+ * A single campaign.
+ */
+export const Campaign = z.object({
+  /** Required. The frequency cap setting of the campaign. *Warning*: On **February 28 */
+  frequencyCap: z.lazy(() => FrequencyCap).optional(),
+  /** Output only. The unique ID of the advertiser the campaign belongs to. */
+  advertiserId: z.string().optional(),
+  /** Output only. The unique ID of the campaign. Assigned by the system. */
+  campaignId: z.string().optional(),
+  /** Required. The display name of the campaign. Must be UTF-8 encoded with a maximum */
+  displayName: z.string().optional(),
+  /** The list of budgets available to this campaign. If this field is not set, the ca */
+  campaignBudgets: z.array(z.lazy(() => CampaignBudget)).optional(),
+  /** Required. The planned spend and duration of the campaign. */
+  campaignFlight: z.lazy(() => CampaignFlight).optional(),
+  /** Required. The goal of the campaign. */
+  campaignGoal: z.lazy(() => CampaignGoal).optional(),
+  /** Output only. The timestamp when the campaign was last updated. Assigned by the s */
+  updateTime: z.string().optional(),
+  /** Required. Controls whether or not the insertion orders under this campaign can s */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
+  /** Output only. The resource name of the campaign. */
+  name: z.string().optional(),
+});
+
+/**
+ * Settings that control the number of times a user may be shown with the same ad during a given time period.
+ */
+export const FrequencyCap = z.object({
+  /** The maximum number of times a user may be shown the same ad during this period.  */
+  maxImpressions: z.number().int().optional(),
+  /** Whether unlimited frequency capping is applied. When this field is set to `true` */
+  unlimited: z.boolean().optional(),
+  /** Optional. The maximum number of times a user may click-through or fully view an  */
+  maxViews: z.number().int().optional(),
+  /** The time unit in which the frequency cap will be applied. Required when unlimite */
+  timeUnit: z.enum(["TIME_UNIT_UNSPECIFIED", "TIME_UNIT_LIFETIME", "TIME_UNIT_MONTHS", "TIME_UNIT_WEEKS", "TIME_UNIT_DAYS", "TIME_UNIT_HOURS", "TIME_UNIT_MINUTES"]).optional(),
+  /** The number of time_unit the frequency cap will last. Required when unlimited is  */
+  timeUnitCount: z.number().int().optional(),
+});
+
+/**
+ * Settings that control how the campaign budget is allocated.
+ */
+export const CampaignBudget = z.object({
+  /** Required. The external source of the budget. */
+  externalBudgetSource: z.enum(["EXTERNAL_BUDGET_SOURCE_UNSPECIFIED", "EXTERNAL_BUDGET_SOURCE_NONE", "EXTERNAL_BUDGET_SOURCE_MEDIA_OCEAN"]).optional(),
+  /** Additional metadata for use by the Mediaocean Prisma tool. Required for Mediaoce */
+  prismaConfig: z.lazy(() => PrismaConfig).optional(),
+  /** Required. The date range for the campaign budget. Linked budget segments may hav */
+  dateRange: z.lazy(() => DateRange).optional(),
+  /** Immutable. The ID identifying this budget to the external source. If this field  */
+  externalBudgetId: z.string().optional(),
+  /** Required. The display name of the budget. Must be UTF-8 encoded with a maximum s */
+  displayName: z.string().optional(),
+  /** Immutable. The ID used to group budgets to be included the same invoice. If this */
+  invoiceGroupingId: z.string().optional(),
+  /** Required. Immutable. Specifies whether the budget is measured in currency or imp */
+  budgetUnit: z.enum(["BUDGET_UNIT_UNSPECIFIED", "BUDGET_UNIT_CURRENCY", "BUDGET_UNIT_IMPRESSIONS"]).optional(),
+  /** Required. The total amount the linked insertion order segments can budget. The a */
+  budgetAmountMicros: z.string().optional(),
+  /** The unique ID of the campaign budget. Assigned by the system. Do not set for new */
+  budgetId: z.string().optional(),
+});
+
+/**
+ * Settings specific to the Mediaocean Prisma tool.
+ */
+export const PrismaConfig = z.object({
+  /** Required. The entity allocated this budget (DSP, site, etc.). */
+  supplier: z.string().optional(),
+  /** Required. Relevant client, product, and estimate codes from the Mediaocean Prism */
+  prismaCpeCode: z.lazy(() => PrismaCpeCode).optional(),
+  /** Required. The Prisma type. */
+  prismaType: z.enum(["PRISMA_TYPE_UNSPECIFIED", "PRISMA_TYPE_DISPLAY", "PRISMA_TYPE_SEARCH", "PRISMA_TYPE_VIDEO", "PRISMA_TYPE_AUDIO", "PRISMA_TYPE_SOCIAL", "PRISMA_TYPE_FEE"]).optional(),
+});
+
+/**
+ * Google Payments Center supports searching and filtering on the component fields of this code.
+ */
+export const PrismaCpeCode = z.object({
+  /** The Prisma estimate code. */
+  prismaEstimateCode: z.string().optional(),
+  /** The Prisma product code. */
+  prismaProductCode: z.string().optional(),
+  /** The Prisma client code. */
+  prismaClientCode: z.string().optional(),
+});
+
+/**
+ * A date range.
+ */
+export const DateRange = z.object({
+  /** The lower bound of the date range, inclusive. Must specify a positive value for  */
+  startDate: z.lazy(() => Date).optional(),
+  /** The upper bound of the date range, inclusive. Must specify a positive value for  */
+  endDate: z.lazy(() => Date).optional(),
+});
+
+/**
+ * Represents a whole or partial calendar date, such as a birthday. The time of day and time zone are either specified elsewhere or are insignificant. The date is relative to the Gregorian Calendar. This can represent one of the following: * A full date, with non-zero year, month, and day values. * A month and day, with a zero year (for example, an anniversary). * A year on its own, with a zero month and a zero day. * A year and month, with a zero day (for example, a credit card expiration date). Related types: * google.type.TimeOfDay * google.type.DateTime * google.protobuf.Timestamp
+ */
+export const Date = z.object({
+  /** Day of a month. Must be from 1 to 31 and valid for the year and month, or 0 to s */
+  day: z.number().int().optional(),
+  /** Month of a year. Must be from 1 to 12, or 0 to specify a year without a month an */
+  month: z.number().int().optional(),
+  /** Year of the date. Must be from 1 to 9999, or 0 to specify a date without a year. */
+  year: z.number().int().optional(),
+});
+
+/**
+ * Settings that track the planned spend and duration of a campaign.
+ */
+export const CampaignFlight = z.object({
+  /** The amount the campaign is expected to spend for its given planned_dates. This w */
+  plannedSpendAmountMicros: z.string().optional(),
+  /** Required. The dates that the campaign is expected to run. They are resolved rela */
+  plannedDates: z.lazy(() => DateRange).optional(),
+});
+
+/**
+ * Settings that control the goal of a campaign.
+ */
+export const CampaignGoal = z.object({
+  /** Required. The performance goal of the campaign. Acceptable values for performanc */
+  performanceGoal: z.lazy(() => PerformanceGoal).optional(),
+  /** Required. The type of the campaign goal. */
+  campaignGoalType: z.enum(["CAMPAIGN_GOAL_TYPE_UNSPECIFIED", "CAMPAIGN_GOAL_TYPE_APP_INSTALL", "CAMPAIGN_GOAL_TYPE_BRAND_AWARENESS", "CAMPAIGN_GOAL_TYPE_OFFLINE_ACTION", "CAMPAIGN_GOAL_TYPE_ONLINE_ACTION"]).optional(),
+});
+
+/**
+ * Settings that control the performance goal of a campaign.
+ */
+export const PerformanceGoal = z.object({
+  /** The decimal representation of the goal percentage in micros. Applicable when per */
+  performanceGoalPercentageMicros: z.string().optional(),
+  /** Required. The type of the performance goal. */
+  performanceGoalType: z.enum(["PERFORMANCE_GOAL_TYPE_UNSPECIFIED", "PERFORMANCE_GOAL_TYPE_CPM", "PERFORMANCE_GOAL_TYPE_CPC", "PERFORMANCE_GOAL_TYPE_CPA", "PERFORMANCE_GOAL_TYPE_CTR", "PERFORMANCE_GOAL_TYPE_VIEWABILITY", "PERFORMANCE_GOAL_TYPE_CPIAVC", "PERFORMANCE_GOAL_TYPE_CPE", "PERFORMANCE_GOAL_TYPE_CPV", "PERFORMANCE_GOAL_TYPE_CLICK_CVR", "PERFORMANCE_GOAL_TYPE_IMPRESSION_CVR", "PERFORMANCE_GOAL_TYPE_VCPM", "PERFORMANCE_GOAL_TYPE_VTR", "PERFORMANCE_GOAL_TYPE_AUDIO_COMPLETION_RATE", "PERFORMANCE_GOAL_TYPE_VIDEO_COMPLETION_RATE", "PERFORMANCE_GOAL_TYPE_OTHER"]).optional(),
+  /** A key performance indicator (KPI) string, which can be empty. Must be UTF-8 enco */
+  performanceGoalString: z.string().optional(),
+  /** The goal amount, in micros of the advertiser's currency. Applicable when perform */
+  performanceGoalAmountMicros: z.string().optional(),
+});
+
+/**
  * A single insertion order.
  */
 export const InsertionOrder = z.object({
-  /** Required. The key performance indicator (KPI) of the insertion order. This is re */
-  kpi: z.lazy(() => Kpi).optional(),
-  /** Output only. The reservation type of the insertion order. */
-  reservationType: z.enum(["RESERVATION_TYPE_UNSPECIFIED", "RESERVATION_TYPE_NOT_GUARANTEED", "RESERVATION_TYPE_PROGRAMMATIC_GUARANTEED", "RESERVATION_TYPE_TAG_GUARANTEED", "RESERVATION_TYPE_PETRA_VIRAL", "RESERVATION_TYPE_INSTANT_RESERVE"]).optional(),
   /** Optional. The bidding strategy of the insertion order. By default, fixed_bid is  */
   bidStrategy: z.lazy(() => BiddingStrategy).optional(),
+  /** Required. Controls whether or not the insertion order can spend its budget and b */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
+  /** Optional. Required. The optimization objective of the insertion order. */
+  optimizationObjective: z.enum(["OPTIMIZATION_OBJECTIVE_UNSPECIFIED", "CONVERSION", "CLICK", "BRAND_AWARENESS", "CUSTOM", "NO_OBJECTIVE"]).optional(),
+  /** Required. The display name of the insertion order. Must be UTF-8 encoded with a  */
+  displayName: z.string().optional(),
+  /** Required. Immutable. The unique ID of the campaign that the insertion order belo */
+  campaignId: z.string().optional(),
   /** Required. The budget allocation settings of the insertion order. */
   budget: z.lazy(() => InsertionOrderBudget).optional(),
   /** Required. The budget spending speed setting of the insertion order. pacing_type  */
   pacing: z.lazy(() => Pacing).optional(),
-  /** Optional. The type of insertion order. If this field is unspecified in creation, */
-  insertionOrderType: z.enum(["INSERTION_ORDER_TYPE_UNSPECIFIED", "RTB", "OVER_THE_TOP"]).optional(),
-  /** Output only. The resource name of the insertion order. */
-  name: z.string().optional(),
-  /** Optional. Additional integration details of the insertion order. */
-  integrationDetails: z.lazy(() => IntegrationDetails).optional(),
+  /** Output only. The reservation type of the insertion order. */
+  reservationType: z.enum(["RESERVATION_TYPE_UNSPECIFIED", "RESERVATION_TYPE_NOT_GUARANTEED", "RESERVATION_TYPE_PROGRAMMATIC_GUARANTEED", "RESERVATION_TYPE_TAG_GUARANTEED", "RESERVATION_TYPE_PETRA_VIRAL", "RESERVATION_TYPE_INSTANT_RESERVE"]).optional(),
   /** Output only. The unique ID of the advertiser the insertion order belongs to. */
   advertiserId: z.string().optional(),
-  /** Optional. The partner costs associated with the insertion order. If absent or em */
-  partnerCosts: z.array(z.lazy(() => PartnerCost)).optional(),
-  /** Output only. The timestamp when the insertion order was last updated. Assigned b */
-  updateTime: z.string().optional(),
-  /** Required. Immutable. The unique ID of the campaign that the insertion order belo */
-  campaignId: z.string().optional(),
+  /** Optional. The type of insertion order. If this field is unspecified in creation, */
+  insertionOrderType: z.enum(["INSERTION_ORDER_TYPE_UNSPECIFIED", "RTB", "OVER_THE_TOP"]).optional(),
   /** Required. The frequency capping setting of the insertion order. */
   frequencyCap: z.lazy(() => FrequencyCap).optional(),
-  /** Required. The display name of the insertion order. Must be UTF-8 encoded with a  */
-  displayName: z.string().optional(),
-  /** Optional. Required. The optimization objective of the insertion order. */
-  optimizationObjective: z.enum(["OPTIMIZATION_OBJECTIVE_UNSPECIFIED", "CONVERSION", "CLICK", "BRAND_AWARENESS", "CUSTOM", "NO_OBJECTIVE"]).optional(),
-  /** Required. Controls whether or not the insertion order can spend its budget and b */
-  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
+  /** Output only. The resource name of the insertion order. */
+  name: z.string().optional(),
+  /** Output only. The timestamp when the insertion order was last updated. Assigned b */
+  updateTime: z.string().optional(),
+  /** Required. The key performance indicator (KPI) of the insertion order. This is re */
+  kpi: z.lazy(() => Kpi).optional(),
+  /** Optional. The partner costs associated with the insertion order. If absent or em */
+  partnerCosts: z.array(z.lazy(() => PartnerCost)).optional(),
+  /** Optional. Additional integration details of the insertion order. */
+  integrationDetails: z.lazy(() => IntegrationDetails).optional(),
   /** Output only. The unique ID of the insertion order. Assigned by the system. */
   insertionOrderId: z.string().optional(),
-});
-
-/**
- * Settings that control the key performance indicator, or KPI, of an insertion order.
- */
-export const Kpi = z.object({
-  /** Required. The type of KPI. */
-  kpiType: z.enum(["KPI_TYPE_UNSPECIFIED", "KPI_TYPE_CPM", "KPI_TYPE_CPC", "KPI_TYPE_CPA", "KPI_TYPE_CTR", "KPI_TYPE_VIEWABILITY", "KPI_TYPE_CPIAVC", "KPI_TYPE_CPE", "KPI_TYPE_CPV", "KPI_TYPE_CLICK_CVR", "KPI_TYPE_IMPRESSION_CVR", "KPI_TYPE_VCPM", "KPI_TYPE_VTR", "KPI_TYPE_AUDIO_COMPLETION_RATE", "KPI_TYPE_VIDEO_COMPLETION_RATE", "KPI_TYPE_CPCL", "KPI_TYPE_CPCV", "KPI_TYPE_TOS10", "KPI_TYPE_MAXIMIZE_PACING", "KPI_TYPE_CUSTOM_IMPRESSION_VALUE_OVER_COST", "KPI_TYPE_OTHER"]).optional(),
-  /** The goal amount, in micros of the advertiser's currency. Applicable when kpi_typ */
-  kpiAmountMicros: z.string().optional(),
-  /** Optional. Custom Bidding Algorithm ID associated with KPI_CUSTOM_IMPRESSION_VALU */
-  kpiAlgorithmId: z.string().optional(),
-  /** A KPI string, which can be empty. Must be UTF-8 encoded with a length of no more */
-  kpiString: z.string().optional(),
-  /** The decimal representation of the goal percentage in micros. Applicable when kpi */
-  kpiPercentageMicros: z.string().optional(),
 });
 
 /**
  * Settings that control the bid strategy. Bid strategy determines the bid price.
  */
 export const BiddingStrategy = z.object({
-  /** A strategy that automatically adjusts the bid to optimize to your performance go */
-  maximizeSpendAutoBid: z.lazy(() => MaximizeSpendBidStrategy).optional(),
-  /** A bid strategy used by YouTube and Partners resources. It can only be used for a */
-  youtubeAndPartnersBid: z.lazy(() => YoutubeAndPartnersBiddingStrategy).optional(),
   /** A strategy that uses a fixed bid price. */
   fixedBid: z.lazy(() => FixedBidStrategy).optional(),
   /** A strategy that automatically adjusts the bid to meet or beat a specified perfor */
   performanceGoalAutoBid: z.lazy(() => PerformanceGoalBidStrategy).optional(),
-});
-
-/**
- * A strategy that automatically adjusts the bid to optimize a specified performance goal while spending the full budget.
- */
-export const MaximizeSpendBidStrategy = z.object({
-  /** The ID of the Custom Bidding Algorithm used by this strategy. Only applicable wh */
-  customBiddingAlgorithmId: z.string().optional(),
-  /** Required. The type of the performance goal that the bidding strategy tries to mi */
-  performanceGoalType: z.enum(["BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED"]).optional(),
-  /** The maximum average CPM that may be bid, in micros of the advertiser's currency. */
-  maxAverageCpmBidAmountMicros: z.string().optional(),
-  /** Whether the strategy takes deal floor prices into account. */
-  raiseBidForDeals: z.boolean().optional(),
-});
-
-/**
- * Settings that control the bid strategy for YouTube and Partners resources.
- */
-export const YoutubeAndPartnersBiddingStrategy = z.object({
-  /** The type of the bidding strategy. */
-  type: z.enum(["YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_UNSPECIFIED", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPV", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPM", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPM", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_CPM", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_LIFT", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSIONS", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPV", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSION_VALUE"]).optional(),
-  /** The value used by the bidding strategy. When the bidding strategy is assigned at */
-  value: z.string().optional(),
-  /** Output only. The effective target CPA for ad group, in micros of advertiser's cu */
-  adGroupEffectiveTargetCpaValue: z.string().optional(),
-  /** Output only. Source of the effective target CPA value for ad group. */
-  adGroupEffectiveTargetCpaSource: z.enum(["BIDDING_SOURCE_UNSPECIFIED", "BIDDING_SOURCE_LINE_ITEM", "BIDDING_SOURCE_AD_GROUP"]).optional(),
+  /** A bid strategy used by YouTube and Partners resources. It can only be used for a */
+  youtubeAndPartnersBid: z.lazy(() => YoutubeAndPartnersBiddingStrategy).optional(),
+  /** A strategy that automatically adjusts the bid to optimize to your performance go */
+  maximizeSpendAutoBid: z.lazy(() => MaximizeSpendBidStrategy).optional(),
 });
 
 /**
@@ -366,20 +468,48 @@ export const PerformanceGoalBidStrategy = z.object({
   performanceGoalAmountMicros: z.string().optional(),
   /** The maximum average CPM that may be bid, in micros of the advertiser's currency. */
   maxAverageCpmBidAmountMicros: z.string().optional(),
-  /** Required. The type of the performance goal that the bidding strategy will try to */
-  performanceGoalType: z.enum(["BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED"]).optional(),
   /** The ID of the Custom Bidding Algorithm used by this strategy. Only applicable wh */
   customBiddingAlgorithmId: z.string().optional(),
+  /** Required. The type of the performance goal that the bidding strategy will try to */
+  performanceGoalType: z.enum(["BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED"]).optional(),
+});
+
+/**
+ * Settings that control the bid strategy for YouTube and Partners resources.
+ */
+export const YoutubeAndPartnersBiddingStrategy = z.object({
+  /** Output only. The effective target CPA for ad group, in micros of advertiser's cu */
+  adGroupEffectiveTargetCpaValue: z.string().optional(),
+  /** Output only. Source of the effective target CPA value for ad group. */
+  adGroupEffectiveTargetCpaSource: z.enum(["BIDDING_SOURCE_UNSPECIFIED", "BIDDING_SOURCE_LINE_ITEM", "BIDDING_SOURCE_AD_GROUP"]).optional(),
+  /** The value used by the bidding strategy. When the bidding strategy is assigned at */
+  value: z.string().optional(),
+  /** The type of the bidding strategy. */
+  type: z.enum(["YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_UNSPECIFIED", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPV", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPM", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPM", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_CPM", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_LIFT", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSIONS", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPV", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS", "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSION_VALUE"]).optional(),
+});
+
+/**
+ * A strategy that automatically adjusts the bid to optimize a specified performance goal while spending the full budget.
+ */
+export const MaximizeSpendBidStrategy = z.object({
+  /** The maximum average CPM that may be bid, in micros of the advertiser's currency. */
+  maxAverageCpmBidAmountMicros: z.string().optional(),
+  /** The ID of the Custom Bidding Algorithm used by this strategy. Only applicable wh */
+  customBiddingAlgorithmId: z.string().optional(),
+  /** Required. The type of the performance goal that the bidding strategy tries to mi */
+  performanceGoalType: z.enum(["BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN", "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED"]).optional(),
+  /** Whether the strategy takes deal floor prices into account. */
+  raiseBidForDeals: z.boolean().optional(),
 });
 
 /**
  * Settings that control how insertion order budget is allocated.
  */
 export const InsertionOrderBudget = z.object({
-  /** Optional. The type of automation used to manage bid and budget for the insertion */
-  automationType: z.enum(["INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED", "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET", "INSERTION_ORDER_AUTOMATION_TYPE_NONE", "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET"]).optional(),
   /** Required. The list of budget segments. Use a budget segment to specify a specifi */
   budgetSegments: z.array(z.lazy(() => InsertionOrderBudgetSegment)).optional(),
+  /** Optional. The type of automation used to manage bid and budget for the insertion */
+  automationType: z.enum(["INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED", "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET", "INSERTION_ORDER_AUTOMATION_TYPE_NONE", "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET"]).optional(),
   /** Required. Immutable. The budget unit specifies whether the budget is currency ba */
   budgetUnit: z.enum(["BUDGET_UNIT_UNSPECIFIED", "BUDGET_UNIT_CURRENCY", "BUDGET_UNIT_IMPRESSIONS"]).optional(),
 });
@@ -388,50 +518,44 @@ export const InsertionOrderBudget = z.object({
  * Settings that control the budget of a single budget segment.
  */
 export const InsertionOrderBudgetSegment = z.object({
-  /** Optional. The budget segment description. It can be used to enter Purchase Order */
-  description: z.string().optional(),
-  /** Required. The budget amount the insertion order will spend for the given date_ra */
-  budgetAmountMicros: z.string().optional(),
   /** Optional. The budget_id of the campaign budget that this insertion order budget  */
   campaignBudgetId: z.string().optional(),
+  /** Optional. The budget segment description. It can be used to enter Purchase Order */
+  description: z.string().optional(),
   /** Required. The start and end date settings of the budget segment. They are resolv */
   dateRange: z.lazy(() => DateRange).optional(),
-});
-
-/**
- * A date range.
- */
-export const DateRange = z.object({
-  /** The lower bound of the date range, inclusive. Must specify a positive value for  */
-  startDate: z.lazy(() => Date).optional(),
-  /** The upper bound of the date range, inclusive. Must specify a positive value for  */
-  endDate: z.lazy(() => Date).optional(),
-});
-
-/**
- * Represents a whole or partial calendar date, such as a birthday. The time of day and time zone are either specified elsewhere or are insignificant. The date is relative to the Gregorian Calendar. This can represent one of the following: * A full date, with non-zero year, month, and day values. * A month and day, with a zero year (for example, an anniversary). * A year on its own, with a zero month and a zero day. * A year and month, with a zero day (for example, a credit card expiration date). Related types: * google.type.TimeOfDay * google.type.DateTime * google.protobuf.Timestamp
- */
-export const Date = z.object({
-  /** Year of the date. Must be from 1 to 9999, or 0 to specify a date without a year. */
-  year: z.number().int().optional(),
-  /** Day of a month. Must be from 1 to 31 and valid for the year and month, or 0 to s */
-  day: z.number().int().optional(),
-  /** Month of a year. Must be from 1 to 12, or 0 to specify a year without a month an */
-  month: z.number().int().optional(),
+  /** Required. The budget amount the insertion order will spend for the given date_ra */
+  budgetAmountMicros: z.string().optional(),
 });
 
 /**
  * Settings that control the rate at which a budget is spent.
  */
 export const Pacing = z.object({
-  /** Required. The type of pacing that defines how the budget amount will be spent ac */
-  pacingType: z.enum(["PACING_TYPE_UNSPECIFIED", "PACING_TYPE_AHEAD", "PACING_TYPE_ASAP", "PACING_TYPE_EVEN"]).optional(),
-  /** Maximum currency amount to spend every day in micros of advertiser's currency. A */
-  dailyMaxMicros: z.string().optional(),
   /** Maximum number of impressions to serve every day. Applicable when the budget is  */
   dailyMaxImpressions: z.string().optional(),
+  /** Required. The type of pacing that defines how the budget amount will be spent ac */
+  pacingType: z.enum(["PACING_TYPE_UNSPECIFIED", "PACING_TYPE_AHEAD", "PACING_TYPE_ASAP", "PACING_TYPE_EVEN"]).optional(),
   /** Required. The time period in which the pacing budget will be spent. When automat */
   pacingPeriod: z.enum(["PACING_PERIOD_UNSPECIFIED", "PACING_PERIOD_DAILY", "PACING_PERIOD_FLIGHT"]).optional(),
+  /** Maximum currency amount to spend every day in micros of advertiser's currency. A */
+  dailyMaxMicros: z.string().optional(),
+});
+
+/**
+ * Settings that control the key performance indicator, or KPI, of an insertion order.
+ */
+export const Kpi = z.object({
+  /** A KPI string, which can be empty. Must be UTF-8 encoded with a length of no more */
+  kpiString: z.string().optional(),
+  /** Required. The type of KPI. */
+  kpiType: z.enum(["KPI_TYPE_UNSPECIFIED", "KPI_TYPE_CPM", "KPI_TYPE_CPC", "KPI_TYPE_CPA", "KPI_TYPE_CTR", "KPI_TYPE_VIEWABILITY", "KPI_TYPE_CPIAVC", "KPI_TYPE_CPE", "KPI_TYPE_CPV", "KPI_TYPE_CLICK_CVR", "KPI_TYPE_IMPRESSION_CVR", "KPI_TYPE_VCPM", "KPI_TYPE_VTR", "KPI_TYPE_AUDIO_COMPLETION_RATE", "KPI_TYPE_VIDEO_COMPLETION_RATE", "KPI_TYPE_CPCL", "KPI_TYPE_CPCV", "KPI_TYPE_TOS10", "KPI_TYPE_MAXIMIZE_PACING", "KPI_TYPE_CUSTOM_IMPRESSION_VALUE_OVER_COST", "KPI_TYPE_OTHER"]).optional(),
+  /** The decimal representation of the goal percentage in micros. Applicable when kpi */
+  kpiPercentageMicros: z.string().optional(),
+  /** The goal amount, in micros of the advertiser's currency. Applicable when kpi_typ */
+  kpiAmountMicros: z.string().optional(),
+  /** Optional. Custom Bidding Algorithm ID associated with KPI_CUSTOM_IMPRESSION_VALU */
+  kpiAlgorithmId: z.string().optional(),
 });
 
 /**
@@ -442,198 +566,70 @@ export const PartnerCost = z.object({
   feePercentageMillis: z.string().optional(),
   /** The invoice type for this partner cost. * Required when cost_type is one of: - ` */
   invoiceType: z.enum(["PARTNER_COST_INVOICE_TYPE_UNSPECIFIED", "PARTNER_COST_INVOICE_TYPE_DV360", "PARTNER_COST_INVOICE_TYPE_PARTNER"]).optional(),
-  /** Required. The fee type for this partner cost. */
-  feeType: z.enum(["PARTNER_COST_FEE_TYPE_UNSPECIFIED", "PARTNER_COST_FEE_TYPE_CPM_FEE", "PARTNER_COST_FEE_TYPE_MEDIA_FEE"]).optional(),
-  /** Required. The type of the partner cost. */
-  costType: z.enum(["PARTNER_COST_TYPE_UNSPECIFIED", "PARTNER_COST_TYPE_ADLOOX", "PARTNER_COST_TYPE_ADLOOX_PREBID", "PARTNER_COST_TYPE_ADSAFE", "PARTNER_COST_TYPE_ADXPOSE", "PARTNER_COST_TYPE_AGGREGATE_KNOWLEDGE", "PARTNER_COST_TYPE_AGENCY_TRADING_DESK", "PARTNER_COST_TYPE_DV360_FEE", "PARTNER_COST_TYPE_COMSCORE_VCE", "PARTNER_COST_TYPE_DATA_MANAGEMENT_PLATFORM", "PARTNER_COST_TYPE_DEFAULT", "PARTNER_COST_TYPE_DOUBLE_VERIFY", "PARTNER_COST_TYPE_DOUBLE_VERIFY_PREBID", "PARTNER_COST_TYPE_EVIDON", "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_VIDEO", "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_PREBID", "PARTNER_COST_TYPE_MEDIA_COST_DATA", "PARTNER_COST_TYPE_MOAT_VIDEO", "PARTNER_COST_TYPE_NIELSEN_DAR", "PARTNER_COST_TYPE_SHOP_LOCAL", "PARTNER_COST_TYPE_TERACENT", "PARTNER_COST_TYPE_THIRD_PARTY_AD_SERVER", "PARTNER_COST_TYPE_TRUST_METRICS", "PARTNER_COST_TYPE_VIZU", "PARTNER_COST_TYPE_CUSTOM_FEE_1", "PARTNER_COST_TYPE_CUSTOM_FEE_2", "PARTNER_COST_TYPE_CUSTOM_FEE_3", "PARTNER_COST_TYPE_CUSTOM_FEE_4", "PARTNER_COST_TYPE_CUSTOM_FEE_5", "PARTNER_COST_TYPE_SCIBIDS_FEE"]).optional(),
   /** The CPM fee amount in micros of advertiser's currency. Applicable when the fee_t */
   feeAmount: z.string().optional(),
-});
-
-/**
- * Settings that control the number of times a user may be shown with the same ad during a given time period.
- */
-export const FrequencyCap = z.object({
-  /** The time unit in which the frequency cap will be applied. Required when unlimite */
-  timeUnit: z.enum(["TIME_UNIT_UNSPECIFIED", "TIME_UNIT_LIFETIME", "TIME_UNIT_MONTHS", "TIME_UNIT_WEEKS", "TIME_UNIT_DAYS", "TIME_UNIT_HOURS", "TIME_UNIT_MINUTES"]).optional(),
-  /** The maximum number of times a user may be shown the same ad during this period.  */
-  maxImpressions: z.number().int().optional(),
-  /** Whether unlimited frequency capping is applied. When this field is set to `true` */
-  unlimited: z.boolean().optional(),
-  /** Optional. The maximum number of times a user may click-through or fully view an  */
-  maxViews: z.number().int().optional(),
-  /** The number of time_unit the frequency cap will last. Required when unlimited is  */
-  timeUnitCount: z.number().int().optional(),
+  /** Required. The type of the partner cost. */
+  costType: z.enum(["PARTNER_COST_TYPE_UNSPECIFIED", "PARTNER_COST_TYPE_ADLOOX", "PARTNER_COST_TYPE_ADLOOX_PREBID", "PARTNER_COST_TYPE_ADSAFE", "PARTNER_COST_TYPE_ADXPOSE", "PARTNER_COST_TYPE_AGGREGATE_KNOWLEDGE", "PARTNER_COST_TYPE_AGENCY_TRADING_DESK", "PARTNER_COST_TYPE_DV360_FEE", "PARTNER_COST_TYPE_COMSCORE_VCE", "PARTNER_COST_TYPE_DATA_MANAGEMENT_PLATFORM", "PARTNER_COST_TYPE_DEFAULT", "PARTNER_COST_TYPE_DOUBLE_VERIFY", "PARTNER_COST_TYPE_DOUBLE_VERIFY_PREBID", "PARTNER_COST_TYPE_EVIDON", "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_VIDEO", "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_PREBID", "PARTNER_COST_TYPE_MEDIA_COST_DATA", "PARTNER_COST_TYPE_MOAT_VIDEO", "PARTNER_COST_TYPE_NIELSEN_DAR", "PARTNER_COST_TYPE_SHOP_LOCAL", "PARTNER_COST_TYPE_TERACENT", "PARTNER_COST_TYPE_THIRD_PARTY_AD_SERVER", "PARTNER_COST_TYPE_TRUST_METRICS", "PARTNER_COST_TYPE_VIZU", "PARTNER_COST_TYPE_CUSTOM_FEE_1", "PARTNER_COST_TYPE_CUSTOM_FEE_2", "PARTNER_COST_TYPE_CUSTOM_FEE_3", "PARTNER_COST_TYPE_CUSTOM_FEE_4", "PARTNER_COST_TYPE_CUSTOM_FEE_5", "PARTNER_COST_TYPE_SCIBIDS_FEE"]).optional(),
+  /** Required. The fee type for this partner cost. */
+  feeType: z.enum(["PARTNER_COST_FEE_TYPE_UNSPECIFIED", "PARTNER_COST_FEE_TYPE_CPM_FEE", "PARTNER_COST_FEE_TYPE_MEDIA_FEE"]).optional(),
 });
 
 /**
  * A single line item.
  */
 export const LineItem = z.object({
-  /** Required. The bidding strategy of the line item. */
-  bidStrategy: z.lazy(() => BiddingStrategy).optional(),
-  /** Output only. The warning messages generated by the line item. These warnings do  */
-  warningMessages: z.array(z.enum(["LINE_ITEM_WARNING_MESSAGE_UNSPECIFIED", "INVALID_FLIGHT_DATES", "EXPIRED", "PENDING_FLIGHT", "ALL_PARTNER_ENABLED_EXCHANGES_NEGATIVELY_TARGETED", "INVALID_INVENTORY_SOURCE", "APP_INVENTORY_INVALID_SITE_TARGETING", "APP_INVENTORY_INVALID_AUDIENCE_LISTS", "NO_VALID_CREATIVE", "PARENT_INSERTION_ORDER_PAUSED", "PARENT_INSERTION_ORDER_EXPIRED"])).optional(),
-  /** Output only. The timestamp when the line item was last updated. Assigned by the  */
-  updateTime: z.string().optional(),
   /** Required. Immutable. The unique ID of the insertion order that the line item bel */
   insertionOrderId: z.string().optional(),
-  /** Output only. Settings specific to YouTube and Partners line items. */
-  youtubeAndPartnersSettings: z.lazy(() => YoutubeAndPartnersSettings).optional(),
-  /** Output only. The unique ID of the campaign that the line item belongs to. */
-  campaignId: z.string().optional(),
   /** Output only. The resource name of the line item. */
   name: z.string().optional(),
+  /** The IDs of the creatives associated with the line item. */
+  creativeIds: z.array(z.string()).optional(),
   /** Required. The start and end time of the line item's flight. */
   flight: z.lazy(() => LineItemFlight).optional(),
-  /** Output only. The reservation type of the line item. */
-  reservationType: z.enum(["RESERVATION_TYPE_UNSPECIFIED", "RESERVATION_TYPE_NOT_GUARANTEED", "RESERVATION_TYPE_PROGRAMMATIC_GUARANTEED", "RESERVATION_TYPE_TAG_GUARANTEED", "RESERVATION_TYPE_PETRA_VIRAL", "RESERVATION_TYPE_INSTANT_RESERVE"]).optional(),
   /** The conversion tracking setting of the line item. */
   conversionCounting: z.lazy(() => ConversionCountingConfig).optional(),
-  /** Output only. The unique ID of the advertiser the line item belongs to. */
-  advertiserId: z.string().optional(),
+  /** Required. The budget spending speed setting of the line item. */
+  pacing: z.lazy(() => Pacing).optional(),
+  /** The partner costs associated with the line item. If absent or empty in CreateLin */
+  partnerCosts: z.array(z.lazy(() => PartnerCost)).optional(),
+  /** Required. The budget allocation setting of the line item. */
+  budget: z.lazy(() => LineItemBudget).optional(),
+  /** Output only. The unique ID of the campaign that the line item belongs to. */
+  campaignId: z.string().optional(),
   /** The mobile app promoted by the line item. This is applicable only when line_item */
   mobileApp: z.lazy(() => MobileApp).optional(),
   /** Required. The partner revenue model setting of the line item. */
   partnerRevenueModel: z.lazy(() => PartnerRevenueModel).optional(),
-  /** Required. Immutable. The type of the line item. */
-  lineItemType: z.enum(["LINE_ITEM_TYPE_UNSPECIFIED", "LINE_ITEM_TYPE_DISPLAY_DEFAULT", "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INSTALL", "LINE_ITEM_TYPE_VIDEO_DEFAULT", "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INSTALL", "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INVENTORY", "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INVENTORY", "LINE_ITEM_TYPE_AUDIO_DEFAULT", "LINE_ITEM_TYPE_VIDEO_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_ACTION", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIDEO_SEQUENCE", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_AUDIO", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_TARGET_FREQUENCY", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIEW", "LINE_ITEM_TYPE_DISPLAY_OUT_OF_HOME", "LINE_ITEM_TYPE_VIDEO_OUT_OF_HOME"]).optional(),
-  /** Required. The impression frequency cap settings of the line item. The max_impres */
-  frequencyCap: z.lazy(() => FrequencyCap).optional(),
-  /** Required. The budget allocation setting of the line item. */
-  budget: z.lazy(() => LineItemBudget).optional(),
-  /** The IDs of the creatives associated with the line item. */
-  creativeIds: z.array(z.string()).optional(),
-  /** Required. The display name of the line item. Must be UTF-8 encoded with a maximu */
-  displayName: z.string().optional(),
-  /** The partner costs associated with the line item. If absent or empty in CreateLin */
-  partnerCosts: z.array(z.lazy(() => PartnerCost)).optional(),
-  /** Required. The budget spending speed setting of the line item. */
-  pacing: z.lazy(() => Pacing).optional(),
-  /** The [optimized targeting](//support.google.com/displayvideo/answer/12060859) set */
-  targetingExpansion: z.lazy(() => TargetingExpansionConfig).optional(),
+  /** Output only. Settings specific to YouTube and Partners line items. */
+  youtubeAndPartnersSettings: z.lazy(() => YoutubeAndPartnersSettings).optional(),
+  /** Output only. The warning messages generated by the line item. These warnings do  */
+  warningMessages: z.array(z.enum(["LINE_ITEM_WARNING_MESSAGE_UNSPECIFIED", "INVALID_FLIGHT_DATES", "EXPIRED", "PENDING_FLIGHT", "ALL_PARTNER_ENABLED_EXCHANGES_NEGATIVELY_TARGETED", "INVALID_INVENTORY_SOURCE", "APP_INVENTORY_INVALID_SITE_TARGETING", "APP_INVENTORY_INVALID_AUDIENCE_LISTS", "NO_VALID_CREATIVE", "PARENT_INSERTION_ORDER_PAUSED", "PARENT_INSERTION_ORDER_EXPIRED"])).optional(),
+  /** Output only. The timestamp when the line item was last updated. Assigned by the  */
+  updateTime: z.string().optional(),
+  /** Output only. The unique ID of the advertiser the line item belongs to. */
+  advertiserId: z.string().optional(),
   /** Output only. The unique ID of the line item. Assigned by the system. */
   lineItemId: z.string().optional(),
-  /** Integration details of the line item. */
-  integrationDetails: z.lazy(() => IntegrationDetails).optional(),
+  /** Whether this line item will serve European Union political ads. If contains_eu_p */
+  containsEuPoliticalAds: z.enum(["EU_POLITICAL_ADVERTISING_STATUS_UNKNOWN", "CONTAINS_EU_POLITICAL_ADVERTISING", "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING"]).optional(),
+  /** Required. The bidding strategy of the line item. */
+  bidStrategy: z.lazy(() => BiddingStrategy).optional(),
+  /** Required. The display name of the line item. Must be UTF-8 encoded with a maximu */
+  displayName: z.string().optional(),
+  /** Required. Immutable. The type of the line item. */
+  lineItemType: z.enum(["LINE_ITEM_TYPE_UNSPECIFIED", "LINE_ITEM_TYPE_DISPLAY_DEFAULT", "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INSTALL", "LINE_ITEM_TYPE_VIDEO_DEFAULT", "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INSTALL", "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INVENTORY", "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INVENTORY", "LINE_ITEM_TYPE_AUDIO_DEFAULT", "LINE_ITEM_TYPE_VIDEO_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_ACTION", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIDEO_SEQUENCE", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_AUDIO", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE_OVER_THE_TOP", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_TARGET_FREQUENCY", "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIEW", "LINE_ITEM_TYPE_DISPLAY_OUT_OF_HOME", "LINE_ITEM_TYPE_VIDEO_OUT_OF_HOME"]).optional(),
+  /** The [optimized targeting](//support.google.com/displayvideo/answer/12060859) set */
+  targetingExpansion: z.lazy(() => TargetingExpansionConfig).optional(),
+  /** Required. The impression frequency cap settings of the line item. The max_impres */
+  frequencyCap: z.lazy(() => FrequencyCap).optional(),
+  /** Output only. The reservation type of the line item. */
+  reservationType: z.enum(["RESERVATION_TYPE_UNSPECIFIED", "RESERVATION_TYPE_NOT_GUARANTEED", "RESERVATION_TYPE_PROGRAMMATIC_GUARANTEED", "RESERVATION_TYPE_TAG_GUARANTEED", "RESERVATION_TYPE_PETRA_VIRAL", "RESERVATION_TYPE_INSTANT_RESERVE"]).optional(),
   /** Whether to exclude new exchanges from automatically being targeted by the line i */
   excludeNewExchanges: z.boolean().optional(),
   /** Required. Controls whether or not the line item can spend its budget and bid on  */
   entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
-  /** Whether this line item will serve European Union political ads. If contains_eu_p */
-  containsEuPoliticalAds: z.enum(["EU_POLITICAL_ADVERTISING_STATUS_UNKNOWN", "CONTAINS_EU_POLITICAL_ADVERTISING", "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING"]).optional(),
-});
-
-/**
- * Settings for YouTube and Partners line items.
- */
-export const YoutubeAndPartnersSettings = z.object({
-  /** Optional. The settings to control which inventory is allowed for this line item. */
-  videoAdInventoryControl: z.lazy(() => VideoAdInventoryControl).optional(),
-  /** Optional. The ID of the form to generate leads. */
-  leadFormId: z.string().optional(),
-  /** Output only. The kind of content on which the YouTube and Partners ads will be s */
-  contentCategory: z.enum(["YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_UNSPECIFIED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_STANDARD", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_EXPANDED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_LIMITED"]).optional(),
-  /** Optional. The average number of times you want ads from this line item to show t */
-  targetFrequency: z.lazy(() => TargetFrequency).optional(),
-  /** Settings that control what YouTube and Partners inventories the line item will t */
-  inventorySourceSettings: z.lazy(() => YoutubeAndPartnersInventorySourceConfig).optional(),
-  /** Optional. The third-party measurement configs of the line item. */
-  thirdPartyMeasurementConfigs: z.lazy(() => ThirdPartyMeasurementConfigs).optional(),
-  /** Optional. The IDs of the videos appear below the primary video ad when the ad is */
-  relatedVideoIds: z.array(z.string()).optional(),
-  /** Optional. The settings related to VideoAdSequence. */
-  videoAdSequenceSettings: z.lazy(() => VideoAdSequenceSettings).optional(),
-  /** Output only. The content category which takes effect when serving the line item. */
-  effectiveContentCategory: z.enum(["YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_UNSPECIFIED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_STANDARD", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_EXPANDED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_LIMITED"]).optional(),
-  /** The view frequency cap settings of the line item. The max_views field in this se */
-  viewFrequencyCap: z.lazy(() => FrequencyCap).optional(),
-  /** Optional. The ID of the merchant which is linked to the line item for product fe */
-  linkedMerchantId: z.string().optional(),
-});
-
-/**
- * The video ad inventory control used in certain YouTube line item types.
- */
-export const VideoAdInventoryControl = z.object({
-  /** Optional. Whether ads can serve as shorts format. */
-  allowShorts: z.boolean().optional(),
-  /** Optional. Whether ads can serve as in-feed format. */
-  allowInFeed: z.boolean().optional(),
-  /** Optional. Whether ads can serve as in-stream format. */
-  allowInStream: z.boolean().optional(),
-});
-
-/**
- * Setting that controls the average number of times the ads will show to the same person over a certain period of time.
- */
-export const TargetFrequency = z.object({
-  /** The unit of time in which the target frequency will be applied. The following ti */
-  timeUnit: z.enum(["TIME_UNIT_UNSPECIFIED", "TIME_UNIT_LIFETIME", "TIME_UNIT_MONTHS", "TIME_UNIT_WEEKS", "TIME_UNIT_DAYS", "TIME_UNIT_HOURS", "TIME_UNIT_MINUTES"]).optional(),
-  /** The target number of times, on average, the ads will be shown to the same person */
-  targetCount: z.string().optional(),
-  /** The number of time_unit the target frequency will last. The following restrictio */
-  timeUnitCount: z.number().int().optional(),
-});
-
-/**
- * Settings that control what YouTube related inventories the YouTube and Partners line item will target.
- */
-export const YoutubeAndPartnersInventorySourceConfig = z.object({
-  /** Optional. Whether to target inventory on YouTube. This includes both search, cha */
-  includeYoutube: z.boolean().optional(),
-  /** Optional. Whether to target inventory in video apps available with Google TV. */
-  includeGoogleTv: z.boolean().optional(),
-  /** Whether to target inventory on a collection of partner sites and apps that follo */
-  includeYoutubeVideoPartners: z.boolean().optional(),
-});
-
-/**
- * Settings that control what third-party vendors are measuring specific line item metrics.
- */
-export const ThirdPartyMeasurementConfigs = z.object({
-  /** Optional. The third-party vendors measuring viewability. The following third-par */
-  viewabilityVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
-  /** Optional. The third-party vendors measuring reach. The following third-party ven */
-  reachVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
-  /** Optional. The third-party vendors measuring brand safety. The following third-pa */
-  brandSafetyVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
-  /** Optional. The third-party vendors measuring brand lift. The following third-part */
-  brandLiftVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
-});
-
-/**
- * Settings that control how third-party measurement vendors are configured.
- */
-export const ThirdPartyVendorConfig = z.object({
-  /** The third-party measurement vendor. */
-  vendor: z.enum(["THIRD_PARTY_VENDOR_UNSPECIFIED", "THIRD_PARTY_VENDOR_MOAT", "THIRD_PARTY_VENDOR_DOUBLE_VERIFY", "THIRD_PARTY_VENDOR_INTEGRAL_AD_SCIENCE", "THIRD_PARTY_VENDOR_COMSCORE", "THIRD_PARTY_VENDOR_TELEMETRY", "THIRD_PARTY_VENDOR_MEETRICS", "THIRD_PARTY_VENDOR_ZEFR", "THIRD_PARTY_VENDOR_NIELSEN", "THIRD_PARTY_VENDOR_KANTAR", "THIRD_PARTY_VENDOR_DYNATA", "THIRD_PARTY_VENDOR_TRANSUNION"]).optional(),
-  /** The ID used by the platform of the third-party vendor to identify the line item. */
-  placementId: z.string().optional(),
-});
-
-/**
- * Settings related to VideoAdSequence.
- */
-export const VideoAdSequenceSettings = z.object({
-  /** The minimum time interval before the same user sees this sequence again. */
-  minimumDuration: z.enum(["VIDEO_AD_SEQUENCE_MINIMUM_DURATION_UNSPECIFIED", "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_WEEK", "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_MONTH"]).optional(),
-  /** The steps of which the sequence consists. */
-  steps: z.array(z.lazy(() => VideoAdSequenceStep)).optional(),
-});
-
-/**
- * The detail of a single step in a VideoAdSequence.
- */
-export const VideoAdSequenceStep = z.object({
-  /** The interaction on the previous step that will lead the viewer to this step. The */
-  interactionType: z.enum(["INTERACTION_TYPE_UNSPECIFIED", "INTERACTION_TYPE_PAID_VIEW", "INTERACTION_TYPE_SKIP", "INTERACTION_TYPE_IMPRESSION", "INTERACTION_TYPE_ENGAGED_IMPRESSION"]).optional(),
-  /** The ID of the previous step. The first step does not have previous step. */
-  previousStepId: z.string().optional(),
-  /** The ID of the step. */
-  stepId: z.string().optional(),
-  /** The ID of the corresponding ad group of the step. */
-  adGroupId: z.string().optional(),
+  /** Integration details of the line item. */
+  integrationDetails: z.lazy(() => IntegrationDetails).optional(),
 });
 
 /**
@@ -660,26 +656,38 @@ export const ConversionCountingConfig = z.object({
  * Settings that control the behavior of a single Floodlight activity config.
  */
 export const TrackingFloodlightActivityConfig = z.object({
+  /** Required. The number of days after an ad has been clicked in which a conversion  */
+  postClickLookbackWindowDays: z.number().int().optional(),
   /** Required. The ID of the Floodlight activity. */
   floodlightActivityId: z.string().optional(),
   /** Required. The number of days after an ad has been viewed in which a conversion m */
   postViewLookbackWindowDays: z.number().int().optional(),
-  /** Required. The number of days after an ad has been clicked in which a conversion  */
-  postClickLookbackWindowDays: z.number().int().optional(),
+});
+
+/**
+ * Settings that control how budget is allocated.
+ */
+export const LineItemBudget = z.object({
+  /** Required. The type of the budget allocation. `LINE_ITEM_BUDGET_ALLOCATION_TYPE_A */
+  budgetAllocationType: z.enum(["LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNSPECIFIED", "LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC", "LINE_ITEM_BUDGET_ALLOCATION_TYPE_FIXED", "LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNLIMITED"]).optional(),
+  /** The maximum budget amount the line item will spend. Must be greater than 0. When */
+  maxAmount: z.string().optional(),
+  /** Output only. The budget unit specifies whether the budget is currency based or i */
+  budgetUnit: z.enum(["BUDGET_UNIT_UNSPECIFIED", "BUDGET_UNIT_CURRENCY", "BUDGET_UNIT_IMPRESSIONS"]).optional(),
 });
 
 /**
  * A mobile app promoted by a mobile app install line item.
  */
 export const MobileApp = z.object({
-  /** Output only. The app name. */
-  displayName: z.string().optional(),
-  /** Output only. The app platform. */
-  platform: z.enum(["PLATFORM_UNSPECIFIED", "IOS", "ANDROID"]).optional(),
-  /** Output only. The app publisher. */
-  publisher: z.string().optional(),
   /** Required. The ID of the app provided by the platform store. Android apps are ide */
   appId: z.string().optional(),
+  /** Output only. The app name. */
+  displayName: z.string().optional(),
+  /** Output only. The app publisher. */
+  publisher: z.string().optional(),
+  /** Output only. The app platform. */
+  platform: z.enum(["PLATFORM_UNSPECIFIED", "IOS", "ANDROID"]).optional(),
 });
 
 /**
@@ -693,25 +701,125 @@ export const PartnerRevenueModel = z.object({
 });
 
 /**
- * Settings that control how budget is allocated.
+ * Settings for YouTube and Partners line items.
  */
-export const LineItemBudget = z.object({
-  /** Output only. The budget unit specifies whether the budget is currency based or i */
-  budgetUnit: z.enum(["BUDGET_UNIT_UNSPECIFIED", "BUDGET_UNIT_CURRENCY", "BUDGET_UNIT_IMPRESSIONS"]).optional(),
-  /** Required. The type of the budget allocation. `LINE_ITEM_BUDGET_ALLOCATION_TYPE_A */
-  budgetAllocationType: z.enum(["LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNSPECIFIED", "LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC", "LINE_ITEM_BUDGET_ALLOCATION_TYPE_FIXED", "LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNLIMITED"]).optional(),
-  /** The maximum budget amount the line item will spend. Must be greater than 0. When */
-  maxAmount: z.string().optional(),
+export const YoutubeAndPartnersSettings = z.object({
+  /** The view frequency cap settings of the line item. The max_views field in this se */
+  viewFrequencyCap: z.lazy(() => FrequencyCap).optional(),
+  /** Optional. The ID of the merchant which is linked to the line item for product fe */
+  linkedMerchantId: z.string().optional(),
+  /** Settings that control what YouTube and Partners inventories the line item will t */
+  inventorySourceSettings: z.lazy(() => YoutubeAndPartnersInventorySourceConfig).optional(),
+  /** Optional. The ID of the form to generate leads. */
+  leadFormId: z.string().optional(),
+  /** Optional. The settings related to VideoAdSequence. */
+  videoAdSequenceSettings: z.lazy(() => VideoAdSequenceSettings).optional(),
+  /** Optional. The settings to control which inventory is allowed for this line item. */
+  videoAdInventoryControl: z.lazy(() => VideoAdInventoryControl).optional(),
+  /** Optional. The average number of times you want ads from this line item to show t */
+  targetFrequency: z.lazy(() => TargetFrequency).optional(),
+  /** Optional. The IDs of the videos appear below the primary video ad when the ad is */
+  relatedVideoIds: z.array(z.string()).optional(),
+  /** Optional. The third-party measurement configs of the line item. */
+  thirdPartyMeasurementConfigs: z.lazy(() => ThirdPartyMeasurementConfigs).optional(),
+  /** Output only. The kind of content on which the YouTube and Partners ads will be s */
+  contentCategory: z.enum(["YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_UNSPECIFIED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_STANDARD", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_EXPANDED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_LIMITED"]).optional(),
+  /** Output only. The content category which takes effect when serving the line item. */
+  effectiveContentCategory: z.enum(["YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_UNSPECIFIED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_STANDARD", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_EXPANDED", "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_LIMITED"]).optional(),
+});
+
+/**
+ * Settings that control what YouTube related inventories the YouTube and Partners line item will target.
+ */
+export const YoutubeAndPartnersInventorySourceConfig = z.object({
+  /** Optional. Whether to target inventory on YouTube. This includes both search, cha */
+  includeYoutube: z.boolean().optional(),
+  /** Optional. Whether to target inventory in video apps available with Google TV. */
+  includeGoogleTv: z.boolean().optional(),
+  /** Whether to target inventory on a collection of partner sites and apps that follo */
+  includeYoutubeVideoPartners: z.boolean().optional(),
+});
+
+/**
+ * Settings related to VideoAdSequence.
+ */
+export const VideoAdSequenceSettings = z.object({
+  /** The steps of which the sequence consists. */
+  steps: z.array(z.lazy(() => VideoAdSequenceStep)).optional(),
+  /** The minimum time interval before the same user sees this sequence again. */
+  minimumDuration: z.enum(["VIDEO_AD_SEQUENCE_MINIMUM_DURATION_UNSPECIFIED", "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_WEEK", "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_MONTH"]).optional(),
+});
+
+/**
+ * The detail of a single step in a VideoAdSequence.
+ */
+export const VideoAdSequenceStep = z.object({
+  /** The interaction on the previous step that will lead the viewer to this step. The */
+  interactionType: z.enum(["INTERACTION_TYPE_UNSPECIFIED", "INTERACTION_TYPE_PAID_VIEW", "INTERACTION_TYPE_SKIP", "INTERACTION_TYPE_IMPRESSION", "INTERACTION_TYPE_ENGAGED_IMPRESSION"]).optional(),
+  /** The ID of the previous step. The first step does not have previous step. */
+  previousStepId: z.string().optional(),
+  /** The ID of the corresponding ad group of the step. */
+  adGroupId: z.string().optional(),
+  /** The ID of the step. */
+  stepId: z.string().optional(),
+});
+
+/**
+ * The video ad inventory control used in certain YouTube line item types.
+ */
+export const VideoAdInventoryControl = z.object({
+  /** Optional. Whether ads can serve as shorts format. */
+  allowShorts: z.boolean().optional(),
+  /** Optional. Whether ads can serve as in-feed format. */
+  allowInFeed: z.boolean().optional(),
+  /** Optional. Whether ads can serve as in-stream format. */
+  allowInStream: z.boolean().optional(),
+});
+
+/**
+ * Setting that controls the average number of times the ads will show to the same person over a certain period of time.
+ */
+export const TargetFrequency = z.object({
+  /** The number of time_unit the target frequency will last. The following restrictio */
+  timeUnitCount: z.number().int().optional(),
+  /** The target number of times, on average, the ads will be shown to the same person */
+  targetCount: z.string().optional(),
+  /** The unit of time in which the target frequency will be applied. The following ti */
+  timeUnit: z.enum(["TIME_UNIT_UNSPECIFIED", "TIME_UNIT_LIFETIME", "TIME_UNIT_MONTHS", "TIME_UNIT_WEEKS", "TIME_UNIT_DAYS", "TIME_UNIT_HOURS", "TIME_UNIT_MINUTES"]).optional(),
+});
+
+/**
+ * Settings that control what third-party vendors are measuring specific line item metrics.
+ */
+export const ThirdPartyMeasurementConfigs = z.object({
+  /** Optional. The third-party vendors measuring viewability. The following third-par */
+  viewabilityVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
+  /** Optional. The third-party vendors measuring brand lift. The following third-part */
+  brandLiftVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
+  /** Optional. The third-party vendors measuring reach. The following third-party ven */
+  reachVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
+  /** Optional. The third-party vendors measuring brand safety. The following third-pa */
+  brandSafetyVendorConfigs: z.array(z.lazy(() => ThirdPartyVendorConfig)).optional(),
+});
+
+/**
+ * Settings that control how third-party measurement vendors are configured.
+ */
+export const ThirdPartyVendorConfig = z.object({
+  /** The third-party measurement vendor. */
+  vendor: z.enum(["THIRD_PARTY_VENDOR_UNSPECIFIED", "THIRD_PARTY_VENDOR_MOAT", "THIRD_PARTY_VENDOR_DOUBLE_VERIFY", "THIRD_PARTY_VENDOR_INTEGRAL_AD_SCIENCE", "THIRD_PARTY_VENDOR_COMSCORE", "THIRD_PARTY_VENDOR_TELEMETRY", "THIRD_PARTY_VENDOR_MEETRICS", "THIRD_PARTY_VENDOR_ZEFR", "THIRD_PARTY_VENDOR_NIELSEN", "THIRD_PARTY_VENDOR_KANTAR", "THIRD_PARTY_VENDOR_DYNATA", "THIRD_PARTY_VENDOR_TRANSUNION"]).optional(),
+  /** The ID used by the platform of the third-party vendor to identify the line item. */
+  placementId: z.string().optional(),
 });
 
 /**
  * Settings that control the [optimized targeting](//support.google.com/displayvideo/answer/12060859) settings of the line item.
  */
 export const TargetingExpansionConfig = z.object({
-  /** Output only. Magnitude of expansion for eligible first-party user lists under th */
-  audienceExpansionLevel: z.enum(["UNKNOWN", "NO_REACH", "LEAST_REACH", "MID_REACH", "MOST_REACH"]).optional(),
   /** Required. Whether to enable Optimized Targeting for the line item. Optimized tar */
   enableOptimizedTargeting: z.boolean().optional(),
+  /** Output only. Magnitude of expansion for eligible first-party user lists under th */
+  audienceExpansionLevel: z.enum(["UNKNOWN", "NO_REACH", "LEAST_REACH", "MID_REACH", "MOST_REACH"]).optional(),
   /** Output only. Whether to exclude seed list for audience expansion. This field onl */
   audienceExpansionSeedListExcluded: z.boolean().optional(),
 });
@@ -720,26 +828,26 @@ export const TargetingExpansionConfig = z.object({
  * A single ad group associated with a line item.
  */
 export const AdGroup = z.object({
-  /** Controls whether or not the ad group can spend its budget and bid on inventory.  */
-  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
-  /** The display name of the ad group. Must be UTF-8 encoded with a maximum size of 2 */
-  displayName: z.string().optional(),
-  /** The [optimized targeting](//support.google.com/displayvideo/answer/12060859) set */
-  targetingExpansion: z.lazy(() => TargetingExpansionConfig).optional(),
   /** The settings of the product feed in this ad group. */
   productFeedData: z.lazy(() => ProductFeedData).optional(),
-  /** The unique ID of the ad group. Assigned by the system. */
-  adGroupId: z.string().optional(),
-  /** The resource name of the ad group. */
-  name: z.string().optional(),
-  /** The format of the ads in the ad group. */
-  adGroupFormat: z.enum(["AD_GROUP_FORMAT_UNSPECIFIED", "AD_GROUP_FORMAT_IN_STREAM", "AD_GROUP_FORMAT_VIDEO_DISCOVERY", "AD_GROUP_FORMAT_BUMPER", "AD_GROUP_FORMAT_NON_SKIPPABLE_IN_STREAM", "AD_GROUP_FORMAT_AUDIO", "AD_GROUP_FORMAT_RESPONSIVE", "AD_GROUP_FORMAT_REACH", "AD_GROUP_FORMAT_MASTHEAD"]).optional(),
-  /** The unique ID of the advertiser the ad group belongs to. */
-  advertiserId: z.string().optional(),
-  /** The bidding strategy used by the ad group. Only the youtubeAndPartnersBid field  */
-  bidStrategy: z.lazy(() => BiddingStrategy).optional(),
   /** The unique ID of the line item that the ad group belongs to. */
   lineItemId: z.string().optional(),
+  /** The [optimized targeting](//support.google.com/displayvideo/answer/12060859) set */
+  targetingExpansion: z.lazy(() => TargetingExpansionConfig).optional(),
+  /** The format of the ads in the ad group. */
+  adGroupFormat: z.enum(["AD_GROUP_FORMAT_UNSPECIFIED", "AD_GROUP_FORMAT_IN_STREAM", "AD_GROUP_FORMAT_VIDEO_DISCOVERY", "AD_GROUP_FORMAT_BUMPER", "AD_GROUP_FORMAT_NON_SKIPPABLE_IN_STREAM", "AD_GROUP_FORMAT_AUDIO", "AD_GROUP_FORMAT_RESPONSIVE", "AD_GROUP_FORMAT_REACH", "AD_GROUP_FORMAT_MASTHEAD"]).optional(),
+  /** The resource name of the ad group. */
+  name: z.string().optional(),
+  /** The display name of the ad group. Must be UTF-8 encoded with a maximum size of 2 */
+  displayName: z.string().optional(),
+  /** Controls whether or not the ad group can spend its budget and bid on inventory.  */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
+  /** The bidding strategy used by the ad group. Only the youtubeAndPartnersBid field  */
+  bidStrategy: z.lazy(() => BiddingStrategy).optional(),
+  /** The unique ID of the ad group. Assigned by the system. */
+  adGroupId: z.string().optional(),
+  /** The unique ID of the advertiser the ad group belongs to. */
+  advertiserId: z.string().optional(),
 });
 
 /**
@@ -758,20 +866,795 @@ export const ProductFeedData = z.object({
  * A dimension used to match products.
  */
 export const ProductMatchDimension = z.object({
-  /** The custom label to match all the products with the label. */
-  customLabel: z.lazy(() => CustomLabel).optional(),
   /** The ID of the product offer to match with a product with the same offer ID. */
   productOfferId: z.string().optional(),
+  /** The custom label to match all the products with the label. */
+  customLabel: z.lazy(() => CustomLabel).optional(),
 });
 
 /**
  * The key and value of a custom label.
  */
 export const CustomLabel = z.object({
-  /** The value of the label. */
-  value: z.string().optional(),
   /** The key of the label. */
   key: z.enum(["CUSTOM_LABEL_KEY_UNSPECIFIED", "CUSTOM_LABEL_KEY_0", "CUSTOM_LABEL_KEY_1", "CUSTOM_LABEL_KEY_2", "CUSTOM_LABEL_KEY_3", "CUSTOM_LABEL_KEY_4"]).optional(),
+  /** The value of the label. */
+  value: z.string().optional(),
+});
+
+/**
+ * A single ad associated with an ad group.
+ */
+export const AdGroupAd = z.object({
+  /** The policy approval status of the ad. */
+  adPolicy: z.lazy(() => AdPolicy).optional(),
+  /** The unique ID of the advertiser the ad belongs to. */
+  advertiserId: z.string().optional(),
+  /** The resource name of the ad. */
+  name: z.string().optional(),
+  /** Details of a [non-skippable short video ad](//support.google.com/displayvideo/an */
+  bumperAd: z.lazy(() => BumperAd).optional(),
+  /** Details of an [ad served on the YouTube Home feed](//support.google.com/google-a */
+  mastheadAd: z.lazy(() => MastheadAd).optional(),
+  /** Details of an ad sourced from a Display & Video 360 creative. */
+  displayVideoSourceAd: z.lazy(() => DisplayVideoSourceAd).optional(),
+  /** The unique ID of the ad. Assigned by the system. */
+  adGroupAdId: z.string().optional(),
+  /** Details of an [in-stream ad skippable after 5 seconds](//support.google.com/disp */
+  inStreamAd: z.lazy(() => InStreamAd).optional(),
+  /** The unique ID of the ad group that the ad belongs to. *Caution*: Parent ad group */
+  adGroupId: z.string().optional(),
+  /** The entity status of the ad. */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
+  /** Details of an [ad used in a video action campaign](//support.google.com/google-a */
+  videoPerformanceAd: z.lazy(() => VideoPerformanceAd).optional(),
+  /** The display name of the ad. Must be UTF-8 encoded with a maximum size of 255 byt */
+  displayName: z.string().optional(),
+  /** Details of an [audio ad](//support.google.com/displayvideo/answer/6274216) used  */
+  audioAd: z.lazy(() => AudioAd).optional(),
+  /** List of URLs used by the ad. */
+  adUrls: z.array(z.lazy(() => AdUrl)).optional(),
+  /** Details of a [non-skippable short in-stream video ad](//support.google.com/displ */
+  nonSkippableAd: z.lazy(() => NonSkippableAd).optional(),
+  /** Details of an [ad promoting a video](//support.google.com/displayvideo/answer/62 */
+  videoDiscoverAd: z.lazy(() => VideoDiscoveryAd).optional(),
+});
+
+/**
+ * A single ad policy associated with an ad group ad.
+ */
+export const AdPolicy = z.object({
+  /** The entries for each policy topic identified as relating to the ad. Each entry i */
+  adPolicyTopicEntry: z.array(z.lazy(() => AdPolicyTopicEntry)).optional(),
+  /** The policy approval status of an ad, indicating the approval decision. */
+  adPolicyApprovalStatus: z.enum(["AD_POLICY_APPROVAL_STATUS_UNKNOWN", "DISAPPROVED", "APPROVED_LIMITED", "APPROVED", "AREA_OF_INTEREST_ONLY"]).optional(),
+  /** The policy review status of an ad, indicating where in the review process the ad */
+  adPolicyReviewStatus: z.enum(["AD_POLICY_REVIEW_STATUS_UNKNOWN", "REVIEW_IN_PROGRESS", "REVIEWED", "UNDER_APPEAL", "ELIGIBLE_MAY_SERVE"]).optional(),
+});
+
+/**
+ * An entry describing how an ad has been identified as relating to an ad policy.
+ */
+export const AdPolicyTopicEntry = z.object({
+  /** How ad serving will be affected due to the relation to the ad policy topic. */
+  policyTopicType: z.enum(["AD_POLICY_TOPIC_ENTRY_TYPE_UNKNOWN", "PROHIBITED", "FULLY_LIMITED", "LIMITED", "DESCRIPTIVE", "BROADENING", "AREA_OF_INTEREST_ONLY"]).optional(),
+  /** Ad policy help center link for the policy topic. */
+  helpCenterLink: z.string().optional(),
+  /** Localized label text for policy. Examples include "Trademarks in text", "Contain */
+  policyLabel: z.string().optional(),
+  /** The evidence used in the policy decision. */
+  policyTopicEvidences: z.array(z.lazy(() => AdPolicyTopicEvidence)).optional(),
+  /** The serving constraints relevant to the policy decision. */
+  policyTopicConstraints: z.array(z.lazy(() => AdPolicyTopicConstraint)).optional(),
+  /** The policy topic. Examples include "TRADEMARKS", "ALCOHOL", etc. */
+  policyTopic: z.string().optional(),
+  /** A short summary description of the policy topic. */
+  policyTopicDescription: z.string().optional(),
+  /** The source of the policy decision. */
+  policyDecisionType: z.enum(["AD_POLICY_DECISION_TYPE_UNKNOWN", "PURSUANT_TO_NOTICE", "GOOGLE_INVESTIGATION"]).optional(),
+  /** The policy enforcement means used in the policy review. */
+  policyEnforcementMeans: z.enum(["AD_POLICY_ENFORCEMENT_MEANS_UNKNOWN", "AUTOMATED", "HUMAN_REVIEW"]).optional(),
+  /** Information on how to appeal the policy decision. */
+  appealInfo: z.lazy(() => AdPolicyTopicAppealInfo).optional(),
+});
+
+/**
+ * Evidence information used in the policy decision.
+ */
+export const AdPolicyTopicEvidence = z.object({
+  /** List of evidence found in the text of the ad. */
+  textList: z.lazy(() => AdPolicyTopicEvidenceTextList).optional(),
+  /** A mismatch between the ad destination URLs. */
+  destinationMismatch: z.lazy(() => AdPolicyTopicEvidenceDestinationMismatch).optional(),
+  /** List of websites linked with the ad. */
+  websiteList: z.lazy(() => AdPolicyTopicEvidenceWebsiteList).optional(),
+  /** Legal related regulation enforcement that caused a policy violation. */
+  legalRemoval: z.lazy(() => AdPolicyTopicEvidenceLegalRemoval).optional(),
+  /** Trademark terms that caused a policy violation. */
+  trademark: z.lazy(() => AdPolicyTopicEvidenceTrademark).optional(),
+  /** HTTP code returned when the final URL was crawled. */
+  httpCode: z.number().int().optional(),
+  /** T&S proactive enforcement that caused a policy violation. */
+  regionalRequirements: z.lazy(() => AdPolicyTopicEvidenceRegionalRequirements).optional(),
+  /** The text in the destination of the ad that is causing a policy violation. */
+  destinationTextList: z.lazy(() => AdPolicyTopicEvidenceDestinationTextList).optional(),
+  /** Counterfeit enforcement that caused a policy violation. */
+  counterfeit: z.lazy(() => AdPolicyTopicEvidenceCounterfeit).optional(),
+  /** Information on HTTP or DNS errors related to the ad destination. */
+  destinationNotWorking: z.lazy(() => AdPolicyTopicEvidenceDestinationNotWorking).optional(),
+  /** The language the ad was detected to be written in. This field uses IETF language */
+  languageCode: z.string().optional(),
+});
+
+/**
+ * A list of fragments of text that violated the policy.
+ */
+export const AdPolicyTopicEvidenceTextList = z.object({
+  /** The fragments of text from the resource that caused the policy finding. */
+  texts: z.array(z.string()).optional(),
+});
+
+/**
+ * Details on a mismatch between destination URL types.
+ */
+export const AdPolicyTopicEvidenceDestinationMismatch = z.object({
+  /** The set of URLs that do not match. The list can include single or multiple uri t */
+  uriTypes: z.array(z.enum(["AD_POLICY_TOPIC_EVIDENCE_DESTINATION_MISMATCH_URL_TYPE_UNKNOWN", "DISPLAY_URL", "FINAL_URL", "FINAL_MOBILE_URL", "TRACKING_URL", "MOBILE_TRACKING_URL"])).optional(),
+});
+
+/**
+ * A list of websites that violated the policy.
+ */
+export const AdPolicyTopicEvidenceWebsiteList = z.object({
+  /** Websites that caused the policy finding. */
+  websites: z.array(z.string()).optional(),
+});
+
+/**
+ * Legal related regulation enforcement, either from DMCA or local legal regulation.
+ */
+export const AdPolicyTopicEvidenceLegalRemoval = z.object({
+  /** The countries restricted due to the legal removal. */
+  countryRestrictions: z.array(z.lazy(() => AdPolicyCriterionRestriction)).optional(),
+  /** Details on the DMCA regulation legal removal. */
+  dmca: z.lazy(() => AdPolicyTopicEvidenceLegalRemovalDmca).optional(),
+  /** The type of complaint causing the legal removal. */
+  complaintType: z.enum(["AD_POLICY_TOPIC_EVIDENCE_LEGAL_REMOVAL_COMPLAINT_TYPE_UNKNOWN", "COPYRIGHT", "COURT_ORDER", "LOCAL_LEGAL"]).optional(),
+  /** The urls restricted due to the legal removal. */
+  restrictedUris: z.array(z.string()).optional(),
+  /** Details on the local legal regulation legal removal. */
+  localLegal: z.lazy(() => AdPolicyTopicEvidenceLegalRemovalLocalLegal).optional(),
+});
+
+/**
+ * Represents a country restriction.
+ */
+export const AdPolicyCriterionRestriction = z.object({
+  /** The country criterion id. */
+  countryCriterionId: z.string().optional(),
+  /** Localized name for the country. May be empty. */
+  countryLabel: z.string().optional(),
+});
+
+/**
+ * DMCA complaint details.
+ */
+export const AdPolicyTopicEvidenceLegalRemovalDmca = z.object({
+  /** The entity who made the legal complaint. */
+  complainant: z.string().optional(),
+});
+
+/**
+ * Local legal regulation details.
+ */
+export const AdPolicyTopicEvidenceLegalRemovalLocalLegal = z.object({
+  /** Type of law for the legal notice. */
+  lawType: z.string().optional(),
+});
+
+/**
+ * Trademark terms that caused a policy violation.
+ */
+export const AdPolicyTopicEvidenceTrademark = z.object({
+  /** The trademark term. */
+  term: z.string().optional(),
+  /** The trademark content owner. */
+  owner: z.string().optional(),
+  /** Countries where the policy violation is relevant. */
+  countryRestrictions: z.array(z.lazy(() => AdPolicyCriterionRestriction)).optional(),
+});
+
+/**
+ * Trust & Safety (T&S) proactive enforcement for policies meant to address regional requirements. This is considered a Google-owned investigation instead of a regulation notice since it's proactive T&S enforcement.
+ */
+export const AdPolicyTopicEvidenceRegionalRequirements = z.object({
+  /** List of regional requirements. */
+  regionalRequirementsEntries: z.array(z.lazy(() => AdPolicyTopicEvidenceRegionalRequirementsRegionalRequirementsEntry)).optional(),
+});
+
+/**
+ * Policy level regional legal violation details.
+ */
+export const AdPolicyTopicEvidenceRegionalRequirementsRegionalRequirementsEntry = z.object({
+  /** The countries restricted due to the legal policy. */
+  countryRestrictions: z.array(z.lazy(() => AdPolicyCriterionRestriction)).optional(),
+  /** The legal policy that is being violated. */
+  legalPolicy: z.string().optional(),
+});
+
+/**
+ * A list of destination text that violated the policy.
+ */
+export const AdPolicyTopicEvidenceDestinationTextList = z.object({
+  /** Destination text that caused the policy finding. */
+  destinationTexts: z.array(z.string()).optional(),
+});
+
+/**
+ * Details on the counterfeit enforcement that caused a policy violation.
+ */
+export const AdPolicyTopicEvidenceCounterfeit = z.object({
+  /** The content or product owners that made a complaint. */
+  owners: z.array(z.string()).optional(),
+});
+
+/**
+ * Details for on HTTP or DNS errors related to the ad destination.
+ */
+export const AdPolicyTopicEvidenceDestinationNotWorking = z.object({
+  /** The type of DNS error. */
+  dnsErrorType: z.enum(["AD_POLICY_TOPIC_EVIDENCE_DESTINATION_NOT_WORKING_DNS_ERROR_TYPE_UNKNOWN", "HOSTNAME_NOT_FOUND", "GOOGLE_CRAWLER_DNS_ISSUE"]).optional(),
+  /** The last time the error was seen when navigating to URL. */
+  lastCheckedTime: z.string().optional(),
+  /** The full URL that didn't work. */
+  expandedUri: z.string().optional(),
+  /** The HTTP error code. */
+  httpErrorCode: z.string().optional(),
+  /** The device where visiting the URL resulted in the error. */
+  device: z.enum(["AD_POLICY_TOPIC_EVIDENCE_DESTINATION_NOT_WORKING_DEVICE_TYPE_UNKNOWN", "DESKTOP", "ANDROID", "IOS"]).optional(),
+});
+
+/**
+ * Details on ad serving constraints.
+ */
+export const AdPolicyTopicConstraint = z.object({
+  /** Countries where the ad cannot serve. */
+  countryConstraint: z.lazy(() => AdPolicyTopicConstraintAdPolicyCountryConstraintList).optional(),
+  /** Countries where the resource's domain is not covered by the certificates associa */
+  certificateDomainMismatchCountryList: z.lazy(() => AdPolicyTopicConstraintAdPolicyCountryConstraintList).optional(),
+  /** Link to the form to request a certificate for the constraint. */
+  requestCertificateFormLink: z.string().optional(),
+  /** Countries where a certificate is required for serving. */
+  certificateMissingCountryList: z.lazy(() => AdPolicyTopicConstraintAdPolicyCountryConstraintList).optional(),
+  /** Certificate is required to serve in any country. */
+  globalCertificateMissing: z.lazy(() => AdPolicyTopicConstraintAdPolicyGlobalCertificateMissingConstraint).optional(),
+  /** Certificate is required to serve in any country and the existing certificate doe */
+  globalCertificateDomainMismatch: z.lazy(() => AdPolicyTopicConstraintAdPolicyGlobalCertificateDomainMismatchConstraint).optional(),
+  /** Reseller constraint. */
+  resellerConstraint: z.lazy(() => AdPolicyTopicConstraintAdPolicyResellerConstraint).optional(),
+});
+
+/**
+ * A list of countries where the ad cannot serve due to policy constraints.
+ */
+export const AdPolicyTopicConstraintAdPolicyCountryConstraintList = z.object({
+  /** Countries where the ad cannot serve. */
+  countries: z.array(z.lazy(() => AdPolicyCriterionRestriction)).optional(),
+});
+
+/**
+ * Certificate is required to serve in any country.
+ */
+export const AdPolicyTopicConstraintAdPolicyGlobalCertificateMissingConstraint = z.object({});
+
+/**
+ * Certificate is required to serve in any country and the existing certificate does not cover the ad's domain.
+ */
+export const AdPolicyTopicConstraintAdPolicyGlobalCertificateDomainMismatchConstraint = z.object({});
+
+/**
+ * Policy topic was constrained due to disapproval of the website for reseller purposes.
+ */
+export const AdPolicyTopicConstraintAdPolicyResellerConstraint = z.object({});
+
+/**
+ * Information on how to appeal a policy decision.
+ */
+export const AdPolicyTopicAppealInfo = z.object({
+  /** Whether the decision can be appealed through a self-service appeal or an appeal  */
+  appealType: z.enum(["AD_POLICY_APPEAL_TYPE_UNKNOWN", "SELF_SERVICE_APPEAL", "APPEAL_FORM"]).optional(),
+  /** Only available when appeal_type is `APPEAL_FORM`. */
+  appealFormLink: z.string().optional(),
+});
+
+/**
+ * Details for a bumper ad.
+ */
+export const BumperAd = z.object({
+  /** Common ad attributes. */
+  commonInStreamAttribute: z.lazy(() => CommonInStreamAttribute).optional(),
+});
+
+/**
+ * Common attributes for in-stream, non-skippable and bumper ads.
+ */
+export const CommonInStreamAttribute = z.object({
+  /** The YouTube video of the ad. */
+  video: z.lazy(() => YoutubeVideoDetails).optional(),
+  /** The URL address loaded in the background for tracking purposes. */
+  trackingUrl: z.string().optional(),
+  /** The webpage address that appears with the ad. */
+  displayUrl: z.string().optional(),
+  /** The image which shows next to the video ad. */
+  companionBanner: z.lazy(() => ImageAsset).optional(),
+  /** The URL address of the webpage that people reach after they click the ad. */
+  finalUrl: z.string().optional(),
+  /** The headline of the call-to-action banner. */
+  actionHeadline: z.string().optional(),
+  /** The text on the call-to-action button. */
+  actionButtonLabel: z.string().optional(),
+});
+
+/**
+ * Details of a YouTube video.
+ */
+export const YoutubeVideoDetails = z.object({
+  /** The reason why the video data is not available. */
+  unavailableReason: z.enum(["VIDEO_UNAVAILABLE_REASON_UNSPECIFIED", "VIDEO_UNAVAILABLE_REASON_PRIVATE", "VIDEO_UNAVAILABLE_REASON_DELETED"]).optional(),
+  /** The YouTube video ID which can be searched on YouTube webpage. */
+  id: z.string().optional(),
+});
+
+/**
+ * Meta data of an image asset.
+ */
+export const ImageAsset = z.object({
+  /** Metadata for this image at its original size. */
+  fullSize: z.lazy(() => Dimensions).optional(),
+  /** File size of the image asset in bytes. */
+  fileSize: z.string().optional(),
+  /** MIME type of the image asset. */
+  mimeType: z.string().optional(),
+});
+
+/**
+ * Dimensions.
+ */
+export const Dimensions = z.object({
+  /** The height in pixels. */
+  heightPixels: z.number().int().optional(),
+  /** The width in pixels. */
+  widthPixels: z.number().int().optional(),
+});
+
+/**
+ * Details for a Masthead Ad.
+ */
+export const MastheadAd = z.object({
+  /** The destination URL for the call-to-action button. */
+  callToActionFinalUrl: z.string().optional(),
+  /** The aspect ratio of the autoplaying YouTube video on the Masthead. */
+  videoAspectRatio: z.enum(["VIDEO_ASPECT_RATIO_UNSPECIFIED", "VIDEO_ASPECT_RATIO_WIDESCREEN", "VIDEO_ASPECT_RATIO_FIXED_16_9"]).optional(),
+  /** Whether to show a background or banner that appears at the top of a YouTube page */
+  showChannelArt: z.boolean().optional(),
+  /** The YouTube video used by the ad. */
+  video: z.lazy(() => YoutubeVideoDetails).optional(),
+  /** The videos that appear next to the Masthead Ad on desktop. Can be no more than t */
+  companionYoutubeVideos: z.array(z.lazy(() => YoutubeVideoDetails)).optional(),
+  /** The tracking URL for the call-to-action button. */
+  callToActionTrackingUrl: z.string().optional(),
+  /** The headline of the ad. */
+  headline: z.string().optional(),
+  /** The description of the ad. */
+  description: z.string().optional(),
+  /** The duration of time the video will autoplay. */
+  autoplayVideoDuration: z.string().optional(),
+  /** The text on the call-to-action button. */
+  callToActionButtonLabel: z.string().optional(),
+  /** The amount of time in milliseconds after which the video will start to play. */
+  autoplayVideoStartMillisecond: z.string().optional(),
+});
+
+/**
+ * The ad sourced from a DV360 creative.
+ */
+export const DisplayVideoSourceAd = z.object({
+  /** The ID of the source creative. */
+  creativeId: z.string().optional(),
+});
+
+/**
+ * Details for an in-stream ad.
+ */
+export const InStreamAd = z.object({
+  /** Common ad attributes. */
+  commonInStreamAttribute: z.lazy(() => CommonInStreamAttribute).optional(),
+  /** The custom parameters to pass custom values to tracking URL template. */
+  customParameters: z.record(z.string()).optional(),
+});
+
+/**
+ * Details for a video performance ad.
+ */
+export const VideoPerformanceAd = z.object({
+  /** The list of text assets shown on the call-to-action button. */
+  actionButtonLabels: z.array(z.string()).optional(),
+  /** The list of headlines shown on the call-to-action banner. */
+  headlines: z.array(z.string()).optional(),
+  /** The list of descriptions shown on the call-to-action banner. */
+  descriptions: z.array(z.string()).optional(),
+  /** The URL address loaded in the background for tracking purposes. */
+  trackingUrl: z.string().optional(),
+  /** The list of companion banners used by this ad. */
+  companionBanners: z.array(z.lazy(() => ImageAsset)).optional(),
+  /** The URL address of the webpage that people reach after they click the ad. */
+  finalUrl: z.string().optional(),
+  /** The custom parameters to pass custom values to tracking URL template. */
+  customParameters: z.record(z.string()).optional(),
+  /** The first piece after the domain in the display URL. */
+  displayUrlBreadcrumb1: z.string().optional(),
+  /** The list of lone headlines shown on the call-to-action banner. */
+  longHeadlines: z.array(z.string()).optional(),
+  /** The second piece after the domain in the display URL. */
+  displayUrlBreadcrumb2: z.string().optional(),
+  /** The domain of the display URL. */
+  domain: z.string().optional(),
+  /** The list of YouTube video assets used by this ad. */
+  videos: z.array(z.lazy(() => YoutubeVideoDetails)).optional(),
+});
+
+/**
+ * Details for an audio ad.
+ */
+export const AudioAd = z.object({
+  /** The URL address loaded in the background for tracking purposes. */
+  trackingUrl: z.string().optional(),
+  /** The URL address of the webpage that people reach after they click the ad. */
+  finalUrl: z.string().optional(),
+  /** The YouTube video of the ad. */
+  video: z.lazy(() => YoutubeVideoDetails).optional(),
+  /** The webpage address that appears with the ad. */
+  displayUrl: z.string().optional(),
+});
+
+/**
+ * Additional URLs related to the ad, including beacons.
+ */
+export const AdUrl = z.object({
+  /** The type of the Ad URL. */
+  type: z.enum(["AD_URL_TYPE_UNSPECIFIED", "AD_URL_TYPE_BEACON_IMPRESSION", "AD_URL_TYPE_BEACON_EXPANDABLE_DCM_IMPRESSION", "AD_URL_TYPE_BEACON_CLICK", "AD_URL_TYPE_BEACON_SKIP"]).optional(),
+  /** The URL string value. */
+  url: z.string().optional(),
+});
+
+/**
+ * Details for a non-skippable ad.
+ */
+export const NonSkippableAd = z.object({
+  /** The custom parameters to pass custom values to tracking URL template. */
+  customParameters: z.record(z.string()).optional(),
+  /** Common ad attributes. */
+  commonInStreamAttribute: z.lazy(() => CommonInStreamAttribute).optional(),
+});
+
+/**
+ * Details for a video discovery ad.
+ */
+export const VideoDiscoveryAd = z.object({
+  /** The YouTube video the ad promotes. */
+  video: z.lazy(() => YoutubeVideoDetails).optional(),
+  /** Second text line for the ad. */
+  description2: z.string().optional(),
+  /** Thumbnail image used in the ad. */
+  thumbnail: z.enum(["THUMBNAIL_UNSPECIFIED", "THUMBNAIL_DEFAULT", "THUMBNAIL_1", "THUMBNAIL_2", "THUMBNAIL_3"]).optional(),
+  /** First text line for the ad. */
+  description1: z.string().optional(),
+  /** The headline of ad. */
+  headline: z.string().optional(),
+});
+
+/**
+ * A single Creative.
+ */
+export const Creative = z.object({
+  /** Optional. User notes for this creative. Must be UTF-8 encoded with a length of n */
+  notes: z.string().optional(),
+  /** Optional. Timer custom events for a rich media creative. Timers track the time d */
+  timerEvents: z.array(z.lazy(() => TimerEvent)).optional(),
+  /** Output only. The timestamp when the creative was created. Assigned by the system */
+  createTime: z.string().optional(),
+  /** Required. The display name of the creative. Must be UTF-8 encoded with a maximum */
+  displayName: z.string().optional(),
+  /** Output only. Indicates the third-party audio creative supports MP3. Output only  */
+  mp3Audio: z.boolean().optional(),
+  /** Required. Exit events for this creative. An exit (also known as a click tag) is  */
+  exitEvents: z.array(z.lazy(() => ExitEvent)).optional(),
+  /** Output only. Media duration of the creative. Applicable when creative_type is on */
+  mediaDuration: z.string().optional(),
+  /** Optional. ID information used to link this creative to an external system. Must  */
+  integrationCode: z.string().optional(),
+  /** Output only. The timestamp when the creative was last updated, either by the use */
+  updateTime: z.string().optional(),
+  /** Optional. Whether the user can choose to skip a video creative. This field is on */
+  skippable: z.boolean().optional(),
+  /** Optional. The URL of the VAST tag for a third-party VAST tag creative. Required  */
+  vastTagUrl: z.string().optional(),
+  /** Optional. Amount of time to play the video before the skip button appears. This  */
+  skipOffset: z.lazy(() => AudioVideoOffset).optional(),
+  /** Required. Indicates where the creative is hosted. */
+  hostingSource: z.enum(["HOSTING_SOURCE_UNSPECIFIED", "HOSTING_SOURCE_CM", "HOSTING_SOURCE_THIRD_PARTY", "HOSTING_SOURCE_HOSTED", "HOSTING_SOURCE_RICH_MEDIA"]).optional(),
+  /** Optional. Amount of time to play the video before counting a view. This field is */
+  progressOffset: z.lazy(() => AudioVideoOffset).optional(),
+  /** Output only. The current status of the creative review process. */
+  reviewStatus: z.lazy(() => ReviewStatusInfo).optional(),
+  /** Optional. Indicates that the creative requires MRAID (Mobile Rich Media Ad Inter */
+  requireMraid: z.boolean().optional(),
+  /** Optional. Tracking URLs from third parties to track interactions with a video cr */
+  thirdPartyUrls: z.array(z.lazy(() => ThirdPartyUrl)).optional(),
+  /** Optional. JavaScript measurement URL from supported third-party verification pro */
+  jsTrackerUrl: z.string().optional(),
+  /** Optional. Specifies the expanding direction of the creative. Required and only v */
+  expandingDirection: z.enum(["EXPANDING_DIRECTION_UNSPECIFIED", "EXPANDING_DIRECTION_NONE", "EXPANDING_DIRECTION_UP", "EXPANDING_DIRECTION_DOWN", "EXPANDING_DIRECTION_LEFT", "EXPANDING_DIRECTION_RIGHT", "EXPANDING_DIRECTION_UP_AND_LEFT", "EXPANDING_DIRECTION_UP_AND_RIGHT", "EXPANDING_DIRECTION_DOWN_AND_LEFT", "EXPANDING_DIRECTION_DOWN_AND_RIGHT", "EXPANDING_DIRECTION_UP_OR_DOWN", "EXPANDING_DIRECTION_LEFT_OR_RIGHT", "EXPANDING_DIRECTION_ANY_DIAGONAL"]).optional(),
+  /** Output only. Indicates the third-party audio creative supports OGG. Output only  */
+  oggAudio: z.boolean().optional(),
+  /** Optional. An optional creative identifier provided by a registry that is unique  */
+  universalAdId: z.lazy(() => UniversalAdId).optional(),
+  /** Required. Immutable. The type of the creative. */
+  creativeType: z.enum(["CREATIVE_TYPE_UNSPECIFIED", "CREATIVE_TYPE_STANDARD", "CREATIVE_TYPE_EXPANDABLE", "CREATIVE_TYPE_VIDEO", "CREATIVE_TYPE_NATIVE", "CREATIVE_TYPE_TEMPLATED_APP_INSTALL", "CREATIVE_TYPE_NATIVE_SITE_SQUARE", "CREATIVE_TYPE_TEMPLATED_APP_INSTALL_INTERSTITIAL", "CREATIVE_TYPE_LIGHTBOX", "CREATIVE_TYPE_NATIVE_APP_INSTALL", "CREATIVE_TYPE_NATIVE_APP_INSTALL_SQUARE", "CREATIVE_TYPE_AUDIO", "CREATIVE_TYPE_PUBLISHER_HOSTED", "CREATIVE_TYPE_NATIVE_VIDEO", "CREATIVE_TYPE_TEMPLATED_APP_INSTALL_VIDEO", "CREATIVE_TYPE_ASSET_BASED_CREATIVE"]).optional(),
+  /** Required. Controls whether or not the creative can serve. Accepted values are: * */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
+  /** Optional. Third-party HTML tracking tag to be appended to the creative tag. */
+  appendedTag: z.string().optional(),
+  /** Optional. Specifies the OBA icon for a video creative. This field is only suppor */
+  obaIcon: z.lazy(() => ObaIcon).optional(),
+  /** Output only. The unique ID of the Campaign Manager 360 placement associated with */
+  cmPlacementId: z.string().optional(),
+  /** Output only. The resource name of the creative. */
+  name: z.string().optional(),
+  /** Output only. The unique ID of the advertiser the creative belongs to. */
+  advertiserId: z.string().optional(),
+  /** Optional. Counter events for a rich media creative. Counters track the number of */
+  counterEvents: z.array(z.lazy(() => CounterEvent)).optional(),
+  /** Optional. Indicates the creative will automatically expand on hover. Optional an */
+  expandOnHover: z.boolean().optional(),
+  /** Required. Assets associated to this creative. */
+  assets: z.array(z.lazy(() => AssetAssociation)).optional(),
+  /** Optional. Tracking URLs for analytics providers or third-party ad technology ven */
+  trackerUrls: z.array(z.string()).optional(),
+  /** Output only. Indicates whether the creative is dynamic. */
+  dynamic: z.boolean().optional(),
+  /** Optional. The IDs of companion creatives for a video creative. You can assign ex */
+  companionCreativeIds: z.array(z.string()).optional(),
+  /** Output only. Indicates the third-party VAST tag creative requires VPAID (Digital */
+  vpaid: z.boolean().optional(),
+  /** Output only. The IDs of the line items this creative is associated with. To asso */
+  lineItemIds: z.array(z.string()).optional(),
+  /** Optional. Indicates that the creative will wait for a return ping for attributio */
+  requirePingForAttribution: z.boolean().optional(),
+  /** Optional. The Campaign Manager 360 tracking ad associated with the creative. Opt */
+  cmTrackingAd: z.lazy(() => CmTrackingAd).optional(),
+  /** Output only. A list of attributes of the creative that is generated by the syste */
+  creativeAttributes: z.array(z.enum(["CREATIVE_ATTRIBUTE_UNSPECIFIED", "CREATIVE_ATTRIBUTE_VAST", "CREATIVE_ATTRIBUTE_VPAID_LINEAR", "CREATIVE_ATTRIBUTE_VPAID_NON_LINEAR"])).optional(),
+  /** Optional. Additional dimensions. Applicable when creative_type is one of: * `CRE */
+  additionalDimensions: z.array(z.lazy(() => Dimensions)).optional(),
+  /** Optional. The original third-party tag used for the creative. Required and only  */
+  thirdPartyTag: z.string().optional(),
+  /** Output only. The unique ID of the creative. Assigned by the system. */
+  creativeId: z.string().optional(),
+  /** Required. Primary dimensions of the creative. Applicable to all creative types.  */
+  dimensions: z.lazy(() => Dimensions).optional(),
+  /** Optional. Indicates that the creative relies on HTML5 to render properly. Option */
+  requireHtml5: z.boolean().optional(),
+  /** Optional. Indicates whether Integral Ad Science (IAS) campaign monitoring is ena */
+  iasCampaignMonitoring: z.boolean().optional(),
+  /** Output only. Indicates the third-party VAST tag creative requires HTML5 Video su */
+  html5Video: z.boolean().optional(),
+  /** Output only. Audio/Video transcodes. Display & Video 360 transcodes the main ass */
+  transcodes: z.array(z.lazy(() => Transcode)).optional(),
+});
+
+/**
+ * Timer event of the creative.
+ */
+export const TimerEvent = z.object({
+  /** Required. The name used to identify this timer event in reports. */
+  reportingName: z.string().optional(),
+  /** Required. The name of the timer event. */
+  name: z.string().optional(),
+});
+
+/**
+ * Exit event of the creative.
+ */
+export const ExitEvent = z.object({
+  /** Optional. The name of the click tag of the exit event. The name must be unique w */
+  name: z.string().optional(),
+  /** Required. The type of the exit event. */
+  type: z.enum(["EXIT_EVENT_TYPE_UNSPECIFIED", "EXIT_EVENT_TYPE_DEFAULT", "EXIT_EVENT_TYPE_BACKUP"]).optional(),
+  /** Optional. The name used to identify this event in reports. Leave it empty or uns */
+  reportingName: z.string().optional(),
+  /** Required. The click through URL of the exit event. This is required when type is */
+  url: z.string().optional(),
+});
+
+/**
+ * The length an audio or a video has been played.
+ */
+export const AudioVideoOffset = z.object({
+  /** Optional. The offset in seconds from the start of the audio or video. */
+  seconds: z.string().optional(),
+  /** Optional. The offset in percentage of the audio or video duration. */
+  percentage: z.string().optional(),
+});
+
+/**
+ * Review statuses for the creative.
+ */
+export const ReviewStatusInfo = z.object({
+  /** Content and policy review status for the creative. */
+  contentAndPolicyReviewStatus: z.enum(["REVIEW_STATUS_UNSPECIFIED", "REVIEW_STATUS_APPROVED", "REVIEW_STATUS_REJECTED", "REVIEW_STATUS_PENDING"]).optional(),
+  /** Exchange review statuses for the creative. */
+  exchangeReviewStatuses: z.array(z.lazy(() => ExchangeReviewStatus)).optional(),
+  /** Creative and landing page review status for the creative. */
+  creativeAndLandingPageReviewStatus: z.enum(["REVIEW_STATUS_UNSPECIFIED", "REVIEW_STATUS_APPROVED", "REVIEW_STATUS_REJECTED", "REVIEW_STATUS_PENDING"]).optional(),
+  /** Represents the basic approval needed for a creative to begin serving. Summary of */
+  approvalStatus: z.enum(["APPROVAL_STATUS_UNSPECIFIED", "APPROVAL_STATUS_PENDING_NOT_SERVABLE", "APPROVAL_STATUS_PENDING_SERVABLE", "APPROVAL_STATUS_APPROVED_SERVABLE", "APPROVAL_STATUS_REJECTED_NOT_SERVABLE"]).optional(),
+});
+
+/**
+ * Exchange review status for the creative.
+ */
+export const ExchangeReviewStatus = z.object({
+  /** The exchange reviewing the creative. */
+  exchange: z.enum(["EXCHANGE_UNSPECIFIED", "EXCHANGE_GOOGLE_AD_MANAGER", "EXCHANGE_APPNEXUS", "EXCHANGE_BRIGHTROLL", "EXCHANGE_ADFORM", "EXCHANGE_ADMETA", "EXCHANGE_ADMIXER", "EXCHANGE_ADSMOGO", "EXCHANGE_ADSWIZZ", "EXCHANGE_BIDSWITCH", "EXCHANGE_BRIGHTROLL_DISPLAY", "EXCHANGE_CADREON", "EXCHANGE_DAILYMOTION", "EXCHANGE_FIVE", "EXCHANGE_FLUCT", "EXCHANGE_FREEWHEEL", "EXCHANGE_GENIEE", "EXCHANGE_GUMGUM", "EXCHANGE_IMOBILE", "EXCHANGE_IBILLBOARD", "EXCHANGE_IMPROVE_DIGITAL", "EXCHANGE_INDEX", "EXCHANGE_KARGO", "EXCHANGE_MICROAD", "EXCHANGE_MOPUB", "EXCHANGE_NEND", "EXCHANGE_ONE_BY_AOL_DISPLAY", "EXCHANGE_ONE_BY_AOL_MOBILE", "EXCHANGE_ONE_BY_AOL_VIDEO", "EXCHANGE_OOYALA", "EXCHANGE_OPENX", "EXCHANGE_PERMODO", "EXCHANGE_PLATFORMONE", "EXCHANGE_PLATFORMID", "EXCHANGE_PUBMATIC", "EXCHANGE_PULSEPOINT", "EXCHANGE_REVENUEMAX", "EXCHANGE_RUBICON", "EXCHANGE_SMARTCLIP", "EXCHANGE_SMARTRTB", "EXCHANGE_SMARTSTREAMTV", "EXCHANGE_SOVRN", "EXCHANGE_SPOTXCHANGE", "EXCHANGE_STROER", "EXCHANGE_TEADSTV", "EXCHANGE_TELARIA", "EXCHANGE_TVN", "EXCHANGE_UNITED", "EXCHANGE_YIELDLAB", "EXCHANGE_YIELDMO", "EXCHANGE_UNRULYX", "EXCHANGE_OPEN8", "EXCHANGE_TRITON", "EXCHANGE_TRIPLELIFT", "EXCHANGE_TABOOLA", "EXCHANGE_INMOBI", "EXCHANGE_SMAATO", "EXCHANGE_AJA", "EXCHANGE_SUPERSHIP", "EXCHANGE_NEXSTAR_DIGITAL", "EXCHANGE_WAZE", "EXCHANGE_SOUNDCAST", "EXCHANGE_SHARETHROUGH", "EXCHANGE_FYBER", "EXCHANGE_RED_FOR_PUBLISHERS", "EXCHANGE_MEDIANET", "EXCHANGE_TAPJOY", "EXCHANGE_VISTAR", "EXCHANGE_DAX", "EXCHANGE_JCD", "EXCHANGE_PLACE_EXCHANGE", "EXCHANGE_APPLOVIN", "EXCHANGE_CONNATIX", "EXCHANGE_RESET_DIGITAL", "EXCHANGE_HIVESTACK", "EXCHANGE_DRAX", "EXCHANGE_APPLOVIN_GBID", "EXCHANGE_FYBER_GBID", "EXCHANGE_UNITY_GBID", "EXCHANGE_CHARTBOOST_GBID", "EXCHANGE_ADMOST_GBID", "EXCHANGE_TOPON_GBID", "EXCHANGE_NETFLIX", "EXCHANGE_CORE", "EXCHANGE_COMMERCE_GRID", "EXCHANGE_SPOTIFY", "EXCHANGE_TUBI", "EXCHANGE_SNAP"]).optional(),
+  /** Status of the exchange review. */
+  status: z.enum(["REVIEW_STATUS_UNSPECIFIED", "REVIEW_STATUS_APPROVED", "REVIEW_STATUS_REJECTED", "REVIEW_STATUS_PENDING"]).optional(),
+});
+
+/**
+ * Tracking URLs from third parties to track interactions with an audio or a video creative.
+ */
+export const ThirdPartyUrl = z.object({
+  /** Optional. The type of interaction needs to be tracked by the tracking URL */
+  type: z.enum(["THIRD_PARTY_URL_TYPE_UNSPECIFIED", "THIRD_PARTY_URL_TYPE_IMPRESSION", "THIRD_PARTY_URL_TYPE_CLICK_TRACKING", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_START", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_FIRST_QUARTILE", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_MIDPOINT", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_THIRD_QUARTILE", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_COMPLETE", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_MUTE", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_PAUSE", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_REWIND", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_FULLSCREEN", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_STOP", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_CUSTOM", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_SKIP", "THIRD_PARTY_URL_TYPE_AUDIO_VIDEO_PROGRESS"]).optional(),
+  /** Optional. Tracking URL used to track the interaction. Provide a URL with optiona */
+  url: z.string().optional(),
+});
+
+/**
+ * A creative identifier provided by a registry that is unique across all platforms. This is part of the VAST 4.0 standard.
+ */
+export const UniversalAdId = z.object({
+  /** Optional. The unique creative identifier. */
+  id: z.string().optional(),
+  /** Optional. The registry provides unique creative identifiers. */
+  registry: z.enum(["UNIVERSAL_AD_REGISTRY_UNSPECIFIED", "UNIVERSAL_AD_REGISTRY_OTHER", "UNIVERSAL_AD_REGISTRY_AD_ID", "UNIVERSAL_AD_REGISTRY_CLEARCAST", "UNIVERSAL_AD_REGISTRY_DV360", "UNIVERSAL_AD_REGISTRY_CM"]).optional(),
+});
+
+/**
+ * OBA Icon for a Creative
+ */
+export const ObaIcon = z.object({
+  /** Optional. The program of the OBA icon. For example: “AdChoices”. */
+  program: z.string().optional(),
+  /** Optional. The dimensions of the OBA icon. */
+  dimensions: z.lazy(() => Dimensions).optional(),
+  /** Required. The click tracking URL of the OBA icon. Only URLs of the following dom */
+  clickTrackingUrl: z.string().optional(),
+  /** Optional. The MIME type of the OBA icon resource. */
+  resourceMimeType: z.string().optional(),
+  /** Optional. The position of the OBA icon on the creative. */
+  position: z.enum(["OBA_ICON_POSITION_UNSPECIFIED", "OBA_ICON_POSITION_UPPER_RIGHT", "OBA_ICON_POSITION_UPPER_LEFT", "OBA_ICON_POSITION_LOWER_RIGHT", "OBA_ICON_POSITION_LOWER_LEFT"]).optional(),
+  /** Required. The view tracking URL of the OBA icon. Only URLs of the following doma */
+  viewTrackingUrl: z.string().optional(),
+  /** Required. The landing page URL of the OBA icon. Only URLs of the following domai */
+  landingPageUrl: z.string().optional(),
+  /** Optional. The URL of the OBA icon resource. */
+  resourceUrl: z.string().optional(),
+});
+
+/**
+ * Counter event of the creative.
+ */
+export const CounterEvent = z.object({
+  /** Required. The name of the counter event. */
+  name: z.string().optional(),
+  /** Required. The name used to identify this counter event in reports. */
+  reportingName: z.string().optional(),
+});
+
+/**
+ * Asset association for the creative.
+ */
+export const AssetAssociation = z.object({
+  /** Optional. The associated asset. */
+  asset: z.lazy(() => Asset).optional(),
+  /** Optional. The role of this asset for the creative. */
+  role: z.enum(["ASSET_ROLE_UNSPECIFIED", "ASSET_ROLE_MAIN", "ASSET_ROLE_BACKUP", "ASSET_ROLE_POLITE_LOAD", "ASSET_ROLE_HEADLINE", "ASSET_ROLE_LONG_HEADLINE", "ASSET_ROLE_BODY", "ASSET_ROLE_LONG_BODY", "ASSET_ROLE_CAPTION_URL", "ASSET_ROLE_CALL_TO_ACTION", "ASSET_ROLE_ADVERTISER_NAME", "ASSET_ROLE_PRICE", "ASSET_ROLE_ANDROID_APP_ID", "ASSET_ROLE_IOS_APP_ID", "ASSET_ROLE_RATING", "ASSET_ROLE_ICON", "ASSET_ROLE_COVER_IMAGE", "ASSET_ROLE_BACKGROUND_COLOR", "ASSET_ROLE_ACCENT_COLOR", "ASSET_ROLE_REQUIRE_LOGO", "ASSET_ROLE_REQUIRE_IMAGE", "ASSET_ROLE_ENABLE_ASSET_ENHANCEMENTS"]).optional(),
+});
+
+/**
+ * A single asset.
+ */
+export const Asset = z.object({
+  /** The asset content. For uploaded assets, the content is the serving path. */
+  content: z.string().optional(),
+  /** Media ID of the uploaded asset. This is a unique identifier for the asset. This  */
+  mediaId: z.string().optional(),
+});
+
+/**
+ * A Campaign Manager 360 tracking ad.
+ */
+export const CmTrackingAd = z.object({
+  /** Optional. The creative ID of the campaign manager 360 tracking Ad. */
+  cmCreativeId: z.string().optional(),
+  /** Optional. The placement ID of the campaign manager 360 tracking Ad. */
+  cmPlacementId: z.string().optional(),
+  /** Optional. The ad ID of the campaign manager 360 tracking Ad. */
+  cmAdId: z.string().optional(),
+});
+
+/**
+ * Represents information about the transcoded audio or video file.
+ */
+export const Transcode = z.object({
+  /** Optional. The name of the transcoded file. */
+  name: z.string().optional(),
+  /** Optional. The bit rate for the audio stream of the transcoded video, or the bit  */
+  audioBitRateKbps: z.string().optional(),
+  /** Optional. The frame rate of the transcoded video, in frames per second. */
+  frameRate: z.number().optional(),
+  /** Optional. The transcoding bit rate of the transcoded video, in kilobits per seco */
+  bitRateKbps: z.string().optional(),
+  /** Optional. Indicates if the transcoding was successful. */
+  transcoded: z.boolean().optional(),
+  /** Optional. The sample rate for the audio stream of the transcoded video, or the s */
+  audioSampleRateHz: z.string().optional(),
+  /** Optional. The size of the transcoded file, in bytes. */
+  fileSizeBytes: z.string().optional(),
+  /** Optional. The dimensions of the transcoded video. */
+  dimensions: z.lazy(() => Dimensions).optional(),
+  /** Optional. The MIME type of the transcoded file. */
+  mimeType: z.string().optional(),
+});
+
+/**
+ * A single custom bidding algorithm.
+ */
+export const CustomBiddingAlgorithm = z.object({
+  /** Output only. The unique ID of the custom bidding algorithm. Assigned by the syst */
+  customBiddingAlgorithmId: z.string().optional(),
+  /** Required. Immutable. The type of custom bidding algorithm. */
+  customBiddingAlgorithmType: z.enum(["CUSTOM_BIDDING_ALGORITHM_TYPE_UNSPECIFIED", "SCRIPT_BASED", "RULE_BASED"]).optional(),
+  /** Optional. Immutable. Designates the third party optimization partner that manage */
+  thirdPartyOptimizationPartner: z.enum(["UNKNOWN", "SCIBIDS", "ADELAIDE"]).optional(),
+  /** Immutable. The unique ID of the advertiser that owns the custom bidding algorith */
+  advertiserId: z.string().optional(),
+  /** Immutable. The unique ID of the partner that owns the custom bidding algorithm. */
+  partnerId: z.string().optional(),
+  /** The IDs of the advertisers who have access to this algorithm. If advertiser_id i */
+  sharedAdvertiserIds: z.array(z.string()).optional(),
+  /** Output only. The resource name of the custom bidding algorithm. */
+  name: z.string().optional(),
+  /** Output only. The details of custom bidding models for each advertiser who has ac */
+  modelDetails: z.array(z.lazy(() => CustomBiddingModelDetails)).optional(),
+  /** Required. The display name of the custom bidding algorithm. Must be UTF-8 encode */
+  displayName: z.string().optional(),
+  /** Controls whether or not the custom bidding algorithm can be used as a bidding st */
+  entityStatus: z.enum(["ENTITY_STATUS_UNSPECIFIED", "ENTITY_STATUS_ACTIVE", "ENTITY_STATUS_ARCHIVED", "ENTITY_STATUS_DRAFT", "ENTITY_STATUS_PAUSED", "ENTITY_STATUS_SCHEDULED_FOR_DELETION"]).optional(),
+});
+
+/**
+ * The details of a custom bidding algorithm model for a single shared advertiser.
+ */
+export const CustomBiddingModelDetails = z.object({
+  /** The readiness state of custom bidding model. */
+  readinessState: z.enum(["READINESS_STATE_UNSPECIFIED", "READINESS_STATE_ACTIVE", "READINESS_STATE_INSUFFICIENT_DATA", "READINESS_STATE_TRAINING", "READINESS_STATE_NO_VALID_SCRIPT", "READINESS_STATE_EVALUATION_FAILURE"]).optional(),
+  /** Output only. The suspension state of custom bidding model. */
+  suspensionState: z.enum(["SUSPENSION_STATE_UNSPECIFIED", "SUSPENSION_STATE_ENABLED", "SUSPENSION_STATE_DORMANT", "SUSPENSION_STATE_SUSPENDED"]).optional(),
+  /** The unique ID of the relevant advertiser. */
+  advertiserId: z.string().optional(),
 });
 
 export const ListPartnersResponse = z.object({
@@ -782,8 +1665,15 @@ export const ListPartnersResponse = z.object({
 });
 
 export const ListAdvertisersResponse = z.object({
+  /** A token to retrieve the next page of results. Pass this value in the page_token  */
+  nextPageToken: z.string().optional(),
   /** The list of advertisers. This list will be absent if empty. */
   advertisers: z.array(z.lazy(() => Advertiser)).optional(),
+});
+
+export const ListCampaignsResponse = z.object({
+  /** The list of campaigns. This list will be absent if empty. */
+  campaigns: z.array(z.lazy(() => Campaign)).optional(),
   /** A token to retrieve the next page of results. Pass this value in the page_token  */
   nextPageToken: z.string().optional(),
 });
@@ -809,16 +1699,37 @@ export const ListAdGroupsResponse = z.object({
   adGroups: z.array(z.lazy(() => AdGroup)).optional(),
 });
 
+export const ListAdGroupAdsResponse = z.object({
+  /** The list of ad group ads. This list will be absent if empty. */
+  adGroupAds: z.array(z.lazy(() => AdGroupAd)).optional(),
+  /** A token to retrieve the next page of results. Pass this value in the page_token  */
+  nextPageToken: z.string().optional(),
+});
+
+export const ListCreativesResponse = z.object({
+  /** A token to retrieve the next page of results. Pass this value in the page_token  */
+  nextPageToken: z.string().optional(),
+  /** The list of creatives. This list will be absent if empty. */
+  creatives: z.array(z.lazy(() => Creative)).optional(),
+});
+
+export const ListCustomBiddingAlgorithmsResponse = z.object({
+  /** A token to retrieve the next page of results. Pass this value in the page_token  */
+  nextPageToken: z.string().optional(),
+  /** The list of custom bidding algorithms. This list will be absent if empty. */
+  customBiddingAlgorithms: z.array(z.lazy(() => CustomBiddingAlgorithm)).optional(),
+});
+
 /**
  * Represents an amount of money with its currency type.
  */
 export const Money = z.object({
-  /** The whole units of the amount. For example if `currencyCode` is `"USD"`, then 1  */
-  units: z.string().optional(),
   /** The three-letter currency code defined in ISO 4217. */
   currencyCode: z.string().optional(),
   /** Number of nano (10^-9) units of the amount. The value must be between -999,999,9 */
   nanos: z.number().int().optional(),
+  /** The whole units of the amount. For example if `currencyCode` is `"USD"`, then 1  */
+  units: z.string().optional(),
 });
 
 /**
@@ -827,20 +1738,10 @@ export const Money = z.object({
 export const Status = z.object({
   /** The status code, which should be an enum value of google.rpc.Code. */
   code: z.number().int().optional(),
-  /** A list of messages that carry the error details. There is a common set of messag */
-  details: z.array(z.record(z.unknown())).optional(),
   /** A developer-facing error message, which should be in English. Any user-facing er */
   message: z.string().optional(),
-});
-
-/**
- * Dimensions.
- */
-export const Dimensions = z.object({
-  /** The width in pixels. */
-  widthPixels: z.number().int().optional(),
-  /** The height in pixels. */
-  heightPixels: z.number().int().optional(),
+  /** A list of messages that carry the error details. There is a common set of messag */
+  details: z.array(z.record(z.unknown())).optional(),
 });
 
 /**
@@ -848,65 +1749,127 @@ export const Dimensions = z.object({
  */
 export const schemas = {
   Partner,
-  PartnerDataAccessConfig,
-  SdfConfig,
   PartnerAdServerConfig,
   MeasurementConfig,
   PartnerBillingConfig,
   PartnerGeneralConfig,
+  PartnerDataAccessConfig,
+  SdfConfig,
   ExchangeConfig,
   ExchangeConfigEnabledExchange,
   Advertiser,
   AdvertiserCreativeConfig,
-  AdvertiserGeneralConfig,
   IntegrationDetails,
-  AdvertiserBillingConfig,
   AdvertiserTargetingConfig,
   AdvertiserAdServerConfig,
-  CmHybridConfig,
   ThirdPartyOnlyConfig,
+  CmHybridConfig,
+  AdvertiserBillingConfig,
   AdvertiserDataAccessConfig,
   AdvertiserSdfConfig,
-  InsertionOrder,
-  Kpi,
-  BiddingStrategy,
-  MaximizeSpendBidStrategy,
-  YoutubeAndPartnersBiddingStrategy,
-  FixedBidStrategy,
-  PerformanceGoalBidStrategy,
-  InsertionOrderBudget,
-  InsertionOrderBudgetSegment,
+  AdvertiserGeneralConfig,
+  Campaign,
+  FrequencyCap,
+  CampaignBudget,
+  PrismaConfig,
+  PrismaCpeCode,
   DateRange,
   Date,
+  CampaignFlight,
+  CampaignGoal,
+  PerformanceGoal,
+  InsertionOrder,
+  BiddingStrategy,
+  FixedBidStrategy,
+  PerformanceGoalBidStrategy,
+  YoutubeAndPartnersBiddingStrategy,
+  MaximizeSpendBidStrategy,
+  InsertionOrderBudget,
+  InsertionOrderBudgetSegment,
   Pacing,
+  Kpi,
   PartnerCost,
-  FrequencyCap,
   LineItem,
-  YoutubeAndPartnersSettings,
-  VideoAdInventoryControl,
-  TargetFrequency,
-  YoutubeAndPartnersInventorySourceConfig,
-  ThirdPartyMeasurementConfigs,
-  ThirdPartyVendorConfig,
-  VideoAdSequenceSettings,
-  VideoAdSequenceStep,
   LineItemFlight,
   ConversionCountingConfig,
   TrackingFloodlightActivityConfig,
+  LineItemBudget,
   MobileApp,
   PartnerRevenueModel,
-  LineItemBudget,
+  YoutubeAndPartnersSettings,
+  YoutubeAndPartnersInventorySourceConfig,
+  VideoAdSequenceSettings,
+  VideoAdSequenceStep,
+  VideoAdInventoryControl,
+  TargetFrequency,
+  ThirdPartyMeasurementConfigs,
+  ThirdPartyVendorConfig,
   TargetingExpansionConfig,
   AdGroup,
   ProductFeedData,
   ProductMatchDimension,
   CustomLabel,
+  AdGroupAd,
+  AdPolicy,
+  AdPolicyTopicEntry,
+  AdPolicyTopicEvidence,
+  AdPolicyTopicEvidenceTextList,
+  AdPolicyTopicEvidenceDestinationMismatch,
+  AdPolicyTopicEvidenceWebsiteList,
+  AdPolicyTopicEvidenceLegalRemoval,
+  AdPolicyCriterionRestriction,
+  AdPolicyTopicEvidenceLegalRemovalDmca,
+  AdPolicyTopicEvidenceLegalRemovalLocalLegal,
+  AdPolicyTopicEvidenceTrademark,
+  AdPolicyTopicEvidenceRegionalRequirements,
+  AdPolicyTopicEvidenceRegionalRequirementsRegionalRequirementsEntry,
+  AdPolicyTopicEvidenceDestinationTextList,
+  AdPolicyTopicEvidenceCounterfeit,
+  AdPolicyTopicEvidenceDestinationNotWorking,
+  AdPolicyTopicConstraint,
+  AdPolicyTopicConstraintAdPolicyCountryConstraintList,
+  AdPolicyTopicConstraintAdPolicyGlobalCertificateMissingConstraint,
+  AdPolicyTopicConstraintAdPolicyGlobalCertificateDomainMismatchConstraint,
+  AdPolicyTopicConstraintAdPolicyResellerConstraint,
+  AdPolicyTopicAppealInfo,
+  BumperAd,
+  CommonInStreamAttribute,
+  YoutubeVideoDetails,
+  ImageAsset,
+  Dimensions,
+  MastheadAd,
+  DisplayVideoSourceAd,
+  InStreamAd,
+  VideoPerformanceAd,
+  AudioAd,
+  AdUrl,
+  NonSkippableAd,
+  VideoDiscoveryAd,
+  Creative,
+  TimerEvent,
+  ExitEvent,
+  AudioVideoOffset,
+  ReviewStatusInfo,
+  ExchangeReviewStatus,
+  ThirdPartyUrl,
+  UniversalAdId,
+  ObaIcon,
+  CounterEvent,
+  AssetAssociation,
+  Asset,
+  CmTrackingAd,
+  Transcode,
+  CustomBiddingAlgorithm,
+  CustomBiddingModelDetails,
   ListPartnersResponse,
   ListAdvertisersResponse,
+  ListCampaignsResponse,
   ListInsertionOrdersResponse,
   ListLineItemsResponse,
   ListAdGroupsResponse,
+  ListAdGroupAdsResponse,
+  ListCreativesResponse,
+  ListCustomBiddingAlgorithmsResponse,
   Money,
   Status,
-  Dimensions,
 };

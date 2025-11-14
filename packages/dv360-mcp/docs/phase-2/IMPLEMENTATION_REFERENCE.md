@@ -29,13 +29,18 @@ This document captures the pseudo-code and detailed implementation snippets refe
 │  │  - createHandler()  │  │  - dv360_list_entities               │ │
 │  └─────────────────────┘  │  - dv360_get_entity                  │ │
 │                            │  - dv360_create_entity               │ │
-│                            │  - dv360_update_entity               │ │
-│                            │  - dv360_delete_entity               │ │
-│                            │  Tier 2: Workflow Tools              │ │
-│                            │  - dv360_adjust_line_item_bids       │ │
-│                            │  - dv360_bulk_update_status          │ │
+│  ┌─────────────────────┐  │  - dv360_update_entity               │ │
+│  │ Resource Registry   │  │  - dv360_delete_entity               │ │
+│  │  - registerAll()    │  │  Tier 2: Workflow Tools              │ │
+│  │  - getResource()    │  │  - dv360_adjust_line_item_bids       │ │
+│  └─────────────────────┘  │  - dv360_bulk_update_status          │ │
 │                            │  - dv360_campaign_setup_wizard       │ │
-│                            └──────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │ MCP Resources (Schema Discovery - On-Demand)                │   │
+│  │  - entity-schema://{entityType} (Full JSON Schema)          │   │
+│  │  - entity-fields://{entityType} (Field list)                │   │
+│  │  - entity-examples://{entityType} (Common patterns)         │   │
+│  └─────────────────────────────────────────────────────────────┘   │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ DI Container (tsyringe)
                                 ▼
@@ -119,6 +124,17 @@ packages/dv360-mcp/
 │   │   │       ├── entityMapping.ts      # Entity type to API endpoint mapping
 │   │   │       ├── requiredFields.ts     # Required fields per entity/method
 │   │   │       └── types.ts              # ToolDefinition interface
+│   │   │
+│   │   ├── resources/
+│   │   │   ├── definitions/
+│   │   │   │   ├── index.ts              # Barrel export (all resources)
+│   │   │   │   ├── entity-schema.resource.ts   # Full JSON Schema
+│   │   │   │   ├── entity-fields.resource.ts   # Flat field list
+│   │   │   │   └── entity-examples.resource.ts # Curated examples
+│   │   │   └── utils/
+│   │   │       ├── resourceRegistry.ts         # ResourceRegistry class
+│   │   │       ├── extractFieldsFromZodSchema.ts # Schema introspection
+│   │   │       └── entityExamples.ts           # Curated example data
 │   │   │
 │   │   ├── transports/
 │   │   │   └── http/
@@ -317,6 +333,443 @@ app.onError((err, c) => {
 // Scopes: ['dv360:write', 'dv360:campaign:write']
 ```
 
+#### MCP Resources (Schema Discovery)
+
+##### Resource 1: `entity-schema://{entityType}`
+
+Returns the full JSON Schema for a DV360 entity type, including field types, descriptions, validation rules, and supported operations.
+
+```typescript
+// src/mcp-server/resources/definitions/entity-schema.resource.ts
+import { ResourceDefinition } from "../utils/types";
+import { UriTemplate } from "@modelcontextprotocol/sdk/types.js";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { getEntitySchema, ENTITY_TYPE_CONFIG } from "../../tools/utils/entityMapping";
+import { getRequiredFields } from "../../tools/utils/requiredFields";
+
+export const entitySchemaResource: ResourceDefinition = {
+  uri: new UriTemplate("entity-schema://{entityType}"),
+  name: "DV360 Entity Schema",
+  description: "Get the full JSON Schema for a DV360 entity type (supports 62 entities)",
+
+  async read({ entityType }: { entityType: string }) {
+    const config = ENTITY_TYPE_CONFIG[entityType];
+    if (!config) {
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `Unknown entity type: ${entityType}`,
+        { entityType, availableTypes: Object.keys(ENTITY_TYPE_CONFIG) }
+      );
+    }
+
+    // Get Zod schema for entity (from Phase 1 generated schemas)
+    const zodSchema = getEntitySchema(entityType, "update");
+
+    // Convert to JSON Schema with rich descriptions
+    const jsonSchema = zodToJsonSchema(zodSchema, {
+      target: "jsonSchema7",
+      markdownDescription: true,
+      errorMessages: true,
+    });
+
+    return {
+      contents: [
+        {
+          uri: `entity-schema://${entityType}`,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              entityType,
+              schema: jsonSchema,
+              requiredFields: {
+                list: getRequiredFields(entityType, "list"),
+                get: getRequiredFields(entityType, "get"),
+                create: getRequiredFields(entityType, "create"),
+                update: getRequiredFields(entityType, "update"),
+                delete: getRequiredFields(entityType, "delete"),
+              },
+              supportedOperations: {
+                create: config.supportsCreate,
+                update: config.supportsUpdate,
+                delete: config.supportsDelete,
+                filter: config.supportsFilter,
+              },
+              filterFields: config.filterFields || [],
+              parentIds: config.parentIds,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  },
+};
+```
+
+**Example Usage:**
+```
+AI: Read entity-schema://lineItem
+Returns: Full JSON Schema + required fields + supported operations (~5-10KB)
+AI: Now I know lineItem requires bidStrategy, flight, budget, etc. for create operations
+```
+
+##### Resource 2: `entity-fields://{entityType}`
+
+Returns a lightweight flat list of all field paths for an entity, useful for quick reference without full schema.
+
+```typescript
+// src/mcp-server/resources/definitions/entity-fields.resource.ts
+import { ResourceDefinition } from "../utils/types";
+import { UriTemplate } from "@modelcontextprotocol/sdk/types.js";
+import { getEntitySchema } from "../../tools/utils/entityMapping";
+import { extractFieldsFromZodSchema } from "../utils/extractFieldsFromZodSchema";
+
+export const entityFieldsResource: ResourceDefinition = {
+  uri: new UriTemplate("entity-fields://{entityType}"),
+  name: "DV360 Entity Fields List",
+  description: "Get a flat list of all field paths for a DV360 entity type",
+
+  async read({ entityType }: { entityType: string }) {
+    const zodSchema = getEntitySchema(entityType, "update");
+
+    // Extract flat field paths from Zod schema
+    const fields = extractFieldsFromZodSchema(zodSchema);
+
+    return {
+      contents: [
+        {
+          uri: `entity-fields://${entityType}`,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              entityType,
+              fieldCount: fields.length,
+              fields: fields.map((field) => ({
+                path: field.path,
+                type: field.type,
+                optional: field.optional,
+                description: field.description,
+              })),
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  },
+};
+```
+
+**Example Usage:**
+```
+AI: Read entity-fields://campaign
+Returns: ["displayName", "entityStatus", "campaignGoal.performanceGoalType", "campaignFlight.plannedDates.startDate", ...] (~2-3KB)
+AI: User wants to update "campaignFlight.plannedDates.endDate" - let me construct the updateMask
+```
+
+##### Resource 3: `entity-examples://{entityType}`
+
+Returns curated examples showing common update patterns for an entity type, including correct `data` payload and `updateMask` values.
+
+```typescript
+// src/mcp-server/resources/definitions/entity-examples.resource.ts
+import { ResourceDefinition } from "../utils/types";
+import { UriTemplate } from "@modelcontextprotocol/sdk/types.js";
+import { getEntityExamples } from "../utils/entityExamples";
+
+export const entityExamplesResource: ResourceDefinition = {
+  uri: new UriTemplate("entity-examples://{entityType}"),
+  name: "DV360 Entity Examples",
+  description: "Get curated examples of common update patterns for a DV360 entity type",
+
+  async read({ entityType }: { entityType: string }) {
+    const examples = getEntityExamples(entityType);
+
+    return {
+      contents: [
+        {
+          uri: `entity-examples://${entityType}`,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              entityType,
+              examples,
+            },
+            null,
+            2
+          ),
+        },
+      ],
+    };
+  },
+};
+```
+
+**Example Usage:**
+```
+AI: Read entity-examples://lineItem
+Returns: Common patterns like "Update CPM bid", "Pause line item", "Change flight dates" with exact payloads (~1-2KB)
+AI: User wants to increase CPM - let me use this example pattern as a template
+```
+
+##### Resource Utility: `extractFieldsFromZodSchema.ts`
+
+```typescript
+// src/mcp-server/resources/utils/extractFieldsFromZodSchema.ts
+import { z } from "zod";
+
+export interface FieldInfo {
+  path: string;
+  type: string;
+  optional: boolean;
+  description?: string;
+}
+
+/**
+ * Recursively extract all field paths from a Zod schema
+ */
+export function extractFieldsFromZodSchema(
+  schema: z.ZodTypeAny,
+  pathPrefix = ""
+): FieldInfo[] {
+  const fields: FieldInfo[] = [];
+
+  if (schema instanceof z.ZodObject) {
+    const shape = schema.shape;
+    for (const [key, value] of Object.entries(shape)) {
+      const fullPath = pathPrefix ? `${pathPrefix}.${key}` : key;
+      const isOptional = value instanceof z.ZodOptional;
+      const innerSchema = isOptional ? (value as z.ZodOptional<any>)._def.innerType : value;
+
+      fields.push({
+        path: fullPath,
+        type: getZodTypeName(innerSchema),
+        optional: isOptional,
+        description: (innerSchema as any)._def?.description,
+      });
+
+      // Recurse into nested objects
+      if (innerSchema instanceof z.ZodObject) {
+        fields.push(...extractFieldsFromZodSchema(innerSchema, fullPath));
+      } else if (innerSchema instanceof z.ZodArray) {
+        const arrayElement = (innerSchema as z.ZodArray<any>)._def.type;
+        if (arrayElement instanceof z.ZodObject) {
+          fields.push(...extractFieldsFromZodSchema(arrayElement, `${fullPath}[]`));
+        }
+      }
+    }
+  }
+
+  return fields;
+}
+
+function getZodTypeName(schema: z.ZodTypeAny): string {
+  if (schema instanceof z.ZodString) return "string";
+  if (schema instanceof z.ZodNumber) return "number";
+  if (schema instanceof z.ZodBoolean) return "boolean";
+  if (schema instanceof z.ZodArray) return "array";
+  if (schema instanceof z.ZodObject) return "object";
+  if (schema instanceof z.ZodEnum) return "enum";
+  return "unknown";
+}
+```
+
+##### Resource Utility: `entityExamples.ts`
+
+```typescript
+// src/mcp-server/resources/utils/entityExamples.ts
+
+export interface EntityExample {
+  title: string;
+  description: string;
+  tool: "dv360_update_entity";
+  input: {
+    entityType: string;
+    [key: string]: any;
+  };
+}
+
+const lineItemExamples: EntityExample[] = [
+  {
+    title: "Update CPM Bid",
+    description: "Increase the fixed CPM bid for a line item",
+    tool: "dv360_update_entity",
+    input: {
+      entityType: "lineItem",
+      advertiserId: "12345",
+      lineItemId: "67890",
+      data: {
+        bidStrategy: {
+          fixedBid: {
+            bidAmountMicros: 5000000, // $5.00 CPM
+          },
+        },
+      },
+      updateMask: "bidStrategy.fixedBid.bidAmountMicros",
+      reason: "Underdelivering - increasing bid to improve pacing",
+    },
+  },
+  {
+    title: "Pause Line Item",
+    description: "Set entity status to paused",
+    tool: "dv360_update_entity",
+    input: {
+      entityType: "lineItem",
+      advertiserId: "12345",
+      lineItemId: "67890",
+      data: {
+        entityStatus: "ENTITY_STATUS_PAUSED",
+      },
+      updateMask: "entityStatus",
+      reason: "Campaign budget exhausted",
+    },
+  },
+  {
+    title: "Extend Flight Dates",
+    description: "Update the end date of a line item flight",
+    tool: "dv360_update_entity",
+    input: {
+      entityType: "lineItem",
+      advertiserId: "12345",
+      lineItemId: "67890",
+      data: {
+        flight: {
+          dateRange: {
+            endDate: {
+              year: 2025,
+              month: 12,
+              day: 31,
+            },
+          },
+        },
+      },
+      updateMask: "flight.dateRange.endDate",
+      reason: "Extending campaign to end of year",
+    },
+  },
+  {
+    title: "Adjust Revenue Margin",
+    description: "Update the partner revenue model margin percentage",
+    tool: "dv360_update_entity",
+    input: {
+      entityType: "lineItem",
+      advertiserId: "12345",
+      lineItemId: "67890",
+      data: {
+        partnerRevenueModel: {
+          markupType: "PARTNER_REVENUE_MODEL_MARKUP_TYPE_CPM",
+          markupAmount: {
+            micros: 500000, // $0.50 margin
+          },
+        },
+      },
+      updateMask: "partnerRevenueModel.markupAmount",
+      reason: "Optimizing margin based on performance data",
+    },
+  },
+];
+
+const campaignExamples: EntityExample[] = [
+  {
+    title: "Update Campaign Budget",
+    description: "Increase the campaign budget amount",
+    tool: "dv360_update_entity",
+    input: {
+      entityType: "campaign",
+      advertiserId: "12345",
+      campaignId: "67890",
+      data: {
+        campaignBudgets: [
+          {
+            budgetAmountMicros: 50000000000, // $50,000
+            budgetUnit: "BUDGET_UNIT_CURRENCY",
+          },
+        ],
+      },
+      updateMask: "campaignBudgets",
+      reason: "Additional budget allocated for Q4",
+    },
+  },
+  {
+    title: "Pause Campaign",
+    description: "Set campaign status to paused",
+    tool: "dv360_update_entity",
+    input: {
+      entityType: "campaign",
+      advertiserId: "12345",
+      campaignId: "67890",
+      data: {
+        entityStatus: "ENTITY_STATUS_PAUSED",
+      },
+      updateMask: "entityStatus",
+      reason: "End of campaign period",
+    },
+  },
+];
+
+const insertionOrderExamples: EntityExample[] = [
+  {
+    title: "Update IO Budget",
+    description: "Increase insertion order budget",
+    tool: "dv360_update_entity",
+    input: {
+      entityType: "insertionOrder",
+      advertiserId: "12345",
+      insertionOrderId: "67890",
+      data: {
+        budget: {
+          budgetAmountMicros: 10000000000, // $10,000
+          budgetUnit: "BUDGET_UNIT_CURRENCY",
+        },
+      },
+      updateMask: "budget.budgetAmountMicros",
+      reason: "Budget increase approved",
+    },
+  },
+];
+
+const examplesByEntity: Record<string, EntityExample[]> = {
+  lineItem: lineItemExamples,
+  campaign: campaignExamples,
+  insertionOrder: insertionOrderExamples,
+  // Add more as needed
+};
+
+export function getEntityExamples(entityType: string): EntityExample[] {
+  return examplesByEntity[entityType] || [];
+}
+```
+
+##### Resource Registry
+
+```typescript
+// src/mcp-server/resources/utils/resourceRegistry.ts
+import { ResourceDefinition } from "./types";
+import { entitySchemaResource } from "../definitions/entity-schema.resource";
+import { entityFieldsResource } from "../definitions/entity-fields.resource";
+import { entityExamplesResource } from "../definitions/entity-examples.resource";
+
+export class ResourceRegistry {
+  private resources: ResourceDefinition[] = [];
+
+  registerAll() {
+    this.resources.push(entitySchemaResource);
+    this.resources.push(entityFieldsResource);
+    this.resources.push(entityExamplesResource);
+  }
+
+  getAllResources(): ResourceDefinition[] {
+    return this.resources;
+  }
+
+  getResource(uri: string): ResourceDefinition | undefined {
+    return this.resources.find((r) => r.uri.match(uri));
+  }
+}
+```
+
 ##### Entity Mapping Pattern (from example-tools.ts)
 
 ```typescript
@@ -476,7 +929,7 @@ const InputSchema = z
         "insertionOrder",
         "lineItem",
         "adGroup",
-        "ad",
+        "adGroupAd",
         "creative",
       ])
       .describe("Type of entity to update"),

@@ -173,7 +173,8 @@ export type SchemaExtractionConfig = z.infer<typeof SchemaExtractionConfigSchema
  * DV360 MCP server. Additional entities can be added incrementally as needed.
  *
  * Current focus areas:
- * - Campaign hierarchy (Partner → Advertiser → InsertionOrder → LineItem → AdGroup)
+ * - Campaign hierarchy (Partner → Advertiser → Campaign → InsertionOrder → LineItem → AdGroup → AdGroupAd)
+ * - Creative management
  * - List response wrappers for pagination
  * - Budget and pacing structures
  */
@@ -184,18 +185,29 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
   // Start small to validate the pipeline works correctly
   rootSchemas: [
     // Core entities (primary hierarchy)
+    // Partner → Advertiser → Campaign → InsertionOrder → LineItem → AdGroup → AdGroupAd
     'Partner',
     'Advertiser',
+    'Campaign',
     'InsertionOrder',
     'LineItem',
     'AdGroup',
+    'AdGroupAd',
+    'Creative',
+
+    // Top-level resources
+    'CustomBiddingAlgorithm',
 
     // Response wrappers (for list operations)
     'ListPartnersResponse',
     'ListAdvertisersResponse',
+    'ListCampaignsResponse',
     'ListInsertionOrdersResponse',
     'ListLineItemsResponse',
     'ListAdGroupsResponse',
+    'ListAdGroupAdsResponse',
+    'ListCreativesResponse',
+    'ListCustomBiddingAlgorithmsResponse',
 
     // Critical nested types
     // Note: These will be auto-resolved via dependencies, but we list them
