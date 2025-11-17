@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, type ZodRawShape } from "zod";
 import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
 import {
@@ -7,6 +7,8 @@ import {
   generateRelationshipDescription,
   validateEntityRelationships,
   getEntityHierarchyPath,
+  getEntitySchemaForOperation,
+  getRequiredFieldsFromSchema,
 } from "../utils/entityMappingDynamic.js";
 import { extractParentIds } from "../utils/entityIdExtraction.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
@@ -38,65 +40,95 @@ Supported entity types: ${getSupportedEntityTypesDynamic().join(", ")}`;
 
 const TOOL_DESCRIPTION = generateToolDescription();
 
-/**
- * Input schema for create entity tool with dynamic validation
- * Uses Zod refinement to enforce entity-specific parent ID requirements
- */
-export const CreateEntityInputSchema = z
-  .object({
-    entityType: z
-      .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
-      .describe("Type of entity to create"),
-    partnerId: z.string().optional().describe("Partner ID (if required for entity type)"),
-    advertiserId: z
-      .string()
-      .optional()
-      .describe("Advertiser ID (if required for entity type)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (if required for entity type)"),
-    insertionOrderId: z
-      .string()
-      .optional()
-      .describe("Insertion Order ID (if required for entity type)"),
-    lineItemId: z
-      .string()
-      .optional()
-      .describe("Line Item ID (if required for entity type)"),
-    adGroupId: z.string().optional().describe("Ad Group ID (if required for entity type)"),
-    data: z
-      .record(z.any())
-      .describe("Entity data to create (validated against entity schema)"),
-  })
-  .refine(
-    (data) => {
-      // Get entity configuration to check required parent IDs
-      const config = getEntityConfigDynamic(data.entityType);
+const COMMON_PARENT_FIELD_DESCRIPTIONS: Record<string, string> = {
+  partnerId: "Partner ID (top-level DV360 scope)",
+  advertiserId: "Advertiser ID (required for most advertiser-scoped resources)",
+  campaignId: "Campaign ID used for linking insertion orders and reports",
+  insertionOrderId: "Insertion order ID used to scope line items",
+  lineItemId: "Line item ID used for ad groups and creatives",
+  adGroupId: "Ad group ID used for managing ads",
+};
 
-      // Validate all required parent IDs are present
-      for (const requiredParentId of config.parentIds) {
-        if (!data[requiredParentId as keyof typeof data]) {
-          return false;
-        }
-      }
+type EntityVariantSchema = z.ZodObject<any>;
 
-      return true;
-    },
-    (data) => {
-      // Generate helpful error message with specific missing IDs
-      const config = getEntityConfigDynamic(data.entityType);
-      const missingIds = config.parentIds.filter(
-        (id) => !data[id as keyof typeof data]
+function buildParentFieldSchema(fieldName: string, required: boolean): z.ZodTypeAny {
+  const description =
+    COMMON_PARENT_FIELD_DESCRIPTIONS[fieldName] ||
+    `${fieldName} identifier required for hierarchical DV360 operations`;
+
+  const baseSchema = z
+    .string()
+    .min(1, `${fieldName} cannot be empty`)
+    .describe(description);
+
+  return required ? baseSchema : baseSchema.optional();
+}
+
+function buildEntitySpecificInputSchema(entityType: string): EntityVariantSchema {
+  const config = getEntityConfigDynamic(entityType);
+  const relationshipDescription = generateRelationshipDescription(entityType);
+  const requiredFields = getRequiredFieldsFromSchema(entityType);
+  const requiredPreview = requiredFields.slice(0, 10);
+  const previewSuffix = requiredFields.length > requiredPreview.length ? ", …" : "";
+  const dataDescription =
+    `Entity data to create (${entityType}). Required fields include: ${requiredPreview.join(", ") ||
+      "See schema"}${previewSuffix}.\n${relationshipDescription}`;
+
+  const shape: ZodRawShape = {
+    entityType: z.literal(entityType).describe("Type of entity to create"),
+  };
+
+  const parentFieldNames = new Set([
+    ...Object.keys(COMMON_PARENT_FIELD_DESCRIPTIONS),
+    ...config.parentIds,
+  ]);
+
+  for (const fieldName of parentFieldNames) {
+    const isRequired = config.parentIds.includes(fieldName);
+    shape[fieldName] = buildParentFieldSchema(fieldName, isRequired);
+  }
+
+  shape.data = getEntitySchemaForOperation(entityType, "create").describe(dataDescription);
+
+  return z.object(shape).passthrough();
+}
+
+function createInputSchema(): z.ZodTypeAny {
+  const variants = getSupportedEntityTypesDynamic().map((entityType) =>
+    buildEntitySpecificInputSchema(entityType)
+  );
+
+  if (variants.length === 0) {
+    throw new Error("No DV360 entity types are configured for create operation");
+  }
+
+  if (variants.length === 1) {
+    return variants[0].describe("Parameters for creating a DV360 entity");
+  }
+
+  return z
+    .discriminatedUnion(
+      "entityType",
+      variants as [EntityVariantSchema, EntityVariantSchema, ...EntityVariantSchema[]]
+    )
+    .superRefine((input, ctx) => {
+      const missingRelationships = validateEntityRelationships(
+        input.entityType,
+        input.data as Record<string, any>
       );
 
-      return {
-        message: `Missing required parent ID(s) for creating ${data.entityType}: ${missingIds.join(", ")}. Required: ${config.parentIds.join(", ")}`,
-        path: missingIds,
-      };
-    }
-  )
-  .describe("Parameters for creating a DV360 entity");
+      if (missingRelationships.length > 0) {
+        ctx.addIssue({
+          code: "custom",
+          message: `Missing required parent relationship field(s): ${missingRelationships.join(", ")}`,
+          path: ["data"],
+        });
+      }
+    })
+    .describe("Parameters for creating a DV360 entity");
+}
+
+export const CreateEntityInputSchema = createInputSchema();
 
 /**
  * Output schema for create entity tool

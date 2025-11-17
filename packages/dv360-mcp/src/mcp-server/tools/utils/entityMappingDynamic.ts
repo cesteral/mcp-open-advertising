@@ -55,7 +55,7 @@ interface EntityApiMetadata {
  * Registry of entity API metadata
  * This is the ONLY place we need to manually configure entities
  */
-const ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
+export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
   partner: {
     apiPathTemplate: "/partners",
     parentResourceIds: [],
@@ -123,12 +123,32 @@ const ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
   },
 };
 
+const ENTITY_API_METADATA_CACHE = new Map<string, EntityApiMetadata>();
+
+function getEntityApiMetadata(entityType: string): EntityApiMetadata | undefined {
+  if (STATIC_ENTITY_API_METADATA[entityType]) {
+    return STATIC_ENTITY_API_METADATA[entityType];
+  }
+
+  if (ENTITY_API_METADATA_CACHE.has(entityType)) {
+    return ENTITY_API_METADATA_CACHE.get(entityType);
+  }
+
+  if (hasGeneratedSchema(entityType)) {
+    const suggestion = suggestApiMetadata(entityType);
+    ENTITY_API_METADATA_CACHE.set(entityType, suggestion);
+    return suggestion;
+  }
+
+  return undefined;
+}
+
 /**
  * Entity Relationship Registry
  * Defines parent-child relationships in entity data payloads
  * This is auto-discovered from schemas but can be overridden here
  */
-const ENTITY_RELATIONSHIPS: Record<string, EntityRelationship[]> = {
+const RELATIONSHIP_OVERRIDES: Record<string, EntityRelationship[]> = {
   // Campaign belongs to Advertiser (via advertiserId in data)
   campaign: [
     {
@@ -202,11 +222,44 @@ const ENTITY_RELATIONSHIPS: Record<string, EntityRelationship[]> = {
   ],
 };
 
+function buildEntityRelationships(
+  entityType: string,
+  metadata?: EntityApiMetadata
+): EntityRelationship[] {
+  const overrides = RELATIONSHIP_OVERRIDES[entityType] || [];
+  if (!metadata) {
+    return overrides;
+  }
+
+  const relationships = [...overrides];
+  for (const parentField of metadata.parentResourceIds) {
+    if (relationships.some((rel) => rel.parentFieldName === parentField)) {
+      continue;
+    }
+
+    relationships.push({
+      parentEntityType: inferParentEntityType(parentField),
+      parentFieldName: parentField,
+      required: true,
+      description: `${entityType} must reference ${parentField} to resolve its API path`,
+    });
+  }
+
+  return relationships;
+}
+
+function inferParentEntityType(fieldName: string): string {
+  if (fieldName.endsWith("Id")) {
+    return fieldName.slice(0, -2);
+  }
+  return fieldName;
+}
+
 /**
  * Build dynamic entity configuration from API metadata and schema introspection
  */
 export function buildEntityConfig(entityType: string): EntityConfig | null {
-  const apiMetadata = ENTITY_API_METADATA[entityType];
+  const apiMetadata = getEntityApiMetadata(entityType);
   if (!apiMetadata) {
     return null;
   }
@@ -249,7 +302,7 @@ export function buildEntityConfig(entityType: string): EntityConfig | null {
     supportsDelete: !apiMetadata.isReadOnly,
     supportsFilter: apiMetadata.supportsFilter ?? false,
     filterFields,
-    relationships: ENTITY_RELATIONSHIPS[entityType] || [],
+    relationships: buildEntityRelationships(entityType, apiMetadata),
   };
 }
 
@@ -296,7 +349,12 @@ function inferFilterableFields(entityType: string): string[] {
 export function getAllEntityConfigs(): Map<string, EntityConfig> {
   const configs = new Map<string, EntityConfig>();
 
-  for (const entityType of Object.keys(ENTITY_API_METADATA)) {
+  const entityTypes = new Set([
+    ...Object.keys(STATIC_ENTITY_API_METADATA),
+    ...getAvailableEntitySchemas().keys(),
+  ]);
+
+  for (const entityType of entityTypes) {
     const config = buildEntityConfig(entityType);
     if (config) {
       configs.set(entityType, config);
@@ -312,7 +370,7 @@ export function getAllEntityConfigs(): Map<string, EntityConfig> {
 export function getRequiredFieldsFromSchema(entityType: string): string[] {
   if (!hasGeneratedSchema(entityType)) {
     // Fallback to minimal requirements
-    const apiMetadata = ENTITY_API_METADATA[entityType];
+    const apiMetadata = getEntityApiMetadata(entityType);
     return [
       ...(apiMetadata?.parentResourceIds || []),
       "displayName",
@@ -328,15 +386,14 @@ export function getRequiredFieldsFromSchema(entityType: string): string[] {
  * Get supported entity types (from schema introspection + API metadata)
  */
 export function getSupportedEntityTypesDynamic(): string[] {
-  // Return entities that have API metadata (schema is optional with fallback)
-  return Object.keys(ENTITY_API_METADATA);
+  return Array.from(getAllEntityConfigs().keys()).sort();
 }
 
 /**
  * Validate entity type is supported
  */
 export function isEntityTypeSupported(entityType: string): boolean {
-  return ENTITY_API_METADATA[entityType] !== undefined;
+  return getEntityApiMetadata(entityType) !== undefined;
 }
 
 /**
@@ -378,7 +435,10 @@ export function getEntitySchemaForOperation(
  */
 export function discoverNewEntities(): string[] {
   const availableSchemas = getAvailableEntitySchemas();
-  const configuredEntities = new Set(Object.keys(ENTITY_API_METADATA));
+  const configuredEntities = new Set([
+    ...Object.keys(STATIC_ENTITY_API_METADATA),
+    ...ENTITY_API_METADATA_CACHE.keys(),
+  ]);
 
   const newEntities: string[] = [];
   for (const entityType of availableSchemas.keys()) {
@@ -412,7 +472,8 @@ export function suggestApiMetadata(entityType: string): EntityApiMetadata {
  * Get entity relationships for a given entity type
  */
 export function getEntityRelationships(entityType: string): EntityRelationship[] {
-  return ENTITY_RELATIONSHIPS[entityType] || [];
+  const metadata = getEntityApiMetadata(entityType);
+  return buildEntityRelationships(entityType, metadata);
 }
 
 /**
@@ -493,7 +554,7 @@ export function validateEntityRelationships(
   const missingFields: string[] = [];
 
   for (const rel of relationships) {
-    if (rel.required && !data[rel.parentFieldName]) {
+    if (rel.required && !hasNestedValue(data, rel.parentFieldName)) {
       missingFields.push(rel.parentFieldName);
     }
   }
@@ -527,4 +588,26 @@ export function getCreateRequirements(entityType: string): {
 - Include ${requiredDataFields.join(", ")} in the data payload (to establish relationships)
 - Hierarchy: ${hierarchy.join(" > ")}`,
   };
+}
+
+function hasNestedValue(data: Record<string, any>, path: string): boolean {
+  const parts = path.split(".");
+
+  const traverse = (current: any, index: number): boolean => {
+    if (index >= parts.length) {
+      return current !== undefined && current !== null && current !== "";
+    }
+
+    if (Array.isArray(current)) {
+      return current.some((item) => traverse(item, index));
+    }
+
+    if (current && typeof current === "object") {
+      return traverse((current as Record<string, any>)[parts[index]], index + 1);
+    }
+
+    return false;
+  };
+
+  return traverse(data, 0);
 }
