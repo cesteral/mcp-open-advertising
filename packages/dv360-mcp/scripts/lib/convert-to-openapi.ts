@@ -150,8 +150,18 @@ function convertSchema(
   }
 
   // Convert required fields
+  // Priority: 1) explicit required array, 2) parse from descriptions, 3) manual overrides
   if (discoverySchema.required && Array.isArray(discoverySchema.required)) {
     openApiSchema.required = discoverySchema.required;
+  } else {
+    // Extract required fields from property descriptions
+    const requiredFromDescriptions = extractRequiredFieldsFromDescriptions(
+      schemaName,
+      discoverySchema
+    );
+    if (requiredFromDescriptions.length > 0) {
+      openApiSchema.required = requiredFromDescriptions;
+    }
   }
 
   // Convert additionalProperties
@@ -337,4 +347,178 @@ export function generateConversionReport(
     lossyConversions,
     newSchemas,
   };
+}
+
+/**
+ * Markers in field descriptions that indicate output-only fields
+ */
+const OUTPUT_ONLY_MARKERS = {
+  EXPLICIT: 'output only',
+  ASSIGNED: 'assigned by the system',
+} as const;
+
+/**
+ * Fields that should be excluded from required detection because they are output-only
+ * These patterns apply to all schemas
+ */
+const OUTPUT_ONLY_PATTERNS: ReadonlyArray<RegExp> = [
+  /^name$/,        // 'name' is usually the resource name (output-only)
+  /^updateTime$/,  // updateTime is always output-only
+  /^createTime$/,  // createTime is always output-only
+] as const;
+
+/**
+ * Manual override registry for required fields
+ *
+ * When to use:
+ * - add: Field is required but API description doesn't start with "Required"
+ * - remove: Field incorrectly detected as required (e.g., conditionally required)
+ * - reason: Document why the override is needed (helps future maintainers)
+ *
+ * Example scenarios:
+ * - Conditionally required fields (required only if another field is set)
+ * - Fields with non-standard description format
+ * - Output-only fields not caught by pattern matching
+ *
+ * @example
+ * ```typescript
+ * const REQUIRED_FIELDS_OVERRIDES = {
+ *   InsertionOrder: {
+ *     add: ['customFieldNotDetected'],
+ *     remove: ['incorrectlyDetectedField'],
+ *     reason: 'Field X is only required when Y is set to Z',
+ *   },
+ * };
+ * ```
+ */
+const REQUIRED_FIELDS_OVERRIDES: Record<
+  string,
+  { add?: string[]; remove?: string[]; reason?: string }
+> = {};
+
+/**
+ * Check if a field description indicates it's output-only
+ */
+function isOutputOnlyField(fieldName: string, description?: string): boolean {
+  if (!description) return false;
+
+  const lowerDesc = description.toLowerCase();
+
+  // Check explicit markers in description (most reliable indicators)
+  const hasOutputMarker = Object.values(OUTPUT_ONLY_MARKERS).some((marker) =>
+    lowerDesc.includes(marker)
+  );
+  if (hasOutputMarker) {
+    return true;
+  }
+
+  // Check field name patterns (only if not explicitly marked as required)
+  // This prevents false positives for fields like campaignId which may be required inputs
+  const isExplicitlyRequired = lowerDesc.startsWith('required');
+  if (!isExplicitlyRequired) {
+    for (const pattern of OUTPUT_ONLY_PATTERNS) {
+      if (pattern.test(fieldName)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Check if a field description indicates it's required
+ */
+function isRequiredFromDescription(description?: string): boolean {
+  if (!description) return false;
+
+  const trimmed = description.trim();
+
+  // Match various "Required" patterns at start of description:
+  // - "Required. ..."
+  // - "Required: ..."
+  // - "Required ..."
+  const requiredPattern = /^Required[\s.:]/i;
+
+  return requiredPattern.test(trimmed);
+}
+
+/**
+ * Extract required fields from schema property descriptions
+ */
+function extractRequiredFieldsFromDescriptions(
+  schemaName: string,
+  schema: DiscoverySchema
+): string[] {
+  const required: string[] = [];
+  const stats = {
+    detected: 0,
+    excluded: 0,
+    overrideAdded: 0,
+    overrideRemoved: 0,
+  };
+
+  if (!schema.properties) {
+    return required;
+  }
+
+  // Auto-detect from descriptions
+  for (const [propName, propSchema] of Object.entries(schema.properties)) {
+    // Skip if output-only
+    if (isOutputOnlyField(propName, propSchema.description)) {
+      stats.excluded++;
+      continue;
+    }
+
+    // Check if description indicates required
+    if (isRequiredFromDescription(propSchema.description)) {
+      required.push(propName);
+      stats.detected++;
+    }
+  }
+
+  // Apply manual overrides if present
+  const overrides = REQUIRED_FIELDS_OVERRIDES[schemaName];
+  if (overrides) {
+    // Add manually specified required fields
+    if (overrides.add) {
+      for (const field of overrides.add) {
+        if (!required.includes(field)) {
+          required.push(field);
+          stats.overrideAdded++;
+        }
+      }
+    }
+
+    // Remove fields that shouldn't be required
+    if (overrides.remove) {
+      const originalLength = required.length;
+      const filtered = required.filter(field => !overrides.remove!.includes(field));
+      stats.overrideRemoved = originalLength - filtered.length;
+
+      // Log override activity
+      if (stats.overrideAdded > 0 || stats.overrideRemoved > 0) {
+        console.log(
+          `     ${schemaName}: Manual override applied (${overrides.reason || 'no reason provided'})`
+        );
+        if (stats.overrideAdded > 0) {
+          console.log(`       + Added: ${overrides.add?.join(', ')}`);
+        }
+        if (stats.overrideRemoved > 0) {
+          console.log(`       - Removed: ${overrides.remove?.join(', ')}`);
+        }
+      }
+
+      return filtered;
+    }
+  }
+
+  // Log detection metrics for schemas with required fields
+  if (required.length > 0) {
+    console.log(
+      `     ${schemaName}: ${required.length} required field(s) detected, ${stats.excluded} excluded`
+    );
+  }
+
+  return required;
 }

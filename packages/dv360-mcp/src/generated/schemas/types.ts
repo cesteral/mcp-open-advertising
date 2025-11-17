@@ -9,35 +9,35 @@ export interface components {
     schemas: {
         /** @description A single partner in Display & Video 360 (DV360). */
         Partner: {
-            /** @description Ad server related settings of the partner. */
-            adServerConfig?: components["schemas"]["PartnerAdServerConfig"];
-            /** @description Output only. The resource name of the partner. */
-            name?: string;
-            /** @description The display name of the partner. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
-            /** @description Billing related settings of the partner. */
-            billingConfig?: components["schemas"]["PartnerBillingConfig"];
-            /** @description General settings of the partner. */
-            generalConfig?: components["schemas"]["PartnerGeneralConfig"];
             /**
              * Format: int64
              * @description Output only. The unique ID of the partner. Assigned by the system.
              */
             partnerId?: string;
+            /** @description Ad server related settings of the partner. */
+            adServerConfig?: components["schemas"]["PartnerAdServerConfig"];
             /** @description Settings that control how partner data may be accessed. */
             dataAccessConfig?: components["schemas"]["PartnerDataAccessConfig"];
-            /** @description Settings that control which exchanges are enabled for the partner. */
-            exchangeConfig?: components["schemas"]["ExchangeConfig"];
             /**
              * Format: google-datetime
              * @description Output only. The timestamp when the partner was last updated. Assigned by the system.
              */
             updateTime?: string;
+            /** @description General settings of the partner. */
+            generalConfig?: components["schemas"]["PartnerGeneralConfig"];
+            /** @description Billing related settings of the partner. */
+            billingConfig?: components["schemas"]["PartnerBillingConfig"];
             /**
              * @description Output only. The status of the partner.
              * @enum {string}
              */
             entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
+            /** @description The display name of the partner. Must be UTF-8 encoded with a maximum size of 240 bytes. */
+            displayName?: string;
+            /** @description Settings that control which exchanges are enabled for the partner. */
+            exchangeConfig?: components["schemas"]["ExchangeConfig"];
+            /** @description Output only. The resource name of the partner. */
+            name?: string;
         };
         /** @description Ad server related settings of a partner. */
         PartnerAdServerConfig: {
@@ -46,25 +46,10 @@ export interface components {
         };
         /** @description Measurement settings of a partner. */
         MeasurementConfig: {
-            /** @description Whether or not to include DV360 data in CM360 data transfer reports. */
-            dv360ToCmDataSharingEnabled?: boolean;
             /** @description Whether or not to report DV360 cost to CM360. */
             dv360ToCmCostReportingEnabled?: boolean;
-        };
-        /** @description Billing related settings of a partner. */
-        PartnerBillingConfig: {
-            /**
-             * Format: int64
-             * @description The ID of a partner default billing profile.
-             */
-            billingProfileId?: string;
-        };
-        /** @description General settings of a partner. */
-        PartnerGeneralConfig: {
-            /** @description Immutable. Partner's currency in ISO 4217 format. */
-            currencyCode?: string;
-            /** @description Immutable. The standard TZ database name of the partner's time zone. For example, `America/New_York`. See more at: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones */
-            timeZone?: string;
+            /** @description Whether or not to include DV360 data in CM360 data transfer reports. */
+            dv360ToCmDataSharingEnabled?: boolean;
         };
         /** @description Settings that control how partner related data may be accessed. */
         PartnerDataAccessConfig: {
@@ -77,9 +62,24 @@ export interface components {
              * @description Required. The version of SDF being used.
              * @enum {string}
              */
-            version?: "SDF_VERSION_UNSPECIFIED" | "SDF_VERSION_3_1" | "SDF_VERSION_4" | "SDF_VERSION_4_1" | "SDF_VERSION_4_2" | "SDF_VERSION_5" | "SDF_VERSION_5_1" | "SDF_VERSION_5_2" | "SDF_VERSION_5_3" | "SDF_VERSION_5_4" | "SDF_VERSION_5_5" | "SDF_VERSION_6" | "SDF_VERSION_7" | "SDF_VERSION_7_1" | "SDF_VERSION_8" | "SDF_VERSION_8_1" | "SDF_VERSION_9" | "SDF_VERSION_9_1" | "SDF_VERSION_9_2";
+            version: "SDF_VERSION_UNSPECIFIED" | "SDF_VERSION_3_1" | "SDF_VERSION_4" | "SDF_VERSION_4_1" | "SDF_VERSION_4_2" | "SDF_VERSION_5" | "SDF_VERSION_5_1" | "SDF_VERSION_5_2" | "SDF_VERSION_5_3" | "SDF_VERSION_5_4" | "SDF_VERSION_5_5" | "SDF_VERSION_6" | "SDF_VERSION_7" | "SDF_VERSION_7_1" | "SDF_VERSION_8" | "SDF_VERSION_8_1" | "SDF_VERSION_9" | "SDF_VERSION_9_1" | "SDF_VERSION_9_2";
             /** @description An administrator email address to which the SDF processing status reports will be sent. */
             adminEmail?: string;
+        };
+        /** @description General settings of a partner. */
+        PartnerGeneralConfig: {
+            /** @description Immutable. Partner's currency in ISO 4217 format. */
+            currencyCode?: string;
+            /** @description Immutable. The standard TZ database name of the partner's time zone. For example, `America/New_York`. See more at: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones */
+            timeZone?: string;
+        };
+        /** @description Billing related settings of a partner. */
+        PartnerBillingConfig: {
+            /**
+             * Format: int64
+             * @description The ID of a partner default billing profile.
+             */
+            billingProfileId?: string;
         };
         /** @description Settings that control which exchanges are enabled for a partner. */
         ExchangeConfig: {
@@ -88,17 +88,17 @@ export interface components {
         };
         /** @description An enabled exchange in the partner. */
         ExchangeConfigEnabledExchange: {
-            /** @description Output only. Network ID of Google Ad Manager. The field is only relevant when Google Ad Manager is the enabled exchange. */
-            googleAdManagerBuyerNetworkId?: string;
-            /** @description Output only. Seat ID of the enabled exchange. */
-            seatId?: string;
             /** @description Output only. Agency ID of Google Ad Manager. The field is only relevant when Google Ad Manager is the enabled exchange. */
             googleAdManagerAgencyId?: string;
+            /** @description Output only. Seat ID of the enabled exchange. */
+            seatId?: string;
             /**
              * @description The enabled exchange.
              * @enum {string}
              */
             exchange?: "EXCHANGE_UNSPECIFIED" | "EXCHANGE_GOOGLE_AD_MANAGER" | "EXCHANGE_APPNEXUS" | "EXCHANGE_BRIGHTROLL" | "EXCHANGE_ADFORM" | "EXCHANGE_ADMETA" | "EXCHANGE_ADMIXER" | "EXCHANGE_ADSMOGO" | "EXCHANGE_ADSWIZZ" | "EXCHANGE_BIDSWITCH" | "EXCHANGE_BRIGHTROLL_DISPLAY" | "EXCHANGE_CADREON" | "EXCHANGE_DAILYMOTION" | "EXCHANGE_FIVE" | "EXCHANGE_FLUCT" | "EXCHANGE_FREEWHEEL" | "EXCHANGE_GENIEE" | "EXCHANGE_GUMGUM" | "EXCHANGE_IMOBILE" | "EXCHANGE_IBILLBOARD" | "EXCHANGE_IMPROVE_DIGITAL" | "EXCHANGE_INDEX" | "EXCHANGE_KARGO" | "EXCHANGE_MICROAD" | "EXCHANGE_MOPUB" | "EXCHANGE_NEND" | "EXCHANGE_ONE_BY_AOL_DISPLAY" | "EXCHANGE_ONE_BY_AOL_MOBILE" | "EXCHANGE_ONE_BY_AOL_VIDEO" | "EXCHANGE_OOYALA" | "EXCHANGE_OPENX" | "EXCHANGE_PERMODO" | "EXCHANGE_PLATFORMONE" | "EXCHANGE_PLATFORMID" | "EXCHANGE_PUBMATIC" | "EXCHANGE_PULSEPOINT" | "EXCHANGE_REVENUEMAX" | "EXCHANGE_RUBICON" | "EXCHANGE_SMARTCLIP" | "EXCHANGE_SMARTRTB" | "EXCHANGE_SMARTSTREAMTV" | "EXCHANGE_SOVRN" | "EXCHANGE_SPOTXCHANGE" | "EXCHANGE_STROER" | "EXCHANGE_TEADSTV" | "EXCHANGE_TELARIA" | "EXCHANGE_TVN" | "EXCHANGE_UNITED" | "EXCHANGE_YIELDLAB" | "EXCHANGE_YIELDMO" | "EXCHANGE_UNRULYX" | "EXCHANGE_OPEN8" | "EXCHANGE_TRITON" | "EXCHANGE_TRIPLELIFT" | "EXCHANGE_TABOOLA" | "EXCHANGE_INMOBI" | "EXCHANGE_SMAATO" | "EXCHANGE_AJA" | "EXCHANGE_SUPERSHIP" | "EXCHANGE_NEXSTAR_DIGITAL" | "EXCHANGE_WAZE" | "EXCHANGE_SOUNDCAST" | "EXCHANGE_SHARETHROUGH" | "EXCHANGE_FYBER" | "EXCHANGE_RED_FOR_PUBLISHERS" | "EXCHANGE_MEDIANET" | "EXCHANGE_TAPJOY" | "EXCHANGE_VISTAR" | "EXCHANGE_DAX" | "EXCHANGE_JCD" | "EXCHANGE_PLACE_EXCHANGE" | "EXCHANGE_APPLOVIN" | "EXCHANGE_CONNATIX" | "EXCHANGE_RESET_DIGITAL" | "EXCHANGE_HIVESTACK" | "EXCHANGE_DRAX" | "EXCHANGE_APPLOVIN_GBID" | "EXCHANGE_FYBER_GBID" | "EXCHANGE_UNITY_GBID" | "EXCHANGE_CHARTBOOST_GBID" | "EXCHANGE_ADMOST_GBID" | "EXCHANGE_TOPON_GBID" | "EXCHANGE_NETFLIX" | "EXCHANGE_CORE" | "EXCHANGE_COMMERCE_GRID" | "EXCHANGE_SPOTIFY" | "EXCHANGE_TUBI" | "EXCHANGE_SNAP";
+            /** @description Output only. Network ID of Google Ad Manager. The field is only relevant when Google Ad Manager is the enabled exchange. */
+            googleAdManagerBuyerNetworkId?: string;
         };
         /** @description A single advertiser in Display & Video 360 (DV360). */
         Advertiser: {
@@ -107,115 +107,51 @@ export interface components {
              * @enum {string}
              */
             containsEuPoliticalAds?: "EU_POLITICAL_ADVERTISING_STATUS_UNKNOWN" | "CONTAINS_EU_POLITICAL_ADVERTISING" | "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING";
-            /** @description Required. The display name of the advertiser. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
-            /** @description Required. Creative related settings of the advertiser. */
-            creativeConfig?: components["schemas"]["AdvertiserCreativeConfig"];
-            /**
-             * Format: google-datetime
-             * @description Output only. The timestamp when the advertiser was last updated. Assigned by the system.
-             */
-            updateTime?: string;
-            /** @description Integration details of the advertiser. Only integrationCode is currently applicable to advertiser. Other fields of IntegrationDetails are not supported and will be ignored if provided. */
-            integrationDetails?: components["schemas"]["IntegrationDetails"];
-            /**
-             * Format: int64
-             * @description Required. Immutable. The unique ID of the partner that the advertiser belongs to.
-             */
-            partnerId?: string;
-            /** @description Targeting settings related to ad serving of the advertiser. */
-            servingConfig?: components["schemas"]["AdvertiserTargetingConfig"];
-            /** @description Required. Immutable. Ad server related settings of the advertiser. */
-            adServerConfig?: components["schemas"]["AdvertiserAdServerConfig"];
-            /** @description Whether integration with Mediaocean (Prisma) is enabled. By enabling this, you agree to the following: On behalf of my company, I authorize Mediaocean (Prisma) to send budget segment plans to Google, and I authorize Google to send corresponding reporting and invoices from DV360 to Mediaocean for the purposes of budget planning, billing, and reconciliation for this advertiser. */
-            prismaEnabled?: boolean;
             /**
              * Format: int64
              * @description Output only. The unique ID of the advertiser. Assigned by the system.
              */
             advertiserId?: string;
-            /** @description Required. Billing related settings of the advertiser. */
-            billingConfig?: components["schemas"]["AdvertiserBillingConfig"];
-            /** @description Output only. The resource name of the advertiser. */
-            name?: string;
+            /** @description Targeting settings related to ad serving of the advertiser. */
+            servingConfig?: components["schemas"]["AdvertiserTargetingConfig"];
             /** @description Settings that control how advertiser data may be accessed. */
             dataAccessConfig?: components["schemas"]["AdvertiserDataAccessConfig"];
-            /** @description Required. General settings of the advertiser. */
-            generalConfig?: components["schemas"]["AdvertiserGeneralConfig"];
+            /**
+             * Format: int64
+             * @description Required. Immutable. The unique ID of the partner that the advertiser belongs to.
+             */
+            partnerId: string;
+            /** @description Required. Creative related settings of the advertiser. */
+            creativeConfig: components["schemas"]["AdvertiserCreativeConfig"];
+            /** @description Whether integration with Mediaocean (Prisma) is enabled. By enabling this, you agree to the following: On behalf of my company, I authorize Mediaocean (Prisma) to send budget segment plans to Google, and I authorize Google to send corresponding reporting and invoices from DV360 to Mediaocean for the purposes of budget planning, billing, and reconciliation for this advertiser. */
+            prismaEnabled?: boolean;
+            /** @description Required. Billing related settings of the advertiser. */
+            billingConfig: components["schemas"]["AdvertiserBillingConfig"];
+            /** @description Integration details of the advertiser. Only integrationCode is currently applicable to advertiser. Other fields of IntegrationDetails are not supported and will be ignored if provided. */
+            integrationDetails?: components["schemas"]["IntegrationDetails"];
+            /**
+             * Format: google-datetime
+             * @description Output only. The timestamp when the advertiser was last updated. Assigned by the system.
+             */
+            updateTime?: string;
+            /** @description Output only. The resource name of the advertiser. */
+            name?: string;
             /**
              * @description Required. Controls whether or not insertion orders and line items of the advertiser can spend their budgets and bid on inventory. * Accepted values are `ENTITY_STATUS_ACTIVE`, `ENTITY_STATUS_PAUSED` and `ENTITY_STATUS_SCHEDULED_FOR_DELETION`. * If set to `ENTITY_STATUS_SCHEDULED_FOR_DELETION`, the advertiser will be deleted 30 days from when it was first scheduled for deletion.
              * @enum {string}
              */
-            entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
-        };
-        /** @description Creatives related settings of an advertiser. */
-        AdvertiserCreativeConfig: {
-            /** @description Whether or not the advertiser is enabled for dynamic creatives. */
-            dynamicCreativeEnabled?: boolean;
-            /**
-             * Format: int64
-             * @description An ID for configuring campaign monitoring provided by Integral Ad Service (IAS). The DV360 system will append an IAS "Campaign Monitor" tag containing this ID to the creative tag.
-             */
-            iasClientId?: string;
-            /** @description Whether or not to disable Google's About this Ad feature that adds badging (to identify the content as an ad) and transparency information (on interaction with About this Ad) to your ads for Online Behavioral Advertising (OBA) and regulatory requirements. About this Ad gives users greater control over the ads they see and helps you explain why they're seeing your ad. [Learn more](//support.google.com/displayvideo/answer/14315795). If you choose to set this field to `true`, note that ads served through Display & Video 360 must comply to the following: * Be Online Behavioral Advertising (OBA) compliant, as per your contract with Google Marketing Platform. * In the European Economic Area (EEA), include transparency information and a mechanism for users to report illegal content in ads. If using an alternative ad badging, transparency, and reporting solution, you must ensure it includes the required transparency information and illegal content flagging mechanism and that you notify Google of any illegal content reports using the appropriate [form](//support.google.com/legal/troubleshooter/1114905?sjid=6787484030557261960-EU#ts=2981967%2C2982031%2C12980091). */
-            obaComplianceDisabled?: boolean;
-            /** @description By setting this field to `true`, you, on behalf of your company, authorize Google to use video creatives associated with this Display & Video 360 advertiser to provide reporting and features related to the advertiser's television campaigns. Applicable only when the advertiser has a CM360 hybrid ad server configuration. */
-            videoCreativeDataSharingAuthorized?: boolean;
-        };
-        /** @description Integration details of an entry. */
-        IntegrationDetails: {
-            /** @description Additional details of the entry in string format. Must be UTF-8 encoded with a length of no more than 1000 characters. */
-            details?: string;
-            /** @description An external identifier to be associated with the entry. The integration code will show up together with the entry in many places in the system, for example, reporting. Must be UTF-8 encoded with a length of no more than 500 characters. */
-            integrationCode?: string;
+            entityStatus: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
+            /** @description Required. The display name of the advertiser. Must be UTF-8 encoded with a maximum size of 240 bytes. */
+            displayName: string;
+            /** @description Required. Immutable. Ad server related settings of the advertiser. */
+            adServerConfig: components["schemas"]["AdvertiserAdServerConfig"];
+            /** @description Required. General settings of the advertiser. */
+            generalConfig: components["schemas"]["AdvertiserGeneralConfig"];
         };
         /** @description Targeting settings related to ad serving of an advertiser. */
         AdvertiserTargetingConfig: {
             /** @description Whether or not connected TV devices are exempt from viewability targeting for all video line items under the advertiser. */
             exemptTvFromViewabilityTargeting?: boolean;
-        };
-        /** @description Ad server related settings of an advertiser. */
-        AdvertiserAdServerConfig: {
-            /** @description The configuration for advertisers that use third-party ad servers only. */
-            thirdPartyOnlyConfig?: components["schemas"]["ThirdPartyOnlyConfig"];
-            /** @description The configuration for advertisers that use both Campaign Manager 360 (CM360) and third-party ad servers. */
-            cmHybridConfig?: components["schemas"]["CmHybridConfig"];
-        };
-        /** @description Settings for advertisers that use third-party ad servers only. */
-        ThirdPartyOnlyConfig: {
-            /** @description Whether or not order ID reporting for pixels is enabled. This value cannot be changed once set to `true`. */
-            pixelOrderIdReportingEnabled?: boolean;
-        };
-        /** @description Settings for advertisers that use both Campaign Manager 360 (CM360) and third-party ad servers. */
-        CmHybridConfig: {
-            /**
-             * Format: int64
-             * @description Required. Immutable. ID of the CM360 Floodlight configuration linked with the DV360 advertiser.
-             */
-            cmFloodlightConfigId?: string;
-            /** @description Output only. The set of CM360 Advertiser IDs sharing the CM360 Floodlight configuration. */
-            cmAdvertiserIds?: string[];
-            /** @description Required. Immutable. By setting this field to `true`, you, on behalf of your company, authorize the sharing of information from the given Floodlight configuration to this Display & Video 360 advertiser. */
-            cmFloodlightLinkingAuthorized?: boolean;
-            /** @description Whether or not to include DV360 data in CM360 data transfer reports. */
-            dv360ToCmDataSharingEnabled?: boolean;
-            /** @description Whether or not to report DV360 cost to CM360. */
-            dv360ToCmCostReportingEnabled?: boolean;
-            /**
-             * Format: int64
-             * @description Required. Immutable. Account ID of the CM360 Floodlight configuration linked with the DV360 advertiser.
-             */
-            cmAccountId?: string;
-            /** @description A list of CM360 sites whose placements will be synced to DV360 as creatives. If absent or empty in CreateAdvertiser method, the system will automatically create a CM360 site. Removing sites from this list may cause DV360 creatives synced from CM360 to be deleted. At least one site must be specified. */
-            cmSyncableSiteIds?: string[];
-        };
-        /** @description Billing related settings of an advertiser. */
-        AdvertiserBillingConfig: {
-            /**
-             * Format: int64
-             * @description Required. The ID of a billing profile assigned to the advertiser.
-             */
-            billingProfileId?: string;
         };
         /** @description Settings that control how advertiser related data may be accessed. */
         AdvertiserDataAccessConfig: {
@@ -229,57 +165,116 @@ export interface components {
             /** @description The SDF configuration for the advertiser. * Required when overridePartnerSdfConfig is `true`. * Output only when overridePartnerSdfConfig is `false`. */
             sdfConfig?: components["schemas"]["SdfConfig"];
         };
+        /** @description Creatives related settings of an advertiser. */
+        AdvertiserCreativeConfig: {
+            /** @description Whether or not to disable Google's About this Ad feature that adds badging (to identify the content as an ad) and transparency information (on interaction with About this Ad) to your ads for Online Behavioral Advertising (OBA) and regulatory requirements. About this Ad gives users greater control over the ads they see and helps you explain why they're seeing your ad. [Learn more](//support.google.com/displayvideo/answer/14315795). If you choose to set this field to `true`, note that ads served through Display & Video 360 must comply to the following: * Be Online Behavioral Advertising (OBA) compliant, as per your contract with Google Marketing Platform. * In the European Economic Area (EEA), include transparency information and a mechanism for users to report illegal content in ads. If using an alternative ad badging, transparency, and reporting solution, you must ensure it includes the required transparency information and illegal content flagging mechanism and that you notify Google of any illegal content reports using the appropriate [form](//support.google.com/legal/troubleshooter/1114905?sjid=6787484030557261960-EU#ts=2981967%2C2982031%2C12980091). */
+            obaComplianceDisabled?: boolean;
+            /** @description By setting this field to `true`, you, on behalf of your company, authorize Google to use video creatives associated with this Display & Video 360 advertiser to provide reporting and features related to the advertiser's television campaigns. Applicable only when the advertiser has a CM360 hybrid ad server configuration. */
+            videoCreativeDataSharingAuthorized?: boolean;
+            /**
+             * Format: int64
+             * @description An ID for configuring campaign monitoring provided by Integral Ad Service (IAS). The DV360 system will append an IAS "Campaign Monitor" tag containing this ID to the creative tag.
+             */
+            iasClientId?: string;
+            /** @description Whether or not the advertiser is enabled for dynamic creatives. */
+            dynamicCreativeEnabled?: boolean;
+        };
+        /** @description Billing related settings of an advertiser. */
+        AdvertiserBillingConfig: {
+            /**
+             * Format: int64
+             * @description Required. The ID of a billing profile assigned to the advertiser.
+             */
+            billingProfileId: string;
+        };
+        /** @description Integration details of an entry. */
+        IntegrationDetails: {
+            /** @description Additional details of the entry in string format. Must be UTF-8 encoded with a length of no more than 1000 characters. */
+            details?: string;
+            /** @description An external identifier to be associated with the entry. The integration code will show up together with the entry in many places in the system, for example, reporting. Must be UTF-8 encoded with a length of no more than 500 characters. */
+            integrationCode?: string;
+        };
+        /** @description Ad server related settings of an advertiser. */
+        AdvertiserAdServerConfig: {
+            /** @description The configuration for advertisers that use both Campaign Manager 360 (CM360) and third-party ad servers. */
+            cmHybridConfig?: components["schemas"]["CmHybridConfig"];
+            /** @description The configuration for advertisers that use third-party ad servers only. */
+            thirdPartyOnlyConfig?: components["schemas"]["ThirdPartyOnlyConfig"];
+        };
+        /** @description Settings for advertisers that use both Campaign Manager 360 (CM360) and third-party ad servers. */
+        CmHybridConfig: {
+            /**
+             * Format: int64
+             * @description Required. Immutable. Account ID of the CM360 Floodlight configuration linked with the DV360 advertiser.
+             */
+            cmAccountId: string;
+            /** @description A list of CM360 sites whose placements will be synced to DV360 as creatives. If absent or empty in CreateAdvertiser method, the system will automatically create a CM360 site. Removing sites from this list may cause DV360 creatives synced from CM360 to be deleted. At least one site must be specified. */
+            cmSyncableSiteIds?: string[];
+            /** @description Output only. The set of CM360 Advertiser IDs sharing the CM360 Floodlight configuration. */
+            cmAdvertiserIds?: string[];
+            /** @description Whether or not to include DV360 data in CM360 data transfer reports. */
+            dv360ToCmDataSharingEnabled?: boolean;
+            /**
+             * Format: int64
+             * @description Required. Immutable. ID of the CM360 Floodlight configuration linked with the DV360 advertiser.
+             */
+            cmFloodlightConfigId: string;
+            /** @description Whether or not to report DV360 cost to CM360. */
+            dv360ToCmCostReportingEnabled?: boolean;
+            /** @description Required. Immutable. By setting this field to `true`, you, on behalf of your company, authorize the sharing of information from the given Floodlight configuration to this Display & Video 360 advertiser. */
+            cmFloodlightLinkingAuthorized: boolean;
+        };
+        /** @description Settings for advertisers that use third-party ad servers only. */
+        ThirdPartyOnlyConfig: {
+            /** @description Whether or not order ID reporting for pixels is enabled. This value cannot be changed once set to `true`. */
+            pixelOrderIdReportingEnabled?: boolean;
+        };
         /** @description General settings of an advertiser. */
         AdvertiserGeneralConfig: {
             /** @description Output only. The standard TZ database name of the advertiser's time zone. For example, `America/New_York`. See more at: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones For CM360 hybrid advertisers, the time zone is the same as that of the associated CM360 account; for third-party only advertisers, the time zone is the same as that of the parent partner. */
             timeZone?: string;
-            /** @description Required. Immutable. Advertiser's currency in ISO 4217 format. Accepted codes and the currencies they represent are: Currency Code : Currency Name * `ARS` : Argentine Peso * `AUD` : Australian Dollar * `BRL` : Brazilian Real * `CAD` : Canadian Dollar * `CHF` : Swiss Franc * `CLP` : Chilean Peso * `CNY` : Chinese Yuan * `COP` : Colombian Peso * `CZK` : Czech Koruna * `DKK` : Danish Krone * `EGP` : Egyption Pound * `EUR` : Euro * `GBP` : British Pound * `HKD` : Hong Kong Dollar * `HUF` : Hungarian Forint * `IDR` : Indonesian Rupiah * `ILS` : Israeli Shekel * `INR` : Indian Rupee * `JPY` : Japanese Yen * `KRW` : South Korean Won * `MXN` : Mexican Pesos * `MYR` : Malaysian Ringgit * `NGN` : Nigerian Naira * `NOK` : Norwegian Krone * `NZD` : New Zealand Dollar * `PEN` : Peruvian Nuevo Sol * `PLN` : Polish Zloty * `RON` : New Romanian Leu * `RUB` : Russian Ruble * `SEK` : Swedish Krona * `TRY` : Turkish Lira * `TWD` : New Taiwan Dollar * `USD` : US Dollar * `ZAR` : South African Rand */
-            currencyCode?: string;
             /** @description Required. The domain URL of the advertiser's primary website. The system will send this information to publishers that require website URL to associate a campaign with an advertiser. Provide a URL with no path or query string, beginning with `http:` or `https:`. For example, http://www.example.com */
-            domainUrl?: string;
+            domainUrl: string;
+            /** @description Required. Immutable. Advertiser's currency in ISO 4217 format. Accepted codes and the currencies they represent are: Currency Code : Currency Name * `ARS` : Argentine Peso * `AUD` : Australian Dollar * `BRL` : Brazilian Real * `CAD` : Canadian Dollar * `CHF` : Swiss Franc * `CLP` : Chilean Peso * `CNY` : Chinese Yuan * `COP` : Colombian Peso * `CZK` : Czech Koruna * `DKK` : Danish Krone * `EGP` : Egyption Pound * `EUR` : Euro * `GBP` : British Pound * `HKD` : Hong Kong Dollar * `HUF` : Hungarian Forint * `IDR` : Indonesian Rupiah * `ILS` : Israeli Shekel * `INR` : Indian Rupee * `JPY` : Japanese Yen * `KRW` : South Korean Won * `MXN` : Mexican Pesos * `MYR` : Malaysian Ringgit * `NGN` : Nigerian Naira * `NOK` : Norwegian Krone * `NZD` : New Zealand Dollar * `PEN` : Peruvian Nuevo Sol * `PLN` : Polish Zloty * `RON` : New Romanian Leu * `RUB` : Russian Ruble * `SEK` : Swedish Krona * `TRY` : Turkish Lira * `TWD` : New Taiwan Dollar * `USD` : US Dollar * `ZAR` : South African Rand */
+            currencyCode: string;
         };
         /** @description A single campaign. */
         Campaign: {
             /** @description Required. The frequency cap setting of the campaign. *Warning*: On **February 28, 2025**, frequency cap time periods greater than 30 days will no longer be accepted. [Read more about this announced change](/display-video/api/deprecations#features.lifetime_frequency_cap) */
-            frequencyCap?: components["schemas"]["FrequencyCap"];
+            frequencyCap: components["schemas"]["FrequencyCap"];
+            /** @description Output only. The resource name of the campaign. */
+            name?: string;
             /**
              * Format: int64
              * @description Output only. The unique ID of the advertiser the campaign belongs to.
              */
             advertiserId?: string;
             /**
+             * @description Required. Controls whether or not the insertion orders under this campaign can spend their budgets and bid on inventory. * Accepted values are `ENTITY_STATUS_ACTIVE`, `ENTITY_STATUS_ARCHIVED`, and `ENTITY_STATUS_PAUSED`. * For CreateCampaign method, `ENTITY_STATUS_ARCHIVED` is not allowed.
+             * @enum {string}
+             */
+            entityStatus: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
+            /**
              * Format: int64
              * @description Output only. The unique ID of the campaign. Assigned by the system.
              */
             campaignId?: string;
+            /** @description Required. The goal of the campaign. */
+            campaignGoal: components["schemas"]["CampaignGoal"];
             /** @description Required. The display name of the campaign. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
+            displayName: string;
             /** @description The list of budgets available to this campaign. If this field is not set, the campaign uses an unlimited budget. */
             campaignBudgets?: components["schemas"]["CampaignBudget"][];
-            /** @description Required. The planned spend and duration of the campaign. */
-            campaignFlight?: components["schemas"]["CampaignFlight"];
-            /** @description Required. The goal of the campaign. */
-            campaignGoal?: components["schemas"]["CampaignGoal"];
             /**
              * Format: google-datetime
              * @description Output only. The timestamp when the campaign was last updated. Assigned by the system.
              */
             updateTime?: string;
-            /**
-             * @description Required. Controls whether or not the insertion orders under this campaign can spend their budgets and bid on inventory. * Accepted values are `ENTITY_STATUS_ACTIVE`, `ENTITY_STATUS_ARCHIVED`, and `ENTITY_STATUS_PAUSED`. * For CreateCampaign method, `ENTITY_STATUS_ARCHIVED` is not allowed.
-             * @enum {string}
-             */
-            entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
-            /** @description Output only. The resource name of the campaign. */
-            name?: string;
+            /** @description Required. The planned spend and duration of the campaign. */
+            campaignFlight: components["schemas"]["CampaignFlight"];
         };
         /** @description Settings that control the number of times a user may be shown with the same ad during a given time period. */
         FrequencyCap: {
-            /**
-             * Format: int32
-             * @description The maximum number of times a user may be shown the same ad during this period. Must be greater than 0. Required when unlimited is `false` and max_views is not set.
-             */
-            maxImpressions?: number;
             /** @description Whether unlimited frequency capping is applied. When this field is set to `true`, the remaining frequency cap fields are not applicable. */
             unlimited?: boolean;
             /**
@@ -297,51 +292,111 @@ export interface components {
              * @description The number of time_unit the frequency cap will last. Required when unlimited is `false`. The following restrictions apply based on the value of time_unit: * `TIME_UNIT_MONTHS` - must be 1 * `TIME_UNIT_WEEKS` - must be between 1 and 4 * `TIME_UNIT_DAYS` - must be between 1 and 6 * `TIME_UNIT_HOURS` - must be between 1 and 23 * `TIME_UNIT_MINUTES` - must be between 1 and 59
              */
             timeUnitCount?: number;
+            /**
+             * Format: int32
+             * @description The maximum number of times a user may be shown the same ad during this period. Must be greater than 0. Required when unlimited is `false` and max_views is not set.
+             */
+            maxImpressions?: number;
+        };
+        /** @description Settings that control the goal of a campaign. */
+        CampaignGoal: {
+            /**
+             * @description Required. The type of the campaign goal.
+             * @enum {string}
+             */
+            campaignGoalType: "CAMPAIGN_GOAL_TYPE_UNSPECIFIED" | "CAMPAIGN_GOAL_TYPE_APP_INSTALL" | "CAMPAIGN_GOAL_TYPE_BRAND_AWARENESS" | "CAMPAIGN_GOAL_TYPE_OFFLINE_ACTION" | "CAMPAIGN_GOAL_TYPE_ONLINE_ACTION";
+            /** @description Required. The performance goal of the campaign. Acceptable values for performance_goal_type are: * `PERFORMANCE_GOAL_TYPE_CPM` * `PERFORMANCE_GOAL_TYPE_CPC` * `PERFORMANCE_GOAL_TYPE_CPA` * `PERFORMANCE_GOAL_TYPE_CPIAVC` * `PERFORMANCE_GOAL_TYPE_CTR` * `PERFORMANCE_GOAL_TYPE_VIEWABILITY` * `PERFORMANCE_GOAL_TYPE_OTHER` */
+            performanceGoal: components["schemas"]["PerformanceGoal"];
+        };
+        /** @description Settings that control the performance goal of a campaign. */
+        PerformanceGoal: {
+            /** @description A key performance indicator (KPI) string, which can be empty. Must be UTF-8 encoded with a length of no more than 100 characters. Applicable when performance_goal_type is set to `PERFORMANCE_GOAL_TYPE_OTHER`. */
+            performanceGoalString?: string;
+            /**
+             * @description Required. The type of the performance goal.
+             * @enum {string}
+             */
+            performanceGoalType: "PERFORMANCE_GOAL_TYPE_UNSPECIFIED" | "PERFORMANCE_GOAL_TYPE_CPM" | "PERFORMANCE_GOAL_TYPE_CPC" | "PERFORMANCE_GOAL_TYPE_CPA" | "PERFORMANCE_GOAL_TYPE_CTR" | "PERFORMANCE_GOAL_TYPE_VIEWABILITY" | "PERFORMANCE_GOAL_TYPE_CPIAVC" | "PERFORMANCE_GOAL_TYPE_CPE" | "PERFORMANCE_GOAL_TYPE_CPV" | "PERFORMANCE_GOAL_TYPE_CLICK_CVR" | "PERFORMANCE_GOAL_TYPE_IMPRESSION_CVR" | "PERFORMANCE_GOAL_TYPE_VCPM" | "PERFORMANCE_GOAL_TYPE_VTR" | "PERFORMANCE_GOAL_TYPE_AUDIO_COMPLETION_RATE" | "PERFORMANCE_GOAL_TYPE_VIDEO_COMPLETION_RATE" | "PERFORMANCE_GOAL_TYPE_OTHER";
+            /**
+             * Format: int64
+             * @description The decimal representation of the goal percentage in micros. Applicable when performance_goal_type is one of: * `PERFORMANCE_GOAL_TYPE_CTR` * `PERFORMANCE_GOAL_TYPE_VIEWABILITY` * `PERFORMANCE_GOAL_TYPE_CLICK_CVR` * `PERFORMANCE_GOAL_TYPE_IMPRESSION_CVR` * `PERFORMANCE_GOAL_TYPE_VTR` * `PERFORMANCE_GOAL_TYPE_AUDIO_COMPLETION_RATE` * `PERFORMANCE_GOAL_TYPE_VIDEO_COMPLETION_RATE` For example, 70000 represents 7% (decimal 0.07).
+             */
+            performanceGoalPercentageMicros?: string;
+            /**
+             * Format: int64
+             * @description The goal amount, in micros of the advertiser's currency. Applicable when performance_goal_type is one of: * `PERFORMANCE_GOAL_TYPE_CPM` * `PERFORMANCE_GOAL_TYPE_CPC` * `PERFORMANCE_GOAL_TYPE_CPA` * `PERFORMANCE_GOAL_TYPE_CPIAVC` * `PERFORMANCE_GOAL_TYPE_VCPM` For example 1500000 represents 1.5 standard units of the currency.
+             */
+            performanceGoalAmountMicros?: string;
         };
         /** @description Settings that control how the campaign budget is allocated. */
         CampaignBudget: {
+            /** @description Required. The date range for the campaign budget. Linked budget segments may have a different date range. They are resolved relative to the parent advertiser's time zone. Both `start_date` and `end_date` must be before the year 2037. */
+            dateRange: components["schemas"]["DateRange"];
+            /** @description Required. The display name of the budget. Must be UTF-8 encoded with a maximum size of 240 bytes. */
+            displayName: string;
+            /** @description Immutable. The ID used to group budgets to be included the same invoice. If this field is set and the invoice level of the corresponding billing profile is set to "Budget invoice grouping ID", all external_budget_id sharing the same invoice_grouping_id will be grouped in the same invoice. */
+            invoiceGroupingId?: string;
+            /** @description Additional metadata for use by the Mediaocean Prisma tool. Required for Mediaocean budgets. Only applicable to prisma_enabled advertisers. */
+            prismaConfig?: components["schemas"]["PrismaConfig"];
+            /** @description Immutable. The ID identifying this budget to the external source. If this field is set and the invoice detail level of the corresponding billing profile is set to "Budget level PO", all impressions served against this budget will include this ID on the invoice. Must be unique under the campaign. */
+            externalBudgetId?: string;
             /**
              * @description Required. The external source of the budget.
              * @enum {string}
              */
-            externalBudgetSource?: "EXTERNAL_BUDGET_SOURCE_UNSPECIFIED" | "EXTERNAL_BUDGET_SOURCE_NONE" | "EXTERNAL_BUDGET_SOURCE_MEDIA_OCEAN";
-            /** @description Additional metadata for use by the Mediaocean Prisma tool. Required for Mediaocean budgets. Only applicable to prisma_enabled advertisers. */
-            prismaConfig?: components["schemas"]["PrismaConfig"];
-            /** @description Required. The date range for the campaign budget. Linked budget segments may have a different date range. They are resolved relative to the parent advertiser's time zone. Both `start_date` and `end_date` must be before the year 2037. */
-            dateRange?: components["schemas"]["DateRange"];
-            /** @description Immutable. The ID identifying this budget to the external source. If this field is set and the invoice detail level of the corresponding billing profile is set to "Budget level PO", all impressions served against this budget will include this ID on the invoice. Must be unique under the campaign. */
-            externalBudgetId?: string;
-            /** @description Required. The display name of the budget. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
-            /** @description Immutable. The ID used to group budgets to be included the same invoice. If this field is set and the invoice level of the corresponding billing profile is set to "Budget invoice grouping ID", all external_budget_id sharing the same invoice_grouping_id will be grouped in the same invoice. */
-            invoiceGroupingId?: string;
-            /**
-             * @description Required. Immutable. Specifies whether the budget is measured in currency or impressions.
-             * @enum {string}
-             */
-            budgetUnit?: "BUDGET_UNIT_UNSPECIFIED" | "BUDGET_UNIT_CURRENCY" | "BUDGET_UNIT_IMPRESSIONS";
+            externalBudgetSource: "EXTERNAL_BUDGET_SOURCE_UNSPECIFIED" | "EXTERNAL_BUDGET_SOURCE_NONE" | "EXTERNAL_BUDGET_SOURCE_MEDIA_OCEAN";
             /**
              * Format: int64
              * @description Required. The total amount the linked insertion order segments can budget. The amount is in micros. Must be greater than 0. For example, 500000000 represents 500 standard units of the currency.
              */
-            budgetAmountMicros?: string;
+            budgetAmountMicros: string;
             /**
              * Format: int64
              * @description The unique ID of the campaign budget. Assigned by the system. Do not set for new budgets. Must be included when updating or adding budgets to campaign_budgets. Otherwise, a new ID will be generated and assigned.
              */
             budgetId?: string;
+            /**
+             * @description Required. Immutable. Specifies whether the budget is measured in currency or impressions.
+             * @enum {string}
+             */
+            budgetUnit: "BUDGET_UNIT_UNSPECIFIED" | "BUDGET_UNIT_CURRENCY" | "BUDGET_UNIT_IMPRESSIONS";
+        };
+        /** @description A date range. */
+        DateRange: {
+            /** @description The upper bound of the date range, inclusive. Must specify a positive value for `year`, `month`, and `day`. */
+            endDate?: components["schemas"]["Date"];
+            /** @description The lower bound of the date range, inclusive. Must specify a positive value for `year`, `month`, and `day`. */
+            startDate?: components["schemas"]["Date"];
+        };
+        /** @description Represents a whole or partial calendar date, such as a birthday. The time of day and time zone are either specified elsewhere or are insignificant. The date is relative to the Gregorian Calendar. This can represent one of the following: * A full date, with non-zero year, month, and day values. * A month and day, with a zero year (for example, an anniversary). * A year on its own, with a zero month and a zero day. * A year and month, with a zero day (for example, a credit card expiration date). Related types: * google.type.TimeOfDay * google.type.DateTime * google.protobuf.Timestamp */
+        Date: {
+            /**
+             * Format: int32
+             * @description Month of a year. Must be from 1 to 12, or 0 to specify a year without a month and day.
+             */
+            month?: number;
+            /**
+             * Format: int32
+             * @description Day of a month. Must be from 1 to 31 and valid for the year and month, or 0 to specify a year by itself or a year and month where the day isn't significant.
+             */
+            day?: number;
+            /**
+             * Format: int32
+             * @description Year of the date. Must be from 1 to 9999, or 0 to specify a date without a year.
+             */
+            year?: number;
         };
         /** @description Settings specific to the Mediaocean Prisma tool. */
         PrismaConfig: {
-            /** @description Required. The entity allocated this budget (DSP, site, etc.). */
-            supplier?: string;
             /** @description Required. Relevant client, product, and estimate codes from the Mediaocean Prisma tool. */
-            prismaCpeCode?: components["schemas"]["PrismaCpeCode"];
+            prismaCpeCode: components["schemas"]["PrismaCpeCode"];
+            /** @description Required. The entity allocated this budget (DSP, site, etc.). */
+            supplier: string;
             /**
              * @description Required. The Prisma type.
              * @enum {string}
              */
-            prismaType?: "PRISMA_TYPE_UNSPECIFIED" | "PRISMA_TYPE_DISPLAY" | "PRISMA_TYPE_SEARCH" | "PRISMA_TYPE_VIDEO" | "PRISMA_TYPE_AUDIO" | "PRISMA_TYPE_SOCIAL" | "PRISMA_TYPE_FEE";
+            prismaType: "PRISMA_TYPE_UNSPECIFIED" | "PRISMA_TYPE_DISPLAY" | "PRISMA_TYPE_SEARCH" | "PRISMA_TYPE_VIDEO" | "PRISMA_TYPE_AUDIO" | "PRISMA_TYPE_SOCIAL" | "PRISMA_TYPE_FEE";
         };
         /** @description Google Payments Center supports searching and filtering on the component fields of this code. */
         PrismaCpeCode: {
@@ -352,31 +407,6 @@ export interface components {
             /** @description The Prisma client code. */
             prismaClientCode?: string;
         };
-        /** @description A date range. */
-        DateRange: {
-            /** @description The lower bound of the date range, inclusive. Must specify a positive value for `year`, `month`, and `day`. */
-            startDate?: components["schemas"]["Date"];
-            /** @description The upper bound of the date range, inclusive. Must specify a positive value for `year`, `month`, and `day`. */
-            endDate?: components["schemas"]["Date"];
-        };
-        /** @description Represents a whole or partial calendar date, such as a birthday. The time of day and time zone are either specified elsewhere or are insignificant. The date is relative to the Gregorian Calendar. This can represent one of the following: * A full date, with non-zero year, month, and day values. * A month and day, with a zero year (for example, an anniversary). * A year on its own, with a zero month and a zero day. * A year and month, with a zero day (for example, a credit card expiration date). Related types: * google.type.TimeOfDay * google.type.DateTime * google.protobuf.Timestamp */
-        Date: {
-            /**
-             * Format: int32
-             * @description Day of a month. Must be from 1 to 31 and valid for the year and month, or 0 to specify a year by itself or a year and month where the day isn't significant.
-             */
-            day?: number;
-            /**
-             * Format: int32
-             * @description Month of a year. Must be from 1 to 12, or 0 to specify a year without a month and day.
-             */
-            month?: number;
-            /**
-             * Format: int32
-             * @description Year of the date. Must be from 1 to 9999, or 0 to specify a date without a year.
-             */
-            year?: number;
-        };
         /** @description Settings that track the planned spend and duration of a campaign. */
         CampaignFlight: {
             /**
@@ -385,98 +415,123 @@ export interface components {
              */
             plannedSpendAmountMicros?: string;
             /** @description Required. The dates that the campaign is expected to run. They are resolved relative to the parent advertiser's time zone. * The dates specified here will not affect serving. They are used to generate alerts and warnings. For example, if the flight date of any child insertion order is outside the range of these dates, the user interface will show a warning. * `start_date` is required and must be the current date or later. * `end_date` is optional. If specified, it must be the `start_date` or later. * Any specified date must be before the year 2037. */
-            plannedDates?: components["schemas"]["DateRange"];
-        };
-        /** @description Settings that control the goal of a campaign. */
-        CampaignGoal: {
-            /** @description Required. The performance goal of the campaign. Acceptable values for performance_goal_type are: * `PERFORMANCE_GOAL_TYPE_CPM` * `PERFORMANCE_GOAL_TYPE_CPC` * `PERFORMANCE_GOAL_TYPE_CPA` * `PERFORMANCE_GOAL_TYPE_CPIAVC` * `PERFORMANCE_GOAL_TYPE_CTR` * `PERFORMANCE_GOAL_TYPE_VIEWABILITY` * `PERFORMANCE_GOAL_TYPE_OTHER` */
-            performanceGoal?: components["schemas"]["PerformanceGoal"];
-            /**
-             * @description Required. The type of the campaign goal.
-             * @enum {string}
-             */
-            campaignGoalType?: "CAMPAIGN_GOAL_TYPE_UNSPECIFIED" | "CAMPAIGN_GOAL_TYPE_APP_INSTALL" | "CAMPAIGN_GOAL_TYPE_BRAND_AWARENESS" | "CAMPAIGN_GOAL_TYPE_OFFLINE_ACTION" | "CAMPAIGN_GOAL_TYPE_ONLINE_ACTION";
-        };
-        /** @description Settings that control the performance goal of a campaign. */
-        PerformanceGoal: {
-            /**
-             * Format: int64
-             * @description The decimal representation of the goal percentage in micros. Applicable when performance_goal_type is one of: * `PERFORMANCE_GOAL_TYPE_CTR` * `PERFORMANCE_GOAL_TYPE_VIEWABILITY` * `PERFORMANCE_GOAL_TYPE_CLICK_CVR` * `PERFORMANCE_GOAL_TYPE_IMPRESSION_CVR` * `PERFORMANCE_GOAL_TYPE_VTR` * `PERFORMANCE_GOAL_TYPE_AUDIO_COMPLETION_RATE` * `PERFORMANCE_GOAL_TYPE_VIDEO_COMPLETION_RATE` For example, 70000 represents 7% (decimal 0.07).
-             */
-            performanceGoalPercentageMicros?: string;
-            /**
-             * @description Required. The type of the performance goal.
-             * @enum {string}
-             */
-            performanceGoalType?: "PERFORMANCE_GOAL_TYPE_UNSPECIFIED" | "PERFORMANCE_GOAL_TYPE_CPM" | "PERFORMANCE_GOAL_TYPE_CPC" | "PERFORMANCE_GOAL_TYPE_CPA" | "PERFORMANCE_GOAL_TYPE_CTR" | "PERFORMANCE_GOAL_TYPE_VIEWABILITY" | "PERFORMANCE_GOAL_TYPE_CPIAVC" | "PERFORMANCE_GOAL_TYPE_CPE" | "PERFORMANCE_GOAL_TYPE_CPV" | "PERFORMANCE_GOAL_TYPE_CLICK_CVR" | "PERFORMANCE_GOAL_TYPE_IMPRESSION_CVR" | "PERFORMANCE_GOAL_TYPE_VCPM" | "PERFORMANCE_GOAL_TYPE_VTR" | "PERFORMANCE_GOAL_TYPE_AUDIO_COMPLETION_RATE" | "PERFORMANCE_GOAL_TYPE_VIDEO_COMPLETION_RATE" | "PERFORMANCE_GOAL_TYPE_OTHER";
-            /** @description A key performance indicator (KPI) string, which can be empty. Must be UTF-8 encoded with a length of no more than 100 characters. Applicable when performance_goal_type is set to `PERFORMANCE_GOAL_TYPE_OTHER`. */
-            performanceGoalString?: string;
-            /**
-             * Format: int64
-             * @description The goal amount, in micros of the advertiser's currency. Applicable when performance_goal_type is one of: * `PERFORMANCE_GOAL_TYPE_CPM` * `PERFORMANCE_GOAL_TYPE_CPC` * `PERFORMANCE_GOAL_TYPE_CPA` * `PERFORMANCE_GOAL_TYPE_CPIAVC` * `PERFORMANCE_GOAL_TYPE_VCPM` For example 1500000 represents 1.5 standard units of the currency.
-             */
-            performanceGoalAmountMicros?: string;
+            plannedDates: components["schemas"]["DateRange"];
         };
         /** @description A single insertion order. */
         InsertionOrder: {
-            /** @description Optional. The bidding strategy of the insertion order. By default, fixed_bid is set. */
-            bidStrategy?: components["schemas"]["BiddingStrategy"];
-            /**
-             * @description Required. Controls whether or not the insertion order can spend its budget and bid on inventory. * For CreateInsertionOrder method, only `ENTITY_STATUS_DRAFT` is allowed. To activate an insertion order, use UpdateInsertionOrder method and update the status to `ENTITY_STATUS_ACTIVE` after creation. * An insertion order cannot be changed back to `ENTITY_STATUS_DRAFT` status from any other status. * An insertion order cannot be set to `ENTITY_STATUS_ACTIVE` if its parent campaign is not active.
-             * @enum {string}
-             */
-            entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
-            /**
-             * @description Optional. Required. The optimization objective of the insertion order.
-             * @enum {string}
-             */
-            optimizationObjective?: "OPTIMIZATION_OBJECTIVE_UNSPECIFIED" | "CONVERSION" | "CLICK" | "BRAND_AWARENESS" | "CUSTOM" | "NO_OBJECTIVE";
-            /** @description Required. The display name of the insertion order. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
-            /**
-             * Format: int64
-             * @description Required. Immutable. The unique ID of the campaign that the insertion order belongs to.
-             */
-            campaignId?: string;
-            /** @description Required. The budget allocation settings of the insertion order. */
-            budget?: components["schemas"]["InsertionOrderBudget"];
-            /** @description Required. The budget spending speed setting of the insertion order. pacing_type `PACING_TYPE_ASAP` is not compatible with pacing_period `PACING_PERIOD_FLIGHT`. */
-            pacing?: components["schemas"]["Pacing"];
             /**
              * @description Output only. The reservation type of the insertion order.
              * @enum {string}
              */
             reservationType?: "RESERVATION_TYPE_UNSPECIFIED" | "RESERVATION_TYPE_NOT_GUARANTEED" | "RESERVATION_TYPE_PROGRAMMATIC_GUARANTEED" | "RESERVATION_TYPE_TAG_GUARANTEED" | "RESERVATION_TYPE_PETRA_VIRAL" | "RESERVATION_TYPE_INSTANT_RESERVE";
+            /** @description Required. The budget allocation settings of the insertion order. */
+            budget: components["schemas"]["InsertionOrderBudget"];
+            /** @description Optional. Additional integration details of the insertion order. */
+            integrationDetails?: components["schemas"]["IntegrationDetails"];
+            /** @description Output only. The resource name of the insertion order. */
+            name?: string;
+            /** @description Required. The budget spending speed setting of the insertion order. pacing_type `PACING_TYPE_ASAP` is not compatible with pacing_period `PACING_PERIOD_FLIGHT`. */
+            pacing: components["schemas"]["Pacing"];
+            /**
+             * Format: int64
+             * @description Required. Immutable. The unique ID of the campaign that the insertion order belongs to.
+             */
+            campaignId: string;
+            /** @description Required. The display name of the insertion order. Must be UTF-8 encoded with a maximum size of 240 bytes. */
+            displayName: string;
+            /**
+             * @description Optional. Required. The optimization objective of the insertion order.
+             * @enum {string}
+             */
+            optimizationObjective?: "OPTIMIZATION_OBJECTIVE_UNSPECIFIED" | "CONVERSION" | "CLICK" | "BRAND_AWARENESS" | "CUSTOM" | "NO_OBJECTIVE";
+            /**
+             * Format: google-datetime
+             * @description Output only. The timestamp when the insertion order was last updated. Assigned by the system.
+             */
+            updateTime?: string;
+            /**
+             * Format: int64
+             * @description Output only. The unique ID of the insertion order. Assigned by the system.
+             */
+            insertionOrderId?: string;
+            /**
+             * @description Required. Controls whether or not the insertion order can spend its budget and bid on inventory. * For CreateInsertionOrder method, only `ENTITY_STATUS_DRAFT` is allowed. To activate an insertion order, use UpdateInsertionOrder method and update the status to `ENTITY_STATUS_ACTIVE` after creation. * An insertion order cannot be changed back to `ENTITY_STATUS_DRAFT` status from any other status. * An insertion order cannot be set to `ENTITY_STATUS_ACTIVE` if its parent campaign is not active.
+             * @enum {string}
+             */
+            entityStatus: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
+            /** @description Optional. The bidding strategy of the insertion order. By default, fixed_bid is set. */
+            bidStrategy?: components["schemas"]["BiddingStrategy"];
             /**
              * Format: int64
              * @description Output only. The unique ID of the advertiser the insertion order belongs to.
              */
             advertiserId?: string;
+            /** @description Optional. The partner costs associated with the insertion order. If absent or empty in CreateInsertionOrder method, the newly created insertion order will inherit partner costs from the partner settings. */
+            partnerCosts?: components["schemas"]["PartnerCost"][];
+            /** @description Required. The key performance indicator (KPI) of the insertion order. This is represented as referred to as the "Goal" in the Display & Video 360 interface. */
+            kpi: components["schemas"]["Kpi"];
             /**
              * @description Optional. The type of insertion order. If this field is unspecified in creation, the value defaults to `RTB`.
              * @enum {string}
              */
             insertionOrderType?: "INSERTION_ORDER_TYPE_UNSPECIFIED" | "RTB" | "OVER_THE_TOP";
             /** @description Required. The frequency capping setting of the insertion order. */
-            frequencyCap?: components["schemas"]["FrequencyCap"];
-            /** @description Output only. The resource name of the insertion order. */
-            name?: string;
+            frequencyCap: components["schemas"]["FrequencyCap"];
+        };
+        /** @description Settings that control how insertion order budget is allocated. */
+        InsertionOrderBudget: {
             /**
-             * Format: google-datetime
-             * @description Output only. The timestamp when the insertion order was last updated. Assigned by the system.
+             * @description Required. Immutable. The budget unit specifies whether the budget is currency based or impression based.
+             * @enum {string}
              */
-            updateTime?: string;
-            /** @description Required. The key performance indicator (KPI) of the insertion order. This is represented as referred to as the "Goal" in the Display & Video 360 interface. */
-            kpi?: components["schemas"]["Kpi"];
-            /** @description Optional. The partner costs associated with the insertion order. If absent or empty in CreateInsertionOrder method, the newly created insertion order will inherit partner costs from the partner settings. */
-            partnerCosts?: components["schemas"]["PartnerCost"][];
-            /** @description Optional. Additional integration details of the insertion order. */
-            integrationDetails?: components["schemas"]["IntegrationDetails"];
+            budgetUnit: "BUDGET_UNIT_UNSPECIFIED" | "BUDGET_UNIT_CURRENCY" | "BUDGET_UNIT_IMPRESSIONS";
+            /**
+             * @description Optional. The type of automation used to manage bid and budget for the insertion order. If this field is unspecified in creation, the value defaults to `INSERTION_ORDER_AUTOMATION_TYPE_NONE`.
+             * @enum {string}
+             */
+            automationType?: "INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED" | "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET" | "INSERTION_ORDER_AUTOMATION_TYPE_NONE" | "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET";
+            /** @description Required. The list of budget segments. Use a budget segment to specify a specific budget for a given period of time an insertion order is running. */
+            budgetSegments: components["schemas"]["InsertionOrderBudgetSegment"][];
+        };
+        /** @description Settings that control the budget of a single budget segment. */
+        InsertionOrderBudgetSegment: {
+            /** @description Required. The start and end date settings of the budget segment. They are resolved relative to the parent advertiser's time zone. * When creating a new budget segment, both `start_date` and `end_date` must be in the future. * An existing budget segment with a `start_date` in the past has a mutable `end_date` but an immutable `start_date`. * `end_date` must be the `start_date` or later, both before the year 2037. */
+            dateRange: components["schemas"]["DateRange"];
             /**
              * Format: int64
-             * @description Output only. The unique ID of the insertion order. Assigned by the system.
+             * @description Required. The budget amount the insertion order will spend for the given date_range. The amount is in micros. Must be greater than 0. For example, 500000000 represents 500 standard units of the currency.
              */
-            insertionOrderId?: string;
+            budgetAmountMicros: string;
+            /**
+             * Format: int64
+             * @description Optional. The budget_id of the campaign budget that this insertion order budget segment is a part of.
+             */
+            campaignBudgetId?: string;
+            /** @description Optional. The budget segment description. It can be used to enter Purchase Order information for each budget segment and have that information printed on the invoices. Must be UTF-8 encoded. */
+            description?: string;
+        };
+        /** @description Settings that control the rate at which a budget is spent. */
+        Pacing: {
+            /**
+             * @description Required. The time period in which the pacing budget will be spent. When automatic budget allocation is enabled at the insertion order via automationType, this field is output only and defaults to `PACING_PERIOD_FLIGHT`.
+             * @enum {string}
+             */
+            pacingPeriod?: "PACING_PERIOD_UNSPECIFIED" | "PACING_PERIOD_DAILY" | "PACING_PERIOD_FLIGHT";
+            /**
+             * Format: int64
+             * @description Maximum currency amount to spend every day in micros of advertiser's currency. Applicable when the budget is currency based. Must be greater than 0. For example, for 1.5 standard unit of the currency, set this field to 1500000. The value assigned will be rounded to whole billable units for the relevant currency by the following rules: any positive value less than a single billable unit will be rounded up to one billable unit and any value larger than a single billable unit will be rounded down to the nearest billable value. For example, if the currency's billable unit is 0.01, and this field is set to 10257770, it will round down to 10250000, a value of 10.25. If set to 505, it will round up to 10000, a value of 0.01.
+             */
+            dailyMaxMicros?: string;
+            /**
+             * Format: int64
+             * @description Maximum number of impressions to serve every day. Applicable when the budget is impression based. Must be greater than 0.
+             */
+            dailyMaxImpressions?: string;
+            /**
+             * @description Required. The type of pacing that defines how the budget amount will be spent across the pacing_period. `PACING_TYPE_ASAP` is not compatible with pacing_period `PACING_PERIOD_FLIGHT` for insertion orders.
+             * @enum {string}
+             */
+            pacingType: "PACING_TYPE_UNSPECIFIED" | "PACING_TYPE_AHEAD" | "PACING_TYPE_ASAP" | "PACING_TYPE_EVEN";
         };
         /** @description Settings that control the bid strategy. Bid strategy determines the bid price. */
         BiddingStrategy: {
@@ -484,10 +539,10 @@ export interface components {
             fixedBid?: components["schemas"]["FixedBidStrategy"];
             /** @description A strategy that automatically adjusts the bid to meet or beat a specified performance goal. It is to be used only for a line item entity. */
             performanceGoalAutoBid?: components["schemas"]["PerformanceGoalBidStrategy"];
-            /** @description A bid strategy used by YouTube and Partners resources. It can only be used for a YouTube and Partners line item or ad group entity. */
-            youtubeAndPartnersBid?: components["schemas"]["YoutubeAndPartnersBiddingStrategy"];
             /** @description A strategy that automatically adjusts the bid to optimize to your performance goal while spending the full budget. At insertion order level, the markup_type of line items cannot be set to `PARTNER_REVENUE_MODEL_MARKUP_TYPE_CPM`. In addition, when performance_goal_type is one of: * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED` , the line_item_type of the insertion order line items must be either: * `LINE_ITEM_TYPE_DISPLAY_DEFAULT` * `LINE_ITEM_TYPE_VIDEO_DEFAULT` , and when performance_goal_type is either: * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN` the line_item_type of the insertion order line items must be `LINE_ITEM_TYPE_VIDEO_DEFAULT`. */
             maximizeSpendAutoBid?: components["schemas"]["MaximizeSpendBidStrategy"];
+            /** @description A bid strategy used by YouTube and Partners resources. It can only be used for a YouTube and Partners line item or ad group entity. */
+            youtubeAndPartnersBid?: components["schemas"]["YoutubeAndPartnersBiddingStrategy"];
         };
         /** @description A strategy that uses a fixed bidding price. */
         FixedBidStrategy: {
@@ -501,16 +556,6 @@ export interface components {
         PerformanceGoalBidStrategy: {
             /**
              * Format: int64
-             * @description Required. The performance goal the bidding strategy will attempt to meet or beat, in micros of the advertiser's currency or in micro of the ROAS (Return On Advertising Spend) value which is also based on advertiser's currency. Must be greater than or equal to a billable unit of the given currency and smaller or equal to upper bounds. Each performance_goal_type has its upper bound: * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA`, upper bound is 10000.00 USD. * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC`, upper bound is 1000.00 USD. * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM`, upper bound is 1000.00 USD. * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO`, upper bound is 1000.00 and lower bound is 0.01. Example: If set to `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM`, the bid price will be based on the probability that each available impression will be viewable. For example, if viewable CPM target is $2 and an impression is 40% likely to be viewable, the bid price will be $0.80 CPM (40% of $2). For example, 1500000 represents 1.5 standard units of the currency or ROAS value.
-             */
-            performanceGoalAmountMicros?: string;
-            /**
-             * Format: int64
-             * @description The maximum average CPM that may be bid, in micros of the advertiser's currency. Must be greater than or equal to a billable unit of the given currency. Not applicable when performance_goal_type is set to `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM`. For example, 1500000 represents 1.5 standard units of the currency.
-             */
-            maxAverageCpmBidAmountMicros?: string;
-            /**
-             * Format: int64
              * @description The ID of the Custom Bidding Algorithm used by this strategy. Only applicable when performance_goal_type is set to `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO`. Assigning a custom bidding algorithm that uses floodlight activities not identified in floodlightActivityConfigs will return an error.
              */
             customBiddingAlgorithmId?: string;
@@ -518,30 +563,17 @@ export interface components {
              * @description Required. The type of the performance goal that the bidding strategy will try to meet or beat. For line item level usage, the value must be one of: * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO`.
              * @enum {string}
              */
-            performanceGoalType?: "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED";
-        };
-        /** @description Settings that control the bid strategy for YouTube and Partners resources. */
-        YoutubeAndPartnersBiddingStrategy: {
+            performanceGoalType: "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED";
             /**
              * Format: int64
-             * @description Output only. The effective target CPA for ad group, in micros of advertiser's currency.
+             * @description The maximum average CPM that may be bid, in micros of the advertiser's currency. Must be greater than or equal to a billable unit of the given currency. Not applicable when performance_goal_type is set to `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM`. For example, 1500000 represents 1.5 standard units of the currency.
              */
-            adGroupEffectiveTargetCpaValue?: string;
-            /**
-             * @description Output only. Source of the effective target CPA value for ad group.
-             * @enum {string}
-             */
-            adGroupEffectiveTargetCpaSource?: "BIDDING_SOURCE_UNSPECIFIED" | "BIDDING_SOURCE_LINE_ITEM" | "BIDDING_SOURCE_AD_GROUP";
+            maxAverageCpmBidAmountMicros?: string;
             /**
              * Format: int64
-             * @description The value used by the bidding strategy. When the bidding strategy is assigned at the line item level, this field is only applicable for the following strategy types: * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_SHARE_OF_VOICE` When the bidding strategy is assigned at the ad group level, this field is only applicable for the following strategy types: * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPM` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPV` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPM` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_CPM` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS` If not using an applicable strategy, the value of this field will be 0.
+             * @description Required. The performance goal the bidding strategy will attempt to meet or beat, in micros of the advertiser's currency or in micro of the ROAS (Return On Advertising Spend) value which is also based on advertiser's currency. Must be greater than or equal to a billable unit of the given currency and smaller or equal to upper bounds. Each performance_goal_type has its upper bound: * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA`, upper bound is 10000.00 USD. * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC`, upper bound is 1000.00 USD. * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM`, upper bound is 1000.00 USD. * when performance_goal_type is `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO`, upper bound is 1000.00 and lower bound is 0.01. Example: If set to `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM`, the bid price will be based on the probability that each available impression will be viewable. For example, if viewable CPM target is $2 and an impression is 40% likely to be viewable, the bid price will be $0.80 CPM (40% of $2). For example, 1500000 represents 1.5 standard units of the currency or ROAS value.
              */
-            value?: string;
-            /**
-             * @description The type of the bidding strategy.
-             * @enum {string}
-             */
-            type?: "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_UNSPECIFIED" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPV" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPM" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPM" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_CPM" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_LIFT" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSIONS" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPV" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSION_VALUE";
+            performanceGoalAmountMicros: string;
         };
         /** @description A strategy that automatically adjusts the bid to optimize a specified performance goal while spending the full budget. */
         MaximizeSpendBidStrategy: {
@@ -555,106 +587,39 @@ export interface components {
              * @description The ID of the Custom Bidding Algorithm used by this strategy. Only applicable when performance_goal_type is set to `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO`. Assigning a custom bidding algorithm that uses floodlight activities not identified in floodlightActivityConfigs will return an error.
              */
             customBiddingAlgorithmId?: string;
+            /** @description Whether the strategy takes deal floor prices into account. */
+            raiseBidForDeals?: boolean;
             /**
              * @description Required. The type of the performance goal that the bidding strategy tries to minimize while spending the full budget. `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM` is not supported for this strategy.
              * @enum {string}
              */
-            performanceGoalType?: "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED";
-            /** @description Whether the strategy takes deal floor prices into account. */
-            raiseBidForDeals?: boolean;
+            performanceGoalType: "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_UNSPECIFIED" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CPC" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CUSTOM_ALGO" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN" | "BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED";
         };
-        /** @description Settings that control how insertion order budget is allocated. */
-        InsertionOrderBudget: {
-            /** @description Required. The list of budget segments. Use a budget segment to specify a specific budget for a given period of time an insertion order is running. */
-            budgetSegments?: components["schemas"]["InsertionOrderBudgetSegment"][];
+        /** @description Settings that control the bid strategy for YouTube and Partners resources. */
+        YoutubeAndPartnersBiddingStrategy: {
             /**
-             * @description Optional. The type of automation used to manage bid and budget for the insertion order. If this field is unspecified in creation, the value defaults to `INSERTION_ORDER_AUTOMATION_TYPE_NONE`.
+             * Format: int64
+             * @description Output only. The effective target CPA for ad group, in micros of advertiser's currency.
+             */
+            adGroupEffectiveTargetCpaValue?: string;
+            /**
+             * @description The type of the bidding strategy.
              * @enum {string}
              */
-            automationType?: "INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED" | "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET" | "INSERTION_ORDER_AUTOMATION_TYPE_NONE" | "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET";
+            type?: "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_UNSPECIFIED" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPV" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPM" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPM" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_CPM" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_LIFT" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSIONS" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPV" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS" | "YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MAXIMIZE_CONVERSION_VALUE";
             /**
-             * @description Required. Immutable. The budget unit specifies whether the budget is currency based or impression based.
+             * @description Output only. Source of the effective target CPA value for ad group.
              * @enum {string}
              */
-            budgetUnit?: "BUDGET_UNIT_UNSPECIFIED" | "BUDGET_UNIT_CURRENCY" | "BUDGET_UNIT_IMPRESSIONS";
-        };
-        /** @description Settings that control the budget of a single budget segment. */
-        InsertionOrderBudgetSegment: {
+            adGroupEffectiveTargetCpaSource?: "BIDDING_SOURCE_UNSPECIFIED" | "BIDDING_SOURCE_LINE_ITEM" | "BIDDING_SOURCE_AD_GROUP";
             /**
              * Format: int64
-             * @description Optional. The budget_id of the campaign budget that this insertion order budget segment is a part of.
+             * @description The value used by the bidding strategy. When the bidding strategy is assigned at the line item level, this field is only applicable for the following strategy types: * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_SHARE_OF_VOICE` When the bidding strategy is assigned at the ad group level, this field is only applicable for the following strategy types: * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPM` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_MANUAL_CPV` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPA` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_CPM` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_RESERVE_CPM` * `YOUTUBE_AND_PARTNERS_BIDDING_STRATEGY_TYPE_TARGET_ROAS` If not using an applicable strategy, the value of this field will be 0.
              */
-            campaignBudgetId?: string;
-            /** @description Optional. The budget segment description. It can be used to enter Purchase Order information for each budget segment and have that information printed on the invoices. Must be UTF-8 encoded. */
-            description?: string;
-            /** @description Required. The start and end date settings of the budget segment. They are resolved relative to the parent advertiser's time zone. * When creating a new budget segment, both `start_date` and `end_date` must be in the future. * An existing budget segment with a `start_date` in the past has a mutable `end_date` but an immutable `start_date`. * `end_date` must be the `start_date` or later, both before the year 2037. */
-            dateRange?: components["schemas"]["DateRange"];
-            /**
-             * Format: int64
-             * @description Required. The budget amount the insertion order will spend for the given date_range. The amount is in micros. Must be greater than 0. For example, 500000000 represents 500 standard units of the currency.
-             */
-            budgetAmountMicros?: string;
-        };
-        /** @description Settings that control the rate at which a budget is spent. */
-        Pacing: {
-            /**
-             * Format: int64
-             * @description Maximum number of impressions to serve every day. Applicable when the budget is impression based. Must be greater than 0.
-             */
-            dailyMaxImpressions?: string;
-            /**
-             * @description Required. The type of pacing that defines how the budget amount will be spent across the pacing_period. `PACING_TYPE_ASAP` is not compatible with pacing_period `PACING_PERIOD_FLIGHT` for insertion orders.
-             * @enum {string}
-             */
-            pacingType?: "PACING_TYPE_UNSPECIFIED" | "PACING_TYPE_AHEAD" | "PACING_TYPE_ASAP" | "PACING_TYPE_EVEN";
-            /**
-             * @description Required. The time period in which the pacing budget will be spent. When automatic budget allocation is enabled at the insertion order via automationType, this field is output only and defaults to `PACING_PERIOD_FLIGHT`.
-             * @enum {string}
-             */
-            pacingPeriod?: "PACING_PERIOD_UNSPECIFIED" | "PACING_PERIOD_DAILY" | "PACING_PERIOD_FLIGHT";
-            /**
-             * Format: int64
-             * @description Maximum currency amount to spend every day in micros of advertiser's currency. Applicable when the budget is currency based. Must be greater than 0. For example, for 1.5 standard unit of the currency, set this field to 1500000. The value assigned will be rounded to whole billable units for the relevant currency by the following rules: any positive value less than a single billable unit will be rounded up to one billable unit and any value larger than a single billable unit will be rounded down to the nearest billable value. For example, if the currency's billable unit is 0.01, and this field is set to 10257770, it will round down to 10250000, a value of 10.25. If set to 505, it will round up to 10000, a value of 0.01.
-             */
-            dailyMaxMicros?: string;
-        };
-        /** @description Settings that control the key performance indicator, or KPI, of an insertion order. */
-        Kpi: {
-            /** @description A KPI string, which can be empty. Must be UTF-8 encoded with a length of no more than 100 characters. Applicable when kpi_type is `KPI_TYPE_OTHER`. */
-            kpiString?: string;
-            /**
-             * @description Required. The type of KPI.
-             * @enum {string}
-             */
-            kpiType?: "KPI_TYPE_UNSPECIFIED" | "KPI_TYPE_CPM" | "KPI_TYPE_CPC" | "KPI_TYPE_CPA" | "KPI_TYPE_CTR" | "KPI_TYPE_VIEWABILITY" | "KPI_TYPE_CPIAVC" | "KPI_TYPE_CPE" | "KPI_TYPE_CPV" | "KPI_TYPE_CLICK_CVR" | "KPI_TYPE_IMPRESSION_CVR" | "KPI_TYPE_VCPM" | "KPI_TYPE_VTR" | "KPI_TYPE_AUDIO_COMPLETION_RATE" | "KPI_TYPE_VIDEO_COMPLETION_RATE" | "KPI_TYPE_CPCL" | "KPI_TYPE_CPCV" | "KPI_TYPE_TOS10" | "KPI_TYPE_MAXIMIZE_PACING" | "KPI_TYPE_CUSTOM_IMPRESSION_VALUE_OVER_COST" | "KPI_TYPE_OTHER";
-            /**
-             * Format: int64
-             * @description The decimal representation of the goal percentage in micros. Applicable when kpi_type is one of: * `KPI_TYPE_CTR` * `KPI_TYPE_VIEWABILITY` * `KPI_TYPE_CLICK_CVR` * `KPI_TYPE_IMPRESSION_CVR` * `KPI_TYPE_VTR` * `KPI_TYPE_AUDIO_COMPLETION_RATE` * `KPI_TYPE_VIDEO_COMPLETION_RATE` For example: 70000 represents 7% (decimal 0.07).
-             */
-            kpiPercentageMicros?: string;
-            /**
-             * Format: int64
-             * @description The goal amount, in micros of the advertiser's currency. Applicable when kpi_type is one of: * `KPI_TYPE_CPM` * `KPI_TYPE_CPC` * `KPI_TYPE_CPA` * `KPI_TYPE_CPIAVC` * `KPI_TYPE_VCPM` For example: 1500000 represents 1.5 standard units of the currency.
-             */
-            kpiAmountMicros?: string;
-            /**
-             * Format: int64
-             * @description Optional. Custom Bidding Algorithm ID associated with KPI_CUSTOM_IMPRESSION_VALUE_OVER_COST. This field is ignored if the proper KPI is not selected.
-             */
-            kpiAlgorithmId?: string;
+            value?: string;
         };
         /** @description Settings that control a partner cost. A partner cost is any type of expense involved in running a campaign, other than the costs of purchasing impressions (which is called the media cost) and using third-party audience segment data (data fee). Some examples of partner costs include the fees for using DV360, a third-party ad server, or a third-party ad serving verification service. */
         PartnerCost: {
-            /**
-             * Format: int64
-             * @description The media fee percentage in millis (1/1000 of a percent). Applicable when the fee_type is `PARTNER_FEE_TYPE_MEDIA_FEE`. Must be greater than or equal to 0. For example: 100 represents 0.1%.
-             */
-            feePercentageMillis?: string;
-            /**
-             * @description The invoice type for this partner cost. * Required when cost_type is one of: - `PARTNER_COST_TYPE_ADLOOX` - `PARTNER_COST_TYPE_DOUBLE_VERIFY` - `PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE`. * Output only for other types.
-             * @enum {string}
-             */
-            invoiceType?: "PARTNER_COST_INVOICE_TYPE_UNSPECIFIED" | "PARTNER_COST_INVOICE_TYPE_DV360" | "PARTNER_COST_INVOICE_TYPE_PARTNER";
             /**
              * Format: int64
              * @description The CPM fee amount in micros of advertiser's currency. Applicable when the fee_type is `PARTNER_FEE_TYPE_CPM_FEE`. Must be greater than or equal to 0. For example, for 1.5 standard unit of the advertiser's currency, set this field to 1500000.
@@ -664,47 +629,80 @@ export interface components {
              * @description Required. The type of the partner cost.
              * @enum {string}
              */
-            costType?: "PARTNER_COST_TYPE_UNSPECIFIED" | "PARTNER_COST_TYPE_ADLOOX" | "PARTNER_COST_TYPE_ADLOOX_PREBID" | "PARTNER_COST_TYPE_ADSAFE" | "PARTNER_COST_TYPE_ADXPOSE" | "PARTNER_COST_TYPE_AGGREGATE_KNOWLEDGE" | "PARTNER_COST_TYPE_AGENCY_TRADING_DESK" | "PARTNER_COST_TYPE_DV360_FEE" | "PARTNER_COST_TYPE_COMSCORE_VCE" | "PARTNER_COST_TYPE_DATA_MANAGEMENT_PLATFORM" | "PARTNER_COST_TYPE_DEFAULT" | "PARTNER_COST_TYPE_DOUBLE_VERIFY" | "PARTNER_COST_TYPE_DOUBLE_VERIFY_PREBID" | "PARTNER_COST_TYPE_EVIDON" | "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_VIDEO" | "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_PREBID" | "PARTNER_COST_TYPE_MEDIA_COST_DATA" | "PARTNER_COST_TYPE_MOAT_VIDEO" | "PARTNER_COST_TYPE_NIELSEN_DAR" | "PARTNER_COST_TYPE_SHOP_LOCAL" | "PARTNER_COST_TYPE_TERACENT" | "PARTNER_COST_TYPE_THIRD_PARTY_AD_SERVER" | "PARTNER_COST_TYPE_TRUST_METRICS" | "PARTNER_COST_TYPE_VIZU" | "PARTNER_COST_TYPE_CUSTOM_FEE_1" | "PARTNER_COST_TYPE_CUSTOM_FEE_2" | "PARTNER_COST_TYPE_CUSTOM_FEE_3" | "PARTNER_COST_TYPE_CUSTOM_FEE_4" | "PARTNER_COST_TYPE_CUSTOM_FEE_5" | "PARTNER_COST_TYPE_SCIBIDS_FEE";
+            costType: "PARTNER_COST_TYPE_UNSPECIFIED" | "PARTNER_COST_TYPE_ADLOOX" | "PARTNER_COST_TYPE_ADLOOX_PREBID" | "PARTNER_COST_TYPE_ADSAFE" | "PARTNER_COST_TYPE_ADXPOSE" | "PARTNER_COST_TYPE_AGGREGATE_KNOWLEDGE" | "PARTNER_COST_TYPE_AGENCY_TRADING_DESK" | "PARTNER_COST_TYPE_DV360_FEE" | "PARTNER_COST_TYPE_COMSCORE_VCE" | "PARTNER_COST_TYPE_DATA_MANAGEMENT_PLATFORM" | "PARTNER_COST_TYPE_DEFAULT" | "PARTNER_COST_TYPE_DOUBLE_VERIFY" | "PARTNER_COST_TYPE_DOUBLE_VERIFY_PREBID" | "PARTNER_COST_TYPE_EVIDON" | "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_VIDEO" | "PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE_PREBID" | "PARTNER_COST_TYPE_MEDIA_COST_DATA" | "PARTNER_COST_TYPE_MOAT_VIDEO" | "PARTNER_COST_TYPE_NIELSEN_DAR" | "PARTNER_COST_TYPE_SHOP_LOCAL" | "PARTNER_COST_TYPE_TERACENT" | "PARTNER_COST_TYPE_THIRD_PARTY_AD_SERVER" | "PARTNER_COST_TYPE_TRUST_METRICS" | "PARTNER_COST_TYPE_VIZU" | "PARTNER_COST_TYPE_CUSTOM_FEE_1" | "PARTNER_COST_TYPE_CUSTOM_FEE_2" | "PARTNER_COST_TYPE_CUSTOM_FEE_3" | "PARTNER_COST_TYPE_CUSTOM_FEE_4" | "PARTNER_COST_TYPE_CUSTOM_FEE_5" | "PARTNER_COST_TYPE_SCIBIDS_FEE";
+            /**
+             * @description The invoice type for this partner cost. * Required when cost_type is one of: - `PARTNER_COST_TYPE_ADLOOX` - `PARTNER_COST_TYPE_DOUBLE_VERIFY` - `PARTNER_COST_TYPE_INTEGRAL_AD_SCIENCE`. * Output only for other types.
+             * @enum {string}
+             */
+            invoiceType?: "PARTNER_COST_INVOICE_TYPE_UNSPECIFIED" | "PARTNER_COST_INVOICE_TYPE_DV360" | "PARTNER_COST_INVOICE_TYPE_PARTNER";
             /**
              * @description Required. The fee type for this partner cost.
              * @enum {string}
              */
-            feeType?: "PARTNER_COST_FEE_TYPE_UNSPECIFIED" | "PARTNER_COST_FEE_TYPE_CPM_FEE" | "PARTNER_COST_FEE_TYPE_MEDIA_FEE";
+            feeType: "PARTNER_COST_FEE_TYPE_UNSPECIFIED" | "PARTNER_COST_FEE_TYPE_CPM_FEE" | "PARTNER_COST_FEE_TYPE_MEDIA_FEE";
+            /**
+             * Format: int64
+             * @description The media fee percentage in millis (1/1000 of a percent). Applicable when the fee_type is `PARTNER_FEE_TYPE_MEDIA_FEE`. Must be greater than or equal to 0. For example: 100 represents 0.1%.
+             */
+            feePercentageMillis?: string;
+        };
+        /** @description Settings that control the key performance indicator, or KPI, of an insertion order. */
+        Kpi: {
+            /**
+             * @description Required. The type of KPI.
+             * @enum {string}
+             */
+            kpiType: "KPI_TYPE_UNSPECIFIED" | "KPI_TYPE_CPM" | "KPI_TYPE_CPC" | "KPI_TYPE_CPA" | "KPI_TYPE_CTR" | "KPI_TYPE_VIEWABILITY" | "KPI_TYPE_CPIAVC" | "KPI_TYPE_CPE" | "KPI_TYPE_CPV" | "KPI_TYPE_CLICK_CVR" | "KPI_TYPE_IMPRESSION_CVR" | "KPI_TYPE_VCPM" | "KPI_TYPE_VTR" | "KPI_TYPE_AUDIO_COMPLETION_RATE" | "KPI_TYPE_VIDEO_COMPLETION_RATE" | "KPI_TYPE_CPCL" | "KPI_TYPE_CPCV" | "KPI_TYPE_TOS10" | "KPI_TYPE_MAXIMIZE_PACING" | "KPI_TYPE_CUSTOM_IMPRESSION_VALUE_OVER_COST" | "KPI_TYPE_OTHER";
+            /**
+             * Format: int64
+             * @description Optional. Custom Bidding Algorithm ID associated with KPI_CUSTOM_IMPRESSION_VALUE_OVER_COST. This field is ignored if the proper KPI is not selected.
+             */
+            kpiAlgorithmId?: string;
+            /**
+             * Format: int64
+             * @description The goal amount, in micros of the advertiser's currency. Applicable when kpi_type is one of: * `KPI_TYPE_CPM` * `KPI_TYPE_CPC` * `KPI_TYPE_CPA` * `KPI_TYPE_CPIAVC` * `KPI_TYPE_VCPM` For example: 1500000 represents 1.5 standard units of the currency.
+             */
+            kpiAmountMicros?: string;
+            /**
+             * Format: int64
+             * @description The decimal representation of the goal percentage in micros. Applicable when kpi_type is one of: * `KPI_TYPE_CTR` * `KPI_TYPE_VIEWABILITY` * `KPI_TYPE_CLICK_CVR` * `KPI_TYPE_IMPRESSION_CVR` * `KPI_TYPE_VTR` * `KPI_TYPE_AUDIO_COMPLETION_RATE` * `KPI_TYPE_VIDEO_COMPLETION_RATE` For example: 70000 represents 7% (decimal 0.07).
+             */
+            kpiPercentageMicros?: string;
+            /** @description A KPI string, which can be empty. Must be UTF-8 encoded with a length of no more than 100 characters. Applicable when kpi_type is `KPI_TYPE_OTHER`. */
+            kpiString?: string;
         };
         /** @description A single line item. */
         LineItem: {
-            /**
-             * Format: int64
-             * @description Required. Immutable. The unique ID of the insertion order that the line item belongs to.
-             */
-            insertionOrderId?: string;
-            /** @description Output only. The resource name of the line item. */
-            name?: string;
-            /** @description The IDs of the creatives associated with the line item. */
-            creativeIds?: string[];
-            /** @description Required. The start and end time of the line item's flight. */
-            flight?: components["schemas"]["LineItemFlight"];
-            /** @description The conversion tracking setting of the line item. */
-            conversionCounting?: components["schemas"]["ConversionCountingConfig"];
-            /** @description Required. The budget spending speed setting of the line item. */
-            pacing?: components["schemas"]["Pacing"];
             /** @description The partner costs associated with the line item. If absent or empty in CreateLineItem method, the newly created line item will inherit partner costs from its parent insertion order. */
             partnerCosts?: components["schemas"]["PartnerCost"][];
-            /** @description Required. The budget allocation setting of the line item. */
-            budget?: components["schemas"]["LineItemBudget"];
+            /** @description Output only. Settings specific to YouTube and Partners line items. */
+            youtubeAndPartnersSettings?: components["schemas"]["YoutubeAndPartnersSettings"];
+            /**
+             * @description Required. Controls whether or not the line item can spend its budget and bid on inventory. * For CreateLineItem method, only `ENTITY_STATUS_DRAFT` is allowed. To activate a line item, use UpdateLineItem method and update the status to `ENTITY_STATUS_ACTIVE` after creation. * A line item cannot be changed back to `ENTITY_STATUS_DRAFT` status from any other status. * If the line item's parent insertion order is not active, the line item can't spend its budget even if its own status is `ENTITY_STATUS_ACTIVE`.
+             * @enum {string}
+             */
+            entityStatus: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
+            /** @description Required. The start and end time of the line item's flight. */
+            flight: components["schemas"]["LineItemFlight"];
+            /**
+             * @description Required. Immutable. The type of the line item.
+             * @enum {string}
+             */
+            lineItemType: "LINE_ITEM_TYPE_UNSPECIFIED" | "LINE_ITEM_TYPE_DISPLAY_DEFAULT" | "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INSTALL" | "LINE_ITEM_TYPE_VIDEO_DEFAULT" | "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INSTALL" | "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INVENTORY" | "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INVENTORY" | "LINE_ITEM_TYPE_AUDIO_DEFAULT" | "LINE_ITEM_TYPE_VIDEO_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_ACTION" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIDEO_SEQUENCE" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_AUDIO" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_TARGET_FREQUENCY" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIEW" | "LINE_ITEM_TYPE_DISPLAY_OUT_OF_HOME" | "LINE_ITEM_TYPE_VIDEO_OUT_OF_HOME";
             /**
              * Format: int64
              * @description Output only. The unique ID of the campaign that the line item belongs to.
              */
             campaignId?: string;
-            /** @description The mobile app promoted by the line item. This is applicable only when line_item_type is either `LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INSTALL` or `LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INSTALL`. */
-            mobileApp?: components["schemas"]["MobileApp"];
             /** @description Required. The partner revenue model setting of the line item. */
-            partnerRevenueModel?: components["schemas"]["PartnerRevenueModel"];
-            /** @description Output only. Settings specific to YouTube and Partners line items. */
-            youtubeAndPartnersSettings?: components["schemas"]["YoutubeAndPartnersSettings"];
-            /** @description Output only. The warning messages generated by the line item. These warnings do not block saving the line item, but some may block the line item from running. */
-            warningMessages?: ("LINE_ITEM_WARNING_MESSAGE_UNSPECIFIED" | "INVALID_FLIGHT_DATES" | "EXPIRED" | "PENDING_FLIGHT" | "ALL_PARTNER_ENABLED_EXCHANGES_NEGATIVELY_TARGETED" | "INVALID_INVENTORY_SOURCE" | "APP_INVENTORY_INVALID_SITE_TARGETING" | "APP_INVENTORY_INVALID_AUDIENCE_LISTS" | "NO_VALID_CREATIVE" | "PARENT_INSERTION_ORDER_PAUSED" | "PARENT_INSERTION_ORDER_EXPIRED")[];
+            partnerRevenueModel: components["schemas"]["PartnerRevenueModel"];
+            /** @description Required. The display name of the line item. Must be UTF-8 encoded with a maximum size of 240 bytes. */
+            displayName: string;
+            /**
+             * @description Whether this line item will serve European Union political ads. If contains_eu_political_ads has been set to `DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING` in the parent advertiser, then this field will be assigned `DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING` if not otherwise specified. This field can then be updated using the UI, API, or Structured Data Files. This field must be assigned when creating a new line item. Otherwise, **the `advertisers.lineItems.create` request will fail**.
+             * @enum {string}
+             */
+            containsEuPoliticalAds?: "EU_POLITICAL_ADVERTISING_STATUS_UNKNOWN" | "CONTAINS_EU_POLITICAL_ADVERTISING" | "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING";
             /**
              * Format: google-datetime
              * @description Output only. The timestamp when the line item was last updated. Assigned by the system.
@@ -712,217 +710,85 @@ export interface components {
             updateTime?: string;
             /**
              * Format: int64
-             * @description Output only. The unique ID of the advertiser the line item belongs to.
-             */
-            advertiserId?: string;
-            /**
-             * Format: int64
              * @description Output only. The unique ID of the line item. Assigned by the system.
              */
             lineItemId?: string;
-            /**
-             * @description Whether this line item will serve European Union political ads. If contains_eu_political_ads has been set to `DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING` in the parent advertiser, then this field will be assigned `DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING` if not otherwise specified. This field can then be updated using the UI, API, or Structured Data Files. This field must be assigned when creating a new line item. Otherwise, **the `advertisers.lineItems.create` request will fail**.
-             * @enum {string}
-             */
-            containsEuPoliticalAds?: "EU_POLITICAL_ADVERTISING_STATUS_UNKNOWN" | "CONTAINS_EU_POLITICAL_ADVERTISING" | "DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING";
-            /** @description Required. The bidding strategy of the line item. */
-            bidStrategy?: components["schemas"]["BiddingStrategy"];
-            /** @description Required. The display name of the line item. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
-            /**
-             * @description Required. Immutable. The type of the line item.
-             * @enum {string}
-             */
-            lineItemType?: "LINE_ITEM_TYPE_UNSPECIFIED" | "LINE_ITEM_TYPE_DISPLAY_DEFAULT" | "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INSTALL" | "LINE_ITEM_TYPE_VIDEO_DEFAULT" | "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INSTALL" | "LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INVENTORY" | "LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INVENTORY" | "LINE_ITEM_TYPE_AUDIO_DEFAULT" | "LINE_ITEM_TYPE_VIDEO_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_ACTION" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIDEO_SEQUENCE" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_AUDIO" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_NON_SKIPPABLE_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_REACH_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_SIMPLE_OVER_THE_TOP" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_TARGET_FREQUENCY" | "LINE_ITEM_TYPE_YOUTUBE_AND_PARTNERS_VIEW" | "LINE_ITEM_TYPE_DISPLAY_OUT_OF_HOME" | "LINE_ITEM_TYPE_VIDEO_OUT_OF_HOME";
+            /** @description Required. The budget allocation setting of the line item. */
+            budget: components["schemas"]["LineItemBudget"];
             /** @description The [optimized targeting](//support.google.com/displayvideo/answer/12060859) settings of the line item. This config is only applicable for display, video, or audio line items that use automated bidding and positively target eligible audience lists. */
             targetingExpansion?: components["schemas"]["TargetingExpansionConfig"];
             /** @description Required. The impression frequency cap settings of the line item. The max_impressions field in this settings object must be used if assigning a limited cap. */
-            frequencyCap?: components["schemas"]["FrequencyCap"];
+            frequencyCap: components["schemas"]["FrequencyCap"];
             /**
              * @description Output only. The reservation type of the line item.
              * @enum {string}
              */
             reservationType?: "RESERVATION_TYPE_UNSPECIFIED" | "RESERVATION_TYPE_NOT_GUARANTEED" | "RESERVATION_TYPE_PROGRAMMATIC_GUARANTEED" | "RESERVATION_TYPE_TAG_GUARANTEED" | "RESERVATION_TYPE_PETRA_VIRAL" | "RESERVATION_TYPE_INSTANT_RESERVE";
+            /** @description Output only. The warning messages generated by the line item. These warnings do not block saving the line item, but some may block the line item from running. */
+            warningMessages?: ("LINE_ITEM_WARNING_MESSAGE_UNSPECIFIED" | "INVALID_FLIGHT_DATES" | "EXPIRED" | "PENDING_FLIGHT" | "ALL_PARTNER_ENABLED_EXCHANGES_NEGATIVELY_TARGETED" | "INVALID_INVENTORY_SOURCE" | "APP_INVENTORY_INVALID_SITE_TARGETING" | "APP_INVENTORY_INVALID_AUDIENCE_LISTS" | "NO_VALID_CREATIVE" | "PARENT_INSERTION_ORDER_PAUSED" | "PARENT_INSERTION_ORDER_EXPIRED")[];
+            /** @description Required. The bidding strategy of the line item. */
+            bidStrategy: components["schemas"]["BiddingStrategy"];
+            /** @description Output only. The resource name of the line item. */
+            name?: string;
+            /** @description The mobile app promoted by the line item. This is applicable only when line_item_type is either `LINE_ITEM_TYPE_DISPLAY_MOBILE_APP_INSTALL` or `LINE_ITEM_TYPE_VIDEO_MOBILE_APP_INSTALL`. */
+            mobileApp?: components["schemas"]["MobileApp"];
             /** @description Whether to exclude new exchanges from automatically being targeted by the line item. This field is false by default. */
             excludeNewExchanges?: boolean;
-            /**
-             * @description Required. Controls whether or not the line item can spend its budget and bid on inventory. * For CreateLineItem method, only `ENTITY_STATUS_DRAFT` is allowed. To activate a line item, use UpdateLineItem method and update the status to `ENTITY_STATUS_ACTIVE` after creation. * A line item cannot be changed back to `ENTITY_STATUS_DRAFT` status from any other status. * If the line item's parent insertion order is not active, the line item can't spend its budget even if its own status is `ENTITY_STATUS_ACTIVE`.
-             * @enum {string}
-             */
-            entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
             /** @description Integration details of the line item. */
             integrationDetails?: components["schemas"]["IntegrationDetails"];
-        };
-        /** @description Settings that control the active duration of a line item. */
-        LineItemFlight: {
-            /**
-             * @description Required. The type of the line item's flight dates.
-             * @enum {string}
-             */
-            flightDateType?: "LINE_ITEM_FLIGHT_DATE_TYPE_UNSPECIFIED" | "LINE_ITEM_FLIGHT_DATE_TYPE_INHERITED" | "LINE_ITEM_FLIGHT_DATE_TYPE_CUSTOM";
-            /** @description The flight start and end dates of the line item. They are resolved relative to the parent advertiser's time zone. * Required when flight_date_type is `LINE_ITEM_FLIGHT_DATE_TYPE_CUSTOM`. Output only otherwise. * When creating a new flight, both `start_date` and `end_date` must be in the future. * An existing flight with a `start_date` in the past has a mutable `end_date` but an immutable `start_date`. * `end_date` must be the `start_date` or later, both before the year 2037. */
-            dateRange?: components["schemas"]["DateRange"];
-        };
-        /** @description Settings that control how conversions are counted. All post-click conversions will be counted. A percentage value can be set for post-view conversions counting. */
-        ConversionCountingConfig: {
+            /** @description The IDs of the creatives associated with the line item. */
+            creativeIds?: string[];
             /**
              * Format: int64
-             * @description The percentage of post-view conversions to count, in millis (1/1000 of a percent). Must be between 0 and 100000 inclusive. For example, to track 50% of the post-click conversions, set a value of 50000.
+             * @description Required. Immutable. The unique ID of the insertion order that the line item belongs to.
              */
-            postViewCountPercentageMillis?: string;
-            /** @description The Floodlight activity configs used to track conversions. The number of conversions counted is the sum of all of the conversions counted by all of the Floodlight activity IDs specified in this field. This field can't be updated if a custom bidding algorithm is assigned to the line item. If you set this field and assign a custom bidding algorithm in the same request, the floodlight activities must match the ones used by the custom bidding algorithm. */
-            floodlightActivityConfigs?: components["schemas"]["TrackingFloodlightActivityConfig"][];
-        };
-        /** @description Settings that control the behavior of a single Floodlight activity config. */
-        TrackingFloodlightActivityConfig: {
-            /**
-             * Format: int32
-             * @description Required. The number of days after an ad has been clicked in which a conversion may be counted. Must be between 0 and 90 inclusive.
-             */
-            postClickLookbackWindowDays?: number;
+            insertionOrderId: string;
+            /** @description Required. The budget spending speed setting of the line item. */
+            pacing: components["schemas"]["Pacing"];
+            /** @description The conversion tracking setting of the line item. */
+            conversionCounting?: components["schemas"]["ConversionCountingConfig"];
             /**
              * Format: int64
-             * @description Required. The ID of the Floodlight activity.
+             * @description Output only. The unique ID of the advertiser the line item belongs to.
              */
-            floodlightActivityId?: string;
-            /**
-             * Format: int32
-             * @description Required. The number of days after an ad has been viewed in which a conversion may be counted. Must be between 0 and 90 inclusive.
-             */
-            postViewLookbackWindowDays?: number;
-        };
-        /** @description Settings that control how budget is allocated. */
-        LineItemBudget: {
-            /**
-             * @description Required. The type of the budget allocation. `LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC` is only applicable when automatic budget allocation is enabled for the parent insertion order.
-             * @enum {string}
-             */
-            budgetAllocationType?: "LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNSPECIFIED" | "LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC" | "LINE_ITEM_BUDGET_ALLOCATION_TYPE_FIXED" | "LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNLIMITED";
-            /**
-             * Format: int64
-             * @description The maximum budget amount the line item will spend. Must be greater than 0. When budget_allocation_type is: * `LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC`, this field is immutable and is set by the system. * `LINE_ITEM_BUDGET_ALLOCATION_TYPE_FIXED`, if budget_unit is: - `BUDGET_UNIT_CURRENCY`, this field represents maximum budget amount to spend, in micros of the advertiser's currency. For example, 1500000 represents 1.5 standard units of the currency. - `BUDGET_UNIT_IMPRESSIONS`, this field represents the maximum number of impressions to serve. * `LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNLIMITED`, this field is not applicable and will be ignored by the system.
-             */
-            maxAmount?: string;
-            /**
-             * @description Output only. The budget unit specifies whether the budget is currency based or impression based. This value is inherited from the parent insertion order.
-             * @enum {string}
-             */
-            budgetUnit?: "BUDGET_UNIT_UNSPECIFIED" | "BUDGET_UNIT_CURRENCY" | "BUDGET_UNIT_IMPRESSIONS";
-        };
-        /** @description A mobile app promoted by a mobile app install line item. */
-        MobileApp: {
-            /** @description Required. The ID of the app provided by the platform store. Android apps are identified by the bundle ID used by Android's Play store, such as `com.google.android.gm`. iOS apps are identified by a nine-digit app ID used by Apple's App store, such as `422689480`. */
-            appId?: string;
-            /** @description Output only. The app name. */
-            displayName?: string;
-            /** @description Output only. The app publisher. */
-            publisher?: string;
-            /**
-             * @description Output only. The app platform.
-             * @enum {string}
-             */
-            platform?: "PLATFORM_UNSPECIFIED" | "IOS" | "ANDROID";
-        };
-        /** @description Settings that control how partner revenue is calculated. */
-        PartnerRevenueModel: {
-            /**
-             * @description Required. The markup type of the partner revenue model.
-             * @enum {string}
-             */
-            markupType?: "PARTNER_REVENUE_MODEL_MARKUP_TYPE_UNSPECIFIED" | "PARTNER_REVENUE_MODEL_MARKUP_TYPE_CPM" | "PARTNER_REVENUE_MODEL_MARKUP_TYPE_MEDIA_COST_MARKUP" | "PARTNER_REVENUE_MODEL_MARKUP_TYPE_TOTAL_MEDIA_COST_MARKUP";
-            /**
-             * Format: int64
-             * @description Required. The markup amount of the partner revenue model. Must be greater than or equal to 0. * When the markup_type is set to be `PARTNER_REVENUE_MODEL_MARKUP_TYPE_CPM`, this field represents the CPM markup in micros of advertiser's currency. For example, 1500000 represents 1.5 standard units of the currency. * When the markup_type is set to be `PARTNER_REVENUE_MODEL_MARKUP_TYPE_MEDIA_COST_MARKUP`, this field represents the media cost percent markup in millis. For example, 100 represents 0.1% (decimal 0.001). * When the markup_type is set to be `PARTNER_REVENUE_MODEL_MARKUP_TYPE_TOTAL_MEDIA_COST_MARKUP`, this field represents the total media cost percent markup in millis. For example, 100 represents 0.1% (decimal 0.001).
-             */
-            markupAmount?: string;
+            advertiserId?: string;
         };
         /** @description Settings for YouTube and Partners line items. */
         YoutubeAndPartnersSettings: {
-            /** @description The view frequency cap settings of the line item. The max_views field in this settings object must be used if assigning a limited cap. */
-            viewFrequencyCap?: components["schemas"]["FrequencyCap"];
-            /**
-             * Format: int64
-             * @description Optional. The ID of the merchant which is linked to the line item for product feed.
-             */
-            linkedMerchantId?: string;
-            /** @description Settings that control what YouTube and Partners inventories the line item will target. */
-            inventorySourceSettings?: components["schemas"]["YoutubeAndPartnersInventorySourceConfig"];
+            /** @description Optional. The IDs of the videos appear below the primary video ad when the ad is playing in the YouTube app on mobile devices. */
+            relatedVideoIds?: string[];
             /**
              * Format: int64
              * @description Optional. The ID of the form to generate leads.
              */
             leadFormId?: string;
-            /** @description Optional. The settings related to VideoAdSequence. */
-            videoAdSequenceSettings?: components["schemas"]["VideoAdSequenceSettings"];
-            /** @description Optional. The settings to control which inventory is allowed for this line item. */
-            videoAdInventoryControl?: components["schemas"]["VideoAdInventoryControl"];
             /** @description Optional. The average number of times you want ads from this line item to show to the same person over a certain period of time. */
             targetFrequency?: components["schemas"]["TargetFrequency"];
-            /** @description Optional. The IDs of the videos appear below the primary video ad when the ad is playing in the YouTube app on mobile devices. */
-            relatedVideoIds?: string[];
             /** @description Optional. The third-party measurement configs of the line item. */
             thirdPartyMeasurementConfigs?: components["schemas"]["ThirdPartyMeasurementConfigs"];
-            /**
-             * @description Output only. The kind of content on which the YouTube and Partners ads will be shown. *Warning*: This field will be removed in the near future. Use effective_content_category instead.
-             * @enum {string}
-             */
-            contentCategory?: "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_UNSPECIFIED" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_STANDARD" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_EXPANDED" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_LIMITED";
             /**
              * @description Output only. The content category which takes effect when serving the line item. When content category is set in both line item and advertiser, the stricter one will take effect when serving the line item. New line items will only inherit the advertiser level setting.
              * @enum {string}
              */
             effectiveContentCategory?: "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_UNSPECIFIED" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_STANDARD" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_EXPANDED" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_LIMITED";
-        };
-        /** @description Settings that control what YouTube related inventories the YouTube and Partners line item will target. */
-        YoutubeAndPartnersInventorySourceConfig: {
-            /** @description Optional. Whether to target inventory on YouTube. This includes both search, channels and videos. */
-            includeYoutube?: boolean;
-            /** @description Optional. Whether to target inventory in video apps available with Google TV. */
-            includeGoogleTv?: boolean;
-            /** @description Whether to target inventory on a collection of partner sites and apps that follow the same brand safety standards as YouTube. */
-            includeYoutubeVideoPartners?: boolean;
-        };
-        /** @description Settings related to VideoAdSequence. */
-        VideoAdSequenceSettings: {
-            /** @description The steps of which the sequence consists. */
-            steps?: components["schemas"]["VideoAdSequenceStep"][];
+            /** @description The view frequency cap settings of the line item. The max_views field in this settings object must be used if assigning a limited cap. */
+            viewFrequencyCap?: components["schemas"]["FrequencyCap"];
             /**
-             * @description The minimum time interval before the same user sees this sequence again.
+             * @description Output only. The kind of content on which the YouTube and Partners ads will be shown. *Warning*: This field will be removed in the near future. Use effective_content_category instead.
              * @enum {string}
              */
-            minimumDuration?: "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_UNSPECIFIED" | "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_WEEK" | "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_MONTH";
-        };
-        /** @description The detail of a single step in a VideoAdSequence. */
-        VideoAdSequenceStep: {
-            /**
-             * @description The interaction on the previous step that will lead the viewer to this step. The first step does not have interaction_type.
-             * @enum {string}
-             */
-            interactionType?: "INTERACTION_TYPE_UNSPECIFIED" | "INTERACTION_TYPE_PAID_VIEW" | "INTERACTION_TYPE_SKIP" | "INTERACTION_TYPE_IMPRESSION" | "INTERACTION_TYPE_ENGAGED_IMPRESSION";
+            contentCategory?: "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_UNSPECIFIED" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_STANDARD" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_EXPANDED" | "YOUTUBE_AND_PARTNERS_CONTENT_CATEGORY_LIMITED";
+            /** @description Optional. The settings related to VideoAdSequence. */
+            videoAdSequenceSettings?: components["schemas"]["VideoAdSequenceSettings"];
+            /** @description Optional. The settings to control which inventory is allowed for this line item. */
+            videoAdInventoryControl?: components["schemas"]["VideoAdInventoryControl"];
+            /** @description Settings that control what YouTube and Partners inventories the line item will target. */
+            inventorySourceSettings?: components["schemas"]["YoutubeAndPartnersInventorySourceConfig"];
             /**
              * Format: int64
-             * @description The ID of the previous step. The first step does not have previous step.
+             * @description Optional. The ID of the merchant which is linked to the line item for product feed.
              */
-            previousStepId?: string;
-            /**
-             * Format: int64
-             * @description The ID of the corresponding ad group of the step.
-             */
-            adGroupId?: string;
-            /**
-             * Format: int64
-             * @description The ID of the step.
-             */
-            stepId?: string;
-        };
-        /** @description The video ad inventory control used in certain YouTube line item types. */
-        VideoAdInventoryControl: {
-            /** @description Optional. Whether ads can serve as shorts format. */
-            allowShorts?: boolean;
-            /** @description Optional. Whether ads can serve as in-feed format. */
-            allowInFeed?: boolean;
-            /** @description Optional. Whether ads can serve as in-stream format. */
-            allowInStream?: boolean;
+            linkedMerchantId?: string;
         };
         /** @description Setting that controls the average number of times the ads will show to the same person over a certain period of time. */
         TargetFrequency: {
@@ -944,14 +810,14 @@ export interface components {
         };
         /** @description Settings that control what third-party vendors are measuring specific line item metrics. */
         ThirdPartyMeasurementConfigs: {
-            /** @description Optional. The third-party vendors measuring viewability. The following third-party vendors are applicable: * `THIRD_PARTY_VENDOR_MOAT` * `THIRD_PARTY_VENDOR_DOUBLE_VERIFY` * `THIRD_PARTY_VENDOR_INTEGRAL_AD_SCIENCE` * `THIRD_PARTY_VENDOR_COMSCORE` * `THIRD_PARTY_VENDOR_TELEMETRY` * `THIRD_PARTY_VENDOR_MEETRICS` * `THIRD_PARTY_VENDOR_GOOGLE_INTERNAL` */
-            viewabilityVendorConfigs?: components["schemas"]["ThirdPartyVendorConfig"][];
-            /** @description Optional. The third-party vendors measuring brand lift. The following third-party vendors are applicable: * `THIRD_PARTY_VENDOR_DYNATA` * `THIRD_PARTY_VENDOR_KANTAR` * `THIRD_PARTY_VENDOR_KANTAR_MILLWARD_BROWN` * `THIRD_PARTY_VENDOR_GOOGLE_INTERNAL` * `THIRD_PARTY_VENDOR_INTAGE` * `THIRD_PARTY_VENDOR_NIELSEN` * `THIRD_PARTY_VENDOR_MACROMILL` */
-            brandLiftVendorConfigs?: components["schemas"]["ThirdPartyVendorConfig"][];
             /** @description Optional. The third-party vendors measuring reach. The following third-party vendors are applicable: * `THIRD_PARTY_VENDOR_NIELSEN` * `THIRD_PARTY_VENDOR_COMSCORE` * `THIRD_PARTY_VENDOR_KANTAR` * `THIRD_PARTY_VENDOR_GOOGLE_INTERNAL` * `THIRD_PARTY_VENDOR_KANTAR_MILLWARD_BROWN` * `THIRD_PARTY_VENDOR_VIDEO_RESEARCH` * `THIRD_PARTY_VENDOR_MEDIA_SCOPE` * `THIRD_PARTY_VENDOR_AUDIENCE_PROJECT` * `THIRD_PARTY_VENDOR_VIDEO_AMP` * `THIRD_PARTY_VENDOR_ISPOT_TV` */
             reachVendorConfigs?: components["schemas"]["ThirdPartyVendorConfig"][];
+            /** @description Optional. The third-party vendors measuring brand lift. The following third-party vendors are applicable: * `THIRD_PARTY_VENDOR_DYNATA` * `THIRD_PARTY_VENDOR_KANTAR` * `THIRD_PARTY_VENDOR_KANTAR_MILLWARD_BROWN` * `THIRD_PARTY_VENDOR_GOOGLE_INTERNAL` * `THIRD_PARTY_VENDOR_INTAGE` * `THIRD_PARTY_VENDOR_NIELSEN` * `THIRD_PARTY_VENDOR_MACROMILL` */
+            brandLiftVendorConfigs?: components["schemas"]["ThirdPartyVendorConfig"][];
             /** @description Optional. The third-party vendors measuring brand safety. The following third-party vendors are applicable: * `THIRD_PARTY_VENDOR_ZERF` * `THIRD_PARTY_VENDOR_DOUBLE_VERIFY` * `THIRD_PARTY_VENDOR_INTEGRAL_AD_SCIENCE` * `THIRD_PARTY_VENDOR_GOOGLE_INTERNAL` * `THIRD_PARTY_VENDOR_ZEFR` */
             brandSafetyVendorConfigs?: components["schemas"]["ThirdPartyVendorConfig"][];
+            /** @description Optional. The third-party vendors measuring viewability. The following third-party vendors are applicable: * `THIRD_PARTY_VENDOR_MOAT` * `THIRD_PARTY_VENDOR_DOUBLE_VERIFY` * `THIRD_PARTY_VENDOR_INTEGRAL_AD_SCIENCE` * `THIRD_PARTY_VENDOR_COMSCORE` * `THIRD_PARTY_VENDOR_TELEMETRY` * `THIRD_PARTY_VENDOR_MEETRICS` * `THIRD_PARTY_VENDOR_GOOGLE_INTERNAL` */
+            viewabilityVendorConfigs?: components["schemas"]["ThirdPartyVendorConfig"][];
         };
         /** @description Settings that control how third-party measurement vendors are configured. */
         ThirdPartyVendorConfig: {
@@ -963,10 +829,100 @@ export interface components {
             /** @description The ID used by the platform of the third-party vendor to identify the line item. */
             placementId?: string;
         };
+        /** @description Settings related to VideoAdSequence. */
+        VideoAdSequenceSettings: {
+            /**
+             * @description The minimum time interval before the same user sees this sequence again.
+             * @enum {string}
+             */
+            minimumDuration?: "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_UNSPECIFIED" | "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_WEEK" | "VIDEO_AD_SEQUENCE_MINIMUM_DURATION_MONTH";
+            /** @description The steps of which the sequence consists. */
+            steps?: components["schemas"]["VideoAdSequenceStep"][];
+        };
+        /** @description The detail of a single step in a VideoAdSequence. */
+        VideoAdSequenceStep: {
+            /**
+             * Format: int64
+             * @description The ID of the corresponding ad group of the step.
+             */
+            adGroupId?: string;
+            /**
+             * @description The interaction on the previous step that will lead the viewer to this step. The first step does not have interaction_type.
+             * @enum {string}
+             */
+            interactionType?: "INTERACTION_TYPE_UNSPECIFIED" | "INTERACTION_TYPE_PAID_VIEW" | "INTERACTION_TYPE_SKIP" | "INTERACTION_TYPE_IMPRESSION" | "INTERACTION_TYPE_ENGAGED_IMPRESSION";
+            /**
+             * Format: int64
+             * @description The ID of the step.
+             */
+            stepId?: string;
+            /**
+             * Format: int64
+             * @description The ID of the previous step. The first step does not have previous step.
+             */
+            previousStepId?: string;
+        };
+        /** @description The video ad inventory control used in certain YouTube line item types. */
+        VideoAdInventoryControl: {
+            /** @description Optional. Whether ads can serve as shorts format. */
+            allowShorts?: boolean;
+            /** @description Optional. Whether ads can serve as in-feed format. */
+            allowInFeed?: boolean;
+            /** @description Optional. Whether ads can serve as in-stream format. */
+            allowInStream?: boolean;
+        };
+        /** @description Settings that control what YouTube related inventories the YouTube and Partners line item will target. */
+        YoutubeAndPartnersInventorySourceConfig: {
+            /** @description Whether to target inventory on a collection of partner sites and apps that follow the same brand safety standards as YouTube. */
+            includeYoutubeVideoPartners?: boolean;
+            /** @description Optional. Whether to target inventory on YouTube. This includes both search, channels and videos. */
+            includeYoutube?: boolean;
+            /** @description Optional. Whether to target inventory in video apps available with Google TV. */
+            includeGoogleTv?: boolean;
+        };
+        /** @description Settings that control the active duration of a line item. */
+        LineItemFlight: {
+            /** @description The flight start and end dates of the line item. They are resolved relative to the parent advertiser's time zone. * Required when flight_date_type is `LINE_ITEM_FLIGHT_DATE_TYPE_CUSTOM`. Output only otherwise. * When creating a new flight, both `start_date` and `end_date` must be in the future. * An existing flight with a `start_date` in the past has a mutable `end_date` but an immutable `start_date`. * `end_date` must be the `start_date` or later, both before the year 2037. */
+            dateRange?: components["schemas"]["DateRange"];
+            /**
+             * @description Required. The type of the line item's flight dates.
+             * @enum {string}
+             */
+            flightDateType: "LINE_ITEM_FLIGHT_DATE_TYPE_UNSPECIFIED" | "LINE_ITEM_FLIGHT_DATE_TYPE_INHERITED" | "LINE_ITEM_FLIGHT_DATE_TYPE_CUSTOM";
+        };
+        /** @description Settings that control how partner revenue is calculated. */
+        PartnerRevenueModel: {
+            /**
+             * @description Required. The markup type of the partner revenue model.
+             * @enum {string}
+             */
+            markupType: "PARTNER_REVENUE_MODEL_MARKUP_TYPE_UNSPECIFIED" | "PARTNER_REVENUE_MODEL_MARKUP_TYPE_CPM" | "PARTNER_REVENUE_MODEL_MARKUP_TYPE_MEDIA_COST_MARKUP" | "PARTNER_REVENUE_MODEL_MARKUP_TYPE_TOTAL_MEDIA_COST_MARKUP";
+            /**
+             * Format: int64
+             * @description Required. The markup amount of the partner revenue model. Must be greater than or equal to 0. * When the markup_type is set to be `PARTNER_REVENUE_MODEL_MARKUP_TYPE_CPM`, this field represents the CPM markup in micros of advertiser's currency. For example, 1500000 represents 1.5 standard units of the currency. * When the markup_type is set to be `PARTNER_REVENUE_MODEL_MARKUP_TYPE_MEDIA_COST_MARKUP`, this field represents the media cost percent markup in millis. For example, 100 represents 0.1% (decimal 0.001). * When the markup_type is set to be `PARTNER_REVENUE_MODEL_MARKUP_TYPE_TOTAL_MEDIA_COST_MARKUP`, this field represents the total media cost percent markup in millis. For example, 100 represents 0.1% (decimal 0.001).
+             */
+            markupAmount: string;
+        };
+        /** @description Settings that control how budget is allocated. */
+        LineItemBudget: {
+            /**
+             * @description Output only. The budget unit specifies whether the budget is currency based or impression based. This value is inherited from the parent insertion order.
+             * @enum {string}
+             */
+            budgetUnit?: "BUDGET_UNIT_UNSPECIFIED" | "BUDGET_UNIT_CURRENCY" | "BUDGET_UNIT_IMPRESSIONS";
+            /**
+             * Format: int64
+             * @description The maximum budget amount the line item will spend. Must be greater than 0. When budget_allocation_type is: * `LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC`, this field is immutable and is set by the system. * `LINE_ITEM_BUDGET_ALLOCATION_TYPE_FIXED`, if budget_unit is: - `BUDGET_UNIT_CURRENCY`, this field represents maximum budget amount to spend, in micros of the advertiser's currency. For example, 1500000 represents 1.5 standard units of the currency. - `BUDGET_UNIT_IMPRESSIONS`, this field represents the maximum number of impressions to serve. * `LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNLIMITED`, this field is not applicable and will be ignored by the system.
+             */
+            maxAmount?: string;
+            /**
+             * @description Required. The type of the budget allocation. `LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC` is only applicable when automatic budget allocation is enabled for the parent insertion order.
+             * @enum {string}
+             */
+            budgetAllocationType: "LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNSPECIFIED" | "LINE_ITEM_BUDGET_ALLOCATION_TYPE_AUTOMATIC" | "LINE_ITEM_BUDGET_ALLOCATION_TYPE_FIXED" | "LINE_ITEM_BUDGET_ALLOCATION_TYPE_UNLIMITED";
+        };
         /** @description Settings that control the [optimized targeting](//support.google.com/displayvideo/answer/12060859) settings of the line item. */
         TargetingExpansionConfig: {
-            /** @description Required. Whether to enable Optimized Targeting for the line item. Optimized targeting is not compatible with all bid strategies. Attempting to set this field to `true` for a line item using the BiddingStrategy field fixed_bid or one of the following combinations of BiddingStrategy fields and BiddingStrategyPerformanceGoalType will result in an error: maximize_auto_spend_bid: * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED` performance_goal_auto_bid: * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM` */
-            enableOptimizedTargeting?: boolean;
             /**
              * @description Output only. Magnitude of expansion for eligible first-party user lists under this ad group. This field only applies to YouTube and Partners line item and ad group resources.
              * @enum {string}
@@ -974,47 +930,93 @@ export interface components {
             audienceExpansionLevel?: "UNKNOWN" | "NO_REACH" | "LEAST_REACH" | "MID_REACH" | "MOST_REACH";
             /** @description Output only. Whether to exclude seed list for audience expansion. This field only applies to YouTube and Partners line item and ad group resources. */
             audienceExpansionSeedListExcluded?: boolean;
+            /** @description Required. Whether to enable Optimized Targeting for the line item. Optimized targeting is not compatible with all bid strategies. Attempting to set this field to `true` for a line item using the BiddingStrategy field fixed_bid or one of the following combinations of BiddingStrategy fields and BiddingStrategyPerformanceGoalType will result in an error: maximize_auto_spend_bid: * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_CIVA` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_IVO_TEN` * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_AV_VIEWED` performance_goal_auto_bid: * `BIDDING_STRATEGY_PERFORMANCE_GOAL_TYPE_VIEWABLE_CPM` */
+            enableOptimizedTargeting: boolean;
+        };
+        /** @description A mobile app promoted by a mobile app install line item. */
+        MobileApp: {
+            /** @description Required. The ID of the app provided by the platform store. Android apps are identified by the bundle ID used by Android's Play store, such as `com.google.android.gm`. iOS apps are identified by a nine-digit app ID used by Apple's App store, such as `422689480`. */
+            appId: string;
+            /**
+             * @description Output only. The app platform.
+             * @enum {string}
+             */
+            platform?: "PLATFORM_UNSPECIFIED" | "IOS" | "ANDROID";
+            /** @description Output only. The app publisher. */
+            publisher?: string;
+            /** @description Output only. The app name. */
+            displayName?: string;
+        };
+        /** @description Settings that control how conversions are counted. All post-click conversions will be counted. A percentage value can be set for post-view conversions counting. */
+        ConversionCountingConfig: {
+            /** @description The Floodlight activity configs used to track conversions. The number of conversions counted is the sum of all of the conversions counted by all of the Floodlight activity IDs specified in this field. This field can't be updated if a custom bidding algorithm is assigned to the line item. If you set this field and assign a custom bidding algorithm in the same request, the floodlight activities must match the ones used by the custom bidding algorithm. */
+            floodlightActivityConfigs?: components["schemas"]["TrackingFloodlightActivityConfig"][];
+            /**
+             * Format: int64
+             * @description The percentage of post-view conversions to count, in millis (1/1000 of a percent). Must be between 0 and 100000 inclusive. For example, to track 50% of the post-click conversions, set a value of 50000.
+             */
+            postViewCountPercentageMillis?: string;
+        };
+        /** @description Settings that control the behavior of a single Floodlight activity config. */
+        TrackingFloodlightActivityConfig: {
+            /**
+             * Format: int32
+             * @description Required. The number of days after an ad has been clicked in which a conversion may be counted. Must be between 0 and 90 inclusive.
+             */
+            postClickLookbackWindowDays: number;
+            /**
+             * Format: int32
+             * @description Required. The number of days after an ad has been viewed in which a conversion may be counted. Must be between 0 and 90 inclusive.
+             */
+            postViewLookbackWindowDays: number;
+            /**
+             * Format: int64
+             * @description Required. The ID of the Floodlight activity.
+             */
+            floodlightActivityId: string;
         };
         /** @description A single ad group associated with a line item. */
         AdGroup: {
-            /** @description The settings of the product feed in this ad group. */
-            productFeedData?: components["schemas"]["ProductFeedData"];
+            /** @description The [optimized targeting](//support.google.com/displayvideo/answer/12060859) settings of the ad group. */
+            targetingExpansion?: components["schemas"]["TargetingExpansionConfig"];
             /**
              * Format: int64
              * @description The unique ID of the line item that the ad group belongs to.
              */
             lineItemId?: string;
-            /** @description The [optimized targeting](//support.google.com/displayvideo/answer/12060859) settings of the ad group. */
-            targetingExpansion?: components["schemas"]["TargetingExpansionConfig"];
-            /**
-             * @description The format of the ads in the ad group.
-             * @enum {string}
-             */
-            adGroupFormat?: "AD_GROUP_FORMAT_UNSPECIFIED" | "AD_GROUP_FORMAT_IN_STREAM" | "AD_GROUP_FORMAT_VIDEO_DISCOVERY" | "AD_GROUP_FORMAT_BUMPER" | "AD_GROUP_FORMAT_NON_SKIPPABLE_IN_STREAM" | "AD_GROUP_FORMAT_AUDIO" | "AD_GROUP_FORMAT_RESPONSIVE" | "AD_GROUP_FORMAT_REACH" | "AD_GROUP_FORMAT_MASTHEAD";
-            /** @description The resource name of the ad group. */
-            name?: string;
-            /** @description The display name of the ad group. Must be UTF-8 encoded with a maximum size of 255 bytes. */
-            displayName?: string;
+            /** @description The settings of the product feed in this ad group. */
+            productFeedData?: components["schemas"]["ProductFeedData"];
             /**
              * @description Controls whether or not the ad group can spend its budget and bid on inventory. If the ad group's parent line item is not active, the ad group can't spend its budget even if its own status is `ENTITY_STATUS_ACTIVE`.
              * @enum {string}
              */
             entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
-            /** @description The bidding strategy used by the ad group. Only the youtubeAndPartnersBid field can be used in the bidding strategy. */
-            bidStrategy?: components["schemas"]["BiddingStrategy"];
             /**
              * Format: int64
              * @description The unique ID of the ad group. Assigned by the system.
              */
             adGroupId?: string;
+            /** @description The display name of the ad group. Must be UTF-8 encoded with a maximum size of 255 bytes. */
+            displayName?: string;
+            /** @description The resource name of the ad group. */
+            name?: string;
             /**
              * Format: int64
              * @description The unique ID of the advertiser the ad group belongs to.
              */
             advertiserId?: string;
+            /**
+             * @description The format of the ads in the ad group.
+             * @enum {string}
+             */
+            adGroupFormat?: "AD_GROUP_FORMAT_UNSPECIFIED" | "AD_GROUP_FORMAT_IN_STREAM" | "AD_GROUP_FORMAT_VIDEO_DISCOVERY" | "AD_GROUP_FORMAT_BUMPER" | "AD_GROUP_FORMAT_NON_SKIPPABLE_IN_STREAM" | "AD_GROUP_FORMAT_AUDIO" | "AD_GROUP_FORMAT_RESPONSIVE" | "AD_GROUP_FORMAT_REACH" | "AD_GROUP_FORMAT_MASTHEAD";
+            /** @description The bidding strategy used by the ad group. Only the youtubeAndPartnersBid field can be used in the bidding strategy. */
+            bidStrategy?: components["schemas"]["BiddingStrategy"];
         };
         /** @description The details of product feed. */
         ProductFeedData: {
+            /** @description A list of dimensions used to match products. */
+            productMatchDimensions?: components["schemas"]["ProductMatchDimension"][];
             /** @description Whether the product feed has opted-out of showing products. */
             isFeedDisabled?: boolean;
             /**
@@ -1022,15 +1024,13 @@ export interface components {
              * @enum {string}
              */
             productMatchType?: "PRODUCT_MATCH_TYPE_UNSPECIFIED" | "PRODUCT_MATCH_TYPE_ALL_PRODUCTS" | "PRODUCT_MATCH_TYPE_SPECIFIC_PRODUCTS" | "PRODUCT_MATCH_TYPE_CUSTOM_LABEL";
-            /** @description A list of dimensions used to match products. */
-            productMatchDimensions?: components["schemas"]["ProductMatchDimension"][];
         };
         /** @description A dimension used to match products. */
         ProductMatchDimension: {
-            /** @description The ID of the product offer to match with a product with the same offer ID. */
-            productOfferId?: string;
             /** @description The custom label to match all the products with the label. */
             customLabel?: components["schemas"]["CustomLabel"];
+            /** @description The ID of the product offer to match with a product with the same offer ID. */
+            productOfferId?: string;
         };
         /** @description The key and value of a custom label. */
         CustomLabel: {
@@ -1048,51 +1048,49 @@ export interface components {
             adPolicy?: components["schemas"]["AdPolicy"];
             /**
              * Format: int64
-             * @description The unique ID of the advertiser the ad belongs to.
+             * @description The unique ID of the ad group that the ad belongs to. *Caution*: Parent ad groups for Demand Gen ads are not currently retrieveable using `advertisers.adGroups.list` or `advertisers.adGroups.get`. Demand Gen ads can be identified by the absence of the `ad_details` union field.
              */
-            advertiserId?: string;
-            /** @description The resource name of the ad. */
-            name?: string;
-            /** @description Details of a [non-skippable short video ad](//support.google.com/displayvideo/answer/6274216), equal to or less than 6 seconds, used for reach. */
-            bumperAd?: components["schemas"]["BumperAd"];
+            adGroupId?: string;
+            /** @description List of URLs used by the ad. */
+            adUrls?: components["schemas"]["AdUrl"][];
+            /** @description Details of an [audio ad](//support.google.com/displayvideo/answer/6274216) used for reach marketing objectives. */
+            audioAd?: components["schemas"]["AudioAd"];
+            /** @description The display name of the ad. Must be UTF-8 encoded with a maximum size of 255 bytes. */
+            displayName?: string;
             /** @description Details of an [ad served on the YouTube Home feed](//support.google.com/google-ads/answer/9709826). */
             mastheadAd?: components["schemas"]["MastheadAd"];
-            /** @description Details of an ad sourced from a Display & Video 360 creative. */
-            displayVideoSourceAd?: components["schemas"]["DisplayVideoSourceAd"];
             /**
              * Format: int64
              * @description The unique ID of the ad. Assigned by the system.
              */
             adGroupAdId?: string;
-            /** @description Details of an [in-stream ad skippable after 5 seconds](//support.google.com/displayvideo/answer/6274216), used for brand awareness or reach marketing objectives. */
-            inStreamAd?: components["schemas"]["InStreamAd"];
+            /** @description Details of an ad sourced from a Display & Video 360 creative. */
+            displayVideoSourceAd?: components["schemas"]["DisplayVideoSourceAd"];
             /**
              * Format: int64
-             * @description The unique ID of the ad group that the ad belongs to. *Caution*: Parent ad groups for Demand Gen ads are not currently retrieveable using `advertisers.adGroups.list` or `advertisers.adGroups.get`. Demand Gen ads can be identified by the absence of the `ad_details` union field.
+             * @description The unique ID of the advertiser the ad belongs to.
              */
-            adGroupId?: string;
+            advertiserId?: string;
+            /** @description Details of a [non-skippable short video ad](//support.google.com/displayvideo/answer/6274216), equal to or less than 6 seconds, used for reach. */
+            bumperAd?: components["schemas"]["BumperAd"];
+            /** @description Details of an [ad used in a video action campaign](//support.google.com/google-ads/answer/10147229) to drive actions to the business, service or product. */
+            videoPerformanceAd?: components["schemas"]["VideoPerformanceAd"];
+            /** @description Details of an [in-stream ad skippable after 5 seconds](//support.google.com/displayvideo/answer/6274216), used for brand awareness or reach marketing objectives. */
+            inStreamAd?: components["schemas"]["InStreamAd"];
             /**
              * @description The entity status of the ad.
              * @enum {string}
              */
             entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
-            /** @description Details of an [ad used in a video action campaign](//support.google.com/google-ads/answer/10147229) to drive actions to the business, service or product. */
-            videoPerformanceAd?: components["schemas"]["VideoPerformanceAd"];
-            /** @description The display name of the ad. Must be UTF-8 encoded with a maximum size of 255 bytes. */
-            displayName?: string;
-            /** @description Details of an [audio ad](//support.google.com/displayvideo/answer/6274216) used for reach marketing objectives. */
-            audioAd?: components["schemas"]["AudioAd"];
-            /** @description List of URLs used by the ad. */
-            adUrls?: components["schemas"]["AdUrl"][];
-            /** @description Details of a [non-skippable short in-stream video ad](//support.google.com/displayvideo/answer/6274216), between 6 and 15 seconds, used for reach marketing objectives. */
-            nonSkippableAd?: components["schemas"]["NonSkippableAd"];
             /** @description Details of an [ad promoting a video](//support.google.com/displayvideo/answer/6274216) that shows in places of discovery. */
             videoDiscoverAd?: components["schemas"]["VideoDiscoveryAd"];
+            /** @description The resource name of the ad. */
+            name?: string;
+            /** @description Details of a [non-skippable short in-stream video ad](//support.google.com/displayvideo/answer/6274216), between 6 and 15 seconds, used for reach marketing objectives. */
+            nonSkippableAd?: components["schemas"]["NonSkippableAd"];
         };
         /** @description A single ad policy associated with an ad group ad. */
         AdPolicy: {
-            /** @description The entries for each policy topic identified as relating to the ad. Each entry includes the topic, restriction level, and guidance on how to fix policy issues. */
-            adPolicyTopicEntry?: components["schemas"]["AdPolicyTopicEntry"][];
             /**
              * @description The policy approval status of an ad, indicating the approval decision.
              * @enum {string}
@@ -1103,97 +1101,62 @@ export interface components {
              * @enum {string}
              */
             adPolicyReviewStatus?: "AD_POLICY_REVIEW_STATUS_UNKNOWN" | "REVIEW_IN_PROGRESS" | "REVIEWED" | "UNDER_APPEAL" | "ELIGIBLE_MAY_SERVE";
+            /** @description The entries for each policy topic identified as relating to the ad. Each entry includes the topic, restriction level, and guidance on how to fix policy issues. */
+            adPolicyTopicEntry?: components["schemas"]["AdPolicyTopicEntry"][];
         };
         /** @description An entry describing how an ad has been identified as relating to an ad policy. */
         AdPolicyTopicEntry: {
+            /** @description A short summary description of the policy topic. */
+            policyTopicDescription?: string;
+            /** @description The serving constraints relevant to the policy decision. */
+            policyTopicConstraints?: components["schemas"]["AdPolicyTopicConstraint"][];
             /**
              * @description How ad serving will be affected due to the relation to the ad policy topic.
              * @enum {string}
              */
             policyTopicType?: "AD_POLICY_TOPIC_ENTRY_TYPE_UNKNOWN" | "PROHIBITED" | "FULLY_LIMITED" | "LIMITED" | "DESCRIPTIVE" | "BROADENING" | "AREA_OF_INTEREST_ONLY";
-            /** @description Ad policy help center link for the policy topic. */
-            helpCenterLink?: string;
-            /** @description Localized label text for policy. Examples include "Trademarks in text", "Contains Alcohol", etc. */
-            policyLabel?: string;
-            /** @description The evidence used in the policy decision. */
-            policyTopicEvidences?: components["schemas"]["AdPolicyTopicEvidence"][];
-            /** @description The serving constraints relevant to the policy decision. */
-            policyTopicConstraints?: components["schemas"]["AdPolicyTopicConstraint"][];
-            /** @description The policy topic. Examples include "TRADEMARKS", "ALCOHOL", etc. */
-            policyTopic?: string;
-            /** @description A short summary description of the policy topic. */
-            policyTopicDescription?: string;
             /**
              * @description The source of the policy decision.
              * @enum {string}
              */
             policyDecisionType?: "AD_POLICY_DECISION_TYPE_UNKNOWN" | "PURSUANT_TO_NOTICE" | "GOOGLE_INVESTIGATION";
+            /** @description The policy topic. Examples include "TRADEMARKS", "ALCOHOL", etc. */
+            policyTopic?: string;
+            /** @description Localized label text for policy. Examples include "Trademarks in text", "Contains Alcohol", etc. */
+            policyLabel?: string;
+            /** @description The evidence used in the policy decision. */
+            policyTopicEvidences?: components["schemas"]["AdPolicyTopicEvidence"][];
+            /** @description Information on how to appeal the policy decision. */
+            appealInfo?: components["schemas"]["AdPolicyTopicAppealInfo"];
+            /** @description Ad policy help center link for the policy topic. */
+            helpCenterLink?: string;
             /**
              * @description The policy enforcement means used in the policy review.
              * @enum {string}
              */
             policyEnforcementMeans?: "AD_POLICY_ENFORCEMENT_MEANS_UNKNOWN" | "AUTOMATED" | "HUMAN_REVIEW";
-            /** @description Information on how to appeal the policy decision. */
-            appealInfo?: components["schemas"]["AdPolicyTopicAppealInfo"];
         };
-        /** @description Evidence information used in the policy decision. */
-        AdPolicyTopicEvidence: {
-            /** @description List of evidence found in the text of the ad. */
-            textList?: components["schemas"]["AdPolicyTopicEvidenceTextList"];
-            /** @description A mismatch between the ad destination URLs. */
-            destinationMismatch?: components["schemas"]["AdPolicyTopicEvidenceDestinationMismatch"];
-            /** @description List of websites linked with the ad. */
-            websiteList?: components["schemas"]["AdPolicyTopicEvidenceWebsiteList"];
-            /** @description Legal related regulation enforcement that caused a policy violation. */
-            legalRemoval?: components["schemas"]["AdPolicyTopicEvidenceLegalRemoval"];
-            /** @description Trademark terms that caused a policy violation. */
-            trademark?: components["schemas"]["AdPolicyTopicEvidenceTrademark"];
-            /**
-             * Format: int32
-             * @description HTTP code returned when the final URL was crawled.
-             */
-            httpCode?: number;
-            /** @description T&S proactive enforcement that caused a policy violation. */
-            regionalRequirements?: components["schemas"]["AdPolicyTopicEvidenceRegionalRequirements"];
-            /** @description The text in the destination of the ad that is causing a policy violation. */
-            destinationTextList?: components["schemas"]["AdPolicyTopicEvidenceDestinationTextList"];
-            /** @description Counterfeit enforcement that caused a policy violation. */
-            counterfeit?: components["schemas"]["AdPolicyTopicEvidenceCounterfeit"];
-            /** @description Information on HTTP or DNS errors related to the ad destination. */
-            destinationNotWorking?: components["schemas"]["AdPolicyTopicEvidenceDestinationNotWorking"];
-            /** @description The language the ad was detected to be written in. This field uses IETF language tags, such as "en-US". */
-            languageCode?: string;
+        /** @description Details on ad serving constraints. */
+        AdPolicyTopicConstraint: {
+            /** @description Countries where the ad cannot serve. */
+            countryConstraint?: components["schemas"]["AdPolicyTopicConstraintAdPolicyCountryConstraintList"];
+            /** @description Countries where the resource's domain is not covered by the certificates associated with it. */
+            certificateDomainMismatchCountryList?: components["schemas"]["AdPolicyTopicConstraintAdPolicyCountryConstraintList"];
+            /** @description Certificate is required to serve in any country. */
+            globalCertificateMissing?: components["schemas"]["AdPolicyTopicConstraintAdPolicyGlobalCertificateMissingConstraint"];
+            /** @description Certificate is required to serve in any country and the existing certificate does not cover the ad's domain. */
+            globalCertificateDomainMismatch?: components["schemas"]["AdPolicyTopicConstraintAdPolicyGlobalCertificateDomainMismatchConstraint"];
+            /** @description Reseller constraint. */
+            resellerConstraint?: components["schemas"]["AdPolicyTopicConstraintAdPolicyResellerConstraint"];
+            /** @description Link to the form to request a certificate for the constraint. */
+            requestCertificateFormLink?: string;
+            /** @description Countries where a certificate is required for serving. */
+            certificateMissingCountryList?: components["schemas"]["AdPolicyTopicConstraintAdPolicyCountryConstraintList"];
         };
-        /** @description A list of fragments of text that violated the policy. */
-        AdPolicyTopicEvidenceTextList: {
-            /** @description The fragments of text from the resource that caused the policy finding. */
-            texts?: string[];
-        };
-        /** @description Details on a mismatch between destination URL types. */
-        AdPolicyTopicEvidenceDestinationMismatch: {
-            /** @description The set of URLs that do not match. The list can include single or multiple uri types. Example 1: [`DISPLAY_URL`, `FINAL_URL`] means ad display URL does not match with the ad final URL. Example 2: [`FINAL_URL`] means ad final URL did not match the crawled url, which is also considered as destination mismatch. */
-            uriTypes?: ("AD_POLICY_TOPIC_EVIDENCE_DESTINATION_MISMATCH_URL_TYPE_UNKNOWN" | "DISPLAY_URL" | "FINAL_URL" | "FINAL_MOBILE_URL" | "TRACKING_URL" | "MOBILE_TRACKING_URL")[];
-        };
-        /** @description A list of websites that violated the policy. */
-        AdPolicyTopicEvidenceWebsiteList: {
-            /** @description Websites that caused the policy finding. */
-            websites?: string[];
-        };
-        /** @description Legal related regulation enforcement, either from DMCA or local legal regulation. */
-        AdPolicyTopicEvidenceLegalRemoval: {
-            /** @description The countries restricted due to the legal removal. */
-            countryRestrictions?: components["schemas"]["AdPolicyCriterionRestriction"][];
-            /** @description Details on the DMCA regulation legal removal. */
-            dmca?: components["schemas"]["AdPolicyTopicEvidenceLegalRemovalDmca"];
-            /**
-             * @description The type of complaint causing the legal removal.
-             * @enum {string}
-             */
-            complaintType?: "AD_POLICY_TOPIC_EVIDENCE_LEGAL_REMOVAL_COMPLAINT_TYPE_UNKNOWN" | "COPYRIGHT" | "COURT_ORDER" | "LOCAL_LEGAL";
-            /** @description The urls restricted due to the legal removal. */
-            restrictedUris?: string[];
-            /** @description Details on the local legal regulation legal removal. */
-            localLegal?: components["schemas"]["AdPolicyTopicEvidenceLegalRemovalLocalLegal"];
+        /** @description A list of countries where the ad cannot serve due to policy constraints. */
+        AdPolicyTopicConstraintAdPolicyCountryConstraintList: {
+            /** @description Countries where the ad cannot serve. */
+            countries?: components["schemas"]["AdPolicyCriterionRestriction"][];
         };
         /** @description Represents a country restriction. */
         AdPolicyCriterionRestriction: {
@@ -1205,49 +1168,52 @@ export interface components {
             /** @description Localized name for the country. May be empty. */
             countryLabel?: string;
         };
-        /** @description DMCA complaint details. */
-        AdPolicyTopicEvidenceLegalRemovalDmca: {
-            /** @description The entity who made the legal complaint. */
-            complainant?: string;
-        };
-        /** @description Local legal regulation details. */
-        AdPolicyTopicEvidenceLegalRemovalLocalLegal: {
-            /** @description Type of law for the legal notice. */
-            lawType?: string;
-        };
-        /** @description Trademark terms that caused a policy violation. */
-        AdPolicyTopicEvidenceTrademark: {
-            /** @description The trademark term. */
-            term?: string;
-            /** @description The trademark content owner. */
-            owner?: string;
-            /** @description Countries where the policy violation is relevant. */
-            countryRestrictions?: components["schemas"]["AdPolicyCriterionRestriction"][];
-        };
-        /** @description Trust & Safety (T&S) proactive enforcement for policies meant to address regional requirements. This is considered a Google-owned investigation instead of a regulation notice since it's proactive T&S enforcement. */
-        AdPolicyTopicEvidenceRegionalRequirements: {
-            /** @description List of regional requirements. */
-            regionalRequirementsEntries?: components["schemas"]["AdPolicyTopicEvidenceRegionalRequirementsRegionalRequirementsEntry"][];
-        };
-        /** @description Policy level regional legal violation details. */
-        AdPolicyTopicEvidenceRegionalRequirementsRegionalRequirementsEntry: {
-            /** @description The countries restricted due to the legal policy. */
-            countryRestrictions?: components["schemas"]["AdPolicyCriterionRestriction"][];
-            /** @description The legal policy that is being violated. */
-            legalPolicy?: string;
-        };
-        /** @description A list of destination text that violated the policy. */
-        AdPolicyTopicEvidenceDestinationTextList: {
-            /** @description Destination text that caused the policy finding. */
-            destinationTexts?: string[];
-        };
-        /** @description Details on the counterfeit enforcement that caused a policy violation. */
-        AdPolicyTopicEvidenceCounterfeit: {
-            /** @description The content or product owners that made a complaint. */
-            owners?: string[];
+        /** @description Certificate is required to serve in any country. */
+        AdPolicyTopicConstraintAdPolicyGlobalCertificateMissingConstraint: Record<string, never>;
+        /** @description Certificate is required to serve in any country and the existing certificate does not cover the ad's domain. */
+        AdPolicyTopicConstraintAdPolicyGlobalCertificateDomainMismatchConstraint: Record<string, never>;
+        /** @description Policy topic was constrained due to disapproval of the website for reseller purposes. */
+        AdPolicyTopicConstraintAdPolicyResellerConstraint: Record<string, never>;
+        /** @description Evidence information used in the policy decision. */
+        AdPolicyTopicEvidence: {
+            /** @description Information on HTTP or DNS errors related to the ad destination. */
+            destinationNotWorking?: components["schemas"]["AdPolicyTopicEvidenceDestinationNotWorking"];
+            /**
+             * Format: int32
+             * @description HTTP code returned when the final URL was crawled.
+             */
+            httpCode?: number;
+            /** @description List of evidence found in the text of the ad. */
+            textList?: components["schemas"]["AdPolicyTopicEvidenceTextList"];
+            /** @description Counterfeit enforcement that caused a policy violation. */
+            counterfeit?: components["schemas"]["AdPolicyTopicEvidenceCounterfeit"];
+            /** @description Trademark terms that caused a policy violation. */
+            trademark?: components["schemas"]["AdPolicyTopicEvidenceTrademark"];
+            /** @description A mismatch between the ad destination URLs. */
+            destinationMismatch?: components["schemas"]["AdPolicyTopicEvidenceDestinationMismatch"];
+            /** @description List of websites linked with the ad. */
+            websiteList?: components["schemas"]["AdPolicyTopicEvidenceWebsiteList"];
+            /** @description T&S proactive enforcement that caused a policy violation. */
+            regionalRequirements?: components["schemas"]["AdPolicyTopicEvidenceRegionalRequirements"];
+            /** @description Legal related regulation enforcement that caused a policy violation. */
+            legalRemoval?: components["schemas"]["AdPolicyTopicEvidenceLegalRemoval"];
+            /** @description The language the ad was detected to be written in. This field uses IETF language tags, such as "en-US". */
+            languageCode?: string;
+            /** @description The text in the destination of the ad that is causing a policy violation. */
+            destinationTextList?: components["schemas"]["AdPolicyTopicEvidenceDestinationTextList"];
         };
         /** @description Details for on HTTP or DNS errors related to the ad destination. */
         AdPolicyTopicEvidenceDestinationNotWorking: {
+            /**
+             * @description The device where visiting the URL resulted in the error.
+             * @enum {string}
+             */
+            device?: "AD_POLICY_TOPIC_EVIDENCE_DESTINATION_NOT_WORKING_DEVICE_TYPE_UNKNOWN" | "DESKTOP" | "ANDROID" | "IOS";
+            /**
+             * Format: int64
+             * @description The HTTP error code.
+             */
+            httpErrorCode?: string;
             /**
              * @description The type of DNS error.
              * @enum {string}
@@ -1260,138 +1226,138 @@ export interface components {
             lastCheckedTime?: string;
             /** @description The full URL that didn't work. */
             expandedUri?: string;
+        };
+        /** @description A list of fragments of text that violated the policy. */
+        AdPolicyTopicEvidenceTextList: {
+            /** @description The fragments of text from the resource that caused the policy finding. */
+            texts?: string[];
+        };
+        /** @description Details on the counterfeit enforcement that caused a policy violation. */
+        AdPolicyTopicEvidenceCounterfeit: {
+            /** @description The content or product owners that made a complaint. */
+            owners?: string[];
+        };
+        /** @description Trademark terms that caused a policy violation. */
+        AdPolicyTopicEvidenceTrademark: {
+            /** @description Countries where the policy violation is relevant. */
+            countryRestrictions?: components["schemas"]["AdPolicyCriterionRestriction"][];
+            /** @description The trademark content owner. */
+            owner?: string;
+            /** @description The trademark term. */
+            term?: string;
+        };
+        /** @description Details on a mismatch between destination URL types. */
+        AdPolicyTopicEvidenceDestinationMismatch: {
+            /** @description The set of URLs that do not match. The list can include single or multiple uri types. Example 1: [`DISPLAY_URL`, `FINAL_URL`] means ad display URL does not match with the ad final URL. Example 2: [`FINAL_URL`] means ad final URL did not match the crawled url, which is also considered as destination mismatch. */
+            uriTypes?: ("AD_POLICY_TOPIC_EVIDENCE_DESTINATION_MISMATCH_URL_TYPE_UNKNOWN" | "DISPLAY_URL" | "FINAL_URL" | "FINAL_MOBILE_URL" | "TRACKING_URL" | "MOBILE_TRACKING_URL")[];
+        };
+        /** @description A list of websites that violated the policy. */
+        AdPolicyTopicEvidenceWebsiteList: {
+            /** @description Websites that caused the policy finding. */
+            websites?: string[];
+        };
+        /** @description Trust & Safety (T&S) proactive enforcement for policies meant to address regional requirements. This is considered a Google-owned investigation instead of a regulation notice since it's proactive T&S enforcement. */
+        AdPolicyTopicEvidenceRegionalRequirements: {
+            /** @description List of regional requirements. */
+            regionalRequirementsEntries?: components["schemas"]["AdPolicyTopicEvidenceRegionalRequirementsRegionalRequirementsEntry"][];
+        };
+        /** @description Policy level regional legal violation details. */
+        AdPolicyTopicEvidenceRegionalRequirementsRegionalRequirementsEntry: {
+            /** @description The legal policy that is being violated. */
+            legalPolicy?: string;
+            /** @description The countries restricted due to the legal policy. */
+            countryRestrictions?: components["schemas"]["AdPolicyCriterionRestriction"][];
+        };
+        /** @description Legal related regulation enforcement, either from DMCA or local legal regulation. */
+        AdPolicyTopicEvidenceLegalRemoval: {
+            /** @description The countries restricted due to the legal removal. */
+            countryRestrictions?: components["schemas"]["AdPolicyCriterionRestriction"][];
+            /** @description Details on the local legal regulation legal removal. */
+            localLegal?: components["schemas"]["AdPolicyTopicEvidenceLegalRemovalLocalLegal"];
+            /** @description The urls restricted due to the legal removal. */
+            restrictedUris?: string[];
             /**
-             * Format: int64
-             * @description The HTTP error code.
-             */
-            httpErrorCode?: string;
-            /**
-             * @description The device where visiting the URL resulted in the error.
+             * @description The type of complaint causing the legal removal.
              * @enum {string}
              */
-            device?: "AD_POLICY_TOPIC_EVIDENCE_DESTINATION_NOT_WORKING_DEVICE_TYPE_UNKNOWN" | "DESKTOP" | "ANDROID" | "IOS";
+            complaintType?: "AD_POLICY_TOPIC_EVIDENCE_LEGAL_REMOVAL_COMPLAINT_TYPE_UNKNOWN" | "COPYRIGHT" | "COURT_ORDER" | "LOCAL_LEGAL";
+            /** @description Details on the DMCA regulation legal removal. */
+            dmca?: components["schemas"]["AdPolicyTopicEvidenceLegalRemovalDmca"];
         };
-        /** @description Details on ad serving constraints. */
-        AdPolicyTopicConstraint: {
-            /** @description Countries where the ad cannot serve. */
-            countryConstraint?: components["schemas"]["AdPolicyTopicConstraintAdPolicyCountryConstraintList"];
-            /** @description Countries where the resource's domain is not covered by the certificates associated with it. */
-            certificateDomainMismatchCountryList?: components["schemas"]["AdPolicyTopicConstraintAdPolicyCountryConstraintList"];
-            /** @description Link to the form to request a certificate for the constraint. */
-            requestCertificateFormLink?: string;
-            /** @description Countries where a certificate is required for serving. */
-            certificateMissingCountryList?: components["schemas"]["AdPolicyTopicConstraintAdPolicyCountryConstraintList"];
-            /** @description Certificate is required to serve in any country. */
-            globalCertificateMissing?: components["schemas"]["AdPolicyTopicConstraintAdPolicyGlobalCertificateMissingConstraint"];
-            /** @description Certificate is required to serve in any country and the existing certificate does not cover the ad's domain. */
-            globalCertificateDomainMismatch?: components["schemas"]["AdPolicyTopicConstraintAdPolicyGlobalCertificateDomainMismatchConstraint"];
-            /** @description Reseller constraint. */
-            resellerConstraint?: components["schemas"]["AdPolicyTopicConstraintAdPolicyResellerConstraint"];
+        /** @description Local legal regulation details. */
+        AdPolicyTopicEvidenceLegalRemovalLocalLegal: {
+            /** @description Type of law for the legal notice. */
+            lawType?: string;
         };
-        /** @description A list of countries where the ad cannot serve due to policy constraints. */
-        AdPolicyTopicConstraintAdPolicyCountryConstraintList: {
-            /** @description Countries where the ad cannot serve. */
-            countries?: components["schemas"]["AdPolicyCriterionRestriction"][];
+        /** @description DMCA complaint details. */
+        AdPolicyTopicEvidenceLegalRemovalDmca: {
+            /** @description The entity who made the legal complaint. */
+            complainant?: string;
         };
-        /** @description Certificate is required to serve in any country. */
-        AdPolicyTopicConstraintAdPolicyGlobalCertificateMissingConstraint: Record<string, never>;
-        /** @description Certificate is required to serve in any country and the existing certificate does not cover the ad's domain. */
-        AdPolicyTopicConstraintAdPolicyGlobalCertificateDomainMismatchConstraint: Record<string, never>;
-        /** @description Policy topic was constrained due to disapproval of the website for reseller purposes. */
-        AdPolicyTopicConstraintAdPolicyResellerConstraint: Record<string, never>;
+        /** @description A list of destination text that violated the policy. */
+        AdPolicyTopicEvidenceDestinationTextList: {
+            /** @description Destination text that caused the policy finding. */
+            destinationTexts?: string[];
+        };
         /** @description Information on how to appeal a policy decision. */
         AdPolicyTopicAppealInfo: {
+            /** @description Only available when appeal_type is `APPEAL_FORM`. */
+            appealFormLink?: string;
             /**
              * @description Whether the decision can be appealed through a self-service appeal or an appeal form.
              * @enum {string}
              */
             appealType?: "AD_POLICY_APPEAL_TYPE_UNKNOWN" | "SELF_SERVICE_APPEAL" | "APPEAL_FORM";
-            /** @description Only available when appeal_type is `APPEAL_FORM`. */
-            appealFormLink?: string;
         };
-        /** @description Details for a bumper ad. */
-        BumperAd: {
-            /** @description Common ad attributes. */
-            commonInStreamAttribute?: components["schemas"]["CommonInStreamAttribute"];
+        /** @description Additional URLs related to the ad, including beacons. */
+        AdUrl: {
+            /** @description The URL string value. */
+            url?: string;
+            /**
+             * @description The type of the Ad URL.
+             * @enum {string}
+             */
+            type?: "AD_URL_TYPE_UNSPECIFIED" | "AD_URL_TYPE_BEACON_IMPRESSION" | "AD_URL_TYPE_BEACON_EXPANDABLE_DCM_IMPRESSION" | "AD_URL_TYPE_BEACON_CLICK" | "AD_URL_TYPE_BEACON_SKIP";
         };
-        /** @description Common attributes for in-stream, non-skippable and bumper ads. */
-        CommonInStreamAttribute: {
-            /** @description The YouTube video of the ad. */
-            video?: components["schemas"]["YoutubeVideoDetails"];
+        /** @description Details for an audio ad. */
+        AudioAd: {
             /** @description The URL address loaded in the background for tracking purposes. */
             trackingUrl?: string;
-            /** @description The webpage address that appears with the ad. */
-            displayUrl?: string;
-            /** @description The image which shows next to the video ad. */
-            companionBanner?: components["schemas"]["ImageAsset"];
             /** @description The URL address of the webpage that people reach after they click the ad. */
             finalUrl?: string;
-            /** @description The headline of the call-to-action banner. */
-            actionHeadline?: string;
-            /** @description The text on the call-to-action button. */
-            actionButtonLabel?: string;
+            /** @description The webpage address that appears with the ad. */
+            displayUrl?: string;
+            /** @description The YouTube video of the ad. */
+            video?: components["schemas"]["YoutubeVideoDetails"];
         };
         /** @description Details of a YouTube video. */
         YoutubeVideoDetails: {
+            /** @description The YouTube video ID which can be searched on YouTube webpage. */
+            id?: string;
             /**
              * @description The reason why the video data is not available.
              * @enum {string}
              */
             unavailableReason?: "VIDEO_UNAVAILABLE_REASON_UNSPECIFIED" | "VIDEO_UNAVAILABLE_REASON_PRIVATE" | "VIDEO_UNAVAILABLE_REASON_DELETED";
-            /** @description The YouTube video ID which can be searched on YouTube webpage. */
-            id?: string;
-        };
-        /** @description Meta data of an image asset. */
-        ImageAsset: {
-            /** @description Metadata for this image at its original size. */
-            fullSize?: components["schemas"]["Dimensions"];
-            /**
-             * Format: int64
-             * @description File size of the image asset in bytes.
-             */
-            fileSize?: string;
-            /** @description MIME type of the image asset. */
-            mimeType?: string;
-        };
-        /** @description Dimensions. */
-        Dimensions: {
-            /**
-             * Format: int32
-             * @description The height in pixels.
-             */
-            heightPixels?: number;
-            /**
-             * Format: int32
-             * @description The width in pixels.
-             */
-            widthPixels?: number;
         };
         /** @description Details for a Masthead Ad. */
         MastheadAd: {
-            /** @description The destination URL for the call-to-action button. */
-            callToActionFinalUrl?: string;
+            /** @description The tracking URL for the call-to-action button. */
+            callToActionTrackingUrl?: string;
             /**
              * @description The aspect ratio of the autoplaying YouTube video on the Masthead.
              * @enum {string}
              */
             videoAspectRatio?: "VIDEO_ASPECT_RATIO_UNSPECIFIED" | "VIDEO_ASPECT_RATIO_WIDESCREEN" | "VIDEO_ASPECT_RATIO_FIXED_16_9";
-            /** @description Whether to show a background or banner that appears at the top of a YouTube page. */
-            showChannelArt?: boolean;
             /** @description The YouTube video used by the ad. */
             video?: components["schemas"]["YoutubeVideoDetails"];
-            /** @description The videos that appear next to the Masthead Ad on desktop. Can be no more than two. */
-            companionYoutubeVideos?: components["schemas"]["YoutubeVideoDetails"][];
-            /** @description The tracking URL for the call-to-action button. */
-            callToActionTrackingUrl?: string;
-            /** @description The headline of the ad. */
-            headline?: string;
-            /** @description The description of the ad. */
-            description?: string;
             /**
              * Format: google-duration
              * @description The duration of time the video will autoplay.
              */
             autoplayVideoDuration?: string;
+            /** @description Whether to show a background or banner that appears at the top of a YouTube page. */
+            showChannelArt?: boolean;
             /** @description The text on the call-to-action button. */
             callToActionButtonLabel?: string;
             /**
@@ -1399,6 +1365,14 @@ export interface components {
              * @description The amount of time in milliseconds after which the video will start to play.
              */
             autoplayVideoStartMillisecond?: string;
+            /** @description The headline of the ad. */
+            headline?: string;
+            /** @description The destination URL for the call-to-action button. */
+            callToActionFinalUrl?: string;
+            /** @description The videos that appear next to the Masthead Ad on desktop. Can be no more than two. */
+            companionYoutubeVideos?: components["schemas"]["YoutubeVideoDetails"][];
+            /** @description The description of the ad. */
+            description?: string;
         };
         /** @description The ad sourced from a DV360 creative. */
         DisplayVideoSourceAd: {
@@ -1408,64 +1382,106 @@ export interface components {
              */
             creativeId?: string;
         };
-        /** @description Details for an in-stream ad. */
-        InStreamAd: {
+        /** @description Details for a bumper ad. */
+        BumperAd: {
             /** @description Common ad attributes. */
             commonInStreamAttribute?: components["schemas"]["CommonInStreamAttribute"];
-            /** @description The custom parameters to pass custom values to tracking URL template. */
-            customParameters?: {
-                [key: string]: string;
-            };
         };
-        /** @description Details for a video performance ad. */
-        VideoPerformanceAd: {
-            /** @description The list of text assets shown on the call-to-action button. */
-            actionButtonLabels?: string[];
-            /** @description The list of headlines shown on the call-to-action banner. */
-            headlines?: string[];
-            /** @description The list of descriptions shown on the call-to-action banner. */
-            descriptions?: string[];
+        /** @description Common attributes for in-stream, non-skippable and bumper ads. */
+        CommonInStreamAttribute: {
+            /** @description The text on the call-to-action button. */
+            actionButtonLabel?: string;
+            /** @description The headline of the call-to-action banner. */
+            actionHeadline?: string;
+            /** @description The image which shows next to the video ad. */
+            companionBanner?: components["schemas"]["ImageAsset"];
             /** @description The URL address loaded in the background for tracking purposes. */
             trackingUrl?: string;
-            /** @description The list of companion banners used by this ad. */
-            companionBanners?: components["schemas"]["ImageAsset"][];
-            /** @description The URL address of the webpage that people reach after they click the ad. */
-            finalUrl?: string;
-            /** @description The custom parameters to pass custom values to tracking URL template. */
-            customParameters?: {
-                [key: string]: string;
-            };
-            /** @description The first piece after the domain in the display URL. */
-            displayUrlBreadcrumb1?: string;
-            /** @description The list of lone headlines shown on the call-to-action banner. */
-            longHeadlines?: string[];
-            /** @description The second piece after the domain in the display URL. */
-            displayUrlBreadcrumb2?: string;
-            /** @description The domain of the display URL. */
-            domain?: string;
-            /** @description The list of YouTube video assets used by this ad. */
-            videos?: components["schemas"]["YoutubeVideoDetails"][];
-        };
-        /** @description Details for an audio ad. */
-        AudioAd: {
-            /** @description The URL address loaded in the background for tracking purposes. */
-            trackingUrl?: string;
-            /** @description The URL address of the webpage that people reach after they click the ad. */
-            finalUrl?: string;
             /** @description The YouTube video of the ad. */
             video?: components["schemas"]["YoutubeVideoDetails"];
             /** @description The webpage address that appears with the ad. */
             displayUrl?: string;
+            /** @description The URL address of the webpage that people reach after they click the ad. */
+            finalUrl?: string;
         };
-        /** @description Additional URLs related to the ad, including beacons. */
-        AdUrl: {
+        /** @description Meta data of an image asset. */
+        ImageAsset: {
             /**
-             * @description The type of the Ad URL.
+             * Format: int64
+             * @description File size of the image asset in bytes.
+             */
+            fileSize?: string;
+            /** @description Metadata for this image at its original size. */
+            fullSize?: components["schemas"]["Dimensions"];
+            /** @description MIME type of the image asset. */
+            mimeType?: string;
+        };
+        /** @description Dimensions. */
+        Dimensions: {
+            /**
+             * Format: int32
+             * @description The width in pixels.
+             */
+            widthPixels?: number;
+            /**
+             * Format: int32
+             * @description The height in pixels.
+             */
+            heightPixels?: number;
+        };
+        /** @description Details for a video performance ad. */
+        VideoPerformanceAd: {
+            /** @description The list of headlines shown on the call-to-action banner. */
+            headlines?: string[];
+            /** @description The second piece after the domain in the display URL. */
+            displayUrlBreadcrumb2?: string;
+            /** @description The domain of the display URL. */
+            domain?: string;
+            /** @description The list of descriptions shown on the call-to-action banner. */
+            descriptions?: string[];
+            /** @description The list of YouTube video assets used by this ad. */
+            videos?: components["schemas"]["YoutubeVideoDetails"][];
+            /** @description The list of text assets shown on the call-to-action button. */
+            actionButtonLabels?: string[];
+            /** @description The first piece after the domain in the display URL. */
+            displayUrlBreadcrumb1?: string;
+            /** @description The list of companion banners used by this ad. */
+            companionBanners?: components["schemas"]["ImageAsset"][];
+            /** @description The URL address loaded in the background for tracking purposes. */
+            trackingUrl?: string;
+            /** @description The custom parameters to pass custom values to tracking URL template. */
+            customParameters?: {
+                [key: string]: string;
+            };
+            /** @description The list of lone headlines shown on the call-to-action banner. */
+            longHeadlines?: string[];
+            /** @description The URL address of the webpage that people reach after they click the ad. */
+            finalUrl?: string;
+        };
+        /** @description Details for an in-stream ad. */
+        InStreamAd: {
+            /** @description The custom parameters to pass custom values to tracking URL template. */
+            customParameters?: {
+                [key: string]: string;
+            };
+            /** @description Common ad attributes. */
+            commonInStreamAttribute?: components["schemas"]["CommonInStreamAttribute"];
+        };
+        /** @description Details for a video discovery ad. */
+        VideoDiscoveryAd: {
+            /** @description The headline of ad. */
+            headline?: string;
+            /** @description Second text line for the ad. */
+            description2?: string;
+            /** @description First text line for the ad. */
+            description1?: string;
+            /** @description The YouTube video the ad promotes. */
+            video?: components["schemas"]["YoutubeVideoDetails"];
+            /**
+             * @description Thumbnail image used in the ad.
              * @enum {string}
              */
-            type?: "AD_URL_TYPE_UNSPECIFIED" | "AD_URL_TYPE_BEACON_IMPRESSION" | "AD_URL_TYPE_BEACON_EXPANDABLE_DCM_IMPRESSION" | "AD_URL_TYPE_BEACON_CLICK" | "AD_URL_TYPE_BEACON_SKIP";
-            /** @description The URL string value. */
-            url?: string;
+            thumbnail?: "THUMBNAIL_UNSPECIFIED" | "THUMBNAIL_DEFAULT" | "THUMBNAIL_1" | "THUMBNAIL_2" | "THUMBNAIL_3";
         };
         /** @description Details for a non-skippable ad. */
         NonSkippableAd: {
@@ -1476,215 +1492,201 @@ export interface components {
             /** @description Common ad attributes. */
             commonInStreamAttribute?: components["schemas"]["CommonInStreamAttribute"];
         };
-        /** @description Details for a video discovery ad. */
-        VideoDiscoveryAd: {
-            /** @description The YouTube video the ad promotes. */
-            video?: components["schemas"]["YoutubeVideoDetails"];
-            /** @description Second text line for the ad. */
-            description2?: string;
-            /**
-             * @description Thumbnail image used in the ad.
-             * @enum {string}
-             */
-            thumbnail?: "THUMBNAIL_UNSPECIFIED" | "THUMBNAIL_DEFAULT" | "THUMBNAIL_1" | "THUMBNAIL_2" | "THUMBNAIL_3";
-            /** @description First text line for the ad. */
-            description1?: string;
-            /** @description The headline of ad. */
-            headline?: string;
-        };
         /** @description A single Creative. */
         Creative: {
-            /** @description Optional. User notes for this creative. Must be UTF-8 encoded with a length of no more than 20,000 characters. */
-            notes?: string;
-            /** @description Optional. Timer custom events for a rich media creative. Timers track the time during which a user views and interacts with a specified part of a rich media creative. A creative can have multiple timer events, each timed independently. Leave it empty or unset for creatives containing image assets only. */
-            timerEvents?: components["schemas"]["TimerEvent"][];
-            /**
-             * Format: google-datetime
-             * @description Output only. The timestamp when the creative was created. Assigned by the system.
-             */
-            createTime?: string;
-            /** @description Required. The display name of the creative. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
-            /** @description Output only. Indicates the third-party audio creative supports MP3. Output only and only valid for third-party audio creatives. Third-party audio creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_AUDIO` */
-            mp3Audio?: boolean;
-            /** @description Required. Exit events for this creative. An exit (also known as a click tag) is any area in your creative that someone can click or tap to open an advertiser's landing page. Every creative must include at least one exit. You can add an exit to your creative in any of the following ways: * Use Google Web Designer's tap area. * Define a JavaScript variable called "clickTag". * Use the Enabler (Enabler.exit()) to track exits in rich media formats. */
-            exitEvents?: components["schemas"]["ExitEvent"][];
-            /**
-             * Format: google-duration
-             * @description Output only. Media duration of the creative. Applicable when creative_type is one of: * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_NATIVE_VIDEO` * `CREATIVE_TYPE_PUBLISHER_HOSTED`
-             */
-            mediaDuration?: string;
-            /** @description Optional. ID information used to link this creative to an external system. Must be UTF-8 encoded with a length of no more than 10,000 characters. */
-            integrationCode?: string;
-            /**
-             * Format: google-datetime
-             * @description Output only. The timestamp when the creative was last updated, either by the user or system (e.g. creative review). Assigned by the system.
-             */
-            updateTime?: string;
-            /** @description Optional. Whether the user can choose to skip a video creative. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
-            skippable?: boolean;
-            /** @description Optional. The URL of the VAST tag for a third-party VAST tag creative. Required and only valid for third-party VAST tag creatives. Third-party VAST tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_VIDEO` */
-            vastTagUrl?: string;
-            /** @description Optional. Amount of time to play the video before the skip button appears. This field is required when skippable is true. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
-            skipOffset?: components["schemas"]["AudioVideoOffset"];
-            /**
-             * @description Required. Indicates where the creative is hosted.
-             * @enum {string}
-             */
-            hostingSource?: "HOSTING_SOURCE_UNSPECIFIED" | "HOSTING_SOURCE_CM" | "HOSTING_SOURCE_THIRD_PARTY" | "HOSTING_SOURCE_HOSTED" | "HOSTING_SOURCE_RICH_MEDIA";
-            /** @description Optional. Amount of time to play the video before counting a view. This field is required when skippable is true. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
-            progressOffset?: components["schemas"]["AudioVideoOffset"];
-            /** @description Output only. The current status of the creative review process. */
-            reviewStatus?: components["schemas"]["ReviewStatusInfo"];
+            /** @description Output only. A list of attributes of the creative that is generated by the system. */
+            creativeAttributes?: ("CREATIVE_ATTRIBUTE_UNSPECIFIED" | "CREATIVE_ATTRIBUTE_VAST" | "CREATIVE_ATTRIBUTE_VPAID_LINEAR" | "CREATIVE_ATTRIBUTE_VPAID_NON_LINEAR")[];
+            /** @description Optional. Tracking URLs for analytics providers or third-party ad technology vendors. The URLs must start with `https:` (except on inventory that doesn't require SSL compliance). If using macros in your URL, use only macros supported by Display & Video 360. Standard URLs only, no IMG or SCRIPT tags. This field is only writeable in the following creative_type: * `CREATIVE_TYPE_NATIVE` * `CREATIVE_TYPE_NATIVE_SITE_SQUARE` * `CREATIVE_TYPE_NATIVE_VIDEO` */
+            trackerUrls?: string[];
+            /** @description Required. Primary dimensions of the creative. Applicable to all creative types. The value of width_pixels and height_pixels defaults to `0` when creative_type is one of: * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_NATIVE_VIDEO` */
+            dimensions: components["schemas"]["Dimensions"];
             /** @description Optional. Indicates that the creative requires MRAID (Mobile Rich Media Ad Interface Definitions system). Set this if the creative relies on mobile gestures for interactivity, such as swiping or tapping. Optional and only valid for third-party tag creatives. Third-party tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_STANDARD` * `CREATIVE_TYPE_EXPANDABLE` */
             requireMraid?: boolean;
-            /** @description Optional. Tracking URLs from third parties to track interactions with a video creative. This field is only supported for the following creative_type: * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_NATIVE_VIDEO` */
-            thirdPartyUrls?: components["schemas"]["ThirdPartyUrl"][];
-            /** @description Optional. JavaScript measurement URL from supported third-party verification providers (ComScore, DoubleVerify, IAS, Moat). HTML script tags are not supported. This field is only writeable in the following creative_type: * `CREATIVE_TYPE_NATIVE` * `CREATIVE_TYPE_NATIVE_SITE_SQUARE` * `CREATIVE_TYPE_NATIVE_VIDEO` */
-            jsTrackerUrl?: string;
-            /**
-             * @description Optional. Specifies the expanding direction of the creative. Required and only valid for third-party expandable creatives. Third-party expandable creatives are creatives with following hosting source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_EXPANDABLE`
-             * @enum {string}
-             */
-            expandingDirection?: "EXPANDING_DIRECTION_UNSPECIFIED" | "EXPANDING_DIRECTION_NONE" | "EXPANDING_DIRECTION_UP" | "EXPANDING_DIRECTION_DOWN" | "EXPANDING_DIRECTION_LEFT" | "EXPANDING_DIRECTION_RIGHT" | "EXPANDING_DIRECTION_UP_AND_LEFT" | "EXPANDING_DIRECTION_UP_AND_RIGHT" | "EXPANDING_DIRECTION_DOWN_AND_LEFT" | "EXPANDING_DIRECTION_DOWN_AND_RIGHT" | "EXPANDING_DIRECTION_UP_OR_DOWN" | "EXPANDING_DIRECTION_LEFT_OR_RIGHT" | "EXPANDING_DIRECTION_ANY_DIAGONAL";
-            /** @description Output only. Indicates the third-party audio creative supports OGG. Output only and only valid for third-party audio creatives. Third-party audio creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_AUDIO` */
-            oggAudio?: boolean;
-            /** @description Optional. An optional creative identifier provided by a registry that is unique across all platforms. Universal Ad ID is part of the VAST 4.0 standard. It can be modified after the creative is created. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
-            universalAdId?: components["schemas"]["UniversalAdId"];
-            /**
-             * @description Required. Immutable. The type of the creative.
-             * @enum {string}
-             */
-            creativeType?: "CREATIVE_TYPE_UNSPECIFIED" | "CREATIVE_TYPE_STANDARD" | "CREATIVE_TYPE_EXPANDABLE" | "CREATIVE_TYPE_VIDEO" | "CREATIVE_TYPE_NATIVE" | "CREATIVE_TYPE_TEMPLATED_APP_INSTALL" | "CREATIVE_TYPE_NATIVE_SITE_SQUARE" | "CREATIVE_TYPE_TEMPLATED_APP_INSTALL_INTERSTITIAL" | "CREATIVE_TYPE_LIGHTBOX" | "CREATIVE_TYPE_NATIVE_APP_INSTALL" | "CREATIVE_TYPE_NATIVE_APP_INSTALL_SQUARE" | "CREATIVE_TYPE_AUDIO" | "CREATIVE_TYPE_PUBLISHER_HOSTED" | "CREATIVE_TYPE_NATIVE_VIDEO" | "CREATIVE_TYPE_TEMPLATED_APP_INSTALL_VIDEO" | "CREATIVE_TYPE_ASSET_BASED_CREATIVE";
-            /**
-             * @description Required. Controls whether or not the creative can serve. Accepted values are: * `ENTITY_STATUS_ACTIVE` * `ENTITY_STATUS_ARCHIVED` * `ENTITY_STATUS_PAUSED`
-             * @enum {string}
-             */
-            entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
-            /** @description Optional. Third-party HTML tracking tag to be appended to the creative tag. */
-            appendedTag?: string;
-            /** @description Optional. Specifies the OBA icon for a video creative. This field is only supported in the following creative_type: * `CREATIVE_TYPE_VIDEO` */
-            obaIcon?: components["schemas"]["ObaIcon"];
-            /**
-             * Format: int64
-             * @description Output only. The unique ID of the Campaign Manager 360 placement associated with the creative. This field is only applicable for creatives that are synced from Campaign Manager.
-             */
-            cmPlacementId?: string;
-            /** @description Output only. The resource name of the creative. */
-            name?: string;
             /**
              * Format: int64
              * @description Output only. The unique ID of the advertiser the creative belongs to.
              */
             advertiserId?: string;
-            /** @description Optional. Counter events for a rich media creative. Counters track the number of times that a user interacts with any part of a rich media creative in a specified way (mouse-overs, mouse-outs, clicks, taps, data loading, keyboard entries, etc.). Any event that can be captured in the creative can be recorded as a counter. Leave it empty or unset for creatives containing image assets only. */
-            counterEvents?: components["schemas"]["CounterEvent"][];
+            /** @description Required. Assets associated to this creative. */
+            assets: components["schemas"]["AssetAssociation"][];
             /** @description Optional. Indicates the creative will automatically expand on hover. Optional and only valid for third-party expandable creatives. Third-party expandable creatives are creatives with following hosting source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_EXPANDABLE` */
             expandOnHover?: boolean;
-            /** @description Required. Assets associated to this creative. */
-            assets?: components["schemas"]["AssetAssociation"][];
-            /** @description Optional. Tracking URLs for analytics providers or third-party ad technology vendors. The URLs must start with `https:` (except on inventory that doesn't require SSL compliance). If using macros in your URL, use only macros supported by Display & Video 360. Standard URLs only, no IMG or SCRIPT tags. This field is only writeable in the following creative_type: * `CREATIVE_TYPE_NATIVE` * `CREATIVE_TYPE_NATIVE_SITE_SQUARE` * `CREATIVE_TYPE_NATIVE_VIDEO` */
-            trackerUrls?: string[];
-            /** @description Output only. Indicates whether the creative is dynamic. */
-            dynamic?: boolean;
-            /** @description Optional. The IDs of companion creatives for a video creative. You can assign existing display creatives (with image or HTML5 assets) to serve surrounding the publisher's video player. Companions display around the video player while the video is playing and remain after the video has completed. Creatives contain additional dimensions can not be companion creatives. This field is only supported for the following creative_type: * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_VIDEO` */
-            companionCreativeIds?: string[];
+            /** @description Output only. Indicates the third-party audio creative supports OGG. Output only and only valid for third-party audio creatives. Third-party audio creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_AUDIO` */
+            oggAudio?: boolean;
+            /** @description Optional. Amount of time to play the video before the skip button appears. This field is required when skippable is true. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
+            skipOffset?: components["schemas"]["AudioVideoOffset"];
+            /** @description Required. Exit events for this creative. An exit (also known as a click tag) is any area in your creative that someone can click or tap to open an advertiser's landing page. Every creative must include at least one exit. You can add an exit to your creative in any of the following ways: * Use Google Web Designer's tap area. * Define a JavaScript variable called "clickTag". * Use the Enabler (Enabler.exit()) to track exits in rich media formats. */
+            exitEvents: components["schemas"]["ExitEvent"][];
+            /**
+             * @description Required. Controls whether or not the creative can serve. Accepted values are: * `ENTITY_STATUS_ACTIVE` * `ENTITY_STATUS_ARCHIVED` * `ENTITY_STATUS_PAUSED`
+             * @enum {string}
+             */
+            entityStatus: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
+            /** @description Optional. Third-party HTML tracking tag to be appended to the creative tag. */
+            appendedTag?: string;
+            /**
+             * Format: int64
+             * @description Output only. The unique ID of the Campaign Manager 360 placement associated with the creative. This field is only applicable for creatives that are synced from Campaign Manager.
+             */
+            cmPlacementId?: string;
+            /** @description Optional. The URL of the VAST tag for a third-party VAST tag creative. Required and only valid for third-party VAST tag creatives. Third-party VAST tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_VIDEO` */
+            vastTagUrl?: string;
             /** @description Output only. Indicates the third-party VAST tag creative requires VPAID (Digital Video Player-Ad Interface). Output only and only valid for third-party VAST tag creatives. Third-party VAST tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_VIDEO` */
             vpaid?: boolean;
-            /** @description Output only. The IDs of the line items this creative is associated with. To associate a creative to a line item, use LineItem.creative_ids instead. */
-            lineItemIds?: string[];
+            /** @description Optional. Indicates that the creative relies on HTML5 to render properly. Optional and only valid for third-party tag creatives. Third-party tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_STANDARD` * `CREATIVE_TYPE_EXPANDABLE` */
+            requireHtml5?: boolean;
+            /** @description Optional. Amount of time to play the video before counting a view. This field is required when skippable is true. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
+            progressOffset?: components["schemas"]["AudioVideoOffset"];
+            /** @description Optional. The IDs of companion creatives for a video creative. You can assign existing display creatives (with image or HTML5 assets) to serve surrounding the publisher's video player. Companions display around the video player while the video is playing and remain after the video has completed. Creatives contain additional dimensions can not be companion creatives. This field is only supported for the following creative_type: * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_VIDEO` */
+            companionCreativeIds?: string[];
+            /** @description Optional. Specifies the OBA icon for a video creative. This field is only supported in the following creative_type: * `CREATIVE_TYPE_VIDEO` */
+            obaIcon?: components["schemas"]["ObaIcon"];
+            /** @description Output only. Indicates whether the creative is dynamic. */
+            dynamic?: boolean;
+            /** @description Optional. Tracking URLs from third parties to track interactions with a video creative. This field is only supported for the following creative_type: * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_NATIVE_VIDEO` */
+            thirdPartyUrls?: components["schemas"]["ThirdPartyUrl"][];
+            /**
+             * Format: google-duration
+             * @description Output only. Media duration of the creative. Applicable when creative_type is one of: * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_NATIVE_VIDEO` * `CREATIVE_TYPE_PUBLISHER_HOSTED`
+             */
+            mediaDuration?: string;
             /** @description Optional. Indicates that the creative will wait for a return ping for attribution. Only valid when using a Campaign Manager 360 tracking ad with a third-party ad server parameter and the ${DC_DBM_TOKEN} macro. Optional and only valid for third-party tag creatives or third-party VAST tag creatives. Third-party tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_STANDARD` * `CREATIVE_TYPE_EXPANDABLE` Third-party VAST tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_VIDEO` */
             requirePingForAttribution?: boolean;
+            /** @description Output only. The IDs of the line items this creative is associated with. To associate a creative to a line item, use LineItem.creative_ids instead. */
+            lineItemIds?: string[];
+            /** @description Required. The display name of the creative. Must be UTF-8 encoded with a maximum size of 240 bytes. */
+            displayName: string;
+            /** @description Output only. Indicates the third-party audio creative supports MP3. Output only and only valid for third-party audio creatives. Third-party audio creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_AUDIO` */
+            mp3Audio?: boolean;
+            /** @description Output only. The current status of the creative review process. */
+            reviewStatus?: components["schemas"]["ReviewStatusInfo"];
+            /**
+             * Format: google-datetime
+             * @description Output only. The timestamp when the creative was last updated, either by the user or system (e.g. creative review). Assigned by the system.
+             */
+            updateTime?: string;
+            /** @description Optional. JavaScript measurement URL from supported third-party verification providers (ComScore, DoubleVerify, IAS, Moat). HTML script tags are not supported. This field is only writeable in the following creative_type: * `CREATIVE_TYPE_NATIVE` * `CREATIVE_TYPE_NATIVE_SITE_SQUARE` * `CREATIVE_TYPE_NATIVE_VIDEO` */
+            jsTrackerUrl?: string;
             /** @description Optional. The Campaign Manager 360 tracking ad associated with the creative. Optional for the following creative_type when created by an advertiser that uses both Campaign Manager 360 and third-party ad serving: * `CREATIVE_TYPE_NATIVE` * `CREATIVE_TYPE_NATIVE_SITE_SQUARE` Output only for other cases. */
             cmTrackingAd?: components["schemas"]["CmTrackingAd"];
-            /** @description Output only. A list of attributes of the creative that is generated by the system. */
-            creativeAttributes?: ("CREATIVE_ATTRIBUTE_UNSPECIFIED" | "CREATIVE_ATTRIBUTE_VAST" | "CREATIVE_ATTRIBUTE_VPAID_LINEAR" | "CREATIVE_ATTRIBUTE_VPAID_NON_LINEAR")[];
-            /** @description Optional. Additional dimensions. Applicable when creative_type is one of: * `CREATIVE_TYPE_STANDARD` * `CREATIVE_TYPE_EXPANDABLE` * `CREATIVE_TYPE_NATIVE` * `CREATIVE_TYPE_NATIVE_SITE_SQUARE` * `CREATIVE_TYPE_LIGHTBOX` * `CREATIVE_TYPE_PUBLISHER_HOSTED` If this field is specified, width_pixels and height_pixels are both required and must be greater than or equal to 0. */
-            additionalDimensions?: components["schemas"]["Dimensions"][];
+            /** @description Optional. Whether the user can choose to skip a video creative. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
+            skippable?: boolean;
+            /** @description Optional. An optional creative identifier provided by a registry that is unique across all platforms. Universal Ad ID is part of the VAST 4.0 standard. It can be modified after the creative is created. This field is only supported for the following creative_type: * `CREATIVE_TYPE_VIDEO` */
+            universalAdId?: components["schemas"]["UniversalAdId"];
+            /** @description Optional. Indicates whether Integral Ad Science (IAS) campaign monitoring is enabled. To enable this for the creative, make sure the Advertiser.creative_config.ias_client_id has been set to your IAS client ID. */
+            iasCampaignMonitoring?: boolean;
+            /**
+             * Format: google-datetime
+             * @description Output only. The timestamp when the creative was created. Assigned by the system.
+             */
+            createTime?: string;
+            /** @description Optional. Timer custom events for a rich media creative. Timers track the time during which a user views and interacts with a specified part of a rich media creative. A creative can have multiple timer events, each timed independently. Leave it empty or unset for creatives containing image assets only. */
+            timerEvents?: components["schemas"]["TimerEvent"][];
+            /** @description Optional. User notes for this creative. Must be UTF-8 encoded with a length of no more than 20,000 characters. */
+            notes?: string;
             /** @description Optional. The original third-party tag used for the creative. Required and only valid for third-party tag creatives. Third-party tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_STANDARD` * `CREATIVE_TYPE_EXPANDABLE` */
             thirdPartyTag?: string;
+            /**
+             * @description Required. Indicates where the creative is hosted.
+             * @enum {string}
+             */
+            hostingSource: "HOSTING_SOURCE_UNSPECIFIED" | "HOSTING_SOURCE_CM" | "HOSTING_SOURCE_THIRD_PARTY" | "HOSTING_SOURCE_HOSTED" | "HOSTING_SOURCE_RICH_MEDIA";
+            /** @description Output only. The resource name of the creative. */
+            name?: string;
+            /**
+             * @description Optional. Specifies the expanding direction of the creative. Required and only valid for third-party expandable creatives. Third-party expandable creatives are creatives with following hosting source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_EXPANDABLE`
+             * @enum {string}
+             */
+            expandingDirection?: "EXPANDING_DIRECTION_UNSPECIFIED" | "EXPANDING_DIRECTION_NONE" | "EXPANDING_DIRECTION_UP" | "EXPANDING_DIRECTION_DOWN" | "EXPANDING_DIRECTION_LEFT" | "EXPANDING_DIRECTION_RIGHT" | "EXPANDING_DIRECTION_UP_AND_LEFT" | "EXPANDING_DIRECTION_UP_AND_RIGHT" | "EXPANDING_DIRECTION_DOWN_AND_LEFT" | "EXPANDING_DIRECTION_DOWN_AND_RIGHT" | "EXPANDING_DIRECTION_UP_OR_DOWN" | "EXPANDING_DIRECTION_LEFT_OR_RIGHT" | "EXPANDING_DIRECTION_ANY_DIAGONAL";
+            /** @description Output only. Audio/Video transcodes. Display & Video 360 transcodes the main asset into a number of alternative versions that use different file formats or have different properties (resolution, audio bit rate, and video bit rate), each designed for specific video players or bandwidths. These transcodes give a publisher's system more options to choose from for each impression on your video and ensures that the appropriate file serves based on the viewer’s connection and screen size. This field is only supported in the following creative_type: * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_NATIVE_VIDEO` * `CREATIVE_TYPE_AUDIO` */
+            transcodes?: components["schemas"]["Transcode"][];
             /**
              * Format: int64
              * @description Output only. The unique ID of the creative. Assigned by the system.
              */
             creativeId?: string;
-            /** @description Required. Primary dimensions of the creative. Applicable to all creative types. The value of width_pixels and height_pixels defaults to `0` when creative_type is one of: * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_AUDIO` * `CREATIVE_TYPE_NATIVE_VIDEO` */
-            dimensions?: components["schemas"]["Dimensions"];
-            /** @description Optional. Indicates that the creative relies on HTML5 to render properly. Optional and only valid for third-party tag creatives. Third-party tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_STANDARD` * `CREATIVE_TYPE_EXPANDABLE` */
-            requireHtml5?: boolean;
-            /** @description Optional. Indicates whether Integral Ad Science (IAS) campaign monitoring is enabled. To enable this for the creative, make sure the Advertiser.creative_config.ias_client_id has been set to your IAS client ID. */
-            iasCampaignMonitoring?: boolean;
             /** @description Output only. Indicates the third-party VAST tag creative requires HTML5 Video support. Output only and only valid for third-party VAST tag creatives. Third-party VAST tag creatives are creatives with following hosting_source: * `HOSTING_SOURCE_THIRD_PARTY` combined with following creative_type: * `CREATIVE_TYPE_VIDEO` */
             html5Video?: boolean;
-            /** @description Output only. Audio/Video transcodes. Display & Video 360 transcodes the main asset into a number of alternative versions that use different file formats or have different properties (resolution, audio bit rate, and video bit rate), each designed for specific video players or bandwidths. These transcodes give a publisher's system more options to choose from for each impression on your video and ensures that the appropriate file serves based on the viewer’s connection and screen size. This field is only supported in the following creative_type: * `CREATIVE_TYPE_VIDEO` * `CREATIVE_TYPE_NATIVE_VIDEO` * `CREATIVE_TYPE_AUDIO` */
-            transcodes?: components["schemas"]["Transcode"][];
-        };
-        /** @description Timer event of the creative. */
-        TimerEvent: {
-            /** @description Required. The name used to identify this timer event in reports. */
-            reportingName?: string;
-            /** @description Required. The name of the timer event. */
-            name?: string;
-        };
-        /** @description Exit event of the creative. */
-        ExitEvent: {
-            /** @description Optional. The name of the click tag of the exit event. The name must be unique within one creative. Leave it empty or unset for creatives containing image assets only. */
-            name?: string;
+            /** @description Optional. ID information used to link this creative to an external system. Must be UTF-8 encoded with a length of no more than 10,000 characters. */
+            integrationCode?: string;
             /**
-             * @description Required. The type of the exit event.
+             * @description Required. Immutable. The type of the creative.
              * @enum {string}
              */
-            type?: "EXIT_EVENT_TYPE_UNSPECIFIED" | "EXIT_EVENT_TYPE_DEFAULT" | "EXIT_EVENT_TYPE_BACKUP";
-            /** @description Optional. The name used to identify this event in reports. Leave it empty or unset for creatives containing image assets only. */
-            reportingName?: string;
-            /** @description Required. The click through URL of the exit event. This is required when type is: * `EXIT_EVENT_TYPE_DEFAULT` * `EXIT_EVENT_TYPE_BACKUP` */
-            url?: string;
+            creativeType: "CREATIVE_TYPE_UNSPECIFIED" | "CREATIVE_TYPE_STANDARD" | "CREATIVE_TYPE_EXPANDABLE" | "CREATIVE_TYPE_VIDEO" | "CREATIVE_TYPE_NATIVE" | "CREATIVE_TYPE_TEMPLATED_APP_INSTALL" | "CREATIVE_TYPE_NATIVE_SITE_SQUARE" | "CREATIVE_TYPE_TEMPLATED_APP_INSTALL_INTERSTITIAL" | "CREATIVE_TYPE_LIGHTBOX" | "CREATIVE_TYPE_NATIVE_APP_INSTALL" | "CREATIVE_TYPE_NATIVE_APP_INSTALL_SQUARE" | "CREATIVE_TYPE_AUDIO" | "CREATIVE_TYPE_PUBLISHER_HOSTED" | "CREATIVE_TYPE_NATIVE_VIDEO" | "CREATIVE_TYPE_TEMPLATED_APP_INSTALL_VIDEO" | "CREATIVE_TYPE_ASSET_BASED_CREATIVE";
+            /** @description Optional. Counter events for a rich media creative. Counters track the number of times that a user interacts with any part of a rich media creative in a specified way (mouse-overs, mouse-outs, clicks, taps, data loading, keyboard entries, etc.). Any event that can be captured in the creative can be recorded as a counter. Leave it empty or unset for creatives containing image assets only. */
+            counterEvents?: components["schemas"]["CounterEvent"][];
+            /** @description Optional. Additional dimensions. Applicable when creative_type is one of: * `CREATIVE_TYPE_STANDARD` * `CREATIVE_TYPE_EXPANDABLE` * `CREATIVE_TYPE_NATIVE` * `CREATIVE_TYPE_NATIVE_SITE_SQUARE` * `CREATIVE_TYPE_LIGHTBOX` * `CREATIVE_TYPE_PUBLISHER_HOSTED` If this field is specified, width_pixels and height_pixels are both required and must be greater than or equal to 0. */
+            additionalDimensions?: components["schemas"]["Dimensions"][];
+        };
+        /** @description Asset association for the creative. */
+        AssetAssociation: {
+            /**
+             * @description Optional. The role of this asset for the creative.
+             * @enum {string}
+             */
+            role?: "ASSET_ROLE_UNSPECIFIED" | "ASSET_ROLE_MAIN" | "ASSET_ROLE_BACKUP" | "ASSET_ROLE_POLITE_LOAD" | "ASSET_ROLE_HEADLINE" | "ASSET_ROLE_LONG_HEADLINE" | "ASSET_ROLE_BODY" | "ASSET_ROLE_LONG_BODY" | "ASSET_ROLE_CAPTION_URL" | "ASSET_ROLE_CALL_TO_ACTION" | "ASSET_ROLE_ADVERTISER_NAME" | "ASSET_ROLE_PRICE" | "ASSET_ROLE_ANDROID_APP_ID" | "ASSET_ROLE_IOS_APP_ID" | "ASSET_ROLE_RATING" | "ASSET_ROLE_ICON" | "ASSET_ROLE_COVER_IMAGE" | "ASSET_ROLE_BACKGROUND_COLOR" | "ASSET_ROLE_ACCENT_COLOR" | "ASSET_ROLE_REQUIRE_LOGO" | "ASSET_ROLE_REQUIRE_IMAGE" | "ASSET_ROLE_ENABLE_ASSET_ENHANCEMENTS";
+            /** @description Optional. The associated asset. */
+            asset?: components["schemas"]["Asset"];
+        };
+        /** @description A single asset. */
+        Asset: {
+            /** @description The asset content. For uploaded assets, the content is the serving path. */
+            content?: string;
+            /**
+             * Format: int64
+             * @description Media ID of the uploaded asset. This is a unique identifier for the asset. This ID can be passed to other API calls, e.g. CreateCreative to associate the asset with a creative. The Media ID space updated on **April 5, 2023**. Update media IDs cached before **April 5, 2023** by retrieving the new media ID from associated creative resources or re-uploading the asset.
+             */
+            mediaId?: string;
         };
         /** @description The length an audio or a video has been played. */
         AudioVideoOffset: {
             /**
              * Format: int64
-             * @description Optional. The offset in seconds from the start of the audio or video.
-             */
-            seconds?: string;
-            /**
-             * Format: int64
              * @description Optional. The offset in percentage of the audio or video duration.
              */
             percentage?: string;
+            /**
+             * Format: int64
+             * @description Optional. The offset in seconds from the start of the audio or video.
+             */
+            seconds?: string;
         };
-        /** @description Review statuses for the creative. */
-        ReviewStatusInfo: {
+        /** @description Exit event of the creative. */
+        ExitEvent: {
+            /** @description Optional. The name of the click tag of the exit event. The name must be unique within one creative. Leave it empty or unset for creatives containing image assets only. */
+            name?: string;
+            /** @description Required. The click through URL of the exit event. This is required when type is: * `EXIT_EVENT_TYPE_DEFAULT` * `EXIT_EVENT_TYPE_BACKUP` */
+            url: string;
+            /** @description Optional. The name used to identify this event in reports. Leave it empty or unset for creatives containing image assets only. */
+            reportingName?: string;
             /**
-             * @description Content and policy review status for the creative.
+             * @description Required. The type of the exit event.
              * @enum {string}
              */
-            contentAndPolicyReviewStatus?: "REVIEW_STATUS_UNSPECIFIED" | "REVIEW_STATUS_APPROVED" | "REVIEW_STATUS_REJECTED" | "REVIEW_STATUS_PENDING";
-            /** @description Exchange review statuses for the creative. */
-            exchangeReviewStatuses?: components["schemas"]["ExchangeReviewStatus"][];
-            /**
-             * @description Creative and landing page review status for the creative.
-             * @enum {string}
-             */
-            creativeAndLandingPageReviewStatus?: "REVIEW_STATUS_UNSPECIFIED" | "REVIEW_STATUS_APPROVED" | "REVIEW_STATUS_REJECTED" | "REVIEW_STATUS_PENDING";
-            /**
-             * @description Represents the basic approval needed for a creative to begin serving. Summary of creative_and_landing_page_review_status and content_and_policy_review_status.
-             * @enum {string}
-             */
-            approvalStatus?: "APPROVAL_STATUS_UNSPECIFIED" | "APPROVAL_STATUS_PENDING_NOT_SERVABLE" | "APPROVAL_STATUS_PENDING_SERVABLE" | "APPROVAL_STATUS_APPROVED_SERVABLE" | "APPROVAL_STATUS_REJECTED_NOT_SERVABLE";
+            type: "EXIT_EVENT_TYPE_UNSPECIFIED" | "EXIT_EVENT_TYPE_DEFAULT" | "EXIT_EVENT_TYPE_BACKUP";
         };
-        /** @description Exchange review status for the creative. */
-        ExchangeReviewStatus: {
+        /** @description OBA Icon for a Creative */
+        ObaIcon: {
+            /** @description Optional. The MIME type of the OBA icon resource. */
+            resourceMimeType?: string;
+            /** @description Optional. The URL of the OBA icon resource. */
+            resourceUrl?: string;
             /**
-             * @description The exchange reviewing the creative.
+             * @description Optional. The position of the OBA icon on the creative.
              * @enum {string}
              */
-            exchange?: "EXCHANGE_UNSPECIFIED" | "EXCHANGE_GOOGLE_AD_MANAGER" | "EXCHANGE_APPNEXUS" | "EXCHANGE_BRIGHTROLL" | "EXCHANGE_ADFORM" | "EXCHANGE_ADMETA" | "EXCHANGE_ADMIXER" | "EXCHANGE_ADSMOGO" | "EXCHANGE_ADSWIZZ" | "EXCHANGE_BIDSWITCH" | "EXCHANGE_BRIGHTROLL_DISPLAY" | "EXCHANGE_CADREON" | "EXCHANGE_DAILYMOTION" | "EXCHANGE_FIVE" | "EXCHANGE_FLUCT" | "EXCHANGE_FREEWHEEL" | "EXCHANGE_GENIEE" | "EXCHANGE_GUMGUM" | "EXCHANGE_IMOBILE" | "EXCHANGE_IBILLBOARD" | "EXCHANGE_IMPROVE_DIGITAL" | "EXCHANGE_INDEX" | "EXCHANGE_KARGO" | "EXCHANGE_MICROAD" | "EXCHANGE_MOPUB" | "EXCHANGE_NEND" | "EXCHANGE_ONE_BY_AOL_DISPLAY" | "EXCHANGE_ONE_BY_AOL_MOBILE" | "EXCHANGE_ONE_BY_AOL_VIDEO" | "EXCHANGE_OOYALA" | "EXCHANGE_OPENX" | "EXCHANGE_PERMODO" | "EXCHANGE_PLATFORMONE" | "EXCHANGE_PLATFORMID" | "EXCHANGE_PUBMATIC" | "EXCHANGE_PULSEPOINT" | "EXCHANGE_REVENUEMAX" | "EXCHANGE_RUBICON" | "EXCHANGE_SMARTCLIP" | "EXCHANGE_SMARTRTB" | "EXCHANGE_SMARTSTREAMTV" | "EXCHANGE_SOVRN" | "EXCHANGE_SPOTXCHANGE" | "EXCHANGE_STROER" | "EXCHANGE_TEADSTV" | "EXCHANGE_TELARIA" | "EXCHANGE_TVN" | "EXCHANGE_UNITED" | "EXCHANGE_YIELDLAB" | "EXCHANGE_YIELDMO" | "EXCHANGE_UNRULYX" | "EXCHANGE_OPEN8" | "EXCHANGE_TRITON" | "EXCHANGE_TRIPLELIFT" | "EXCHANGE_TABOOLA" | "EXCHANGE_INMOBI" | "EXCHANGE_SMAATO" | "EXCHANGE_AJA" | "EXCHANGE_SUPERSHIP" | "EXCHANGE_NEXSTAR_DIGITAL" | "EXCHANGE_WAZE" | "EXCHANGE_SOUNDCAST" | "EXCHANGE_SHARETHROUGH" | "EXCHANGE_FYBER" | "EXCHANGE_RED_FOR_PUBLISHERS" | "EXCHANGE_MEDIANET" | "EXCHANGE_TAPJOY" | "EXCHANGE_VISTAR" | "EXCHANGE_DAX" | "EXCHANGE_JCD" | "EXCHANGE_PLACE_EXCHANGE" | "EXCHANGE_APPLOVIN" | "EXCHANGE_CONNATIX" | "EXCHANGE_RESET_DIGITAL" | "EXCHANGE_HIVESTACK" | "EXCHANGE_DRAX" | "EXCHANGE_APPLOVIN_GBID" | "EXCHANGE_FYBER_GBID" | "EXCHANGE_UNITY_GBID" | "EXCHANGE_CHARTBOOST_GBID" | "EXCHANGE_ADMOST_GBID" | "EXCHANGE_TOPON_GBID" | "EXCHANGE_NETFLIX" | "EXCHANGE_CORE" | "EXCHANGE_COMMERCE_GRID" | "EXCHANGE_SPOTIFY" | "EXCHANGE_TUBI" | "EXCHANGE_SNAP";
-            /**
-             * @description Status of the exchange review.
-             * @enum {string}
-             */
-            status?: "REVIEW_STATUS_UNSPECIFIED" | "REVIEW_STATUS_APPROVED" | "REVIEW_STATUS_REJECTED" | "REVIEW_STATUS_PENDING";
+            position?: "OBA_ICON_POSITION_UNSPECIFIED" | "OBA_ICON_POSITION_UPPER_RIGHT" | "OBA_ICON_POSITION_UPPER_LEFT" | "OBA_ICON_POSITION_LOWER_RIGHT" | "OBA_ICON_POSITION_LOWER_LEFT";
+            /** @description Optional. The program of the OBA icon. For example: “AdChoices”. */
+            program?: string;
+            /** @description Optional. The dimensions of the OBA icon. */
+            dimensions?: components["schemas"]["Dimensions"];
+            /** @description Required. The view tracking URL of the OBA icon. Only URLs of the following domains are allowed: * `https://info.evidon.com` * `https://l.betrad.com` */
+            viewTrackingUrl: string;
+            /** @description Required. The landing page URL of the OBA icon. Only URLs of the following domains are allowed: * `https://info.evidon.com` * `https://l.betrad.com` */
+            landingPageUrl: string;
+            /** @description Required. The click tracking URL of the OBA icon. Only URLs of the following domains are allowed: * `https://info.evidon.com` * `https://l.betrad.com` */
+            clickTrackingUrl: string;
         };
         /** @description Tracking URLs from third parties to track interactions with an audio or a video creative. */
         ThirdPartyUrl: {
@@ -1696,64 +1698,38 @@ export interface components {
             /** @description Optional. Tracking URL used to track the interaction. Provide a URL with optional path or query string, beginning with `https:`. For example, `https://www.example.com/path` */
             url?: string;
         };
-        /** @description A creative identifier provided by a registry that is unique across all platforms. This is part of the VAST 4.0 standard. */
-        UniversalAdId: {
-            /** @description Optional. The unique creative identifier. */
-            id?: string;
+        /** @description Review statuses for the creative. */
+        ReviewStatusInfo: {
             /**
-             * @description Optional. The registry provides unique creative identifiers.
+             * @description Creative and landing page review status for the creative.
              * @enum {string}
              */
-            registry?: "UNIVERSAL_AD_REGISTRY_UNSPECIFIED" | "UNIVERSAL_AD_REGISTRY_OTHER" | "UNIVERSAL_AD_REGISTRY_AD_ID" | "UNIVERSAL_AD_REGISTRY_CLEARCAST" | "UNIVERSAL_AD_REGISTRY_DV360" | "UNIVERSAL_AD_REGISTRY_CM";
-        };
-        /** @description OBA Icon for a Creative */
-        ObaIcon: {
-            /** @description Optional. The program of the OBA icon. For example: “AdChoices”. */
-            program?: string;
-            /** @description Optional. The dimensions of the OBA icon. */
-            dimensions?: components["schemas"]["Dimensions"];
-            /** @description Required. The click tracking URL of the OBA icon. Only URLs of the following domains are allowed: * `https://info.evidon.com` * `https://l.betrad.com` */
-            clickTrackingUrl?: string;
-            /** @description Optional. The MIME type of the OBA icon resource. */
-            resourceMimeType?: string;
+            creativeAndLandingPageReviewStatus?: "REVIEW_STATUS_UNSPECIFIED" | "REVIEW_STATUS_APPROVED" | "REVIEW_STATUS_REJECTED" | "REVIEW_STATUS_PENDING";
             /**
-             * @description Optional. The position of the OBA icon on the creative.
+             * @description Represents the basic approval needed for a creative to begin serving. Summary of creative_and_landing_page_review_status and content_and_policy_review_status.
              * @enum {string}
              */
-            position?: "OBA_ICON_POSITION_UNSPECIFIED" | "OBA_ICON_POSITION_UPPER_RIGHT" | "OBA_ICON_POSITION_UPPER_LEFT" | "OBA_ICON_POSITION_LOWER_RIGHT" | "OBA_ICON_POSITION_LOWER_LEFT";
-            /** @description Required. The view tracking URL of the OBA icon. Only URLs of the following domains are allowed: * `https://info.evidon.com` * `https://l.betrad.com` */
-            viewTrackingUrl?: string;
-            /** @description Required. The landing page URL of the OBA icon. Only URLs of the following domains are allowed: * `https://info.evidon.com` * `https://l.betrad.com` */
-            landingPageUrl?: string;
-            /** @description Optional. The URL of the OBA icon resource. */
-            resourceUrl?: string;
-        };
-        /** @description Counter event of the creative. */
-        CounterEvent: {
-            /** @description Required. The name of the counter event. */
-            name?: string;
-            /** @description Required. The name used to identify this counter event in reports. */
-            reportingName?: string;
-        };
-        /** @description Asset association for the creative. */
-        AssetAssociation: {
-            /** @description Optional. The associated asset. */
-            asset?: components["schemas"]["Asset"];
+            approvalStatus?: "APPROVAL_STATUS_UNSPECIFIED" | "APPROVAL_STATUS_PENDING_NOT_SERVABLE" | "APPROVAL_STATUS_PENDING_SERVABLE" | "APPROVAL_STATUS_APPROVED_SERVABLE" | "APPROVAL_STATUS_REJECTED_NOT_SERVABLE";
+            /** @description Exchange review statuses for the creative. */
+            exchangeReviewStatuses?: components["schemas"]["ExchangeReviewStatus"][];
             /**
-             * @description Optional. The role of this asset for the creative.
+             * @description Content and policy review status for the creative.
              * @enum {string}
              */
-            role?: "ASSET_ROLE_UNSPECIFIED" | "ASSET_ROLE_MAIN" | "ASSET_ROLE_BACKUP" | "ASSET_ROLE_POLITE_LOAD" | "ASSET_ROLE_HEADLINE" | "ASSET_ROLE_LONG_HEADLINE" | "ASSET_ROLE_BODY" | "ASSET_ROLE_LONG_BODY" | "ASSET_ROLE_CAPTION_URL" | "ASSET_ROLE_CALL_TO_ACTION" | "ASSET_ROLE_ADVERTISER_NAME" | "ASSET_ROLE_PRICE" | "ASSET_ROLE_ANDROID_APP_ID" | "ASSET_ROLE_IOS_APP_ID" | "ASSET_ROLE_RATING" | "ASSET_ROLE_ICON" | "ASSET_ROLE_COVER_IMAGE" | "ASSET_ROLE_BACKGROUND_COLOR" | "ASSET_ROLE_ACCENT_COLOR" | "ASSET_ROLE_REQUIRE_LOGO" | "ASSET_ROLE_REQUIRE_IMAGE" | "ASSET_ROLE_ENABLE_ASSET_ENHANCEMENTS";
+            contentAndPolicyReviewStatus?: "REVIEW_STATUS_UNSPECIFIED" | "REVIEW_STATUS_APPROVED" | "REVIEW_STATUS_REJECTED" | "REVIEW_STATUS_PENDING";
         };
-        /** @description A single asset. */
-        Asset: {
-            /** @description The asset content. For uploaded assets, the content is the serving path. */
-            content?: string;
+        /** @description Exchange review status for the creative. */
+        ExchangeReviewStatus: {
             /**
-             * Format: int64
-             * @description Media ID of the uploaded asset. This is a unique identifier for the asset. This ID can be passed to other API calls, e.g. CreateCreative to associate the asset with a creative. The Media ID space updated on **April 5, 2023**. Update media IDs cached before **April 5, 2023** by retrieving the new media ID from associated creative resources or re-uploading the asset.
+             * @description Status of the exchange review.
+             * @enum {string}
              */
-            mediaId?: string;
+            status?: "REVIEW_STATUS_UNSPECIFIED" | "REVIEW_STATUS_APPROVED" | "REVIEW_STATUS_REJECTED" | "REVIEW_STATUS_PENDING";
+            /**
+             * @description The exchange reviewing the creative.
+             * @enum {string}
+             */
+            exchange?: "EXCHANGE_UNSPECIFIED" | "EXCHANGE_GOOGLE_AD_MANAGER" | "EXCHANGE_APPNEXUS" | "EXCHANGE_BRIGHTROLL" | "EXCHANGE_ADFORM" | "EXCHANGE_ADMETA" | "EXCHANGE_ADMIXER" | "EXCHANGE_ADSMOGO" | "EXCHANGE_ADSWIZZ" | "EXCHANGE_BIDSWITCH" | "EXCHANGE_BRIGHTROLL_DISPLAY" | "EXCHANGE_CADREON" | "EXCHANGE_DAILYMOTION" | "EXCHANGE_FIVE" | "EXCHANGE_FLUCT" | "EXCHANGE_FREEWHEEL" | "EXCHANGE_GENIEE" | "EXCHANGE_GUMGUM" | "EXCHANGE_IMOBILE" | "EXCHANGE_IBILLBOARD" | "EXCHANGE_IMPROVE_DIGITAL" | "EXCHANGE_INDEX" | "EXCHANGE_KARGO" | "EXCHANGE_MICROAD" | "EXCHANGE_MOPUB" | "EXCHANGE_NEND" | "EXCHANGE_ONE_BY_AOL_DISPLAY" | "EXCHANGE_ONE_BY_AOL_MOBILE" | "EXCHANGE_ONE_BY_AOL_VIDEO" | "EXCHANGE_OOYALA" | "EXCHANGE_OPENX" | "EXCHANGE_PERMODO" | "EXCHANGE_PLATFORMONE" | "EXCHANGE_PLATFORMID" | "EXCHANGE_PUBMATIC" | "EXCHANGE_PULSEPOINT" | "EXCHANGE_REVENUEMAX" | "EXCHANGE_RUBICON" | "EXCHANGE_SMARTCLIP" | "EXCHANGE_SMARTRTB" | "EXCHANGE_SMARTSTREAMTV" | "EXCHANGE_SOVRN" | "EXCHANGE_SPOTXCHANGE" | "EXCHANGE_STROER" | "EXCHANGE_TEADSTV" | "EXCHANGE_TELARIA" | "EXCHANGE_TVN" | "EXCHANGE_UNITED" | "EXCHANGE_YIELDLAB" | "EXCHANGE_YIELDMO" | "EXCHANGE_UNRULYX" | "EXCHANGE_OPEN8" | "EXCHANGE_TRITON" | "EXCHANGE_TRIPLELIFT" | "EXCHANGE_TABOOLA" | "EXCHANGE_INMOBI" | "EXCHANGE_SMAATO" | "EXCHANGE_AJA" | "EXCHANGE_SUPERSHIP" | "EXCHANGE_NEXSTAR_DIGITAL" | "EXCHANGE_WAZE" | "EXCHANGE_SOUNDCAST" | "EXCHANGE_SHARETHROUGH" | "EXCHANGE_FYBER" | "EXCHANGE_RED_FOR_PUBLISHERS" | "EXCHANGE_MEDIANET" | "EXCHANGE_TAPJOY" | "EXCHANGE_VISTAR" | "EXCHANGE_DAX" | "EXCHANGE_JCD" | "EXCHANGE_PLACE_EXCHANGE" | "EXCHANGE_APPLOVIN" | "EXCHANGE_CONNATIX" | "EXCHANGE_RESET_DIGITAL" | "EXCHANGE_HIVESTACK" | "EXCHANGE_DRAX" | "EXCHANGE_APPLOVIN_GBID" | "EXCHANGE_FYBER_GBID" | "EXCHANGE_UNITY_GBID" | "EXCHANGE_CHARTBOOST_GBID" | "EXCHANGE_ADMOST_GBID" | "EXCHANGE_TOPON_GBID" | "EXCHANGE_NETFLIX" | "EXCHANGE_CORE" | "EXCHANGE_COMMERCE_GRID" | "EXCHANGE_SPOTIFY" | "EXCHANGE_TUBI" | "EXCHANGE_SNAP";
         };
         /** @description A Campaign Manager 360 tracking ad. */
         CmTrackingAd: {
@@ -1773,90 +1749,109 @@ export interface components {
              */
             cmAdId?: string;
         };
+        /** @description A creative identifier provided by a registry that is unique across all platforms. This is part of the VAST 4.0 standard. */
+        UniversalAdId: {
+            /** @description Optional. The unique creative identifier. */
+            id?: string;
+            /**
+             * @description Optional. The registry provides unique creative identifiers.
+             * @enum {string}
+             */
+            registry?: "UNIVERSAL_AD_REGISTRY_UNSPECIFIED" | "UNIVERSAL_AD_REGISTRY_OTHER" | "UNIVERSAL_AD_REGISTRY_AD_ID" | "UNIVERSAL_AD_REGISTRY_CLEARCAST" | "UNIVERSAL_AD_REGISTRY_DV360" | "UNIVERSAL_AD_REGISTRY_CM";
+        };
+        /** @description Timer event of the creative. */
+        TimerEvent: {
+            /** @description Required. The name used to identify this timer event in reports. */
+            reportingName: string;
+            /** @description Required. The name of the timer event. */
+            name: string;
+        };
         /** @description Represents information about the transcoded audio or video file. */
         Transcode: {
-            /** @description Optional. The name of the transcoded file. */
-            name?: string;
-            /**
-             * Format: int64
-             * @description Optional. The bit rate for the audio stream of the transcoded video, or the bit rate for the transcoded audio, in kilobits per second.
-             */
-            audioBitRateKbps?: string;
-            /**
-             * Format: float
-             * @description Optional. The frame rate of the transcoded video, in frames per second.
-             */
-            frameRate?: number;
             /**
              * Format: int64
              * @description Optional. The transcoding bit rate of the transcoded video, in kilobits per second.
              */
             bitRateKbps?: string;
-            /** @description Optional. Indicates if the transcoding was successful. */
-            transcoded?: boolean;
             /**
              * Format: int64
-             * @description Optional. The sample rate for the audio stream of the transcoded video, or the sample rate for the transcoded audio, in hertz.
+             * @description Optional. The bit rate for the audio stream of the transcoded video, or the bit rate for the transcoded audio, in kilobits per second.
              */
-            audioSampleRateHz?: string;
+            audioBitRateKbps?: string;
+            /** @description Optional. The name of the transcoded file. */
+            name?: string;
+            /** @description Optional. Indicates if the transcoding was successful. */
+            transcoded?: boolean;
+            /** @description Optional. The dimensions of the transcoded video. */
+            dimensions?: components["schemas"]["Dimensions"];
             /**
              * Format: int64
              * @description Optional. The size of the transcoded file, in bytes.
              */
             fileSizeBytes?: string;
-            /** @description Optional. The dimensions of the transcoded video. */
-            dimensions?: components["schemas"]["Dimensions"];
+            /**
+             * Format: int64
+             * @description Optional. The sample rate for the audio stream of the transcoded video, or the sample rate for the transcoded audio, in hertz.
+             */
+            audioSampleRateHz?: string;
             /** @description Optional. The MIME type of the transcoded file. */
             mimeType?: string;
+            /**
+             * Format: float
+             * @description Optional. The frame rate of the transcoded video, in frames per second.
+             */
+            frameRate?: number;
+        };
+        /** @description Counter event of the creative. */
+        CounterEvent: {
+            /** @description Required. The name used to identify this counter event in reports. */
+            reportingName: string;
+            /** @description Required. The name of the counter event. */
+            name: string;
         };
         /** @description A single custom bidding algorithm. */
         CustomBiddingAlgorithm: {
+            /** @description The IDs of the advertisers who have access to this algorithm. If advertiser_id is set, this field will only consist of that value. This field will not be set if the algorithm [`owner`](/display-video/api/reference/rest/v1/customBiddingAlgorithms#CustomBiddingAlgorithm.FIELDS.oneof_owner) is a partner and is being retrieved using an advertiser [`accessor`](/display-video/api/reference/rest/v1/customBiddingAlgorithms/list#body.QUERY_PARAMETERS.oneof_accessor). */
+            sharedAdvertiserIds?: string[];
+            /** @description Output only. The resource name of the custom bidding algorithm. */
+            name?: string;
             /**
              * Format: int64
              * @description Output only. The unique ID of the custom bidding algorithm. Assigned by the system.
              */
             customBiddingAlgorithmId?: string;
             /**
+             * Format: int64
+             * @description Immutable. The unique ID of the partner that owns the custom bidding algorithm.
+             */
+            partnerId?: string;
+            /**
              * @description Required. Immutable. The type of custom bidding algorithm.
              * @enum {string}
              */
-            customBiddingAlgorithmType?: "CUSTOM_BIDDING_ALGORITHM_TYPE_UNSPECIFIED" | "SCRIPT_BASED" | "RULE_BASED";
-            /**
-             * @description Optional. Immutable. Designates the third party optimization partner that manages this algorithm.
-             * @enum {string}
-             */
-            thirdPartyOptimizationPartner?: "UNKNOWN" | "SCIBIDS" | "ADELAIDE";
+            customBiddingAlgorithmType: "CUSTOM_BIDDING_ALGORITHM_TYPE_UNSPECIFIED" | "SCRIPT_BASED" | "RULE_BASED";
             /**
              * Format: int64
              * @description Immutable. The unique ID of the advertiser that owns the custom bidding algorithm.
              */
             advertiserId?: string;
             /**
-             * Format: int64
-             * @description Immutable. The unique ID of the partner that owns the custom bidding algorithm.
-             */
-            partnerId?: string;
-            /** @description The IDs of the advertisers who have access to this algorithm. If advertiser_id is set, this field will only consist of that value. This field will not be set if the algorithm [`owner`](/display-video/api/reference/rest/v1/customBiddingAlgorithms#CustomBiddingAlgorithm.FIELDS.oneof_owner) is a partner and is being retrieved using an advertiser [`accessor`](/display-video/api/reference/rest/v1/customBiddingAlgorithms/list#body.QUERY_PARAMETERS.oneof_accessor). */
-            sharedAdvertiserIds?: string[];
-            /** @description Output only. The resource name of the custom bidding algorithm. */
-            name?: string;
-            /** @description Output only. The details of custom bidding models for each advertiser who has access. This field may only include the details of the queried advertiser if the algorithm [`owner`](/display-video/api/reference/rest/v1/customBiddingAlgorithms#CustomBiddingAlgorithm.FIELDS.oneof_owner) is a partner and is being retrieved using an advertiser [`accessor`](/display-video/api/reference/rest/v1/customBiddingAlgorithms/list#body.QUERY_PARAMETERS.oneof_accessor). */
-            modelDetails?: components["schemas"]["CustomBiddingModelDetails"][];
-            /** @description Required. The display name of the custom bidding algorithm. Must be UTF-8 encoded with a maximum size of 240 bytes. */
-            displayName?: string;
-            /**
              * @description Controls whether or not the custom bidding algorithm can be used as a bidding strategy. Accepted values are: * `ENTITY_STATUS_ACTIVE` * `ENTITY_STATUS_ARCHIVED`
              * @enum {string}
              */
             entityStatus?: "ENTITY_STATUS_UNSPECIFIED" | "ENTITY_STATUS_ACTIVE" | "ENTITY_STATUS_ARCHIVED" | "ENTITY_STATUS_DRAFT" | "ENTITY_STATUS_PAUSED" | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
+            /** @description Required. The display name of the custom bidding algorithm. Must be UTF-8 encoded with a maximum size of 240 bytes. */
+            displayName: string;
+            /** @description Output only. The details of custom bidding models for each advertiser who has access. This field may only include the details of the queried advertiser if the algorithm [`owner`](/display-video/api/reference/rest/v1/customBiddingAlgorithms#CustomBiddingAlgorithm.FIELDS.oneof_owner) is a partner and is being retrieved using an advertiser [`accessor`](/display-video/api/reference/rest/v1/customBiddingAlgorithms/list#body.QUERY_PARAMETERS.oneof_accessor). */
+            modelDetails?: components["schemas"]["CustomBiddingModelDetails"][];
+            /**
+             * @description Optional. Immutable. Designates the third party optimization partner that manages this algorithm.
+             * @enum {string}
+             */
+            thirdPartyOptimizationPartner?: "UNKNOWN" | "SCIBIDS" | "ADELAIDE";
         };
         /** @description The details of a custom bidding algorithm model for a single shared advertiser. */
         CustomBiddingModelDetails: {
-            /**
-             * @description The readiness state of custom bidding model.
-             * @enum {string}
-             */
-            readinessState?: "READINESS_STATE_UNSPECIFIED" | "READINESS_STATE_ACTIVE" | "READINESS_STATE_INSUFFICIENT_DATA" | "READINESS_STATE_TRAINING" | "READINESS_STATE_NO_VALID_SCRIPT" | "READINESS_STATE_EVALUATION_FAILURE";
             /**
              * @description Output only. The suspension state of custom bidding model.
              * @enum {string}
@@ -1867,6 +1862,11 @@ export interface components {
              * @description The unique ID of the relevant advertiser.
              */
             advertiserId?: string;
+            /**
+             * @description The readiness state of custom bidding model.
+             * @enum {string}
+             */
+            readinessState?: "READINESS_STATE_UNSPECIFIED" | "READINESS_STATE_ACTIVE" | "READINESS_STATE_INSUFFICIENT_DATA" | "READINESS_STATE_TRAINING" | "READINESS_STATE_NO_VALID_SCRIPT" | "READINESS_STATE_EVALUATION_FAILURE";
         };
         ListPartnersResponse: {
             /** @description The list of partners. This list will be absent if empty. */
@@ -1881,40 +1881,40 @@ export interface components {
             advertisers?: components["schemas"]["Advertiser"][];
         };
         ListCampaignsResponse: {
-            /** @description The list of campaigns. This list will be absent if empty. */
-            campaigns?: components["schemas"]["Campaign"][];
             /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListCampaigns` method to retrieve the next page of results. */
             nextPageToken?: string;
+            /** @description The list of campaigns. This list will be absent if empty. */
+            campaigns?: components["schemas"]["Campaign"][];
         };
         ListInsertionOrdersResponse: {
-            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListInsertionOrders` method to retrieve the next page of results. */
-            nextPageToken?: string;
             /** @description The list of insertion orders. This list will be absent if empty. */
             insertionOrders?: components["schemas"]["InsertionOrder"][];
+            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListInsertionOrders` method to retrieve the next page of results. */
+            nextPageToken?: string;
         };
         ListLineItemsResponse: {
-            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListLineItems` method to retrieve the next page of results. */
-            nextPageToken?: string;
             /** @description The list of line items. This list will be absent if empty. */
             lineItems?: components["schemas"]["LineItem"][];
+            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListLineItems` method to retrieve the next page of results. */
+            nextPageToken?: string;
         };
         ListAdGroupsResponse: {
-            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListAdGroups` method to retrieve the next page of results. */
-            nextPageToken?: string;
             /** @description The list of ad groups. This list will be absent if empty. */
             adGroups?: components["schemas"]["AdGroup"][];
+            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListAdGroups` method to retrieve the next page of results. */
+            nextPageToken?: string;
         };
         ListAdGroupAdsResponse: {
-            /** @description The list of ad group ads. This list will be absent if empty. */
-            adGroupAds?: components["schemas"]["AdGroupAd"][];
             /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListAdGroupAds` method to retrieve the next page of results. */
             nextPageToken?: string;
+            /** @description The list of ad group ads. This list will be absent if empty. */
+            adGroupAds?: components["schemas"]["AdGroupAd"][];
         };
         ListCreativesResponse: {
-            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListCreativesRequest` method to retrieve the next page of results. If this field is null, it means this is the last page. */
-            nextPageToken?: string;
             /** @description The list of creatives. This list will be absent if empty. */
             creatives?: components["schemas"]["Creative"][];
+            /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListCreativesRequest` method to retrieve the next page of results. If this field is null, it means this is the last page. */
+            nextPageToken?: string;
         };
         ListCustomBiddingAlgorithmsResponse: {
             /** @description A token to retrieve the next page of results. Pass this value in the page_token field in the subsequent call to `ListCustomBiddingAlgorithmsRequest` method to retrieve the next page of results. If this field is null, it means this is the last page. */
@@ -1924,6 +1924,11 @@ export interface components {
         };
         /** @description Represents an amount of money with its currency type. */
         Money: {
+            /**
+             * Format: int64
+             * @description The whole units of the amount. For example if `currencyCode` is `"USD"`, then 1 unit is one US dollar.
+             */
+            units?: string;
             /** @description The three-letter currency code defined in ISO 4217. */
             currencyCode?: string;
             /**
@@ -1931,14 +1936,13 @@ export interface components {
              * @description Number of nano (10^-9) units of the amount. The value must be between -999,999,999 and +999,999,999 inclusive. If `units` is positive, `nanos` must be positive or zero. If `units` is zero, `nanos` can be positive, zero, or negative. If `units` is negative, `nanos` must be negative or zero. For example $-1.75 is represented as `units`=-1 and `nanos`=-750,000,000.
              */
             nanos?: number;
-            /**
-             * Format: int64
-             * @description The whole units of the amount. For example if `currencyCode` is `"USD"`, then 1 unit is one US dollar.
-             */
-            units?: string;
         };
         /** @description The `Status` type defines a logical error model that is suitable for different programming environments, including REST APIs and RPC APIs. It is used by [gRPC](https://github.com/grpc). Each `Status` message contains three pieces of data: error code, error message, and error details. You can find out more about this error model and how to work with it in the [API Design Guide](https://cloud.google.com/apis/design/errors). */
         Status: {
+            /** @description A list of messages that carry the error details. There is a common set of message types for APIs to use. */
+            details?: {
+                [key: string]: Record<string, never>;
+            }[];
             /**
              * Format: int32
              * @description The status code, which should be an enum value of google.rpc.Code.
@@ -1946,10 +1950,6 @@ export interface components {
             code?: number;
             /** @description A developer-facing error message, which should be in English. Any user-facing error message should be localized and sent in the google.rpc.Status.details field, or localized by the client. */
             message?: string;
-            /** @description A list of messages that carry the error details. There is a common set of message types for APIs to use. */
-            details?: {
-                [key: string]: Record<string, never>;
-            }[];
         };
     };
     responses: never;

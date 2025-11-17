@@ -1,7 +1,32 @@
 import { config } from "dotenv";
 import { z } from "zod";
+import { existsSync } from "fs";
+import { resolve } from "path";
 
-config();
+// Suppress dotenv banner by temporarily redirecting stdout
+const originalWrite = process.stdout.write.bind(process.stdout);
+process.stdout.write = (chunk: any, ...args: any[]): boolean => {
+  // Suppress dotenv banner messages
+  if (typeof chunk === 'string' && chunk.includes('[dotenv@')) {
+    return true;
+  }
+  return originalWrite(chunk, ...args);
+};
+
+// Load .env file from package root
+const envPath = resolve(process.cwd(), '.env');
+if (existsSync(envPath)) {
+  const result = config({ path: envPath });
+  // Debug: Log to stderr if .env loaded successfully
+  if (result.parsed) {
+    process.stderr.write(`[config] Loaded .env from ${envPath} with ${Object.keys(result.parsed).length} variables\n`);
+  }
+} else {
+  process.stderr.write(`[config] WARNING: .env file not found at ${envPath}\n`);
+}
+
+// Restore stdout.write
+process.stdout.write = originalWrite;
 
 /**
  * Configuration schema with Zod validation
@@ -42,6 +67,7 @@ const ConfigSchema = z.object({
     .url()
     .default("https://displayvideo.googleapis.com/v4"),
   dv360ServiceAccountJson: z.string().optional(), // Base64 encoded service account JSON
+  dv360ServiceAccountFile: z.string().optional(), // Path to service account JSON file
   dv360RateLimitPerMinute: z.number().default(60),
 
   // Google Cloud Configuration (for Secret Manager)
@@ -87,6 +113,7 @@ export function parseConfig(): AppConfig {
     // DV360 API
     dv360ApiBaseUrl: process.env.DV360_API_BASE_URL,
     dv360ServiceAccountJson: process.env.DV360_SERVICE_ACCOUNT_JSON,
+    dv360ServiceAccountFile: process.env.DV360_SERVICE_ACCOUNT_FILE,
     dv360RateLimitPerMinute: process.env.DV360_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.DV360_RATE_LIMIT_PER_MINUTE)
       : undefined,
@@ -97,6 +124,9 @@ export function parseConfig(): AppConfig {
 
   try {
     const config = ConfigSchema.parse(rawConfig);
+
+    // Debug: Log service account status to stderr
+    process.stderr.write(`[config] DV360_SERVICE_ACCOUNT_JSON present: ${!!config.dv360ServiceAccountJson}, length: ${config.dv360ServiceAccountJson?.length || 0}\n`);
 
     // Validation: JWT mode requires secret key
     if (config.mcpAuthMode === "jwt" && !config.mcpAuthSecretKey) {
@@ -114,10 +144,11 @@ export function parseConfig(): AppConfig {
     if (
       config.nodeEnv === "production" &&
       !config.dv360ServiceAccountJson &&
+      !config.dv360ServiceAccountFile &&
       !config.serviceAccountSecretId
     ) {
       throw new Error(
-        "Production requires either DV360_SERVICE_ACCOUNT_JSON or SERVICE_ACCOUNT_SECRET_ID"
+        "Production requires either DV360_SERVICE_ACCOUNT_JSON, DV360_SERVICE_ACCOUNT_FILE, or SERVICE_ACCOUNT_SECRET_ID"
       );
     }
 

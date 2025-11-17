@@ -35,6 +35,7 @@ export class DV360Service {
     ids: Record<string, string>,
     filter?: string,
     pageToken?: string,
+    pageSize?: number,
     context?: RequestContext
   ): Promise<{ entities: unknown[]; nextPageToken?: string }> {
     return withDV360ApiSpan("listEntities", entityType, async () => {
@@ -42,12 +43,37 @@ export class DV360Service {
 
       const config = getEntityConfigDynamic(entityType);
 
+      // Validate that all required parent IDs are present
+      for (const requiredParentId of config.parentIds) {
+        if (!ids[requiredParentId]) {
+          throw new McpError(
+            JsonRpcErrorCode.InvalidParams,
+            `Missing required parent ID '${requiredParentId}' for listing ${entityType} entities`,
+            {
+              entityType,
+              requiredParentIds: config.parentIds,
+              providedIds: Object.keys(ids),
+              requestId: context?.requestId,
+            }
+          );
+        }
+      }
+
       // Construct API path
       const basePath =
         typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
 
       // Build query params
       const params = new URLSearchParams();
+
+      // Add parent IDs that should be query parameters (e.g., partnerId for advertisers)
+      for (const queryParamId of config.queryParamIds) {
+        if (ids[queryParamId]) {
+          params.append(queryParamId, ids[queryParamId]);
+          setSpanAttribute(`dv360.${queryParamId}`, ids[queryParamId]);
+        }
+      }
+
       if (filter && config.supportsFilter) {
         params.append("filter", filter);
         setSpanAttribute("dv360.filter", filter);
@@ -55,6 +81,10 @@ export class DV360Service {
       if (pageToken) {
         params.append("pageToken", pageToken);
         setSpanAttribute("dv360.pageToken", "present");
+      }
+      if (pageSize) {
+        params.append("pageSize", pageSize.toString());
+        setSpanAttribute("dv360.pageSize", pageSize);
       }
 
       const path = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
@@ -337,8 +367,8 @@ export class DV360Service {
   private async authenticateServiceAccount(context?: RequestContext): Promise<void> {
     this.logger.info({ requestId: context?.requestId }, "Authenticating with DV360 API");
 
-    // Check if service account JSON is provided
-    if (!this.config.dv360ServiceAccountJson) {
+    // Check if service account credentials are provided
+    if (!this.config.dv360ServiceAccountJson && !this.config.dv360ServiceAccountFile) {
       throw new McpError(
         JsonRpcErrorCode.InternalError,
         "DV360 service account credentials not configured",
@@ -347,10 +377,19 @@ export class DV360Service {
     }
 
     try {
-      // Decode base64 service account JSON
-      const credentials = JSON.parse(
-        Buffer.from(this.config.dv360ServiceAccountJson, "base64").toString()
-      );
+      let credentialsJson: string;
+
+      // Load credentials from file or base64 string
+      if (this.config.dv360ServiceAccountFile) {
+        this.logger.debug({ file: this.config.dv360ServiceAccountFile }, "Loading service account from file");
+        const { readFileSync } = await import("fs");
+        credentialsJson = readFileSync(this.config.dv360ServiceAccountFile, "utf-8");
+      } else {
+        // Decode base64 service account JSON
+        credentialsJson = Buffer.from(this.config.dv360ServiceAccountJson!, "base64").toString();
+      }
+
+      const credentials = JSON.parse(credentialsJson);
 
       // Create JWT assertion
       const now = Math.floor(Date.now() / 1000);

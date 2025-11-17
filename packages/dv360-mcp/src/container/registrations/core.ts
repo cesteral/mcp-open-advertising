@@ -1,4 +1,5 @@
 import { container } from "tsyringe";
+import type { Logger } from "pino";
 import { createLogger } from "@bidshifter/shared";
 import { appConfig } from "../../config/index.js";
 import * as Tokens from "../tokens.js";
@@ -9,14 +10,16 @@ import { DV360Service } from "../../services/dv360/DV360Service.js";
 /**
  * Register core services (Config, Logger, etc.)
  * These are foundational services needed by all other components
+ * @param logger Optional logger instance to use (for stdio mode with stderr logging)
  */
-export function registerCoreServices(): void {
+export function registerCoreServices(logger?: Logger): void {
   // Configuration (static value)
   container.register(Tokens.AppConfig, { useValue: appConfig });
 
-  // Logger (static instance)
-  const logger = createLogger("dv360-mcp");
-  container.register(Tokens.Logger, { useValue: logger });
+  // Logger (use provided logger or create default)
+  // In stdio mode, the logger is configured to write to stderr
+  const loggerInstance = logger || createLogger("dv360-mcp");
+  container.register(Tokens.Logger, { useValue: loggerInstance });
 
   // Request Context Service (static instance)
   container.register(Tokens.RequestContextService, { useValue: requestContextService });

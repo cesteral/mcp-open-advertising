@@ -1,28 +1,43 @@
 import { z } from "zod";
 import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
-import { getSupportedEntityTypesDynamic } from "../utils/entityMappingDynamic.js";
+import {
+  getSupportedEntityTypesDynamic,
+  getEntityConfigDynamic,
+} from "../utils/entityMappingDynamic.js";
 import { extractParentIds } from "../utils/entityIdExtraction.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
 
 const TOOL_NAME = "dv360_list_entities";
 const TOOL_TITLE = "List DV360 Entities";
-const TOOL_DESCRIPTION =
-  "List DV360 entities with optional filtering and pagination (supports partners, advertisers, campaigns, insertion orders, line items, ad groups, ads, creatives)";
+
+function generateToolDescription(): string {
+  return `List DV360 entities with optional filtering and pagination.
+
+**Entity Hierarchy:**
+partner > advertiser > campaign > insertionOrder > lineItem
+
+**Filtering:** Use campaignId to filter insertion orders, insertionOrderId to filter line items.
+
+Supports all entity types: ${getSupportedEntityTypesDynamic().join(", ")}`;
+}
+
+const TOOL_DESCRIPTION = generateToolDescription();
 
 /**
- * Input schema for list entities tool
+ * Input schema for list entities tool with dynamic validation
+ * Uses Zod refinement to enforce entity-specific parent ID requirements
  */
 export const ListEntitiesInputSchema = z
   .object({
     entityType: z
       .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
       .describe("Type of entities to list"),
-    partnerId: z.string().optional().describe("Partner ID (if required for entity type)"),
+    partnerId: z.string().optional().describe("Partner ID (required for advertisers)"),
     advertiserId: z
       .string()
       .optional()
-      .describe("Advertiser ID (if required for entity type)"),
+      .describe("Advertiser ID (required for campaigns, insertion orders, line items, etc.)"),
     campaignId: z.string().optional().describe("Campaign ID (for filtering)"),
     insertionOrderId: z.string().optional().describe("Insertion Order ID (for filtering)"),
     filter: z
@@ -32,6 +47,33 @@ export const ListEntitiesInputSchema = z
     pageToken: z.string().optional().describe("Page token for pagination"),
     pageSize: z.number().min(1).max(100).optional().describe("Number of entities to return"),
   })
+  .refine(
+    (data) => {
+      // Get entity configuration to check required parent IDs
+      const config = getEntityConfigDynamic(data.entityType);
+
+      // Validate all required parent IDs are present
+      for (const requiredParentId of config.parentIds) {
+        if (!data[requiredParentId as keyof typeof data]) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+    (data) => {
+      // Generate helpful error message with specific missing IDs
+      const config = getEntityConfigDynamic(data.entityType);
+      const missingIds = config.parentIds.filter(
+        (id) => !data[id as keyof typeof data]
+      );
+
+      return {
+        message: `Missing required parent ID(s) for entity type '${data.entityType}': ${missingIds.join(", ")}. Required: ${config.parentIds.join(", ")}`,
+        path: missingIds,
+      };
+    }
+  )
   .describe("Parameters for listing DV360 entities");
 
 /**
@@ -62,12 +104,35 @@ export async function listEntitiesLogic(
   // Extract parent IDs using utility
   const parentIds = extractParentIds(input);
 
+  // Get entity configuration to determine which IDs should become filters
+  const config = getEntityConfigDynamic(input.entityType);
+
+  // Build filter expression combining user filter + dynamic hierarchy filters
+  const filterParts: string[] = [];
+
+  if (input.filter) {
+    filterParts.push(input.filter);
+  }
+
+  // Auto-convert filterParamIds to filter expressions
+  for (const filterParamId of config.filterParamIds) {
+    const value = (input as any)[filterParamId];
+    if (value) {
+      filterParts.push(`${filterParamId}=${value}`);
+      // Remove from parentIds since it's a filter, not a path/query param
+      delete parentIds[filterParamId];
+    }
+  }
+
+  const combinedFilter = filterParts.length > 0 ? filterParts.join(" AND ") : undefined;
+
   // List entities
   const result = await dv360Service.listEntities(
     input.entityType,
     parentIds,
-    input.filter,
+    combinedFilter,
     input.pageToken,
+    input.pageSize,
     context
   );
 

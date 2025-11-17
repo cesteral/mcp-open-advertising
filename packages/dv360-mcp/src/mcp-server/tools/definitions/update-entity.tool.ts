@@ -1,18 +1,26 @@
 import { z } from "zod";
 import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
-import { getSupportedEntityTypesDynamic } from "../utils/entityMappingDynamic.js";
+import {
+  getSupportedEntityTypesDynamic,
+  getEntityConfigDynamic,
+} from "../utils/entityMappingDynamic.js";
 import { extractEntityIds } from "../utils/entityIdExtraction.js";
 import { getEntityTypesWithExamples, getExamplesSummary, getEntityExamples, findMatchingExample } from "../utils/entityExamples.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
 
 const TOOL_NAME = "dv360_update_entity";
 
-// Generate dynamic description with examples
+// Generate dynamic description with examples and hierarchy
 function generateToolDescription(): string {
   const baseDescription = `Update a DV360 entity with flexible field updates.
 
 Use this tool to update any field on any entity type. Specify the data to update and the updateMask indicating which fields to update.
+
+**Entity Hierarchy:**
+partner > advertiser > campaign > insertionOrder > lineItem
+
+**Important:** Ensure you have the correct parent IDs when updating entities.
 
 **Common Update Patterns:**`;
 
@@ -28,20 +36,65 @@ Use this tool to update any field on any entity type. Specify the data to update
   return baseDescription + exampleSummaries + `\n\nFor more examples, see entity examples utility.`;
 }
 
-export const UpdateEntityInputSchema = z.object({
-  entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
-  partnerId: z.string().optional(),
-  advertiserId: z.string().optional(),
-  campaignId: z.string().optional(),
-  insertionOrderId: z.string().optional(),
-  lineItemId: z.string().optional(),
-  adGroupId: z.string().optional(),
-  adId: z.string().optional(),
-  creativeId: z.string().optional(),
-  data: z.record(z.any()),
-  updateMask: z.string(),
-  reason: z.string().optional(),
-});
+export const UpdateEntityInputSchema = z
+  .object({
+    entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
+    partnerId: z.string().optional(),
+    advertiserId: z.string().optional(),
+    campaignId: z.string().optional(),
+    insertionOrderId: z.string().optional(),
+    lineItemId: z.string().optional(),
+    adGroupId: z.string().optional(),
+    adId: z.string().optional(),
+    creativeId: z.string().optional(),
+    data: z.record(z.any()),
+    updateMask: z.string(),
+    reason: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // Get entity configuration to check required parent IDs
+      const config = getEntityConfigDynamic(data.entityType);
+
+      // Validate all required parent IDs are present
+      for (const requiredParentId of config.parentIds) {
+        if (!data[requiredParentId as keyof typeof data]) {
+          return false;
+        }
+      }
+
+      // Validate entity ID is present
+      const entityIdField = `${data.entityType}Id` as keyof typeof data;
+      if (!data[entityIdField]) {
+        return false;
+      }
+
+      return true;
+    },
+    (data) => {
+      // Generate helpful error message with specific missing IDs
+      const config = getEntityConfigDynamic(data.entityType);
+      const entityIdField = `${data.entityType}Id`;
+
+      // Check which parent IDs are missing
+      const missingParentIds = config.parentIds.filter(
+        (id) => !data[id as keyof typeof data]
+      );
+
+      // Check if entity ID is missing
+      const missingEntityId = !data[entityIdField as keyof typeof data]
+        ? [entityIdField]
+        : [];
+
+      const allMissingIds = [...missingParentIds, ...missingEntityId];
+      const allRequiredIds = [...config.parentIds, entityIdField];
+
+      return {
+        message: `Missing required ID(s) for updating ${data.entityType}: ${allMissingIds.join(", ")}. Required: ${allRequiredIds.join(", ")}`,
+        path: allMissingIds,
+      };
+    }
+  );
 
 export const UpdateEntityOutputSchema = z.object({
   entity: z.record(z.any()),

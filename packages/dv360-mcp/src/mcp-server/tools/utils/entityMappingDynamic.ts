@@ -7,16 +7,30 @@ import {
 } from "./schemaIntrospection.js";
 
 /**
+ * Entity relationship metadata
+ * Defines parent-child relationships between entities
+ */
+export interface EntityRelationship {
+  parentEntityType: string; // e.g., "campaign" for insertionOrder
+  parentFieldName: string; // Field name in child entity schema (e.g., "campaignId")
+  required: boolean; // Whether this relationship is required
+  description: string; // Human-readable relationship description
+}
+
+/**
  * Entity configuration for API mapping
  */
 export interface EntityConfig {
   apiPath: string | ((ids: Record<string, string>) => string);
-  parentIds: string[];
+  parentIds: string[]; // IDs required for validation (for API path construction)
+  queryParamIds: string[]; // IDs that should be passed as query parameters (not in path)
+  filterParamIds: string[]; // IDs that should be converted to filter expressions (e.g., campaignId for insertionOrders)
   supportsCreate: boolean;
   supportsUpdate: boolean;
   supportsDelete: boolean;
   supportsFilter: boolean;
   filterFields?: string[];
+  relationships?: EntityRelationship[]; // Parent-child relationships in entity data
 }
 
 /**
@@ -30,7 +44,9 @@ export interface EntityConfig {
  */
 interface EntityApiMetadata {
   apiPathTemplate: string; // e.g., "/partners" or "/advertisers/{advertiserId}/campaigns"
-  parentResourceIds: string[]; // e.g., ["advertiserId"]
+  parentResourceIds: string[]; // e.g., ["advertiserId"] - IDs required for this entity
+  queryParamIds?: string[]; // IDs that go in query params instead of path (e.g., ["partnerId"] for advertisers)
+  filterParamIds?: string[]; // IDs that become filter expressions (e.g., ["campaignId"] for insertionOrders)
   isReadOnly?: boolean; // If true, only GET/LIST operations allowed
   supportsFilter?: boolean; // Whether LIST supports filtering
 }
@@ -49,6 +65,7 @@ const ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
   advertiser: {
     apiPathTemplate: "/advertisers",
     parentResourceIds: ["partnerId"],
+    queryParamIds: ["partnerId"], // partnerId goes in query params, not path
     supportsFilter: true,
   },
   campaign: {
@@ -59,11 +76,13 @@ const ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
   insertionOrder: {
     apiPathTemplate: "/advertisers/{advertiserId}/insertionOrders",
     parentResourceIds: ["advertiserId"],
+    filterParamIds: ["campaignId"], // campaignId is optional filter, not required parent
     supportsFilter: true,
   },
   lineItem: {
     apiPathTemplate: "/advertisers/{advertiserId}/lineItems",
     parentResourceIds: ["advertiserId"],
+    filterParamIds: ["insertionOrderId"], // insertionOrderId is optional filter, not required parent
     supportsFilter: true,
   },
   adGroup: {
@@ -105,6 +124,85 @@ const ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
 };
 
 /**
+ * Entity Relationship Registry
+ * Defines parent-child relationships in entity data payloads
+ * This is auto-discovered from schemas but can be overridden here
+ */
+const ENTITY_RELATIONSHIPS: Record<string, EntityRelationship[]> = {
+  // Campaign belongs to Advertiser (via advertiserId in data)
+  campaign: [
+    {
+      parentEntityType: "advertiser",
+      parentFieldName: "advertiserId",
+      required: true,
+      description: "Campaign must belong to an advertiser",
+    },
+  ],
+
+  // InsertionOrder belongs to Campaign and Advertiser
+  insertionOrder: [
+    {
+      parentEntityType: "advertiser",
+      parentFieldName: "advertiserId",
+      required: true,
+      description: "Insertion order must belong to an advertiser",
+    },
+    {
+      parentEntityType: "campaign",
+      parentFieldName: "campaignId",
+      required: true,
+      description: "Insertion order must be linked to a campaign",
+    },
+  ],
+
+  // LineItem belongs to InsertionOrder and Advertiser
+  lineItem: [
+    {
+      parentEntityType: "advertiser",
+      parentFieldName: "advertiserId",
+      required: true,
+      description: "Line item must belong to an advertiser",
+    },
+    {
+      parentEntityType: "insertionOrder",
+      parentFieldName: "insertionOrderId",
+      required: true,
+      description: "Line item must be linked to an insertion order",
+    },
+  ],
+
+  // AdGroup belongs to Advertiser
+  adGroup: [
+    {
+      parentEntityType: "advertiser",
+      parentFieldName: "advertiserId",
+      required: true,
+      description: "Ad group must belong to an advertiser",
+    },
+  ],
+
+  // Creative belongs to Advertiser
+  creative: [
+    {
+      parentEntityType: "advertiser",
+      parentFieldName: "advertiserId",
+      required: true,
+      description: "Creative must belong to an advertiser",
+    },
+  ],
+
+  // Advertiser belongs to Partner
+  advertiser: [
+    {
+      parentEntityType: "partner",
+      parentFieldName: "partnerId",
+      required: true,
+      description: "Advertiser must belong to a partner",
+    },
+  ],
+};
+
+/**
  * Build dynamic entity configuration from API metadata and schema introspection
  */
 export function buildEntityConfig(entityType: string): EntityConfig | null {
@@ -117,8 +215,21 @@ export function buildEntityConfig(entityType: string): EntityConfig | null {
   const apiPath = apiMetadata.apiPathTemplate.includes("{")
     ? (ids: Record<string, string>) => {
         let path = apiMetadata.apiPathTemplate;
+
+        // Extract required parameters from template
+        const requiredParams = [...path.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+
+        // Validate all required parameters are present (defense-in-depth)
+        const missingParams = requiredParams.filter((param) => !ids[param]);
+        if (missingParams.length > 0) {
+          throw new Error(
+            `[PathBuilder] Missing required path parameter(s) for ${entityType}: ${missingParams.join(", ")}. ` +
+              `Template: ${apiMetadata.apiPathTemplate}, Provided IDs: ${Object.keys(ids).join(", ")}`
+          );
+        }
+
         // Replace all {paramName} with ids[paramName]
-        path = path.replace(/\{(\w+)\}/g, (_, key) => ids[key] || "");
+        path = path.replace(/\{(\w+)\}/g, (_, key) => ids[key]);
         return path;
       }
     : apiMetadata.apiPathTemplate;
@@ -131,11 +242,14 @@ export function buildEntityConfig(entityType: string): EntityConfig | null {
   return {
     apiPath,
     parentIds: apiMetadata.parentResourceIds,
+    queryParamIds: apiMetadata.queryParamIds || [],
+    filterParamIds: apiMetadata.filterParamIds || [],
     supportsCreate: !apiMetadata.isReadOnly,
     supportsUpdate: !apiMetadata.isReadOnly,
     supportsDelete: !apiMetadata.isReadOnly,
     supportsFilter: apiMetadata.supportsFilter ?? false,
     filterFields,
+    relationships: ENTITY_RELATIONSHIPS[entityType] || [],
   };
 }
 
@@ -291,5 +405,126 @@ export function suggestApiMetadata(entityType: string): EntityApiMetadata {
     apiPathTemplate: guessedPath,
     parentResourceIds: ["advertiserId"],
     supportsFilter: true,
+  };
+}
+
+/**
+ * Get entity relationships for a given entity type
+ */
+export function getEntityRelationships(entityType: string): EntityRelationship[] {
+  return ENTITY_RELATIONSHIPS[entityType] || [];
+}
+
+/**
+ * Get all parent entities for a given entity type
+ * Returns entities in hierarchical order (closest parent first)
+ */
+export function getParentEntityTypes(entityType: string): string[] {
+  const relationships = getEntityRelationships(entityType);
+  return relationships.map((rel) => rel.parentEntityType);
+}
+
+/**
+ * Get full entity hierarchy path
+ * Example: lineItem -> [advertiser, campaign, insertionOrder, lineItem]
+ */
+export function getEntityHierarchyPath(entityType: string): string[] {
+  const path: string[] = [];
+  const visited = new Set<string>();
+
+  function traverse(currentType: string) {
+    // Prevent circular dependencies
+    if (visited.has(currentType)) {
+      return;
+    }
+    visited.add(currentType);
+
+    // Get parent relationships
+    const relationships = getEntityRelationships(currentType);
+
+    // Add parents first (recursive)
+    for (const rel of relationships) {
+      traverse(rel.parentEntityType);
+    }
+
+    // Add current entity
+    if (!path.includes(currentType)) {
+      path.push(currentType);
+    }
+  }
+
+  traverse(entityType);
+  return path;
+}
+
+/**
+ * Generate human-readable relationship description for an entity
+ * Used for tool descriptions and error messages
+ */
+export function generateRelationshipDescription(entityType: string): string {
+  const relationships = getEntityRelationships(entityType);
+
+  if (relationships.length === 0) {
+    return `${entityType} is a top-level entity with no parent requirements.`;
+  }
+
+  const requiredRelationships = relationships.filter((rel) => rel.required);
+
+  if (requiredRelationships.length === 0) {
+    return `${entityType} has optional parent relationships.`;
+  }
+
+  const descriptions = requiredRelationships.map((rel) => {
+    return `- Must include '${rel.parentFieldName}' in data to link to ${rel.parentEntityType}`;
+  });
+
+  return `${entityType} requires:\n${descriptions.join("\n")}`;
+}
+
+/**
+ * Validate that entity data includes all required parent field references
+ * Returns array of missing required fields
+ */
+export function validateEntityRelationships(
+  entityType: string,
+  data: Record<string, any>
+): string[] {
+  const relationships = getEntityRelationships(entityType);
+  const missingFields: string[] = [];
+
+  for (const rel of relationships) {
+    if (rel.required && !data[rel.parentFieldName]) {
+      missingFields.push(rel.parentFieldName);
+    }
+  }
+
+  return missingFields;
+}
+
+/**
+ * Get suggested parent IDs for creating a new entity
+ * Returns a helpful message for the AI about what IDs are needed
+ */
+export function getCreateRequirements(entityType: string): {
+  pathIds: string[]; // IDs needed for API path
+  dataFields: string[]; // Parent ID fields needed in data payload
+  description: string;
+} {
+  const config = getEntityConfigDynamic(entityType);
+  const relationships = getEntityRelationships(entityType);
+
+  const requiredDataFields = relationships
+    .filter((rel) => rel.required)
+    .map((rel) => rel.parentFieldName);
+
+  const hierarchy = getEntityHierarchyPath(entityType);
+
+  return {
+    pathIds: config.parentIds,
+    dataFields: requiredDataFields,
+    description: `To create ${entityType}:
+- Provide ${config.parentIds.join(", ")} as parameters (for API path)
+- Include ${requiredDataFields.join(", ")} in the data payload (to establish relationships)
+- Hierarchy: ${hierarchy.join(" > ")}`,
   };
 }
