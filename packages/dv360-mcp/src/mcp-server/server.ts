@@ -11,6 +11,7 @@ import { createRequestContext } from "../utils/internal/requestContext.js";
 import { ErrorHandler } from "../utils/errors/index.js";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "../utils/telemetry/index.js";
 import type { Logger } from "pino";
+import type { SdkContext } from "../types-global/mcp.js";
 
 /**
  * Create and configure MCP server instance
@@ -24,6 +25,7 @@ export function createMcpServer(logger: Logger): Server {
     {
       capabilities: {
         tools: {},
+        elicitation: {},
         // resources: {}, // Will be added in Phase 2
         // prompts: {}, // Will be added in Phase 2
       },
@@ -47,7 +49,10 @@ export function createMcpServer(logger: Logger): Server {
   });
 
   // Register tools/call handler
-  server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
+  server.setRequestHandler(CallToolRequestSchema, async (
+    request: CallToolRequest,
+    _extra
+  ) => {
     const { name, arguments: args } = request.params;
 
     logger.info({ toolName: name, arguments: args }, "Handling tools/call request");
@@ -83,8 +88,17 @@ export function createMcpServer(logger: Logger): Server {
         const validatedInput = tool.inputSchema.parse(args);
         setSpanAttribute("tool.input.validated", true);
 
+        const sdkContext: SdkContext = {
+          requestId: context.requestId,
+          elicitInput: async (params) => server.elicitInput({ ...params }),
+        };
+
         // Execute tool logic (cast to any since each tool has unique I/O types)
-        const result = await (tool.logic as any)(validatedInput, context);
+        const result = await (tool.logic as any)(
+          validatedInput,
+          context,
+          sdkContext
+        );
         setSpanAttribute("tool.execution.success", true);
 
         // Format response

@@ -8,6 +8,7 @@ import {
 import { extractEntityIds } from "../utils/entityIdExtraction.js";
 import { getEntityTypesWithExamples, getExamplesSummary, getEntityExamples, findMatchingExample } from "../utils/entityExamples.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_update_entity";
 
@@ -105,7 +106,11 @@ export const UpdateEntityOutputSchema = z.object({
 type UpdateEntityInput = z.infer<typeof UpdateEntityInputSchema>;
 type UpdateEntityOutput = z.infer<typeof UpdateEntityOutputSchema>;
 
-export async function updateEntityLogic(input: UpdateEntityInput, context: RequestContext): Promise<UpdateEntityOutput> {
+export async function updateEntityLogic(
+  input: UpdateEntityInput,
+  context: RequestContext,
+  _sdkContext?: SdkContext
+): Promise<UpdateEntityOutput> {
   const dv360Service = container.resolve(DV360Service);
   const entityIds = extractEntityIds(input, input.entityType);
 

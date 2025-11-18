@@ -4,6 +4,10 @@
 
 import type { z } from "zod";
 import type { RequestContext } from "../utils/internal/requestContext.js";
+import type {
+  ElicitRequest,
+  ElicitResult,
+} from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * Tool definition structure
@@ -24,7 +28,8 @@ export interface ToolDefinition<
   };
   logic: (
     input: z.infer<TInputSchema>,
-    context: RequestContext
+    context: RequestContext,
+    sdkContext?: SdkContext
   ) => Promise<z.infer<TOutputSchema>>;
   responseFormatter?: (result: z.infer<TOutputSchema>) => any;
 }
@@ -51,5 +56,6 @@ export interface ResourceDefinition {
  */
 export interface SdkContext {
   requestId?: string;
+  elicitInput?: (params: ElicitRequest["params"]) => Promise<ElicitResult>;
   [key: string]: unknown;
 }

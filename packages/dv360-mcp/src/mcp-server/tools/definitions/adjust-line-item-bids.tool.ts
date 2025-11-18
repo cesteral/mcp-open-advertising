@@ -3,6 +3,8 @@ import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
 import { getEntityExamplesByCategory } from "../utils/entityExamples.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import type { SdkContext } from "../../../types-global/mcp.js";
+import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
 const TOOL_NAME = "dv360_adjust_line_item_bids";
 const TOOL_TITLE = "Adjust Line Item Bids";
@@ -33,8 +35,14 @@ const TOOL_DESCRIPTION = generateBidToolDescription();
  * Bid adjustment specification
  */
 const BidAdjustmentSchema = z.object({
-  advertiserId: z.string().describe("Advertiser ID"),
-  lineItemId: z.string().describe("Line Item ID"),
+  advertiserId: z
+    .string()
+    .optional()
+    .describe("Advertiser ID (leave blank to be prompted during elicitation)"),
+  lineItemId: z
+    .string()
+    .optional()
+    .describe("Line Item ID (leave blank to be prompted during elicitation)"),
   newBidMicros: z.number().int().positive().describe("New bid amount in micros"),
   reason: z.string().optional().describe("Reason for bid adjustment (audit trail)"),
 });
@@ -60,7 +68,11 @@ export const AdjustLineItemBidsOutputSchema = z
     successful: z
       .array(
         z.object({
+          advertiserId: z.string(),
           lineItemId: z.string(),
+          lineItemName: z.string().optional(),
+          campaignId: z.string().optional(),
+          insertionOrderId: z.string().optional(),
           previousBidMicros: z.number(),
           newBidMicros: z.number(),
         })
@@ -69,7 +81,11 @@ export const AdjustLineItemBidsOutputSchema = z
     failed: z
       .array(
         z.object({
-          lineItemId: z.string(),
+          advertiserId: z.string().optional(),
+          lineItemId: z.string().optional(),
+          lineItemName: z.string().optional(),
+          campaignId: z.string().optional(),
+          insertionOrderId: z.string().optional(),
           error: z.string(),
         })
       )
@@ -89,23 +105,60 @@ type AdjustLineItemBidsOutput = z.infer<typeof AdjustLineItemBidsOutputSchema>;
  */
 export async function adjustLineItemBidsLogic(
   input: AdjustLineItemBidsInput,
-  context: RequestContext
+  context: RequestContext,
+  sdkContext?: SdkContext
 ): Promise<AdjustLineItemBidsOutput> {
   const dv360Service = container.resolve(DV360Service);
 
   const successful: Array<{
+    advertiserId: string;
     lineItemId: string;
+    lineItemName?: string;
+    campaignId?: string;
+    insertionOrderId?: string;
     previousBidMicros: number;
     newBidMicros: number;
   }> = [];
-  const failed: Array<{ lineItemId: string; error: string }> = [];
+  const failed: Array<{
+    advertiserId?: string;
+    lineItemId?: string;
+    lineItemName?: string;
+    campaignId?: string;
+    insertionOrderId?: string;
+    error: string;
+  }> = [];
 
   // Process each adjustment
   for (const adjustment of input.adjustments) {
+    let advertiserId: string | undefined = adjustment.advertiserId ?? undefined;
+    let lineItemId: string | undefined = adjustment.lineItemId ?? undefined;
+    let lineItemName: string | undefined;
+    let campaignId: string | undefined;
+    let insertionOrderId: string | undefined;
     try {
+      const resolvedAdvertiserId = await ensureRequiredFieldValue({
+        fieldName: "advertiserId",
+        fieldLabel: "Advertiser ID",
+        entityType: "line item",
+        operation: "batch bid adjustment",
+        sdkContext,
+        currentValue: advertiserId,
+      });
+      advertiserId = resolvedAdvertiserId;
+
+      const resolvedLineItemId = await ensureRequiredFieldValue({
+        fieldName: "lineItemId",
+        fieldLabel: "Line Item ID",
+        entityType: "line item",
+        operation: "batch bid adjustment",
+        sdkContext,
+        currentValue: lineItemId,
+      });
+      lineItemId = resolvedLineItemId;
+
       const entityIds = {
-        advertiserId: adjustment.advertiserId,
-        lineItemId: adjustment.lineItemId,
+        advertiserId: resolvedAdvertiserId,
+        lineItemId: resolvedLineItemId,
       };
 
       // Get current line item to extract previous bid
@@ -139,14 +192,26 @@ export async function adjustLineItemBidsLogic(
         context
       );
 
+      lineItemName = currentLineItem.displayName as string | undefined;
+      campaignId = currentLineItem.campaignId as string | undefined;
+      insertionOrderId = currentLineItem.insertionOrderId as string | undefined;
+
       successful.push({
-        lineItemId: adjustment.lineItemId,
+        advertiserId: resolvedAdvertiserId,
+        lineItemId: resolvedLineItemId,
+        lineItemName,
+        campaignId,
+        insertionOrderId,
         previousBidMicros,
         newBidMicros: adjustment.newBidMicros,
       });
     } catch (error: any) {
       failed.push({
-        lineItemId: adjustment.lineItemId,
+        advertiserId,
+        lineItemId,
+        lineItemName,
+        campaignId,
+        insertionOrderId,
         error: error.message || String(error),
       });
     }

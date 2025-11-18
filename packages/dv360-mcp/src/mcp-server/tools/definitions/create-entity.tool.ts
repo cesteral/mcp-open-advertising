@@ -12,6 +12,7 @@ import {
 } from "../utils/entityMappingDynamic.js";
 import { extractParentIds } from "../utils/entityIdExtraction.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import type { SdkContext } from "../../../types-global/mcp.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "dv360_create_entity";
@@ -148,7 +149,8 @@ type CreateEntityOutput = z.infer<typeof CreateEntityOutputSchema>;
  */
 export async function createEntityLogic(
   input: CreateEntityInput,
-  context: RequestContext
+  context: RequestContext,
+  _sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
   // Validate entity relationships in data payload
   const missingRelationships = validateEntityRelationships(

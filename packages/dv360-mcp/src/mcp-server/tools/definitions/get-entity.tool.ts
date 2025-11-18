@@ -7,6 +7,7 @@ import {
 } from "../utils/entityMappingDynamic.js";
 import { extractEntityIds } from "../utils/entityIdExtraction.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_get_entity";
 const TOOL_TITLE = "Get DV360 Entity";
@@ -110,7 +111,8 @@ type GetEntityOutput = z.infer<typeof GetEntityOutputSchema>;
  */
 export async function getEntityLogic(
   input: GetEntityInput,
-  context: RequestContext
+  context: RequestContext,
+  _sdkContext?: SdkContext
 ): Promise<GetEntityOutput> {
   // Resolve DV360Service from container
   const dv360Service = container.resolve(DV360Service);
