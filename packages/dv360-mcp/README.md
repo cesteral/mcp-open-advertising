@@ -40,43 +40,39 @@ The server is built with production-grade architecture and nearly complete funct
 - ✅ Rate limiting and error handling
 - ✅ OpenTelemetry observability
 - ✅ Dynamic entity system supporting 11 entity types
-- ⚠️  Requires DV360 service account credentials (see Setup below)
+- ⚠️ Requires DV360 service account credentials (see Setup below)
 
 ## MCP Tools
 
 ### Entity Management Tools (Generic CRUD)
 
-1. **`dv360_list_partners`** ⚠️ *Currently returns mock data*
-   - List DV360 partners
-   - Parameters: `pageSize`, `pageToken`
-
-2. **`dv360_list_entities`** ✅
+1. **`dv360_list_entities`** ✅
    - List entities of any type (campaigns, line items, creatives, etc.)
    - Parameters: `entityType`, `advertiserId`, `pageSize`, `pageToken`
 
-3. **`dv360_get_entity`** ✅
+2. **`dv360_get_entity`** ✅
    - Get a specific entity by ID
    - Parameters: `entityType`, `entityId`, `advertiserId`
 
-4. **`dv360_create_entity`** ✅
+3. **`dv360_create_entity`** ✅
    - Create a new entity
    - Parameters: `entityType`, `advertiserId`, `entityData`
 
-5. **`dv360_update_entity`** ✅
+4. **`dv360_update_entity`** ✅
    - Update an existing entity
    - Parameters: `entityType`, `entityId`, `advertiserId`, `entityData`, `updateMask`
 
-6. **`dv360_delete_entity`** ✅
+5. **`dv360_delete_entity`** ✅
    - Delete an entity
    - Parameters: `entityType`, `entityId`, `advertiserId`
 
 ### Workflow Tools (Batch Operations)
 
-7. **`dv360_adjust_line_item_bids`** ✅
+6. **`dv360_adjust_line_item_bids`** ✅
    - Batch update bids for multiple line items
    - Parameters: `advertiserId`, `lineItemIds`, `bidAdjustment` (percentage or absolute)
 
-8. **`dv360_bulk_update_status`** ✅
+7. **`dv360_bulk_update_status`** ✅
    - Batch update status for multiple entities
    - Parameters: `entityType`, `advertiserId`, `entityIds`, `status`
 
@@ -121,6 +117,7 @@ pnpm run build
 Follow the detailed guide: [docs/SERVICE_ACCOUNT_SETUP.md](./docs/SERVICE_ACCOUNT_SETUP.md)
 
 Quick summary:
+
 1. Create GCP service account with DV360 API access
 2. Download service account JSON key
 3. Store it securely (outside the project directory)
@@ -156,6 +153,7 @@ For using with Claude Desktop, configure via Claude Desktop settings:
 See [docs/CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md) for complete instructions.
 
 Quick configuration:
+
 ```json
 {
   "mcpServers": {
@@ -173,6 +171,7 @@ Quick configuration:
 ```
 
 **Why file-based credentials?**
+
 - ✅ Most secure for local development
 - ✅ Easy to rotate and manage
 - ✅ Standard Google Cloud practice
@@ -206,16 +205,19 @@ pnpm run test              # Run tests (when implemented)
 ### Testing the Server
 
 **Health Check:**
+
 ```bash
 curl http://localhost:3002/health
 ```
 
 **SSE Endpoint (MCP Protocol):**
+
 ```bash
 curl http://localhost:3002/sse
 ```
 
 **List Tools (via MCP):**
+
 ```bash
 curl -X POST http://localhost:3002/sse \
   -H "Content-Type: application/json" \
@@ -258,6 +260,7 @@ pnpm run generate:schemas
 ```
 
 This generates:
+
 - `src/generated/schemas/types.ts` - TypeScript types (1,962 lines)
 - `src/generated/schemas/zod.ts` - Zod validation schemas (1,874 lines)
 
@@ -294,6 +297,7 @@ tail -50 ~/Library/Logs/Claude/mcp-server-dv360-mcp-local.log | grep -E "config|
 ```
 
 **Verify API access:**
+
 - Ensure DV360 API is enabled in GCP project
 - Verify service account has `display-video` scope
 - Check service account has access in DV360 partner/advertiser settings
@@ -301,6 +305,7 @@ tail -50 ~/Library/Logs/Claude/mcp-server-dv360-mcp-local.log | grep -E "config|
 ### Server Won't Start
 
 **Check dependencies and build:**
+
 ```bash
 # Install dependencies
 pnpm install
@@ -318,6 +323,7 @@ node dist/index.js
 The server implements per-advertiser rate limiting (default: 60 requests/minute).
 
 If hitting limits:
+
 1. Check `DV360_RATE_LIMIT_PER_MINUTE` in `.env`
 2. Monitor logs for rate limit warnings
 3. Consider batching operations using workflow tools
@@ -333,14 +339,6 @@ gcloud run services logs tail dv360-mcp --region=europe-west2
 ```
 
 ## Next Steps
-
-### Enable Real Partners Data
-
-The `dv360_list_partners` tool currently returns mock data. To enable real data:
-
-1. Ensure service account credentials are configured
-2. Uncomment lines 40-41 in `src/mcp-server/tools/definitions/list-partners.tool.ts`
-3. Rebuild: `pnpm run build`
 
 ### Add Tests
 

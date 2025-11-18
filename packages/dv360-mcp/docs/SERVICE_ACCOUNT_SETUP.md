@@ -211,20 +211,7 @@ sleep 3
 # Test health endpoint
 curl http://localhost:3002/health
 
-# Test listing partners (will return mock data initially)
-curl -X POST http://localhost:3002/sse \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "id": 1,
-    "method": "tools/call",
-    "params": {
-      "name": "dv360_list_partners",
-      "arguments": {}
-    }
-  }'
 
-# Stop server
 kill $SERVER_PID
 ```
 
@@ -256,12 +243,14 @@ This scope provides full access to DV360 API. The dv360-mcp server will request 
 ### 1. Credential Storage
 
 **DO**:
+
 - ✅ Store JSON key file in secure location (e.g., `~/.gcp/keys/`)
 - ✅ Use GCP Secret Manager for production deployments
 - ✅ Base64 encode credentials in environment variables
 - ✅ Set restrictive file permissions: `chmod 600 ~/dv360-service-account-key.json`
 
 **DON'T**:
+
 - ❌ Commit service account JSON to version control
 - ❌ Share service account keys via email/chat
 - ❌ Store unencrypted keys in CI/CD logs
@@ -296,6 +285,7 @@ OTEL_ENABLED=true
 ```
 
 Monitor for:
+
 - Failed authentication attempts
 - Unusual API request patterns
 - Rate limit violations
@@ -307,6 +297,7 @@ Monitor for:
 **Cause**: Service account email is incorrect or doesn't exist.
 
 **Solution**:
+
 ```bash
 # List all service accounts
 gcloud iam service-accounts list
@@ -319,6 +310,7 @@ gcloud iam service-accounts list
 **Cause**: DV360 API not enabled in GCP project.
 
 **Solution**:
+
 ```bash
 gcloud services enable displayvideo.googleapis.com
 
@@ -330,6 +322,7 @@ gcloud services enable displayvideo.googleapis.com
 **Cause**: Service account not linked in DV360.
 
 **Solution**:
+
 - Follow Step 5 to link service account at Partner or Advertiser level
 - Wait 5-10 minutes for permissions to propagate
 - Verify correct access level (Read and Write vs Read Only)
@@ -339,6 +332,7 @@ gcloud services enable displayvideo.googleapis.com
 **Cause**: Service account JSON might be corrupted or improperly encoded.
 
 **Solution**:
+
 ```bash
 # Decode and validate JSON structure
 echo $DV360_SERVICE_ACCOUNT_JSON | base64 -d | jq .
@@ -351,17 +345,20 @@ echo $DV360_SERVICE_ACCOUNT_JSON | base64 -d | jq .
 **Cause**: Service account linked with "Read Only" but server is attempting write operations.
 
 **Solution**:
+
 - In DV360, update service account access level to "Read and Write"
 - Wait 5 minutes for permissions to sync
 
 ### Server starts but all API calls fail
 
 **Possible causes**:
+
 1. Service account JSON not properly base64 encoded
 2. Service account not linked in DV360
 3. DV360 API not enabled
 
 **Debugging steps**:
+
 ```bash
 # 1. Verify JSON structure
 echo $DV360_SERVICE_ACCOUNT_JSON | base64 -d | jq .
@@ -383,6 +380,7 @@ gcloud services list --enabled | grep displayvideo
 ## Support
 
 For issues with:
+
 - **GCP/Service Accounts**: Check [GCP Support](https://cloud.google.com/support)
 - **DV360 API Access**: Contact your DV360 account manager
 - **dv360-mcp server**: See main [README.md](../README.md) troubleshooting section
@@ -423,6 +421,7 @@ gcloud iam service-accounts keys delete KEY_ID \
 ```
 
 Example:
+
 ```
 dv360-mcp-service-account@bidshifter-dv360.iam.gserviceaccount.com
 ```
@@ -430,8 +429,8 @@ dv360-mcp-service-account@bidshifter-dv360.iam.gserviceaccount.com
 ### Required DV360 Permissions
 
 | Permission Level | Can Read | Can Create | Can Update | Can Delete |
-|-----------------|----------|------------|------------|------------|
-| Read Only       | ✅       | ❌         | ❌         | ❌         |
-| Read and Write  | ✅       | ✅         | ✅         | ✅         |
+| ---------------- | -------- | ---------- | ---------- | ---------- |
+| Read Only        | ✅       | ❌         | ❌         | ❌         |
+| Read and Write   | ✅       | ✅         | ✅         | ✅         |
 
 For full dv360-mcp functionality, **Read and Write** access is required.

@@ -7,6 +7,7 @@ This guide explains how to connect Claude Desktop to your local dv360-mcp server
 Before configuring Claude Desktop, ensure you have:
 
 1. **Built the server:**
+
    ```bash
    cd packages/dv360-mcp
    pnpm run build
@@ -19,16 +20,19 @@ Before configuring Claude Desktop, ensure you have:
 The Claude Desktop configuration file is located at:
 
 **macOS:**
+
 ```
 ~/Library/Application Support/Claude/claude_desktop_config.json
 ```
 
 **Windows:**
+
 ```
 %APPDATA%\Claude\claude_desktop_config.json
 ```
 
 **Linux:**
+
 ```
 ~/.config/Claude/claude_desktop_config.json
 ```
@@ -42,9 +46,7 @@ Add the following to your `claude_desktop_config.json`:
   "mcpServers": {
     "dv360-mcp-local": {
       "command": "node",
-      "args": [
-        "/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp/dist/index.js"
-      ],
+      "args": ["/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp/dist/index.js"],
       "cwd": "/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp",
       "env": {
         "NODE_ENV": "development",
@@ -58,10 +60,12 @@ Add the following to your `claude_desktop_config.json`:
 ```
 
 **Replace:**
+
 - `/absolute/path/to/cesteral-mcp-servers/...` with your actual project path
 - `/absolute/path/to/your/service-account.json` with the path to your DV360 service account JSON file
 
 **Why this approach?**
+
 - ✅ Secure - credentials stored in a separate file
 - ✅ Easy to rotate credentials
 - ✅ Standard practice for Google Cloud tools
@@ -76,9 +80,7 @@ If you prefer to embed credentials directly (e.g., for CI/CD):
   "mcpServers": {
     "dv360-mcp-local": {
       "command": "node",
-      "args": [
-        "/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp/dist/index.js"
-      ],
+      "args": ["/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp/dist/index.js"],
       "cwd": "/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp",
       "env": {
         "NODE_ENV": "development",
@@ -91,6 +93,7 @@ If you prefer to embed credentials directly (e.g., for CI/CD):
 ```
 
 To encode your service account:
+
 ```bash
 cat service-account.json | base64
 ```
@@ -100,12 +103,14 @@ cat service-account.json | base64
 ## Setup Steps
 
 1. **Build the server:**
+
    ```bash
    cd packages/dv360-mcp
    pnpm run build
    ```
 
 2. **Create/edit Claude Desktop config:**
+
    ```bash
    # macOS
    open ~/Library/Application\ Support/Claude/claude_desktop_config.json
@@ -129,14 +134,13 @@ cat service-account.json | base64
 
 Once connected, you'll have access to these tools:
 
-1. `dv360_list_partners` - List DV360 partners
-2. `dv360_list_entities` - List entities (campaigns, line items, etc.)
-3. `dv360_get_entity` - Get a specific entity
-4. `dv360_create_entity` - Create new entities
-5. `dv360_update_entity` - Update existing entities
-6. `dv360_delete_entity` - Delete entities
-7. `dv360_adjust_line_item_bids` - Batch update bids
-8. `dv360_bulk_update_status` - Batch update status
+1. `dv360_list_entities` - List entities (campaigns, line items, etc.)
+2. `dv360_get_entity` - Get a specific entity
+3. `dv360_create_entity` - Create new entities
+4. `dv360_update_entity` - Update existing entities
+5. `dv360_delete_entity` - Delete entities
+6. `dv360_adjust_line_item_bids` - Batch update bids
+7. `dv360_bulk_update_status` - Batch update status
 
 ## Testing in Claude Desktop
 
@@ -159,6 +163,7 @@ Try these prompts to test the integration:
 ### Tools not showing in Claude Desktop
 
 1. **Check Claude Desktop logs:**
+
    ```bash
    # macOS
    tail -100 ~/Library/Logs/Claude/mcp-server-dv360-mcp-local.log
@@ -168,6 +173,7 @@ Try these prompts to test the integration:
    ```
 
 2. **Verify the build exists:**
+
    ```bash
    ls -la packages/dv360-mcp/dist/index.js
    ```
@@ -186,21 +192,25 @@ Try these prompts to test the integration:
 **Error: "DV360 service account credentials not configured"**
 
 Check the logs to verify credentials are being loaded:
+
 ```bash
 grep "SERVICE_ACCOUNT" ~/Library/Logs/Claude/mcp-server-dv360-mcp-local.log
 ```
 
 Should show:
+
 ```
 [config] DV360_SERVICE_ACCOUNT_JSON present: true, length: 3164
 ```
 
 Or for file-based credentials:
+
 ```
 Loading service account from file
 ```
 
 **If credentials are not loaded:**
+
 - Verify the path to your service account JSON file is correct and absolute
 - Ensure the file exists and is readable: `cat /path/to/service-account.json`
 - Check the service account has DV360 API access (see `SERVICE_ACCOUNT_SETUP.md`)
@@ -210,6 +220,7 @@ Loading service account from file
 **"Server transport closed" or "EPIPE" errors:**
 
 These typically indicate the server started but encountered an error. Common causes:
+
 1. Missing dependencies: `pnpm install`
 2. Outdated build: `pnpm run build`
 3. TypeScript errors: `pnpm run typecheck`
@@ -218,22 +229,24 @@ These typically indicate the server started but encountered an error. Common cau
 
 The dv360-mcp server supports two transport modes:
 
-| Mode | Use Case | How to Run |
-|------|----------|------------|
+| Mode      | Use Case                         | How to Run           |
+| --------- | -------------------------------- | -------------------- |
 | **Stdio** | Claude Desktop local development | `node dist/index.js` |
-| **HTTP** | Production (Cloud Run), testing | `pnpm run dev:http` |
+| **HTTP**  | Production (Cloud Run), testing  | `pnpm run dev:http`  |
 
 **Claude Desktop uses stdio mode** automatically when you specify a `command` in the config. All logs go to stderr, keeping the MCP protocol on stdout clean.
 
 ## Security Best Practices
 
 ✅ **Recommended:**
+
 - Store service account credentials in a separate file outside the project
 - Use absolute paths in configuration
 - Set file permissions: `chmod 600 /path/to/service-account.json`
 - Never commit `claude_desktop_config.json` to version control
 
 ⚠️ **Avoid:**
+
 - Embedding credentials directly in config files
 - Storing credentials in the project directory
 - Committing any files with credentials to git
