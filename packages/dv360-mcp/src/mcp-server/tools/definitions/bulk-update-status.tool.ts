@@ -3,6 +3,8 @@ import { container } from "tsyringe";
 import { DV360Service } from "../../../services/dv360/DV360Service.js";
 import { getEntityExamplesByCategory } from "../utils/entityExamples.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import type { SdkContext } from "../../../types-global/mcp.js";
+import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
 const TOOL_NAME = "dv360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update Entity Status";
@@ -37,7 +39,10 @@ export const BulkUpdateStatusInputSchema = z
     entityType: z
       .enum(["campaign", "insertionOrder", "lineItem", "adGroup"])
       .describe("Type of entities to update"),
-    advertiserId: z.string().describe("Advertiser ID"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("Advertiser ID (leave blank to be prompted during elicitation)"),
     entityIds: z
       .array(z.string())
       .min(1)
@@ -63,16 +68,25 @@ export const BulkUpdateStatusOutputSchema = z
     successful: z
       .array(
         z.object({
+          advertiserId: z.string(),
+          entityType: z.string(),
           entityId: z.string(),
+          entityName: z.string().optional(),
           previousStatus: z.string(),
           newStatus: z.string(),
+          statusChanged: z
+            .boolean()
+            .describe("Indicates whether an update was required"),
         })
       )
       .describe("Successfully updated entities"),
     failed: z
       .array(
         z.object({
+          advertiserId: z.string(),
+          entityType: z.string(),
           entityId: z.string(),
+          entityName: z.string().optional(),
           error: z.string(),
         })
       )
@@ -92,22 +106,43 @@ type BulkUpdateStatusOutput = z.infer<typeof BulkUpdateStatusOutputSchema>;
  */
 export async function bulkUpdateStatusLogic(
   input: BulkUpdateStatusInput,
-  context: RequestContext
+  context: RequestContext,
+  sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
   const dv360Service = container.resolve(DV360Service);
 
+  const advertiserId = await ensureRequiredFieldValue({
+    fieldName: "advertiserId",
+    fieldLabel: "Advertiser ID",
+    entityType: input.entityType,
+    operation: "bulk status update",
+    sdkContext,
+    currentValue: input.advertiserId,
+  });
+
   const successful: Array<{
+    advertiserId: string;
+    entityType: string;
     entityId: string;
+    entityName?: string;
     previousStatus: string;
     newStatus: string;
+    statusChanged: boolean;
   }> = [];
-  const failed: Array<{ entityId: string; error: string }> = [];
+  const failed: Array<{
+    advertiserId: string;
+    entityType: string;
+    entityId: string;
+    entityName?: string;
+    error: string;
+  }> = [];
 
   // Process each entity
   for (const entityId of input.entityIds) {
+    let entityName: string | undefined;
     try {
       const entityIds: Record<string, string> = {
-        advertiserId: input.advertiserId,
+        advertiserId,
         [`${input.entityType}Id`]: entityId,
       };
 
@@ -118,14 +153,22 @@ export async function bulkUpdateStatusLogic(
         context
       )) as any;
 
+      entityName =
+        (currentEntity.displayName as string | undefined) ||
+        (currentEntity.name as string | undefined);
+
       const previousStatus = currentEntity.entityStatus || "ENTITY_STATUS_UNSPECIFIED";
 
       // Skip if already in target status
       if (previousStatus === input.status) {
         successful.push({
+          advertiserId,
+          entityType: input.entityType,
           entityId,
+          entityName,
           previousStatus,
           newStatus: input.status,
+          statusChanged: false,
         });
         continue;
       }
@@ -142,13 +185,20 @@ export async function bulkUpdateStatusLogic(
       );
 
       successful.push({
+        advertiserId,
+        entityType: input.entityType,
         entityId,
+        entityName,
         previousStatus,
         newStatus: input.status,
+        statusChanged: true,
       });
     } catch (error: any) {
       failed.push({
+        advertiserId,
+        entityType: input.entityType,
         entityId,
+        entityName,
         error: error.message || String(error),
       });
     }

@@ -7,6 +7,7 @@ import {
 } from "../utils/entityMappingDynamic.js";
 import { extractEntityIds } from "../utils/entityIdExtraction.js";
 import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_delete_entity";
 
@@ -77,7 +78,11 @@ export const DeleteEntityOutputSchema = z.object({
 type DeleteEntityInput = z.infer<typeof DeleteEntityInputSchema>;
 type DeleteEntityOutput = z.infer<typeof DeleteEntityOutputSchema>;
 
-export async function deleteEntityLogic(input: DeleteEntityInput, context: RequestContext): Promise<DeleteEntityOutput> {
+export async function deleteEntityLogic(
+  input: DeleteEntityInput,
+  context: RequestContext,
+  _sdkContext?: SdkContext
+): Promise<DeleteEntityOutput> {
   const dv360Service = container.resolve(DV360Service);
   const entityIds = extractEntityIds(input, input.entityType);
   const entityBeforeDeletion = await dv360Service.getEntity(input.entityType, entityIds, context) as Record<string, any>;
