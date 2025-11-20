@@ -4,7 +4,7 @@ import {
   getEntitySchemaByType,
   extractRequiredFields,
   hasGeneratedSchema,
-} from "./schemaIntrospection.js";
+} from "./schema-introspection.js";
 
 /**
  * Entity relationship metadata
@@ -288,9 +288,7 @@ export function buildEntityConfig(entityType: string): EntityConfig | null {
     : apiMetadata.apiPathTemplate;
 
   // Determine filter fields from schema (look for common filterable fields)
-  const filterFields = apiMetadata.supportsFilter
-    ? inferFilterableFields(entityType)
-    : undefined;
+  const filterFields = apiMetadata.supportsFilter ? inferFilterableFields(entityType) : undefined;
 
   return {
     apiPath,
@@ -371,11 +369,7 @@ export function getRequiredFieldsFromSchema(entityType: string): string[] {
   if (!hasGeneratedSchema(entityType)) {
     // Fallback to minimal requirements
     const apiMetadata = getEntityApiMetadata(entityType);
-    return [
-      ...(apiMetadata?.parentResourceIds || []),
-      "displayName",
-      "entityStatus",
-    ];
+    return [...(apiMetadata?.parentResourceIds || []), "displayName", "entityStatus"];
   }
 
   const schema = getEntitySchemaByType(entityType);

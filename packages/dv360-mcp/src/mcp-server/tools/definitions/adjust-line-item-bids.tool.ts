@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360Service.js";
-import { getEntityExamplesByCategory } from "../utils/entityExamples.js";
-import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
@@ -162,11 +162,7 @@ export async function adjustLineItemBidsLogic(
       };
 
       // Get current line item to extract previous bid
-      const currentLineItem = (await dv360Service.getEntity(
-        "lineItem",
-        entityIds,
-        context
-      )) as any;
+      const currentLineItem = (await dv360Service.getEntity("lineItem", entityIds, context)) as any;
 
       // Extract current bid (handle different bid strategy types)
       let previousBidMicros = 0;

@@ -4,10 +4,10 @@
  */
 
 // Dynamic entity system
-export * from "./schemaIntrospection.js";
-export * from "./entityMappingDynamic.js";
-export * from "./entityIdExtraction.js";
-export * from "./entityExamples.js";
+export * from "./schema-introspection.js";
+export * from "./entity-mapping-dynamic.js";
+export * from "./entity-id-extraction.js";
+export * from "./entity-examples.js";
 
 /**
  * Usage Guide

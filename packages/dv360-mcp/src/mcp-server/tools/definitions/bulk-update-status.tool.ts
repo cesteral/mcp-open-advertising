@@ -1,8 +1,8 @@
 import { z } from "zod";
 import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360Service.js";
-import { getEntityExamplesByCategory } from "../utils/entityExamples.js";
-import type { RequestContext } from "../../../utils/internal/requestContext.js";
+import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
@@ -43,11 +43,7 @@ export const BulkUpdateStatusInputSchema = z
       .string()
       .optional()
       .describe("Advertiser ID (leave blank to be prompted during elicitation)"),
-    entityIds: z
-      .array(z.string())
-      .min(1)
-      .max(50)
-      .describe("List of entity IDs to update (max 50)"),
+    entityIds: z.array(z.string()).min(1).max(50).describe("List of entity IDs to update (max 50)"),
     status: z
       .enum([
         "ENTITY_STATUS_ACTIVE",
@@ -74,9 +70,7 @@ export const BulkUpdateStatusOutputSchema = z
           entityName: z.string().optional(),
           previousStatus: z.string(),
           newStatus: z.string(),
-          statusChanged: z
-            .boolean()
-            .describe("Indicates whether an update was required"),
+          statusChanged: z.boolean().describe("Indicates whether an update was required"),
         })
       )
       .describe("Successfully updated entities"),
@@ -217,7 +211,10 @@ export async function bulkUpdateStatusLogic(
 /**
  * Format response for MCP client
  */
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput, input?: BulkUpdateStatusInput): any {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput,
+  input?: BulkUpdateStatusInput
+): any {
   const summary = `Bulk status update completed: ${result.totalSuccessful}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0

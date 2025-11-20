@@ -1,14 +1,14 @@
 import { injectable, inject } from "tsyringe";
 import type { Logger } from "pino";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { RateLimiter } from "../../utils/security/rateLimiter.js";
+import { RateLimiter } from "../../utils/security/rate-limiter.js";
 import {
   getEntityConfigDynamic,
   getEntitySchemaForOperation,
-} from "../../mcp-server/tools/utils/entityMappingDynamic.js";
-import { fetchWithTimeout } from "../../utils/network/fetchWithTimeout.js";
+} from "../../mcp-server/tools/utils/entity-mapping-dynamic.js";
+import { fetchWithTimeout } from "../../utils/network/fetch-with-timeout.js";
 import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
-import type { RequestContext } from "../../utils/internal/requestContext.js";
+import type { RequestContext } from "../../utils/internal/request-context.js";
 import type { AppConfig } from "../../config/index.js";
 import * as tokens from "../../container/tokens.js";
 
@@ -60,8 +60,7 @@ export class DV360Service {
       }
 
       // Construct API path
-      const basePath =
-        typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
 
       // Build query params
       const params = new URLSearchParams();
@@ -125,8 +124,7 @@ export class DV360Service {
     const config = getEntityConfigDynamic(entityType);
 
     // Construct full path including entity ID
-    const basePath =
-      typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+    const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
     const entityId = ids[`${entityType}Id`];
 
     if (!entityId) {
@@ -176,8 +174,7 @@ export class DV360Service {
     const schema = getEntitySchemaForOperation(entityType, "create");
     const validated = schema.parse(data);
 
-    const basePath =
-      typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+    const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
 
     // Rate limit by advertiser
     if (ids.advertiserId) {
@@ -220,18 +217,14 @@ export class DV360Service {
       setSpanAttribute("dv360.updateFieldsCount", updateMask.split(",").length);
 
       // Get current entity and merge with updates
-      const current = (await this.getEntity(entityType, ids, context)) as Record<
-        string,
-        any
-      >;
+      const current = (await this.getEntity(entityType, ids, context)) as Record<string, any>;
       const merged = { ...current, ...data };
 
       // Validate merged entity
       const schema = getEntitySchemaForOperation(entityType, "update");
       const validated = schema.parse(merged);
 
-      const basePath =
-        typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
       const entityId = ids[`${entityType}Id`];
 
       if (!entityId) {
@@ -281,8 +274,7 @@ export class DV360Service {
       );
     }
 
-    const basePath =
-      typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+    const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
     const entityId = ids[`${entityType}Id`];
 
     if (!entityId) {
@@ -381,7 +373,10 @@ export class DV360Service {
 
       // Load credentials from file or base64 string
       if (this.config.dv360ServiceAccountFile) {
-        this.logger.debug({ file: this.config.dv360ServiceAccountFile }, "Loading service account from file");
+        this.logger.debug(
+          { file: this.config.dv360ServiceAccountFile },
+          "Loading service account from file"
+        );
         const { readFileSync } = await import("fs");
         credentialsJson = readFileSync(this.config.dv360ServiceAccountFile, "utf-8");
       } else {
@@ -393,9 +388,9 @@ export class DV360Service {
 
       // Create JWT assertion
       const now = Math.floor(Date.now() / 1000);
-      const jwtHeader = Buffer.from(
-        JSON.stringify({ alg: "RS256", typ: "JWT" })
-      ).toString("base64url");
+      const jwtHeader = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString(
+        "base64url"
+      );
 
       const jwtPayload = Buffer.from(
         JSON.stringify({

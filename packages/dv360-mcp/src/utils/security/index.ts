@@ -2,6 +2,6 @@
  * Security utilities barrel export
  */
 
-export * from "./rateLimiter.js";
+export * from "./rate-limiter.js";
 export * from "./sanitization.js";
-export * from "./withToolAuth.js";
+export * from "./with-tool-auth.js";

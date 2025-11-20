@@ -1,13 +1,18 @@
 import { z } from "zod";
 import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360Service.js";
+import { DV360Service } from "../../../services/dv360/DV360-service.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
-} from "../utils/entityMappingDynamic.js";
-import { extractEntityIds } from "../utils/entityIdExtraction.js";
-import { getEntityTypesWithExamples, getExamplesSummary, getEntityExamples, findMatchingExample } from "../utils/entityExamples.js";
-import type { RequestContext } from "../../../utils/internal/requestContext.js";
+} from "../utils/entity-mapping-dynamic.js";
+import { extractEntityIds } from "../utils/entity-id-extraction.js";
+import {
+  getEntityTypesWithExamples,
+  getExamplesSummary,
+  getEntityExamples,
+  findMatchingExample,
+} from "../utils/entity-examples.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_update_entity";
@@ -37,7 +42,8 @@ partner > advertiser > campaign > insertionOrder > lineItem
   return baseDescription + exampleSummaries + `\n\nFor more examples, see entity examples utility.`;
 }
 
-export const UpdateEntityInputSchema = z
+// Full validation schema (with refine logic)
+const FullUpdateEntityInputSchema = z
   .object({
     entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
     partnerId: z.string().optional(),
@@ -78,14 +84,10 @@ export const UpdateEntityInputSchema = z
       const entityIdField = `${data.entityType}Id`;
 
       // Check which parent IDs are missing
-      const missingParentIds = config.parentIds.filter(
-        (id) => !data[id as keyof typeof data]
-      );
+      const missingParentIds = config.parentIds.filter((id) => !data[id as keyof typeof data]);
 
       // Check if entity ID is missing
-      const missingEntityId = !data[entityIdField as keyof typeof data]
-        ? [entityIdField]
-        : [];
+      const missingEntityId = !data[entityIdField as keyof typeof data] ? [entityIdField] : [];
 
       const allMissingIds = [...missingParentIds, ...missingEntityId];
       const allRequiredIds = [...config.parentIds, entityIdField];
@@ -96,6 +98,66 @@ export const UpdateEntityInputSchema = z
       };
     }
   );
+
+// Simplified schema for MCP tool registration (avoids stdio overflow)
+//
+// WHY SIMPLIFIED: Full discriminated union schemas exceed ~1MB, causing EPIPE errors on stdio transport.
+// This simplified version keeps tool registration small (~10KB) while preserving full dynamic functionality.
+//
+// HOW IT WORKS:
+// 1. Tool registration uses generic z.record(z.any()) for data field
+// 2. Descriptions guide AI to fetch full schemas and field paths via MCP Resources
+// 3. Server-side validation still uses FullUpdateEntityInputSchema (line 41)
+// 4. Both simplified and full schemas use same getSupportedEntityTypesDynamic() - fully dynamic!
+//
+// IMPORTANT: Before attempting to update an entity, fetch resources via:
+//   - entity-schema://{entityType} → Complete JSON Schema with all fields
+//   - entity-fields://{entityType} → All valid field paths for updateMask
+//   - entity-examples://{entityType} → Common update patterns with updateMask examples
+const SimplifiedUpdateEntityInputSchema = z
+  .object({
+    entityType: z
+      .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
+      .describe(
+        "Type of entity to update. REQUIRED: Fetch field paths first using MCP Resource: " +
+          "resources/read entity-fields://{entityType} to see valid updateMask values."
+      ),
+    partnerId: z.string().optional().describe("Partner ID (if required)"),
+    advertiserId: z.string().optional().describe("Advertiser ID (if required)"),
+    campaignId: z.string().optional().describe("Campaign ID (if updating campaign)"),
+    insertionOrderId: z.string().optional().describe("Insertion Order ID (if updating IO)"),
+    lineItemId: z.string().optional().describe("Line Item ID (if updating line item)"),
+    adGroupId: z.string().optional().describe("Ad Group ID (if updating ad group)"),
+    adId: z.string().optional().describe("Ad ID (if updating ad)"),
+    creativeId: z.string().optional().describe("Creative ID (if updating creative)"),
+    data: z
+      .record(z.any())
+      .describe(
+        "Partial entity data (only fields being updated). IMPORTANT:\n" +
+          "  1. resources/read entity-examples://{entityType} → See common update patterns\n" +
+          "  2. Only include fields you want to change\n" +
+          "  3. Must match fields specified in updateMask"
+      ),
+    updateMask: z
+      .string()
+      .describe(
+        "Comma-separated field paths to update (e.g., 'displayName,entityStatus'). " +
+          "REQUIRED: Fetch valid paths first using resources/read entity-fields://{entityType}. " +
+          "CRITICAL: Only fields in updateMask will be modified on the server."
+      ),
+    reason: z.string().optional().describe("Optional reason for audit trail"),
+  })
+  .describe(
+    "Update DV360 entity. WORKFLOW:\n" +
+      "1. Fetch field paths: resources/read entity-fields://{entityType}\n" +
+      "2. Review examples: resources/read entity-examples://{entityType}\n" +
+      "3. Build data object with only fields to update\n" +
+      "4. Set updateMask to comma-separated field paths\n" +
+      "5. Call this tool with entityType + data + updateMask"
+  );
+
+// Export simplified schema for MCP
+export const UpdateEntityInputSchema = SimplifiedUpdateEntityInputSchema;
 
 export const UpdateEntityOutputSchema = z.object({
   entity: z.record(z.any()),
@@ -111,24 +173,43 @@ export async function updateEntityLogic(
   context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
+  // Server-side validation using full schema
+  const validatedInput = FullUpdateEntityInputSchema.parse(input);
+
   const dv360Service = container.resolve(DV360Service);
-  const entityIds = extractEntityIds(input, input.entityType);
+  const entityIds = extractEntityIds(validatedInput, validatedInput.entityType);
 
   try {
-    const current = await dv360Service.getEntity(input.entityType, entityIds, context) as Record<string, any>;
-    const updateFields = input.updateMask.split(",").map(f => f.trim());
+    const current = (await dv360Service.getEntity(
+      validatedInput.entityType,
+      entityIds,
+      context
+    )) as Record<string, any>;
+    const updateFields = validatedInput.updateMask.split(",").map((f) => f.trim());
     const previousValues: Record<string, any> = {};
     for (const field of updateFields) {
       const parts = field.split(".");
       let value: any = current;
-      for (const part of parts) { value = value?.[part]; }
+      for (const part of parts) {
+        value = value?.[part];
+      }
       previousValues[field] = value;
     }
-    const updated = await dv360Service.updateEntity(input.entityType, entityIds, input.data, input.updateMask, context);
-    return { entity: updated as Record<string, any>, previousValues, timestamp: new Date().toISOString() };
+    const updated = await dv360Service.updateEntity(
+      validatedInput.entityType,
+      entityIds,
+      validatedInput.data,
+      validatedInput.updateMask,
+      context
+    );
+    return {
+      entity: updated as Record<string, any>,
+      previousValues,
+      timestamp: new Date().toISOString(),
+    };
   } catch (error: any) {
     // Enhance error message with example suggestions
-    const examples = getEntityExamples(input.entityType);
+    const examples = getEntityExamples(validatedInput.entityType);
 
     if (examples.length > 0) {
       const exampleSuggestions = examples
@@ -136,7 +217,7 @@ export async function updateEntityLogic(
         .map((ex) => `  - ${ex.operation}: updateMask="${ex.updateMask}"`)
         .join("\n");
 
-      const enhancedMessage = `${error.message}\n\nTip: Try one of these common patterns for ${input.entityType}:\n${exampleSuggestions}`;
+      const enhancedMessage = `${error.message}\n\nTip: Try one of these common patterns for ${validatedInput.entityType}:\n${exampleSuggestions}`;
       error.message = enhancedMessage;
     }
 
@@ -144,7 +225,10 @@ export async function updateEntityLogic(
   }
 }
 
-export function updateEntityResponseFormatter(result: UpdateEntityOutput, input?: UpdateEntityInput): any {
+export function updateEntityResponseFormatter(
+  result: UpdateEntityOutput,
+  input?: UpdateEntityInput
+): any {
   let responseText = "Entity updated successfully:\n" + JSON.stringify(result.entity, null, 2);
 
   // Add helpful note if this matches a known pattern

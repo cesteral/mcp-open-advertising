@@ -1,4 +1,4 @@
-import { JsonRpcErrorCode } from "./errorCodes.js";
+import { JsonRpcErrorCode } from "./error-codes.js";
 
 /**
  * Custom error class for MCP operations
@@ -62,10 +62,6 @@ export class McpError extends Error {
       });
     }
 
-    return new McpError(
-      defaultCode,
-      String(error),
-      { originalError: String(error) }
-    );
+    return new McpError(defaultCode, String(error), { originalError: String(error) });
   }
 }

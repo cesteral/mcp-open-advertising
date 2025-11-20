@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import { McpError, JsonRpcErrorCode } from "../errors/index.js";
-import type { RequestContext } from "../internal/requestContext.js";
+import type { RequestContext } from "../internal/request-context.js";
 import { appConfig } from "../../config/index.js";
 
 /**
@@ -45,10 +45,7 @@ export function withRequiredScopes(requiredScopes: string[]): void {
   // Get auth info from AsyncLocalStorage
   const store = authContext.getStore();
   if (!store?.authInfo) {
-    throw new McpError(
-      JsonRpcErrorCode.Unauthorized,
-      "No authentication information found"
-    );
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "No authentication information found");
   }
 
   const userScopes = store.authInfo.scopes;
@@ -70,11 +67,7 @@ export function withRequiredScopes(requiredScopes: string[]): void {
  */
 export function withToolAuth<TInput, TOutput>(
   requiredScopes: string[],
-  logicFn: (
-    input: TInput,
-    context: RequestContext,
-    sdkContext?: any
-  ) => TOutput | Promise<TOutput>
+  logicFn: (input: TInput, context: RequestContext, sdkContext?: any) => TOutput | Promise<TOutput>
 ): (input: TInput, context: RequestContext, sdkContext?: any) => Promise<TOutput> {
   return async (input, context, sdkContext) => {
     // Check required scopes (throws if unauthorized)

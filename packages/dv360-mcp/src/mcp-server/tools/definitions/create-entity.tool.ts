@@ -1,6 +1,6 @@
 import { z, type ZodRawShape } from "zod";
 import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360Service.js";
+import { DV360Service } from "../../../services/dv360/DV360-service.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
@@ -9,9 +9,9 @@ import {
   getEntityHierarchyPath,
   getEntitySchemaForOperation,
   getRequiredFieldsFromSchema,
-} from "../utils/entityMappingDynamic.js";
-import { extractParentIds } from "../utils/entityIdExtraction.js";
-import type { RequestContext } from "../../../utils/internal/requestContext.js";
+} from "../utils/entity-mapping-dynamic.js";
+import { extractParentIds } from "../utils/entity-id-extraction.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
@@ -57,10 +57,7 @@ function buildParentFieldSchema(fieldName: string, required: boolean): z.ZodType
     COMMON_PARENT_FIELD_DESCRIPTIONS[fieldName] ||
     `${fieldName} identifier required for hierarchical DV360 operations`;
 
-  const baseSchema = z
-    .string()
-    .min(1, `${fieldName} cannot be empty`)
-    .describe(description);
+  const baseSchema = z.string().min(1, `${fieldName} cannot be empty`).describe(description);
 
   return required ? baseSchema : baseSchema.optional();
 }
@@ -71,9 +68,9 @@ function buildEntitySpecificInputSchema(entityType: string): EntityVariantSchema
   const requiredFields = getRequiredFieldsFromSchema(entityType);
   const requiredPreview = requiredFields.slice(0, 10);
   const previewSuffix = requiredFields.length > requiredPreview.length ? ", …" : "";
-  const dataDescription =
-    `Entity data to create (${entityType}). Required fields include: ${requiredPreview.join(", ") ||
-      "See schema"}${previewSuffix}.\n${relationshipDescription}`;
+  const dataDescription = `Entity data to create (${entityType}). Required fields include: ${
+    requiredPreview.join(", ") || "See schema"
+  }${previewSuffix}.\n${relationshipDescription}`;
 
   const shape: ZodRawShape = {
     entityType: z.literal(entityType).describe("Type of entity to create"),
@@ -129,7 +126,61 @@ function createInputSchema(): z.ZodTypeAny {
     .describe("Parameters for creating a DV360 entity");
 }
 
-export const CreateEntityInputSchema = createInputSchema();
+// Full validation schema (used server-side for validation)
+const FullCreateEntityInputSchema = createInputSchema();
+
+// Simplified schema for MCP tool registration (avoids stdio overflow)
+//
+// WHY SIMPLIFIED: Full discriminated union schemas exceed ~1MB, causing EPIPE errors on stdio transport.
+// This simplified version keeps tool registration small (~10KB) while preserving full dynamic functionality.
+//
+// HOW IT WORKS:
+// 1. Tool registration uses generic z.record(z.any()) for data field
+// 2. Descriptions guide AI to fetch full schemas via MCP Resources
+// 3. Server-side validation still uses FullCreateEntityInputSchema (line 133)
+// 4. Both simplified and full schemas use same getSupportedEntityTypesDynamic() - fully dynamic!
+//
+// IMPORTANT: Before attempting to create an entity, fetch the full schema via:
+//   - entity-schema://{entityType} → Complete JSON Schema with all fields
+//   - entity-fields://{entityType} → Flat list of all field paths
+//   - entity-examples://{entityType} → Curated example payloads
+const SimplifiedCreateEntityInputSchema = z
+  .object({
+    entityType: z
+      .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
+      .describe(
+        "Type of entity to create. REQUIRED: Fetch full schema first using MCP Resource: " +
+          "resources/read entity-schema://{entityType} to see required fields and structure."
+      ),
+    partnerId: z.string().optional().describe("Partner ID (required for partner-scoped entities)"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("Advertiser ID (required for advertiser-scoped entities)"),
+    campaignId: z.string().optional().describe("Campaign ID (for campaign-scoped entities)"),
+    insertionOrderId: z.string().optional().describe("Insertion Order ID (for IO-scoped entities)"),
+    lineItemId: z.string().optional().describe("Line Item ID (for line item-scoped entities)"),
+    data: z
+      .record(z.any())
+      .describe(
+        "Entity data to create. IMPORTANT: Required fields vary by entityType. " +
+          "You MUST fetch the schema first:\n" +
+          "  1. resources/read entity-schema://{entityType} → Full schema definition\n" +
+          "  2. resources/read entity-examples://{entityType} → Example payloads\n" +
+          "  3. resources/read entity-fields://{entityType} → Available field paths\n" +
+          "Do NOT attempt to create without fetching the schema first!"
+      ),
+  })
+  .describe(
+    "Create DV360 entity. WORKFLOW:\n" +
+      "1. Fetch schema: resources/read entity-schema://{entityType}\n" +
+      "2. Review examples: resources/read entity-examples://{entityType}\n" +
+      "3. Build data payload with required fields\n" +
+      "4. Call this tool with entityType + data"
+  );
+
+// Export simplified schema for MCP tool registration
+export const CreateEntityInputSchema = SimplifiedCreateEntityInputSchema;
 
 /**
  * Output schema for create entity tool
@@ -152,24 +203,29 @@ export async function createEntityLogic(
   context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
+  // Server-side validation using full schema
+  const validatedInput = FullCreateEntityInputSchema.parse(input);
+
   // Validate entity relationships in data payload
   const missingRelationships = validateEntityRelationships(
-    input.entityType,
-    input.data
+    validatedInput.entityType,
+    validatedInput.data
   );
 
   if (missingRelationships.length > 0) {
-    const hierarchy = getEntityHierarchyPath(input.entityType);
-    const relationshipDesc = generateRelationshipDescription(input.entityType);
+    const hierarchy = getEntityHierarchyPath(validatedInput.entityType);
+    const relationshipDesc = generateRelationshipDescription(validatedInput.entityType);
 
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
-      `Missing required parent relationship field(s) in data: ${missingRelationships.join(", ")}`,
+      `Missing required parent relationship field(s) in data: ${missingRelationships.join(", ")}\n\n` +
+        `To see required fields, fetch: entity-schema://${validatedInput.entityType}`,
       {
-        entityType: input.entityType,
+        entityType: validatedInput.entityType,
         missingFields: missingRelationships,
         hierarchy: hierarchy.join(" > "),
         hint: relationshipDesc,
+        resourceUri: `entity-schema://${validatedInput.entityType}`,
         requestId: context?.requestId,
       }
     );
@@ -179,13 +235,13 @@ export async function createEntityLogic(
   const dv360Service = container.resolve(DV360Service);
 
   // Extract parent IDs using utility
-  const parentIds = extractParentIds(input);
+  const parentIds = extractParentIds(validatedInput);
 
   // Create entity
   const entity = await dv360Service.createEntity(
-    input.entityType,
+    validatedInput.entityType,
     parentIds,
-    input.data,
+    validatedInput.data,
     context
   );
 

@@ -26,8 +26,8 @@ export const allTools = [
   // Tier 1: Entity CRUD (generic tools handle all entity types dynamically)
   listEntitiesTool,
   getEntityTool,
-  createEntityTool,
-  updateEntityTool,
+  createEntityTool, // Now using simplified schema
+  updateEntityTool, // Now using simplified schema
   deleteEntityTool,
   // Tier 2: Workflow Tools
   adjustLineItemBidsTool,

@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360Service.js";
+import { DV360Service } from "../../../services/dv360/DV360-service.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
-} from "../utils/entityMappingDynamic.js";
-import { extractParentIds } from "../utils/entityIdExtraction.js";
-import type { RequestContext } from "../../../utils/internal/requestContext.js";
+} from "../utils/entity-mapping-dynamic.js";
+import { extractParentIds } from "../utils/entity-id-extraction.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_list_entities";
@@ -65,9 +65,7 @@ export const ListEntitiesInputSchema = z
     (data) => {
       // Generate helpful error message with specific missing IDs
       const config = getEntityConfigDynamic(data.entityType);
-      const missingIds = config.parentIds.filter(
-        (id) => !data[id as keyof typeof data]
-      );
+      const missingIds = config.parentIds.filter((id) => !data[id as keyof typeof data]);
 
       return {
         message: `Missing required parent ID(s) for entity type '${data.entityType}': ${missingIds.join(", ")}. Required: ${config.parentIds.join(", ")}`,

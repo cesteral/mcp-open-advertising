@@ -1,6 +1,6 @@
 import type { Logger } from "pino";
-import { McpError } from "./McpError.js";
-import { JsonRpcErrorCode } from "./errorCodes.js";
+import { McpError } from "./mcp-error.js";
+import { JsonRpcErrorCode } from "./error-codes.js";
 
 /**
  * Error handling context
@@ -19,11 +19,7 @@ export class ErrorHandler {
   /**
    * Handle error with logging, sanitization, and conversion to McpError
    */
-  static handleError(
-    error: unknown,
-    errorContext: ErrorContext,
-    logger?: Logger
-  ): McpError {
+  static handleError(error: unknown, errorContext: ErrorContext, logger?: Logger): McpError {
     // If already an McpError, just log and return
     if (error instanceof McpError) {
       logger?.error(
@@ -92,10 +88,7 @@ export class ErrorHandler {
         });
       }
 
-      if (
-        errorMessage.includes("rate limit") ||
-        errorMessage.includes("too many requests")
-      ) {
+      if (errorMessage.includes("rate limit") || errorMessage.includes("too many requests")) {
         return new McpError(JsonRpcErrorCode.RateLimited, error.message, undefined, {
           cause: error,
         });
@@ -114,11 +107,9 @@ export class ErrorHandler {
     }
 
     // Unknown error type
-    return new McpError(
-      JsonRpcErrorCode.InternalError,
-      "An unknown error occurred",
-      { originalError: String(error) }
-    );
+    return new McpError(JsonRpcErrorCode.InternalError, "An unknown error occurred", {
+      originalError: String(error),
+    });
   }
 
   /**

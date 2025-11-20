@@ -1,12 +1,12 @@
 import { z } from "zod";
 import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360Service.js";
+import { DV360Service } from "../../../services/dv360/DV360-service.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
-} from "../utils/entityMappingDynamic.js";
-import { extractEntityIds } from "../utils/entityIdExtraction.js";
-import type { RequestContext } from "../../../utils/internal/requestContext.js";
+} from "../utils/entity-mapping-dynamic.js";
+import { extractEntityIds } from "../utils/entity-id-extraction.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_get_entity";
@@ -33,10 +33,7 @@ export const GetEntityInputSchema = z
       .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
       .describe("Type of entity to retrieve"),
     partnerId: z.string().optional().describe("Partner ID (if required for entity type)"),
-    advertiserId: z
-      .string()
-      .optional()
-      .describe("Advertiser ID (if required for entity type)"),
+    advertiserId: z.string().optional().describe("Advertiser ID (if required for entity type)"),
     campaignId: z.string().optional().describe("Campaign ID (if entity type is campaign)"),
     insertionOrderId: z
       .string()
@@ -73,14 +70,10 @@ export const GetEntityInputSchema = z
       const entityIdField = `${data.entityType}Id`;
 
       // Check which parent IDs are missing
-      const missingParentIds = config.parentIds.filter(
-        (id) => !data[id as keyof typeof data]
-      );
+      const missingParentIds = config.parentIds.filter((id) => !data[id as keyof typeof data]);
 
       // Check if entity ID is missing
-      const missingEntityId = !data[entityIdField as keyof typeof data]
-        ? [entityIdField]
-        : [];
+      const missingEntityId = !data[entityIdField as keyof typeof data] ? [entityIdField] : [];
 
       const allMissingIds = [...missingParentIds, ...missingEntityId];
       const allRequiredIds = [...config.parentIds, entityIdField];

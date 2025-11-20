@@ -10,14 +10,14 @@ import {
   extractRequiredFields,
   hasGeneratedSchema,
   getCommonUpdateMasks,
-} from "./schemaIntrospection.js";
+} from "./schema-introspection.js";
 import {
   getAllEntityConfigs,
   getSupportedEntityTypesDynamic,
   discoverNewEntities,
   suggestApiMetadata,
   getRequiredFieldsFromSchema,
-} from "./entityMappingDynamic.js";
+} from "./entity-mapping-dynamic.js";
 
 console.log("🎯 DV360 MCP - Dynamic Entity System Demo\n");
 console.log("=".repeat(60));
@@ -91,7 +91,9 @@ if (newEntities.length > 0) {
     const suggestion = suggestApiMetadata(entity);
     console.log(`\n  ${entity}:`);
     console.log(`    apiPathTemplate: "${suggestion.apiPathTemplate}"`);
-    console.log(`    parentResourceIds: [${suggestion.parentResourceIds.map((id) => `"${id}"`).join(", ")}]`);
+    console.log(
+      `    parentResourceIds: [${suggestion.parentResourceIds.map((id) => `"${id}"`).join(", ")}]`
+    );
   });
 } else {
   console.log("\n✅ All entities with schemas are configured!");

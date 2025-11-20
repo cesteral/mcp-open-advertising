@@ -183,6 +183,162 @@ Then register in `src/mcp-server/transports/http-transport.ts`:
 
 **Tool Handler Pattern**: The transport layer wraps all tool calls in try/catch blocks. Tool handlers should focus on business logic and let errors propagate up to be caught and formatted by the transport layer.
 
+### Dynamic Schema Pattern (DV360 MCP)
+
+**Problem**: Full discriminated union schemas for all entity types exceed ~1MB, causing EPIPE errors on stdio transport (e.g., Claude Desktop).
+
+**Solution**: Simplified schemas for tool registration + MCP Resources for full schema details.
+
+#### How It Works
+
+```
+Generated Zod Schemas (zod.js)
+    ↓ (runtime introspection)
+schemaIntrospection.ts → getAvailableEntitySchemas()
+    ↓ (pattern matching for entity-like exports)
+entityMappingDynamic.ts → getSupportedEntityTypesDynamic()
+    ↓ (used by BOTH)
+┌─────────────────────┬──────────────────────┐
+│ Simplified Schemas  │  Full Schemas        │
+│ (for MCP tools)     │  (server validation) │
+└─────────────────────┴──────────────────────┘
+         ↓                      ↓
+    MCP Resources (also dynamic)
+```
+
+**Key Features**:
+1. ✅ **Fully Dynamic** - Both simplified and full schemas use `getSupportedEntityTypesDynamic()`
+2. ✅ **Single Source of Truth** - All entity discovery flows through `schemaIntrospection.ts`
+3. ✅ **Stdio Compatible** - Simplified schemas are ~2KB vs ~1MB+ for full schemas
+4. ✅ **Complete Validation** - Server-side still uses full Zod schemas for strict validation
+
+#### MCP Resources for Schema Discovery
+
+AI agents fetch detailed schemas on-demand via MCP Resources:
+
+```typescript
+// Resource URIs (automatically available for all entity types)
+entity-schema://lineItem     → Full JSON Schema with all fields
+entity-fields://lineItem     → Flat list of all field paths (for updateMask)
+entity-examples://lineItem   → Curated example payloads with common patterns
+```
+
+**Workflow for AI Agents**:
+1. See `entityType` enum in simplified tool schema
+2. Fetch `entity-schema://{entityType}` to understand required fields
+3. Review `entity-examples://{entityType}` for common patterns
+4. Build data payload and call tool
+5. Server validates with full schema and returns errors if invalid
+
+#### Adding New Entity Types
+
+When new entity types are added to `generated/schemas/zod.js`:
+1. ✅ `schemaIntrospection.ts` auto-discovers them via pattern matching
+2. ✅ Simplified schemas automatically include them in enum
+3. ✅ Full schemas automatically add them to discriminated union
+4. ✅ MCP Resources automatically provide schema/fields/examples
+5. ✅ **No manual updates needed anywhere**
+
+#### Testing Schema Sizes
+
+Run schema size validation test to ensure schemas stay under stdio limits:
+
+```bash
+cd packages/dv360-mcp
+node tests/test-schema-size.cjs
+```
+
+This validates all tool schemas stay under 100KB (safe stdio limit).
+
+#### When to Use This Pattern
+
+**Use simplified schemas + MCP Resources when**:
+- Tool schema exceeds 100KB (stdio safe limit)
+- You have many entity types (10+) with complex schemas
+- Entity types are dynamically discovered
+- Schema details change frequently
+
+**Alternative: Entity-specific tools** (if Resources UX is poor):
+- Auto-generate dedicated tools per entity type
+- Each tool has full schema for that entity
+- Trade-off: More tools (15-30) vs simpler schemas
+
+## MCP Prompts (Workflow Guidance)
+
+**Purpose**: MCP Prompts provide step-by-step workflow guidance for complex multi-step operations.
+
+### Why Use Prompts?
+
+**Context Efficiency**:
+- **Tools**: Always loaded (~2KB per simplified tool = ~20KB for 10 tools)
+- **Resources**: On-demand only (0KB unless requested)
+- **Prompts**: On-demand only (0KB unless invoked)
+
+**Best Use Cases**:
+- Multi-step workflows requiring specific ordering (e.g., Campaign → IO → Line Items)
+- Operations with DV360-specific gotchas (e.g., campaigns can't be DRAFT, IOs must be DRAFT)
+- Workflows needing validation gates between steps
+- Complex troubleshooting sequences
+
+**When NOT to Use Prompts**:
+- Simple single-tool operations (tool description is sufficient)
+- Reference documentation (use MCP Resources instead)
+
+### Available Prompts (dv360-mcp)
+
+| Prompt | Description | Key Arguments |
+|--------|-------------|---------------|
+| `full_campaign_setup_workflow` | Complete campaign creation (Campaign → IO → Line Items → Targeting) | `advertiserId` (required), `includeTargeting` (optional) |
+
+### Creating New Prompts
+
+Location: `packages/{server-name}/src/mcp-server/prompts/`
+
+```typescript
+// 1. Define prompt metadata
+export const myWorkflowPrompt: Prompt = {
+  name: "my_workflow",
+  description: "Step-by-step guide for...",
+  arguments: [
+    {
+      name: "advertiserId",
+      description: "DV360 Advertiser ID",
+      required: true,
+    },
+  ],
+};
+
+// 2. Define message generator
+export function getMyWorkflowPromptMessage(args?: Record<string, string>): string {
+  const advertiserId = args?.advertiserId || "{advertiserId}";
+
+  return `# My Workflow Guide
+
+## Step 1: ...
+...
+  `;
+}
+```
+
+Then register in `src/mcp-server/prompts/index.ts`:
+```typescript
+export const promptRegistry: Map<string, PromptDefinition> = new Map([
+  [myWorkflowPrompt.name, {
+    prompt: myWorkflowPrompt,
+    generateMessage: getMyWorkflowPromptMessage,
+  }],
+]);
+```
+
+**Prompt Message Guidelines**:
+- Use markdown for formatting (headings, code blocks, tables, lists)
+- Include ⚠️ **GOTCHA** callouts for DV360-specific quirks
+- Provide example tool calls with exact JSON syntax
+- Add success criteria checklists
+- Include common errors table with solutions
+- Reference MCP Resources for schema details
+- Keep tone instructional but friendly
+
 ## Dependency Injection Pattern
 
 All services use **tsyringe** for dependency injection:

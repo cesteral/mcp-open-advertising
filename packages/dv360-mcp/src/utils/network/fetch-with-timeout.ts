@@ -1,4 +1,4 @@
-import type { RequestContext } from "../internal/requestContext.js";
+import type { RequestContext } from "../internal/request-context.js";
 
 /**
  * Fetch with timeout support

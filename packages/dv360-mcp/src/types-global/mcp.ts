@@ -3,18 +3,15 @@
  */
 
 import type { z } from "zod";
-import type { RequestContext } from "../utils/internal/requestContext.js";
-import type {
-  ElicitRequest,
-  ElicitResult,
-} from "@modelcontextprotocol/sdk/types.js";
+import type { RequestContext } from "../utils/internal/request-context.js";
+import type { ElicitRequest, ElicitResult } from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * Tool definition structure
  */
 export interface ToolDefinition<
   TInputSchema extends z.ZodTypeAny = z.ZodTypeAny,
-  TOutputSchema extends z.ZodTypeAny = z.ZodTypeAny
+  TOutputSchema extends z.ZodTypeAny = z.ZodTypeAny,
 > {
   name: string;
   title: string;

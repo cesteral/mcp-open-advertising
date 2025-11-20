@@ -3,9 +3,9 @@ import type { Logger } from "pino";
 import { createLogger } from "@bidshifter/shared";
 import { appConfig } from "../../config/index.js";
 import * as Tokens from "../tokens.js";
-import { rateLimiter } from "../../utils/security/rateLimiter.js";
-import { requestContextService } from "../../utils/internal/requestContext.js";
-import { DV360Service } from "../../services/dv360/DV360Service.js";
+import { rateLimiter } from "../../utils/security/rate-limiter.js";
+import { requestContextService } from "../../utils/internal/request-context.js";
+import { DV360Service } from "../../services/dv360/DV360-service.js";
 
 /**
  * Register core services (Config, Logger, etc.)
