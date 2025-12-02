@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { container } from "tsyringe";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import { BidManagerService } from "../../../services/bid-manager/index.js";
+import * as Tokens from "../../../container/tokens.js";
 
 const TOOL_NAME = "get_historical_metrics";
 const TOOL_TITLE = "Get Historical Metrics";
@@ -22,7 +25,7 @@ export const GetHistoricalMetricsInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
       .describe("End date in YYYY-MM-DD format"),
     granularity: z
-      .enum(["daily", "hourly"])
+      .enum(["daily", "weekly", "monthly"])
       .default("daily")
       .describe("Time series granularity (default: daily)"),
   })
@@ -39,7 +42,7 @@ export const GetHistoricalMetricsOutputSchema = z
       startDate: z.string(),
       endDate: z.string(),
     }),
-    granularity: z.enum(["daily", "hourly"]),
+    granularity: z.enum(["daily", "weekly", "monthly"]),
     timeSeries: z.array(
       z.object({
         date: z.string(),
@@ -48,6 +51,7 @@ export const GetHistoricalMetricsOutputSchema = z
           clicks: z.number(),
           spend: z.number(),
           conversions: z.number(),
+          revenue: z.number(),
         }),
       })
     ),
@@ -73,20 +77,32 @@ export async function getHistoricalMetricsLogic(
   _context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<GetHistoricalMetricsOutput> {
-  // TODO: Implement actual time-series data from Bid Manager API
-  // This is a stub that returns mock data
-  const mockTimeSeries = [
-    {
-      date: input.startDate,
-      metrics: { impressions: 100000, clicks: 500, spend: 1000, conversions: 5 },
-    },
-    {
-      date: input.endDate,
-      metrics: { impressions: 120000, clicks: 600, spend: 1200, conversions: 6 },
-    },
-  ];
+  // Resolve BidManagerService from DI container
+  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
 
-  const summary = mockTimeSeries.reduce(
+  // Fetch historical metrics via Bid Manager API
+  const historicalData = await bidManagerService.getHistoricalMetrics({
+    advertiserId: input.advertiserId,
+    campaignId: input.campaignId,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    granularity: input.granularity,
+  });
+
+  // Transform to output format
+  const timeSeries = historicalData.map((point) => ({
+    date: point.date,
+    metrics: {
+      impressions: point.metrics.impressions,
+      clicks: point.metrics.clicks,
+      spend: point.metrics.spend,
+      conversions: point.metrics.conversions,
+      revenue: point.metrics.revenue,
+    },
+  }));
+
+  // Calculate summary
+  const summary = timeSeries.reduce(
     (acc, point) => ({
       totalImpressions: acc.totalImpressions + point.metrics.impressions,
       totalClicks: acc.totalClicks + point.metrics.clicks,
@@ -105,7 +121,7 @@ export async function getHistoricalMetricsLogic(
       endDate: input.endDate,
     },
     granularity: input.granularity,
-    timeSeries: mockTimeSeries,
+    timeSeries,
     summary,
     timestamp: new Date().toISOString(),
   };

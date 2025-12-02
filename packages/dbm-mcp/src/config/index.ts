@@ -71,10 +71,13 @@ const ConfigSchema = z.object({
   // Rate Limiting
   rateLimitPerMinute: z.number().default(100), // Bid Manager API is less restrictive
 
-  // Report Settings (Bid Manager async reports)
-  reportPollIntervalMs: z.number().default(2000), // Poll every 2 seconds
-  reportPollTimeoutMs: z.number().default(120000), // 2 minutes max wait
+  // Report Settings (Bid Manager async reports with exponential backoff)
   reportCacheTtlMs: z.number().default(300000), // 5 minute cache
+  reportPollMaxRetries: z.number().default(10), // Max polling attempts
+  reportPollInitialDelayMs: z.number().default(2000), // Initial backoff delay (2s)
+  reportPollMaxDelayMs: z.number().default(60000), // Max backoff delay (60s)
+  reportQueryRetries: z.number().default(3), // High-level query retries
+  reportRetryCooldownMs: z.number().default(60000), // Delay before retry (60s)
 
   // BigQuery Configuration (for report storage)
   bigQueryDataset: z.string().default("bidshifter"),
@@ -134,14 +137,23 @@ export function parseConfig(): AppConfig {
       : undefined,
 
     // Report Settings
-    reportPollIntervalMs: process.env.REPORT_POLL_INTERVAL_MS
-      ? Number(process.env.REPORT_POLL_INTERVAL_MS)
-      : undefined,
-    reportPollTimeoutMs: process.env.REPORT_POLL_TIMEOUT_MS
-      ? Number(process.env.REPORT_POLL_TIMEOUT_MS)
-      : undefined,
     reportCacheTtlMs: process.env.REPORT_CACHE_TTL_MS
       ? Number(process.env.REPORT_CACHE_TTL_MS)
+      : undefined,
+    reportPollMaxRetries: process.env.REPORT_POLL_MAX_RETRIES
+      ? Number(process.env.REPORT_POLL_MAX_RETRIES)
+      : undefined,
+    reportPollInitialDelayMs: process.env.REPORT_POLL_INITIAL_DELAY_MS
+      ? Number(process.env.REPORT_POLL_INITIAL_DELAY_MS)
+      : undefined,
+    reportPollMaxDelayMs: process.env.REPORT_POLL_MAX_DELAY_MS
+      ? Number(process.env.REPORT_POLL_MAX_DELAY_MS)
+      : undefined,
+    reportQueryRetries: process.env.REPORT_QUERY_RETRIES
+      ? Number(process.env.REPORT_QUERY_RETRIES)
+      : undefined,
+    reportRetryCooldownMs: process.env.REPORT_RETRY_COOLDOWN_MS
+      ? Number(process.env.REPORT_RETRY_COOLDOWN_MS)
       : undefined,
 
     // BigQuery

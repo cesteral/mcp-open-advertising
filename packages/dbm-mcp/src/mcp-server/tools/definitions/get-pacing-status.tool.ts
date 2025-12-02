@@ -1,11 +1,14 @@
 import { z } from "zod";
+import { container } from "tsyringe";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import { BidManagerService } from "../../../services/bid-manager/index.js";
+import * as Tokens from "../../../container/tokens.js";
 
 const TOOL_NAME = "get_pacing_status";
 const TOOL_TITLE = "Get Pacing Status";
 const TOOL_DESCRIPTION =
-  "Get real-time pacing status for a campaign (actual vs expected delivery)";
+  "Get real-time pacing status for a campaign (actual vs expected delivery). Requires budget and flight dates as inputs.";
 
 /**
  * Input schema
@@ -14,6 +17,16 @@ export const GetPacingStatusInputSchema = z
   .object({
     advertiserId: z.string().min(1).describe("DV360 Advertiser ID"),
     campaignId: z.string().min(1).describe("The campaign ID to check pacing for"),
+    budgetTotal: z.number().min(0).describe("Total campaign budget in advertiser currency"),
+    flightStartDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+      .describe("Campaign flight start date (YYYY-MM-DD)"),
+    flightEndDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+      .describe("Campaign flight end date (YYYY-MM-DD)"),
+    currency: z.string().default("USD").describe("Currency code (default: USD)"),
   })
   .describe("Parameters for checking campaign pacing status");
 
@@ -53,6 +66,16 @@ export type GetPacingStatusInput = z.infer<typeof GetPacingStatusInputSchema>;
 export type GetPacingStatusOutput = z.infer<typeof GetPacingStatusOutputSchema>;
 
 /**
+ * Calculate days between two dates
+ */
+function daysBetween(startDate: string, endDate: string): number {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
  * Tool logic
  */
 export async function getPacingStatusLogic(
@@ -60,50 +83,47 @@ export async function getPacingStatusLogic(
   _context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<GetPacingStatusOutput> {
-  // TODO: Implement actual pacing calculation from Bid Manager data + DV360 budget info
-  // This is a stub that returns mock data
-  const budget = {
-    total: 100000,
-    spent: 45000,
-    remaining: 55000,
-    currency: "USD",
-  };
+  // Resolve BidManagerService from DI container
+  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
 
-  const flight = {
-    startDate: "2025-01-01",
-    endDate: "2025-12-31",
-    daysElapsed: 150,
-    daysRemaining: 215,
-    totalDays: 365,
-  };
+  // Get pacing status from Bid Manager API
+  const pacingStatus = await bidManagerService.getPacingStatus({
+    advertiserId: input.advertiserId,
+    campaignId: input.campaignId,
+    budgetTotal: input.budgetTotal,
+    flightStartDate: input.flightStartDate,
+    flightEndDate: input.flightEndDate,
+  });
 
-  const expectedSpendPercent = (flight.daysElapsed / flight.totalDays) * 100;
-  const actualSpendPercent = (budget.spent / budget.total) * 100;
-  const pacingRatio = actualSpendPercent / expectedSpendPercent;
-
-  let status: "ON_PACE" | "AHEAD" | "BEHIND" | "SEVERELY_BEHIND";
-  if (pacingRatio >= 0.95 && pacingRatio <= 1.05) {
-    status = "ON_PACE";
-  } else if (pacingRatio > 1.05) {
-    status = "AHEAD";
-  } else if (pacingRatio >= 0.8) {
-    status = "BEHIND";
-  } else {
-    status = "SEVERELY_BEHIND";
-  }
+  // Calculate flight details
+  const totalDays = daysBetween(input.flightStartDate, input.flightEndDate) + 1;
+  const today = new Date().toISOString().split("T")[0];
+  const effectiveEndDate = today < input.flightEndDate ? today : input.flightEndDate;
+  const daysElapsed = daysBetween(input.flightStartDate, effectiveEndDate) + 1;
 
   return {
     advertiserId: input.advertiserId,
     campaignId: input.campaignId,
-    campaignName: "Example Campaign",
-    budget,
-    flight,
+    campaignName: `Campaign ${input.campaignId}`,
+    budget: {
+      total: input.budgetTotal,
+      spent: pacingStatus.spendToDate,
+      remaining: Math.max(0, input.budgetTotal - pacingStatus.spendToDate),
+      currency: input.currency,
+    },
+    flight: {
+      startDate: input.flightStartDate,
+      endDate: input.flightEndDate,
+      daysElapsed,
+      daysRemaining: pacingStatus.daysRemaining,
+      totalDays,
+    },
     pacing: {
-      expectedSpendPercent,
-      actualSpendPercent,
-      pacingRatio,
-      status,
-      projectedEndSpend: budget.spent * (flight.totalDays / flight.daysElapsed),
+      expectedSpendPercent: pacingStatus.expectedDeliveryPercent,
+      actualSpendPercent: pacingStatus.actualDeliveryPercent,
+      pacingRatio: pacingStatus.pacingRatio,
+      status: pacingStatus.status,
+      projectedEndSpend: pacingStatus.projectedEndSpend,
     },
     timestamp: new Date().toISOString(),
   };

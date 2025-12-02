@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { allTools } from "./tools/index.js";
+import { allResources } from "./resources/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
 import { ErrorHandler } from "../utils/errors/index.js";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "../utils/telemetry/index.js";
@@ -106,6 +107,44 @@ export async function createMcpServer(logger: Logger): Promise<McpServer> {
   }
 
   logger.info({ toolCount: allTools.length }, "Registered MCP tools");
+
+  // Register all resources
+  // Note: Using manual resource registration - SDK API may change
+  for (const resource of allResources) {
+    // Create a unique name from the URI
+    const resourceName = resource.uri.replace(/[^a-zA-Z0-9]/g, "_");
+
+    server.registerResource(
+      resourceName,
+      resource.uri,
+      {
+        name: resource.name,
+        description: resource.description,
+        mimeType: resource.mimeType,
+      },
+      async () => {
+        logger.info({ resourceUri: resource.uri }, "Handling resource read");
+
+        try {
+          const content = resource.getContent();
+          return {
+            contents: [
+              {
+                uri: resource.uri,
+                mimeType: resource.mimeType,
+                text: content,
+              },
+            ],
+          };
+        } catch (error) {
+          logger.error({ error, resourceUri: resource.uri }, "Failed to read resource");
+          throw error;
+        }
+      }
+    );
+  }
+
+  logger.info({ resourceCount: allResources.length }, "Registered MCP resources");
 
   return server;
 }

@@ -1,6 +1,9 @@
 import { z } from "zod";
+import { container } from "tsyringe";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import { BidManagerService } from "../../../services/bid-manager/index.js";
+import * as Tokens from "../../../container/tokens.js";
 
 const TOOL_NAME = "get_performance_metrics";
 const TOOL_TITLE = "Get Performance Metrics";
@@ -65,15 +68,16 @@ export async function getPerformanceMetricsLogic(
   _context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<GetPerformanceMetricsOutput> {
-  // TODO: Implement actual calculations from Bid Manager report data
-  // This is a stub that returns mock data
-  const delivery = {
-    impressions: 1000000,
-    clicks: 5000,
-    spend: 10000.0,
-    conversions: 50,
-    revenue: 15000.0,
-  };
+  // Resolve BidManagerService from DI container
+  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
+
+  // Fetch performance metrics (includes calculated KPIs)
+  const metrics = await bidManagerService.getPerformanceMetrics({
+    advertiserId: input.advertiserId,
+    campaignId: input.campaignId,
+    startDate: input.startDate,
+    endDate: input.endDate,
+  });
 
   return {
     advertiserId: input.advertiserId,
@@ -82,13 +86,19 @@ export async function getPerformanceMetricsLogic(
       startDate: input.startDate,
       endDate: input.endDate,
     },
-    delivery,
+    delivery: {
+      impressions: metrics.impressions,
+      clicks: metrics.clicks,
+      spend: metrics.spend,
+      conversions: metrics.conversions,
+      revenue: metrics.revenue,
+    },
     performance: {
-      cpm: delivery.impressions > 0 ? (delivery.spend / delivery.impressions) * 1000 : 0,
-      ctr: delivery.impressions > 0 ? (delivery.clicks / delivery.impressions) * 100 : 0,
-      cpc: delivery.clicks > 0 ? delivery.spend / delivery.clicks : 0,
-      cpa: delivery.conversions > 0 ? delivery.spend / delivery.conversions : 0,
-      roas: delivery.spend > 0 ? delivery.revenue / delivery.spend : 0,
+      cpm: metrics.cpm,
+      ctr: metrics.ctr,
+      cpc: metrics.cpc,
+      cpa: metrics.cpa,
+      roas: metrics.roas,
     },
     timestamp: new Date().toISOString(),
   };

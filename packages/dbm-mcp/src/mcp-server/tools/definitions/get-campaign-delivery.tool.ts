@@ -1,6 +1,10 @@
 import { z } from "zod";
+import { container } from "tsyringe";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import { BidManagerService } from "../../../services/bid-manager/index.js";
+import * as Tokens from "../../../container/tokens.js";
+import { calculateCTR, calculateCPM, formatMetricValue } from "../../../utils/metrics.js";
 
 const TOOL_NAME = "get_campaign_delivery";
 const TOOL_TITLE = "Get Campaign Delivery";
@@ -58,8 +62,17 @@ export async function getCampaignDeliveryLogic(
   _context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<GetCampaignDeliveryOutput> {
-  // TODO: Implement actual Bid Manager API v2 query via BidManagerService
-  // This is a stub that returns mock data
+  // Resolve BidManagerService from DI container
+  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
+
+  // Fetch delivery metrics via Bid Manager API
+  const metrics = await bidManagerService.getDeliveryMetrics({
+    advertiserId: input.advertiserId,
+    campaignId: input.campaignId,
+    startDate: input.startDate,
+    endDate: input.endDate,
+  });
+
   return {
     advertiserId: input.advertiserId,
     campaignId: input.campaignId,
@@ -68,11 +81,11 @@ export async function getCampaignDeliveryLogic(
       endDate: input.endDate,
     },
     metrics: {
-      impressions: 1000000,
-      clicks: 5000,
-      spend: 10000.0,
-      conversions: 50,
-      revenue: 15000.0,
+      impressions: metrics.impressions,
+      clicks: metrics.clicks,
+      spend: metrics.spend,
+      conversions: metrics.conversions,
+      revenue: metrics.revenue,
     },
     timestamp: new Date().toISOString(),
   };
@@ -80,31 +93,30 @@ export async function getCampaignDeliveryLogic(
 
 /**
  * Response formatter
+ *
+ * Uses declarative metrics utilities for consistent calculation.
  */
 export function getCampaignDeliveryResponseFormatter(
   result: GetCampaignDeliveryOutput,
   input: GetCampaignDeliveryInput
 ): any[] {
-  const ctr = result.metrics.impressions > 0
-    ? ((result.metrics.clicks / result.metrics.impressions) * 100).toFixed(2)
-    : "0.00";
-  const cpm = result.metrics.impressions > 0
-    ? ((result.metrics.spend / result.metrics.impressions) * 1000).toFixed(2)
-    : "0.00";
+  // Use declarative metrics utilities instead of inline calculations
+  const ctr = calculateCTR(result.metrics.clicks, result.metrics.impressions);
+  const cpm = calculateCPM(result.metrics.spend, result.metrics.impressions);
 
   return [
     {
       type: "text" as const,
       text: `Campaign ${input.campaignId} Delivery (${input.startDate} to ${input.endDate}):
 
-📊 Delivery Metrics:
-• Impressions: ${result.metrics.impressions.toLocaleString()}
-• Clicks: ${result.metrics.clicks.toLocaleString()}
-• CTR: ${ctr}%
-• Spend: $${result.metrics.spend.toFixed(2)}
-• CPM: $${cpm}
-• Conversions: ${result.metrics.conversions}
-• Revenue: $${result.metrics.revenue.toFixed(2)}
+Delivery Metrics:
+- Impressions: ${result.metrics.impressions.toLocaleString()}
+- Clicks: ${result.metrics.clicks.toLocaleString()}
+- CTR: ${formatMetricValue("ctr", ctr)}
+- Spend: $${result.metrics.spend.toFixed(2)}
+- CPM: ${formatMetricValue("cpm", cpm)}
+- Conversions: ${result.metrics.conversions}
+- Revenue: $${result.metrics.revenue.toFixed(2)}
 
 Full Data:
 ${JSON.stringify(result, null, 2)}`,
