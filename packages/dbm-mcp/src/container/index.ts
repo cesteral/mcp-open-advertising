@@ -1,21 +1,26 @@
-import "reflect-metadata";
-import { container } from "tsyringe";
-import { DeliveryService, EntityService } from "@bidshifter/platform-lib";
-import { createLogger } from "@bidshifter/shared";
+import "reflect-metadata"; // MUST be first import
+import type { Logger } from "pino";
+import { registerCoreServices } from "./registrations/core.js";
+import { registerMcpServices } from "./registrations/mcp.js";
+
+let isContainerComposed = false;
 
 /**
- * Configure dependency injection container
+ * Compose the DI container
+ * This function is idempotent - can be called multiple times safely
+ * @param logger Optional logger instance to use (for stdio mode with stderr logging)
  */
-export function setupContainer() {
-  // Register logger
-  const logger = createLogger("dbm-mcp");
-  container.register("Logger", { useValue: logger });
+export function composeContainer(logger?: Logger): void {
+  if (isContainerComposed) {
+    return;
+  }
 
-  // Register services
-  container.register(DeliveryService, { useClass: DeliveryService });
-  container.register(EntityService, { useClass: EntityService });
+  // Register services in dependency order
+  registerCoreServices(logger);
+  registerMcpServices();
 
-  return container;
+  isContainerComposed = true;
 }
 
-export { container };
+// Re-export tokens for convenience
+export * as Tokens from "./tokens.js";

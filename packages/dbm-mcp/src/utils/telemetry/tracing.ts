@@ -13,7 +13,7 @@ import { trace, context, SpanStatusCode, Span, Tracer } from "@opentelemetry/api
  * @param name - Tracer name (typically service or module name)
  * @returns Tracer instance
  */
-export function getTracer(name: string = "dv360-mcp"): Tracer {
+export function getTracer(name: string = "dbm-mcp"): Tracer {
   return trace.getTracer(name);
 }
 
@@ -73,7 +73,6 @@ export async function withToolSpan<T>(
 ): Promise<T> {
   const attributes: Record<string, string | number | boolean> = {
     "tool.name": toolName,
-    "tool.input.entityType": input.entityType || "unknown",
   };
 
   // Add specific attributes based on input
@@ -83,32 +82,38 @@ export async function withToolSpan<T>(
   if (input.campaignId) {
     attributes["tool.input.campaignId"] = input.campaignId;
   }
-  if (input.lineItemId) {
-    attributes["tool.input.lineItemId"] = input.lineItemId;
+  if (input.startDate) {
+    attributes["tool.input.startDate"] = input.startDate;
+  }
+  if (input.endDate) {
+    attributes["tool.input.endDate"] = input.endDate;
   }
 
   return withSpan(`tool.${toolName}`, fn, attributes);
 }
 
 /**
- * Create a span for DV360 API calls
+ * Create a span for Bid Manager API calls
  *
- * @param operation - API operation (e.g., "listEntities", "updateEntity")
- * @param entityType - Entity type being operated on
+ * @param operation - API operation (e.g., "createQuery", "runQuery", "fetchReport")
+ * @param queryId - Query ID (if available)
  * @param fn - API call function
  * @returns API call result
  */
-export async function withDV360ApiSpan<T>(
+export async function withBidManagerApiSpan<T>(
   operation: string,
-  entityType: string,
+  queryId: string | undefined,
   fn: (span: Span) => Promise<T>
 ): Promise<T> {
-  const attributes = {
-    "dv360.operation": operation,
-    "dv360.entityType": entityType,
+  const attributes: Record<string, string | number | boolean> = {
+    "bidmanager.operation": operation,
   };
 
-  return withSpan(`dv360.${operation}`, fn, attributes);
+  if (queryId) {
+    attributes["bidmanager.queryId"] = queryId;
+  }
+
+  return withSpan(`bidmanager.${operation}`, fn, attributes);
 }
 
 /**
@@ -139,4 +144,3 @@ export function recordSpanError(error: Error): void {
     });
   }
 }
-

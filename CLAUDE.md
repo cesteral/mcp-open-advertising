@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BidShifter is an AI-native programmatic advertising optimization platform built on three independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting, campaign management, and optimization intelligence across multiple advertising platforms (DV360, Google Ads, Meta).
+BidShifter is an AI-native programmatic advertising optimization platform built on three independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting, campaign management, and optimization intelligence for DV360 (Display & Video 360).
 
 **Key Architecture Pattern**: Hybrid approach with three MCP servers for external API composability + shared library (`@bidshifter/platform-lib`) for internal performance optimization (avoiding HTTP overhead).
 
@@ -13,9 +13,9 @@ BidShifter is an AI-native programmatic advertising optimization platform built 
 **Phase: Scaffolding Complete ✅**
 
 The monorepo is fully scaffolded with root configuration, shared packages, and three MCP server packages. Current implementations are **stubs** - tools return mock data while awaiting:
-- BigQuery integration for reporting
-- DV360 API and SDF file handling for management
-- Optimization algorithms implementation
+- Bid Manager API v2 integration for DV360 reporting (dbm-mcp)
+- DV360 API and SDF file handling for management (dv360-mcp)
+- Optimization algorithms implementation (bidshifter-mcp)
 
 ## Essential Commands
 
@@ -76,7 +76,7 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 2. **`@bidshifter/platform-lib`** - Shared business logic and services used internally by MCP servers
 
 ### Three MCP Servers
-1. **`@bidshifter/dbm-mcp`** - Cross-platform reporting queries (read-only, BigQuery)
+1. **`@bidshifter/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@bidshifter/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@bidshifter/bidshifter-mcp`** - BidShifter optimization intelligence (orchestrates other servers)
 
@@ -129,7 +129,7 @@ packages/{server-name}/
 Each tool should be a single file in `src/mcp-server/tools/definitions/`:
 
 ```typescript
-// Example: get-campaign-delivery.tool.ts
+// Example: get-campaign-delivery.tool.ts (dbm-mcp)
 import { z } from "zod";
 
 // 1. Define Zod schema for parameters
@@ -137,26 +137,22 @@ export const getCampaignDeliveryParamsSchema = z.object({
   campaignId: z.string(),
   startDate: z.string(),
   endDate: z.string(),
-  platform: z.enum(["dv360", "google_ads", "meta"]),
+  advertiserId: z.string(),
 });
 
 // 2. Define tool metadata for MCP
 export const getCampaignDeliveryTool = {
   name: "get_campaign_delivery",
-  description: "Fetch delivery metrics for a campaign",
+  description: "Fetch DV360 delivery metrics for a campaign via Bid Manager API",
   inputSchema: {
     type: "object",
     properties: {
-      campaignId: { type: "string", description: "Campaign ID" },
+      campaignId: { type: "string", description: "DV360 Campaign ID" },
+      advertiserId: { type: "string", description: "DV360 Advertiser ID" },
       startDate: { type: "string", description: "Start date (YYYY-MM-DD)" },
       endDate: { type: "string", description: "End date (YYYY-MM-DD)" },
-      platform: {
-        type: "string",
-        enum: ["dv360", "google_ads", "meta"],
-        description: "Platform name"
-      },
     },
-    required: ["campaignId", "startDate", "endDate", "platform"],
+    required: ["campaignId", "advertiserId", "startDate", "endDate"],
   },
 };
 
@@ -164,7 +160,7 @@ export const getCampaignDeliveryTool = {
 export async function handleGetCampaignDelivery(
   params: z.infer<typeof getCampaignDeliveryParamsSchema>
 ) {
-  // Implementation here
+  // Implementation uses BidManagerService to create/run report query
   return {
     content: [
       {
@@ -421,19 +417,20 @@ Complete reference of all MCP tools across the three servers:
 
 ### dbm-mcp (Reporting Server) Tools
 
+Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query → run → poll → fetch results).
+
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `get_campaign_delivery` | Fetch delivery metrics for date range | `campaignId`, `startDate`, `endDate`, `platform` |
-| `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS | `campaignId`, `dateRange` |
-| `get_historical_metrics` | Time-series data for trends | `campaignId`, `startDate`, `endDate`, `granularity` |
-| `get_platform_entities` | Fetch campaign hierarchy | `advertiserId`, `platform` |
-| `get_pacing_status` | Real-time pacing calculation | `campaignId` |
+| `get_campaign_delivery` | Fetch DV360 delivery metrics via Bid Manager API | `campaignId`, `advertiserId`, `startDate`, `endDate` |
+| `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS from report data | `campaignId`, `advertiserId`, `dateRange` |
+| `get_historical_metrics` | Time-series data for trends | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
+| `get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
 
 ### dv360-mcp (Management Server) Tools
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `fetch_campaign_entities` | Retrieve full hierarchy from platform | `advertiserId`, `platform` |
+| `fetch_campaign_entities` | Retrieve full DV360 hierarchy | `advertiserId` |
 | `update_campaign_budget` | Change campaign/IO budget | `campaignId`, `newBudget`, `reason` |
 | `update_campaign_dates` | Adjust flight dates | `campaignId`, `startDate`, `endDate` |
 | `update_line_item_status` | Pause/activate line items | `lineItemId`, `status` |
@@ -472,7 +469,8 @@ Complete reference of all MCP tools across the three servers:
 ## Deployment & Infrastructure
 
 - **Platform**: GCP Cloud Run (containerized services)
-- **Data Storage**: BigQuery (delivery metrics, configuration, task state)
+- **Data Storage**: BigQuery (optimization configuration, task state, adjustment history)
+- **Reporting**: Bid Manager API v2 (DV360 delivery metrics - no BigQuery storage needed)
 - **Secrets**: GCP Secret Manager
 - **IaC**: Terraform (in `terraform/` directory)
 - **CI/CD**: Cloud Build (`cloudbuild.yaml`)
@@ -480,7 +478,7 @@ Complete reference of all MCP tools across the three servers:
 ### Cloud Scheduler Jobs (Production)
 
 Automated background jobs that invoke MCP server endpoints:
-- **data-sync** (every 4h) → dbm-mcp reporting server
+- **report-cache-refresh** (every 4h) → dbm-mcp (pre-runs common Bid Manager queries)
 - **optimization-scan** (every 4h) → bidshifter-mcp optimization server
 - **adjustment-executor** (every 30m) → dv360-mcp management server
 - **outcome-tracker** (daily) → bidshifter-mcp optimization server
@@ -544,9 +542,9 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 ## Key Design Principles
 
 1. **Separation of Concerns**: Three MCP servers with distinct responsibilities (reporting, management, optimization)
-2. **Platform Independence**: `dbm-mcp` and `dv360-mcp` are generic and reusable
+2. **DV360 Focus**: All servers are purpose-built for DV360 (Bid Manager API for reporting, DV360 API for management)
 3. **Performance**: Shared library for internal calls (no HTTP overhead)
-4. **Stateless**: No persistent storage in server code (all state in BigQuery)
+4. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
 5. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
 6. **Observability**: Structured logging throughout, designed for OpenTelemetry integration
 

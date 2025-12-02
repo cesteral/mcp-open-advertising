@@ -40,7 +40,7 @@ The **dv360-mcp** server is a production-grade MCP (Model Context Protocol) serv
 
 - **Protocol**: Model Context Protocol (MCP) via HTTP/SSE
 - **Runtime**: Node.js 20+ with TypeScript
-- **Framework**: Hono (HTTP server) + @hono/mcp (SSE transport)
+- **Framework**: Express (HTTP server) + MCP SDK (@modelcontextprotocol/sdk)
 - **DI Container**: tsyringe
 - **Schema Validation**: Zod (runtime) + TypeScript (compile-time)
 - **Observability**: Pino (structured logging) + OpenTelemetry (tracing/metrics)
@@ -87,7 +87,7 @@ This server adopts the **advanced patterns** from `mcp-ts-quickstart-template` w
 │  │ CORS        │→ │ Auth         │→ │ Session     │→ │ MCP      │ │
 │  │ Middleware  │  │ Middleware   │  │ Store       │  │ Server   │ │
 │  └─────────────┘  └──────────────┘  └─────────────┘  └──────────┘ │
-│                        (Hono + @hono/mcp)                            │
+│                        (Express + MCP SDK)                           │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │
                                 ▼
@@ -1053,8 +1053,7 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 
 - **MCP Protocol:**
   - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
-  - [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) - Official SDK
-  - [@hono/mcp](https://www.npmjs.com/package/@hono/mcp) - Hono MCP transport
+  - [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) - Official SDK (includes SSE transport)
 - **Advanced Patterns:**
   - [`mcp-ts-quickstart-template/`](../../mcp-ts-quickstart-template/) - Production-grade patterns
   - [`mcp-ts-quickstart-template/AGENTS.md`](../../mcp-ts-quickstart-template/AGENTS.md) - Development rules

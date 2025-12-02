@@ -51,7 +51,7 @@ async function main() {
     if (transportMode === "stdio") {
       // Stdio mode for local MCP client testing (e.g., Claude Desktop)
       logger.info("Starting in stdio mode");
-      const server = createMcpServer(logger);
+      const server = await createMcpServer(logger);
       await runStdioServer(server, logger);
     } else {
       // HTTP/SSE mode for web clients and production

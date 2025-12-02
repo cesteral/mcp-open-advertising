@@ -41,7 +41,7 @@ export function createMcpHttpServer(
     logger.info("SSE connection request");
 
     try {
-      const server = createMcpServer(logger);
+      const server = await createMcpServer(logger);
       const transport = new SSEServerTransport("/mcp", res);
 
       activeTransports.set(transport.sessionId, transport);

@@ -1,113 +1,98 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import express, {
+  type Application,
+  type Request,
+  type Response,
+} from "express";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
-import express, { type Application } from "express";
-import { createLogger, formatErrorForMcp } from "@bidshifter/shared";
-import {
-  getCampaignDeliveryTool,
-  handleGetCampaignDelivery,
-  getCampaignDeliveryParamsSchema,
-  getPerformanceMetricsTool,
-  handleGetPerformanceMetrics,
-  getPerformanceMetricsParamsSchema,
-  getHistoricalMetricsTool,
-  handleGetHistoricalMetrics,
-  getHistoricalMetricsParamsSchema,
-  getPlatformEntitiesTool,
-  handleGetPlatformEntities,
-  getPlatformEntitiesParamsSchema,
-  getPacingStatusTool,
-  handleGetPacingStatus,
-  getPacingStatusParamsSchema,
-} from "../tools/index.js";
-
-const logger = createLogger("dbm-mcp:http-transport");
+import type { Logger } from "pino";
+import type { AppConfig } from "../../config/index.js";
+import { createMcpServer } from "../server.js";
 
 /**
- * Create and configure the MCP server with HTTP/SSE transport
+ * Creates an Express application configured to expose the MCP server over HTTP + SSE.
+ *
+ * The implementation mirrors the behaviour previously embedded in the top-level
+ * index entry point but encapsulates it behind a reusable function so that
+ * transports can be composed in a consistent way across MCP services.
  */
-export function createMcpHttpServer(): Application {
+export function createMcpHttpServer(
+  config: AppConfig,
+  logger: Logger
+): Application {
   const app = express();
+  const activeTransports = new Map<string, SSEServerTransport>();
+
   app.use(express.json());
+  app.use(express.text());
 
-  // Health check endpoint
-  app.get("/health", (_req, res) => {
-    res.json({ status: "healthy", service: "dbm-mcp" });
+  // Health check endpoint used by Cloud Run and other monitors.
+  app.get("/health", (_req: Request, res: Response) => {
+    res.json({
+      status: "healthy",
+      service: config.serviceName,
+      version: "1.0.0",
+      mode: "http-sse",
+      activeSessions: activeTransports.size,
+    });
   });
 
-  // MCP SSE endpoint
-  app.get("/sse", async (_req, res) => {
-    logger.info("New SSE connection");
+  // Establish an SSE session and connect it to a fresh MCP server instance.
+  app.get("/mcp", async (_req: Request, res: Response) => {
+    logger.info("SSE connection request");
 
-    const transport = new SSEServerTransport("/message", res);
-    const server = new Server(
-      {
-        name: "dbm-mcp",
-        version: "1.0.0",
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
+    try {
+      const server = await createMcpServer(logger);
+      const transport = new SSEServerTransport("/mcp", res);
+
+      activeTransports.set(transport.sessionId, transport);
+
+      transport.onclose = () => {
+        logger.info({ sessionId: transport.sessionId }, "SSE connection closed");
+        activeTransports.delete(transport.sessionId);
+      };
+
+      await server.connect(transport);
+
+      logger.info(
+        { sessionId: transport.sessionId, activeSessions: activeTransports.size },
+        "SSE connection established"
+      );
+    } catch (error) {
+      logger.error({ error }, "Failed to establish SSE connection");
+
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to establish SSE connection" });
       }
-    );
-
-    // Register all tools
-    server.setRequestHandler("tools/list" as any, async () => ({
-      tools: [
-        getCampaignDeliveryTool,
-        getPerformanceMetricsTool,
-        getHistoricalMetricsTool,
-        getPlatformEntitiesTool,
-        getPacingStatusTool,
-      ],
-    }));
-
-    // Handle tool calls
-    server.setRequestHandler("tools/call" as any, async (request: any) => {
-      try {
-        const { name, arguments: args } = request.params;
-
-          logger.info({ tool: name, args }, "Tool called");
-
-          switch (name) {
-            case "get_campaign_delivery": {
-              const params = getCampaignDeliveryParamsSchema.parse(args);
-              return await handleGetCampaignDelivery(params);
-            }
-            case "get_performance_metrics": {
-              const params = getPerformanceMetricsParamsSchema.parse(args);
-              return await handleGetPerformanceMetrics(params);
-            }
-            case "get_historical_metrics": {
-              const params = getHistoricalMetricsParamsSchema.parse(args);
-              return await handleGetHistoricalMetrics(params);
-            }
-            case "get_platform_entities": {
-              const params = getPlatformEntitiesParamsSchema.parse(args);
-              return await handleGetPlatformEntities(params);
-            }
-            case "get_pacing_status": {
-              const params = getPacingStatusParamsSchema.parse(args);
-              return await handleGetPacingStatus(params);
-            }
-            default:
-              throw new Error(`Unknown tool: ${name}`);
-          }
-        } catch (error) {
-          logger.error({ error }, "Tool execution failed");
-          return formatErrorForMcp(error);
-        }
-      }
-    );
-
-    await server.connect(transport);
-    logger.info("MCP server connected via SSE");
+    }
   });
 
-  // POST endpoint for direct MCP protocol messages
-  app.post("/message", async (_req, res) => {
-    // This would handle direct JSON-RPC messages if needed
-    res.status(501).json({ error: "Use SSE endpoint at /sse" });
+  // Accept JSON-RPC payloads for the active SSE session.
+  app.post("/mcp", async (req: Request, res: Response): Promise<void> => {
+    const sessionId = req.query.sessionId as string | undefined;
+
+    if (!sessionId) {
+      logger.warn("POST request missing sessionId");
+      res.status(400).json({ error: "Missing sessionId query parameter" });
+      return;
+    }
+
+    const transport = activeTransports.get(sessionId);
+    if (!transport) {
+      logger.warn({ sessionId }, "Session not found");
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    try {
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      await transport.handlePostMessage(req, res, body);
+    } catch (error) {
+      logger.error({ error, sessionId }, "Failed to handle POST message");
+
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Failed to process message" });
+      }
+    }
   });
 
   return app;

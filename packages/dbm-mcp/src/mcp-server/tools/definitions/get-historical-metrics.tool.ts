@@ -1,73 +1,168 @@
 import { z } from "zod";
-import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
+import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 
-export const getHistoricalMetricsTool: Tool = {
-  name: "get_historical_metrics",
-  description: "Fetch time-series historical metrics for trend analysis",
-  inputSchema: {
-    type: "object",
-    properties: {
-      campaignId: {
-        type: "string",
-        description: "The campaign ID to fetch historical data for",
-      },
-      startDate: {
-        type: "string",
-        description: "Start date in YYYY-MM-DD format",
-        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-      },
-      endDate: {
-        type: "string",
-        description: "End date in YYYY-MM-DD format",
-        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-      },
-      granularity: {
-        type: "string",
-        enum: ["daily", "hourly"],
-        description: "Time series granularity (default: daily)",
-      },
+const TOOL_NAME = "get_historical_metrics";
+const TOOL_TITLE = "Get Historical Metrics";
+const TOOL_DESCRIPTION = "Fetch time-series historical metrics for trend analysis";
+
+/**
+ * Input schema
+ */
+export const GetHistoricalMetricsInputSchema = z
+  .object({
+    advertiserId: z.string().min(1).describe("DV360 Advertiser ID"),
+    campaignId: z.string().min(1).describe("The campaign ID to fetch historical data for"),
+    startDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+      .describe("Start date in YYYY-MM-DD format"),
+    endDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+      .describe("End date in YYYY-MM-DD format"),
+    granularity: z
+      .enum(["daily", "hourly"])
+      .default("daily")
+      .describe("Time series granularity (default: daily)"),
+  })
+  .describe("Parameters for fetching historical metrics");
+
+/**
+ * Output schema
+ */
+export const GetHistoricalMetricsOutputSchema = z
+  .object({
+    advertiserId: z.string(),
+    campaignId: z.string(),
+    dateRange: z.object({
+      startDate: z.string(),
+      endDate: z.string(),
+    }),
+    granularity: z.enum(["daily", "hourly"]),
+    timeSeries: z.array(
+      z.object({
+        date: z.string(),
+        metrics: z.object({
+          impressions: z.number(),
+          clicks: z.number(),
+          spend: z.number(),
+          conversions: z.number(),
+        }),
+      })
+    ),
+    summary: z.object({
+      totalImpressions: z.number(),
+      totalClicks: z.number(),
+      totalSpend: z.number(),
+      totalConversions: z.number(),
+      dataPoints: z.number(),
+    }),
+    timestamp: z.string().datetime(),
+  })
+  .describe("Historical metrics time-series result");
+
+export type GetHistoricalMetricsInput = z.infer<typeof GetHistoricalMetricsInputSchema>;
+export type GetHistoricalMetricsOutput = z.infer<typeof GetHistoricalMetricsOutputSchema>;
+
+/**
+ * Tool logic
+ */
+export async function getHistoricalMetricsLogic(
+  input: GetHistoricalMetricsInput,
+  _context: RequestContext,
+  _sdkContext?: SdkContext
+): Promise<GetHistoricalMetricsOutput> {
+  // TODO: Implement actual time-series data from Bid Manager API
+  // This is a stub that returns mock data
+  const mockTimeSeries = [
+    {
+      date: input.startDate,
+      metrics: { impressions: 100000, clicks: 500, spend: 1000, conversions: 5 },
     },
-    required: ["campaignId", "startDate", "endDate"],
-  },
-};
+    {
+      date: input.endDate,
+      metrics: { impressions: 120000, clicks: 600, spend: 1200, conversions: 6 },
+    },
+  ];
 
-export const getHistoricalMetricsParamsSchema = z.object({
-  campaignId: z.string().min(1),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  granularity: z.enum(["daily", "hourly"]).default("daily"),
-});
+  const summary = mockTimeSeries.reduce(
+    (acc, point) => ({
+      totalImpressions: acc.totalImpressions + point.metrics.impressions,
+      totalClicks: acc.totalClicks + point.metrics.clicks,
+      totalSpend: acc.totalSpend + point.metrics.spend,
+      totalConversions: acc.totalConversions + point.metrics.conversions,
+      dataPoints: acc.dataPoints + 1,
+    }),
+    { totalImpressions: 0, totalClicks: 0, totalSpend: 0, totalConversions: 0, dataPoints: 0 }
+  );
 
-export type GetHistoricalMetricsParams = z.infer<typeof getHistoricalMetricsParamsSchema>;
-
-export async function handleGetHistoricalMetrics(params: GetHistoricalMetricsParams) {
   return {
-    content: [
-      {
-        type: "text" as const,
-        text: JSON.stringify(
-          {
-            campaignId: params.campaignId,
-            dateRange: { startDate: params.startDate, endDate: params.endDate },
-            granularity: params.granularity,
-            timeSeries: [
-              {
-                date: params.startDate,
-                metrics: {
-                  impressions: 100000,
-                  clicks: 500,
-                  spend: 1000,
-                  conversions: 5,
-                },
-              },
-            ],
-            message: "Stub implementation - actual time-series data pending",
-          },
-          null,
-          2
-        ),
-      },
-    ],
-    isError: false,
+    advertiserId: input.advertiserId,
+    campaignId: input.campaignId,
+    dateRange: {
+      startDate: input.startDate,
+      endDate: input.endDate,
+    },
+    granularity: input.granularity,
+    timeSeries: mockTimeSeries,
+    summary,
+    timestamp: new Date().toISOString(),
   };
 }
+
+/**
+ * Response formatter
+ */
+export function getHistoricalMetricsResponseFormatter(
+  result: GetHistoricalMetricsOutput,
+  input: GetHistoricalMetricsInput
+): any[] {
+  const trendsText = result.timeSeries
+    .slice(0, 5)
+    .map(
+      (point) =>
+        `  ${point.date}: ${point.metrics.impressions.toLocaleString()} impr, $${point.metrics.spend.toFixed(2)} spend`
+    )
+    .join("\n");
+
+  return [
+    {
+      type: "text" as const,
+      text: `Campaign ${input.campaignId} Historical Metrics (${input.startDate} to ${input.endDate}):
+
+📈 Summary (${result.summary.dataPoints} data points, ${result.granularity}):
+• Total Impressions: ${result.summary.totalImpressions.toLocaleString()}
+• Total Clicks: ${result.summary.totalClicks.toLocaleString()}
+• Total Spend: $${result.summary.totalSpend.toFixed(2)}
+• Total Conversions: ${result.summary.totalConversions}
+
+📊 Trend (first 5 periods):
+${trendsText}
+
+Full Data:
+${JSON.stringify(result, null, 2)}`,
+    },
+  ];
+}
+
+/**
+ * Tool definition (rich pattern)
+ */
+export const getHistoricalMetricsTool: ToolDefinition<
+  typeof GetHistoricalMetricsInputSchema,
+  typeof GetHistoricalMetricsOutputSchema
+> = {
+  name: TOOL_NAME,
+  title: TOOL_TITLE,
+  description: TOOL_DESCRIPTION,
+  inputSchema: GetHistoricalMetricsInputSchema,
+  outputSchema: GetHistoricalMetricsOutputSchema,
+  annotations: {
+    readOnlyHint: true,
+    openWorldHint: false,
+    idempotentHint: true,
+  },
+  logic: getHistoricalMetricsLogic,
+  responseFormatter: getHistoricalMetricsResponseFormatter,
+};
