@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Bid Manager API Reference",
+  "description": "Schema for Bid Manager API filters, metrics, and report types reference data",
+  "type": "object",
+  "required": ["version", "filters", "metrics", "reportTypes", "dataRanges", "categories"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "description": "Version of the reference data"
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date",
+      "description": "Date when the reference was last updated"
+    },
+    "source": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL of the source documentation"
+    },
+    "filters": {
+      "type": "object",
+      "description": "All available filter/dimension types",
+      "patternProperties": {
+        "^FILTER_": {
+          "$ref": "#/definitions/FilterDefinition"
+        }
+      },
+      "additionalProperties": false
+    },
+    "metrics": {
+      "type": "object",
+      "description": "All available metric types",
+      "patternProperties": {
+        "^METRIC_": {
+          "$ref": "#/definitions/MetricDefinition"
+        }
+      },
+      "additionalProperties": false
+    },
+    "reportTypes": {
+      "type": "object",
+      "description": "Available report types",
+      "additionalProperties": {
+        "$ref": "#/definitions/ReportTypeDefinition"
+      }
+    },
+    "dataRanges": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Available date range presets"
+    },
+    "categories": {
+      "type": "object",
+      "properties": {
+        "filters": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "metrics": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "required": ["filters", "metrics"]
+    }
+  },
+  "definitions": {
+    "FilterDefinition": {
+      "type": "object",
+      "required": ["displayName", "reportBuilderName", "category", "description", "usage"],
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable display name"
+        },
+        "reportBuilderName": {
+          "type": "string",
+          "description": "Name shown in DV360 Report Builder UI"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category for organizing filters"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what this filter does"
+        },
+        "usage": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["filter", "groupBy"]
+          },
+          "description": "How this filter can be used"
+        },
+        "reportTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Report types this filter is compatible with"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or warnings"
+        }
+      }
+    },
+    "MetricDefinition": {
+      "type": "object",
+      "required": ["displayName", "reportBuilderName", "category", "description"],
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable display name"
+        },
+        "reportBuilderName": {
+          "type": "string",
+          "description": "Name shown in DV360 Report Builder UI"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category for organizing metrics"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what this metric measures"
+        },
+        "dataType": {
+          "type": "string",
+          "enum": ["integer", "decimal", "percentage", "currency", "string"],
+          "description": "Data type of the metric value"
+        },
+        "reportTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Report types this metric is compatible with"
+        },
+        "aggregation": {
+          "type": "string",
+          "enum": ["sum", "average", "calculated", "max", "min"],
+          "description": "How this metric is aggregated"
+        },
+        "formula": {
+          "type": "string",
+          "description": "Formula for calculated metrics"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes or warnings"
+        }
+      }
+    },
+    "ReportTypeDefinition": {
+      "type": "object",
+      "required": ["displayName", "description"],
+      "properties": {
+        "displayName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

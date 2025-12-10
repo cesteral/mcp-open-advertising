@@ -691,4 +691,183 @@ export class BidManagerService {
     const delivery = await this.getDeliveryMetrics(params);
     return calculatePerformanceMetrics(delivery);
   }
+
+  /**
+   * Execute a custom query with user-specified filters, metrics, and groupBys
+   *
+   * This method accepts dynamic parameters allowing flexible query construction
+   * for any combination of Bid Manager API filters and metrics.
+   */
+  async executeCustomQuery(params: {
+    reportType: string;
+    groupBys: string[];
+    metrics: string[];
+    filters?: Array<{ type: string; value: string }>;
+    dateRange: { preset?: string; startDate?: string; endDate?: string };
+    outputFormat?: "structured" | "csv";
+  }): Promise<{
+    queryId: string;
+    reportId: string;
+    status: string;
+    rowCount: number;
+    columns: string[];
+    data: Record<string, unknown>[] | string;
+  }> {
+    this.logger.info(
+      {
+        reportType: params.reportType,
+        groupBysCount: params.groupBys.length,
+        metricsCount: params.metrics.length,
+        filtersCount: params.filters?.length || 0,
+      },
+      "Executing custom query"
+    );
+
+    // Build date range config
+    let dataRangeConfig: QuerySpec["metadata"]["dataRange"];
+
+    if (params.dateRange.preset) {
+      // Use preset range
+      dataRangeConfig = {
+        range: params.dateRange.preset as "LAST_7_DAYS" | "LAST_30_DAYS" | "MONTH_TO_DATE",
+      };
+    } else if (params.dateRange.startDate && params.dateRange.endDate) {
+      // Use custom date range
+      dataRangeConfig = {
+        range: "CUSTOM_DATES",
+        customStartDate: parseDateString(params.dateRange.startDate),
+        customEndDate: parseDateString(params.dateRange.endDate),
+      };
+    } else {
+      throw new BidManagerError(
+        "Invalid dateRange: provide either preset or startDate/endDate"
+      );
+    }
+
+    // Build query specification with user-provided parameters
+    // Note: Types are cast because we accept strings for flexibility
+    // Validation happens at the tool level before calling this method
+    const querySpec: QuerySpec = {
+      metadata: {
+        title: `Custom query - ${new Date().toISOString()}`,
+        dataRange: dataRangeConfig,
+        format: "CSV",
+      },
+      params: {
+        type: params.reportType as QuerySpec["params"]["type"],
+        groupBys: params.groupBys as QuerySpec["params"]["groupBys"],
+        metrics: params.metrics as QuerySpec["params"]["metrics"],
+        filters: params.filters as QuerySpec["params"]["filters"],
+      },
+    };
+
+    // Execute with retry and exponential backoff
+    const gcsPath = await this.executeQueryWithRetry(querySpec);
+    const csvData = await this.fetchReportData(gcsPath);
+
+    // Parse results based on output format
+    if (params.outputFormat === "csv") {
+      // Return raw CSV
+      const lines = csvData.trim().split("\n");
+      const columns = lines[0]?.split(",").map((c) => c.trim()) || [];
+
+      this.logger.info(
+        { rowCount: lines.length - 1, columnsCount: columns.length },
+        "Custom query completed (CSV format)"
+      );
+
+      return {
+        queryId: "custom_query",
+        reportId: `report_${Date.now()}`,
+        status: "DONE",
+        rowCount: lines.length - 1,
+        columns,
+        data: csvData,
+      };
+    }
+
+    // Parse CSV to structured data
+    const records = this.parseCSVToRecords(csvData);
+
+    this.logger.info(
+      { rowCount: records.length, columnsCount: Object.keys(records[0] || {}).length },
+      "Custom query completed (structured format)"
+    );
+
+    return {
+      queryId: "custom_query",
+      reportId: `report_${Date.now()}`,
+      status: "DONE",
+      rowCount: records.length,
+      columns: records.length > 0 ? Object.keys(records[0]) : [],
+      data: records,
+    };
+  }
+
+  /**
+   * Parse CSV string to array of records
+   */
+  private parseCSVToRecords(csv: string): Record<string, unknown>[] {
+    const lines = csv.trim().split("\n");
+    if (lines.length < 2) return [];
+
+    // Parse header - handle quoted fields
+    const headers = this.parseCSVLine(lines[0]);
+    const records: Record<string, unknown>[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      const values = this.parseCSVLine(line);
+      const record: Record<string, unknown> = {};
+
+      for (let j = 0; j < headers.length; j++) {
+        const header = headers[j].trim();
+        const value = values[j]?.trim() || "";
+
+        // Try to parse as number
+        if (value !== "" && !isNaN(Number(value))) {
+          record[header] = Number(value);
+        } else {
+          record[header] = value;
+        }
+      }
+
+      records.push(record);
+    }
+
+    return records;
+  }
+
+  /**
+   * Parse a single CSV line, handling quoted fields
+   */
+  private parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if (char === '"') {
+        // Check for escaped quote
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        result.push(current);
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+
+    result.push(current);
+    return result;
+  }
 }
