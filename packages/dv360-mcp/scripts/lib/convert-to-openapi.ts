@@ -394,7 +394,20 @@ const OUTPUT_ONLY_PATTERNS: ReadonlyArray<RegExp> = [
 const REQUIRED_FIELDS_OVERRIDES: Record<
   string,
   { add?: string[]; remove?: string[]; reason?: string }
-> = {};
+> = {
+  PartnerRevenueModel: {
+    remove: ['markupAmount'],
+    reason: 'DV360 API omits markupAmount in GET responses when set to default/zero',
+  },
+  LineItemBudget: {
+    remove: ['budgetAllocationType'],
+    reason: 'DV360 API may omit budgetAllocationType for certain budget configurations',
+  },
+  TargetingExpansionConfig: {
+    remove: ['enableOptimizedTargeting'],
+    reason: 'DV360 API may omit enableOptimizedTargeting when optimized targeting is disabled',
+  },
+};
 
 /**
  * Check if a field description indicates it's output-only

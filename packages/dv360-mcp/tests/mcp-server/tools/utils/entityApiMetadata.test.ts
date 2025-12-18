@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { STATIC_ENTITY_API_METADATA } from "../entityMappingDynamic.js";
+import { STATIC_ENTITY_API_METADATA } from "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js";
 
 type DocPathExpectation = {
   readonly apiPath: string;

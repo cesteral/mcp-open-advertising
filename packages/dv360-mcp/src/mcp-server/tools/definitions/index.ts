@@ -13,6 +13,13 @@ export { deleteEntityTool } from "./delete-entity.tool.js";
 export { adjustLineItemBidsTool } from "./adjust-line-item-bids.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 
+// Tier 3: Targeting Tools (CRUD for assignedTargetingOptions)
+export { listAssignedTargetingTool } from "./list-assigned-targeting.tool.js";
+export { getAssignedTargetingTool } from "./get-assigned-targeting.tool.js";
+export { createAssignedTargetingTool } from "./create-assigned-targeting.tool.js";
+export { deleteAssignedTargetingTool } from "./delete-assigned-targeting.tool.js";
+export { validateTargetingConfigTool } from "./validate-targeting-config.tool.js";
+
 // Export all tools as an array for easy registration
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -21,6 +28,11 @@ import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
 import { adjustLineItemBidsTool } from "./adjust-line-item-bids.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
+import { listAssignedTargetingTool } from "./list-assigned-targeting.tool.js";
+import { getAssignedTargetingTool } from "./get-assigned-targeting.tool.js";
+import { createAssignedTargetingTool } from "./create-assigned-targeting.tool.js";
+import { deleteAssignedTargetingTool } from "./delete-assigned-targeting.tool.js";
+import { validateTargetingConfigTool } from "./validate-targeting-config.tool.js";
 
 export const allTools = [
   // Tier 1: Entity CRUD (generic tools handle all entity types dynamically)
@@ -32,4 +44,10 @@ export const allTools = [
   // Tier 2: Workflow Tools
   adjustLineItemBidsTool,
   bulkUpdateStatusTool,
+  // Tier 3: Targeting Tools (assignedTargetingOptions CRUD)
+  listAssignedTargetingTool,
+  getAssignedTargetingTool,
+  createAssignedTargetingTool,
+  deleteAssignedTargetingTool,
+  validateTargetingConfigTool,
 ];

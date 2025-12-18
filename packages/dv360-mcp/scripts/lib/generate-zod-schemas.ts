@@ -39,10 +39,11 @@ export function generateZodSchemas(spec: OpenAPISpec): string {
   }
 
   // Export all schemas as a single object for convenience
+  // Note: Explicit type annotation avoids TS7056 "inferred type exceeds maximum length" error
   lines.push('/**');
   lines.push(' * All schemas exported as a single object');
   lines.push(' */');
-  lines.push('export const schemas = {');
+  lines.push('export const schemas: Record<string, z.ZodTypeAny> = {');
   for (const schemaName of schemaNames) {
     lines.push(`  ${schemaName},`);
   }

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { z } from "zod";
 import { allTools } from "./tools/definitions/index.js";
 import { resourceRegistry } from "./resources/index.js";
 import { getAllPrompts, getPromptDefinition } from "./prompts/index.js";
@@ -9,6 +9,26 @@ import { ErrorHandler } from "../utils/errors/index.js";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "../utils/telemetry/index.js";
 import type { Logger } from "pino";
 import type { SdkContext } from "../types-global/mcp.js";
+
+/**
+ * Extract the raw shape from a Zod schema
+ * The MCP SDK expects ZodRawShape (the shape object), not a full Zod schema
+ */
+function extractZodShape(schema: z.ZodTypeAny): z.ZodRawShape {
+  // Unwrap effects (refinements, transforms, etc.)
+  let current = schema;
+  while (current instanceof z.ZodEffects) {
+    current = current._def.schema;
+  }
+
+  // Extract shape from ZodObject
+  if (current instanceof z.ZodObject) {
+    return current.shape;
+  }
+
+  // Fallback for non-object schemas
+  return {};
+}
 
 /**
  * Create and configure MCP server instance
@@ -25,14 +45,15 @@ export async function createMcpServer(logger: Logger): Promise<McpServer> {
 
   // Register all tools
   for (const tool of allTools) {
+    // Extract the raw shape from the Zod schema
+    // MCP SDK v1.21+ expects ZodRawShape, not JSON schema
+    const inputShape = extractZodShape(tool.inputSchema);
+
     server.registerTool(
       tool.name,
       {
         description: tool.description,
-        inputSchema: zodToJsonSchema(tool.inputSchema, {
-          target: "jsonSchema7",
-          markdownDescription: true,
-        }) as any,
+        inputSchema: inputShape,
       },
       async (args: unknown) => {
         logger.info({ toolName: tool.name, arguments: args }, "Handling tool call");
@@ -112,75 +133,40 @@ export async function createMcpServer(logger: Logger): Promise<McpServer> {
   }
 
   // Register all resources
-  // Note: Using manual resource registration due to McpServer's registerResource API
-  // being unclear in SDK v1.0.2. May need to update when SDK stabilizes.
+  // Each resource template is registered once - the list() function provides
+  // discovery info for clients, but registration happens once per template
   const resources = resourceRegistry.getAllResources();
   for (const resource of resources) {
-    // For resources with list capability, register multiple URIs
-    if (resource.list) {
-      const listItems = await resource.list();
-      for (const item of listItems) {
-        // Register each specific resource URI
-        (server as any).registerResource?.(
-          item.uri.replace(/[^a-zA-Z0-9]/g, "_"),
-          resource.uriTemplate,
-          {
-            title: item.name,
-            description: item.description || resource.description,
-            mimeType: item.mimeType || resource.mimeType || "application/json",
-          },
-          async (uri: any) => {
-            logger.info({ uri: uri.href }, "Reading resource");
-            const match = resourceRegistry.findResourceByUri(uri.href);
-            if (!match) {
-              throw new Error(`Resource not found: ${uri.href}`);
-            }
-            try {
-              const content = await match.resource.read(match.params);
-              return {
-                contents: [content],
-              };
-            } catch (error) {
-              logger.error({ uri: uri.href, error }, "Failed to read resource");
-              const mcpError = ErrorHandler.handleError(
-                error,
-                { operation: "resource:read", context: { uri: uri.href } },
-                logger
-              );
-              throw new Error(`Failed to read resource: ${mcpError.message}`);
-            }
-          }
-        );
-      }
-    } else {
-      // Register single resource
-      (server as any).registerResource?.(
-        resource.uriTemplate.replace(/[^a-zA-Z0-9]/g, "_"),
-        resource.uriTemplate,
-        {
-          title: resource.name,
-          description: resource.description,
-          mimeType: resource.mimeType || "application/json",
-        },
-        async (uri: any, params: any) => {
-          logger.info({ uri: uri.href, params }, "Reading resource");
-          try {
-            const content = await resource.read(params);
-            return {
-              contents: [content],
-            };
-          } catch (error) {
-            logger.error({ uri: uri.href, error }, "Failed to read resource");
-            const mcpError = ErrorHandler.handleError(
-              error,
-              { operation: "resource:read", context: { uri: uri.href, params } },
-              logger
-            );
-            throw new Error(`Failed to read resource: ${mcpError.message}`);
-          }
+    (server as any).registerResource?.(
+      resource.uriTemplate.replace(/[^a-zA-Z0-9]/g, "_"),
+      resource.uriTemplate,
+      {
+        title: resource.name,
+        description: resource.description,
+        mimeType: resource.mimeType || "application/json",
+      },
+      async (uri: any, params: any) => {
+        logger.info({ uri: uri.href, params }, "Reading resource");
+        const match = resourceRegistry.findResourceByUri(uri.href);
+        if (!match) {
+          throw new Error(`Resource not found: ${uri.href}`);
         }
-      );
-    }
+        try {
+          const content = await match.resource.read(match.params);
+          return {
+            contents: [content],
+          };
+        } catch (error) {
+          logger.error({ uri: uri.href, error }, "Failed to read resource");
+          const mcpError = ErrorHandler.handleError(
+            error,
+            { operation: "resource:read", context: { uri: uri.href } },
+            logger
+          );
+          throw new Error(`Failed to read resource: ${mcpError.message}`);
+        }
+      }
+    );
   }
 
   // Register all prompts

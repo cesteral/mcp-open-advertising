@@ -6,6 +6,7 @@ import * as Tokens from "../tokens.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 import { requestContextService } from "../../utils/internal/request-context.js";
 import { DV360Service } from "../../services/dv360/DV360-service.js";
+import { TargetingService } from "../../services/targeting/index.js";
 
 /**
  * Register core services (Config, Logger, etc.)
@@ -29,4 +30,7 @@ export function registerCoreServices(logger?: Logger): void {
 
   // DV360 Service (singleton class)
   container.registerSingleton(Tokens.DV360Service, DV360Service);
+
+  // Targeting Service (singleton class)
+  container.registerSingleton(Tokens.TargetingService, TargetingService);
 }

@@ -216,6 +216,79 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
     'Pacing',
     'FrequencyCap',
     'BiddingStrategy',
+
+    // ========================================
+    // Phase 2: Targeting Configuration Support
+    // ========================================
+
+    // Core targeting schemas
+    'AssignedTargetingOption',
+    'ListInsertionOrderAssignedTargetingOptionsResponse',
+    'ListLineItemAssignedTargetingOptionsResponse',
+    'ListAdGroupAssignedTargetingOptionsResponse',
+
+    // Content & Audience targeting details
+    'ChannelAssignedTargetingOptionDetails',
+    'AppCategoryAssignedTargetingOptionDetails',
+    'AppAssignedTargetingOptionDetails',
+    'UrlAssignedTargetingOptionDetails',
+    'AgeRangeAssignedTargetingOptionDetails',
+    'GenderAssignedTargetingOptionDetails',
+    'ParentalStatusAssignedTargetingOptionDetails',
+    'HouseholdIncomeAssignedTargetingOptionDetails',
+    'AudienceGroupAssignedTargetingOptionDetails',
+
+    // Location targeting details
+    'RegionalLocationListAssignedTargetingOptionDetails',
+    'ProximityLocationListAssignedTargetingOptionDetails',
+    'GeoRegionAssignedTargetingOptionDetails',
+    'PoiAssignedTargetingOptionDetails',
+    'BusinessChainAssignedTargetingOptionDetails',
+
+    // Device & Environment targeting details
+    'DeviceTypeAssignedTargetingOptionDetails',
+    'BrowserAssignedTargetingOptionDetails',
+    'OperatingSystemAssignedTargetingOptionDetails',
+    'DeviceMakeModelAssignedTargetingOptionDetails',
+    'CarrierAndIspAssignedTargetingOptionDetails',
+    'EnvironmentAssignedTargetingOptionDetails',
+    'OmidAssignedTargetingOptionDetails',
+
+    // Video & Media targeting details
+    'VideoPlayerSizeAssignedTargetingOptionDetails',
+    'UserRewardedContentAssignedTargetingOptionDetails',
+    'ContentInstreamPositionAssignedTargetingOptionDetails',
+    'ContentOutstreamPositionAssignedTargetingOptionDetails',
+    'ContentDurationAssignedTargetingOptionDetails',
+    'ContentStreamTypeAssignedTargetingOptionDetails',
+    'AudioContentTypeAssignedTargetingOptionDetails',
+    'ContentGenreAssignedTargetingOptionDetails',
+    'NativeContentPositionAssignedTargetingOptionDetails',
+
+    // Inventory targeting details
+    'InventorySourceAssignedTargetingOptionDetails',
+    'InventorySourceGroupAssignedTargetingOptionDetails',
+    'ExchangeAssignedTargetingOptionDetails',
+    'SubExchangeAssignedTargetingOptionDetails',
+
+    // Keywords & Exclusions targeting details
+    'KeywordAssignedTargetingOptionDetails',
+    'NegativeKeywordListAssignedTargetingOptionDetails',
+    'DigitalContentLabelAssignedTargetingOptionDetails',
+    'SensitiveCategoryAssignedTargetingOptionDetails',
+    'ContentThemeAssignedTargetingOptionDetails',
+
+    // Other targeting details
+    'DayAndTimeAssignedTargetingOptionDetails',
+    'ViewabilityAssignedTargetingOptionDetails',
+    'CategoryAssignedTargetingOptionDetails',
+    'LanguageAssignedTargetingOptionDetails',
+    'AuthorizedSellerStatusAssignedTargetingOptionDetails',
+    'YoutubeVideoAssignedTargetingOptionDetails',
+    'YoutubeChannelAssignedTargetingOptionDetails',
+    'SessionPositionAssignedTargetingOptionDetails',
+    'OnScreenPositionAssignedTargetingOptionDetails',
+    'ThirdPartyVerifierAssignedTargetingOptionDetails',
   ],
 
   includeCommonTypes: true,
