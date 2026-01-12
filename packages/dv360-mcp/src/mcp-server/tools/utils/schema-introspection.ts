@@ -1,5 +1,6 @@
 import { z } from "zod";
 import * as schemas from "../../../generated/schemas/zod.js";
+import { getTransformedSchema } from "./schema-transforms.js";
 
 /**
  * Schema introspection utilities
@@ -284,8 +285,18 @@ export function hasGeneratedSchema(entityType: string): boolean {
 
 /**
  * Get entity schema by entity type (with fallback)
+ *
+ * Checks for schema transforms first to handle API response quirks,
+ * then falls back to generated schema.
  */
 export function getEntitySchemaByType(entityType: string): z.ZodTypeAny {
+  // Check for runtime transforms first (handles API quirks like missing required arrays)
+  const transformedSchema = getTransformedSchema(entityType);
+  if (transformedSchema) {
+    return transformedSchema;
+  }
+
+  // Fall back to generated schema
   const entityName = entityType.charAt(0).toUpperCase() + entityType.slice(1);
   const schema = (schemas as any)[entityName];
 

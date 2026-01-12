@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { allTools } from "./tools/definitions/index.js";
@@ -137,36 +137,107 @@ export async function createMcpServer(logger: Logger): Promise<McpServer> {
   // discovery info for clients, but registration happens once per template
   const resources = resourceRegistry.getAllResources();
   for (const resource of resources) {
-    (server as any).registerResource?.(
-      resource.uriTemplate.replace(/[^a-zA-Z0-9]/g, "_"),
-      resource.uriTemplate,
-      {
-        title: resource.name,
-        description: resource.description,
-        mimeType: resource.mimeType || "application/json",
-      },
-      async (uri: any, params: any) => {
-        logger.info({ uri: uri.href, params }, "Reading resource");
-        const match = resourceRegistry.findResourceByUri(uri.href);
-        if (!match) {
-          throw new Error(`Resource not found: ${uri.href}`);
+    // Check if this is a parameterized resource (contains {param} placeholders)
+    const isParameterized = resource.uriTemplate.includes("{");
+
+    // Generate unique resource ID from template
+    const resourceId = resource.uriTemplate.replace(/[^a-zA-Z0-9]/g, "_");
+
+    // Resource metadata
+    const metadata = {
+      title: resource.name,
+      description: resource.description,
+      mimeType: resource.mimeType || "application/json",
+    };
+
+    if (isParameterized) {
+      // For parameterized resources, use ResourceTemplate
+      const template = new ResourceTemplate(resource.uriTemplate, {
+        list: resource.list
+          ? async () => {
+              const items = await resource.list!();
+              // Convert resource list items to the format expected by MCP SDK
+              return {
+                resources: items.map((item) => ({
+                  uri: item.uri,
+                  name: item.name,
+                  description: item.description,
+                  mimeType: item.mimeType || "application/json",
+                })),
+              };
+            }
+          : undefined,
+      });
+
+      server.registerResource(
+        resourceId,
+        template,
+        metadata,
+        async (uri, variables) => {
+          logger.info({ uri: uri.href, variables }, "Reading parameterized resource");
+          const match = resourceRegistry.findResourceByUri(uri.href);
+          if (!match) {
+            throw new Error(`Resource not found: ${uri.href}`);
+          }
+          try {
+            const content = await match.resource.read(match.params);
+            // Return format expected by MCP SDK
+            return {
+              contents: [
+                {
+                  uri: content.uri,
+                  mimeType: content.mimeType,
+                  text: content.text,
+                },
+              ],
+            };
+          } catch (error) {
+            logger.error({ uri: uri.href, error }, "Failed to read resource");
+            const mcpError = ErrorHandler.handleError(
+              error,
+              { operation: "resource:read", context: { uri: uri.href } },
+              logger
+            );
+            throw new Error(`Failed to read resource: ${mcpError.message}`);
+          }
         }
-        try {
-          const content = await match.resource.read(match.params);
-          return {
-            contents: [content],
-          };
-        } catch (error) {
-          logger.error({ uri: uri.href, error }, "Failed to read resource");
-          const mcpError = ErrorHandler.handleError(
-            error,
-            { operation: "resource:read", context: { uri: uri.href } },
-            logger
-          );
-          throw new Error(`Failed to read resource: ${mcpError.message}`);
+      );
+    } else {
+      // For static resources, use the URI string directly
+      server.registerResource(
+        resourceId,
+        resource.uriTemplate,
+        metadata,
+        async (uri) => {
+          logger.info({ uri: uri.href }, "Reading static resource");
+          const match = resourceRegistry.findResourceByUri(uri.href);
+          if (!match) {
+            throw new Error(`Resource not found: ${uri.href}`);
+          }
+          try {
+            const content = await match.resource.read(match.params);
+            // Return format expected by MCP SDK
+            return {
+              contents: [
+                {
+                  uri: content.uri,
+                  mimeType: content.mimeType,
+                  text: content.text,
+                },
+              ],
+            };
+          } catch (error) {
+            logger.error({ uri: uri.href, error }, "Failed to read resource");
+            const mcpError = ErrorHandler.handleError(
+              error,
+              { operation: "resource:read", context: { uri: uri.href } },
+              logger
+            );
+            throw new Error(`Failed to read resource: ${mcpError.message}`);
+          }
         }
-      }
-    );
+      );
+    }
   }
 
   // Register all prompts

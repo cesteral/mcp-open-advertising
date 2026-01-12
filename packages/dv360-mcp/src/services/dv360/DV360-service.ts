@@ -12,6 +12,60 @@ import type { RequestContext } from "../../utils/internal/request-context.js";
 import type { AppConfig } from "../../config/index.js";
 import * as tokens from "../../container/tokens.js";
 
+// ============================================================================
+// Custom Bidding Types
+// ============================================================================
+
+/**
+ * Script error returned when a script is rejected
+ */
+export interface ScriptError {
+  errorCode: "SYNTAX_ERROR" | "DEPRECATED_SYNTAX" | "INTERNAL_ERROR";
+  line: string;
+  column: string;
+  errorMessage: string;
+}
+
+/**
+ * Custom bidding script resource
+ */
+export interface CustomBiddingScript {
+  name: string;
+  customBiddingAlgorithmId: string;
+  customBiddingScriptId: string;
+  createTime: string;
+  active: boolean;
+  state: "PENDING" | "ACCEPTED" | "REJECTED";
+  errors?: ScriptError[];
+  script?: {
+    resourceName: string;
+  };
+}
+
+/**
+ * Rules error returned when rules are rejected
+ */
+export interface RulesError {
+  errorCode: "SYNTAX_ERROR" | "CONSTRAINT_VIOLATION" | "INTERNAL_ERROR";
+  errorMessage: string;
+}
+
+/**
+ * Custom bidding algorithm rules resource
+ */
+export interface CustomBiddingAlgorithmRules {
+  name: string;
+  customBiddingAlgorithmId: string;
+  customBiddingAlgorithmRulesId: string;
+  createTime: string;
+  active: boolean;
+  state: "ACCEPTED" | "REJECTED";
+  error?: RulesError;
+  rules?: {
+    resourceName: string;
+  };
+}
+
 /**
  * Service for interacting with DV360 API
  * Provides generic entity operations (list, get, create, update, delete)
@@ -293,6 +347,313 @@ export class DV360Service {
     }
 
     await this.fetch(path, context, { method: "DELETE" });
+  }
+
+  // ============================================================================
+  // Custom Bidding Algorithm Operations
+  // ============================================================================
+
+  /**
+   * Upload a custom bidding script file and get a reference for creating script resource
+   * @param customBiddingAlgorithmId - The algorithm ID to upload script for
+   * @param scriptContent - The script content as a string
+   * @param context - Request context
+   * @returns Reference object containing resourceName for script creation
+   */
+  async uploadCustomBiddingScript(
+    customBiddingAlgorithmId: string,
+    scriptContent: string,
+    context?: RequestContext
+  ): Promise<{ resourceName: string }> {
+    return withDV360ApiSpan("uploadCustomBiddingScript", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+      setSpanAttribute("dv360.scriptLength", scriptContent.length);
+
+      // Upload endpoint is different from main API
+      const uploadUrl = `https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript`;
+
+      this.logger.debug(
+        { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
+        "Uploading custom bidding script"
+      );
+
+      const response = await fetchWithTimeout(uploadUrl, 30000, context, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/octet-stream",
+        },
+        body: scriptContent,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new McpError(
+          response.status >= 500
+            ? JsonRpcErrorCode.ServiceUnavailable
+            : JsonRpcErrorCode.InvalidRequest,
+          `Failed to upload custom bidding script: ${response.status} ${response.statusText}`,
+          {
+            requestId: context?.requestId,
+            httpStatus: response.status,
+            customBiddingAlgorithmId,
+            errorBody: errorBody.substring(0, 500),
+          }
+        );
+      }
+
+      const result = (await response.json()) as { resourceName: string };
+      setSpanAttribute("dv360.scriptResourceName", result.resourceName);
+
+      return result;
+    });
+  }
+
+  /**
+   * Create a custom bidding script resource (after uploading the script file)
+   * @param customBiddingAlgorithmId - The algorithm ID
+   * @param scriptResourceName - Resource name from uploadCustomBiddingScript
+   * @param context - Request context
+   * @returns Created script resource with state and details
+   */
+  async createCustomBiddingScript(
+    customBiddingAlgorithmId: string,
+    scriptResourceName: string,
+    context?: RequestContext
+  ): Promise<CustomBiddingScript> {
+    return withDV360ApiSpan("createCustomBiddingScript", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts`;
+
+      const response = await this.fetch(path, context, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          script: { resourceName: scriptResourceName },
+        }),
+      });
+
+      return response as CustomBiddingScript;
+    });
+  }
+
+  /**
+   * List all scripts for a custom bidding algorithm
+   * @param customBiddingAlgorithmId - The algorithm ID
+   * @param pageToken - Optional pagination token
+   * @param pageSize - Optional page size
+   * @param context - Request context
+   * @returns List of scripts with pagination
+   */
+  async listCustomBiddingScripts(
+    customBiddingAlgorithmId: string,
+    pageToken?: string,
+    pageSize?: number,
+    context?: RequestContext
+  ): Promise<{ scripts: CustomBiddingScript[]; nextPageToken?: string }> {
+    return withDV360ApiSpan("listCustomBiddingScripts", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+
+      const params = new URLSearchParams();
+      if (pageToken) params.append("pageToken", pageToken);
+      if (pageSize) params.append("pageSize", pageSize.toString());
+
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${params.toString() ? `?${params}` : ""}`;
+
+      const response = (await this.fetch(path, context)) as {
+        customBiddingScripts?: CustomBiddingScript[];
+        nextPageToken?: string;
+      };
+
+      setSpanAttribute("dv360.resultCount", response.customBiddingScripts?.length ?? 0);
+
+      return {
+        scripts: response.customBiddingScripts || [],
+        nextPageToken: response.nextPageToken,
+      };
+    });
+  }
+
+  /**
+   * Get a specific custom bidding script
+   * @param customBiddingAlgorithmId - The algorithm ID
+   * @param customBiddingScriptId - The script ID
+   * @param context - Request context
+   * @returns Script resource with state and details
+   */
+  async getCustomBiddingScript(
+    customBiddingAlgorithmId: string,
+    customBiddingScriptId: string,
+    context?: RequestContext
+  ): Promise<CustomBiddingScript> {
+    return withDV360ApiSpan("getCustomBiddingScript", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+      setSpanAttribute("dv360.customBiddingScriptId", customBiddingScriptId);
+
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts/${customBiddingScriptId}`;
+
+      return (await this.fetch(path, context)) as CustomBiddingScript;
+    });
+  }
+
+  /**
+   * Upload custom bidding rules file and get a reference for creating rules resource
+   * @param customBiddingAlgorithmId - The algorithm ID to upload rules for
+   * @param rulesContent - The rules content as a string (AlgorithmRules format)
+   * @param context - Request context
+   * @returns Reference object containing resourceName for rules creation
+   */
+  async uploadCustomBiddingRules(
+    customBiddingAlgorithmId: string,
+    rulesContent: string,
+    context?: RequestContext
+  ): Promise<{ resourceName: string }> {
+    return withDV360ApiSpan("uploadCustomBiddingRules", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+      setSpanAttribute("dv360.rulesLength", rulesContent.length);
+
+      const uploadUrl = `https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules`;
+
+      this.logger.debug(
+        { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
+        "Uploading custom bidding rules"
+      );
+
+      const response = await fetchWithTimeout(uploadUrl, 30000, context, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/octet-stream",
+        },
+        body: rulesContent,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new McpError(
+          response.status >= 500
+            ? JsonRpcErrorCode.ServiceUnavailable
+            : JsonRpcErrorCode.InvalidRequest,
+          `Failed to upload custom bidding rules: ${response.status} ${response.statusText}`,
+          {
+            requestId: context?.requestId,
+            httpStatus: response.status,
+            customBiddingAlgorithmId,
+            errorBody: errorBody.substring(0, 500),
+          }
+        );
+      }
+
+      const result = (await response.json()) as { resourceName: string };
+      setSpanAttribute("dv360.rulesResourceName", result.resourceName);
+
+      return result;
+    });
+  }
+
+  /**
+   * Create a custom bidding rules resource (after uploading the rules file)
+   * @param customBiddingAlgorithmId - The algorithm ID
+   * @param rulesResourceName - Resource name from uploadCustomBiddingRules
+   * @param context - Request context
+   * @returns Created rules resource with state and details
+   */
+  async createCustomBiddingRules(
+    customBiddingAlgorithmId: string,
+    rulesResourceName: string,
+    context?: RequestContext
+  ): Promise<CustomBiddingAlgorithmRules> {
+    return withDV360ApiSpan("createCustomBiddingRules", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules`;
+
+      const response = await this.fetch(path, context, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rules: { resourceName: rulesResourceName },
+        }),
+      });
+
+      return response as CustomBiddingAlgorithmRules;
+    });
+  }
+
+  /**
+   * List all rules for a custom bidding algorithm
+   * @param customBiddingAlgorithmId - The algorithm ID
+   * @param pageToken - Optional pagination token
+   * @param pageSize - Optional page size
+   * @param context - Request context
+   * @returns List of rules with pagination
+   */
+  async listCustomBiddingRules(
+    customBiddingAlgorithmId: string,
+    pageToken?: string,
+    pageSize?: number,
+    context?: RequestContext
+  ): Promise<{ rules: CustomBiddingAlgorithmRules[]; nextPageToken?: string }> {
+    return withDV360ApiSpan("listCustomBiddingRules", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+
+      const params = new URLSearchParams();
+      if (pageToken) params.append("pageToken", pageToken);
+      if (pageSize) params.append("pageSize", pageSize.toString());
+
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${params.toString() ? `?${params}` : ""}`;
+
+      const response = (await this.fetch(path, context)) as {
+        customBiddingRules?: CustomBiddingAlgorithmRules[];
+        nextPageToken?: string;
+      };
+
+      setSpanAttribute("dv360.resultCount", response.customBiddingRules?.length ?? 0);
+
+      return {
+        rules: response.customBiddingRules || [],
+        nextPageToken: response.nextPageToken,
+      };
+    });
+  }
+
+  /**
+   * Get a specific custom bidding rules resource
+   * @param customBiddingAlgorithmId - The algorithm ID
+   * @param customBiddingAlgorithmRulesId - The rules ID
+   * @param context - Request context
+   * @returns Rules resource with state and details
+   */
+  async getCustomBiddingRules(
+    customBiddingAlgorithmId: string,
+    customBiddingAlgorithmRulesId: string,
+    context?: RequestContext
+  ): Promise<CustomBiddingAlgorithmRules> {
+    return withDV360ApiSpan("getCustomBiddingRules", customBiddingAlgorithmId, async () => {
+      await this.ensureAuthenticated(context);
+
+      setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
+      setSpanAttribute("dv360.customBiddingAlgorithmRulesId", customBiddingAlgorithmRulesId);
+
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules/${customBiddingAlgorithmRulesId}`;
+
+      return (await this.fetch(path, context)) as CustomBiddingAlgorithmRules;
+    });
   }
 
   /**

@@ -13,6 +13,12 @@ export { deleteEntityTool } from "./delete-entity.tool.js";
 export { adjustLineItemBidsTool } from "./adjust-line-item-bids.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 
+// Tier 2: Custom Bidding Algorithm Tools
+export { createCustomBiddingAlgorithmTool } from "./create-custom-bidding-algorithm.tool.js";
+export { manageCustomBiddingScriptTool } from "./manage-custom-bidding-script.tool.js";
+export { manageCustomBiddingRulesTool } from "./manage-custom-bidding-rules.tool.js";
+export { listCustomBiddingAlgorithmsTool } from "./list-custom-bidding-algorithms.tool.js";
+
 // Tier 3: Targeting Tools (CRUD for assignedTargetingOptions)
 export { listAssignedTargetingTool } from "./list-assigned-targeting.tool.js";
 export { getAssignedTargetingTool } from "./get-assigned-targeting.tool.js";
@@ -28,6 +34,10 @@ import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
 import { adjustLineItemBidsTool } from "./adjust-line-item-bids.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
+import { createCustomBiddingAlgorithmTool } from "./create-custom-bidding-algorithm.tool.js";
+import { manageCustomBiddingScriptTool } from "./manage-custom-bidding-script.tool.js";
+import { manageCustomBiddingRulesTool } from "./manage-custom-bidding-rules.tool.js";
+import { listCustomBiddingAlgorithmsTool } from "./list-custom-bidding-algorithms.tool.js";
 import { listAssignedTargetingTool } from "./list-assigned-targeting.tool.js";
 import { getAssignedTargetingTool } from "./get-assigned-targeting.tool.js";
 import { createAssignedTargetingTool } from "./create-assigned-targeting.tool.js";
@@ -44,6 +54,11 @@ export const allTools = [
   // Tier 2: Workflow Tools
   adjustLineItemBidsTool,
   bulkUpdateStatusTool,
+  // Tier 2: Custom Bidding Algorithm Tools
+  createCustomBiddingAlgorithmTool,
+  manageCustomBiddingScriptTool,
+  manageCustomBiddingRulesTool,
+  listCustomBiddingAlgorithmsTool,
   // Tier 3: Targeting Tools (assignedTargetingOptions CRUD)
   listAssignedTargetingTool,
   getAssignedTargetingTool,

@@ -220,6 +220,24 @@ const RELATIONSHIP_OVERRIDES: Record<string, EntityRelationship[]> = {
       description: "Advertiser must belong to a partner",
     },
   ],
+
+  // CustomBiddingAlgorithm can be owned by either Advertiser OR Partner (mutually exclusive)
+  customBiddingAlgorithm: [
+    {
+      parentEntityType: "advertiser",
+      parentFieldName: "advertiserId",
+      required: false, // Either advertiserId OR partnerId required, but not both
+      description:
+        "Algorithm owned by advertiser (mutually exclusive with partnerId). Set advertiserId for advertiser-scoped algorithms.",
+    },
+    {
+      parentEntityType: "partner",
+      parentFieldName: "partnerId",
+      required: false, // Either advertiserId OR partnerId required, but not both
+      description:
+        "Algorithm owned by partner (mutually exclusive with advertiserId). Set partnerId for partner-scoped algorithms that can be shared with multiple advertisers.",
+    },
+  ],
 };
 
 function buildEntityRelationships(
@@ -413,9 +431,12 @@ export function getEntitySchemaForOperation(
   const schema = getEntitySchemaByType(entityType);
 
   // For list operations, wrap in array response
+  // Make entity array optional with empty default to handle:
+  // - Empty responses: {} → { lineItems: [] }
+  // - Undefined arrays: { lineItems: undefined } → { lineItems: [] }
   if (operation === "list") {
     return z.object({
-      [entityType + "s"]: z.array(schema),
+      [entityType + "s"]: z.array(schema).optional().default([]),
       nextPageToken: z.string().optional(),
     });
   }

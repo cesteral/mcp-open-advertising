@@ -318,6 +318,102 @@ const AD_GROUP_EXAMPLES: EntityExample[] = [
 ];
 
 /**
+ * Curated examples for CustomBiddingAlgorithm entities
+ */
+const CUSTOM_BIDDING_ALGORITHM_EXAMPLES: EntityExample[] = [
+  {
+    operation: "Create SCRIPT_BASED algorithm (advertiser-owned)",
+    description: "Create a custom bidding algorithm owned by a specific advertiser",
+    category: "general",
+    data: {
+      displayName: "My Custom Bidding Algorithm",
+      customBiddingAlgorithmType: "SCRIPT_BASED",
+      entityStatus: "ENTITY_STATUS_ACTIVE",
+      advertiserId: "123456789",
+    },
+    updateMask: "displayName,customBiddingAlgorithmType,entityStatus,advertiserId",
+    notes: "Use the dv360_create_custom_bidding_algorithm tool. Algorithm type is immutable after creation. Advertiser ownership is also immutable.",
+  },
+  {
+    operation: "Create SCRIPT_BASED algorithm (partner-owned, shared)",
+    description: "Create a partner-level algorithm shared with multiple advertisers",
+    category: "general",
+    data: {
+      displayName: "Partner Custom Bidding Algorithm",
+      customBiddingAlgorithmType: "SCRIPT_BASED",
+      entityStatus: "ENTITY_STATUS_ACTIVE",
+      partnerId: "987654321",
+      sharedAdvertiserIds: ["123456789", "234567890"],
+    },
+    updateMask: "displayName,customBiddingAlgorithmType,entityStatus,partnerId,sharedAdvertiserIds",
+    notes: "Partner-owned algorithms can be shared with multiple advertisers via sharedAdvertiserIds. Useful for agency-wide bidding strategies.",
+  },
+  {
+    operation: "Create RULE_BASED algorithm",
+    description: "Create a rule-based custom bidding algorithm (requires allowlisting)",
+    category: "general",
+    data: {
+      displayName: "Rule-Based Bidding Algorithm",
+      customBiddingAlgorithmType: "RULE_BASED",
+      entityStatus: "ENTITY_STATUS_ACTIVE",
+      advertiserId: "123456789",
+    },
+    updateMask: "displayName,customBiddingAlgorithmType,entityStatus,advertiserId",
+    notes: "RULE_BASED algorithms are restricted to allowlisted customers. Contact Google support if you need access to this feature.",
+  },
+  {
+    operation: "Update algorithm display name",
+    description: "Change the algorithm's display name",
+    category: "general",
+    data: {
+      displayName: "Updated Algorithm Name",
+    },
+    updateMask: "displayName",
+    notes: "Display name can be updated at any time. Max 240 bytes UTF-8 encoded.",
+  },
+  {
+    operation: "Archive algorithm",
+    description: "Set algorithm status to archived",
+    category: "status",
+    data: {
+      entityStatus: "ENTITY_STATUS_ARCHIVED",
+    },
+    updateMask: "entityStatus",
+    notes: "Archived algorithms cannot be used for bidding. Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_ARCHIVED.",
+  },
+  {
+    operation: "Example script content",
+    description: "Sample custom bidding script for impression scoring",
+    category: "general",
+    data: {
+      scriptContent: `// Custom bidding script example
+// Available variables: impression, advertiser, creative, etc.
+// Return a score between 0 and 1
+
+function main() {
+  var score = 0.5; // Default score
+
+  // Adjust score based on device
+  if (impression.device.type === 'MOBILE') {
+    score *= 1.2;
+  }
+
+  // Adjust score based on time of day
+  var hour = new Date().getHours();
+  if (hour >= 9 && hour <= 17) {
+    score *= 1.1; // Boost during business hours
+  }
+
+  // Cap score at 1.0
+  return Math.min(score, 1.0);
+}`,
+    },
+    updateMask: "scriptContent",
+    notes: "Use the dv360_manage_custom_bidding_script tool with action='upload' to upload scripts. Scripts are processed asynchronously - check state for ACCEPTED/REJECTED.",
+  },
+];
+
+/**
  * Registry of all entity examples
  */
 const ENTITY_EXAMPLES_REGISTRY: Record<string, EntityExample[]> = {
@@ -327,6 +423,7 @@ const ENTITY_EXAMPLES_REGISTRY: Record<string, EntityExample[]> = {
   advertiser: ADVERTISER_EXAMPLES,
   creative: CREATIVE_EXAMPLES,
   adGroup: AD_GROUP_EXAMPLES,
+  customBiddingAlgorithm: CUSTOM_BIDDING_ALGORITHM_EXAMPLES,
 };
 
 /**
