@@ -10,13 +10,13 @@
 
 ## Overview
 
-BidShifter is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on three separate MCP servers, BidShifter provides clean separation between reporting, campaign management, and optimization intelligence.
+BidShifter is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on two separate MCP servers, BidShifter provides clean separation between reporting and campaign management.
 
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, Meta, and future DSPs
-- **🔧 Composable Architecture** - Three independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Two independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -25,7 +25,7 @@ BidShifter is a **Model Context Protocol (MCP) based optimization platform** tha
 
 ## Architecture
 
-BidShifter uses a **GCP-native architecture** with three Cloud Run services:
+BidShifter uses a **GCP-native architecture** with two Cloud Run services:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -35,27 +35,27 @@ BidShifter uses a **GCP-native architecture** with three Cloud Run services:
                      │                │
                      │ HTTPS          │ JWT Bearer Tokens
                      │ (MCP Protocol) │
-        ┌────────────┼────────────────┼────────────┐
-        │            │                │            │
-        ▼            ▼                ▼            │
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐│
-│   Cloud Run  │ │   Cloud Run  │ │   Cloud Run  ││
-│   Reporting  │ │  Management  │ │ Optimization ││
-│  MCP Server  │ │  MCP Server  │ │  MCP Server  ││
-│              │ │              │ │              ││
-│ Read-only    │ │ CRUD Ops     │ │ Intelligence ││
-│ queries      │ │ SDF updates  │ │ orchestrates ││
-│ BigQuery     │ │ via DV360    │ │ other two    ││
-│ normalized   │ │ Google Ads   │ │ servers      ││
-│ data         │ │ Meta APIs    │ │              ││
-└──────┬───────┘ └──────┬───────┘ └──────┬───────┘│
-       │                │                │        │
-       └────────────────┼────────────────┘        │
-                        │                         │
-                        ▼                         │
-           ┌────────────────────────┐             │
-           │  GCP Data & Compute    │             │
-           │                        │◄────────────┘
+        ┌────────────┼────────────────┤
+        │            │                │
+        ▼            ▼                │
+┌──────────────┐ ┌──────────────┐     │
+│   Cloud Run  │ │   Cloud Run  │     │
+│   Reporting  │ │  Management  │     │
+│  MCP Server  │ │  MCP Server  │     │
+│              │ │              │     │
+│ Read-only    │ │ CRUD Ops     │     │
+│ queries      │ │ SDF updates  │     │
+│ BigQuery     │ │ via DV360    │     │
+│ normalized   │ │ Google Ads   │     │
+│ data         │ │ Meta APIs    │     │
+└──────┬───────┘ └──────┬───────┘     │
+       │                │             │
+       └────────────────┤             │
+                        │             │
+                        ▼             │
+           ┌────────────────────────┐ │
+           │  GCP Data & Compute    │ │
+           │                        │◄┘
            │  • BigQuery            │
            │    - Delivery metrics  │
            │    - Configuration     │
@@ -77,9 +77,7 @@ BidShifter uses a **GCP-native architecture** with three Cloud Run services:
 
 Cloud Scheduler Jobs (Automated):
   • data-sync (every 4h) → Reporting Server
-  • optimization-scan (every 4h) → Optimization Server
   • adjustment-executor (every 30m) → Management Server
-  • outcome-tracker (daily) → Optimization Server
 ```
 
 ### Key Architectural Decisions
@@ -115,18 +113,6 @@ Cloud Scheduler Jobs (Automated):
 
 **Platform**: DV360 via SDF (Structured Data Files)
 
-### Server 3: `bidshifter-mcp`
-
-**BidShifter-specific optimization intelligence**
-
-- Analyze pacing and calculate bid adjustments
-- Optimize revenue margins
-- Track historical adjustments and effectiveness
-- Provide AI agent guidance via MCP prompts
-- Orchestrates `dbm-mcp` and `dv360-mcp` servers
-
-**Platform-Agnostic**: Works with any platform supported by reporting and management servers
-
 ---
 
 ## Current Status
@@ -135,8 +121,8 @@ Cloud Scheduler Jobs (Automated):
 
 The monorepo architecture is now fully scaffolded with:
 - ✅ Root configuration (pnpm workspaces, Turborepo, TypeScript)
-- ✅ Shared packages (`@bidshifter/shared`, `@bidshifter/platform-lib`)
-- ✅ Three MCP server packages (dbm-mcp, dv360-mcp, bidshifter-mcp)
+- ✅ Shared package (`@bidshifter/shared`)
+- ✅ Two MCP server packages (dbm-mcp, dv360-mcp)
 - ✅ Dockerfiles for containerization
 - ✅ Development scripts
 
@@ -203,9 +189,6 @@ pnpm run dev
 
 # Start dv360-mcp (port 3002)
 ./scripts/dev-server.sh dv360-mcp
-
-# Start bidshifter-mcp (port 3003)
-./scripts/dev-server.sh bidshifter-mcp
 ```
 
 ### 6. Deploy Infrastructure *(Coming Soon)*
@@ -233,10 +216,6 @@ Edit your Claude Desktop MCP configuration:
     "bidshifter-management": {
       "url": "https://management.bidshifter.io/mcp",
       "apiKey": "your-management-api-key"
-    },
-    "bidshifter-optimization": {
-      "url": "https://optimization.bidshifter.io/mcp",
-      "apiKey": "your-optimization-api-key"
     }
   }
 }
@@ -262,16 +241,6 @@ bidshifter-mcp/
 │   │   ├── src/
 │   │   │   ├── mcp-server/      # MCP tool definitions
 │   │   │   ├── services/        # DV360 API & SDF integrations
-│   │   │   ├── http-transport.ts # Express HTTP server
-│   │   │   └── index.ts
-│   │   ├── Dockerfile
-│   │   └── package.json
-│   │
-│   ├── bidshifter-mcp/          # MCP Server 3: BidShifter optimization
-│   │   ├── src/
-│   │   │   ├── mcp-server/      # MCP tools, prompts, resources
-│   │   │   ├── services/        # Optimization algorithms
-│   │   │   ├── scheduled/       # Cloud Scheduler endpoints
 │   │   │   ├── http-transport.ts # Express HTTP server
 │   │   │   └── index.ts
 │   │   ├── Dockerfile
@@ -336,25 +305,6 @@ bidshifter-mcp/
 | `update_line_item_bid`    | Change CPM/CPC bid                    | `lineItemId`, `newBid`, `reason`     |
 | `update_revenue_margin`   | Adjust margin percentage              | `lineItemId`, `newMargin`, `reason`  |
 
-### Optimization Server Tools
-
-| Tool                               | Description                      | Parameters                         |
-| ---------------------------------- | -------------------------------- | ---------------------------------- |
-| `optimize_campaign_bids`           | Analyze and adjust bids          | `campaignId`, `strategy`, `dryRun` |
-| `adjust_revenue_margin`            | Optimize margin-based line items | `lineItemId`, `strategy`           |
-| `get_optimization_recommendations` | Preview adjustments (dry-run)    | `campaignId`, `strategy`           |
-| `get_adjustment_history`           | Track historical decisions       | `lineItemId`, `lookbackDays`       |
-| `get_pacing_forecast`              | Project future delivery          | `campaignId`, `forecastDays`       |
-| `configure_optimization`           | Set strategy and thresholds      | `campaignId`, `config`             |
-
-### Optimization Server Prompts
-
-| Prompt                           | Description                           | Use Case                                                |
-| -------------------------------- | ------------------------------------- | ------------------------------------------------------- |
-| `campaign_optimization_workflow` | Step-by-step optimization guide       | Full campaign optimization from assessment to execution |
-| `troubleshoot_underdelivery`     | Diagnostic workflow for pacing issues | Campaign underdelivering significantly                  |
-| `margin_optimization_strategy`   | Margin-specific optimization guidance | Revenue-based line items with margin goals              |
-
 ---
 
 ## Example AI Agent Workflows
@@ -378,33 +328,7 @@ AI Agent:
 3. Synthesizes response with metrics and insights
 ```
 
-### Workflow 2: Optimize Underdelivering Campaign
-
-```
-AI Agent (autonomous, triggered by scheduled scan):
-1. Detects Campaign 12345 at 72% pacing (expected 85%)
-
-2. Calls bidshifter-mcp.get_optimization_recommendations
-   - campaignId: "12345"
-   - strategy: "moderate"
-   - dryRun: true
-
-3. Reviews recommendations:
-   - 15 line items need bid increases
-   - Average +12% CPM adjustment
-   - All within configured thresholds
-
-4. Calls bidshifter-mcp.optimize_campaign_bids
-   - campaignId: "12345"
-   - strategy: "moderate"
-   - dryRun: false
-
-5. Posts notification to Slack:
-   "Optimized Campaign 12345: 15 line items adjusted, avg +12% CPM.
-    Expected pacing improvement: 72% → 81%"
-```
-
-### Workflow 3: Manual Bid Override
+### Workflow 2: Manual Bid Override
 
 ```
 User: "Increase the bid for line item 67890 to $3.50 CPM"
@@ -466,7 +390,7 @@ pnpm run deploy:optimization --env=prod
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|bidshifter)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360)-mcp"' --limit=50
 ```
 
 ### Metrics Dashboard
@@ -475,7 +399,6 @@ Access Cloud Monitoring dashboards:
 
 - [DBM Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/dbm-mcp)
 - [DV360 Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/dv360-mcp)
-- [BidShifter Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/bidshifter-mcp)
 
 ---
 
@@ -511,9 +434,6 @@ pnpm run dev
 cd packages/dv360-mcp
 pnpm run dev
 
-# Start bidshifter server locally
-cd packages/bidshifter-mcp
-pnpm run dev
 ```
 
 ### Testing MCP Tools
@@ -537,7 +457,6 @@ curl -X POST http://localhost:8080/mcp \
 ## Documentation
 
 - **[Product Requirements Document](docs/BidShifter-PRD.md)** - Full product specification
-- **[Architecture Design](docs/bidshifter-mcp-design-architecture.md)** - Technical architecture details
 - **[MCP Tool Catalog](docs/mcp-tool-catalog.md)** - Complete tool reference
 - **[Development Guide](docs/development-guide.md)** - Developer workflows
 - **[Deployment Guide](docs/deployment-guide.md)** - Production deployment

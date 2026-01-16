@@ -9,7 +9,7 @@ SERVER_NAME=$1
 
 if [ -z "$SERVER_NAME" ]; then
   echo "Usage: ./scripts/dev-server.sh <server-name>"
-  echo "Available servers: dbm-mcp, dv360-mcp, bidshifter-mcp"
+  echo "Available servers: dbm-mcp, dv360-mcp"
   exit 1
 fi
 

@@ -4,18 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BidShifter is an AI-native programmatic advertising optimization platform built on three independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting, campaign management, and optimization intelligence for DV360 (Display & Video 360).
-
-**Key Architecture Pattern**: Hybrid approach with three MCP servers for external API composability + shared library (`@bidshifter/platform-lib`) for internal performance optimization (avoiding HTTP overhead).
+BidShifter is an AI-native programmatic advertising optimization platform built on two independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting and campaign management for DV360 (Display & Video 360).
 
 ### Current Project Status
 
 **Phase: Scaffolding Complete ✅**
 
-The monorepo is fully scaffolded with root configuration, shared packages, and three MCP server packages. Current implementations are **stubs** - tools return mock data while awaiting:
+The monorepo is fully scaffolded with root configuration, shared packages, and two MCP server packages. Current implementations are **stubs** - tools return mock data while awaiting:
 - Bid Manager API v2 integration for DV360 reporting (dbm-mcp)
 - DV360 API and SDF file handling for management (dv360-mcp)
-- Optimization algorithms implementation (bidshifter-mcp)
 
 ## Essential Commands
 
@@ -30,7 +27,6 @@ pnpm run build
 # Run specific server in development mode
 cd packages/dbm-mcp && pnpm run dev:http
 cd packages/dv360-mcp && pnpm run dev:http
-cd packages/bidshifter-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -51,7 +47,7 @@ cd packages/dbm-mcp && pnpm run build
 cd packages/shared && pnpm run test
 
 # Type check single package
-cd packages/platform-lib && pnpm run typecheck
+cd packages/dv360-mcp && pnpm run typecheck
 ```
 
 ### Running Servers Locally
@@ -62,9 +58,6 @@ Use the dev-server script (automatically uses correct port for each server):
 
 # Start dv360-mcp (port 3002)
 ./scripts/dev-server.sh dv360-mcp
-
-# Start bidshifter-mcp (port 3003)
-./scripts/dev-server.sh bidshifter-mcp
 ```
 
 ## Monorepo Architecture
@@ -73,14 +66,12 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 
 ### Core Packages
 1. **`@bidshifter/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
-2. **`@bidshifter/platform-lib`** - Shared business logic and services used internally by MCP servers
 
-### Three MCP Servers
+### Two MCP Servers
 1. **`@bidshifter/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@bidshifter/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
-3. **`@bidshifter/bidshifter-mcp`** - BidShifter optimization intelligence (orchestrates other servers)
 
-**Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.) but internally uses `@bidshifter/platform-lib` to avoid HTTP overhead.
+**Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
 ## Build System & Dependencies
 
@@ -90,7 +81,7 @@ Build tasks have dependencies defined in `turbo.json`:
 - `typecheck` depends on `^build`
 - `test` depends on `^build`
 
-**Critical**: When modifying `@bidshifter/shared` or `@bidshifter/platform-lib`, rebuild all packages:
+**Critical**: When modifying `@bidshifter/shared`, rebuild all packages:
 ```bash
 pnpm run build
 ```
@@ -413,7 +404,7 @@ const params = schema.parse(rawInput); // Throws on invalid input
 
 ## MCP Tools Catalog
 
-Complete reference of all MCP tools across the three servers:
+Complete reference of all MCP tools across the two servers:
 
 ### dbm-mcp (Reporting Server) Tools
 
@@ -437,34 +428,14 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `update_line_item_bid` | Change CPM/CPC bid | `lineItemId`, `newBid`, `reason` |
 | `update_revenue_margin` | Adjust margin percentage | `lineItemId`, `newMargin`, `reason` |
 
-### bidshifter-mcp (Optimization Server) Tools
+### How the Two Servers Work Together
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `optimize_campaign_bids` | Analyze and adjust bids | `campaignId`, `strategy`, `dryRun` |
-| `adjust_revenue_margin` | Optimize margin-based line items | `lineItemId`, `strategy` |
-| `get_optimization_recommendations` | Preview adjustments (dry-run) | `campaignId`, `strategy` |
-| `get_adjustment_history` | Track historical decisions | `lineItemId`, `lookbackDays` |
-| `get_pacing_forecast` | Project future delivery | `campaignId`, `forecastDays` |
-| `configure_optimization` | Set strategy and thresholds | `campaignId`, `config` |
-
-### bidshifter-mcp MCP Prompts
-
-| Prompt | Description | Use Case |
-|--------|-------------|----------|
-| `campaign_optimization_workflow` | Step-by-step optimization guide | Full campaign optimization |
-| `troubleshoot_underdelivery` | Diagnostic workflow for pacing issues | Campaign underdelivering |
-| `margin_optimization_strategy` | Margin-specific optimization guidance | Revenue-based line items |
-
-### How the Three Servers Work Together
-
-**Example: Optimizing an underdelivering campaign**
+**Example: Investigating and fixing an underdelivering campaign**
 1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
-2. AI agent calls **bidshifter-mcp** → `get_optimization_recommendations` (dry-run mode)
-3. AI agent reviews recommendations (15 line items need +12% CPM increase)
-4. AI agent calls **bidshifter-mcp** → `optimize_campaign_bids` (executes optimizations)
-5. **bidshifter-mcp** internally orchestrates **dv360-mcp** → `update_line_item_bid` for each line item
-6. AI agent confirms changes and reports expected pacing improvement (72% → 81%)
+2. AI agent calls **dbm-mcp** → `get_performance_metrics` to analyze current CPMs
+3. AI agent calculates bid adjustments needed based on pacing data
+4. AI agent calls **dv360-mcp** → `update_line_item_bid` for each line item needing adjustment
+5. AI agent confirms changes and monitors delivery improvement
 
 ## Deployment & Infrastructure
 
@@ -479,15 +450,12 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 
 Automated background jobs that invoke MCP server endpoints:
 - **report-cache-refresh** (every 4h) → dbm-mcp (pre-runs common Bid Manager queries)
-- **optimization-scan** (every 4h) → bidshifter-mcp optimization server
 - **adjustment-executor** (every 30m) → dv360-mcp management server
-- **outcome-tracker** (daily) → bidshifter-mcp optimization server
 
 ### Local Testing
 Each server runs on a different port:
 - `dbm-mcp`: port 3001
 - `dv360-mcp`: port 3002
-- `bidshifter-mcp`: port 3003
 
 Test SSE endpoint:
 ```bash
@@ -507,7 +475,7 @@ View logs for specific server:
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|bidshifter)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360)-mcp"' --limit=50
 ```
 
 View costs:
@@ -530,10 +498,6 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
     "bidshifter-management": {
       "url": "https://management.bidshifter.io/mcp",
       "apiKey": "your-management-api-key"
-    },
-    "bidshifter-optimization": {
-      "url": "https://optimization.bidshifter.io/mcp",
-      "apiKey": "your-optimization-api-key"
     }
   }
 }
@@ -541,19 +505,17 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 
 ## Key Design Principles
 
-1. **Separation of Concerns**: Three MCP servers with distinct responsibilities (reporting, management, optimization)
-2. **DV360 Focus**: All servers are purpose-built for DV360 (Bid Manager API for reporting, DV360 API for management)
-3. **Performance**: Shared library for internal calls (no HTTP overhead)
-4. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
-5. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
-6. **Observability**: Structured logging throughout, designed for OpenTelemetry integration
+1. **Separation of Concerns**: Two MCP servers with distinct responsibilities (reporting and management)
+2. **DV360 Focus**: Both servers are purpose-built for DV360 (Bid Manager API for reporting, DV360 API for management)
+3. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
+4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
+5. **Observability**: Structured logging throughout, designed for OpenTelemetry integration
 
 ## Important Files
 
 - `package.json` (root) - Workspace configuration and scripts
 - `turbo.json` - Build pipeline configuration
 - `pnpm-workspace.yaml` - Workspace package definitions
-- `docs/bidshifter-mcp-design-architecture.md` - Detailed architecture documentation
 - `docs/PRD.md` - Product requirements document
 - `README.md` - User-facing documentation with quick start guide
 
@@ -579,7 +541,7 @@ export function createMcpHttpServer(): express.Application {
 
 When making changes that span multiple packages:
 
-1. Make changes to `@bidshifter/shared` or `@bidshifter/platform-lib`
+1. Make changes to `@bidshifter/shared`
 2. Build from root: `pnpm run build` (Turborepo handles dependency order)
 3. Changes automatically available to dependent packages via workspace protocol (`workspace:*`)
 

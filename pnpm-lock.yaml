@@ -39,57 +39,8 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.24)
 
-  packages/bidshifter-mcp:
-    dependencies:
-      '@bidshifter/platform-lib':
-        specifier: workspace:*
-        version: link:../platform-lib
-      '@bidshifter/shared':
-        specifier: workspace:*
-        version: link:../shared
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.0.2
-        version: 1.21.1
-      dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
-      express:
-        specifier: ^4.21.2
-        version: 4.21.2
-      pino:
-        specifier: ^10.1.0
-        version: 10.1.0
-      reflect-metadata:
-        specifier: ^0.2.2
-        version: 0.2.2
-      tsyringe:
-        specifier: ^4.10.0
-        version: 4.10.0
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-    devDependencies:
-      '@types/express':
-        specifier: ^5.0.0
-        version: 5.0.5
-      '@types/node':
-        specifier: ^20.17.6
-        version: 20.19.24
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.6
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.24)
-
   packages/dbm-mcp:
     dependencies:
-      '@bidshifter/platform-lib':
-        specifier: workspace:*
-        version: link:../platform-lib
       '@bidshifter/shared':
         specifier: workspace:*
         version: link:../shared
@@ -163,9 +114,6 @@ importers:
 
   packages/dv360-mcp:
     dependencies:
-      '@bidshifter/platform-lib':
-        specifier: workspace:*
-        version: link:../platform-lib
       '@bidshifter/shared':
         specifier: workspace:*
         version: link:../shared
@@ -242,25 +190,6 @@ importers:
       tsx:
         specifier: ^4.20.6
         version: 4.20.6
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^1.6.0
-        version: 1.6.1(@types/node@20.19.24)
-
-  packages/platform-lib:
-    dependencies:
-      '@bidshifter/shared':
-        specifier: workspace:*
-        version: link:../shared
-      zod:
-        specifier: ^3.23.8
-        version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^20.17.6
-        version: 20.19.24
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

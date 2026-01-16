@@ -5,7 +5,6 @@ import { appConfig } from "../../config/index.js";
 import * as Tokens from "../tokens.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 import { requestContextService } from "../../utils/internal/request-context.js";
-import { DeliveryService, EntityService } from "@bidshifter/platform-lib";
 import { BidManagerService } from "../../services/bid-manager/index.js";
 
 /**
@@ -30,9 +29,4 @@ export function registerCoreServices(logger?: Logger): void {
 
   // Bid Manager Service (singleton for API interactions)
   container.registerSingleton(Tokens.BidManagerService, BidManagerService);
-
-  // Platform services (from @bidshifter/platform-lib)
-  // These provide stub implementations for now
-  container.register(DeliveryService, { useClass: DeliveryService });
-  container.register(EntityService, { useClass: EntityService });
 }

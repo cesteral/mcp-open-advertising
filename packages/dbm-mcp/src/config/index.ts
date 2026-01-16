@@ -79,13 +79,6 @@ const ConfigSchema = z.object({
   reportQueryRetries: z.number().default(3), // High-level query retries
   reportRetryCooldownMs: z.number().default(60000), // Delay before retry (60s)
 
-  // BigQuery Configuration (for report storage)
-  bigQueryDataset: z.string().default("bidshifter"),
-  bigQueryLocation: z.string().default("US"),
-
-  // GCS Configuration (for report downloads)
-  gcsBucket: z.string().optional(),
-
   // Google Cloud (for Secret Manager)
   serviceAccountSecretId: z.string().optional(), // GCP Secret Manager secret ID
 });
@@ -156,13 +149,6 @@ export function parseConfig(): AppConfig {
       ? Number(process.env.REPORT_RETRY_COOLDOWN_MS)
       : undefined,
 
-    // BigQuery
-    bigQueryDataset: process.env.BIGQUERY_DATASET_ID,
-    bigQueryLocation: process.env.BIGQUERY_LOCATION,
-
-    // GCS
-    gcsBucket: process.env.GCS_BUCKET_NAME,
-
     // Google Cloud
     serviceAccountSecretId: process.env.SERVICE_ACCOUNT_SECRET_ID,
   };
@@ -229,7 +215,4 @@ export const appConfig: AppConfig = mcpConfig;
 export const gcpConfig = {
   projectId: mcpConfig.gcpProjectId || "",
   region: process.env.GCP_REGION || "us-central1",
-  bigQueryDataset: mcpConfig.bigQueryDataset,
-  bigQueryLocation: mcpConfig.bigQueryLocation,
-  gcsBucket: mcpConfig.gcsBucket || "",
 };

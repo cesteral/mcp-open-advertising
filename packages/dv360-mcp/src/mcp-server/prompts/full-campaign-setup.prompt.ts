@@ -354,7 +354,6 @@ After successful campaign setup:
 - Use \`get_entity\` to verify each entity was created correctly
 - Use \`list_entities\` to view the full campaign hierarchy
 - Monitor campaign delivery using the reporting MCP server (dbm-mcp)
-- Optimize bids using the optimization MCP server (bidshifter-mcp)
 
 **Need more help?** Fetch these resources:
 - \`entity-schema://{entityType}\` for detailed field documentation
