@@ -7,9 +7,7 @@
 export const AppConfig = Symbol("AppConfig");
 export const Logger = Symbol("Logger");
 
-// Bid Manager Services
-export const BidManagerService = Symbol("BidManagerService");
-export const ReportCacheService = Symbol("ReportCacheService");
+// Infrastructure Services
 export const RateLimiterService = Symbol("RateLimiterService");
 export const RequestContextService = Symbol("RequestContextService");
 

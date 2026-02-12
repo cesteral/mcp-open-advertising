@@ -6,16 +6,9 @@
  * Create Query → Run Query → Poll for Completion → Fetch CSV → Parse Results
  */
 
-import { injectable, inject } from "tsyringe";
 import type { Logger } from "pino";
 import type { AppConfig } from "../../config/index.js";
-import * as Tokens from "../../container/tokens.js";
-import {
-  createGoogleAuth,
-  createBidManagerClient,
-  parseServiceAccountCredentials,
-  type BidManagerClient,
-} from "./client.js";
+import type { BidManagerClient } from "./client.js";
 import {
   QueryCreationError,
   QueryExecutionError,
@@ -77,50 +70,26 @@ function getTodayString(): string {
   return today.toISOString().split("T")[0];
 }
 
-@injectable()
 export class BidManagerService {
-  private client: BidManagerClient | null = null;
-  private isInitialized = false;
-
-  constructor(
-    @inject(Tokens.AppConfig) private config: AppConfig,
-    @inject(Tokens.Logger) private logger: Logger
-  ) {}
-
   /**
-   * Initialize the Bid Manager API client (lazy initialization)
+   * Constructor accepts a pre-initialized Bid Manager API client.
+   * The client is created per-session by the SessionServiceStore using
+   * the user-provided GoogleAuthAdapter.
    */
-  private async initialize(): Promise<BidManagerClient> {
-    if (this.client && this.isInitialized) {
-      return this.client;
-    }
-
-    this.logger.info("Initializing Bid Manager API client");
-
-    try {
-      const credentials = parseServiceAccountCredentials(this.config, this.logger);
-      const auth = createGoogleAuth(credentials, this.logger);
-      this.client = createBidManagerClient(auth);
-      this.isInitialized = true;
-
-      this.logger.info("Bid Manager API client initialized successfully");
-      return this.client;
-    } catch (error) {
-      this.logger.error({ error }, "Failed to initialize Bid Manager API client");
-      throw error;
-    }
-  }
+  constructor(
+    private config: AppConfig,
+    private logger: Logger,
+    private client: BidManagerClient,
+  ) {}
 
   /**
    * Create a Bid Manager query
    */
   async createQuery(spec: QuerySpec): Promise<{ queryId: string }> {
-    const client = await this.initialize();
-
     this.logger.info({ title: spec.metadata.title }, "Creating Bid Manager query");
 
     try {
-      const response = await client.queries.create({
+      const response = await this.client.queries.create({
         requestBody: {
           metadata: {
             title: spec.metadata.title,
@@ -166,12 +135,10 @@ export class BidManagerService {
    * Run a Bid Manager query to generate a report
    */
   async runQuery(queryId: string): Promise<{ reportId: string }> {
-    const client = await this.initialize();
-
     this.logger.info({ queryId }, "Running Bid Manager query");
 
     try {
-      const response = await client.queries.run({ queryId });
+      const response = await this.client.queries.run({ queryId });
 
       const reportId = response.data.key?.reportId;
       if (!reportId) {
@@ -197,10 +164,8 @@ export class BidManagerService {
    * Get report status
    */
   async getReportStatus(queryId: string, reportId: string): Promise<ReportMetadata> {
-    const client = await this.initialize();
-
     try {
-      const response = await client.queries.reports.get({ queryId, reportId });
+      const response = await this.client.queries.reports.get({ queryId, reportId });
 
       return {
         status: {
@@ -314,8 +279,6 @@ export class BidManagerService {
     queryId: string,
     reportId?: string
   ): Promise<{ reportId: string; isNewRun: boolean }> {
-    await this.initialize();
-
     this.logger.info({ queryId, existingReportId: reportId }, "Attempting to continue query");
 
     // If we have a reportId, check its status first

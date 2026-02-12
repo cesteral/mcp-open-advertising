@@ -1,12 +1,9 @@
-import { injectable, inject } from 'tsyringe';
 import type { Logger } from 'pino';
 import { McpError, JsonRpcErrorCode } from '../../utils/errors/index.js';
 import { RateLimiter } from '../../utils/security/rate-limiter.js';
-import { fetchWithTimeout } from '../../utils/network/fetch-with-timeout.js';
 import { withDV360ApiSpan, setSpanAttribute } from '../../utils/telemetry/index.js';
 import type { RequestContext } from '../../utils/internal/request-context.js';
-import type { AppConfig } from '../../config/index.js';
-import * as tokens from '../../container/tokens.js';
+import { DV360HttpClient } from '../dv360/dv360-http-client.js';
 import {
   type TargetingType,
   type TargetingParentType,
@@ -34,15 +31,11 @@ export interface ListTargetingOptionsResult {
  * - Line Items
  * - Ad Groups
  */
-@injectable()
 export class TargetingService {
-  private accessToken?: string;
-  private tokenExpiry?: Date;
-
   constructor(
-    @inject(tokens.Logger) private logger: Logger,
-    @inject(tokens.AppConfig) private config: AppConfig,
-    @inject(tokens.RateLimiterService) private rateLimiter: RateLimiter
+    private logger: Logger,
+    private rateLimiter: RateLimiter,
+    private httpClient: DV360HttpClient
   ) {}
 
   /**
@@ -57,8 +50,6 @@ export class TargetingService {
     context?: RequestContext
   ): Promise<ListTargetingOptionsResult> {
     return withDV360ApiSpan('listAssignedTargetingOptions', parentType, async () => {
-      await this.ensureAuthenticated(context);
-
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -106,7 +97,7 @@ export class TargetingService {
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
       setSpanAttribute('dv360.advertiserId', ids.advertiserId);
 
-      const response = await this.fetch(path, context);
+      const response = await this.httpClient.fetch(path, context);
 
       const result = response as {
         assignedTargetingOptions?: unknown[];
@@ -133,8 +124,6 @@ export class TargetingService {
     context?: RequestContext
   ): Promise<unknown> {
     return withDV360ApiSpan('getAssignedTargetingOption', parentType, async () => {
-      await this.ensureAuthenticated(context);
-
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -170,7 +159,7 @@ export class TargetingService {
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
       setSpanAttribute('dv360.advertiserId', ids.advertiserId);
 
-      return this.fetch(path, context);
+      return this.httpClient.fetch(path, context);
     });
   }
 
@@ -185,8 +174,6 @@ export class TargetingService {
     context?: RequestContext
   ): Promise<unknown> {
     return withDV360ApiSpan('createAssignedTargetingOption', parentType, async () => {
-      await this.ensureAuthenticated(context);
-
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -222,7 +209,7 @@ export class TargetingService {
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
       setSpanAttribute('dv360.advertiserId', ids.advertiserId);
 
-      return this.fetch(path, context, {
+      return this.httpClient.fetch(path, context, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -241,8 +228,6 @@ export class TargetingService {
     context?: RequestContext
   ): Promise<void> {
     return withDV360ApiSpan('deleteAssignedTargetingOption', parentType, async () => {
-      await this.ensureAuthenticated(context);
-
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -279,7 +264,7 @@ export class TargetingService {
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
       setSpanAttribute('dv360.advertiserId', ids.advertiserId);
 
-      await this.fetch(path, context, { method: 'DELETE' });
+      await this.httpClient.fetch(path, context, { method: 'DELETE' });
     });
   }
 
@@ -407,146 +392,5 @@ export class TargetingService {
         issueCount: issues.length,
       },
     };
-  }
-
-  /**
-   * Private helper: Make authenticated fetch request
-   */
-  private async fetch(
-    path: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    const url = `${this.config.dv360ApiBaseUrl}${path}`;
-
-    this.logger.debug(
-      { url, method: options?.method || 'GET', requestId: context?.requestId },
-      'Making DV360 Targeting API request'
-    );
-
-    const response = await fetchWithTimeout(url, 10000, context, {
-      ...options,
-      headers: {
-        ...options?.headers,
-        Authorization: `Bearer ${this.accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => '');
-
-      throw new McpError(
-        response.status >= 500 ? JsonRpcErrorCode.ServiceUnavailable : JsonRpcErrorCode.InvalidRequest,
-        `DV360 API request failed: ${response.status} ${response.statusText}`,
-        {
-          requestId: context?.requestId,
-          httpStatus: response.status,
-          path,
-          method: options?.method ?? 'GET',
-          errorBody: errorBody.substring(0, 500),
-        }
-      );
-    }
-
-    // DELETE returns 204 No Content
-    if (response.status === 204) {
-      return {};
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Ensure service account is authenticated
-   */
-  private async ensureAuthenticated(context?: RequestContext): Promise<void> {
-    if (!this.accessToken || !this.tokenExpiry || this.tokenExpiry < new Date()) {
-      await this.authenticateServiceAccount(context);
-    }
-  }
-
-  /**
-   * Authenticate using service account credentials
-   */
-  private async authenticateServiceAccount(context?: RequestContext): Promise<void> {
-    this.logger.info({ requestId: context?.requestId }, 'Authenticating with DV360 API');
-
-    // Check if service account credentials are provided
-    if (!this.config.dv360ServiceAccountJson && !this.config.dv360ServiceAccountFile) {
-      throw new McpError(JsonRpcErrorCode.InternalError, 'DV360 service account credentials not configured', {
-        requestId: context?.requestId,
-      });
-    }
-
-    try {
-      let credentialsJson: string;
-
-      // Load credentials from file or base64 string
-      if (this.config.dv360ServiceAccountFile) {
-        this.logger.debug({ file: this.config.dv360ServiceAccountFile }, 'Loading service account from file');
-        const { readFileSync } = await import('fs');
-        credentialsJson = readFileSync(this.config.dv360ServiceAccountFile, 'utf-8');
-      } else {
-        // Decode base64 service account JSON
-        credentialsJson = Buffer.from(this.config.dv360ServiceAccountJson!, 'base64').toString();
-      }
-
-      const credentials = JSON.parse(credentialsJson);
-
-      // Create JWT assertion
-      const now = Math.floor(Date.now() / 1000);
-      const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-
-      const jwtPayload = Buffer.from(
-        JSON.stringify({
-          iss: credentials.client_email,
-          scope: 'https://www.googleapis.com/auth/display-video',
-          aud: 'https://oauth2.googleapis.com/token',
-          exp: now + 3600,
-          iat: now,
-        })
-      ).toString('base64url');
-
-      // Sign with private key
-      const crypto = await import('crypto');
-      const signature = crypto
-        .createSign('RSA-SHA256')
-        .update(`${jwtHeader}.${jwtPayload}`)
-        .sign(credentials.private_key, 'base64url');
-
-      const assertion = `${jwtHeader}.${jwtPayload}.${signature}`;
-
-      // Exchange for access token
-      const tokenResponse = await fetchWithTimeout('https://oauth2.googleapis.com/token', 5000, context, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-          assertion,
-        }),
-      });
-
-      if (!tokenResponse.ok) {
-        throw new Error(`OAuth2 token exchange failed: ${tokenResponse.status} ${tokenResponse.statusText}`);
-      }
-
-      const tokenData = (await tokenResponse.json()) as {
-        access_token: string;
-        expires_in: number;
-      };
-
-      this.accessToken = tokenData.access_token;
-      this.tokenExpiry = new Date(Date.now() + tokenData.expires_in * 1000);
-
-      this.logger.info(
-        { expiresAt: this.tokenExpiry, requestId: context?.requestId },
-        'DV360 authentication successful'
-      );
-    } catch (error) {
-      this.logger.error({ error, requestId: context?.requestId }, 'DV360 authentication failed');
-      throw new McpError(JsonRpcErrorCode.InternalError, 'Failed to authenticate with DV360 API', {
-        requestId: context?.requestId,
-      });
-    }
   }
 }

@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -98,9 +97,9 @@ type ListCustomBiddingAlgorithmsOutput = z.infer<typeof ListCustomBiddingAlgorit
 export async function listCustomBiddingAlgorithmsLogic(
   input: ListCustomBiddingAlgorithmsInput,
   context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<ListCustomBiddingAlgorithmsOutput> {
-  const dv360Service = container.resolve(DV360Service);
+  const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Validate that at least one ID is provided
   if (!input.partnerId && !input.advertiserId) {

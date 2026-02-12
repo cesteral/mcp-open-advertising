@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { container } from 'tsyringe';
-import { TargetingService } from '../../../services/targeting/index.js';
+import { resolveSessionServices } from '../utils/resolve-session.js';
 import { ALL_TARGETING_TYPES, type TargetingType } from '../utils/targeting-metadata.js';
 import {
   getValidateInputShape,
@@ -103,9 +102,9 @@ type ValidateTargetingConfigOutput = z.infer<typeof ValidateTargetingConfigOutpu
 export async function validateTargetingConfigLogic(
   input: ValidateTargetingConfigInput,
   context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<ValidateTargetingConfigOutput> {
-  const targetingService = container.resolve(TargetingService);
+  const { targetingService } = resolveSessionServices(sdkContext);
 
   const targetingTypes = (input.targetingTypesToCheck as TargetingType[]) || DEFAULT_TARGETING_TYPES;
 

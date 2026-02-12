@@ -3,6 +3,14 @@ import {
   fullCampaignSetupPrompt,
   getFullCampaignSetupPromptMessage,
 } from "./full-campaign-setup.prompt.js";
+import {
+  troubleshootUnderdeliveryPrompt,
+  getTroubleshootUnderdeliveryPromptMessage,
+} from "./troubleshoot-underdelivery.prompt.js";
+import {
+  budgetReallocationPrompt,
+  getBudgetReallocationPromptMessage,
+} from "./budget-reallocation.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -23,7 +31,20 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
       generateMessage: getFullCampaignSetupPromptMessage,
     },
   ],
-  // Add more prompts here as they're created
+  [
+    troubleshootUnderdeliveryPrompt.name,
+    {
+      prompt: troubleshootUnderdeliveryPrompt,
+      generateMessage: getTroubleshootUnderdeliveryPromptMessage,
+    },
+  ],
+  [
+    budgetReallocationPrompt.name,
+    {
+      prompt: budgetReallocationPrompt,
+      generateMessage: getBudgetReallocationPromptMessage,
+    },
+  ],
 ]);
 
 /**

@@ -7,6 +7,7 @@ import { McpError, JsonRpcErrorCode } from "../errors/index.js";
 export class RateLimiter {
   private readonly requests: Map<string, number[]> = new Map();
   private readonly limits: Map<string, { limit: number; windowMs: number }> = new Map();
+  private readonly compiledPatterns: Map<string, RegExp> = new Map();
   private cleanupInterval?: NodeJS.Timeout;
 
   constructor() {
@@ -22,6 +23,15 @@ export class RateLimiter {
    */
   configure(keyPattern: string, limit: number, windowMs: number): void {
     this.limits.set(keyPattern, { limit, windowMs });
+
+    // Pre-compile the wildcard pattern to a RegExp for fast matching
+    if (keyPattern.includes("*") && keyPattern !== "*") {
+      const regexSource = keyPattern
+        .split("*")
+        .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+        .join(".*");
+      this.compiledPatterns.set(keyPattern, new RegExp(`^${regexSource}$`));
+    }
   }
 
   /**
@@ -105,6 +115,7 @@ export class RateLimiter {
    */
   clear(): void {
     this.requests.clear();
+    this.compiledPatterns.clear();
   }
 
   /**
@@ -129,7 +140,7 @@ export class RateLimiter {
   }
 
   /**
-   * Match key against pattern (supports * wildcard)
+   * Match key against a configured pattern using cached RegExp
    */
   private matchPattern(key: string, pattern: string): boolean {
     if (pattern === "*") {
@@ -140,12 +151,17 @@ export class RateLimiter {
       return key === pattern;
     }
 
-    const regexPattern = pattern
+    const cached = this.compiledPatterns.get(pattern);
+    if (cached) {
+      return cached.test(key);
+    }
+
+    // Fallback: compile on the fly (shouldn't happen if configure() was called)
+    const regexSource = pattern
       .split("*")
       .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
       .join(".*");
-
-    return new RegExp(`^${regexPattern}$`).test(key);
+    return new RegExp(`^${regexSource}$`).test(key);
   }
 
   /**
@@ -181,6 +197,7 @@ export class RateLimiter {
     }
     this.requests.clear();
     this.limits.clear();
+    this.compiledPatterns.clear();
   }
 }
 

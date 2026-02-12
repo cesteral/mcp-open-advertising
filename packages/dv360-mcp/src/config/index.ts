@@ -3,20 +3,10 @@ import { z } from "zod";
 import { existsSync } from "fs";
 import { resolve } from "path";
 
-// Suppress dotenv banner by temporarily redirecting stdout
-const originalWrite = process.stdout.write.bind(process.stdout);
-process.stdout.write = (chunk: any, ...args: any[]): boolean => {
-  // Suppress dotenv banner messages
-  if (typeof chunk === 'string' && chunk.includes('[dotenv@')) {
-    return true;
-  }
-  return originalWrite(chunk, ...args);
-};
-
 // Load .env file from package root
 const envPath = resolve(process.cwd(), '.env');
 if (existsSync(envPath)) {
-  const result = config({ path: envPath });
+  const result = config({ path: envPath, debug: false });
   // Debug: Log to stderr if .env loaded successfully
   if (result.parsed) {
     process.stderr.write(`[config] Loaded .env from ${envPath} with ${Object.keys(result.parsed).length} variables\n`);
@@ -25,12 +15,12 @@ if (existsSync(envPath)) {
   process.stderr.write(`[config] WARNING: .env file not found at ${envPath}\n`);
 }
 
-// Restore stdout.write
-process.stdout.write = originalWrite;
-
 /**
  * Configuration schema with Zod validation
- * Based on Phase 2 architecture requirements
+ *
+ * Note: Google API credentials are now provided by the end-user via HTTP
+ * headers at SSE connection time (see http-transport.ts). The server no
+ * longer owns a service account.
  */
 const ConfigSchema = z.object({
   // Service Identity
@@ -38,11 +28,6 @@ const ConfigSchema = z.object({
   port: z.number().int().min(1).max(65535).default(3002),
   host: z.string().default("0.0.0.0"),
   nodeEnv: z.enum(["development", "production", "test"]).default("development"),
-
-  // Authentication
-  mcpAuthMode: z.enum(["none", "jwt", "oauth"]).default("none"),
-  mcpAuthSecretKey: z.string().min(32).optional(),
-  jwtSecret: z.string().default("dev-secret-change-in-production"), // Legacy, kept for compatibility
 
   // Session Management
   mcpSessionMode: z.enum(["stateless", "stateful", "auto"]).default("auto"),
@@ -66,12 +51,12 @@ const ConfigSchema = z.object({
     .string()
     .url()
     .default("https://displayvideo.googleapis.com/v4"),
-  dv360ServiceAccountJson: z.string().optional(), // Base64 encoded service account JSON
-  dv360ServiceAccountFile: z.string().optional(), // Path to service account JSON file
   dv360RateLimitPerMinute: z.number().default(60),
 
-  // Google Cloud Configuration (for Secret Manager)
-  serviceAccountSecretId: z.string().optional(), // GCP Secret Manager secret ID
+  // Stdio fallback: service account credentials from env vars
+  // Used only in stdio transport mode (e.g., Claude Desktop local)
+  dv360ServiceAccountJson: z.string().optional(),
+  dv360ServiceAccountFile: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -85,11 +70,6 @@ export function parseConfig(): AppConfig {
     port: process.env.DV360_MCP_PORT ? Number(process.env.DV360_MCP_PORT) : undefined,
     host: process.env.DV360_MCP_HOST,
     nodeEnv: process.env.NODE_ENV,
-
-    // Authentication
-    mcpAuthMode: process.env.MCP_AUTH_MODE,
-    mcpAuthSecretKey: process.env.MCP_AUTH_SECRET_KEY,
-    jwtSecret: process.env.JWT_SECRET,
 
     // Session
     mcpSessionMode: process.env.MCP_SESSION_MODE,
@@ -112,47 +92,18 @@ export function parseConfig(): AppConfig {
 
     // DV360 API
     dv360ApiBaseUrl: process.env.DV360_API_BASE_URL,
-    dv360ServiceAccountJson: process.env.DV360_SERVICE_ACCOUNT_JSON,
-    dv360ServiceAccountFile: process.env.DV360_SERVICE_ACCOUNT_FILE,
     dv360RateLimitPerMinute: process.env.DV360_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.DV360_RATE_LIMIT_PER_MINUTE)
       : undefined,
 
-    // Google Cloud
-    serviceAccountSecretId: process.env.SERVICE_ACCOUNT_SECRET_ID,
+    // Stdio fallback credentials
+    dv360ServiceAccountJson: process.env.DV360_SERVICE_ACCOUNT_JSON,
+    dv360ServiceAccountFile: process.env.DV360_SERVICE_ACCOUNT_FILE,
   };
 
   try {
-    const config = ConfigSchema.parse(rawConfig);
-
-    // Debug: Log service account status to stderr
-    process.stderr.write(`[config] DV360_SERVICE_ACCOUNT_JSON present: ${!!config.dv360ServiceAccountJson}, length: ${config.dv360ServiceAccountJson?.length || 0}\n`);
-
-    // Validation: JWT mode requires secret key
-    if (config.mcpAuthMode === "jwt" && !config.mcpAuthSecretKey) {
-      throw new Error("MCP_AUTH_SECRET_KEY is required when MCP_AUTH_MODE=jwt");
-    }
-
-    // Validation: Production requires auth
-    if (config.nodeEnv === "production" && config.mcpAuthMode === "none") {
-      console.warn(
-        "WARNING: Running in production mode without authentication (MCP_AUTH_MODE=none)"
-      );
-    }
-
-    // Validation: DV360 service account required for production
-    if (
-      config.nodeEnv === "production" &&
-      !config.dv360ServiceAccountJson &&
-      !config.dv360ServiceAccountFile &&
-      !config.serviceAccountSecretId
-    ) {
-      throw new Error(
-        "Production requires either DV360_SERVICE_ACCOUNT_JSON, DV360_SERVICE_ACCOUNT_FILE, or SERVICE_ACCOUNT_SECRET_ID"
-      );
-    }
-
-    return config;
+    const parsedConfig = ConfigSchema.parse(rawConfig);
+    return parsedConfig;
   } catch (error) {
     if (error instanceof z.ZodError) {
       console.error("Configuration validation failed:");

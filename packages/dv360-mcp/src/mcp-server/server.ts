@@ -33,7 +33,7 @@ function extractZodShape(schema: z.ZodTypeAny): z.ZodRawShape {
 /**
  * Create and configure MCP server instance
  */
-export async function createMcpServer(logger: Logger): Promise<McpServer> {
+export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
   // Register all resources
   resourceRegistry.registerAll();
   logger.info({ resourceCount: resourceRegistry.getResourceCount() }, "Registered MCP resources");
@@ -76,6 +76,7 @@ export async function createMcpServer(logger: Logger): Promise<McpServer> {
 
             const sdkContext: SdkContext = {
               requestId: context.requestId,
+              sessionId,
               elicitInput: async (params) => {
                 // Note: elicitInput may need to be verified in newer SDK versions
                 if (typeof (server as any).elicitInput === "function") {

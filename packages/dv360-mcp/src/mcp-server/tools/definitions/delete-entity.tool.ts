@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
@@ -77,9 +76,9 @@ type DeleteEntityOutput = z.infer<typeof DeleteEntityOutputSchema>;
 export async function deleteEntityLogic(
   input: DeleteEntityInput,
   context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
-  const dv360Service = container.resolve(DV360Service);
+  const { dv360Service } = resolveSessionServices(sdkContext);
   const entityIds = extractEntityIds(input, input.entityType);
   const entityBeforeDeletion = (await dv360Service.getEntity(
     input.entityType,

@@ -1,9 +1,7 @@
 import { z } from "zod";
-import { container } from "tsyringe";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
-import { BidManagerService } from "../../../services/bid-manager/index.js";
-import * as Tokens from "../../../container/tokens.js";
 import { calculateCTR, calculateCPM, formatMetricValue } from "../../../utils/metrics.js";
 
 const TOOL_NAME = "get_campaign_delivery";
@@ -60,10 +58,10 @@ export type GetCampaignDeliveryOutput = z.infer<typeof GetCampaignDeliveryOutput
 export async function getCampaignDeliveryLogic(
   input: GetCampaignDeliveryInput,
   _context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<GetCampaignDeliveryOutput> {
   // Resolve BidManagerService from DI container
-  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
+  const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Fetch delivery metrics via Bid Manager API
   const metrics = await bidManagerService.getDeliveryMetrics({

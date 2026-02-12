@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { container } from 'tsyringe';
-import { TargetingService } from '../../../services/targeting/index.js';
+import { resolveSessionServices } from '../utils/resolve-session.js';
 import {
   ALL_TARGETING_TYPES,
   type TargetingParentType,
@@ -93,9 +92,9 @@ type CreateAssignedTargetingOutput = z.infer<typeof CreateAssignedTargetingOutpu
 export async function createAssignedTargetingLogic(
   input: CreateAssignedTargetingInput,
   context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<CreateAssignedTargetingOutput> {
-  const targetingService = container.resolve(TargetingService);
+  const { targetingService } = resolveSessionServices(sdkContext);
 
   // Build IDs object using config-driven helper
   const ids = buildTargetingIds(input.parentType as TargetingParentType, input.advertiserId, input);

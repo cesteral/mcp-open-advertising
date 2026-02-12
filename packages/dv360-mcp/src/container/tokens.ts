@@ -7,9 +7,7 @@
 export const AppConfig = Symbol("AppConfig");
 export const Logger = Symbol("Logger");
 
-// DV360 Services
-export const DV360Service = Symbol("DV360Service");
-export const TargetingService = Symbol("TargetingService");
+// Infrastructure Services
 export const RateLimiterService = Symbol("RateLimiterService");
 export const RequestContextService = Symbol("RequestContextService");
 

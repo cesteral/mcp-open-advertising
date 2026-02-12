@@ -15,6 +15,7 @@ import {
   type EntityExample,
 } from "../../tools/utils/entity-examples.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { resourceCache } from "../utils/resource-cache.js";
 
 const RESOURCE_NAME = "DV360 Entity Examples";
 const RESOURCE_DESCRIPTION = "Curated examples of common operations for DV360 entity types";
@@ -37,6 +38,12 @@ async function readEntityExamples(params: Record<string, string>): Promise<Resou
       entityType,
       availableTypes: getSupportedEntityTypesDynamic(),
     });
+  }
+
+  const cacheKey = `entity-examples://${entityType}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached) {
+    return { uri: cacheKey, mimeType: "application/json", text: cached };
   }
 
   // Get examples for this entity type
@@ -71,10 +78,13 @@ async function readEntityExamples(params: Record<string, string>): Promise<Resou
     },
   };
 
+  const text = JSON.stringify(examplesDocument, null, 2);
+  resourceCache.set(cacheKey, text);
+
   return {
-    uri: `entity-examples://${entityType}`,
+    uri: cacheKey,
     mimeType: "application/json",
-    text: JSON.stringify(examplesDocument, null, 2),
+    text,
   };
 }
 

@@ -1,36 +1,21 @@
 // import { container } from "tsyringe";
 // import * as Tokens from "../tokens.js";
+// ↑ Uncomment when registering DI services below (e.g. ResourceRegistry)
 
 /**
  * Register MCP-specific services (Tools, Resources, etc.)
- * This will be populated as we implement tools and resources
  */
 export function registerMcpServices(): void {
-  // Tool Registry (singleton)
-  // Will be uncommented when ToolRegistry class is implemented
-  // container.registerSingleton(Tokens.ToolRegistry, ToolRegistry);
+  // Resource Registry — not yet implemented for dbm-mcp.
+  // When a ResourceRegistry class is created (similar to dv360-mcp), register it here:
+  //   import { ResourceRegistry } from "../../mcp-server/resources/utils/resource-registry.js";
+  //   container.registerSingleton(Tokens.ResourceRegistry, ResourceRegistry);
 
-  // Resource Registry (singleton)
-  // Will be uncommented when ResourceRegistry class is implemented
-  // container.registerSingleton(Tokens.ResourceRegistry, ResourceRegistry);
-
-  // Tool Definitions (multi-injection pattern)
-  // All tool definitions will be registered here
-  // const allTools = [
-  //   getCampaignDeliveryTool,
-  //   getPerformanceMetricsTool,
-  //   getHistoricalMetricsTool,
-  //   getPacingStatusTool,
-  //   getPlatformEntitiesTool,
-  // ];
-  //
-  // for (const tool of allTools) {
-  //   container.register(Tokens.ToolDefinitions, { useValue: tool });
-  // }
-
-  // Factory for MCP server instances
-  // Will be uncommented when createMcpServerInstance is implemented
-  // container.register(Tokens.CreateMcpServerInstance, {
-  //   useValue: createMcpServerInstance,
-  // });
+  // Tool Definitions
+  // ----------------
+  // Tool definitions are registered directly in server.ts using the MCP SDK's
+  // `server.tool()` API, which doesn't fit the multi-injection DI pattern well.
+  // Each tool file (e.g., get-campaign-delivery.tool.ts) resolves its own service
+  // dependencies from the container at call time, so there is no need to
+  // register tool definitions here.
 }

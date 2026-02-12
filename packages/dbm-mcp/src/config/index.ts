@@ -3,20 +3,10 @@ import { z } from "zod";
 import { existsSync } from "fs";
 import { resolve } from "path";
 
-// Suppress dotenv banner by temporarily redirecting stdout
-const originalWrite = process.stdout.write.bind(process.stdout);
-process.stdout.write = (chunk: any, ...args: any[]): boolean => {
-  // Suppress dotenv banner messages
-  if (typeof chunk === "string" && chunk.includes("[dotenv@")) {
-    return true;
-  }
-  return originalWrite(chunk, ...args);
-};
-
 // Load .env file from package root
 const envPath = resolve(process.cwd(), ".env");
 if (existsSync(envPath)) {
-  const result = config({ path: envPath });
+  const result = config({ path: envPath, debug: false });
   // Debug: Log to stderr if .env loaded successfully
   if (result.parsed) {
     process.stderr.write(
@@ -26,9 +16,6 @@ if (existsSync(envPath)) {
 } else {
   process.stderr.write(`[config] WARNING: .env file not found at ${envPath}\n`);
 }
-
-// Restore stdout.write
-process.stdout.write = originalWrite;
 
 /**
  * Configuration schema with Zod validation
@@ -40,11 +27,6 @@ const ConfigSchema = z.object({
   port: z.number().int().min(1).max(65535).default(3001),
   host: z.string().default("0.0.0.0"),
   nodeEnv: z.enum(["development", "production", "test"]).default("development"),
-
-  // Authentication (MCP clients)
-  mcpAuthMode: z.enum(["none", "jwt", "oauth"]).default("none"),
-  mcpAuthSecretKey: z.string().min(32).optional(),
-  jwtSecret: z.string().default("dev-secret-change-in-production"), // Legacy, kept for compatibility
 
   // Session Management
   mcpSessionMode: z.enum(["stateless", "stateful", "auto"]).default("auto"),
@@ -63,8 +45,10 @@ const ConfigSchema = z.object({
   otelExporterOtlpTracesEndpoint: z.string().url().optional(),
   otelExporterOtlpMetricsEndpoint: z.string().url().optional(),
 
-  // Google Cloud / Bid Manager API Configuration
+  // Google Cloud
   gcpProjectId: z.string().optional(),
+
+  // Stdio-mode fallback credentials (env vars only, not used in HTTP mode)
   serviceAccountJson: z.string().optional(), // Base64 encoded service account JSON
   serviceAccountFile: z.string().optional(), // Path to service account JSON file
 
@@ -78,9 +62,6 @@ const ConfigSchema = z.object({
   reportPollMaxDelayMs: z.number().default(60000), // Max backoff delay (60s)
   reportQueryRetries: z.number().default(3), // High-level query retries
   reportRetryCooldownMs: z.number().default(60000), // Delay before retry (60s)
-
-  // Google Cloud (for Secret Manager)
-  serviceAccountSecretId: z.string().optional(), // GCP Secret Manager secret ID
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -94,11 +75,6 @@ export function parseConfig(): AppConfig {
     port: process.env.DBM_MCP_PORT ? Number(process.env.DBM_MCP_PORT) : undefined,
     host: process.env.DBM_MCP_HOST,
     nodeEnv: process.env.NODE_ENV,
-
-    // Authentication
-    mcpAuthMode: process.env.MCP_AUTH_MODE,
-    mcpAuthSecretKey: process.env.MCP_AUTH_SECRET_KEY,
-    jwtSecret: process.env.JWT_SECRET,
 
     // Session
     mcpSessionMode: process.env.MCP_SESSION_MODE,
@@ -119,8 +95,10 @@ export function parseConfig(): AppConfig {
     otelExporterOtlpTracesEndpoint: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
     otelExporterOtlpMetricsEndpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
 
-    // Google Cloud / Bid Manager API
+    // Google Cloud
     gcpProjectId: process.env.GCP_PROJECT_ID,
+
+    // Stdio-mode fallback credentials
     serviceAccountJson: process.env.SERVICE_ACCOUNT_JSON,
     serviceAccountFile: process.env.SERVICE_ACCOUNT_FILE,
 
@@ -148,43 +126,10 @@ export function parseConfig(): AppConfig {
     reportRetryCooldownMs: process.env.REPORT_RETRY_COOLDOWN_MS
       ? Number(process.env.REPORT_RETRY_COOLDOWN_MS)
       : undefined,
-
-    // Google Cloud
-    serviceAccountSecretId: process.env.SERVICE_ACCOUNT_SECRET_ID,
   };
 
   try {
     const config = ConfigSchema.parse(rawConfig);
-
-    // Debug: Log service account status to stderr
-    process.stderr.write(
-      `[config] SERVICE_ACCOUNT_JSON present: ${!!config.serviceAccountJson}, length: ${config.serviceAccountJson?.length || 0}\n`
-    );
-
-    // Validation: JWT mode requires secret key
-    if (config.mcpAuthMode === "jwt" && !config.mcpAuthSecretKey) {
-      throw new Error("MCP_AUTH_SECRET_KEY is required when MCP_AUTH_MODE=jwt");
-    }
-
-    // Validation: Production requires auth
-    if (config.nodeEnv === "production" && config.mcpAuthMode === "none") {
-      console.warn(
-        "WARNING: Running in production mode without authentication (MCP_AUTH_MODE=none)"
-      );
-    }
-
-    // Validation: Bid Manager service account required for production
-    if (
-      config.nodeEnv === "production" &&
-      !config.serviceAccountJson &&
-      !config.serviceAccountFile &&
-      !config.serviceAccountSecretId
-    ) {
-      throw new Error(
-        "Production requires either SERVICE_ACCOUNT_JSON, SERVICE_ACCOUNT_FILE, or SERVICE_ACCOUNT_SECRET_ID"
-      );
-    }
-
     return config;
   } catch (error) {
     if (error instanceof z.ZodError) {

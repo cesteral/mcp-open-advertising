@@ -15,6 +15,7 @@ import {
   type FieldInfo,
 } from "../../tools/utils/schema-introspection.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { resourceCache } from "../utils/resource-cache.js";
 
 const RESOURCE_NAME = "DV360 Entity Fields";
 const RESOURCE_DESCRIPTION = "Flat list of all field paths for DV360 entity types";
@@ -37,6 +38,12 @@ async function readEntityFields(params: Record<string, string>): Promise<Resourc
       entityType,
       availableTypes: getSupportedEntityTypesDynamic(),
     });
+  }
+
+  const cacheKey = `entity-fields://${entityType}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached) {
+    return { uri: cacheKey, mimeType: "application/json", text: cached };
   }
 
   // Get schema for the entity type (use update schema as it's the most complete)
@@ -67,10 +74,13 @@ async function readEntityFields(params: Record<string, string>): Promise<Resourc
     },
   };
 
+  const text = JSON.stringify(fieldsDocument, null, 2);
+  resourceCache.set(cacheKey, text);
+
   return {
-    uri: `entity-fields://${entityType}`,
+    uri: cacheKey,
     mimeType: "application/json",
-    text: JSON.stringify(fieldsDocument, null, 2),
+    text,
   };
 }
 

@@ -14,7 +14,7 @@ import type { SdkContext } from "../types-global/mcp.js";
 /**
  * Create and configure MCP server instance
  */
-export async function createMcpServer(logger: Logger): Promise<McpServer> {
+export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
   const server = new McpServer({
     name: "dbm-mcp",
     version: "1.0.0",
@@ -52,6 +52,7 @@ export async function createMcpServer(logger: Logger): Promise<McpServer> {
 
             const sdkContext: SdkContext = {
               requestId: context.requestId,
+              sessionId,
               elicitInput: async (params: Record<string, unknown>) => {
                 // Note: elicitInput may need to be verified in newer SDK versions
                 if (typeof (server as any).elicitInput === "function") {

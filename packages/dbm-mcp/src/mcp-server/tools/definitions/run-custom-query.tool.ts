@@ -1,9 +1,7 @@
 import { z } from "zod";
-import { container } from "tsyringe";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
-import { BidManagerService } from "../../../services/bid-manager/index.js";
-import * as Tokens from "../../../container/tokens.js";
 import {
   isValidFilterType,
   isValidMetricType,
@@ -194,7 +192,7 @@ function validateQueryParams(
 export async function runCustomQueryLogic(
   input: RunCustomQueryInput,
   _context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<RunCustomQueryOutput> {
   const strictValidation = input.strictValidation !== false;
 
@@ -206,7 +204,7 @@ export async function runCustomQueryLogic(
   }
 
   // Resolve BidManagerService from DI container
-  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
+  const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Execute custom query via BidManagerService
   const result = await bidManagerService.executeCustomQuery({

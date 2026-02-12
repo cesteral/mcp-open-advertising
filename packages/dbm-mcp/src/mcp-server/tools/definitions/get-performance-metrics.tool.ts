@@ -1,9 +1,7 @@
 import { z } from "zod";
-import { container } from "tsyringe";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
-import { BidManagerService } from "../../../services/bid-manager/index.js";
-import * as Tokens from "../../../container/tokens.js";
 
 const TOOL_NAME = "get_performance_metrics";
 const TOOL_TITLE = "Get Performance Metrics";
@@ -66,10 +64,10 @@ export type GetPerformanceMetricsOutput = z.infer<typeof GetPerformanceMetricsOu
 export async function getPerformanceMetricsLogic(
   input: GetPerformanceMetricsInput,
   _context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<GetPerformanceMetricsOutput> {
   // Resolve BidManagerService from DI container
-  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
+  const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Fetch performance metrics (includes calculated KPIs)
   const metrics = await bidManagerService.getPerformanceMetrics({

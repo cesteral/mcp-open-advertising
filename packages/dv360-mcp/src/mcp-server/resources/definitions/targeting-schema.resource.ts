@@ -14,6 +14,7 @@ import {
 } from '../../tools/utils/targeting-metadata.js';
 import { McpError, JsonRpcErrorCode } from '../../../utils/errors/index.js';
 import * as generatedSchemas from '../../../generated/schemas/zod.js';
+import { resourceCache } from '../utils/resource-cache.js';
 
 const RESOURCE_NAME = 'DV360 Targeting Schema';
 const RESOURCE_DESCRIPTION = 'JSON Schema for specific targeting option detail types';
@@ -101,6 +102,12 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
     });
   }
 
+  const cacheKey = `targeting-schema://${targetingType}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached) {
+    return { uri: cacheKey, mimeType: 'application/json', text: cached };
+  }
+
   const schemaName = getTargetingDetailSchemaName(targetingType as TargetingType);
   const zodSchema = (generatedSchemas as Record<string, any>)[schemaName];
 
@@ -135,10 +142,13 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
     documentation: `https://developers.google.com/display-video/api/reference/rest/v4/advertisers.lineItems.targetingTypes.assignedTargetingOptions#${schemaName}`,
   };
 
+  const text = JSON.stringify(document, null, 2);
+  resourceCache.set(cacheKey, text);
+
   return {
-    uri: `targeting-schema://${targetingType}`,
+    uri: cacheKey,
     mimeType: 'application/json',
-    text: JSON.stringify(document, null, 2),
+    text,
   };
 }
 

@@ -11,6 +11,7 @@ import {
   getSupportedTargetingParentTypes,
   type TargetingType,
 } from '../../tools/utils/targeting-metadata.js';
+import { resourceCache } from '../utils/resource-cache.js';
 
 const RESOURCE_NAME = 'DV360 Targeting Types';
 const RESOURCE_DESCRIPTION = 'List of all available DV360 targeting types with descriptions and categories';
@@ -30,6 +31,12 @@ function getSupportedParentTypes(_targetingType: TargetingType): string[] {
  * Read targeting types resource
  */
 async function readTargetingTypes(): Promise<ResourceContent> {
+  const cacheKey = 'targeting-types://';
+  const cached = resourceCache.get(cacheKey);
+  if (cached) {
+    return { uri: cacheKey, mimeType: 'application/json', text: cached };
+  }
+
   const categorizedTypes: Record<
     string,
     Array<{
@@ -70,10 +77,13 @@ async function readTargetingTypes(): Promise<ResourceContent> {
     documentation: 'https://developers.google.com/display-video/api/reference/rest/v4/TargetingType',
   };
 
+  const text = JSON.stringify(document, null, 2);
+  resourceCache.set(cacheKey, text);
+
   return {
-    uri: 'targeting-types://',
+    uri: cacheKey,
     mimeType: 'application/json',
-    text: JSON.stringify(document, null, 2),
+    text,
   };
 }
 

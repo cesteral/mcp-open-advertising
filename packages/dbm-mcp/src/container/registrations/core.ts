@@ -5,11 +5,14 @@ import { appConfig } from "../../config/index.js";
 import * as Tokens from "../tokens.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 import { requestContextService } from "../../utils/internal/request-context.js";
-import { BidManagerService } from "../../services/bid-manager/index.js";
 
 /**
  * Register core services (Config, Logger, etc.)
- * These are foundational services needed by all other components
+ * These are foundational services needed by all other components.
+ *
+ * Note: BidManagerService is no longer registered as a singleton here.
+ * It is created per-session via SessionServiceStore (see services/session-services.ts).
+ *
  * @param logger Optional logger instance to use (for stdio mode with stderr logging)
  */
 export function registerCoreServices(logger?: Logger): void {
@@ -26,7 +29,4 @@ export function registerCoreServices(logger?: Logger): void {
 
   // Rate Limiter Service (singleton instance)
   container.register(Tokens.RateLimiterService, { useValue: rateLimiter });
-
-  // Bid Manager Service (singleton for API interactions)
-  container.registerSingleton(Tokens.BidManagerService, BidManagerService);
 }

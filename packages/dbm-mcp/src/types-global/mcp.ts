@@ -52,5 +52,6 @@ export interface ResourceDefinition {
  */
 export interface SdkContext {
   requestId?: string;
+  sessionId?: string;
   [key: string]: unknown;
 }

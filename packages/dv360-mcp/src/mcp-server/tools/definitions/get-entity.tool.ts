@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
@@ -105,10 +104,10 @@ type GetEntityOutput = z.infer<typeof GetEntityOutputSchema>;
 export async function getEntityLogic(
   input: GetEntityInput,
   context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<GetEntityOutput> {
   // Resolve DV360Service from container
-  const dv360Service = container.resolve(DV360Service);
+  const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Extract entity IDs using utility
   const entityIds = extractEntityIds(input, input.entityType);

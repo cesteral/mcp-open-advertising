@@ -1,7 +1,5 @@
 import { AsyncLocalStorage } from "async_hooks";
-import { McpError, JsonRpcErrorCode } from "../errors/index.js";
 import type { RequestContext } from "../internal/request-context.js";
-import { appConfig } from "../../config/index.js";
 
 /**
  * Authentication information stored in AsyncLocalStorage
@@ -36,27 +34,10 @@ export function getAuthInfo(): AuthInfo | undefined {
 /**
  * Check if user has required scopes
  */
-export function withRequiredScopes(requiredScopes: string[]): void {
-  // When auth is disabled (MCP_AUTH_MODE=none), allow all
-  if (appConfig.mcpAuthMode === "none") {
-    return;
-  }
-
-  // Get auth info from AsyncLocalStorage
-  const store = authContext.getStore();
-  if (!store?.authInfo) {
-    throw new McpError(JsonRpcErrorCode.Unauthorized, "No authentication information found");
-  }
-
-  const userScopes = store.authInfo.scopes;
-  const hasAllScopes = requiredScopes.every((scope) => userScopes.includes(scope));
-
-  if (!hasAllScopes) {
-    throw new McpError(JsonRpcErrorCode.Forbidden, "Insufficient permissions", {
-      required: requiredScopes,
-      provided: userScopes,
-    });
-  }
+export function withRequiredScopes(_requiredScopes: string[]): void {
+  // Auth is now handled at the transport level (credentials in headers).
+  // Scope-based authorization is not currently enforced.
+  return;
 }
 
 /**
@@ -81,33 +62,17 @@ export function withToolAuth<TInput, TOutput>(
 /**
  * Helper function to check if current user has any of the specified scopes
  */
-export function hasAnyScope(scopes: string[]): boolean {
-  if (appConfig.mcpAuthMode === "none") {
-    return true;
-  }
-
-  const store = authContext.getStore();
-  if (!store?.authInfo) {
-    return false;
-  }
-
-  return scopes.some((scope) => store.authInfo.scopes.includes(scope));
+export function hasAnyScope(_scopes: string[]): boolean {
+  // Auth is now handled at the transport level (credentials in headers).
+  return true;
 }
 
 /**
  * Helper function to check if current user has all of the specified scopes
  */
-export function hasAllScopes(scopes: string[]): boolean {
-  if (appConfig.mcpAuthMode === "none") {
-    return true;
-  }
-
-  const store = authContext.getStore();
-  if (!store?.authInfo) {
-    return false;
-  }
-
-  return scopes.every((scope) => store.authInfo.scopes.includes(scope));
+export function hasAllScopes(_scopes: string[]): boolean {
+  // Auth is now handled at the transport level (credentials in headers).
+  return true;
 }
 
 /**

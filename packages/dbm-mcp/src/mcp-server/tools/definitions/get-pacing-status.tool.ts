@@ -1,9 +1,7 @@
 import { z } from "zod";
-import { container } from "tsyringe";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
-import { BidManagerService } from "../../../services/bid-manager/index.js";
-import * as Tokens from "../../../container/tokens.js";
 
 const TOOL_NAME = "get_pacing_status";
 const TOOL_TITLE = "Get Pacing Status";
@@ -81,10 +79,10 @@ function daysBetween(startDate: string, endDate: string): number {
 export async function getPacingStatusLogic(
   input: GetPacingStatusInput,
   _context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<GetPacingStatusOutput> {
   // Resolve BidManagerService from DI container
-  const bidManagerService = container.resolve<BidManagerService>(Tokens.BidManagerService);
+  const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Get pacing status from Bid Manager API
   const pacingStatus = await bidManagerService.getPacingStatus({

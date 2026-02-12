@@ -13,6 +13,7 @@ import {
 } from "../../tools/utils/entity-mapping-dynamic.js";
 import { getRequiredFieldsFromSchema } from "../../tools/utils/entity-mapping-dynamic.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { resourceCache } from "../utils/resource-cache.js";
 
 const RESOURCE_NAME = "DV360 Entity Schema";
 const RESOURCE_DESCRIPTION = "Full JSON Schema for DV360 entity types with operation metadata";
@@ -35,6 +36,12 @@ async function readEntitySchema(params: Record<string, string>): Promise<Resourc
       entityType,
       availableTypes: getSupportedEntityTypesDynamic(),
     });
+  }
+
+  const cacheKey = `entity-schema://${entityType}`;
+  const cached = resourceCache.get(cacheKey);
+  if (cached) {
+    return { uri: cacheKey, mimeType: "application/json", text: cached };
   }
 
   const config = getEntityConfigDynamic(entityType);
@@ -74,10 +81,13 @@ async function readEntitySchema(params: Record<string, string>): Promise<Resourc
         : config.apiPath,
   };
 
+  const text = JSON.stringify(schemaDocument, null, 2);
+  resourceCache.set(cacheKey, text);
+
   return {
-    uri: `entity-schema://${entityType}`,
+    uri: cacheKey,
     mimeType: "application/json",
-    text: JSON.stringify(schemaDocument, null, 2),
+    text,
   };
 }
 

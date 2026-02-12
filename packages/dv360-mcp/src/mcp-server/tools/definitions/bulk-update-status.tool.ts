@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
@@ -103,7 +102,7 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
-  const dv360Service = container.resolve(DV360Service);
+  const { dv360Service } = resolveSessionServices(sdkContext);
 
   const advertiserId = await ensureRequiredFieldValue({
     fieldName: "advertiserId",

@@ -1,4 +1,3 @@
-import { injectable, inject } from "tsyringe";
 import type { Logger } from "pino";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { RateLimiter } from "../../utils/security/rate-limiter.js";
@@ -6,11 +5,56 @@ import {
   getEntityConfigDynamic,
   getEntitySchemaForOperation,
 } from "../../mcp-server/tools/utils/entity-mapping-dynamic.js";
-import { fetchWithTimeout } from "../../utils/network/fetch-with-timeout.js";
 import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
 import type { RequestContext } from "../../utils/internal/request-context.js";
-import type { AppConfig } from "../../config/index.js";
-import * as tokens from "../../container/tokens.js";
+import { DV360HttpClient } from "./dv360-http-client.js";
+
+// ============================================================================
+// Deep Merge Utility
+// ============================================================================
+
+/**
+ * Check whether a value is a plain object (not an array, Date, RegExp, etc.)
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Recursively deep-merge `source` into `target`.
+ *
+ * Rules:
+ * - Plain objects are merged recursively.
+ * - Arrays in `source` **replace** the corresponding array in `target`.
+ * - `null` values in `source` **override** (do not skip).
+ * - All other values in `source` override `target`.
+ */
+function deepMerge<T extends Record<string, unknown>>(
+  target: T,
+  source: Record<string, unknown>
+): T {
+  const result: Record<string, unknown> = { ...target };
+
+  for (const key of Object.keys(source)) {
+    const sourceVal = source[key];
+    const targetVal = result[key];
+
+    if (sourceVal === null) {
+      // Null in source explicitly overrides
+      result[key] = null;
+    } else if (isPlainObject(sourceVal) && isPlainObject(targetVal)) {
+      // Both are plain objects — recurse
+      result[key] = deepMerge(targetVal as Record<string, unknown>, sourceVal);
+    } else {
+      // Everything else (arrays, primitives, Date, etc.) — replace
+      result[key] = sourceVal;
+    }
+  }
+
+  return result as T;
+}
 
 // ============================================================================
 // Custom Bidding Types
@@ -70,15 +114,11 @@ export interface CustomBiddingAlgorithmRules {
  * Service for interacting with DV360 API
  * Provides generic entity operations (list, get, create, update, delete)
  */
-@injectable()
 export class DV360Service {
-  private accessToken?: string;
-  private tokenExpiry?: Date;
-
   constructor(
-    @inject(tokens.Logger) private logger: Logger,
-    @inject(tokens.AppConfig) private config: AppConfig,
-    @inject(tokens.RateLimiterService) private rateLimiter: RateLimiter
+    private logger: Logger,
+    private rateLimiter: RateLimiter,
+    private httpClient: DV360HttpClient
   ) {}
 
   /**
@@ -93,8 +133,6 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<{ entities: unknown[]; nextPageToken?: string }> {
     return withDV360ApiSpan("listEntities", entityType, async () => {
-      await this.ensureAuthenticated(context);
-
       const config = getEntityConfigDynamic(entityType);
 
       // Validate that all required parent IDs are present
@@ -149,7 +187,7 @@ export class DV360Service {
         setSpanAttribute("dv360.advertiserId", ids.advertiserId);
       }
 
-      const response = await this.fetch(path, context);
+      const response = await this.httpClient.fetch(path, context);
 
       // Validate response with generated schema
       const schema = getEntitySchemaForOperation(entityType, "list");
@@ -173,34 +211,37 @@ export class DV360Service {
     ids: Record<string, string>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.ensureAuthenticated(context);
+    return withDV360ApiSpan("getEntity", entityType, async () => {
+      const config = getEntityConfigDynamic(entityType);
 
-    const config = getEntityConfigDynamic(entityType);
+      // Construct full path including entity ID
+      const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      const entityId = ids[`${entityType}Id`];
 
-    // Construct full path including entity ID
-    const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
-    const entityId = ids[`${entityType}Id`];
+      if (!entityId) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Entity ID is required for ${entityType}`,
+          { entityType, providedIds: Object.keys(ids) }
+        );
+      }
 
-    if (!entityId) {
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `Entity ID is required for ${entityType}`,
-        { entityType, providedIds: Object.keys(ids) }
-      );
-    }
+      const path = `${basePath}/${entityId}`;
 
-    const path = `${basePath}/${entityId}`;
+      // Rate limit by advertiser
+      if (ids.advertiserId) {
+        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
+        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
+      }
 
-    // Rate limit by advertiser
-    if (ids.advertiserId) {
-      await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-    }
+      setSpanAttribute("dv360.entityId", entityId);
 
-    const response = await this.fetch(path, context);
+      const response = await this.httpClient.fetch(path, context);
 
-    // Validate with generated schema
-    const schema = getEntitySchemaForOperation(entityType, "get");
-    return schema.parse(response);
+      // Validate with generated schema
+      const schema = getEntitySchemaForOperation(entityType, "get");
+      return schema.parse(response);
+    });
   }
 
   /**
@@ -212,36 +253,38 @@ export class DV360Service {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.ensureAuthenticated(context);
+    return withDV360ApiSpan("createEntity", entityType, async () => {
+      const config = getEntityConfigDynamic(entityType);
 
-    const config = getEntityConfigDynamic(entityType);
+      if (!config.supportsCreate) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Entity type ${entityType} does not support create operation`,
+          { entityType }
+        );
+      }
 
-    if (!config.supportsCreate) {
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `Entity type ${entityType} does not support create operation`,
-        { entityType }
-      );
-    }
+      // Validate input data with generated schema
+      const schema = getEntitySchemaForOperation(entityType, "create");
+      const validated = schema.parse(data);
 
-    // Validate input data with generated schema
-    const schema = getEntitySchemaForOperation(entityType, "create");
-    const validated = schema.parse(data);
+      const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      setSpanAttribute("dv360.apiPath", basePath);
 
-    const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      // Rate limit by advertiser
+      if (ids.advertiserId) {
+        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
+        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
+      }
 
-    // Rate limit by advertiser
-    if (ids.advertiserId) {
-      await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-    }
+      const response = await this.httpClient.fetch(basePath, context, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validated),
+      });
 
-    const response = await this.fetch(basePath, context, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(validated),
+      return schema.parse(response);
     });
-
-    return schema.parse(response);
   }
 
   /**
@@ -255,8 +298,6 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<unknown> {
     return withDV360ApiSpan("updateEntity", entityType, async () => {
-      await this.ensureAuthenticated(context);
-
       const config = getEntityConfigDynamic(entityType);
 
       if (!config.supportsUpdate) {
@@ -270,9 +311,9 @@ export class DV360Service {
       setSpanAttribute("dv360.updateMask", updateMask);
       setSpanAttribute("dv360.updateFieldsCount", updateMask.split(",").length);
 
-      // Get current entity and merge with updates
-      const current = (await this.getEntity(entityType, ids, context)) as Record<string, any>;
-      const merged = { ...current, ...data };
+      // Get current entity and deep-merge with updates
+      const current = (await this.getEntity(entityType, ids, context)) as Record<string, unknown>;
+      const merged = deepMerge(current, data);
 
       // Validate merged entity
       const schema = getEntitySchemaForOperation(entityType, "update");
@@ -298,7 +339,7 @@ export class DV360Service {
         setSpanAttribute("dv360.advertiserId", ids.advertiserId);
       }
 
-      const response = await this.fetch(path, context, {
+      const response = await this.httpClient.fetch(path, context, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(validated),
@@ -316,37 +357,39 @@ export class DV360Service {
     ids: Record<string, string>,
     context?: RequestContext
   ): Promise<void> {
-    await this.ensureAuthenticated(context);
+    return withDV360ApiSpan("deleteEntity", entityType, async () => {
+      const config = getEntityConfigDynamic(entityType);
 
-    const config = getEntityConfigDynamic(entityType);
+      if (!config.supportsDelete) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Entity type ${entityType} does not support delete operation`,
+          { entityType }
+        );
+      }
 
-    if (!config.supportsDelete) {
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `Entity type ${entityType} does not support delete operation`,
-        { entityType }
-      );
-    }
+      const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
+      const entityId = ids[`${entityType}Id`];
 
-    const basePath = typeof config.apiPath === "function" ? config.apiPath(ids) : config.apiPath;
-    const entityId = ids[`${entityType}Id`];
+      if (!entityId) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Entity ID is required for ${entityType}`,
+          { entityType, providedIds: Object.keys(ids) }
+        );
+      }
 
-    if (!entityId) {
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `Entity ID is required for ${entityType}`,
-        { entityType, providedIds: Object.keys(ids) }
-      );
-    }
+      const path = `${basePath}/${entityId}`;
+      setSpanAttribute("dv360.entityId", entityId);
 
-    const path = `${basePath}/${entityId}`;
+      // Rate limit by advertiser
+      if (ids.advertiserId) {
+        await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
+        setSpanAttribute("dv360.advertiserId", ids.advertiserId);
+      }
 
-    // Rate limit by advertiser
-    if (ids.advertiserId) {
-      await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-    }
-
-    await this.fetch(path, context, { method: "DELETE" });
+      await this.httpClient.fetch(path, context, { method: "DELETE" });
+    });
   }
 
   // ============================================================================
@@ -366,8 +409,6 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<{ resourceName: string }> {
     return withDV360ApiSpan("uploadCustomBiddingScript", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.scriptLength", scriptContent.length);
 
@@ -379,10 +420,9 @@ export class DV360Service {
         "Uploading custom bidding script"
       );
 
-      const response = await fetchWithTimeout(uploadUrl, 30000, context, {
+      const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${this.accessToken}`,
           "Content-Type": "application/octet-stream",
         },
         body: scriptContent,
@@ -424,13 +464,11 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<CustomBiddingScript> {
     return withDV360ApiSpan("createCustomBiddingScript", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts`;
 
-      const response = await this.fetch(path, context, {
+      const response = await this.httpClient.fetch(path, context, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -457,8 +495,6 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<{ scripts: CustomBiddingScript[]; nextPageToken?: string }> {
     return withDV360ApiSpan("listCustomBiddingScripts", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
 
       const params = new URLSearchParams();
@@ -467,7 +503,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${params.toString() ? `?${params}` : ""}`;
 
-      const response = (await this.fetch(path, context)) as {
+      const response = (await this.httpClient.fetch(path, context)) as {
         customBiddingScripts?: CustomBiddingScript[];
         nextPageToken?: string;
       };
@@ -494,14 +530,12 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<CustomBiddingScript> {
     return withDV360ApiSpan("getCustomBiddingScript", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.customBiddingScriptId", customBiddingScriptId);
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts/${customBiddingScriptId}`;
 
-      return (await this.fetch(path, context)) as CustomBiddingScript;
+      return (await this.httpClient.fetch(path, context)) as CustomBiddingScript;
     });
   }
 
@@ -518,8 +552,6 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<{ resourceName: string }> {
     return withDV360ApiSpan("uploadCustomBiddingRules", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.rulesLength", rulesContent.length);
 
@@ -530,10 +562,9 @@ export class DV360Service {
         "Uploading custom bidding rules"
       );
 
-      const response = await fetchWithTimeout(uploadUrl, 30000, context, {
+      const response = await this.httpClient.fetchRaw(uploadUrl, 30000, context, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${this.accessToken}`,
           "Content-Type": "application/octet-stream",
         },
         body: rulesContent,
@@ -575,13 +606,11 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<CustomBiddingAlgorithmRules> {
     return withDV360ApiSpan("createCustomBiddingRules", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules`;
 
-      const response = await this.fetch(path, context, {
+      const response = await this.httpClient.fetch(path, context, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -608,8 +637,6 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<{ rules: CustomBiddingAlgorithmRules[]; nextPageToken?: string }> {
     return withDV360ApiSpan("listCustomBiddingRules", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
 
       const params = new URLSearchParams();
@@ -618,7 +645,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${params.toString() ? `?${params}` : ""}`;
 
-      const response = (await this.fetch(path, context)) as {
+      const response = (await this.httpClient.fetch(path, context)) as {
         customBiddingRules?: CustomBiddingAlgorithmRules[];
         nextPageToken?: string;
       };
@@ -645,174 +672,12 @@ export class DV360Service {
     context?: RequestContext
   ): Promise<CustomBiddingAlgorithmRules> {
     return withDV360ApiSpan("getCustomBiddingRules", customBiddingAlgorithmId, async () => {
-      await this.ensureAuthenticated(context);
-
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.customBiddingAlgorithmRulesId", customBiddingAlgorithmRulesId);
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules/${customBiddingAlgorithmRulesId}`;
 
-      return (await this.fetch(path, context)) as CustomBiddingAlgorithmRules;
+      return (await this.httpClient.fetch(path, context)) as CustomBiddingAlgorithmRules;
     });
-  }
-
-  /**
-   * Private helper: Make authenticated fetch request
-   */
-  private async fetch(
-    path: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    const url = `${this.config.dv360ApiBaseUrl}${path}`;
-
-    this.logger.debug(
-      { url, method: options?.method || "GET", requestId: context?.requestId },
-      "Making DV360 API request"
-    );
-
-    const response = await fetchWithTimeout(url, 10000, context, {
-      ...options,
-      headers: {
-        ...options?.headers,
-        Authorization: `Bearer ${this.accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-
-      throw new McpError(
-        response.status >= 500
-          ? JsonRpcErrorCode.ServiceUnavailable
-          : JsonRpcErrorCode.InvalidRequest,
-        `DV360 API request failed: ${response.status} ${response.statusText}`,
-        {
-          requestId: context?.requestId,
-          httpStatus: response.status,
-          path,
-          method: options?.method ?? "GET",
-          errorBody: errorBody.substring(0, 500), // Limit error body size
-        }
-      );
-    }
-
-    // DELETE returns 204 No Content
-    if (response.status === 204) {
-      return {};
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Ensure service account is authenticated
-   */
-  private async ensureAuthenticated(context?: RequestContext): Promise<void> {
-    if (!this.accessToken || !this.tokenExpiry || this.tokenExpiry < new Date()) {
-      await this.authenticateServiceAccount(context);
-    }
-  }
-
-  /**
-   * Authenticate using service account credentials
-   */
-  private async authenticateServiceAccount(context?: RequestContext): Promise<void> {
-    this.logger.info({ requestId: context?.requestId }, "Authenticating with DV360 API");
-
-    // Check if service account credentials are provided
-    if (!this.config.dv360ServiceAccountJson && !this.config.dv360ServiceAccountFile) {
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        "DV360 service account credentials not configured",
-        { requestId: context?.requestId }
-      );
-    }
-
-    try {
-      let credentialsJson: string;
-
-      // Load credentials from file or base64 string
-      if (this.config.dv360ServiceAccountFile) {
-        this.logger.debug(
-          { file: this.config.dv360ServiceAccountFile },
-          "Loading service account from file"
-        );
-        const { readFileSync } = await import("fs");
-        credentialsJson = readFileSync(this.config.dv360ServiceAccountFile, "utf-8");
-      } else {
-        // Decode base64 service account JSON
-        credentialsJson = Buffer.from(this.config.dv360ServiceAccountJson!, "base64").toString();
-      }
-
-      const credentials = JSON.parse(credentialsJson);
-
-      // Create JWT assertion
-      const now = Math.floor(Date.now() / 1000);
-      const jwtHeader = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString(
-        "base64url"
-      );
-
-      const jwtPayload = Buffer.from(
-        JSON.stringify({
-          iss: credentials.client_email,
-          scope: "https://www.googleapis.com/auth/display-video",
-          aud: "https://oauth2.googleapis.com/token",
-          exp: now + 3600,
-          iat: now,
-        })
-      ).toString("base64url");
-
-      // Sign with private key (simplified - in production use proper JWT library)
-      const crypto = await import("crypto");
-      const signature = crypto
-        .createSign("RSA-SHA256")
-        .update(`${jwtHeader}.${jwtPayload}`)
-        .sign(credentials.private_key, "base64url");
-
-      const assertion = `${jwtHeader}.${jwtPayload}.${signature}`;
-
-      // Exchange for access token
-      const tokenResponse = await fetchWithTimeout(
-        "https://oauth2.googleapis.com/token",
-        5000,
-        context,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-            assertion,
-          }),
-        }
-      );
-
-      if (!tokenResponse.ok) {
-        throw new Error(
-          `OAuth2 token exchange failed: ${tokenResponse.status} ${tokenResponse.statusText}`
-        );
-      }
-
-      const tokenData = (await tokenResponse.json()) as {
-        access_token: string;
-        expires_in: number;
-      };
-
-      this.accessToken = tokenData.access_token;
-      this.tokenExpiry = new Date(Date.now() + tokenData.expires_in * 1000);
-
-      this.logger.info(
-        { expiresAt: this.tokenExpiry, requestId: context?.requestId },
-        "DV360 authentication successful"
-      );
-    } catch (error) {
-      this.logger.error({ error, requestId: context?.requestId }, "DV360 authentication failed");
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        "Failed to authenticate with DV360 API",
-        { requestId: context?.requestId },
-        { cause: error }
-      );
-    }
   }
 }

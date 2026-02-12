@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
@@ -171,12 +170,12 @@ type UpdateEntityOutput = z.infer<typeof UpdateEntityOutputSchema>;
 export async function updateEntityLogic(
   input: UpdateEntityInput,
   context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
   // Server-side validation using full schema
   const validatedInput = FullUpdateEntityInputSchema.parse(input);
 
-  const dv360Service = container.resolve(DV360Service);
+  const { dv360Service } = resolveSessionServices(sdkContext);
   const entityIds = extractEntityIds(validatedInput, validatedInput.entityType);
 
   try {

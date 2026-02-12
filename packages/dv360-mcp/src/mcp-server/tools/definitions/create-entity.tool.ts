@@ -1,6 +1,5 @@
 import { z, type ZodRawShape } from "zod";
-import { container } from "tsyringe";
-import { DV360Service } from "../../../services/dv360/DV360-service.js";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
   getEntityConfigDynamic,
@@ -201,7 +200,7 @@ type CreateEntityOutput = z.infer<typeof CreateEntityOutputSchema>;
 export async function createEntityLogic(
   input: CreateEntityInput,
   context: RequestContext,
-  _sdkContext?: SdkContext
+  sdkContext?: SdkContext
 ): Promise<CreateEntityOutput> {
   // Server-side validation using full schema
   const validatedInput = FullCreateEntityInputSchema.parse(input);
@@ -232,7 +231,7 @@ export async function createEntityLogic(
   }
 
   // Resolve DV360Service from container
-  const dv360Service = container.resolve(DV360Service);
+  const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Extract parent IDs using utility
   const parentIds = extractParentIds(validatedInput);
