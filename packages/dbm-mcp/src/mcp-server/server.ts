@@ -6,10 +6,8 @@ import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
-import { ErrorHandler } from "../utils/errors/index.js";
-import { withToolSpan, setSpanAttribute, recordSpanError } from "../utils/telemetry/index.js";
+import { registerToolsFromDefinitions } from "@bidshifter/shared";
 import type { Logger } from "pino";
-import type { SdkContext } from "../types-global/mcp.js";
 
 /**
  * Create and configure MCP server instance
@@ -20,108 +18,32 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     version: "1.0.0",
   });
 
-  // Register all tools
-  for (const tool of allTools) {
-    server.registerTool(
-      tool.name,
-      {
-        description: tool.description,
-        inputSchema: zodToJsonSchema(tool.inputSchema, {
-          target: "jsonSchema7",
-          markdownDescription: true,
-        }) as any,
-      },
-      async (args: unknown) => {
-        logger.info({ toolName: tool.name, arguments: args }, "Handling tool call");
-
-        // Wrap tool execution in OpenTelemetry span
-        return withToolSpan(tool.name, (args as any) || {}, async () => {
-          try {
-            // Create request context
-            const context = createRequestContext({
-              operation: `HandleToolRequest:${tool.name}`,
-              additionalContext: {
-                toolName: tool.name,
-                input: args,
-              },
-            });
-
-            // Validate input
-            const validatedInput = tool.inputSchema.parse(args);
-            setSpanAttribute("tool.input.validated", true);
-
-            const sdkContext: SdkContext = {
-              requestId: context.requestId,
-              sessionId,
-              elicitInput: async (params: Record<string, unknown>) => {
-                // Note: elicitInput may need to be verified in newer SDK versions
-                if (typeof (server as any).elicitInput === "function") {
-                  return (server as any).elicitInput({ ...params });
-                }
-                throw new Error("elicitInput not available in current SDK version");
-              },
-            };
-
-            // Execute tool logic (cast to any since each tool has unique I/O types)
-            const result = await (tool.logic as any)(validatedInput, context, sdkContext);
-            setSpanAttribute("tool.execution.success", true);
-
-            // Format response
-            const content = tool.responseFormatter
-              ? (tool.responseFormatter as any)(result, validatedInput)
-              : [
-                  {
-                    type: "text" as const,
-                    text: JSON.stringify(result, null, 2),
-                  },
-                ];
-
-            logger.info({ toolName: tool.name, requestId: context.requestId }, "Tool executed successfully");
-
-            return {
-              content,
-            };
-          } catch (error) {
-            recordSpanError(error as Error);
-            setSpanAttribute("tool.execution.success", false);
-
-            const mcpError = ErrorHandler.handleError(
-              error,
-              {
-                operation: `tool:${tool.name}`,
-                input: args,
-              },
-              logger
-            );
-
-            return {
-              content: [
-                {
-                  type: "text" as const,
-                  text: `Error: ${mcpError.message}`,
-                },
-              ],
-              isError: true,
-            };
-          }
-        });
-      }
-    );
-  }
-
-  logger.info({ toolCount: allTools.length }, "Registered MCP tools");
+  // Register all tools via shared factory
+  registerToolsFromDefinitions({
+    server,
+    tools: allTools,
+    logger,
+    sessionId,
+    transformSchema: (schema) =>
+      zodToJsonSchema(schema, {
+        target: "jsonSchema7",
+        markdownDescription: true,
+      }),
+    createRequestContext: (params) =>
+      createRequestContext({
+        operation: params.operation,
+        additionalContext: params.additionalContext,
+      }),
+  });
 
   // Register all resources
-  // Note: Using manual resource registration - SDK API may change
   for (const resource of allResources) {
-    // Create a unique name from the URI
     const resourceName = resource.uri.replace(/[^a-zA-Z0-9]/g, "_");
 
     server.registerResource(
       resourceName,
       resource.uri,
       {
-        name: resource.name,
         description: resource.description,
         mimeType: resource.mimeType,
       },
@@ -151,10 +73,8 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
 
   // Register all prompts
   for (const [name, definition] of promptRegistry) {
-    // Convert prompt arguments to Zod schema format for the new API
     const argsSchema = definition.prompt.arguments?.reduce(
       (acc, arg) => {
-        // Use z.string() with optional() for non-required args
         const zodType = arg.required
           ? z.string().describe(arg.description)
           : z.string().optional().describe(arg.description);
@@ -175,7 +95,6 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
         logger.info({ promptName: name, arguments: args }, "Handling prompt get");
 
         try {
-          // Convert to Record<string, string> by filtering out undefined values
           const cleanArgs: Record<string, string> = {};
           for (const [key, value] of Object.entries(args)) {
             if (value !== undefined) {

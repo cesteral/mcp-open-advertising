@@ -6,6 +6,8 @@
  * supplied by the end-user via HTTP headers at SSE connection time.
  */
 
+import { createHash } from "crypto";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -306,4 +308,20 @@ export function parseCredentialsFromHeaders(
   throw new Error(
     `Invalid X-Google-Auth-Type: "${authType}". Must be "service_account" or "oauth2".`
   );
+}
+
+// ---------------------------------------------------------------------------
+// Credential Fingerprinting
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate a SHA-256 fingerprint of Google credentials for session binding.
+ * Uses `client_email` for service accounts or `clientId` for OAuth2.
+ */
+export function getCredentialFingerprint(credentials: GoogleCredentials): string {
+  const identifier =
+    credentials.type === "service_account"
+      ? credentials.client_email
+      : credentials.clientId;
+  return createHash("sha256").update(identifier).digest("hex");
 }

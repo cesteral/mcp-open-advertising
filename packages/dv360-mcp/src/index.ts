@@ -1,12 +1,12 @@
 import "reflect-metadata";
 import { readFileSync } from "fs";
-import type http from "http";
+
 import pino from "pino";
 import { mcpConfig } from "./config/index.js";
 import { composeContainer } from "./container/index.js";
 import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
-import { createMcpHttpServer } from "./mcp-server/transports/http-transport.js";
-import { initializeOpenTelemetry } from "./utils/telemetry/index.js";
+import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
+import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
 import {
   createGoogleAuthAdapter,
   type ServiceAccountCredentials,
@@ -30,6 +30,7 @@ const loggerConfig: pino.LoggerOptions = {
     level: (label) => ({ level: label }),
   },
   timestamp: pino.stdTimeFunctions.isoTime,
+  mixin: otelLogMixin(),
 };
 
 // Add transport configuration based on mode
@@ -82,18 +83,10 @@ async function main() {
       process.on("SIGTERM", handleStdioShutdown);
       process.on("SIGINT", handleStdioShutdown);
     } else {
-      // HTTP/SSE mode for web clients and production
-      logger.info("Starting in HTTP mode with SSE transport");
+      // HTTP mode with Streamable HTTP transport
+      logger.info("Starting in HTTP mode with Streamable HTTP transport");
 
-      const { app, shutdown } = createMcpHttpServer(mcpConfig, logger);
-      const { host, port } = mcpConfig;
-
-      const httpServer: http.Server = app.listen(port, host, () => {
-        logger.info({ host, port }, "DV360 MCP Server started");
-        logger.info(
-          `Server is ready to accept MCP connections via SSE at http://${host}:${port}/mcp`
-        );
-      });
+      const { server: httpServer, shutdown } = await startHttpServer(mcpConfig, logger);
 
       // Graceful shutdown for HTTP mode
       let shuttingDown = false;
@@ -112,7 +105,7 @@ async function main() {
           }
         });
 
-        // 2. Close all active SSE transports
+        // 2. Clean up sessions
         await shutdown();
 
         // 3. Allow brief window for in-flight requests to complete, then exit

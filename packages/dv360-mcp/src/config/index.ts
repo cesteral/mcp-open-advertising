@@ -19,7 +19,7 @@ if (existsSync(envPath)) {
  * Configuration schema with Zod validation
  *
  * Note: Google API credentials are now provided by the end-user via HTTP
- * headers at SSE connection time (see http-transport.ts). The server no
+ * headers at connection time (see streamable-http-transport.ts). The server no
  * longer owns a service account.
  */
 const ConfigSchema = z.object({
@@ -32,6 +32,10 @@ const ConfigSchema = z.object({
   // Session Management
   mcpSessionMode: z.enum(["stateless", "stateful", "auto"]).default("auto"),
   mcpStatefulSessionTimeoutMs: z.number().default(3600000), // 1 hour
+
+  // Auth
+  mcpAuthMode: z.enum(["google-headers", "jwt", "none"]).default("google-headers"),
+  mcpAuthSecretKey: z.string().optional(),
 
   // CORS Configuration
   mcpAllowedOrigins: z.string().optional(),
@@ -76,6 +80,10 @@ export function parseConfig(): AppConfig {
     mcpStatefulSessionTimeoutMs: process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS
       ? Number(process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS)
       : undefined,
+
+    // Auth
+    mcpAuthMode: process.env.MCP_AUTH_MODE,
+    mcpAuthSecretKey: process.env.MCP_AUTH_SECRET_KEY,
 
     // CORS
     mcpAllowedOrigins: process.env.MCP_ALLOWED_ORIGINS,

@@ -1,4 +1,4 @@
-# Root Terraform configuration for Campaign Guardian MCP Server
+# Root Terraform configuration for BidShifter MCP Servers
 # Orchestrates networking and core infrastructure modules
 
 terraform {
@@ -115,4 +115,25 @@ module "core_infrastructure" {
   scheduler_timezone    = var.scheduler_timezone
 
   depends_on = [module.networking]
+}
+
+# ============================================================================
+# MONITORING MODULE
+# ============================================================================
+
+module "monitoring" {
+  source = "./modules/monitoring"
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  services              = var.monitoring_services
+  notification_channels = var.monitoring_notification_channels
+
+  error_rate_threshold     = var.monitoring_error_rate_threshold
+  latency_p99_threshold_ms = var.monitoring_latency_p99_threshold_ms
+  uptime_check_period      = var.monitoring_uptime_check_period
+
+  depends_on = [module.core_infrastructure]
 }

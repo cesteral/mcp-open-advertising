@@ -1,12 +1,12 @@
 # Staging environment configuration
 
 # Project configuration
-project_id  = "campaign-guardian-staging" # TODO: Replace with actual staging project ID
+project_id  = "bidshifter-staging" # TODO: Replace with actual staging project ID
 region      = "europe-west2"
 environment = "staging"
 
 # Container image (update after first build)
-container_image = "europe-west2-docker.pkg.dev/campaign-guardian-staging/campaign-guardian/mcp-server:latest"
+container_image = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/mcp-server:latest"
 
 # Networking
 create_vpc             = true
@@ -46,4 +46,4 @@ scheduler_timezone    = "America/New_York"
 
 # Artifact Registry
 use_artifact_registry       = true
-artifact_registry_repo_name = "campaign-guardian"
+artifact_registry_repo_name = "bidshifter"

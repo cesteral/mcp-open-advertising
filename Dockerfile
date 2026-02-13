@@ -9,10 +9,8 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared/package.json ./packages/shared/
-COPY packages/platform-lib/package.json ./packages/platform-lib/
 COPY packages/dbm-mcp/package.json ./packages/dbm-mcp/
 COPY packages/dv360-mcp/package.json ./packages/dv360-mcp/
-COPY packages/bidshifter-mcp/package.json ./packages/bidshifter-mcp/
 RUN pnpm install --frozen-lockfile
 
 # Build all packages
@@ -32,8 +30,6 @@ ENV SERVER_NAME=${SERVER_NAME}
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
-COPY --from=builder /app/packages/platform-lib/dist ./packages/platform-lib/dist
-COPY --from=builder /app/packages/platform-lib/package.json ./packages/platform-lib/
 COPY --from=builder /app/packages/${SERVER_NAME}/dist ./packages/${SERVER_NAME}/dist
 COPY --from=builder /app/packages/${SERVER_NAME}/package.json ./packages/${SERVER_NAME}/
 
@@ -41,6 +37,9 @@ WORKDIR /app/packages/${SERVER_NAME}
 
 # Expose port (will be overridden by Cloud Run)
 EXPOSE 3000
+
+# Run as non-root user for security
+USER node
 
 # Start the server
 CMD ["node", "dist/index.js"]

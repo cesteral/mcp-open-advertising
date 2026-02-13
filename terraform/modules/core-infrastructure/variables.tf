@@ -115,14 +115,14 @@ variable "secret_names" {
   description = "List of secret names to create in Secret Manager"
   type        = list(string)
   default = [
-    "campaign-guardian-dv360-oauth-client-id",
-    "campaign-guardian-dv360-oauth-client-secret",
-    "campaign-guardian-dv360-refresh-token",
-    "campaign-guardian-bid-manager-api-key",
-    "campaign-guardian-beam-api-key",
-    "campaign-guardian-teams-app-id",
-    "campaign-guardian-teams-app-secret",
-    "campaign-guardian-jwt-secret-key"
+    "bidshifter-dv360-oauth-client-id",
+    "bidshifter-dv360-oauth-client-secret",
+    "bidshifter-dv360-refresh-token",
+    "bidshifter-bid-manager-api-key",
+    "bidshifter-beam-api-key",
+    "bidshifter-teams-app-id",
+    "bidshifter-teams-app-secret",
+    "bidshifter-jwt-secret-key"
   ]
 }
 
@@ -134,35 +134,35 @@ variable "secret_env_vars" {
   }))
   default = {
     MCP_AUTH_SECRET_KEY = {
-      secret_name = "campaign-guardian-jwt-secret-key"
+      secret_name = "bidshifter-jwt-secret-key"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_ID = {
-      secret_name = "campaign-guardian-dv360-oauth-client-id"
+      secret_name = "bidshifter-dv360-oauth-client-id"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_SECRET = {
-      secret_name = "campaign-guardian-dv360-oauth-client-secret"
+      secret_name = "bidshifter-dv360-oauth-client-secret"
       version     = "latest"
     }
     DV360_REFRESH_TOKEN = {
-      secret_name = "campaign-guardian-dv360-refresh-token"
+      secret_name = "bidshifter-dv360-refresh-token"
       version     = "latest"
     }
     BID_MANAGER_API_KEY = {
-      secret_name = "campaign-guardian-bid-manager-api-key"
+      secret_name = "bidshifter-bid-manager-api-key"
       version     = "latest"
     }
     BEAM_API_KEY = {
-      secret_name = "campaign-guardian-beam-api-key"
+      secret_name = "bidshifter-beam-api-key"
       version     = "latest"
     }
     TEAMS_APP_ID = {
-      secret_name = "campaign-guardian-teams-app-id"
+      secret_name = "bidshifter-teams-app-id"
       version     = "latest"
     }
     TEAMS_APP_SECRET = {
-      secret_name = "campaign-guardian-teams-app-secret"
+      secret_name = "bidshifter-teams-app-secret"
       version     = "latest"
     }
   }

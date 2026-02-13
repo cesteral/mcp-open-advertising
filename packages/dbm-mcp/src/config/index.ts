@@ -32,6 +32,10 @@ const ConfigSchema = z.object({
   mcpSessionMode: z.enum(["stateless", "stateful", "auto"]).default("auto"),
   mcpStatefulSessionTimeoutMs: z.number().default(3600000), // 1 hour
 
+  // Auth
+  mcpAuthMode: z.enum(["google-headers", "jwt", "none"]).default("google-headers"),
+  mcpAuthSecretKey: z.string().optional(),
+
   // CORS Configuration
   mcpAllowedOrigins: z.string().optional(),
 
@@ -81,6 +85,10 @@ export function parseConfig(): AppConfig {
     mcpStatefulSessionTimeoutMs: process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS
       ? Number(process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS)
       : undefined,
+
+    // Auth
+    mcpAuthMode: process.env.MCP_AUTH_MODE,
+    mcpAuthSecretKey: process.env.MCP_AUTH_SECRET_KEY,
 
     // CORS
     mcpAllowedOrigins: process.env.MCP_ALLOWED_ORIGINS,

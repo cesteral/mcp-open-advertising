@@ -1,10 +1,10 @@
-# Core Infrastructure Module for Campaign Guardian MCP Server
+# Core Infrastructure Module for BidShifter MCP Server
 # Includes: Cloud Run service, Secret Manager, Cloud Scheduler, IAM
 
 locals {
-  service_name = "campaign-guardian-mcp"
+  service_name = "bidshifter-mcp"
   common_labels = {
-    application = "campaign-guardian"
+    application = "bidshifter"
     component   = "mcp-server"
     environment = var.environment
     managed_by  = "terraform"
@@ -18,7 +18,7 @@ locals {
 # Runtime service account for Cloud Run and Cloud Scheduler
 resource "google_service_account" "runtime" {
   account_id   = "${local.service_name}-runtime"
-  display_name = "Campaign Guardian Runtime Service Account"
+  display_name = "BidShifter Runtime Service Account"
   description  = "Service account for MCP server runtime and scheduled jobs"
   project      = var.project_id
 }

@@ -1,10 +1,10 @@
-# Networking Module for Campaign Guardian MCP Server
+# Networking Module for BidShifter MCP Server
 # Includes: Serverless VPC Access Connector, Cloud NAT, VPC configuration
 
 locals {
   network_name = var.create_vpc ? google_compute_network.vpc[0].name : var.existing_vpc_name
   common_labels = {
-    application = "campaign-guardian"
+    application = "bidshifter"
     component   = "networking"
     environment = var.environment
     managed_by  = "terraform"
@@ -22,7 +22,7 @@ resource "google_compute_network" "vpc" {
   name                    = "${var.network_prefix}-vpc"
   project                 = var.project_id
   auto_create_subnetworks = false
-  description             = "VPC for Campaign Guardian MCP Server"
+  description             = "VPC for BidShifter MCP Server"
 }
 
 # Create subnet for serverless connector
@@ -125,7 +125,7 @@ resource "google_compute_firewall" "allow_google_apis" {
     "199.36.153.8/30",  # Private Google Access
   ]
 
-  target_tags = ["campaign-guardian"]
+  target_tags = ["bidshifter"]
 }
 
 # Allow egress to external APIs (DV360, Bid Manager, Beam)
@@ -147,7 +147,7 @@ resource "google_compute_firewall" "allow_external_apis" {
 
   destination_ranges = ["0.0.0.0/0"]
 
-  target_tags = ["campaign-guardian"]
+  target_tags = ["bidshifter"]
 }
 
 # Allow ingress from Cloud Scheduler
@@ -171,7 +171,7 @@ resource "google_compute_firewall" "allow_scheduler" {
     "0.0.0.0/0" # Cloud Scheduler uses dynamic IPs
   ]
 
-  target_tags = ["campaign-guardian"]
+  target_tags = ["bidshifter"]
 }
 
 # Allow health checks from Google Cloud load balancers
@@ -195,5 +195,5 @@ resource "google_compute_firewall" "allow_health_checks" {
     "130.211.0.0/22",
   ]
 
-  target_tags = ["campaign-guardian"]
+  target_tags = ["bidshifter"]
 }

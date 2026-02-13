@@ -1,11 +1,18 @@
 /**
  * Error handling utilities
- * Barrel export for convenient imports
+ *
+ * Core error types (McpError, JsonRpcErrorCode, ErrorHandler) are provided
+ * by @bidshifter/shared. Domain-specific errors remain in this package.
  */
 
-export { McpError } from "./mcp-error.js";
-export { ErrorHandler, type ErrorContext } from "./error-handler.js";
-export { JsonRpcErrorCode, mapErrorCodeToHttpStatus } from "./error-codes.js";
+// Re-export core error types from shared
+export {
+  McpError,
+  ErrorHandler,
+  type ErrorContext,
+  JsonRpcErrorCode,
+  mapErrorCodeToHttpStatus,
+} from "@bidshifter/shared";
 
 // Bid Manager specific errors
 export {

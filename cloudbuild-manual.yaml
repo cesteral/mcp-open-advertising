@@ -4,7 +4,7 @@
 substitutions:
   _ENVIRONMENT: 'dev'
   _REGION: 'europe-west2'
-  _ARTIFACT_REGISTRY_REPO: 'campaign-guardian'
+  _ARTIFACT_REGISTRY_REPO: 'bidshifter'
 
 options:
   machineType: 'N1_HIGHCPU_8'

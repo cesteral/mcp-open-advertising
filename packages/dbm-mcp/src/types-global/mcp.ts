@@ -4,6 +4,7 @@
 
 import type { z } from "zod";
 import type { RequestContext } from "../utils/internal/request-context.js";
+import type { ElicitRequestFormParams, ElicitRequestURLParams, ElicitResult } from "@modelcontextprotocol/sdk/types.js";
 
 /**
  * Tool definition structure
@@ -48,10 +49,10 @@ export interface ResourceDefinition {
 
 /**
  * SDK Context from MCP SDK
- * (This is a simplified version - actual SDK provides more fields)
  */
 export interface SdkContext {
   requestId?: string;
   sessionId?: string;
+  elicitInput?: (params: ElicitRequestFormParams | ElicitRequestURLParams) => Promise<ElicitResult>;
   [key: string]: unknown;
 }

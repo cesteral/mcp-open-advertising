@@ -1,4 +1,4 @@
-# Root Terraform variables for Campaign Guardian
+# Root Terraform variables for BidShifter
 
 # ============================================================================
 # PROJECT CONFIGURATION
@@ -37,7 +37,7 @@ variable "use_artifact_registry" {
 variable "artifact_registry_repo_name" {
   description = "Name of Artifact Registry repository"
   type        = string
-  default     = "campaign-guardian"
+  default     = "bidshifter"
 }
 
 variable "container_image" {
@@ -209,14 +209,14 @@ variable "secret_names" {
   description = "List of secret names to create"
   type        = list(string)
   default = [
-    "campaign-guardian-dv360-oauth-client-id",
-    "campaign-guardian-dv360-oauth-client-secret",
-    "campaign-guardian-dv360-refresh-token",
-    "campaign-guardian-bid-manager-api-key",
-    "campaign-guardian-beam-api-key",
-    "campaign-guardian-teams-app-id",
-    "campaign-guardian-teams-app-secret",
-    "campaign-guardian-jwt-secret-key"
+    "bidshifter-dv360-oauth-client-id",
+    "bidshifter-dv360-oauth-client-secret",
+    "bidshifter-dv360-refresh-token",
+    "bidshifter-bid-manager-api-key",
+    "bidshifter-beam-api-key",
+    "bidshifter-teams-app-id",
+    "bidshifter-teams-app-secret",
+    "bidshifter-jwt-secret-key"
   ]
 }
 
@@ -228,35 +228,35 @@ variable "secret_env_vars" {
   }))
   default = {
     MCP_AUTH_SECRET_KEY = {
-      secret_name = "campaign-guardian-jwt-secret-key"
+      secret_name = "bidshifter-jwt-secret-key"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_ID = {
-      secret_name = "campaign-guardian-dv360-oauth-client-id"
+      secret_name = "bidshifter-dv360-oauth-client-id"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_SECRET = {
-      secret_name = "campaign-guardian-dv360-oauth-client-secret"
+      secret_name = "bidshifter-dv360-oauth-client-secret"
       version     = "latest"
     }
     DV360_REFRESH_TOKEN = {
-      secret_name = "campaign-guardian-dv360-refresh-token"
+      secret_name = "bidshifter-dv360-refresh-token"
       version     = "latest"
     }
     BID_MANAGER_API_KEY = {
-      secret_name = "campaign-guardian-bid-manager-api-key"
+      secret_name = "bidshifter-bid-manager-api-key"
       version     = "latest"
     }
     BEAM_API_KEY = {
-      secret_name = "campaign-guardian-beam-api-key"
+      secret_name = "bidshifter-beam-api-key"
       version     = "latest"
     }
     TEAMS_APP_ID = {
-      secret_name = "campaign-guardian-teams-app-id"
+      secret_name = "bidshifter-teams-app-id"
       version     = "latest"
     }
     TEAMS_APP_SECRET = {
-      secret_name = "campaign-guardian-teams-app-secret"
+      secret_name = "bidshifter-teams-app-secret"
       version     = "latest"
     }
   }
@@ -288,4 +288,41 @@ variable "scheduler_timezone" {
   description = "Timezone for scheduler jobs"
   type        = string
   default     = "America/New_York"
+}
+
+# ============================================================================
+# MONITORING CONFIGURATION
+# ============================================================================
+
+variable "monitoring_services" {
+  description = "Cloud Run services to monitor (name + URL pairs)"
+  type = list(object({
+    name = string
+    url  = string
+  }))
+  default = []
+}
+
+variable "monitoring_notification_channels" {
+  description = "Notification channel IDs for monitoring alerts"
+  type        = list(string)
+  default     = []
+}
+
+variable "monitoring_error_rate_threshold" {
+  description = "Error rate threshold percentage for alerting"
+  type        = number
+  default     = 5
+}
+
+variable "monitoring_latency_p99_threshold_ms" {
+  description = "P99 latency threshold in milliseconds for alerting"
+  type        = number
+  default     = 5000
+}
+
+variable "monitoring_uptime_check_period" {
+  description = "Uptime check frequency"
+  type        = string
+  default     = "300s"
 }

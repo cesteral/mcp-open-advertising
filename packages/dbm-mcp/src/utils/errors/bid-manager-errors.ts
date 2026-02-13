@@ -5,8 +5,7 @@
  * throughout the service layer and tool handlers.
  */
 
-import { McpError } from "./mcp-error.js";
-import { JsonRpcErrorCode } from "./error-codes.js";
+import { McpError, JsonRpcErrorCode } from "@bidshifter/shared";
 
 /**
  * Base class for Bid Manager API errors
