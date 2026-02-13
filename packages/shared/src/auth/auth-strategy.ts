@@ -33,6 +33,11 @@ export interface AuthResult {
    */
   googleAuthAdapter?: unknown;
   /**
+   * Generic platform auth adapter for non-Google platforms (TTD, Meta, etc.).
+   * Each server casts to its own adapter type.
+   */
+  platformAuthAdapter?: unknown;
+  /**
    * Credential fingerprint for session binding.
    */
   credentialFingerprint?: string;

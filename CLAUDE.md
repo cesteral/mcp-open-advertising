@@ -416,17 +416,19 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS from report data | `campaignId`, `advertiserId`, `dateRange` |
 | `get_historical_metrics` | Time-series data for trends | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
 | `get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
+| `run_custom_query` | Compose and execute custom Bid Manager reports | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
 ### dv360-mcp (Management Server) Tools
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `fetch_campaign_entities` | Retrieve full DV360 hierarchy | `advertiserId` |
-| `update_campaign_budget` | Change campaign/IO budget | `campaignId`, `newBudget`, `reason` |
-| `update_campaign_dates` | Adjust flight dates | `campaignId`, `startDate`, `endDate` |
-| `update_line_item_status` | Pause/activate line items | `lineItemId`, `status` |
-| `update_line_item_bid` | Change CPM/CPC bid | `lineItemId`, `newBid`, `reason` |
-| `update_revenue_margin` | Adjust margin percentage | `lineItemId`, `newMargin`, `reason` |
+| `dv360_list_entities` | List supported DV360 entities with filters/paging | `entityType`, IDs, optional filters |
+| `dv360_get_entity` | Retrieve a single DV360 entity by type/id | `entityType`, entity IDs |
+| `dv360_create_entity` | Create any supported DV360 entity | `entityType`, IDs, `data` |
+| `dv360_update_entity` | Update any supported DV360 entity with updateMask discipline | `entityType`, IDs, `data`, `updateMask` |
+| `dv360_delete_entity` | Delete supported DV360 entities | `entityType`, entity IDs |
+| `dv360_adjust_line_item_bids` | Batch adjust line item bids | `advertiserId`, `adjustments[]` |
+| `dv360_bulk_update_status` | Batch update statuses for entities | `entityType`, `entityIds[]`, `entityStatus` |
 
 ### How the Two Servers Work Together
 
@@ -434,7 +436,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
 2. AI agent calls **dbm-mcp** → `get_performance_metrics` to analyze current CPMs
 3. AI agent calculates bid adjustments needed based on pacing data
-4. AI agent calls **dv360-mcp** → `update_line_item_bid` for each line item needing adjustment
+4. AI agent calls **dv360-mcp** → `dv360_adjust_line_item_bids` for batched line item updates
 5. AI agent confirms changes and monitors delivery improvement
 
 ## Deployment & Infrastructure

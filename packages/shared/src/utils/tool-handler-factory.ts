@@ -5,14 +5,17 @@
  * Both dbm-mcp and dv360-mcp servers use this to register tools with
  * consistent context creation, telemetry, error handling, and metrics.
  *
- * Uses structural typing to avoid coupling the shared package to the MCP SDK.
+ * Compliant with MCP Specification 2025-11-25:
+ * - Forwards title, annotations, outputSchema to the SDK
+ * - Returns structuredContent alongside content when outputSchema is defined
+ * - Uses structural typing to avoid coupling the shared package to the MCP SDK
  */
 
 import type { Logger } from "pino";
 import type { z } from "zod";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
-import { ErrorHandler } from "./mcp-errors.js";
-import { recordToolExecution } from "./metrics.js";
+import { ErrorHandler, EvaluatorIssueClass, JsonRpcErrorCode, McpError } from "./mcp-errors.js";
+import { recordToolExecution, recordEvaluatorFinding, recordWorkflowCallDepth } from "./metrics.js";
 
 /**
  * Request context created per tool invocation
@@ -35,18 +38,85 @@ export interface ToolSdkContext {
 }
 
 /**
- * Minimal tool definition interface — matches both server packages
+ * Tool annotations per MCP Spec 2025-11-25
+ */
+export interface ToolAnnotations {
+  readOnlyHint?: boolean;
+  destructiveHint?: boolean;
+  idempotentHint?: boolean;
+  openWorldHint?: boolean;
+}
+
+export interface ToolInteractionIssue {
+  class: EvaluatorIssueClass;
+  message: string;
+  isRecoverable?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ToolInteractionEvaluation {
+  issues: ToolInteractionIssue[];
+  inputQualityScore?: number;
+  efficiencyScore?: number;
+  recommendationAction?: "none" | "log_only" | "propose_playbook_delta" | "block";
+}
+
+export interface ToolInteractionContext {
+  toolName: string;
+  operation: string;
+  workflowId?: string;
+  platform?: string;
+  packageName?: string;
+  requestId: string;
+}
+
+export interface ToolExecutionSnapshot {
+  args: unknown;
+  validatedInput: unknown;
+  context: ToolRequestContext;
+  result: unknown;
+  durationMs: number;
+}
+
+/**
+ * Minimal tool definition interface — matches both server packages.
+ * Includes all fields from MCP Spec 2025-11-25 (title, annotations, outputSchema).
  */
 export interface ToolDefinitionForFactory {
   name: string;
+  title?: string;
   description: string;
   inputSchema: z.ZodTypeAny;
+  outputSchema?: z.ZodTypeAny;
+  annotations?: ToolAnnotations;
   logic: (
     input: any,
     context: any,
     sdkContext?: any
   ) => Promise<any>;
+  inputRefiner?: (
+    input: any,
+    context: ToolInteractionContext,
+    sdkContext?: ToolSdkContext
+  ) => Promise<any>;
+  postExecutionEvaluator?: (
+    snapshot: ToolExecutionSnapshot,
+    context: ToolInteractionContext,
+    sdkContext?: ToolSdkContext
+  ) => Promise<ToolInteractionEvaluation>;
   responseFormatter?: (result: any, input: any) => any[];
+}
+
+/**
+ * Tool registration config passed to McpServer.registerTool().
+ * Matches the MCP SDK's expected config shape including 2025-11-25 fields.
+ */
+interface ToolRegistrationConfig {
+  title?: string;
+  description: string;
+  inputSchema: any;
+  outputSchema?: any;
+  annotations?: ToolAnnotations;
 }
 
 /**
@@ -59,7 +129,7 @@ interface McpServerLike {
   };
   registerTool(
     name: string,
-    config: { description: string; inputSchema: any },
+    config: ToolRegistrationConfig,
     handler: (args: any) => Promise<any>
   ): void;
 }
@@ -73,7 +143,7 @@ export interface RegisterToolsOptions {
   logger: Logger;
   sessionId?: string;
   /**
-   * Transform the Zod schema into the format expected by server.registerTool().
+   * Transform a Zod schema into the format expected by server.registerTool().
    * dbm-mcp converts to JSON Schema; dv360-mcp extracts the raw Zod shape.
    */
   transformSchema: (schema: z.ZodTypeAny) => unknown;
@@ -85,6 +155,44 @@ export interface RegisterToolsOptions {
     operation: string;
     additionalContext: Record<string, unknown>;
   }) => ToolRequestContext;
+  /**
+   * Controls JSON formatting for default text responses when no custom responseFormatter is provided.
+   * `compact` reduces token usage and is recommended when outputSchema is present.
+   */
+  defaultTextFormat?: "compact" | "pretty";
+  platform?: string;
+  packageName?: string;
+  /**
+   * Optional workflow id map to annotate executions by tool name.
+   */
+  workflowIdByToolName?: Record<string, string>;
+  /**
+   * Shared evaluator config for all registered tools.
+   */
+  evaluator?: {
+    enabled: boolean;
+    observeOnly?: boolean;
+    evaluate?: (
+      snapshot: ToolExecutionSnapshot,
+      context: ToolInteractionContext,
+      sdkContext?: ToolSdkContext
+    ) => Promise<ToolInteractionEvaluation>;
+  };
+}
+
+function estimatePayloadBytes(value: unknown): number {
+  try {
+    return Buffer.byteLength(JSON.stringify(value), "utf-8");
+  } catch {
+    return 0;
+  }
+}
+
+function clampScore(value: number | undefined): number | undefined {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return undefined;
+  }
+  return Math.min(1, Math.max(0, value));
 }
 
 /**
@@ -93,17 +201,63 @@ export interface RegisterToolsOptions {
  * This eliminates ~90 lines of duplicated boilerplate per server by
  * centralising: OTEL spans, input validation, context creation,
  * elicitation wiring, response formatting, error handling, and metrics.
+ *
+ * MCP Spec 2025-11-25 compliance:
+ * - Forwards title, annotations, outputSchema to the SDK
+ * - Returns structuredContent alongside content when outputSchema is defined
  */
 export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
-  const { server, tools, logger, sessionId, transformSchema, createRequestContext } = opts;
+  const {
+    server,
+    tools,
+    logger,
+    sessionId,
+    transformSchema,
+    createRequestContext,
+    defaultTextFormat = "compact",
+    platform,
+    packageName,
+    workflowIdByToolName = {},
+    evaluator,
+  } = opts;
 
   for (const tool of tools) {
+    // Build registration config with all MCP 2025-11-25 fields
+    const transformedInputSchema = transformSchema(tool.inputSchema);
+    const toolConfig: ToolRegistrationConfig = {
+      description: tool.description,
+      inputSchema: transformedInputSchema,
+    };
+
+    // Forward optional title (human-readable display name)
+    if (tool.title) {
+      toolConfig.title = tool.title;
+    }
+
+    // Forward optional annotations (readOnlyHint, destructiveHint, etc.)
+    if (tool.annotations) {
+      toolConfig.annotations = tool.annotations;
+    }
+
+    // Forward optional outputSchema for structured content validation
+    let transformedOutputSchema: unknown;
+    if (tool.outputSchema) {
+      transformedOutputSchema = transformSchema(tool.outputSchema);
+      toolConfig.outputSchema = transformedOutputSchema;
+    }
+
+    const schemaSizeLog: Record<string, unknown> = {
+      toolName: tool.name,
+      inputSchemaBytes: estimatePayloadBytes(transformedInputSchema),
+    };
+    if (transformedOutputSchema !== undefined) {
+      schemaSizeLog.outputSchemaBytes = estimatePayloadBytes(transformedOutputSchema);
+    }
+    logger.debug(schemaSizeLog, "Tool schema sizes");
+
     server.registerTool(
       tool.name,
-      {
-        description: tool.description,
-        inputSchema: transformSchema(tool.inputSchema),
-      },
+      toolConfig,
       async (args: unknown) => {
         logger.info({ toolName: tool.name, arguments: args }, "Handling tool call");
 
@@ -129,18 +283,142 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 return server.server.elicitInput(params);
               },
             };
+            const interactionContext: ToolInteractionContext = {
+              toolName: tool.name,
+              operation: `tool:${tool.name}`,
+              workflowId: workflowIdByToolName[tool.name],
+              platform,
+              packageName,
+              requestId: context.requestId,
+            };
+            if (platform) setSpanAttribute("mcp.platform", platform);
+            if (packageName) setSpanAttribute("mcp.server.package", packageName);
+            if (interactionContext.workflowId) {
+              setSpanAttribute("mcp.workflow.id", interactionContext.workflowId);
+            }
+            setSpanAttribute("mcp.tool.retry_count", 0);
 
-            const result = await tool.logic(validatedInput, context, sdkContext);
+            const refinedInput = tool.inputRefiner
+              ? await tool.inputRefiner(validatedInput, interactionContext, sdkContext)
+              : validatedInput;
+
+            if (tool.inputRefiner) {
+              setSpanAttribute("mcp.evaluator.input_refiner.enabled", true);
+            }
+
+            const result = await tool.logic(refinedInput, context, sdkContext);
             setSpanAttribute("tool.execution.success", true);
 
+            const durationMs = Date.now() - startTime;
+            setSpanAttribute("mcp.tool.execution.latency_ms", durationMs);
+            const issues: ToolInteractionIssue[] = [];
+            let inputQualityScore: number | undefined;
+            let efficiencyScore: number | undefined;
+            let recommendationAction:
+              | "none"
+              | "log_only"
+              | "propose_playbook_delta"
+              | "block"
+              | undefined;
+
+            const executionSnapshot: ToolExecutionSnapshot = {
+              args,
+              validatedInput: refinedInput,
+              context,
+              result,
+              durationMs,
+            };
+
+            if (evaluator?.enabled && evaluator.evaluate) {
+              const globalEvaluation = await evaluator.evaluate(
+                executionSnapshot,
+                interactionContext,
+                sdkContext
+              );
+              if (globalEvaluation?.issues?.length) {
+                issues.push(...globalEvaluation.issues);
+              }
+              inputQualityScore = clampScore(globalEvaluation?.inputQualityScore);
+              efficiencyScore = clampScore(globalEvaluation?.efficiencyScore);
+              recommendationAction = globalEvaluation?.recommendationAction;
+            }
+
+            if (tool.postExecutionEvaluator) {
+              const localEvaluation = await tool.postExecutionEvaluator(
+                executionSnapshot,
+                interactionContext,
+                sdkContext
+              );
+              if (localEvaluation?.issues?.length) {
+                issues.push(...localEvaluation.issues);
+              }
+              inputQualityScore = clampScore(localEvaluation?.inputQualityScore ?? inputQualityScore);
+              efficiencyScore = clampScore(localEvaluation?.efficiencyScore ?? efficiencyScore);
+              recommendationAction =
+                localEvaluation?.recommendationAction ?? recommendationAction;
+            }
+
+            if (issues.length > 0) {
+              const observeOnly = evaluator?.observeOnly ?? true;
+              setSpanAttribute("mcp.evaluator.observe_only", observeOnly);
+              setSpanAttribute("mcp.evaluator.issues.count", issues.length);
+              if (inputQualityScore !== undefined) {
+                setSpanAttribute("mcp.evaluator.input_quality_score", inputQualityScore);
+              }
+              if (efficiencyScore !== undefined) {
+                setSpanAttribute("mcp.evaluator.efficiency_score", efficiencyScore);
+              }
+              if (recommendationAction) {
+                setSpanAttribute("mcp.evaluator.recommendation.action", recommendationAction);
+              }
+
+              for (const issue of issues) {
+                recordEvaluatorFinding(tool.name, issue.class, issue.isRecoverable ?? true);
+              }
+
+              if (
+                recommendationAction === "block" &&
+                !observeOnly &&
+                issues.some((issue) => issue.isRecoverable === false)
+              ) {
+                throw new McpError(
+                  JsonRpcErrorCode.ValidationError,
+                  "Interaction evaluator blocked tool execution due to non-recoverable issues",
+                  {
+                    toolName: tool.name,
+                    requestId: context.requestId,
+                    issues,
+                  }
+                );
+              }
+            }
+
             const content = tool.responseFormatter
-              ? tool.responseFormatter(result, validatedInput)
+              ? tool.responseFormatter(result, refinedInput)
               : [
                   {
                     type: "text" as const,
-                    text: JSON.stringify(result, null, 2),
+                    text:
+                      defaultTextFormat === "pretty"
+                        ? JSON.stringify(result, null, 2)
+                        : JSON.stringify(result),
                   },
                 ];
+
+            if (tool.outputSchema && tool.responseFormatter) {
+              const hasVerbosePayloadText = content.some(
+                (item) =>
+                  item?.type === "text" &&
+                  typeof item.text === "string" &&
+                  (item.text.includes("Full Data:") || item.text.length > 6_000)
+              );
+              if (hasVerbosePayloadText) {
+                logger.warn(
+                  { toolName: tool.name },
+                  "Structured tool response text appears verbose; prefer concise summaries with structuredContent"
+                );
+              }
+            }
 
             logger.info(
               { toolName: tool.name, requestId: context.requestId },
@@ -148,11 +426,24 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             );
 
             recordToolExecution(tool.name, "success", Date.now() - startTime);
+            recordWorkflowCallDepth(workflowIdByToolName[tool.name], 1);
+
+            // MCP Spec 2025-11-25: return structuredContent alongside content
+            // when outputSchema is defined. This enables typed result parsing.
+            if (tool.outputSchema) {
+              return {
+                content,
+                structuredContent: result,
+              };
+            }
 
             return { content };
           } catch (error) {
             recordSpanError(error as Error);
             setSpanAttribute("tool.execution.success", false);
+            if (error instanceof McpError) {
+              setSpanAttribute("mcp.tool.error_class", error.code);
+            }
 
             recordToolExecution(tool.name, "error", Date.now() - startTime);
 

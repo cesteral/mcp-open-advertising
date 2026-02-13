@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PlaybookDelta",
+  "type": "object",
+  "required": [
+    "findingId",
+    "createdAt",
+    "riskClass",
+    "platform",
+    "serverPackage",
+    "workflowId",
+    "evidence",
+    "proposedChanges",
+    "rollout"
+  ],
+  "properties": {
+    "findingId": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "owner": { "type": "string" },
+    "riskClass": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "platform": { "type": "string", "minLength": 1 },
+    "serverPackage": { "type": "string", "minLength": 1 },
+    "workflowId": { "type": "string", "minLength": 1 },
+    "evidence": {
+      "type": "object",
+      "required": ["occurrenceCount", "timeWindow", "confidence"],
+      "properties": {
+        "occurrenceCount": { "type": "integer", "minimum": 1 },
+        "timeWindow": { "type": "string", "minLength": 1 },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "sampleEventIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "proposedChanges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "summary"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "summary": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rollout": {
+      "type": "object",
+      "required": ["observeOnlyFirst", "rollbackTrigger", "successMetric"],
+      "properties": {
+        "observeOnlyFirst": { "type": "boolean" },
+        "featureFlagName": { "type": "string" },
+        "rollbackTrigger": { "type": "string", "minLength": 1 },
+        "successMetric": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

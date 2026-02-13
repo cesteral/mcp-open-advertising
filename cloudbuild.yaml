@@ -23,6 +23,7 @@ steps:
         pnpm install --frozen-lockfile
         pnpm run build
         pnpm run typecheck
+        pnpm run validate:skills
     id: 'test'
 
   # Step 2a: Build dbm-mcp Docker image

@@ -15,6 +15,13 @@ import {
   type FilterMetadata,
 } from "../../../generated/index.js";
 
+let cachedFiltersMarkdown: string | undefined;
+const cachedCategoryMarkdown = new Map<string, string>();
+
+function toCategorySlug(category: string): string {
+  return category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 /**
  * Format filters documentation as markdown
  */
@@ -178,6 +185,41 @@ ${Array.from(byReportType.get("YOUTUBE_PROGRAMMATIC_GUARANTEED") || [])
   return markdown;
 }
 
+function formatFiltersCategoryMarkdown(category: string): string {
+  const cacheKey = toCategorySlug(category);
+  const cached = cachedCategoryMarkdown.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const filters = (Object.entries(FILTER_METADATA) as [FilterType, FilterMetadata][])
+    .filter(([, meta]) => meta.category === category)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  let markdown = `# ${category} Filter Types
+
+This resource contains only \`${category}\` filters from the full \`filter-types://all\` reference.
+
+| Filter | Display Name | Report Types | Usage |
+|--------|--------------|--------------|-------|
+`;
+
+  for (const [filter, meta] of filters) {
+    const usageStr = meta.usage.join(", ");
+    const reportTypes = meta.reportTypes?.join(", ") || "All";
+    markdown += `| \`${filter}\` | ${meta.displayName} | ${reportTypes} | ${usageStr} |\n`;
+  }
+
+  markdown += `
+---
+
+Need the full catalog? Use \`filter-types://all\`.
+`;
+
+  cachedCategoryMarkdown.set(cacheKey, markdown);
+  return markdown;
+}
+
 /**
  * Filter types resource definition
  */
@@ -186,5 +228,16 @@ export const filterTypesResource: Resource = {
   name: "Bid Manager Filter/Dimension Types",
   description: `Complete reference of all ${Object.keys(FILTER_METADATA).length} available Bid Manager API filters and dimensions`,
   mimeType: "text/markdown",
-  getContent: () => formatFiltersMarkdown(),
+  getContent: () => {
+    cachedFiltersMarkdown ??= formatFiltersMarkdown();
+    return cachedFiltersMarkdown;
+  },
 };
+
+export const filterTypeCategoryResources: Resource[] = FILTER_CATEGORIES.map((category) => ({
+  uri: `filter-types://category/${toCategorySlug(category)}`,
+  name: `Bid Manager Filter Types (${category})`,
+  description: `Filter/dimension reference for ${category} category`,
+  mimeType: "text/markdown",
+  getContent: () => formatFiltersCategoryMarkdown(category),
+}));

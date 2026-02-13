@@ -12,6 +12,10 @@ import {
   troubleshootReportPrompt,
   getTroubleshootReportMessage,
 } from "./troubleshoot-report.prompt.js";
+import {
+  toolSchemaExplorationPrompt,
+  getToolSchemaExplorationMessage,
+} from "./tool-schema-exploration.prompt.js";
 import type { PromptDefinition } from "./types.js";
 
 /**
@@ -32,9 +36,22 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
       generateMessage: getTroubleshootReportMessage,
     },
   ],
+  [
+    toolSchemaExplorationPrompt.name,
+    {
+      prompt: toolSchemaExplorationPrompt,
+      generateMessage: getToolSchemaExplorationMessage,
+    },
+  ],
 ]);
 
 /**
  * All prompts for registration
  */
-export const allPrompts = Array.from(promptRegistry.values()).map((def) => def.prompt);
+export function getAllPrompts() {
+  return Array.from(promptRegistry.values()).map((def) => def.prompt);
+}
+
+export function getPromptDefinition(name: string): PromptDefinition | undefined {
+  return promptRegistry.get(name);
+}

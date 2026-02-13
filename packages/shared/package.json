@@ -1,7 +1,7 @@
 {
   "name": "@bidshifter/shared",
   "version": "1.0.0",
-  "description": "Shared types, utilities, and authentication for BidShifter MCP servers",
+  "description": "Shared infrastructure utilities and authentication for BidShifter MCP servers",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,10 +9,6 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    },
-    "./types": {
-      "types": "./dist/types/index.d.ts",
-      "import": "./dist/types/index.js"
     },
     "./utils": {
       "types": "./dist/utils/index.d.ts",

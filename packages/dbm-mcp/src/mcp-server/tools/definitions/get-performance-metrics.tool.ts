@@ -126,10 +126,7 @@ export function getPerformanceMetricsResponseFormatter(
 • Clicks: ${result.delivery.clicks.toLocaleString()}
 • Spend: $${result.delivery.spend.toFixed(2)}
 • Conversions: ${result.delivery.conversions}
-• Revenue: $${result.delivery.revenue.toFixed(2)}
-
-Full Data:
-${JSON.stringify(result, null, 2)}`,
+• Revenue: $${result.delivery.revenue.toFixed(2)}`,
     },
   ];
 }

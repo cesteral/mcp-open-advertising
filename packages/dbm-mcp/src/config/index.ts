@@ -74,10 +74,14 @@ export type AppConfig = z.infer<typeof ConfigSchema>;
  * Parse and validate configuration from environment variables
  */
 export function parseConfig(): AppConfig {
+  // MCP Spec 2025-11-25: bind to localhost in development to prevent
+  // DNS rebinding attacks; use 0.0.0.0 in production for Cloud Run.
+  const defaultHost = process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1";
+
   const rawConfig = {
     serviceName: process.env.SERVICE_NAME,
     port: process.env.DBM_MCP_PORT ? Number(process.env.DBM_MCP_PORT) : undefined,
-    host: process.env.DBM_MCP_HOST,
+    host: process.env.DBM_MCP_HOST || defaultHost,
     nodeEnv: process.env.NODE_ENV,
 
     // Session

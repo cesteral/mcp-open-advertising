@@ -5,9 +5,9 @@ import {
   getEntityConfigDynamic,
 } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
+import { createSimplifiedUpdateEntityInputSchema } from "../utils/simplified-schemas.js";
 import {
   getEntityTypesWithExamples,
-  getExamplesSummary,
   getEntityExamples,
   findMatchingExample,
 } from "../utils/entity-examples.js";
@@ -18,27 +18,13 @@ const TOOL_NAME = "dv360_update_entity";
 
 // Generate dynamic description with examples and hierarchy
 function generateToolDescription(): string {
-  const baseDescription = `Update a DV360 entity with flexible field updates.
-
-Use this tool to update any field on any entity type. Specify the data to update and the updateMask indicating which fields to update.
-
-**Entity Hierarchy:**
-partner > advertiser > campaign > insertionOrder > lineItem
-
-**Important:** Ensure you have the correct parent IDs when updating entities.
-
-**Common Update Patterns:**`;
-
-  const entityTypesWithExamples = getEntityTypesWithExamples();
-  const exampleSummaries = entityTypesWithExamples
-    .slice(0, 3) // Show top 3 entities with most examples
-    .map((entityType) => {
-      const summary = getExamplesSummary(entityType);
-      return `\n\n${summary}`;
-    })
-    .join("");
-
-  return baseDescription + exampleSummaries + `\n\nFor more examples, see entity examples utility.`;
+  const typesWithExamples = getEntityTypesWithExamples().slice(0, 6).join(", ");
+  const examplesHint =
+    typesWithExamples.length > 0 ? ` Common examples available for: ${typesWithExamples}.` : "";
+  return (
+    "Update a DV360 entity using partial data plus updateMask. Fetch entity-fields://{entityType} and entity-examples://{entityType} before calling." +
+    examplesHint
+  );
 }
 
 // Full validation schema (with refine logic)
@@ -98,65 +84,10 @@ const FullUpdateEntityInputSchema = z
     }
   );
 
-// Simplified schema for MCP tool registration (avoids stdio overflow)
-//
-// WHY SIMPLIFIED: Full discriminated union schemas exceed ~1MB, causing EPIPE errors on stdio transport.
-// This simplified version keeps tool registration small (~10KB) while preserving full dynamic functionality.
-//
-// HOW IT WORKS:
-// 1. Tool registration uses generic z.record(z.any()) for data field
-// 2. Descriptions guide AI to fetch full schemas and field paths via MCP Resources
-// 3. Server-side validation still uses FullUpdateEntityInputSchema (line 41)
-// 4. Both simplified and full schemas use same getSupportedEntityTypesDynamic() - fully dynamic!
-//
-// IMPORTANT: Before attempting to update an entity, fetch resources via:
-//   - entity-schema://{entityType} → Complete JSON Schema with all fields
-//   - entity-fields://{entityType} → All valid field paths for updateMask
-//   - entity-examples://{entityType} → Common update patterns with updateMask examples
-const SimplifiedUpdateEntityInputSchema = z
-  .object({
-    entityType: z
-      .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
-      .describe(
-        "Type of entity to update. REQUIRED: Fetch field paths first using MCP Resource: " +
-          "resources/read entity-fields://{entityType} to see valid updateMask values."
-      ),
-    partnerId: z.string().optional().describe("Partner ID (if required)"),
-    advertiserId: z.string().optional().describe("Advertiser ID (if required)"),
-    campaignId: z.string().optional().describe("Campaign ID (if updating campaign)"),
-    insertionOrderId: z.string().optional().describe("Insertion Order ID (if updating IO)"),
-    lineItemId: z.string().optional().describe("Line Item ID (if updating line item)"),
-    adGroupId: z.string().optional().describe("Ad Group ID (if updating ad group)"),
-    adId: z.string().optional().describe("Ad ID (if updating ad)"),
-    creativeId: z.string().optional().describe("Creative ID (if updating creative)"),
-    data: z
-      .record(z.any())
-      .describe(
-        "Partial entity data (only fields being updated). IMPORTANT:\n" +
-          "  1. resources/read entity-examples://{entityType} → See common update patterns\n" +
-          "  2. Only include fields you want to change\n" +
-          "  3. Must match fields specified in updateMask"
-      ),
-    updateMask: z
-      .string()
-      .describe(
-        "Comma-separated field paths to update (e.g., 'displayName,entityStatus'). " +
-          "REQUIRED: Fetch valid paths first using resources/read entity-fields://{entityType}. " +
-          "CRITICAL: Only fields in updateMask will be modified on the server."
-      ),
-    reason: z.string().optional().describe("Optional reason for audit trail"),
-  })
-  .describe(
-    "Update DV360 entity. WORKFLOW:\n" +
-      "1. Fetch field paths: resources/read entity-fields://{entityType}\n" +
-      "2. Review examples: resources/read entity-examples://{entityType}\n" +
-      "3. Build data object with only fields to update\n" +
-      "4. Set updateMask to comma-separated field paths\n" +
-      "5. Call this tool with entityType + data + updateMask"
-  );
-
 // Export simplified schema for MCP
-export const UpdateEntityInputSchema = SimplifiedUpdateEntityInputSchema;
+export const UpdateEntityInputSchema = createSimplifiedUpdateEntityInputSchema().describe(
+  "Update DV360 entity. Fetch entity-fields://{entityType} and entity-examples://{entityType} first."
+);
 
 export const UpdateEntityOutputSchema = z.object({
   entity: z.record(z.any()),

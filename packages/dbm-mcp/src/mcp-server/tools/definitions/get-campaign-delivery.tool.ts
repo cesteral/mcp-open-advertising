@@ -115,9 +115,7 @@ Delivery Metrics:
 - CPM: ${formatMetricValue("cpm", cpm)}
 - Conversions: ${result.metrics.conversions}
 - Revenue: $${result.metrics.revenue.toFixed(2)}
-
-Full Data:
-${JSON.stringify(result, null, 2)}`,
+`,
     },
   ];
 }

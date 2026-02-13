@@ -16,6 +16,13 @@ import {
   type MetricMetadata,
 } from "../../../generated/index.js";
 
+let cachedMetricsMarkdown: string | undefined;
+const cachedCategoryMarkdown = new Map<string, string>();
+
+function toCategorySlug(category: string): string {
+  return category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 /**
  * Format metrics documentation as markdown
  */
@@ -205,6 +212,40 @@ These are pre-defined metric combinations for common use cases:
   return markdown;
 }
 
+function formatMetricsCategoryMarkdown(category: string): string {
+  const cacheKey = toCategorySlug(category);
+  const cached = cachedCategoryMarkdown.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  const metrics = (Object.entries(METRIC_METADATA) as [MetricType, MetricMetadata][])
+    .filter(([, meta]) => meta.category === category)
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  let markdown = `# ${category} Metric Types
+
+This resource contains only \`${category}\` metrics from the full \`metric-types://all\` reference.
+
+| Metric | Display Name | Report Types | Data Type |
+|--------|--------------|--------------|----------|
+`;
+
+  for (const [metric, meta] of metrics) {
+    const reportTypes = meta.reportTypes?.join(", ") || "All";
+    markdown += `| \`${metric}\` | ${meta.displayName} | ${reportTypes} | ${meta.dataType || "—"} |\n`;
+  }
+
+  markdown += `
+---
+
+Need the full catalog? Use \`metric-types://all\`.
+`;
+
+  cachedCategoryMarkdown.set(cacheKey, markdown);
+  return markdown;
+}
+
 /**
  * Metric types resource definition
  */
@@ -213,5 +254,16 @@ export const metricTypesResource: Resource = {
   name: "Bid Manager Metric Types",
   description: `Complete reference of all ${Object.keys(METRIC_METADATA).length} available Bid Manager API metrics with descriptions`,
   mimeType: "text/markdown",
-  getContent: () => formatMetricsMarkdown(),
+  getContent: () => {
+    cachedMetricsMarkdown ??= formatMetricsMarkdown();
+    return cachedMetricsMarkdown;
+  },
 };
+
+export const metricTypeCategoryResources: Resource[] = METRIC_CATEGORIES.map((category) => ({
+  uri: `metric-types://category/${toCategorySlug(category)}`,
+  name: `Bid Manager Metric Types (${category})`,
+  description: `Metric reference for ${category} category`,
+  mimeType: "text/markdown",
+  getContent: () => formatMetricsCategoryMarkdown(category),
+}));

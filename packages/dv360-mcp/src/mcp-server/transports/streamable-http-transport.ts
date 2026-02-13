@@ -1,8 +1,8 @@
 /**
  * Streamable HTTP Transport for DV360-MCP
  *
- * Implements MCP Specification 2025-03-26 Streamable HTTP Transport.
- * Replaces the deprecated SSE transport with Hono + @hono/mcp.
+ * Implements MCP Specification 2025-11-25 Streamable HTTP Transport.
+ * Uses Hono + @hono/mcp for the Streamable HTTP transport.
  */
 import { readFileSync } from "fs";
 import { StreamableHTTPTransport } from "@hono/mcp";
@@ -78,6 +78,10 @@ export function createMcpHttpServer(
 
   // Track active sessions for timeout sweep
   const sessionCreatedAt = new Map<string, number>();
+
+  // Cache MCP server instances per session to avoid re-registering
+  // tools/resources/prompts on every request (MCP spec: sessions are stateful)
+  const sessionServers = new Map<string, Awaited<ReturnType<typeof createMcpServer>>>();
 
   // Register active sessions gauge
   registerActiveSessionsGauge(() => sessionServiceStore.size);
@@ -170,29 +174,29 @@ export function createMcpHttpServer(
   });
 
   // -----------------------------------------------------------------------
-  // GET /mcp — server info (no auth required)
+  // GET /mcp — MCP Spec 2025-11-25: return 405 Method Not Allowed
+  // since this server does not offer a standalone SSE stream.
+  // Server info is available via GET /health instead.
   // -----------------------------------------------------------------------
   app.get("/mcp", (c) => {
-    return c.json({
-      status: "ok",
-      server: {
-        name: config.serviceName,
-        version: pkg.version,
-        transport: "streamable-http",
-        sessionMode: config.mcpSessionMode,
-      },
-    });
+    return c.body(null, 405);
   });
 
   // -----------------------------------------------------------------------
   // DELETE /mcp — session termination
   // -----------------------------------------------------------------------
-  app.delete("/mcp", (c) => {
+  app.delete("/mcp", async (c) => {
     const sessionId = c.req.header("mcp-session-id");
     if (!sessionId) {
       return c.json({ error: "Mcp-Session-Id header required" }, 400);
     }
     logger.info({ sessionId }, "Session termination requested");
+    // Clean up cached MCP server instance
+    const cachedServer = sessionServers.get(sessionId);
+    if (cachedServer) {
+      await cachedServer.close().catch(() => {});
+      sessionServers.delete(sessionId);
+    }
     sessionServiceStore.delete(sessionId);
     sessionCreatedAt.delete(sessionId);
     return c.json({ status: "terminated", sessionId }, 200);
@@ -211,10 +215,11 @@ export function createMcpHttpServer(
 
     return runWithRequestContext(reqCtx, async () => {
 
-    // Validate MCP-Protocol-Version header
+    // Validate MCP-Protocol-Version header (spec 2025-11-25)
+    // Default to 2025-03-26 for backwards compatibility when header is absent
     const protocolVersion =
       c.req.header("mcp-protocol-version") ?? "2025-03-26";
-    const supportedVersions = ["2025-03-26", "2025-06-18"];
+    const supportedVersions = ["2025-03-26", "2025-06-18", "2025-11-25"];
     if (!supportedVersions.includes(protocolVersion)) {
       logger.warn(
         { protocolVersion, supportedVersions },
@@ -311,11 +316,18 @@ export function createMcpHttpServer(
       );
     }
 
+    // Get or create cached MCP server for this session
+    let mcpServer = sessionServers.get(sessionId);
+    if (!mcpServer) {
+      mcpServer = await createMcpServer(logger, sessionId);
+      sessionServers.set(sessionId, mcpServer);
+      logger.debug({ sessionId }, "Created new MCP server instance for session");
+    }
+
     // Create transport and handle request
     const transport = new McpSessionTransport(sessionId);
     try {
-      const server = await createMcpServer(logger, sessionId);
-      await server.connect(transport);
+      await mcpServer.connect(transport);
       const response = await transport.handleRequest(c);
 
       // Add session ID header for stateful sessions
@@ -345,6 +357,12 @@ export function createMcpHttpServer(
           { sessionId, ageMs: now - createdAt },
           "Session timed out — cleaning up"
         );
+        // Clean up cached MCP server instance
+        const cachedServer = sessionServers.get(sessionId);
+        if (cachedServer) {
+          cachedServer.close().catch(() => {});
+          sessionServers.delete(sessionId);
+        }
         sessionServiceStore.delete(sessionId);
         sessionCreatedAt.delete(sessionId);
       }
@@ -357,7 +375,11 @@ export function createMcpHttpServer(
   // -----------------------------------------------------------------------
   async function shutdown(): Promise<void> {
     clearInterval(sweepInterval);
-    // Clean up all sessions
+    // Close all cached MCP server instances
+    for (const [, cachedServer] of sessionServers) {
+      await cachedServer.close().catch(() => {});
+    }
+    sessionServers.clear();
     sessionCreatedAt.clear();
   }
 

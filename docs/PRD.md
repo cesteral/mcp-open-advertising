@@ -1,8 +1,8 @@
 # BidShifter - Product Requirements Document (PRD)
 
-**Version:** 2.0
-**Date:** January 2025
-**Status:** Active Development
+**Version:** 3.0
+**Date:** February 2026
+**Status:** Scaffolding Complete
 **Product Owner:** Daniel Thorner
 
 ---
@@ -24,14 +24,14 @@
 
 ## Executive Summary
 
-BidShifter is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, Google Ads, Meta).
+BidShifter is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk).
 
 Built on three separate Model Context Protocol (MCP) servers, BidShifter enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
 
 ### Key Differentiators
 
 - **AI-First Interface**: MCP protocol as primary interface, not an afterthought
-- **Multi-Platform Support**: Single optimization logic works across DV360, Google Ads, Meta, and future DSPs
+- **Multi-Platform Support**: DV360 and The Trade Desk supported, extensible to additional DSPs
 - **Composable Architecture**: Three separate MCP servers can be used independently or combined
 - **Transparent Decision-Making**: All optimization decisions are explainable and auditable
 - **Cost-Efficient**: Hybrid cloud architecture reduces costs by 40-60% vs. traditional approaches
@@ -176,89 +176,25 @@ Programmatic advertising campaign optimization is:
 
 ---
 
-### Feature 3: Intelligent Optimization (`bidshifter-mcp`)
+### Feature 3: The Trade Desk Management (`ttd-mcp`)
 
-**Description**: BidShifter-specific optimization intelligence that analyzes pacing and performance to calculate bid/margin adjustments.
+**Description**: The Trade Desk campaign entity management — full CRUD operations plus reporting via the TTD REST API.
 
 **Capabilities**:
-- **Pacing Optimization**: Automatically adjust bids to achieve target pacing (e.g., 95% of expected delivery)
-- **Performance Goal Optimization**: Factor in CPA, ROAS, or other KPI goals when calculating adjustments
-- **Margin Optimization**: Optimize revenue margins for margin-based line items
-- **Historical Learning**: Learn from past adjustments to improve future decisions
-- **Dry-Run Mode**: Preview recommended changes before applying
-- **Multi-Strategy Support**: Aggressive, moderate, conservative optimization strategies
+- **Entity CRUD**: Create, read, update, and delete TTD entities (advertisers, campaigns, ad groups, ads)
+- **Entity Listing**: List and filter entities with pagination support
+- **Reporting**: Generate and retrieve TTD performance reports
 
 **User Value**:
-- Continuous 24/7 monitoring and optimization (no nights/weekends gaps)
-- Faster response to pacing issues (4-hour check cycles vs. daily manual review)
-- Consistent application of optimization logic across all campaigns
-- Explainable decisions (AI agent shows reasoning for each adjustment)
-- Human control (approval workflows, strategy selection, threshold configuration)
+- AI agents can manage TTD campaigns alongside DV360 campaigns
+- Unified tooling pattern across platforms (same CRUD verbs, similar tool structure)
+- Partner token auth model keeps credentials per-session
 
 **Technical Details**:
-- Calls `dbm-mcp` for delivery data
-- Runs optimization algorithms (pacing offset calculation, bid delta calculation)
-- Calls `dv360-mcp` to execute changes
-- Records all adjustments to BigQuery for effectiveness analysis
-- Scheduled functions for automated optimization scans
-
-**Optimization Algorithm** (high-level):
-```
-1. Fetch current pacing from reporting server
-2. Calculate pacing offset (actual vs. expected)
-3. Fetch historical adjustments for this line item
-4. Calculate bid adjustment based on:
-   - Pacing offset magnitude
-   - Optimization strategy (aggressive/moderate/conservative)
-   - Historical effectiveness of past adjustments
-   - Goal performance (CPA, ROAS within target?)
-5. Cap adjustment at configured max (e.g., ±10%)
-6. Queue adjustment for execution
-7. Track outcome 24 hours later to measure effectiveness
-```
-
-**Optimization Algorithms** (detailed implementation):
-
-BidShifter preserves the proven optimization logic from the current Firebase Cloud Function implementation:
-
-**Revenue Type Handling**:
-1. **Cost Plus (`cost_plus`)**: Adjusts CPM based on pacing, calculates markup from performance goal
-   - Markup = (Required CPM - Media CPM) / Media CPM × 100
-   - Capped at 500% maximum markup
-
-2. **Margin (`margin`)**: Adjusts both CPM and margin percentage based on pacing
-   - More flexible for balancing volume vs. revenue
-
-3. **Fixed CPM (`fixed_cpm`)**: No pacing-based adjustments
-   - Maintains stable bidding regardless of delivery
-
-**Pacing Calculations**:
-- **Optimal pacing target**: 95% of expected delivery
-- **Pacing tolerance**: ±5% band before adjustments trigger
-- **Daily adjustment rate**: 2% maximum to prevent volatility
-- **Minimum impressions**: 1,000 for statistical significance
-
-**Bid Adjustment Logic**:
-```typescript
-if (pacingOffset < -5%) {
-  // Underpacing: Increase bid
-  adjustment = +2% × strategy_multiplier
-} else if (pacingOffset > +5%) {
-  // Overpacing: Decrease bid
-  adjustment = -2% × strategy_multiplier
-}
-
-// Strategy multipliers:
-// - Aggressive: 1.5× (±3% daily adjustment)
-// - Moderate: 1.0× (±2% daily adjustment)
-// - Conservative: 0.5× (±1% daily adjustment)
-```
-
-**Advanced Features**:
-- **Historical Learning**: Analyzes past adjustments from BigQuery to improve future decisions
-- **Budget Protection**: Reduces adjustment magnitude when < 3 days budget remaining
-- **Insertion Order Constraints**: Line item adjustments consider parent IO pacing
-- **Performance Goal Optimization**: Factors in CPA/ROAS goals when calculating adjustments
+- Uses TTD REST API via `TtdHttpClient`
+- Auth via partner ID + API secret (per-session `TtdAuthAdapter`)
+- Rate limiting consolidated in shared package
+- Entity types dynamically discovered from TTD API schema
 
 ---
 
@@ -332,12 +268,12 @@ if (pacingOffset < -5%) {
 ### Monorepo Structure
 
 ```
-bidshifter-mcp/
+cesteral-mcp-servers/
 ├── packages/
-│   ├── dbm-mcp/                 # Server 1: Generic cross-platform reporting
-│   ├── dv360-mcp/               # Server 2: DV360 entity management
-│   ├── bidshifter-mcp/          # Server 3: BidShifter optimization
-│   └── shared/                  # Shared types, utilities
+│   ├── dbm-mcp/                 # Server 1: DV360 reporting via Bid Manager API
+│   ├── dv360-mcp/               # Server 2: DV360 entity management via DV360 API
+│   ├── ttd-mcp/                 # Server 3: The Trade Desk entity management & reporting
+│   └── shared/                  # Shared types, utilities, auth, observability
 ├── terraform/                   # Infrastructure as Code
 ├── scripts/                     # Deployment automation
 └── docs/                        # Documentation
@@ -348,7 +284,7 @@ bidshifter-mcp/
 **GCP-Native Architecture** (no Cloudflare layer)
 
 **Compute Layer**
-- **Cloud Run**: Containerized MCP servers (Node.js 20, TypeScript, Express.js)
+- **Cloud Run**: Containerized MCP servers (Node.js 20, TypeScript, Hono)
 - **Auto-scaling**: 0-10 instances per service based on load
 - **Regional deployment**: europe-west2 (London) for EU data residency
 - **HTTP Transport**: MCP protocol directly over HTTPS with JWT authentication
@@ -370,45 +306,64 @@ bidshifter-mcp/
 
 **External Integrations**
 - DV360 API v4 + Bid Manager API v2
-- Google Ads API
-- Meta Marketing API
-- Future: The Trade Desk, Amazon DSP
+- The Trade Desk REST API
+- Future: Google Ads API, Meta Marketing API, Amazon DSP
 
 ### Data Flow Example: Optimize Campaign Bids
 
-```
-1. AI Agent (Claude Desktop)
-   → HTTPS POST (JWT auth) → Optimization MCP Server (Cloud Run)
-   MCP method: tools/call "optimize_campaign_bids"
+BidShifter supports two access patterns. This keeps each MCP server independently consumable while still enabling multi-server automation.
 
-2. Optimization Service (internal MCP client)
-   → Reporting MCP Server (Cloud Run)
+**Pattern A (Current default): Direct client orchestration**
+
+```
+1. AI Agent (Claude Desktop or custom agent)
+   → HTTPS POST (JWT/auth headers) → Reporting MCP Server (Cloud Run)
    MCP method: tools/call "get_campaign_delivery"
 
-3. Reporting Service
+2. Reporting Service
    → BigQuery: Query normalized delivery metrics tables
 
-4. Optimization Service (internal logic)
-   - Calculate pacing offset (actual vs expected)
-   - Determine revenue type (cost_plus, margin, fixed_cpm)
-   - Apply adjustment algorithm (2% daily rate, strategy multiplier)
-   - Check budget protection rules
-   - Generate adjustment recommendations
+3. AI Agent (same conversation/session)
+   - Calculates pacing offset and candidate adjustment plan
+   - Chooses smallest safe set of changes
 
-5. Optimization Service (internal MCP client)
-   → Management MCP Server (Cloud Run)
-   MCP method: tools/call "update_line_item_bid" (for each adjustment)
+4. AI Agent
+   → HTTPS POST (JWT/auth headers) → Management MCP Server (Cloud Run)
+   MCP method: tools/call "dv360_adjust_line_item_bids" (batched adjustments)
 
-6. Management Service
+5. Management Service
    → DV360 API: SDF download → modify CSV → SDF upload
    → Pub/Sub: Publish "bids.adjusted" event
 
-7. Historical Service (Pub/Sub subscriber)
+6. Historical Service (Pub/Sub subscriber)
    → BigQuery: Insert to adjustments_changelog table
 
-8. Optimization Service → AI Agent
-   Return: {taskId, status: "completed", adjustments: [...]}
+7. AI Agent → User
+   Return: changes applied + monitor plan
 ```
+
+**Pattern B (Optional): Server-side orchestration service**
+
+```
+1. AI Agent
+   → HTTPS POST → Orchestration MCP/Optimization Service
+   MCP method: tools/call "optimize_campaign_bids"
+
+2. Orchestration Service (internal MCP client)
+   → Reporting MCP Server (tools/call "get_campaign_delivery")
+
+3. Orchestration Service (policy + risk logic)
+   - Apply adjustment algorithm
+   - Enforce budget/guardrail constraints
+
+4. Orchestration Service (internal MCP client)
+   → Management MCP Server (tools/call "dv360_adjust_line_item_bids")
+
+5. Orchestration Service → AI Agent
+   Return: {taskId, status, adjustments, rollbackPlan}
+```
+
+Pattern B is recommended when you need centralized retries, policy enforcement, and cross-server trace correlation at high scale.
 
 ---
 
@@ -588,7 +543,7 @@ bidshifter-mcp/
 **Goals**: Build `dv360-mcp` with DV360 SDF support
 
 **Deliverables**:
-- MCP tools: `fetch_campaign_entities`, `update_line_item_bid`, `update_revenue_margin`
+- MCP tools: `dv360_list_entities`, `dv360_update_entity`, `dv360_adjust_line_item_bids`
 - DV360 SDF download/upload implementation
 - Cloud Storage integration for SDF staging
 - Pub/Sub event publishing for audit trail
@@ -601,23 +556,20 @@ bidshifter-mcp/
 
 ---
 
-### Phase 4: Optimization Server (Weeks 15-20)
+### Phase 4: The Trade Desk Server (Weeks 15-20)
 
-**Goals**: Build `bidshifter-optimization-mcp` orchestrating other two servers
+**Goals**: Build `ttd-mcp` for The Trade Desk entity management and reporting
 
 **Deliverables**:
-- MCP tools: `optimize_campaign_bids`, `get_optimization_recommendations`, `configure_optimization`
-- Optimization algorithms (pacing offset → bid delta calculation)
-- MCP-to-MCP client (calls reporting + management servers)
-- Historical analysis service (effectiveness tracking)
-- Scheduled functions: optimization scan, adjustment executor, outcome tracker
-- MCP prompts: `campaign_optimization_workflow`, `troubleshoot_underdelivery`
+- MCP tools: `ttd_create_entity`, `ttd_get_entity`, `ttd_list_entities`, `ttd_update_entity`, `ttd_delete_entity`, `ttd_get_report`
+- TTD REST API integration via `TtdHttpClient`
+- Partner token authentication (`TtdAuthAdapter`, `TtdHeadersAuthStrategy`)
+- Per-session service pattern matching DV360 server architecture
 
 **Success Criteria**:
-- AI agent can run full optimization workflow end-to-end
-- > 70% of optimizations improve pacing within 48 hours
-- Scheduled optimization scan runs every 4 hours
-- Adjustment executor processes batches every 30 minutes
+- AI agent can perform full CRUD on TTD entities via MCP
+- AI agent can generate and retrieve TTD reports
+- Auth works via headers (partner ID + API secret) and stdio env vars
 
 ---
 
@@ -631,12 +583,10 @@ bidshifter-mcp/
 - Meta reporting adapter in reporting server
 - Meta management adapter in management server
 - BigQuery ETL jobs for Google Ads and Meta raw data
-- Platform selection logic in optimization server
 
 **Success Criteria**:
-- AI agent can optimize Google Ads and Meta campaigns
-- Same optimization logic works across all three platforms
-- No changes required to optimization server algorithms
+- AI agent can manage Google Ads and Meta campaigns
+- Same tool patterns work across all platforms
 
 ---
 
@@ -690,7 +640,6 @@ bidshifter-mcp/
 - Personalized optimization strategies per advertiser
 
 **6. Additional Platform Support**
-- The Trade Desk
 - Amazon DSP
 - LinkedIn Ads
 - TikTok Ads

@@ -10,13 +10,13 @@
 
 ## Overview
 
-BidShifter is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on two separate MCP servers, BidShifter provides clean separation between reporting and campaign management.
+BidShifter is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on three independent MCP servers, BidShifter separates reporting and platform management concerns while allowing cross-server workflows.
 
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, Meta, and future DSPs
-- **🔧 Composable Architecture** - Two independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Three independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -25,60 +25,18 @@ BidShifter is a **Model Context Protocol (MCP) based optimization platform** tha
 
 ## Architecture
 
-BidShifter uses a **GCP-native architecture** with two Cloud Run services:
+BidShifter uses a **GCP-native architecture** with three independently deployable Cloud Run MCP services:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         AI Clients                              │
-│                   (Claude Desktop, Custom Agents)               │
-└────────────────────┬────────────────┬──────────────────────────┘
-                     │                │
-                     │ HTTPS          │ JWT Bearer Tokens
-                     │ (MCP Protocol) │
-        ┌────────────┼────────────────┤
-        │            │                │
-        ▼            ▼                │
-┌──────────────┐ ┌──────────────┐     │
-│   Cloud Run  │ │   Cloud Run  │     │
-│   Reporting  │ │  Management  │     │
-│  MCP Server  │ │  MCP Server  │     │
-│              │ │              │     │
-│ Read-only    │ │ CRUD Ops     │     │
-│ queries      │ │ SDF updates  │     │
-│ BigQuery     │ │ via DV360    │     │
-│ normalized   │ │ Google Ads   │     │
-│ data         │ │ Meta APIs    │     │
-└──────┬───────┘ └──────┬───────┘     │
-       │                │             │
-       └────────────────┤             │
-                        │             │
-                        ▼             │
-           ┌────────────────────────┐ │
-           │  GCP Data & Compute    │ │
-           │                        │◄┘
-           │  • BigQuery            │
-           │    - Delivery metrics  │
-           │    - Configuration     │
-           │    - Task state        │
-           │  • Cloud Storage (SDF) │
-           │  • Pub/Sub (events)    │
-           │  • Secret Manager      │
-           │  • Cloud Scheduler     │
-           └────────┬───────────────┘
-                    │
-                    ▼
-           ┌────────────────────┐
-           │   External APIs    │
-           │  • DV360 API v4    │
-           │  • Bid Manager v2  │
-           │  • Google Ads API  │
-           │  • Meta API        │
-           └────────────────────┘
+- `dbm-mcp` for reporting and query workflows
+- `dv360-mcp` for DV360 management workflows
+- `ttd-mcp` for The Trade Desk management/reporting workflows
 
-Cloud Scheduler Jobs (Automated):
-  • data-sync (every 4h) → Reporting Server
-  • adjustment-executor (every 30m) → Management Server
-```
+### Access Model
+
+- **Direct microservice access (default)**: AI clients connect to one or more MCP servers directly.
+- **Optional orchestration layer (recommended for complex automation)**: a dedicated orchestration service can call multiple MCP servers as internal MCP clients for multi-step workflows.
+
+This dual-access model preserves service autonomy while enabling cross-server automation when needed.
 
 ### Key Architectural Decisions
 
@@ -113,6 +71,17 @@ Cloud Scheduler Jobs (Automated):
 
 **Platform**: DV360 via SDF (Structured Data Files)
 
+### Server 3: `ttd-mcp`
+
+**The Trade Desk campaign entity management and reporting**
+
+- Full CRUD on TTD entities (advertisers, campaigns, ad groups, ads)
+- List and filter entities with pagination
+- Generate and retrieve TTD performance reports
+- Per-session auth via partner ID + API secret
+
+**Platform**: The Trade Desk REST API
+
 ---
 
 ## Current Status
@@ -122,7 +91,7 @@ Cloud Scheduler Jobs (Automated):
 The monorepo architecture is now fully scaffolded with:
 - ✅ Root configuration (pnpm workspaces, Turborepo, TypeScript)
 - ✅ Shared package (`@bidshifter/shared`)
-- ✅ Two MCP server packages (dbm-mcp, dv360-mcp)
+- ✅ Three MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`)
 - ✅ Dockerfiles for containerization
 - ✅ Development scripts
 
@@ -189,6 +158,9 @@ pnpm run dev
 
 # Start dv360-mcp (port 3002)
 ./scripts/dev-server.sh dv360-mcp
+
+# Start ttd-mcp (port 3003)
+./scripts/dev-server.sh ttd-mcp
 ```
 
 ### 6. Deploy Infrastructure *(Coming Soon)*
@@ -216,6 +188,10 @@ Edit your Claude Desktop MCP configuration:
     "bidshifter-management": {
       "url": "https://management.bidshifter.io/mcp",
       "apiKey": "your-management-api-key"
+    },
+    "bidshifter-ttd": {
+      "url": "https://ttd.bidshifter.io/mcp",
+      "apiKey": "your-ttd-api-key"
     }
   }
 }
@@ -291,19 +267,23 @@ bidshifter-mcp/
 | `get_campaign_delivery`   | Fetch delivery metrics for date range | `campaignId`, `startDate`, `endDate`, `platform`    |
 | `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS         | `campaignId`, `dateRange`                           |
 | `get_historical_metrics`  | Time-series data for trends           | `campaignId`, `startDate`, `endDate`, `granularity` |
-| `get_platform_entities`   | Fetch campaign hierarchy              | `advertiserId`, `platform`                          |
 | `get_pacing_status`       | Real-time pacing calculation          | `campaignId`                                        |
+| `run_custom_query`        | Execute dynamic DBM report queries    | `reportType`, `filters`, `metrics`, `dimensions`    |
 
 ### Management Server Tools
 
-| Tool                      | Description                           | Parameters                           |
-| ------------------------- | ------------------------------------- | ------------------------------------ |
-| `fetch_campaign_entities` | Retrieve full hierarchy from platform | `advertiserId`, `platform`           |
-| `update_campaign_budget`  | Change campaign/IO budget             | `campaignId`, `newBudget`, `reason`  |
-| `update_campaign_dates`   | Adjust flight dates                   | `campaignId`, `startDate`, `endDate` |
-| `update_line_item_status` | Pause/activate line items             | `lineItemId`, `status`               |
-| `update_line_item_bid`    | Change CPM/CPC bid                    | `lineItemId`, `newBid`, `reason`     |
-| `update_revenue_margin`   | Adjust margin percentage              | `lineItemId`, `newMargin`, `reason`  |
+| Tool                                 | Description                                         | Parameters |
+| ------------------------------------ | --------------------------------------------------- | ---------- |
+| `dv360_list_entities`                | Generic list for DV360 entities                     | `entityType`, IDs, filters, paging |
+| `dv360_get_entity`                   | Fetch one DV360 entity by type/id                   | `entityType`, entity IDs |
+| `dv360_create_entity`                | Create any supported DV360 entity                   | `entityType`, IDs, `data` |
+| `dv360_update_entity`                | Update any supported DV360 entity with updateMask   | `entityType`, IDs, `data`, `updateMask` |
+| `dv360_delete_entity`                | Delete any supported DV360 entity                   | `entityType`, entity IDs |
+| `dv360_adjust_line_item_bids`        | Batch bid adjustments for multiple line items       | `advertiserId`, `adjustments[]` |
+| `dv360_bulk_update_status`           | Batch status changes across entities                | `entityType`, `entityIds[]`, `entityStatus` |
+| `dv360_list_assigned_targeting`      | List assigned targeting options                     | `parentType`, IDs, `targetingType` |
+| `dv360_create_assigned_targeting`    | Create assigned targeting option                    | `parentType`, IDs, `targetingType`, `assignedTargetingOption` |
+| `dv360_delete_assigned_targeting`    | Delete assigned targeting option                    | `parentType`, IDs, `targetingType`, `assignedTargetingOptionId` |
 
 ---
 
@@ -334,14 +314,12 @@ AI Agent:
 User: "Increase the bid for line item 67890 to $3.50 CPM"
 
 AI Agent:
-1. Calls dv360-mcp.update_line_item_bid
-   - lineItemId: "67890"
-   - newBid: 3.50
-   - reason: "Manual override requested by user"
+1. Calls dv360-mcp.dv360_adjust_line_item_bids
+   - advertiserId: "12345"
+   - adjustments: [{ lineItemId: "67890", bidAmount: 3.50, bidType: "cpm", reason: "Manual override requested by user" }]
 
 2. Confirms change:
-   "Line item 67890 bid updated to $3.50 CPM.
-    Previous bid: $2.80 CPM (+25% increase)"
+   "Line item 67890 bid updated to $3.50 CPM."
 ```
 
 ---
@@ -456,10 +434,10 @@ curl -X POST http://localhost:8080/mcp \
 
 ## Documentation
 
-- **[Product Requirements Document](docs/BidShifter-PRD.md)** - Full product specification
-- **[MCP Tool Catalog](docs/mcp-tool-catalog.md)** - Complete tool reference
-- **[Development Guide](docs/development-guide.md)** - Developer workflows
-- **[Deployment Guide](docs/deployment-guide.md)** - Production deployment
+- **[Product Requirements Document](docs/PRD.md)** - Product and system requirements
+- **[Repository Structure](docs/repository-structure.md)** - Package and platform layout
+- **[MCP Skill Contract](docs/mcp-skill-contract.md)** - Cross-client workflow contract
+- **[Microservice Topology](docs/architecture/mcp-microservice-topology.md)** - Direct + orchestration access model
 
 ---
 

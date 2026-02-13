@@ -19,7 +19,7 @@ cesteral-mcp-servers/
     │   └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
     ├── dbm-mcp/
     │   └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
-    └── bidshifter-mcp/
+    └── ttd-mcp/
         └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
 ```
 
@@ -89,7 +89,7 @@ cesteral-mcp-servers/
     │   ├── .env.example  ← OPTIONAL: Package-specific docs only
     │   └── src/config/index.ts
     ├── dbm-mcp/
-    └── bidshifter-mcp/
+    └── ttd-mcp/
 ```
 
 ### Root `.env.example` (Template)
@@ -114,8 +114,13 @@ GCP_REGION=us-central1
 
 # Authentication
 JWT_SECRET=your-jwt-secret-here
-MCP_AUTH_MODE=none
+MCP_AUTH_MODE=none                              # none | jwt | google-headers | ttd-headers
 MCP_AUTH_SECRET_KEY=
+
+# MCP Session Management
+MCP_SESSION_MODE=auto                           # auto | stateless | stateful
+MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000         # 1 hour
+MCP_ALLOWED_ORIGINS=*                           # CSV of allowed origins
 
 # Logging
 LOG_LEVEL=info
@@ -123,7 +128,7 @@ MCP_LOG_LEVEL=debug
 
 # OpenTelemetry (All Services)
 OTEL_ENABLED=false
-OTEL_SERVICE_NAME=bidshifter-mcp
+OTEL_SERVICE_NAME=ttd-mcp
 OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=
 OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=
 
@@ -153,16 +158,16 @@ MCP_SESSION_MODE=auto
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000
 MCP_ALLOWED_ORIGINS=*
 
-# ---------- bidshifter-mcp (Optimization Server) ----------
-BIDSHIFTER_MCP_PORT=3003
-BIDSHIFTER_MCP_HOST=0.0.0.0
+# ---------- ttd-mcp (The Trade Desk Server) ----------
+TTD_MCP_PORT=3003
+TTD_MCP_HOST=0.0.0.0
 
-# Optimization Settings
-OPTIMIZATION_STRATEGY=moderate
-OPTIMIZATION_MAX_ADJUSTMENT_PERCENT=20
-OPTIMIZATION_MIN_IMPRESSIONS=1000
-PACING_TARGET_PERCENT=95
-PACING_TOLERANCE_PERCENT=5
+# TTD API Configuration
+TTD_PARTNER_ID=your-partner-id
+TTD_API_SECRET=your-api-secret
+TTD_API_BASE_URL=https://api.thetradedesk.com/v3
+TTD_AUTH_URL=https://id.thetradedesk.com/v3/auth/token
+TTD_RATE_LIMIT_PER_MINUTE=60
 ```
 
 ### Local `.env` (Your Actual Values)
@@ -443,7 +448,7 @@ DV360_MCP_HOST=0.0.0.0
 NODE_ENV=development
 
 # MCP Authentication
-MCP_AUTH_MODE=none                           # none | jwt | oauth
+MCP_AUTH_MODE=none                           # none | jwt | google-headers | ttd-headers
 MCP_AUTH_SECRET_KEY=                         # Required if MCP_AUTH_MODE=jwt (32+ chars)
 
 # MCP Session Management

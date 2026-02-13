@@ -164,10 +164,7 @@ ${statusEmoji} Status: ${result.pacing.status}
 • Expected Spend: ${result.pacing.expectedSpendPercent.toFixed(1)}%
 • Actual Spend: ${result.pacing.actualSpendPercent.toFixed(1)}%
 • Pacing Ratio: ${result.pacing.pacingRatio.toFixed(2)}x
-• Projected End Spend: $${result.pacing.projectedEndSpend.toFixed(2)}
-
-Full Data:
-${JSON.stringify(result, null, 2)}`,
+• Projected End Spend: $${result.pacing.projectedEndSpend.toFixed(2)}`,
     },
   ];
 }

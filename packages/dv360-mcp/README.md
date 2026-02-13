@@ -14,6 +14,12 @@ Management server for DV360 campaign entities. Provides CRUD operations for camp
 - **MCP Protocol**: Full Model Context Protocol implementation with HTTP/SSE and stdio transports
 - **Claude Desktop Integration**: Seamless integration with Claude Desktop for AI-powered DV360 management
 
+## Context Efficiency Notes
+
+- Tool schemas are intentionally simplified for MCP registration; use resources for full schema details.
+- Keep tool descriptions concise and fetch workflow guidance from prompts/resources.
+- For tools with `outputSchema`, prioritize `structuredContent` as the canonical full payload.
+
 ## Quick Start with Claude Desktop
 
 The fastest way to get started is using Claude Desktop:

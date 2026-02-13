@@ -1,0 +1,155 @@
+{
+  "version": "1.1.1",
+  "architecture": {
+    "accessPatterns": [
+      "direct-client-orchestration",
+      "optional-server-side-orchestration"
+    ],
+    "resourceNamespacingPolicy": {
+      "status": "recommended-compatible-rollout",
+      "currentUrisRemainValid": true,
+      "preferredUriExamples": [
+        "dv360:entity-schema://{entityType}",
+        "dv360:entity-fields://{entityType}",
+        "dv360:entity-examples://{entityType}",
+        "ttd:entity-schema://{entityType}",
+        "ttd:entity-examples://{entityType}"
+      ]
+    }
+  },
+  "workflowIds": [
+    "mcp.explore.tools_and_schemas",
+    "mcp.execute.dv360_entity_update",
+    "mcp.execute.ttd_entity_update",
+    "mcp.execute.dbm_custom_query",
+    "mcp.troubleshoot.delivery"
+  ],
+  "workflows": {
+    "mcp.explore.tools_and_schemas": {
+      "description": "Discover tools, prompts, and resources with minimal context usage.",
+      "prompts": [
+        {
+          "server": "dbm-mcp",
+          "name": "tool_schema_exploration_workflow"
+        }
+      ],
+      "resources": [
+        "filter-types://category/{slug}",
+        "metric-types://category/{slug}",
+        "report-types://all",
+        "compatibility-rules://all",
+        "entity-schema://{entityType}",
+        "entity-fields://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "Scope",
+        "SelectedResources",
+        "NextToolCall"
+      ]
+    },
+    "mcp.execute.dv360_entity_update": {
+      "description": "Perform safe schema-first DV360 entity updates with updateMask discipline.",
+      "prompts": [
+        {
+          "server": "dv360-mcp",
+          "name": "entity_update_execution_workflow"
+        }
+      ],
+      "resources": [
+        "entity-schema://{entityType}",
+        "entity-fields://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "ChangePlan",
+        "UpdateMask",
+        "VerificationResult"
+      ]
+    },
+    "mcp.execute.ttd_entity_update": {
+      "description": "Perform safe The Trade Desk entity updates with schema-first validation and minimal payload changes.",
+      "prompts": [],
+      "resources": [],
+      "requiredOutputSections": [
+        "ChangePlan",
+        "PayloadDiff",
+        "VerificationResult"
+      ]
+    },
+    "mcp.execute.dbm_custom_query": {
+      "description": "Build and run custom Bid Manager queries with compatibility validation.",
+      "prompts": [
+        {
+          "server": "dbm-mcp",
+          "name": "custom_query_workflow"
+        }
+      ],
+      "resources": [
+        "report-types://all",
+        "filter-types://category/{slug}",
+        "metric-types://category/{slug}",
+        "query-examples://all",
+        "compatibility-rules://all"
+      ],
+      "requiredOutputSections": [
+        "QuerySpec",
+        "ValidationChecks",
+        "ExecutionSummary"
+      ]
+    },
+    "mcp.troubleshoot.delivery": {
+      "description": "Diagnose and remediate underdelivery using reporting and management servers.",
+      "prompts": [
+        {
+          "server": "dv360-mcp",
+          "name": "troubleshoot_underdelivery"
+        },
+        {
+          "server": "dbm-mcp",
+          "name": "troubleshoot_report"
+        }
+      ],
+      "resources": [
+        "compatibility-rules://all",
+        "entity-schema://{entityType}",
+        "entity-fields://{entityType}",
+        "targeting-types://"
+      ],
+      "requiredOutputSections": [
+        "Symptoms",
+        "RootCauseHypothesis",
+        "FixAndMonitorPlan"
+      ]
+    }
+  },
+  "adapterRules": {
+    "maxSkillLines": 200,
+    "mustReferenceWorkflowId": true,
+    "mustNotDuplicateLargeSchemas": true,
+    "requirePackageWorkflowMapping": true
+  },
+  "platformPackages": {
+    "dbm-mcp": {
+      "platform": "dv360-reporting",
+      "requiredWorkflowIds": [
+        "mcp.explore.tools_and_schemas",
+        "mcp.execute.dbm_custom_query",
+        "mcp.troubleshoot.delivery"
+      ]
+    },
+    "dv360-mcp": {
+      "platform": "dv360-management",
+      "requiredWorkflowIds": [
+        "mcp.execute.dv360_entity_update",
+        "mcp.troubleshoot.delivery"
+      ]
+    },
+    "ttd-mcp": {
+      "platform": "ttd",
+      "requiredWorkflowIds": [
+        "mcp.execute.ttd_entity_update"
+      ]
+    }
+  }
+}

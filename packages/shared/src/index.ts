@@ -1,4 +1,3 @@
-// Re-export all modules for convenience
-export * from "./types/index.js";
+// Re-export shared infrastructure modules for convenience
 export * from "./utils/index.js";
 export * from "./auth/index.js";

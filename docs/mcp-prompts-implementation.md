@@ -203,7 +203,7 @@ Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 1. ✅ **Implemented:** `full_campaign_setup_workflow` prompt
 2. **Monitor Usage:** Track which prompts AI agents invoke most
 3. **Iterate:** Add prompts based on common user workflows
-4. **Expand:** Create similar prompts for `bidshifter-mcp` optimization workflows
+4. **Expand:** Create similar prompts for `ttd-mcp` workflows
 
 ---
 

@@ -31,6 +31,18 @@ export enum JsonRpcErrorCode {
 }
 
 /**
+ * Standardized evaluator/refinement issue taxonomy used across MCP packages.
+ */
+export enum EvaluatorIssueClass {
+  InputQuality = "input_quality",
+  WorkflowSequencing = "workflow_sequencing",
+  Efficiency = "efficiency",
+  SchemaLookupOmission = "schema_lookup_omission",
+  RedundantCalls = "redundant_calls",
+  PlatformIntegration = "platform_integration",
+}
+
+/**
  * Map error code to HTTP status code
  */
 export function mapErrorCodeToHttpStatus(code: JsonRpcErrorCode): number {

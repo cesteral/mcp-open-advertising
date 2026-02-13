@@ -20,8 +20,9 @@ export interface ToolDefinition<
   outputSchema: TOutputSchema;
   annotations?: {
     readOnlyHint?: boolean;
-    openWorldHint?: boolean;
+    destructiveHint?: boolean;
     idempotentHint?: boolean;
+    openWorldHint?: boolean;
   };
   logic: (
     input: z.infer<TInputSchema>,

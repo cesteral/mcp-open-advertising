@@ -144,22 +144,8 @@ async function testAllSchemas() {
     )
   );
 
-  // Test simplified schema utilities
-  const simplifiedSchemasModule = await import(
-    "../dist/mcp-server/tools/utils/simplified-schemas.js"
-  );
-
-  results.push(
-    await testSchemaSize("Simplified Create Entity Schema (JSON)", async () =>
-      simplifiedSchemasModule.getSimplifiedCreateEntitySchema()
-    )
-  );
-
-  results.push(
-    await testSchemaSize("Simplified Update Entity Schema (JSON)", async () =>
-      simplifiedSchemasModule.getSimplifiedUpdateEntitySchema()
-    )
-  );
+  // Create/update runtime schemas are the canonical simplified MCP registration schemas.
+  // Keep the test focused on runtime exports to avoid drift between utility-only variants.
 
   return results;
 }

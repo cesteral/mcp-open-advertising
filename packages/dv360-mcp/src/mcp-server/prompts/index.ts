@@ -11,6 +11,10 @@ import {
   budgetReallocationPrompt,
   getBudgetReallocationPromptMessage,
 } from "./budget-reallocation.prompt.js";
+import {
+  entityUpdateExecutionPrompt,
+  getEntityUpdateExecutionPromptMessage,
+} from "./entity-update-execution.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -43,6 +47,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: budgetReallocationPrompt,
       generateMessage: getBudgetReallocationPromptMessage,
+    },
+  ],
+  [
+    entityUpdateExecutionPrompt.name,
+    {
+      prompt: entityUpdateExecutionPrompt,
+      generateMessage: getEntityUpdateExecutionPromptMessage,
     },
   ],
 ]);

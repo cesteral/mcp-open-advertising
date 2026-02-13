@@ -13,7 +13,7 @@ import {
   isValidTargetingParentType,
   getEntityIdField,
   TARGETING_PARENT_TYPES,
-} from '../../mcp-server/tools/utils/targeting-metadata.js';
+} from '../domain/targeting-metadata.js';
 
 /**
  * Response from list targeting options

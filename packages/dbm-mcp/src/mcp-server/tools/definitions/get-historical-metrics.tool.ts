@@ -152,10 +152,7 @@ export function getHistoricalMetricsResponseFormatter(
 • Total Conversions: ${result.summary.totalConversions}
 
 📊 Trend (first 5 periods):
-${trendsText}
-
-Full Data:
-${JSON.stringify(result, null, 2)}`,
+${trendsText}`,
     },
   ];
 }

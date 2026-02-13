@@ -15,7 +15,9 @@ const TOOL_DESCRIPTION = `Execute a custom Bid Manager API query with any combin
 
 For available options, fetch these MCP Resources:
 - filter-types://all - Complete list of ~280 filter/dimension types
+- filter-types://category/{slug} - Category-specific filter subsets (e.g. filter-types://category/time)
 - metric-types://all - Complete list of ~100 metric types
+- metric-types://category/{slug} - Category-specific metric subsets (e.g. metric-types://category/video)
 - report-types://all - Report types and date range presets
 - query-examples://all - Example queries for common use cases
 

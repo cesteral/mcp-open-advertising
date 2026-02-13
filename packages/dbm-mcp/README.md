@@ -33,18 +33,19 @@ Fetch time-series historical metrics for trend analysis.
 - `endDate` (string): End date (YYYY-MM-DD)
 - `granularity` (string, optional): "daily" or "hourly" (default: "daily")
 
-### 4. `get_platform_entities`
-Fetch campaign hierarchy (advertisers → campaigns → line items) for a platform.
-
-**Parameters:**
-- `advertiserId` (string): Advertiser ID
-- `platform` (string, optional): "dv360" | "google_ads" | "meta" | "ttd" | "amazon" (default: "dv360")
-
-### 5. `get_pacing_status`
+### 4. `get_pacing_status`
 Get real-time pacing status for a campaign (actual vs expected delivery).
 
 **Parameters:**
 - `campaignId` (string): Campaign ID
+
+## Context Efficiency Notes
+
+- Tools with `outputSchema` provide full typed payloads in `structuredContent`; text output is intentionally summary-focused.
+- Use scoped resources when possible to reduce context size:
+  - `metric-types://category/{slug}`
+  - `filter-types://category/{slug}`
+- Full catalogs remain available at `metric-types://all` and `filter-types://all`.
 
 ## Architecture
 
@@ -56,11 +57,9 @@ Get real-time pacing status for a campaign (actual vs expected delivery).
 - BigQuery: Normalized delivery metrics (to be implemented)
 
 ### Current Status
-**Phase: Scaffolding**
+**Phase: Production-Ready**
 
-All tools return stub/mock data. Actual implementations pending:
-- BigQuery integration for delivery metrics
-- Platform-specific data normalization
+All tools are fully implemented using Bid Manager API v2 for DV360 reporting. Entity retrieval is handled by the separate `@bidshifter/dv360-mcp` server.
 
 ## Development
 

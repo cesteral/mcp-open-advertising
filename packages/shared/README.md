@@ -1,45 +1,42 @@
 # @bidshifter/shared
 
-Shared types, utilities, and authentication for BidShifter MCP servers.
+Shared infrastructure utilities and authentication for BidShifter MCP servers.
 
 ## Contents
-
-### Types (`/types`)
-
-- **MCP Types**: Base schemas for MCP tool responses, date ranges, pagination
-- **Delivery Types**: Metrics, performance KPIs, pacing status, platform enums
-- **Campaign Types**: Advertisers, campaigns, line items, revenue types, bid strategies
-- **Optimization Types**: Adjustment schemas, recommendations, history, forecasts
-
-All types are defined using Zod schemas for runtime validation and TypeScript type inference.
 
 ### Utilities (`/utils`)
 
 - **Logger**: Pino-based structured logging with development/production modes
-- **Errors**: Custom error classes (ValidationError, AuthenticationError, etc.)
-- **Validation**: Zod schema validation helpers and date utilities
+- **Errors**: MCP-focused error handling and JSON-RPC code mapping
 - **Request Context**: Request tracking with correlation IDs
+- **Telemetry/Metrics**: OpenTelemetry setup, spans, and business metrics
+- **Tool Registration**: Shared MCP tool handler factory
 
 ### Authentication (`/auth`)
 
 - **JWT**: Token verification and creation using `jose` library
-- **Middleware**: Express middleware for JWT authentication (required and optional)
+- **Google Auth**: Service account and OAuth2 refresh token adapters
+- **Strategies**: Configurable auth strategy factory (`google-headers`, `jwt`, `none`)
 
 ## Usage
 
 ```typescript
-// Import types and schemas
-import { campaignSchema, deliveryMetricsSchema } from "@bidshifter/shared/types";
-
 // Import utilities
-import { createLogger, ValidationError } from "@bidshifter/shared/utils";
+import { createLogger, McpError, JsonRpcErrorCode } from "@bidshifter/shared/utils";
 
 // Import auth
-import { authMiddleware, verifyJwt } from "@bidshifter/shared/auth";
+import { createAuthStrategy, verifyJwt } from "@bidshifter/shared/auth";
 
 // Or import everything
-import { campaignSchema, createLogger, authMiddleware } from "@bidshifter/shared";
+import { createLogger, createAuthStrategy, registerToolsFromDefinitions } from "@bidshifter/shared";
 ```
+
+## Context Efficiency Standards
+
+- If a tool defines `outputSchema`, keep text responses concise and return full payload via `structuredContent`.
+- Avoid embedding large JSON blobs in human-readable text fields.
+- Keep tool descriptions short; place detailed workflows in MCP prompts/resources.
+- Prefer compact default text formatting in shared tool handlers unless pretty output is explicitly required.
 
 ## Development
 

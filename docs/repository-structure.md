@@ -7,16 +7,19 @@ This repository contains the BidShifter platform - an AI-native programmatic adv
 ## Repository Layout
 
 ```
-bidshifter-mcp/
+cesteral-mcp-servers/
+├── packages/
+│   ├── dbm-mcp/                    # Server 1: DV360 reporting
+│   ├── dv360-mcp/                  # Server 2: DV360 entity management
+│   ├── ttd-mcp/                    # Server 3: The Trade Desk management & reporting
+│   └── shared/                     # Shared types, utilities, auth, observability
 ├── docs/                           # Documentation
-├── mcp-ts-quickstart-template/     # MCP server template
+├── mcp-ts-quickstart-template/     # MCP server template (reference)
 ├── scripts/                        # Deployment and automation scripts
 ├── terraform/                      # Infrastructure as Code (GCP)
-├── Dockerfile                      # Container build configuration
 ├── cloudbuild.yaml                 # Cloud Build CI/CD pipeline
-├── cloudbuild-manual.yaml          # Manual deployment pipeline
 ├── README.md                       # Main documentation
-└── SETUP.md                        # Setup instructions
+└── CLAUDE.md                       # Claude Code instructions
 ```
 
 ## Three MCP Servers
@@ -40,8 +43,8 @@ bidshifter-mcp/
 - `get_campaign_delivery`
 - `get_performance_metrics`
 - `get_historical_metrics`
-- `get_platform_entities`
 - `get_pacing_status`
+- `run_custom_query`
 
 ---
 
@@ -61,44 +64,34 @@ bidshifter-mcp/
 
 **Key Tools**:
 
-- `fetch_campaign_entities`
-- `update_campaign_budget`
-- `update_campaign_dates`
-- `update_line_item_status`
-- `update_line_item_bid`
-- `update_revenue_margin`
+- `list_entities` / `get_entity` / `create_entity` / `update_entity` / `delete_entity`
+- `adjust_line_item_bids` / `bulk_update_status`
+- `create_custom_bidding_algorithm` / `manage_custom_bidding_script` / `manage_custom_bidding_rules` / `list_custom_bidding_algorithms`
+- `list_assigned_targeting` / `get_assigned_targeting` / `create_assigned_targeting` / `delete_assigned_targeting` / `validate_targeting_config`
 
 ---
 
-### 3. **bidshifter-mcp** (Optimization Server)
+### 3. **ttd-mcp** (The Trade Desk Server)
 
-**Purpose**: BidShifter-specific optimization intelligence and orchestration
+**Purpose**: The Trade Desk campaign entity management and reporting
 
 **Responsibilities**:
 
-- Analyze pacing and calculate bid adjustments
-- Optimize revenue margins
-- Track historical adjustments and effectiveness
-- Provide AI agent guidance via MCP prompts
-- Orchestrate calls to dbm-mcp and dv360-mcp servers
-- Execute scheduled optimization scans
+- Full CRUD on TTD entities (advertisers, campaigns, ad groups, ads)
+- List and filter entities with pagination
+- Generate and retrieve TTD performance reports
+- Per-session auth via partner ID + API secret
 
-**Platform-Agnostic**: Works with any platform supported by reporting and management servers
+**Platform**: The Trade Desk via TTD REST API
 
 **Key Tools**:
 
-- `optimize_campaign_bids`
-- `adjust_revenue_margin`
-- `get_optimization_recommendations`
-- `get_adjustment_history`
-- `get_pacing_forecast`
-- `configure_optimization`
-
-**MCP Prompts**:
-
-- `campaign_optimization_workflow`
-- `troubleshoot_underdelivery`
-- `margin_optimization_strategy`
+- `ttd_create_entity`
+- `ttd_get_entity`
+- `ttd_list_entities`
+- `ttd_update_entity`
+- `ttd_delete_entity`
+- `ttd_get_report`
 
 ---
 
@@ -108,11 +101,12 @@ bidshifter-mcp/
 
 Documentation for the platform:
 
-- `bidshifter-mcp-design-architecture.md` - Technical architecture and design decisions
 - `PRD.md` - Product Requirements Document
-- `gcp-deployment.md` - GCP deployment guide
-- `terraform-setup.md` - Terraform infrastructure setup
+- `ENV-VARIABLES-GUIDE.md` - Environment variable configuration
 - `repository-structure.md` - This file
+- `architecture/mcp-microservice-topology.md` - Microservice + orchestration access model
+- `governance/` - Architecture decision records and governance docs
+- `packages/` - Per-package documentation
 
 ### `/mcp-ts-quickstart-template`
 
@@ -167,14 +161,14 @@ Infrastructure as Code for GCP resources:
     │            │                │            │
     ▼            ▼                ▼            │
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│   dbm-mcp    │ │  dv360-mcp   │ │bidshifter-mcp│
+│   dbm-mcp    │ │  dv360-mcp   │ │   ttd-mcp    │
 │              │ │              │ │              │
-│  Reporting   │ │ Management   │ │Optimization  │
+│  Reporting   │ │ DV360 Mgmt   │ │  TTD Mgmt    │
 │  Server      │ │   Server     │ │   Server     │
 │              │ │              │ │              │
-│ Read-only    │ │ CRUD Ops     │ │ Orchestrates │
-│ BigQuery     │ │ SDF/API      │ │ other two    │
-│ queries      │ │ updates      │ │ servers      │
+│ Bid Manager  │ │ DV360 API    │ │ TTD REST     │
+│ API queries  │ │ CRUD ops     │ │ API CRUD     │
+│              │ │              │ │              │
 └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
        │                │                │
        └────────────────┼────────────────┘
@@ -194,42 +188,47 @@ Infrastructure as Code for GCP resources:
            ┌────────────────────┐
            │   External APIs    │
            │  • DV360 API       │
-           │  • Google Ads API  │
-           │  • Meta API        │
+           │  • Bid Manager API │
+           │  • TTD REST API    │
            └────────────────────┘
 ```
+
+### Access Patterns
+
+- **Direct access (default)**: clients connect to any subset of `dbm-mcp`, `dv360-mcp`, and `ttd-mcp` in the same session.
+- **Optional orchestration service**: for policy-heavy or high-scale workflows, an internal orchestration service can act as an MCP client to multiple servers and return a single consolidated result.
 
 ---
 
 ## Current Status
 
-**Repository State**: Planning and documentation phase
+**Repository State**: Scaffolding complete
 
-- Core documentation completed
-- Architecture designed
-- Infrastructure templates ready
-- MCP server template available
+- All three MCP servers implemented with Streamable HTTP transport (Hono)
+- Shared package provides auth strategies, observability, rate limiting, tool handler factory
+- Per-session service architecture with `SessionServiceStore` pattern
+- DV360 servers (dbm-mcp, dv360-mcp) use Google auth adapters
+- TTD server (ttd-mcp) uses partner token auth via `TtdAuthAdapter`
+- OpenTelemetry consolidated in shared package
 
 **Next Steps**:
 
-1. Create `packages/` directory structure
-2. Implement `dbm-mcp` server
-3. Implement `dv360-mcp` server
-4. Implement `bidshifter-mcp` server
-5. Deploy Terraform infrastructure
-6. Deploy servers to GCP Cloud Run
+1. Production API integrations (live data vs. stubs)
+2. Align Terraform and CI/CD for independent deployment of all three servers
+3. Standardize versioning and compatibility metadata across servers/contracts
+4. Deploy servers to GCP Cloud Run
 
 ---
 
 ## Key Technologies
 
 - **Runtime**: Node.js 20 LTS, TypeScript 5.0+
-- **Framework**: Express.js (HTTP transport for MCP)
+- **Framework**: Hono (Streamable HTTP transport for MCP)
 - **Cloud Platform**: Google Cloud Platform (GCP)
 - **Infrastructure**: Terraform
-- **Protocol**: Model Context Protocol (MCP)
-- **Authentication**: JWT Bearer Tokens
-- **Data Storage**: BigQuery, Cloud Storage
+- **Protocol**: Model Context Protocol (MCP) via `@modelcontextprotocol/sdk`
+- **Authentication**: Google headers, TTD partner tokens, JWT
+- **Observability**: OpenTelemetry (traces + metrics)
 - **Containerization**: Docker
 - **Monorepo**: pnpm workspaces + Turborepo
 
@@ -259,4 +258,4 @@ Infrastructure as Code for GCP resources:
 
 ---
 
-_Last updated: 2025-11-07_
+_Last updated: 2026-02-13_

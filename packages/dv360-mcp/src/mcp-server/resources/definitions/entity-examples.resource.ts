@@ -49,6 +49,9 @@ async function readEntityExamples(params: Record<string, string>): Promise<Resou
   // Get examples for this entity type
   const examples = getEntityExamples(entityType);
   const groupedByCategory = getExamplesByCategory(entityType);
+  const categoryCounts = Object.fromEntries(
+    Object.entries(groupedByCategory).map(([category, entries]) => [category, entries.length])
+  );
 
   // Build examples document
   const examplesDocument = {
@@ -63,7 +66,7 @@ async function readEntityExamples(params: Record<string, string>): Promise<Resou
       updateMask: ex.updateMask,
       notes: ex.notes,
     })),
-    examplesByCategory: groupedByCategory,
+    categoryCounts,
     usage: {
       description: "Use these examples as templates for common DV360 entity updates",
       toolName: "dv360_update_entity",
