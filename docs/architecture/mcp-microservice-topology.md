@@ -33,11 +33,21 @@ Use this mode when centralized guardrails are required:
 ## Contract and URI Guidance
 
 - Keep workflow IDs portable and server-agnostic.
-- Continue supporting current unscoped entity resources for compatibility:
-  - `entity-schema://{entityType}`
-  - `entity-fields://{entityType}`
-  - `entity-examples://{entityType}`
-- Add namespaced aliases for future-proofing:
+
+### Current Resource URIs
+
+Each server exposes its own resource URI patterns. These diverge by platform:
+
+| Server | Resource URIs | Notes |
+|--------|--------------|-------|
+| `dv360-mcp` | `entity-schema://{entityType}`, `entity-fields://{entityType}`, `entity-examples://{entityType}` | Dynamic entity discovery via schema introspection |
+| `ttd-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}`, `entity-hierarchy://all`, `report-reference://all` | Includes hierarchy and report reference resources |
+| `dbm-mcp` | `metric-types://`, `filter-types://`, `query-examples://all`, `report-types://all`, `compatibility-rules://all` | Reporting-oriented — no entity-schema resources |
+
+### Planned Namespaced URI Aliases
+
+The [skill contract](../mcp-skill-contract.json) recommends namespaced aliases via `preferredUriExamples` for future multi-server disambiguation. These are **not yet implemented** — only the unscoped URIs above are currently registered:
+
   - `dv360:entity-schema://{entityType}`
   - `dv360:entity-fields://{entityType}`
   - `dv360:entity-examples://{entityType}`
@@ -55,6 +65,7 @@ Use this mode when centralized guardrails are required:
 ### P0
 
 - Align CI/CD and Terraform to deploy all three MCP servers independently.
+  - **Status**: ✅ Complete — `cloudbuild.yaml`, `cloudbuild-manual.yaml`, and Terraform now cover `dbm-mcp`, `dv360-mcp`, and `ttd-mcp`.
 - Keep docs and architecture diagrams consistent with actual deployable services.
 
 ### P1

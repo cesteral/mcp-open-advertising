@@ -1,38 +1,74 @@
 # Root Terraform outputs
 
 # ============================================================================
-# CORE INFRASTRUCTURE OUTPUTS
+# DBM-MCP OUTPUTS
 # ============================================================================
 
-output "cloud_run_service_url" {
-  description = "URL of the Cloud Run service"
-  value       = module.core_infrastructure.cloud_run_service_url
+output "dbm_mcp_service_url" {
+  description = "URL of the dbm-mcp Cloud Run service"
+  value       = module.dbm_mcp.cloud_run_service_url
 }
 
-output "cloud_run_service_name" {
-  description = "Name of the Cloud Run service"
-  value       = module.core_infrastructure.cloud_run_service_name
+output "dbm_mcp_service_name" {
+  description = "Name of the dbm-mcp Cloud Run service"
+  value       = module.dbm_mcp.cloud_run_service_name
 }
 
-output "runtime_service_account_email" {
-  description = "Email of the runtime service account"
-  value       = module.core_infrastructure.runtime_service_account_email
+output "dbm_mcp_service_account_email" {
+  description = "Email of the dbm-mcp runtime service account"
+  value       = module.dbm_mcp.runtime_service_account_email
 }
 
-output "secret_ids" {
-  description = "Map of secret names to IDs"
-  value       = module.core_infrastructure.secret_ids
-  sensitive   = true
+# ============================================================================
+# DV360-MCP OUTPUTS
+# ============================================================================
+
+output "dv360_mcp_service_url" {
+  description = "URL of the dv360-mcp Cloud Run service"
+  value       = module.dv360_mcp.cloud_run_service_url
 }
+
+output "dv360_mcp_service_name" {
+  description = "Name of the dv360-mcp Cloud Run service"
+  value       = module.dv360_mcp.cloud_run_service_name
+}
+
+output "dv360_mcp_service_account_email" {
+  description = "Email of the dv360-mcp runtime service account"
+  value       = module.dv360_mcp.runtime_service_account_email
+}
+
+# ============================================================================
+# TTD-MCP OUTPUTS
+# ============================================================================
+
+output "ttd_mcp_service_url" {
+  description = "URL of the ttd-mcp Cloud Run service"
+  value       = module.ttd_mcp.cloud_run_service_url
+}
+
+output "ttd_mcp_service_name" {
+  description = "Name of the ttd-mcp Cloud Run service"
+  value       = module.ttd_mcp.cloud_run_service_name
+}
+
+output "ttd_mcp_service_account_email" {
+  description = "Email of the ttd-mcp runtime service account"
+  value       = module.ttd_mcp.runtime_service_account_email
+}
+
+# ============================================================================
+# SCHEDULER OUTPUTS (dbm-mcp only)
+# ============================================================================
 
 output "preflight_job_name" {
   description = "Name of pre-flight scheduler job"
-  value       = module.core_infrastructure.preflight_job_name
+  value       = module.dbm_mcp.preflight_job_name
 }
 
 output "inflight_job_name" {
   description = "Name of in-flight scheduler job"
-  value       = module.core_infrastructure.inflight_job_name
+  value       = module.dbm_mcp.inflight_job_name
 }
 
 # ============================================================================
@@ -61,9 +97,11 @@ output "cloud_nat_name" {
 output "deployment_info" {
   description = "Deployment information summary"
   value = {
-    project_id  = var.project_id
-    region      = var.region
-    environment = var.environment
-    service_url = module.core_infrastructure.cloud_run_service_url
+    project_id      = var.project_id
+    region          = var.region
+    environment     = var.environment
+    dbm_mcp_url     = module.dbm_mcp.cloud_run_service_url
+    dv360_mcp_url   = module.dv360_mcp.cloud_run_service_url
+    ttd_mcp_url     = module.ttd_mcp.cloud_run_service_url
   }
 }

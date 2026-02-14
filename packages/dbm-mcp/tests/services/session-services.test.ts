@@ -66,13 +66,13 @@ describe("session services", () => {
 describe("resolveSessionServices", () => {
   it("throws when sessionId is missing", () => {
     expect(() => resolveSessionServices(undefined)).toThrow(
-      "No sessionId in sdkContext",
+      "No session ID available",
     );
   });
 
   it("throws when services are not found for sessionId", () => {
     expect(() => resolveSessionServices({ sessionId: "missing" })).toThrow(
-      'No session services found for sessionId "missing"',
+      'No services registered for session "missing"',
     );
   });
 });

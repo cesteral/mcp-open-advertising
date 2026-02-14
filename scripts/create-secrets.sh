@@ -1,5 +1,5 @@
 #!/bin/bash
-# Create and populate Secret Manager secrets for Campaign Guardian
+# Create and populate Secret Manager secrets for BidShifter
 # This script prompts for sensitive values and stores them securely
 
 set -e
@@ -35,13 +35,13 @@ PROJECT_ID="" # Will be set based on environment
 # Set project ID based on environment
 case $ENVIRONMENT in
     dev)
-        PROJECT_ID="campaign-guardian-dev" # TODO: Update with actual project ID
+        PROJECT_ID="bidshifter-dev" # TODO: Update with actual project ID
         ;;
     staging)
-        PROJECT_ID="campaign-guardian-staging" # TODO: Update with actual project ID
+        PROJECT_ID="bidshifter-staging" # TODO: Update with actual project ID
         ;;
     prod)
-        PROJECT_ID="campaign-guardian-prod" # TODO: Update with actual project ID
+        PROJECT_ID="bidshifter-prod" # TODO: Update with actual project ID
         ;;
     *)
         print_error "Invalid environment: $ENVIRONMENT"
@@ -77,7 +77,7 @@ create_or_update_secret() {
         gcloud secrets create $secret_name \
             --project=$PROJECT_ID \
             --replication-policy="automatic" \
-            --labels="environment=$ENVIRONMENT,application=campaign-guardian"
+            --labels="environment=$ENVIRONMENT,application=bidshifter"
         print_info "Created secret: $secret_name"
     fi
 
@@ -104,55 +104,55 @@ create_or_update_secret() {
 
 # JWT Secret Key
 create_or_update_secret \
-    "campaign-guardian-jwt-secret-key" \
+    "bidshifter-jwt-secret-key" \
     "JWT secret key for MCP server authentication" \
     "Enter JWT secret key (generate with: openssl rand -base64 32)" \
     false
 
 # DV360 OAuth credentials
 create_or_update_secret \
-    "campaign-guardian-dv360-oauth-client-id" \
+    "bidshifter-dv360-oauth-client-id" \
     "DV360 OAuth 2.0 Client ID" \
     "Enter DV360 OAuth Client ID" \
     false
 
 create_or_update_secret \
-    "campaign-guardian-dv360-oauth-client-secret" \
+    "bidshifter-dv360-oauth-client-secret" \
     "DV360 OAuth 2.0 Client Secret" \
     "Enter DV360 OAuth Client Secret" \
     false
 
 create_or_update_secret \
-    "campaign-guardian-dv360-refresh-token" \
+    "bidshifter-dv360-refresh-token" \
     "DV360 OAuth 2.0 Refresh Token" \
     "Enter DV360 OAuth Refresh Token" \
     false
 
 # Bid Manager API Key
 create_or_update_secret \
-    "campaign-guardian-bid-manager-api-key" \
+    "bidshifter-bid-manager-api-key" \
     "Bid Manager API Key" \
     "Enter Bid Manager API Key" \
     false
 
 # Beam/Databridge API Key
 create_or_update_secret \
-    "campaign-guardian-beam-api-key" \
+    "bidshifter-beam-api-key" \
     "Beam/Databridge API Key" \
     "Enter Beam/Databridge API Key" \
     false
 
-# Teams Bot credentials
+# TTD API credentials
 create_or_update_secret \
-    "campaign-guardian-teams-app-id" \
-    "Microsoft Teams Bot App ID" \
-    "Enter Teams Bot App ID" \
+    "bidshifter-ttd-partner-id" \
+    "The Trade Desk Partner ID" \
+    "Enter TTD Partner ID" \
     false
 
 create_or_update_secret \
-    "campaign-guardian-teams-app-secret" \
-    "Microsoft Teams Bot App Secret" \
-    "Enter Teams Bot App Secret" \
+    "bidshifter-ttd-api-secret" \
+    "The Trade Desk API Secret" \
+    "Enter TTD API Secret" \
     false
 
 # Print summary

@@ -34,7 +34,7 @@ cesteral-mcp-servers/
 - Calculate performance metrics (CPM, CTR, CPA, ROAS)
 - Time-series data for trend analysis
 - Real-time pacing calculations
-- Query normalized data from BigQuery
+- Execute and parse Bid Manager API reports for reporting workflows
 
 **Platforms Supported**: DV360 (extensible to any DSP)
 
@@ -202,7 +202,7 @@ Infrastructure as Code for GCP resources:
 
 ## Current Status
 
-**Repository State**: Scaffolding complete
+**Repository State**: Production-ready
 
 - All three MCP servers implemented with Streamable HTTP transport (Hono)
 - Shared package provides auth strategies, observability, rate limiting, tool handler factory
@@ -213,8 +213,8 @@ Infrastructure as Code for GCP resources:
 
 **Next Steps**:
 
-1. Production API integrations (live data vs. stubs)
-2. Align Terraform and CI/CD for independent deployment of all three servers
+1. ~~Production API integrations~~ ✅ Complete — all three servers have live API integrations
+2. ~~Align Terraform and CI/CD for independent deployment of all three servers~~ ✅ Complete
 3. Standardize versioning and compatibility metadata across servers/contracts
 4. Deploy servers to GCP Cloud Run
 

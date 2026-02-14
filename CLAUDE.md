@@ -4,15 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BidShifter is an AI-native programmatic advertising optimization platform built on two independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting and campaign management for DV360 (Display & Video 360).
+BidShifter is an AI-native programmatic advertising optimization platform built on three independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), and The Trade Desk campaign management (ttd-mcp).
 
 ### Current Project Status
 
-**Phase: Scaffolding Complete ✅**
+**Phase: Production-Ready ✅**
 
-The monorepo is fully scaffolded with root configuration, shared packages, and two MCP server packages. Current implementations are **stubs** - tools return mock data while awaiting:
-- Bid Manager API v2 integration for DV360 reporting (dbm-mcp)
-- DV360 API and SDF file handling for management (dv360-mcp)
+All three MCP servers are fully implemented with live API integrations:
+- **dbm-mcp**: Bid Manager API v2 for DV360 reporting
+- **dv360-mcp**: DV360 API v4 for campaign entity management
+- **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
 
 ## Essential Commands
 
@@ -27,6 +28,7 @@ pnpm run build
 # Run specific server in development mode
 cd packages/dbm-mcp && pnpm run dev:http
 cd packages/dv360-mcp && pnpm run dev:http
+cd packages/ttd-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -58,6 +60,9 @@ Use the dev-server script (automatically uses correct port for each server):
 
 # Start dv360-mcp (port 3002)
 ./scripts/dev-server.sh dv360-mcp
+
+# Start ttd-mcp (port 3003)
+./scripts/dev-server.sh ttd-mcp
 ```
 
 ## Monorepo Architecture
@@ -67,9 +72,10 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 ### Core Packages
 1. **`@bidshifter/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Two MCP Servers
+### Three MCP Servers
 1. **`@bidshifter/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@bidshifter/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
+3. **`@bidshifter/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -404,7 +410,7 @@ const params = schema.parse(rawInput); // Throws on invalid input
 
 ## MCP Tools Catalog
 
-Complete reference of all MCP tools across the two servers:
+Complete reference of all MCP tools across the three servers:
 
 ### dbm-mcp (Reporting Server) Tools
 
@@ -430,7 +436,18 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `dv360_adjust_line_item_bids` | Batch adjust line item bids | `advertiserId`, `adjustments[]` |
 | `dv360_bulk_update_status` | Batch update statuses for entities | `entityType`, `entityIds[]`, `entityStatus` |
 
-### How the Two Servers Work Together
+### ttd-mcp (The Trade Desk Server) Tools
+
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `ttd_create_entity` | Create a TTD entity (advertiser, campaign, ad group, ad) | `entityType`, `data` |
+| `ttd_get_entity` | Retrieve a single TTD entity by type/id | `entityType`, `entityId` |
+| `ttd_list_entities` | List TTD entities with filters/paging | `entityType`, optional filters |
+| `ttd_update_entity` | Update a TTD entity | `entityType`, `entityId`, `data` |
+| `ttd_delete_entity` | Delete a TTD entity | `entityType`, `entityId` |
+| `ttd_get_report` | Generate and retrieve TTD performance reports | `reportType`, `startDate`, `endDate`, filters |
+
+### How the Three Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**
 1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
@@ -458,6 +475,7 @@ Automated background jobs that invoke MCP server endpoints:
 Each server runs on a different port:
 - `dbm-mcp`: port 3001
 - `dv360-mcp`: port 3002
+- `ttd-mcp`: port 3003
 
 Test SSE endpoint:
 ```bash
@@ -477,7 +495,7 @@ View logs for specific server:
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd)-mcp"' --limit=50
 ```
 
 View costs:
@@ -507,8 +525,8 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 
 ## Key Design Principles
 
-1. **Separation of Concerns**: Two MCP servers with distinct responsibilities (reporting and management)
-2. **DV360 Focus**: Both servers are purpose-built for DV360 (Bid Manager API for reporting, DV360 API for management)
+1. **Separation of Concerns**: Three MCP servers with distinct responsibilities (reporting, DV360 management, TTD management)
+2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management)
 3. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
 4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
 5. **Observability**: Structured logging throughout, designed for OpenTelemetry integration

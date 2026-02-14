@@ -1,6 +1,6 @@
-# Campaign Guardian Deployment Scripts
+# BidShifter Deployment Scripts
 
-This directory contains helper scripts for deploying and managing the Campaign Guardian MCP Server on GCP.
+This directory contains helper scripts for deploying and managing the BidShifter MCP servers on GCP.
 
 ## Scripts Overview
 
@@ -48,7 +48,7 @@ Interactively creates and populates Secret Manager secrets.
   - DV360 OAuth credentials (client ID, secret, refresh token)
   - Bid Manager API key
   - Beam/Databridge API key
-  - Microsoft Teams bot credentials (app ID, secret)
+  - TTD partner credentials (partner ID, API secret)
 - Prompts for each secret value interactively
 - Stores secrets securely in Secret Manager
 
@@ -61,7 +61,7 @@ Interactively creates and populates Secret Manager secrets.
 - You can re-run to update existing secrets
 
 ### 3. `deploy.sh`
-Builds Docker image and deploys infrastructure using Terraform.
+Builds Docker images for all servers and deploys infrastructure using Terraform.
 
 **Usage:**
 ```bash
@@ -84,12 +84,12 @@ Builds Docker image and deploys infrastructure using Terraform.
 ```
 
 **What it does:**
-- Builds Docker image from Dockerfile
-- Pushes image to Artifact Registry
+- Builds Docker images for `dbm-mcp`, `dv360-mcp`, and `ttd-mcp`
+- Pushes images to Artifact Registry
 - Initializes Terraform with environment-specific backend
 - Runs Terraform plan
 - Applies Terraform configuration (creates/updates infrastructure)
-- Displays service URL and helpful commands
+- Displays service URLs and helpful commands
 
 **Prerequisites:**
 - Docker installed and running
@@ -163,7 +163,7 @@ For automated deployments, use Cloud Build instead:
 gcloud builds submit \
   --config=cloudbuild.yaml \
   --substitutions=_ENVIRONMENT=dev \
-  --project=campaign-guardian-dev
+  --project=bidshifter-dev
 
 # Or set up automated triggers in Cloud Console
 # Triggers > Create Trigger > Connect Repository
@@ -201,7 +201,7 @@ terraform force-unlock <LOCK_ID>
 ### Secret not found
 ```bash
 # List secrets
-gcloud secrets list --project=campaign-guardian-dev
+gcloud secrets list --project=bidshifter-dev
 
 # Re-run secret creation
 ./scripts/create-secrets.sh dev
@@ -209,36 +209,39 @@ gcloud secrets list --project=campaign-guardian-dev
 
 ## Manual Commands
 
-### View Cloud Run service
+### View Cloud Run services
 ```bash
-gcloud run services describe campaign-guardian-mcp \
-  --region=europe-west2 \
-  --project=campaign-guardian-dev
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp; do
+  gcloud run services describe "$SERVICE" \
+    --region=europe-west2 \
+    --project=bidshifter-dev
+done
 ```
 
 ### View logs
 ```bash
 gcloud logging read \
-  'resource.type=cloud_run_revision AND resource.labels.service_name=campaign-guardian-mcp' \
+  'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd)-mcp"' \
   --limit 50 \
-  --project=campaign-guardian-dev
+  --project=bidshifter-dev
 ```
 
 ### List Cloud Scheduler jobs
 ```bash
 gcloud scheduler jobs list \
   --location=europe-west2 \
-  --project=campaign-guardian-dev
+  --project=bidshifter-dev
 ```
 
-### Test health endpoint
+### Test health endpoints
 ```bash
-SERVICE_URL=$(gcloud run services describe campaign-guardian-mcp \
-  --region=europe-west2 \
-  --project=campaign-guardian-dev \
-  --format='value(status.url)')
-
-curl $SERVICE_URL/health
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp; do
+  SERVICE_URL=$(gcloud run services describe "$SERVICE" \
+    --region=europe-west2 \
+    --project=bidshifter-dev \
+    --format='value(status.url)')
+  curl "$SERVICE_URL/health"
+done
 ```
 
 ## Security Notes

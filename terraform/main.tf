@@ -1,5 +1,5 @@
 # Root Terraform configuration for BidShifter MCP Servers
-# Orchestrates networking and core infrastructure modules
+# Orchestrates networking, three MCP service modules, and monitoring
 
 terraform {
   required_version = ">= 1.5.0"
@@ -78,41 +78,113 @@ module "networking" {
 }
 
 # ============================================================================
-# CORE INFRASTRUCTURE MODULE
+# MCP SERVICE MODULES (one per server)
 # ============================================================================
 
-module "core_infrastructure" {
-  source = "./modules/core-infrastructure"
+module "dbm_mcp" {
+  source = "./modules/mcp-service"
+
+  service_name    = "dbm-mcp"
+  container_image = var.dbm_mcp_image
 
   project_id  = var.project_id
   region      = var.region
   environment = var.environment
 
   # Cloud Run configuration
-  container_image        = var.container_image
-  min_instances          = var.min_instances
-  max_instances          = var.max_instances
-  cpu_limit              = var.cpu_limit
-  memory_limit           = var.memory_limit
-  cpu_always_allocated   = var.cpu_always_allocated
-  allow_unauthenticated  = var.allow_unauthenticated
-  authorized_invokers    = var.authorized_invokers
-  vpc_connector_name     = module.networking.vpc_connector_id
+  min_instances         = var.min_instances
+  max_instances         = var.max_instances
+  cpu_limit             = var.cpu_limit
+  memory_limit          = var.memory_limit
+  cpu_always_allocated  = var.cpu_always_allocated
+  allow_unauthenticated = var.allow_unauthenticated
+  authorized_invokers   = var.authorized_invokers
+  vpc_connector_name    = module.networking.vpc_connector_id
 
   # MCP server configuration
   mcp_session_mode = var.mcp_session_mode
   mcp_auth_mode    = var.mcp_auth_mode
   log_level        = var.log_level
 
-  # Secret Manager configuration
-  secret_names    = var.secret_names
-  secret_env_vars = var.secret_env_vars
+  # Secrets (dbm-specific)
+  secret_names    = var.dbm_secret_names
+  secret_env_vars = var.dbm_secret_env_vars
 
-  # Cloud Scheduler configuration
+  # Scheduler jobs (reporting server runs preflight/inflight)
   enable_scheduler_jobs = var.enable_scheduler_jobs
   preflight_schedule    = var.preflight_schedule
   inflight_schedule     = var.inflight_schedule
   scheduler_timezone    = var.scheduler_timezone
+
+  depends_on = [module.networking]
+}
+
+module "dv360_mcp" {
+  source = "./modules/mcp-service"
+
+  service_name    = "dv360-mcp"
+  container_image = var.dv360_mcp_image
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  # Cloud Run configuration
+  min_instances         = var.min_instances
+  max_instances         = var.max_instances
+  cpu_limit             = var.cpu_limit
+  memory_limit          = var.memory_limit
+  cpu_always_allocated  = var.cpu_always_allocated
+  allow_unauthenticated = var.allow_unauthenticated
+  authorized_invokers   = var.authorized_invokers
+  vpc_connector_name    = module.networking.vpc_connector_id
+
+  # MCP server configuration
+  mcp_session_mode = var.mcp_session_mode
+  mcp_auth_mode    = var.mcp_auth_mode
+  log_level        = var.log_level
+
+  # Secrets (dv360-specific)
+  secret_names    = var.dv360_secret_names
+  secret_env_vars = var.dv360_secret_env_vars
+
+  # No scheduler jobs for management server
+  enable_scheduler_jobs = false
+
+  depends_on = [module.networking]
+}
+
+module "ttd_mcp" {
+  source = "./modules/mcp-service"
+
+  service_name    = "ttd-mcp"
+  container_image = var.ttd_mcp_image
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  # Cloud Run configuration
+  min_instances         = var.min_instances
+  max_instances         = var.max_instances
+  cpu_limit             = var.cpu_limit
+  memory_limit          = var.memory_limit
+  cpu_always_allocated  = var.cpu_always_allocated
+  allow_unauthenticated = var.allow_unauthenticated
+  authorized_invokers   = var.authorized_invokers
+  vpc_connector_name    = module.networking.vpc_connector_id
+
+  # MCP server configuration
+  mcp_session_mode = var.mcp_session_mode
+  mcp_auth_mode    = var.mcp_auth_mode
+  log_level        = var.log_level
+
+  # Secrets (ttd-specific)
+  secret_names    = var.ttd_secret_names
+  secret_env_vars = var.ttd_secret_env_vars
+
+  # No scheduler jobs for TTD server
+  enable_scheduler_jobs = false
 
   depends_on = [module.networking]
 }
@@ -135,5 +207,5 @@ module "monitoring" {
   latency_p99_threshold_ms = var.monitoring_latency_p99_threshold_ms
   uptime_check_period      = var.monitoring_uptime_check_period
 
-  depends_on = [module.core_infrastructure]
+  depends_on = [module.dbm_mcp, module.dv360_mcp, module.ttd_mcp]
 }

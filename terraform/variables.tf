@@ -40,8 +40,18 @@ variable "artifact_registry_repo_name" {
   default     = "bidshifter"
 }
 
-variable "container_image" {
-  description = "Full container image URL (e.g., europe-west2-docker.pkg.dev/PROJECT/REPO/IMAGE:TAG)"
+variable "dbm_mcp_image" {
+  description = "Full container image URL for dbm-mcp server"
+  type        = string
+}
+
+variable "dv360_mcp_image" {
+  description = "Full container image URL for dv360-mcp server"
+  type        = string
+}
+
+variable "ttd_mcp_image" {
+  description = "Full container image URL for ttd-mcp server"
   type        = string
 }
 
@@ -206,22 +216,49 @@ variable "log_level" {
 # ============================================================================
 
 variable "secret_names" {
-  description = "List of secret names to create"
+  description = "List of secret names to create (shared secrets)"
   type        = list(string)
   default = [
-    "bidshifter-dv360-oauth-client-id",
-    "bidshifter-dv360-oauth-client-secret",
-    "bidshifter-dv360-refresh-token",
-    "bidshifter-bid-manager-api-key",
-    "bidshifter-beam-api-key",
-    "bidshifter-teams-app-id",
-    "bidshifter-teams-app-secret",
     "bidshifter-jwt-secret-key"
   ]
 }
 
-variable "secret_env_vars" {
-  description = "Map of env vars to secrets"
+variable "dbm_secret_names" {
+  description = "Secret names specific to dbm-mcp"
+  type        = list(string)
+  default = [
+    "bidshifter-jwt-secret-key",
+    "bidshifter-dv360-oauth-client-id",
+    "bidshifter-dv360-oauth-client-secret",
+    "bidshifter-dv360-refresh-token",
+    "bidshifter-bid-manager-api-key",
+    "bidshifter-beam-api-key"
+  ]
+}
+
+variable "dv360_secret_names" {
+  description = "Secret names specific to dv360-mcp"
+  type        = list(string)
+  default = [
+    "bidshifter-jwt-secret-key",
+    "bidshifter-dv360-oauth-client-id",
+    "bidshifter-dv360-oauth-client-secret",
+    "bidshifter-dv360-refresh-token"
+  ]
+}
+
+variable "ttd_secret_names" {
+  description = "Secret names specific to ttd-mcp"
+  type        = list(string)
+  default = [
+    "bidshifter-jwt-secret-key",
+    "bidshifter-ttd-partner-id",
+    "bidshifter-ttd-api-secret"
+  ]
+}
+
+variable "dbm_secret_env_vars" {
+  description = "Map of env vars to secrets for dbm-mcp"
   type = map(object({
     secret_name = string
     version     = string
@@ -251,12 +288,52 @@ variable "secret_env_vars" {
       secret_name = "bidshifter-beam-api-key"
       version     = "latest"
     }
-    TEAMS_APP_ID = {
-      secret_name = "bidshifter-teams-app-id"
+  }
+}
+
+variable "dv360_secret_env_vars" {
+  description = "Map of env vars to secrets for dv360-mcp"
+  type = map(object({
+    secret_name = string
+    version     = string
+  }))
+  default = {
+    MCP_AUTH_SECRET_KEY = {
+      secret_name = "bidshifter-jwt-secret-key"
       version     = "latest"
     }
-    TEAMS_APP_SECRET = {
-      secret_name = "bidshifter-teams-app-secret"
+    DV360_OAUTH_CLIENT_ID = {
+      secret_name = "bidshifter-dv360-oauth-client-id"
+      version     = "latest"
+    }
+    DV360_OAUTH_CLIENT_SECRET = {
+      secret_name = "bidshifter-dv360-oauth-client-secret"
+      version     = "latest"
+    }
+    DV360_REFRESH_TOKEN = {
+      secret_name = "bidshifter-dv360-refresh-token"
+      version     = "latest"
+    }
+  }
+}
+
+variable "ttd_secret_env_vars" {
+  description = "Map of env vars to secrets for ttd-mcp"
+  type = map(object({
+    secret_name = string
+    version     = string
+  }))
+  default = {
+    MCP_AUTH_SECRET_KEY = {
+      secret_name = "bidshifter-jwt-secret-key"
+      version     = "latest"
+    }
+    TTD_PARTNER_ID = {
+      secret_name = "bidshifter-ttd-partner-id"
+      version     = "latest"
+    }
+    TTD_API_SECRET = {
+      secret_name = "bidshifter-ttd-api-secret"
       version     = "latest"
     }
   }

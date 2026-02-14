@@ -11,6 +11,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/dbm-mcp/package.json ./packages/dbm-mcp/
 COPY packages/dv360-mcp/package.json ./packages/dv360-mcp/
+COPY packages/ttd-mcp/package.json ./packages/ttd-mcp/
 RUN pnpm install --frozen-lockfile
 
 # Build all packages

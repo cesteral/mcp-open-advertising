@@ -12,35 +12,84 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  # Step 1: Build Docker image
+  # Step 1a: Build dbm-mcp Docker image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${SHORT_SHA}'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}'
       - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${_ENVIRONMENT}-latest'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:latest'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${_ENVIRONMENT}-latest'
       - '--build-arg'
-      - 'NODE_ENV=production'
+      - 'SERVER_NAME=dbm-mcp'
       - '-f'
       - 'Dockerfile'
       - '.'
-    id: 'build-image'
+    id: 'build-dbm-mcp'
 
-  # Step 2: Push Docker image to Artifact Registry
+  # Step 1b: Build dv360-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=dv360-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-dv360-mcp'
+
+  # Step 1c: Build ttd-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=ttd-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-ttd-mcp'
+
+  # Step 2a: Push dbm-mcp image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server'
-    id: 'push-image'
-    waitFor: ['build-image']
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp'
+    id: 'push-dbm-mcp'
+    waitFor: ['build-dbm-mcp']
+
+  # Step 2b: Push dv360-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp'
+    id: 'push-dv360-mcp'
+    waitFor: ['build-dv360-mcp']
+
+  # Step 2c: Push ttd-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp'
+    id: 'push-ttd-mcp'
+    waitFor: ['build-ttd-mcp']
 
 images:
-  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${SHORT_SHA}'
-  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:${_ENVIRONMENT}-latest'
-  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/mcp-server:latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
 
 timeout: '600s' # 10 minutes

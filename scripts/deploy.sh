@@ -1,6 +1,6 @@
 #!/bin/bash
-# Deploy Campaign Guardian MCP Server using Terraform
-# This script builds the Docker image, pushes it, and deploys via Terraform
+# Deploy BidShifter MCP Servers using Terraform
+# This script builds Docker images for all 3 servers, pushes them, and deploys via Terraform
 
 set -e
 
@@ -61,13 +61,13 @@ done
 # Set project ID based on environment
 case $ENVIRONMENT in
     dev)
-        PROJECT_ID="campaign-guardian-dev" # TODO: Update with actual project ID
+        PROJECT_ID="bidshifter-dev" # TODO: Update with actual project ID
         ;;
     staging)
-        PROJECT_ID="campaign-guardian-staging" # TODO: Update with actual project ID
+        PROJECT_ID="bidshifter-staging" # TODO: Update with actual project ID
         ;;
     prod)
-        PROJECT_ID="campaign-guardian-prod" # TODO: Update with actual project ID
+        PROJECT_ID="bidshifter-prod" # TODO: Update with actual project ID
         ;;
     *)
         print_error "Invalid environment: $ENVIRONMENT"
@@ -76,20 +76,18 @@ case $ENVIRONMENT in
 esac
 
 REGION="europe-west2"
-REPO_NAME="campaign-guardian"
-IMAGE_NAME="mcp-server"
+REPO_NAME="bidshifter"
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "local")
-
-IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:${GIT_SHA}"
-IMAGE_LATEST="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}:latest"
+SERVERS=("dbm-mcp" "dv360-mcp" "ttd-mcp")
 
 print_info "=========================================="
-print_info "Deploying Campaign Guardian MCP Server"
+print_info "Deploying BidShifter MCP Servers"
 print_info "=========================================="
 print_info "Environment: $ENVIRONMENT"
 print_info "Project ID: $PROJECT_ID"
 print_info "Region: $REGION"
-print_info "Image: $IMAGE_TAG"
+print_info "Servers: ${SERVERS[*]}"
+print_info "Git SHA: $GIT_SHA"
 print_info "=========================================="
 print_info ""
 
@@ -97,22 +95,26 @@ print_info ""
 print_step "Setting active GCP project..."
 gcloud config set project $PROJECT_ID
 
-# Build and push Docker image (unless skipped)
+# Build and push Docker images (unless skipped)
 if [ "$SKIP_BUILD" = false ]; then
-    print_step "Building Docker image..."
-    docker build -t $IMAGE_TAG -t $IMAGE_LATEST -f Dockerfile .
-
     print_step "Configuring Docker for Artifact Registry..."
     gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-    print_step "Pushing Docker image to Artifact Registry..."
-    docker push $IMAGE_TAG
-    docker push $IMAGE_LATEST
+    for SERVER in "${SERVERS[@]}"; do
+        IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVER}:${GIT_SHA}"
+        IMAGE_LATEST="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SERVER}:latest"
 
-    print_info "Docker image pushed successfully!"
+        print_step "Building Docker image for ${SERVER}..."
+        docker build -t $IMAGE_TAG -t $IMAGE_LATEST --build-arg SERVER_NAME=$SERVER -f Dockerfile .
+
+        print_step "Pushing Docker image for ${SERVER}..."
+        docker push $IMAGE_TAG
+        docker push $IMAGE_LATEST
+    done
+
+    print_info "All Docker images pushed successfully!"
 else
     print_warn "Skipping Docker build (--skip-build flag set)"
-    IMAGE_TAG=$IMAGE_LATEST
 fi
 
 # Navigate to terraform directory
@@ -122,10 +124,23 @@ cd terraform
 print_step "Initializing Terraform..."
 terraform init -backend-config=backend-${ENVIRONMENT}.conf -reconfigure
 
+# Build image var flags
+DBM_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dbm-mcp:${GIT_SHA}"
+DV360_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dv360-mcp:${GIT_SHA}"
+TTD_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/ttd-mcp:${GIT_SHA}"
+
+if [ "$SKIP_BUILD" = true ]; then
+    DBM_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dbm-mcp:latest"
+    DV360_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dv360-mcp:latest"
+    TTD_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/ttd-mcp:latest"
+fi
+
 # Run Terraform plan
 print_step "Running Terraform plan..."
 terraform plan \
-    -var="container_image=${IMAGE_TAG}" \
+    -var="dbm_mcp_image=${DBM_IMAGE}" \
+    -var="dv360_mcp_image=${DV360_IMAGE}" \
+    -var="ttd_mcp_image=${TTD_IMAGE}" \
     -var-file=${ENVIRONMENT}.tfvars \
     -out=tfplan
 
@@ -147,21 +162,25 @@ if [ "$PLAN_ONLY" = false ]; then
 
     # Get outputs
     print_step "Retrieving deployment information..."
-    SERVICE_URL=$(terraform output -raw cloud_run_service_url)
-    SERVICE_NAME=$(terraform output -raw cloud_run_service_name)
+    DBM_URL=$(terraform output -raw dbm_mcp_service_url 2>/dev/null || echo "N/A")
+    DV360_URL=$(terraform output -raw dv360_mcp_service_url 2>/dev/null || echo "N/A")
+    TTD_URL=$(terraform output -raw ttd_mcp_service_url 2>/dev/null || echo "N/A")
 
     print_info ""
     print_info "=========================================="
     print_info "Deployment Complete!"
     print_info "=========================================="
-    print_info "Service URL: $SERVICE_URL"
-    print_info "Service Name: $SERVICE_NAME"
+    print_info "dbm-mcp URL:   $DBM_URL"
+    print_info "dv360-mcp URL: $DV360_URL"
+    print_info "ttd-mcp URL:   $TTD_URL"
     print_info ""
-    print_info "Test the health endpoint:"
-    print_info "  curl $SERVICE_URL/health"
+    print_info "Test health endpoints:"
+    print_info "  curl $DBM_URL/health"
+    print_info "  curl $DV360_URL/health"
+    print_info "  curl $TTD_URL/health"
     print_info ""
     print_info "View logs:"
-    print_info "  gcloud logging read 'resource.type=cloud_run_revision AND resource.labels.service_name=$SERVICE_NAME' --limit 50 --project=$PROJECT_ID"
+    print_info "  gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~\"(dbm|dv360|ttd)-mcp\"' --limit 50 --project=$PROJECT_ID"
     print_info ""
 else
     print_warn "Plan-only mode: Terraform changes not applied"

@@ -3,7 +3,7 @@
 > **Status**: Design document
 > **Version**: 1.0.0
 > **Last updated**: 2026-02-13
-> **Depends on**: [Skill Contract v1.1.0](../mcp-skill-contract.json), [Governance Overview](../governance/GOVERNANCE-OVERVIEW.md), [Refinement Governance](../governance/refinement-governance.md)
+> **Depends on**: [Skill Contract v1.1.1](../mcp-skill-contract.json), [Governance Overview](../governance/GOVERNANCE-OVERVIEW.md), [Refinement Governance](../governance/refinement-governance.md)
 
 ---
 
@@ -14,7 +14,7 @@ BidShifter has strong foundations for a self-improving system:
 - **Evaluator hooks** in `packages/shared/src/utils/tool-handler-factory.ts` fire after every tool execution, producing `ToolInteractionEvaluation` results with issue classifications, quality scores, and recommended actions.
 - **Governance docs** in `docs/governance/` define a full refinement lifecycle — findings → classification → playbook deltas → approval → deployment.
 - **Skill adapters** in `.cursor/skills/` and `.codex/skills/` project workflows to IDE clients.
-- **A canonical skill contract** (`docs/mcp-skill-contract.json` v1.1.0) defines five workflow IDs with required prompts, resources, and output sections.
+- **A canonical skill contract** (`docs/mcp-skill-contract.json` v1.1.1) defines five workflow IDs with required prompts, resources, and output sections.
 
 But the loop isn't closed:
 
@@ -100,6 +100,8 @@ Each server is self-contained. No cross-server runtime dependency. The AI agent 
 ---
 
 ## 4. Layer 1: Skill Store (Versionable Prompts)
+
+> **Implementation status**: Not yet implemented. No `skills/` directory, YAML loader, or template resolver exist. This section describes the proposed design.
 
 ### 4.1 Why
 
@@ -287,9 +289,11 @@ for (const skill of skills) {
 
 ## 5. Layer 2: Finding Aggregation
 
+> **Implementation status**: Partially exists. The evaluator hooks in `registerToolsFromDefinitions()` and the `recordEvaluatorFinding()` metric are implemented. The finding buffer, finding store, pattern detection, and `findings://` MCP resources described below are **not yet implemented**.
+
 ### 5.1 Why
 
-The evaluator in `tool-handler-factory.ts` (lines 332–393) already produces rich findings — `ToolInteractionEvaluation` with issues classified by `EvaluatorIssueClass`, quality scores, and `recommendationAction`. These are emitted to telemetry (span attributes + `recordEvaluatorFinding()` metric counter) and then lost. No aggregation means no pattern detection, which means no data-driven skill improvement.
+The evaluator block in `registerToolsFromDefinitions()` (`tool-handler-factory.ts`) already produces rich findings — `ToolInteractionEvaluation` with issues classified by `EvaluatorIssueClass`, quality scores, and `recommendationAction`. These are emitted to telemetry (span attributes + `recordEvaluatorFinding()` metric counter) and then lost. No aggregation means no pattern detection, which means no data-driven skill improvement.
 
 ### 5.2 Finding Data Model
 
@@ -439,7 +443,7 @@ interface RegisterToolsOptions {
 }
 ```
 
-After the evaluator runs (around line 376), if `findingBuffer` is provided:
+After the evaluator runs (in the evaluator block of `registerToolsFromDefinitions()`), if `findingBuffer` is provided:
 
 ```typescript
 if (opts.findingBuffer && evaluation) {
@@ -494,6 +498,8 @@ async function cleanupSession(sessionId: string) {
 ---
 
 ## 6. Layer 3: Refinement Loop
+
+> **Implementation status**: Not yet implemented. No `propose_skill_refinement` tool, `get_refinement_status` tool, or `RefinementEngine` exist. This section describes the proposed design.
 
 ### 6.1 The Loop
 
@@ -646,11 +652,7 @@ function createRefinementEngine(opts: {
 
 ### 6.5 Proposal YAML Format
 
-Proposals include all required `playbook-delta.schema.json` fields and add skill-specific metadata. Because the current schema has `additionalProperties: false`, we must either:
-1. Extend the schema to allow these additive fields, or
-2. Store the playbook delta in a nested object and validate only that object against the current schema.
-
-The example below uses the first approach (schema extension in Phase 3):
+Proposals include all required `playbook-delta.schema.json` fields and add skill-specific metadata. Because the current schema has `additionalProperties: false`, we use a **nested object approach**: the standard `playbook-delta.schema.json` fields live at the top level (validated against the schema), while skill-specific extensions live in a `skillDelta` sub-object that is outside the schema's scope. This avoids modifying the shared governance schema.
 
 ```yaml
 # skills/proposals/{proposalId}.yaml
@@ -690,6 +692,8 @@ skillDelta:
 
 ## 7. Telemetry Integration
 
+> **Implementation status**: Not yet implemented. The existing `recordEvaluatorFinding()` counter metric is in place, but the spans and metrics below are proposed additions.
+
 ### 7.1 Span Naming
 
 Per `docs/governance/telemetry-governance.md`, the following spans are added:
@@ -712,6 +716,8 @@ Per `docs/governance/telemetry-governance.md`, the following spans are added:
 ---
 
 ## 8. Contract & Adapter Evolution
+
+> **Implementation status**: Not yet implemented. The current skill contract is v1.1.1. Adapter `Skill Version` annotations do not exist yet. This section describes proposed changes for Phase 4.
 
 ### 8.1 Skill Contract v1.2.0 (Minor Bump)
 

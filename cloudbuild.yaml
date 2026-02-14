@@ -1,6 +1,6 @@
 # Cloud Build configuration for BidShifter MCP Servers
 # Automated CI/CD pipeline: Build Docker images → Push to registry → Deploy to Cloud Run
-# Builds both dbm-mcp and dv360-mcp servers from the same monorepo.
+# Builds dbm-mcp, dv360-mcp, and ttd-mcp servers from the same monorepo.
 
 substitutions:
   _ENVIRONMENT: 'dev' # Override with trigger substitution variable
@@ -58,6 +58,22 @@ steps:
     id: 'build-dv360-mcp'
     waitFor: ['test']
 
+  # Step 2c: Build ttd-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=ttd-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-ttd-mcp'
+    waitFor: ['test']
+
   # Step 3a: Push dbm-mcp image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -76,6 +92,15 @@ steps:
     id: 'push-dv360-mcp'
     waitFor: ['build-dv360-mcp']
 
+  # Step 3c: Push ttd-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp'
+    id: 'push-ttd-mcp'
+    waitFor: ['build-ttd-mcp']
+
   # Step 4: Initialize Terraform
   - name: 'hashicorp/terraform:1.5'
     entrypoint: 'sh'
@@ -85,7 +110,7 @@ steps:
         cd terraform
         terraform init -backend-config=backend-${_ENVIRONMENT}.conf -reconfigure
     id: 'terraform-init'
-    waitFor: ['push-dbm-mcp', 'push-dv360-mcp']
+    waitFor: ['push-dbm-mcp', 'push-dv360-mcp', 'push-ttd-mcp']
 
   # Step 5: Terraform Plan
   - name: 'hashicorp/terraform:1.5'
@@ -97,6 +122,7 @@ steps:
         terraform plan \
           -var="dbm_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}" \
           -var="dv360_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${SHORT_SHA}" \
+          -var="ttd_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}" \
           -var-file=${_ENVIRONMENT}.tfvars \
           -out=tfplan
     id: 'terraform-plan'
@@ -113,29 +139,35 @@ steps:
     id: 'terraform-apply'
     waitFor: ['terraform-plan']
 
-  # Step 7: Health checks for both services
+  # Step 7: Health checks for all three services
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        for SERVICE in dbm-mcp dv360-mcp; do
+        for SERVICE in dbm-mcp dv360-mcp ttd-mcp; do
+          HEALTHY=false
           URL=$(gcloud run services describe $SERVICE \
             --region=${_REGION} \
             --format='value(status.url)' 2>/dev/null || echo "")
           if [ -z "$URL" ]; then
-            echo "Service $SERVICE not found — skipping health check"
-            continue
+            echo "Service $SERVICE not found"
+            exit 1
           fi
           echo "Testing health endpoint: $URL/health"
           for i in $(seq 1 24); do
             if curl -s -o /dev/null -w "%{http_code}" "$URL/health" | grep -q "200"; then
               echo "Health check passed for $SERVICE"
+              HEALTHY=true
               break
             fi
             echo "Waiting for $SERVICE to be ready... (attempt $i/24)"
             sleep 5
           done
+          if [ "$HEALTHY" != "true" ]; then
+            echo "Health check failed for $SERVICE after 24 attempts"
+            exit 1
+          fi
         done
     id: 'health-check'
     waitFor: ['terraform-apply']
@@ -146,6 +178,8 @@ images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${_ENVIRONMENT}-latest'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
 
 # Artifacts to store
 artifacts:

@@ -5,8 +5,10 @@ project_id  = "bidshifter-dev" # TODO: Replace with actual dev project ID
 region      = "europe-west2"
 environment = "dev"
 
-# Container image (update after first build)
-container_image = "europe-west2-docker.pkg.dev/bidshifter-dev/bidshifter/mcp-server:latest"
+# Container images (update after first build)
+dbm_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-dev/bidshifter/dbm-mcp:latest"
+dv360_mcp_image = "europe-west2-docker.pkg.dev/bidshifter-dev/bidshifter/dv360-mcp:latest"
+ttd_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-dev/bidshifter/ttd-mcp:latest"
 
 # Networking
 create_vpc             = true

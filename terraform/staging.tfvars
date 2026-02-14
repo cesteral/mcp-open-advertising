@@ -5,8 +5,10 @@ project_id  = "bidshifter-staging" # TODO: Replace with actual staging project I
 region      = "europe-west2"
 environment = "staging"
 
-# Container image (update after first build)
-container_image = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/mcp-server:latest"
+# Container images (update after first build)
+dbm_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/dbm-mcp:latest"
+dv360_mcp_image = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/dv360-mcp:latest"
+ttd_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/ttd-mcp:latest"
 
 # Networking
 create_vpc             = true
