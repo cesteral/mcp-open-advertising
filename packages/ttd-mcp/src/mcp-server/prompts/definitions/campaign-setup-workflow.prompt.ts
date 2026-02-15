@@ -115,7 +115,35 @@ Input: {
 
 ---
 
-## Step 4: Create Ad(s)
+## Step 4: Create Creative(s) (if needed)
+
+Creatives must exist before ads can reference them.
+
+\`\`\`
+Tool: ttd_create_entity
+Input: {
+  "entityType": "creative",
+  "advertiserId": "${advertiserId}",
+  "data": {
+    "CreativeName": "Banner 300x250 - Version A",
+    "AdvertiserId": "${advertiserId}",
+    "CreativeType": "Banner",
+    "Width": 300,
+    "Height": 250,
+    "Tag": "<script src='https://cdn.example.com/ad.js'></script>",
+    "LandingPageUrl": "https://www.example.com/landing",
+    "IsHTTPS": true
+  }
+}
+\`\`\`
+
+**Save**: Note the returned \`CreativeId\`.
+
+> Fetch \`entity-schema://creative\` for full field reference (Banner, Video, Native types).
+
+---
+
+## Step 5: Create Ad(s)
 
 Ads associate creatives with the ad group.
 
@@ -128,26 +156,79 @@ Input: {
     "AdName": "Your Ad Name",
     "AdGroupId": "{AdGroupId from Step 3}",
     "AdvertiserId": "${advertiserId}",
-    "CreativeIds": ["{existing creative ID}"],
+    "CreativeIds": ["{CreativeId from Step 4}"],
     "LandingPageUrl": "https://www.example.com/landing"
   }
 }
 \`\`\`
 
 ### Common Gotchas
-- \`CreativeIds\` must reference **existing** creatives (create them separately first)
+- \`CreativeIds\` must reference **existing** creatives (created in Step 4)
 - Multiple creatives in one ad enables TTD auto-optimization (A/B testing)
 - Ads inherit targeting from their parent ad group
 
 ---
 
-## Step 5: Verify the Hierarchy
+## Step 6: Optional — Set Up Ancillary Entities
+
+### Conversion Tracking (for CPA/ROAS campaigns)
+\`\`\`
+Tool: ttd_create_entity
+Input: {
+  "entityType": "conversionTracker",
+  "advertiserId": "${advertiserId}",
+  "data": {
+    "TrackingTagName": "Purchase - Thank You Page",
+    "AdvertiserId": "${advertiserId}",
+    "TrackingTagType": "Standard",
+    "TrackingTagCategory": "Purchase",
+    "ConversionType": "Both"
+  }
+}
+\`\`\`
+
+### Site Lists (for inventory targeting)
+\`\`\`
+Tool: ttd_create_entity
+Input: {
+  "entityType": "siteList",
+  "advertiserId": "${advertiserId}",
+  "data": {
+    "SiteListName": "Premium Publishers",
+    "AdvertiserId": "${advertiserId}",
+    "SiteListType": "Whitelist",
+    "Sites": ["nytimes.com", "bbc.com"]
+  }
+}
+\`\`\`
+
+### Bid Lists (for dimensional bid adjustments)
+\`\`\`
+Tool: ttd_create_entity
+Input: {
+  "entityType": "bidList",
+  "advertiserId": "${advertiserId}",
+  "data": {
+    "BidListName": "Geo Bid Modifiers",
+    "AdvertiserId": "${advertiserId}",
+    "BidListDimension": "GeoRegion",
+    "BidListAdjustmentType": "PercentageAdjustment",
+    "BidListEntries": [
+      { "DimensionValue": "US-CA", "AdjustmentValue": 50, "IsEnabled": true }
+    ]
+  }
+}
+\`\`\`
+
+---
+
+## Step 7: Verify the Hierarchy
 
 Confirm everything was created correctly:
 
-1. List campaigns: \`ttd_list_entities\` with \`{ "entityType": "campaign", "filters": { "AdvertiserIds": ["${advertiserId}"] } }\`
-2. List ad groups: \`ttd_list_entities\` with \`{ "entityType": "adGroup", "filters": { "CampaignId": "{CampaignId}" } }\`
-3. List ads: \`ttd_list_entities\` with \`{ "entityType": "ad", "filters": { "AdGroupId": "{AdGroupId}" } }\`
+1. List campaigns: \`ttd_list_entities\` with \`{ "entityType": "campaign", "advertiserId": "${advertiserId}" }\`
+2. List ad groups: \`ttd_list_entities\` with \`{ "entityType": "adGroup", "campaignId": "{CampaignId}" }\`
+3. List ads: \`ttd_list_entities\` with \`{ "entityType": "ad", "filter": { "AdGroupId": "{AdGroupId}" } }\`
 
 ---
 
@@ -155,13 +236,22 @@ Confirm everything was created correctly:
 
 - [ ] Advertiser verified with correct currency
 - [ ] Campaign created with budget and flight dates
-- [ ] Ad group created with bidding and optional targeting
+- [ ] Ad group created with bidding, targeting, and channel settings
+- [ ] Creative(s) created (Banner, Video, or Native)
 - [ ] Ad(s) created with creative associations
+- [ ] (Optional) Conversion tracker deployed for CPA/ROAS
+- [ ] (Optional) Site lists configured for inventory targeting
+- [ ] (Optional) Bid lists configured for dimensional optimization
 - [ ] Hierarchy verified via list queries
 
 ## Related Resources
-- \`entity-hierarchy://all\` — Entity relationships and parent ID requirements
+- \`entity-hierarchy://all\` — Entity relationships and parent ID requirements (9 entity types)
 - \`entity-schema://{entityType}\` — Full field reference per entity type
 - \`entity-examples://{entityType}\` — CRUD payload examples
+
+## Bulk Alternative
+For creating multiple campaigns or ad groups at once, use:
+- \`ttd_bulk_create_entities\` — batch create up to 50 items
+- \`ttd_bulk_update_status\` — batch pause/resume after verification
 `;
 }

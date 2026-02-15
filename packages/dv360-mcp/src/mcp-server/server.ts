@@ -1,19 +1,24 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
 import { allTools } from "./tools/index.js";
 import { resourceRegistry } from "./resources/index.js";
-import { getAllPrompts, getPromptDefinition } from "./prompts/index.js";
+import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
 import { ErrorHandler } from "../utils/errors/index.js";
 import {
   EvaluatorIssueClass,
+  extractZodShape,
   registerToolsFromDefinitions,
+  registerPromptsFromDefinitions,
+  type McpServerPromptLike,
+  type PromptDefinitionForFactory,
+  type PromptArgumentForFactory,
   type ToolExecutionSnapshot,
   type ToolInteractionContext,
   type ToolInteractionEvaluation,
-} from "@bidshifter/shared";
+} from "@cesteral/shared";
 import type { Logger } from "pino";
+import packageJson from "../../package.json";
 
 const DV360_PACKAGE_NAME = "dv360-mcp";
 const DV360_PLATFORM = "dv360-management";
@@ -68,21 +73,6 @@ async function evaluateDv360Interaction(
 }
 
 /**
- * Extract the raw shape from a Zod schema.
- * The MCP SDK expects ZodRawShape (the shape object), not a full Zod schema.
- */
-function extractZodShape(schema: z.ZodTypeAny): z.ZodRawShape {
-  let current = schema;
-  while (current instanceof z.ZodEffects) {
-    current = current._def.schema;
-  }
-  if (current instanceof z.ZodObject) {
-    return current.shape;
-  }
-  return {};
-}
-
-/**
  * Create and configure MCP server instance
  */
 export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
@@ -92,7 +82,7 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
 
   const server = new McpServer({
     name: "dv360-mcp",
-    version: "1.0.0",
+    version: packageJson.version,
     description: "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
   });
 
@@ -119,7 +109,7 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     },
   });
 
-  // Register all resources
+  // Register all resources (DV360 uses parameterized resource registry)
   const resources = resourceRegistry.getAllResources();
   for (const resource of resources) {
     const isParameterized = resource.uriTemplate.includes("{");
@@ -230,80 +220,14 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     }
   }
 
-  // Register all prompts
-  const allPrompts = getAllPrompts();
-  for (const prompt of allPrompts) {
-    const argsSchema = prompt.arguments?.reduce(
-      (acc, arg) => {
-        const description = arg.description || `${arg.name} argument`;
-        const zodType = arg.required
-          ? z.string().describe(description)
-          : z.string().optional().describe(description);
-        acc[arg.name] = zodType;
-        return acc;
-      },
-      {} as Record<string, z.ZodType<string> | z.ZodOptional<z.ZodType<string>>>
-    );
-
-    server.registerPrompt(
-      prompt.name,
-      {
-        title: prompt.name,
-        description: prompt.description,
-        ...(argsSchema && Object.keys(argsSchema).length > 0 && { argsSchema }),
-      },
-      async (args: Record<string, string | undefined> | undefined) => {
-        logger.info({ promptName: prompt.name, arguments: args }, "Handling prompt request");
-
-        const promptDef = getPromptDefinition(prompt.name);
-
-        if (!promptDef) {
-          logger.error({ promptName: prompt.name }, "Prompt not found");
-          throw new Error(`Prompt not found: ${prompt.name}`);
-        }
-
-        try {
-          const cleanArgs: Record<string, string> = {};
-          if (args) {
-            for (const [key, value] of Object.entries(args)) {
-              if (value !== undefined) {
-                cleanArgs[key] = value;
-              }
-            }
-          }
-          const message = promptDef.generateMessage(cleanArgs);
-
-          return {
-            messages: [
-              {
-                role: "user",
-                content: {
-                  type: "text",
-                  text: message,
-                },
-              },
-            ],
-          };
-        } catch (error) {
-          logger.error({ promptName: prompt.name, error }, "Failed to generate prompt");
-
-          const mcpError = ErrorHandler.handleError(
-            error,
-            {
-              operation: `prompt:get`,
-              context: {
-                name: prompt.name,
-                args,
-              },
-            },
-            logger
-          );
-
-          throw new Error(`Failed to generate prompt: ${mcpError.message}`);
-        }
-      }
-    );
-  }
+  // Register all prompts via shared factory
+  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
+    name: def.prompt.name,
+    description: def.prompt.description ?? "",
+    arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
+    generateMessage: def.generateMessage,
+  }));
+  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
 
   return server;
 }

@@ -98,7 +98,7 @@ Keep your current root `.env.example` with ALL variables for ALL packages:
 
 ```bash
 # =============================================================================
-# BIDSHIFTER MCP MONOREPO - ENVIRONMENT VARIABLES
+# CESTERAL MCP MONOREPO - ENVIRONMENT VARIABLES
 # =============================================================================
 
 # Node Environment
@@ -141,7 +141,7 @@ DBM_MCP_PORT=3001
 DBM_MCP_HOST=0.0.0.0
 
 # BigQuery
-BIGQUERY_DATASET_ID=bidshifter
+BIGQUERY_DATASET_ID=cesteral
 BIGQUERY_LOCATION=US
 
 # ---------- dv360-mcp (Management Server) ----------
@@ -168,6 +168,19 @@ TTD_API_SECRET=your-api-secret
 TTD_API_BASE_URL=https://api.thetradedesk.com/v3
 TTD_AUTH_URL=https://id.thetradedesk.com/v3/auth/token
 TTD_RATE_LIMIT_PER_MINUTE=60
+
+# ---------- gads-mcp (Google Ads Server) ----------
+GADS_MCP_PORT=3004
+GADS_MCP_HOST=0.0.0.0
+
+# Google Ads API Configuration
+GADS_DEVELOPER_TOKEN=your-developer-token
+GADS_CLIENT_ID=your-oauth-client-id
+GADS_CLIENT_SECRET=your-oauth-client-secret
+GADS_REFRESH_TOKEN=your-oauth-refresh-token
+GADS_LOGIN_CUSTOMER_ID=                         # Optional: MCC login customer ID (no dashes)
+GADS_API_BASE_URL=https://googleads.googleapis.com/v23
+GADS_RATE_LIMIT_PER_MINUTE=100
 ```
 
 ### Local `.env` (Your Actual Values)

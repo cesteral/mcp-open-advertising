@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { STATIC_ENTITY_API_METADATA } from "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js";
+import {
+  STATIC_ENTITY_API_METADATA,
+  getEntityRelationships,
+} from "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js";
 
 type DocPathExpectation = {
   readonly apiPath: string;
@@ -71,4 +74,16 @@ describe("STATIC_ENTITY_API_METADATA", () => {
       expect(STATIC_ENTITY_API_METADATA[entityType]?.apiPathTemplate).toBe(expectation.apiPath);
     });
   }
+
+  it("keeps relationship metadata aligned with required parentResourceIds", () => {
+    for (const [entityType, metadata] of Object.entries(STATIC_ENTITY_API_METADATA)) {
+      const requiredRelationships = getEntityRelationships(entityType)
+        .filter((relationship) => relationship.required)
+        .map((relationship) => relationship.parentFieldName);
+
+      for (const parentResourceId of metadata.parentResourceIds) {
+        expect(requiredRelationships).toContain(parentResourceId);
+      }
+    }
+  });
 });

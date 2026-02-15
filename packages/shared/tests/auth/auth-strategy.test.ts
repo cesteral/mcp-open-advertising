@@ -174,8 +174,8 @@ describe("JwtBearerAuthStrategy", () => {
     mockExtractBearer.mockReturnValue("my-jwt-token");
     mockVerifyJwt.mockResolvedValue({
       sub: "user-1",
-      iss: "bidshifter-mcp",
-      aud: "bidshifter-services",
+      iss: "cesteral-mcp",
+      aud: "cesteral-services",
       exp: 9999999999,
       iat: 1000000000,
     });
@@ -190,8 +190,8 @@ describe("JwtBearerAuthStrategy", () => {
     mockExtractBearer.mockReturnValue("my-jwt-token");
     mockVerifyJwt.mockResolvedValue({
       sub: "user-1",
-      iss: "bidshifter-mcp",
-      aud: "bidshifter-services",
+      iss: "cesteral-mcp",
+      aud: "cesteral-services",
       exp: 9999999999,
       iat: 1000000000,
     });
@@ -206,8 +206,8 @@ describe("JwtBearerAuthStrategy", () => {
     mockExtractBearer.mockReturnValue("tok");
     mockVerifyJwt.mockResolvedValue({
       sub: "user-42",
-      iss: "bidshifter-mcp",
-      aud: "bidshifter-services",
+      iss: "cesteral-mcp",
+      aud: "cesteral-services",
       exp: 9999999999,
       iat: 1000000000,
       scope: "read write",
@@ -226,8 +226,8 @@ describe("JwtBearerAuthStrategy", () => {
     mockExtractBearer.mockReturnValue("first-token");
     mockVerifyJwt.mockResolvedValue({
       sub: "user-1",
-      iss: "bidshifter-mcp",
-      aud: "bidshifter-services",
+      iss: "cesteral-mcp",
+      aud: "cesteral-services",
       exp: 9999999999,
       iat: 1000000000,
     });

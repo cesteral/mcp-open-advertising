@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
+import {
+  addParentValidationIssue,
+  mergeParentIdsIntoData,
+} from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -21,9 +25,29 @@ export const UpdateEntityInputSchema = z
       .string()
       .min(1)
       .describe("The entity ID to update"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("Advertiser ID (required for most non-advertiser entities)"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID (required for adGroup)"),
+    adGroupId: z
+      .string()
+      .optional()
+      .describe("Ad Group ID (required for ad)"),
     data: z
       .record(z.any())
       .describe("Entity data fields to update"),
+  })
+  .superRefine((input, ctx) => {
+    addParentValidationIssue(
+      ctx,
+      input.entityType as TtdEntityType,
+      input as Record<string, unknown>,
+      input.data
+    );
   })
   .describe("Parameters for updating a TTD entity");
 
@@ -43,11 +67,12 @@ export async function updateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
+  const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
 
   const entity = await ttdService.updateEntity(
     input.entityType as TtdEntityType,
     input.entityId,
-    input.data,
+    data,
     context
   );
 

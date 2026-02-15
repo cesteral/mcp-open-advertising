@@ -2,9 +2,9 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
-  getEntityConfigDynamic,
 } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
+import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -23,46 +23,14 @@ export const DeleteEntityInputSchema = z
     creativeId: z.string().optional(),
     reason: z.string().optional(),
   })
-  .refine(
-    (data) => {
-      // Get entity configuration to check required parent IDs
-      const config = getEntityConfigDynamic(data.entityType);
-
-      // Validate all required parent IDs are present
-      for (const requiredParentId of config.parentIds) {
-        if (!data[requiredParentId as keyof typeof data]) {
-          return false;
-        }
-      }
-
-      // Validate entity ID is present
-      const entityIdField = `${data.entityType}Id` as keyof typeof data;
-      if (!data[entityIdField]) {
-        return false;
-      }
-
-      return true;
-    },
-    (data) => {
-      // Generate helpful error message with specific missing IDs
-      const config = getEntityConfigDynamic(data.entityType);
-      const entityIdField = `${data.entityType}Id`;
-
-      // Check which parent IDs are missing
-      const missingParentIds = config.parentIds.filter((id) => !data[id as keyof typeof data]);
-
-      // Check if entity ID is missing
-      const missingEntityId = !data[entityIdField as keyof typeof data] ? [entityIdField] : [];
-
-      const allMissingIds = [...missingParentIds, ...missingEntityId];
-      const allRequiredIds = [...config.parentIds, entityIdField];
-
-      return {
-        message: `Missing required ID(s) for deleting ${data.entityType}: ${allMissingIds.join(", ")}. Required: ${allRequiredIds.join(", ")}`,
-        path: allMissingIds,
-      };
-    }
-  );
+  .superRefine((input, ctx) => {
+    addIdValidationIssues(ctx, {
+      entityType: input.entityType,
+      input: input as Record<string, unknown>,
+      operation: "delete",
+      requireEntityId: true,
+    });
+  });
 
 export const DeleteEntityOutputSchema = z.object({
   success: z.boolean(),

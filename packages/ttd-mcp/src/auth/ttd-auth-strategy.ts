@@ -6,7 +6,7 @@
  * creates a TtdApiTokenAuthAdapter, and validates by exchanging for a token.
  */
 
-import type { AuthStrategy, AuthResult } from "@bidshifter/shared";
+import type { AuthStrategy, AuthResult } from "@cesteral/shared";
 import type { Logger } from "pino";
 import {
   TtdApiTokenAuthAdapter,

@@ -13,9 +13,14 @@
 
 import type { Logger } from "pino";
 import type { z } from "zod";
-import { withToolSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
+import { withToolSpan, withSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
 import { ErrorHandler, EvaluatorIssueClass, JsonRpcErrorCode, McpError } from "./mcp-errors.js";
-import { recordToolExecution, recordEvaluatorFinding, recordWorkflowCallDepth } from "./metrics.js";
+import {
+  recordToolExecution,
+  recordEvaluatorFinding,
+  recordEvaluatorRecommendation,
+  recordWorkflowCallDepth,
+} from "./metrics.js";
 
 /**
  * Request context created per tool invocation
@@ -307,7 +312,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             const result = await tool.logic(refinedInput, context, sdkContext);
-            setSpanAttribute("tool.execution.success", true);
+            setSpanAttribute("mcp.tool.execution.success", true);
 
             const durationMs = Date.now() - startTime;
             setSpanAttribute("mcp.tool.execution.latency_ms", durationMs);
@@ -329,49 +334,81 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               durationMs,
             };
 
-            if (evaluator?.enabled && evaluator.evaluate) {
-              const globalEvaluation = await evaluator.evaluate(
-                executionSnapshot,
-                interactionContext,
-                sdkContext
-              );
-              if (globalEvaluation?.issues?.length) {
-                issues.push(...globalEvaluation.issues);
-              }
-              inputQualityScore = clampScore(globalEvaluation?.inputQualityScore);
-              efficiencyScore = clampScore(globalEvaluation?.efficiencyScore);
-              recommendationAction = globalEvaluation?.recommendationAction;
-            }
+            const observeOnly = evaluator?.observeOnly ?? true;
+            const hasEvaluator = Boolean(
+              (evaluator?.enabled && evaluator.evaluate) || tool.postExecutionEvaluator
+            );
+            if (hasEvaluator) {
+              await withSpan(
+                `tool.${tool.name}.evaluation`,
+                async () => {
+                  if (evaluator?.enabled && evaluator.evaluate) {
+                    const globalEvaluation = await evaluator.evaluate(
+                      executionSnapshot,
+                      interactionContext,
+                      sdkContext
+                    );
+                    if (globalEvaluation?.issues?.length) {
+                      issues.push(...globalEvaluation.issues);
+                    }
+                    inputQualityScore = clampScore(globalEvaluation?.inputQualityScore);
+                    efficiencyScore = clampScore(globalEvaluation?.efficiencyScore);
+                    recommendationAction = globalEvaluation?.recommendationAction;
+                  }
 
-            if (tool.postExecutionEvaluator) {
-              const localEvaluation = await tool.postExecutionEvaluator(
-                executionSnapshot,
-                interactionContext,
-                sdkContext
+                  if (tool.postExecutionEvaluator) {
+                    const localEvaluation = await tool.postExecutionEvaluator(
+                      executionSnapshot,
+                      interactionContext,
+                      sdkContext
+                    );
+                    if (localEvaluation?.issues?.length) {
+                      issues.push(...localEvaluation.issues);
+                    }
+                    inputQualityScore = clampScore(
+                      localEvaluation?.inputQualityScore ?? inputQualityScore
+                    );
+                    efficiencyScore = clampScore(
+                      localEvaluation?.efficiencyScore ?? efficiencyScore
+                    );
+                    recommendationAction =
+                      localEvaluation?.recommendationAction ?? recommendationAction;
+                  }
+                },
+                {
+                  "mcp.tool.name": tool.name,
+                  "mcp.workflow.id": interactionContext.workflowId ?? "unknown",
+                }
               );
-              if (localEvaluation?.issues?.length) {
-                issues.push(...localEvaluation.issues);
-              }
-              inputQualityScore = clampScore(localEvaluation?.inputQualityScore ?? inputQualityScore);
-              efficiencyScore = clampScore(localEvaluation?.efficiencyScore ?? efficiencyScore);
-              recommendationAction =
-                localEvaluation?.recommendationAction ?? recommendationAction;
-            }
 
-            if (issues.length > 0) {
-              const observeOnly = evaluator?.observeOnly ?? true;
+              const resolvedAction = recommendationAction ?? "none";
               setSpanAttribute("mcp.evaluator.observe_only", observeOnly);
               setSpanAttribute("mcp.evaluator.issues.count", issues.length);
+              setSpanAttribute("mcp.evaluator.recommendation.action", resolvedAction);
               if (inputQualityScore !== undefined) {
                 setSpanAttribute("mcp.evaluator.input_quality_score", inputQualityScore);
               }
               if (efficiencyScore !== undefined) {
                 setSpanAttribute("mcp.evaluator.efficiency_score", efficiencyScore);
               }
-              if (recommendationAction) {
-                setSpanAttribute("mcp.evaluator.recommendation.action", recommendationAction);
-              }
+              recordEvaluatorRecommendation(tool.name, resolvedAction, observeOnly);
 
+              if (interactionContext.workflowId) {
+                await withSpan(
+                  `workflow.${interactionContext.workflowId}.refinement_decision`,
+                  async () => undefined,
+                  {
+                    "mcp.workflow.id": interactionContext.workflowId,
+                    "mcp.tool.name": tool.name,
+                    "mcp.evaluator.issues.count": issues.length,
+                    "mcp.evaluator.observe_only": observeOnly,
+                    "mcp.evaluator.recommendation.action": resolvedAction,
+                  }
+                );
+              }
+            }
+
+            if (issues.length > 0) {
               for (const issue of issues) {
                 recordEvaluatorFinding(tool.name, issue.class, issue.isRecoverable ?? true);
               }
@@ -440,7 +477,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             return { content };
           } catch (error) {
             recordSpanError(error as Error);
-            setSpanAttribute("tool.execution.success", false);
+            setSpanAttribute("mcp.tool.execution.success", false);
             if (error instanceof McpError) {
               setSpanAttribute("mcp.tool.error_class", error.code);
             }

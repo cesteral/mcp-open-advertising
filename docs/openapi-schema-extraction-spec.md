@@ -2070,7 +2070,7 @@ With the above safeguards, this iteration provides an automated, test-backed loo
 
 - **Version:** 1.1.0
 - **Last Updated:** 2025-01-16
-- **Author:** BidShifter Engineering
+- **Author:** Cesteral Engineering
 - **Status:** Draft
 - **Related Documents:**
   - [DV360 API Reference](https://developers.google.com/display-video/api/reference/rest)

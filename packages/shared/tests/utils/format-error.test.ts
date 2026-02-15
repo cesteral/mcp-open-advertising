@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   formatErrorForMcp,
-  BidShifterError,
+  CesteralError,
   ValidationError,
   AuthenticationError,
   AuthorizationError,
@@ -12,7 +12,7 @@ import {
 } from "../../src/utils/errors.js";
 
 describe("formatErrorForMcp", () => {
-  it("formats BidShifterError with code and details", () => {
+  it("formats CesteralError with code and details", () => {
     const error = new ValidationError("Invalid input", { field: "name" });
     const result = formatErrorForMcp(error);
 
@@ -62,10 +62,10 @@ describe("formatErrorForMcp", () => {
   });
 });
 
-describe("BidShifterError subclasses", () => {
+describe("CesteralError subclasses", () => {
   it("ValidationError has code VALIDATION_ERROR and status 400", () => {
     const error = new ValidationError("bad input");
-    expect(error).toBeInstanceOf(BidShifterError);
+    expect(error).toBeInstanceOf(CesteralError);
     expect(error).toBeInstanceOf(Error);
     expect(error.code).toBe("VALIDATION_ERROR");
     expect(error.statusCode).toBe(400);
@@ -113,12 +113,12 @@ describe("BidShifterError subclasses", () => {
     expect(error.statusCode).toBe(500);
   });
 
-  it("BidShifterError supports optional details", () => {
+  it("CesteralError supports optional details", () => {
     const error = new ValidationError("bad", { field: "email", constraint: "required" });
     expect(error.details).toEqual({ field: "email", constraint: "required" });
   });
 
-  it("BidShifterError has a stack trace", () => {
+  it("CesteralError has a stack trace", () => {
     const error = new ValidationError("test");
     expect(error.stack).toBeDefined();
     expect(error.stack).toContain("ValidationError");

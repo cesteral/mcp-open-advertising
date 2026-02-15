@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
+  "version": "1.2.0",
   "architecture": {
     "accessPatterns": [
       "direct-client-orchestration",
@@ -22,6 +22,9 @@
     "mcp.execute.dv360_entity_update",
     "mcp.execute.ttd_entity_update",
     "mcp.execute.dbm_custom_query",
+    "mcp.execute.gads_query",
+    "mcp.execute.gads_entity_management",
+    "mcp.execute.gads_bulk_operations",
     "mcp.troubleshoot.delivery"
   ],
   "workflows": {
@@ -31,6 +34,10 @@
         {
           "server": "dbm-mcp",
           "name": "tool_schema_exploration_workflow"
+        },
+        {
+          "server": "gads-mcp",
+          "name": "gads_tool_schema_exploration"
         }
       ],
       "resources": [
@@ -98,6 +105,67 @@
         "ExecutionSummary"
       ]
     },
+    "mcp.execute.gads_query": {
+      "description": "Build and execute GAQL-based Google Ads reporting queries with schema-aware validation.",
+      "prompts": [
+        {
+          "server": "gads-mcp",
+          "name": "gads_tool_schema_exploration"
+        }
+      ],
+      "resources": [
+        "gaql-reference://syntax",
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "QuerySpec",
+        "ValidationChecks",
+        "ExecutionSummary"
+      ]
+    },
+    "mcp.execute.gads_entity_management": {
+      "description": "Perform safe Google Ads entity CRUD operations with schema-first validation and targeted updates.",
+      "prompts": [
+        {
+          "server": "gads-mcp",
+          "name": "gads_campaign_setup_workflow"
+        },
+        {
+          "server": "gads-mcp",
+          "name": "gads_troubleshoot_entity"
+        }
+      ],
+      "resources": [
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}",
+        "entity-hierarchy://gads"
+      ],
+      "requiredOutputSections": [
+        "ChangePlan",
+        "PayloadDiff",
+        "VerificationResult"
+      ]
+    },
+    "mcp.execute.gads_bulk_operations": {
+      "description": "Execute batch Google Ads mutate and status operations with controlled payload sizing and verification.",
+      "prompts": [
+        {
+          "server": "gads-mcp",
+          "name": "gads_campaign_setup_workflow"
+        }
+      ],
+      "resources": [
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}",
+        "entity-hierarchy://gads"
+      ],
+      "requiredOutputSections": [
+        "BatchPlan",
+        "SafetyChecks",
+        "ExecutionSummary"
+      ]
+    },
     "mcp.troubleshoot.delivery": {
       "description": "Diagnose and remediate underdelivery using reporting and management servers.",
       "prompts": [
@@ -149,6 +217,15 @@
       "platform": "ttd",
       "requiredWorkflowIds": [
         "mcp.execute.ttd_entity_update"
+      ]
+    },
+    "gads-mcp": {
+      "platform": "google-ads",
+      "requiredWorkflowIds": [
+        "mcp.explore.tools_and_schemas",
+        "mcp.execute.gads_query",
+        "mcp.execute.gads_entity_management",
+        "mcp.execute.gads_bulk_operations"
       ]
     }
   }

@@ -2,7 +2,7 @@
  * Error handling utilities
  *
  * Core error types (McpError, JsonRpcErrorCode, ErrorHandler) are provided
- * by @bidshifter/shared. Domain-specific errors remain in this package.
+ * by @cesteral/shared. Domain-specific errors remain in this package.
  */
 
 // Re-export core error types from shared
@@ -12,7 +12,7 @@ export {
   type ErrorContext,
   JsonRpcErrorCode,
   mapErrorCodeToHttpStatus,
-} from "@bidshifter/shared";
+} from "@cesteral/shared";
 
 // Bid Manager specific errors
 export {

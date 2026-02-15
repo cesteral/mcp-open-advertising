@@ -1,7 +1,7 @@
 /**
- * Base error class for BidShifter errors
+ * Base error class for Cesteral errors
  */
-export class BidShifterError extends Error {
+export class CesteralError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
   public readonly details?: Record<string, unknown>;
@@ -24,7 +24,7 @@ export class BidShifterError extends Error {
 /**
  * Validation error (400)
  */
-export class ValidationError extends BidShifterError {
+export class ValidationError extends CesteralError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, "VALIDATION_ERROR", 400, details);
   }
@@ -33,7 +33,7 @@ export class ValidationError extends BidShifterError {
 /**
  * Authentication error (401)
  */
-export class AuthenticationError extends BidShifterError {
+export class AuthenticationError extends CesteralError {
   constructor(message: string = "Authentication required", details?: Record<string, unknown>) {
     super(message, "AUTHENTICATION_ERROR", 401, details);
   }
@@ -42,7 +42,7 @@ export class AuthenticationError extends BidShifterError {
 /**
  * Authorization error (403)
  */
-export class AuthorizationError extends BidShifterError {
+export class AuthorizationError extends CesteralError {
   constructor(message: string = "Insufficient permissions", details?: Record<string, unknown>) {
     super(message, "AUTHORIZATION_ERROR", 403, details);
   }
@@ -51,7 +51,7 @@ export class AuthorizationError extends BidShifterError {
 /**
  * Not found error (404)
  */
-export class NotFoundError extends BidShifterError {
+export class NotFoundError extends CesteralError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(message, "NOT_FOUND", 404, details);
   }
@@ -60,7 +60,7 @@ export class NotFoundError extends BidShifterError {
 /**
  * External API error (502)
  */
-export class ExternalApiError extends BidShifterError {
+export class ExternalApiError extends CesteralError {
   constructor(
     message: string,
     public readonly platform: string,
@@ -73,7 +73,7 @@ export class ExternalApiError extends BidShifterError {
 /**
  * Rate limit error (429)
  */
-export class RateLimitError extends BidShifterError {
+export class RateLimitError extends CesteralError {
   constructor(message: string = "Rate limit exceeded", details?: Record<string, unknown>) {
     super(message, "RATE_LIMIT_ERROR", 429, details);
   }
@@ -82,7 +82,7 @@ export class RateLimitError extends BidShifterError {
 /**
  * Internal server error (500)
  */
-export class InternalServerError extends BidShifterError {
+export class InternalServerError extends CesteralError {
   constructor(message: string = "Internal server error", details?: Record<string, unknown>) {
     super(message, "INTERNAL_SERVER_ERROR", 500, details);
   }
@@ -95,7 +95,7 @@ export function formatErrorForMcp(error: unknown): {
   content: Array<{ type: "text"; text: string }>;
   isError: boolean;
 } {
-  if (error instanceof BidShifterError) {
+  if (error instanceof CesteralError) {
     return {
       content: [
         {

@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
+import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
-import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
 const TOOL_NAME = "dv360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update Entity Status";
@@ -40,8 +40,8 @@ export const BulkUpdateStatusInputSchema = z
       .describe("Type of entities to update"),
     advertiserId: z
       .string()
-      .optional()
-      .describe("Advertiser ID (leave blank to be prompted during elicitation)"),
+      .min(1)
+      .describe("Advertiser ID (required for campaign, insertionOrder, lineItem, adGroup)"),
     entityIds: z.array(z.string()).min(1).max(50).describe("List of entity IDs to update (max 50)"),
     status: z
       .enum([
@@ -52,6 +52,15 @@ export const BulkUpdateStatusInputSchema = z
       ])
       .describe("Target entity status"),
     reason: z.string().optional().describe("Reason for status change (audit trail)"),
+  })
+  .superRefine((input, ctx) => {
+    addIdValidationIssues(ctx, {
+      entityType: input.entityType,
+      input: input as Record<string, unknown>,
+      operation: "update",
+      requireEntityId: false,
+      path: ["advertiserId"],
+    });
   })
   .describe("Parameters for bulk status update");
 
@@ -103,15 +112,7 @@ export async function bulkUpdateStatusLogic(
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
   const { dv360Service } = resolveSessionServices(sdkContext);
-
-  const advertiserId = await ensureRequiredFieldValue({
-    fieldName: "advertiserId",
-    fieldLabel: "Advertiser ID",
-    entityType: input.entityType,
-    operation: "bulk status update",
-    sdkContext,
-    currentValue: input.advertiserId,
-  });
+  const advertiserId = input.advertiserId;
 
   const successful: Array<{
     advertiserId: string;

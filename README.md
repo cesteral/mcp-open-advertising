@@ -1,4 +1,4 @@
-# BidShifter - AI-Native Multi-Platform Campaign Optimization
+# Cesteral - AI-Native Multi-Platform Campaign Optimization
 
 **AI-powered programmatic advertising optimization across DV360, Google Ads, Meta, and future DSPs**
 
@@ -10,13 +10,13 @@
 
 ## Overview
 
-BidShifter is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on three independent MCP servers, BidShifter separates reporting and platform management concerns while allowing cross-server workflows.
+Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on four independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
 
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, Meta, and future DSPs
-- **🔧 Composable Architecture** - Three independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Four independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -25,11 +25,12 @@ BidShifter is a **Model Context Protocol (MCP) based optimization platform** tha
 
 ## Architecture
 
-BidShifter uses a **GCP-native architecture** with three independently deployable Cloud Run MCP services:
+Cesteral uses a **GCP-native architecture** with four independently deployable Cloud Run MCP services:
 
 - `dbm-mcp` for reporting and query workflows
 - `dv360-mcp` for DV360 management workflows
 - `ttd-mcp` for The Trade Desk management/reporting workflows
+- `gads-mcp` for Google Ads campaign management and reporting workflows
 
 ### Access Model
 
@@ -82,26 +83,34 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: The Trade Desk REST API
 
+### Server 4: `gads-mcp`
+
+**Google Ads campaign management and reporting**
+
+- Execute GAQL (Google Ads Query Language) queries for reporting
+- Full CRUD on Google Ads entities (campaigns, ad groups, ads, keywords, budgets, extensions)
+- List accessible customer accounts
+- Bulk mutate operations and batch status updates
+- Per-session auth via OAuth2 + developer token headers
+
+**Platform**: Google Ads REST API v23
+
 ---
 
 ## Current Status
 
-**Phase: Scaffolding Complete ✅**
+**Phase: Production-Ready ✅**
 
-The monorepo architecture is now fully scaffolded with:
-- ✅ Root configuration (pnpm workspaces, Turborepo, TypeScript)
-- ✅ Shared package (`@bidshifter/shared`)
-- ✅ Three MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`)
-- ✅ Dockerfiles for containerization
-- ✅ Development scripts
+The platform currently includes:
+- ✅ Four implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`)
+- ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
+- ✅ Live platform/API integrations and Streamable HTTP transports
+- ✅ Terraform + Cloud Build coverage for independent service deployment
 
-**Next Steps:**
-1. Run `pnpm install` to install dependencies
-2. Run `pnpm run build` to verify compilation
-3. Implement actual MCP server logic (tools, services, integrations)
-4. Add BigQuery and platform API integrations
-5. Deploy Terraform infrastructure
-6. Deploy servers to GCP Cloud Run
+**Current Focus:**
+1. Keep contract/adapter governance aligned across all platform packages
+2. Harden telemetry dashboards and evaluator feedback loops
+3. Continue incremental rollout and production operations improvements
 
 ## Quick Start
 
@@ -116,8 +125,8 @@ The monorepo architecture is now fully scaffolded with:
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/bidshifter-mcp.git
-cd bidshifter-mcp
+git clone https://github.com/yourusername/cesteral-mcp.git
+cd cesteral-mcp
 ```
 
 ### 2. Install Dependencies
@@ -161,9 +170,12 @@ pnpm run dev
 
 # Start ttd-mcp (port 3003)
 ./scripts/dev-server.sh ttd-mcp
+
+# Start gads-mcp (port 3004)
+./scripts/dev-server.sh gads-mcp
 ```
 
-### 6. Deploy Infrastructure *(Coming Soon)*
+### 6. Deploy Infrastructure
 
 ```bash
 # Initialize Terraform
@@ -181,16 +193,16 @@ Edit your Claude Desktop MCP configuration:
 ```json
 {
   "mcpServers": {
-    "bidshifter-reporting": {
-      "url": "https://reporting.bidshifter.io/mcp",
+    "cesteral-reporting": {
+      "url": "https://reporting.cesteral.io/mcp",
       "apiKey": "your-reporting-api-key"
     },
-    "bidshifter-management": {
-      "url": "https://management.bidshifter.io/mcp",
+    "cesteral-management": {
+      "url": "https://management.cesteral.io/mcp",
       "apiKey": "your-management-api-key"
     },
-    "bidshifter-ttd": {
-      "url": "https://ttd.bidshifter.io/mcp",
+    "cesteral-ttd": {
+      "url": "https://ttd.cesteral.io/mcp",
       "apiKey": "your-ttd-api-key"
     }
   }
@@ -202,7 +214,7 @@ Edit your Claude Desktop MCP configuration:
 ## Repository Structure
 
 ```
-bidshifter-mcp/
+cesteral-mcp/
 ├── packages/
 │   ├── dbm-mcp/                 # MCP Server 1: Cross-platform reporting
 │   │   ├── src/
@@ -246,8 +258,8 @@ bidshifter-mcp/
 │   └── init-gcp-project.sh      # One-time GCP setup
 │
 ├── docs/                        # Documentation
-│   ├── BidShifter-PRD.md        # Product Requirements Document
-│   ├── bidshifter-mcp-design-architecture.md  # Architecture design
+│   ├── Cesteral-PRD.md        # Product Requirements Document
+│   ├── cesteral-mcp-design-architecture.md  # Architecture design
 │   └── mcp-tool-catalog.md      # All MCP tools reference
 │
 ├── package.json                 # Root workspace config
@@ -504,7 +516,7 @@ For issues or questions:
 
 - **Documentation**: Check [docs/](docs/) for detailed guides
 - **GitHub Issues**: Report bugs or request features
-- **Email**: support@bidshifter.io
+- **Email**: support@cesteral.io
 
 ---
 

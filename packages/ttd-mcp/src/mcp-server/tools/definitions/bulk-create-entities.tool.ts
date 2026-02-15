@@ -1,0 +1,126 @@
+import { z } from "zod";
+import { resolveSessionServices } from "../utils/resolve-session.js";
+import { getBulkEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
+import {
+  addParentValidationIssue,
+  mergeParentIdsIntoData,
+} from "../utils/parent-id-validation.js";
+import type { RequestContext } from "../../../utils/internal/request-context.js";
+import type { SdkContext } from "../../../types-global/mcp.js";
+
+const TOOL_NAME = "ttd_bulk_create_entities";
+const TOOL_TITLE = "Bulk Create TTD Entities";
+const TOOL_DESCRIPTION = `Create multiple The Trade Desk entities of the same type in a single batch operation.
+
+**Supported entity types for bulk create:** ${getBulkEntityTypeEnum().join(", ")}
+
+Provide an array of entity data objects. Each item is created independently — partial failures are possible and reported per-item.`;
+
+export const BulkCreateEntitiesInputSchema = z
+  .object({
+    entityType: z
+      .enum(getBulkEntityTypeEnum())
+      .describe("Type of entities to create (campaign or adGroup)"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("Advertiser ID for all items (required for campaign/adGroup)"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID for all items (required for adGroup)"),
+    items: z
+      .array(z.record(z.any()))
+      .min(1)
+      .max(50)
+      .describe("Array of entity data objects to create (max 50)"),
+  })
+  .superRefine((input, ctx) => {
+    input.items.forEach((item, index) => {
+      addParentValidationIssue(
+        ctx,
+        input.entityType as TtdEntityType,
+        input as Record<string, unknown>,
+        item,
+        ["items", index]
+      );
+    });
+  })
+  .describe("Parameters for bulk creating TTD entities");
+
+export const BulkCreateEntitiesOutputSchema = z
+  .object({
+    entityType: z.string(),
+    totalRequested: z.number(),
+    totalSucceeded: z.number(),
+    totalFailed: z.number(),
+    results: z.array(
+      z.object({
+        success: z.boolean(),
+        entity: z.record(z.any()).optional(),
+        error: z.string().optional(),
+      })
+    ),
+    timestamp: z.string().datetime(),
+  })
+  .describe("Bulk entity creation results");
+
+type BulkCreateInput = z.infer<typeof BulkCreateEntitiesInputSchema>;
+type BulkCreateOutput = z.infer<typeof BulkCreateEntitiesOutputSchema>;
+
+export async function bulkCreateEntitiesLogic(
+  input: BulkCreateInput,
+  context: RequestContext,
+  sdkContext?: SdkContext
+): Promise<BulkCreateOutput> {
+  const { ttdService } = resolveSessionServices(sdkContext);
+  const items = input.items.map((item) =>
+    mergeParentIdsIntoData(item, input as Record<string, unknown>)
+  );
+
+  const { results } = await ttdService.bulkCreateEntities(
+    input.entityType as TtdEntityType,
+    items,
+    context
+  );
+
+  const succeeded = results.filter((r) => r.success).length;
+
+  return {
+    entityType: input.entityType,
+    totalRequested: items.length,
+    totalSucceeded: succeeded,
+    totalFailed: items.length - succeeded,
+    results: results.map((r) => ({
+      success: r.success,
+      entity: r.entity as Record<string, any> | undefined,
+      error: r.error,
+    })),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export function bulkCreateEntitiesResponseFormatter(result: BulkCreateOutput): any {
+  return [
+    {
+      type: "text" as const,
+      text: `Bulk create ${result.entityType}: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+    },
+  ];
+}
+
+export const bulkCreateEntitiesTool = {
+  name: TOOL_NAME,
+  title: TOOL_TITLE,
+  description: TOOL_DESCRIPTION,
+  inputSchema: BulkCreateEntitiesInputSchema,
+  outputSchema: BulkCreateEntitiesOutputSchema,
+  annotations: {
+    readOnlyHint: false,
+    openWorldHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
+  },
+  logic: bulkCreateEntitiesLogic,
+  responseFormatter: bulkCreateEntitiesResponseFormatter,
+};

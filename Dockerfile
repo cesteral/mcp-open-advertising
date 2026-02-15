@@ -1,4 +1,4 @@
-# Multi-stage Dockerfile for BidShifter MCP servers
+# Multi-stage Dockerfile for Cesteral MCP servers
 # Build with: docker build --build-arg SERVER_NAME=dbm-mcp -t dbm-mcp .
 
 FROM node:20-alpine AS base
@@ -12,6 +12,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/dbm-mcp/package.json ./packages/dbm-mcp/
 COPY packages/dv360-mcp/package.json ./packages/dv360-mcp/
 COPY packages/ttd-mcp/package.json ./packages/ttd-mcp/
+COPY packages/gads-mcp/package.json ./packages/gads-mcp/
 RUN pnpm install --frozen-lockfile
 
 # Build all packages

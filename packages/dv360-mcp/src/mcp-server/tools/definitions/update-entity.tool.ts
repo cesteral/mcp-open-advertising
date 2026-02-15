@@ -2,7 +2,6 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   getSupportedEntityTypesDynamic,
-  getEntityConfigDynamic,
 } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { createSimplifiedUpdateEntityInputSchema } from "../utils/simplified-schemas.js";
@@ -11,6 +10,7 @@ import {
   getEntityExamples,
   findMatchingExample,
 } from "../utils/entity-examples.js";
+import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -43,46 +43,20 @@ const FullUpdateEntityInputSchema = z
     updateMask: z.string(),
     reason: z.string().optional(),
   })
-  .refine(
-    (data) => {
-      // Get entity configuration to check required parent IDs
-      const config = getEntityConfigDynamic(data.entityType);
-
-      // Validate all required parent IDs are present
-      for (const requiredParentId of config.parentIds) {
-        if (!data[requiredParentId as keyof typeof data]) {
-          return false;
-        }
-      }
-
-      // Validate entity ID is present
-      const entityIdField = `${data.entityType}Id` as keyof typeof data;
-      if (!data[entityIdField]) {
-        return false;
-      }
-
-      return true;
-    },
-    (data) => {
-      // Generate helpful error message with specific missing IDs
-      const config = getEntityConfigDynamic(data.entityType);
-      const entityIdField = `${data.entityType}Id`;
-
-      // Check which parent IDs are missing
-      const missingParentIds = config.parentIds.filter((id) => !data[id as keyof typeof data]);
-
-      // Check if entity ID is missing
-      const missingEntityId = !data[entityIdField as keyof typeof data] ? [entityIdField] : [];
-
-      const allMissingIds = [...missingParentIds, ...missingEntityId];
-      const allRequiredIds = [...config.parentIds, entityIdField];
-
-      return {
-        message: `Missing required ID(s) for updating ${data.entityType}: ${allMissingIds.join(", ")}. Required: ${allRequiredIds.join(", ")}`,
-        path: allMissingIds,
-      };
-    }
-  );
+  .superRefine((input, ctx) => {
+    const mergedData = mergeIdsIntoData(
+      input.entityType,
+      input.data as Record<string, unknown>,
+      input as Record<string, unknown>
+    );
+    addIdValidationIssues(ctx, {
+      entityType: input.entityType,
+      input: input as Record<string, unknown>,
+      data: mergedData,
+      operation: "update",
+      requireEntityId: true,
+    });
+  });
 
 // Export simplified schema for MCP
 export const UpdateEntityInputSchema = createSimplifiedUpdateEntityInputSchema().describe(
@@ -105,6 +79,11 @@ export async function updateEntityLogic(
 ): Promise<UpdateEntityOutput> {
   // Server-side validation using full schema
   const validatedInput = FullUpdateEntityInputSchema.parse(input);
+  const mergedData = mergeIdsIntoData(
+    validatedInput.entityType,
+    validatedInput.data,
+    validatedInput as Record<string, unknown>
+  );
 
   const { dv360Service } = resolveSessionServices(sdkContext);
   const entityIds = extractEntityIds(validatedInput, validatedInput.entityType);
@@ -128,7 +107,7 @@ export async function updateEntityLogic(
     const updated = await dv360Service.updateEntity(
       validatedInput.entityType,
       entityIds,
-      validatedInput.data,
+      mergedData,
       validatedInput.updateMask,
       context
     );

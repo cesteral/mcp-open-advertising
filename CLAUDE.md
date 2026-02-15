@@ -4,16 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-BidShifter is an AI-native programmatic advertising optimization platform built on three independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), and The Trade Desk campaign management (ttd-mcp).
+Cesteral is an AI-native programmatic advertising optimization platform built on four independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), and Google Ads campaign management (gads-mcp).
 
 ### Current Project Status
 
 **Phase: Production-Ready ✅**
 
-All three MCP servers are fully implemented with live API integrations:
+All four MCP servers are fully implemented with live API integrations:
 - **dbm-mcp**: Bid Manager API v2 for DV360 reporting
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
+- **gads-mcp**: Google Ads REST API v23 for Google Ads campaign management & reporting
 
 ## Essential Commands
 
@@ -29,6 +30,7 @@ pnpm run build
 cd packages/dbm-mcp && pnpm run dev:http
 cd packages/dv360-mcp && pnpm run dev:http
 cd packages/ttd-mcp && pnpm run dev:http
+cd packages/gads-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -63,6 +65,9 @@ Use the dev-server script (automatically uses correct port for each server):
 
 # Start ttd-mcp (port 3003)
 ./scripts/dev-server.sh ttd-mcp
+
+# Start gads-mcp (port 3004)
+./scripts/dev-server.sh gads-mcp
 ```
 
 ## Monorepo Architecture
@@ -70,12 +75,13 @@ Use the dev-server script (automatically uses correct port for each server):
 This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace consists of:
 
 ### Core Packages
-1. **`@bidshifter/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
+1. **`@cesteral/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Three MCP Servers
-1. **`@bidshifter/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
-2. **`@bidshifter/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
-3. **`@bidshifter/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
+### Four MCP Servers
+1. **`@cesteral/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
+2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
+3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
+4. **`@cesteral/gads-mcp`** - Google Ads campaign management & reporting (CRUD via Google Ads REST API v23)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -87,7 +93,7 @@ Build tasks have dependencies defined in `turbo.json`:
 - `typecheck` depends on `^build`
 - `test` depends on `^build`
 
-**Critical**: When modifying `@bidshifter/shared`, rebuild all packages:
+**Critical**: When modifying `@cesteral/shared`, rebuild all packages:
 ```bash
 pnpm run build
 ```
@@ -119,7 +125,7 @@ packages/{server-name}/
 │   └── utils/                      # Helper utilities
 ```
 
-**Note**: The `mcp-ts-quickstart-template/` directory contains a more sophisticated template with additional infrastructure (McpError, withToolAuth, RequestContext patterns, elicitation). BidShifter currently uses a simplified version focused on the core MCP protocol. Refer to the template for advanced patterns if needed.
+**Note**: The `mcp-ts-quickstart-template/` directory contains a more sophisticated template with additional infrastructure (McpError, withToolAuth, RequestContext patterns, elicitation). Cesteral currently uses a simplified version focused on the core MCP protocol. Refer to the template for advanced patterns if needed.
 
 ### Creating a New MCP Tool
 
@@ -369,10 +375,10 @@ export class MyService {
 ## Common Development Patterns
 
 ### Error Handling
-Use `formatErrorForMcp` from `@bidshifter/shared` for consistent error responses:
+Use `formatErrorForMcp` from `@cesteral/shared` for consistent error responses:
 
 ```typescript
-import { formatErrorForMcp } from "@bidshifter/shared";
+import { formatErrorForMcp } from "@cesteral/shared";
 
 try {
   // Tool logic
@@ -386,7 +392,7 @@ try {
 Use structured logging via Pino:
 
 ```typescript
-import { createLogger } from "@bidshifter/shared";
+import { createLogger } from "@cesteral/shared";
 
 const logger = createLogger("component-name");
 
@@ -436,18 +442,62 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `dv360_adjust_line_item_bids` | Batch adjust line item bids | `advertiserId`, `adjustments[]` |
 | `dv360_bulk_update_status` | Batch update statuses for entities | `entityType`, `entityIds[]`, `entityStatus` |
 
-### ttd-mcp (The Trade Desk Server) Tools
+### ttd-mcp (The Trade Desk Server) Tools — 14 Tools, 9 Entity Types
 
+**Supported entity types:** `advertiser`, `campaign`, `adGroup`, `ad`, `creative`, `siteList`, `deal`, `conversionTracker`, `bidList`
+
+#### Core CRUD
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `ttd_create_entity` | Create a TTD entity (advertiser, campaign, ad group, ad) | `entityType`, `data` |
-| `ttd_get_entity` | Retrieve a single TTD entity by type/id | `entityType`, `entityId` |
 | `ttd_list_entities` | List TTD entities with filters/paging | `entityType`, optional filters |
-| `ttd_update_entity` | Update a TTD entity | `entityType`, `entityId`, `data` |
+| `ttd_get_entity` | Retrieve a single TTD entity by type/id | `entityType`, `entityId` |
+| `ttd_create_entity` | Create a TTD entity | `entityType`, `data` |
+| `ttd_update_entity` | Update a TTD entity (PUT) | `entityType`, `entityId`, `data` |
 | `ttd_delete_entity` | Delete a TTD entity | `entityType`, `entityId` |
-| `ttd_get_report` | Generate and retrieve TTD performance reports | `reportType`, `startDate`, `endDate`, filters |
+| `ttd_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
 
-### How the Three Servers Work Together
+#### Reporting
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `ttd_get_report` | Generate async report via MyReports V3 API | `reportName`, `dateRange`, `dimensions`, `metrics`, `advertiserIds` |
+| `ttd_download_report` | Download & parse report CSV from URL | `downloadUrl`, `maxRows` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `ttd_bulk_create_entities` | Batch create campaigns/ad groups (up to 50) | `entityType`, `items[]` |
+| `ttd_bulk_update_entities` | Batch update campaigns/ad groups (up to 50) | `entityType`, `items[]` |
+| `ttd_bulk_update_status` | Batch pause/resume/archive entities | `entityType`, `entityIds[]`, `status` |
+| `ttd_archive_entities` | Batch archive (soft-delete) entities | `entityType`, `entityIds[]` |
+| `ttd_adjust_bids` | Batch adjust ad group bid CPMs (safe read-modify-write) | `adjustments[]` |
+
+#### Advanced
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `ttd_graphql_query` | Execute GraphQL query/mutation against TTD GraphQL API | `query`, `variables` |
+
+### gads-mcp (Google Ads Server) Tools — 9 Tools, 6 Entity Types
+
+**Supported entity types:** `campaign`, `adGroup`, `ad`, `keyword`, `campaignBudget`, `extension`
+
+#### Read Tools
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `gads_gaql_search` | Execute arbitrary GAQL queries | `customerId`, `query`, `pageSize` |
+| `gads_list_accounts` | List accessible customer accounts | _(none)_ |
+| `gads_get_entity` | Get a single entity by type and ID | `entityType`, `customerId`, `entityId` |
+| `gads_list_entities` | List entities with GAQL filters | `entityType`, `customerId`, `filters` |
+
+#### Write Tools
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `gads_create_entity` | Create entity via :mutate API | `entityType`, `customerId`, `data` |
+| `gads_update_entity` | Update entity with updateMask | `entityType`, `customerId`, `entityId`, `data`, `updateMask` |
+| `gads_remove_entity` | Remove entity via :mutate API | `entityType`, `customerId`, `entityId` |
+| `gads_bulk_mutate` | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
+| `gads_bulk_update_status` | Batch enable/pause/remove entities | `entityType`, `customerId`, `entityIds[]`, `status` |
+
+### How the Four Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**
 1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
@@ -476,6 +526,7 @@ Each server runs on a different port:
 - `dbm-mcp`: port 3001
 - `dv360-mcp`: port 3002
 - `ttd-mcp`: port 3003
+- `gads-mcp`: port 3004
 
 Test SSE endpoint:
 ```bash
@@ -511,12 +562,12 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 ```json
 {
   "mcpServers": {
-    "bidshifter-reporting": {
-      "url": "https://reporting.bidshifter.io/mcp",
+    "cesteral-reporting": {
+      "url": "https://reporting.cesteral.io/mcp",
       "apiKey": "your-reporting-api-key"
     },
-    "bidshifter-management": {
-      "url": "https://management.bidshifter.io/mcp",
+    "cesteral-management": {
+      "url": "https://management.cesteral.io/mcp",
       "apiKey": "your-management-api-key"
     }
   }
@@ -525,8 +576,8 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 
 ## Key Design Principles
 
-1. **Separation of Concerns**: Three MCP servers with distinct responsibilities (reporting, DV360 management, TTD management)
-2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management)
+1. **Separation of Concerns**: Four MCP servers with distinct responsibilities (reporting, DV360 management, TTD management, Google Ads management)
+2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management, Google Ads REST API for Google Ads management)
 3. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
 4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
 5. **Observability**: Structured logging throughout, designed for OpenTelemetry integration
@@ -561,7 +612,7 @@ export function createMcpHttpServer(): express.Application {
 
 When making changes that span multiple packages:
 
-1. Make changes to `@bidshifter/shared`
+1. Make changes to `@cesteral/shared`
 2. Build from root: `pnpm run build` (Turborepo handles dependency order)
 3. Changes automatically available to dependent packages via workspace protocol (`workspace:*`)
 
@@ -580,4 +631,4 @@ The `mcp-ts-quickstart-template/` directory contains a production-grade MCP serv
 
 See `mcp-ts-quickstart-template/AGENTS.md` for detailed architectural guidelines if adopting these patterns.
 
-**Current Status**: BidShifter uses a simplified MCP implementation. These advanced patterns are available for future adoption if needed.
+**Current Status**: Cesteral uses a simplified MCP implementation. These advanced patterns are available for future adoption if needed.

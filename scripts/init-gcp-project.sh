@@ -1,5 +1,5 @@
 #!/bin/bash
-# Initialize GCP project for BidShifter MCP Servers
+# Initialize GCP project for Cesteral MCP Servers
 # This script sets up the GCP project with required APIs, service accounts, and resources
 
 set -e
@@ -36,13 +36,13 @@ PROJECT_ID="" # Will be set based on environment
 # Set project ID based on environment
 case $ENVIRONMENT in
     dev)
-        PROJECT_ID="bidshifter-dev" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-dev" # TODO: Update with actual project ID
         ;;
     staging)
-        PROJECT_ID="bidshifter-staging" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-staging" # TODO: Update with actual project ID
         ;;
     prod)
-        PROJECT_ID="bidshifter-prod" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-prod" # TODO: Update with actual project ID
         ;;
     *)
         print_error "Invalid environment: $ENVIRONMENT"
@@ -86,7 +86,7 @@ print_info "All required APIs enabled successfully!"
 # Create Artifact Registry repository
 print_info "Creating Artifact Registry repository..."
 REGION="europe-west2"
-REPO_NAME="bidshifter"
+REPO_NAME="cesteral"
 
 if gcloud artifacts repositories describe $REPO_NAME \
     --location=$REGION \
@@ -96,7 +96,7 @@ else
     gcloud artifacts repositories create $REPO_NAME \
         --repository-format=docker \
         --location=$REGION \
-        --description="Container images for BidShifter MCP Servers" \
+        --description="Container images for Cesteral MCP Servers" \
         --project=$PROJECT_ID
     print_info "Artifact Registry repository created: $REPO_NAME"
 fi

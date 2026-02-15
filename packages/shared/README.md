@@ -1,6 +1,6 @@
-# @bidshifter/shared
+# @cesteral/shared
 
-Shared infrastructure utilities and authentication for BidShifter MCP servers.
+Shared infrastructure utilities and authentication for Cesteral MCP servers.
 
 ## Contents
 
@@ -22,13 +22,13 @@ Shared infrastructure utilities and authentication for BidShifter MCP servers.
 
 ```typescript
 // Import utilities
-import { createLogger, McpError, JsonRpcErrorCode } from "@bidshifter/shared/utils";
+import { createLogger, McpError, JsonRpcErrorCode } from "@cesteral/shared/utils";
 
 // Import auth
-import { createAuthStrategy, verifyJwt } from "@bidshifter/shared/auth";
+import { createAuthStrategy, verifyJwt } from "@cesteral/shared/auth";
 
 // Or import everything
-import { createLogger, createAuthStrategy, registerToolsFromDefinitions } from "@bidshifter/shared";
+import { createLogger, createAuthStrategy, registerToolsFromDefinitions } from "@cesteral/shared";
 ```
 
 ## Context Efficiency Standards

@@ -19,9 +19,17 @@ import {
   registerActiveSessionsGauge,
   recordAuthValidation,
   createAuthStrategy,
+  isValidSessionId,
+  generateSessionId,
+  validateProtocolVersion,
+  SUPPORTED_PROTOCOL_VERSIONS,
+  buildAllowedOrigins,
+  extractHeadersMap,
+  oauthProtectedResourceBody,
+  SessionManager,
   type AuthMode,
   type GoogleAuthAdapter,
-} from "@bidshifter/shared";
+} from "@cesteral/shared";
 import {
   createSessionServices,
   sessionServiceStore,
@@ -34,14 +42,6 @@ import { rateLimiter } from "../../utils/security/rate-limiter.js";
 const pkg: { version: string } = JSON.parse(
   readFileSync(new URL("../../../package.json", import.meta.url), "utf-8")
 );
-
-// ---------------------------------------------------------------------------
-// Session ID validation
-// ---------------------------------------------------------------------------
-const SESSION_ID_PATTERN = /^[a-f0-9-]{20,100}$/i;
-function isValidSessionId(id: string): boolean {
-  return SESSION_ID_PATTERN.test(id);
-}
 
 // ---------------------------------------------------------------------------
 // Session transport wrapper
@@ -76,12 +76,7 @@ export function createMcpHttpServer(
 ): { app: Hono<{ Bindings: HonoBindings }>; shutdown: () => Promise<void> } {
   const app = new Hono<{ Bindings: HonoBindings }>();
 
-  // Track active sessions for timeout sweep
-  const sessionCreatedAt = new Map<string, number>();
-
-  // Cache MCP server instances per session to avoid re-registering
-  // tools/resources/prompts on every request (MCP spec: sessions are stateful)
-  const sessionServers = new Map<string, Awaited<ReturnType<typeof createMcpServer>>>();
+  const sessions = new SessionManager<Awaited<ReturnType<typeof createMcpServer>>>(sessionServiceStore);
 
   // Register active sessions gauge
   registerActiveSessionsGauge(() => sessionServiceStore.size);
@@ -89,7 +84,7 @@ export function createMcpHttpServer(
   // -----------------------------------------------------------------------
   // CORS
   // -----------------------------------------------------------------------
-  const allowedOrigin = buildAllowedOrigins(config, logger);
+  const allowedOrigin = buildAllowedOrigins(config.mcpAllowedOrigins, config.nodeEnv, logger);
   app.use(
     "*",
     cors({
@@ -157,26 +152,14 @@ export function createMcpHttpServer(
 
   // -----------------------------------------------------------------------
   // RFC 9728 Protected Resource Metadata
-  // Must be accessible without authentication for discovery.
   // -----------------------------------------------------------------------
   app.get("/.well-known/oauth-protected-resource", (c) => {
-    if (config.mcpAuthMode === "jwt") {
-      return c.json({
-        resource: `${c.req.url.replace("/.well-known/oauth-protected-resource", "")}`,
-        bearer_methods_supported: ["header"],
-        scopes_supported: [],
-      });
-    }
-    return c.json(
-      { error: "OAuth not configured on this server" },
-      404
-    );
+    const { body, status } = oauthProtectedResourceBody(config.mcpAuthMode, c.req.url);
+    return c.json(body, status as 200);
   });
 
   // -----------------------------------------------------------------------
-  // GET /mcp — MCP Spec 2025-11-25: return 405 Method Not Allowed
-  // since this server does not offer a standalone SSE stream.
-  // Server info is available via GET /health instead.
+  // GET /mcp — 405 Method Not Allowed
   // -----------------------------------------------------------------------
   app.get("/mcp", (c) => {
     return c.body(null, 405);
@@ -191,14 +174,7 @@ export function createMcpHttpServer(
       return c.json({ error: "Mcp-Session-Id header required" }, 400);
     }
     logger.info({ sessionId }, "Session termination requested");
-    // Clean up cached MCP server instance
-    const cachedServer = sessionServers.get(sessionId);
-    if (cachedServer) {
-      await cachedServer.close().catch(() => {});
-      sessionServers.delete(sessionId);
-    }
-    sessionServiceStore.delete(sessionId);
-    sessionCreatedAt.delete(sessionId);
+    await sessions.cleanupSession(sessionId);
     return c.json({ status: "terminated", sessionId }, 200);
   });
 
@@ -206,30 +182,25 @@ export function createMcpHttpServer(
   // POST /mcp — JSON-RPC over Streamable HTTP
   // -----------------------------------------------------------------------
   app.post("/mcp", async (c) => {
-    // Establish request context for correlation
-    const requestId = extractRequestId(
-      Object.fromEntries([...c.req.raw.headers.entries()].map(([k, v]) => [k, v]))
-    );
+    const requestId = extractRequestId(extractHeadersMap(c.req.raw.headers));
     const reqCtx = createRequestContext(config.serviceName);
     reqCtx.requestId = requestId;
 
     return runWithRequestContext(reqCtx, async () => {
 
-    // Validate MCP-Protocol-Version header (spec 2025-11-25)
-    // Default to 2025-03-26 for backwards compatibility when header is absent
+    // Validate MCP-Protocol-Version header
     const protocolVersion =
       c.req.header("mcp-protocol-version") ?? "2025-03-26";
-    const supportedVersions = ["2025-03-26", "2025-06-18", "2025-11-25"];
-    if (!supportedVersions.includes(protocolVersion)) {
+    if (!validateProtocolVersion(protocolVersion)) {
       logger.warn(
-        { protocolVersion, supportedVersions },
+        { protocolVersion, supportedVersions: SUPPORTED_PROTOCOL_VERSIONS },
         "Unsupported MCP protocol version"
       );
       return c.json(
         {
           error: "Unsupported MCP protocol version",
           protocolVersion,
-          supportedVersions,
+          supportedVersions: SUPPORTED_PROTOCOL_VERSIONS,
         },
         400
       );
@@ -253,7 +224,6 @@ export function createMcpHttpServer(
       return c.json({ error: "Invalid session ID format" }, 400);
     }
 
-    // If existing session, validate it exists
     if (providedSessionId && !sessionServiceStore.get(providedSessionId)) {
       return c.json({ error: "Session not found or expired" }, 404);
     }
@@ -261,9 +231,7 @@ export function createMcpHttpServer(
     // For new sessions, authenticate via configured strategy
     let sessionId = providedSessionId;
     if (!sessionId) {
-      const headers = Object.fromEntries(
-        [...c.req.raw.headers.entries()].map(([k, v]) => [k, v])
-      );
+      const headers = extractHeadersMap(c.req.raw.headers);
 
       let authResult;
       try {
@@ -283,11 +251,8 @@ export function createMcpHttpServer(
         );
       }
 
-      // Generate session ID and create session services
-      const { randomBytes } = await import("crypto");
-      sessionId = randomBytes(32).toString("hex");
+      sessionId = generateSessionId();
 
-      // For google-headers mode, the adapter is returned for API calls
       const adapter = authResult.googleAuthAdapter as GoogleAuthAdapter | undefined;
       if (adapter) {
         const services = createSessionServices(
@@ -303,7 +268,7 @@ export function createMcpHttpServer(
           400
         );
       }
-      sessionCreatedAt.set(sessionId, Date.now());
+      sessions.trackSession(sessionId);
 
       logger.info(
         {
@@ -317,10 +282,10 @@ export function createMcpHttpServer(
     }
 
     // Get or create cached MCP server for this session
-    let mcpServer = sessionServers.get(sessionId);
+    let mcpServer = sessions.getServer(sessionId);
     if (!mcpServer) {
       mcpServer = await createMcpServer(logger, sessionId);
-      sessionServers.set(sessionId, mcpServer);
+      sessions.setServer(sessionId, mcpServer);
       logger.debug({ sessionId }, "Created new MCP server instance for session");
     }
 
@@ -330,7 +295,6 @@ export function createMcpHttpServer(
       await mcpServer.connect(transport);
       const response = await transport.handleRequest(c);
 
-      // Add session ID header for stateful sessions
       if (response) {
         response.headers.set("Mcp-Session-Id", sessionId);
         return response;
@@ -345,45 +309,10 @@ export function createMcpHttpServer(
     }); // end runWithRequestContext
   });
 
-  // -----------------------------------------------------------------------
-  // Session timeout sweep
-  // -----------------------------------------------------------------------
-  const timeoutMs = config.mcpStatefulSessionTimeoutMs;
-  const sweepInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [sessionId, createdAt] of sessionCreatedAt) {
-      if (now - createdAt > timeoutMs) {
-        logger.info(
-          { sessionId, ageMs: now - createdAt },
-          "Session timed out — cleaning up"
-        );
-        // Clean up cached MCP server instance
-        const cachedServer = sessionServers.get(sessionId);
-        if (cachedServer) {
-          cachedServer.close().catch(() => {});
-          sessionServers.delete(sessionId);
-        }
-        sessionServiceStore.delete(sessionId);
-        sessionCreatedAt.delete(sessionId);
-      }
-    }
-  }, 60_000);
-  sweepInterval.unref();
+  // Start session timeout sweep
+  sessions.startSweep(config.mcpStatefulSessionTimeoutMs, logger);
 
-  // -----------------------------------------------------------------------
-  // Shutdown helper
-  // -----------------------------------------------------------------------
-  async function shutdown(): Promise<void> {
-    clearInterval(sweepInterval);
-    // Close all cached MCP server instances
-    for (const [, cachedServer] of sessionServers) {
-      await cachedServer.close().catch(() => {});
-    }
-    sessionServers.clear();
-    sessionCreatedAt.clear();
-  }
-
-  return { app, shutdown };
+  return { app, shutdown: () => sessions.shutdown() };
 }
 
 // ---------------------------------------------------------------------------
@@ -410,29 +339,4 @@ export async function startHttpServer(
   );
 
   return { server, shutdown };
-}
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-function buildAllowedOrigins(
-  config: AppConfig,
-  logger: Logger
-): string | string[] {
-  if (config.mcpAllowedOrigins) {
-    const origins = config.mcpAllowedOrigins
-      .split(",")
-      .map((o) => o.trim())
-      .filter(Boolean);
-    logger.info({ origins }, "CORS configured with explicit origins");
-    return origins;
-  }
-  if (config.nodeEnv === "production") {
-    logger.warn(
-      "No MCP_ALLOWED_ORIGINS configured in production — CORS will reject all cross-origin requests. " +
-        "Set MCP_ALLOWED_ORIGINS to a comma-separated list of allowed origins."
-    );
-    return [];
-  }
-  return "*";
 }

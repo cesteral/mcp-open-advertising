@@ -1,4 +1,4 @@
-# @bidshifter/dbm-mcp
+# @cesteral/dbm-mcp
 
 DBM MCP Server - Generic cross-platform reporting and metrics server.
 
@@ -59,7 +59,7 @@ Get real-time pacing status for a campaign (actual vs expected delivery).
 ### Current Status
 **Phase: Production-Ready**
 
-All tools are fully implemented using Bid Manager API v2 for DV360 reporting. Entity retrieval is handled by the separate `@bidshifter/dv360-mcp` server.
+All tools are fully implemented using Bid Manager API v2 for DV360 reporting. Entity retrieval is handled by the separate `@cesteral/dv360-mcp` server.
 
 ## Development
 

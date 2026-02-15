@@ -1,7 +1,7 @@
 /**
  * Tracing utilities for dbm-mcp
  *
- * Core tracing helpers are in @bidshifter/shared.
+ * Core tracing helpers are in @cesteral/shared.
  * This file adds Bid Manager API-specific span helpers.
  */
 
@@ -12,10 +12,10 @@ export {
   setSpanAttribute,
   recordSpanError,
   type Span,
-} from "@bidshifter/shared";
+} from "@cesteral/shared";
 
-import { withSpan } from "@bidshifter/shared";
-import type { Span } from "@bidshifter/shared";
+import { withSpan } from "@cesteral/shared";
+import type { Span } from "@cesteral/shared";
 
 /**
  * Create a span for Bid Manager API calls

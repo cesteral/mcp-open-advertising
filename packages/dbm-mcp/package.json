@@ -1,5 +1,5 @@
 {
-  "name": "@bidshifter/dbm-mcp",
+  "name": "@cesteral/dbm-mcp",
   "version": "1.0.0",
   "description": "DBM MCP Server - Generic cross-platform reporting and metrics",
   "type": "module",
@@ -17,7 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@bidshifter/shared": "workspace:*",
+    "@cesteral/shared": "workspace:*",
     "@hono/mcp": "^0.2.3",
     "@hono/node-server": "^1.19.9",
     "@modelcontextprotocol/sdk": "^1.26.0",

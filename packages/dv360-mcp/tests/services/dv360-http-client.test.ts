@@ -2,7 +2,7 @@ import "reflect-metadata";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DV360HttpClient } from "../../src/services/dv360/dv360-http-client.js";
 import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
-import type { GoogleAuthAdapter } from "@bidshifter/shared";
+import type { GoogleAuthAdapter } from "@cesteral/shared";
 
 // ---------------------------------------------------------------------------
 // Mocks

@@ -1,0 +1,221 @@
+import type { Logger } from "pino";
+import type { GAdsAuthAdapter } from "../../auth/gads-auth-adapter.js";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { fetchWithTimeout } from "../../utils/network/fetch-with-timeout.js";
+import type { RequestContext } from "../../utils/internal/request-context.js";
+
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1_000;
+const MAX_BACKOFF_MS = 10_000;
+
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+/**
+ * Google Ads API error response structure.
+ * The API returns structured error objects with detailed error codes.
+ */
+interface GoogleAdsFailure {
+  errors?: Array<{
+    errorCode?: Record<string, string>;
+    message?: string;
+    trigger?: { stringValue?: string };
+    location?: {
+      fieldPathElements?: Array<{ fieldName?: string; index?: number }>;
+    };
+  }>;
+}
+
+/**
+ * Parse Google Ads error response body into a human-readable summary.
+ */
+function parseGAdsErrors(body: string): string {
+  try {
+    const parsed = JSON.parse(body) as { error?: { details?: GoogleAdsFailure[] }; message?: string };
+
+    // Standard Google API error format
+    if (parsed.error?.details) {
+      const failures = parsed.error.details;
+      const messages: string[] = [];
+      for (const failure of failures) {
+        if (failure.errors) {
+          for (const err of failure.errors) {
+            const code = err.errorCode
+              ? Object.entries(err.errorCode).map(([k, v]) => `${k}=${v}`).join(", ")
+              : "unknown";
+            messages.push(`[${code}] ${err.message || "No message"}`);
+          }
+        }
+      }
+      if (messages.length > 0) {
+        return messages.join("; ");
+      }
+    }
+
+    // Fallback to top-level message
+    if (parsed.error && typeof parsed.error === "object" && "message" in parsed.error) {
+      return (parsed.error as { message: string }).message;
+    }
+
+    return body.substring(0, 500);
+  } catch {
+    return body.substring(0, 500);
+  }
+}
+
+/**
+ * Shared HTTP client for Google Ads API requests.
+ *
+ * Delegates authentication to the injected GAdsAuthAdapter (which handles
+ * token caching, refresh, and mutex internally). Provides retry logic with
+ * exponential backoff and consistent error handling.
+ *
+ * Automatically includes the required `developer-token` and optional
+ * `login-customer-id` headers on every request.
+ */
+export class GAdsHttpClient {
+  constructor(
+    private authAdapter: GAdsAuthAdapter,
+    private baseUrl: string,
+    private logger: Logger
+  ) {}
+
+  get developerToken(): string {
+    return this.authAdapter.developerToken;
+  }
+
+  get loginCustomerId(): string | undefined {
+    return this.authAdapter.loginCustomerId;
+  }
+
+  /**
+   * Make an authenticated request to the Google Ads API.
+   *
+   * - Prepends `baseUrl` to `path`.
+   * - Includes `developer-token` and optional `login-customer-id` headers.
+   * - Retries on 429 and 5xx with exponential backoff (respects Retry-After).
+   * - Parses JSON or returns `{}` for 204 No Content.
+   */
+  async fetch(
+    path: string,
+    context?: RequestContext,
+    options?: RequestInit
+  ): Promise<unknown> {
+    const url = `${this.baseUrl}${path}`;
+
+    this.logger.debug(
+      { url, method: options?.method || "GET", requestId: context?.requestId },
+      "Making Google Ads API request"
+    );
+
+    return this.executeWithRetry(url, 30_000, context, options);
+  }
+
+  private async executeWithRetry(
+    url: string,
+    timeoutMs: number,
+    context?: RequestContext,
+    options?: RequestInit
+  ): Promise<unknown> {
+    let lastError: McpError | undefined;
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      const accessToken = await this.authAdapter.getAccessToken();
+
+      const gadsHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "developer-token": this.authAdapter.developerToken,
+      };
+
+      if (this.authAdapter.loginCustomerId) {
+        gadsHeaders["login-customer-id"] = this.authAdapter.loginCustomerId;
+      }
+
+      const response = await fetchWithTimeout(url, timeoutMs, context, {
+        ...options,
+        headers: {
+          ...gadsHeaders,
+          ...options?.headers,
+        },
+      });
+
+      if (response.ok) {
+        if (response.status === 204) {
+          return {};
+        }
+        return response.json();
+      }
+
+      const errorBody = await response.text().catch(() => "");
+      const parsedError = parseGAdsErrors(errorBody);
+
+      const mcpError = new McpError(
+        response.status >= 500
+          ? JsonRpcErrorCode.ServiceUnavailable
+          : response.status === 429
+            ? JsonRpcErrorCode.RateLimited
+            : response.status === 403
+              ? JsonRpcErrorCode.Forbidden
+              : JsonRpcErrorCode.InvalidRequest,
+        `Google Ads API request failed: ${response.status} ${response.statusText} — ${parsedError}`,
+        {
+          requestId: context?.requestId,
+          httpStatus: response.status,
+          url,
+          method: options?.method ?? "GET",
+          errorBody: errorBody.substring(0, 500),
+          attempt,
+        }
+      );
+
+      if (!isRetryableStatus(response.status) || attempt >= MAX_RETRIES) {
+        throw mcpError;
+      }
+
+      lastError = mcpError;
+
+      let delayMs = Math.min(
+        INITIAL_BACKOFF_MS * Math.pow(2, attempt),
+        MAX_BACKOFF_MS
+      );
+
+      if (response.status === 429) {
+        const retryAfter = response.headers.get("Retry-After");
+        if (retryAfter) {
+          const retryAfterSeconds = parseInt(retryAfter, 10);
+          if (!isNaN(retryAfterSeconds)) {
+            delayMs = Math.min(retryAfterSeconds * 1000, MAX_BACKOFF_MS);
+          }
+        }
+      }
+
+      this.logger.warn(
+        {
+          url,
+          method: options?.method ?? "GET",
+          status: response.status,
+          attempt: attempt + 1,
+          maxRetries: MAX_RETRIES,
+          delayMs,
+          requestId: context?.requestId,
+        },
+        "Retrying Google Ads API request after transient error"
+      );
+
+      await this.sleep(delayMs);
+    }
+
+    throw (
+      lastError ??
+      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
+        requestId: context?.requestId,
+      })
+    );
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}

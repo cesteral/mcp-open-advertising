@@ -23,7 +23,7 @@ variable "environment" {
 variable "network_prefix" {
   description = "Prefix for network resource names"
   type        = string
-  default     = "bidshifter"
+  default     = "cesteral"
 }
 
 # ============================================================================

@@ -1,5 +1,5 @@
 /**
- * Rate Limiter — shared across all BidShifter MCP servers
+ * Rate Limiter — shared across all Cesteral MCP servers
  *
  * In-memory sliding window rate limiter with wildcard pattern support.
  * Each server configures its own limits (e.g., "dv360:*" or "bidmanager:*").

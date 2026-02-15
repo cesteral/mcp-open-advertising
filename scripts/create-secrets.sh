@@ -1,5 +1,5 @@
 #!/bin/bash
-# Create and populate Secret Manager secrets for BidShifter
+# Create and populate Secret Manager secrets for Cesteral
 # This script prompts for sensitive values and stores them securely
 
 set -e
@@ -35,13 +35,13 @@ PROJECT_ID="" # Will be set based on environment
 # Set project ID based on environment
 case $ENVIRONMENT in
     dev)
-        PROJECT_ID="bidshifter-dev" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-dev" # TODO: Update with actual project ID
         ;;
     staging)
-        PROJECT_ID="bidshifter-staging" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-staging" # TODO: Update with actual project ID
         ;;
     prod)
-        PROJECT_ID="bidshifter-prod" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-prod" # TODO: Update with actual project ID
         ;;
     *)
         print_error "Invalid environment: $ENVIRONMENT"
@@ -77,7 +77,7 @@ create_or_update_secret() {
         gcloud secrets create $secret_name \
             --project=$PROJECT_ID \
             --replication-policy="automatic" \
-            --labels="environment=$ENVIRONMENT,application=bidshifter"
+            --labels="environment=$ENVIRONMENT,application=cesteral"
         print_info "Created secret: $secret_name"
     fi
 
@@ -104,55 +104,80 @@ create_or_update_secret() {
 
 # JWT Secret Key
 create_or_update_secret \
-    "bidshifter-jwt-secret-key" \
+    "cesteral-jwt-secret-key" \
     "JWT secret key for MCP server authentication" \
     "Enter JWT secret key (generate with: openssl rand -base64 32)" \
     false
 
 # DV360 OAuth credentials
 create_or_update_secret \
-    "bidshifter-dv360-oauth-client-id" \
+    "cesteral-dv360-oauth-client-id" \
     "DV360 OAuth 2.0 Client ID" \
     "Enter DV360 OAuth Client ID" \
     false
 
 create_or_update_secret \
-    "bidshifter-dv360-oauth-client-secret" \
+    "cesteral-dv360-oauth-client-secret" \
     "DV360 OAuth 2.0 Client Secret" \
     "Enter DV360 OAuth Client Secret" \
     false
 
 create_or_update_secret \
-    "bidshifter-dv360-refresh-token" \
+    "cesteral-dv360-refresh-token" \
     "DV360 OAuth 2.0 Refresh Token" \
     "Enter DV360 OAuth Refresh Token" \
     false
 
 # Bid Manager API Key
 create_or_update_secret \
-    "bidshifter-bid-manager-api-key" \
+    "cesteral-bid-manager-api-key" \
     "Bid Manager API Key" \
     "Enter Bid Manager API Key" \
     false
 
 # Beam/Databridge API Key
 create_or_update_secret \
-    "bidshifter-beam-api-key" \
+    "cesteral-beam-api-key" \
     "Beam/Databridge API Key" \
     "Enter Beam/Databridge API Key" \
     false
 
 # TTD API credentials
 create_or_update_secret \
-    "bidshifter-ttd-partner-id" \
+    "cesteral-ttd-partner-id" \
     "The Trade Desk Partner ID" \
     "Enter TTD Partner ID" \
     false
 
 create_or_update_secret \
-    "bidshifter-ttd-api-secret" \
+    "cesteral-ttd-api-secret" \
     "The Trade Desk API Secret" \
     "Enter TTD API Secret" \
+    false
+
+# Google Ads credentials
+create_or_update_secret \
+    "cesteral-gads-developer-token" \
+    "Google Ads Developer Token" \
+    "Enter Google Ads Developer Token" \
+    false
+
+create_or_update_secret \
+    "cesteral-gads-client-id" \
+    "Google Ads OAuth 2.0 Client ID" \
+    "Enter Google Ads OAuth Client ID" \
+    false
+
+create_or_update_secret \
+    "cesteral-gads-client-secret" \
+    "Google Ads OAuth 2.0 Client Secret" \
+    "Enter Google Ads OAuth Client Secret" \
+    false
+
+create_or_update_secret \
+    "cesteral-gads-refresh-token" \
+    "Google Ads OAuth 2.0 Refresh Token" \
+    "Enter Google Ads OAuth Refresh Token" \
     false
 
 # Print summary

@@ -26,14 +26,14 @@ If you don't have a GCP project yet:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Click **Select a project** → **New Project**
-3. Enter project name (e.g., `bidshifter-dv360`)
+3. Enter project name (e.g., `cesteral-dv360`)
 4. Click **Create**
 
 ### Via CLI
 
 ```bash
-gcloud projects create bidshifter-dv360 --name="BidShifter DV360 Integration"
-gcloud config set project bidshifter-dv360
+gcloud projects create cesteral-dv360 --name="Cesteral DV360 Integration"
+gcloud config set project cesteral-dv360
 ```
 
 ## Step 2: Enable Display & Video 360 API
@@ -88,7 +88,7 @@ gcloud iam service-accounts create dv360-mcp-service-account \
 3. Click **Add Key** → **Create new key**
 4. Select **JSON** format
 5. Click **Create**
-6. The JSON key file will download automatically (e.g., `bidshifter-dv360-abc123.json`)
+6. The JSON key file will download automatically (e.g., `cesteral-dv360-abc123.json`)
 
 **⚠️ Security Warning**: This file contains sensitive credentials. Store it securely and never commit to version control.
 
@@ -96,7 +96,7 @@ gcloud iam service-accounts create dv360-mcp-service-account \
 
 ```bash
 gcloud iam service-accounts keys create ~/dv360-service-account-key.json \
-  --iam-account=dv360-mcp-service-account@bidshifter-dv360.iam.gserviceaccount.com
+  --iam-account=dv360-mcp-service-account@cesteral-dv360.iam.gserviceaccount.com
 ```
 
 ## Step 5: Link Service Account to DV360
@@ -111,7 +111,7 @@ The service account needs explicit access to your DV360 account.
 4. Click **Add service account**
 5. Enter your service account email:
    ```
-   dv360-mcp-service-account@bidshifter-dv360.iam.gserviceaccount.com
+   dv360-mcp-service-account@cesteral-dv360.iam.gserviceaccount.com
    ```
 6. Select access level:
    - **Read Only** - For reporting/querying only
@@ -175,7 +175,7 @@ You have two options for providing credentials to the server:
 
    ```bash
    # Get the Cloud Run service account email
-   PROJECT_NUMBER=$(gcloud projects describe bidshifter-dv360 --format="value(projectNumber)")
+   PROJECT_NUMBER=$(gcloud projects describe cesteral-dv360 --format="value(projectNumber)")
    CLOUD_RUN_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 
    # Grant access
@@ -188,7 +188,7 @@ You have two options for providing credentials to the server:
 
    ```bash
    # In Cloud Run environment variables
-   SERVICE_ACCOUNT_SECRET_ID=projects/bidshifter-dv360/secrets/dv360-service-account/versions/latest
+   SERVICE_ACCOUNT_SECRET_ID=projects/cesteral-dv360/secrets/dv360-service-account/versions/latest
    ```
 
 ## Step 7: Verify Setup
@@ -423,7 +423,7 @@ gcloud iam service-accounts keys delete KEY_ID \
 Example:
 
 ```
-dv360-mcp-service-account@bidshifter-dv360.iam.gserviceaccount.com
+dv360-mcp-service-account@cesteral-dv360.iam.gserviceaccount.com
 ```
 
 ### Required DV360 Permissions

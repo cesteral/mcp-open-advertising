@@ -11,6 +11,7 @@ import {
 } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { createSimplifiedCreateEntityInputSchema } from "../utils/simplified-schemas.js";
+import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
@@ -68,8 +69,7 @@ function buildEntitySpecificInputSchema(entityType: string): EntityVariantSchema
   ]);
 
   for (const fieldName of parentFieldNames) {
-    const isRequired = config.parentIds.includes(fieldName);
-    shape[fieldName] = buildParentFieldSchema(fieldName, isRequired);
+    shape[fieldName] = buildParentFieldSchema(fieldName, false);
   }
 
   shape.data = getEntitySchemaForOperation(entityType, "create").describe(dataDescription);
@@ -96,9 +96,23 @@ function createInputSchema(): z.ZodTypeAny {
       variants as [EntityVariantSchema, EntityVariantSchema, ...EntityVariantSchema[]]
     )
     .superRefine((input, ctx) => {
+      const mergedData = mergeIdsIntoData(
+        input.entityType,
+        input.data as Record<string, unknown>,
+        input as Record<string, unknown>
+      );
+
+      addIdValidationIssues(ctx, {
+        entityType: input.entityType,
+        input: input as Record<string, unknown>,
+        data: mergedData,
+        operation: "create",
+        requireEntityId: false,
+      });
+
       const missingRelationships = validateEntityRelationships(
         input.entityType,
-        input.data as Record<string, any>
+        mergedData as Record<string, any>
       );
 
       if (missingRelationships.length > 0) {
@@ -143,13 +157,14 @@ export async function createEntityLogic(
 ): Promise<CreateEntityOutput> {
   // Server-side validation using full schema
   const validatedInput = FullCreateEntityInputSchema.parse(input);
-
-  // Validate entity relationships in data payload
-  const missingRelationships = validateEntityRelationships(
+  const mergedData = mergeIdsIntoData(
     validatedInput.entityType,
-    validatedInput.data
+    validatedInput.data,
+    validatedInput as Record<string, unknown>
   );
 
+  // Validate entity relationships in data payload
+  const missingRelationships = validateEntityRelationships(validatedInput.entityType, mergedData);
   if (missingRelationships.length > 0) {
     const hierarchy = getEntityHierarchyPath(validatedInput.entityType);
     const relationshipDesc = generateRelationshipDescription(validatedInput.entityType);
@@ -179,7 +194,7 @@ export async function createEntityLogic(
   const entity = await dv360Service.createEntity(
     validatedInput.entityType,
     parentIds,
-    validatedInput.data,
+    mergedData,
     context
   );
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
+import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -21,10 +22,29 @@ export const DeleteEntityInputSchema = z
       .string()
       .min(1)
       .describe("The entity ID to delete"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("Advertiser ID (required for most non-advertiser entities)"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID (required for adGroup)"),
+    adGroupId: z
+      .string()
+      .optional()
+      .describe("Ad Group ID (required for ad)"),
     reason: z
       .string()
       .optional()
       .describe("Reason for deletion (for audit logging)"),
+  })
+  .superRefine((input, ctx) => {
+    addParentValidationIssue(
+      ctx,
+      input.entityType as TtdEntityType,
+      input as Record<string, unknown>
+    );
   })
   .describe("Parameters for deleting a TTD entity");
 

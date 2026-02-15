@@ -1,7 +1,7 @@
 /**
  * OpenTelemetry — re-export from shared
  *
- * The core OTEL initialization is now in @bidshifter/shared.
+ * The core OTEL initialization is now in @cesteral/shared.
  * This file re-exports for backward compatibility.
  */
 
@@ -11,4 +11,4 @@ export {
   getOpenTelemetrySDK,
   isOpenTelemetryEnabled,
   otelLogMixin,
-} from "@bidshifter/shared";
+} from "@cesteral/shared";

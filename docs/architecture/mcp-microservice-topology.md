@@ -1,6 +1,6 @@
 # MCP Microservice Topology
 
-This document defines the target service-access pattern for BidShifter MCP servers and the near-term hardening steps for scale.
+This document defines the target service-access pattern for Cesteral MCP servers and the near-term hardening steps for scale.
 
 ## Goals
 
@@ -17,6 +17,7 @@ Clients connect directly to one or more MCP servers:
 - `dbm-mcp`
 - `dv360-mcp`
 - `ttd-mcp`
+- `gads-mcp`
 
 Use this mode when clients can manage multi-step logic and retries.
 
@@ -42,6 +43,7 @@ Each server exposes its own resource URI patterns. These diverge by platform:
 |--------|--------------|-------|
 | `dv360-mcp` | `entity-schema://{entityType}`, `entity-fields://{entityType}`, `entity-examples://{entityType}` | Dynamic entity discovery via schema introspection |
 | `ttd-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}`, `entity-hierarchy://all`, `report-reference://all` | Includes hierarchy and report reference resources |
+| `gads-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}`, `entity-hierarchy://gads`, `gaql-reference://syntax` | Includes GAQL reference and entity examples |
 | `dbm-mcp` | `metric-types://`, `filter-types://`, `query-examples://all`, `report-types://all`, `compatibility-rules://all` | Reporting-oriented — no entity-schema resources |
 
 ### Planned Namespaced URI Aliases
@@ -64,8 +66,8 @@ The [skill contract](../mcp-skill-contract.json) recommends namespaced aliases v
 
 ### P0
 
-- Align CI/CD and Terraform to deploy all three MCP servers independently.
-  - **Status**: ✅ Complete — `cloudbuild.yaml`, `cloudbuild-manual.yaml`, and Terraform now cover `dbm-mcp`, `dv360-mcp`, and `ttd-mcp`.
+- Align CI/CD and Terraform to deploy all four MCP servers independently.
+  - **Status**: ✅ Complete — `cloudbuild.yaml`, `cloudbuild-manual.yaml`, and Terraform now cover `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, and `gads-mcp`.
 - Keep docs and architecture diagrams consistent with actual deployable services.
 
 ### P1

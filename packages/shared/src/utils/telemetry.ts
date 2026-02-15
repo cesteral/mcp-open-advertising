@@ -218,7 +218,7 @@ export function otelLogMixin(): () => Record<string, string | undefined> {
 // Tracing helpers
 // ---------------------------------------------------------------------------
 
-export function getTracer(name: string = "bidshifter"): Tracer {
+export function getTracer(name: string = "cesteral"): Tracer {
   return trace.getTracer(name);
 }
 

@@ -91,7 +91,7 @@ This server follows the **production-grade patterns** established in dv360-mcp:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                MCP Client (AI Agent / bidshifter-mcp)                │
+│                MCP Client (AI Agent / cesteral-mcp)                │
 │                      HTTP POST /sse with JWT                         │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ JSON-RPC 2.0 over SSE
@@ -1027,6 +1027,25 @@ describe("Bid Manager Integration", () => {
 - [Google APIs Node.js Client](https://github.com/googleapis/google-api-nodejs-client)
 - [OpenTelemetry Node.js](https://opentelemetry.io/docs/instrumentation/js/)
 - [Pino Logging](https://github.com/pinojs/pino)
+
+---
+
+## Validation and Testing Hardening
+
+### Validation Source of Truth
+
+- `src/mcp-server/tools/utils/query-validation.ts` defines report/filter/metric/date-range compatibility checks.
+- `src/mcp-server/tools/definitions/run-custom-query.tool.ts` applies strict schema-time validation via `superRefine`.
+- Validation errors include resource hints (`filter-types://all`, `metric-types://all`, `report-types://all`) to guide operators and agents.
+
+### Testing Strategy (Current)
+
+- **Service tests** in `tests/services/` validate Bid Manager service behavior, auth bridge, and parsing helpers.
+- **Tool tests** in `tests/tools/` validate tool logic/formatting.
+- **Transport integration tests** in `tests/integration/` validate:
+  - query workflow request handling
+  - session lifecycle (`POST /mcp`, `DELETE /mcp`, session reuse rejection)
+  - error propagation through MCP transport responses
 
 ---
 

@@ -1,4 +1,4 @@
-# @bidshifter/dv360-mcp
+# @cesteral/dv360-mcp
 
 DV360 MCP Server - Campaign entity management and configuration for Google Display & Video 360.
 
@@ -368,8 +368,8 @@ OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=https://your-collector/v1/metrics
 
 ## Contributing
 
-This package is part of the BidShifter monorepo. See root-level `CLAUDE.md` for development guidelines.
+This package is part of the Cesteral monorepo. See root-level `CLAUDE.md` for development guidelines.
 
 ## License
 
-Private - BidShifter Internal Use Only
+Private - Cesteral Internal Use Only

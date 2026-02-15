@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import type { GoogleAuthAdapter } from "@bidshifter/shared";
+import type { GoogleAuthAdapter } from "@cesteral/shared";
 import { BidManagerService } from "../../src/services/bid-manager/BidManagerService.js";
 import {
   createSessionServices,

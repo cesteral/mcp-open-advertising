@@ -9,7 +9,7 @@
 
 ## 1. Problem Statement
 
-BidShifter has strong foundations for a self-improving system:
+Cesteral has strong foundations for a self-improving system:
 
 - **Evaluator hooks** in `packages/shared/src/utils/tool-handler-factory.ts` fire after every tool execution, producing `ToolInteractionEvaluation` results with issue classifications, quality scores, and recommended actions.
 - **Governance docs** in `docs/governance/` define a full refinement lifecycle — findings → classification → playbook deltas → approval → deployment.
@@ -255,7 +255,7 @@ Behavior:
 In each server's `server.ts`, before prompt registration:
 
 ```typescript
-import { loadSkillsForServer } from "@bidshifter/shared";
+import { loadSkillsForServer } from "@cesteral/shared";
 
 // Load skills from YAML (empty array if skills/ absent)
 const skills = loadSkillsForServer({

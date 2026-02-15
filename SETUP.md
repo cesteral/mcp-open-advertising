@@ -1,4 +1,4 @@
-# BidShifter - GitHub & Cloud Build Setup
+# Cesteral - GitHub & Cloud Build Setup
 
 ## Repository Setup
 
@@ -14,10 +14,10 @@ git init
 git add .
 
 # 3. Create initial commit
-git commit -m "Initial commit: BidShifter MCP Server"
+git commit -m "Initial commit: Cesteral MCP Server"
 
 # 4. Create GitHub repository (via GitHub CLI or web interface)
-gh repo create bidshifter --private --source=. --remote=origin
+gh repo create cesteral --private --source=. --remote=origin
 
 # 5. Push to GitHub
 git push -u origin main
@@ -31,7 +31,7 @@ GitHub Repository
 Cloud Build Trigger (automatic)
     ↓
 cloudbuild.yaml execution:
-    1. Build Docker images (dbm-mcp, dv360-mcp, ttd-mcp)
+    1. Build Docker images (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp)
     2. Push to Artifact Registry
     3. Run Terraform
     4. Deploy to Cloud Run
@@ -67,8 +67,8 @@ cloudbuild.yaml execution:
    **Production Trigger** (main branch):
    ```bash
    gcloud builds triggers create github \
-     --name="bidshifter-prod-deploy" \
-     --repo-name="bidshifter" \
+     --name="cesteral-prod-deploy" \
+     --repo-name="cesteral" \
      --repo-owner="YOUR_GITHUB_ORG" \
      --branch-pattern="^main$" \
      --build-config="cloudbuild.yaml" \
@@ -78,8 +78,8 @@ cloudbuild.yaml execution:
    **Staging Trigger** (staging branch):
    ```bash
    gcloud builds triggers create github \
-     --name="bidshifter-staging-deploy" \
-     --repo-name="bidshifter" \
+     --name="cesteral-staging-deploy" \
+     --repo-name="cesteral" \
      --repo-owner="YOUR_GITHUB_ORG" \
      --branch-pattern="^staging$" \
      --build-config="cloudbuild.yaml" \
@@ -89,8 +89,8 @@ cloudbuild.yaml execution:
    **Development Trigger** (dev branch):
    ```bash
    gcloud builds triggers create github \
-     --name="bidshifter-dev-deploy" \
-     --repo-name="bidshifter" \
+     --name="cesteral-dev-deploy" \
+     --repo-name="cesteral" \
      --repo-owner="YOUR_GITHUB_ORG" \
      --branch-pattern="^dev$" \
      --build-config="cloudbuild.yaml" \

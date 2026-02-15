@@ -5,7 +5,8 @@ import type { RequestContext } from "../../utils/internal/request-context.js";
 import { getEntityConfig, type TtdEntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 
 /**
- * TTD Service — Generic CRUD operations for TTD entities.
+ * TTD Service — Generic CRUD operations for TTD entities,
+ * plus bulk operations, archive, GraphQL passthrough, and validate-only mode.
  *
  * Uses entity-mapping.ts for path construction and the TtdHttpClient
  * for authenticated HTTP calls with retry logic.
@@ -16,6 +17,8 @@ export class TtdService {
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: TtdHttpClient
   ) {}
+
+  // ─── Standard CRUD ─────────────────────────────────────────────────
 
   async listEntities(
     entityType: TtdEntityType,
@@ -140,5 +143,275 @@ export class TtdService {
       context,
       { method: "DELETE" }
     );
+  }
+
+  // ─── Validate-Only (Dry Run) ──────────────────────────────────────
+
+  /**
+   * Validate an entity payload without persisting it.
+   * Sends the data with the same endpoint but uses TTD's validation
+   * semantics (POST for create, PUT for update) and wraps errors.
+   */
+  async validateEntity(
+    entityType: TtdEntityType,
+    data: Record<string, unknown>,
+    mode: "create" | "update",
+    entityId?: string,
+    context?: RequestContext
+  ): Promise<{ valid: boolean; errors?: string[] }> {
+    const config = getEntityConfig(entityType);
+    const partnerId = this.httpClient.partnerId;
+
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    try {
+      if (mode === "update" && entityId) {
+        await this.httpClient.fetch(
+          `${config.apiPath}/${entityId}`,
+          context,
+          { method: "PUT", body: JSON.stringify(data) }
+        );
+      } else {
+        await this.httpClient.fetch(
+          config.apiPath,
+          context,
+          { method: "POST", body: JSON.stringify(data) }
+        );
+      }
+      return { valid: true };
+    } catch (error: any) {
+      const errorMessage = error?.message ?? String(error);
+      const errorBody = error?.data?.errorBody ?? errorMessage;
+      return { valid: false, errors: [errorBody] };
+    }
+  }
+
+  // ─── Bulk Operations ──────────────────────────────────────────────
+
+  /**
+   * Bulk create entities of the same type.
+   * Sends individual create calls in parallel (concurrency-limited).
+   */
+  async bulkCreateEntities(
+    entityType: TtdEntityType,
+    items: Record<string, unknown>[],
+    context?: RequestContext
+  ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
+    const results = await this.executeBulk(items, async (data) => {
+      return this.createEntity(entityType, data, context);
+    });
+    return { results };
+  }
+
+  /**
+   * Bulk update entities of the same type.
+   * Each item must include the entity ID in its data payload.
+   */
+  async bulkUpdateEntities(
+    entityType: TtdEntityType,
+    items: Array<{ entityId: string; data: Record<string, unknown> }>,
+    context?: RequestContext
+  ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
+    const results = await this.executeBulk(items, async (item) => {
+      return this.updateEntity(entityType, item.entityId, item.data, context);
+    });
+    return { results };
+  }
+
+  // ─── Archive (Batch Soft-Delete) ──────────────────────────────────
+
+  /**
+   * Archive multiple entities by setting Availability to "Archived".
+   */
+  async archiveEntities(
+    entityType: TtdEntityType,
+    entityIds: string[],
+    context?: RequestContext
+  ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
+    const config = getEntityConfig(entityType);
+    const partnerId = this.httpClient.partnerId;
+
+    const results: Array<{ entityId: string; success: boolean; error?: string }> = [];
+
+    for (const entityId of entityIds) {
+      try {
+        await this.rateLimiter.consume(`ttd:${partnerId}`);
+        await this.httpClient.fetch(
+          `${config.apiPath}/${entityId}`,
+          context,
+          {
+            method: "PUT",
+            body: JSON.stringify({ Availability: "Archived" }),
+          }
+        );
+        results.push({ entityId, success: true });
+      } catch (error: any) {
+        results.push({
+          entityId,
+          success: false,
+          error: error?.message ?? String(error),
+        });
+      }
+    }
+
+    return { results };
+  }
+
+  // ─── Bulk Status Update ───────────────────────────────────────────
+
+  /**
+   * Batch update availability status for multiple entities of the same type.
+   */
+  async bulkUpdateStatus(
+    entityType: TtdEntityType,
+    entityIds: string[],
+    status: "Available" | "Paused" | "Archived",
+    context?: RequestContext
+  ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
+    const config = getEntityConfig(entityType);
+    const partnerId = this.httpClient.partnerId;
+
+    const results: Array<{ entityId: string; success: boolean; error?: string }> = [];
+
+    for (const entityId of entityIds) {
+      try {
+        await this.rateLimiter.consume(`ttd:${partnerId}`);
+        await this.httpClient.fetch(
+          `${config.apiPath}/${entityId}`,
+          context,
+          {
+            method: "PUT",
+            body: JSON.stringify({ Availability: status }),
+          }
+        );
+        results.push({ entityId, success: true });
+      } catch (error: any) {
+        results.push({
+          entityId,
+          success: false,
+          error: error?.message ?? String(error),
+        });
+      }
+    }
+
+    return { results };
+  }
+
+  // ─── Bid Adjustment ───────────────────────────────────────────────
+
+  /**
+   * Batch adjust bids for multiple ad groups.
+   */
+  async adjustBids(
+    adjustments: Array<{
+      adGroupId: string;
+      baseBidCpm?: number;
+      maxBidCpm?: number;
+      currencyCode?: string;
+    }>,
+    context?: RequestContext
+  ): Promise<{ results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> }> {
+    const partnerId = this.httpClient.partnerId;
+
+    const results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> = [];
+
+    for (const adj of adjustments) {
+      try {
+        await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+        // First GET the current entity to merge RTBAttributes
+        const current = (await this.httpClient.fetch(
+          `/adgroup/${adj.adGroupId}`,
+          context,
+          { method: "GET" }
+        )) as Record<string, unknown>;
+
+        const rtb = (current.RTBAttributes as Record<string, unknown>) || {};
+        const cc = adj.currencyCode || "USD";
+
+        if (adj.baseBidCpm !== undefined) {
+          rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
+        }
+        if (adj.maxBidCpm !== undefined) {
+          rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
+        }
+
+        const entity = await this.httpClient.fetch(
+          `/adgroup/${adj.adGroupId}`,
+          context,
+          {
+            method: "PUT",
+            body: JSON.stringify({ ...current, RTBAttributes: rtb }),
+          }
+        );
+
+        results.push({ adGroupId: adj.adGroupId, success: true, entity });
+      } catch (error: any) {
+        results.push({
+          adGroupId: adj.adGroupId,
+          success: false,
+          error: error?.message ?? String(error),
+        });
+      }
+    }
+
+    return { results };
+  }
+
+  // ─── GraphQL Passthrough ──────────────────────────────────────────
+
+  /**
+   * Execute a GraphQL query or mutation against the TTD GraphQL API.
+   *
+   * This is a passthrough to the TTD GraphQL endpoint, enabling
+   * rich nested queries and mutations not available in the REST API.
+   */
+  async graphqlQuery(
+    query: string,
+    variables?: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch(
+      "/graphql",
+      context,
+      {
+        method: "POST",
+        body: JSON.stringify({ query, variables }),
+      }
+    );
+  }
+
+  // ─── Internal Helpers ─────────────────────────────────────────────
+
+  private async executeBulk<T>(
+    items: T[],
+    operation: (item: T) => Promise<unknown>
+  ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
+    const CONCURRENCY = 5;
+    const results: Array<{ success: boolean; entity?: unknown; error?: string }> = new Array(items.length);
+
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const batch = items.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.allSettled(
+        batch.map((item) => operation(item))
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        if (result.status === "fulfilled") {
+          results[i + j] = { success: true, entity: result.value };
+        } else {
+          results[i + j] = {
+            success: false,
+            error: result.reason?.message ?? String(result.reason),
+          };
+        }
+      }
+    }
+
+    return results;
   }
 }

@@ -1,4 +1,4 @@
-# @bidshifter/ttd-mcp
+# @cesteral/ttd-mcp
 
 TTD MCP Server - The Trade Desk campaign entity management and reporting via TTD API v3.
 
@@ -138,4 +138,4 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 ## License
 
-Private - BidShifter Internal Use Only
+Private - Cesteral Internal Use Only

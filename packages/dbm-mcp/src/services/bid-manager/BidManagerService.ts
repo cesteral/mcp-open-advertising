@@ -575,7 +575,7 @@ export class BidManagerService {
    * Calculate pacing status for a campaign
    *
    * Returns basic pacing metrics and status. For advanced pacing optimization
-   * with feedback loops, use the bidshifter-mcp optimization server.
+   * with feedback loops, use the cesteral-mcp optimization server.
    */
   async getPacingStatus(params: GetPacingStatusInput): Promise<PacingStatus> {
     this.logger.info(
@@ -608,7 +608,7 @@ export class BidManagerService {
     const actualDeliveryPercent = round(safeDivide(metrics.spend, params.budgetTotal, 0) * 100, 2);
     const pacingRatio = round(safeDivide(actualDeliveryPercent, expectedDeliveryPercent, 0), 4);
 
-    // Simple inline status determination (advanced optimization logic lives in bidshifter-mcp)
+    // Simple inline status determination (advanced optimization logic lives in cesteral-mcp)
     let status: "ON_PACE" | "AHEAD" | "BEHIND" | "SEVERELY_BEHIND";
     if (pacingRatio >= 0.95 && pacingRatio <= 1.05) {
       status = "ON_PACE";

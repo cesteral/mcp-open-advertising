@@ -1,29 +1,47 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
-import { getAllPrompts, getPromptDefinition } from "./prompts/index.js";
+import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
 import {
   EvaluatorIssueClass,
+  extractZodShape,
   registerToolsFromDefinitions,
+  registerPromptsFromDefinitions,
+  registerStaticResourcesFromDefinitions,
+  type McpServerPromptLike,
+  type PromptDefinitionForFactory,
+  type PromptArgumentForFactory,
   type ToolExecutionSnapshot,
   type ToolInteractionContext,
   type ToolInteractionEvaluation,
-} from "@bidshifter/shared";
+} from "@cesteral/shared";
 import type { Logger } from "pino";
+import packageJson from "../../package.json";
 
 const TTD_PACKAGE_NAME = "ttd-mcp";
 const TTD_PLATFORM = "ttd";
 
 const ttdWorkflowIdByToolName: Record<string, string> = {
+  // Core CRUD
   ttd_list_entities: "mcp.execute.ttd_entity_update",
   ttd_get_entity: "mcp.execute.ttd_entity_update",
   ttd_create_entity: "mcp.execute.ttd_entity_update",
   ttd_update_entity: "mcp.execute.ttd_entity_update",
   ttd_delete_entity: "mcp.execute.ttd_entity_update",
-  ttd_get_report: "mcp.execute.ttd_entity_update",
+  // Reporting
+  ttd_get_report: "mcp.execute.ttd_reporting",
+  ttd_download_report: "mcp.execute.ttd_reporting",
+  // Bulk operations
+  ttd_bulk_create_entities: "mcp.execute.ttd_bulk_operations",
+  ttd_bulk_update_entities: "mcp.execute.ttd_bulk_operations",
+  ttd_bulk_update_status: "mcp.execute.ttd_bulk_operations",
+  ttd_archive_entities: "mcp.execute.ttd_bulk_operations",
+  ttd_adjust_bids: "mcp.execute.ttd_bulk_operations",
+  // Advanced
+  ttd_graphql_query: "mcp.execute.ttd_graphql",
+  ttd_validate_entity: "mcp.execute.ttd_entity_update",
 };
 
 async function evaluateTtdInteraction(
@@ -62,28 +80,13 @@ async function evaluateTtdInteraction(
 }
 
 /**
- * Extract the raw shape from a Zod schema.
- * The MCP SDK expects ZodRawShape (the shape object), not a full Zod schema.
- */
-function extractZodShape(schema: z.ZodTypeAny): z.ZodRawShape {
-  let current = schema;
-  while (current instanceof z.ZodEffects) {
-    current = current._def.schema;
-  }
-  if (current instanceof z.ZodObject) {
-    return current.shape;
-  }
-  return {};
-}
-
-/**
  * Create and configure MCP server instance
  */
 export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
   const server = new McpServer({
     name: "ttd-mcp",
-    version: "1.0.0",
-    description: "The Trade Desk campaign entity management and reporting via TTD API v3. Supports CRUD operations on advertisers, campaigns, ad groups, and ads, plus async report generation.",
+    version: packageJson.version,
+    description: "The Trade Desk campaign management, reporting, and optimization via TTD API v3 + GraphQL. Supports 9 entity types (advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList), bulk operations, bid adjustments, GraphQL passthrough, and async report generation with download/parse.",
   });
 
   // Register all tools via shared factory
@@ -109,102 +112,17 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     },
   });
 
-  // Register all resources
-  for (const resource of allResources) {
-    const resourceName = resource.uri.replace(/[^a-zA-Z0-9]/g, "_");
+  // Register all resources via shared factory
+  registerStaticResourcesFromDefinitions({ server, resources: allResources, logger });
 
-    server.registerResource(
-      resourceName,
-      resource.uri,
-      {
-        description: resource.description,
-        mimeType: resource.mimeType,
-      },
-      async () => {
-        logger.info({ resourceUri: resource.uri }, "Handling resource read");
-
-        try {
-          const content = resource.getContent();
-          logger.debug(
-            {
-              resourceUri: resource.uri,
-              contentBytes: Buffer.byteLength(content, "utf-8"),
-            },
-            "Resource content size"
-          );
-          return {
-            contents: [
-              {
-                uri: resource.uri,
-                mimeType: resource.mimeType,
-                text: content,
-              },
-            ],
-          };
-        } catch (error) {
-          logger.error({ error, resourceUri: resource.uri }, "Failed to read resource");
-          throw error;
-        }
-      }
-    );
-  }
-
-  logger.info({ resourceCount: allResources.length }, "Registered MCP resources");
-
-  // Register all prompts
-  const allPrompts = getAllPrompts();
-  for (const prompt of allPrompts) {
-    const argsSchema = prompt.arguments?.reduce(
-      (acc, arg) => {
-        const description = arg.description || `${arg.name} argument`;
-        const zodType = arg.required
-          ? z.string().describe(description)
-          : z.string().optional().describe(description);
-        acc[arg.name] = zodType;
-        return acc;
-      },
-      {} as Record<string, z.ZodType<string> | z.ZodOptional<z.ZodType<string>>>
-    );
-
-    server.registerPrompt(
-      prompt.name,
-      {
-        title: prompt.name,
-        description: prompt.description,
-        ...(argsSchema && Object.keys(argsSchema).length > 0 && { argsSchema }),
-      },
-      async (args: Record<string, string | undefined> | undefined) => {
-        logger.info({ promptName: prompt.name, arguments: args }, "Handling prompt request");
-
-        const promptDef = getPromptDefinition(prompt.name);
-        if (!promptDef) {
-          throw new Error(`Prompt not found: ${prompt.name}`);
-        }
-
-        const cleanArgs: Record<string, string> = {};
-        if (args) {
-          for (const [key, value] of Object.entries(args)) {
-            if (value !== undefined) {
-              cleanArgs[key] = value;
-            }
-          }
-        }
-
-        const message = promptDef.generateMessage(cleanArgs);
-        return {
-          messages: [
-            {
-              role: "user",
-              content: {
-                type: "text",
-                text: message,
-              },
-            },
-          ],
-        };
-      }
-    );
-  }
+  // Register all prompts via shared factory
+  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
+    name: def.prompt.name,
+    description: def.prompt.description ?? "",
+    arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
+    generateMessage: def.generateMessage,
+  }));
+  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
 
   return server;
 }

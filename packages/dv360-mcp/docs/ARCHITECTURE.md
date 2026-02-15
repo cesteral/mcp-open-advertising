@@ -76,7 +76,7 @@ This server adopts the **advanced patterns** from `mcp-ts-quickstart-template` w
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      MCP Client (AI Agent / bidshifter-mcp)          │
+│                      MCP Client (AI Agent / cesteral-mcp)          │
 │                      HTTP POST /mcp with JWT                         │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ JSON-RPC 2.0 over SSE
@@ -859,20 +859,20 @@ _Detailed pseudo-code for Configuration Schema is available in [Phase 2 Implemen
 
 ## Integration Points
 
-### 7.1 Integration with bidshifter-mcp
+### 7.1 Integration with cesteral-mcp
 
 **Architecture:** Loose coupling via MCP HTTP transport (no direct library dependencies)
 
 **Flow:**
 
-- bidshifter-mcp issues scoped JWTs, calls the HTTP transport, and listens on SSE for MCP responses.
-- Correlated request IDs enable cross-service tracing, and errors are surfaced back to bidshifter workflows with actionable metadata.
+- cesteral-mcp issues scoped JWTs, calls the HTTP transport, and listens on SSE for MCP responses.
+- Correlated request IDs enable cross-service tracing, and errors are surfaced back to cesteral workflows with actionable metadata.
 
-_Detailed pseudo-code for 7.1 Integration with bidshifter-mcp is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#71-integration-with-bidshifter-mcp)._
+_Detailed pseudo-code for 7.1 Integration with cesteral-mcp is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#71-integration-with-cesteral-mcp)._
 
 **Benefits of MCP Transport:**
 
-- **Platform agnostic**: bidshifter-mcp can orchestrate any MCP server (DV360, Google Ads, Meta)
+- **Platform agnostic**: cesteral-mcp can orchestrate any MCP server (DV360, Google Ads, Meta)
 - **Independent deployment**: dv360-mcp can scale/update independently
 - **Network-level security**: JWT authentication between services
 - **Observability**: Distributed tracing across service boundaries
@@ -1067,7 +1067,7 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 - **Root Documentation:**
   - [`CLAUDE.md`](../../CLAUDE.md) - Project overview and commands
   - [`README.md`](../../README.md) - User-facing documentation
-  - [`docs/bidshifter-mcp-design-architecture.md`](../../docs/bidshifter-mcp-design-architecture.md) - Overall architecture
+  - [`docs/cesteral-mcp-design-architecture.md`](../../docs/cesteral-mcp-design-architecture.md) - Overall architecture
   - [`docs/PRD.md`](../../docs/PRD.md) - Product requirements
 
 ---
@@ -1157,7 +1157,7 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 
 **Rationale:**
 
-1. **Use case**: Called by bidshifter-mcp over network (not local CLI)
+1. **Use case**: Called by cesteral-mcp over network (not local CLI)
 2. **Deployment**: GCP Cloud Run requires HTTP
 3. **Security**: JWT authentication only makes sense over HTTP
 4. **Session management**: Stateful sessions require HTTP transport
@@ -1193,6 +1193,25 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 - Schemas fetched granularly (only the entities agent needs)
 - Example patterns help agent construct correct `updateMask` and `data` payloads
 - Works seamlessly with MCP protocol's native resource capabilities
+
+---
+
+## Entity Validation and Source of Truth
+
+DV360 entity routing and parent-ID requirements are derived from:
+
+- `src/mcp-server/tools/utils/entity-mapping-dynamic.ts` (`STATIC_ENTITY_API_METADATA`)
+- `src/mcp-server/tools/utils/parent-id-validation.ts`
+
+Validation model:
+
+- Tool schemas perform strict, schema-level ID checks with `superRefine`.
+- Missing identifiers are validated against dynamic entity metadata and surfaced with actionable messages.
+- IDs may be provided as top-level arguments or in `data` payloads (merged server-side before service calls).
+
+Consistency guardrail:
+
+- `tests/mcp-server/tools/utils/entityApiMetadata.test.ts` verifies that required relationships stay aligned with `parentResourceIds` metadata.
 
 ---
 

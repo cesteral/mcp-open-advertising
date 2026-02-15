@@ -1,9 +1,9 @@
 /**
- * Rate limiter — re-exports from @bidshifter/shared
+ * Rate limiter — re-exports from @cesteral/shared
  * Server-specific default configuration applied below.
  */
-export { RateLimiter } from "@bidshifter/shared";
-import { RateLimiter } from "@bidshifter/shared";
+export { RateLimiter } from "@cesteral/shared";
+import { RateLimiter } from "@cesteral/shared";
 
 /**
  * Global rate limiter instance for Bid Manager API

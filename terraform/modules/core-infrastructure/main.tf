@@ -1,10 +1,10 @@
-# Core Infrastructure Module for BidShifter MCP Server
+# Core Infrastructure Module for Cesteral MCP Server
 # Includes: Cloud Run service, Secret Manager, Cloud Scheduler, IAM
 
 locals {
-  service_name = "bidshifter-mcp"
+  service_name = "cesteral-mcp"
   common_labels = {
-    application = "bidshifter"
+    application = "cesteral"
     component   = "mcp-server"
     environment = var.environment
     managed_by  = "terraform"
@@ -18,7 +18,7 @@ locals {
 # Runtime service account for Cloud Run and Cloud Scheduler
 resource "google_service_account" "runtime" {
   account_id   = "${local.service_name}-runtime"
-  display_name = "BidShifter Runtime Service Account"
+  display_name = "Cesteral Runtime Service Account"
   description  = "Service account for MCP server runtime and scheduled jobs"
   project      = var.project_id
 }

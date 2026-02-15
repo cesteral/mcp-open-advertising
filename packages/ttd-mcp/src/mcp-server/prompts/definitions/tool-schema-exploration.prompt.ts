@@ -89,8 +89,9 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary
+## Available Tools Summary (14 tools)
 
+### Core CRUD
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
 | \`ttd_list_entities\` | List entities with filters | Read |
@@ -98,7 +99,30 @@ Inspect the output, then iterate with more specific calls.
 | \`ttd_create_entity\` | Create an entity | Write |
 | \`ttd_update_entity\` | Update an entity (PUT) | Write |
 | \`ttd_delete_entity\` | Delete an entity | Write |
+| \`ttd_validate_entity\` | Dry-run entity validation | Read/Write |
+
+### Reporting
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
 | \`ttd_get_report\` | Generate and retrieve reports | Read |
+| \`ttd_download_report\` | Download & parse report CSV | Read |
+
+### Bulk Operations
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_bulk_create_entities\` | Batch create (campaigns/ad groups) | Write |
+| \`ttd_bulk_update_entities\` | Batch update (campaigns/ad groups) | Write |
+| \`ttd_bulk_update_status\` | Batch pause/resume/archive | Write |
+| \`ttd_archive_entities\` | Batch archive (soft-delete) | Write |
+| \`ttd_adjust_bids\` | Batch bid adjustments | Write |
+
+### Advanced
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_graphql_query\` | GraphQL query/mutation passthrough | Read/Write |
+
+### Supported Entity Types (9)
+\`advertiser\`, \`campaign\`, \`adGroup\`, \`ad\`, \`creative\`, \`siteList\`, \`deal\`, \`conversionTracker\`, \`bidList\`
 
 ---
 
@@ -113,5 +137,8 @@ Inspect the output, then iterate with more specific calls.
 - For campaign setup: invoke \`ttd_campaign_setup_workflow\` prompt
 - For reporting: invoke \`ttd_report_generation_workflow\` prompt
 - For debugging: invoke \`ttd_troubleshoot_entity\` prompt
+- For bulk operations: use \`ttd_bulk_create_entities\` or \`ttd_bulk_update_entities\`
+- For rich entity queries: use \`ttd_graphql_query\` for nested data
+- For bid optimization: use \`ttd_adjust_bids\` for safe read-modify-write
 `;
 }

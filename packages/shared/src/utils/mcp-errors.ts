@@ -1,5 +1,5 @@
 /**
- * MCP Error System — shared across all BidShifter MCP servers
+ * MCP Error System — shared across all Cesteral MCP servers
  *
  * Provides JSON-RPC 2.0 error codes, a structured McpError class,
  * and a central ErrorHandler for consistent error processing.

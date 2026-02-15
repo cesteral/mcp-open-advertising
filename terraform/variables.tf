@@ -1,4 +1,4 @@
-# Root Terraform variables for BidShifter
+# Root Terraform variables for Cesteral
 
 # ============================================================================
 # PROJECT CONFIGURATION
@@ -37,7 +37,7 @@ variable "use_artifact_registry" {
 variable "artifact_registry_repo_name" {
   description = "Name of Artifact Registry repository"
   type        = string
-  default     = "bidshifter"
+  default     = "cesteral"
 }
 
 variable "dbm_mcp_image" {
@@ -52,6 +52,11 @@ variable "dv360_mcp_image" {
 
 variable "ttd_mcp_image" {
   description = "Full container image URL for ttd-mcp server"
+  type        = string
+}
+
+variable "gads_mcp_image" {
+  description = "Full container image URL for gads-mcp server"
   type        = string
 }
 
@@ -219,7 +224,7 @@ variable "secret_names" {
   description = "List of secret names to create (shared secrets)"
   type        = list(string)
   default = [
-    "bidshifter-jwt-secret-key"
+    "cesteral-jwt-secret-key"
   ]
 }
 
@@ -227,12 +232,12 @@ variable "dbm_secret_names" {
   description = "Secret names specific to dbm-mcp"
   type        = list(string)
   default = [
-    "bidshifter-jwt-secret-key",
-    "bidshifter-dv360-oauth-client-id",
-    "bidshifter-dv360-oauth-client-secret",
-    "bidshifter-dv360-refresh-token",
-    "bidshifter-bid-manager-api-key",
-    "bidshifter-beam-api-key"
+    "cesteral-jwt-secret-key",
+    "cesteral-dv360-oauth-client-id",
+    "cesteral-dv360-oauth-client-secret",
+    "cesteral-dv360-refresh-token",
+    "cesteral-bid-manager-api-key",
+    "cesteral-beam-api-key"
   ]
 }
 
@@ -240,10 +245,10 @@ variable "dv360_secret_names" {
   description = "Secret names specific to dv360-mcp"
   type        = list(string)
   default = [
-    "bidshifter-jwt-secret-key",
-    "bidshifter-dv360-oauth-client-id",
-    "bidshifter-dv360-oauth-client-secret",
-    "bidshifter-dv360-refresh-token"
+    "cesteral-jwt-secret-key",
+    "cesteral-dv360-oauth-client-id",
+    "cesteral-dv360-oauth-client-secret",
+    "cesteral-dv360-refresh-token"
   ]
 }
 
@@ -251,9 +256,9 @@ variable "ttd_secret_names" {
   description = "Secret names specific to ttd-mcp"
   type        = list(string)
   default = [
-    "bidshifter-jwt-secret-key",
-    "bidshifter-ttd-partner-id",
-    "bidshifter-ttd-api-secret"
+    "cesteral-jwt-secret-key",
+    "cesteral-ttd-partner-id",
+    "cesteral-ttd-api-secret"
   ]
 }
 
@@ -265,27 +270,27 @@ variable "dbm_secret_env_vars" {
   }))
   default = {
     MCP_AUTH_SECRET_KEY = {
-      secret_name = "bidshifter-jwt-secret-key"
+      secret_name = "cesteral-jwt-secret-key"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_ID = {
-      secret_name = "bidshifter-dv360-oauth-client-id"
+      secret_name = "cesteral-dv360-oauth-client-id"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_SECRET = {
-      secret_name = "bidshifter-dv360-oauth-client-secret"
+      secret_name = "cesteral-dv360-oauth-client-secret"
       version     = "latest"
     }
     DV360_REFRESH_TOKEN = {
-      secret_name = "bidshifter-dv360-refresh-token"
+      secret_name = "cesteral-dv360-refresh-token"
       version     = "latest"
     }
     BID_MANAGER_API_KEY = {
-      secret_name = "bidshifter-bid-manager-api-key"
+      secret_name = "cesteral-bid-manager-api-key"
       version     = "latest"
     }
     BEAM_API_KEY = {
-      secret_name = "bidshifter-beam-api-key"
+      secret_name = "cesteral-beam-api-key"
       version     = "latest"
     }
   }
@@ -299,19 +304,19 @@ variable "dv360_secret_env_vars" {
   }))
   default = {
     MCP_AUTH_SECRET_KEY = {
-      secret_name = "bidshifter-jwt-secret-key"
+      secret_name = "cesteral-jwt-secret-key"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_ID = {
-      secret_name = "bidshifter-dv360-oauth-client-id"
+      secret_name = "cesteral-dv360-oauth-client-id"
       version     = "latest"
     }
     DV360_OAUTH_CLIENT_SECRET = {
-      secret_name = "bidshifter-dv360-oauth-client-secret"
+      secret_name = "cesteral-dv360-oauth-client-secret"
       version     = "latest"
     }
     DV360_REFRESH_TOKEN = {
-      secret_name = "bidshifter-dv360-refresh-token"
+      secret_name = "cesteral-dv360-refresh-token"
       version     = "latest"
     }
   }
@@ -325,15 +330,57 @@ variable "ttd_secret_env_vars" {
   }))
   default = {
     MCP_AUTH_SECRET_KEY = {
-      secret_name = "bidshifter-jwt-secret-key"
+      secret_name = "cesteral-jwt-secret-key"
       version     = "latest"
     }
     TTD_PARTNER_ID = {
-      secret_name = "bidshifter-ttd-partner-id"
+      secret_name = "cesteral-ttd-partner-id"
       version     = "latest"
     }
     TTD_API_SECRET = {
-      secret_name = "bidshifter-ttd-api-secret"
+      secret_name = "cesteral-ttd-api-secret"
+      version     = "latest"
+    }
+  }
+}
+
+variable "gads_secret_names" {
+  description = "Secret names specific to gads-mcp"
+  type        = list(string)
+  default = [
+    "cesteral-jwt-secret-key",
+    "cesteral-gads-developer-token",
+    "cesteral-gads-client-id",
+    "cesteral-gads-client-secret",
+    "cesteral-gads-refresh-token"
+  ]
+}
+
+variable "gads_secret_env_vars" {
+  description = "Map of env vars to secrets for gads-mcp"
+  type = map(object({
+    secret_name = string
+    version     = string
+  }))
+  default = {
+    MCP_AUTH_SECRET_KEY = {
+      secret_name = "cesteral-jwt-secret-key"
+      version     = "latest"
+    }
+    GADS_DEVELOPER_TOKEN = {
+      secret_name = "cesteral-gads-developer-token"
+      version     = "latest"
+    }
+    GADS_CLIENT_ID = {
+      secret_name = "cesteral-gads-client-id"
+      version     = "latest"
+    }
+    GADS_CLIENT_SECRET = {
+      secret_name = "cesteral-gads-client-secret"
+      version     = "latest"
+    }
+    GADS_REFRESH_TOKEN = {
+      secret_name = "cesteral-gads-refresh-token"
       version     = "latest"
     }
   }

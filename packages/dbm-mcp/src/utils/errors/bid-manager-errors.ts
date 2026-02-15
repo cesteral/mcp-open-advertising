@@ -5,7 +5,7 @@
  * throughout the service layer and tool handlers.
  */
 
-import { McpError, JsonRpcErrorCode } from "@bidshifter/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 /**
  * Base class for Bid Manager API errors

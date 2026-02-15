@@ -2,12 +2,8 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
-import {
-  isValidFilterType,
-  isValidMetricType,
-  isValidReportType,
-  isValidDataRange,
-} from "../../../generated/index.js";
+import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
+import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "run_custom_query";
 const TOOL_TITLE = "Run Custom Query";
@@ -93,6 +89,9 @@ export const RunCustomQueryInputSchema = z
       .default("structured")
       .describe("Output format: 'structured' (JSON array) or 'csv' (raw CSV string)"),
   })
+  .superRefine((input, ctx) => {
+    addQueryValidationIssues(ctx, input);
+  })
   .describe("Parameters for executing a custom Bid Manager query");
 
 /**
@@ -117,78 +116,6 @@ export type RunCustomQueryInput = z.infer<typeof RunCustomQueryInputSchema>;
 export type RunCustomQueryOutput = z.infer<typeof RunCustomQueryOutputSchema>;
 
 /**
- * Validate filters and metrics against generated schemas
- */
-function validateQueryParams(
-  input: RunCustomQueryInput,
-  strictValidation: boolean
-): { warnings: string[]; errors: string[] } {
-  const warnings: string[] = [];
-  const errors: string[] = [];
-
-  // Validate report type
-  if (!isValidReportType(input.reportType)) {
-    if (strictValidation) {
-      errors.push(
-        `Unknown report type: ${input.reportType}. Use report-types://all to see valid options.`
-      );
-    } else {
-      warnings.push(`Unknown report type: ${input.reportType} - passing through to API`);
-    }
-  }
-
-  // Validate groupBys
-  for (const groupBy of input.groupBys) {
-    if (!isValidFilterType(groupBy)) {
-      if (strictValidation) {
-        errors.push(`Unknown filter type in groupBys: ${groupBy}. Use filter-types://all to see valid options.`);
-      } else {
-        warnings.push(`Unknown filter type: ${groupBy} - passing through to API`);
-      }
-    }
-  }
-
-  // Validate metrics
-  for (const metric of input.metrics) {
-    if (!isValidMetricType(metric)) {
-      if (strictValidation) {
-        errors.push(`Unknown metric type: ${metric}. Use metric-types://all to see valid options.`);
-      } else {
-        warnings.push(`Unknown metric type: ${metric} - passing through to API`);
-      }
-    }
-  }
-
-  // Validate filter types in filters array
-  if (input.filters) {
-    for (const filter of input.filters) {
-      if (!isValidFilterType(filter.type)) {
-        if (strictValidation) {
-          errors.push(
-            `Unknown filter type in filters: ${filter.type}. Use filter-types://all to see valid options.`
-          );
-        } else {
-          warnings.push(`Unknown filter type: ${filter.type} - passing through to API`);
-        }
-      }
-    }
-  }
-
-  // Validate date range preset if provided
-  if ("preset" in input.dateRange && !isValidDataRange(input.dateRange.preset)) {
-    if (strictValidation) {
-      errors.push(
-        `Unknown date range preset: ${input.dateRange.preset}. Use report-types://all to see valid options.`
-      );
-    } else {
-      warnings.push(`Unknown date range preset: ${input.dateRange.preset} - passing through to API`);
-    }
-  }
-
-  return { warnings, errors };
-}
-
-/**
  * Tool logic
  */
 export async function runCustomQueryLogic(
@@ -202,7 +129,20 @@ export async function runCustomQueryLogic(
   const { warnings, errors } = validateQueryParams(input, strictValidation);
 
   if (errors.length > 0) {
-    throw new Error(`Validation errors:\n${errors.join("\n")}`);
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Custom query validation failed with ${errors.length} issue(s). Resolve invalid values and retry.`,
+      {
+        issues: errors.map((error) => ({
+          code: error.code,
+          message: error.message,
+          value: error.value,
+          resourceUri: error.resourceUri,
+          path: error.path,
+        })),
+        requestId: _context?.requestId,
+      }
+    );
   }
 
   // Resolve BidManagerService from DI container

@@ -8,7 +8,7 @@
 import { metrics, type Counter, type Histogram, type ObservableGauge } from "@opentelemetry/api";
 import { EvaluatorIssueClass } from "./mcp-errors.js";
 
-const METER_NAME = "bidshifter-mcp";
+const METER_NAME = "cesteral-mcp";
 
 function getMeter() {
   return metrics.getMeter(METER_NAME);
@@ -21,6 +21,7 @@ function getMeter() {
 let toolExecutionCounter: Counter | undefined;
 let toolExecutionDuration: Histogram | undefined;
 let evaluatorFindingCounter: Counter | undefined;
+let evaluatorRecommendationCounter: Counter | undefined;
 let workflowCallDepthHistogram: Histogram | undefined;
 
 /**
@@ -67,6 +68,31 @@ export function recordEvaluatorFinding(
     tool_name: toolName,
     issue_class: issueClass,
     is_recoverable: String(isRecoverable),
+  });
+}
+
+/**
+ * Record evaluator recommendation actions for governance dashboards.
+ */
+export function recordEvaluatorRecommendation(
+  toolName: string,
+  action: "none" | "log_only" | "propose_playbook_delta" | "block",
+  observeOnly: boolean
+): void {
+  if (!evaluatorRecommendationCounter) {
+    evaluatorRecommendationCounter = getMeter().createCounter(
+      "mcp.evaluator.recommendation.count",
+      {
+        description: "Number of evaluator recommendation actions emitted by tool execution",
+        unit: "1",
+      }
+    );
+  }
+
+  evaluatorRecommendationCounter.add(1, {
+    tool_name: toolName,
+    action,
+    observe_only: String(observeOnly),
   });
 }
 

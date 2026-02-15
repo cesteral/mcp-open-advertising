@@ -4,7 +4,7 @@
 
 set -e
 
-echo "Building all BidShifter MCP packages..."
+echo "Building all Cesteral MCP packages..."
 
 # Clean previous builds
 echo "Cleaning previous builds..."
@@ -17,6 +17,8 @@ pnpm run build
 echo "Build completed successfully!"
 echo ""
 echo "Built packages:"
-echo "  - @bidshifter/shared"
-echo "  - @bidshifter/dbm-mcp"
-echo "  - @bidshifter/dv360-mcp"
+echo "  - @cesteral/shared"
+echo "  - @cesteral/dbm-mcp"
+echo "  - @cesteral/dv360-mcp"
+echo "  - @cesteral/ttd-mcp"
+echo "  - @cesteral/gads-mcp"

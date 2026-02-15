@@ -1,6 +1,6 @@
 import { container } from "tsyringe";
 import type { Logger } from "pino";
-import { createLogger } from "@bidshifter/shared";
+import { createLogger } from "@cesteral/shared";
 import { appConfig } from "../../config/index.js";
 import * as Tokens from "../tokens.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";

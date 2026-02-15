@@ -1,19 +1,23 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { z } from "zod";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
-import { getAllPrompts, getPromptDefinition } from "./prompts/index.js";
+import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
 import {
   EvaluatorIssueClass,
   registerToolsFromDefinitions,
+  registerPromptsFromDefinitions,
+  registerStaticResourcesFromDefinitions,
+  type McpServerPromptLike,
+  type PromptDefinitionForFactory,
   type ToolExecutionSnapshot,
   type ToolInteractionContext,
   type ToolInteractionEvaluation,
-} from "@bidshifter/shared";
+} from "@cesteral/shared";
 import type { Logger } from "pino";
+import packageJson from "../../package.json";
 
 const DBM_PACKAGE_NAME = "dbm-mcp";
 const DBM_PLATFORM = "dv360-reporting";
@@ -64,7 +68,7 @@ async function evaluateDbmInteraction(
 export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
   const server = new McpServer({
     name: "dbm-mcp",
-    version: "1.0.0",
+    version: packageJson.version,
     description: "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
   });
 
@@ -76,10 +80,6 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     sessionId,
     transformSchema: (schema) =>
       zodToJsonSchema(schema, {
-        // MCP Spec 2025-11-25 defaults to JSON Schema 2020-12.
-        // zod-to-json-schema doesn't have a 2020-12 target; 2019-09 is the
-        // closest available (uses $defs, modern keywords). Schemas without
-        // $schema field are treated as 2020-12 by MCP clients.
         target: "jsonSchema2019-09",
         markdownDescription: true,
       }),
@@ -99,107 +99,17 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     },
   });
 
-  // Register all resources
-  for (const resource of allResources) {
-    const resourceName = resource.uri.replace(/[^a-zA-Z0-9]/g, "_");
+  // Register all resources via shared factory
+  registerStaticResourcesFromDefinitions({ server, resources: allResources, logger });
 
-    server.registerResource(
-      resourceName,
-      resource.uri,
-      {
-        description: resource.description,
-        mimeType: resource.mimeType,
-      },
-      async () => {
-        logger.info({ resourceUri: resource.uri }, "Handling resource read");
-
-        try {
-          const content = resource.getContent();
-          logger.debug(
-            {
-              resourceUri: resource.uri,
-              contentBytes: Buffer.byteLength(content, "utf-8"),
-            },
-            "Resource content size"
-          );
-          return {
-            contents: [
-              {
-                uri: resource.uri,
-                mimeType: resource.mimeType,
-                text: content,
-              },
-            ],
-          };
-        } catch (error) {
-          logger.error({ error, resourceUri: resource.uri }, "Failed to read resource");
-          throw error;
-        }
-      }
-    );
-  }
-
-  logger.info({ resourceCount: allResources.length }, "Registered MCP resources");
-
-  // Register all prompts
-  const allPrompts = getAllPrompts();
-  for (const prompt of allPrompts) {
-    const argsSchema = prompt.arguments?.reduce(
-      (acc, arg) => {
-        const zodType = arg.required
-          ? z.string().describe(arg.description)
-          : z.string().optional().describe(arg.description);
-        acc[arg.name] = zodType;
-        return acc;
-      },
-      {} as Record<string, z.ZodType<string> | z.ZodOptional<z.ZodType<string>>>
-    );
-
-    server.registerPrompt(
-      prompt.name,
-      {
-        title: prompt.name,
-        description: prompt.description,
-        ...(argsSchema && Object.keys(argsSchema).length > 0 && { argsSchema }),
-      },
-      async (args: Record<string, string | undefined> | undefined) => {
-        logger.info({ promptName: prompt.name, arguments: args }, "Handling prompt get");
-
-        const promptDefinition = getPromptDefinition(prompt.name);
-        if (!promptDefinition) {
-          throw new Error(`Prompt not found: ${prompt.name}`);
-        }
-
-        try {
-          const cleanArgs: Record<string, string> = {};
-          if (args) {
-            for (const [key, value] of Object.entries(args)) {
-              if (value !== undefined) {
-                cleanArgs[key] = value;
-              }
-            }
-          }
-          const message = promptDefinition.generateMessage(cleanArgs);
-          return {
-            messages: [
-              {
-                role: "user",
-                content: {
-                  type: "text",
-                  text: message,
-                },
-              },
-            ],
-          };
-        } catch (error) {
-          logger.error({ error, promptName: prompt.name }, "Failed to generate prompt");
-          throw error;
-        }
-      }
-    );
-  }
-
-  logger.info({ promptCount: allPrompts.length }, "Registered MCP prompts");
+  // Register all prompts via shared factory
+  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
+    name: def.prompt.name,
+    description: def.prompt.description ?? "",
+    arguments: def.prompt.arguments,
+    generateMessage: def.generateMessage,
+  }));
+  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
 
   return server;
 }

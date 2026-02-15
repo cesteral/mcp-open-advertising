@@ -1,14 +1,15 @@
 # Staging environment configuration
 
 # Project configuration
-project_id  = "bidshifter-staging" # TODO: Replace with actual staging project ID
+project_id  = "cesteral-staging" # TODO: Replace with actual staging project ID
 region      = "europe-west2"
 environment = "staging"
 
 # Container images (update after first build)
-dbm_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/dbm-mcp:latest"
-dv360_mcp_image = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/dv360-mcp:latest"
-ttd_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-staging/bidshifter/ttd-mcp:latest"
+dbm_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-staging/cesteral/dbm-mcp:latest"
+dv360_mcp_image = "europe-west2-docker.pkg.dev/cesteral-staging/cesteral/dv360-mcp:latest"
+ttd_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-staging/cesteral/ttd-mcp:latest"
+gads_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-staging/cesteral/gads-mcp:latest"
 
 # Networking
 create_vpc             = true
@@ -48,4 +49,4 @@ scheduler_timezone    = "America/New_York"
 
 # Artifact Registry
 use_artifact_registry       = true
-artifact_registry_repo_name = "bidshifter"
+artifact_registry_repo_name = "cesteral"

@@ -4,7 +4,7 @@
 substitutions:
   _ENVIRONMENT: 'dev'
   _REGION: 'europe-west2'
-  _ARTIFACT_REGISTRY_REPO: 'bidshifter'
+  _ARTIFACT_REGISTRY_REPO: 'cesteral'
 
 options:
   machineType: 'N1_HIGHCPU_8'
@@ -57,6 +57,21 @@ steps:
       - '.'
     id: 'build-ttd-mcp'
 
+  # Step 1d: Build gads-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=gads-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-gads-mcp'
+
   # Step 2a: Push dbm-mcp image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -84,6 +99,15 @@ steps:
     id: 'push-ttd-mcp'
     waitFor: ['build-ttd-mcp']
 
+  # Step 2d: Push gads-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp'
+    id: 'push-gads-mcp'
+    waitFor: ['build-gads-mcp']
+
 images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${_ENVIRONMENT}-latest'
@@ -91,5 +115,7 @@ images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${_ENVIRONMENT}-latest'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${_ENVIRONMENT}-latest'
 
 timeout: '600s' # 10 minutes

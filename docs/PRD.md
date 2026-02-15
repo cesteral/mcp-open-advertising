@@ -1,4 +1,4 @@
-# BidShifter - Product Requirements Document (PRD)
+# Cesteral - Product Requirements Document (PRD)
 
 **Version:** 3.0
 **Date:** February 2026
@@ -24,9 +24,9 @@
 
 ## Executive Summary
 
-BidShifter is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk).
+Cesteral is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk).
 
-Built on three separate Model Context Protocol (MCP) servers, BidShifter enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
+Built on three separate Model Context Protocol (MCP) servers, Cesteral enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
 
 ### Key Differentiators
 
@@ -99,7 +99,7 @@ Programmatic advertising campaign optimization is:
 - Escalates edge cases to humans
 
 **Custom AI Agents**
-- Built by customers using BidShifter MCP servers as building blocks
+- Built by customers using Cesteral MCP servers as building blocks
 - Can focus on specific workflows (e.g., only margin optimization)
 - Integrate with customer's existing tools and processes
 
@@ -311,7 +311,7 @@ cesteral-mcp-servers/
 
 ### Data Flow Example: Optimize Campaign Bids
 
-BidShifter supports two access patterns. This keeps each MCP server independently consumable while still enabling multi-server automation.
+Cesteral supports two access patterns. This keeps each MCP server independently consumable while still enabling multi-server automation.
 
 **Pattern A (Current default): Direct client orchestration**
 
@@ -630,7 +630,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 **4. A/B Testing Support**
 - Run controlled experiments on optimization strategies
-- Measure lift from BidShifter vs. manual optimization
+- Measure lift from Cesteral vs. manual optimization
 
 ### Medium-Term (12 months)
 
@@ -667,7 +667,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 - Auto-create lookalike audiences from converters
 
 **12. White-Label Solution**
-- Enable agencies to deploy BidShifter for their clients
+- Enable agencies to deploy Cesteral for their clients
 - Multi-tenant architecture with org isolation
 
 ---

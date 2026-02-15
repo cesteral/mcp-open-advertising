@@ -6,7 +6,7 @@
  */
 
 import { google } from "googleapis";
-import type { GoogleAuthAdapter } from "@bidshifter/shared";
+import type { GoogleAuthAdapter } from "@cesteral/shared";
 
 type OAuth2Client = InstanceType<typeof google.auth.OAuth2>;
 

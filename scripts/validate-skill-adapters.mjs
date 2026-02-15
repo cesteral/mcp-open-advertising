@@ -22,10 +22,19 @@ function listFiles(dirPath, suffix) {
   if (!fs.existsSync(dirPath)) {
     return [];
   }
-  return fs
-    .readdirSync(dirPath)
-    .filter((file) => file.endsWith(suffix))
-    .map((file) => path.join(dirPath, file));
+  const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const fullPath = path.join(dirPath, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...listFiles(fullPath, suffix));
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(suffix)) {
+      files.push(fullPath);
+    }
+  }
+  return files;
 }
 
 function extractPromptNames(promptFiles) {
@@ -87,16 +96,16 @@ function resourcePatternSatisfied(pattern, availableUris) {
 
 function validateAdapters(contract) {
   const adapterFiles = [
-    ".cursor/skills/mcp-tool-explorer/SKILL.md",
-    ".cursor/skills/mcp-workflow-executor/SKILL.md",
-    ".cursor/skills/mcp-custom-query-executor/SKILL.md",
-    ".cursor/skills/mcp-delivery-troubleshooter/SKILL.md",
-    ".cursor/skills/mcp-ttd-workflow-executor/SKILL.md",
-    ".codex/skills/mcp-tool-explorer/SKILL.md",
-    ".codex/skills/mcp-workflow-executor/SKILL.md",
-    ".codex/skills/mcp-custom-query-executor/SKILL.md",
-    ".codex/skills/mcp-delivery-troubleshooter/SKILL.md",
-    ".codex/skills/mcp-ttd-workflow-executor/SKILL.md",
+    ".cursor/skills/cesteral-tool-explorer/SKILL.md",
+    ".cursor/skills/dv360-entity-updater/SKILL.md",
+    ".cursor/skills/dbm-report-builder/SKILL.md",
+    ".cursor/skills/dv360-delivery-troubleshooter/SKILL.md",
+    ".cursor/skills/ttd-entity-updater/SKILL.md",
+    ".codex/skills/cesteral-tool-explorer/SKILL.md",
+    ".codex/skills/dv360-entity-updater/SKILL.md",
+    ".codex/skills/dbm-report-builder/SKILL.md",
+    ".codex/skills/dv360-delivery-troubleshooter/SKILL.md",
+    ".codex/skills/ttd-entity-updater/SKILL.md",
   ].map((p) => path.join(repoRoot, p));
 
   const workflowIds = new Set(contract.workflowIds);
@@ -156,16 +165,16 @@ function isPotentialToolName(value) {
 
 function validateToolReferences(toolNames, promptNames) {
   const filesToCheck = [
-    ".cursor/skills/mcp-tool-explorer/SKILL.md",
-    ".cursor/skills/mcp-workflow-executor/SKILL.md",
-    ".cursor/skills/mcp-custom-query-executor/SKILL.md",
-    ".cursor/skills/mcp-delivery-troubleshooter/SKILL.md",
-    ".cursor/skills/mcp-ttd-workflow-executor/SKILL.md",
-    ".codex/skills/mcp-tool-explorer/SKILL.md",
-    ".codex/skills/mcp-workflow-executor/SKILL.md",
-    ".codex/skills/mcp-custom-query-executor/SKILL.md",
-    ".codex/skills/mcp-delivery-troubleshooter/SKILL.md",
-    ".codex/skills/mcp-ttd-workflow-executor/SKILL.md",
+    ".cursor/skills/cesteral-tool-explorer/SKILL.md",
+    ".cursor/skills/dv360-entity-updater/SKILL.md",
+    ".cursor/skills/dbm-report-builder/SKILL.md",
+    ".cursor/skills/dv360-delivery-troubleshooter/SKILL.md",
+    ".cursor/skills/ttd-entity-updater/SKILL.md",
+    ".codex/skills/cesteral-tool-explorer/SKILL.md",
+    ".codex/skills/dv360-entity-updater/SKILL.md",
+    ".codex/skills/dbm-report-builder/SKILL.md",
+    ".codex/skills/dv360-delivery-troubleshooter/SKILL.md",
+    ".codex/skills/ttd-entity-updater/SKILL.md",
     "README.md",
     "CLAUDE.md",
     "docs/client-workflow-mappings.md",
@@ -276,6 +285,20 @@ function main() {
         repoRoot,
         "packages",
         "ttd-mcp",
+        "src",
+        "mcp-server",
+        "resources",
+        "definitions"
+      ),
+    },
+    {
+      server: "gads-mcp",
+      promptsDir: path.join(repoRoot, "packages", "gads-mcp", "src", "mcp-server", "prompts"),
+      toolsDir: path.join(repoRoot, "packages", "gads-mcp", "src", "mcp-server", "tools", "definitions"),
+      resourcesDir: path.join(
+        repoRoot,
+        "packages",
+        "gads-mcp",
         "src",
         "mcp-server",
         "resources",

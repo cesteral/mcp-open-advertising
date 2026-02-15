@@ -6,7 +6,7 @@ This document captures the pseudo-code and detailed implementation snippets refe
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      MCP Client (AI Agent / bidshifter-mcp)          │
+│                      MCP Client (AI Agent / cesteral-mcp)          │
 │                      HTTP POST /mcp with JWT                         │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │ JSON-RPC 2.0 over SSE
@@ -1974,10 +1974,10 @@ export function parseConfig(): AppConfig {
 }
 ```
 
-#### 7.1 Integration with bidshifter-mcp
+#### 7.1 Integration with cesteral-mcp
 
 ```typescript
-// bidshifter-mcp orchestrates dv360-mcp tools
+// cesteral-mcp orchestrates dv360-mcp tools
 async function optimizeCampaignBids(campaignId: string) {
   // 1. Call dv360-mcp to fetch entities
   const entities = await mcpClient.callTool("fetch_campaign_entities", {
@@ -1985,7 +1985,7 @@ async function optimizeCampaignBids(campaignId: string) {
     platform: "dv360",
   });
 
-  // 2. Analyze entities (bidshifter-mcp logic)
+  // 2. Analyze entities (cesteral-mcp logic)
   const recommendations = calculateBidAdjustments(entities);
 
   // 3. Apply adjustments via dv360-mcp

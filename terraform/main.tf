@@ -1,4 +1,4 @@
-# Root Terraform configuration for BidShifter MCP Servers
+# Root Terraform configuration for Cesteral MCP Servers
 # Orchestrates networking, three MCP service modules, and monitoring
 
 terraform {
@@ -190,6 +190,45 @@ module "ttd_mcp" {
 }
 
 # ============================================================================
+# GOOGLE ADS MCP SERVICE
+# ============================================================================
+
+module "gads_mcp" {
+  source = "./modules/mcp-service"
+
+  service_name    = "gads-mcp"
+  container_image = var.gads_mcp_image
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  # Cloud Run configuration
+  min_instances         = var.min_instances
+  max_instances         = var.max_instances
+  cpu_limit             = var.cpu_limit
+  memory_limit          = var.memory_limit
+  cpu_always_allocated  = var.cpu_always_allocated
+  allow_unauthenticated = var.allow_unauthenticated
+  authorized_invokers   = var.authorized_invokers
+  vpc_connector_name    = module.networking.vpc_connector_id
+
+  # MCP server configuration
+  mcp_session_mode = var.mcp_session_mode
+  mcp_auth_mode    = var.mcp_auth_mode
+  log_level        = var.log_level
+
+  # Secrets (gads-specific)
+  secret_names    = var.gads_secret_names
+  secret_env_vars = var.gads_secret_env_vars
+
+  # No scheduler jobs for GAds server
+  enable_scheduler_jobs = false
+
+  depends_on = [module.networking]
+}
+
+# ============================================================================
 # MONITORING MODULE
 # ============================================================================
 
@@ -207,5 +246,5 @@ module "monitoring" {
   latency_p99_threshold_ms = var.monitoring_latency_p99_threshold_ms
   uptime_check_period      = var.monitoring_uptime_check_period
 
-  depends_on = [module.dbm_mcp, module.dv360_mcp, module.ttd_mcp]
+  depends_on = [module.dbm_mcp, module.dv360_mcp, module.ttd_mcp, module.gads_mcp]
 }

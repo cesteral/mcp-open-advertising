@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
+import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -19,6 +20,25 @@ export const GetEntityInputSchema = z
       .string()
       .min(1)
       .describe("The entity ID to retrieve"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("Advertiser ID (required for most non-advertiser entities)"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID (required for adGroup)"),
+    adGroupId: z
+      .string()
+      .optional()
+      .describe("Ad Group ID (required for ad)"),
+  })
+  .superRefine((input, ctx) => {
+    addParentValidationIssue(
+      ctx,
+      input.entityType as TtdEntityType,
+      input as Record<string, unknown>
+    );
   })
   .describe("Parameters for getting a TTD entity");
 

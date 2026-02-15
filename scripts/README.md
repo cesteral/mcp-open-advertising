@@ -1,6 +1,6 @@
-# BidShifter Deployment Scripts
+# Cesteral Deployment Scripts
 
-This directory contains helper scripts for deploying and managing the BidShifter MCP servers on GCP.
+This directory contains helper scripts for deploying and managing the Cesteral MCP servers on GCP.
 
 ## Scripts Overview
 
@@ -163,7 +163,7 @@ For automated deployments, use Cloud Build instead:
 gcloud builds submit \
   --config=cloudbuild.yaml \
   --substitutions=_ENVIRONMENT=dev \
-  --project=bidshifter-dev
+  --project=cesteral-dev
 
 # Or set up automated triggers in Cloud Console
 # Triggers > Create Trigger > Connect Repository
@@ -201,7 +201,7 @@ terraform force-unlock <LOCK_ID>
 ### Secret not found
 ```bash
 # List secrets
-gcloud secrets list --project=bidshifter-dev
+gcloud secrets list --project=cesteral-dev
 
 # Re-run secret creation
 ./scripts/create-secrets.sh dev
@@ -214,7 +214,7 @@ gcloud secrets list --project=bidshifter-dev
 for SERVICE in dbm-mcp dv360-mcp ttd-mcp; do
   gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
-    --project=bidshifter-dev
+    --project=cesteral-dev
 done
 ```
 
@@ -223,14 +223,14 @@ done
 gcloud logging read \
   'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd)-mcp"' \
   --limit 50 \
-  --project=bidshifter-dev
+  --project=cesteral-dev
 ```
 
 ### List Cloud Scheduler jobs
 ```bash
 gcloud scheduler jobs list \
   --location=europe-west2 \
-  --project=bidshifter-dev
+  --project=cesteral-dev
 ```
 
 ### Test health endpoints
@@ -238,7 +238,7 @@ gcloud scheduler jobs list \
 for SERVICE in dbm-mcp dv360-mcp ttd-mcp; do
   SERVICE_URL=$(gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
-    --project=bidshifter-dev \
+    --project=cesteral-dev \
     --format='value(status.url)')
   curl "$SERVICE_URL/health"
 done

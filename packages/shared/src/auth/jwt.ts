@@ -17,8 +17,8 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
   try {
     const secretKey = new TextEncoder().encode(secret);
     const { payload } = await jose.jwtVerify(token, secretKey, {
-      issuer: process.env.JWT_ISSUER || "bidshifter-mcp",
-      audience: process.env.JWT_AUDIENCE || "bidshifter-services",
+      issuer: process.env.JWT_ISSUER || "cesteral-mcp",
+      audience: process.env.JWT_AUDIENCE || "cesteral-services",
     });
 
     return payload as JwtPayload;
@@ -46,8 +46,8 @@ export async function createJwt(
   const token = await new jose.SignJWT({ sub: userId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setIssuer(process.env.JWT_ISSUER || "bidshifter-mcp")
-    .setAudience(process.env.JWT_AUDIENCE || "bidshifter-services")
+    .setIssuer(process.env.JWT_ISSUER || "cesteral-mcp")
+    .setAudience(process.env.JWT_AUDIENCE || "cesteral-services")
     .setExpirationTime(expiresIn)
     .sign(secretKey);
 

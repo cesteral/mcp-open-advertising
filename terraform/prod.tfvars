@@ -1,14 +1,15 @@
 # Production environment configuration
 
 # Project configuration
-project_id  = "bidshifter-prod" # TODO: Replace with actual prod project ID
+project_id  = "cesteral-prod" # TODO: Replace with actual prod project ID
 region      = "europe-west2"
 environment = "prod"
 
 # Container images (update after first build)
-dbm_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-prod/bidshifter/dbm-mcp:latest"
-dv360_mcp_image = "europe-west2-docker.pkg.dev/bidshifter-prod/bidshifter/dv360-mcp:latest"
-ttd_mcp_image   = "europe-west2-docker.pkg.dev/bidshifter-prod/bidshifter/ttd-mcp:latest"
+dbm_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dbm-mcp:latest"
+dv360_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dv360-mcp:latest"
+ttd_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/ttd-mcp:latest"
+gads_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/gads-mcp:latest"
 
 # Networking
 create_vpc             = true
@@ -48,4 +49,4 @@ scheduler_timezone    = "America/New_York"
 
 # Artifact Registry
 use_artifact_registry       = true
-artifact_registry_repo_name = "bidshifter"
+artifact_registry_repo_name = "cesteral"

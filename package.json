@@ -1,8 +1,8 @@
 {
-  "name": "bidshifter-mcp",
+  "name": "cesteral-mcp",
   "version": "1.0.0",
   "private": true,
-  "description": "BidShifter - AI-native programmatic advertising optimization platform with three independent MCP servers",
+  "description": "Cesteral - AI-native programmatic advertising optimization platform with four independent MCP servers",
   "type": "module",
   "engines": {
     "node": ">=20.0.0",
