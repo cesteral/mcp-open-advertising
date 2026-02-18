@@ -2,19 +2,19 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 import {
   fullCampaignSetupPrompt,
   getFullCampaignSetupPromptMessage,
-} from "./full-campaign-setup.prompt.js";
+} from "./definitions/full-campaign-setup.prompt.js";
 import {
   troubleshootUnderdeliveryPrompt,
   getTroubleshootUnderdeliveryPromptMessage,
-} from "./troubleshoot-underdelivery.prompt.js";
+} from "./definitions/troubleshoot-underdelivery.prompt.js";
 import {
   budgetReallocationPrompt,
   getBudgetReallocationPromptMessage,
-} from "./budget-reallocation.prompt.js";
+} from "./definitions/budget-reallocation.prompt.js";
 import {
   entityUpdateExecutionPrompt,
   getEntityUpdateExecutionPromptMessage,
-} from "./entity-update-execution.prompt.js";
+} from "./definitions/entity-update-execution.prompt.js";
 
 /**
  * Prompt definition with message generator

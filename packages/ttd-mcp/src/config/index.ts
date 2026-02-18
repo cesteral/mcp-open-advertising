@@ -27,7 +27,11 @@ const ConfigSchema = BaseConfigSchema.extend({
   ttdAuthUrl: z
     .string()
     .url()
-    .default("https://auth.thetradedesk.com/oauth2/token"),
+    .default("https://api.thetradedesk.com/v3/authentication"),
+  ttdGraphqlUrl: z
+    .string()
+    .url()
+    .default("https://desk.thetradedesk.com/graphql"),
   ttdRateLimitPerMinute: z.number().default(100),
 
   // Stdio fallback: TTD credentials from env vars
@@ -51,6 +55,7 @@ export function parseConfig(): AppConfig {
     // TTD API
     ttdApiBaseUrl: process.env.TTD_API_BASE_URL,
     ttdAuthUrl: process.env.TTD_AUTH_URL,
+    ttdGraphqlUrl: process.env.TTD_GRAPHQL_URL,
     ttdRateLimitPerMinute: process.env.TTD_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.TTD_RATE_LIMIT_PER_MINUTE)
       : undefined,

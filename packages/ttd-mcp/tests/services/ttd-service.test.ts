@@ -54,41 +54,41 @@ describe("TtdService", () => {
   // ==========================================================================
 
   describe("listEntities", () => {
-    it("calls httpClient.fetch with correct path for campaigns", async () => {
+    it("calls httpClient.fetch with correct scoped query path for campaigns", async () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
 
       await service.listEntities("campaign", { AdvertiserId: "adv1" });
 
       expect(httpClient.fetch).toHaveBeenCalledTimes(1);
       const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/campaign/query");
+      expect(path).toBe("/campaign/query/advertiser");
     });
 
-    it("calls httpClient.fetch with correct path for advertisers", async () => {
+    it("calls httpClient.fetch with correct scoped query path for advertisers", async () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
 
       await service.listEntities("advertiser", {});
 
       const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/advertiser/query");
+      expect(path).toBe("/advertiser/query/partner");
     });
 
-    it("calls httpClient.fetch with correct path for adGroups", async () => {
+    it("calls httpClient.fetch with correct scoped query path for adGroups", async () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
 
       await service.listEntities("adGroup", { AdvertiserId: "adv1" });
 
       const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/adgroup/query");
+      expect(path).toBe("/adgroup/query/campaign");
     });
 
-    it("calls httpClient.fetch with correct path for ads", async () => {
+    it("calls httpClient.fetch with correct scoped query path for ads", async () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
 
       await service.listEntities("ad", { AdvertiserId: "adv1" });
 
       const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/ad/query");
+      expect(path).toBe("/ad/query/adgroup");
     });
 
     it("uses POST method with filters in body", async () => {
@@ -268,16 +268,16 @@ describe("TtdService", () => {
   // ==========================================================================
 
   describe("updateEntity", () => {
-    it("calls httpClient.fetch with PUT, correct path, and body", async () => {
+    it("calls httpClient.fetch with PUT, no ID in URL, and ID injected into body", async () => {
       const data = { CampaignName: "Updated" };
       httpClient.fetch.mockResolvedValueOnce({ CampaignId: "c1", ...data });
 
       await service.updateEntity("campaign", "c1", data);
 
       const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/campaign/c1");
+      expect(path).toBe("/campaign");
       expect(options.method).toBe("PUT");
-      expect(JSON.parse(options.body)).toEqual(data);
+      expect(JSON.parse(options.body)).toEqual({ CampaignId: "c1", CampaignName: "Updated" });
     });
 
     it("calls rateLimiter.consume", async () => {

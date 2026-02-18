@@ -11,12 +11,13 @@ import type { GoogleAuthAdapter } from "@cesteral/shared";
 /**
  * Mock fetchWithTimeout – replaces the real network call for all tests.
  */
-vi.mock("../../src/utils/network/fetch-with-timeout.js", () => ({
-  fetchWithTimeout: vi.fn(),
-}));
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return { ...actual, fetchWithTimeout: vi.fn() };
+});
 
 // We need the reference to the mock *after* vi.mock has been hoisted.
-import { fetchWithTimeout } from "../../src/utils/network/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 /** Pino-compatible mock logger. */

@@ -2,14 +2,15 @@
  * TTD Auth Adapter
  *
  * Handles authentication with The Trade Desk API v3.
- * Uses partner ID + API secret to obtain Bearer tokens via OAuth2 client credentials flow.
- * Token endpoint: https://auth.thetradedesk.com/oauth2/token
+ * Uses partner ID + API secret to obtain access tokens via POST /v3/authentication.
+ * Token endpoint: https://api.thetradedesk.com/v3/authentication
  *
  * Same caching pattern as GoogleAuthAdapter: tokens are cached with a 60s
  * expiry buffer, and a pending-auth mutex prevents concurrent token requests.
  */
 
 import { createHash } from "crypto";
+import { fetchWithTimeout } from "@cesteral/shared";
 
 /**
  * TTD credentials parsed from HTTP headers or environment variables.
@@ -49,7 +50,7 @@ export class TtdApiTokenAuthAdapter implements TtdAuthAdapter {
 
   constructor(
     private readonly credentials: TtdCredentials,
-    private readonly authUrl: string = "https://auth.thetradedesk.com/oauth2/token"
+    private readonly authUrl: string = "https://api.thetradedesk.com/v3/authentication"
   ) {}
 
   get partnerId(): string {
@@ -77,7 +78,7 @@ export class TtdApiTokenAuthAdapter implements TtdAuthAdapter {
   }
 
   private async exchangeToken(): Promise<string> {
-    const response = await fetch(this.authUrl, {
+    const response = await fetchWithTimeout(this.authUrl, 10_000, undefined, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

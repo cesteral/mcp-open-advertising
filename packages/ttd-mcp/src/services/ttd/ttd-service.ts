@@ -15,7 +15,8 @@ export class TtdService {
   constructor(
     private readonly logger: Logger,
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: TtdHttpClient
+    private readonly httpClient: TtdHttpClient,
+    private readonly graphqlUrl: string = "https://desk.thetradedesk.com/graphql"
   ) {}
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
@@ -49,7 +50,7 @@ export class TtdService {
     }
 
     const result = (await this.httpClient.fetch(
-      `${config.apiPath}/query`,
+      config.queryPath,
       context,
       {
         method: "POST",
@@ -118,12 +119,15 @@ export class TtdService {
 
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
+    // TTD PUT endpoints take no ID in URL; ID must be in the request body
+    const payload = { [config.idField]: entityId, ...data };
+
     return this.httpClient.fetch(
-      `${config.apiPath}/${entityId}`,
+      config.apiPath,
       context,
       {
         method: "PUT",
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       }
     );
   }
@@ -166,10 +170,12 @@ export class TtdService {
 
     try {
       if (mode === "update" && entityId) {
+        // TTD PUT endpoints take no ID in URL; ID must be in the request body
+        const payload = { [config.idField]: entityId, ...data };
         await this.httpClient.fetch(
-          `${config.apiPath}/${entityId}`,
+          config.apiPath,
           context,
-          { method: "PUT", body: JSON.stringify(data) }
+          { method: "PUT", body: JSON.stringify(payload) }
         );
       } else {
         await this.httpClient.fetch(
@@ -222,45 +228,31 @@ export class TtdService {
 
   /**
    * Archive multiple entities by setting Availability to "Archived".
+   * Uses read-modify-write: GET full entity, set Availability, PUT full entity back.
    */
   async archiveEntities(
     entityType: TtdEntityType,
     entityIds: string[],
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
+    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+      return this.updateAvailability(entityType, entityId, "Archived", context);
+    });
 
-    const results: Array<{ entityId: string; success: boolean; error?: string }> = [];
-
-    for (const entityId of entityIds) {
-      try {
-        await this.rateLimiter.consume(`ttd:${partnerId}`);
-        await this.httpClient.fetch(
-          `${config.apiPath}/${entityId}`,
-          context,
-          {
-            method: "PUT",
-            body: JSON.stringify({ Availability: "Archived" }),
-          }
-        );
-        results.push({ entityId, success: true });
-      } catch (error: any) {
-        results.push({
-          entityId,
-          success: false,
-          error: error?.message ?? String(error),
-        });
-      }
-    }
-
-    return { results };
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: entityIds[i],
+        success: r.success,
+        error: r.error,
+      })),
+    };
   }
 
   // ─── Bulk Status Update ───────────────────────────────────────────
 
   /**
    * Batch update availability status for multiple entities of the same type.
+   * Uses read-modify-write: GET full entity, set Availability, PUT full entity back.
    */
   async bulkUpdateStatus(
     entityType: TtdEntityType,
@@ -268,33 +260,55 @@ export class TtdService {
     status: "Available" | "Paused" | "Archived",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
+    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+      return this.updateAvailability(entityType, entityId, status, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: entityIds[i],
+        success: r.success,
+        error: r.error,
+      })),
+    };
+  }
+
+  /**
+   * Read-modify-write helper: GET entity, set Availability, PUT full entity back.
+   * TTD uses full-replacement PUT semantics, so sending only { Availability } would
+   * reset all other fields. This pattern preserves the full entity payload.
+   */
+  private async updateAvailability(
+    entityType: TtdEntityType,
+    entityId: string,
+    availability: string,
+    context?: RequestContext
+  ): Promise<unknown> {
     const config = getEntityConfig(entityType);
     const partnerId = this.httpClient.partnerId;
 
-    const results: Array<{ entityId: string; success: boolean; error?: string }> = [];
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    for (const entityId of entityIds) {
-      try {
-        await this.rateLimiter.consume(`ttd:${partnerId}`);
-        await this.httpClient.fetch(
-          `${config.apiPath}/${entityId}`,
-          context,
-          {
-            method: "PUT",
-            body: JSON.stringify({ Availability: status }),
-          }
-        );
-        results.push({ entityId, success: true });
-      } catch (error: any) {
-        results.push({
-          entityId,
-          success: false,
-          error: error?.message ?? String(error),
-        });
+    // GET current entity (full payload)
+    const current = (await this.httpClient.fetch(
+      `${config.apiPath}/${entityId}`,
+      context,
+      { method: "GET" }
+    )) as Record<string, unknown>;
+
+    // Set Availability on the full entity
+    current.Availability = availability;
+
+    // PUT full entity back (no ID in URL, ID already in body)
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch(
+      config.apiPath,
+      context,
+      {
+        method: "PUT",
+        body: JSON.stringify(current),
       }
-    }
-
-    return { results };
+    );
   }
 
   // ─── Bid Adjustment ───────────────────────────────────────────────
@@ -336,8 +350,9 @@ export class TtdService {
           rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
         }
 
+        // TTD PUT endpoints take no ID in URL; full entity with ID in body
         const entity = await this.httpClient.fetch(
-          `/adgroup/${adj.adGroupId}`,
+          "/adgroup",
           context,
           {
             method: "PUT",
@@ -374,8 +389,9 @@ export class TtdService {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    return this.httpClient.fetch(
-      "/graphql",
+    // GraphQL lives on a different host (desk.thetradedesk.com) from the REST API
+    return this.httpClient.fetchDirect(
+      this.graphqlUrl,
       context,
       {
         method: "POST",

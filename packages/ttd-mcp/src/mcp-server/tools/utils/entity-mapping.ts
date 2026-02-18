@@ -24,6 +24,8 @@ export type BulkSupportedEntityType = "campaign" | "adGroup";
 
 export interface TtdEntityConfig {
   apiPath: string;
+  /** TTD query endpoint path (e.g., "/campaign/query/advertiser"). */
+  queryPath: string;
   parentIds: ParentIdKey[];
   idField: string;
   /** Whether the entity supports bulk create/update via Workflows Service. */
@@ -37,11 +39,13 @@ export type ParentIdKey = "advertiserId" | "campaignId" | "adGroupId";
 const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
   advertiser: {
     apiPath: "/advertiser",
+    queryPath: "/advertiser/query/partner",
     parentIds: [],
     idField: "AdvertiserId",
   },
   campaign: {
     apiPath: "/campaign",
+    queryPath: "/campaign/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "CampaignId",
     supportsBulk: true,
@@ -49,6 +53,7 @@ const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
   },
   adGroup: {
     apiPath: "/adgroup",
+    queryPath: "/adgroup/query/campaign",
     parentIds: ["advertiserId", "campaignId"],
     idField: "AdGroupId",
     supportsBulk: true,
@@ -56,31 +61,37 @@ const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
   },
   ad: {
     apiPath: "/ad",
+    queryPath: "/ad/query/adgroup",
     parentIds: ["advertiserId", "adGroupId"],
     idField: "AdId",
   },
   creative: {
     apiPath: "/creative",
+    queryPath: "/creative/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "CreativeId",
   },
   siteList: {
     apiPath: "/sitelist",
+    queryPath: "/sitelist/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "SiteListId",
   },
   deal: {
     apiPath: "/deal",
+    queryPath: "/deal/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "DealId",
   },
   conversionTracker: {
     apiPath: "/tracking",
+    queryPath: "/tracking/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "TrackingTagId",
   },
   bidList: {
     apiPath: "/bidlist",
+    queryPath: "/bidlist/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "BidListId",
   },

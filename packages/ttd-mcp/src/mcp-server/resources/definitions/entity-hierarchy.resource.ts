@@ -31,7 +31,7 @@ function buildEntityRows(): string {
       const config = getEntityConfig(entityType);
       const supportsBulk = config.supportsBulk ? "✓" : "";
       const supportsArchive = config.supportsArchive ? "✓" : "";
-      return `| **${entityType}** | ${formatParentIds(config.parentIds)} | \`${config.idField}\` | \`${config.apiPath}\` | ${supportsBulk} | ${supportsArchive} |`;
+      return `| **${entityType}** | ${formatParentIds(config.parentIds)} | \`${config.idField}\` | \`${config.apiPath}\` | \`${config.queryPath}\` | ${supportsBulk} | ${supportsArchive} |`;
     })
     .join("\n");
 }
@@ -57,8 +57,8 @@ Partner (your TTD seat)
 
 ## Entity Types (9 total)
 
-| Entity Type | Required Parent IDs | ID Field | API Path | Supports Bulk | Supports Archive |
-|-------------|--------------------:|----------|----------|:---:|:---:|
+| Entity Type | Required Parent IDs | ID Field | API Path | Query Path | Supports Bulk | Supports Archive |
+|-------------|--------------------:|----------|----------|------------|:---:|:---:|
 ${buildEntityRows()}
 
 ## Key Relationships
@@ -101,16 +101,19 @@ Delete bottom-up to avoid orphan references:
 
 ## Query Patterns
 
-All list queries use POST to \`/{entity}/query\` with filter payloads:
+List queries use POST to scoped query endpoints. Each endpoint is scoped to a parent entity type:
 
-| Query | Filter Field | Example |
-|-------|-------------|---------|
-| Campaigns for an advertiser | \`AdvertiserIds\` | \`{ "AdvertiserIds": ["abc123"] }\` |
-| Ad Groups for a campaign | \`CampaignId\` | \`{ "CampaignId": "camp456" }\` |
-| Ads for an ad group | \`AdGroupId\` | \`{ "AdGroupId": "ag789" }\` |
-| Creatives for an advertiser | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
-| Site lists for an advertiser | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
-| Deals for an advertiser | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
+| Query | Endpoint | Required Filter | Example |
+|-------|----------|----------------|---------|
+| Advertisers for partner | \`/advertiser/query/partner\` | \`PartnerId\` (auto-set) | _automatic_ |
+| Campaigns for advertiser | \`/campaign/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
+| Ad Groups for campaign | \`/adgroup/query/campaign\` | \`CampaignId\` | \`{ "CampaignId": "camp456" }\` |
+| Ads for ad group | \`/ad/query/adgroup\` | \`AdGroupId\` | \`{ "AdGroupId": "ag789" }\` |
+| Creatives for advertiser | \`/creative/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
+| Site lists for advertiser | \`/sitelist/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
+| Deals for advertiser | \`/deal/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
+| Trackers for advertiser | \`/tracking/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
+| Bid lists for advertiser | \`/bidlist/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
 
 ## Available Tools Summary
 
@@ -126,10 +129,25 @@ All list queries use POST to \`/{entity}/query\` with filter payloads:
 | \`ttd_bulk_update_status\` | Batch pause/resume/archive | ✓ |
 | \`ttd_archive_entities\` | Batch archive (soft-delete) | ✓ |
 | \`ttd_adjust_bids\` | Batch bid adjustments | ✓ |
-| \`ttd_validate_entity\` | Dry-run entity validation | |
+| \`ttd_validate_entity\` | Test entity payload (NOT dry-run — creates/updates on success) | |
 | \`ttd_graphql_query\` | GraphQL query/mutation passthrough | |
+| \`ttd_graphql_query_bulk\` | Submit bulk GraphQL query job | ✓ |
+| \`ttd_graphql_mutation_bulk\` | Submit bulk GraphQL mutation job (non-cancelable) | ✓ |
+| \`ttd_graphql_bulk_job\` | Check bulk job status / get result URL | |
+| \`ttd_graphql_cancel_bulk_job\` | Cancel bulk query job (not mutations) | |
 | \`ttd_get_report\` | Generate async report | |
 | \`ttd_download_report\` | Download & parse report CSV | |
+
+## GraphQL Bulk Constraints
+
+| Constraint | Limit |
+|-----------|-------|
+| Max mutation inputs per job | 1,000 |
+| Max lexical tokens per query/mutation string | 15,000 (~60,000 chars) |
+| Mutation jobs cancelable? | **No** — non-cancelable once submitted |
+| Result URL expiry | 1 hour after job completion |
+| Max active jobs per partner | 10 |
+| Max queued jobs per partner | 20 |
 `;
 }
 

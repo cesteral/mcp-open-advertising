@@ -24,7 +24,7 @@ const logger = createServerLogger("gads-mcp", transportMode, otelLogMixin());
  * Set up credentials for stdio mode from environment variables.
  * Creates a GAdsRefreshTokenAuthAdapter and session services for the "stdio" session.
  */
-function setupStdioCredentials(sessionId: string): void {
+function setupStdioCredentials(sessionId: string): boolean {
   const developerToken = mcpConfig.gadsDeveloperToken;
   const clientId = mcpConfig.gadsClientId;
   const clientSecret = mcpConfig.gadsClientSecret;
@@ -35,7 +35,7 @@ function setupStdioCredentials(sessionId: string): void {
       "No Google Ads credentials found in env vars. " +
       "Set GADS_DEVELOPER_TOKEN, GADS_CLIENT_ID, GADS_CLIENT_SECRET, and GADS_REFRESH_TOKEN for stdio mode."
     );
-    return;
+    return false;
   }
 
   const authAdapter = new GAdsRefreshTokenAuthAdapter({
@@ -55,6 +55,7 @@ function setupStdioCredentials(sessionId: string): void {
 
   sessionServiceStore.set(sessionId, services);
   logger.info("Stdio session services created successfully");
+  return true;
 }
 
 bootstrapMcpServer({

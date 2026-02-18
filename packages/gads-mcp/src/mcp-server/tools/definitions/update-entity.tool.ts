@@ -43,7 +43,9 @@ export const UpdateEntityInputSchema = z
     addParentValidationIssue(
       ctx,
       input.entityType as GAdsEntityType,
-      input as Record<string, unknown>
+      input as Record<string, unknown>,
+      [],
+      { validateCompositeIds: true }
     );
   })
   .describe("Parameters for updating a Google Ads entity");

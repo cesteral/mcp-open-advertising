@@ -10,12 +10,13 @@ import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
 /**
  * Mock fetchWithTimeout -- replaces the real network call for all tests.
  */
-vi.mock("../../src/utils/network/fetch-with-timeout.js", () => ({
-  fetchWithTimeout: vi.fn(),
-}));
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return { ...actual, fetchWithTimeout: vi.fn() };
+});
 
 // We need the reference to the mock *after* vi.mock has been hoisted.
-import { fetchWithTimeout } from "../../src/utils/network/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 /** Pino-compatible mock logger. */
@@ -138,15 +139,15 @@ describe("TtdHttpClient", () => {
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
-    it("includes Bearer token in Authorization header", async () => {
+    it("includes TTD-Auth header with access token", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce(fakeResponse(200, { ok: true }));
 
       await client.fetch("/test");
 
-      // Verify the Authorization header was set
+      // Verify the TTD-Auth header was set
       const callOptions = mockFetchWithTimeout.mock.calls[0]![3] as RequestInit;
-      expect((callOptions.headers as Record<string, string>).Authorization).toBe(
-        "Bearer test-token",
+      expect((callOptions.headers as Record<string, string>)["TTD-Auth"]).toBe(
+        "test-token",
       );
     });
   });

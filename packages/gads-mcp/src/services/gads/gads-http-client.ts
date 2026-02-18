@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { GAdsAuthAdapter } from "../../auth/gads-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout } from "../../utils/network/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext } from "../../utils/internal/request-context.js";
 
 const MAX_RETRIES = 3;

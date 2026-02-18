@@ -1,3 +1,7 @@
+<!-- GENERATED FILE — DO NOT EDIT DIRECTLY -->
+<!-- Source: skills/canonical/dbm-report-builder/SKILL.md -->
+<!-- Regenerate: pnpm generate:skills -->
+
 ---
 name: dbm-report-builder
 description: Build and execute custom Bid Manager (DBM) reports with prompt-guided validation.

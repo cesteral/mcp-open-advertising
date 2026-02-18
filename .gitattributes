@@ -1,0 +1,7 @@
+# Generated skill adapter files — collapse in PR diffs
+.cursor/skills/** linguist-generated=true
+.codex/skills/** linguist-generated=true
+.github/copilot-instructions.md linguist-generated=true
+.windsurf/rules/** linguist-generated=true
+.clinerules/** linguist-generated=true
+.continue/rules/** linguist-generated=true

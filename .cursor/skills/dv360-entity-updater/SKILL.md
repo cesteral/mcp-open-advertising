@@ -1,3 +1,7 @@
+<!-- GENERATED FILE — DO NOT EDIT DIRECTLY -->
+<!-- Source: skills/canonical/dv360-entity-updater/SKILL.md -->
+<!-- Regenerate: pnpm generate:skills -->
+
 ---
 name: dv360-entity-updater
 description: Execute schema-first DV360 entity updates with updateMask discipline and verification.

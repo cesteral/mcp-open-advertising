@@ -17,10 +17,11 @@ export function createSessionServices(
   authAdapter: TtdAuthAdapter,
   baseUrl: string,
   logger: Logger,
-  rateLimiter: RateLimiter
+  rateLimiter: RateLimiter,
+  graphqlUrl?: string
 ): SessionServices {
   const httpClient = new TtdHttpClient(authAdapter, baseUrl, logger);
-  const ttdService = new TtdService(logger, rateLimiter, httpClient);
+  const ttdService = new TtdService(logger, rateLimiter, httpClient, graphqlUrl);
   const ttdReportingService = new TtdReportingService(logger, rateLimiter, httpClient);
   return { httpClient, ttdService, ttdReportingService };
 }

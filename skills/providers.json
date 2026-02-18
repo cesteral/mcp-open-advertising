@@ -1,0 +1,41 @@
+{
+  "providers": {
+    "cursor": {
+      "outputDir": ".cursor/skills/{skillName}",
+      "outputFile": "SKILL.md",
+      "format": "skill-per-directory",
+      "frontmatter": "preserve"
+    },
+    "codex": {
+      "outputDir": ".codex/skills/{skillName}",
+      "outputFile": "SKILL.md",
+      "format": "skill-per-directory",
+      "frontmatter": "preserve"
+    },
+    "copilot": {
+      "outputDir": ".github",
+      "outputFile": "copilot-instructions.md",
+      "format": "single-concatenated",
+      "frontmatter": "strip",
+      "preamble": "TOC + intro"
+    },
+    "windsurf": {
+      "outputDir": ".windsurf/rules",
+      "outputFile": "{skillName}.md",
+      "format": "file-per-skill",
+      "frontmatter": "strip"
+    },
+    "cline": {
+      "outputDir": ".clinerules",
+      "outputFile": "{skillName}.md",
+      "format": "file-per-skill",
+      "frontmatter": "preserve"
+    },
+    "continue": {
+      "outputDir": ".continue/rules",
+      "outputFile": "{skillName}.md",
+      "format": "file-per-skill",
+      "frontmatter": "preserve"
+    }
+  }
+}

@@ -17,8 +17,18 @@ export const GetReportInputSchema = z
       .string()
       .describe("Name for the report"),
     dateRange: z
-      .string()
-      .describe("Date range (e.g., 'Last7Days', 'Last30Days', 'Yesterday', 'Custom')"),
+      .enum([
+        "Last7Days",
+        "Last14Days",
+        "Last30Days",
+        "Yesterday",
+        "Custom",
+        "MonthToDate",
+        "LastMonth",
+        "QuarterToDate",
+        "Lifetime",
+      ])
+      .describe("Date range for the report"),
     dimensions: z
       .array(z.string())
       .optional()

@@ -23,7 +23,10 @@ export const AdjustBidsInputSchema = z
           baseBidCpm: z.number().positive().optional().describe("New base bid CPM amount"),
           maxBidCpm: z.number().positive().optional().describe("New max bid CPM amount"),
           currencyCode: z.string().optional().describe("Currency code (default: USD)"),
-        })
+        }).refine(
+          (adj) => adj.baseBidCpm !== undefined || adj.maxBidCpm !== undefined,
+          { message: "At least one of baseBidCpm or maxBidCpm must be provided" }
+        )
       )
       .min(1)
       .max(50)

@@ -24,7 +24,7 @@ const logger = createServerLogger("ttd-mcp", transportMode, otelLogMixin());
  * Set up credentials for stdio mode from environment variables.
  * Creates a TtdApiTokenAuthAdapter and session services for the "stdio" session.
  */
-function setupStdioCredentials(sessionId: string): void {
+function setupStdioCredentials(sessionId: string): boolean {
   const partnerId = mcpConfig.ttdPartnerId;
   const apiSecret = mcpConfig.ttdApiSecret;
 
@@ -33,7 +33,7 @@ function setupStdioCredentials(sessionId: string): void {
       "No TTD credentials found in env vars. " +
       "Set TTD_PARTNER_ID and TTD_API_SECRET for stdio mode."
     );
-    return;
+    return false;
   }
 
   const authAdapter = new TtdApiTokenAuthAdapter(
@@ -45,11 +45,13 @@ function setupStdioCredentials(sessionId: string): void {
     authAdapter,
     mcpConfig.ttdApiBaseUrl,
     logger,
-    rateLimiter
+    rateLimiter,
+    mcpConfig.ttdGraphqlUrl
   );
 
   sessionServiceStore.set(sessionId, services);
   logger.info("Stdio session services created successfully");
+  return true;
 }
 
 bootstrapMcpServer({

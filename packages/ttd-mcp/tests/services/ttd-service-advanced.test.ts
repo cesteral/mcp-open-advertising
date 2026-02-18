@@ -18,6 +18,7 @@ function createMockLogger() {
 function createMockHttpClient() {
   return {
     fetch: vi.fn().mockResolvedValue({}),
+    fetchDirect: vi.fn().mockResolvedValue({}),
     partnerId: "test-partner",
   } as any;
 }
@@ -33,10 +34,12 @@ describe("TtdService advanced methods", () => {
   let httpClient: ReturnType<typeof createMockHttpClient>;
   let rateLimiter: ReturnType<typeof createMockRateLimiter>;
 
+  const TEST_GRAPHQL_URL = "https://desk.thetradedesk.com/graphql";
+
   beforeEach(() => {
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
-    service = new TtdService(createMockLogger(), rateLimiter, httpClient);
+    service = new TtdService(createMockLogger(), rateLimiter, httpClient, TEST_GRAPHQL_URL);
     vi.clearAllMocks();
   });
 
@@ -68,8 +71,10 @@ describe("TtdService advanced methods", () => {
 
       expect(result).toEqual({ valid: true });
       const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/campaign/c1");
+      // TTD PUT: no ID in URL, ID injected into body
+      expect(path).toBe("/campaign");
       expect(options.method).toBe("PUT");
+      expect(JSON.parse(options.body)).toEqual({ CampaignId: "c1", CampaignName: "A" });
     });
 
     it("returns valid=false and error message when API call fails", async () => {
@@ -120,31 +125,43 @@ describe("TtdService advanced methods", () => {
 
       expect(result.results.every((r) => r.success)).toBe(true);
       expect(httpClient.fetch).toHaveBeenCalledTimes(2);
-      expect(httpClient.fetch.mock.calls[0][0]).toBe("/campaign/c1");
-      expect(httpClient.fetch.mock.calls[1][0]).toBe("/campaign/c2");
+      // TTD PUT: no ID in URL, ID injected into body
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/campaign");
+      expect(httpClient.fetch.mock.calls[1][0]).toBe("/campaign");
     });
   });
 
   describe("archiveEntities", () => {
-    it("sets Availability=Archived per entity", async () => {
-      httpClient.fetch.mockResolvedValue({});
+    it("uses read-modify-write: GET entity, set Availability=Archived, PUT full entity", async () => {
+      // Single entity to keep assertion ordering simple
+      httpClient.fetch
+        .mockResolvedValueOnce({ CampaignId: "c1", CampaignName: "Camp1", Availability: "Available" }) // GET
+        .mockResolvedValueOnce({}); // PUT result
 
-      const result = await service.archiveEntities("campaign", ["c1", "c2"]);
+      const result = await service.archiveEntities("campaign", ["c1"]);
 
       expect(result.results).toEqual([
         { entityId: "c1", success: true },
-        { entityId: "c2", success: true },
       ]);
 
-      const [, , firstOptions] = httpClient.fetch.mock.calls[0];
-      expect(firstOptions.method).toBe("PUT");
-      expect(JSON.parse(firstOptions.body)).toEqual({ Availability: "Archived" });
+      // GET then PUT
+      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/campaign/c1");
+      expect(httpClient.fetch.mock.calls[0][2].method).toBe("GET");
+      expect(httpClient.fetch.mock.calls[1][0]).toBe("/campaign");
+      expect(httpClient.fetch.mock.calls[1][2].method).toBe("PUT");
+      const putBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
+      expect(putBody.Availability).toBe("Archived");
+      expect(putBody.CampaignName).toBe("Camp1"); // preserves other fields
     });
   });
 
   describe("bulkUpdateStatus", () => {
-    it("sets requested Availability status", async () => {
-      httpClient.fetch.mockResolvedValue({});
+    it("uses read-modify-write: GET entity, set Availability, PUT full entity", async () => {
+      // GET returns full entity
+      httpClient.fetch
+        .mockResolvedValueOnce({ AdGroupId: "ag1", AdGroupName: "AG1", Availability: "Available" })
+        .mockResolvedValueOnce({}); // PUT result
 
       const result = await service.bulkUpdateStatus(
         "adGroup",
@@ -153,9 +170,15 @@ describe("TtdService advanced methods", () => {
       );
 
       expect(result.results).toEqual([{ entityId: "ag1", success: true }]);
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/adgroup/ag1");
-      expect(JSON.parse(options.body)).toEqual({ Availability: "Paused" });
+      // GET
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/adgroup/ag1");
+      expect(httpClient.fetch.mock.calls[0][2].method).toBe("GET");
+      // PUT (no ID in URL)
+      expect(httpClient.fetch.mock.calls[1][0]).toBe("/adgroup");
+      expect(httpClient.fetch.mock.calls[1][2].method).toBe("PUT");
+      const putBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
+      expect(putBody.Availability).toBe("Paused");
+      expect(putBody.AdGroupName).toBe("AG1"); // preserves other fields
     });
   });
 
@@ -183,6 +206,8 @@ describe("TtdService advanced methods", () => {
       expect(httpClient.fetch).toHaveBeenCalledTimes(2);
       expect(httpClient.fetch.mock.calls[0][0]).toBe("/adgroup/ag1");
       expect(httpClient.fetch.mock.calls[0][2].method).toBe("GET");
+      // TTD PUT: no ID in URL
+      expect(httpClient.fetch.mock.calls[1][0]).toBe("/adgroup");
       expect(httpClient.fetch.mock.calls[1][2].method).toBe("PUT");
       const putBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
       expect(putBody.RTBAttributes.BaseBidCPM.Amount).toBe(2.5);
@@ -191,8 +216,8 @@ describe("TtdService advanced methods", () => {
   });
 
   describe("graphqlQuery", () => {
-    it("posts query and variables to /graphql", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ data: { advertiser: { id: "a1" } } });
+    it("posts query and variables to the configured GraphQL URL via fetchDirect", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({ data: { advertiser: { id: "a1" } } });
 
       const result = await service.graphqlQuery(
         "query ($id: ID!) { advertiser(id: $id) { id } }",
@@ -200,8 +225,8 @@ describe("TtdService advanced methods", () => {
       );
 
       expect(result).toEqual({ data: { advertiser: { id: "a1" } } });
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/graphql");
+      const [url, , options] = httpClient.fetchDirect.mock.calls[0];
+      expect(url).toBe(TEST_GRAPHQL_URL);
       expect(options.method).toBe("POST");
       const body = JSON.parse(options.body);
       expect(body.variables.id).toBe("a1");

@@ -5,6 +5,15 @@ import {
   getTtdCredentialFingerprint,
 } from "../../src/auth/ttd-auth-adapter.js";
 
+// Mock fetchWithTimeout from shared
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return { ...actual, fetchWithTimeout: vi.fn() };
+});
+
+import { fetchWithTimeout } from "@cesteral/shared";
+const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
+
 const MOCK_CREDENTIALS = { partnerId: "test-partner", apiSecret: "test-secret" };
 
 const MOCK_TOKEN_RESPONSE = {
@@ -14,11 +23,8 @@ const MOCK_TOKEN_RESPONSE = {
 };
 
 describe("TtdApiTokenAuthAdapter", () => {
-  let fetchMock: ReturnType<typeof vi.fn>;
-
   beforeEach(() => {
-    fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetchWithTimeout.mockReset();
   });
 
   afterEach(() => {
@@ -27,10 +33,10 @@ describe("TtdApiTokenAuthAdapter", () => {
   });
 
   function mockSuccessResponse(body = MOCK_TOKEN_RESPONSE) {
-    fetchMock.mockResolvedValueOnce({
+    mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       json: async () => body,
-    });
+    } as unknown as Response);
   }
 
   describe("getAccessToken", () => {
@@ -50,7 +56,7 @@ describe("TtdApiTokenAuthAdapter", () => {
       expect(second).toBe("ttd-test-token");
 
       // fetch should only have been called once
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
     it("fetches new token when no cached token", async () => {
@@ -59,7 +65,7 @@ describe("TtdApiTokenAuthAdapter", () => {
 
       const token = await adapter.getAccessToken();
       expect(token).toBe("ttd-test-token");
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
     it("fetches new token when cached token expired", async () => {
@@ -82,14 +88,14 @@ describe("TtdApiTokenAuthAdapter", () => {
 
       const second = await adapter.getAccessToken();
       expect(second).toBe("ttd-new-token");
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
 
     it("concurrent calls share the same pending auth (mutex)", async () => {
       const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
 
       let resolveToken!: (value: unknown) => void;
-      fetchMock.mockReturnValueOnce(
+      mockFetchWithTimeout.mockReturnValueOnce(
         new Promise((resolve) => {
           resolveToken = resolve;
         })
@@ -103,7 +109,7 @@ describe("TtdApiTokenAuthAdapter", () => {
       resolveToken({
         ok: true,
         json: async () => MOCK_TOKEN_RESPONSE,
-      });
+      } as unknown as Response);
 
       const [t1, t2, t3] = await Promise.all([p1, p2, p3]);
       expect(t1).toBe("ttd-test-token");
@@ -111,18 +117,18 @@ describe("TtdApiTokenAuthAdapter", () => {
       expect(t3).toBe("ttd-test-token");
 
       // fetch was only called once
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
     it("clears pendingAuth even on failure (finally block)", async () => {
       const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
 
-      fetchMock.mockResolvedValueOnce({
+      mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
         status: 401,
         statusText: "Unauthorized",
         text: async () => "Bad credentials",
-      });
+      } as unknown as Response);
 
       await expect(adapter.getAccessToken()).rejects.toThrow("TTD token exchange failed");
 
@@ -130,7 +136,7 @@ describe("TtdApiTokenAuthAdapter", () => {
       mockSuccessResponse();
       const token = await adapter.getAccessToken();
       expect(token).toBe("ttd-test-token");
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -141,8 +147,10 @@ describe("TtdApiTokenAuthAdapter", () => {
 
       await adapter.getAccessToken();
 
-      const call = fetchMock.mock.calls[0];
-      const body = JSON.parse(call[1].body);
+      // fetchWithTimeout(url, timeoutMs, context, options)
+      const call = mockFetchWithTimeout.mock.calls[0];
+      const options = call[3] as RequestInit;
+      const body = JSON.parse(options.body as string);
       expect(body).toEqual({
         Login: "test-partner",
         Password: "test-secret",
@@ -156,8 +164,19 @@ describe("TtdApiTokenAuthAdapter", () => {
 
       await adapter.getAccessToken();
 
-      const call = fetchMock.mock.calls[0];
-      expect(call[1].headers["Content-Type"]).toBe("application/json");
+      const call = mockFetchWithTimeout.mock.calls[0];
+      const options = call[3] as RequestInit;
+      expect((options.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
+    });
+
+    it("uses 10s timeout", async () => {
+      const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
+      mockSuccessResponse();
+
+      await adapter.getAccessToken();
+
+      const call = mockFetchWithTimeout.mock.calls[0];
+      expect(call[1]).toBe(10_000);
     });
 
     it("uses custom authUrl when provided", async () => {
@@ -167,29 +186,29 @@ describe("TtdApiTokenAuthAdapter", () => {
 
       await adapter.getAccessToken();
 
-      expect(fetchMock.mock.calls[0][0]).toBe(customUrl);
+      expect(mockFetchWithTimeout.mock.calls[0][0]).toBe(customUrl);
     });
 
-    it("defaults to https://auth.thetradedesk.com/oauth2/token", async () => {
+    it("defaults to https://api.thetradedesk.com/v3/authentication", async () => {
       const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
       mockSuccessResponse();
 
       await adapter.getAccessToken();
 
-      expect(fetchMock.mock.calls[0][0]).toBe(
-        "https://auth.thetradedesk.com/oauth2/token"
+      expect(mockFetchWithTimeout.mock.calls[0][0]).toBe(
+        "https://api.thetradedesk.com/v3/authentication"
       );
     });
 
     it("throws on non-ok response with error body", async () => {
       const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
 
-      fetchMock.mockResolvedValueOnce({
+      mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
         status: 403,
         statusText: "Forbidden",
         text: async () => "Invalid partner credentials",
-      });
+      } as unknown as Response);
 
       await expect(adapter.getAccessToken()).rejects.toThrow(
         "TTD token exchange failed: 403 Forbidden. Invalid partner credentials"
@@ -208,14 +227,14 @@ describe("TtdApiTokenAuthAdapter", () => {
       vi.advanceTimersByTime(3539 * 1000);
       const stillCached = await adapter.getAccessToken();
       expect(stillCached).toBe("token-1");
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
 
       // At 3540s+, the token should be expired
       vi.advanceTimersByTime(2 * 1000);
       mockSuccessResponse({ access_token: "token-2", expires_in: 3600, token_type: "Bearer" });
       const refreshed = await adapter.getAccessToken();
       expect(refreshed).toBe("token-2");
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
   });
 

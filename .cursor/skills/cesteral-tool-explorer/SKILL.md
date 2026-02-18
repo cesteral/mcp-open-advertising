@@ -1,3 +1,7 @@
+<!-- GENERATED FILE — DO NOT EDIT DIRECTLY -->
+<!-- Source: skills/canonical/cesteral-tool-explorer/SKILL.md -->
+<!-- Regenerate: pnpm generate:skills -->
+
 ---
 name: cesteral-tool-explorer
 description: Explore Cesteral tools, prompts, and resources across all servers (DV360, DBM, TTD) with minimal context usage.

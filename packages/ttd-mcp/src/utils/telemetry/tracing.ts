@@ -1,11 +1,16 @@
 /**
- * Tracing utilities for ttd-mcp
+ * Telemetry utilities for ttd-mcp
  *
- * Core tracing helpers are in @cesteral/shared.
- * This file adds TTD API-specific span helpers.
+ * Re-exports core OTEL + tracing from @cesteral/shared,
+ * plus TTD API-specific span helpers.
  */
 
 export {
+  initializeOpenTelemetry,
+  shutdownOpenTelemetry,
+  getOpenTelemetrySDK,
+  isOpenTelemetryEnabled,
+  otelLogMixin,
   getTracer,
   withSpan,
   withToolSpan,

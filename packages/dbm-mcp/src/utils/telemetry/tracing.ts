@@ -1,11 +1,16 @@
 /**
- * Tracing utilities for dbm-mcp
+ * Telemetry utilities for dbm-mcp
  *
- * Core tracing helpers are in @cesteral/shared.
- * This file adds Bid Manager API-specific span helpers.
+ * Re-exports core OTEL + tracing from @cesteral/shared,
+ * plus Bid Manager API-specific span helpers.
  */
 
 export {
+  initializeOpenTelemetry,
+  shutdownOpenTelemetry,
+  getOpenTelemetrySDK,
+  isOpenTelemetryEnabled,
+  otelLogMixin,
   getTracer,
   withSpan,
   withToolSpan,

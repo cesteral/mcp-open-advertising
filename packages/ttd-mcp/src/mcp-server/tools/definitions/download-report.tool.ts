@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -14,8 +15,7 @@ After generating a report with \`ttd_get_report\`, use the returned \`downloadUr
 2. Run \`ttd_download_report\` with that URL → get parsed data
 
 **Options:**
-- \`maxRows\` limits returned rows (default 1000) to avoid large payloads
-- \`format\` controls output format (summary vs full)`;
+- \`maxRows\` limits returned rows (default 1000) to avoid large payloads`;
 
 export const DownloadReportInputSchema = z
   .object({
@@ -29,10 +29,6 @@ export const DownloadReportInputSchema = z
       .max(10000)
       .optional()
       .describe("Maximum rows to return (default: 1000)"),
-    format: z
-      .enum(["full", "summary"])
-      .optional()
-      .describe("Output format: 'full' for all rows, 'summary' for aggregated stats (default: full)"),
   })
   .describe("Parameters for downloading a TTD report");
 
@@ -98,7 +94,7 @@ export async function downloadReportLogic(
   // Resolve session to ensure the user is authenticated
   resolveSessionServices(sdkContext);
 
-  const response = await fetch(input.downloadUrl);
+  const response = await fetchWithTimeout(input.downloadUrl, 60_000);
   if (!response.ok) {
     throw new Error(
       `Failed to download report: ${response.status} ${response.statusText}`

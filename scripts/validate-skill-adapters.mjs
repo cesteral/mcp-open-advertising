@@ -2,8 +2,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 
 const repoRoot = process.cwd();
+const checkFreshness = process.argv.includes("--check-freshness");
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -94,46 +96,114 @@ function resourcePatternSatisfied(pattern, availableUris) {
   return Array.from(availableUris).some((uri) => uri.startsWith(prefix));
 }
 
-function validateAdapters(contract) {
-  const adapterFiles = [
-    ".cursor/skills/cesteral-tool-explorer/SKILL.md",
-    ".cursor/skills/dv360-entity-updater/SKILL.md",
-    ".cursor/skills/dbm-report-builder/SKILL.md",
-    ".cursor/skills/dv360-delivery-troubleshooter/SKILL.md",
-    ".cursor/skills/ttd-entity-updater/SKILL.md",
-    ".codex/skills/cesteral-tool-explorer/SKILL.md",
-    ".codex/skills/dv360-entity-updater/SKILL.md",
-    ".codex/skills/dbm-report-builder/SKILL.md",
-    ".codex/skills/dv360-delivery-troubleshooter/SKILL.md",
-    ".codex/skills/ttd-entity-updater/SKILL.md",
-  ].map((p) => path.join(repoRoot, p));
+// --- Data-driven adapter path computation ---
 
+function readCanonicalSkillNames() {
+  const canonicalDir = path.join(repoRoot, "skills", "canonical");
+  if (!fs.existsSync(canonicalDir)) {
+    fail("Missing skills/canonical/ directory");
+    return [];
+  }
+  const entries = fs.readdirSync(canonicalDir, { withFileTypes: true });
+  return entries
+    .filter((e) => e.isDirectory())
+    .filter((e) => fs.existsSync(path.join(canonicalDir, e.name, "SKILL.md")))
+    .map((e) => e.name)
+    .sort();
+}
+
+function computeExpectedPaths(providers, skillNames) {
+  const paths = [];
+  for (const [providerName, provider] of Object.entries(providers)) {
+    switch (provider.format) {
+      case "skill-per-directory":
+        for (const name of skillNames) {
+          const dir = provider.outputDir.replace("{skillName}", name);
+          paths.push({
+            provider: providerName,
+            skill: name,
+            filePath: path.join(repoRoot, dir, provider.outputFile),
+          });
+        }
+        break;
+      case "file-per-skill":
+        for (const name of skillNames) {
+          const file = provider.outputFile.replace("{skillName}", name);
+          paths.push({
+            provider: providerName,
+            skill: name,
+            filePath: path.join(repoRoot, provider.outputDir, file),
+          });
+        }
+        break;
+      case "single-concatenated":
+        paths.push({
+          provider: providerName,
+          skill: "*",
+          filePath: path.join(repoRoot, provider.outputDir, provider.outputFile),
+        });
+        break;
+    }
+  }
+  return paths;
+}
+
+function validateAdapters(contract, providers, skillNames) {
+  const expectedPaths = computeExpectedPaths(providers, skillNames);
   const workflowIds = new Set(contract.workflowIds);
 
-  for (const filePath of adapterFiles) {
-    if (!fs.existsSync(filePath)) {
-      fail(`Missing adapter skill: ${path.relative(repoRoot, filePath)}`);
+  for (const entry of expectedPaths) {
+    if (!fs.existsSync(entry.filePath)) {
+      fail(
+        `Missing adapter (${entry.provider}): ${path.relative(repoRoot, entry.filePath)}`
+      );
       continue;
     }
 
-    const content = fs.readFileSync(filePath, "utf8");
+    const content = fs.readFileSync(entry.filePath, "utf8");
+
+    // For single-concatenated files, validate all workflow IDs are present
+    if (entry.skill === "*") {
+      for (const workflowId of workflowIds) {
+        if (!content.includes(workflowId)) {
+          fail(
+            `Concatenated file missing workflow ID '${workflowId}': ${path.relative(repoRoot, entry.filePath)}`
+          );
+        }
+      }
+      // Check line count of concatenated file
+      const lineCount = content.split("\n").length;
+      const maxConcatenatedLines = contract.adapterRules.maxSkillLines * skillNames.length;
+      if (lineCount > maxConcatenatedLines) {
+        fail(
+          `Concatenated file too long (${lineCount} lines, max ${maxConcatenatedLines}): ${path.relative(repoRoot, entry.filePath)}`
+        );
+      }
+      continue;
+    }
+
+    // Per-skill validation
     const lineCount = content.split("\n").length;
-    if (lineCount > contract.adapterRules.maxSkillLines) {
+    // Account for 4 extra lines from generated header (3 comment lines + 1 blank)
+    const effectiveMax = contract.adapterRules.maxSkillLines + 4;
+    if (lineCount > effectiveMax) {
       fail(
-        `Adapter too long (${lineCount} lines): ${path.relative(repoRoot, filePath)}`
+        `Adapter too long (${lineCount} lines): ${path.relative(repoRoot, entry.filePath)}`
       );
     }
 
     const workflowMatch = content.match(/Workflow ID:\s*`([^`]+)`/);
     if (!workflowMatch) {
-      fail(`Adapter missing workflow ID: ${path.relative(repoRoot, filePath)}`);
+      fail(
+        `Adapter missing workflow ID: ${path.relative(repoRoot, entry.filePath)}`
+      );
       continue;
     }
 
     const workflowId = workflowMatch[1];
     if (!workflowIds.has(workflowId)) {
       fail(
-        `Adapter references unknown workflow ID '${workflowId}': ${path.relative(repoRoot, filePath)}`
+        `Adapter references unknown workflow ID '${workflowId}': ${path.relative(repoRoot, entry.filePath)}`
       );
       continue;
     }
@@ -143,7 +213,7 @@ function validateAdapters(contract) {
     for (const section of requiredSections) {
       if (!content.includes(`\`${section}\``)) {
         fail(
-          `Adapter missing required output section '${section}': ${path.relative(repoRoot, filePath)}`
+          `Adapter missing required output section '${section}': ${path.relative(repoRoot, entry.filePath)}`
         );
       }
     }
@@ -163,22 +233,21 @@ function isPotentialToolName(value) {
   return /^[a-z0-9]+(?:_[a-z0-9]+)+$/.test(value);
 }
 
-function validateToolReferences(toolNames, promptNames) {
-  const filesToCheck = [
-    ".cursor/skills/cesteral-tool-explorer/SKILL.md",
-    ".cursor/skills/dv360-entity-updater/SKILL.md",
-    ".cursor/skills/dbm-report-builder/SKILL.md",
-    ".cursor/skills/dv360-delivery-troubleshooter/SKILL.md",
-    ".cursor/skills/ttd-entity-updater/SKILL.md",
-    ".codex/skills/cesteral-tool-explorer/SKILL.md",
-    ".codex/skills/dv360-entity-updater/SKILL.md",
-    ".codex/skills/dbm-report-builder/SKILL.md",
-    ".codex/skills/dv360-delivery-troubleshooter/SKILL.md",
-    ".codex/skills/ttd-entity-updater/SKILL.md",
-    "README.md",
-    "CLAUDE.md",
-    "docs/client-workflow-mappings.md",
-  ].map((p) => path.join(repoRoot, p));
+function validateToolReferences(toolNames, promptNames, providers, skillNames) {
+  // Build list of files to check from providers (only check canonical + one provider to avoid dupe noise)
+  const filesToCheck = [];
+
+  // Check canonical files
+  for (const name of skillNames) {
+    filesToCheck.push(
+      path.join(repoRoot, "skills", "canonical", name, "SKILL.md")
+    );
+  }
+
+  // Check docs
+  filesToCheck.push(path.join(repoRoot, "README.md"));
+  filesToCheck.push(path.join(repoRoot, "CLAUDE.md"));
+  filesToCheck.push(path.join(repoRoot, "docs", "client-workflow-mappings.md"));
 
   for (const filePath of filesToCheck) {
     if (!fs.existsSync(filePath)) continue;
@@ -213,21 +282,30 @@ function extractWorkflowIdsFromMappings(mappingsPath) {
 
 function validatePlatformPackages(contract, workflowIds) {
   const platformPackages = contract.platformPackages || {};
-  const requireMappings = Boolean(contract.adapterRules?.requirePackageWorkflowMapping);
+  const requireMappings = Boolean(
+    contract.adapterRules?.requirePackageWorkflowMapping
+  );
 
   if (!requireMappings) {
     return;
   }
 
   if (!Object.keys(platformPackages).length) {
-    fail("adapterRules.requirePackageWorkflowMapping=true but platformPackages is empty");
+    fail(
+      "adapterRules.requirePackageWorkflowMapping=true but platformPackages is empty"
+    );
     return;
   }
 
   for (const [packageName, details] of Object.entries(platformPackages)) {
     const requiredWorkflowIds = details?.requiredWorkflowIds || [];
-    if (!Array.isArray(requiredWorkflowIds) || requiredWorkflowIds.length === 0) {
-      fail(`platformPackages.${packageName}.requiredWorkflowIds must be a non-empty array`);
+    if (
+      !Array.isArray(requiredWorkflowIds) ||
+      requiredWorkflowIds.length === 0
+    ) {
+      fail(
+        `platformPackages.${packageName}.requiredWorkflowIds must be a non-empty array`
+      );
       continue;
     }
     for (const workflowId of requiredWorkflowIds) {
@@ -240,6 +318,113 @@ function validatePlatformPackages(contract, workflowIds) {
   }
 }
 
+function validateFreshness() {
+  console.log("\nChecking freshness...");
+
+  const tmpDir = path.join(repoRoot, ".tmp-skill-freshness");
+  try {
+    // Clean up any previous tmp dir
+    if (fs.existsSync(tmpDir)) {
+      fs.rmSync(tmpDir, { recursive: true });
+    }
+    fs.mkdirSync(tmpDir, { recursive: true });
+
+    // Re-generate to tmp by temporarily swapping output dirs
+    const providersPath = path.join(repoRoot, "skills", "providers.json");
+    const { providers } = readJson(providersPath);
+    const canonicalDir = path.join(repoRoot, "skills", "canonical");
+    const skillNames = readCanonicalSkillNames();
+
+    // Read canonical skills
+    const skills = skillNames.map((name) => ({
+      name,
+      content: fs.readFileSync(
+        path.join(canonicalDir, name, "SKILL.md"),
+        "utf8"
+      ),
+    }));
+
+    // Generate to tmp and compare
+    let staleCount = 0;
+
+    for (const [providerName, provider] of Object.entries(providers)) {
+      const expectedPaths = computeExpectedPaths(
+        { [providerName]: provider },
+        skillNames
+      );
+
+      for (const entry of expectedPaths) {
+        if (!fs.existsSync(entry.filePath)) {
+          fail(`Freshness: missing file ${path.relative(repoRoot, entry.filePath)}`);
+          staleCount++;
+          continue;
+        }
+
+        // For single-concatenated, we need to regenerate the entire file
+        // For others, check that canonical content matches the body after header
+        const currentContent = fs.readFileSync(entry.filePath, "utf8");
+
+        if (entry.skill === "*") {
+          // For concatenated files, verify all canonical skills are present
+          for (const skill of skills) {
+            const workflowMatch = skill.content.match(
+              /Workflow ID:\s*`([^`]+)`/
+            );
+            if (workflowMatch && !currentContent.includes(workflowMatch[1])) {
+              fail(
+                `Freshness: concatenated file missing workflow from '${skill.name}'`
+              );
+              staleCount++;
+            }
+          }
+          continue;
+        }
+
+        // For per-skill files, strip the generated header and compare body
+        const skill = skills.find((s) => s.name === entry.skill);
+        if (!skill) continue;
+
+        // Strip generated header (first 3 lines + blank line)
+        const lines = currentContent.split("\n");
+        const bodyStart = lines.findIndex(
+          (line, i) =>
+            i >= 3 && !line.startsWith("<!--") && line !== ""
+        );
+
+        // Determine expected body based on frontmatter handling
+        let expectedBody;
+        if (provider.frontmatter === "strip") {
+          const fmMatch = skill.content.match(/^---\n[\s\S]*?\n---\n/);
+          expectedBody = fmMatch
+            ? skill.content.slice(fmMatch[0].length)
+            : skill.content;
+        } else {
+          expectedBody = skill.content;
+        }
+
+        // The body after header should start at line index where content begins
+        // Generated header is 3 comment lines + 1 blank line = 4 lines (indices 0-3)
+        const actualBody = lines.slice(4).join("\n");
+
+        if (actualBody !== expectedBody) {
+          fail(
+            `Freshness: stale file (${providerName}) ${path.relative(repoRoot, entry.filePath)}`
+          );
+          staleCount++;
+        }
+      }
+    }
+
+    if (staleCount === 0) {
+      console.log("Freshness check passed — all generated files match canonical sources.");
+    }
+  } finally {
+    if (fs.existsSync(tmpDir)) {
+      fs.rmSync(tmpDir, { recursive: true });
+    }
+  }
+}
+
 function main() {
   const contractPath = path.join(repoRoot, "docs", "mcp-skill-contract.json");
   if (!fs.existsSync(contractPath)) {
@@ -248,11 +433,43 @@ function main() {
   }
   const contract = readJson(contractPath);
 
+  const providersPath = path.join(repoRoot, "skills", "providers.json");
+  if (!fs.existsSync(providersPath)) {
+    fail("Missing skills/providers.json");
+    return;
+  }
+  const { providers } = readJson(providersPath);
+
+  const skillNames = readCanonicalSkillNames();
+  if (skillNames.length === 0) {
+    fail("No canonical skills found");
+    return;
+  }
+
+  console.log(
+    `Validating ${skillNames.length} skills across ${Object.keys(providers).length} providers...\n`
+  );
+
   const packageSpecs = [
     {
       server: "dbm-mcp",
-      promptsDir: path.join(repoRoot, "packages", "dbm-mcp", "src", "mcp-server", "prompts"),
-      toolsDir: path.join(repoRoot, "packages", "dbm-mcp", "src", "mcp-server", "tools", "definitions"),
+      promptsDir: path.join(
+        repoRoot,
+        "packages",
+        "dbm-mcp",
+        "src",
+        "mcp-server",
+        "prompts"
+      ),
+      toolsDir: path.join(
+        repoRoot,
+        "packages",
+        "dbm-mcp",
+        "src",
+        "mcp-server",
+        "tools",
+        "definitions"
+      ),
       resourcesDir: path.join(
         repoRoot,
         "packages",
@@ -265,8 +482,23 @@ function main() {
     },
     {
       server: "dv360-mcp",
-      promptsDir: path.join(repoRoot, "packages", "dv360-mcp", "src", "mcp-server", "prompts"),
-      toolsDir: path.join(repoRoot, "packages", "dv360-mcp", "src", "mcp-server", "tools", "definitions"),
+      promptsDir: path.join(
+        repoRoot,
+        "packages",
+        "dv360-mcp",
+        "src",
+        "mcp-server",
+        "prompts"
+      ),
+      toolsDir: path.join(
+        repoRoot,
+        "packages",
+        "dv360-mcp",
+        "src",
+        "mcp-server",
+        "tools",
+        "definitions"
+      ),
       resourcesDir: path.join(
         repoRoot,
         "packages",
@@ -279,8 +511,23 @@ function main() {
     },
     {
       server: "ttd-mcp",
-      promptsDir: path.join(repoRoot, "packages", "ttd-mcp", "src", "mcp-server", "prompts"),
-      toolsDir: path.join(repoRoot, "packages", "ttd-mcp", "src", "mcp-server", "tools", "definitions"),
+      promptsDir: path.join(
+        repoRoot,
+        "packages",
+        "ttd-mcp",
+        "src",
+        "mcp-server",
+        "prompts"
+      ),
+      toolsDir: path.join(
+        repoRoot,
+        "packages",
+        "ttd-mcp",
+        "src",
+        "mcp-server",
+        "tools",
+        "definitions"
+      ),
       resourcesDir: path.join(
         repoRoot,
         "packages",
@@ -293,8 +540,23 @@ function main() {
     },
     {
       server: "gads-mcp",
-      promptsDir: path.join(repoRoot, "packages", "gads-mcp", "src", "mcp-server", "prompts"),
-      toolsDir: path.join(repoRoot, "packages", "gads-mcp", "src", "mcp-server", "tools", "definitions"),
+      promptsDir: path.join(
+        repoRoot,
+        "packages",
+        "gads-mcp",
+        "src",
+        "mcp-server",
+        "prompts"
+      ),
+      toolsDir: path.join(
+        repoRoot,
+        "packages",
+        "gads-mcp",
+        "src",
+        "mcp-server",
+        "tools",
+        "definitions"
+      ),
       resourcesDir: path.join(
         repoRoot,
         "packages",
@@ -312,7 +574,9 @@ function main() {
   const allToolNames = new Set();
   const allResourceUris = new Set();
   for (const spec of packageSpecs) {
-    promptNamesByServer[spec.server] = extractPromptNames(listFiles(spec.promptsDir, ".prompt.ts"));
+    promptNamesByServer[spec.server] = extractPromptNames(
+      listFiles(spec.promptsDir, ".prompt.ts")
+    );
     for (const promptName of promptNamesByServer[spec.server]) {
       allPromptNames.add(promptName);
     }
@@ -322,7 +586,9 @@ function main() {
       allToolNames.add(toolName);
     }
 
-    const resourceUris = extractResourceUris(listFiles(spec.resourcesDir, ".resource.ts"));
+    const resourceUris = extractResourceUris(
+      listFiles(spec.resourcesDir, ".resource.ts")
+    );
     for (const uri of resourceUris) {
       allResourceUris.add(uri);
     }
@@ -372,15 +638,19 @@ function main() {
     }
   }
 
-  validateAdapters(contract);
-  validateToolReferences(allToolNames, allPromptNames);
+  validateAdapters(contract, providers, skillNames);
+  validateToolReferences(allToolNames, allPromptNames, providers, skillNames);
+
+  if (checkFreshness) {
+    validateFreshness();
+  }
 
   if (process.exitCode) {
-    console.error("Skill adapter validation failed.");
+    console.error("\nSkill adapter validation failed.");
     process.exit(process.exitCode);
   }
 
-  console.log("Skill adapter validation passed.");
+  console.log("\nSkill adapter validation passed.");
 }
 
 main();

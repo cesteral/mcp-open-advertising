@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { TtdAuthAdapter } from "../../auth/ttd-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout } from "../../utils/network/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext } from "../../utils/internal/request-context.js";
 
 const MAX_RETRIES = 3;
@@ -52,6 +52,25 @@ export class TtdHttpClient {
     return this.executeWithRetry(url, 10_000, context, options);
   }
 
+  /**
+   * Make an authenticated request to a full URL (not prepending baseUrl).
+   *
+   * Used for endpoints on a different host (e.g., GraphQL at desk.thetradedesk.com).
+   * Same retry/auth logic as `fetch`.
+   */
+  async fetchDirect(
+    fullUrl: string,
+    context?: RequestContext,
+    options?: RequestInit
+  ): Promise<unknown> {
+    this.logger.debug(
+      { url: fullUrl, method: options?.method || "GET", requestId: context?.requestId },
+      "Making TTD API request (direct URL)"
+    );
+
+    return this.executeWithRetry(fullUrl, 10_000, context, options);
+  }
+
   private async executeWithRetry(
     url: string,
     timeoutMs: number,
@@ -68,7 +87,7 @@ export class TtdHttpClient {
         headers: {
           "Content-Type": "application/json",
           ...options?.headers,
-          Authorization: `Bearer ${accessToken}`,
+          "TTD-Auth": accessToken,
         },
       });
 

@@ -1,11 +1,16 @@
 /**
- * Tracing utilities for dv360-mcp
+ * Telemetry utilities for dv360-mcp
  *
- * Core tracing helpers are in @cesteral/shared.
- * This file adds DV360 API-specific span helpers.
+ * Re-exports core OTEL + tracing from @cesteral/shared,
+ * plus DV360 API-specific span helpers.
  */
 
 export {
+  initializeOpenTelemetry,
+  shutdownOpenTelemetry,
+  getOpenTelemetrySDK,
+  isOpenTelemetryEnabled,
+  otelLogMixin,
   getTracer,
   withSpan,
   withToolSpan,

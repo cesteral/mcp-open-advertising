@@ -1,11 +1,16 @@
 /**
- * Tracing utilities for gads-mcp
+ * Telemetry utilities for gads-mcp
  *
- * Core tracing helpers are in @cesteral/shared.
- * This file adds Google Ads API-specific span helpers.
+ * Re-exports core OTEL + tracing from @cesteral/shared,
+ * plus Google Ads API-specific span helpers.
  */
 
 export {
+  initializeOpenTelemetry,
+  shutdownOpenTelemetry,
+  getOpenTelemetrySDK,
+  isOpenTelemetryEnabled,
+  otelLogMixin,
   getTracer,
   withSpan,
   withToolSpan,

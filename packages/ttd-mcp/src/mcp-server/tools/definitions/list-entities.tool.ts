@@ -12,7 +12,13 @@ const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering a
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Uses TTD API v3 query endpoints. Results are paginated; use pageToken to fetch subsequent pages.`;
+Uses TTD API v3 scoped query endpoints. Required parent IDs depend on entity type:
+- **advertiser**: no parent required (scoped to partner)
+- **campaign, creative, siteList, deal, conversionTracker, bidList**: \`advertiserId\` required
+- **adGroup**: \`advertiserId\` + \`campaignId\` required
+- **ad**: \`advertiserId\` + \`adGroupId\` required
+
+Results are paginated; use pageToken to fetch subsequent pages.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -22,11 +28,15 @@ export const ListEntitiesInputSchema = z
     advertiserId: z
       .string()
       .optional()
-      .describe("Advertiser ID (required for campaigns, ad groups, ads)"),
+      .describe("Advertiser ID (required for all entity types except advertiser)"),
     campaignId: z
       .string()
       .optional()
-      .describe("Campaign ID (optional filter)"),
+      .describe("Campaign ID (required for adGroup queries)"),
+    adGroupId: z
+      .string()
+      .optional()
+      .describe("Ad Group ID (required for ad queries)"),
     filter: z
       .record(z.unknown())
       .optional()
@@ -41,6 +51,32 @@ export const ListEntitiesInputSchema = z
       .max(100)
       .optional()
       .describe("Number of entities to return per page"),
+  })
+  .superRefine((data, ctx) => {
+    const needsAdvertiser = ["campaign", "adGroup", "ad", "creative", "siteList", "deal", "conversionTracker", "bidList"];
+    if (needsAdvertiser.includes(data.entityType) && !data.advertiserId) {
+      ctx.addIssue({
+        code: "custom",
+        message: `advertiserId is required when listing ${data.entityType} entities`,
+        path: ["advertiserId"],
+      });
+    }
+    // adGroup queries use /adgroup/query/campaign — campaignId is required
+    if (data.entityType === "adGroup" && !data.campaignId) {
+      ctx.addIssue({
+        code: "custom",
+        message: "campaignId is required when listing adGroup entities (query is scoped to campaign)",
+        path: ["campaignId"],
+      });
+    }
+    // ad queries use /ad/query/adgroup — adGroupId is required
+    if (data.entityType === "ad" && !data.adGroupId) {
+      ctx.addIssue({
+        code: "custom",
+        message: "adGroupId is required when listing ad entities (query is scoped to ad group)",
+        path: ["adGroupId"],
+      });
+    }
   })
   .describe("Parameters for listing TTD entities");
 
@@ -69,6 +105,9 @@ export async function listEntitiesLogic(
   }
   if (input.campaignId) {
     filters.CampaignId = input.campaignId;
+  }
+  if (input.adGroupId) {
+    filters.AdGroupId = input.adGroupId;
   }
 
   const result = await ttdService.listEntities(

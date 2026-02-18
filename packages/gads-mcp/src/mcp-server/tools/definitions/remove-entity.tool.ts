@@ -35,7 +35,9 @@ export const RemoveEntityInputSchema = z
     addParentValidationIssue(
       ctx,
       input.entityType as GAdsEntityType,
-      input as Record<string, unknown>
+      input as Record<string, unknown>,
+      [],
+      { validateCompositeIds: true }
     );
   })
   .describe("Parameters for removing a Google Ads entity");

@@ -23,10 +23,12 @@ vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
       "bidList",
     ]),
   getBulkEntityTypeEnum: vi.fn().mockReturnValue(["campaign", "adGroup"]),
+  getArchiveSupportedEntityTypes: vi.fn().mockReturnValue(["campaign", "adGroup"]),
   getEntityConfig: vi.fn().mockImplementation((entityType: string) => {
     if (entityType === "adGroup") {
       return {
         apiPath: "/adgroup",
+        queryPath: "/adgroup/query/campaign",
         parentIds: ["advertiserId", "campaignId"],
         idField: "AdGroupId",
         supportsBulk: true,
@@ -36,6 +38,7 @@ vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
     if (entityType === "campaign") {
       return {
         apiPath: "/campaign",
+        queryPath: "/campaign/query/advertiser",
         parentIds: ["advertiserId"],
         idField: "CampaignId",
         supportsBulk: true,
@@ -44,11 +47,20 @@ vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
     }
     return {
       apiPath: `/${entityType}`,
+      queryPath: `/${entityType}/query/advertiser`,
       parentIds: ["advertiserId"],
       idField: "Id",
     };
   }),
 }));
+
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return { ...actual, fetchWithTimeout: vi.fn() };
+});
+
+import { fetchWithTimeout } from "@cesteral/shared";
+const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 
 import {
   bulkCreateEntitiesLogic,
@@ -276,13 +288,10 @@ describe("ttd advanced tools", () => {
       "c1,100",
       "c2,200",
     ].join("\n");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        text: vi.fn().mockResolvedValue(csv),
-      })
-    );
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      text: vi.fn().mockResolvedValue(csv),
+    } as unknown as Response);
 
     const result = await downloadReportLogic(
       {
@@ -297,18 +306,17 @@ describe("ttd advanced tools", () => {
     expect(result.returnedRows).toBe(1);
     expect(result.truncated).toBe(true);
     expect(result.rows[0]).toEqual({ CampaignId: "c1", Impressions: "100" });
+    // Verify 60s timeout is used
+    expect(mockFetchWithTimeout.mock.calls[0][1]).toBe(60_000);
   });
 
   it("downloadReportLogic throws when fetch fails", async () => {
     mockResolveSessionServices.mockReturnValueOnce({});
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: "Server Error",
-      })
-    );
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      statusText: "Server Error",
+    } as unknown as Response);
 
     await expect(
       downloadReportLogic(

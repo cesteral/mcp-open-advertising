@@ -17,6 +17,10 @@ import {
   troubleshootEntityPrompt,
   getTroubleshootEntityMessage,
 } from "./definitions/troubleshoot-entity.prompt.js";
+import {
+  gaqlReportingWorkflowPrompt,
+  getGaqlReportingWorkflowMessage,
+} from "./definitions/gaql-reporting-workflow.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -43,6 +47,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: troubleshootEntityPrompt,
       generateMessage: getTroubleshootEntityMessage,
+    },
+  ],
+  [
+    gaqlReportingWorkflowPrompt.name,
+    {
+      prompt: gaqlReportingWorkflowPrompt,
+      generateMessage: getGaqlReportingWorkflowMessage,
     },
   ],
 ]);

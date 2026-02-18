@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.4.0",
   "architecture": {
     "accessPatterns": [
       "direct-client-orchestration",
@@ -20,7 +20,11 @@
   "workflowIds": [
     "mcp.explore.tools_and_schemas",
     "mcp.execute.dv360_entity_update",
+    "mcp.execute.dv360_budget_reallocation",
     "mcp.execute.ttd_entity_update",
+    "mcp.execute.ttd_campaign_setup",
+    "mcp.execute.ttd_report",
+    "mcp.troubleshoot.ttd_entity",
     "mcp.execute.dbm_custom_query",
     "mcp.execute.gads_query",
     "mcp.execute.gads_entity_management",
@@ -38,6 +42,10 @@
         {
           "server": "gads-mcp",
           "name": "gads_tool_schema_exploration"
+        },
+        {
+          "server": "ttd-mcp",
+          "name": "ttd_tool_schema_exploration"
         }
       ],
       "resources": [
@@ -74,14 +82,91 @@
         "VerificationResult"
       ]
     },
+    "mcp.execute.dv360_budget_reallocation": {
+      "description": "Analyze and reallocate budgets across DV360 insertion orders and line items with safe execution.",
+      "prompts": [
+        {
+          "server": "dv360-mcp",
+          "name": "budget_reallocation_workflow"
+        }
+      ],
+      "resources": [
+        "entity-schema://{entityType}",
+        "entity-fields://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "AnalysisSummary",
+        "ReallocationPlan",
+        "ExecutionSummary"
+      ]
+    },
     "mcp.execute.ttd_entity_update": {
       "description": "Perform safe The Trade Desk entity updates with schema-first validation and minimal payload changes.",
-      "prompts": [],
-      "resources": [],
+      "prompts": [
+        {
+          "server": "ttd-mcp",
+          "name": "ttd_campaign_setup_workflow"
+        }
+      ],
+      "resources": [
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
       "requiredOutputSections": [
         "ChangePlan",
         "PayloadDiff",
         "VerificationResult"
+      ]
+    },
+    "mcp.execute.ttd_campaign_setup": {
+      "description": "Create complete TTD campaign structures (Campaign → Ad Group → Ad → Creative) with schema-first validation.",
+      "prompts": [
+        {
+          "server": "ttd-mcp",
+          "name": "ttd_campaign_setup_workflow"
+        }
+      ],
+      "resources": [
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "ChangePlan",
+        "PayloadDiff",
+        "VerificationResult"
+      ]
+    },
+    "mcp.execute.ttd_report": {
+      "description": "Build and execute TTD MyReports V3 async reports with dimension/metric validation.",
+      "prompts": [
+        {
+          "server": "ttd-mcp",
+          "name": "ttd_report_generation_workflow"
+        }
+      ],
+      "resources": [],
+      "requiredOutputSections": [
+        "QuerySpec",
+        "ValidationChecks",
+        "ExecutionSummary"
+      ]
+    },
+    "mcp.troubleshoot.ttd_entity": {
+      "description": "Diagnose and remediate TTD entity issues using schema inspection and targeted updates.",
+      "prompts": [
+        {
+          "server": "ttd-mcp",
+          "name": "ttd_troubleshoot_entity"
+        }
+      ],
+      "resources": [
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "Symptoms",
+        "RootCauseHypothesis",
+        "FixAndMonitorPlan"
       ]
     },
     "mcp.execute.dbm_custom_query": {
@@ -111,6 +196,10 @@
         {
           "server": "gads-mcp",
           "name": "gads_tool_schema_exploration"
+        },
+        {
+          "server": "gads-mcp",
+          "name": "gaql_reporting_workflow"
         }
       ],
       "resources": [
@@ -195,7 +284,41 @@
     "maxSkillLines": 200,
     "mustReferenceWorkflowId": true,
     "mustNotDuplicateLargeSchemas": true,
-    "requirePackageWorkflowMapping": true
+    "requirePackageWorkflowMapping": true,
+    "canonicalSourceDir": "skills/canonical",
+    "providerRegistry": "skills/providers.json"
+  },
+  "providers": {
+    "cursor": {
+      "tier": "active",
+      "format": "skill-per-directory",
+      "status": "generated"
+    },
+    "codex": {
+      "tier": "active",
+      "format": "skill-per-directory",
+      "status": "generated"
+    },
+    "copilot": {
+      "tier": "active",
+      "format": "single-concatenated",
+      "status": "generated"
+    },
+    "windsurf": {
+      "tier": "active",
+      "format": "file-per-skill",
+      "status": "generated"
+    },
+    "cline": {
+      "tier": "active",
+      "format": "file-per-skill",
+      "status": "generated"
+    },
+    "continue": {
+      "tier": "active",
+      "format": "file-per-skill",
+      "status": "generated"
+    }
   },
   "platformPackages": {
     "dbm-mcp": {
@@ -210,13 +333,18 @@
       "platform": "dv360-management",
       "requiredWorkflowIds": [
         "mcp.execute.dv360_entity_update",
+        "mcp.execute.dv360_budget_reallocation",
         "mcp.troubleshoot.delivery"
       ]
     },
     "ttd-mcp": {
       "platform": "ttd",
       "requiredWorkflowIds": [
-        "mcp.execute.ttd_entity_update"
+        "mcp.explore.tools_and_schemas",
+        "mcp.execute.ttd_entity_update",
+        "mcp.execute.ttd_campaign_setup",
+        "mcp.execute.ttd_report",
+        "mcp.troubleshoot.ttd_entity"
       ]
     },
     "gads-mcp": {

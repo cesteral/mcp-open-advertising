@@ -1,3 +1,7 @@
+<!-- GENERATED FILE — DO NOT EDIT DIRECTLY -->
+<!-- Source: skills/canonical/ttd-entity-updater/SKILL.md -->
+<!-- Regenerate: pnpm generate:skills -->
+
 ---
 name: ttd-entity-updater
 description: Execute schema-disciplined Trade Desk entity creates, updates, and deletes with verification.

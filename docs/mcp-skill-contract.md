@@ -3,7 +3,7 @@
 This document defines the portable contract between:
 - canonical workflow IDs
 - MCP prompt/resource surfaces
-- client-specific skill adapters (Cursor/Codex)
+- client-specific skill adapters (Cursor, Codex, and any skill.md-compatible client)
 
 The canonical machine-readable source is:
 - `docs/mcp-skill-contract.json`
@@ -15,6 +15,71 @@ The canonical machine-readable source is:
 - Adapter skills should stay concise (target under 200 lines).
 - Required output sections must match the workflow contract.
 - Package-to-workflow mappings must be declared in `platformPackages` in `docs/mcp-skill-contract.json`.
+
+## Design Decision: MCP Prompts as Source of Truth
+
+MCP Prompts are the canonical home for workflow guidance in this repo. Skill adapters are a thin complementary layer, not a replacement.
+
+**Why MCP Prompts stay:**
+
+- **Protocol-level discoverability** — any MCP client can call `prompts/list` and `prompts/get` without knowing about skill.md files. This covers Claude Desktop, Open WebUI, LibreChat, and every other standards-compliant MCP host.
+- **Zero vendor lock-in** — the MCP spec is an open standard. Workflow guidance encoded as MCP Prompts is portable to any conformant client today and in the future.
+- **On-demand context cost** — prompts add 0KB baseline context. They are only loaded when an agent explicitly invokes them (see `docs/mcp-prompts-implementation.md` for the cost analysis).
+
+**Where skill adapters add value:**
+
+- **Client-native UX** — skill-aware clients (Cursor, Codex, Claude Code, etc.) can surface workflows in their own UI without requiring MCP prompt support.
+- **Cross-server orchestration** — workflows like `mcp.troubleshoot.delivery` span multiple MCP servers. A skill adapter can orchestrate calls to both `dbm-mcp` and `dv360-mcp` in a single instruction set, while each server's MCP Prompts only cover their own scope.
+- **Ecosystem breadth** — skill.md is understood by a wide range of AI agents and IDEs (see next section), making adapters portable across most of the developer tooling landscape.
+
+**Contract rule:** adapter skills must call MCP prompts/resources rather than duplicating their content. The prompt is the source of truth; the adapter is a thin routing layer.
+
+## skill.md Ecosystem Support
+
+The skill.md format has broad adoption across AI agents, IDEs, and infrastructure tooling. Adapter skills are generated from canonical sources in `skills/canonical/` to 6 providers via `pnpm generate:skills`.
+
+### AI Agents & Platforms
+
+| Platform | skill.md Support | Notes |
+|---|---|---|
+| **Anthropic** (Claude Code, Claude API) | Native | `CLAUDE.md` + skill files in project root |
+| **OpenAI** (Codex CLI, Responses API, ChatGPT) | Via agentskills.io / `.codex/skills/` | Codex CLI reads `.codex/skills/` natively |
+| **GitHub Copilot** | Via `.github/copilot-instructions.md` + skill files | Copilot Chat and Workspace respect project-level instructions |
+| **Google Gemini** | Via project context / `GEMINI.md` | Gemini Code Assist reads project instructions |
+| **Manus** | Native skill.md consumption | Agent platform with built-in skill discovery |
+
+### IDEs & Editors
+
+| IDE | skill.md Location | Notes |
+|---|---|---|
+| **Cursor** | `.cursor/skills/` | First-class support; skills appear in agent context |
+| **Windsurf** | `.windsurfrules` + skill files | Codeium's IDE reads project rules and skill docs |
+| **Kiro** | Project-level instruction files | AWS-backed IDE with agent skill support |
+| **Cline / Roo Code** | `.clinerules` + skill files | VS Code extensions with skill-aware agents |
+
+### Infrastructure & Frameworks
+
+| Tool | Integration | Notes |
+|---|---|---|
+| **Vercel** | `skills` CLI command | Auto-generates skill.md from project structure |
+| **Mintlify** | Auto-generation from docs | Converts API docs into skill.md format |
+| **LangChain** (`deepagents`) | Skill-based agent orchestration | Uses skill.md as agent capability definitions |
+| **skillkit** | Local model support (Ollama) | Runs skill.md workflows on local LLMs |
+
+### Actively Generated Providers
+
+| Provider | Format | Output Location | Status |
+|---|---|---|---|
+| **Cursor** | skill-per-directory | `.cursor/skills/{name}/SKILL.md` | Generated |
+| **Codex** | skill-per-directory | `.codex/skills/{name}/SKILL.md` | Generated |
+| **GitHub Copilot** | single-concatenated | `.github/copilot-instructions.md` | Generated |
+| **Windsurf** | file-per-skill | `.windsurf/rules/{name}.md` | Generated |
+| **Cline / Roo Code** | file-per-skill | `.clinerules/{name}.md` | Generated |
+| **Continue.dev** | file-per-skill | `.continue/rules/{name}.md` | Generated |
+
+All 6 providers are generated from `skills/canonical/` via `pnpm generate:skills`. The provider registry at `skills/providers.json` defines the output format and paths for each provider. Adding a new provider requires only a single entry in the registry.
+
+The MCP Prompts underneath remain the single source of truth regardless of which client invokes the workflow.
 
 ## Canonical Workflows
 

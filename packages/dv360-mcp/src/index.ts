@@ -26,7 +26,7 @@ const logger = createServerLogger("dv360-mcp", transportMode, otelLogMixin());
  * Set up credentials for stdio mode from environment variables.
  * Creates a GoogleAuthAdapter and session services for the "stdio" session.
  */
-function setupStdioCredentials(sessionId: string): void {
+function setupStdioCredentials(sessionId: string): boolean {
   let credentialsJson: string | undefined;
 
   if (mcpConfig.dv360ServiceAccountFile) {
@@ -44,7 +44,7 @@ function setupStdioCredentials(sessionId: string): void {
       "No DV360 service account credentials found in env vars. " +
       "Set DV360_SERVICE_ACCOUNT_JSON or DV360_SERVICE_ACCOUNT_FILE for stdio mode."
     );
-    return;
+    return false;
   }
 
   const credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
@@ -61,6 +61,7 @@ function setupStdioCredentials(sessionId: string): void {
 
   sessionServiceStore.set(sessionId, services);
   logger.info("Stdio session services created successfully");
+  return true;
 }
 
 bootstrapMcpServer({

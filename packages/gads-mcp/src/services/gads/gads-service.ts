@@ -128,7 +128,7 @@ export class GAdsService {
     orderBy?: string,
     context?: RequestContext
   ): Promise<{ entities: unknown[]; nextPageToken?: string; totalResultsCount?: number }> {
-    const query = buildListQuery(entityType, filters, pageSize, orderBy);
+    const query = buildListQuery(entityType, filters, orderBy);
     const result = await this.gaqlSearch(customerId, query, pageSize, pageToken, context);
 
     return {
@@ -310,6 +310,17 @@ export class GAdsService {
     const config = getEntityConfig(entityType);
     const mutateUrl = buildMutateUrl(entityType, customerId);
 
+    // Reject entity types without a status field (e.g., campaignBudget, asset)
+    if (!config.statusField && status !== "REMOVED") {
+      return {
+        results: entityIds.map((entityId) => ({
+          entityId,
+          success: false,
+          error: `Entity type "${entityType}" does not have a status field and cannot be set to ${status}`,
+        })),
+      };
+    }
+
     // Determine the status field based on entity type
     const statusFieldParts = (config.statusField || "").split(".");
     const statusProperty = statusFieldParts[statusFieldParts.length - 1] || "status";
@@ -321,13 +332,24 @@ export class GAdsService {
       }));
 
       try {
-        await this.httpClient.fetch(mutateUrl, context, {
+        const result = (await this.httpClient.fetch(mutateUrl, context, {
           method: "POST",
           body: JSON.stringify({ operations, partialFailure: true }),
-        });
+        })) as Record<string, unknown>;
+
+        // Parse partial failure results (same pattern as ENABLED/PAUSED branch)
+        const mutateResults = (result.results as Array<Record<string, unknown>>) || [];
+        const partialErrors = result.partialFailureError as Record<string, unknown> | undefined;
 
         return {
-          results: entityIds.map((entityId) => ({ entityId, success: true })),
+          results: entityIds.map((entityId, idx) => {
+            const hasResult = mutateResults[idx] && Object.keys(mutateResults[idx]).length > 0;
+            return {
+              entityId,
+              success: hasResult || !partialErrors,
+              error: !hasResult && partialErrors ? "Partial failure — check error details" : undefined,
+            };
+          }),
         };
       } catch (error: any) {
         return {

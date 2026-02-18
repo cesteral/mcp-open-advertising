@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
+import { getStatusCapableEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "../../../utils/internal/request-context.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
@@ -9,7 +9,7 @@ const TOOL_NAME = "gads_bulk_update_status";
 const TOOL_TITLE = "Bulk Update Google Ads Entity Status";
 const TOOL_DESCRIPTION = `Batch update the status for multiple Google Ads entities of the same type.
 
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getStatusCapableEntityTypeEnum().join(", ")}
 
 **Available statuses:**
 - \`ENABLED\` — active and eligible for delivery
@@ -23,8 +23,8 @@ Use this tool for batch pause/resume operations across campaigns, ad groups, or 
 export const BulkUpdateStatusInputSchema = z
   .object({
     entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
+      .enum(getStatusCapableEntityTypeEnum())
+      .describe("Type of entities to update (only types with a status field)"),
     customerId: z
       .string()
       .min(1)
@@ -42,7 +42,9 @@ export const BulkUpdateStatusInputSchema = z
     addParentValidationIssue(
       ctx,
       input.entityType as GAdsEntityType,
-      input as Record<string, unknown>
+      input as Record<string, unknown>,
+      [],
+      { validateCompositeIds: true }
     );
   })
   .describe("Parameters for bulk status update");

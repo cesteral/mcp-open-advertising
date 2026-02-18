@@ -1,3 +1,7 @@
+<!-- GENERATED FILE — DO NOT EDIT DIRECTLY -->
+<!-- Source: skills/canonical/dv360-delivery-troubleshooter/SKILL.md -->
+<!-- Regenerate: pnpm generate:skills -->
+
 ---
 name: dv360-delivery-troubleshooter
 description: Diagnose DV360 campaign delivery issues using DBM reporting and DV360 management tools.

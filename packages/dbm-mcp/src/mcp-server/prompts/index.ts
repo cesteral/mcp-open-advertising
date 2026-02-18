@@ -2,21 +2,21 @@
  * MCP Prompts - Barrel Export
  */
 
-export type { Prompt, PromptArgument, PromptDefinition } from "./types.js";
+export type { Prompt, PromptArgument, PromptDefinition } from "./definitions/types.js";
 
 import {
   customQueryWorkflowPrompt,
   getCustomQueryWorkflowMessage,
-} from "./custom-query-workflow.prompt.js";
+} from "./definitions/custom-query-workflow.prompt.js";
 import {
   troubleshootReportPrompt,
   getTroubleshootReportMessage,
-} from "./troubleshoot-report.prompt.js";
+} from "./definitions/troubleshoot-report.prompt.js";
 import {
   toolSchemaExplorationPrompt,
   getToolSchemaExplorationMessage,
-} from "./tool-schema-exploration.prompt.js";
-import type { PromptDefinition } from "./types.js";
+} from "./definitions/tool-schema-exploration.prompt.js";
+import type { PromptDefinition } from "./definitions/types.js";
 
 /**
  * Registry of all available prompts

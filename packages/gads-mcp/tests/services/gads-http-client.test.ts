@@ -7,13 +7,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  * The HTTP client is imported dynamically after mocking.
  */
 
-// Mock the fetch-with-timeout module
-vi.mock("../../src/utils/network/fetch-with-timeout.js", () => ({
-  fetchWithTimeout: vi.fn(),
-}));
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return { ...actual, fetchWithTimeout: vi.fn() };
+});
 
 import { GAdsHttpClient } from "../../src/services/gads/gads-http-client.js";
-import { fetchWithTimeout } from "../../src/utils/network/fetch-with-timeout.js";
+import { fetchWithTimeout } from "@cesteral/shared";
 import type { GAdsAuthAdapter } from "../../src/auth/gads-auth-adapter.js";
 
 const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);

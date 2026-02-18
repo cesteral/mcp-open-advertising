@@ -1,9 +1,10 @@
 /**
  * Tool definitions barrel export
  *
- * 14 tools total:
+ * 18 tools total:
  *   6 original: list, get, create, update, delete, report
- *   8 new:      bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report
+ *   8 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report
+ *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -20,6 +21,10 @@ export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { downloadReportTool } from "./download-report.tool.js";
+export { graphqlQueryBulkTool } from "./graphql-query-bulk.tool.js";
+export { graphqlMutationBulkTool } from "./graphql-mutation-bulk.tool.js";
+export { graphqlBulkJobTool } from "./graphql-bulk-job.tool.js";
+export { graphqlCancelBulkJobTool } from "./graphql-cancel-bulk-job.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -35,6 +40,10 @@ import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { downloadReportTool } from "./download-report.tool.js";
+import { graphqlQueryBulkTool } from "./graphql-query-bulk.tool.js";
+import { graphqlMutationBulkTool } from "./graphql-mutation-bulk.tool.js";
+import { graphqlBulkJobTool } from "./graphql-bulk-job.tool.js";
+import { graphqlCancelBulkJobTool } from "./graphql-cancel-bulk-job.tool.js";
 import type { ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
@@ -56,4 +65,9 @@ export const allTools: ToolDefinitionForFactory[] = [
   // ── Advanced ──
   graphqlQueryTool,
   validateEntityTool,
+  // ── GraphQL Bulk ──
+  graphqlQueryBulkTool,
+  graphqlMutationBulkTool,
+  graphqlBulkJobTool,
+  graphqlCancelBulkJobTool,
 ];

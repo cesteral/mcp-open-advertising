@@ -6,16 +6,17 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_validate_entity";
 const TOOL_TITLE = "Validate TTD Entity";
-const TOOL_DESCRIPTION = `Validate a TTD entity payload without persisting it (dry-run mode).
+const TOOL_DESCRIPTION = `Test a TTD entity payload against the TTD API.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Sends the payload to the TTD API and reports whether it would succeed or what validation errors exist. Useful for:
-- Pre-flight checks before creating/updating entities
-- Schema discovery — see what fields TTD expects or rejects
-- Debugging 400 errors by testing payloads incrementally
+Sends the payload to the TTD API and reports whether it succeeds or what validation errors exist.
 
-**Note:** In create mode, if validation succeeds the entity IS created (TTD has no native dry-run). In update mode, the entity IS updated. Use this tool primarily to diagnose validation failures.`;
+**WARNING: This is NOT a true dry-run.** TTD has no native dry-run/validate-only mode:
+- In **create** mode, a successful call **CREATES** the entity.
+- In **update** mode, a successful call **UPDATES** the entity.
+
+Use this tool primarily to **diagnose validation failures** (400 errors) by testing payloads incrementally. If the call succeeds, the side effect has already occurred.`;
 
 export const ValidateEntityInputSchema = z
   .object({
@@ -98,6 +99,7 @@ export const validateEntityTool = {
   outputSchema: ValidateEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
+    destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
   },

@@ -19,6 +19,7 @@ vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
 import {
   listEntitiesLogic,
   listEntitiesResponseFormatter,
+  ListEntitiesInputSchema,
 } from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
 
 // ---------------------------------------------------------------------------
@@ -99,6 +100,18 @@ describe("listEntitiesLogic", () => {
     expect(mockTtdService.listEntities).toHaveBeenCalledOnce();
     const [_entityType, filters] = mockTtdService.listEntities.mock.calls[0];
     expect(filters.CampaignId).toBe("camp-001");
+  });
+
+  it("includes adGroupId in filters when provided", async () => {
+    await listEntitiesLogic(
+      { entityType: "ad" as any, advertiserId: "adv-001", adGroupId: "ag-001" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    expect(mockTtdService.listEntities).toHaveBeenCalledOnce();
+    const [_entityType, filters] = mockTtdService.listEntities.mock.calls[0];
+    expect(filters.AdGroupId).toBe("ag-001");
   });
 
   it("merges additional filter fields", async () => {
@@ -201,5 +214,64 @@ describe("listEntitiesResponseFormatter", () => {
     const content = listEntitiesResponseFormatter(result);
 
     expect(content[0].text).toContain("No entities found");
+  });
+});
+
+describe("ListEntitiesInputSchema validation", () => {
+  it("requires advertiserId for campaign entities", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "campaign",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("advertiserId"))).toBe(true);
+    }
+  });
+
+  it("requires campaignId for adGroup entities", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "adGroup",
+      advertiserId: "adv-001",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("campaignId"))).toBe(true);
+    }
+  });
+
+  it("requires adGroupId for ad entities", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "ad",
+      advertiserId: "adv-001",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("adGroupId"))).toBe(true);
+    }
+  });
+
+  it("allows advertiser without any parent IDs", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "advertiser",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("passes for adGroup with both advertiserId and campaignId", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "adGroup",
+      advertiserId: "adv-001",
+      campaignId: "camp-001",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("passes for ad with advertiserId and adGroupId", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "ad",
+      advertiserId: "adv-001",
+      adGroupId: "ag-001",
+    });
+    expect(result.success).toBe(true);
   });
 });

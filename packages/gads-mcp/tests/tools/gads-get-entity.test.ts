@@ -45,7 +45,7 @@ describe("GetEntityInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts all supported entity types", () => {
+  it("accepts all supported entity types with simple IDs (GAQL reads)", () => {
     const entityTypes = ["campaign", "adGroup", "ad", "keyword", "campaignBudget", "asset"];
     for (const entityType of entityTypes) {
       const result = GetEntityInputSchema.safeParse({

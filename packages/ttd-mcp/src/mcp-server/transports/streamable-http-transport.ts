@@ -258,7 +258,8 @@ export function createMcpHttpServer(
           adapter,
           config.ttdApiBaseUrl,
           logger,
-          rateLimiter
+          rateLimiter,
+          config.ttdGraphqlUrl
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
       } else if (config.mcpAuthMode === "none" || config.mcpAuthMode === "jwt") {
@@ -278,7 +279,8 @@ export function createMcpHttpServer(
           envAdapter,
           config.ttdApiBaseUrl,
           logger,
-          rateLimiter
+          rateLimiter,
+          config.ttdGraphqlUrl
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
       } else {

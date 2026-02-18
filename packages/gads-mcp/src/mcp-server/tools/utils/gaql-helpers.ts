@@ -70,7 +70,6 @@ const DEFAULT_SELECT_FIELDS: Record<GAdsEntityType, string[]> = {
 export function buildListQuery(
   entityType: GAdsEntityType,
   filters?: Record<string, string>,
-  pageSize?: number,
   orderBy?: string
 ): string {
   const config = getEntityConfig(entityType);
@@ -86,7 +85,8 @@ export function buildListQuery(
       if (value.match(/^(=|!=|>|<|>=|<=|IN|LIKE|CONTAINS|NOT|BETWEEN|DURING|IS)\s/i)) {
         conditions.push(`${field} ${value}`);
       } else {
-        conditions.push(`${field} = '${value}'`);
+        // Escape single quotes in filter values for GAQL safety
+        conditions.push(`${field} = '${value.replace(/'/g, "\\'")}'`);
       }
     }
   }
@@ -99,9 +99,9 @@ export function buildListQuery(
     query += ` ORDER BY ${orderBy}`;
   }
 
-  if (pageSize) {
-    query += ` LIMIT ${pageSize}`;
-  }
+  // Note: No LIMIT clause — pagination is handled by the API's pageSize/pageToken
+  // body parameters in gaqlSearch(). Adding LIMIT here would cap total results and
+  // prevent multi-page iteration.
 
   return query;
 }

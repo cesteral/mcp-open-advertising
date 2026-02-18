@@ -111,6 +111,21 @@ export function getEntityTypeEnum(): [string, ...string[]] {
 }
 
 /**
+ * Returns entity types that have a statusField defined (can be paused/enabled).
+ * Use this to restrict tools like bulkUpdateStatus to valid entity types.
+ */
+export function getStatusCapableEntityTypes(): GAdsEntityType[] {
+  return (Object.entries(ENTITY_CONFIGS) as [GAdsEntityType, GAdsEntityConfig][])
+    .filter(([, config]) => !!config.statusField)
+    .map(([type]) => type);
+}
+
+export function getStatusCapableEntityTypeEnum(): [string, ...string[]] {
+  const types = getStatusCapableEntityTypes();
+  return types as [string, ...string[]];
+}
+
+/**
  * Build a resource name string for a specific entity.
  * e.g., "customers/123/campaigns/456"
  */
