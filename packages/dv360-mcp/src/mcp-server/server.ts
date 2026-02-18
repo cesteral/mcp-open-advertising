@@ -18,7 +18,7 @@ import {
   type ToolInteractionEvaluation,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
-import packageJson from "../../package.json";
+import packageJson from "../../package.json" with { type: "json" };
 
 const DV360_PACKAGE_NAME = "dv360-mcp";
 const DV360_PLATFORM = "dv360-management";

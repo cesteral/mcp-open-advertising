@@ -18,7 +18,7 @@ import {
   type ToolInteractionEvaluation,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
-import packageJson from "../../package.json";
+import packageJson from "../../package.json" with { type: "json" };
 
 const GADS_PACKAGE_NAME = "gads-mcp";
 const GADS_PLATFORM = "gads";

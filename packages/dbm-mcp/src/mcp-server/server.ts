@@ -17,7 +17,7 @@ import {
   type ToolInteractionEvaluation,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
-import packageJson from "../../package.json";
+import packageJson from "../../package.json" with { type: "json" };
 
 const DBM_PACKAGE_NAME = "dbm-mcp";
 const DBM_PLATFORM = "dv360-reporting";

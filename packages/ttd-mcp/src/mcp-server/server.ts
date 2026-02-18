@@ -18,7 +18,7 @@ import {
   type ToolInteractionEvaluation,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
-import packageJson from "../../package.json";
+import packageJson from "../../package.json" with { type: "json" };
 
 const TTD_PACKAGE_NAME = "ttd-mcp";
 const TTD_PLATFORM = "ttd";
