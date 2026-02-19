@@ -5,7 +5,9 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 
 const repoRoot = process.cwd();
-const checkFreshness = process.argv.includes("--check-freshness");
+const skipFreshness = process.argv.includes("--skip-freshness");
+// Legacy flag support
+const checkFreshness = !skipFreshness || process.argv.includes("--check-freshness");
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -425,6 +427,73 @@ function validateFreshness() {
   }
 }
 
+function extractWorkflowIdFromSkill(skillPath) {
+  const content = fs.readFileSync(skillPath, "utf8");
+  const match = content.match(/Workflow ID:\s*`([^`]+)`/);
+  return match ? match[1] : null;
+}
+
+function validateSkillContractAlignment(contract, skillNames) {
+  console.log("\nChecking skill-contract alignment...");
+  const canonicalDir = path.join(repoRoot, "skills", "canonical");
+
+  for (const name of skillNames) {
+    const skillPath = path.join(canonicalDir, name, "SKILL.md");
+    const content = fs.readFileSync(skillPath, "utf8");
+    const workflowId = extractWorkflowIdFromSkill(skillPath);
+
+    if (!workflowId) {
+      fail(`Canonical skill '${name}' missing Workflow ID`);
+      continue;
+    }
+
+    const workflow = contract.workflows[workflowId];
+    if (!workflow) {
+      continue; // Orphan detection handles this case
+    }
+
+    // Check that prompts required by contract are referenced in skill Steps
+    const prompts = workflow.prompts || [];
+    for (const prompt of prompts) {
+      if (!content.includes(prompt.name)) {
+        warn(
+          `Canonical skill '${name}' (${workflowId}) does not reference contract prompt '${prompt.name}' (${prompt.server}) in its Steps`
+        );
+      }
+    }
+  }
+}
+
+function validateOrphans(contract, skillNames) {
+  console.log("Checking for orphan skills/workflows...");
+  const canonicalDir = path.join(repoRoot, "skills", "canonical");
+  const contractWorkflowIds = new Set(contract.workflowIds);
+  const canonicalWorkflowIds = new Set();
+
+  // Map canonical skills to their workflow IDs
+  for (const name of skillNames) {
+    const skillPath = path.join(canonicalDir, name, "SKILL.md");
+    const workflowId = extractWorkflowIdFromSkill(skillPath);
+    if (workflowId) {
+      canonicalWorkflowIds.add(workflowId);
+      if (!contractWorkflowIds.has(workflowId)) {
+        warn(
+          `Canonical skill '${name}' references workflow '${workflowId}' not in contract`
+        );
+      }
+    }
+  }
+
+  // Check for contract workflows with no canonical skill
+  for (const workflowId of contractWorkflowIds) {
+    if (!canonicalWorkflowIds.has(workflowId)) {
+      warn(
+        `Contract workflow '${workflowId}' has no corresponding canonical skill`
+      );
+    }
+  }
+}
+
 function main() {
   const contractPath = path.join(repoRoot, "docs", "mcp-skill-contract.json");
   if (!fs.existsSync(contractPath)) {
@@ -594,6 +663,21 @@ function main() {
     }
   }
 
+  // Also scan shared package for cross-server tools and resources (e.g. learnings)
+  const sharedLearningsDir = path.join(repoRoot, "packages", "shared", "src", "learnings");
+  if (fs.existsSync(sharedLearningsDir)) {
+    const sharedToolFiles = listFiles(sharedLearningsDir, ".tool.ts");
+    const sharedResourceFiles = listFiles(sharedLearningsDir, ".ts").filter(
+      (f) => f.includes("resource")
+    );
+    for (const toolName of extractToolNames(sharedToolFiles)) {
+      allToolNames.add(toolName);
+    }
+    for (const uri of extractResourceUris(sharedResourceFiles)) {
+      allResourceUris.add(uri);
+    }
+  }
+
   const workflowIds = new Set(contract.workflowIds);
   validatePlatformPackages(contract, workflowIds);
 
@@ -640,6 +724,8 @@ function main() {
 
   validateAdapters(contract, providers, skillNames);
   validateToolReferences(allToolNames, allPromptNames, providers, skillNames);
+  validateSkillContractAlignment(contract, skillNames);
+  validateOrphans(contract, skillNames);
 
   if (checkFreshness) {
     validateFreshness();

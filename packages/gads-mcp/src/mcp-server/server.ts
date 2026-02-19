@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { join } from "node:path";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
@@ -10,6 +11,9 @@ import {
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
+  InteractionLogger,
+  createSubmitLearningTool,
+  createLearningsResources,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -22,6 +26,7 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const GADS_PACKAGE_NAME = "gads-mcp";
 const GADS_PLATFORM = "gads";
+const LEARNINGS_ROOT = join(process.cwd(), "learnings");
 
 const gadsWorkflowIdByToolName: Record<string, string> = {
   // Read tools
@@ -106,10 +111,17 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       "(campaign, adGroup, ad, keyword, campaignBudget, asset) with bulk operations.",
   });
 
-  // Register all tools via shared factory
+  // Interaction logger for persisting tool execution data
+  const interactionLogger = new InteractionLogger({
+    serverName: GADS_PACKAGE_NAME,
+    logger,
+  });
+
+  // Register all tools via shared factory (includes submit_learning)
+  const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
   registerToolsFromDefinitions({
     server,
-    tools: allTools,
+    tools: [...allTools, submitLearningTool],
     logger,
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
@@ -127,10 +139,19 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       observeOnly: process.env.MCP_EVALUATOR_OBSERVE_ONLY !== "false",
       evaluate: evaluateGAdsInteraction,
     },
+    interactionLogger,
   });
 
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({ server, resources: allResources, logger });
+  // Register all resources via shared factory (platform + learnings)
+  const learningsResources = createLearningsResources({
+    learningsRoot: LEARNINGS_ROOT,
+    serverPlatform: GADS_PLATFORM,
+  });
+  registerStaticResourcesFromDefinitions({
+    server,
+    resources: [...allResources, ...learningsResources],
+    logger,
+  });
 
   // Register all prompts via shared factory
   const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({

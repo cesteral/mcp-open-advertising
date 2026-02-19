@@ -1,5 +1,7 @@
 # Refinement Governance
 
+> **Implementation Status**: Design only. The evaluator hooks exist (`tool-handler-factory.ts`), but finding persistence, pattern detection, proposal generation, and approval workflow are not yet implemented (Phases 2-3 of `docs/architecture/self-improving-skills.md`).
+
 This document defines how LLM -> MCP interaction findings are converted into controlled skill/playbook improvements.
 
 ## Lifecycle
@@ -24,7 +26,7 @@ Each proposal must include:
 
 - `findingId`: stable identifier.
 - `workflowId`: canonical workflow impacted.
-- `platform`: `dv360` | `dbm` | `ttd` | future platform ID.
+- `platform`: `dv360` | `dbm` | `ttd` | `gads` | future platform ID.
 - `evidence`: count, sample events, and confidence.
 - `proposedChanges`: exact docs/adapter/contract edits.
 - `riskClass`: low, medium, high.

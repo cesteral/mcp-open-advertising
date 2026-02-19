@@ -1,6 +1,8 @@
 # Evaluator Phased Rollout
 
-This rollout plan applies to `dv360-mcp`, `dbm-mcp`, and `ttd-mcp`.
+> **Implementation Status**: Stage 1 active (observe-only). Stages 2-3 depend on finding aggregation and pattern detection from Phases 2-3 of `docs/architecture/self-improving-skills.md`.
+
+This rollout plan applies to `dv360-mcp`, `dbm-mcp`, `ttd-mcp`, and `gads-mcp`.
 
 ## Feature Flags
 
@@ -19,7 +21,8 @@ This rollout plan applies to `dv360-mcp`, `dbm-mcp`, and `ttd-mcp`.
 1. `dv360-mcp`
 2. `dbm-mcp`
 3. `ttd-mcp`
-4. Future packages using `docs/packages/package-template.md`
+4. `gads-mcp`
+5. Future packages using `docs/packages/package-template.md`
 
 ## Entry Criteria (per package)
 

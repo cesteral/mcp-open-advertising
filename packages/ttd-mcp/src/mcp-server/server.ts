@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { join } from "node:path";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
@@ -10,6 +11,9 @@ import {
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
+  InteractionLogger,
+  createSubmitLearningTool,
+  createLearningsResources,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -22,6 +26,7 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const TTD_PACKAGE_NAME = "ttd-mcp";
 const TTD_PLATFORM = "ttd";
+const LEARNINGS_ROOT = join(process.cwd(), "learnings");
 
 const ttdWorkflowIdByToolName: Record<string, string> = {
   // Core CRUD
@@ -89,10 +94,17 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     description: "The Trade Desk campaign management, reporting, and optimization via TTD API v3 + GraphQL. Supports 9 entity types (advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList), bulk operations, bid adjustments, GraphQL passthrough, and async report generation with download/parse.",
   });
 
-  // Register all tools via shared factory
+  // Interaction logger for persisting tool execution data
+  const interactionLogger = new InteractionLogger({
+    serverName: TTD_PACKAGE_NAME,
+    logger,
+  });
+
+  // Register all tools via shared factory (includes submit_learning)
+  const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
   registerToolsFromDefinitions({
     server,
-    tools: allTools,
+    tools: [...allTools, submitLearningTool],
     logger,
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
@@ -110,10 +122,19 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       observeOnly: process.env.MCP_EVALUATOR_OBSERVE_ONLY !== "false",
       evaluate: evaluateTtdInteraction,
     },
+    interactionLogger,
   });
 
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({ server, resources: allResources, logger });
+  // Register all resources via shared factory (platform + learnings)
+  const learningsResources = createLearningsResources({
+    learningsRoot: LEARNINGS_ROOT,
+    serverPlatform: TTD_PLATFORM,
+  });
+  registerStaticResourcesFromDefinitions({
+    server,
+    resources: [...allResources, ...learningsResources],
+    logger,
+  });
 
   // Register all prompts via shared factory
   const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({

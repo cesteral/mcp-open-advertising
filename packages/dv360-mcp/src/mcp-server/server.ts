@@ -1,5 +1,6 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { join } from "node:path";
 import { allTools } from "./tools/index.js";
 import { resourceRegistry } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
@@ -10,6 +11,10 @@ import {
   extractZodShape,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
+  registerStaticResourcesFromDefinitions,
+  InteractionLogger,
+  createSubmitLearningTool,
+  createLearningsResources,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -22,6 +27,7 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const DV360_PACKAGE_NAME = "dv360-mcp";
 const DV360_PLATFORM = "dv360-management";
+const LEARNINGS_ROOT = join(process.cwd(), "learnings");
 
 const dv360WorkflowIdByToolName: Record<string, string> = {
   dv360_update_entity: "mcp.execute.dv360_entity_update",
@@ -86,10 +92,17 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     description: "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
   });
 
-  // Register all tools via shared factory
+  // Interaction logger for persisting tool execution data
+  const interactionLogger = new InteractionLogger({
+    serverName: DV360_PACKAGE_NAME,
+    logger,
+  });
+
+  // Register all tools via shared factory (includes submit_learning)
+  const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
   registerToolsFromDefinitions({
     server,
-    tools: allTools,
+    tools: [...allTools, submitLearningTool],
     logger,
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
@@ -107,9 +120,10 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       observeOnly: process.env.MCP_EVALUATOR_OBSERVE_ONLY !== "false",
       evaluate: evaluateDv360Interaction,
     },
+    interactionLogger,
   });
 
-  // Register all resources (DV360 uses parameterized resource registry)
+  // Register DV360 parameterized resources
   const resources = resourceRegistry.getAllResources();
   for (const resource of resources) {
     const isParameterized = resource.uriTemplate.includes("{");
@@ -219,6 +233,17 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       );
     }
   }
+
+  // Register learnings resources (static) via shared factory
+  const learningsResources = createLearningsResources({
+    learningsRoot: LEARNINGS_ROOT,
+    serverPlatform: "dv360",
+  });
+  registerStaticResourcesFromDefinitions({
+    server,
+    resources: learningsResources,
+    logger,
+  });
 
   // Register all prompts via shared factory
   const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({

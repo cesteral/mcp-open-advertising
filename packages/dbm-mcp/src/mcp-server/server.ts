@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { join } from "node:path";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
@@ -10,6 +11,9 @@ import {
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
+  InteractionLogger,
+  createSubmitLearningTool,
+  createLearningsResources,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type ToolExecutionSnapshot,
@@ -21,6 +25,7 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const DBM_PACKAGE_NAME = "dbm-mcp";
 const DBM_PLATFORM = "dv360-reporting";
+const LEARNINGS_ROOT = join(process.cwd(), "learnings");
 
 const dbmWorkflowIdByToolName: Record<string, string> = {
   get_campaign_delivery: "mcp.troubleshoot.delivery",
@@ -72,10 +77,17 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     description: "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
   });
 
-  // Register all tools via shared factory
+  // Interaction logger for persisting tool execution data
+  const interactionLogger = new InteractionLogger({
+    serverName: DBM_PACKAGE_NAME,
+    logger,
+  });
+
+  // Register all tools via shared factory (includes submit_learning)
+  const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
   registerToolsFromDefinitions({
     server,
-    tools: allTools,
+    tools: [...allTools, submitLearningTool],
     logger,
     sessionId,
     transformSchema: (schema) =>
@@ -97,10 +109,19 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       observeOnly: process.env.MCP_EVALUATOR_OBSERVE_ONLY !== "false",
       evaluate: evaluateDbmInteraction,
     },
+    interactionLogger,
   });
 
-  // Register all resources via shared factory
-  registerStaticResourcesFromDefinitions({ server, resources: allResources, logger });
+  // Register all resources via shared factory (platform + learnings)
+  const learningsResources = createLearningsResources({
+    learningsRoot: LEARNINGS_ROOT,
+    serverPlatform: "dbm",
+  });
+  registerStaticResourcesFromDefinitions({
+    server,
+    resources: [...allResources, ...learningsResources],
+    logger,
+  });
 
   // Register all prompts via shared factory
   const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({

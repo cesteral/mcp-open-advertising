@@ -3,7 +3,7 @@
 > **Status**: Design document
 > **Version**: 1.0.0
 > **Last updated**: 2026-02-13
-> **Depends on**: [Skill Contract v1.1.1](../mcp-skill-contract.json), [Governance Overview](../governance/GOVERNANCE-OVERVIEW.md), [Refinement Governance](../governance/refinement-governance.md)
+> **Depends on**: [Skill Contract v1.4.0](../mcp-skill-contract.json), [Governance Overview](../governance/GOVERNANCE-OVERVIEW.md), [Refinement Governance](../governance/refinement-governance.md)
 
 ---
 
@@ -13,8 +13,8 @@ Cesteral has strong foundations for a self-improving system:
 
 - **Evaluator hooks** in `packages/shared/src/utils/tool-handler-factory.ts` fire after every tool execution, producing `ToolInteractionEvaluation` results with issue classifications, quality scores, and recommended actions.
 - **Governance docs** in `docs/governance/` define a full refinement lifecycle — findings → classification → playbook deltas → approval → deployment.
-- **Skill adapters** in `.cursor/skills/` and `.codex/skills/` project workflows to IDE clients.
-- **A canonical skill contract** (`docs/mcp-skill-contract.json` v1.1.1) defines five workflow IDs with required prompts, resources, and output sections.
+- **Skill adapters** generated from `skills/canonical/` (12 skills) to 6 providers (Cursor, Codex, Copilot, Windsurf, Cline, Continue) via `pnpm generate:skills`.
+- **A canonical skill contract** (`docs/mcp-skill-contract.json` v1.4.0) defines twelve workflow IDs across four servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp) with required prompts, resources, and output sections.
 
 But the loop isn't closed:
 
@@ -101,7 +101,7 @@ Each server is self-contained. No cross-server runtime dependency. The AI agent 
 
 ## 4. Layer 1: Skill Store (Versionable Prompts)
 
-> **Implementation status**: Not yet implemented. No `skills/` directory, YAML loader, or template resolver exist. This section describes the proposed design.
+> **Implementation status**: **Partially exists**. The `skills/canonical/` directory contains 12 skill definitions (markdown-based), with an adapter generation pipeline (`pnpm generate:skills`) producing 72 files across 6 providers and a validation pipeline (`pnpm validate:skills`). What is **not yet implemented**: the YAML-based versioned skill store (`skills/definitions/`, `skills/registry.yaml`), the `loadSkillsForServer()` loader, and the `resolveTemplate()` engine described below.
 
 ### 4.1 Why
 
@@ -130,6 +130,21 @@ skills/
   proposals/
     # Refinement proposals land here before promotion
 ```
+
+#### 4.2.1 Relationship to Existing `skills/canonical/`
+
+The proposed YAML versioning system builds on top of the existing canonical markdown system:
+
+| Aspect | Existing `skills/canonical/` | Proposed `skills/definitions/` |
+|--------|------------------------------|-------------------------------|
+| **Format** | Markdown (SKILL.md) | YAML with embedded templates |
+| **Versioning** | Unversioned (single file per skill) | Semver-versioned (v1.0.0.yaml, v1.1.0.yaml, ...) |
+| **Scope** | Workflow routing + adapter generation | Full prompt content + effectiveness tracking |
+| **Adapter generation** | `pnpm generate:skills` from canonical → 6 providers | Same pipeline, extended to read version from registry |
+| **Prompt content** | References MCP prompts (thin routing layer) | Contains the actual prompt template (replaces hardcoded TS) |
+| **Lifecycle** | Manual edits → commit → deploy | AI-proposed refinements → governance review → staged rollout |
+
+The canonical system remains the **adapter generation source**. The YAML versioning system adds **prompt evolution** on top of it. During migration, `skills/canonical/` SKILL.md files gain a `skillVersion` frontmatter field linking to the active YAML version.
 
 ### 4.3 Skill YAML Schema
 
@@ -717,15 +732,15 @@ Per `docs/governance/telemetry-governance.md`, the following spans are added:
 
 ## 8. Contract & Adapter Evolution
 
-> **Implementation status**: Not yet implemented. The current skill contract is v1.1.1. Adapter `Skill Version` annotations do not exist yet. This section describes proposed changes for Phase 4.
+> **Implementation status**: Not yet implemented. The current skill contract is v1.4.0. Adapter `Skill Version` annotations do not exist yet. This section describes proposed changes for Phase 4.
 
-### 8.1 Skill Contract v1.2.0 (Minor Bump)
+### 8.1 Skill Contract v1.5.0 (Minor Bump)
 
-The canonical contract (`docs/mcp-skill-contract.json`) evolves to v1.2.0 with additive fields:
+The canonical contract (`docs/mcp-skill-contract.json`) evolves to v1.5.0 with additive fields:
 
 ```json
 {
-  "version": "1.2.0",
+  "version": "1.5.0",
   "workflowIds": ["...existing..."],
   "workflows": {
     "mcp.execute.dv360_entity_update": {
@@ -755,7 +770,7 @@ The canonical contract (`docs/mcp-skill-contract.json`) evolves to v1.2.0 with a
 }
 ```
 
-Per `docs/governance/contract-versioning.md`, this is a **minor** version bump (additive fields only — `activeSkillVersion`, `stagedSkillVersion`, `refinementPolicy`, `refinementResources`, `refinementTools`). No breaking changes.
+Per `docs/governance/contract-versioning.md`, this is a **minor** version bump from v1.4.0 (additive fields only — `activeSkillVersion`, `stagedSkillVersion`, `refinementPolicy`, `refinementResources`, `refinementTools`). No breaking changes.
 
 ### 8.2 Adapter Updates
 
@@ -790,6 +805,7 @@ This enables the validator to check that adapter annotations match `registry.yam
 | Install only `dv360-mcp` | Loads only skills where `metadata.serverPackage === "dv360-mcp"`. Findings stay local. Refinement proposes only dv360 skills. |
 | Install only `dbm-mcp` | Same isolation for DBM workflows. Finding store is per-server instance. |
 | Install only `ttd-mcp` | Same isolation. TTD-specific evaluators, findings, patterns. |
+| Install only `gads-mcp` | Same isolation. Google Ads-specific evaluators, findings, patterns. |
 | Install multiple servers | AI agent cross-references findings across servers by reading resources from each. No server-to-server communication required. |
 | No `skills/` directory | `loadSkillsForServer()` returns `[]`. Hardcoded TypeScript prompts serve as fallback. Zero regression. |
 | No finding store file | Created lazily on first flush. `findings://patterns/*` resources return empty arrays. |
@@ -800,15 +816,30 @@ This enables the validator to check that adapter annotations match `registry.yam
 
 ## 10. Implementation Roadmap
 
+### Phase 0: Canonical Skill System (COMPLETE)
+
+**Goal**: Establish canonical skill definitions and multi-provider adapter generation.
+
+**What exists**:
+- `skills/canonical/` — 12 skill definitions as markdown SKILL.md files
+- `skills/providers.json` — 6 provider configurations (Cursor, Codex, Copilot, Windsurf, Cline, Continue)
+- `scripts/generate-skill-adapters.mjs` — generates 72 adapter files from canonical sources
+- `scripts/validate-skill-adapters.mjs` — validates adapters against contract, checks tool/prompt references, freshness
+- `docs/mcp-skill-contract.json` v1.4.0 — 12 workflow IDs across 4 servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp)
+- `docs/client-workflow-mappings.md` — maps workflows to client capabilities
+- MCP prompts in each server — canonical prompt implementations referenced by skills
+
+**Status**: Fully operational. `pnpm generate:skills` and `pnpm validate:skills` run in CI.
+
 ### Phase 1: Skill Store Foundation
 
-**Goal**: Externalize prompts to YAML, serve them via existing prompt infrastructure.
+**Goal**: Externalize prompts to YAML, serve them via existing prompt infrastructure. Builds on the existing 12 canonical workflows.
 
 **Deliverables**:
 - `packages/shared/src/utils/skill-types.ts` — type definitions
 - `packages/shared/src/utils/skill-loader.ts` — YAML loader with `serverPackage` filter
 - `packages/shared/src/utils/template-resolver.ts` — `{{var}}` interpolation
-- `skills/registry.yaml` — initial registry
+- `skills/registry.yaml` — initial registry (all 12 workflows)
 - `skills/definitions/` — one YAML per workflow, migrated from existing TypeScript prompts
 - Server wiring in `server.ts` for each server
 - Validator extensions for skill consistency
@@ -859,17 +890,17 @@ This enables the validator to check that adapter annotations match `registry.yam
 
 ### Phase 4: Contract & Adapter Sync
 
-**Goal**: Evolve the contract to v1.2.0 and keep adapters in sync with skill versions.
+**Goal**: Evolve the contract to v1.5.0 and keep adapters in sync with skill versions.
 
 **Deliverables**:
-- `docs/mcp-skill-contract.json` v1.2.0 with new fields
+- `docs/mcp-skill-contract.json` v1.5.0 with new fields
 - Adapter SKILL.md files with `Skill Version` annotations
 - Validator checks for version consistency
 - Updated `docs/client-workflow-mappings.md`
 - Telemetry spans and metrics for the refinement loop
 
 **Acceptance criteria**:
-- Contract v1.2.0 passes validator
+- Contract v1.5.0 passes validator
 - Adapter versions match registry active versions
 - Telemetry spans emitted for findings, patterns, and proposals
 - `docs/client-workflow-mappings.md` reflects new resources and tools

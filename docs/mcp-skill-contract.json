@@ -29,7 +29,8 @@
     "mcp.execute.gads_query",
     "mcp.execute.gads_entity_management",
     "mcp.execute.gads_bulk_operations",
-    "mcp.troubleshoot.delivery"
+    "mcp.troubleshoot.delivery",
+    "mcp.improve.learnings_review"
   ],
   "workflows": {
     "mcp.explore.tools_and_schemas": {
@@ -277,6 +278,22 @@
         "Symptoms",
         "RootCauseHypothesis",
         "FixAndMonitorPlan"
+      ]
+    },
+    "mcp.improve.learnings_review": {
+      "description": "Review interaction logs and learnings tree to propose codebase improvements.",
+      "prompts": [],
+      "resources": [
+        "learnings://agent-behaviors",
+        "learnings://workflows",
+        "learnings://platforms/{platform}",
+        "learnings://all"
+      ],
+      "requiredOutputSections": [
+        "LogAnalysis",
+        "LearningsGaps",
+        "Proposals",
+        "Evidence"
       ]
     }
   },

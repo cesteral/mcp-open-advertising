@@ -85,10 +85,17 @@ The MCP Prompts underneath remain the single source of truth regardless of which
 
 | Workflow ID | Purpose | Primary Prompt(s) |
 |---|---|---|
-| `mcp.explore.tools_and_schemas` | Discover capabilities with minimal context use | `tool_schema_exploration_workflow` (dbm-mcp) |
+| `mcp.explore.tools_and_schemas` | Discover capabilities with minimal context use | `tool_schema_exploration_workflow` (dbm-mcp), `gads_tool_schema_exploration` (gads-mcp), `ttd_tool_schema_exploration` (ttd-mcp) |
 | `mcp.execute.dv360_entity_update` | Perform safe schema-first DV360 updates | `entity_update_execution_workflow` (dv360-mcp) |
-| `mcp.execute.ttd_entity_update` | Perform safe schema-first TTD updates | currently tool-first (no canonical prompt yet) |
+| `mcp.execute.dv360_budget_reallocation` | Analyze and reallocate DV360 budgets | `budget_reallocation_workflow` (dv360-mcp) |
+| `mcp.execute.ttd_entity_update` | Perform safe schema-first TTD updates | `ttd_campaign_setup_workflow` (ttd-mcp) |
+| `mcp.execute.ttd_campaign_setup` | Create complete TTD campaign structures | `ttd_campaign_setup_workflow` (ttd-mcp) |
+| `mcp.execute.ttd_report` | Build and execute TTD MyReports V3 reports | `ttd_report_generation_workflow` (ttd-mcp) |
+| `mcp.troubleshoot.ttd_entity` | Diagnose and fix TTD entity issues | `ttd_troubleshoot_entity` (ttd-mcp) |
 | `mcp.execute.dbm_custom_query` | Compose and run custom reporting queries | `custom_query_workflow` (dbm-mcp) |
+| `mcp.execute.gads_query` | Build and execute GAQL reporting queries | `gaql_reporting_workflow` (gads-mcp) |
+| `mcp.execute.gads_entity_management` | Safe Google Ads entity CRUD | `gads_campaign_setup_workflow` (gads-mcp) |
+| `mcp.execute.gads_bulk_operations` | Batch Google Ads mutate operations | `gads_campaign_setup_workflow` (gads-mcp) |
 | `mcp.troubleshoot.delivery` | Diagnose and fix underdelivery | `troubleshoot_underdelivery` (dv360-mcp), `troubleshoot_report` (dbm-mcp) |
 
 ## Multi-Server Access Model
@@ -104,6 +111,7 @@ Canonical package ownership is defined in `docs/mcp-skill-contract.json` under `
 - `dbm-mcp` -> `dv360-reporting`
 - `dv360-mcp` -> `dv360-management`
 - `ttd-mcp` -> `ttd`
+- `gads-mcp` -> `google-ads`
 
 Any new platform package must:
 

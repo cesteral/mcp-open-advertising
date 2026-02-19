@@ -16,6 +16,7 @@ This file contains all Cesteral workflow skills for GitHub Copilot. Each skill p
 - [gads-bulk-operator](#gads-bulk-operator) — Execute batch Google Ads mutate and status operations with controlled sizing and verification.
 - [gads-entity-manager](#gads-entity-manager) — Execute schema-first Google Ads entity CRUD with verification.
 - [gads-query-builder](#gads-query-builder) — Build and execute GAQL-based Google Ads reporting queries with prompt-guided validation.
+- [learnings-reviewer](#learnings-reviewer) — Review interaction logs and learnings tree to propose codebase improvements.
 - [ttd-campaign-builder](#ttd-campaign-builder) — Create complete TTD campaign structures with schema-first validation and verification.
 - [ttd-entity-updater](#ttd-entity-updater) — Execute schema-disciplined Trade Desk entity creates, updates, and deletes with verification.
 - [ttd-report-builder](#ttd-report-builder) — Build and execute TTD MyReports V3 async reports with prompt-guided validation.
@@ -332,6 +333,46 @@ Workflow ID: `mcp.execute.gads_query`
 ---
 
 
+# Learnings Reviewer
+
+Workflow ID: `mcp.improve.learnings_review`
+
+## Use When
+
+- Periodic review of accumulated learnings for actionable improvements.
+- After a batch of new learnings has been submitted.
+- When interaction logs show recurring patterns worth codifying.
+
+## Steps
+
+1. Read resources:
+   - `learnings://agent-behaviors` to understand known agent behavior patterns.
+   - `learnings://workflows` to understand cross-platform workflow learnings.
+   - `learnings://platforms/{platform}` for platform-specific insights.
+2. Scan recent interaction logs (`data/interactions/`) for recurring failures or low scores.
+3. Cross-reference logs against existing learnings to identify gaps.
+4. For each actionable insight:
+   a. If it is a **skill improvement** — propose updates to canonical SKILL.md files.
+   b. If it is a **code fix** — propose changes to tool handlers or services.
+   c. If it is a **new learning** — draft a new entry for the learnings tree via `submit_learning`.
+5. Summarize all proposals with rationale and evidence.
+
+## Required Output Sections
+
+- `LogAnalysis`
+- `LearningsGaps`
+- `Proposals`
+- `Evidence`
+
+## Constraints
+
+- Never auto-merge proposals — always present for human review.
+- Cite specific log entries or learnings as evidence.
+- Prefer updating existing learnings over creating new files.
+
+---
+
+
 # TTD Campaign Builder
 
 Workflow ID: `mcp.execute.ttd_campaign_setup`
@@ -375,16 +416,17 @@ Workflow ID: `mcp.execute.ttd_entity_update`
 ## Use When
 
 - You need to create/update/delete TTD entities safely.
-- No canonical prompt is available and tool-first flow is required.
+- You need schema-guided entity updates with prompt-driven flow.
 - You need explicit payload diff and verification output.
 
 ## Steps
 
-1. Discover available TTD tools with `tools/list`.
-2. Retrieve baseline entity state with `ttd_get_entity` (or `ttd_list_entities`).
-3. Build minimal payload change for `ttd_create_entity` or `ttd_update_entity`.
-4. Execute the write operation.
-5. Verify with `ttd_get_entity` and summarize the delta.
+1. Invoke the `ttd_campaign_setup_workflow` prompt for schema-guided workflow sequencing.
+2. Discover available TTD tools with `tools/list`.
+3. Retrieve baseline entity state with `ttd_get_entity` (or `ttd_list_entities`).
+4. Build minimal payload change for `ttd_create_entity` or `ttd_update_entity`.
+5. Execute the write operation.
+6. Verify with `ttd_get_entity` and summarize the delta.
 
 ## Required Output Sections
 

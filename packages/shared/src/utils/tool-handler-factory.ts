@@ -21,6 +21,7 @@ import {
   recordEvaluatorRecommendation,
   recordWorkflowCallDepth,
 } from "./metrics.js";
+import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
 
 /**
  * Request context created per tool invocation
@@ -183,6 +184,11 @@ export interface RegisterToolsOptions {
       sdkContext?: ToolSdkContext
     ) => Promise<ToolInteractionEvaluation>;
   };
+  /**
+   * Optional interaction logger for persisting tool execution data to JSONL.
+   * Fires after evaluation completes. Writes are fire-and-forget.
+   */
+  interactionLogger?: InteractionLogger;
 }
 
 function estimatePayloadBytes(value: unknown): number {
@@ -224,6 +230,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     packageName,
     workflowIdByToolName = {},
     evaluator,
+    interactionLogger,
   } = opts;
 
   for (const tool of tools) {
@@ -430,6 +437,35 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               }
             }
 
+            // ── Interaction logging (fire-and-forget) ────────────────────
+            if (interactionLogger) {
+              const logEntry: InteractionLogEntry = {
+                ts: new Date().toISOString(),
+                sessionId: sessionId ?? "unknown",
+                tool: tool.name,
+                params: sanitizeParams(args) as Record<string, unknown>,
+                success: true,
+                durationMs,
+                workflowId: interactionContext.workflowId,
+                platform,
+                packageName,
+                requestId: context.requestId,
+              };
+              if (issues.length > 0) {
+                logEntry.evaluatorIssues = issues.map((i) => i.class);
+              }
+              if (inputQualityScore !== undefined) {
+                logEntry.inputQualityScore = inputQualityScore;
+              }
+              if (efficiencyScore !== undefined) {
+                logEntry.efficiencyScore = efficiencyScore;
+              }
+              if (recommendationAction) {
+                logEntry.recommendationAction = recommendationAction;
+              }
+              interactionLogger.append(logEntry);
+            }
+
             const content = tool.responseFormatter
               ? tool.responseFormatter(result, refinedInput)
               : [
@@ -483,6 +519,21 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             recordToolExecution(tool.name, "error", Date.now() - startTime);
+
+            // Log failed interactions too
+            if (interactionLogger) {
+              interactionLogger.append({
+                ts: new Date().toISOString(),
+                sessionId: sessionId ?? "unknown",
+                tool: tool.name,
+                params: sanitizeParams(args) as Record<string, unknown>,
+                success: false,
+                durationMs: Date.now() - startTime,
+                workflowId: workflowIdByToolName[tool.name],
+                platform,
+                packageName,
+              });
+            }
 
             const mcpError = ErrorHandler.handleError(
               error,
