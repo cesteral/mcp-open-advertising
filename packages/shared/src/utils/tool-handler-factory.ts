@@ -276,6 +276,18 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
         const startTime = Date.now();
 
         return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
+          // Evaluator data — declared outside try so they're accessible
+          // in the catch block for error-path interaction logging.
+          const issues: ToolInteractionIssue[] = [];
+          let inputQualityScore: number | undefined;
+          let efficiencyScore: number | undefined;
+          let recommendationAction:
+            | "none"
+            | "log_only"
+            | "propose_playbook_delta"
+            | "block"
+            | undefined;
+
           try {
             const context = createRequestContext({
               operation: `HandleToolRequest:${tool.name}`,
@@ -323,15 +335,6 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
             const durationMs = Date.now() - startTime;
             setSpanAttribute("mcp.tool.execution.latency_ms", durationMs);
-            const issues: ToolInteractionIssue[] = [];
-            let inputQualityScore: number | undefined;
-            let efficiencyScore: number | undefined;
-            let recommendationAction:
-              | "none"
-              | "log_only"
-              | "propose_playbook_delta"
-              | "block"
-              | undefined;
 
             const executionSnapshot: ToolExecutionSnapshot = {
               args,
@@ -520,9 +523,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
             recordToolExecution(tool.name, "error", Date.now() - startTime);
 
-            // Log failed interactions too
+            // Log failed interactions with any evaluator data collected before failure
             if (interactionLogger) {
-              interactionLogger.append({
+              const errorLogEntry: InteractionLogEntry = {
                 ts: new Date().toISOString(),
                 sessionId: sessionId ?? "unknown",
                 tool: tool.name,
@@ -532,7 +535,20 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 workflowId: workflowIdByToolName[tool.name],
                 platform,
                 packageName,
-              });
+              };
+              if (issues.length > 0) {
+                errorLogEntry.evaluatorIssues = issues.map((i) => i.class);
+              }
+              if (inputQualityScore !== undefined) {
+                errorLogEntry.inputQualityScore = inputQualityScore;
+              }
+              if (efficiencyScore !== undefined) {
+                errorLogEntry.efficiencyScore = efficiencyScore;
+              }
+              if (recommendationAction) {
+                errorLogEntry.recommendationAction = recommendationAction;
+              }
+              interactionLogger.append(errorLogEntry);
             }
 
             const mcpError = ErrorHandler.handleError(
