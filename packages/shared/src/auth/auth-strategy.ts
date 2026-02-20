@@ -41,6 +41,21 @@ export interface AuthResult {
    * Credential fingerprint for session binding.
    */
   credentialFingerprint?: string;
+  /**
+   * Allowed advertiser/customer IDs from JWT claims.
+   * Undefined means unrestricted.
+   */
+  allowedAdvertisers?: string[];
+}
+
+/**
+ * Authentication context persisted for the session lifetime.
+ * Used for fingerprint validation, authorization, and audit logging.
+ */
+export interface SessionAuthContext {
+  authInfo: AuthInfo;
+  credentialFingerprint?: string;
+  allowedAdvertisers?: string[];
 }
 
 export type AuthMode = "google-headers" | "jwt" | "none";
@@ -54,6 +69,13 @@ export interface AuthStrategy {
    * Returns an AuthResult on success, throws on failure.
    */
   verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult>;
+  /**
+   * Optional lightweight fingerprint extraction for session reuse checks.
+   * Implementations should avoid network calls where possible.
+   */
+  getCredentialFingerprint?(
+    headers: Record<string, string | string[] | undefined>
+  ): Promise<string | undefined>;
 }
 
 /**
@@ -67,6 +89,12 @@ export class NoAuthStrategy implements AuthStrategy {
         authType: "none",
       },
     };
+  }
+
+  async getCredentialFingerprint(
+    _headers: Record<string, string | string[] | undefined>
+  ): Promise<string | undefined> {
+    return undefined;
   }
 }
 
@@ -111,6 +139,15 @@ export class GoogleHeadersAuthStrategy implements AuthStrategy {
       credentialFingerprint: fingerprint,
     };
   }
+
+  async getCredentialFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): Promise<string | undefined> {
+    const { parseCredentialsFromHeaders, getCredentialFingerprint } =
+      await import("./google-auth.js");
+    const credentials = parseCredentialsFromHeaders(headers);
+    return getCredentialFingerprint(credentials);
+  }
 }
 
 /**
@@ -123,7 +160,7 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
   ) {}
 
   async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
-    const { extractBearerToken, verifyJwt } = await import("./jwt.js");
+    const { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } = await import("./jwt.js");
 
     const authHeader = typeof headers["authorization"] === "string"
       ? headers["authorization"]
@@ -133,6 +170,7 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
 
     const token = extractBearerToken(authHeader);
     const payload = await verifyJwt(token, this.secret);
+    const credentialFingerprint = getJwtCredentialFingerprint(payload);
 
     this.logger?.debug({ sub: payload.sub }, "JWT validated");
 
@@ -143,7 +181,26 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
         authType: "jwt",
         scopes: payload.scope ? payload.scope.split(" ") : [],
       },
+      credentialFingerprint,
+      allowedAdvertisers: payload.allowed_advertisers,
     };
+  }
+
+  async getCredentialFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): Promise<string | undefined> {
+    const { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } = await import("./jwt.js");
+
+    const authHeader = typeof headers["authorization"] === "string"
+      ? headers["authorization"]
+      : Array.isArray(headers["authorization"])
+        ? headers["authorization"][0]
+        : undefined;
+
+    const token = extractBearerToken(authHeader);
+    const payload = await verifyJwt(token, this.secret);
+
+    return getJwtCredentialFingerprint(payload);
   }
 }
 

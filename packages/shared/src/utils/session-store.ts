@@ -8,11 +8,14 @@
  * Each MCP server instantiates this with its own SessionServices type.
  */
 
+import type { SessionAuthContext } from "../auth/auth-strategy.js";
+
 const DEFAULT_MAX_SESSIONS = 1000;
 
 export class SessionServiceStore<T> {
   private store = new Map<string, T>();
   private fingerprints = new Map<string, string>();
+  private authContexts = new Map<string, SessionAuthContext>();
   private readonly maxSessions: number;
 
   constructor(maxSessions: number = DEFAULT_MAX_SESSIONS) {
@@ -34,6 +37,18 @@ export class SessionServiceStore<T> {
     return this.store.get(sessionId);
   }
 
+  setAuthContext(sessionId: string, authContext: SessionAuthContext): void {
+    this.authContexts.set(sessionId, authContext);
+  }
+
+  getAuthContext(sessionId: string): SessionAuthContext | undefined {
+    return this.authContexts.get(sessionId);
+  }
+
+  getFingerprint(sessionId: string): string | undefined {
+    return this.fingerprints.get(sessionId);
+  }
+
   /**
    * Validate that the credential fingerprint matches the one used at session creation.
    * Returns false if the session exists but the fingerprint doesn't match.
@@ -47,6 +62,7 @@ export class SessionServiceStore<T> {
   delete(sessionId: string): void {
     this.store.delete(sessionId);
     this.fingerprints.delete(sessionId);
+    this.authContexts.delete(sessionId);
   }
 
   get size(): number {

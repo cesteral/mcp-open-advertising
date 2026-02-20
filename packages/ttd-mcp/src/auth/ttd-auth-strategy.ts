@@ -45,4 +45,11 @@ export class TtdHeadersAuthStrategy implements AuthStrategy {
       credentialFingerprint: fingerprint,
     };
   }
+
+  async getCredentialFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): Promise<string | undefined> {
+    const credentials = parseTtdCredentialsFromHeaders(headers);
+    return getTtdCredentialFingerprint(credentials);
+  }
 }

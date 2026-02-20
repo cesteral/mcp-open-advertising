@@ -11,8 +11,43 @@ const mockState = vi.hoisted(() => ({
 }));
 
 vi.mock("../../src/services/session-services.js", async () => {
-  const { SessionServiceStore } = await import("@cesteral/shared");
-  const store = new SessionServiceStore<any>();
+  const services = new Map<string, any>();
+  const fingerprints = new Map<string, string>();
+  const authContexts = new Map<string, any>();
+  const store = {
+    set(sessionId: string, sessionServices: any, credentialFingerprint?: string) {
+      services.set(sessionId, sessionServices);
+      if (credentialFingerprint) fingerprints.set(sessionId, credentialFingerprint);
+    },
+    get(sessionId: string) {
+      return services.get(sessionId);
+    },
+    delete(sessionId: string) {
+      services.delete(sessionId);
+      fingerprints.delete(sessionId);
+      authContexts.delete(sessionId);
+    },
+    validateFingerprint(sessionId: string, credentialFingerprint: string) {
+      const stored = fingerprints.get(sessionId);
+      if (!stored) return true;
+      return stored === credentialFingerprint;
+    },
+    getFingerprint(sessionId: string) {
+      return fingerprints.get(sessionId);
+    },
+    setAuthContext(sessionId: string, authContext: any) {
+      authContexts.set(sessionId, authContext);
+    },
+    getAuthContext(sessionId: string) {
+      return authContexts.get(sessionId);
+    },
+    isFull() {
+      return false;
+    },
+    get size() {
+      return services.size;
+    },
+  };
   return {
     sessionServiceStore: store,
     createSessionServices: vi.fn(() => ({

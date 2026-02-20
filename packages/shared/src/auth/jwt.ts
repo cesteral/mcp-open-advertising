@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import * as jose from "jose";
 import { AuthenticationError } from "../utils/errors.js";
 
@@ -8,6 +9,7 @@ export interface JwtPayload {
   exp: number; // Expiration
   iat: number; // Issued at
   scope?: string; // Optional scope
+  allowed_advertisers?: string[];
 }
 
 /**
@@ -31,6 +33,15 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
     }
     throw new AuthenticationError("Token verification failed");
   }
+}
+
+/**
+ * Create a stable credential fingerprint from JWT identity claims.
+ */
+export function getJwtCredentialFingerprint(payload: JwtPayload): string {
+  return createHash("sha256")
+    .update(`${payload.iss}:${payload.sub}`)
+    .digest("hex");
 }
 
 /**

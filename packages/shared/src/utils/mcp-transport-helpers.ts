@@ -8,6 +8,7 @@
 
 import { randomBytes } from "crypto";
 import type { Logger } from "pino";
+import type { AuthResult, AuthStrategy } from "../auth/auth-strategy.js";
 
 // ---------------------------------------------------------------------------
 // Session ID validation
@@ -89,6 +90,76 @@ export function oauthProtectedResourceBody(
   return {
     body: { error: "OAuth not configured on this server" },
     status: 404,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Session reuse validation
+// ---------------------------------------------------------------------------
+
+interface SessionFingerprintStore {
+  validateFingerprint(sessionId: string, fingerprint: string): boolean;
+  getFingerprint(sessionId: string): string | undefined;
+}
+
+export interface SessionReuseResult {
+  valid: boolean;
+  reason?: string;
+  authResult?: AuthResult;
+  storedFingerprint?: string;
+  requestFingerprint?: string;
+}
+
+/**
+ * Validate that a reused session belongs to the same credential holder.
+ * Prefers lightweight fingerprint extraction to avoid expensive network auth calls.
+ */
+export async function validateSessionReuse(
+  authStrategy: AuthStrategy,
+  sessionServiceStore: SessionFingerprintStore,
+  headers: Record<string, string>,
+  sessionId: string
+): Promise<SessionReuseResult> {
+  let authResult: AuthResult | undefined;
+  let requestFingerprint: string | undefined;
+
+  try {
+    if (authStrategy.getCredentialFingerprint) {
+      requestFingerprint = await authStrategy.getCredentialFingerprint(headers);
+    }
+  } catch (error: any) {
+    return {
+      valid: false,
+      reason: `Authentication failed on session reuse: ${error?.message ?? "unknown error"}`,
+    };
+  }
+
+  if (!requestFingerprint) {
+    try {
+      authResult = await authStrategy.verify(headers);
+      requestFingerprint = authResult.credentialFingerprint;
+    } catch (error: any) {
+      return {
+        valid: false,
+        reason: `Authentication failed on session reuse: ${error?.message ?? "unknown error"}`,
+      };
+    }
+  }
+
+  if (requestFingerprint && !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)) {
+    const storedFingerprint = sessionServiceStore.getFingerprint(sessionId);
+    return {
+      valid: false,
+      reason: "Credential fingerprint mismatch — possible session hijacking attempt",
+      storedFingerprint,
+      requestFingerprint,
+    };
+  }
+
+  return {
+    valid: true,
+    authResult,
+    requestFingerprint,
   };
 }
 

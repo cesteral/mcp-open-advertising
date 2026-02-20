@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { extractBearerToken, createJwt, verifyJwt } from "../../src/auth/jwt.js";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { extractBearerToken, createJwt, verifyJwt, getJwtCredentialFingerprint } from "../../src/auth/jwt.js";
 import { AuthenticationError } from "../../src/utils/errors.js";
 
 // ---------------------------------------------------------------------------
@@ -140,6 +140,23 @@ describe("verifyJwt", () => {
     expect(payload).toHaveProperty("iat");
   });
 
+  it("preserves optional allowed_advertisers claim", async () => {
+    const secretKey = new TextEncoder().encode(SECRET);
+    const token = await new (await import("jose")).SignJWT({
+      sub: "user-1",
+      allowed_advertisers: ["adv123", "adv456"],
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt()
+      .setIssuer("test-issuer")
+      .setAudience("test-audience")
+      .setExpirationTime("1h")
+      .sign(secretKey);
+
+    const payload = await verifyJwt(token, SECRET);
+    expect(payload.allowed_advertisers).toEqual(["adv123", "adv456"]);
+  });
+
   it("throws AuthenticationError for expired token", async () => {
     // Create a token that expires in 1 second
     const token = await createJwt("user-1", SECRET, "1s");
@@ -177,6 +194,39 @@ describe("verifyJwt", () => {
     await expect(verifyJwt(tampered, SECRET)).rejects.toThrow(
       AuthenticationError
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getJwtCredentialFingerprint
+// ---------------------------------------------------------------------------
+
+describe("getJwtCredentialFingerprint", () => {
+  it("is deterministic for issuer+subject", () => {
+    const a = getJwtCredentialFingerprint({
+      sub: "user-1",
+      iss: "issuer-a",
+      aud: "aud",
+      exp: 1,
+      iat: 1,
+    });
+    const b = getJwtCredentialFingerprint({
+      sub: "user-1",
+      iss: "issuer-a",
+      aud: "aud",
+      exp: 2,
+      iat: 2,
+    });
+    const c = getJwtCredentialFingerprint({
+      sub: "user-2",
+      iss: "issuer-a",
+      aud: "aud",
+      exp: 2,
+      iat: 2,
+    });
+
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
   });
 });
 

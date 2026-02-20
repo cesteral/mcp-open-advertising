@@ -169,6 +169,9 @@ export async function createMcpServer(
     learningExtractor,
     findingBuffer: sessionServices?.findingBuffer,
     workflowTracker: sessionServices?.workflowTracker,
+    authContextResolver: sessionId
+      ? () => sessionServiceStore.getAuthContext(sessionId)
+      : undefined,
   });
 
   // Register DV360 parameterized resources

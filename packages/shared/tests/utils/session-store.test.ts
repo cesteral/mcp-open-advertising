@@ -63,12 +63,48 @@ describe("SessionServiceStore", () => {
       expect(store.validateFingerprint("s1", "any-fp")).toBe(true);
     });
 
+    it("should expose stored fingerprint", () => {
+      store.set("s1", { serviceA: "a", serviceB: 1 }, "fp-abc");
+      expect(store.getFingerprint("s1")).toBe("fp-abc");
+      expect(store.getFingerprint("missing")).toBeUndefined();
+    });
+
     it("should clean up fingerprints on delete", () => {
       store.set("s1", { serviceA: "a", serviceB: 1 }, "fp-abc");
       store.delete("s1");
       // After delete + re-create without fingerprint, should allow
       store.set("s1", { serviceA: "a", serviceB: 1 });
       expect(store.validateFingerprint("s1", "any-fp")).toBe(true);
+    });
+  });
+
+  describe("auth context", () => {
+    it("should set and get auth context", () => {
+      store.set("s1", { serviceA: "a", serviceB: 1 });
+      const ctx = { authInfo: { clientId: "user@test.com", authType: "jwt" } };
+      store.setAuthContext("s1", ctx);
+      expect(store.getAuthContext("s1")).toEqual(ctx);
+    });
+
+    it("should return undefined for missing auth context", () => {
+      expect(store.getAuthContext("nonexistent")).toBeUndefined();
+    });
+
+    it("should clean up auth context on delete", () => {
+      store.set("s1", { serviceA: "a", serviceB: 1 });
+      store.setAuthContext("s1", { authInfo: { clientId: "u", authType: "jwt" } });
+      store.delete("s1");
+      expect(store.getAuthContext("s1")).toBeUndefined();
+    });
+
+    it("should store allowedAdvertisers from auth context", () => {
+      store.set("s1", { serviceA: "a", serviceB: 1 });
+      const ctx = {
+        authInfo: { clientId: "user@test.com", authType: "jwt" },
+        allowedAdvertisers: ["adv123", "adv456"],
+      };
+      store.setAuthContext("s1", ctx);
+      expect(store.getAuthContext("s1")?.allowedAdvertisers).toEqual(["adv123", "adv456"]);
     });
   });
 });

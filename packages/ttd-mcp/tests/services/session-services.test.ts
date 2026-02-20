@@ -74,7 +74,7 @@ describe("createSessionServices", () => {
     expect(typeof services.findingBuffer.push).toBe("function");
   });
 
-  it("returns an object with all 4 services", () => {
+  it("returns an object with all services", () => {
     const logger = createMockLogger();
     const authAdapter = createMockAuthAdapter();
     const rateLimiter = createMockRateLimiter();
@@ -90,7 +90,8 @@ describe("createSessionServices", () => {
     expect(services).toHaveProperty("ttdService");
     expect(services).toHaveProperty("ttdReportingService");
     expect(services).toHaveProperty("findingBuffer");
-    expect(Object.keys(services)).toHaveLength(4);
+    expect(services).toHaveProperty("workflowTracker");
+    expect(Object.keys(services)).toHaveLength(5);
   });
 });
 

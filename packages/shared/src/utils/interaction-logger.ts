@@ -211,8 +211,11 @@ export class InteractionLogger {
       await this.flushBuffer();
     } else {
       if (this.stream) {
-        this.stream.end();
+        const stream = this.stream;
         this.stream = null;
+        await new Promise<void>((resolve) => {
+          stream.end(() => resolve());
+        });
       }
     }
   }

@@ -12,7 +12,7 @@
  */
 
 import type { Logger } from "pino";
-import type { z } from "zod";
+import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { withToolSpan, withSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
 import { ErrorHandler, EvaluatorIssueClass, JsonRpcErrorCode, McpError } from "./mcp-errors.js";
@@ -25,6 +25,10 @@ import {
 import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
 import type { FindingBuffer, SkillContext } from "./finding-types.js";
 import type { WorkflowTracker } from "./workflow-tracker.js";
+import type { SessionAuthContext } from "../auth/auth-strategy.js";
+
+const ADVERTISER_PARAM_KEYS = ["advertiserId", "customerId", "partnerId"] as const;
+const ADVERTISER_PARAM_ARRAY_KEYS = ["advertiserIds", "customerIds"] as const;
 
 /**
  * Request context created per tool invocation
@@ -210,6 +214,10 @@ export interface RegisterToolsOptions {
    * When provided, tool calls with _skillContext will be recorded.
    */
   workflowTracker?: WorkflowTracker;
+  /**
+   * Optional resolver to access session auth context for authorization + audit logging.
+   */
+  authContextResolver?: () => SessionAuthContext | undefined;
 }
 
 function estimatePayloadBytes(value: unknown): number {
@@ -233,42 +241,43 @@ function clampScore(value: number | undefined): number | undefined {
  */
 function augmentSchemaWithSkillContext(schema: unknown): unknown {
   if (typeof schema !== "object" || schema === null) return schema;
+  if (schema instanceof z.ZodType) return schema;
 
   const s = schema as Record<string, unknown>;
+  const skillContextJsonSchema = {
+    type: "object",
+    description:
+      "Optional skill attribution context. Pass skillName and workflowRunId " +
+      "(from start_skill_workflow) to attribute this call to a skill workflow.",
+    properties: {
+      skillName: { type: "string", description: "Name of the orchestrating skill" },
+      workflowId: { type: "string", description: "Workflow category ID" },
+      workflowRunId: { type: "string", description: "Active workflow run ID from start_skill_workflow" },
+    },
+    required: ["skillName"],
+  };
 
   // JSON Schema style (has "properties" key)
   if (s.properties && typeof s.properties === "object") {
     const props = s.properties as Record<string, unknown>;
-    props._skillContext = {
-      type: "object",
-      description:
-        "Optional skill attribution context. Pass skillName and workflowRunId " +
-        "(from start_skill_workflow) to attribute this call to a skill workflow.",
-      properties: {
-        skillName: { type: "string", description: "Name of the orchestrating skill" },
-        workflowId: { type: "string", description: "Workflow category ID" },
-        workflowRunId: { type: "string", description: "Active workflow run ID from start_skill_workflow" },
-      },
-      required: ["skillName"],
-    };
+    props._skillContext = skillContextJsonSchema;
     return schema;
   }
 
   // Raw Zod shape style (flat key-value, no "properties" wrapper)
-  // In this case the schema itself IS the properties map
-  if (!s.type && !s.properties) {
-    (s as Record<string, unknown>)._skillContext = {
-      type: "object",
-      description:
-        "Optional skill attribution context. Pass skillName and workflowRunId " +
-        "(from start_skill_workflow) to attribute this call to a skill workflow.",
-      properties: {
-        skillName: { type: "string", description: "Name of the orchestrating skill" },
-        workflowId: { type: "string", description: "Workflow category ID" },
-        workflowRunId: { type: "string", description: "Active workflow run ID from start_skill_workflow" },
-      },
-      required: ["skillName"],
-    };
+  // In this case the schema itself IS the properties map.
+  if (
+    !s.type &&
+    !s.properties &&
+    Object.values(s).every((value) => value instanceof z.ZodType)
+  ) {
+    (s as Record<string, unknown>)._skillContext = z
+      .object({
+        skillName: z.string(),
+        workflowId: z.string().optional(),
+        workflowRunId: z.string().optional(),
+      })
+      .optional();
     return schema;
   }
 
@@ -303,7 +312,10 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     learningExtractor,
     findingBuffer,
     workflowTracker,
+    authContextResolver,
   } = opts;
+
+  const auditLogger = logger.child({ component: "audit" });
 
   for (const tool of tools) {
     // Build registration config with all MCP 2025-11-25 fields
@@ -363,6 +375,8 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             | "propose_playbook_delta"
             | "block"
             | undefined;
+          let resolvedAuthContext: SessionAuthContext | undefined;
+          let auditedIdentifiers: Record<string, string | string[]> = {};
 
           try {
             const context = createRequestContext({
@@ -395,6 +409,85 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
             const validatedInput = tool.inputSchema.parse(argsForValidation);
             setSpanAttribute("tool.input.validated", true);
+
+            // ── Authorization check ──────────────────────────────────────
+            if (authContextResolver) {
+              resolvedAuthContext = authContextResolver();
+              if (resolvedAuthContext && resolvedAuthContext.allowedAdvertisers !== undefined) {
+                const input = validatedInput as Record<string, unknown>;
+                const allowedAdvertisers = resolvedAuthContext.allowedAdvertisers;
+
+                for (const key of ADVERTISER_PARAM_KEYS) {
+                  const value = input[key];
+                  if (typeof value === "string") {
+                    auditedIdentifiers[key] = value;
+                    if (!allowedAdvertisers.includes(value)) {
+                      auditLogger.warn(
+                        {
+                          event: "tool_access_denied",
+                          sessionId,
+                          clientId: resolvedAuthContext.authInfo.clientId,
+                          authType: resolvedAuthContext.authInfo.authType,
+                          tool: tool.name,
+                          [key]: value,
+                          authorized: false,
+                          reason: "advertiser not in allowed scope",
+                        },
+                        "Authorization denied"
+                      );
+
+                      recordToolExecution(tool.name, "error", Date.now() - startTime);
+
+                      return {
+                        content: [
+                          {
+                            type: "text" as const,
+                            text: "Access denied: " + key + ' "' + value + '" is not in your authorized scope.',
+                          },
+                        ],
+                        isError: true,
+                      };
+                    }
+                  }
+                }
+
+                for (const key of ADVERTISER_PARAM_ARRAY_KEYS) {
+                  const value = input[key];
+                  if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+                    const ids = value as string[];
+                    auditedIdentifiers[key] = ids;
+                    const deniedId = ids.find((id) => !allowedAdvertisers.includes(id));
+                    if (deniedId) {
+                      auditLogger.warn(
+                        {
+                          event: "tool_access_denied",
+                          sessionId,
+                          clientId: resolvedAuthContext.authInfo.clientId,
+                          authType: resolvedAuthContext.authInfo.authType,
+                          tool: tool.name,
+                          [key]: deniedId,
+                          authorized: false,
+                          reason: "advertiser not in allowed scope",
+                        },
+                        "Authorization denied"
+                      );
+
+                      recordToolExecution(tool.name, "error", Date.now() - startTime);
+
+                      return {
+                        content: [
+                          {
+                            type: "text" as const,
+                            text: "Access denied: " + key + ' contains ID "' + deniedId + '" outside your authorized scope.',
+                          },
+                        ],
+                        isError: true,
+                      };
+                    }
+                  }
+                }
+              }
+            }
 
             const sdkContext: ToolSdkContext = {
               requestId: context.requestId,
@@ -650,6 +743,23 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               "Tool executed successfully"
             );
 
+            if (resolvedAuthContext) {
+              auditLogger.info(
+                {
+                  event: "tool_access",
+                  sessionId,
+                  clientId: resolvedAuthContext.authInfo.clientId,
+                  authType: resolvedAuthContext.authInfo.authType,
+                  tool: tool.name,
+                  authorized: true,
+                  durationMs,
+                  success: true,
+                  ...auditedIdentifiers,
+                },
+                "Tool access"
+              );
+            }
+
             recordToolExecution(tool.name, "success", Date.now() - startTime);
             recordWorkflowCallDepth(workflowIdByToolName[tool.name], 1);
 
@@ -671,6 +781,23 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             recordToolExecution(tool.name, "error", Date.now() - startTime);
+
+            if (resolvedAuthContext) {
+              auditLogger.info(
+                {
+                  event: "tool_access",
+                  sessionId,
+                  clientId: resolvedAuthContext.authInfo.clientId,
+                  authType: resolvedAuthContext.authInfo.authType,
+                  tool: tool.name,
+                  authorized: true,
+                  durationMs: Date.now() - startTime,
+                  success: false,
+                  ...auditedIdentifiers,
+                },
+                "Tool access (error)"
+              );
+            }
 
             // Log failed interactions with any evaluator data collected before failure
             if (interactionLogger) {

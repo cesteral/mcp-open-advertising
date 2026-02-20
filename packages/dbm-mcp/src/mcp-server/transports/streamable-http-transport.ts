@@ -26,6 +26,7 @@ import {
   SUPPORTED_PROTOCOL_VERSIONS,
   buildAllowedOrigins,
   extractHeadersMap,
+  validateSessionReuse,
   oauthProtectedResourceBody,
   SessionManager,
   createFindingStore,
@@ -258,6 +259,29 @@ export function createMcpHttpServer(
       return c.json({ error: "Session not found or expired" }, 404);
     }
 
+    if (providedSessionId) {
+      const headers = extractHeadersMap(c.req.raw.headers);
+      const reuseResult = await validateSessionReuse(
+        authStrategy,
+        sessionServiceStore,
+        headers,
+        providedSessionId
+      );
+      if (!reuseResult.valid) {
+        const auditLogger = logger.child({ component: "audit" });
+        auditLogger.warn(
+          {
+            event: "session_fingerprint_mismatch",
+            sessionId: providedSessionId,
+            storedFingerprint: reuseResult.storedFingerprint,
+            requestFingerprint: reuseResult.requestFingerprint,
+          },
+          reuseResult.reason ?? "Session credential mismatch"
+        );
+        return c.json({ error: "Session credential mismatch" }, 401);
+      }
+    }
+
     // For new sessions, authenticate via configured strategy
     let sessionId = providedSessionId;
     if (!sessionId) {
@@ -287,6 +311,11 @@ export function createMcpHttpServer(
       if (adapter) {
         const services = createSessionServices(adapter, config, logger);
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
+        sessionServiceStore.setAuthContext(sessionId, {
+          authInfo: authResult.authInfo,
+          credentialFingerprint: authResult.credentialFingerprint,
+          allowedAdvertisers: authResult.allowedAdvertisers,
+        });
       } else {
         return c.json(
           { error: "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers." },

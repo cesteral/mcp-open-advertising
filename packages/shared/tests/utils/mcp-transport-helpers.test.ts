@@ -7,10 +7,13 @@ import {
   buildAllowedOrigins,
   extractHeadersMap,
   oauthProtectedResourceBody,
+  validateSessionReuse,
   SessionManager,
   type SessionServiceStoreLike,
 } from "../../src/utils/mcp-transport-helpers.js";
 import type { Logger } from "pino";
+import type { AuthStrategy } from "../../src/auth/auth-strategy.js";
+import { SessionServiceStore } from "../../src/utils/session-store.js";
 
 function createMockLogger(): Logger {
   return {
@@ -103,6 +106,86 @@ describe("oauthProtectedResourceBody", () => {
   it("should return 404 for non-jwt modes", () => {
     const result = oauthProtectedResourceBody("google-headers", "https://example.com");
     expect(result.status).toBe(404);
+  });
+});
+
+interface MockServices {
+  svc: string;
+}
+
+function createMockAuthStrategy(options: {
+  extractorFingerprint?: string;
+  verifyFingerprint?: string;
+  throwOnExtract?: boolean;
+  throwOnVerify?: boolean;
+}): AuthStrategy {
+  return {
+    getCredentialFingerprint: vi.fn().mockImplementation(async () => {
+      if (options.throwOnExtract) throw new Error("extract failed");
+      return options.extractorFingerprint;
+    }),
+    verify: vi.fn().mockImplementation(async () => {
+      if (options.throwOnVerify) throw new Error("verify failed");
+      return {
+        authInfo: { clientId: "user@test.com", authType: "jwt" },
+        credentialFingerprint: options.verifyFingerprint,
+      };
+    }),
+  };
+}
+
+describe("validateSessionReuse", () => {
+  it("should return valid when extractor fingerprint matches", async () => {
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }, "fp-abc");
+    const strategy = createMockAuthStrategy({ extractorFingerprint: "fp-abc" });
+
+    const result = await validateSessionReuse(strategy, store, {}, "s1");
+    expect(result.valid).toBe(true);
+    expect(result.requestFingerprint).toBe("fp-abc");
+    expect(strategy.verify).not.toHaveBeenCalled();
+  });
+
+  it("should return invalid when extractor fingerprint mismatches", async () => {
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }, "fp-abc");
+    const strategy = createMockAuthStrategy({ extractorFingerprint: "fp-xyz" });
+
+    const result = await validateSessionReuse(strategy, store, {}, "s1");
+    expect(result.valid).toBe(false);
+    expect(result.reason).toContain("fingerprint");
+    expect(result.storedFingerprint).toBe("fp-abc");
+    expect(result.requestFingerprint).toBe("fp-xyz");
+  });
+
+  it("should fallback to verify when extractor returns undefined", async () => {
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }, "fp-abc");
+    const strategy = createMockAuthStrategy({ verifyFingerprint: "fp-abc" });
+
+    const result = await validateSessionReuse(strategy, store, {}, "s1");
+    expect(result.valid).toBe(true);
+    expect(result.authResult?.authInfo.clientId).toBe("user@test.com");
+    expect(strategy.verify).toHaveBeenCalled();
+  });
+
+  it("should return valid when no stored fingerprint (stdio mode)", async () => {
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }); // no fingerprint
+    const strategy = createMockAuthStrategy({ extractorFingerprint: "fp-any" });
+
+    const result = await validateSessionReuse(strategy, store, {}, "s1");
+    expect(result.valid).toBe(true);
+  });
+
+  it("should return invalid when extractor throws", async () => {
+    const store = new SessionServiceStore<MockServices>();
+    store.set("s1", { svc: "a" }, "fp-abc");
+    const strategy = createMockAuthStrategy({ throwOnExtract: true });
+
+    const result = await validateSessionReuse(strategy, store, {}, "s1");
+    expect(result.valid).toBe(false);
+    expect(result.reason).toContain("Authentication failed");
   });
 });
 

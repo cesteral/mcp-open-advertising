@@ -19,6 +19,7 @@ vi.mock("../../src/auth/google-auth.js", () => ({
 vi.mock("../../src/auth/jwt.js", () => ({
   extractBearerToken: vi.fn(),
   verifyJwt: vi.fn(),
+  getJwtCredentialFingerprint: vi.fn(),
 }));
 
 // We need to import the mocked modules so we can control their return values
@@ -28,7 +29,7 @@ import {
   getCredentialFingerprint,
 } from "../../src/auth/google-auth.js";
 
-import { extractBearerToken, verifyJwt } from "../../src/auth/jwt.js";
+import { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } from "../../src/auth/jwt.js";
 
 // Cast to vi.Mock for easier typing
 const mockParseCredentials = parseCredentialsFromHeaders as ReturnType<typeof vi.fn>;
@@ -36,6 +37,7 @@ const mockCreateAdapter = createGoogleAuthAdapter as ReturnType<typeof vi.fn>;
 const mockGetFingerprint = getCredentialFingerprint as ReturnType<typeof vi.fn>;
 const mockExtractBearer = extractBearerToken as ReturnType<typeof vi.fn>;
 const mockVerifyJwt = verifyJwt as ReturnType<typeof vi.fn>;
+const mockGetJwtFingerprint = getJwtCredentialFingerprint as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -59,6 +61,11 @@ describe("NoAuthStrategy", () => {
     const strategy = new NoAuthStrategy();
     const result = await strategy.verify({});
     expect(result.authInfo.authType).toBe("none");
+  });
+
+  it("getCredentialFingerprint returns undefined", async () => {
+    const strategy = new NoAuthStrategy();
+    await expect(strategy.getCredentialFingerprint?.({})).resolves.toBeUndefined();
   });
 });
 
@@ -149,6 +156,22 @@ describe("GoogleHeadersAuthStrategy", () => {
     expect(mockGetAccessToken).toHaveBeenCalledOnce();
   });
 
+  it("extracts fingerprint without adapter creation in getCredentialFingerprint", async () => {
+    mockParseCredentials.mockReturnValue({
+      type: "oauth2",
+      clientId: "client-123",
+      clientSecret: "secret",
+      refreshToken: "refresh",
+    });
+    mockGetFingerprint.mockReturnValue("fp-only");
+
+    const strategy = new GoogleHeadersAuthStrategy(["scope1"]);
+    const fp = await strategy.getCredentialFingerprint?.({ "x-google-auth-type": "oauth2" });
+
+    expect(fp).toBe("fp-only");
+    expect(mockCreateAdapter).not.toHaveBeenCalled();
+  });
+
   it("throws when headers are invalid (propagates parseCredentialsFromHeaders errors)", async () => {
     mockParseCredentials.mockImplementation(() => {
       throw new Error("Missing X-Google-Auth-Type header.");
@@ -179,6 +202,7 @@ describe("JwtBearerAuthStrategy", () => {
       exp: 9999999999,
       iat: 1000000000,
     });
+    mockGetJwtFingerprint.mockReturnValue("fp-jwt");
 
     const strategy = new JwtBearerAuthStrategy("my-secret");
     await strategy.verify({ authorization: "Bearer my-jwt-token" });
@@ -195,6 +219,7 @@ describe("JwtBearerAuthStrategy", () => {
       exp: 9999999999,
       iat: 1000000000,
     });
+    mockGetJwtFingerprint.mockReturnValue("fp-jwt");
 
     const strategy = new JwtBearerAuthStrategy("my-secret");
     await strategy.verify({ authorization: "Bearer my-jwt-token" });
@@ -211,7 +236,9 @@ describe("JwtBearerAuthStrategy", () => {
       exp: 9999999999,
       iat: 1000000000,
       scope: "read write",
+      allowed_advertisers: ["adv123"],
     });
+    mockGetJwtFingerprint.mockReturnValue("fp-jwt-42");
 
     const strategy = new JwtBearerAuthStrategy("secret");
     const result = await strategy.verify({ authorization: "Bearer tok" });
@@ -220,6 +247,8 @@ describe("JwtBearerAuthStrategy", () => {
     expect(result.authInfo.subject).toBe("user-42");
     expect(result.authInfo.authType).toBe("jwt");
     expect(result.authInfo.scopes).toEqual(["read", "write"]);
+    expect(result.allowedAdvertisers).toEqual(["adv123"]);
+    expect(result.credentialFingerprint).toBe("fp-jwt-42");
   });
 
   it("handles array Authorization header (takes first value)", async () => {
@@ -231,6 +260,7 @@ describe("JwtBearerAuthStrategy", () => {
       exp: 9999999999,
       iat: 1000000000,
     });
+    mockGetJwtFingerprint.mockReturnValue("fp-jwt");
 
     const strategy = new JwtBearerAuthStrategy("secret");
     await strategy.verify({
@@ -238,6 +268,24 @@ describe("JwtBearerAuthStrategy", () => {
     });
 
     expect(mockExtractBearer).toHaveBeenCalledWith("Bearer first-token");
+  });
+
+  it("extracts fingerprint via getCredentialFingerprint", async () => {
+    mockExtractBearer.mockReturnValue("tok");
+    mockVerifyJwt.mockResolvedValue({
+      sub: "user-1",
+      iss: "issuer",
+      aud: "aud",
+      exp: 9999999999,
+      iat: 1000000000,
+    });
+    mockGetJwtFingerprint.mockReturnValue("fp-derived");
+
+    const strategy = new JwtBearerAuthStrategy("secret");
+    const fp = await strategy.getCredentialFingerprint?.({ authorization: "Bearer tok" });
+
+    expect(fp).toBe("fp-derived");
+    expect(mockGetJwtFingerprint).toHaveBeenCalled();
   });
 
   it("throws when Authorization header is missing", async () => {

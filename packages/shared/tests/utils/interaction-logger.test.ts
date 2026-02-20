@@ -72,8 +72,7 @@ describe("InteractionLogger", () => {
       success: true,
       durationMs: 1,
     });
-    interactionLogger.close();
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await interactionLogger.close();
 
     const files = readdirSync(dataDir);
     expect(files.length).toBe(1);
