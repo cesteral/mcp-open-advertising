@@ -1,15 +1,15 @@
 # Development environment configuration
 
 # Project configuration
-project_id  = "cesteral-dev" # TODO: Replace with actual dev project ID
+project_id  = "cesteral-labs"
 region      = "europe-west2"
 environment = "dev"
 
 # Container images (update after first build)
-dbm_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/dbm-mcp:latest"
-dv360_mcp_image = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/dv360-mcp:latest"
-ttd_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/ttd-mcp:latest"
-gads_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/gads-mcp:latest"
+dbm_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-labs/cesteral/dbm-mcp:latest"
+dv360_mcp_image = "europe-west2-docker.pkg.dev/cesteral-labs/cesteral/dv360-mcp:latest"
+ttd_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-labs/cesteral/ttd-mcp:latest"
+gads_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-labs/cesteral/gads-mcp:latest"
 
 # Networking
 create_vpc             = true
@@ -41,7 +41,7 @@ mcp_session_mode       = "stateless"
 mcp_auth_mode          = "jwt"
 log_level              = "debug" # More verbose logging in dev
 enable_gcs_persistence = false
-gcs_bucket_name        = "cesteral-dev-mcp-persistence" # Enable when ready
+gcs_bucket_name        = "cesteral-labs-mcp-persistence" # Enable when ready
 
 # Cloud Scheduler - less frequent in dev
 enable_scheduler_jobs = true

@@ -25,9 +25,9 @@ resource "google_service_account" "runtime" {
 
 # Grant runtime service account access to secrets
 resource "google_secret_manager_secret_iam_member" "runtime_secret_accessor" {
-  for_each  = toset([for s in google_secret_manager_secret.secrets : s.id])
+  for_each  = toset(var.secret_names)
   project   = var.project_id
-  secret_id = each.value
+  secret_id = google_secret_manager_secret.secrets[each.value].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.runtime.email}"
 }
