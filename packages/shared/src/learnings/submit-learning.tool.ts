@@ -10,6 +10,7 @@ import { z } from "zod";
 import { existsSync, mkdirSync, appendFileSync, readFileSync } from "node:fs";
 import { join, resolve, relative } from "node:path";
 import type { ToolDefinitionForFactory } from "../utils/tool-handler-factory.js";
+import { rebuildLearningsIndex } from "./learnings-index.js";
 
 const TOOL_NAME = "submit_learning";
 
@@ -60,6 +61,16 @@ export const SubmitLearningInputSchema = z
       .max(500)
       .optional()
       .describe("Comma-separated list of servers, tools, or workflow IDs this applies to"),
+    sourceInteractionIds: z
+      .array(z.string())
+      .max(20)
+      .optional()
+      .describe("IDs of interaction log entries that motivated this learning"),
+    force: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("If true, skip deduplication check and append even if a similar entry exists"),
   })
   .refine(
     (data) => data.category !== "platform" || data.platform !== undefined,
@@ -71,6 +82,7 @@ export const SubmitLearningOutputSchema = z.object({
   filePath: z.string().describe("Relative path to the file the learning was appended to"),
   entryTitle: z.string(),
   timestamp: z.string().datetime(),
+  duplicateOf: z.string().optional().describe("Title of existing entry if duplicate detected"),
 });
 
 type SubmitLearningInput = z.infer<typeof SubmitLearningInputSchema>;
@@ -127,6 +139,39 @@ function resolveTargetFile(
 }
 
 // ---------------------------------------------------------------------------
+// Deduplication helpers
+// ---------------------------------------------------------------------------
+
+function tokenize(text: string): Set<string> {
+  return new Set(text.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).filter(Boolean));
+}
+
+function normalizedWordOverlap(a: string, b: string): number {
+  const setA = tokenize(a);
+  const setB = tokenize(b);
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  for (const word of setA) {
+    if (setB.has(word)) intersection++;
+  }
+  return intersection / Math.max(setA.size, setB.size);
+}
+
+function findSimilarEntry(filePath: string, title: string): string | null {
+  if (!existsSync(filePath)) return null;
+  const content = readFileSync(filePath, "utf-8");
+  const headingRegex = /^## (.+)$/gm;
+  let match: RegExpExecArray | null;
+  while ((match = headingRegex.exec(content)) !== null) {
+    const existingTitle = match[1].trim();
+    if (normalizedWordOverlap(title, existingTitle) > 0.7) {
+      return existingTitle;
+    }
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Logic
 // ---------------------------------------------------------------------------
 
@@ -145,6 +190,20 @@ export function createSubmitLearningLogic(learningsRoot: string) {
     const dir = join(targetFile, "..");
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
+    }
+
+    // Deduplication check
+    if (!input.force) {
+      const duplicate = findSimilarEntry(targetFile, input.title);
+      if (duplicate) {
+        return {
+          success: false,
+          filePath: relative(process.cwd(), targetFile),
+          entryTitle: input.title,
+          timestamp: new Date().toISOString(),
+          duplicateOf: duplicate,
+        };
+      }
     }
 
     // If the file doesn't exist, create it with a header
@@ -166,6 +225,9 @@ export function createSubmitLearningLogic(learningsRoot: string) {
     if (input.appliesTo) {
       entry += `- **Applies to**: ${input.appliesTo}\n`;
     }
+    if (input.sourceInteractionIds?.length) {
+      entry += `- **Source interactions**: ${input.sourceInteractionIds.join(", ")}\n`;
+    }
 
     // Read existing content, insert new entry after the first heading
     const existing = readFileSync(targetFile, "utf-8");
@@ -181,6 +243,13 @@ export function createSubmitLearningLogic(learningsRoot: string) {
     } else {
       // No clear heading structure, just append
       appendFileSync(targetFile, entry + "\n", "utf-8");
+    }
+
+    // Rebuild index after successful write
+    try {
+      rebuildLearningsIndex(learningsRoot);
+    } catch {
+      // Non-critical — index rebuild failure shouldn't block the learning submission
     }
 
     const relativePath = relative(process.cwd(), targetFile);
@@ -218,7 +287,9 @@ export function createSubmitLearningTool(learningsRoot: string): ToolDefinitionF
     responseFormatter: (result: SubmitLearningOutput) => [
       {
         type: "text" as const,
-        text: `Learning submitted: "${result.entryTitle}"\nFile: ${result.filePath}\nTimestamp: ${result.timestamp}`,
+        text: result.duplicateOf
+          ? `Duplicate detected: "${result.entryTitle}" is similar to existing entry "${result.duplicateOf}"\nFile: ${result.filePath}\nUse force: true to append anyway.`
+          : `Learning submitted: "${result.entryTitle}"\nFile: ${result.filePath}\nTimestamp: ${result.timestamp}`,
       },
     ],
   };

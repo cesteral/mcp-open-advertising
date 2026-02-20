@@ -111,4 +111,22 @@ describe("registerStaticResourcesFromDefinitions", () => {
     registerStaticResourcesFromDefinitions({ server, resources: [], logger });
     expect(logger.info).toHaveBeenCalledWith({ resourceCount: 0 }, "Registered MCP resources");
   });
+
+  it("should support async getContent implementations", async () => {
+    const resources: StaticResourceDefinition[] = [
+      {
+        uri: "async://resource",
+        name: "Async",
+        description: "Async resource",
+        mimeType: "text/plain",
+        getContent: async () => "async-content",
+      },
+    ];
+
+    registerStaticResourcesFromDefinitions({ server, resources, logger });
+
+    const handler = server.registerResource.mock.calls[0][3];
+    const result = await handler(new URL("async://resource"));
+    expect(result.contents[0].text).toBe("async-content");
+  });
 });

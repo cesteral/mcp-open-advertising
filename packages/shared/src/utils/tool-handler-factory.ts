@@ -13,6 +13,7 @@
 
 import type { Logger } from "pino";
 import type { z } from "zod";
+import { randomUUID } from "node:crypto";
 import { withToolSpan, withSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
 import { ErrorHandler, EvaluatorIssueClass, JsonRpcErrorCode, McpError } from "./mcp-errors.js";
 import {
@@ -22,6 +23,7 @@ import {
   recordWorkflowCallDepth,
 } from "./metrics.js";
 import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
+import type { FindingBuffer } from "./finding-types.js";
 
 /**
  * Request context created per tool invocation
@@ -189,6 +191,17 @@ export interface RegisterToolsOptions {
    * Fires after evaluation completes. Writes are fire-and-forget.
    */
   interactionLogger?: InteractionLogger;
+  /**
+   * Optional learning extractor that auto-generates learnings from repeated evaluator findings.
+   * Fires after evaluation completes. Writes are fire-and-forget.
+   */
+  learningExtractor?: {
+    processEvaluation(toolName: string, issues: ToolInteractionIssue[]): void;
+  };
+  /**
+   * Optional per-session finding buffer for persisted evaluator findings.
+   */
+  findingBuffer?: FindingBuffer;
 }
 
 function estimatePayloadBytes(value: unknown): number {
@@ -231,6 +244,8 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     workflowIdByToolName = {},
     evaluator,
     interactionLogger,
+    learningExtractor,
+    findingBuffer,
   } = opts;
 
   for (const tool of tools) {
@@ -276,8 +291,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
         const startTime = Date.now();
 
         return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
-          // Evaluator data — declared outside try so they're accessible
-          // in the catch block for error-path interaction logging.
+          // Declared outside try so they're accessible in the catch block
+          // for error-path interaction logging.
+          let requestId: string | undefined;
           const issues: ToolInteractionIssue[] = [];
           let inputQualityScore: number | undefined;
           let efficiencyScore: number | undefined;
@@ -296,6 +312,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 input: args,
               },
             });
+            requestId = context.requestId;
 
             const validatedInput = tool.inputSchema.parse(args);
             setSpanAttribute("tool.input.validated", true);
@@ -418,6 +435,37 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               }
             }
 
+            if (findingBuffer && hasEvaluator) {
+              findingBuffer.push({
+                id: randomUUID(),
+                sessionId: sessionId ?? "unknown",
+                timestamp: new Date().toISOString(),
+                toolName: tool.name,
+                workflowId: interactionContext.workflowId,
+                platform: interactionContext.platform ?? "unknown",
+                serverPackage: interactionContext.packageName ?? "unknown",
+                issues: issues.map((issue) => ({
+                  class: issue.class,
+                  message: issue.message,
+                  isRecoverable: issue.isRecoverable,
+                  metadata: issue.metadata,
+                })),
+                inputQualityScore,
+                efficiencyScore,
+                recommendationAction: recommendationAction ?? "none",
+                durationMs,
+              });
+            }
+
+            // Fire-and-forget: feed evaluator findings to learning extractor
+            if (learningExtractor && issues.length > 0) {
+              try {
+                learningExtractor.processEvaluation(tool.name, issues);
+              } catch {
+                // Non-critical — don't block tool response
+              }
+            }
+
             if (issues.length > 0) {
               for (const issue of issues) {
                 recordEvaluatorFinding(tool.name, issue.class, issue.isRecoverable ?? true);
@@ -535,6 +583,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 workflowId: workflowIdByToolName[tool.name],
                 platform,
                 packageName,
+                requestId,
               };
               if (issues.length > 0) {
                 errorLogEntry.evaluatorIssues = issues.map((i) => i.class);

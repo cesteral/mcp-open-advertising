@@ -14,6 +14,7 @@
 
 import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from "node:fs";
 import { join, dirname } from "node:path";
+import { createHash } from "node:crypto";
 import type { Logger } from "pino";
 
 // ---------------------------------------------------------------------------
@@ -21,6 +22,7 @@ import type { Logger } from "pino";
 // ---------------------------------------------------------------------------
 
 export interface InteractionLogEntry {
+  id?: string;
   ts: string;
   sessionId: string;
   tool: string;
@@ -46,6 +48,25 @@ export interface InteractionLoggerOptions {
   maxFileSizeBytes?: number;
   /** Logger for internal diagnostics. */
   logger: Logger;
+}
+
+export interface GenerateEntryIdInput {
+  ts: string;
+  sessionId: string;
+  tool: string;
+  requestId?: string;
+  nonce?: number;
+}
+
+/**
+ * Generate a collision-resistant 16-char hex ID for an interaction log entry.
+ */
+export function generateEntryId(input: GenerateEntryIdInput): string {
+  const { ts, sessionId, tool, requestId, nonce } = input;
+  return createHash("sha256")
+    .update(`${ts}:${sessionId}:${tool}:${requestId ?? "no-request-id"}:${nonce ?? 0}`)
+    .digest("hex")
+    .slice(0, 16);
 }
 
 // Secrets / tokens that should never be logged
@@ -113,6 +134,7 @@ export class InteractionLogger {
   private currentDate: string = "";
   private stream: WriteStream | null = null;
   private currentFilePath: string = "";
+  private entryNonce = 0;
 
   constructor(options: InteractionLoggerOptions) {
     this.dataDir = options.dataDir ?? join(process.cwd(), "data", "interactions");
@@ -127,6 +149,15 @@ export class InteractionLogger {
    */
   append(entry: InteractionLogEntry): void {
     try {
+      if (!entry.id) {
+        entry.id = generateEntryId({
+          ts: entry.ts,
+          sessionId: entry.sessionId,
+          tool: entry.tool,
+          requestId: entry.requestId,
+          nonce: this.entryNonce++,
+        });
+      }
       const line = JSON.stringify(entry) + "\n";
       const stream = this.getStream();
       stream.write(line);

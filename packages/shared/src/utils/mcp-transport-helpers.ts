@@ -105,6 +105,10 @@ export interface SessionServiceStoreLike {
   readonly size: number;
 }
 
+interface SessionManagerOptions {
+  onBeforeCleanup?: (sessionId: string) => Promise<void>;
+}
+
 /**
  * Manages MCP server instances and session lifecycle:
  * - Tracks session creation timestamps for timeout sweeps
@@ -116,7 +120,10 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
   readonly sessionServers = new Map<string, TMcpServer>();
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private readonly sessionServiceStore: SessionServiceStoreLike) {}
+  constructor(
+    private readonly sessionServiceStore: SessionServiceStoreLike,
+    private readonly options?: SessionManagerOptions
+  ) {}
 
   trackSession(sessionId: string): void {
     this.sessionCreatedAt.set(sessionId, Date.now());
@@ -131,6 +138,10 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
   }
 
   async cleanupSession(sessionId: string): Promise<void> {
+    if (this.options?.onBeforeCleanup) {
+      await this.options.onBeforeCleanup(sessionId).catch(() => {});
+    }
+
     const cachedServer = this.sessionServers.get(sessionId);
     if (cachedServer) {
       await cachedServer.close().catch(() => {});
@@ -141,6 +152,7 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
   }
 
   startSweep(timeoutMs: number, logger: Logger): void {
+    if (this.sweepTimer) clearInterval(this.sweepTimer);
     this.sweepTimer = setInterval(() => {
       const now = Date.now();
       for (const [sessionId, createdAt] of this.sessionCreatedAt) {
@@ -161,6 +173,17 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
       clearInterval(this.sweepTimer);
       this.sweepTimer = null;
     }
+
+    if (this.options?.onBeforeCleanup) {
+      const sessionIds = new Set<string>([
+        ...this.sessionCreatedAt.keys(),
+        ...this.sessionServers.keys(),
+      ]);
+      for (const sessionId of sessionIds) {
+        await this.options.onBeforeCleanup(sessionId).catch(() => {});
+      }
+    }
+
     for (const [, cachedServer] of this.sessionServers) {
       await cachedServer.close().catch(() => {});
     }

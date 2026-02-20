@@ -16,7 +16,7 @@ export interface StaticResourceDefinition {
   name: string;
   description: string;
   mimeType: string;
-  getContent: () => string;
+  getContent: (uri?: URL) => string | Promise<string>;
 }
 
 /**
@@ -55,11 +55,11 @@ export function registerStaticResourcesFromDefinitions(opts: RegisterStaticResou
         description: resource.description,
         mimeType: resource.mimeType,
       },
-      async () => {
+      async (uri: URL) => {
         logger.info({ resourceUri: resource.uri }, "Handling resource read");
 
         try {
-          const content = resource.getContent();
+          const content = await resource.getContent(uri);
           logger.debug(
             {
               resourceUri: resource.uri,

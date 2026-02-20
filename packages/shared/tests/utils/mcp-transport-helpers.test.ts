@@ -143,6 +143,21 @@ describe("SessionManager", () => {
     expect(store.delete).toHaveBeenCalledWith("s1");
   });
 
+  it("should call onBeforeCleanup hook before deleting session", async () => {
+    const onBeforeCleanup = vi.fn().mockResolvedValue(undefined);
+    const manager = new SessionManager<{ close: () => Promise<void> }>(store, {
+      onBeforeCleanup,
+    });
+    const mockServer = { close: vi.fn().mockResolvedValue(undefined) };
+
+    manager.trackSession("s1");
+    manager.setServer("s1", mockServer);
+
+    await manager.cleanupSession("s1");
+
+    expect(onBeforeCleanup).toHaveBeenCalledWith("s1");
+  });
+
   it("should shutdown all sessions", async () => {
     const manager = new SessionManager<{ close: () => Promise<void> }>(store);
     const server1 = { close: vi.fn().mockResolvedValue(undefined) };
@@ -156,5 +171,24 @@ describe("SessionManager", () => {
     expect(server1.close).toHaveBeenCalled();
     expect(server2.close).toHaveBeenCalled();
     expect(manager.sessionServers.size).toBe(0);
+  });
+
+  it("should flush hooks for all tracked sessions during shutdown", async () => {
+    const onBeforeCleanup = vi.fn().mockResolvedValue(undefined);
+    const manager = new SessionManager<{ close: () => Promise<void> }>(store, {
+      onBeforeCleanup,
+    });
+    const server1 = { close: vi.fn().mockResolvedValue(undefined) };
+    const server2 = { close: vi.fn().mockResolvedValue(undefined) };
+
+    manager.trackSession("s1");
+    manager.trackSession("s2");
+    manager.setServer("s1", server1);
+    manager.setServer("s2", server2);
+
+    await manager.shutdown();
+
+    expect(onBeforeCleanup).toHaveBeenCalledWith("s1");
+    expect(onBeforeCleanup).toHaveBeenCalledWith("s2");
   });
 });
