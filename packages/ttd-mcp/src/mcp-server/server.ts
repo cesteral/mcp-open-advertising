@@ -26,6 +26,7 @@ import {
   type ToolExecutionSnapshot,
   type ToolInteractionContext,
   type ToolInteractionEvaluation,
+  type StorageBackend,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
@@ -33,13 +34,10 @@ import packageJson from "../../package.json" with { type: "json" };
 const TTD_PACKAGE_NAME = "ttd-mcp";
 const TTD_PLATFORM = "ttd";
 const LEARNINGS_ROOT = join(process.cwd(), "learnings");
-const LEARNING_EXTRACTOR = new LearningExtractor({
-  learningsRoot: LEARNINGS_ROOT,
-  dataDir: join(process.cwd(), "data", "learnings", TTD_PACKAGE_NAME),
-});
 
 interface FindingDeps {
   findingStore: FindingStore;
+  storageBackend?: StorageBackend;
 }
 
 const ttdWorkflowIdByToolName: Record<string, string> = {
@@ -118,9 +116,18 @@ export async function createMcpServer(
   });
 
   // Interaction logger for persisting tool execution data
+  const storageBackend = findingDeps?.storageBackend;
   const interactionLogger = new InteractionLogger({
     serverName: TTD_PACKAGE_NAME,
     logger,
+    storageBackend,
+  });
+
+  // Learning extractor (created per-server to support optional GCS backend)
+  const learningExtractor = new LearningExtractor({
+    learningsRoot: LEARNINGS_ROOT,
+    dataDir: join(process.cwd(), "data", "learnings", TTD_PACKAGE_NAME),
+    storageBackend,
   });
 
   // Register all tools via shared factory (includes submit_learning + workflow lifecycle)
@@ -156,7 +163,7 @@ export async function createMcpServer(
       evaluate: evaluateTtdInteraction,
     },
     interactionLogger,
-    learningExtractor: LEARNING_EXTRACTOR,
+    learningExtractor,
     findingBuffer: sessionServices?.findingBuffer,
     workflowTracker: sessionServices?.workflowTracker,
   });

@@ -4,10 +4,13 @@
  * Maintains a JSON index of all learning entries across the markdown tree.
  * Enables fast structured lookups for deduplication and filtered retrieval
  * without parsing markdown at read time.
+ *
+ * Provides both sync functions (local FS) and async overloads (StorageBackend/GCS).
  */
 
 import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, relative } from "node:path";
+import type { StorageBackend } from "../utils/storage-backend.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,6 +45,13 @@ export function parseMarkdownEntries(filePath: string, relPath: string): Learnin
     return [];
   }
 
+  return parseMarkdownEntriesFromContent(content, relPath);
+}
+
+/**
+ * Parse markdown content (string) into index entries. Shared by sync and async paths.
+ */
+function parseMarkdownEntriesFromContent(content: string, relPath: string): LearningsIndexEntry[] {
   const sections = content.split(/\n(?=## )/);
   const entries: LearningsIndexEntry[] = [];
 
@@ -98,8 +108,10 @@ function walkMarkdownFiles(dir: string, root: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// Index operations
+// Index operations (sync — local filesystem)
 // ---------------------------------------------------------------------------
+
+const SCAN_DIRS = ["platforms", "workflows", "agent-behaviors", "auto-generated"];
 
 /**
  * Rebuild the learnings index by scanning all markdown files.
@@ -107,9 +119,8 @@ function walkMarkdownFiles(dir: string, root: string): string[] {
  */
 export function rebuildLearningsIndex(learningsRoot: string): LearningsIndex {
   const entries: LearningsIndexEntry[] = [];
-  const scanDirs = ["platforms", "workflows", "agent-behaviors", "auto-generated"];
 
-  for (const subDir of scanDirs) {
+  for (const subDir of SCAN_DIRS) {
     const dirPath = join(learningsRoot, subDir);
     const files = walkMarkdownFiles(dirPath, learningsRoot);
     for (const relPath of files) {
@@ -141,6 +152,65 @@ export function loadLearningsIndex(learningsRoot: string): LearningsIndex | null
     return null;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Index operations (async — StorageBackend)
+// ---------------------------------------------------------------------------
+
+/**
+ * Rebuild the learnings index via StorageBackend.
+ * Scans markdown files in the standard subdirectories via backend.listFiles().
+ */
+export async function rebuildLearningsIndexAsync(
+  _learningsRoot: string,
+  backend: StorageBackend
+): Promise<LearningsIndex> {
+  const entries: LearningsIndexEntry[] = [];
+
+  for (const subDir of SCAN_DIRS) {
+    const prefix = `learnings/${subDir}`;
+    const files = await backend.listFiles(prefix, ".md");
+    for (const filePath of files) {
+      // filePath is relative to backend root, e.g. "learnings/platforms/foo.md"
+      const content = await backend.readFile(filePath);
+      if (!content) continue;
+      // relPath should be relative to learningsRoot, e.g. "platforms/foo.md"
+      const relPath = filePath.startsWith("learnings/")
+        ? filePath.slice("learnings/".length)
+        : filePath;
+      entries.push(...parseMarkdownEntriesFromContent(content, relPath));
+    }
+  }
+
+  const index: LearningsIndex = {
+    entries,
+    generatedAt: new Date().toISOString(),
+  };
+
+  await backend.writeFile("learnings/index.json", JSON.stringify(index, null, 2));
+
+  return index;
+}
+
+/**
+ * Load an existing index via StorageBackend. Returns null if not found.
+ */
+export async function loadLearningsIndexAsync(
+  _learningsRoot: string,
+  backend: StorageBackend
+): Promise<LearningsIndex | null> {
+  try {
+    const raw = await backend.readFile("learnings/index.json");
+    if (!raw) return null;
+    return JSON.parse(raw) as LearningsIndex;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Query
+// ---------------------------------------------------------------------------
 
 /**
  * Filter index entries by tool name, workflow, or general text match on appliesTo.

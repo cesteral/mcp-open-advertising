@@ -29,6 +29,7 @@ import {
   oauthProtectedResourceBody,
   SessionManager,
   createFindingStore,
+  resolveStorageBackend,
   type AuthMode,
   type GoogleAuthAdapter,
 } from "@cesteral/shared";
@@ -78,10 +79,17 @@ export function createMcpHttpServer(
 ): { app: Hono<{ Bindings: HonoBindings }>; shutdown: () => Promise<void> } {
   const app = new Hono<{ Bindings: HonoBindings }>();
 
+  const storageBackend = config.gcsBucketName
+    ? resolveStorageBackend({ gcsBucket: config.gcsBucketName, gcsPrefix: "dv360-mcp" })
+    : undefined;
+
   const findingStore = createFindingStore({
-    filePath: join(process.cwd(), "data", "findings", "dv360-mcp-findings.jsonl"),
+    filePath: storageBackend
+      ? "findings/dv360-mcp-findings.jsonl"
+      : join(process.cwd(), "data", "findings", "dv360-mcp-findings.jsonl"),
     retentionDays: 30,
     logger,
+    storageBackend,
   });
   findingStore.prune().catch((error) => {
     logger.warn({ error }, "Failed to prune finding store on startup");
@@ -307,7 +315,7 @@ export function createMcpHttpServer(
     // Get or create cached MCP server for this session
     let mcpServer = sessions.getServer(sessionId);
     if (!mcpServer) {
-      mcpServer = await createMcpServer(logger, sessionId, { findingStore });
+      mcpServer = await createMcpServer(logger, sessionId, { findingStore, storageBackend });
       sessions.setServer(sessionId, mcpServer);
       logger.debug({ sessionId }, "Created new MCP server instance for session");
     }

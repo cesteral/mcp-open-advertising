@@ -142,6 +142,22 @@ variable "secret_env_vars" {
 }
 
 # ============================================================================
+# GCS PERSISTENCE
+# ============================================================================
+
+variable "enable_gcs_persistence" {
+  description = "Enable GCS-backed persistence for learning system data"
+  type        = bool
+  default     = false
+}
+
+variable "gcs_bucket_name" {
+  description = "GCS bucket name for learnings/findings persistence"
+  type        = string
+  default     = ""
+}
+
+# ============================================================================
 # CLOUD SCHEDULER CONFIGURATION
 # ============================================================================
 

@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 describe("LearningExtractor", () => {
-  it("writes an auto-generated learning when threshold is reached", () => {
+  it("writes an auto-generated learning when threshold is reached", async () => {
     const root = createRoot();
     const extractor = new LearningExtractor({
       learningsRoot: root,
@@ -31,7 +31,7 @@ describe("LearningExtractor", () => {
       threshold: 2,
     });
 
-    extractor.processEvaluation("ttd_update_entity", [
+    await extractor.processEvaluation("ttd_update_entity", [
       {
         class: EvaluatorIssueClass.InputQuality,
         message: "Payload had too many mutable fields",
@@ -42,7 +42,7 @@ describe("LearningExtractor", () => {
     const filePath = join(root, "auto-generated", "ttd_update_entity-input_quality.md");
     expect(existsSync(filePath)).toBe(false);
 
-    extractor.processEvaluation("ttd_update_entity", [
+    await extractor.processEvaluation("ttd_update_entity", [
       {
         class: EvaluatorIssueClass.InputQuality,
         message: "Payload had too many mutable fields",

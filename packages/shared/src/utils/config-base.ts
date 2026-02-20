@@ -59,6 +59,9 @@ export const BaseConfigSchema = z.object({
   otelServiceName: z.string(),
   otelExporterOtlpTracesEndpoint: z.string().url().optional(),
   otelExporterOtlpMetricsEndpoint: z.string().url().optional(),
+
+  // GCS Persistence
+  gcsBucketName: z.string().optional(),
 });
 
 /**
@@ -91,6 +94,9 @@ export function getBaseEnvConfig(defaultHost: string): Record<string, unknown> {
     otelServiceName: process.env.OTEL_SERVICE_NAME,
     otelExporterOtlpTracesEndpoint: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
     otelExporterOtlpMetricsEndpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
+
+    // GCS Persistence
+    gcsBucketName: process.env.GCS_BUCKET_NAME || undefined,
 
     // Host
     host: defaultHost,

@@ -10,12 +10,14 @@
  * - File rotation by date and size (configurable)
  * - Secret sanitization (strips tokens/keys from logged params)
  * - Fire-and-forget writes (no blocking the tool response)
+ * - Optional StorageBackend for GCS persistence (buffered writes)
  */
 
 import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import type { Logger } from "pino";
+import type { StorageBackend } from "./storage-backend.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +52,10 @@ export interface InteractionLoggerOptions {
   maxFileSizeBytes?: number;
   /** Logger for internal diagnostics. */
   logger: Logger;
+  /** Optional StorageBackend for GCS persistence. When provided, entries are buffered and flushed periodically. */
+  storageBackend?: StorageBackend;
+  /** Flush interval in ms for StorageBackend mode. Default: 5000 (5s). */
+  flushIntervalMs?: number;
 }
 
 export interface GenerateEntryIdInput {
@@ -132,17 +138,36 @@ export class InteractionLogger {
   private readonly serverName: string;
   private readonly maxFileSizeBytes: number;
   private readonly logger: Logger;
+  private readonly storageBackend?: StorageBackend;
 
+  // Local FS mode
   private currentDate: string = "";
   private stream: WriteStream | null = null;
   private currentFilePath: string = "";
   private entryNonce = 0;
+
+  // StorageBackend buffered mode
+  private buffer: string[] = [];
+  private flushTimer: ReturnType<typeof setInterval> | null = null;
+  private flushing = false;
 
   constructor(options: InteractionLoggerOptions) {
     this.dataDir = options.dataDir ?? join(process.cwd(), "data", "interactions");
     this.serverName = options.serverName;
     this.maxFileSizeBytes = options.maxFileSizeBytes ?? 10 * 1024 * 1024; // 10 MB
     this.logger = options.logger;
+    this.storageBackend = options.storageBackend;
+
+    if (this.storageBackend) {
+      const interval = options.flushIntervalMs ?? 5000;
+      this.flushTimer = setInterval(() => {
+        this.flushBuffer().catch((err) => {
+          this.logger.warn({ error: err }, "InteractionLogger: flush failed");
+        });
+      }, interval);
+      // Unref so the timer doesn't keep the process alive
+      if (this.flushTimer.unref) this.flushTimer.unref();
+    }
   }
 
   /**
@@ -161,17 +186,45 @@ export class InteractionLogger {
         });
       }
       const line = JSON.stringify(entry) + "\n";
-      const stream = this.getStream();
-      stream.write(line);
+
+      if (this.storageBackend) {
+        this.buffer.push(line);
+      } else {
+        const stream = this.getStream();
+        stream.write(line);
+      }
     } catch (error) {
       this.logger.warn({ error }, "InteractionLogger: failed to write entry");
     }
   }
 
   /**
-   * Flush and close the underlying write stream.
+   * Flush and close the underlying write stream or storage backend buffer.
    */
-  close(): void {
+  async close(): Promise<void> {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
+
+    if (this.storageBackend) {
+      await this.flushBuffer();
+    } else {
+      if (this.stream) {
+        this.stream.end();
+        this.stream = null;
+      }
+    }
+  }
+
+  /**
+   * Synchronous close for backward compatibility (local FS only).
+   */
+  closeSync(): void {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
     if (this.stream) {
       this.stream.end();
       this.stream = null;
@@ -179,6 +232,22 @@ export class InteractionLogger {
   }
 
   // ── Private ──────────────────────────────────────────────────────────────
+
+  private async flushBuffer(): Promise<void> {
+    if (!this.storageBackend || this.buffer.length === 0 || this.flushing) return;
+    this.flushing = true;
+    try {
+      const lines = this.buffer.splice(0);
+      const payload = lines.join("");
+      const today = new Date().toISOString().slice(0, 10);
+      const filePath = `interactions/${this.serverName}-${today}.jsonl`;
+      await this.storageBackend.appendFile(filePath, payload);
+    } catch (error) {
+      this.logger.warn({ error }, "InteractionLogger: failed to flush buffer to storage backend");
+    } finally {
+      this.flushing = false;
+    }
+  }
 
   private getStream(): WriteStream {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -205,7 +274,10 @@ export class InteractionLogger {
   }
 
   private rotateStream(date: string): void {
-    this.close();
+    if (this.stream) {
+      this.stream.end();
+      this.stream = null;
+    }
     this.currentDate = date;
 
     // Ensure data directory exists

@@ -199,7 +199,7 @@ export interface RegisterToolsOptions {
    * Fires after evaluation completes. Writes are fire-and-forget.
    */
   learningExtractor?: {
-    processEvaluation(toolName: string, issues: ToolInteractionIssue[], skillContext?: SkillContext): void;
+    processEvaluation(toolName: string, issues: ToolInteractionIssue[], skillContext?: SkillContext): void | Promise<void>;
   };
   /**
    * Optional per-session finding buffer for persisted evaluator findings.

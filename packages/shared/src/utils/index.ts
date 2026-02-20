@@ -21,3 +21,4 @@ export * from "./finding-store.js";
 export * from "./workflow-tracker.js";
 export * from "./workflow-evaluator.js";
 export * from "./workflow-lifecycle-tools.js";
+export * from "./storage-backend.js";

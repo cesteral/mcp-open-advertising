@@ -11,11 +11,14 @@ import type {
   PersistedFinding,
 } from "./finding-types.js";
 import type { EvaluatorIssueClass } from "./mcp-errors.js";
+import type { StorageBackend } from "./storage-backend.js";
 
 interface CreateFindingStoreOptions {
   filePath: string;
   retentionDays?: number;
   logger: Logger;
+  /** Optional StorageBackend for GCS persistence. */
+  storageBackend?: StorageBackend;
 }
 
 interface PatternAccumulator {
@@ -78,16 +81,27 @@ function parseJsonLine(line: string, logger: Logger): PersistedFinding | null {
 }
 
 export function createFindingStore(options: CreateFindingStoreOptions): FindingStore {
-  const { filePath, logger, retentionDays = 30 } = options;
+  const { filePath, logger, retentionDays = 30, storageBackend } = options;
 
+  // When using StorageBackend, filePath is used as the relative path within the backend
   async function ensureFileDir(): Promise<void> {
-    await mkdir(dirname(filePath), { recursive: true });
+    if (storageBackend) {
+      await storageBackend.mkdir(dirname(filePath));
+    } else {
+      await mkdir(dirname(filePath), { recursive: true });
+    }
   }
 
   async function readFindingsFromDisk(): Promise<PersistedFinding[]> {
-    if (!existsSync(filePath)) return [];
     try {
-      const raw = await readFile(filePath, "utf-8");
+      let raw: string | null;
+      if (storageBackend) {
+        raw = await storageBackend.readFile(filePath);
+      } else {
+        if (!existsSync(filePath)) return [];
+        raw = await readFile(filePath, "utf-8");
+      }
+      if (!raw) return [];
       return raw
         .split("\n")
         .map((line) => parseJsonLine(line, logger))
@@ -104,7 +118,11 @@ export function createFindingStore(options: CreateFindingStoreOptions): FindingS
       try {
         await ensureFileDir();
         const payload = findings.map((finding) => JSON.stringify(finding)).join("\n") + "\n";
-        await appendFile(filePath, payload, "utf-8");
+        if (storageBackend) {
+          await storageBackend.appendFile(filePath, payload);
+        } else {
+          await appendFile(filePath, payload, "utf-8");
+        }
       } catch (error) {
         logger.warn({ error, filePath }, "Failed to append findings");
       }
@@ -214,7 +232,11 @@ export function createFindingStore(options: CreateFindingStoreOptions): FindingS
       try {
         await ensureFileDir();
         const payload = retained.map((finding) => JSON.stringify(finding)).join("\n");
-        await writeFile(filePath, payload ? `${payload}\n` : "", "utf-8");
+        if (storageBackend) {
+          await storageBackend.writeFile(filePath, payload ? `${payload}\n` : "");
+        } else {
+          await writeFile(filePath, payload ? `${payload}\n` : "", "utf-8");
+        }
       } catch (error) {
         logger.warn({ error, filePath }, "Failed to prune finding store");
         return 0;
@@ -224,4 +246,3 @@ export function createFindingStore(options: CreateFindingStoreOptions): FindingS
     },
   };
 }
-

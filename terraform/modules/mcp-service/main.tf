@@ -61,6 +61,32 @@ resource "google_project_iam_member" "runtime_vertex_ai_user" {
 }
 
 # ============================================================================
+# GCS PERSISTENCE (learnings, findings, interaction logs)
+# ============================================================================
+
+resource "google_storage_bucket" "learnings_data" {
+  count    = var.enable_gcs_persistence ? 1 : 0
+  name     = var.gcs_bucket_name
+  location = var.region
+  project  = var.project_id
+
+  uniform_bucket_level_access = true
+  labels                      = local.common_labels
+
+  lifecycle_rule {
+    condition { age = 90 }
+    action { type = "Delete" }
+  }
+}
+
+resource "google_storage_bucket_iam_member" "runtime_storage_user" {
+  count  = var.enable_gcs_persistence ? 1 : 0
+  bucket = google_storage_bucket.learnings_data[0].name
+  role   = "roles/storage.objectUser"
+  member = "serviceAccount:${google_service_account.runtime.email}"
+}
+
+# ============================================================================
 # SECRET MANAGER
 # ============================================================================
 
@@ -207,6 +233,15 @@ resource "google_cloud_run_v2_service" "mcp_server" {
               version = env.value.version
             }
           }
+        }
+      }
+
+      # GCS persistence (optional)
+      dynamic "env" {
+        for_each = var.enable_gcs_persistence ? [1] : []
+        content {
+          name  = "GCS_BUCKET_NAME"
+          value = var.gcs_bucket_name
         }
       }
     }
