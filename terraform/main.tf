@@ -1,5 +1,5 @@
 # Root Terraform configuration for Cesteral MCP Servers
-# Orchestrates networking, three MCP service modules, and monitoring
+# Orchestrates networking, four MCP service modules, and monitoring
 
 terraform {
   required_version = ">= 1.5.0"
@@ -41,6 +41,30 @@ data "google_artifact_registry_repository" "container_repo" {
   project       = var.project_id
   location      = var.region
   repository_id = var.artifact_registry_repo_name
+}
+
+# ============================================================================
+# SHARED GCS PERSISTENCE BUCKET
+# ============================================================================
+
+resource "google_storage_bucket" "gcs_persistence" {
+  count    = var.enable_gcs_persistence ? 1 : 0
+  name     = var.gcs_bucket_name
+  location = var.region
+  project  = var.project_id
+
+  uniform_bucket_level_access = true
+
+  labels = {
+    application = "cesteral"
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+
+  lifecycle_rule {
+    condition { age = 90 }
+    action { type = "Delete" }
+  }
 }
 
 # ============================================================================
@@ -102,9 +126,11 @@ module "dbm_mcp" {
   vpc_connector_name    = module.networking.vpc_connector_id
 
   # MCP server configuration
-  mcp_session_mode = var.mcp_session_mode
-  mcp_auth_mode    = var.mcp_auth_mode
-  log_level        = var.log_level
+  mcp_session_mode       = var.mcp_session_mode
+  mcp_auth_mode          = var.mcp_auth_mode
+  log_level              = var.log_level
+  enable_gcs_persistence = var.enable_gcs_persistence
+  gcs_bucket_name        = var.gcs_bucket_name
 
   # Secrets (dbm-specific)
   secret_names    = var.dbm_secret_names
@@ -116,7 +142,7 @@ module "dbm_mcp" {
   inflight_schedule     = var.inflight_schedule
   scheduler_timezone    = var.scheduler_timezone
 
-  depends_on = [module.networking]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
 module "dv360_mcp" {
@@ -140,9 +166,11 @@ module "dv360_mcp" {
   vpc_connector_name    = module.networking.vpc_connector_id
 
   # MCP server configuration
-  mcp_session_mode = var.mcp_session_mode
-  mcp_auth_mode    = var.mcp_auth_mode
-  log_level        = var.log_level
+  mcp_session_mode       = var.mcp_session_mode
+  mcp_auth_mode          = var.mcp_auth_mode
+  log_level              = var.log_level
+  enable_gcs_persistence = var.enable_gcs_persistence
+  gcs_bucket_name        = var.gcs_bucket_name
 
   # Secrets (dv360-specific)
   secret_names    = var.dv360_secret_names
@@ -151,7 +179,7 @@ module "dv360_mcp" {
   # No scheduler jobs for management server
   enable_scheduler_jobs = false
 
-  depends_on = [module.networking]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
 module "ttd_mcp" {
@@ -175,9 +203,11 @@ module "ttd_mcp" {
   vpc_connector_name    = module.networking.vpc_connector_id
 
   # MCP server configuration
-  mcp_session_mode = var.mcp_session_mode
-  mcp_auth_mode    = var.mcp_auth_mode
-  log_level        = var.log_level
+  mcp_session_mode       = var.mcp_session_mode
+  mcp_auth_mode          = var.mcp_auth_mode
+  log_level              = var.log_level
+  enable_gcs_persistence = var.enable_gcs_persistence
+  gcs_bucket_name        = var.gcs_bucket_name
 
   # Secrets (ttd-specific)
   secret_names    = var.ttd_secret_names
@@ -186,7 +216,7 @@ module "ttd_mcp" {
   # No scheduler jobs for TTD server
   enable_scheduler_jobs = false
 
-  depends_on = [module.networking]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
 # ============================================================================
@@ -214,9 +244,11 @@ module "gads_mcp" {
   vpc_connector_name    = module.networking.vpc_connector_id
 
   # MCP server configuration
-  mcp_session_mode = var.mcp_session_mode
-  mcp_auth_mode    = var.mcp_auth_mode
-  log_level        = var.log_level
+  mcp_session_mode       = var.mcp_session_mode
+  mcp_auth_mode          = var.mcp_auth_mode
+  log_level              = var.log_level
+  enable_gcs_persistence = var.enable_gcs_persistence
+  gcs_bucket_name        = var.gcs_bucket_name
 
   # Secrets (gads-specific)
   secret_names    = var.gads_secret_names
@@ -225,7 +257,7 @@ module "gads_mcp" {
   # No scheduler jobs for GAds server
   enable_scheduler_jobs = false
 
-  depends_on = [module.networking]
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
 # ============================================================================

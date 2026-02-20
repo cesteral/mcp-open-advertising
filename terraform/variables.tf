@@ -387,6 +387,26 @@ variable "gads_secret_env_vars" {
 }
 
 # ============================================================================
+# GCS PERSISTENCE
+# ============================================================================
+
+variable "enable_gcs_persistence" {
+  description = "Enable shared GCS-backed persistence for learning system data"
+  type        = bool
+  default     = false
+}
+
+variable "gcs_bucket_name" {
+  description = "Shared GCS bucket name for learnings/findings/interaction logs"
+  type        = string
+  default     = ""
+  validation {
+    condition     = !var.enable_gcs_persistence || length(trim(var.gcs_bucket_name)) > 0
+    error_message = "gcs_bucket_name must be set when enable_gcs_persistence is true."
+  }
+}
+
+# ============================================================================
 # CLOUD SCHEDULER CONFIGURATION
 # ============================================================================
 

@@ -156,4 +156,55 @@ describe("createFindingStore", () => {
     expect(fileContent).toContain("fresh");
     expect(fileContent).not.toContain('"old"');
   });
+
+  it("supports storage backend mode for append/query/prune", async () => {
+    const files = new Map<string, string>();
+    const storageBackend = {
+      type: "local" as const,
+      async readFile(path: string): Promise<string | null> {
+        return files.get(path) ?? null;
+      },
+      async writeFile(path: string, content: string): Promise<void> {
+        files.set(path, content);
+      },
+      async appendFile(path: string, content: string): Promise<void> {
+        files.set(path, (files.get(path) ?? "") + content);
+      },
+      async exists(path: string): Promise<boolean> {
+        return files.has(path);
+      },
+      async listFiles(_prefix: string, _extension?: string): Promise<string[]> {
+        return [];
+      },
+      async mkdir(_path: string): Promise<void> {
+        // no-op
+      },
+    };
+
+    const store = createFindingStore({
+      filePath: "findings/test.jsonl",
+      retentionDays: 1,
+      logger: mockLogger(),
+      storageBackend,
+    });
+
+    const oldTs = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+    const freshTs = new Date().toISOString();
+
+    await store.append([
+      buildFinding({ id: "old", timestamp: oldTs }),
+      buildFinding({ id: "fresh", timestamp: freshTs }),
+    ]);
+
+    const before = await store.query();
+    expect(before.map((f) => f.id).sort()).toEqual(["fresh", "old"]);
+
+    const removed = await store.prune();
+    expect(removed).toBe(1);
+
+    const after = await store.query();
+    expect(after.map((f) => f.id)).toEqual(["fresh"]);
+    expect(files.get("findings/test.jsonl")).toContain('"fresh"');
+    expect(files.get("findings/test.jsonl")).not.toContain('"old"');
+  });
 });

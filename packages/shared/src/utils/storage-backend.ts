@@ -110,20 +110,21 @@ export function createLocalStorageBackend(basePath: string): StorageBackend {
 // ---------------------------------------------------------------------------
 
 export function createGcsStorageBackend(bucketName: string, prefix?: string): StorageBackend {
-  // Lazy-init: only import @google-cloud/storage when actually used
-  let bucketInstance: any;
+  // Lazy-init: only import @google-cloud/storage when actually used.
+  // Kept async + cached for ESM compatibility and to avoid repeat imports.
+  let bucketPromise: Promise<any> | null = null;
 
-  function getBucket(): any {
-    if (!bucketInstance) {
-      // Dynamic import at first use to avoid pulling in GCS SDK when not needed.
-      // We use require-style here because the Storage class is needed synchronously
-      // after the first call. The @google-cloud/storage package uses ADC on Cloud Run.
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { Storage } = require("@google-cloud/storage") as typeof import("@google-cloud/storage");
-      const storage = new Storage();
-      bucketInstance = storage.bucket(bucketName);
+  async function getBucket(): Promise<any> {
+    if (!bucketPromise) {
+      bucketPromise = (async () => {
+        const moduleName = "@google-cloud/storage";
+        const gcsModule = await import(moduleName);
+        const StorageCtor = (gcsModule as { Storage: new () => any }).Storage;
+        const storage = new StorageCtor();
+        return storage.bucket(bucketName);
+      })();
     }
-    return bucketInstance;
+    return bucketPromise;
   }
 
   function gcsPath(path: string): string {
@@ -136,7 +137,8 @@ export function createGcsStorageBackend(bucketName: string, prefix?: string): St
 
     async readFile(path: string): Promise<string | null> {
       try {
-        const [contents] = await getBucket().file(gcsPath(path)).download();
+        const bucket = await getBucket();
+        const [contents] = await bucket.file(gcsPath(path)).download();
         return contents.toString("utf-8");
       } catch (err: any) {
         if (err.code === 404) return null;
@@ -145,14 +147,16 @@ export function createGcsStorageBackend(bucketName: string, prefix?: string): St
     },
 
     async writeFile(path: string, content: string): Promise<void> {
-      await getBucket().file(gcsPath(path)).save(content, {
+      const bucket = await getBucket();
+      await bucket.file(gcsPath(path)).save(content, {
         contentType: "text/plain; charset=utf-8",
         resumable: false,
       });
     },
 
     async appendFile(path: string, content: string): Promise<void> {
-      const file = getBucket().file(gcsPath(path));
+      const bucket = await getBucket();
+      const file = bucket.file(gcsPath(path));
       let existing = "";
       try {
         const [data] = await file.download();
@@ -168,13 +172,15 @@ export function createGcsStorageBackend(bucketName: string, prefix?: string): St
     },
 
     async exists(path: string): Promise<boolean> {
-      const [exists] = await getBucket().file(gcsPath(path)).exists();
+      const bucket = await getBucket();
+      const [exists] = await bucket.file(gcsPath(path)).exists();
       return exists;
     },
 
     async listFiles(prefix_: string, extension?: string): Promise<string[]> {
       const fullPrefix = gcsPath(prefix_);
-      const [files] = await getBucket().getFiles({ prefix: fullPrefix });
+      const bucket = await getBucket();
+      const [files] = await bucket.getFiles({ prefix: fullPrefix });
       const results: string[] = [];
       for (const file of files) {
         const name: string = file.name;

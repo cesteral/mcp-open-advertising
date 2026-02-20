@@ -86,4 +86,73 @@ describe("InteractionLogger", () => {
     expect(lines.length).toBe(2);
     expect(lines[0].id).not.toBe(lines[1].id);
   });
+
+  it("buffers and flushes entries when storageBackend is provided", async () => {
+    const files = new Map<string, string>();
+    const storageBackend = {
+      type: "local" as const,
+      async readFile(path: string): Promise<string | null> {
+        return files.get(path) ?? null;
+      },
+      async writeFile(path: string, content: string): Promise<void> {
+        files.set(path, content);
+      },
+      async appendFile(path: string, content: string): Promise<void> {
+        files.set(path, (files.get(path) ?? "") + content);
+      },
+      async exists(path: string): Promise<boolean> {
+        return files.has(path);
+      },
+      async listFiles(_prefix: string, _extension?: string): Promise<string[]> {
+        return [];
+      },
+      async mkdir(_path: string): Promise<void> {
+        // no-op
+      },
+    };
+
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+      level: "debug",
+    } as any;
+
+    const interactionLogger = new InteractionLogger({
+      serverName: "test-server",
+      logger,
+      storageBackend,
+      flushIntervalMs: 5,
+    });
+
+    interactionLogger.append({
+      ts: "2026-02-19T21:00:00.000Z",
+      sessionId: "session-1",
+      tool: "ttd_update_entity",
+      params: { a: 1 },
+      success: true,
+      durationMs: 1,
+    });
+    interactionLogger.append({
+      ts: "2026-02-19T21:00:01.000Z",
+      sessionId: "session-1",
+      tool: "ttd_update_entity",
+      params: { a: 2 },
+      success: true,
+      durationMs: 1,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    await interactionLogger.close();
+
+    const [path, payload] = Array.from(files.entries())[0] ?? [];
+    expect(path).toMatch(/^interactions\/test-server-\d{4}-\d{2}-\d{2}\.jsonl$/);
+    const lines = (payload ?? "").trim().split("\n").map((line) => JSON.parse(line) as { id: string });
+    expect(lines).toHaveLength(2);
+    expect(lines[0].id).not.toBe(lines[1].id);
+  });
 });

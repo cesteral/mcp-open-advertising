@@ -60,4 +60,60 @@ describe("LearningExtractor", () => {
     expect(index).not.toBeNull();
     expect(index?.entries.some((entry) => entry.file.includes("auto-generated"))).toBe(true);
   });
+
+  it("writes counts and learnings via storage backend when provided", async () => {
+    const files = new Map<string, string>();
+    const backend = {
+      type: "local" as const,
+      async readFile(path: string): Promise<string | null> {
+        return files.get(path) ?? null;
+      },
+      async writeFile(path: string, content: string): Promise<void> {
+        files.set(path, content);
+      },
+      async appendFile(path: string, content: string): Promise<void> {
+        files.set(path, (files.get(path) ?? "") + content);
+      },
+      async exists(path: string): Promise<boolean> {
+        return files.has(path);
+      },
+      async listFiles(prefix: string, extension?: string): Promise<string[]> {
+        return Array.from(files.keys()).filter((path) => {
+          if (!path.startsWith(prefix)) return false;
+          if (extension && !path.endsWith(extension)) return false;
+          return true;
+        });
+      },
+      async mkdir(_path: string): Promise<void> {
+        // no-op
+      },
+    };
+
+    const root = createRoot();
+    const extractor = new LearningExtractor({
+      learningsRoot: root,
+      dataDir: join(root, "data"),
+      threshold: 2,
+      storageBackend: backend,
+    });
+
+    await extractor.processEvaluation("ttd_update_entity", [
+      {
+        class: EvaluatorIssueClass.InputQuality,
+        message: "Payload had too many mutable fields",
+        isRecoverable: true,
+      },
+    ]);
+    await extractor.processEvaluation("ttd_update_entity", [
+      {
+        class: EvaluatorIssueClass.InputQuality,
+        message: "Payload had too many mutable fields",
+        isRecoverable: true,
+      },
+    ]);
+
+    expect(files.has("learnings/issue-counts.json")).toBe(true);
+    expect(files.has("learnings/auto-generated/ttd_update_entity-input_quality.md")).toBe(true);
+    expect(files.has("learnings/index.json")).toBe(true);
+  });
 });

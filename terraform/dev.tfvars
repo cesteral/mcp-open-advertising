@@ -40,6 +40,8 @@ allow_unauthenticated = false # Still require auth in dev
 mcp_session_mode = "stateless"
 mcp_auth_mode    = "jwt"
 log_level        = "debug" # More verbose logging in dev
+enable_gcs_persistence = false
+gcs_bucket_name        = "cesteral-dev-mcp-persistence" # Enable when ready
 
 # Cloud Scheduler - less frequent in dev
 enable_scheduler_jobs = true

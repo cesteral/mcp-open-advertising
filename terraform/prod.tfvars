@@ -40,6 +40,8 @@ allow_unauthenticated = false
 mcp_session_mode = "stateless"
 mcp_auth_mode    = "jwt"
 log_level        = "info" # Production logging level
+enable_gcs_persistence = false
+gcs_bucket_name        = "cesteral-prod-mcp-persistence" # Enable when ready
 
 # Cloud Scheduler - full production schedule
 enable_scheduler_jobs = true
