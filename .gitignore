@@ -58,6 +58,9 @@ service-account-key.json
 # Docker
 .dockerignore
 
+# Worktrees
+.worktrees/
+
 # Turbo
 .turbo/
 
