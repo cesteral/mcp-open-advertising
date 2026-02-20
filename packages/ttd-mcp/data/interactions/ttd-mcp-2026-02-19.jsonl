@@ -1,1 +1,0 @@
-{"ts":"2026-02-19T09:17:03.957Z","sessionId":"1c766ef87421c03d6f6734bc189aab4fa3fe06cfc907422ce403562647094ed3","tool":"ttd_create_entity","params":{"entityType":"campaign","advertiserId":"adv-123","data":{"CampaignName":"Will Fail"}},"success":false,"durationMs":1,"workflowId":"mcp.execute.ttd_entity_update","platform":"ttd","packageName":"ttd-mcp"}
