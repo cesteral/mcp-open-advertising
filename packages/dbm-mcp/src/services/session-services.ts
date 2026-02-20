@@ -9,7 +9,7 @@
 import { google } from "googleapis";
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
-import { SessionServiceStore } from "@cesteral/shared";
+import { SessionServiceStore, createFindingBuffer, type FindingBuffer } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { BidManagerService } from "./bid-manager/BidManagerService.js";
 import { createGoogleAuthFromAdapter } from "./bid-manager/auth-bridge.js";
@@ -20,6 +20,7 @@ import type { AppConfig } from "../config/index.js";
  */
 export interface SessionServices {
   bidManagerService: BidManagerService;
+  findingBuffer: FindingBuffer;
 }
 
 /**
@@ -28,7 +29,7 @@ export interface SessionServices {
 export function createSessionServices(
   authAdapter: GoogleAuthAdapter,
   config: AppConfig,
-  logger: Logger,
+  logger: Logger
 ): SessionServices {
   // Bridge GoogleAuthAdapter → googleapis OAuth2Client
   const googleAuth = createGoogleAuthFromAdapter(authAdapter);
@@ -42,7 +43,10 @@ export function createSessionServices(
   // Create BidManagerService with the pre-initialized client
   const bidManagerService = new BidManagerService(config, logger, bidManagerClient);
 
-  return { bidManagerService };
+  return {
+    bidManagerService,
+    findingBuffer: createFindingBuffer(),
+  };
 }
 
 export const sessionServiceStore = new SessionServiceStore<SessionServices>();

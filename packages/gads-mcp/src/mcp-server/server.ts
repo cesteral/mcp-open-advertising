@@ -3,8 +3,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { join } from "node:path";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
+import { createFindingResources } from "./resources/definitions/findings.resource.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
+import { sessionServiceStore } from "../services/session-services.js";
 import {
   EvaluatorIssueClass,
   extractZodShape,
@@ -12,8 +14,10 @@ import {
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   InteractionLogger,
+  LearningExtractor,
   createSubmitLearningTool,
   createLearningsResources,
+  type FindingStore,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -27,13 +31,21 @@ import packageJson from "../../package.json" with { type: "json" };
 const GADS_PACKAGE_NAME = "gads-mcp";
 const GADS_PLATFORM = "gads";
 const LEARNINGS_ROOT = join(process.cwd(), "learnings");
+const LEARNING_EXTRACTOR = new LearningExtractor({
+  learningsRoot: LEARNINGS_ROOT,
+  dataDir: join(process.cwd(), "data", "learnings", GADS_PACKAGE_NAME),
+});
+
+interface FindingDeps {
+  findingStore: FindingStore;
+}
 
 const gadsWorkflowIdByToolName: Record<string, string> = {
   // Read tools
-  gads_gaql_search: "mcp.execute.gads_query",
-  gads_list_accounts: "mcp.execute.gads_query",
-  gads_get_entity: "mcp.execute.gads_entity_management",
-  gads_list_entities: "mcp.execute.gads_entity_management",
+  gads_gaql_search: "mcp.execute.gads_entity_read",
+  gads_list_accounts: "mcp.execute.gads_entity_read",
+  gads_get_entity: "mcp.execute.gads_entity_read",
+  gads_list_entities: "mcp.execute.gads_entity_read",
   // Write tools
   gads_create_entity: "mcp.execute.gads_entity_management",
   gads_update_entity: "mcp.execute.gads_entity_management",
@@ -101,7 +113,11 @@ async function evaluateGAdsInteraction(
 /**
  * Create and configure MCP server instance
  */
-export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
+export async function createMcpServer(
+  logger: Logger,
+  sessionId?: string,
+  findingDeps?: FindingDeps
+): Promise<McpServer> {
   const server = new McpServer({
     name: "gads-mcp",
     version: packageJson.version,
@@ -119,6 +135,7 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
 
   // Register all tools via shared factory (includes submit_learning)
   const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
+  const sessionServices = sessionId ? sessionServiceStore.get(sessionId) : undefined;
   registerToolsFromDefinitions({
     server,
     tools: [...allTools, submitLearningTool],
@@ -140,6 +157,8 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       evaluate: evaluateGAdsInteraction,
     },
     interactionLogger,
+    learningExtractor: LEARNING_EXTRACTOR,
+    findingBuffer: sessionServices?.findingBuffer,
   });
 
   // Register all resources via shared factory (platform + learnings)
@@ -147,9 +166,15 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     learningsRoot: LEARNINGS_ROOT,
     serverPlatform: GADS_PLATFORM,
   });
+  const findingResources = findingDeps
+    ? createFindingResources({
+        findingStore: findingDeps.findingStore,
+        getFindingBuffer: () => sessionId ? sessionServiceStore.get(sessionId)?.findingBuffer : undefined,
+      })
+    : [];
   registerStaticResourcesFromDefinitions({
     server,
-    resources: [...allResources, ...learningsResources],
+    resources: [...allResources, ...learningsResources, ...findingResources],
     logger,
   });
 

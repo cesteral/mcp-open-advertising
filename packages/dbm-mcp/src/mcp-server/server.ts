@@ -1,19 +1,23 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { join } from "node:path";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
+import { createFindingResources } from "./resources/definitions/findings.resource.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
+import { sessionServiceStore } from "../services/session-services.js";
 import {
   EvaluatorIssueClass,
+  extractZodShape,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   InteractionLogger,
+  LearningExtractor,
   createSubmitLearningTool,
   createLearningsResources,
+  type FindingStore,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type ToolExecutionSnapshot,
@@ -26,6 +30,14 @@ import packageJson from "../../package.json" with { type: "json" };
 const DBM_PACKAGE_NAME = "dbm-mcp";
 const DBM_PLATFORM = "dv360-reporting";
 const LEARNINGS_ROOT = join(process.cwd(), "learnings");
+const LEARNING_EXTRACTOR = new LearningExtractor({
+  learningsRoot: LEARNINGS_ROOT,
+  dataDir: join(process.cwd(), "data", "learnings", DBM_PACKAGE_NAME),
+});
+
+interface FindingDeps {
+  findingStore: FindingStore;
+}
 
 const dbmWorkflowIdByToolName: Record<string, string> = {
   get_campaign_delivery: "mcp.troubleshoot.delivery",
@@ -70,7 +82,11 @@ async function evaluateDbmInteraction(
 /**
  * Create and configure MCP server instance
  */
-export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
+export async function createMcpServer(
+  logger: Logger,
+  sessionId?: string,
+  findingDeps?: FindingDeps
+): Promise<McpServer> {
   const server = new McpServer({
     name: "dbm-mcp",
     version: packageJson.version,
@@ -85,16 +101,13 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
 
   // Register all tools via shared factory (includes submit_learning)
   const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
+  const sessionServices = sessionId ? sessionServiceStore.get(sessionId) : undefined;
   registerToolsFromDefinitions({
     server,
     tools: [...allTools, submitLearningTool],
     logger,
     sessionId,
-    transformSchema: (schema) =>
-      zodToJsonSchema(schema, {
-        target: "jsonSchema2019-09",
-        markdownDescription: true,
-      }),
+    transformSchema: (schema) => extractZodShape(schema),
     createRequestContext: (params) =>
       createRequestContext({
         operation: params.operation,
@@ -110,6 +123,8 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       evaluate: evaluateDbmInteraction,
     },
     interactionLogger,
+    learningExtractor: LEARNING_EXTRACTOR,
+    findingBuffer: sessionServices?.findingBuffer,
   });
 
   // Register all resources via shared factory (platform + learnings)
@@ -117,9 +132,15 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     learningsRoot: LEARNINGS_ROOT,
     serverPlatform: "dbm",
   });
+  const findingResources = findingDeps
+    ? createFindingResources({
+        findingStore: findingDeps.findingStore,
+        getFindingBuffer: () => sessionId ? sessionServiceStore.get(sessionId)?.findingBuffer : undefined,
+      })
+    : [];
   registerStaticResourcesFromDefinitions({
     server,
-    resources: [...allResources, ...learningsResources],
+    resources: [...allResources, ...learningsResources, ...findingResources],
     logger,
   });
 

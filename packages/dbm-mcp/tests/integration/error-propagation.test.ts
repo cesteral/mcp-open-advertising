@@ -114,6 +114,6 @@ describe("dbm transport error propagation", () => {
     const text = await response.text();
     expect(response.status).toBe(200);
     expect(text).toContain("isError");
-    expect(text).toContain("safeParseAsync");
+    expect(text).toContain("FILTER_NOT_REAL");
   });
 });

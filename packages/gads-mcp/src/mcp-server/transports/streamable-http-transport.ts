@@ -5,6 +5,7 @@
  * Uses Hono + @hono/mcp for the Streamable HTTP transport.
  */
 import { readFileSync } from "fs";
+import { join } from "node:path";
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { type ServerType, serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -27,6 +28,7 @@ import {
   extractHeadersMap,
   oauthProtectedResourceBody,
   SessionManager,
+  createFindingStore,
   type AuthMode,
 } from "@cesteral/shared";
 import { GAdsHeadersAuthStrategy } from "../../auth/gads-auth-strategy.js";
@@ -77,7 +79,28 @@ export function createMcpHttpServer(
 ): { app: Hono<{ Bindings: HonoBindings }>; shutdown: () => Promise<void> } {
   const app = new Hono<{ Bindings: HonoBindings }>();
 
-  const sessions = new SessionManager<Awaited<ReturnType<typeof createMcpServer>>>(sessionServiceStore);
+  const findingStore = createFindingStore({
+    filePath: join(process.cwd(), "data", "findings", "gads-mcp-findings.jsonl"),
+    retentionDays: 30,
+    logger,
+  });
+  findingStore.prune().catch((error) => {
+    logger.warn({ error }, "Failed to prune finding store on startup");
+  });
+
+  const sessions = new SessionManager<Awaited<ReturnType<typeof createMcpServer>>>(
+    sessionServiceStore,
+    {
+      onBeforeCleanup: async (sessionId: string) => {
+        const services = sessionServiceStore.get(sessionId);
+        if (!services?.findingBuffer) return;
+        const findings = services.findingBuffer.clear();
+        if (findings.length > 0) {
+          await findingStore.append(findings);
+        }
+      },
+    }
+  );
 
   registerActiveSessionsGauge(() => sessionServiceStore.size);
 
@@ -309,7 +332,7 @@ export function createMcpHttpServer(
     // Get or create cached MCP server for this session
     let mcpServer = sessions.getServer(sessionId);
     if (!mcpServer) {
-      mcpServer = await createMcpServer(logger, sessionId);
+      mcpServer = await createMcpServer(logger, sessionId, { findingStore });
       sessions.setServer(sessionId, mcpServer);
       logger.debug({ sessionId }, "Created new MCP server instance for session");
     }

@@ -3,9 +3,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { join } from "node:path";
 import { allTools } from "./tools/index.js";
 import { resourceRegistry } from "./resources/index.js";
+import { createFindingResources } from "./resources/definitions/findings.resource.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
 import { ErrorHandler } from "../utils/errors/index.js";
+import { sessionServiceStore } from "../services/session-services.js";
 import {
   EvaluatorIssueClass,
   extractZodShape,
@@ -13,8 +15,10 @@ import {
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   InteractionLogger,
+  LearningExtractor,
   createSubmitLearningTool,
   createLearningsResources,
+  type FindingStore,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -28,19 +32,37 @@ import packageJson from "../../package.json" with { type: "json" };
 const DV360_PACKAGE_NAME = "dv360-mcp";
 const DV360_PLATFORM = "dv360-management";
 const LEARNINGS_ROOT = join(process.cwd(), "learnings");
+const LEARNING_EXTRACTOR = new LearningExtractor({
+  learningsRoot: LEARNINGS_ROOT,
+  dataDir: join(process.cwd(), "data", "learnings", DV360_PACKAGE_NAME),
+});
+
+interface FindingDeps {
+  findingStore: FindingStore;
+}
 
 const dv360WorkflowIdByToolName: Record<string, string> = {
+  // Read operations
+  dv360_get_entity: "mcp.execute.dv360_entity_read",
+  dv360_list_entities: "mcp.execute.dv360_entity_read",
+  // Write operations
   dv360_update_entity: "mcp.execute.dv360_entity_update",
   dv360_create_entity: "mcp.execute.dv360_entity_update",
-  dv360_get_entity: "mcp.execute.dv360_entity_update",
   dv360_delete_entity: "mcp.execute.dv360_entity_update",
-  dv360_list_entities: "mcp.execute.dv360_entity_update",
+  // Delivery troubleshooting
   dv360_adjust_line_item_bids: "mcp.troubleshoot.delivery",
   dv360_bulk_update_status: "mcp.troubleshoot.delivery",
+  // Custom bidding
   dv360_create_custom_bidding_algorithm: "mcp.execute.dv360_entity_update",
   dv360_manage_custom_bidding_script: "mcp.execute.dv360_entity_update",
   dv360_manage_custom_bidding_rules: "mcp.execute.dv360_entity_update",
-  dv360_list_custom_bidding_algorithms: "mcp.execute.dv360_entity_update",
+  dv360_list_custom_bidding_algorithms: "mcp.execute.dv360_entity_read",
+  // Targeting
+  dv360_list_assigned_targeting: "mcp.execute.dv360_targeting",
+  dv360_get_assigned_targeting: "mcp.execute.dv360_targeting",
+  dv360_create_assigned_targeting: "mcp.execute.dv360_targeting",
+  dv360_delete_assigned_targeting: "mcp.execute.dv360_targeting",
+  dv360_validate_targeting_config: "mcp.execute.dv360_targeting",
 };
 
 async function evaluateDv360Interaction(
@@ -54,8 +76,8 @@ async function evaluateDv360Interaction(
     snapshot.validatedInput &&
     "updateMask" in (snapshot.validatedInput as Record<string, unknown>)
   ) {
-    const updateMask = String((snapshot.validatedInput as Record<string, unknown>).updateMask);
-    if (!updateMask || updateMask.split(",").length > 8) {
+    const updateMask = (snapshot.validatedInput as Record<string, unknown>).updateMask;
+    if (typeof updateMask !== "string" || !updateMask || updateMask.split(",").length > 8) {
       issues.push({
         class: EvaluatorIssueClass.InputQuality,
         message: "Update mask may be too broad; prefer narrower field updates",
@@ -81,7 +103,11 @@ async function evaluateDv360Interaction(
 /**
  * Create and configure MCP server instance
  */
-export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
+export async function createMcpServer(
+  logger: Logger,
+  sessionId?: string,
+  findingDeps?: FindingDeps
+): Promise<McpServer> {
   // Register all resources
   resourceRegistry.registerAll();
   logger.info({ resourceCount: resourceRegistry.getResourceCount() }, "Registered MCP resources");
@@ -100,6 +126,7 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
 
   // Register all tools via shared factory (includes submit_learning)
   const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
+  const sessionServices = sessionId ? sessionServiceStore.get(sessionId) : undefined;
   registerToolsFromDefinitions({
     server,
     tools: [...allTools, submitLearningTool],
@@ -121,6 +148,8 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       evaluate: evaluateDv360Interaction,
     },
     interactionLogger,
+    learningExtractor: LEARNING_EXTRACTOR,
+    findingBuffer: sessionServices?.findingBuffer,
   });
 
   // Register DV360 parameterized resources
@@ -239,9 +268,15 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     learningsRoot: LEARNINGS_ROOT,
     serverPlatform: "dv360",
   });
+  const findingResources = findingDeps
+    ? createFindingResources({
+        findingStore: findingDeps.findingStore,
+        getFindingBuffer: () => sessionId ? sessionServiceStore.get(sessionId)?.findingBuffer : undefined,
+      })
+    : [];
   registerStaticResourcesFromDefinitions({
     server,
-    resources: learningsResources,
+    resources: [...learningsResources, ...findingResources],
     logger,
   });
 

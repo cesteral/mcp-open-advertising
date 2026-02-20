@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { GAdsAuthAdapter } from "../auth/gads-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { SessionServiceStore } from "@cesteral/shared";
+import { SessionServiceStore, createFindingBuffer, type FindingBuffer } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { GAdsHttpClient } from "./gads/gads-http-client.js";
 import { GAdsService } from "./gads/gads-service.js";
@@ -9,6 +9,7 @@ import { GAdsService } from "./gads/gads-service.js";
 export interface SessionServices {
   httpClient: GAdsHttpClient;
   gadsService: GAdsService;
+  findingBuffer: FindingBuffer;
 }
 
 export function createSessionServices(
@@ -19,7 +20,11 @@ export function createSessionServices(
 ): SessionServices {
   const httpClient = new GAdsHttpClient(authAdapter, baseUrl, logger);
   const gadsService = new GAdsService(logger, rateLimiter, httpClient);
-  return { httpClient, gadsService };
+  return {
+    httpClient,
+    gadsService,
+    findingBuffer: createFindingBuffer(),
+  };
 }
 
 export const sessionServiceStore = new SessionServiceStore<SessionServices>();

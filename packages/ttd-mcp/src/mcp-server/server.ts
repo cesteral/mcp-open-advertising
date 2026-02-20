@@ -3,8 +3,10 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { join } from "node:path";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
+import { createFindingResources } from "./resources/definitions/findings.resource.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createRequestContext } from "../utils/internal/request-context.js";
+import { sessionServiceStore } from "../services/session-services.js";
 import {
   EvaluatorIssueClass,
   extractZodShape,
@@ -12,8 +14,10 @@ import {
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   InteractionLogger,
+  LearningExtractor,
   createSubmitLearningTool,
   createLearningsResources,
+  type FindingStore,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -27,14 +31,24 @@ import packageJson from "../../package.json" with { type: "json" };
 const TTD_PACKAGE_NAME = "ttd-mcp";
 const TTD_PLATFORM = "ttd";
 const LEARNINGS_ROOT = join(process.cwd(), "learnings");
+const LEARNING_EXTRACTOR = new LearningExtractor({
+  learningsRoot: LEARNINGS_ROOT,
+  dataDir: join(process.cwd(), "data", "learnings", TTD_PACKAGE_NAME),
+});
+
+interface FindingDeps {
+  findingStore: FindingStore;
+}
 
 const ttdWorkflowIdByToolName: Record<string, string> = {
-  // Core CRUD
-  ttd_list_entities: "mcp.execute.ttd_entity_update",
-  ttd_get_entity: "mcp.execute.ttd_entity_update",
+  // Read operations
+  ttd_list_entities: "mcp.execute.ttd_entity_read",
+  ttd_get_entity: "mcp.execute.ttd_entity_read",
+  // Write operations
   ttd_create_entity: "mcp.execute.ttd_entity_update",
   ttd_update_entity: "mcp.execute.ttd_entity_update",
   ttd_delete_entity: "mcp.execute.ttd_entity_update",
+  ttd_validate_entity: "mcp.execute.ttd_entity_update",
   // Reporting
   ttd_get_report: "mcp.execute.ttd_reporting",
   ttd_download_report: "mcp.execute.ttd_reporting",
@@ -44,9 +58,12 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_bulk_update_status: "mcp.execute.ttd_bulk_operations",
   ttd_archive_entities: "mcp.execute.ttd_bulk_operations",
   ttd_adjust_bids: "mcp.execute.ttd_bulk_operations",
-  // Advanced
+  // GraphQL
   ttd_graphql_query: "mcp.execute.ttd_graphql",
-  ttd_validate_entity: "mcp.execute.ttd_entity_update",
+  ttd_graphql_query_bulk: "mcp.execute.ttd_graphql",
+  ttd_graphql_mutation_bulk: "mcp.execute.ttd_graphql",
+  ttd_graphql_bulk_job: "mcp.execute.ttd_graphql",
+  ttd_graphql_cancel_bulk_job: "mcp.execute.ttd_graphql",
 };
 
 async function evaluateTtdInteraction(
@@ -87,7 +104,11 @@ async function evaluateTtdInteraction(
 /**
  * Create and configure MCP server instance
  */
-export async function createMcpServer(logger: Logger, sessionId?: string): Promise<McpServer> {
+export async function createMcpServer(
+  logger: Logger,
+  sessionId?: string,
+  findingDeps?: FindingDeps
+): Promise<McpServer> {
   const server = new McpServer({
     name: "ttd-mcp",
     version: packageJson.version,
@@ -102,6 +123,7 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
 
   // Register all tools via shared factory (includes submit_learning)
   const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
+  const sessionServices = sessionId ? sessionServiceStore.get(sessionId) : undefined;
   registerToolsFromDefinitions({
     server,
     tools: [...allTools, submitLearningTool],
@@ -123,6 +145,8 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
       evaluate: evaluateTtdInteraction,
     },
     interactionLogger,
+    learningExtractor: LEARNING_EXTRACTOR,
+    findingBuffer: sessionServices?.findingBuffer,
   });
 
   // Register all resources via shared factory (platform + learnings)
@@ -130,9 +154,15 @@ export async function createMcpServer(logger: Logger, sessionId?: string): Promi
     learningsRoot: LEARNINGS_ROOT,
     serverPlatform: TTD_PLATFORM,
   });
+  const findingResources = findingDeps
+    ? createFindingResources({
+        findingStore: findingDeps.findingStore,
+        getFindingBuffer: () => sessionId ? sessionServiceStore.get(sessionId)?.findingBuffer : undefined,
+      })
+    : [];
   registerStaticResourcesFromDefinitions({
     server,
-    resources: [...allResources, ...learningsResources],
+    resources: [...allResources, ...learningsResources, ...findingResources],
     logger,
   });
 
