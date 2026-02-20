@@ -29,17 +29,17 @@ nat_min_ports_per_vm                = 64
 enable_endpoint_independent_mapping = true # Better for production
 
 # Cloud Run - production scaling
-min_instances         = 1  # Always keep 1 warm
-max_instances         = 10 # Scale up to 10 for peak loads
+min_instances         = 1   # Always keep 1 warm
+max_instances         = 10  # Scale up to 10 for peak loads
 cpu_limit             = "2" # More CPU for production
 memory_limit          = "1Gi"
 cpu_always_allocated  = true # Faster response times
 allow_unauthenticated = false
 
 # MCP Server configuration
-mcp_session_mode = "stateless"
-mcp_auth_mode    = "jwt"
-log_level        = "info" # Production logging level
+mcp_session_mode       = "stateless"
+mcp_auth_mode          = "jwt"
+log_level              = "info" # Production logging level
 enable_gcs_persistence = false
 gcs_bucket_name        = "cesteral-prod-mcp-persistence" # Enable when ready
 

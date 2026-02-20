@@ -97,11 +97,11 @@ output "cloud_nat_name" {
 output "deployment_info" {
   description = "Deployment information summary"
   value = {
-    project_id      = var.project_id
-    region          = var.region
-    environment     = var.environment
-    dbm_mcp_url     = module.dbm_mcp.cloud_run_service_url
-    dv360_mcp_url   = module.dv360_mcp.cloud_run_service_url
-    ttd_mcp_url     = module.ttd_mcp.cloud_run_service_url
+    project_id    = var.project_id
+    region        = var.region
+    environment   = var.environment
+    dbm_mcp_url   = module.dbm_mcp.cloud_run_service_url
+    dv360_mcp_url = module.dv360_mcp.cloud_run_service_url
+    ttd_mcp_url   = module.ttd_mcp.cloud_run_service_url
   }
 }

@@ -37,9 +37,9 @@ cpu_always_allocated  = false
 allow_unauthenticated = false
 
 # MCP Server configuration
-mcp_session_mode = "stateless"
-mcp_auth_mode    = "jwt"
-log_level        = "info"
+mcp_session_mode       = "stateless"
+mcp_auth_mode          = "jwt"
+log_level              = "info"
 enable_gcs_persistence = false
 gcs_bucket_name        = "cesteral-staging-mcp-persistence" # Enable when ready
 

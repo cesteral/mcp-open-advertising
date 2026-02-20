@@ -85,9 +85,9 @@ module "networking" {
   serverless_subnet_cidr = var.serverless_subnet_cidr
 
   # VPC connector configuration
-  connector_machine_type  = var.connector_machine_type
-  connector_min_instances = var.connector_min_instances
-  connector_max_instances = var.connector_max_instances
+  connector_machine_type   = var.connector_machine_type
+  connector_min_instances  = var.connector_min_instances
+  connector_max_instances  = var.connector_max_instances
   connector_min_throughput = var.connector_min_throughput
   connector_max_throughput = var.connector_max_throughput
 

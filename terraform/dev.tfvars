@@ -37,16 +37,16 @@ cpu_always_allocated  = false
 allow_unauthenticated = false # Still require auth in dev
 
 # MCP Server configuration
-mcp_session_mode = "stateless"
-mcp_auth_mode    = "jwt"
-log_level        = "debug" # More verbose logging in dev
+mcp_session_mode       = "stateless"
+mcp_auth_mode          = "jwt"
+log_level              = "debug" # More verbose logging in dev
 enable_gcs_persistence = false
 gcs_bucket_name        = "cesteral-dev-mcp-persistence" # Enable when ready
 
 # Cloud Scheduler - less frequent in dev
 enable_scheduler_jobs = true
-preflight_schedule    = "0 8 * * *"       # Once daily at 8am
-inflight_schedule     = "0 */3 * * *"     # Every 3 hours
+preflight_schedule    = "0 8 * * *"   # Once daily at 8am
+inflight_schedule     = "0 */3 * * *" # Every 3 hours
 scheduler_timezone    = "America/New_York"
 
 # Artifact Registry

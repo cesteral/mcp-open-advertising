@@ -50,8 +50,7 @@ resource "google_vpc_access_connector" "connector" {
   region  = var.region
 
   subnet {
-    name    = var.create_vpc ? google_compute_subnetwork.serverless_subnet[0].name : var.existing_subnet_name
-    project = var.project_id
+    name = var.create_vpc ? google_compute_subnetwork.serverless_subnet[0].name : var.existing_subnet_name
   }
 
   machine_type  = var.connector_machine_type
@@ -121,8 +120,8 @@ resource "google_compute_firewall" "allow_google_apis" {
   }
 
   destination_ranges = [
-    "199.36.153.4/30",  # Private Google Access
-    "199.36.153.8/30",  # Private Google Access
+    "199.36.153.4/30", # Private Google Access
+    "199.36.153.8/30", # Private Google Access
   ]
 
   target_tags = ["cesteral"]
@@ -191,7 +190,7 @@ resource "google_compute_firewall" "allow_health_checks" {
   }
 
   source_ranges = [
-    "35.191.0.0/16",  # Google Cloud health check ranges
+    "35.191.0.0/16", # Google Cloud health check ranges
     "130.211.0.0/22",
   ]
 
