@@ -383,7 +383,8 @@ describe("registerToolsFromDefinitions", () => {
         expect.objectContaining({
           class: EvaluatorIssueClass.InputQuality,
         }),
-      ])
+      ]),
+      undefined
     );
   });
 

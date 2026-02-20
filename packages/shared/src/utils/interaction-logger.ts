@@ -34,6 +34,8 @@ export interface InteractionLogEntry {
   efficiencyScore?: number;
   recommendationAction?: string;
   workflowId?: string;
+  skillName?: string;
+  workflowRunId?: string;
   platform?: string;
   packageName?: string;
   requestId?: string;

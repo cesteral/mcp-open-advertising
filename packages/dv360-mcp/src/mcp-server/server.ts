@@ -22,6 +22,8 @@ import {
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
+  createDefaultWorkflowEvaluator,
+  createWorkflowLifecycleTools,
   type ToolExecutionSnapshot,
   type ToolInteractionContext,
   type ToolInteractionEvaluation,
@@ -124,12 +126,21 @@ export async function createMcpServer(
     logger,
   });
 
-  // Register all tools via shared factory (includes submit_learning)
+  // Register all tools via shared factory (includes submit_learning + workflow lifecycle)
   const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
   const sessionServices = sessionId ? sessionServiceStore.get(sessionId) : undefined;
+  const workflowEvaluator = createDefaultWorkflowEvaluator();
+  const workflowTools = createWorkflowLifecycleTools({
+    getTracker: () => sessionServices?.workflowTracker,
+    getEvaluator: () => workflowEvaluator,
+    getFindingBuffer: () => sessionServices?.findingBuffer,
+    platform: DV360_PLATFORM,
+    packageName: DV360_PACKAGE_NAME,
+    sessionId,
+  });
   registerToolsFromDefinitions({
     server,
-    tools: [...allTools, submitLearningTool],
+    tools: [...allTools, submitLearningTool, ...workflowTools],
     logger,
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
@@ -150,6 +161,7 @@ export async function createMcpServer(
     interactionLogger,
     learningExtractor: LEARNING_EXTRACTOR,
     findingBuffer: sessionServices?.findingBuffer,
+    workflowTracker: sessionServices?.workflowTracker,
   });
 
   // Register DV360 parameterized resources

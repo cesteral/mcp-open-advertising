@@ -19,6 +19,8 @@ export interface PersistedFinding {
   timestamp: string;
   toolName: string;
   workflowId?: string;
+  skillName?: string;
+  workflowRunId?: string;
   platform: string;
   serverPackage: string;
   issues: PersistedIssue[];
@@ -70,5 +72,46 @@ export interface FindingStore {
   getPatterns(filter?: FindingQueryFilter, preloadedFindings?: PersistedFinding[]): Promise<DetectedPattern[]>;
   getSummary(filter?: FindingQueryFilter): Promise<FindingSummary>;
   prune(): Promise<number>;
+}
+
+// ---------------------------------------------------------------------------
+// Skill Attribution & Workflow Tracking
+// ---------------------------------------------------------------------------
+
+export interface SkillContext {
+  skillName: string;
+  workflowId?: string;
+  workflowRunId?: string;
+}
+
+export type WorkflowOutcome = "success" | "partial_success" | "failure" | "abandoned";
+
+export interface WorkflowToolCall {
+  toolName: string;
+  requestId: string;
+  timestamp: string;
+  durationMs: number;
+  success: boolean;
+  issueCount: number;
+}
+
+export interface WorkflowRun {
+  workflowRunId: string;
+  skillName: string;
+  workflowId?: string;
+  startedAt: string;
+  completedAt?: string;
+  outcome?: WorkflowOutcome;
+  toolCalls: WorkflowToolCall[];
+}
+
+export interface WorkflowEvaluationResult {
+  workflowRunId: string;
+  skillName: string;
+  totalCalls: number;
+  failedCalls: number;
+  totalDurationMs: number;
+  aggregateIssues: string[];
+  recommendations: string[];
 }
 

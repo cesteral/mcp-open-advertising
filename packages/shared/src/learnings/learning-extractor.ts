@@ -9,6 +9,7 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import type { ToolInteractionIssue } from "../utils/tool-handler-factory.js";
+import type { SkillContext } from "../utils/finding-types.js";
 import { rebuildLearningsIndex } from "./learnings-index.js";
 
 // ---------------------------------------------------------------------------
@@ -52,40 +53,59 @@ export class LearningExtractor {
   /**
    * Process evaluator issues for a tool execution.
    * Increments counts and auto-generates learnings when threshold is reached.
+   * Optionally accepts a skill context for skill-aware counting.
    */
-  processEvaluation(toolName: string, issues: ToolInteractionIssue[]): void {
+  processEvaluation(toolName: string, issues: ToolInteractionIssue[], skillContext?: SkillContext): void {
     if (!issues.length) return;
 
     for (const issue of issues) {
+      // Per-tool key (always counted)
       const key = `${toolName}::${issue.class}`;
-      const existing = this.counts[key];
+      this.incrementCount(key, issue);
 
-      if (existing) {
-        existing.count++;
-        existing.lastSeen = new Date().toISOString();
-        if (existing.sampleMessages.length < 3 && issue.message) {
-          existing.sampleMessages.push(issue.message);
-        }
-      } else {
-        this.counts[key] = {
-          count: 1,
-          lastSeen: new Date().toISOString(),
-          sampleMessages: issue.message ? [issue.message] : [],
-        };
-      }
-
-      // Auto-generate when hitting threshold exactly
       if (this.counts[key].count === this.threshold) {
         this.generateLearning(toolName, issue.class, this.counts[key]);
+      }
+
+      // Per-skill key (when skill context is provided)
+      if (skillContext?.skillName) {
+        const skillKey = `skill:${skillContext.skillName}::${toolName}::${issue.class}`;
+        this.incrementCount(skillKey, issue);
+
+        if (this.counts[skillKey].count === this.threshold) {
+          this.generateLearning(
+            toolName,
+            issue.class,
+            this.counts[skillKey],
+            skillContext.skillName
+          );
+        }
       }
     }
 
     this.saveCounts();
   }
 
+  private incrementCount(key: string, issue: ToolInteractionIssue): void {
+    const existing = this.counts[key];
+    if (existing) {
+      existing.count++;
+      existing.lastSeen = new Date().toISOString();
+      if (existing.sampleMessages.length < 3 && issue.message) {
+        existing.sampleMessages.push(issue.message);
+      }
+    } else {
+      this.counts[key] = {
+        count: 1,
+        lastSeen: new Date().toISOString(),
+        sampleMessages: issue.message ? [issue.message] : [],
+      };
+    }
+  }
+
   // ── Private ──────────────────────────────────────────────────────────────
 
-  private generateLearning(tool: string, issueClass: string, data: IssueCountData): void {
+  private generateLearning(tool: string, issueClass: string, data: IssueCountData, skillName?: string): void {
     const autoDir = join(this.learningsRoot, "auto-generated");
     if (!existsSync(autoDir)) {
       mkdirSync(autoDir, { recursive: true });
@@ -93,19 +113,28 @@ export class LearningExtractor {
 
     const safeClass = issueClass.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
     const safeTool = tool.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
-    const filePath = join(autoDir, `${safeTool}-${safeClass}.md`);
+    const safeSkill = skillName ? skillName.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase() : "";
+    const fileName = skillName
+      ? `${safeSkill}-${safeTool}-${safeClass}.md`
+      : `${safeTool}-${safeClass}.md`;
+    const filePath = join(autoDir, fileName);
 
     const date = new Date().toISOString().slice(0, 10);
     const samples = data.sampleMessages
       .map((msg) => `  - ${msg}`)
       .join("\n");
 
-    const content = `# Auto-Generated: ${tool} — ${issueClass}
+    const skillLine = skillName ? `- **Skill**: ${skillName}\n` : "";
+    const title = skillName
+      ? `${tool} — ${issueClass} (skill: ${skillName})`
+      : `${tool} — ${issueClass}`;
+
+    const content = `# Auto-Generated: ${title}
 
 ## ${issueClass} pattern detected for ${tool}
 - **Date**: ${date}
 - **Source**: Auto-extracted (${data.count} occurrences)
-- **Context**: The evaluator has detected the \`${issueClass}\` issue class ${data.count} times for the \`${tool}\` tool. This suggests a recurring pattern that agents should be aware of.
+${skillLine}- **Context**: The evaluator has detected the \`${issueClass}\` issue class ${data.count} times for the \`${tool}\` tool${skillName ? ` when used within the \`${skillName}\` skill` : ""}. This suggests a recurring pattern that agents should be aware of.
 - **Applies to**: ${tool}
 ${samples ? `- **Sample messages**:\n${samples}\n` : ""}- **Recommendation**: Review recent ${tool} interactions for this issue pattern and adjust usage accordingly.
 `;

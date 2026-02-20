@@ -40,6 +40,7 @@ export enum EvaluatorIssueClass {
   SchemaLookupOmission = "schema_lookup_omission",
   RedundantCalls = "redundant_calls",
   PlatformIntegration = "platform_integration",
+  WorkflowPattern = "workflow_pattern",
 }
 
 /**

@@ -9,7 +9,7 @@
 import { google } from "googleapis";
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
-import { SessionServiceStore, createFindingBuffer, type FindingBuffer } from "@cesteral/shared";
+import { SessionServiceStore, createFindingBuffer, createWorkflowTracker, type FindingBuffer, type WorkflowTracker } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { BidManagerService } from "./bid-manager/BidManagerService.js";
 import { createGoogleAuthFromAdapter } from "./bid-manager/auth-bridge.js";
@@ -21,6 +21,7 @@ import type { AppConfig } from "../config/index.js";
 export interface SessionServices {
   bidManagerService: BidManagerService;
   findingBuffer: FindingBuffer;
+  workflowTracker: WorkflowTracker;
 }
 
 /**
@@ -46,6 +47,7 @@ export function createSessionServices(
   return {
     bidManagerService,
     findingBuffer: createFindingBuffer(),
+    workflowTracker: createWorkflowTracker(),
   };
 }
 

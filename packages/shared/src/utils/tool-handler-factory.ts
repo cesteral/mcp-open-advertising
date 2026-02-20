@@ -23,7 +23,8 @@ import {
   recordWorkflowCallDepth,
 } from "./metrics.js";
 import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
-import type { FindingBuffer } from "./finding-types.js";
+import type { FindingBuffer, SkillContext } from "./finding-types.js";
+import type { WorkflowTracker } from "./workflow-tracker.js";
 
 /**
  * Request context created per tool invocation
@@ -73,6 +74,8 @@ export interface ToolInteractionContext {
   toolName: string;
   operation: string;
   workflowId?: string;
+  skillName?: string;
+  workflowRunId?: string;
   platform?: string;
   packageName?: string;
   requestId: string;
@@ -196,12 +199,17 @@ export interface RegisterToolsOptions {
    * Fires after evaluation completes. Writes are fire-and-forget.
    */
   learningExtractor?: {
-    processEvaluation(toolName: string, issues: ToolInteractionIssue[]): void;
+    processEvaluation(toolName: string, issues: ToolInteractionIssue[], skillContext?: SkillContext): void;
   };
   /**
    * Optional per-session finding buffer for persisted evaluator findings.
    */
   findingBuffer?: FindingBuffer;
+  /**
+   * Optional per-session workflow tracker for skill attribution.
+   * When provided, tool calls with _skillContext will be recorded.
+   */
+  workflowTracker?: WorkflowTracker;
 }
 
 function estimatePayloadBytes(value: unknown): number {
@@ -217,6 +225,54 @@ function clampScore(value: number | undefined): number | undefined {
     return undefined;
   }
   return Math.min(1, Math.max(0, value));
+}
+
+/**
+ * Augment a transformed JSON-like schema with the optional _skillContext property.
+ * Works with both JSON Schema objects and raw Zod shape objects.
+ */
+function augmentSchemaWithSkillContext(schema: unknown): unknown {
+  if (typeof schema !== "object" || schema === null) return schema;
+
+  const s = schema as Record<string, unknown>;
+
+  // JSON Schema style (has "properties" key)
+  if (s.properties && typeof s.properties === "object") {
+    const props = s.properties as Record<string, unknown>;
+    props._skillContext = {
+      type: "object",
+      description:
+        "Optional skill attribution context. Pass skillName and workflowRunId " +
+        "(from start_skill_workflow) to attribute this call to a skill workflow.",
+      properties: {
+        skillName: { type: "string", description: "Name of the orchestrating skill" },
+        workflowId: { type: "string", description: "Workflow category ID" },
+        workflowRunId: { type: "string", description: "Active workflow run ID from start_skill_workflow" },
+      },
+      required: ["skillName"],
+    };
+    return schema;
+  }
+
+  // Raw Zod shape style (flat key-value, no "properties" wrapper)
+  // In this case the schema itself IS the properties map
+  if (!s.type && !s.properties) {
+    (s as Record<string, unknown>)._skillContext = {
+      type: "object",
+      description:
+        "Optional skill attribution context. Pass skillName and workflowRunId " +
+        "(from start_skill_workflow) to attribute this call to a skill workflow.",
+      properties: {
+        skillName: { type: "string", description: "Name of the orchestrating skill" },
+        workflowId: { type: "string", description: "Workflow category ID" },
+        workflowRunId: { type: "string", description: "Active workflow run ID from start_skill_workflow" },
+      },
+      required: ["skillName"],
+    };
+    return schema;
+  }
+
+  return schema;
 }
 
 /**
@@ -246,11 +302,15 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     interactionLogger,
     learningExtractor,
     findingBuffer,
+    workflowTracker,
   } = opts;
 
   for (const tool of tools) {
     // Build registration config with all MCP 2025-11-25 fields
-    const transformedInputSchema = transformSchema(tool.inputSchema);
+    const rawTransformed = transformSchema(tool.inputSchema);
+
+    // Augment the transformed input schema with optional _skillContext
+    const transformedInputSchema = augmentSchemaWithSkillContext(rawTransformed);
     const toolConfig: ToolRegistrationConfig = {
       description: tool.description,
       inputSchema: transformedInputSchema,
@@ -314,7 +374,26 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             });
             requestId = context.requestId;
 
-            const validatedInput = tool.inputSchema.parse(args);
+            // Extract _skillContext before Zod validation (it's not in the tool's schema)
+            let skillContext: SkillContext | undefined;
+            let argsForValidation = args;
+            if (
+              typeof args === "object" &&
+              args !== null &&
+              "_skillContext" in (args as Record<string, unknown>)
+            ) {
+              const { _skillContext, ...rest } = args as Record<string, unknown>;
+              if (
+                typeof _skillContext === "object" &&
+                _skillContext !== null &&
+                "skillName" in (_skillContext as Record<string, unknown>)
+              ) {
+                skillContext = _skillContext as unknown as SkillContext;
+              }
+              argsForValidation = rest;
+            }
+
+            const validatedInput = tool.inputSchema.parse(argsForValidation);
             setSpanAttribute("tool.input.validated", true);
 
             const sdkContext: ToolSdkContext = {
@@ -327,7 +406,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             const interactionContext: ToolInteractionContext = {
               toolName: tool.name,
               operation: `tool:${tool.name}`,
-              workflowId: workflowIdByToolName[tool.name],
+              workflowId: skillContext?.workflowId ?? workflowIdByToolName[tool.name],
+              skillName: skillContext?.skillName,
+              workflowRunId: skillContext?.workflowRunId,
               platform,
               packageName,
               requestId: context.requestId,
@@ -442,6 +523,8 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 timestamp: new Date().toISOString(),
                 toolName: tool.name,
                 workflowId: interactionContext.workflowId,
+                skillName: interactionContext.skillName,
+                workflowRunId: interactionContext.workflowRunId,
                 platform: interactionContext.platform ?? "unknown",
                 serverPackage: interactionContext.packageName ?? "unknown",
                 issues: issues.map((issue) => ({
@@ -460,7 +543,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             // Fire-and-forget: feed evaluator findings to learning extractor
             if (learningExtractor && issues.length > 0) {
               try {
-                learningExtractor.processEvaluation(tool.name, issues);
+                learningExtractor.processEvaluation(tool.name, issues, skillContext);
               } catch {
                 // Non-critical — don't block tool response
               }
@@ -488,16 +571,34 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               }
             }
 
+            // ── Workflow tracker (fire-and-forget) ─────────────────────
+            if (workflowTracker && interactionContext.workflowRunId) {
+              try {
+                workflowTracker.recordToolCall(interactionContext.workflowRunId, {
+                  toolName: tool.name,
+                  requestId: context.requestId,
+                  timestamp: new Date().toISOString(),
+                  durationMs,
+                  success: true,
+                  issueCount: issues.length,
+                });
+              } catch {
+                // Non-critical
+              }
+            }
+
             // ── Interaction logging (fire-and-forget) ────────────────────
             if (interactionLogger) {
               const logEntry: InteractionLogEntry = {
                 ts: new Date().toISOString(),
                 sessionId: sessionId ?? "unknown",
                 tool: tool.name,
-                params: sanitizeParams(args) as Record<string, unknown>,
+                params: sanitizeParams(argsForValidation) as Record<string, unknown>,
                 success: true,
                 durationMs,
                 workflowId: interactionContext.workflowId,
+                skillName: interactionContext.skillName,
+                workflowRunId: interactionContext.workflowRunId,
                 platform,
                 packageName,
                 requestId: context.requestId,

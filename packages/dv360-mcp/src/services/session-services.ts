@@ -1,6 +1,6 @@
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
-import { SessionServiceStore, createFindingBuffer, type FindingBuffer } from "@cesteral/shared";
+import { SessionServiceStore, createFindingBuffer, createWorkflowTracker, type FindingBuffer, type WorkflowTracker } from "@cesteral/shared";
 import { RateLimiter } from "../utils/security/rate-limiter.js";
 import { DV360HttpClient } from "./dv360/dv360-http-client.js";
 import { DV360Service } from "./dv360/DV360-service.js";
@@ -11,6 +11,7 @@ export interface SessionServices {
   dv360Service: DV360Service;
   targetingService: TargetingService;
   findingBuffer: FindingBuffer;
+  workflowTracker: WorkflowTracker;
 }
 
 export function createSessionServices(
@@ -27,6 +28,7 @@ export function createSessionServices(
     dv360Service,
     targetingService,
     findingBuffer: createFindingBuffer(),
+    workflowTracker: createWorkflowTracker(),
   };
 }
 

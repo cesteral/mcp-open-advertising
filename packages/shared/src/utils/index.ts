@@ -18,3 +18,6 @@ export * from "./interaction-logger.js";
 export * from "./finding-types.js";
 export * from "./finding-buffer.js";
 export * from "./finding-store.js";
+export * from "./workflow-tracker.js";
+export * from "./workflow-evaluator.js";
+export * from "./workflow-lifecycle-tools.js";
