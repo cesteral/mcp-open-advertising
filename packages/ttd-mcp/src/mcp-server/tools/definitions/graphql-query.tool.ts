@@ -93,6 +93,22 @@ export const graphqlQueryTool = {
     openWorldHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Query advertiser details",
+      input: {
+        query: "query GetAdvertiser($id: String!) { advertiser(id: $id) { id name status } }",
+        variables: { id: "adv123abc" },
+      },
+    },
+    {
+      label: "List campaigns for an advertiser",
+      input: {
+        query: "query ListCampaigns($advertiserId: String!) { campaigns(advertiserId: $advertiserId) { edges { node { id name status budget { amount currencyCode } } } } }",
+        variables: { advertiserId: "adv123abc" },
+      },
+    },
+  ],
   logic: graphqlQueryLogic,
   responseFormatter: graphqlQueryResponseFormatter,
 };

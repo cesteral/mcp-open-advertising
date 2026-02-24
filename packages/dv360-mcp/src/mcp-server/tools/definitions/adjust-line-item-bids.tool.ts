@@ -256,6 +256,26 @@ export const adjustLineItemBidsTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: AdjustLineItemBidsInputSchema,
   outputSchema: AdjustLineItemBidsOutputSchema,
+  inputExamples: [
+    {
+      label: "Adjust a single line item bid",
+      input: {
+        adjustments: [
+          { advertiserId: "1234567", lineItemId: "7654321", newBidMicros: 4500000, reason: "Increase bid due to underdelivery" },
+        ],
+      },
+    },
+    {
+      label: "Batch adjust multiple line items",
+      input: {
+        adjustments: [
+          { advertiserId: "1234567", lineItemId: "7654321", newBidMicros: 4500000 },
+          { advertiserId: "1234567", lineItemId: "7654322", newBidMicros: 3200000 },
+          { advertiserId: "1234567", lineItemId: "7654323", newBidMicros: 6000000, reason: "Priority placement" },
+        ],
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,

@@ -102,6 +102,33 @@ export const updateEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Update campaign name",
+      input: {
+        entityType: "campaign",
+        entityId: "camp456def",
+        advertiserId: "adv123abc",
+        data: {
+          CampaignName: "Q1 2025 Brand Awareness - Updated",
+        },
+      },
+    },
+    {
+      label: "Update ad group bid",
+      input: {
+        entityType: "adGroup",
+        entityId: "ag789ghi",
+        advertiserId: "adv123abc",
+        campaignId: "camp456def",
+        data: {
+          RTBAttributes: {
+            BaseBidCPM: { Amount: 4.25, CurrencyCode: "USD" },
+          },
+        },
+      },
+    },
+  ],
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
 };

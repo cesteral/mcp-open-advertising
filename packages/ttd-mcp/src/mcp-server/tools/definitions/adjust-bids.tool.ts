@@ -111,6 +111,26 @@ export const adjustBidsTool = {
     openWorldHint: false,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Adjust a single ad group bid",
+      input: {
+        adjustments: [
+          { adGroupId: "ag789ghi", baseBidCpm: 4.50 },
+        ],
+      },
+    },
+    {
+      label: "Batch adjust multiple ad groups",
+      input: {
+        adjustments: [
+          { adGroupId: "ag001", baseBidCpm: 3.00, maxBidCpm: 8.00 },
+          { adGroupId: "ag002", baseBidCpm: 5.50 },
+          { adGroupId: "ag003", maxBidCpm: 12.00, currencyCode: "EUR" },
+        ],
+      },
+    },
+  ],
   logic: adjustBidsLogic,
   responseFormatter: adjustBidsResponseFormatter,
 };

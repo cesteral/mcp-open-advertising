@@ -99,6 +99,30 @@ export const gaqlSearchTool = {
     openWorldHint: true,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Campaign performance metrics",
+      input: {
+        customerId: "1234567890",
+        query: "SELECT campaign.id, campaign.name, metrics.impressions, metrics.clicks, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS ORDER BY metrics.impressions DESC LIMIT 50",
+      },
+    },
+    {
+      label: "Ad group performance for a campaign",
+      input: {
+        customerId: "1234567890",
+        query: "SELECT ad_group.id, ad_group.name, ad_group.status, metrics.impressions, metrics.conversions FROM ad_group WHERE campaign.id = 123456789 AND segments.date DURING LAST_7_DAYS",
+        pageSize: 500,
+      },
+    },
+    {
+      label: "Keyword quality scores",
+      input: {
+        customerId: "1234567890",
+        query: "SELECT ad_group_criterion.keyword.text, ad_group_criterion.quality_info.quality_score, ad_group_criterion.quality_info.creative_quality_score FROM keyword_view WHERE campaign.id = 123456789",
+      },
+    },
+  ],
   logic: gaqlSearchLogic,
   responseFormatter: gaqlSearchResponseFormatter,
 };

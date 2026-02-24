@@ -153,6 +153,32 @@ export const createAssignedTargetingTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: CreateAssignedTargetingInputSchema,
   outputSchema: CreateAssignedTargetingOutputSchema,
+  inputExamples: [
+    {
+      label: "Assign geo targeting to a line item",
+      input: {
+        parentType: "lineItem",
+        advertiserId: "1234567",
+        lineItemId: "7654321",
+        targetingType: "TARGETING_TYPE_GEO_REGION",
+        data: {
+          geoRegionDetails: { displayName: "United States", geoRegionType: "GEO_REGION_TYPE_COUNTRY", negative: false },
+        },
+      },
+    },
+    {
+      label: "Assign channel targeting to an insertion order",
+      input: {
+        parentType: "insertionOrder",
+        advertiserId: "1234567",
+        insertionOrderId: "5555555",
+        targetingType: "TARGETING_TYPE_CHANNEL",
+        data: {
+          channelDetails: { channelId: "888999", negative: false },
+        },
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,

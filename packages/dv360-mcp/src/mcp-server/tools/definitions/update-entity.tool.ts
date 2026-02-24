@@ -158,6 +158,40 @@ export const updateEntityTool = {
   description: generateToolDescription(),
   inputSchema: UpdateEntityInputSchema,
   outputSchema: UpdateEntityOutputSchema,
+  inputExamples: [
+    {
+      label: "Pause a line item",
+      input: {
+        entityType: "lineItem",
+        advertiserId: "1234567",
+        lineItemId: "7654321",
+        data: { entityStatus: "ENTITY_STATUS_PAUSED" },
+        updateMask: "entityStatus",
+        reason: "Pausing for budget review",
+      },
+    },
+    {
+      label: "Update insertion order budget",
+      input: {
+        entityType: "insertionOrder",
+        advertiserId: "1234567",
+        insertionOrderId: "5555555",
+        data: {
+          budget: {
+            budgetUnit: "BUDGET_UNIT_CURRENCY",
+            automationType: "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET",
+            budgetSegments: [
+              {
+                budgetAmountMicros: "75000000000",
+                dateRange: { startDate: { year: 2025, month: 1, day: 15 }, endDate: { year: 2025, month: 6, day: 30 } },
+              },
+            ],
+          },
+        },
+        updateMask: "budget.budgetSegments",
+      },
+    },
+  ],
   annotations: { readOnlyHint: false, openWorldHint: false, idempotentHint: true },
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,

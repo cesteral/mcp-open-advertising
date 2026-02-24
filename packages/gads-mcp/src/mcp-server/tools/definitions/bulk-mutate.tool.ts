@@ -106,6 +106,31 @@ export const bulkMutateTool = {
     destructiveHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Batch create ad groups",
+      input: {
+        entityType: "adGroup",
+        customerId: "1234567890",
+        operations: [
+          { create: { name: "Brand Terms", campaign: "customers/1234567890/campaigns/123456", type: "SEARCH_STANDARD", status: "PAUSED", cpcBidMicros: "1500000" } },
+          { create: { name: "Generic Terms", campaign: "customers/1234567890/campaigns/123456", type: "SEARCH_STANDARD", status: "PAUSED", cpcBidMicros: "2000000" } },
+        ],
+      },
+    },
+    {
+      label: "Mixed operations with partial failure",
+      input: {
+        entityType: "campaign",
+        customerId: "1234567890",
+        operations: [
+          { update: { resourceName: "customers/1234567890/campaigns/111", name: "Updated Campaign Name", updateMask: "name" } },
+          { remove: "customers/1234567890/campaigns/222" },
+        ],
+        partialFailure: true,
+      },
+    },
+  ],
   logic: bulkMutateLogic,
   responseFormatter: bulkMutateResponseFormatter,
 };

@@ -99,6 +99,37 @@ export const createEntityTool = {
     destructiveHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Create a campaign",
+      input: {
+        entityType: "campaign",
+        advertiserId: "adv123abc",
+        data: {
+          CampaignName: "Q1 2025 Brand Awareness",
+          Budget: { Amount: 50000, CurrencyCode: "USD" },
+          StartDate: "2025-01-15T00:00:00Z",
+          EndDate: "2025-03-31T23:59:59Z",
+          PacingMode: "PaceEvenly",
+        },
+      },
+    },
+    {
+      label: "Create an ad group under a campaign",
+      input: {
+        entityType: "adGroup",
+        advertiserId: "adv123abc",
+        campaignId: "camp456def",
+        data: {
+          AdGroupName: "Prospecting - Display",
+          RTBAttributes: {
+            BudgetSettings: { DailyBudget: { Amount: 500, CurrencyCode: "USD" } },
+            BaseBidCPM: { Amount: 3.50, CurrencyCode: "USD" },
+          },
+        },
+      },
+    },
+  ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
 };

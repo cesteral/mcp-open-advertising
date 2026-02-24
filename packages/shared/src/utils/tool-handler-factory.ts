@@ -51,6 +51,32 @@ export interface ToolSdkContext {
 }
 
 /**
+ * A concrete input example for a tool, used to improve tool selection
+ * and usage accuracy. Embedded into tool descriptions for MCP clients
+ * and available as structured data for Anthropic API's input_examples.
+ */
+export interface ToolInputExample {
+  /** Short label describing the scenario, e.g. "Create a TTD campaign" */
+  label: string;
+  /** Complete input payload — must validate against the tool's inputSchema */
+  input: Record<string, unknown>;
+}
+
+/**
+ * Format ToolInputExample[] into a markdown section appended to tool descriptions.
+ * Returns empty string when examples is undefined or empty.
+ */
+export function formatExamplesForDescription(examples?: ToolInputExample[]): string {
+  if (!examples || examples.length === 0) return "";
+
+  const blocks = examples.map(
+    (ex) => `**${ex.label}:**\n\`\`\`json\n${JSON.stringify(ex.input, null, 2)}\n\`\`\``
+  );
+
+  return `\n\n### Examples\n\n${blocks.join("\n\n")}`;
+}
+
+/**
  * Tool annotations per MCP Spec 2025-11-25
  */
 export interface ToolAnnotations {
@@ -104,6 +130,7 @@ export interface ToolDefinitionForFactory {
   inputSchema: z.ZodTypeAny;
   outputSchema?: z.ZodTypeAny;
   annotations?: ToolAnnotations;
+  inputExamples?: ToolInputExample[];
   logic: (
     input: any,
     context: any,
@@ -323,8 +350,12 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
     // Augment the transformed input schema with optional _skillContext
     const transformedInputSchema = augmentSchemaWithSkillContext(rawTransformed);
+
+    // Embed input examples into description for universal MCP client compatibility
+    const descriptionWithExamples = tool.description + formatExamplesForDescription(tool.inputExamples);
+
     const toolConfig: ToolRegistrationConfig = {
-      description: tool.description,
+      description: descriptionWithExamples,
       inputSchema: transformedInputSchema,
     };
 

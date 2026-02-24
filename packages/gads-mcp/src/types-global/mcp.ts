@@ -4,6 +4,7 @@
 
 import type { z } from "zod";
 import type { RequestContext } from "../utils/internal/request-context.js";
+import type { ToolInputExample } from "@cesteral/shared";
 
 /**
  * Tool definition structure
@@ -23,6 +24,7 @@ export interface ToolDefinition<
     idempotentHint?: boolean;
     destructiveHint?: boolean;
   };
+  inputExamples?: ToolInputExample[];
   logic: (
     input: z.infer<TInputSchema>,
     context: RequestContext,

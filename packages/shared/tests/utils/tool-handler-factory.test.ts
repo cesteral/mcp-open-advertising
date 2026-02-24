@@ -16,7 +16,7 @@ vi.mock("../../src/utils/metrics.js", () => ({
   recordWorkflowCallDepth: vi.fn(),
 }));
 
-import { registerToolsFromDefinitions, type ToolDefinitionForFactory } from "../../src/utils/tool-handler-factory.js";
+import { registerToolsFromDefinitions, formatExamplesForDescription, type ToolDefinitionForFactory, type ToolInputExample } from "../../src/utils/tool-handler-factory.js";
 import { EvaluatorIssueClass } from "../../src/utils/mcp-errors.js";
 import { recordToolExecution } from "../../src/utils/metrics.js";
 
@@ -470,5 +470,80 @@ describe("registerToolsFromDefinitions", () => {
       expect.any(Object),
       expect.any(Object)
     );
+  });
+
+  it("embeds inputExamples into tool description", () => {
+    const examples: ToolInputExample[] = [
+      { label: "Simple query", input: { id: "123" } },
+      { label: "With filter", input: { id: "456", filter: "active" } },
+    ];
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [
+        {
+          name: "example_tool",
+          description: "Base description",
+          inputSchema: z.object({ id: z.string(), filter: z.string().optional() }),
+          logic: vi.fn().mockResolvedValue({}),
+          inputExamples: examples,
+        },
+      ],
+      logger,
+      transformSchema: (schema) => schema,
+      createRequestContext,
+    });
+
+    const config = server.registerTool.mock.calls[0][1];
+    expect(config.description).toContain("Base description");
+    expect(config.description).toContain("### Examples");
+    expect(config.description).toContain("**Simple query:**");
+    expect(config.description).toContain("**With filter:**");
+    expect(config.description).toContain('"id": "123"');
+    expect(config.description).toContain('"filter": "active"');
+  });
+
+  it("leaves description unchanged when no inputExamples provided", () => {
+    registerToolsFromDefinitions({
+      server,
+      tools: [
+        {
+          name: "no_examples_tool",
+          description: "Just a description",
+          inputSchema: z.object({}),
+          logic: vi.fn().mockResolvedValue({}),
+        },
+      ],
+      logger,
+      transformSchema: (schema) => schema,
+      createRequestContext,
+    });
+
+    const config = server.registerTool.mock.calls[0][1];
+    expect(config.description).toBe("Just a description");
+    expect(config.description).not.toContain("### Examples");
+  });
+});
+
+describe("formatExamplesForDescription", () => {
+  it("returns empty string for undefined examples", () => {
+    expect(formatExamplesForDescription(undefined)).toBe("");
+  });
+
+  it("returns empty string for empty array", () => {
+    expect(formatExamplesForDescription([])).toBe("");
+  });
+
+  it("formats examples as markdown with JSON code blocks", () => {
+    const examples: ToolInputExample[] = [
+      { label: "Test example", input: { key: "value" } },
+    ];
+    const result = formatExamplesForDescription(examples);
+
+    expect(result).toContain("### Examples");
+    expect(result).toContain("**Test example:**");
+    expect(result).toContain("```json");
+    expect(result).toContain('"key": "value"');
+    expect(result).toContain("```");
   });
 });

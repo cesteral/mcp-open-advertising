@@ -235,6 +235,37 @@ export const runCustomQueryTool: ToolDefinition<
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Campaign delivery with preset date range",
+      input: {
+        reportType: "STANDARD",
+        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
+        metrics: ["METRIC_IMPRESSIONS", "METRIC_CLICKS", "METRIC_TOTAL_MEDIA_COST_ADVERTISER"],
+        dateRange: { preset: "LAST_7_DAYS" },
+      },
+    },
+    {
+      label: "Custom date range with advertiser filter",
+      input: {
+        reportType: "STANDARD",
+        groupBys: ["FILTER_ADVERTISER", "FILTER_LINE_ITEM"],
+        metrics: ["METRIC_IMPRESSIONS", "METRIC_REVENUE_ADVERTISER"],
+        filters: [{ type: "FILTER_ADVERTISER", value: "1234567" }],
+        dateRange: { startDate: "2025-01-01", endDate: "2025-01-31" },
+      },
+    },
+    {
+      label: "YouTube report with CSV output",
+      input: {
+        reportType: "YOUTUBE",
+        groupBys: ["FILTER_DATE", "FILTER_LINE_ITEM"],
+        metrics: ["METRIC_TRUEVIEW_VIEWS", "METRIC_TRUEVIEW_VIEW_RATE"],
+        dateRange: { preset: "LAST_30_DAYS" },
+        outputFormat: "csv",
+      },
+    },
+  ],
   logic: runCustomQueryLogic,
   responseFormatter: runCustomQueryResponseFormatter,
 };

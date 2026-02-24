@@ -89,6 +89,40 @@ export const createEntityTool = {
     destructiveHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Create a campaign budget",
+      input: {
+        entityType: "campaignBudget",
+        customerId: "1234567890",
+        data: {
+          name: "Q1 2025 Search Budget",
+          amountMicros: "50000000000",
+          deliveryMethod: "STANDARD",
+        },
+      },
+    },
+    {
+      label: "Create a search campaign",
+      input: {
+        entityType: "campaign",
+        customerId: "1234567890",
+        data: {
+          name: "Q1 2025 Brand Search",
+          advertisingChannelType: "SEARCH",
+          status: "PAUSED",
+          campaignBudget: "customers/1234567890/campaignBudgets/9876543",
+          startDate: "2025-01-15",
+          endDate: "2025-03-31",
+          networkSettings: {
+            targetGoogleSearch: true,
+            targetSearchNetwork: false,
+            targetContentNetwork: false,
+          },
+        },
+      },
+    },
+  ],
   logic: createEntityLogic,
   responseFormatter: createEntityResponseFormatter,
 };

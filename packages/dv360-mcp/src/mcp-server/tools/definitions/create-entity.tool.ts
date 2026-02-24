@@ -225,6 +225,61 @@ export const createEntityTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: CreateEntityInputSchema,
   outputSchema: CreateEntityOutputSchema,
+  inputExamples: [
+    {
+      label: "Create a campaign",
+      input: {
+        entityType: "campaign",
+        advertiserId: "1234567",
+        data: {
+          displayName: "Q1 2025 Programmatic Campaign",
+          entityStatus: "ENTITY_STATUS_ACTIVE",
+          campaignGoal: {
+            campaignGoalType: "CAMPAIGN_GOAL_TYPE_BRAND_AWARENESS",
+            performanceGoal: {
+              performanceGoalType: "PERFORMANCE_GOAL_TYPE_CPM",
+              performanceGoalAmountMicros: "5000000",
+            },
+          },
+          campaignFlight: {
+            plannedSpendAmountMicros: "100000000000",
+            plannedDates: { startDate: { year: 2025, month: 1, day: 15 } },
+          },
+          frequencyCap: {
+            maxImpressions: 5,
+            timeUnit: "TIME_UNIT_DAYS",
+            timeUnitCount: 1,
+          },
+        },
+      },
+    },
+    {
+      label: "Create an insertion order",
+      input: {
+        entityType: "insertionOrder",
+        advertiserId: "1234567",
+        campaignId: "9876543",
+        data: {
+          displayName: "IO - Display Prospecting",
+          entityStatus: "ENTITY_STATUS_DRAFT",
+          pacing: {
+            pacingPeriod: "PACING_PERIOD_FLIGHT",
+            pacingType: "PACING_TYPE_EVEN",
+          },
+          budget: {
+            budgetUnit: "BUDGET_UNIT_CURRENCY",
+            automationType: "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET",
+            budgetSegments: [
+              {
+                budgetAmountMicros: "50000000000",
+                dateRange: { startDate: { year: 2025, month: 1, day: 15 }, endDate: { year: 2025, month: 3, day: 31 } },
+              },
+            ],
+          },
+        },
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
