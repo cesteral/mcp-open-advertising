@@ -31,7 +31,6 @@
     "mcp.execute.gads_bulk_operations",
     "mcp.troubleshoot.delivery",
     "mcp.improve.learnings_review",
-    "mcp.execute.meta_entity_read",
     "mcp.execute.meta_entity_update",
     "mcp.execute.meta_campaign_setup",
     "mcp.execute.meta_insights",
@@ -288,25 +287,6 @@
         "Symptoms",
         "RootCauseHypothesis",
         "FixAndMonitorPlan"
-      ]
-    },
-    "mcp.execute.meta_entity_read": {
-      "description": "Read Meta Ads entities (campaigns, ad sets, ads, creatives, audiences) and account data.",
-      "prompts": [
-        {
-          "server": "meta-mcp",
-          "name": "meta_tool_schema_exploration"
-        }
-      ],
-      "resources": [
-        "entity-hierarchy://all",
-        "entity-schema://{entityType}",
-        "entity-examples://{entityType}"
-      ],
-      "requiredOutputSections": [
-        "Scope",
-        "SelectedResources",
-        "NextToolCall"
       ]
     },
     "mcp.execute.meta_entity_update": {

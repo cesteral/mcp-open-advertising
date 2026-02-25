@@ -636,6 +636,35 @@ function main() {
         "definitions"
       ),
     },
+    {
+      server: "meta-mcp",
+      promptsDir: path.join(
+        repoRoot,
+        "packages",
+        "meta-mcp",
+        "src",
+        "mcp-server",
+        "prompts"
+      ),
+      toolsDir: path.join(
+        repoRoot,
+        "packages",
+        "meta-mcp",
+        "src",
+        "mcp-server",
+        "tools",
+        "definitions"
+      ),
+      resourcesDir: path.join(
+        repoRoot,
+        "packages",
+        "meta-mcp",
+        "src",
+        "mcp-server",
+        "resources",
+        "definitions"
+      ),
+    },
   ];
 
   const promptNamesByServer = {};
