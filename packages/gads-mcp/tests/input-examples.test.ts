@@ -1,12 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { gaqlSearchTool } from "../src/mcp-server/tools/definitions/gaql-search.tool.js";
-import { createEntityTool } from "../src/mcp-server/tools/definitions/create-entity.tool.js";
-import { bulkMutateTool } from "../src/mcp-server/tools/definitions/bulk-mutate.tool.js";
+import { bulkUpdateStatusTool } from "../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
+import { getEntityTool } from "../src/mcp-server/tools/definitions/get-entity.tool.js";
+import { listAccountsTool } from "../src/mcp-server/tools/definitions/list-accounts.tool.js";
+import { listEntitiesTool } from "../src/mcp-server/tools/definitions/list-entities.tool.js";
+import { removeEntityTool } from "../src/mcp-server/tools/definitions/remove-entity.tool.js";
 
 const toolsWithExamples = [
-  gaqlSearchTool,
-  createEntityTool,
-  bulkMutateTool,
+  bulkUpdateStatusTool,
+  getEntityTool,
+  listAccountsTool,
+  listEntitiesTool,
+  removeEntityTool,
 ] as const;
 
 describe("Input examples validation", () => {

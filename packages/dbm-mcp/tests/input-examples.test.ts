@@ -1,8 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { runCustomQueryTool } from "../src/mcp-server/tools/definitions/run-custom-query.tool.js";
+import { getCampaignDeliveryTool } from "../src/mcp-server/tools/definitions/get-campaign-delivery.tool.js";
+import { getPerformanceMetricsTool } from "../src/mcp-server/tools/definitions/get-performance-metrics.tool.js";
+import { getHistoricalMetricsTool } from "../src/mcp-server/tools/definitions/get-historical-metrics.tool.js";
+import { getPacingStatusTool } from "../src/mcp-server/tools/definitions/get-pacing-status.tool.js";
 
 const toolsWithExamples = [
-  runCustomQueryTool,
+  getCampaignDeliveryTool,
+  getPerformanceMetricsTool,
+  getHistoricalMetricsTool,
+  getPacingStatusTool,
 ] as const;
 
 describe("Input examples validation", () => {

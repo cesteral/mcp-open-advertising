@@ -1,14 +1,30 @@
 import { describe, it, expect } from "vitest";
-import { createEntityTool } from "../src/mcp-server/tools/definitions/create-entity.tool.js";
-import { updateEntityTool } from "../src/mcp-server/tools/definitions/update-entity.tool.js";
-import { createAssignedTargetingTool } from "../src/mcp-server/tools/definitions/create-assigned-targeting.tool.js";
-import { adjustLineItemBidsTool } from "../src/mcp-server/tools/definitions/adjust-line-item-bids.tool.js";
+import { bulkUpdateStatusTool } from "../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
+import { createCustomBiddingAlgorithmTool } from "../src/mcp-server/tools/definitions/create-custom-bidding-algorithm.tool.js";
+import { deleteAssignedTargetingTool } from "../src/mcp-server/tools/definitions/delete-assigned-targeting.tool.js";
+import { getAssignedTargetingTool } from "../src/mcp-server/tools/definitions/get-assigned-targeting.tool.js";
+import { listAssignedTargetingTool } from "../src/mcp-server/tools/definitions/list-assigned-targeting.tool.js";
+import { deleteEntityTool } from "../src/mcp-server/tools/definitions/delete-entity.tool.js";
+import { getEntityTool } from "../src/mcp-server/tools/definitions/get-entity.tool.js";
+import { listEntitiesTool } from "../src/mcp-server/tools/definitions/list-entities.tool.js";
+import { listCustomBiddingAlgorithmsTool } from "../src/mcp-server/tools/definitions/list-custom-bidding-algorithms.tool.js";
+import { manageCustomBiddingRulesTool } from "../src/mcp-server/tools/definitions/manage-custom-bidding-rules.tool.js";
+import { manageCustomBiddingScriptTool } from "../src/mcp-server/tools/definitions/manage-custom-bidding-script.tool.js";
+import { validateTargetingConfigTool } from "../src/mcp-server/tools/definitions/validate-targeting-config.tool.js";
 
 const toolsWithExamples = [
-  createEntityTool,
-  updateEntityTool,
-  createAssignedTargetingTool,
-  adjustLineItemBidsTool,
+  bulkUpdateStatusTool,
+  createCustomBiddingAlgorithmTool,
+  deleteAssignedTargetingTool,
+  getAssignedTargetingTool,
+  listAssignedTargetingTool,
+  deleteEntityTool,
+  getEntityTool,
+  listEntitiesTool,
+  listCustomBiddingAlgorithmsTool,
+  manageCustomBiddingRulesTool,
+  manageCustomBiddingScriptTool,
+  validateTargetingConfigTool,
 ] as const;
 
 describe("Input examples validation", () => {
