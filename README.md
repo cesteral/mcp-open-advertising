@@ -2,7 +2,7 @@
 
 **AI-powered programmatic advertising optimization across DV360, Google Ads, Meta, and future DSPs**
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-green)](https://modelcontextprotocol.io/)
 
@@ -10,13 +10,13 @@
 
 ## Overview
 
-Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on four independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
+Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on five independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
 
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, Meta, and future DSPs
-- **🔧 Composable Architecture** - Four independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Five independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -25,12 +25,13 @@ Cesteral is a **Model Context Protocol (MCP) based optimization platform** that 
 
 ## Architecture
 
-Cesteral uses a **GCP-native architecture** with four independently deployable Cloud Run MCP services:
+Cesteral uses a **GCP-native architecture** with five independently deployable Cloud Run MCP services:
 
 - `dbm-mcp` for reporting and query workflows
 - `dv360-mcp` for DV360 management workflows
 - `ttd-mcp` for The Trade Desk management/reporting workflows
 - `gads-mcp` for Google Ads campaign management and reporting workflows
+- `meta-mcp` for Meta Ads campaign management
 
 ### Access Model
 
@@ -95,6 +96,18 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: Google Ads REST API v23
 
+### Server 5: `meta-mcp`
+
+**Meta Ads campaign management**
+
+- Full CRUD on Meta Ads entities (campaigns, ad sets, ads, creatives, custom audiences)
+- Performance insights with dimensional breakdowns
+- Targeting search and delivery estimates
+- Bulk operations and entity duplication
+- Per-session auth via Bearer token
+
+**Platform**: Meta Marketing API v21.0
+
 ---
 
 ## Current Status
@@ -102,15 +115,15 @@ This dual-access model preserves service autonomy while enabling cross-server au
 **Phase: Production-Ready ✅**
 
 The platform currently includes:
-- ✅ Four implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`)
+- ✅ Five implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`)
 - ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
-- ✅ Live platform/API integrations and Streamable HTTP transports
+- ✅ Live platform API integrations and Streamable HTTP transports
 - ✅ Terraform + Cloud Build coverage for independent service deployment
 
 **Current Focus:**
-1. Keep contract/adapter governance aligned across all platform packages
-2. Harden telemetry dashboards and evaluator feedback loops
-3. Continue incremental rollout and production operations improvements
+1. Production hardening and operational reliability across all five servers
+2. Cross-platform workflow coverage and contract governance
+3. Telemetry dashboards and observability improvements
 
 ## Quick Start
 
@@ -125,8 +138,8 @@ The platform currently includes:
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/cesteral-mcp.git
-cd cesteral-mcp
+git clone https://github.com/cesteral/cesteral-mcp-servers.git
+cd cesteral-mcp-servers
 ```
 
 ### 2. Install Dependencies
@@ -173,6 +186,9 @@ pnpm run dev
 
 # Start gads-mcp (port 3004)
 ./scripts/dev-server.sh gads-mcp
+
+# Start meta-mcp (port 3005)
+./scripts/dev-server.sh meta-mcp
 ```
 
 ### 6. Deploy Infrastructure
@@ -194,16 +210,24 @@ Edit your Claude Desktop MCP configuration:
 {
   "mcpServers": {
     "cesteral-reporting": {
-      "url": "https://reporting.cesteral.io/mcp",
+      "url": "https://reporting.cesteral.com/mcp",
       "apiKey": "your-reporting-api-key"
     },
     "cesteral-management": {
-      "url": "https://management.cesteral.io/mcp",
+      "url": "https://management.cesteral.com/mcp",
       "apiKey": "your-management-api-key"
     },
     "cesteral-ttd": {
-      "url": "https://ttd.cesteral.io/mcp",
+      "url": "https://ttd.cesteral.com/mcp",
       "apiKey": "your-ttd-api-key"
+    },
+    "cesteral-gads": {
+      "url": "https://gads.cesteral.com/mcp",
+      "apiKey": "your-gads-api-key"
+    },
+    "cesteral-meta": {
+      "url": "https://meta.cesteral.com/mcp",
+      "apiKey": "your-meta-api-key"
     }
   }
 }
@@ -214,22 +238,44 @@ Edit your Claude Desktop MCP configuration:
 ## Repository Structure
 
 ```
-cesteral-mcp/
+cesteral-mcp-servers/
 ├── packages/
-│   ├── dbm-mcp/                 # MCP Server 1: Cross-platform reporting
+│   ├── dbm-mcp/                 # MCP Server 1: DV360 reporting
 │   │   ├── src/
-│   │   │   ├── mcp-server/      # MCP tool definitions
-│   │   │   ├── services/        # BigQuery, platform adapters
-│   │   │   ├── http-transport.ts # Express HTTP server
+│   │   │   ├── mcp-server/      # MCP tool definitions + transports
+│   │   │   ├── services/        # Bid Manager API adapters
 │   │   │   └── index.ts
 │   │   ├── Dockerfile
 │   │   └── package.json
 │   │
 │   ├── dv360-mcp/               # MCP Server 2: DV360 management
 │   │   ├── src/
-│   │   │   ├── mcp-server/      # MCP tool definitions
+│   │   │   ├── mcp-server/      # MCP tool definitions + transports
 │   │   │   ├── services/        # DV360 API & SDF integrations
-│   │   │   ├── http-transport.ts # Express HTTP server
+│   │   │   └── index.ts
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── ttd-mcp/                 # MCP Server 3: The Trade Desk
+│   │   ├── src/
+│   │   │   ├── mcp-server/      # MCP tool definitions + transports
+│   │   │   ├── services/        # TTD REST API client
+│   │   │   └── index.ts
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── gads-mcp/                # MCP Server 4: Google Ads
+│   │   ├── src/
+│   │   │   ├── mcp-server/      # MCP tool definitions + transports
+│   │   │   ├── services/        # Google Ads REST API client
+│   │   │   └── index.ts
+│   │   ├── Dockerfile
+│   │   └── package.json
+│   │
+│   ├── meta-mcp/                # MCP Server 5: Meta Ads
+│   │   ├── src/
+│   │   │   ├── mcp-server/      # MCP tool definitions + transports
+│   │   │   ├── services/        # Meta Graph API client
 │   │   │   └── index.ts
 │   │   ├── Dockerfile
 │   │   └── package.json
@@ -237,7 +283,7 @@ cesteral-mcp/
 │   └── shared/                  # Shared code
 │       ├── types/               # Zod schemas, TypeScript types
 │       ├── utils/               # Common utilities
-│       ├── auth/                # JWT validation middleware
+│       ├── auth/                # Auth strategies + JWT validation
 │       └── package.json
 │
 ├── terraform/                   # Infrastructure as Code
@@ -282,7 +328,7 @@ cesteral-mcp/
 | `get_pacing_status`       | Real-time pacing calculation          | `campaignId`                                        |
 | `run_custom_query`        | Execute dynamic DBM report queries    | `reportType`, `filters`, `metrics`, `dimensions`    |
 
-### Management Server Tools
+### DV360 Management Server Tools
 
 | Tool                                 | Description                                         | Parameters |
 | ------------------------------------ | --------------------------------------------------- | ---------- |
@@ -290,12 +336,44 @@ cesteral-mcp/
 | `dv360_get_entity`                   | Fetch one DV360 entity by type/id                   | `entityType`, entity IDs |
 | `dv360_create_entity`                | Create any supported DV360 entity                   | `entityType`, IDs, `data` |
 | `dv360_update_entity`                | Update any supported DV360 entity with updateMask   | `entityType`, IDs, `data`, `updateMask` |
-| `dv360_delete_entity`                | Delete any supported DV360 entity                   | `entityType`, entity IDs |
 | `dv360_adjust_line_item_bids`        | Batch bid adjustments for multiple line items       | `advertiserId`, `adjustments[]` |
-| `dv360_bulk_update_status`           | Batch status changes across entities                | `entityType`, `entityIds[]`, `entityStatus` |
-| `dv360_list_assigned_targeting`      | List assigned targeting options                     | `parentType`, IDs, `targetingType` |
-| `dv360_create_assigned_targeting`    | Create assigned targeting option                    | `parentType`, IDs, `targetingType`, `assignedTargetingOption` |
-| `dv360_delete_assigned_targeting`    | Delete assigned targeting option                    | `parentType`, IDs, `targetingType`, `assignedTargetingOptionId` |
+
+See [packages/dv360-mcp](packages/dv360-mcp) for the full 10-tool reference including targeting and bulk operations.
+
+### The Trade Desk Server Tools
+
+| Tool                       | Description                                  | Parameters |
+| -------------------------- | -------------------------------------------- | ---------- |
+| `ttd_list_entities`        | List TTD entities with filters/paging        | `entityType`, optional filters |
+| `ttd_create_entity`        | Create a TTD entity                          | `entityType`, `data` |
+| `ttd_get_report`           | Generate async report via MyReports V3 API   | `reportName`, `dateRange`, `dimensions`, `metrics` |
+| `ttd_bulk_update_status`   | Batch pause/resume/archive entities          | `entityType`, `entityIds[]`, `status` |
+| `ttd_graphql_query`        | Execute GraphQL query against TTD API        | `query`, `variables` |
+
+See [packages/ttd-mcp](packages/ttd-mcp) for the full 14-tool reference including bulk CRUD and bid adjustments.
+
+### Google Ads Server Tools
+
+| Tool                    | Description                              | Parameters |
+| ----------------------- | ---------------------------------------- | ---------- |
+| `gads_gaql_search`      | Execute arbitrary GAQL queries           | `customerId`, `query`, `pageSize` |
+| `gads_list_accounts`    | List accessible customer accounts        | _(none)_ |
+| `gads_create_entity`    | Create entity via :mutate API            | `entityType`, `customerId`, `data` |
+| `gads_bulk_mutate`      | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
+
+See [packages/gads-mcp](packages/gads-mcp) for the full 9-tool reference including entity CRUD and bulk status updates.
+
+### Meta Ads Server Tools
+
+| Tool                          | Description                              | Parameters |
+| ----------------------------- | ---------------------------------------- | ---------- |
+| `meta_list_entities`          | List Meta Ads entities with filters      | `entityType`, `adAccountId`, `fields` |
+| `meta_create_entity`          | Create a Meta Ads entity                 | `entityType`, `adAccountId`, `data` |
+| `meta_get_insights`           | Performance metrics for an entity        | `entityId`, `fields`, `datePreset` |
+| `meta_search_targeting`       | Search interests, locations, etc.        | `type`, `query`, `limit` |
+| `meta_get_delivery_estimate`  | Audience size estimation                 | `adAccountId`, `targetingSpec` |
+
+See [packages/meta-mcp](packages/meta-mcp) for the full 15-tool reference including insights breakdowns, duplication, and ad previews.
 
 ---
 
@@ -332,6 +410,24 @@ AI Agent:
 
 2. Confirms change:
    "Line item 67890 bid updated to $3.50 CPM."
+```
+
+### Workflow 3: Cross-Platform Performance Comparison
+
+```
+User: "Compare last week's performance across our Google Ads and Meta campaigns"
+
+AI Agent:
+1. Calls gads-mcp.gads_gaql_search
+   - query: "SELECT campaign.name, metrics.impressions, metrics.clicks, metrics.cost_micros
+             FROM campaign WHERE segments.date DURING LAST_7_DAYS"
+
+2. Calls meta-mcp.meta_get_insights
+   - entityId: "{adAccountId}"
+   - fields: ["campaign_name", "impressions", "clicks", "spend"]
+   - datePreset: "last_7_days"
+
+3. Synthesizes cross-platform comparison with unified metrics
 ```
 
 ---
@@ -380,7 +476,7 @@ pnpm run deploy:optimization --env=prod
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta)-mcp"' --limit=50
 ```
 
 ### Metrics Dashboard
@@ -389,6 +485,9 @@ Access Cloud Monitoring dashboards:
 
 - [DBM Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/dbm-mcp)
 - [DV360 Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/dv360-mcp)
+- [TTD Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/ttd-mcp)
+- [Google Ads Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/gads-mcp)
+- [Meta Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/meta-mcp)
 
 ---
 
@@ -460,7 +559,7 @@ curl -X POST http://localhost:8080/mcp \
 - TypeScript 5.0+
 - Node.js 20 LTS
 - Zod (schema validation)
-- Express.js (HTTP server)
+- Hono (HTTP server + MCP transport)
 
 **GCP Services**
 
@@ -475,8 +574,9 @@ curl -X POST http://localhost:8080/mcp \
 **External APIs**
 
 - DV360 API v4 + Bid Manager API v2
-- Google Ads API
-- Meta Marketing API
+- The Trade Desk REST API
+- Google Ads REST API v23
+- Meta Marketing API v21.0
 
 **Development Tools**
 
@@ -506,7 +606,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## License
 
-[MIT License](LICENSE)
+[Business Source License 1.1](LICENSE.md) — converts to Apache 2.0 after 3 years.
 
 ---
 
@@ -516,40 +616,7 @@ For issues or questions:
 
 - **Documentation**: Check [docs/](docs/) for detailed guides
 - **GitHub Issues**: Report bugs or request features
-- **Email**: support@cesteral.io
-
----
-
-## Roadmap
-
-### Q1 2025
-
-- ✅ Three MCP servers architecture design
-- ✅ Monorepo scaffolding (pnpm workspaces + Turborepo)
-- ✅ Shared packages (types, utilities, authentication)
-- ✅ MCP server templates with HTTP/SSE transport
-- 🚧 DV360 support (reporting + management + optimization)
-- 🚧 BigQuery integration
-- 🚧 Google Ads support
-- 🚧 Meta support
-
-### Q2 2025
-
-- 📋 Machine learning for adjustment effectiveness prediction
-- 📋 Budget optimization across campaigns
-- 📋 Goal performance optimization (CPA/ROAS targeting)
-
-### Q3 2025
-
-- 📋 The Trade Desk platform support
-- 📋 Amazon DSP platform support
-- 📋 Creative performance analysis
-
-### Q4 2025
-
-- 📋 Cross-platform budget allocation
-- 📋 Advanced forecasting with confidence intervals
-- 📋 White-label solution for agencies
+- **Email**: support@cesteral.com
 
 ---
 
