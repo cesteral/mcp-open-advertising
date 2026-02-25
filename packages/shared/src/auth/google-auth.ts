@@ -40,6 +40,7 @@ export type GoogleCredentials = ServiceAccountCredentials | OAuth2RefreshCredent
 
 export interface GoogleAuthAdapter {
   getAccessToken(): Promise<string>;
+  validate(): Promise<void>;
   readonly credentialType: "service_account" | "oauth2";
   readonly scopes: string[];
 }
@@ -64,6 +65,10 @@ export class ServiceAccountAuthAdapter implements GoogleAuthAdapter {
     private readonly credentials: ServiceAccountCredentials,
     readonly scopes: string[]
   ) {}
+
+  async validate(): Promise<void> {
+    await this.getAccessToken();
+  }
 
   async getAccessToken(): Promise<string> {
     if (
@@ -152,6 +157,10 @@ export class OAuth2RefreshTokenAuthAdapter implements GoogleAuthAdapter {
     private readonly credentials: OAuth2RefreshCredentials,
     readonly scopes: string[]
   ) {}
+
+  async validate(): Promise<void> {
+    await this.getAccessToken();
+  }
 
   async getAccessToken(): Promise<string> {
     if (

@@ -4,17 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cesteral is an AI-native programmatic advertising optimization platform built on four independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), and Google Ads campaign management (gads-mcp).
+Cesteral is an AI-native programmatic advertising optimization platform built on five independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), and Meta Ads campaign management (meta-mcp).
 
 ### Current Project Status
 
 **Phase: Production-Ready ✅**
 
-All four MCP servers are fully implemented with live API integrations:
+All five MCP servers are fully implemented with live API integrations:
 - **dbm-mcp**: Bid Manager API v2 for DV360 reporting
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
 - **gads-mcp**: Google Ads REST API v23 for Google Ads campaign management & reporting
+- **meta-mcp**: Meta Marketing API v21.0 for Meta Ads campaign management
 
 ## Essential Commands
 
@@ -31,6 +32,7 @@ cd packages/dbm-mcp && pnpm run dev:http
 cd packages/dv360-mcp && pnpm run dev:http
 cd packages/ttd-mcp && pnpm run dev:http
 cd packages/gads-mcp && pnpm run dev:http
+cd packages/meta-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -68,6 +70,9 @@ Use the dev-server script (automatically uses correct port for each server):
 
 # Start gads-mcp (port 3004)
 ./scripts/dev-server.sh gads-mcp
+
+# Start meta-mcp (port 3005)
+./scripts/dev-server.sh meta-mcp
 ```
 
 ## Monorepo Architecture
@@ -77,11 +82,12 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 ### Core Packages
 1. **`@cesteral/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Four MCP Servers
+### Five MCP Servers
 1. **`@cesteral/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
 4. **`@cesteral/gads-mcp`** - Google Ads campaign management & reporting (CRUD via Google Ads REST API v23)
+5. **`@cesteral/meta-mcp`** - Meta Ads campaign management (CRUD via Meta Marketing API v21.0)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -529,7 +535,50 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `gads_bulk_mutate` | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
 | `gads_bulk_update_status` | Batch enable/pause/remove entities | `entityType`, `customerId`, `entityIds[]`, `status` |
 
-### How the Four Servers Work Together
+### meta-mcp (Meta Ads Server) Tools — 15 Tools, 5 Entity Types
+
+**Supported entity types:** `campaign`, `adSet`, `ad`, `adCreative`, `customAudience`
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `meta_list_entities` | List Meta Ads entities with filters/paging | `entityType`, `adAccountId`, `fields`, `filtering` |
+| `meta_get_entity` | Retrieve a single entity by type/id | `entityType`, `entityId`, `fields` |
+| `meta_create_entity` | Create a Meta Ads entity | `entityType`, `adAccountId`, `data` |
+| `meta_update_entity` | Update entity (POST with PATCH semantics) | `entityId`, `data` |
+| `meta_delete_entity` | Delete a Meta Ads entity | `entityId` |
+
+#### Account
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `meta_list_ad_accounts` | List accessible ad accounts | `fields`, `limit` |
+
+#### Insights
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `meta_get_insights` | Performance metrics for an entity | `entityId`, `fields`, `datePreset`, `timeRange` |
+| `meta_get_insights_breakdowns` | Metrics with dimensional breakdowns | `entityId`, `breakdowns`, `fields`, `datePreset` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `meta_bulk_update_status` | Batch status updates | `entityIds[]`, `status` |
+| `meta_bulk_create_entities` | Batch entity creation | `entityType`, `adAccountId`, `items[]` |
+
+#### Targeting
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `meta_search_targeting` | Search interests, locations, etc. | `type`, `query`, `limit` |
+| `meta_get_targeting_options` | Browse targeting categories | `adAccountId`, `type` |
+
+#### Specialized
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `meta_duplicate_entity` | Copy campaigns/adSets/ads | `entityId`, `options` |
+| `meta_get_delivery_estimate` | Audience size estimation | `adAccountId`, `targetingSpec` |
+| `meta_get_ad_previews` | Ad preview HTML | `adId`, `adFormat` |
+
+### How the Five Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**
 1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
@@ -559,6 +608,7 @@ Each server runs on a different port:
 - `dv360-mcp`: port 3002
 - `ttd-mcp`: port 3003
 - `gads-mcp`: port 3004
+- `meta-mcp`: port 3005
 
 Test SSE endpoint:
 ```bash
@@ -595,11 +645,11 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 {
   "mcpServers": {
     "cesteral-reporting": {
-      "url": "https://reporting.cesteral.io/mcp",
+      "url": "https://reporting.cesteral.com/mcp",
       "apiKey": "your-reporting-api-key"
     },
     "cesteral-management": {
-      "url": "https://management.cesteral.io/mcp",
+      "url": "https://management.cesteral.com/mcp",
       "apiKey": "your-management-api-key"
     }
   }

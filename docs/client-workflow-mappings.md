@@ -19,6 +19,12 @@ This document shows how each client should consume the same canonical workflows.
 | `mcp.execute.gads_bulk_operations` | `.cursor/skills/gads-bulk-operator/SKILL.md` | `.codex/skills/gads-bulk-operator/SKILL.md` | Section in `.github/copilot-instructions.md` | `.windsurf/rules/gads-bulk-operator.md` | `.clinerules/gads-bulk-operator.md` | `.continue/rules/gads-bulk-operator.md` | Use `gads_campaign_setup_workflow` guidance and execute bulk tools with verification |
 | `mcp.troubleshoot.delivery` | `.cursor/skills/dv360-delivery-troubleshooter/SKILL.md` | `.codex/skills/dv360-delivery-troubleshooter/SKILL.md` | Section in `.github/copilot-instructions.md` | `.windsurf/rules/dv360-delivery-troubleshooter.md` | `.clinerules/dv360-delivery-troubleshooter.md` | `.continue/rules/dv360-delivery-troubleshooter.md` | Call `troubleshoot_underdelivery` and/or `troubleshoot_report` |
 | `mcp.improve.learnings_review` | `.cursor/skills/learnings-reviewer/SKILL.md` | `.codex/skills/learnings-reviewer/SKILL.md` | Section in `.github/copilot-instructions.md` | `.windsurf/rules/learnings-reviewer.md` | `.clinerules/learnings-reviewer.md` | `.continue/rules/learnings-reviewer.md` | Read learnings resources directly, use `submit_learning` tool |
+| `mcp.execute.meta_entity_read` | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | Call prompt `meta_tool_schema_exploration`, fetch entity resources |
+| `mcp.execute.meta_entity_update` | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | Call prompt `meta_campaign_setup_workflow`, then use CRUD tools |
+| `mcp.execute.meta_campaign_setup` | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | Call prompt `meta_campaign_setup_workflow` directly |
+| `mcp.execute.meta_insights` | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | Call prompt `meta_insights_reporting_workflow` directly |
+| `mcp.execute.meta_bulk_operations` | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | Use `meta_campaign_setup_workflow` guidance and execute bulk tools |
+| `mcp.troubleshoot.meta_entity` | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | _(generate)_ | Call prompt `meta_troubleshoot_entity` directly |
 
 ## Supported Clients
 

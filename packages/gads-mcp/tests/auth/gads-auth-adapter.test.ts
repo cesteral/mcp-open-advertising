@@ -139,6 +139,48 @@ describe("GAdsRefreshTokenAuthAdapter", () => {
     });
   });
 
+  describe("validate", () => {
+    it("resolves when token exchange succeeds", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        mockTokenResponse("access-token-1", 3600)
+      );
+
+      const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
+
+      await expect(adapter.validate()).resolves.toBeUndefined();
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects when token exchange fails", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        text: vi.fn().mockResolvedValue("invalid_grant"),
+      });
+
+      const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
+
+      await expect(adapter.validate()).rejects.toThrow(
+        "Google OAuth2 token exchange failed: 401"
+      );
+    });
+
+    it("caches token — validate + getAccessToken = 1 fetch total", async () => {
+      globalThis.fetch = vi.fn().mockResolvedValue(
+        mockTokenResponse("access-token-cached", 3600)
+      );
+
+      const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
+
+      await adapter.validate();
+      const token = await adapter.getAccessToken();
+
+      expect(token).toBe("access-token-cached");
+      expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("credential properties", () => {
     it("exposes developerToken", () => {
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);

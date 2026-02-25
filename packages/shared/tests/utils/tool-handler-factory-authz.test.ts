@@ -269,4 +269,113 @@ describe("tool-handler-factory authorization", () => {
     expect((result as any).isError).toBeUndefined();
     expect(bulkTool.logic).toHaveBeenCalled();
   });
+
+  it("blocks tool call when adAccountId not in allowedAdvertisers", async () => {
+    const metaTool = {
+      name: "meta_tool",
+      description: "Meta tool",
+      inputSchema: z.object({
+        adAccountId: z.string(),
+      }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+
+    const authContext: SessionAuthContext = {
+      authInfo: { clientId: "user@test.com", authType: "meta-bearer" },
+      allowedAdvertisers: ["111222333"],
+    };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [metaTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      authContextResolver: () => authContext,
+    });
+
+    const result = await server.callTool("meta_tool", { adAccountId: "999888777" });
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("Access denied");
+    expect(metaTool.logic).not.toHaveBeenCalled();
+  });
+
+  it("allows adAccountId with act_ prefix when bare ID is in allowedAdvertisers", async () => {
+    const metaTool = {
+      name: "meta_tool_prefix",
+      description: "Meta tool",
+      inputSchema: z.object({
+        adAccountId: z.string(),
+      }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+
+    const authContext: SessionAuthContext = {
+      authInfo: { clientId: "user@test.com", authType: "meta-bearer" },
+      allowedAdvertisers: ["111222333"],
+    };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [metaTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      authContextResolver: () => authContext,
+    });
+
+    const result = await server.callTool("meta_tool_prefix", { adAccountId: "act_111222333" });
+
+    expect((result as any).isError).toBeUndefined();
+    expect(metaTool.logic).toHaveBeenCalled();
+  });
+
+  it("blocks adAccountIds array with unauthorized entries", async () => {
+    const metaBulkTool = {
+      name: "meta_bulk_tool",
+      description: "Meta bulk tool",
+      inputSchema: z.object({
+        adAccountIds: z.array(z.string()),
+      }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+
+    const authContext: SessionAuthContext = {
+      authInfo: { clientId: "user@test.com", authType: "meta-bearer" },
+      allowedAdvertisers: ["111222333"],
+    };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [metaBulkTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      authContextResolver: () => authContext,
+    });
+
+    const result = await server.callTool("meta_bulk_tool", {
+      adAccountIds: ["act_111222333", "act_999888777"],
+    });
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("Access denied");
+    expect(metaBulkTool.logic).not.toHaveBeenCalled();
+  });
 });

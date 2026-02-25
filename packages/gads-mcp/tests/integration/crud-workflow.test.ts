@@ -10,6 +10,23 @@ const mockState = vi.hoisted(() => ({
   },
 }));
 
+vi.mock("../../src/auth/gads-auth-adapter.js", async () => {
+  const actual = await vi.importActual<any>("../../src/auth/gads-auth-adapter.js");
+  return {
+    ...actual,
+    GAdsRefreshTokenAuthAdapter: class {
+      developerToken: string;
+      loginCustomerId: string | undefined;
+      constructor(creds: { developerToken: string; loginCustomerId?: string }) {
+        this.developerToken = creds.developerToken;
+        this.loginCustomerId = creds.loginCustomerId;
+      }
+      async getAccessToken() { return "mock-token"; }
+      async validate() {}
+    },
+  };
+});
+
 vi.mock("../../src/services/session-services.js", async () => {
   const services = new Map<string, any>();
   const fingerprints = new Map<string, string>();

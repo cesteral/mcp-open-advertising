@@ -25,6 +25,7 @@ export interface TtdCredentials {
  */
 export interface TtdAuthAdapter {
   getAccessToken(): Promise<string>;
+  validate(): Promise<void>;
   readonly partnerId: string;
 }
 
@@ -55,6 +56,10 @@ export class TtdApiTokenAuthAdapter implements TtdAuthAdapter {
 
   get partnerId(): string {
     return this.credentials.partnerId;
+  }
+
+  async validate(): Promise<void> {
+    await this.getAccessToken();
   }
 
   async getAccessToken(): Promise<string> {

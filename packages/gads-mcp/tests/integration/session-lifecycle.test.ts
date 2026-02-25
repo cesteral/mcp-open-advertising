@@ -37,7 +37,7 @@ vi.mock("../../src/auth/gads-auth-strategy.js", () => {
           : "fp-test";
         return {
           authInfo: { clientId: "client-test", authType: "gads-headers" },
-          platformAuthAdapter: {} as any,
+          platformAuthAdapter: { validate: vi.fn() } as any,
           credentialFingerprint: fp,
         };
       }

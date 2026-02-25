@@ -37,7 +37,7 @@ vi.mock("../../src/auth/ttd-auth-strategy.js", () => {
           : "fp-test";
         return {
           authInfo: { clientId: "partner-test", authType: "ttd-headers" },
-          platformAuthAdapter: {} as any,
+          platformAuthAdapter: { validate: vi.fn() } as any,
           credentialFingerprint: fp,
         };
       }

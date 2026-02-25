@@ -218,6 +218,39 @@ describe("ServiceAccountAuthAdapter", () => {
       /OAuth2 token exchange failed: 400 Bad Request/
     );
   });
+
+  describe("validate", () => {
+    it("resolves when token exchange succeeds", async () => {
+      const adapter = new ServiceAccountAuthAdapter(MOCK_SA_CREDENTIALS, [
+        "https://www.googleapis.com/auth/display-video",
+      ]);
+
+      await expect(adapter.validate()).resolves.toBeUndefined();
+      expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it("rejects when token exchange fails", async () => {
+      vi.stubGlobal("fetch", mockFetchFailure(401, "Unauthorized", "bad creds"));
+
+      const adapter = new ServiceAccountAuthAdapter(MOCK_SA_CREDENTIALS, [
+        "https://www.googleapis.com/auth/display-video",
+      ]);
+
+      await expect(adapter.validate()).rejects.toThrow(/OAuth2 token exchange failed/);
+    });
+
+    it("caches token — validate + getAccessToken = 1 fetch total", async () => {
+      const adapter = new ServiceAccountAuthAdapter(MOCK_SA_CREDENTIALS, [
+        "https://www.googleapis.com/auth/display-video",
+      ]);
+
+      await adapter.validate();
+      const token = await adapter.getAccessToken();
+
+      expect(token).toBe("test-token");
+      expect(fetch).toHaveBeenCalledOnce();
+    });
+  });
 });
 
 describe("OAuth2RefreshTokenAuthAdapter", () => {
@@ -270,6 +303,39 @@ describe("OAuth2RefreshTokenAuthAdapter", () => {
     await expect(adapter.getAccessToken()).rejects.toThrow(
       /OAuth2 refresh token exchange failed: 401 Unauthorized/
     );
+  });
+
+  describe("validate", () => {
+    it("resolves when token refresh succeeds", async () => {
+      const adapter = new OAuth2RefreshTokenAuthAdapter(MOCK_OAUTH2_CREDENTIALS, [
+        "https://www.googleapis.com/auth/display-video",
+      ]);
+
+      await expect(adapter.validate()).resolves.toBeUndefined();
+      expect(fetch).toHaveBeenCalledOnce();
+    });
+
+    it("rejects when token refresh fails", async () => {
+      vi.stubGlobal("fetch", mockFetchFailure(401, "Unauthorized", "invalid_client"));
+
+      const adapter = new OAuth2RefreshTokenAuthAdapter(MOCK_OAUTH2_CREDENTIALS, [
+        "https://www.googleapis.com/auth/display-video",
+      ]);
+
+      await expect(adapter.validate()).rejects.toThrow(/OAuth2 refresh token exchange failed/);
+    });
+
+    it("caches token — validate + getAccessToken = 1 fetch total", async () => {
+      const adapter = new OAuth2RefreshTokenAuthAdapter(MOCK_OAUTH2_CREDENTIALS, [
+        "https://www.googleapis.com/auth/display-video",
+      ]);
+
+      await adapter.validate();
+      const token = await adapter.getAccessToken();
+
+      expect(token).toBe("test-token");
+      expect(fetch).toHaveBeenCalledOnce();
+    });
   });
 });
 

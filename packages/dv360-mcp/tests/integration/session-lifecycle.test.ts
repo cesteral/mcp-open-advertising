@@ -7,7 +7,7 @@ vi.mock("@cesteral/shared", async () => {
     createAuthStrategy: vi.fn(() => ({
       verify: vi.fn(async (headers: Record<string, string | string[] | undefined>) => ({
         authInfo: { clientId: "test-client", authType: "google-headers" },
-        googleAuthAdapter: {} as any,
+        googleAuthAdapter: { validate: vi.fn() } as any,
         credentialFingerprint:
           typeof headers["x-test-fingerprint"] === "string"
             ? headers["x-test-fingerprint"]

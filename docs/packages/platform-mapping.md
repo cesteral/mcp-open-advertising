@@ -10,12 +10,12 @@ This table tracks current and planned ad-platform packages and their canonical w
 | DV360 Management | `packages/dv360-mcp` | DV360 entity creation/updates | Active |
 | The Trade Desk | `packages/ttd-mcp` | TTD entity management and reporting | Active (expanding workflow contract coverage) |
 | Google Ads | `packages/gads-mcp` | Google Ads campaign management and reporting | Active |
+| Meta Ads | `packages/meta-mcp` | Meta Marketing API v21.0 campaign management | Active |
 
 ## Planned/Target Platforms
 
 | Platform | Proposed Package | Notes |
 |---|---|---|
-| Meta Ads | `packages/meta-mcp` | Use package template checklist before scaffolding |
 | Amazon DSP | `packages/amazon-dsp-mcp` | Include workflow IDs and mappings at package introduction |
 
 ## Rules

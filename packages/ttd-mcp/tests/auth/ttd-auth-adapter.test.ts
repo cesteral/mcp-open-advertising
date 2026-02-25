@@ -238,6 +238,40 @@ describe("TtdApiTokenAuthAdapter", () => {
     });
   });
 
+  describe("validate", () => {
+    it("resolves when token exchange succeeds", async () => {
+      const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
+      mockSuccessResponse();
+
+      await expect(adapter.validate()).resolves.toBeUndefined();
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    it("rejects when token exchange fails", async () => {
+      const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
+
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        text: async () => "Bad credentials",
+      } as unknown as Response);
+
+      await expect(adapter.validate()).rejects.toThrow("TTD token exchange failed");
+    });
+
+    it("caches token — validate + getAccessToken = 1 fetch total", async () => {
+      const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
+      mockSuccessResponse();
+
+      await adapter.validate();
+      const token = await adapter.getAccessToken();
+
+      expect(token).toBe("ttd-test-token");
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("partnerId", () => {
     it("returns credentials.partnerId", () => {
       const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);

@@ -97,10 +97,18 @@ export function createMcpHttpServer(
     logger.warn({ error }, "Failed to prune finding store on startup");
   });
 
+  const sessionTransports = new Map<string, McpSessionTransport>();
+
   const sessions = new SessionManager<Awaited<ReturnType<typeof createMcpServer>>>(
     sessionServiceStore,
     {
       onBeforeCleanup: async (sessionId: string) => {
+        const transport = sessionTransports.get(sessionId);
+        if (transport) {
+          await transport.close?.().catch(() => {});
+          sessionTransports.delete(sessionId);
+        }
+
         const services = sessionServiceStore.get(sessionId);
         if (!services?.findingBuffer) return;
         const findings = services.findingBuffer.clear();
@@ -203,6 +211,26 @@ export function createMcpHttpServer(
     if (!sessionId) {
       return c.json({ error: "Mcp-Session-Id header required" }, 400);
     }
+
+    const storedFingerprint = sessionServiceStore.getFingerprint(sessionId);
+    if (storedFingerprint) {
+      try {
+        const headers = extractHeadersMap(c.req.raw.headers);
+        const requestFingerprint = authStrategy.getCredentialFingerprint
+          ? await authStrategy.getCredentialFingerprint(headers)
+          : undefined;
+        if (requestFingerprint && requestFingerprint !== storedFingerprint) {
+          logger.warn(
+            { sessionId, event: "unauthorized_session_termination" },
+            "Session termination rejected — credential mismatch"
+          );
+          return c.json({ error: "Session credential mismatch" }, 401);
+        }
+      } catch {
+        return c.json({ error: "Authentication required for session termination" }, 401);
+      }
+    }
+
     logger.info({ sessionId }, "Session termination requested");
     await sessions.cleanupSession(sessionId);
     return c.json({ status: "terminated", sessionId }, 200);
@@ -233,18 +261,6 @@ export function createMcpHttpServer(
           supportedVersions: SUPPORTED_PROTOCOL_VERSIONS,
         },
         400
-      );
-    }
-
-    // Check session capacity
-    if (sessionServiceStore.isFull()) {
-      logger.warn(
-        { activeSessions: sessionServiceStore.size },
-        "Max session capacity reached"
-      );
-      return c.json(
-        { error: "Server at capacity. Please try again later." },
-        503
       );
     }
 
@@ -281,6 +297,18 @@ export function createMcpHttpServer(
       }
     }
 
+    // Check session capacity — only for new sessions (existing sessions must not be blocked)
+    if (!providedSessionId && sessionServiceStore.isFull()) {
+      logger.warn(
+        { activeSessions: sessionServiceStore.size },
+        "Max session capacity reached"
+      );
+      return c.json(
+        { error: "Server at capacity. Please try again later." },
+        503
+      );
+    }
+
     // For new sessions, authenticate via configured strategy
     let sessionId = providedSessionId;
     if (!sessionId) {
@@ -290,12 +318,13 @@ export function createMcpHttpServer(
       try {
         authResult = await authStrategy.verify(headers);
         recordAuthValidation(authResult.authInfo.authType, "success");
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Authentication failed";
         recordAuthValidation(config.mcpAuthMode, "failure");
-        logger.warn({ error: error.message }, "Authentication failed");
+        logger.warn({ error: message }, "Authentication failed");
         return c.json(
           {
-            error: error.message,
+            error: message,
             hint: config.mcpAuthMode === "ttd-headers"
               ? "Provide TTD credentials via X-TTD-Partner-Id and X-TTD-Api-Secret headers."
               : "Provide a valid Bearer token in the Authorization header.",
@@ -309,6 +338,7 @@ export function createMcpHttpServer(
       // For ttd-headers mode, the adapter is returned via platformAuthAdapter
       const adapter = authResult.platformAuthAdapter as TtdAuthAdapter | undefined;
       if (adapter) {
+        await adapter.validate();
         const services = createSessionServices(
           adapter,
           config.ttdApiBaseUrl,
@@ -335,6 +365,7 @@ export function createMcpHttpServer(
           { partnerId: config.ttdPartnerId, apiSecret: config.ttdApiSecret },
           config.ttdAuthUrl
         );
+        await envAdapter.validate();
         const services = createSessionServices(
           envAdapter,
           config.ttdApiBaseUrl,
@@ -375,10 +406,15 @@ export function createMcpHttpServer(
       logger.debug({ sessionId }, "Created new MCP server instance for session");
     }
 
-    // Create transport and handle request
-    const transport = new McpSessionTransport(sessionId);
+    // Use one connected transport per session to avoid reconnecting a server protocol instance.
+    let transport = sessionTransports.get(sessionId);
     try {
-      await mcpServer.connect(transport);
+      if (!transport) {
+        transport = new McpSessionTransport(sessionId);
+        await mcpServer.connect(transport);
+        sessionTransports.set(sessionId, transport);
+      }
+
       const response = await transport.handleRequest(c);
 
       if (response) {
@@ -388,7 +424,8 @@ export function createMcpHttpServer(
       return c.body(null, 204);
     } catch (error) {
       logger.error({ error, sessionId, requestId }, "Error handling MCP request");
-      await transport.close?.().catch(() => {});
+      await transport?.close?.().catch(() => {});
+      sessionTransports.delete(sessionId);
       throw error;
     }
 

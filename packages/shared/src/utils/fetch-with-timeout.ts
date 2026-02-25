@@ -6,7 +6,8 @@ export async function fetchWithTimeout(
   url: string,
   timeoutMs: number,
   context?: { requestId?: string },
-  options?: RequestInit
+  options?: RequestInit,
+  sanitizeUrlForErrors?: (url: string) => string
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -25,7 +26,8 @@ export async function fetchWithTimeout(
     return response;
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
-      throw new Error(`Request timeout after ${timeoutMs}ms: ${url}`);
+      const displayUrl = sanitizeUrlForErrors ? sanitizeUrlForErrors(url) : url;
+      throw new Error(`Request timeout after ${timeoutMs}ms: ${displayUrl}`);
     }
     throw error;
   } finally {

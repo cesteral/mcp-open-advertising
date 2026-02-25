@@ -27,8 +27,17 @@ import type { FindingBuffer, SkillContext } from "./finding-types.js";
 import type { WorkflowTracker } from "./workflow-tracker.js";
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
 
-const ADVERTISER_PARAM_KEYS = ["advertiserId", "customerId", "partnerId"] as const;
-const ADVERTISER_PARAM_ARRAY_KEYS = ["advertiserIds", "customerIds"] as const;
+const ADVERTISER_PARAM_KEYS = ["advertiserId", "customerId", "partnerId", "adAccountId"] as const;
+const ADVERTISER_PARAM_ARRAY_KEYS = ["advertiserIds", "customerIds", "adAccountIds"] as const;
+
+/**
+ * Normalize a Meta ad account ID by stripping the `act_` prefix.
+ * This allows allowedAdvertisers to store bare numeric IDs while
+ * tool params may arrive with the `act_` prefix.
+ */
+function normalizeAccountId(id: string): string {
+  return id.startsWith("act_") ? id.slice(4) : id;
+}
 
 /**
  * Request context created per tool invocation
@@ -452,7 +461,8 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                   const value = input[key];
                   if (typeof value === "string") {
                     auditedIdentifiers[key] = value;
-                    if (!allowedAdvertisers.includes(value)) {
+                    const normalizedValue = normalizeAccountId(value);
+                    if (!allowedAdvertisers.some((a) => normalizeAccountId(a) === normalizedValue)) {
                       auditLogger.warn(
                         {
                           event: "tool_access_denied",
@@ -487,7 +497,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                   if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
                     const ids = value as string[];
                     auditedIdentifiers[key] = ids;
-                    const deniedId = ids.find((id) => !allowedAdvertisers.includes(id));
+                    const deniedId = ids.find((id) => !allowedAdvertisers.some((a) => normalizeAccountId(a) === normalizeAccountId(id)));
                     if (deniedId) {
                       auditLogger.warn(
                         {

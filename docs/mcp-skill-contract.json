@@ -30,7 +30,13 @@
     "mcp.execute.gads_entity_management",
     "mcp.execute.gads_bulk_operations",
     "mcp.troubleshoot.delivery",
-    "mcp.improve.learnings_review"
+    "mcp.improve.learnings_review",
+    "mcp.execute.meta_entity_read",
+    "mcp.execute.meta_entity_update",
+    "mcp.execute.meta_campaign_setup",
+    "mcp.execute.meta_insights",
+    "mcp.execute.meta_bulk_operations",
+    "mcp.troubleshoot.meta_entity"
   ],
   "workflows": {
     "mcp.explore.tools_and_schemas": {
@@ -47,6 +53,10 @@
         {
           "server": "ttd-mcp",
           "name": "ttd_tool_schema_exploration"
+        },
+        {
+          "server": "meta-mcp",
+          "name": "meta_tool_schema_exploration"
         }
       ],
       "resources": [
@@ -280,6 +290,117 @@
         "FixAndMonitorPlan"
       ]
     },
+    "mcp.execute.meta_entity_read": {
+      "description": "Read Meta Ads entities (campaigns, ad sets, ads, creatives, audiences) and account data.",
+      "prompts": [
+        {
+          "server": "meta-mcp",
+          "name": "meta_tool_schema_exploration"
+        }
+      ],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "Scope",
+        "SelectedResources",
+        "NextToolCall"
+      ]
+    },
+    "mcp.execute.meta_entity_update": {
+      "description": "Perform safe Meta Ads entity mutations (create, update, delete) with schema-first validation.",
+      "prompts": [
+        {
+          "server": "meta-mcp",
+          "name": "meta_campaign_setup_workflow"
+        }
+      ],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "ChangePlan",
+        "PayloadDiff",
+        "VerificationResult"
+      ]
+    },
+    "mcp.execute.meta_campaign_setup": {
+      "description": "Create complete Meta Ads campaign structures (Campaign → Ad Set → Creative → Ad) with creation-order enforcement.",
+      "prompts": [
+        {
+          "server": "meta-mcp",
+          "name": "meta_campaign_setup_workflow"
+        }
+      ],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "ChangePlan",
+        "PayloadDiff",
+        "VerificationResult"
+      ]
+    },
+    "mcp.execute.meta_insights": {
+      "description": "Query Meta Ads Insights API for performance metrics with breakdowns and attribution windows.",
+      "prompts": [
+        {
+          "server": "meta-mcp",
+          "name": "meta_insights_reporting_workflow"
+        }
+      ],
+      "resources": [
+        "insights-reference://all"
+      ],
+      "requiredOutputSections": [
+        "QuerySpec",
+        "ValidationChecks",
+        "ExecutionSummary"
+      ]
+    },
+    "mcp.execute.meta_bulk_operations": {
+      "description": "Execute batch Meta Ads operations (bulk create, bulk status update) with controlled concurrency.",
+      "prompts": [
+        {
+          "server": "meta-mcp",
+          "name": "meta_campaign_setup_workflow"
+        }
+      ],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "BatchPlan",
+        "SafetyChecks",
+        "ExecutionSummary"
+      ]
+    },
+    "mcp.troubleshoot.meta_entity": {
+      "description": "Diagnose and remediate Meta Ads entity issues using API inspection and targeted fixes.",
+      "prompts": [
+        {
+          "server": "meta-mcp",
+          "name": "meta_troubleshoot_entity"
+        }
+      ],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://{entityType}",
+        "entity-examples://{entityType}"
+      ],
+      "requiredOutputSections": [
+        "Symptoms",
+        "RootCauseHypothesis",
+        "FixAndMonitorPlan"
+      ]
+    },
     "mcp.improve.learnings_review": {
       "description": "Review interaction logs and learnings tree to propose codebase improvements.",
       "prompts": [],
@@ -371,6 +492,17 @@
         "mcp.execute.gads_query",
         "mcp.execute.gads_entity_management",
         "mcp.execute.gads_bulk_operations"
+      ]
+    },
+    "meta-mcp": {
+      "platform": "meta",
+      "requiredWorkflowIds": [
+        "mcp.explore.tools_and_schemas",
+        "mcp.execute.meta_entity_update",
+        "mcp.execute.meta_campaign_setup",
+        "mcp.execute.meta_insights",
+        "mcp.execute.meta_bulk_operations",
+        "mcp.troubleshoot.meta_entity"
       ]
     }
   }

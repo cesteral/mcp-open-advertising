@@ -37,6 +37,7 @@ export interface GAdsCredentials {
  */
 export interface GAdsAuthAdapter {
   getAccessToken(): Promise<string>;
+  validate(): Promise<void>;
   readonly developerToken: string;
   readonly loginCustomerId: string | undefined;
 }
@@ -71,6 +72,10 @@ export class GAdsRefreshTokenAuthAdapter implements GAdsAuthAdapter {
 
   get loginCustomerId(): string | undefined {
     return this.credentials.loginCustomerId;
+  }
+
+  async validate(): Promise<void> {
+    await this.getAccessToken();
   }
 
   async getAccessToken(): Promise<string> {
