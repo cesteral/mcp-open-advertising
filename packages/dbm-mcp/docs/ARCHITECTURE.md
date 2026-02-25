@@ -430,7 +430,7 @@ export class BidManagerService {
       },
       params: {
         type: "TYPE_GENERAL",
-        groupBys: ["FILTER_DATE", "FILTER_CAMPAIGN"],
+        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_CLICKS",
@@ -440,7 +440,7 @@ export class BidManagerService {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: params.advertiserId },
-          { type: "FILTER_CAMPAIGN", value: params.campaignId },
+          { type: "FILTER_MEDIA_PLAN", value: params.campaignId },
         ],
       },
     });
@@ -796,7 +796,7 @@ Common metrics for delivery reports:
 |-----------|-------------|
 | `FILTER_DATE` | Group by date |
 | `FILTER_ADVERTISER` | Group by advertiser |
-| `FILTER_CAMPAIGN` | Group by campaign |
+| `FILTER_MEDIA_PLAN` | Group by campaign (media plan) |
 | `FILTER_INSERTION_ORDER` | Group by insertion order |
 | `FILTER_LINE_ITEM` | Group by line item |
 

@@ -76,6 +76,7 @@ export const FilterTypeSchema = z.enum([
   // Entity hierarchy
   "FILTER_PARTNER",
   "FILTER_ADVERTISER",
+  "FILTER_MEDIA_PLAN",
   "FILTER_INSERTION_ORDER",
   "FILTER_LINE_ITEM",
   "FILTER_CREATIVE",
@@ -109,7 +110,6 @@ export const FilterTypeSchema = z.enum([
   "FILTER_VIDEO_AD_POSITION",
 
   // Other
-  "FILTER_MEDIA_PLAN",
   "FILTER_ORDER_ID",
   "FILTER_TRUEVIEW_CONVERSION_TYPE",
 ]);
