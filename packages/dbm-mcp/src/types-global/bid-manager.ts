@@ -49,7 +49,7 @@ export type QueryType =
 export type FilterType =
   | "FILTER_DATE"
   | "FILTER_ADVERTISER"
-  | "FILTER_CAMPAIGN"
+  | "FILTER_MEDIA_PLAN"
   | "FILTER_INSERTION_ORDER"
   | "FILTER_LINE_ITEM"
   | "FILTER_CREATIVE"

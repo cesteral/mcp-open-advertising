@@ -76,7 +76,7 @@ Use for general delivery metrics, campaign performance, and cost analysis.
 \`\`\`json
 {
   "reportType": "STANDARD",
-  "groupBys": ["FILTER_DATE", "FILTER_CAMPAIGN"],
+  "groupBys": ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
   "metrics": ["METRIC_IMPRESSIONS", "METRIC_CLICKS", "METRIC_TOTAL_MEDIA_COST_ADVERTISER"]
 }
 \`\`\`

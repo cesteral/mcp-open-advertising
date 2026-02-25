@@ -76,7 +76,6 @@ export const FilterTypeSchema = z.enum([
   // Entity hierarchy
   "FILTER_PARTNER",
   "FILTER_ADVERTISER",
-  "FILTER_CAMPAIGN",
   "FILTER_INSERTION_ORDER",
   "FILTER_LINE_ITEM",
   "FILTER_CREATIVE",

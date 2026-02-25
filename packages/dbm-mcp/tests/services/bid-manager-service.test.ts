@@ -119,11 +119,11 @@ function createQuerySpec() {
     },
     params: {
       type: "STANDARD" as const,
-      groupBys: ["FILTER_DATE" as const, "FILTER_CAMPAIGN" as const],
+      groupBys: ["FILTER_DATE" as const, "FILTER_MEDIA_PLAN" as const],
       metrics: ["METRIC_IMPRESSIONS" as const, "METRIC_CLICKS" as const],
       filters: [
         { type: "FILTER_ADVERTISER" as const, value: "adv-123" },
-        { type: "FILTER_CAMPAIGN" as const, value: "camp-456" },
+        { type: "FILTER_MEDIA_PLAN" as const, value: "camp-456" },
       ],
     },
   };
@@ -770,7 +770,7 @@ describe("BidManagerService", () => {
       expect(createCall.requestBody.params.filters).toEqual(
         expect.arrayContaining([
           { type: "FILTER_ADVERTISER", value: "adv-123" },
-          { type: "FILTER_CAMPAIGN", value: "camp-456" },
+          { type: "FILTER_MEDIA_PLAN", value: "camp-456" },
         ])
       );
 

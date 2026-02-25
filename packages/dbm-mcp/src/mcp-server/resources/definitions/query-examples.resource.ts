@@ -23,7 +23,7 @@ export const QUERY_EXAMPLES = {
       },
       params: {
         type: "STANDARD",
-        groupBys: ["FILTER_DATE", "FILTER_CAMPAIGN"],
+        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_CLICKS",
@@ -32,7 +32,7 @@ export const QUERY_EXAMPLES = {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: "{advertiserId}" },
-          { type: "FILTER_CAMPAIGN", value: "{campaignId}" },
+          { type: "FILTER_MEDIA_PLAN", value: "{campaignId}" },
         ],
       },
     },
@@ -52,7 +52,7 @@ export const QUERY_EXAMPLES = {
       },
       params: {
         type: "STANDARD",
-        groupBys: ["FILTER_DATE", "FILTER_CAMPAIGN"],
+        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_CLICKS",
@@ -91,7 +91,7 @@ export const QUERY_EXAMPLES = {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: "{advertiserId}" },
-          { type: "FILTER_CAMPAIGN", value: "{campaignId}" },
+          { type: "FILTER_MEDIA_PLAN", value: "{campaignId}" },
         ],
       },
     },
@@ -119,7 +119,7 @@ export const QUERY_EXAMPLES = {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: "{advertiserId}" },
-          { type: "FILTER_CAMPAIGN", value: "{campaignId}" },
+          { type: "FILTER_MEDIA_PLAN", value: "{campaignId}" },
         ],
       },
     },
@@ -161,7 +161,7 @@ export const QUERY_EXAMPLES = {
       },
       params: {
         type: "STANDARD",
-        groupBys: ["FILTER_DATE", "FILTER_CAMPAIGN"],
+        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_ACTIVE_VIEW_MEASURABLE_IMPRESSIONS",
@@ -171,7 +171,7 @@ export const QUERY_EXAMPLES = {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: "{advertiserId}" },
-          { type: "FILTER_CAMPAIGN", value: "{campaignId}" },
+          { type: "FILTER_MEDIA_PLAN", value: "{campaignId}" },
         ],
       },
     },
@@ -202,7 +202,7 @@ export const QUERY_EXAMPLES = {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: "{advertiserId}" },
-          { type: "FILTER_CAMPAIGN", value: "{campaignId}" },
+          { type: "FILTER_MEDIA_PLAN", value: "{campaignId}" },
         ],
       },
     },

@@ -121,7 +121,7 @@ ${Array.from(byReportType.get("YOUTUBE_PROGRAMMATIC_GUARANTEED") || [])
 ### Daily Delivery by Campaign
 \`\`\`json
 {
-  "groupBys": ["FILTER_DATE", "FILTER_CAMPAIGN"],
+  "groupBys": ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
   "filters": [
     { "type": "FILTER_ADVERTISER", "value": "123456" }
   ]
@@ -134,7 +134,7 @@ ${Array.from(byReportType.get("YOUTUBE_PROGRAMMATIC_GUARANTEED") || [])
   "groupBys": ["FILTER_DEVICE_TYPE"],
   "filters": [
     { "type": "FILTER_ADVERTISER", "value": "123456" },
-    { "type": "FILTER_CAMPAIGN", "value": "789012" }
+    { "type": "FILTER_MEDIA_PLAN", "value": "789012" }
   ]
 }
 \`\`\`
@@ -155,7 +155,7 @@ ${Array.from(byReportType.get("YOUTUBE_PROGRAMMATIC_GUARANTEED") || [])
   "groupBys": ["FILTER_LINE_ITEM"],
   "filters": [
     { "type": "FILTER_ADVERTISER", "value": "123456" },
-    { "type": "FILTER_CAMPAIGN", "value": "789012" }
+    { "type": "FILTER_MEDIA_PLAN", "value": "789012" }
   ]
 }
 \`\`\`

@@ -115,7 +115,7 @@ export const INCOMPATIBLE_COMBINATIONS: IncompatibleCombination[] = [
     },
     reason:
       "Reach metrics can only be used with a limited set of groupBys due to privacy thresholds. " +
-      "Use coarse dimensions like FILTER_DATE, FILTER_ADVERTISER, FILTER_CAMPAIGN, FILTER_INSERTION_ORDER.",
+      "Use coarse dimensions like FILTER_DATE, FILTER_ADVERTISER, FILTER_MEDIA_PLAN, FILTER_INSERTION_ORDER.",
   },
 ];
 

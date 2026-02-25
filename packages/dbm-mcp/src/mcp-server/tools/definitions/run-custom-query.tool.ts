@@ -17,7 +17,7 @@ For available options, fetch these MCP Resources:
 - report-types://all - Report types and date range presets
 - query-examples://all - Example queries for common use cases
 
-Common groupBys: FILTER_DATE, FILTER_CAMPAIGN, FILTER_LINE_ITEM, FILTER_DEVICE_TYPE
+Common groupBys: FILTER_DATE, FILTER_MEDIA_PLAN, FILTER_LINE_ITEM, FILTER_DEVICE_TYPE
 Common metrics: METRIC_IMPRESSIONS, METRIC_CLICKS, METRIC_CTR, METRIC_TOTAL_MEDIA_COST_ADVERTISER`;
 
 /**
@@ -35,7 +35,7 @@ export const RunCustomQueryInputSchema = z
       .array(z.string())
       .min(1)
       .describe(
-        "Dimensions to group results by (e.g., FILTER_DATE, FILTER_CAMPAIGN, FILTER_LINE_ITEM). See filter-types://all"
+        "Dimensions to group results by (e.g., FILTER_DATE, FILTER_MEDIA_PLAN, FILTER_LINE_ITEM). See filter-types://all"
       ),
 
     metrics: z

@@ -480,7 +480,7 @@ export class BidManagerService {
       },
       params: {
         type: "STANDARD",
-        groupBys: ["FILTER_DATE", "FILTER_CAMPAIGN"],
+        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_CLICKS",
@@ -490,7 +490,7 @@ export class BidManagerService {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: params.advertiserId },
-          { type: "FILTER_CAMPAIGN", value: params.campaignId },
+          { type: "FILTER_MEDIA_PLAN", value: params.campaignId },
         ],
       },
     };
@@ -539,7 +539,7 @@ export class BidManagerService {
       },
       params: {
         type: "STANDARD",
-        groupBys: [timeGroupBy, "FILTER_CAMPAIGN"],
+        groupBys: [timeGroupBy, "FILTER_MEDIA_PLAN"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_CLICKS",
@@ -549,7 +549,7 @@ export class BidManagerService {
         ],
         filters: [
           { type: "FILTER_ADVERTISER", value: params.advertiserId },
-          { type: "FILTER_CAMPAIGN", value: params.campaignId },
+          { type: "FILTER_MEDIA_PLAN", value: params.campaignId },
         ],
       },
     };

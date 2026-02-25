@@ -55,7 +55,7 @@ Dimensions determine how results are broken down.
 
 **Common groupBys for ${queryGoal}:**
 - \`FILTER_DATE\` - Daily breakdown
-- \`FILTER_CAMPAIGN\` - By campaign
+- \`FILTER_MEDIA_PLAN\` - By campaign
 - \`FILTER_LINE_ITEM\` - By line item
 - \`FILTER_DEVICE_TYPE\` - By device
 - \`FILTER_CREATIVE\` - By creative
@@ -89,7 +89,7 @@ Filters restrict the data to specific values.
 \`\`\`
 
 **Optional filters:**
-- \`FILTER_CAMPAIGN\` - Specific campaign(s)
+- \`FILTER_MEDIA_PLAN\` - Specific campaign(s)
 - \`FILTER_LINE_ITEM\` - Specific line item(s)
 - \`FILTER_DATE\` - Specific date range
 
@@ -120,7 +120,7 @@ Example query for ${queryGoal}:
 \`\`\`json
 {
   "reportType": "STANDARD",
-  "groupBys": ["FILTER_DATE", "FILTER_CAMPAIGN"],
+  "groupBys": ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
   "metrics": [
     "METRIC_IMPRESSIONS",
     "METRIC_CLICKS",

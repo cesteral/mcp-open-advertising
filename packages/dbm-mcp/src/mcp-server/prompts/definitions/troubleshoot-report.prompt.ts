@@ -131,11 +131,11 @@ If the query succeeds but returns empty results:
 \`\`\`json
 {
   "reportType": "STANDARD",
-  "groupBys": ["FILTER_CAMPAIGN"],
+  "groupBys": ["FILTER_MEDIA_PLAN"],
   "metrics": ["METRIC_IMPRESSIONS", "METRIC_CLICKS"],
   "filters": [
     { "type": "FILTER_ADVERTISER", "value": "{advertiserId}" },
-    { "type": "FILTER_CAMPAIGN", "value": "{campaignId}" }
+    { "type": "FILTER_MEDIA_PLAN", "value": "{campaignId}" }
   ],
   "dateRange": { "preset": "LAST_30_DAYS" }
 }
