@@ -43,7 +43,6 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
     "@types/node": "^20.17.6",
     "typescript": "^5.9.3",
     "vitest": "^1.6.0"

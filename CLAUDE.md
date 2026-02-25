@@ -120,7 +120,7 @@ packages/{server-name}/
 │   │   │   └── definitions/        # Individual tool files
 │   │   │       └── {tool-name}.tool.ts
 │   │   └── transports/
-│   │       └── http-transport.ts   # Express app with SSE endpoint
+│   │       └── streamable-http-transport.ts  # Hono app with Streamable HTTP transport (@hono/mcp)
 │   ├── services/                   # Business logic services
 │   └── utils/                      # Helper utilities
 ```
@@ -175,12 +175,44 @@ export async function handleGetCampaignDelivery(
 }
 ```
 
-Then register in `src/mcp-server/transports/http-transport.ts`:
-1. Import tool, handler, and schema
-2. Add to `tools/list` response array
-3. Add case to `tools/call` handler switch statement with Zod validation
+Then register in `src/mcp-server/tools/index.ts`:
+1. Import the tool definition object at the top of the file
+2. Add it to the `allTools` array
 
-**Tool Handler Pattern**: The transport layer wraps all tool calls in try/catch blocks. Tool handlers should focus on business logic and let errors propagate up to be caught and formatted by the transport layer.
+`registerToolsFromDefinitions()` in `src/mcp-server/server.ts` picks up `allTools` automatically — no switch statements or transport changes needed.
+
+**Tool Handler Pattern**: `registerToolsFromDefinitions()` wraps all tool calls in try/catch blocks. Tool handlers should focus on business logic and let errors propagate up to be caught and formatted by the factory.
+
+### Session Service Pattern
+
+Each server uses per-session service instances to hold authenticated API clients and request state. This pattern allows multiple concurrent sessions (different users/API keys) on a single server process.
+
+**Key components (all in `src/services/session-services.ts`):**
+
+```typescript
+// 1. SessionServiceStore — typed map from sessionId → SessionServices
+//    Exported from @cesteral/shared:
+import { SessionServiceStore } from "@cesteral/shared";
+export const sessionServiceStore = new SessionServiceStore<SessionServices>();
+
+// 2. createSessionServices() — called when a new session connects
+export async function createSessionServices(
+  sessionId: string,
+  authAdapter: GoogleAuthAdapter  // or platform-specific adapter
+): Promise<SessionServices> { ... }
+
+// 3. resolveSessionServices() — called inside every tool handler
+import { resolveSessionServices } from "../tools/utils/resolve-session.js";
+export async function handleMyTool(params, _extra, sdkContext) {
+  const { myApiService } = resolveSessionServices(sdkContext);
+  // use myApiService...
+}
+```
+
+**Session lifecycle:**
+- Created: `createSessionServices()` called in the transport layer when a client connects with valid credentials
+- Available: tool handlers retrieve services via `resolveSessionServices(sdkContext)`
+- Cleaned up: `sessionServiceStore.delete(sessionId)` on transport close or session timeout
 
 ### Dynamic Schema Pattern (DV360 MCP)
 
