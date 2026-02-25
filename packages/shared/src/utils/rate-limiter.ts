@@ -181,3 +181,22 @@ export class RateLimiter {
     this.compiledPatterns.clear();
   }
 }
+
+/**
+ * Create a pre-configured rate limiter for a named platform.
+ *
+ * @param platformName Short platform identifier (e.g., "bidmanager", "dv360")
+ * @param requestsPerMinute Sliding-window request cap
+ * @returns Configured RateLimiter instance ready for use
+ *
+ * @example
+ *   export const rateLimiter = createPlatformRateLimiter("bidmanager", 100);
+ */
+export function createPlatformRateLimiter(
+  platformName: string,
+  requestsPerMinute: number
+): RateLimiter {
+  const limiter = new RateLimiter();
+  limiter.configure(`${platformName}:*`, requestsPerMinute, 60_000);
+  return limiter;
+}

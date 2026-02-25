@@ -8,6 +8,7 @@ export * from "./metrics.js";
 export * from "./tool-handler-factory.js";
 export * from "./rate-limiter.js";
 export * from "./session-store.js";
+export * from "./session-resolver.js";
 export * from "./prompt-handler-factory.js";
 export * from "./resource-handler-factory.js";
 export * from "./zod-helpers.js";
