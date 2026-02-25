@@ -314,6 +314,28 @@ export const createCustomBiddingAlgorithmTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: CreateCustomBiddingAlgorithmInputSchema,
   outputSchema: CreateCustomBiddingAlgorithmOutputSchema,
+  inputExamples: [
+    {
+      label: "Create a script-based algorithm for an advertiser",
+      input: {
+        displayName: "Custom CPM Optimizer Q1 2025",
+        algorithmType: "SCRIPT_BASED",
+        ownerType: "advertiser",
+        ownerId: "1234567",
+        initialScript: "// Custom bidding script\nfunction bid(request) {\n  return request.floorPrice * 1.2;\n}",
+      },
+    },
+    {
+      label: "Create a partner-owned script-based algorithm shared with advertisers",
+      input: {
+        displayName: "Partner-Level Bid Optimizer",
+        algorithmType: "SCRIPT_BASED",
+        ownerType: "partner",
+        ownerId: "9876543",
+        sharedAdvertiserIds: ["1234567", "2345678"],
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,

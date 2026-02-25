@@ -119,6 +119,38 @@ export const deleteAssignedTargetingTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: DeleteAssignedTargetingInputSchema,
   outputSchema: DeleteAssignedTargetingOutputSchema,
+  inputExamples: [
+    {
+      label: "Delete geo targeting from a line item",
+      input: {
+        parentType: "lineItem",
+        advertiserId: "1234567",
+        lineItemId: "5678901",
+        targetingType: "TARGETING_TYPE_GEO_REGION",
+        assignedTargetingOptionId: "lineItems-5678901-geoRegion-123456",
+      },
+    },
+    {
+      label: "Delete channel exclusion from an insertion order",
+      input: {
+        parentType: "insertionOrder",
+        advertiserId: "1234567",
+        insertionOrderId: "4445551",
+        targetingType: "TARGETING_TYPE_CHANNEL",
+        assignedTargetingOptionId: "insertionOrders-4445551-channel-789012",
+      },
+    },
+    {
+      label: "Delete keyword targeting from an ad group",
+      input: {
+        parentType: "adGroup",
+        advertiserId: "1234567",
+        adGroupId: "3334441",
+        targetingType: "TARGETING_TYPE_KEYWORD",
+        assignedTargetingOptionId: "adGroups-3334441-keyword-654321",
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,

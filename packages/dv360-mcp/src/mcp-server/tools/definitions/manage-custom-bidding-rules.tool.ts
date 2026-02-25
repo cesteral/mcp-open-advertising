@@ -284,6 +284,30 @@ export const manageCustomBiddingRulesTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: ManageCustomBiddingRulesInputSchema,
   outputSchema: ManageCustomBiddingRulesOutputSchema,
+  inputExamples: [
+    {
+      label: "Upload new rules to an algorithm",
+      input: {
+        customBiddingAlgorithmId: "1122334455",
+        action: "upload",
+        rulesContent: '{"rules": [{"condition": {"impressionCount": {"min": 1000}}, "bid": {"fixedBid": {"bidAmountMicros": "5000000"}}}]}',
+      },
+    },
+    {
+      label: "List all rules for an algorithm",
+      input: {
+        customBiddingAlgorithmId: "1122334455",
+        action: "list",
+      },
+    },
+    {
+      label: "Get the currently active rules",
+      input: {
+        customBiddingAlgorithmId: "1122334455",
+        action: "getActive",
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,

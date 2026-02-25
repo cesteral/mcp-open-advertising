@@ -110,6 +110,32 @@ export const getEntityTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: GetEntityInputSchema,
   outputSchema: GetEntityOutputSchema,
+  inputExamples: [
+    {
+      label: "Get a line item by ID",
+      input: {
+        entityType: "lineItem",
+        advertiserId: "1234567",
+        lineItemId: "5678901",
+      },
+    },
+    {
+      label: "Get an insertion order by ID",
+      input: {
+        entityType: "insertionOrder",
+        advertiserId: "1234567",
+        insertionOrderId: "4445551",
+      },
+    },
+    {
+      label: "Get a campaign by ID",
+      input: {
+        entityType: "campaign",
+        advertiserId: "1234567",
+        campaignId: "9876543",
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,

@@ -155,6 +155,33 @@ export const listEntitiesTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "List all campaigns for an advertiser",
+      input: {
+        entityType: "campaign",
+        advertiserId: "adv123abc",
+        pageSize: 50,
+      },
+    },
+    {
+      label: "List ad groups for a specific campaign",
+      input: {
+        entityType: "adGroup",
+        advertiserId: "adv123abc",
+        campaignId: "camp456def",
+        pageSize: 25,
+      },
+    },
+    {
+      label: "List advertisers with pagination",
+      input: {
+        entityType: "advertiser",
+        pageSize: 20,
+        pageToken: "100",
+      },
+    },
+  ],
   logic: listEntitiesLogic,
   responseFormatter: listEntitiesResponseFormatter,
 };

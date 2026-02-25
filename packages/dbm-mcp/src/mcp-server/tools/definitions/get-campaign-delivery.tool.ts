@@ -137,6 +137,35 @@ export const getCampaignDeliveryTool: ToolDefinition<
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Fetch last month's delivery for a campaign",
+      input: {
+        advertiserId: "1234567",
+        campaignId: "9876543",
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+      },
+    },
+    {
+      label: "Fetch delivery for a short campaign burst",
+      input: {
+        advertiserId: "7654321",
+        campaignId: "1122334",
+        startDate: "2026-02-10",
+        endDate: "2026-02-17",
+      },
+    },
+    {
+      label: "Fetch Q4 delivery for a large advertiser campaign",
+      input: {
+        advertiserId: "9988776",
+        campaignId: "5544332",
+        startDate: "2025-10-01",
+        endDate: "2025-12-31",
+      },
+    },
+  ],
   logic: getCampaignDeliveryLogic,
   responseFormatter: getCampaignDeliveryResponseFormatter,
 };

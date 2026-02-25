@@ -68,6 +68,12 @@ export const listAccountsTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "List all accessible accounts",
+      input: {},
+    },
+  ],
   logic: listAccountsLogic,
   responseFormatter: listAccountsResponseFormatter,
 };

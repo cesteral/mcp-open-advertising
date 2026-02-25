@@ -186,6 +186,40 @@ export const getPacingStatusTool: ToolDefinition<
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Check pacing for a standard monthly campaign",
+      input: {
+        advertiserId: "1234567",
+        campaignId: "9876543",
+        budgetTotal: 50000,
+        flightStartDate: "2026-02-01",
+        flightEndDate: "2026-02-28",
+        currency: "USD",
+      },
+    },
+    {
+      label: "Check pacing for a short-burst campaign in GBP",
+      input: {
+        advertiserId: "7654321",
+        campaignId: "1122334",
+        budgetTotal: 10000,
+        flightStartDate: "2026-02-15",
+        flightEndDate: "2026-02-21",
+        currency: "GBP",
+      },
+    },
+    {
+      label: "Check pacing for a Q1 brand awareness campaign (default USD)",
+      input: {
+        advertiserId: "9988776",
+        campaignId: "5544332",
+        budgetTotal: 250000,
+        flightStartDate: "2026-01-01",
+        flightEndDate: "2026-03-31",
+      },
+    },
+  ],
   logic: getPacingStatusLogic,
   responseFormatter: getPacingStatusResponseFormatter,
 };

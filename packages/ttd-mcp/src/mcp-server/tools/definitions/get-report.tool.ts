@@ -114,6 +114,37 @@ export const getReportTool = {
     openWorldHint: false,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Campaign performance report for last 7 days",
+      input: {
+        reportName: "Campaign Performance - Last 7 Days",
+        dateRange: "Last7Days",
+        dimensions: ["AdvertiserId", "CampaignId", "CampaignName"],
+        metrics: ["Impressions", "Clicks", "TotalCost", "CTR", "CPM"],
+        advertiserIds: ["adv123abc"],
+      },
+    },
+    {
+      label: "Conversion report for last 30 days",
+      input: {
+        reportName: "Conversion Report - Last 30 Days",
+        dateRange: "Last30Days",
+        dimensions: ["AdvertiserId", "CampaignId", "AdGroupId", "ConversionTrackerName"],
+        metrics: ["Impressions", "Clicks", "TotalConversions", "TotalCost", "CPA"],
+        advertiserIds: ["adv123abc", "adv456def"],
+      },
+    },
+    {
+      label: "Month-to-date ad group pacing report",
+      input: {
+        reportName: "Ad Group Pacing MTD",
+        dateRange: "MonthToDate",
+        dimensions: ["CampaignId", "AdGroupId", "AdGroupName"],
+        metrics: ["Impressions", "TotalCost", "AdvertiserCost"],
+      },
+    },
+  ],
   logic: getReportLogic,
   responseFormatter: getReportResponseFormatter,
 };

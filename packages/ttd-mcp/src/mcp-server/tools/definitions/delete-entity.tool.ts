@@ -102,6 +102,27 @@ export const deleteEntityTool = {
     destructiveHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Delete an ad",
+      input: {
+        entityType: "ad",
+        entityId: "ad111xyz",
+        advertiserId: "adv123abc",
+        adGroupId: "adg111aaa",
+        reason: "Replaced by updated creative version",
+      },
+    },
+    {
+      label: "Delete a creative",
+      input: {
+        entityType: "creative",
+        entityId: "cre001xyz",
+        advertiserId: "adv123abc",
+        reason: "Creative no longer needed after campaign end",
+      },
+    },
+  ],
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
 };

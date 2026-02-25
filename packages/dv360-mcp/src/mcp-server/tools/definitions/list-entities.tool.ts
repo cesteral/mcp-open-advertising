@@ -173,6 +173,34 @@ export const listEntitiesTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: ListEntitiesInputSchema,
   outputSchema: ListEntitiesOutputSchema,
+  inputExamples: [
+    {
+      label: "List all active line items under an advertiser",
+      input: {
+        entityType: "lineItem",
+        advertiserId: "1234567",
+        filter: "entityStatus=ENTITY_STATUS_ACTIVE",
+        pageSize: 50,
+      },
+    },
+    {
+      label: "List insertion orders for a specific campaign",
+      input: {
+        entityType: "insertionOrder",
+        advertiserId: "1234567",
+        campaignId: "9876543",
+        pageSize: 20,
+      },
+    },
+    {
+      label: "List all campaigns for an advertiser",
+      input: {
+        entityType: "campaign",
+        advertiserId: "1234567",
+        pageSize: 100,
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,

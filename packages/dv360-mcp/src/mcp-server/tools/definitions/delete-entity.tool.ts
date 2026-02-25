@@ -76,6 +76,34 @@ export const deleteEntityTool = {
   description: "Delete a DV360 entity",
   inputSchema: DeleteEntityInputSchema,
   outputSchema: DeleteEntityOutputSchema,
+  inputExamples: [
+    {
+      label: "Delete a line item",
+      input: {
+        entityType: "lineItem",
+        advertiserId: "1234567",
+        lineItemId: "5678901",
+        reason: "Removing unused line item from paused campaign",
+      },
+    },
+    {
+      label: "Delete a creative",
+      input: {
+        entityType: "creative",
+        advertiserId: "1234567",
+        creativeId: "8901234",
+        reason: "Removing expired creative asset",
+      },
+    },
+    {
+      label: "Delete an insertion order",
+      input: {
+        entityType: "insertionOrder",
+        advertiserId: "1234567",
+        insertionOrderId: "4445551",
+      },
+    },
+  ],
   annotations: { readOnlyHint: false, openWorldHint: false, idempotentHint: false },
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,

@@ -138,6 +138,20 @@ export const graphqlBulkJobTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Check status of a bulk query job",
+      input: {
+        jobId: "bulkjob-abc123def456",
+      },
+    },
+    {
+      label: "Poll a bulk mutation job for completion",
+      input: {
+        jobId: "bulkjob-xyz789uvw012",
+      },
+    },
+  ],
   logic: graphqlBulkJobLogic,
   responseFormatter: graphqlBulkJobResponseFormatter,
 };

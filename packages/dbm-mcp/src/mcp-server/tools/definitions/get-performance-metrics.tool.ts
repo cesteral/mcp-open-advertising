@@ -148,6 +148,35 @@ export const getPerformanceMetricsTool: ToolDefinition<
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Calculate KPIs for a campaign over the past month",
+      input: {
+        advertiserId: "1234567",
+        campaignId: "9876543",
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+      },
+    },
+    {
+      label: "Evaluate performance over a short campaign flight",
+      input: {
+        advertiserId: "7654321",
+        campaignId: "1122334",
+        startDate: "2026-02-01",
+        endDate: "2026-02-14",
+      },
+    },
+    {
+      label: "Annual performance review for a large campaign",
+      input: {
+        advertiserId: "9988776",
+        campaignId: "5544332",
+        startDate: "2025-01-01",
+        endDate: "2025-12-31",
+      },
+    },
+  ],
   logic: getPerformanceMetricsLogic,
   responseFormatter: getPerformanceMetricsResponseFormatter,
 };

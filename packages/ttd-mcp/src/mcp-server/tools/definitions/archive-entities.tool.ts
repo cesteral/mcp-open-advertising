@@ -94,6 +94,22 @@ export const archiveEntitiesTool = {
     destructiveHint: true,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Archive multiple ad groups",
+      input: {
+        entityType: "adGroup",
+        entityIds: ["adg111aaa", "adg222bbb", "adg333ccc"],
+      },
+    },
+    {
+      label: "Archive a finished campaign",
+      input: {
+        entityType: "campaign",
+        entityIds: ["camp456def"],
+      },
+    },
+  ],
   logic: archiveEntitiesLogic,
   responseFormatter: archiveEntitiesResponseFormatter,
 };

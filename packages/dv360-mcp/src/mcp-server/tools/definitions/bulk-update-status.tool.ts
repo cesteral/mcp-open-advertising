@@ -250,6 +250,38 @@ export const bulkUpdateStatusTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: BulkUpdateStatusInputSchema,
   outputSchema: BulkUpdateStatusOutputSchema,
+  inputExamples: [
+    {
+      label: "Pause multiple line items",
+      input: {
+        entityType: "lineItem",
+        advertiserId: "1234567",
+        entityIds: ["5678901", "5678902", "5678903"],
+        status: "ENTITY_STATUS_PAUSED",
+        reason: "Budget review — pausing underperforming line items",
+      },
+    },
+    {
+      label: "Activate insertion orders",
+      input: {
+        entityType: "insertionOrder",
+        advertiserId: "1234567",
+        entityIds: ["4445551", "4445552"],
+        status: "ENTITY_STATUS_ACTIVE",
+        reason: "Campaign launch — activating approved IOs",
+      },
+    },
+    {
+      label: "Archive a campaign",
+      input: {
+        entityType: "campaign",
+        advertiserId: "1234567",
+        entityIds: ["9876543"],
+        status: "ENTITY_STATUS_ARCHIVED",
+        reason: "End of flight — archiving completed campaign",
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,

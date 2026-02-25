@@ -121,6 +121,55 @@ export const bulkCreateEntitiesTool = {
     destructiveHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Create 2 campaigns in one call",
+      input: {
+        entityType: "campaign",
+        advertiserId: "adv123abc",
+        items: [
+          {
+            CampaignName: "Q1 Brand Awareness",
+            Budget: { Amount: 50000, CurrencyCode: "USD" },
+            StartDate: "2025-01-01T00:00:00Z",
+            EndDate: "2025-03-31T23:59:59Z",
+            PacingMode: "PaceEvenly",
+          },
+          {
+            CampaignName: "Q1 Retargeting",
+            Budget: { Amount: 20000, CurrencyCode: "USD" },
+            StartDate: "2025-01-01T00:00:00Z",
+            EndDate: "2025-03-31T23:59:59Z",
+            PacingMode: "PaceAhead",
+          },
+        ],
+      },
+    },
+    {
+      label: "Create 2 ad groups under a campaign",
+      input: {
+        entityType: "adGroup",
+        advertiserId: "adv123abc",
+        campaignId: "camp456def",
+        items: [
+          {
+            AdGroupName: "Prospecting - Display",
+            RTBAttributes: {
+              BudgetSettings: { DailyBudget: { Amount: 500, CurrencyCode: "USD" } },
+              BaseBidCPM: { Amount: 3.5, CurrencyCode: "USD" },
+            },
+          },
+          {
+            AdGroupName: "Prospecting - Video",
+            RTBAttributes: {
+              BudgetSettings: { DailyBudget: { Amount: 1000, CurrencyCode: "USD" } },
+              BaseBidCPM: { Amount: 8.0, CurrencyCode: "USD" },
+            },
+          },
+        ],
+      },
+    },
+  ],
   logic: bulkCreateEntitiesLogic,
   responseFormatter: bulkCreateEntitiesResponseFormatter,
 };

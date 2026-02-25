@@ -204,6 +204,39 @@ export const validateTargetingConfigTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: ValidateTargetingConfigInputSchema,
   outputSchema: ValidateTargetingConfigOutputSchema,
+  inputExamples: [
+    {
+      label: "Validate targeting for multiple line items",
+      input: {
+        advertiserId: "1234567",
+        lineItemIds: ["5678901", "5678902"],
+        targetingTypesToCheck: [
+          "TARGETING_TYPE_GEO_REGION",
+          "TARGETING_TYPE_CHANNEL",
+          "TARGETING_TYPE_DIGITAL_CONTENT_LABEL_EXCLUSION",
+        ],
+      },
+    },
+    {
+      label: "Audit full targeting config across IO and line items",
+      input: {
+        advertiserId: "1234567",
+        insertionOrderIds: ["4445551"],
+        lineItemIds: ["5678901", "5678902", "5678903"],
+      },
+    },
+    {
+      label: "Check keyword and brand-safety targeting on an ad group",
+      input: {
+        advertiserId: "1234567",
+        adGroupIds: ["3334441"],
+        targetingTypesToCheck: [
+          "TARGETING_TYPE_KEYWORD",
+          "TARGETING_TYPE_SENSITIVE_CATEGORY_EXCLUSION",
+        ],
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,

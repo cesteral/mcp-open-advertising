@@ -109,6 +109,31 @@ export const graphqlQueryBulkTool = {
     openWorldHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Bulk query details for multiple advertisers",
+      input: {
+        query: "query GetAdvertiser($id: ID!) { advertiser(id: $id) { id name status totalCampaignChannelCount } }",
+        variables: [
+          { id: "adv123abc" },
+          { id: "adv456def" },
+          { id: "adv789ghi" },
+        ],
+        operationName: "GetAdvertiser",
+      },
+    },
+    {
+      label: "Bulk query campaign budget and pacing for multiple campaigns",
+      input: {
+        query: "query GetCampaign($id: ID!) { campaign(id: $id) { id name budget { amount currencyCode } pacingMode availability } }",
+        variables: [
+          { id: "camp456def" },
+          { id: "camp789ghi" },
+          { id: "camp012jkl" },
+        ],
+      },
+    },
+  ],
   logic: graphqlQueryBulkLogic,
   responseFormatter: graphqlQueryBulkResponseFormatter,
 };

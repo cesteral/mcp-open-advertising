@@ -79,6 +79,20 @@ export const graphqlCancelBulkJobTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Cancel a running bulk query job",
+      input: {
+        jobId: "bulkjob-abc123def456",
+      },
+    },
+    {
+      label: "Cancel a queued bulk query job before it starts",
+      input: {
+        jobId: "bulkjob-xyz789uvw012",
+      },
+    },
+  ],
   logic: graphqlCancelBulkJobLogic,
   responseFormatter: graphqlCancelBulkJobResponseFormatter,
 };

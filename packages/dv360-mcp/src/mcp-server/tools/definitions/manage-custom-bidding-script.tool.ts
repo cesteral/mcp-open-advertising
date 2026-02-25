@@ -290,6 +290,31 @@ export const manageCustomBiddingScriptTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: ManageCustomBiddingScriptInputSchema,
   outputSchema: ManageCustomBiddingScriptOutputSchema,
+  inputExamples: [
+    {
+      label: "Upload a new script to an algorithm",
+      input: {
+        customBiddingAlgorithmId: "1122334455",
+        action: "upload",
+        scriptContent: "// Custom bidding script v2\nfunction bid(request) {\n  const baseBid = request.floorPrice;\n  const multiplier = request.userList ? 1.5 : 1.0;\n  return baseBid * multiplier;\n}",
+      },
+    },
+    {
+      label: "List all scripts for an algorithm",
+      input: {
+        customBiddingAlgorithmId: "1122334455",
+        action: "list",
+      },
+    },
+    {
+      label: "Get a specific script by ID",
+      input: {
+        customBiddingAlgorithmId: "1122334455",
+        action: "get",
+        customBiddingScriptId: "9988776655",
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,

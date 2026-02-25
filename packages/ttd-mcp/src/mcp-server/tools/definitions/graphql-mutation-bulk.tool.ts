@@ -130,6 +130,30 @@ export const graphqlMutationBulkTool = {
     idempotentHint: false,
     destructiveHint: true,
   },
+  inputExamples: [
+    {
+      label: "Batch update campaign names via bulk mutation",
+      input: {
+        mutation: "mutation UpdateCampaign($input: UpdateCampaignInput!) { updateCampaign(input: $input) { campaign { campaignId name } } }",
+        inputs: [
+          { campaignId: "camp456def", name: "Q1 2025 Brand Awareness - Updated" },
+          { campaignId: "camp789ghi", name: "Q1 2025 Retargeting - Updated" },
+          { campaignId: "camp012jkl", name: "Q1 2025 Prospecting - Updated" },
+        ],
+        operationName: "UpdateCampaign",
+      },
+    },
+    {
+      label: "Batch update ad group bids via bulk mutation",
+      input: {
+        mutation: "mutation UpdateAdGroup($input: UpdateAdGroupInput!) { updateAdGroup(input: $input) { adGroup { adGroupId baseBidCPM { amount } } } }",
+        inputs: [
+          { adGroupId: "adg111aaa", baseBidCPM: { amount: 4.5, currencyCode: "USD" } },
+          { adGroupId: "adg222bbb", baseBidCPM: { amount: 6.0, currencyCode: "USD" } },
+        ],
+      },
+    },
+  ],
   logic: graphqlMutationBulkLogic,
   responseFormatter: graphqlMutationBulkResponseFormatter,
 };

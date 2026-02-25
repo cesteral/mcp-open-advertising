@@ -101,6 +101,32 @@ export const bulkUpdateStatusTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Pause multiple ad groups",
+      input: {
+        entityType: "adGroup",
+        entityIds: ["adg111aaa", "adg222bbb", "adg333ccc"],
+        status: "Paused",
+      },
+    },
+    {
+      label: "Resume (activate) multiple campaigns",
+      input: {
+        entityType: "campaign",
+        entityIds: ["camp456def", "camp789ghi"],
+        status: "Available",
+      },
+    },
+    {
+      label: "Archive a set of creatives",
+      input: {
+        entityType: "creative",
+        entityIds: ["cre001xyz", "cre002xyz"],
+        status: "Archived",
+      },
+    },
+  ],
   logic: bulkUpdateStatusLogic,
   responseFormatter: bulkUpdateStatusResponseFormatter,
 };

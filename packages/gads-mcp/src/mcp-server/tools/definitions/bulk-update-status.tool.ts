@@ -118,6 +118,35 @@ export const bulkUpdateStatusTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Pause a single campaign",
+      input: {
+        entityType: "campaign",
+        customerId: "1234567890",
+        entityIds: ["9876543210"],
+        status: "PAUSED",
+      },
+    },
+    {
+      label: "Pause multiple ad groups",
+      input: {
+        entityType: "adGroup",
+        customerId: "1234567890",
+        entityIds: ["1111111111", "2222222222", "3333333333"],
+        status: "PAUSED",
+      },
+    },
+    {
+      label: "Re-enable paused ads",
+      input: {
+        entityType: "ad",
+        customerId: "1234567890",
+        entityIds: ["5555555555~7777777777", "5555555555~8888888888"],
+        status: "ENABLED",
+      },
+    },
+  ],
   logic: bulkUpdateStatusLogic,
   responseFormatter: bulkUpdateStatusResponseFormatter,
 };

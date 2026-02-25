@@ -109,6 +109,28 @@ export const getAssignedTargetingTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: GetAssignedTargetingInputSchema,
   outputSchema: GetAssignedTargetingOutputSchema,
+  inputExamples: [
+    {
+      label: "Get a specific geo targeting option on a line item",
+      input: {
+        parentType: "lineItem",
+        advertiserId: "1234567",
+        lineItemId: "5678901",
+        targetingType: "TARGETING_TYPE_GEO_REGION",
+        assignedTargetingOptionId: "lineItems-5678901-geoRegion-123456",
+      },
+    },
+    {
+      label: "Get a channel targeting option on an insertion order",
+      input: {
+        parentType: "insertionOrder",
+        advertiserId: "1234567",
+        insertionOrderId: "4445551",
+        targetingType: "TARGETING_TYPE_CHANNEL",
+        assignedTargetingOptionId: "insertionOrders-4445551-channel-789012",
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,

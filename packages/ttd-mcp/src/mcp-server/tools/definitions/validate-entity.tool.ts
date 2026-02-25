@@ -103,6 +103,40 @@ export const validateEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Validate a new campaign payload before creating",
+      input: {
+        entityType: "campaign",
+        mode: "create",
+        data: {
+          AdvertiserId: "adv123abc",
+          CampaignName: "Q1 2025 Brand Awareness",
+          Budget: { Amount: 50000, CurrencyCode: "USD" },
+          StartDate: "2025-01-01T00:00:00Z",
+          EndDate: "2025-03-31T23:59:59Z",
+          PacingMode: "PaceEvenly",
+        },
+      },
+    },
+    {
+      label: "Validate an ad group update payload",
+      input: {
+        entityType: "adGroup",
+        mode: "update",
+        entityId: "adg111aaa",
+        data: {
+          AdvertiserId: "adv123abc",
+          CampaignId: "camp456def",
+          AdGroupName: "Prospecting - Display",
+          RTBAttributes: {
+            BudgetSettings: { DailyBudget: { Amount: 750, CurrencyCode: "USD" } },
+            BaseBidCPM: { Amount: 5.0, CurrencyCode: "USD" },
+          },
+        },
+      },
+    },
+  ],
   logic: validateEntityLogic,
   responseFormatter: validateEntityResponseFormatter,
 };

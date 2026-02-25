@@ -142,6 +142,21 @@ export const downloadReportTool = {
     openWorldHint: true,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Download report CSV with default row limit",
+      input: {
+        downloadUrl: "https://reports.thetradedesk.com/results/abc123def456/report.csv",
+      },
+    },
+    {
+      label: "Download report with custom row limit",
+      input: {
+        downloadUrl: "https://reports.thetradedesk.com/results/xyz789uvw012/report.csv",
+        maxRows: 5000,
+      },
+    },
+  ],
   logic: downloadReportLogic,
   responseFormatter: downloadReportResponseFormatter,
 };

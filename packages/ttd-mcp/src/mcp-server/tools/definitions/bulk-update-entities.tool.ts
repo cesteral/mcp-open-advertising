@@ -128,6 +128,67 @@ export const bulkUpdateEntitiesTool = {
     openWorldHint: false,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Update 2 ad groups with new bid CPMs",
+      input: {
+        entityType: "adGroup",
+        advertiserId: "adv123abc",
+        campaignId: "camp456def",
+        items: [
+          {
+            entityId: "adg111aaa",
+            data: {
+              AdGroupName: "Prospecting - Display",
+              RTBAttributes: {
+                BudgetSettings: { DailyBudget: { Amount: 600, CurrencyCode: "USD" } },
+                BaseBidCPM: { Amount: 4.0, CurrencyCode: "USD" },
+              },
+            },
+          },
+          {
+            entityId: "adg222bbb",
+            data: {
+              AdGroupName: "Prospecting - Video",
+              RTBAttributes: {
+                BudgetSettings: { DailyBudget: { Amount: 1200, CurrencyCode: "USD" } },
+                BaseBidCPM: { Amount: 9.5, CurrencyCode: "USD" },
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
+      label: "Update 2 campaigns with new budgets",
+      input: {
+        entityType: "campaign",
+        advertiserId: "adv123abc",
+        items: [
+          {
+            entityId: "camp456def",
+            data: {
+              CampaignName: "Q1 Brand Awareness",
+              Budget: { Amount: 75000, CurrencyCode: "USD" },
+              StartDate: "2025-01-01T00:00:00Z",
+              EndDate: "2025-03-31T23:59:59Z",
+              PacingMode: "PaceEvenly",
+            },
+          },
+          {
+            entityId: "camp789ghi",
+            data: {
+              CampaignName: "Q1 Retargeting",
+              Budget: { Amount: 30000, CurrencyCode: "USD" },
+              StartDate: "2025-01-01T00:00:00Z",
+              EndDate: "2025-03-31T23:59:59Z",
+              PacingMode: "PaceAhead",
+            },
+          },
+        ],
+      },
+    },
+  ],
   logic: bulkUpdateEntitiesLogic,
   responseFormatter: bulkUpdateEntitiesResponseFormatter,
 };

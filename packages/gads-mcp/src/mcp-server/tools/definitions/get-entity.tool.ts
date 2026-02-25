@@ -88,6 +88,32 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Get a campaign by ID",
+      input: {
+        entityType: "campaign",
+        customerId: "1234567890",
+        entityId: "9876543210",
+      },
+    },
+    {
+      label: "Get an ad group by ID",
+      input: {
+        entityType: "adGroup",
+        customerId: "1234567890",
+        entityId: "1122334455",
+      },
+    },
+    {
+      label: "Get a keyword by criterion ID",
+      input: {
+        entityType: "keyword",
+        customerId: "1234567890",
+        entityId: "6677889900",
+      },
+    },
+  ],
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,
 };

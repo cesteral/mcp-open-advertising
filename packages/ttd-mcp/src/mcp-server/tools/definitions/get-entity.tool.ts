@@ -91,6 +91,32 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Get a campaign by ID",
+      input: {
+        entityType: "campaign",
+        entityId: "camp456def",
+        advertiserId: "adv123abc",
+      },
+    },
+    {
+      label: "Get an ad group by ID",
+      input: {
+        entityType: "adGroup",
+        entityId: "adg111aaa",
+        advertiserId: "adv123abc",
+        campaignId: "camp456def",
+      },
+    },
+    {
+      label: "Get an advertiser by ID",
+      input: {
+        entityType: "advertiser",
+        entityId: "adv123abc",
+      },
+    },
+  ],
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,
 };

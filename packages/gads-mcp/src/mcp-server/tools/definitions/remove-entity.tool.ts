@@ -97,6 +97,32 @@ export const removeEntityTool = {
     destructiveHint: true,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Remove a keyword",
+      input: {
+        entityType: "keyword",
+        customerId: "1234567890",
+        entityId: "5555555555~6666666666",
+      },
+    },
+    {
+      label: "Remove an ad",
+      input: {
+        entityType: "ad",
+        customerId: "1234567890",
+        entityId: "7777777777~8888888888",
+      },
+    },
+    {
+      label: "Remove a campaign budget",
+      input: {
+        entityType: "campaignBudget",
+        customerId: "1234567890",
+        entityId: "9999999999",
+      },
+    },
+  ],
   logic: removeEntityLogic,
   responseFormatter: removeEntityResponseFormatter,
 };

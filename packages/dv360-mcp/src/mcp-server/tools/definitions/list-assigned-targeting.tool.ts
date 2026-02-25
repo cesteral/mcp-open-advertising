@@ -135,6 +135,37 @@ export const listAssignedTargetingTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: ListAssignedTargetingInputSchema,
   outputSchema: ListAssignedTargetingOutputSchema,
+  inputExamples: [
+    {
+      label: "List all geo targeting options on a line item",
+      input: {
+        parentType: "lineItem",
+        advertiserId: "1234567",
+        lineItemId: "5678901",
+        targetingType: "TARGETING_TYPE_GEO_REGION",
+        pageSize: 50,
+      },
+    },
+    {
+      label: "List channel targeting on an insertion order",
+      input: {
+        parentType: "insertionOrder",
+        advertiserId: "1234567",
+        insertionOrderId: "4445551",
+        targetingType: "TARGETING_TYPE_CHANNEL",
+      },
+    },
+    {
+      label: "List keyword targeting on an ad group",
+      input: {
+        parentType: "adGroup",
+        advertiserId: "1234567",
+        adGroupId: "3334441",
+        targetingType: "TARGETING_TYPE_KEYWORD",
+        pageSize: 100,
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,

@@ -174,6 +174,38 @@ export const getHistoricalMetricsTool: ToolDefinition<
     openWorldHint: false,
     idempotentHint: true,
   },
+  inputExamples: [
+    {
+      label: "Daily trend over the past 30 days",
+      input: {
+        advertiserId: "1234567",
+        campaignId: "9876543",
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+        granularity: "daily",
+      },
+    },
+    {
+      label: "Weekly trend over a quarter",
+      input: {
+        advertiserId: "7654321",
+        campaignId: "1122334",
+        startDate: "2025-10-01",
+        endDate: "2025-12-31",
+        granularity: "weekly",
+      },
+    },
+    {
+      label: "Monthly trend over a full year",
+      input: {
+        advertiserId: "9988776",
+        campaignId: "5544332",
+        startDate: "2025-01-01",
+        endDate: "2025-12-31",
+        granularity: "monthly",
+      },
+    },
+  ],
   logic: getHistoricalMetricsLogic,
   responseFormatter: getHistoricalMetricsResponseFormatter,
 };

@@ -217,6 +217,23 @@ export const listCustomBiddingAlgorithmsTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: ListCustomBiddingAlgorithmsInputSchema,
   outputSchema: ListCustomBiddingAlgorithmsOutputSchema,
+  inputExamples: [
+    {
+      label: "List all algorithms for an advertiser",
+      input: {
+        advertiserId: "1234567",
+        pageSize: 50,
+      },
+    },
+    {
+      label: "List active script-based algorithms for a partner",
+      input: {
+        partnerId: "9876543",
+        filter: 'entityStatus="ENTITY_STATUS_ACTIVE" AND customBiddingAlgorithmType="SCRIPT_BASED"',
+        pageSize: 100,
+      },
+    },
+  ],
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
