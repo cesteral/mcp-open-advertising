@@ -10,6 +10,8 @@ import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentation
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
+import { TraceExporter as GcpTraceExporter } from "@google-cloud/opentelemetry-cloud-trace-exporter";
+import { MetricExporter as GcpMetricExporter } from "@google-cloud/opentelemetry-cloud-monitoring-exporter";
 import { resourceFromAttributes } from "@opentelemetry/resources";
 import {
   ATTR_SERVICE_NAME,
@@ -35,6 +37,7 @@ export interface OtelConfig {
   otelExporterOtlpTracesEndpoint?: string;
   otelExporterOtlpMetricsEndpoint?: string;
   otelSamplingRatio?: number;
+  gcpExporter?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -42,6 +45,45 @@ export interface OtelConfig {
 // ---------------------------------------------------------------------------
 
 let sdk: NodeSDK | null = null;
+
+/**
+ * Select trace exporter and metric reader based on environment.
+ * - Cloud Run (K_SERVICE set) or gcpExporter:true → GCP-native exporters (workload identity auth)
+ * - OTLP endpoint env vars set → OTLP HTTP exporters (local dev / custom collector)
+ * - Neither → no-op (undefined)
+ */
+export function buildExporters(config: OtelConfig): {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  traceExporter: any;
+  metricReader: PeriodicExportingMetricReader | undefined;
+} {
+  const useGcp = config.gcpExporter ?? !!process.env.K_SERVICE;
+
+  if (useGcp) {
+    return {
+      traceExporter: new GcpTraceExporter(),
+      metricReader: new PeriodicExportingMetricReader({
+        exporter: new GcpMetricExporter(),
+        exportIntervalMillis: 60_000,
+      }),
+    };
+  }
+
+  const traceExporter = config.otelExporterOtlpTracesEndpoint
+    ? new OTLPTraceExporter({ url: config.otelExporterOtlpTracesEndpoint })
+    : undefined;
+
+  const metricReader = config.otelExporterOtlpMetricsEndpoint
+    ? new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({
+          url: config.otelExporterOtlpMetricsEndpoint,
+        }),
+        exportIntervalMillis: 60_000,
+      })
+    : undefined;
+
+  return { traceExporter, metricReader };
+}
 
 /**
  * Initialize OpenTelemetry with GCP Cloud Run detection and configurable sampling.
@@ -93,22 +135,8 @@ export function initializeOpenTelemetry(
 
     const resource = resourceFromAttributes(resourceAttrs);
 
-    // Configure trace exporter
-    const traceExporter = config.otelExporterOtlpTracesEndpoint
-      ? new OTLPTraceExporter({
-          url: config.otelExporterOtlpTracesEndpoint,
-        })
-      : undefined;
-
-    // Configure metric exporter
-    const metricReader = config.otelExporterOtlpMetricsEndpoint
-      ? new PeriodicExportingMetricReader({
-          exporter: new OTLPMetricExporter({
-            url: config.otelExporterOtlpMetricsEndpoint,
-          }),
-          exportIntervalMillis: 60_000,
-        })
-      : undefined;
+    // Configure exporters (GCP on Cloud Run, OTLP for local dev, none otherwise)
+    const { traceExporter, metricReader } = buildExporters(config);
 
     sdk = new NodeSDK({
       resource,

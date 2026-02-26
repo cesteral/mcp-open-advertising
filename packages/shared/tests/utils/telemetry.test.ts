@@ -1,6 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock OTEL dependencies — all mocks inline in factory
+vi.mock("@google-cloud/opentelemetry-cloud-trace-exporter", () => ({
+  TraceExporter: vi.fn().mockImplementation(() => ({ type: "gcp-trace" })),
+}));
+vi.mock("@google-cloud/opentelemetry-cloud-monitoring-exporter", () => ({
+  MetricExporter: vi.fn().mockImplementation(() => ({ type: "gcp-metrics" })),
+}));
 vi.mock("@opentelemetry/api", () => {
   const span = {
     setAttribute: vi.fn(),
@@ -58,6 +64,8 @@ vi.mock("@opentelemetry/semantic-conventions", () => ({
 }));
 
 import { __mockSpan, __mockTracer } from "@opentelemetry/api";
+import { TraceExporter as GcpTraceExporter } from "@google-cloud/opentelemetry-cloud-trace-exporter";
+import { MetricExporter as GcpMetricExporter } from "@google-cloud/opentelemetry-cloud-monitoring-exporter";
 
 import {
   otelLogMixin,
@@ -183,6 +191,82 @@ describe("telemetry utilities", () => {
         code: 2,
         message: "test error",
       });
+    });
+  });
+
+  describe("buildExporters", () => {
+    const originalKService = process.env.K_SERVICE;
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      delete process.env.K_SERVICE;
+    });
+
+    afterEach(() => {
+      if (originalKService !== undefined) {
+        process.env.K_SERVICE = originalKService;
+      } else {
+        delete process.env.K_SERVICE;
+      }
+    });
+
+    it("selects GCP exporters when K_SERVICE env var is set", async () => {
+      process.env.K_SERVICE = "dbm-mcp";
+
+      const { buildExporters } = await import("../../src/utils/telemetry.js");
+      const { traceExporter, metricReader } = buildExporters({
+        otelEnabled: true,
+        otelServiceName: "test",
+      });
+
+      expect(GcpTraceExporter).toHaveBeenCalledOnce();
+      expect(GcpMetricExporter).toHaveBeenCalledOnce();
+      expect(traceExporter).toBeDefined();
+      expect(metricReader).toBeDefined();
+    });
+
+    it("selects GCP exporters when gcpExporter: true is passed explicitly", async () => {
+      // K_SERVICE not set — config override
+      const { buildExporters } = await import("../../src/utils/telemetry.js");
+      const { traceExporter, metricReader } = buildExporters({
+        otelEnabled: true,
+        otelServiceName: "test",
+        gcpExporter: true,
+      });
+
+      expect(GcpTraceExporter).toHaveBeenCalledOnce();
+      expect(GcpMetricExporter).toHaveBeenCalledOnce();
+      expect(traceExporter).toBeDefined();
+      expect(metricReader).toBeDefined();
+    });
+
+    it("selects OTLP exporters when endpoints are configured and not on Cloud Run", async () => {
+      const { buildExporters } = await import("../../src/utils/telemetry.js");
+      const { traceExporter, metricReader } = buildExporters({
+        otelEnabled: true,
+        otelServiceName: "test",
+        otelExporterOtlpTracesEndpoint: "http://localhost:4318/v1/traces",
+        otelExporterOtlpMetricsEndpoint: "http://localhost:4318/v1/metrics",
+      });
+
+      const { OTLPTraceExporter } = await import("@opentelemetry/exporter-trace-otlp-http");
+      const { OTLPMetricExporter } = await import("@opentelemetry/exporter-metrics-otlp-http");
+
+      expect(OTLPTraceExporter).toHaveBeenCalledOnce();
+      expect(OTLPMetricExporter).toHaveBeenCalledOnce();
+      expect(traceExporter).toBeDefined();
+      expect(metricReader).toBeDefined();
+    });
+
+    it("returns undefined exporters when no Cloud Run and no OTLP endpoints", async () => {
+      const { buildExporters } = await import("../../src/utils/telemetry.js");
+      const { traceExporter, metricReader } = buildExporters({
+        otelEnabled: true,
+        otelServiceName: "test",
+      });
+
+      expect(traceExporter).toBeUndefined();
+      expect(metricReader).toBeUndefined();
     });
   });
 });
