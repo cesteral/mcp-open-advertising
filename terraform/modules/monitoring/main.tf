@@ -328,7 +328,7 @@ resource "google_monitoring_dashboard" "cesteral" {
               dataSets = [{
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/tool/execution/count\""
+                    filter = "metric.type=\"custom.googleapis.com/cesteral-mcp/mcp/tool/execution/count\""
                     aggregation = {
                       alignmentPeriod     = "60s"
                       perSeriesAligner    = "ALIGN_RATE"
@@ -351,11 +351,11 @@ resource "google_monitoring_dashboard" "cesteral" {
               dataSets = [{
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/tool/execution/duration_ms\""
+                    filter = "metric.type=\"custom.googleapis.com/cesteral-mcp/mcp/tool/execution/duration_ms\""
                     aggregation = {
                       alignmentPeriod     = "60s"
-                      perSeriesAligner    = "ALIGN_PERCENTILE_99"
-                      crossSeriesReducer  = "REDUCE_MAX"
+                      perSeriesAligner    = "ALIGN_DELTA"
+                      crossSeriesReducer  = "REDUCE_PERCENTILE_99"
                       groupByFields       = ["metric.labels.tool_name"]
                     }
                   }
@@ -374,7 +374,7 @@ resource "google_monitoring_dashboard" "cesteral" {
               dataSets = [{
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/session/active\""
+                    filter = "metric.type=\"custom.googleapis.com/cesteral-mcp/mcp/session/active\""
                     aggregation = {
                       alignmentPeriod    = "60s"
                       perSeriesAligner   = "ALIGN_MEAN"
@@ -396,7 +396,7 @@ resource "google_monitoring_dashboard" "cesteral" {
               dataSets = [{
                 timeSeriesQuery = {
                   timeSeriesFilter = {
-                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/auth/validation/count\""
+                    filter = "metric.type=\"custom.googleapis.com/cesteral-mcp/mcp/auth/validation/count\""
                     aggregation = {
                       alignmentPeriod     = "60s"
                       perSeriesAligner    = "ALIGN_RATE"
