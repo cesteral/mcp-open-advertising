@@ -168,6 +168,7 @@ export function initializeOpenTelemetry(
     logger.info(
       {
         serviceName: config.otelServiceName,
+        gcpExporter: !!(config.gcpExporter ?? !!process.env.K_SERVICE),
         tracesEndpoint: config.otelExporterOtlpTracesEndpoint,
         metricsEndpoint: config.otelExporterOtlpMetricsEndpoint,
         cloudRunService: kService || "local",
