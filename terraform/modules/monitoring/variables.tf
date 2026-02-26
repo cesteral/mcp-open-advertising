@@ -45,3 +45,9 @@ variable "uptime_check_period" {
   description = "Uptime check frequency (e.g., 60s, 300s)"
   default     = "300s"
 }
+
+variable "notification_email" {
+  type        = string
+  description = "Email address for alert notification channel. Empty string disables email channel."
+  default     = ""
+}

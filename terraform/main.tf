@@ -273,6 +273,7 @@ module "monitoring" {
 
   services              = var.monitoring_services
   notification_channels = var.monitoring_notification_channels
+  notification_email    = var.monitoring_notification_email
 
   error_rate_threshold     = var.monitoring_error_rate_threshold
   latency_p99_threshold_ms = var.monitoring_latency_p99_threshold_ms

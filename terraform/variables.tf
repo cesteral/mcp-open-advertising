@@ -470,3 +470,9 @@ variable "monitoring_uptime_check_period" {
   type        = string
   default     = "300s"
 }
+
+variable "monitoring_notification_email" {
+  description = "Email address for monitoring alert notifications"
+  type        = string
+  default     = ""
+}

@@ -37,6 +37,28 @@ resource "google_monitoring_uptime_check_config" "health" {
 }
 
 # ============================================================================
+# NOTIFICATION CHANNELS
+# ============================================================================
+
+resource "google_monitoring_notification_channel" "email" {
+  count        = var.notification_email != "" ? 1 : 0
+  display_name = "Cesteral Alerts Email (${var.environment})"
+  type         = "email"
+  project      = var.project_id
+
+  labels = {
+    email_address = var.notification_email
+  }
+}
+
+locals {
+  effective_channels = var.notification_email != "" ? concat(
+    var.notification_channels,
+    [google_monitoring_notification_channel.email[0].name]
+  ) : var.notification_channels
+}
+
+# ============================================================================
 # ALERT: Error Rate
 # ============================================================================
 
@@ -70,7 +92,7 @@ resource "google_monitoring_alert_policy" "error_rate" {
     }
   }
 
-  notification_channels = var.notification_channels
+  notification_channels = local.effective_channels
 
   alert_strategy {
     auto_close = "1800s"
@@ -115,7 +137,7 @@ resource "google_monitoring_alert_policy" "latency_p99" {
     }
   }
 
-  notification_channels = var.notification_channels
+  notification_channels = local.effective_channels
 
   alert_strategy {
     auto_close = "1800s"
@@ -160,7 +182,7 @@ resource "google_monitoring_alert_policy" "instance_count" {
     }
   }
 
-  notification_channels = var.notification_channels
+  notification_channels = local.effective_channels
 
   alert_strategy {
     auto_close = "1800s"
@@ -205,7 +227,7 @@ resource "google_monitoring_alert_policy" "uptime_failure" {
     }
   }
 
-  notification_channels = var.notification_channels
+  notification_channels = local.effective_channels
 
   alert_strategy {
     auto_close = "1800s"
