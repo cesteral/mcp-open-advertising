@@ -414,3 +414,84 @@ resource "google_monitoring_dashboard" "cesteral" {
     }
   })
 }
+
+# ============================================================================
+# LOG-BASED METRIC: Audit access denied events
+# ============================================================================
+
+resource "google_logging_metric" "audit_access_denied" {
+  name    = "cesteral/audit_access_denied_${var.environment}"
+  project = var.project_id
+
+  filter = <<-EOT
+    resource.type="cloud_run_revision"
+    jsonPayload.component="audit"
+    jsonPayload.event="tool_access_denied"
+  EOT
+
+  metric_descriptor {
+    metric_kind = "DELTA"
+    value_type  = "INT64"
+    unit        = "1"
+    display_name = "Cesteral Audit Access Denied"
+
+    labels {
+      key         = "tool"
+      value_type  = "STRING"
+      description = "MCP tool name that was denied"
+    }
+
+    labels {
+      key         = "service"
+      value_type  = "STRING"
+      description = "Cloud Run service name"
+    }
+  }
+
+  label_extractors = {
+    "tool"    = "EXTRACT(jsonPayload.tool)"
+    "service" = "EXTRACT(resource.labels.service_name)"
+  }
+}
+
+# ============================================================================
+# ALERT: Audit access denied spike
+# ============================================================================
+
+resource "google_monitoring_alert_policy" "audit_access_denied" {
+  display_name = "Cesteral Audit Access Denied Spike (${var.environment})"
+  project      = var.project_id
+  combiner     = "OR"
+
+  conditions {
+    display_name = "Audit access denied > 10 in 5 minutes"
+
+    condition_threshold {
+      filter = <<-EOT
+        resource.type="cloud_run_revision"
+        AND metric.type="logging.googleapis.com/user/cesteral/audit_access_denied_${var.environment}"
+      EOT
+
+      comparison      = "COMPARISON_GT"
+      threshold_value = 10
+      duration        = "0s"
+
+      aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_SUM"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+    }
+  }
+
+  notification_channels = local.effective_channels
+
+  alert_strategy {
+    auto_close = "1800s"
+  }
+
+  documentation {
+    content   = "More than 10 tool_access_denied audit events in 5 minutes in ${var.environment}. Check Cloud Logging: jsonPayload.component=\"audit\" AND jsonPayload.event=\"tool_access_denied\""
+    mime_type = "text/markdown"
+  }
+}
