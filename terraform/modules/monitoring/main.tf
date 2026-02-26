@@ -238,3 +238,179 @@ resource "google_monitoring_alert_policy" "uptime_failure" {
     mime_type = "text/markdown"
   }
 }
+
+# ============================================================================
+# CLOUD MONITORING DASHBOARD
+# ============================================================================
+
+resource "google_monitoring_dashboard" "cesteral" {
+  project = var.project_id
+
+  dashboard_json = jsonencode({
+    displayName = "Cesteral MCP Servers (${var.environment})"
+    mosaicLayout = {
+      columns = 12
+      tiles = [
+        # Row 1: Service uptime (full width)
+        {
+          xPos = 0, yPos = 0, width = 12, height = 3
+          widget = {
+            title = "Service Uptime"
+            xyChart = {
+              dataSets = [{
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" resource.type=\"uptime_url\""
+                    aggregation = {
+                      alignmentPeriod  = "300s"
+                      perSeriesAligner = "ALIGN_FRACTION_TRUE"
+                      groupByFields    = ["metric.labels.check_id"]
+                    }
+                  }
+                }
+                plotType = "LINE"
+              }]
+            }
+          }
+        },
+        # Row 2 left: Request count by service
+        {
+          xPos = 0, yPos = 3, width = 6, height = 3
+          widget = {
+            title = "Request Count by Service"
+            xyChart = {
+              dataSets = [{
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\""
+                    aggregation = {
+                      alignmentPeriod     = "60s"
+                      perSeriesAligner    = "ALIGN_RATE"
+                      crossSeriesReducer  = "REDUCE_SUM"
+                      groupByFields       = ["resource.labels.service_name"]
+                    }
+                  }
+                }
+                plotType = "LINE"
+              }]
+            }
+          }
+        },
+        # Row 2 right: P99 latency by service
+        {
+          xPos = 6, yPos = 3, width = 6, height = 3
+          widget = {
+            title = "P99 Latency by Service (ms)"
+            xyChart = {
+              dataSets = [{
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\""
+                    aggregation = {
+                      alignmentPeriod     = "60s"
+                      perSeriesAligner    = "ALIGN_PERCENTILE_99"
+                      crossSeriesReducer  = "REDUCE_MAX"
+                      groupByFields       = ["resource.labels.service_name"]
+                    }
+                  }
+                }
+                plotType = "LINE"
+              }]
+            }
+          }
+        },
+        # Row 3 left: Tool execution count by tool name + status
+        {
+          xPos = 0, yPos = 6, width = 6, height = 3
+          widget = {
+            title = "Tool Executions (count/min)"
+            xyChart = {
+              dataSets = [{
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/tool/execution/count\""
+                    aggregation = {
+                      alignmentPeriod     = "60s"
+                      perSeriesAligner    = "ALIGN_RATE"
+                      crossSeriesReducer  = "REDUCE_SUM"
+                      groupByFields       = ["metric.labels.tool_name", "metric.labels.status"]
+                    }
+                  }
+                }
+                plotType = "LINE"
+              }]
+            }
+          }
+        },
+        # Row 3 right: Tool execution duration P99
+        {
+          xPos = 6, yPos = 6, width = 6, height = 3
+          widget = {
+            title = "Tool Execution Duration P99 (ms)"
+            xyChart = {
+              dataSets = [{
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/tool/execution/duration_ms\""
+                    aggregation = {
+                      alignmentPeriod     = "60s"
+                      perSeriesAligner    = "ALIGN_PERCENTILE_99"
+                      crossSeriesReducer  = "REDUCE_MAX"
+                      groupByFields       = ["metric.labels.tool_name"]
+                    }
+                  }
+                }
+                plotType = "LINE"
+              }]
+            }
+          }
+        },
+        # Row 4 left: Active sessions gauge
+        {
+          xPos = 0, yPos = 9, width = 6, height = 3
+          widget = {
+            title = "Active MCP Sessions"
+            xyChart = {
+              dataSets = [{
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/session/active\""
+                    aggregation = {
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_MEAN"
+                      crossSeriesReducer = "REDUCE_SUM"
+                    }
+                  }
+                }
+                plotType = "LINE"
+              }]
+            }
+          }
+        },
+        # Row 4 right: Auth validation count
+        {
+          xPos = 6, yPos = 9, width = 6, height = 3
+          widget = {
+            title = "Auth Validations (success vs failure)"
+            xyChart = {
+              dataSets = [{
+                timeSeriesQuery = {
+                  timeSeriesFilter = {
+                    filter = "metric.type=\"custom.googleapis.com/opentelemetry/mcp/auth/validation/count\""
+                    aggregation = {
+                      alignmentPeriod     = "60s"
+                      perSeriesAligner    = "ALIGN_RATE"
+                      crossSeriesReducer  = "REDUCE_SUM"
+                      groupByFields       = ["metric.labels.result"]
+                    }
+                  }
+                }
+                plotType = "LINE"
+              }]
+            }
+          }
+        }
+      ]
+    }
+  })
+}
