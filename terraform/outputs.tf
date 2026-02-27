@@ -58,6 +58,44 @@ output "ttd_mcp_service_account_email" {
 }
 
 # ============================================================================
+# GADS-MCP OUTPUTS
+# ============================================================================
+
+output "gads_mcp_service_url" {
+  description = "URL of the gads-mcp Cloud Run service"
+  value       = module.gads_mcp.cloud_run_service_url
+}
+
+output "gads_mcp_service_name" {
+  description = "Name of the gads-mcp Cloud Run service"
+  value       = module.gads_mcp.cloud_run_service_name
+}
+
+output "gads_mcp_service_account_email" {
+  description = "Email of the gads-mcp runtime service account"
+  value       = module.gads_mcp.runtime_service_account_email
+}
+
+# ============================================================================
+# META-MCP OUTPUTS
+# ============================================================================
+
+output "meta_mcp_service_url" {
+  description = "URL of the meta-mcp Cloud Run service"
+  value       = module.meta_mcp.cloud_run_service_url
+}
+
+output "meta_mcp_service_name" {
+  description = "Name of the meta-mcp Cloud Run service"
+  value       = module.meta_mcp.cloud_run_service_name
+}
+
+output "meta_mcp_service_account_email" {
+  description = "Email of the meta-mcp runtime service account"
+  value       = module.meta_mcp.runtime_service_account_email
+}
+
+# ============================================================================
 # SCHEDULER OUTPUTS (dbm-mcp only)
 # ============================================================================
 
@@ -103,5 +141,7 @@ output "deployment_info" {
     dbm_mcp_url   = module.dbm_mcp.cloud_run_service_url
     dv360_mcp_url = module.dv360_mcp.cloud_run_service_url
     ttd_mcp_url   = module.ttd_mcp.cloud_run_service_url
+    gads_mcp_url  = module.gads_mcp.cloud_run_service_url
+    meta_mcp_url  = module.meta_mcp.cloud_run_service_url
   }
 }
