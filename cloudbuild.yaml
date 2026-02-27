@@ -1,6 +1,6 @@
 # Cloud Build configuration for Cesteral MCP Servers
 # Automated CI/CD pipeline: Build Docker images → Push to registry → Deploy to Cloud Run
-# Builds dbm-mcp, dv360-mcp, and ttd-mcp servers from the same monorepo.
+# Builds dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, and meta-mcp servers from the same monorepo.
 
 substitutions:
   _ENVIRONMENT: 'dev' # Override with trigger substitution variable
@@ -90,6 +90,22 @@ steps:
     id: 'build-gads-mcp'
     waitFor: ['test']
 
+  # Step 2e: Build meta-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=meta-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-meta-mcp'
+    waitFor: ['test']
+
   # Step 3a: Push dbm-mcp image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -126,6 +142,15 @@ steps:
     id: 'push-gads-mcp'
     waitFor: ['build-gads-mcp']
 
+  # Step 3e: Push meta-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp'
+    id: 'push-meta-mcp'
+    waitFor: ['build-meta-mcp']
+
   # Step 4: Initialize Terraform
   - name: 'hashicorp/terraform:1.5'
     entrypoint: 'sh'
@@ -135,7 +160,7 @@ steps:
         cd terraform
         terraform init -backend-config=backend-${_ENVIRONMENT}.conf -reconfigure
     id: 'terraform-init'
-    waitFor: ['push-dbm-mcp', 'push-dv360-mcp', 'push-ttd-mcp', 'push-gads-mcp']
+    waitFor: ['push-dbm-mcp', 'push-dv360-mcp', 'push-ttd-mcp', 'push-gads-mcp', 'push-meta-mcp']
 
   # Step 5: Terraform Plan
   - name: 'hashicorp/terraform:1.5'
@@ -149,6 +174,7 @@ steps:
           -var="dv360_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${SHORT_SHA}" \
           -var="ttd_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}" \
           -var="gads_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}" \
+          -var="meta_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}" \
           -var-file=${_ENVIRONMENT}.tfvars \
           -out=tfplan
     id: 'terraform-plan'
@@ -171,7 +197,7 @@ steps:
     args:
       - '-c'
       - |
-        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp; do
+        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
           HEALTHY=false
           URL=$(gcloud run services describe $SERVICE \
             --region=${_REGION} \
@@ -208,6 +234,8 @@ images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${_ENVIRONMENT}-latest'
 
 # Artifacts to store
 artifacts:

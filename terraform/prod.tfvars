@@ -10,6 +10,7 @@ dbm_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dbm-mcp:la
 dv360_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dv360-mcp:latest"
 ttd_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/ttd-mcp:latest"
 gads_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/gads-mcp:latest"
+meta_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/meta-mcp:latest"
 
 # Networking
 create_vpc             = true
@@ -62,4 +63,5 @@ monitoring_services = [
   { name = "dv360-mcp", url = "https://dv360-mcp-placeholder.europe-west2.run.app" },
   { name = "ttd-mcp", url = "https://ttd-mcp-placeholder.europe-west2.run.app" },
   { name = "gads-mcp", url = "https://gads-mcp-placeholder.europe-west2.run.app" },
+  { name = "meta-mcp", url = "https://meta-mcp-placeholder.europe-west2.run.app" },
 ]

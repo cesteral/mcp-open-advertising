@@ -72,6 +72,21 @@ steps:
       - '.'
     id: 'build-gads-mcp'
 
+  # Step 1e: Build meta-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=meta-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-meta-mcp'
+
   # Step 2a: Push dbm-mcp image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -108,6 +123,15 @@ steps:
     id: 'push-gads-mcp'
     waitFor: ['build-gads-mcp']
 
+  # Step 2e: Push meta-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp'
+    id: 'push-meta-mcp'
+    waitFor: ['build-meta-mcp']
+
 images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${_ENVIRONMENT}-latest'
@@ -117,5 +141,7 @@ images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${_ENVIRONMENT}-latest'
 
 timeout: '600s' # 10 minutes

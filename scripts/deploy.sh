@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy Cesteral MCP Servers using Terraform
-# This script builds Docker images for all 4 servers, pushes them, and deploys via Terraform
+# This script builds Docker images for all 5 servers, pushes them, and deploys via Terraform
 
 set -e
 
@@ -78,7 +78,7 @@ esac
 REGION="europe-west2"
 REPO_NAME="cesteral"
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "local")
-SERVERS=("dbm-mcp" "dv360-mcp" "ttd-mcp" "gads-mcp")
+SERVERS=("dbm-mcp" "dv360-mcp" "ttd-mcp" "gads-mcp" "meta-mcp")
 
 print_info "=========================================="
 print_info "Deploying Cesteral MCP Servers"
@@ -129,12 +129,14 @@ DBM_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dbm-mcp:${GIT_SHA
 DV360_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dv360-mcp:${GIT_SHA}"
 TTD_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/ttd-mcp:${GIT_SHA}"
 GADS_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/gads-mcp:${GIT_SHA}"
+META_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/meta-mcp:${GIT_SHA}"
 
 if [ "$SKIP_BUILD" = true ]; then
     DBM_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dbm-mcp:latest"
     DV360_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/dv360-mcp:latest"
     TTD_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/ttd-mcp:latest"
     GADS_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/gads-mcp:latest"
+    META_IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/meta-mcp:latest"
 fi
 
 # Run Terraform plan
@@ -144,6 +146,7 @@ terraform plan \
     -var="dv360_mcp_image=${DV360_IMAGE}" \
     -var="ttd_mcp_image=${TTD_IMAGE}" \
     -var="gads_mcp_image=${GADS_IMAGE}" \
+    -var="meta_mcp_image=${META_IMAGE}" \
     -var-file=${ENVIRONMENT}.tfvars \
     -out=tfplan
 
@@ -169,6 +172,7 @@ if [ "$PLAN_ONLY" = false ]; then
     DV360_URL=$(terraform output -raw dv360_mcp_service_url 2>/dev/null || echo "N/A")
     TTD_URL=$(terraform output -raw ttd_mcp_service_url 2>/dev/null || echo "N/A")
     GADS_URL=$(terraform output -raw gads_mcp_service_url 2>/dev/null || echo "N/A")
+    META_URL=$(terraform output -raw meta_mcp_service_url 2>/dev/null || echo "N/A")
 
     print_info ""
     print_info "=========================================="
@@ -178,15 +182,17 @@ if [ "$PLAN_ONLY" = false ]; then
     print_info "dv360-mcp URL: $DV360_URL"
     print_info "ttd-mcp URL:   $TTD_URL"
     print_info "gads-mcp URL:  $GADS_URL"
+    print_info "meta-mcp URL:  $META_URL"
     print_info ""
     print_info "Test health endpoints:"
     print_info "  curl $DBM_URL/health"
     print_info "  curl $DV360_URL/health"
     print_info "  curl $TTD_URL/health"
     print_info "  curl $GADS_URL/health"
+    print_info "  curl $META_URL/health"
     print_info ""
     print_info "View logs:"
-    print_info "  gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~\"(dbm|dv360|ttd|gads)-mcp\"' --limit 50 --project=$PROJECT_ID"
+    print_info "  gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~\"(dbm|dv360|ttd|gads|meta)-mcp\"' --limit 50 --project=$PROJECT_ID"
     print_info ""
 else
     print_warn "Plan-only mode: Terraform changes not applied"

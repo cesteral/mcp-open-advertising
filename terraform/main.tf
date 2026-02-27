@@ -1,5 +1,5 @@
 # Root Terraform configuration for Cesteral MCP Servers
-# Orchestrates networking, four MCP service modules, and monitoring
+# Orchestrates networking, five MCP service modules, and monitoring
 
 terraform {
   required_version = ">= 1.5.0"
@@ -261,6 +261,47 @@ module "gads_mcp" {
 }
 
 # ============================================================================
+# META ADS MCP SERVICE
+# ============================================================================
+
+module "meta_mcp" {
+  source = "./modules/mcp-service"
+
+  service_name    = "meta-mcp"
+  container_image = var.meta_mcp_image
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  # Cloud Run configuration
+  min_instances         = var.min_instances
+  max_instances         = var.max_instances
+  cpu_limit             = var.cpu_limit
+  memory_limit          = var.memory_limit
+  cpu_always_allocated  = var.cpu_always_allocated
+  allow_unauthenticated = var.allow_unauthenticated
+  authorized_invokers   = var.authorized_invokers
+  vpc_connector_name    = module.networking.vpc_connector_id
+
+  # MCP server configuration
+  mcp_session_mode       = var.mcp_session_mode
+  mcp_auth_mode          = var.mcp_auth_mode
+  log_level              = var.log_level
+  enable_gcs_persistence = var.enable_gcs_persistence
+  gcs_bucket_name        = var.gcs_bucket_name
+
+  # Secrets (meta-specific)
+  secret_names    = var.meta_secret_names
+  secret_env_vars = var.meta_secret_env_vars
+
+  # No scheduler jobs for Meta server
+  enable_scheduler_jobs = false
+
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+}
+
+# ============================================================================
 # MONITORING MODULE
 # ============================================================================
 
@@ -279,5 +320,5 @@ module "monitoring" {
   latency_p99_threshold_ms = var.monitoring_latency_p99_threshold_ms
   uptime_check_period      = var.monitoring_uptime_check_period
 
-  depends_on = [module.dbm_mcp, module.dv360_mcp, module.ttd_mcp, module.gads_mcp]
+  depends_on = [module.dbm_mcp, module.dv360_mcp, module.ttd_mcp, module.gads_mcp, module.meta_mcp]
 }

@@ -60,6 +60,11 @@ variable "gads_mcp_image" {
   type        = string
 }
 
+variable "meta_mcp_image" {
+  description = "Full container image URL for meta-mcp server"
+  type        = string
+}
+
 # ============================================================================
 # NETWORKING VARIABLES
 # ============================================================================
@@ -381,6 +386,33 @@ variable "gads_secret_env_vars" {
     }
     GADS_REFRESH_TOKEN = {
       secret_name = "cesteral-gads-refresh-token"
+      version     = "latest"
+    }
+  }
+}
+
+variable "meta_secret_names" {
+  description = "Secret names specific to meta-mcp"
+  type        = list(string)
+  default = [
+    "cesteral-jwt-secret-key",
+    "cesteral-meta-access-token"
+  ]
+}
+
+variable "meta_secret_env_vars" {
+  description = "Map of env vars to secrets for meta-mcp"
+  type = map(object({
+    secret_name = string
+    version     = string
+  }))
+  default = {
+    MCP_AUTH_SECRET_KEY = {
+      secret_name = "cesteral-jwt-secret-key"
+      version     = "latest"
+    }
+    META_ACCESS_TOKEN = {
+      secret_name = "cesteral-meta-access-token"
       version     = "latest"
     }
   }
