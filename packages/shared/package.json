@@ -2,6 +2,7 @@
   "name": "@cesteral/shared",
   "version": "1.0.0",
   "description": "Shared infrastructure utilities and authentication for Cesteral MCP servers",
+  "license": "BSL-1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -2,6 +2,7 @@
   "name": "@cesteral/gads-mcp",
   "version": "1.0.0",
   "description": "Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v23",
+  "license": "BSL-1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

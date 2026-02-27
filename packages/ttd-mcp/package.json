@@ -2,6 +2,7 @@
   "name": "@cesteral/ttd-mcp",
   "version": "1.0.0",
   "description": "The Trade Desk MCP Server - Campaign entity management and reporting via TTD API v3",
+  "license": "BSL-1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

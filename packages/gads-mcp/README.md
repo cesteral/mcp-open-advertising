@@ -168,8 +168,8 @@ pnpm run test
 
 ## Contributing
 
-See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system details, and monorepo conventions.
+See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system details, and monorepo conventions. See the [root README](../../README.md) for full architecture context.
 
 ## License
 
-Private - Cesteral Internal Use Only
+Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.

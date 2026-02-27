@@ -39,6 +39,27 @@ Get real-time pacing status for a campaign (actual vs expected delivery).
 **Parameters:**
 - `campaignId` (string): Campaign ID
 
+### 5. `run_custom_query`
+Compose and execute a custom Bid Manager report with specified metrics, dimensions, and filters.
+
+**Parameters:**
+- `reportType` (string): Report type
+- `timeRange` (object): Time range for the report
+- `metrics` (string[]): Metrics to include
+- `dimensions` (string[]): Dimensions for grouping
+- `filters` (object[], optional): Filter conditions
+- `advertiserId` (string): DV360 Advertiser ID
+
+## Authentication Modes
+
+| Mode | Header | Description |
+|------|--------|-------------|
+| `google-headers` (default) | `X-DV360-*` | Google OAuth2 credentials via request headers |
+| `jwt` | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
+| `none` | — | No authentication (development only) |
+
+Set via `MCP_AUTH_MODE` environment variable.
+
 ## Context Efficiency Notes
 
 - Tools with `outputSchema` provide full typed payloads in `structuredContent`; text output is intentionally summary-focused.
@@ -106,3 +127,11 @@ npx @modelcontextprotocol/inspector http://localhost:3001/sse
 - `GET /health` - Health check
 - `GET /sse` - MCP protocol via Server-Sent Events
 - `POST /message` - Not implemented (use SSE)
+
+## Contributing
+
+See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system details, and monorepo conventions. See the [root README](../../README.md) for full architecture context.
+
+## License
+
+Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.

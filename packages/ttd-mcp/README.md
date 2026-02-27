@@ -15,60 +15,45 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 - **MCP protocol** with Streamable HTTP transport (Hono)
 - **Structured output** with `outputSchema` on all tools
 
-## MCP Tools
+## MCP Tools (18 tools)
 
-### 1. `ttd_create_entity`
-Create a new TTD entity. Required fields vary by entity type.
+### Core CRUD
 
-**Parameters:**
-- `entityType` (string): Type of entity to create
-- `advertiserId` (string, optional): Advertiser ID (required for campaigns, ad groups, ads)
-- `data` (object): Entity data fields
+| Tool | Description |
+|------|-------------|
+| `ttd_list_entities` | List TTD entities with optional filtering and pagination |
+| `ttd_get_entity` | Get a single TTD entity by ID |
+| `ttd_create_entity` | Create a new TTD entity |
+| `ttd_update_entity` | Update an existing TTD entity (PUT) |
+| `ttd_delete_entity` | Delete a TTD entity by ID |
+| `ttd_validate_entity` | Dry-run validate entity payload without persisting |
 
-### 2. `ttd_get_entity`
-Get a single TTD entity by ID.
+### Reporting
 
-**Parameters:**
-- `entityType` (string): Type of entity to retrieve
-- `entityId` (string): The entity ID
+| Tool | Description |
+|------|-------------|
+| `ttd_get_report` | Generate async report via MyReports V3 API |
+| `ttd_download_report` | Download and parse report CSV from URL |
 
-### 3. `ttd_list_entities`
-List TTD entities with optional filtering and pagination.
+### Bulk Operations
 
-**Parameters:**
-- `entityType` (string): Type of entities to list
-- `advertiserId` (string, optional): Advertiser ID filter
-- `campaignId` (string, optional): Campaign ID filter
-- `filter` (object, optional): Additional filter fields
-- `pageToken` (string, optional): Pagination token
-- `pageSize` (number, optional): Results per page (1-100)
+| Tool | Description |
+|------|-------------|
+| `ttd_bulk_create_entities` | Batch create campaigns/ad groups (up to 50) |
+| `ttd_bulk_update_entities` | Batch update campaigns/ad groups (up to 50) |
+| `ttd_bulk_update_status` | Batch pause/resume/archive entities |
+| `ttd_archive_entities` | Batch archive (soft-delete) entities |
+| `ttd_adjust_bids` | Batch adjust ad group bid CPMs (safe read-modify-write) |
 
-### 4. `ttd_update_entity`
-Update an existing TTD entity via PUT endpoint.
+### Advanced (GraphQL)
 
-**Parameters:**
-- `entityType` (string): Type of entity to update
-- `entityId` (string): The entity ID
-- `data` (object): Entity data fields to update
-
-### 5. `ttd_delete_entity`
-Delete a TTD entity by ID. Destructive and cannot be undone.
-
-**Parameters:**
-- `entityType` (string): Type of entity to delete
-- `entityId` (string): The entity ID
-- `reason` (string, optional): Reason for deletion (audit logging)
-
-### 6. `ttd_get_report`
-Generate and retrieve a report via the TTD MyReports API. Async operation that creates a report schedule, polls for execution, and returns results.
-
-**Parameters:**
-- `reportName` (string): Name for the report
-- `dateRange` (string): Date range (e.g., "Last7Days", "Last30Days", "Yesterday", "Custom")
-- `dimensions` (string[], optional): Report dimensions (e.g., ["AdvertiserId", "CampaignId"])
-- `metrics` (string[], optional): Report metrics (e.g., ["Impressions", "Clicks", "TotalCost"])
-- `advertiserIds` (string[], optional): Filter by advertiser IDs
-- `additionalConfig` (object, optional): Additional report configuration fields
+| Tool | Description |
+|------|-------------|
+| `ttd_graphql_query` | Execute GraphQL query/mutation against TTD GraphQL API |
+| `ttd_graphql_query_bulk` | Execute bulk GraphQL queries |
+| `ttd_graphql_mutation_bulk` | Execute bulk GraphQL mutations |
+| `ttd_graphql_bulk_job` | Submit a GraphQL bulk job |
+| `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job |
 
 ## Supported Entity Types
 
@@ -78,6 +63,11 @@ Generate and retrieve a report via the TTD MyReports API. Async operation that c
 | `campaign` | `/campaign` | `CampaignId` |
 | `adGroup` | `/adgroup` | `AdGroupId` |
 | `ad` | `/ad` | `AdId` |
+| `creative` | `/creative` | `CreativeId` |
+| `siteList` | `/sitelist` | `SiteListId` |
+| `deal` | `/deal` | `DealId` |
+| `conversionTracker` | `/tracking/conversion` | `TrackingTagId` |
+| `bidList` | `/bidlist` | `BidListId` |
 
 **Entity Hierarchy:** partner > advertiser > campaign > adGroup > ad
 
@@ -134,8 +124,8 @@ pnpm run lint
 
 ## Contributing
 
-See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system details, and monorepo conventions.
+See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system details, and monorepo conventions. See the [root README](../../README.md) for full architecture context.
 
 ## License
 
-Private - Cesteral Internal Use Only
+Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.

@@ -2,6 +2,7 @@
   "name": "@cesteral/dv360-mcp",
   "version": "1.0.0",
   "description": "DV360 MCP Server - Campaign entity management and configuration",
+  "license": "BSL-1.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

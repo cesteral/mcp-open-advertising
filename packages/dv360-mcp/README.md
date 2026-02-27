@@ -41,46 +41,50 @@ See [CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md) for detailed setup
 The server is built with production-grade architecture and complete functionality:
 
 - ✅ HTTP/SSE transport with session management
-- ✅ 8 MCP tools, all connected to DV360 API
+- ✅ 17 MCP tools, all connected to DV360 API
 - ✅ OAuth2 service account authentication
 - ✅ Rate limiting and error handling
 - ✅ OpenTelemetry observability
 - ✅ Dynamic entity system supporting 11 entity types
 - ⚠️ Requires DV360 service account credentials (see Setup below)
 
-## MCP Tools
+## MCP Tools (17 tools)
 
-### Entity Management Tools (Generic CRUD)
+### Entity Management (CRUD)
 
-1. **`dv360_list_entities`** ✅
-   - List entities of any type (campaigns, line items, creatives, etc.)
-   - Parameters: `entityType`, `advertiserId`, `pageSize`, `pageToken`
+| Tool | Description |
+|------|-------------|
+| `dv360_list_entities` | List entities of any type with filters and pagination |
+| `dv360_get_entity` | Get a specific entity by ID |
+| `dv360_create_entity` | Create a new entity |
+| `dv360_update_entity` | Update an entity with updateMask discipline |
+| `dv360_delete_entity` | Delete an entity |
 
-2. **`dv360_get_entity`** ✅
-   - Get a specific entity by ID
-   - Parameters: `entityType`, `entityId`, `advertiserId`
+### Batch Operations
 
-3. **`dv360_create_entity`** ✅
-   - Create a new entity
-   - Parameters: `entityType`, `advertiserId`, `entityData`
+| Tool | Description |
+|------|-------------|
+| `dv360_adjust_line_item_bids` | Batch adjust bids for multiple line items |
+| `dv360_bulk_update_status` | Batch update status for multiple entities |
 
-4. **`dv360_update_entity`** ✅
-   - Update an existing entity
-   - Parameters: `entityType`, `entityId`, `advertiserId`, `entityData`, `updateMask`
+### Custom Bidding Algorithms
 
-5. **`dv360_delete_entity`** ✅
-   - Delete an entity
-   - Parameters: `entityType`, `entityId`, `advertiserId`
+| Tool | Description |
+|------|-------------|
+| `dv360_create_custom_bidding_algorithm` | Create a custom bidding algorithm |
+| `dv360_manage_custom_bidding_script` | Upload/manage custom bidding scripts |
+| `dv360_manage_custom_bidding_rules` | Manage custom bidding rules |
+| `dv360_list_custom_bidding_algorithms` | List custom bidding algorithms |
 
-### Workflow Tools (Batch Operations)
+### Targeting
 
-6. **`dv360_adjust_line_item_bids`** ✅
-   - Batch update bids for multiple line items
-   - Parameters: `advertiserId`, `lineItemIds`, `bidAdjustment` (percentage or absolute)
-
-7. **`dv360_bulk_update_status`** ✅
-   - Batch update status for multiple entities
-   - Parameters: `entityType`, `advertiserId`, `entityIds`, `status`
+| Tool | Description |
+|------|-------------|
+| `dv360_list_assigned_targeting` | List assigned targeting options |
+| `dv360_get_assigned_targeting` | Get a specific assigned targeting option |
+| `dv360_create_assigned_targeting` | Assign a targeting option |
+| `dv360_delete_assigned_targeting` | Remove an assigned targeting option |
+| `dv360_validate_targeting_config` | Validate a targeting configuration |
 
 ## Supported Entity Types
 
@@ -97,6 +101,16 @@ The server supports 11 DV360 entity types through the dynamic entity system:
 - `CustomBiddingAlgorithm` - Custom bidding algorithms
 - `InventorySource` - Inventory sources
 - `LocationList` - Geographic location lists
+
+## Authentication Modes
+
+| Mode | Header | Description |
+|------|--------|-------------|
+| `google-headers` (default) | `X-DV360-*` | Google OAuth2 credentials via request headers |
+| `jwt` | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
+| `none` | — | No authentication (development only) |
+
+Set via `MCP_AUTH_MODE` environment variable.
 
 ## Prerequisites
 
@@ -368,8 +382,8 @@ OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=https://your-collector/v1/metrics
 
 ## Contributing
 
-This package is part of the Cesteral monorepo. See root-level `CLAUDE.md` for development guidelines.
+See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system details, and monorepo conventions. See the [root README](../../README.md) for full architecture context.
 
 ## License
 
-Private - Cesteral Internal Use Only
+Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.
