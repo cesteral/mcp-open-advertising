@@ -70,7 +70,7 @@ resource "google_monitoring_alert_policy" "error_rate" {
   combiner     = "OR"
 
   conditions {
-    display_name = "Cloud Run ${each.key} 5xx error rate"
+    display_name = "Cloud Run ${each.key} 5xx error percentage"
 
     condition_threshold {
       filter = <<-EOT
@@ -80,11 +80,23 @@ resource "google_monitoring_alert_policy" "error_rate" {
         AND metric.labels.response_code_class = "5xx"
       EOT
 
+      denominator_filter = <<-EOT
+        resource.type = "cloud_run_revision"
+        AND resource.labels.service_name = "${each.key}"
+        AND metric.type = "run.googleapis.com/request_count"
+      EOT
+
       comparison      = "COMPARISON_GT"
-      threshold_value = var.error_rate_threshold
+      threshold_value = var.error_rate_threshold / 100
       duration        = "300s"
 
       aggregations {
+        alignment_period     = "300s"
+        per_series_aligner   = "ALIGN_RATE"
+        cross_series_reducer = "REDUCE_SUM"
+      }
+
+      denominator_aggregations {
         alignment_period     = "300s"
         per_series_aligner   = "ALIGN_RATE"
         cross_series_reducer = "REDUCE_SUM"
@@ -99,7 +111,7 @@ resource "google_monitoring_alert_policy" "error_rate" {
   }
 
   documentation {
-    content   = "Error rate for Cesteral ${each.key} exceeded ${var.error_rate_threshold}% in ${var.environment}. Check Cloud Run logs for details."
+    content   = "5xx error percentage for Cesteral ${each.key} exceeded ${var.error_rate_threshold}% in ${var.environment}. Check Cloud Run logs for details."
     mime_type = "text/markdown"
   }
 }

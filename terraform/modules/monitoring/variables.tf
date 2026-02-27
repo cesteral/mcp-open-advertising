@@ -30,8 +30,12 @@ variable "notification_channels" {
 
 variable "error_rate_threshold" {
   type        = number
-  description = "Error rate threshold percentage for alerting"
+  description = "5xx error percentage threshold for alerting (0-100)"
   default     = 5
+  validation {
+    condition     = var.error_rate_threshold >= 0 && var.error_rate_threshold <= 100
+    error_message = "error_rate_threshold must be between 0 and 100."
+  }
 }
 
 variable "latency_p99_threshold_ms" {

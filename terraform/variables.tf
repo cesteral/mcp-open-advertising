@@ -454,9 +454,13 @@ variable "monitoring_notification_channels" {
 }
 
 variable "monitoring_error_rate_threshold" {
-  description = "Error rate threshold percentage for alerting"
+  description = "5xx error percentage threshold for alerting (0-100)"
   type        = number
   default     = 5
+  validation {
+    condition     = var.monitoring_error_rate_threshold >= 0 && var.monitoring_error_rate_threshold <= 100
+    error_message = "monitoring_error_rate_threshold must be between 0 and 100."
+  }
 }
 
 variable "monitoring_latency_p99_threshold_ms" {
