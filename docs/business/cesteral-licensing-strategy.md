@@ -2,13 +2,13 @@
 
 **Date:** February 25, 2026
 **Author:** Cesteral AB
-**Status:** Approved — staged rollout pending readiness triggers
+**Status:** Approved — publishing with early access gate, billing in parallel
 
 ---
 
 ## Executive Summary
 
-Cesteral will license its MCP server connectors (`cesteral-mcp-servers`) under the **Business Source License 1.1 (BSL 1.1)**, with an **Additional Use Grant** scoped to prevent competing hosted advertising-platform connector services. The governance and optimization platform (`cesteral-intelligence`) remains fully proprietary. This is a **staged rollout**: the repository stays private now, transitioning to public BSL 1.1 when four readiness triggers are met. After three years per version, the BSL automatically converts to **Apache License 2.0**.
+Cesteral will license its MCP server connectors (`cesteral-mcp-servers`) under the **Business Source License 1.1 (BSL 1.1)**, with an **Additional Use Grant** scoped to prevent competing hosted advertising-platform connector services. The governance and optimization platform (`cesteral-intelligence`) remains fully proprietary. This is a **staged rollout**: the repository stays private now, transitioning to public BSL 1.1 when two readiness triggers are met (billing proceeds in parallel). After three years per version, the BSL automatically converts to **Apache License 2.0**.
 
 ---
 
@@ -116,23 +116,23 @@ Apache 2.0 is more permissive than GPL and better suited for enterprise adoption
 The repository remains private. This is where we are now.
 
 **What to do during this phase:**
-- Polish READMEs and documentation for external consumption
-- Add `LICENSE.md` to the repo (ready to go when we flip)
-- Add `LICENSE-NOTICE.md` for source file headers
-- Build the billing and subscription infrastructure in `cesteral-intelligence`
-- Create the landing page / marketing site
-- Remove any internal-only references, hardcoded credentials, or debug artifacts
+- ~~Polish READMEs and documentation for external consumption~~ ✅ Done
+- ~~Add `LICENSE.md` to the repo (ready to go when we flip)~~ ✅ Done
+- ~~Add `LICENSE-NOTICE.md` for source file headers~~ ✅ Done
+- Build the billing and subscription infrastructure in `cesteral-intelligence` *(in parallel — not a blocker for publishing)*
+- ~~Create the landing page / marketing site~~ ✅ Landing page with early access form
+- ~~Remove any internal-only references, hardcoded credentials, or debug artifacts~~ ✅ Audited
 
 ### Phase 2: BSL 1.1 Public (Triggered)
 
-Make the repository public under BSL 1.1. This phase begins when **all four readiness triggers** are met:
+Make the repository public under BSL 1.1. This phase begins when **both readiness triggers** are met:
 
 | # | Trigger | Rationale |
 |---|---------|-----------|
-| 1 | **Billing is live** | Without a conversion mechanism, public exposure has no revenue path |
-| 2 | **Landing page exists** | GitHub visitors need somewhere to go — "Star → Learn more → Sign up" funnel |
-| 3 | **First paying customer** | Validates the product before investing in distribution |
-| 4 | **READMEs are polished** | First impressions are permanent in open source |
+| 1 | **Landing page with early access form is live** | Captures demand; funnels GitHub visitors to waitlist while billing is finalized |
+| 2 | **READMEs are polished** | First impressions are permanent in open source |
+
+> **Note:** Billing infrastructure proceeds in parallel. The early access form captures demand pre-billing, removing the need to wait for a live billing system or first paying customer before publishing.
 
 **Actions on trigger:**
 1. Make `cesteral-mcp-servers` repository public
@@ -156,12 +156,12 @@ Actions to complete **now**, while still in Phase 1:
 - [x] Create `LICENSE.md` with filled BSL 1.1 parameters
 - [x] Create `LICENSE-NOTICE.md` for source file headers
 - [x] Update business model analysis with Cesteral-specific context
-- [ ] Audit repo for hardcoded credentials, internal URLs, debug artifacts
-- [ ] Polish package READMEs for external audience
-- [ ] Add CONTRIBUTING.md with CLA requirements
-- [ ] Build billing infrastructure in `cesteral-intelligence`
-- [ ] Create landing page with "Star → Learn → Sign up" funnel
-- [ ] Register on MCP registries (draft listings, don't publish yet)
+- [x] Audit repo for hardcoded credentials, internal URLs, debug artifacts
+- [x] Polish package READMEs for external audience
+- [x] Add CONTRIBUTING.md with CLA requirements
+- [ ] Build billing infrastructure in `cesteral-intelligence` *(in parallel — not a blocker)*
+- [x] Create landing page with early access form
+- [x] Register on MCP registries (draft listings ready)
 - [ ] Prepare announcement content (blog post, social templates)
 
 ---
@@ -181,8 +181,8 @@ Actions to complete **now**, while still in Phase 1:
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| **No conversion funnel** — GitHub stars with no revenue path | High | Certain (if no billing) | Trigger 1 prevents this |
-| **Premature exposure** — unpolished docs create negative first impression | Medium | High (if rushed) | Trigger 4 prevents this |
+| **No conversion funnel** — GitHub stars with no revenue path | Medium | Mitigated | Early access form captures demand pre-billing; waitlist converts to paying customers once billing is live |
+| **Premature exposure** — unpolished docs create negative first impression | Medium | High (if rushed) | Trigger 2 prevents this |
 | **Competitor intelligence** — competitors read architecture before we have customers | Low | Medium | MCP servers are commodity; architecture is not the moat |
 | **Support burden** — issues/PRs from community without resources to handle | Medium | Medium | Start with "issues only, no PRs" policy; add CONTRIBUTING.md later |
 

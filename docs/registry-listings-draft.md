@@ -23,19 +23,20 @@ Five production-ready MCP servers for programmatic advertising management across
 - meta-mcp: 15 management tools (entity CRUD, insights, targeting, duplication, previews)
 
 **Auth:**
-- Hosted: JWT authentication (single token for all servers)
+- Hosted: JWT authentication — Early Access (request access at cesteral.com)
 - Self-hosted: Platform-specific credentials (Google OAuth2, TTD partner tokens, Meta Bearer tokens)
 
 **Deployment:**
 - Self-hosted via Docker + Terraform on GCP Cloud Run
 - Each server runs as an independent container
 - Full IaC included (Terraform modules, Cloud Build CI/CD)
+- Hosted option coming soon — request early access at https://cesteral.com
 
 **License:** Business Source License 1.1 (converts to Apache 2.0 after 3 years)
 
 **Links:**
-- GitHub: `https://github.com/cesteral/cesteral-mcp-servers` _(update when public)_
-- Landing page: _(update when built)_
+- GitHub: https://github.com/cesteral/cesteral-mcp-servers
+- Landing page: https://cesteral.com
 - Documentation: See repository README
 
 ---
@@ -62,17 +63,19 @@ All servers feature per-session authentication, OpenTelemetry observability, rat
 **Auth Requirements:**
 | Server | Self-hosted | Hosted |
 |--------|-------------|--------|
-| dbm-mcp | Google OAuth2 headers | JWT |
-| dv360-mcp | Google OAuth2 headers | JWT |
-| ttd-mcp | TTD partner token headers | JWT |
-| gads-mcp | Google Ads OAuth2 headers | JWT |
-| meta-mcp | Meta Bearer token | JWT |
+| dbm-mcp | Google OAuth2 headers | JWT (Early Access) |
+| dv360-mcp | Google OAuth2 headers | JWT (Early Access) |
+| ttd-mcp | TTD partner token headers | JWT (Early Access) |
+| gads-mcp | Google Ads OAuth2 headers | JWT (Early Access) |
+| meta-mcp | Meta Bearer token | JWT (Early Access) |
+
+Hosted option coming soon — request early access at https://cesteral.com
 
 **License:** BSL 1.1
 
 **Links:**
-- GitHub: _(update when public)_
-- Landing page: _(update when built)_
+- GitHub: https://github.com/cesteral/cesteral-mcp-servers
+- Landing page: https://cesteral.com
 
 ---
 
@@ -102,10 +105,11 @@ Five production-ready MCP servers providing ~63 tools for programmatic advertisi
 - OpenTelemetry traces and metrics for production observability
 - TypeScript/Node.js with Zod runtime validation
 - Terraform + Cloud Build IaC for GCP Cloud Run deployment
+- Hosted option coming soon — request early access at https://cesteral.com
 
 **License:** Business Source License 1.1 (Apache 2.0 change date: 3 years from release)
 
 **Links:**
-- GitHub: _(update when public)_
-- Landing page: _(update when built)_
+- GitHub: https://github.com/cesteral/cesteral-mcp-servers
+- Landing page: https://cesteral.com
 - Demo/screenshots: _(update when available)_

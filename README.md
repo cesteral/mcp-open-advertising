@@ -6,6 +6,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-green)](https://modelcontextprotocol.io/)
 
+> **Hosted service coming soon** — [Request early access](https://cesteral.com) for managed hosting, or self-host using the guide below.
+
 ---
 
 ## Overview
@@ -204,18 +206,18 @@ terraform apply -var-file=environments/dev.tfvars
 
 ### 7. Configure AI Agent (Claude Desktop) *(After Deployment)*
 
-Edit your Claude Desktop MCP configuration:
+#### Self-hosted
 
 ```json
 {
   "mcpServers": {
-    "cesteral-reporting": {
-      "url": "https://reporting.cesteral.com/mcp",
-      "apiKey": "your-reporting-api-key"
+    "cesteral-dbm": {
+      "url": "https://dbm.cesteral.com/mcp",
+      "apiKey": "your-dbm-api-key"
     },
-    "cesteral-management": {
-      "url": "https://management.cesteral.com/mcp",
-      "apiKey": "your-management-api-key"
+    "cesteral-dv360": {
+      "url": "https://dv360.cesteral.com/mcp",
+      "apiKey": "your-dv360-api-key"
     },
     "cesteral-ttd": {
       "url": "https://ttd.cesteral.com/mcp",
@@ -232,6 +234,10 @@ Edit your Claude Desktop MCP configuration:
   }
 }
 ```
+
+#### Hosted (Early Access)
+
+Managed hosting with JWT authentication is coming soon. [Request early access at cesteral.com](https://cesteral.com) to get notified when it's available.
 
 ---
 
@@ -614,6 +620,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 For issues or questions:
 
+- **Website**: [cesteral.com](https://cesteral.com) — request early access to the hosted service
 - **Documentation**: Check [docs/](docs/) for detailed guides
 - **GitHub Issues**: Report bugs or request features
 - **Email**: support@cesteral.com
