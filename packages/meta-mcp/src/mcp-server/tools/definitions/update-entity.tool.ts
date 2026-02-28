@@ -72,10 +72,11 @@ export async function updateEntityLogic(
 
 export function updateEntityResponseFormatter(result: UpdateEntityOutput): unknown[] {
   const status = result.success ? "updated successfully" : "update returned unexpected response";
+  const entityLabel = result.entityType ?? "Entity";
   return [
     {
       type: "text" as const,
-      text: `${result.entityType} ${result.entityId} ${status}\n\nTimestamp: ${result.timestamp}`,
+      text: `${entityLabel} ${result.entityId} ${status}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
