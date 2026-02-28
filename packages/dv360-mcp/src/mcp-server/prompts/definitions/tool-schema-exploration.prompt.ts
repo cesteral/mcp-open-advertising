@@ -91,9 +91,9 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (16 tools)
+## Available Tools Summary (18 tools)
 
-### Entity CRUD (7 tools)
+### Entity CRUD (9 tools)
 | Tool | Purpose | Notes |
 |------|---------|-------|
 | \`dv360_list_entities\` | List entities with filters/paging | Supports all entity types |
@@ -103,6 +103,8 @@ Inspect the output, then iterate with more specific calls.
 | \`dv360_delete_entity\` | Delete an entity | Permanent operation |
 | \`dv360_adjust_line_item_bids\` | Batch adjust bids | Safe read-modify-write |
 | \`dv360_bulk_update_status\` | Batch status updates | Enable/pause/archive |
+| \`dv360_bulk_create_entities\` | Batch create up to 50 entities | Partial success model |
+| \`dv360_bulk_update_entities\` | Batch update up to 50 entities | Requires \`updateMask\` per item |
 
 ### Custom Bidding (4 tools)
 | Tool | Purpose | Notes |
