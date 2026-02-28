@@ -184,9 +184,10 @@ describe("dv360_adjust_line_item_bids", () => {
       expect(mockDv360Service.updateEntity).toHaveBeenCalledWith(
         "lineItem",
         { advertiserId: "adv-1", lineItemId: "li-1" },
-        { bidStrategy: { fixedBid: { bidAmountMicros: 5000000 } } },
+        { bidStrategy: { fixedBid: { bidAmountMicros: "5000000" } } },
         "bidStrategy.fixedBid.bidAmountMicros",
-        expect.any(Object)
+        expect.any(Object),
+        expect.any(Object) // currentEntity passed to avoid redundant GET
       );
     });
 

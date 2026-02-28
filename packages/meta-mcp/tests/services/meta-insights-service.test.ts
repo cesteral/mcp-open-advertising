@@ -335,7 +335,7 @@ describe("MetaInsightsService", () => {
       expect(params.after).toBe("cursor-xyz");
     });
 
-    it("passes actionAttributionWindows as JSON string", async () => {
+    it("passes actionAttributionWindows as comma-separated string", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       await service.getInsightsBreakdowns("campaign-123", {
@@ -344,9 +344,7 @@ describe("MetaInsightsService", () => {
       });
 
       const [, params] = httpClient.get.mock.calls[0];
-      expect(params.action_attribution_windows).toBe(
-        JSON.stringify(["1d_click", "7d_click"])
-      );
+      expect(params.action_attribution_windows).toBe("1d_click,7d_click");
     });
 
     it("does not pass actionAttributionWindows when empty", async () => {

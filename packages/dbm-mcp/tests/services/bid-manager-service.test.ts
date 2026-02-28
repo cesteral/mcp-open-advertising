@@ -558,7 +558,11 @@ describe("BidManagerService", () => {
         },
       });
 
-      expect(result).toBe("gs://bucket/report.csv");
+      expect(result).toEqual({
+        gcsPath: "gs://bucket/report.csv",
+        queryId: "q-123",
+        reportId: "r-456",
+      });
       expect(mockClient.queries.create).toHaveBeenCalledOnce();
       expect(mockClient.queries.run).toHaveBeenCalledOnce();
     });
@@ -611,7 +615,11 @@ describe("BidManagerService", () => {
       }
 
       const result = await promise;
-      expect(result).toBe("gs://bucket/report.csv");
+      expect(result).toEqual({
+        gcsPath: "gs://bucket/report.csv",
+        queryId: "q-123",
+        reportId: "r-456",
+      });
     });
 
     it("throws RetryExhaustedError after all retries", async () => {

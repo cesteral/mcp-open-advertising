@@ -22,7 +22,8 @@ export const BulkUpdateStatusInputSchema = z
   .object({
     entityType: z
       .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
+      .optional()
+      .describe("Type of entities to update (optional — for informational purposes only, not used in API call)"),
     entityIds: z
       .array(z.string())
       .min(1)

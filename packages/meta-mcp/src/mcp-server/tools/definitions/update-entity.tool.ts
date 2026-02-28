@@ -23,7 +23,8 @@ export const UpdateEntityInputSchema = z
   .object({
     entityType: z
       .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
+      .optional()
+      .describe("Type of entity to update (optional — for informational purposes only, not used in API call)"),
     entityId: z
       .string()
       .min(1)
@@ -38,7 +39,7 @@ export const UpdateEntityOutputSchema = z
   .object({
     success: z.boolean(),
     entityId: z.string(),
-    entityType: z.string(),
+    entityType: z.string().optional(),
     timestamp: z.string().datetime(),
   })
   .describe("Entity update result");

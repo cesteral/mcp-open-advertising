@@ -30,6 +30,12 @@ export class MetaInsightsService {
     },
     context?: RequestContext
   ): Promise<{ data: unknown[]; nextCursor?: string; summary?: unknown }> {
+    if (options.datePreset && options.timeRange) {
+      throw new Error(
+        "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
+      );
+    }
+
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
@@ -101,6 +107,12 @@ export class MetaInsightsService {
     },
     context?: RequestContext
   ): Promise<{ data: unknown[]; nextCursor?: string }> {
+    if (options.datePreset && options.timeRange) {
+      throw new Error(
+        "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
+      );
+    }
+
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
@@ -138,7 +150,7 @@ export class MetaInsightsService {
     }
 
     if (options.actionAttributionWindows?.length) {
-      params.action_attribution_windows = JSON.stringify(options.actionAttributionWindows);
+      params.action_attribution_windows = options.actionAttributionWindows.join(",");
     }
 
     const result = (await this.httpClient.get(

@@ -192,8 +192,9 @@ export class MetaService {
   async listAdAccounts(
     fields?: string[],
     limit?: number,
+    after?: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ accounts: unknown[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
@@ -209,7 +210,20 @@ export class MetaService {
       params.limit = String(limit);
     }
 
-    return this.httpClient.get("/me/adaccounts", params, context);
+    if (after) {
+      params.after = after;
+    }
+
+    const result = (await this.httpClient.get("/me/adaccounts", params, context)) as Record<string, unknown>;
+
+    const accounts = (result.data as unknown[]) || [];
+    const paging = result.paging as Record<string, unknown> | undefined;
+    const cursors = paging?.cursors as Record<string, string> | undefined;
+
+    return {
+      accounts,
+      nextCursor: cursors?.after,
+    };
   }
 
   // ─── Delivery Estimate ─────────────────────────────────────────

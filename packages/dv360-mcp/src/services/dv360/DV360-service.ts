@@ -168,6 +168,11 @@ export class DV360Service {
       if (filter && config.supportsFilter) {
         params.append("filter", filter);
         setSpanAttribute("dv360.filter", filter);
+      } else if (filter && !config.supportsFilter) {
+        this.logger.warn(
+          { entityType, filter, requestId: context?.requestId },
+          "Filter parameter provided but entity type does not support filtering — filter will be ignored"
+        );
       }
       if (pageToken) {
         params.append("pageToken", pageToken);
@@ -288,14 +293,21 @@ export class DV360Service {
   }
 
   /**
-   * Update entity with updateMask
+   * Update entity with updateMask.
+   *
+   * @param currentEntity - Optional pre-fetched entity data. When provided,
+   *   the service skips the redundant GET and deep-merges updates into this
+   *   object directly. Callers that already have the current entity (e.g. tool
+   *   handlers that fetch it for previousValues) should pass it here to avoid
+   *   a triple API call (GET in tool + GET in service + PATCH).
    */
   async updateEntity(
     entityType: string,
     ids: Record<string, string>,
     data: Record<string, unknown>,
     updateMask: string,
-    context?: RequestContext
+    context?: RequestContext,
+    currentEntity?: Record<string, unknown>
   ): Promise<unknown> {
     return withDV360ApiSpan("updateEntity", entityType, async () => {
       const config = getEntityConfigDynamic(entityType);
@@ -311,8 +323,8 @@ export class DV360Service {
       setSpanAttribute("dv360.updateMask", updateMask);
       setSpanAttribute("dv360.updateFieldsCount", updateMask.split(",").length);
 
-      // Get current entity and deep-merge with updates
-      const current = (await this.getEntity(entityType, ids, context)) as Record<string, unknown>;
+      // Use pre-fetched entity if provided, otherwise fetch current state
+      const current = currentEntity ?? (await this.getEntity(entityType, ids, context)) as Record<string, unknown>;
       const merged = deepMerge(current, data);
 
       // Validate merged entity
@@ -412,8 +424,8 @@ export class DV360Service {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.scriptLength", scriptContent.length);
 
-      // Upload endpoint is different from main API
-      const uploadUrl = `https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript`;
+      // Upload endpoint is different from main API — derive from configured base URL
+      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript`;
 
       this.logger.debug(
         { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
@@ -555,7 +567,7 @@ export class DV360Service {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.rulesLength", rulesContent.length);
 
-      const uploadUrl = `https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules`;
+      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules`;
 
       this.logger.debug(
         { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
@@ -646,14 +658,14 @@ export class DV360Service {
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${params.toString() ? `?${params}` : ""}`;
 
       const response = (await this.httpClient.fetch(path, context)) as {
-        customBiddingRules?: CustomBiddingAlgorithmRules[];
+        customBiddingAlgorithmRules?: CustomBiddingAlgorithmRules[];
         nextPageToken?: string;
       };
 
-      setSpanAttribute("dv360.resultCount", response.customBiddingRules?.length ?? 0);
+      setSpanAttribute("dv360.resultCount", response.customBiddingAlgorithmRules?.length ?? 0);
 
       return {
-        rules: response.customBiddingRules || [],
+        rules: response.customBiddingAlgorithmRules || [],
         nextPageToken: response.nextPageToken,
       };
     });

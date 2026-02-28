@@ -34,6 +34,15 @@ export const ValidateEntityInputSchema = z
       .record(z.any())
       .describe("Entity data payload to validate"),
   })
+  .superRefine((val, ctx) => {
+    if (val.mode === "update" && !val.entityId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "entityId is required when mode is 'update' — without it the request would fall through to a create operation",
+        path: ["entityId"],
+      });
+    }
+  })
   .describe("Parameters for validating a TTD entity payload");
 
 export const ValidateEntityOutputSchema = z

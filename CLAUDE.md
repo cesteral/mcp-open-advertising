@@ -468,7 +468,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
 | `run_custom_query` | Compose and execute custom Bid Manager reports | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
-### dv360-mcp (Management Server) Tools — 16 Tools
+### dv360-mcp (Management Server) Tools — 18 Tools
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -479,6 +479,8 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `dv360_delete_entity` | Delete supported DV360 entities | `entityType`, entity IDs |
 | `dv360_adjust_line_item_bids` | Batch adjust line item bids | `advertiserId`, `adjustments[]` |
 | `dv360_bulk_update_status` | Batch update statuses for entities | `entityType`, `entityIds[]`, `entityStatus` |
+| `dv360_bulk_create_entities` | Batch create DV360 entities | `entityType`, `advertiserId`, `items[]` |
+| `dv360_bulk_update_entities` | Batch update DV360 entities | `entityType`, `advertiserId`, `items[]` |
 
 #### Custom Bidding
 | Tool | Description | Key Parameters |
@@ -535,7 +537,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `ttd_graphql_bulk_job` | Submit async bulk GraphQL job | `operation`, `variables` |
 | `ttd_graphql_cancel_bulk_job` | Cancel a running bulk GraphQL job | `jobId` |
 
-### gads-mcp (Google Ads Server) Tools — 9 Tools, 6 Entity Types
+### gads-mcp (Google Ads Server) Tools — 11 Tools, 6 Entity Types
 
 **Supported entity types:** `campaign`, `adGroup`, `ad`, `keyword`, `campaignBudget`, `asset`
 
@@ -555,8 +557,10 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `gads_remove_entity` | Remove entity via :mutate API | `entityType`, `customerId`, `entityId` |
 | `gads_bulk_mutate` | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
 | `gads_bulk_update_status` | Batch enable/pause/remove entities | `entityType`, `customerId`, `entityIds[]`, `status` |
+| `gads_adjust_bids` | Batch adjust ad group bids (safe read-modify-write) | `customerId`, `adjustments[]` |
+| `gads_validate_entity` | Dry-run validate entity payload | `entityType`, `customerId`, `mode`, `data` |
 
-### meta-mcp (Meta Ads Server) Tools — 15 Tools, 5 Entity Types
+### meta-mcp (Meta Ads Server) Tools — 17 Tools, 5 Entity Types
 
 **Supported entity types:** `campaign`, `adSet`, `ad`, `adCreative`, `customAudience`
 
@@ -598,6 +602,8 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `meta_duplicate_entity` | Copy campaigns/adSets/ads | `entityId`, `options` |
 | `meta_get_delivery_estimate` | Audience size estimation | `adAccountId`, `targetingSpec` |
 | `meta_get_ad_previews` | Ad preview HTML | `adId`, `adFormat` |
+| `meta_adjust_bids` | Batch adjust ad set bids | `adAccountId`, `adjustments[]` |
+| `meta_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
 
 ### How the Five Servers Work Together
 

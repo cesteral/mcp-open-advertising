@@ -25,10 +25,20 @@ export class MetaTargetingService {
   ): Promise<unknown> {
     await this.rateLimiter.consume(`meta:default`);
 
+    // Normalize type to lowercase — Meta API search types are case-sensitive
+    // and expect lowercase (e.g., "adinterest", "adinterestsuggestion")
+    const normalizedType = type.toLowerCase();
+
     const params: Record<string, string> = {
-      type,
-      q: query,
+      type: normalizedType,
     };
+
+    // adinterestsuggestion requires interest_list instead of q
+    if (normalizedType === "adinterestsuggestion") {
+      params.interest_list = query;
+    } else {
+      params.q = query;
+    }
 
     if (limit) {
       params.limit = String(limit);
@@ -51,7 +61,8 @@ export class MetaTargetingService {
 
     const params: Record<string, string> = {};
     if (type) {
-      params.type = type;
+      // Normalize to lowercase — Meta API targeting types are case-sensitive
+      params.type = type.toLowerCase();
     }
 
     return this.httpClient.get(`/${actId}/targetingbrowse`, params, context);

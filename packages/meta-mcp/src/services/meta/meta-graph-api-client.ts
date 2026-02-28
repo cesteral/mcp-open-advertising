@@ -172,13 +172,14 @@ export class MetaGraphApiClient {
       const jsonRpcCode = mapMetaErrorToJsonRpc(metaCode, response.status);
       const errorMessage = metaError?.error?.message ?? `Meta API request failed: ${response.status}`;
 
+      const redactedUrl = urlWithAuth.toString().replace(/access_token=[^&]+/, "access_token=***");
       const mcpError = new McpError(
         jsonRpcCode,
         errorMessage,
         {
           requestId: context?.requestId,
           httpStatus: response.status,
-          url: url.replace(/access_token=[^&]+/, "access_token=***"),
+          url: redactedUrl,
           method: options?.method ?? "GET",
           metaCode,
           metaSubcode: metaError?.error?.error_subcode,
@@ -210,7 +211,7 @@ export class MetaGraphApiClient {
 
       this.logger.warn(
         {
-          url: url.replace(/access_token=[^&]+/, "access_token=***"),
+          url: redactedUrl,
           method: options?.method ?? "GET",
           status: response.status,
           metaCode,

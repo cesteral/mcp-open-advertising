@@ -165,7 +165,7 @@ export const adjustBidsTool = {
   annotations: {
     destructiveHint: true,
     idempotentHint: true,
-    openWorldHint: true,
+    openWorldHint: false,
   },
   inputExamples: [
     {

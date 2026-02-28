@@ -22,6 +22,10 @@ export const ListAdAccountsInputSchema = z
       .max(100)
       .optional()
       .describe("Number of accounts to return"),
+    after: z
+      .string()
+      .optional()
+      .describe("Pagination cursor — pass nextCursor from a previous response to get the next page"),
   })
   .describe("Parameters for listing ad accounts");
 
@@ -29,6 +33,7 @@ export const ListAdAccountsOutputSchema = z
   .object({
     accounts: z.array(z.record(z.any())).describe("List of ad accounts"),
     totalCount: z.number(),
+    nextCursor: z.string().optional().describe("Cursor for the next page of results"),
     timestamp: z.string().datetime(),
   })
   .describe("Ad accounts list result");
@@ -46,14 +51,14 @@ export async function listAdAccountsLogic(
   const result = await metaService.listAdAccounts(
     input.fields,
     input.limit,
+    input.after,
     context
   );
 
-  const data = (result as Record<string, unknown>)?.data as unknown[] || [];
-
   return {
-    accounts: data as Record<string, unknown>[],
-    totalCount: data.length,
+    accounts: result.accounts as Record<string, unknown>[],
+    totalCount: (result.accounts as unknown[]).length,
+    nextCursor: result.nextCursor,
     timestamp: new Date().toISOString(),
   };
 }
@@ -64,11 +69,14 @@ export function listAdAccountsResponseFormatter(result: ListAdAccountsOutput): u
     result.totalCount > 0
       ? `\n\n${JSON.stringify(result.accounts, null, 2)}`
       : "\n\nNo ad accounts found";
+  const pagination = result.nextCursor
+    ? `\n\nMore results available — pass after: "${result.nextCursor}" to get the next page`
+    : "";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}${accounts}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${accounts}${pagination}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

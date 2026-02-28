@@ -29,6 +29,7 @@ const DEFAULT_SELECT_FIELDS: Record<GAdsEntityType, string[]> = {
     "ad_group.type",
     "ad_group.campaign",
     "ad_group.cpc_bid_micros",
+    "ad_group.cpm_bid_micros",
     "ad_group.resource_name",
   ],
   ad: [

@@ -102,7 +102,7 @@ export async function getPacingStatusLogic(
   return {
     advertiserId: input.advertiserId,
     campaignId: input.campaignId,
-    campaignName: `Campaign ${input.campaignId}`,
+    campaignName: input.campaignId,
     budget: {
       total: input.budgetTotal,
       spent: pacingStatus.spendToDate,

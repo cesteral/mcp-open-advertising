@@ -59,11 +59,15 @@ export async function duplicateEntityLogic(
   const options: Record<string, unknown> = {};
 
   if (input.renameOptions) {
+    const renameOptions: Record<string, string> = {};
     if (input.renameOptions.prefix) {
-      options.rename_prefix = input.renameOptions.prefix;
+      renameOptions.rename_prefix = input.renameOptions.prefix;
     }
     if (input.renameOptions.suffix) {
-      options.rename_suffix = input.renameOptions.suffix;
+      renameOptions.rename_suffix = input.renameOptions.suffix;
+    }
+    if (Object.keys(renameOptions).length > 0) {
+      options.rename_options = renameOptions;
     }
   }
 

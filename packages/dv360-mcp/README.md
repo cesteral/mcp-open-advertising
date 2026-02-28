@@ -48,7 +48,7 @@ The server is built with production-grade architecture and complete functionalit
 - ✅ Dynamic entity system supporting 11 entity types
 - ⚠️ Requires DV360 service account credentials (see Setup below)
 
-## MCP Tools (16 tools)
+## MCP Tools (18 tools)
 
 ### Entity Management (CRUD)
 

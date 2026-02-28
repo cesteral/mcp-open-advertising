@@ -40,7 +40,7 @@ const FullUpdateEntityInputSchema = z
     adId: z.string().optional(),
     creativeId: z.string().optional(),
     data: z.record(z.any()),
-    updateMask: z.string(),
+    updateMask: z.string().min(1),
     reason: z.string().optional(),
   })
   .superRefine((input, ctx) => {
@@ -109,7 +109,8 @@ export async function updateEntityLogic(
       entityIds,
       mergedData,
       validatedInput.updateMask,
-      context
+      context,
+      current
     );
     return {
       entity: updated as Record<string, any>,

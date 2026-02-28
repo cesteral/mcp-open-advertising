@@ -53,6 +53,9 @@ export const ListCustomBiddingAlgorithmsInputSchema = z
       .describe("Number of results per page (default: 100, max: 200)"),
     pageToken: z.string().optional().describe("Page token for pagination"),
   })
+  .refine((input) => input.partnerId || input.advertiserId, {
+    message: "Either partnerId or advertiserId must be provided",
+  })
   .describe("Parameters for listing custom bidding algorithms");
 
 /**

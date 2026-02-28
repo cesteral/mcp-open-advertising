@@ -5,7 +5,6 @@ import {
   getEntityConfigDynamic,
   generateRelationshipDescription,
   validateEntityRelationships,
-  getEntityHierarchyPath,
   getEntitySchemaForOperation,
   getRequiredFieldsFromSchema,
 } from "../utils/entity-mapping-dynamic.js";
@@ -14,7 +13,6 @@ import { createSimplifiedCreateEntityInputSchema } from "../utils/simplified-sch
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "dv360_create_entity";
 const TOOL_TITLE = "Create DV360 Entity";
@@ -163,26 +161,8 @@ export async function createEntityLogic(
     validatedInput as Record<string, unknown>
   );
 
-  // Validate entity relationships in data payload
-  const missingRelationships = validateEntityRelationships(validatedInput.entityType, mergedData);
-  if (missingRelationships.length > 0) {
-    const hierarchy = getEntityHierarchyPath(validatedInput.entityType);
-    const relationshipDesc = generateRelationshipDescription(validatedInput.entityType);
-
-    throw new McpError(
-      JsonRpcErrorCode.InvalidParams,
-      `Missing required parent relationship field(s) in data: ${missingRelationships.join(", ")}\n\n` +
-        `To see required fields, fetch: entity-schema://${validatedInput.entityType}`,
-      {
-        entityType: validatedInput.entityType,
-        missingFields: missingRelationships,
-        hierarchy: hierarchy.join(" > "),
-        hint: relationshipDesc,
-        resourceUri: `entity-schema://${validatedInput.entityType}`,
-        requestId: context?.requestId,
-      }
-    );
-  }
+  // Note: validateEntityRelationships is already called inside the superRefine
+  // of FullCreateEntityInputSchema.parse(input) above, so no duplicate call needed.
 
   // Resolve DV360Service from container
   const { dv360Service } = resolveSessionServices(sdkContext);

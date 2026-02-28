@@ -24,7 +24,7 @@ const logger = createServerLogger("meta-mcp", transportMode, otelLogMixin());
  * Set up credentials for stdio mode from environment variables.
  * Creates a MetaAccessTokenAdapter and session services for the "stdio" session.
  */
-function setupStdioCredentials(sessionId: string): boolean {
+async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   const accessToken = mcpConfig.metaAccessToken;
 
   if (!accessToken) {
@@ -39,6 +39,9 @@ function setupStdioCredentials(sessionId: string): boolean {
     accessToken,
     mcpConfig.metaApiBaseUrl
   );
+
+  // Validate token at startup to fail fast on invalid credentials
+  await authAdapter.validate();
 
   const services = createSessionServices(
     authAdapter,

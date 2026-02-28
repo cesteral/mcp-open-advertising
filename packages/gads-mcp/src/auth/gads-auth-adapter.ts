@@ -15,6 +15,7 @@
  */
 
 import { createHash } from "crypto";
+import { fetchWithTimeout } from "@cesteral/shared";
 
 /**
  * Google Ads credentials parsed from HTTP headers or environment variables.
@@ -63,6 +64,7 @@ export class GAdsRefreshTokenAuthAdapter implements GAdsAuthAdapter {
 
   private static readonly EXPIRY_BUFFER_MS = 60_000;
   private static readonly TOKEN_URL = "https://oauth2.googleapis.com/token";
+  private static readonly TOKEN_TIMEOUT_MS = 10_000;
 
   constructor(private readonly credentials: GAdsCredentials) {}
 
@@ -106,13 +108,18 @@ export class GAdsRefreshTokenAuthAdapter implements GAdsAuthAdapter {
       grant_type: "refresh_token",
     });
 
-    const response = await fetch(GAdsRefreshTokenAuthAdapter.TOKEN_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: body.toString(),
-    });
+    const response = await fetchWithTimeout(
+      GAdsRefreshTokenAuthAdapter.TOKEN_URL,
+      GAdsRefreshTokenAuthAdapter.TOKEN_TIMEOUT_MS,
+      undefined,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: body.toString(),
+      }
+    );
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");

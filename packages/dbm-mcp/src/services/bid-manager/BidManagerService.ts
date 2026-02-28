@@ -323,7 +323,7 @@ export class BidManagerService {
    * - On failure, retries with query continuation (reuses queryId)
    * - Configurable retry count and cooldown between retries
    *
-   * @returns GCS path to the completed report
+   * @returns Object with GCS path, queryId, and reportId from the completed report
    */
   async executeQueryWithRetry(
     spec: QuerySpec,
@@ -332,7 +332,7 @@ export class BidManagerService {
       retryCooldownMs?: number;
       backoffConfig?: Partial<ExponentialBackoffConfig>;
     }
-  ): Promise<string> {
+  ): Promise<{ gcsPath: string; queryId: string; reportId: string }> {
     const maxRetries = options?.maxRetries ?? this.config.reportQueryRetries ?? 3;
     const retryCooldownMs = options?.retryCooldownMs ?? this.config.reportRetryCooldownMs ?? 60000;
 
@@ -382,7 +382,7 @@ export class BidManagerService {
           "Query executed successfully"
         );
 
-        return report.googleCloudStoragePath;
+        return { gcsPath: report.googleCloudStoragePath, queryId, reportId };
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
@@ -502,8 +502,8 @@ export class BidManagerService {
     };
 
     // Execute with retry and exponential backoff
-    const gcsPath = await this.executeQueryWithRetry(querySpec);
-    const csvData = await this.fetchReportData(gcsPath);
+    const result = await this.executeQueryWithRetry(querySpec);
+    const csvData = await this.fetchReportData(result.gcsPath);
     const metrics = parseCSVToDeliveryMetrics(csvData);
 
     this.logger.info(
@@ -531,7 +531,12 @@ export class BidManagerService {
     );
 
     // Determine groupBy based on granularity
-    const timeGroupBy = params.granularity === "monthly" ? "FILTER_MONTH" : "FILTER_DATE";
+    const timeGroupBy =
+      params.granularity === "weekly"
+        ? "FILTER_WEEK" as const
+        : params.granularity === "monthly"
+          ? "FILTER_MONTH" as const
+          : "FILTER_DATE" as const;
 
     const querySpec: QuerySpec = {
       metadata: {
@@ -561,8 +566,8 @@ export class BidManagerService {
     };
 
     // Execute with retry and exponential backoff
-    const gcsPath = await this.executeQueryWithRetry(querySpec);
-    const csvData = await this.fetchReportData(gcsPath);
+    const result = await this.executeQueryWithRetry(querySpec);
+    const csvData = await this.fetchReportData(result.gcsPath);
     const historicalData = parseCSVToHistoricalData(csvData);
 
     this.logger.info(
@@ -731,8 +736,8 @@ export class BidManagerService {
     };
 
     // Execute with retry and exponential backoff
-    const gcsPath = await this.executeQueryWithRetry(querySpec);
-    const csvData = await this.fetchReportData(gcsPath);
+    const queryResult = await this.executeQueryWithRetry(querySpec);
+    const csvData = await this.fetchReportData(queryResult.gcsPath);
 
     // Parse results based on output format
     if (params.outputFormat === "csv") {
@@ -746,8 +751,8 @@ export class BidManagerService {
       );
 
       return {
-        queryId: "custom_query",
-        reportId: `report_${Date.now()}`,
+        queryId: queryResult.queryId,
+        reportId: queryResult.reportId,
         status: "DONE",
         rowCount: lines.length - 1,
         columns,
@@ -764,8 +769,8 @@ export class BidManagerService {
     );
 
     return {
-      queryId: "custom_query",
-      reportId: `report_${Date.now()}`,
+      queryId: queryResult.queryId,
+      reportId: queryResult.reportId,
       status: "DONE",
       rowCount: records.length,
       columns: records.length > 0 ? Object.keys(records[0]) : [],

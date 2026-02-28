@@ -32,6 +32,18 @@ export class DV360HttpClient {
     private logger: Logger
   ) {}
 
+  /**
+   * Derive the upload base URL from the configured base URL.
+   *
+   * For a base URL like `https://displayvideo.googleapis.com/v4`
+   * the upload base is `https://displayvideo.googleapis.com/upload/displayvideo/v4`.
+   */
+  getUploadBaseUrl(): string {
+    const parsed = new URL(this.baseUrl);
+    // pathname is e.g. "/v4"
+    return `${parsed.origin}/upload/displayvideo${parsed.pathname}`;
+  }
+
   // ==========================================================================
   // Public API
   // ==========================================================================

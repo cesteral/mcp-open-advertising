@@ -172,19 +172,21 @@ export async function adjustLineItemBidsLogic(
           currentLineItem.bidStrategy.maximizeSpendAutoBid.maxAverageCpmBidAmountMicros;
       }
 
-      // Update bid
+      // Update bid — DV360 API expects int64 as string for bidAmountMicros
+      // Pass currentLineItem to avoid redundant GET inside updateEntity
       await dv360Service.updateEntity(
         "lineItem",
         entityIds,
         {
           bidStrategy: {
             fixedBid: {
-              bidAmountMicros: adjustment.newBidMicros,
+              bidAmountMicros: String(adjustment.newBidMicros),
             },
           },
         },
         "bidStrategy.fixedBid.bidAmountMicros",
-        context
+        context,
+        currentLineItem as Record<string, unknown>
       );
 
       lineItemName = currentLineItem.displayName as string | undefined;

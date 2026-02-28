@@ -528,15 +528,15 @@ export class GAdsService {
 
         // Parse partial failure results (same pattern as ENABLED/PAUSED branch)
         const mutateResults = (result.results as Array<Record<string, unknown>>) || [];
-        const partialErrors = result.partialFailureError as Record<string, unknown> | undefined;
 
         return {
           results: entityIds.map((entityId, idx) => {
-            const hasResult = mutateResults[idx] && Object.keys(mutateResults[idx]).length > 0;
+            const resultEntry = mutateResults[idx];
+            const hasResult = resultEntry && Object.keys(resultEntry).length > 0;
             return {
               entityId,
-              success: hasResult || !partialErrors,
-              error: !hasResult && partialErrors ? "Partial failure — check error details" : undefined,
+              success: hasResult,
+              error: !hasResult ? "Partial failure — check error details" : undefined,
             };
           }),
         };
@@ -568,15 +568,15 @@ export class GAdsService {
 
       // Parse partial failure results
       const mutateResults = (result.results as Array<Record<string, unknown>>) || [];
-      const partialErrors = result.partialFailureError as Record<string, unknown> | undefined;
 
       return {
         results: entityIds.map((entityId, idx) => {
-          const hasResult = mutateResults[idx] && Object.keys(mutateResults[idx]).length > 0;
+          const resultEntry = mutateResults[idx];
+          const hasResult = resultEntry && Object.keys(resultEntry).length > 0;
           return {
             entityId,
-            success: hasResult || !partialErrors,
-            error: !hasResult && partialErrors ? "Partial failure — check error details" : undefined,
+            success: hasResult,
+            error: !hasResult ? "Partial failure — check error details" : undefined,
           };
         }),
       };

@@ -167,7 +167,7 @@ export async function bulkUpdateStatusLogic(
         continue;
       }
 
-      // Update status
+      // Update status — pass currentEntity to avoid redundant GET inside updateEntity
       await dv360Service.updateEntity(
         input.entityType,
         entityIds,
@@ -175,7 +175,8 @@ export async function bulkUpdateStatusLogic(
           entityStatus: input.status,
         },
         "entityStatus",
-        context
+        context,
+        currentEntity as Record<string, unknown>
       );
 
       successful.push({
@@ -285,7 +286,7 @@ export const bulkUpdateStatusTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
-    idempotentHint: false,
+    idempotentHint: true,
   },
   logic: bulkUpdateStatusLogic,
   responseFormatter: bulkUpdateStatusResponseFormatter,

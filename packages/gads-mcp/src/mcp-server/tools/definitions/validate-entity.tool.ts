@@ -137,7 +137,7 @@ export const validateEntityTool = {
   annotations: {
     readOnlyHint: true,
     idempotentHint: true,
-    openWorldHint: true,
+    openWorldHint: false,
   },
   inputExamples: [
     {

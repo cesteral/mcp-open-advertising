@@ -90,7 +90,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (9 tools)
+## Available Tools Summary (11 tools)
 
 ### Read Tools
 | Tool | Purpose | Notes |
@@ -108,6 +108,8 @@ Inspect the output, then iterate with more specific calls.
 | \`gads_remove_entity\` | Remove an entity | Sets status to REMOVED (permanent) |
 | \`gads_bulk_mutate\` | Batch create/update/remove | Up to 5000 operations |
 | \`gads_bulk_update_status\` | Batch enable/pause/remove | Convenience wrapper |
+| \`gads_adjust_bids\` | Batch adjust ad group bids | Safe read-modify-write |
+| \`gads_validate_entity\` | Dry-run validate entity payload | Returns validation errors |
 
 ### Supported Entity Types (6)
 \`campaign\`, \`adGroup\`, \`ad\`, \`keyword\`, \`campaignBudget\`, \`asset\`

@@ -4,7 +4,7 @@ Meta Ads MCP Server - Campaign management via Meta Marketing API v21.0.
 
 ## Purpose
 
-Management server for Meta Ads. Provides 15 tools across 5 entity types for full CRUD operations, performance insights, targeting discovery, bulk operations, and specialized features like entity duplication and delivery estimates. Designed for AI agents to manage Meta Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for Meta Ads. Provides 17 tools across 5 entity types for full CRUD operations, performance insights, targeting discovery, bulk operations, and specialized features like entity duplication and delivery estimates. Designed for AI agents to manage Meta Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
 
 ## Features
 
@@ -178,7 +178,7 @@ Get preview HTML for an ad in a specific format.
 
 **Phase: Production-Ready**
 
-All 15 tools are fully implemented using Meta Marketing API v21.0 with Bearer token authentication, insights reporting, and targeting discovery.
+All 17 tools are fully implemented using Meta Marketing API v21.0 with Bearer token authentication, insights reporting, and targeting discovery.
 
 ## Development
 

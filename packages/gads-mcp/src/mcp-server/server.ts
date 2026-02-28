@@ -46,10 +46,12 @@ const gadsWorkflowIdByToolName: Record<string, string> = {
   gads_list_accounts: "mcp.execute.gads_entity_read",
   gads_get_entity: "mcp.execute.gads_entity_read",
   gads_list_entities: "mcp.execute.gads_entity_read",
+  gads_validate_entity: "mcp.execute.gads_entity_read",
   // Write tools
   gads_create_entity: "mcp.execute.gads_entity_management",
   gads_update_entity: "mcp.execute.gads_entity_management",
   gads_remove_entity: "mcp.execute.gads_entity_management",
+  gads_adjust_bids: "mcp.execute.gads_entity_management",
   gads_bulk_mutate: "mcp.execute.gads_bulk_operations",
   gads_bulk_update_status: "mcp.execute.gads_bulk_operations",
 };

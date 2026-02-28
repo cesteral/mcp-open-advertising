@@ -219,7 +219,8 @@ describe("dv360_bulk_update_status", () => {
         expect.objectContaining({ advertiserId: "adv-1", lineItemId: "li-1" }),
         { entityStatus: "ENTITY_STATUS_PAUSED" },
         "entityStatus",
-        expect.any(Object)
+        expect.any(Object),
+        expect.any(Object) // currentEntity passed to avoid redundant GET
       );
     });
 

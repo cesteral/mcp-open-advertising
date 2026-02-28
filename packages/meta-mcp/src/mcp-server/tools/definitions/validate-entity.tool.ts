@@ -56,6 +56,7 @@ const REQUIRED_FIELDS_CREATE: Record<MetaEntityType, FieldRule[]> = {
     { field: "name", expectedType: "string" },
     { field: "adset_id", expectedType: "string" },
     { field: "creative", expectedType: "object", hint: "must be an object with creative_id" },
+    { field: "status", expectedType: "string", hint: "e.g., PAUSED, ACTIVE" },
   ],
   adCreative: [
     { field: "name", expectedType: "string" },
@@ -90,18 +91,14 @@ export const ValidateEntityInputSchema = z
     adAccountId: z
       .string()
       .optional()
-      .describe("Ad Account ID (required for create mode, except customAudience)"),
+      .describe("Ad Account ID (required for create mode)"),
   })
   .superRefine((val, ctx) => {
-    if (
-      val.mode === "create" &&
-      val.entityType !== "customAudience" &&
-      !val.adAccountId
-    ) {
+    if (val.mode === "create" && !val.adAccountId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["adAccountId"],
-        message: "adAccountId is required when mode is 'create' (except for customAudience)",
+        message: "adAccountId is required when mode is 'create'",
       });
     }
   })

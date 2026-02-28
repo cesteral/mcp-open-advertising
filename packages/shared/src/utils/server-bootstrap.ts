@@ -96,7 +96,7 @@ export interface BootstrapOptions<TConfig, TServer extends { close(): Promise<vo
 
   // Stdio mode callbacks
   /** Set up stdio session credentials. Return false if credentials are missing and required. */
-  setupStdioSession: (sessionId: string) => boolean | void;
+  setupStdioSession: (sessionId: string) => boolean | void | Promise<boolean | void>;
   /** Create MCP server instance */
   createMcpServer: (logger: Logger, sessionId: string) => Promise<TServer>;
   /** Run the server over stdio transport */
@@ -128,7 +128,7 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
       logger.info("Starting in stdio mode");
 
       const stdioSessionId = "stdio";
-      const result = opts.setupStdioSession(stdioSessionId);
+      const result = await opts.setupStdioSession(stdioSessionId);
       if (result === false) {
         throw new Error(
           "No credentials found for stdio mode. " +

@@ -46,6 +46,9 @@ function createMockHttpClient() {
   return {
     fetch: vi.fn(),
     fetchRaw: vi.fn(),
+    getUploadBaseUrl: vi.fn().mockReturnValue(
+      "https://displayvideo.googleapis.com/upload/displayvideo/v4"
+    ),
   } as any;
 }
 
