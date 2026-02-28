@@ -4,15 +4,20 @@ import { AsyncLocalStorage } from "async_hooks";
 /**
  * Request context for tracking requests across async boundaries.
  *
- * Uses AsyncLocalStorage so any code in the call chain can access the
- * current requestId without explicit parameter passing.
+ * Unified interface used by both:
+ * - Transport layer (AsyncLocalStorage propagation via `runWithRequestContext`)
+ * - Tool/operation layer (per-invocation context via `createOperationContext`)
+ *
+ * The index signature allows parent/additional context to be merged in.
  */
 export interface RequestContext {
   requestId: string;
   sessionId?: string;
   userId?: string;
   timestamp: string;
-  service: string;
+  service?: string;
+  operation?: string;
+  [key: string]: unknown;
 }
 
 /**
@@ -69,3 +74,41 @@ export function extractRequestId(headers: Record<string, string | string[] | und
   }
   return randomUUID();
 }
+
+// ─── Operation-level context (formerly internal/request-context.ts) ───────
+
+/**
+ * Generate a unique request ID with `req-` prefix.
+ */
+export function generateRequestContextId(): string {
+  return `req-${randomUUID()}`;
+}
+
+/**
+ * Create a request context for tool/operation tracking.
+ * Supports merging parent context and additional context fields.
+ */
+export function createOperationContext(params?: {
+  parentContext?: Record<string, unknown>;
+  additionalContext?: Record<string, unknown>;
+  operation?: string;
+}): RequestContext {
+  const requestId =
+    (params?.parentContext?.requestId as string) ?? generateRequestContextId();
+
+  return {
+    requestId,
+    timestamp: new Date().toISOString(),
+    ...params?.parentContext,
+    ...params?.additionalContext,
+    operation: params?.operation,
+  };
+}
+
+/**
+ * Request context service — convenience object for DI registration.
+ */
+export const requestContextService = {
+  createOperationContext,
+  generateRequestContextId,
+};

@@ -11,7 +11,7 @@ import {
   findMatchingExample,
 } from "../utils/entity-examples.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "../../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_update_entity";

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum } from "../utils/entity-mapping.js";
-import type { RequestContext } from "../../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_duplicate_entity";

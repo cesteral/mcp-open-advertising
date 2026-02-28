@@ -12,6 +12,8 @@ export { deleteEntityTool } from "./delete-entity.tool.js";
 // Tier 2: Workflow Tools (Domain-Specific)
 export { adjustLineItemBidsTool } from "./adjust-line-item-bids.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
+export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
+export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 
 // Tier 2: Custom Bidding Algorithm Tools
 export { createCustomBiddingAlgorithmTool } from "./create-custom-bidding-algorithm.tool.js";
@@ -34,6 +36,8 @@ import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
 import { adjustLineItemBidsTool } from "./adjust-line-item-bids.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
+import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
+import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { createCustomBiddingAlgorithmTool } from "./create-custom-bidding-algorithm.tool.js";
 import { manageCustomBiddingScriptTool } from "./manage-custom-bidding-script.tool.js";
 import { manageCustomBiddingRulesTool } from "./manage-custom-bidding-rules.tool.js";
@@ -55,6 +59,8 @@ export const allTools: ToolDefinitionForFactory[] = [
   // Tier 2: Workflow Tools
   adjustLineItemBidsTool,
   bulkUpdateStatusTool,
+  bulkCreateEntitiesTool,
+  bulkUpdateEntitiesTool,
   // Tier 2: Custom Bidding Algorithm Tools
   createCustomBiddingAlgorithmTool,
   manageCustomBiddingScriptTool,

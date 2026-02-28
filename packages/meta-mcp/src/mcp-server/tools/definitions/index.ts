@@ -1,12 +1,13 @@
 /**
  * Tool definitions barrel export
  *
- * 15 tools total:
+ * 17 tools total:
  *   6 core: list entities, get entity, create entity, update entity, delete entity, list ad accounts
  *   2 insights: get insights, get insights breakdowns
  *   2 targeting: search targeting, get targeting options
- *   2 bulk: bulk update status, bulk create entities
+ *   3 bulk: bulk update status, bulk create entities, adjust bids
  *   3 specialized: duplicate entity, get delivery estimate, get ad previews
+ *   1 validation: validate entity (client-side)
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -24,6 +25,8 @@ export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
 export { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+export { validateEntityTool } from "./validate-entity.tool.js";
+export { adjustBidsTool } from "./adjust-bids.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -40,6 +43,8 @@ import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
 import { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+import { validateEntityTool } from "./validate-entity.tool.js";
+import { adjustBidsTool } from "./adjust-bids.tool.js";
 import type { ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
@@ -64,4 +69,8 @@ export const allTools: ToolDefinitionForFactory[] = [
   duplicateEntityTool,
   getDeliveryEstimateTool,
   getAdPreviewsTool,
+  // ── Bulk Operations (continued) ──
+  adjustBidsTool,
+  // ── Validation ──
+  validateEntityTool,
 ];

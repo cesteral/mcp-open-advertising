@@ -2,7 +2,7 @@ import type { Logger } from 'pino';
 import { McpError, JsonRpcErrorCode } from '../../utils/errors/index.js';
 import { RateLimiter } from '../../utils/security/rate-limiter.js';
 import { withDV360ApiSpan, setSpanAttribute } from '../../utils/telemetry/index.js';
-import type { RequestContext } from '../../utils/internal/request-context.js';
+import type { RequestContext } from "@cesteral/shared";
 import { DV360HttpClient } from '../dv360/dv360-http-client.js';
 import {
   type TargetingType,

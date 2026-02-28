@@ -8,7 +8,7 @@ import {
   getValidateIdsFieldName,
 } from '../utils/targeting-input-shape.js';
 import { getSupportedTargetingParentTypes } from '../utils/targeting-metadata.js';
-import type { RequestContext } from '../../../utils/internal/request-context.js';
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from '../../../types-global/mcp.js';
 
 const TOOL_NAME = 'dv360_validate_targeting_config';

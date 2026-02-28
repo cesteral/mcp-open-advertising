@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { GAdsHttpClient } from "./gads-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
   buildMutateUrl,
@@ -248,6 +248,72 @@ export class GAdsService {
     return result;
   }
 
+  // ─── Validate (Dry-Run) ──────────────────────────────────────────
+
+  /**
+   * Validate an entity payload without creating or modifying it.
+   *
+   * Uses the Google Ads `validateOnly: true` flag on the :mutate endpoint
+   * to perform server-side validation without side effects.
+   *
+   * - "create" mode: validates a create operation
+   * - "update" mode: validates an update operation (requires entityId + updateMask)
+   */
+  async validateEntity(
+    entityType: GAdsEntityType,
+    customerId: string,
+    data: Record<string, unknown>,
+    mode: "create" | "update",
+    entityId?: string,
+    updateMask?: string,
+    context?: RequestContext
+  ): Promise<{ valid: boolean; errors?: string[] }> {
+    await this.rateLimiter.consume(`gads:${customerId}`);
+
+    this.logger.debug({ entityType, customerId, mode }, "Validating Google Ads entity (dry-run)");
+
+    const mutateUrl = buildMutateUrl(entityType, customerId);
+
+    let operations: Array<Record<string, unknown>>;
+
+    if (mode === "update") {
+      if (!entityId || !updateMask) {
+        return {
+          valid: false,
+          errors: ["entityId and updateMask are required for update mode validation"],
+        };
+      }
+      const resourceName = buildResourceName(entityType, customerId, entityId);
+      operations = [
+        {
+          update: { ...data, resourceName },
+          updateMask,
+        },
+      ];
+    } else {
+      operations = [{ create: data }];
+    }
+
+    try {
+      await this.httpClient.fetch(
+        mutateUrl,
+        context,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            operations,
+            validateOnly: true,
+          }),
+        }
+      );
+      return { valid: true };
+    } catch (error: any) {
+      const errorMessage = error?.message ?? String(error);
+      const errorBody = error?.data?.errorBody ?? errorMessage;
+      return { valid: false, errors: [errorBody] };
+    }
+  }
+
   // ─── Bulk Operations ──────────────────────────────────────────────
 
   /**
@@ -288,6 +354,129 @@ export class GAdsService {
 
     return result;
   }
+
+  // ─── Bid Adjustment ──────────────────────────────────────────────
+
+  /**
+   * Safe read-modify-write bid adjustment for ad groups.
+   *
+   * For each adjustment:
+   * 1. Read: Fetch current ad group via GAQL to capture previous bid values
+   * 2. Modify: Build update payload with new bid fields
+   * 3. Write: Call :mutate with update operation and targeted updateMask
+   *
+   * Bid values are strings of micros (1,000,000 = $1.00 USD).
+   */
+  async adjustBids(
+    customerId: string,
+    adjustments: Array<{
+      adGroupId: string;
+      cpcBidMicros?: string;
+      cpmBidMicros?: string;
+    }>,
+    context?: RequestContext
+  ): Promise<{
+    results: Array<{
+      adGroupId: string;
+      adGroupName?: string;
+      success: boolean;
+      previousCpcBidMicros?: string;
+      previousCpmBidMicros?: string;
+      newCpcBidMicros?: string;
+      newCpmBidMicros?: string;
+      error?: string;
+    }>;
+  }> {
+    const results: Array<{
+      adGroupId: string;
+      adGroupName?: string;
+      success: boolean;
+      previousCpcBidMicros?: string;
+      previousCpmBidMicros?: string;
+      newCpcBidMicros?: string;
+      newCpmBidMicros?: string;
+      error?: string;
+    }> = [];
+
+    for (const adjustment of adjustments) {
+      try {
+        // 1. Read — fetch current ad group to capture previous bids
+        const readQuery = `SELECT ad_group.id, ad_group.name, ad_group.cpc_bid_micros, ad_group.cpm_bid_micros FROM ad_group WHERE ad_group.id = ${adjustment.adGroupId}`;
+        const { results: rows } = await this.gaqlSearch(customerId, readQuery, 1, undefined, context);
+
+        if (rows.length === 0) {
+          results.push({
+            adGroupId: adjustment.adGroupId,
+            success: false,
+            error: `Ad group ${adjustment.adGroupId} not found in customer ${customerId}`,
+          });
+          continue;
+        }
+
+        const adGroupRow = rows[0] as Record<string, any>;
+        const adGroup = adGroupRow.adGroup || adGroupRow.ad_group || {};
+        const adGroupName = adGroup.name as string | undefined;
+        const previousCpcBidMicros = adGroup.cpcBidMicros?.toString() ?? adGroup.cpc_bid_micros?.toString();
+        const previousCpmBidMicros = adGroup.cpmBidMicros?.toString() ?? adGroup.cpm_bid_micros?.toString();
+
+        // 2. Modify — build update payload with only the bid fields being changed
+        const updateData: Record<string, unknown> = {};
+        const maskFields: string[] = [];
+
+        if (adjustment.cpcBidMicros !== undefined) {
+          updateData.cpcBidMicros = adjustment.cpcBidMicros;
+          maskFields.push("cpcBidMicros");
+        }
+
+        if (adjustment.cpmBidMicros !== undefined) {
+          updateData.cpmBidMicros = adjustment.cpmBidMicros;
+          maskFields.push("cpmBidMicros");
+        }
+
+        // 3. Write — call :mutate with update operation
+        const resourceName = buildResourceName("adGroup", customerId, adjustment.adGroupId);
+        const mutateUrl = buildMutateUrl("adGroup", customerId);
+
+        await this.rateLimiter.consume(`gads:${customerId}`);
+
+        await this.httpClient.fetch(mutateUrl, context, {
+          method: "POST",
+          body: JSON.stringify({
+            operations: [
+              {
+                update: { ...updateData, resourceName },
+                updateMask: maskFields.join(","),
+              },
+            ],
+          }),
+        });
+
+        results.push({
+          adGroupId: adjustment.adGroupId,
+          adGroupName,
+          success: true,
+          previousCpcBidMicros,
+          previousCpmBidMicros,
+          newCpcBidMicros: adjustment.cpcBidMicros,
+          newCpmBidMicros: adjustment.cpmBidMicros,
+        });
+      } catch (error: any) {
+        this.logger.error(
+          { adGroupId: adjustment.adGroupId, error: error?.message },
+          "Bid adjustment failed for ad group"
+        );
+        results.push({
+          adGroupId: adjustment.adGroupId,
+          success: false,
+          error: error?.message ?? String(error),
+        });
+      }
+    }
+
+    return { results };
+  }
+
+  // ─── Bulk Operations ──────────────────────────────────────────────
 
   /**
    * Batch update the status for multiple entities of the same type.

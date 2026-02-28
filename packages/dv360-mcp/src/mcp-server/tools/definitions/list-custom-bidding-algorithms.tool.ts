@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "../../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_list_custom_bidding_algorithms";

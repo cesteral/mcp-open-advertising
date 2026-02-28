@@ -6,7 +6,7 @@ import {
   getEntitySchemaForOperation,
 } from "../domain/entity-mapping.js";
 import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
-import type { RequestContext } from "../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360-http-client.js";
 
 // ============================================================================
