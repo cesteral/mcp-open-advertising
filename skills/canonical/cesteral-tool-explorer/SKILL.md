@@ -1,6 +1,6 @@
 ---
 name: cesteral-tool-explorer
-description: Explore Cesteral tools, prompts, and resources across all servers (DV360, DBM, TTD) with minimal context usage.
+description: Explore Cesteral tools, prompts, and resources across all servers (DV360, DBM, TTD, Google Ads, Meta) with minimal context usage.
 ---
 
 # Cesteral Tool Explorer

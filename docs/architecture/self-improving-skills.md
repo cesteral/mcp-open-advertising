@@ -2,7 +2,7 @@
 
 > **Status**: Design document
 > **Version**: 1.0.0
-> **Last updated**: 2026-02-13
+> **Last updated**: 2026-02-27
 > **Depends on**: [Skill Contract v1.4.0](../mcp-skill-contract.json), [Governance Overview](../governance/GOVERNANCE-OVERVIEW.md), [Refinement Governance](../governance/refinement-governance.md)
 
 ---
@@ -14,7 +14,7 @@ Cesteral has strong foundations for a self-improving system:
 - **Evaluator hooks** in `packages/shared/src/utils/tool-handler-factory.ts` fire after every tool execution, producing `ToolInteractionEvaluation` results with issue classifications, quality scores, and recommended actions.
 - **Governance docs** in `docs/governance/` define a full refinement lifecycle — findings → classification → playbook deltas → approval → deployment.
 - **Skill adapters** generated from `skills/canonical/` (12 skills) to 6 providers (Cursor, Codex, Copilot, Windsurf, Cline, Continue) via `pnpm generate:skills`.
-- **A canonical skill contract** (`docs/mcp-skill-contract.json` v1.4.0) defines twelve workflow IDs across four servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp) with required prompts, resources, and output sections.
+- **A canonical skill contract** (`docs/mcp-skill-contract.json` v1.4.0) defines workflow IDs across five servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp) with required prompts, resources, and output sections.
 
 But the loop isn't closed:
 
@@ -825,7 +825,7 @@ This enables the validator to check that adapter annotations match `registry.yam
 - `skills/providers.json` — 6 provider configurations (Cursor, Codex, Copilot, Windsurf, Cline, Continue)
 - `scripts/generate-skill-adapters.mjs` — generates 72 adapter files from canonical sources
 - `scripts/validate-skill-adapters.mjs` — validates adapters against contract, checks tool/prompt references, freshness
-- `docs/mcp-skill-contract.json` v1.4.0 — 12 workflow IDs across 4 servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp)
+- `docs/mcp-skill-contract.json` v1.4.0 — workflow IDs across 5 servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp)
 - `docs/client-workflow-mappings.md` — maps workflows to client capabilities
 - MCP prompts in each server — canonical prompt implementations referenced by skills
 

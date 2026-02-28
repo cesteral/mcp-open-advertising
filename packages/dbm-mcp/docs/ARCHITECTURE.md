@@ -92,9 +92,9 @@ This server follows the **production-grade patterns** established in dv360-mcp:
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                MCP Client (AI Agent / cesteral-mcp)                │
-│                      HTTP POST /sse with JWT                         │
+│                      HTTP POST /mcp with JWT                         │
 └───────────────────────────────┬─────────────────────────────────────┘
-                                │ JSON-RPC 2.0 over SSE
+                                │ JSON-RPC 2.0 over Streamable HTTP
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        HTTP Transport Layer                          │

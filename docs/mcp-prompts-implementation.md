@@ -200,10 +200,10 @@ Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 
 ## Next Steps
 
-1. ✅ **Implemented:** `full_campaign_setup_workflow` prompt
-2. **Monitor Usage:** Track which prompts AI agents invoke most
-3. **Iterate:** Add prompts based on common user workflows
-4. **Expand:** Create similar prompts for `ttd-mcp` workflows
+1. ✅ **Implemented:** `full_campaign_setup_workflow` prompt (dv360-mcp)
+2. ✅ **Expanded:** Prompts implemented across all five servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp)
+3. **Monitor Usage:** Track which prompts AI agents invoke most
+4. **Iterate:** Add prompts based on common user workflows
 
 ---
 

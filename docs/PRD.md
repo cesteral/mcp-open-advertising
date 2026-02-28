@@ -2,7 +2,7 @@
 
 **Version:** 3.0
 **Date:** February 2026
-**Status:** Scaffolding Complete
+**Status:** Production-Ready
 **Product Owner:** Daniel Thorner
 
 ---
@@ -24,15 +24,15 @@
 
 ## Executive Summary
 
-Cesteral is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk).
+Cesteral is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk, Google Ads, Meta).
 
-Built on three separate Model Context Protocol (MCP) servers, Cesteral enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
+Built on five separate Model Context Protocol (MCP) servers, Cesteral enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
 
 ### Key Differentiators
 
 - **AI-First Interface**: MCP protocol as primary interface, not an afterthought
-- **Multi-Platform Support**: DV360 and The Trade Desk supported, extensible to additional DSPs
-- **Composable Architecture**: Three separate MCP servers can be used independently or combined
+- **Multi-Platform Support**: DV360, The Trade Desk, Google Ads, and Meta supported, extensible to additional DSPs
+- **Composable Architecture**: Five separate MCP servers can be used independently or combined
 - **Transparent Decision-Making**: All optimization decisions are explainable and auditable
 - **Cost-Efficient**: Hybrid cloud architecture reduces costs by 40-60% vs. traditional approaches
 
@@ -93,7 +93,7 @@ Programmatic advertising campaign optimization is:
 ### Primary Users (AI Agents)
 
 **Claude Desktop / API**
-- Connects to all three MCP servers simultaneously
+- Connects to all five MCP servers simultaneously
 - Executes optimization workflows based on prompts
 - Makes routine bid adjustment decisions
 - Escalates edge cases to humans
@@ -144,10 +144,9 @@ Programmatic advertising campaign optimization is:
 - AI agents can ask questions in natural language and get structured data
 
 **Technical Details**:
-- Platform adapters for DV360, Google Ads, Meta APIs
-- BigQuery normalized schemas for unified data model
+- Bid Manager API v2 for DV360 reporting queries
 - Read-only operations (safe to call repeatedly)
-- Partitioned tables for fast queries
+- Async report lifecycle: create query → run → poll → fetch results
 
 ---
 
@@ -159,7 +158,7 @@ Programmatic advertising campaign optimization is:
 - Fetch full campaign hierarchy (advertisers → campaigns → line items)
 - Update campaign budgets, flight dates, status (active/paused)
 - Update line item bids (CPM, CPC) and revenue margins
-- Create new line items (future)
+- Create new entities (campaigns, insertion orders, line items)
 
 **User Value**:
 - AI agents can make changes directly on advertising platforms
@@ -168,11 +167,10 @@ Programmatic advertising campaign optimization is:
 - Idempotent operations with safe retry logic
 
 **Technical Details**:
-- DV360: SDF download/upload + API v4 mutations
-- Google Ads: Mutation endpoints via Google Ads API
-- Meta: Marketing API write operations
-- Pub/Sub events for audit trail (all changes logged to BigQuery)
-- Cloud Storage for SDF file staging
+- DV360 API v4 for entity CRUD operations
+- Dynamic entity system supporting 11 entity types
+- Custom bidding algorithm management
+- Targeting assignment management
 
 ---
 
@@ -273,6 +271,8 @@ cesteral-mcp-servers/
 │   ├── dbm-mcp/                 # Server 1: DV360 reporting via Bid Manager API
 │   ├── dv360-mcp/               # Server 2: DV360 entity management via DV360 API
 │   ├── ttd-mcp/                 # Server 3: The Trade Desk entity management & reporting
+│   ├── gads-mcp/                # Server 4: Google Ads management & reporting
+│   ├── meta-mcp/                # Server 5: Meta Ads management
 │   └── shared/                  # Shared types, utilities, auth, observability
 ├── terraform/                   # Infrastructure as Code
 ├── scripts/                     # Deployment automation
@@ -307,7 +307,8 @@ cesteral-mcp-servers/
 **External Integrations**
 - DV360 API v4 + Bid Manager API v2
 - The Trade Desk REST API
-- Future: Google Ads API, Meta Marketing API, Amazon DSP
+- Google Ads REST API v23
+- Meta Marketing API v21.0
 
 ### Data Flow Example: Optimize Campaign Bids
 
@@ -332,7 +333,7 @@ Cesteral supports two access patterns. This keeps each MCP server independently 
    MCP method: tools/call "dv360_adjust_line_item_bids" (batched adjustments)
 
 5. Management Service
-   → DV360 API: SDF download → modify CSV → SDF upload
+   → DV360 API v4: Update entity via CRUD operations
    → Pub/Sub: Publish "bids.adjusted" event
 
 6. Historical Service (Pub/Sub subscriber)
@@ -376,7 +377,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 **Steps**:
 1. Media buyer creates campaign in DV360/Google Ads/Meta
 2. Media buyer tells AI agent: "Enable optimization for campaign X with moderate strategy"
-3. AI agent calls `configure_optimization` tool on optimization server
+3. AI agent calls dv360-mcp tools to configure campaign entities
 4. Configuration written to BigQuery `optimization_config` table:
    - Campaign ID, target pacing: 95%, strategy: moderate, max adjustment: 10%
    - Enabled: true, created_at: timestamp
@@ -398,10 +399,10 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 1. Scheduled scan (every 4 hours) publishes `optimization.needed` events for campaigns with pacing issues
 2. AI agent consumes event, calls `get_campaign_delivery` to fetch current metrics
 3. AI agent analyzes pacing: Campaign at 72% pacing, expected 85% → 13% underdelivering
-4. AI agent calls `get_optimization_recommendations` (dry-run mode)
+4. AI agent analyzes pacing data and calculates adjustment recommendations
 5. Optimization server recommends: +12% CPM increase across 24 line items
 6. AI agent reviews recommendations, determines reasonable (< 20% threshold)
-7. AI agent calls `optimize_campaign_bids` (execute mode)
+7. AI agent calls `dv360_adjust_line_item_bids` to execute recommended changes
 8. Adjustments queued, executed in next batch window (within 30 minutes)
 9. AI agent posts notification to Slack: "Optimized Campaign X: 15 line items adjusted, avg +12% CPM"
 10. 24 hours later, outcome tracker measures pacing improvement: 72% → 81% (9% improvement)
@@ -449,7 +450,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
    - Last week (2025-01-13 to 2025-01-19)
    - Two weeks ago (2025-01-06 to 2025-01-12)
 3. Reporting server queries BigQuery normalized tables
-4. AI agent calls `get_adjustment_history` to see if optimizations occurred
+4. AI agent reviews recent changes made via the management server
 5. AI agent synthesizes response:
    ```
    Campaign X Performance Comparison:
@@ -508,14 +509,14 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 **Goals**: Establish monorepo, shared types, basic infrastructure
 
 **Deliverables**:
-- Monorepo structure with three packages
+- Monorepo structure with six packages (five servers + shared)
 - Shared TypeScript types (Zod schemas)
 - BigQuery normalized schemas deployed
 - Terraform modules for GCP infrastructure
-- CI/CD pipeline (GitHub Actions)
+- CI/CD pipeline (Cloud Build)
 
 **Success Criteria**:
-- All three MCP servers deploy successfully
+- All five MCP servers deploy successfully
 - Can insert/query test data in BigQuery
 - MCP Gateway responds to basic requests
 
@@ -540,11 +541,11 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 ### Phase 3: Management Server (Weeks 11-14)
 
-**Goals**: Build `dv360-mcp` with DV360 SDF support
+**Goals**: Build `dv360-mcp` with DV360 API v4 support
 
 **Deliverables**:
 - MCP tools: `dv360_list_entities`, `dv360_update_entity`, `dv360_adjust_line_item_bids`
-- DV360 SDF download/upload implementation
+- DV360 API v4 entity management implementation
 - Cloud Storage integration for SDF staging
 - Pub/Sub event publishing for audit trail
 - Idempotent retry logic
@@ -552,7 +553,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 **Success Criteria**:
 - AI agent can update DV360 line item bids via MCP
 - All bid changes logged to BigQuery
-- SDF operations complete within 5 minutes P99
+- API operations complete within 5 seconds P99
 
 ---
 
@@ -575,14 +576,11 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 ### Phase 5: Multi-Platform Expansion (Weeks 21-28)
 
-**Goals**: Add Google Ads and Meta platform support
+**Goals**: Add Google Ads and Meta platform support ✅ Complete
 
 **Deliverables**:
-- Google Ads reporting adapter in reporting server
-- Google Ads management adapter in management server
-- Meta reporting adapter in reporting server
-- Meta management adapter in management server
-- BigQuery ETL jobs for Google Ads and Meta raw data
+- Google Ads MCP server (`gads-mcp`) with 9 tools for entity CRUD and GAQL reporting
+- Meta Ads MCP server (`meta-mcp`) with 15 tools for entity CRUD, insights, and targeting
 
 **Success Criteria**:
 - AI agent can manage Google Ads and Meta campaigns

@@ -146,7 +146,7 @@ Open (BSL → Apache 2.0)          Proprietary
 ─────────────────────────         ─────────────────────────
 cesteral-mcp-servers              cesteral-intelligence
 • 5 MCP servers                   • Budget guardrails
-• 48 tools across platforms       • Approval workflows
+• 63 tools across platforms       • Approval workflows
 • Auth adapters                   • Cross-platform strategy
 • Session management              • AI orchestration
 • Platform API wrappers           • Audit logs & compliance
@@ -159,7 +159,7 @@ The MCP servers are **commodity connectors** — they wrap public REST APIs usin
 
 Even though the connectors are commodity, they represent significant engineering:
 
-1. **48 tools** across 5 platforms with consistent patterns
+1. **63 tools** across 5 platforms with consistent patterns
 2. **Auth complexity** — OAuth2, service accounts, partner tokens, bearer tokens
 3. **Per-platform quirks** — DV360's dynamic schemas, TTD's GraphQL, Bid Manager's async reports
 4. **Session management** — per-session services, cleanup, concurrent users

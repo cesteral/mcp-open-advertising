@@ -47,7 +47,6 @@ Interactively creates and populates Secret Manager secrets.
   - JWT secret key (for MCP authentication)
   - DV360 OAuth credentials (client ID, secret, refresh token)
   - Bid Manager API key
-  - Beam/Databridge API key
   - TTD partner credentials (partner ID, API secret)
 - Prompts for each secret value interactively
 - Stores secrets securely in Secret Manager
@@ -84,7 +83,7 @@ Builds Docker images for all servers and deploys infrastructure using Terraform.
 ```
 
 **What it does:**
-- Builds Docker images for `dbm-mcp`, `dv360-mcp`, and `ttd-mcp`
+- Builds Docker images for `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, and `meta-mcp`
 - Pushes images to Artifact Registry
 - Initializes Terraform with environment-specific backend
 - Runs Terraform plan
@@ -211,7 +210,7 @@ gcloud secrets list --project=cesteral-dev
 
 ### View Cloud Run services
 ```bash
-for SERVICE in dbm-mcp dv360-mcp ttd-mcp; do
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
   gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
     --project=cesteral-dev
@@ -221,7 +220,7 @@ done
 ### View logs
 ```bash
 gcloud logging read \
-  'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd)-mcp"' \
+  'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta)-mcp"' \
   --limit 50 \
   --project=cesteral-dev
 ```
@@ -235,7 +234,7 @@ gcloud scheduler jobs list \
 
 ### Test health endpoints
 ```bash
-for SERVICE in dbm-mcp dv360-mcp ttd-mcp; do
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
   SERVICE_URL=$(gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
     --project=cesteral-dev \

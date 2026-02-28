@@ -454,7 +454,7 @@ const params = schema.parse(rawInput); // Throws on invalid input
 
 ## MCP Tools Catalog
 
-Complete reference of all MCP tools across the three servers:
+Complete reference of all MCP tools across the five servers:
 
 ### dbm-mcp (Reporting Server) Tools
 
@@ -468,7 +468,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
 | `run_custom_query` | Compose and execute custom Bid Manager reports | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
-### dv360-mcp (Management Server) Tools
+### dv360-mcp (Management Server) Tools — 16 Tools
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -480,7 +480,24 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `dv360_adjust_line_item_bids` | Batch adjust line item bids | `advertiserId`, `adjustments[]` |
 | `dv360_bulk_update_status` | Batch update statuses for entities | `entityType`, `entityIds[]`, `entityStatus` |
 
-### ttd-mcp (The Trade Desk Server) Tools — 14 Tools, 9 Entity Types
+#### Custom Bidding
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `dv360_create_custom_bidding_algorithm` | Create a custom bidding algorithm | `advertiserId`, `data` |
+| `dv360_manage_custom_bidding_script` | Upload/manage custom bidding scripts | `algorithmId`, `data` |
+| `dv360_manage_custom_bidding_rules` | Manage rules for custom bidding | `algorithmId`, `data` |
+| `dv360_list_custom_bidding_algorithms` | List custom bidding algorithms | `advertiserId`, filters |
+
+#### Targeting
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `dv360_list_assigned_targeting` | List assigned targeting options | `entityType`, entity IDs |
+| `dv360_get_assigned_targeting` | Get a specific targeting assignment | `entityType`, entity IDs, `targetingType` |
+| `dv360_create_assigned_targeting` | Create targeting assignment | `entityType`, entity IDs, `data` |
+| `dv360_delete_assigned_targeting` | Delete targeting assignment | `entityType`, entity IDs, `targetingType` |
+| `dv360_validate_targeting_config` | Validate targeting configuration | `entityType`, entity IDs, `config` |
+
+### ttd-mcp (The Trade Desk Server) Tools — 18 Tools, 9 Entity Types
 
 **Supported entity types:** `advertiser`, `campaign`, `adGroup`, `ad`, `creative`, `siteList`, `deal`, `conversionTracker`, `bidList`
 
@@ -513,6 +530,10 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `ttd_graphql_query` | Execute GraphQL query/mutation against TTD GraphQL API | `query`, `variables` |
+| `ttd_graphql_query_bulk` | Execute bulk GraphQL queries against TTD API | `queries[]` |
+| `ttd_graphql_mutation_bulk` | Execute bulk GraphQL mutations against TTD API | `mutations[]` |
+| `ttd_graphql_bulk_job` | Submit async bulk GraphQL job | `operation`, `variables` |
+| `ttd_graphql_cancel_bulk_job` | Cancel a running bulk GraphQL job | `jobId` |
 
 ### gads-mcp (Google Ads Server) Tools — 9 Tools, 6 Entity Types
 
@@ -610,9 +631,9 @@ Each server runs on a different port:
 - `gads-mcp`: port 3004
 - `meta-mcp`: port 3005
 
-Test SSE endpoint:
+Test MCP endpoint:
 ```bash
-curl http://localhost:3001/sse
+curl -X POST http://localhost:3001/mcp -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"ping","id":1}'
 ```
 
 Test health check:
@@ -628,7 +649,7 @@ View logs for specific server:
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta)-mcp"' --limit=50
 ```
 
 View costs:
@@ -658,8 +679,8 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 
 ## Key Design Principles
 
-1. **Separation of Concerns**: Four MCP servers with distinct responsibilities (reporting, DV360 management, TTD management, Google Ads management)
-2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management, Google Ads REST API for Google Ads management)
+1. **Separation of Concerns**: Five MCP servers with distinct responsibilities (reporting, DV360 management, TTD management, Google Ads management, Meta Ads management)
+2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management, Google Ads REST API for Google Ads management, Meta Marketing API for Meta management)
 3. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
 4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
 5. **Observability**: Structured logging throughout, designed for OpenTelemetry integration

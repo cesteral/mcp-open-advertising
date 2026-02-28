@@ -71,9 +71,9 @@ This dual-access model preserves service autonomy while enabling cross-server au
 - Fetch campaign hierarchies (advertisers → campaigns → line items)
 - Update budgets, flight dates, status (active/paused)
 - Update bids (CPM, CPC) and revenue margins
-- Create new line items (future)
+- Create new entities (campaigns, line items, insertion orders)
 
-**Platform**: DV360 via SDF (Structured Data Files)
+**Platform**: DV360 API v4
 
 ### Server 3: `ttd-mcp`
 
@@ -153,15 +153,14 @@ pnpm install
 ### 3. Set Up Environment
 
 ```bash
-# Copy environment template
-cp .env.example .env
-
-# Edit .env with your credentials
-# - GCP project ID
-# - JWT secret for authentication
-# - DV360 OAuth credentials
-# - Google Ads API credentials (optional)
+# Create a local .env file with your credentials
+# Required variables:
+# - GCP_PROJECT_ID
+# - MCP_AUTH_SECRET_KEY (for JWT auth mode)
+# - DV360/Google Ads OAuth credentials
+# - TTD partner credentials (optional)
 # - Meta API credentials (optional)
+# See docs/ENV-VARIABLES-GUIDE.md for full reference
 ```
 
 ### 4. Build All Packages
@@ -201,7 +200,7 @@ cd terraform
 terraform init
 
 # Deploy to development environment
-terraform apply -var-file=environments/dev.tfvars
+terraform apply -var-file=dev.tfvars
 ```
 
 ### 7. Configure AI Agent (Claude Desktop) *(After Deployment)*
@@ -257,7 +256,7 @@ cesteral-mcp-servers/
 │   ├── dv360-mcp/               # MCP Server 2: DV360 management
 │   │   ├── src/
 │   │   │   ├── mcp-server/      # MCP tool definitions + transports
-│   │   │   ├── services/        # DV360 API & SDF integrations
+│   │   │   ├── services/        # DV360 API v4 integrations
 │   │   │   └── index.ts
 │   │   ├── Dockerfile
 │   │   └── package.json
@@ -294,25 +293,23 @@ cesteral-mcp-servers/
 │
 ├── terraform/                   # Infrastructure as Code
 │   ├── modules/
-│   │   ├── mcp-server/          # Reusable Cloud Run module
-│   │   ├── bigquery/            # BigQuery datasets and tables
-│   │   ├── pubsub/              # Pub/Sub topics
+│   │   ├── mcp-service/         # Reusable Cloud Run module
+│   │   ├── core-infrastructure/ # BigQuery, Pub/Sub, etc.
+│   │   ├── monitoring/          # Dashboards and alerts
 │   │   └── networking/          # VPC, NAT, firewall
-│   ├── environments/
-│   │   ├── dev.tfvars
-│   │   ├── staging.tfvars
-│   │   └── prod.tfvars
+│   ├── dev.tfvars
+│   ├── staging.tfvars
+│   ├── prod.tfvars
 │   └── main.tf
 │
 ├── scripts/                     # Deployment automation
-│   ├── deploy.sh                # Deploy all servers
-│   ├── deploy-server.sh         # Deploy individual server
+│   ├── deploy.sh                # Deploy individual or all servers
+│   ├── dev-server.sh            # Local development server
 │   └── init-gcp-project.sh      # One-time GCP setup
 │
 ├── docs/                        # Documentation
-│   ├── Cesteral-PRD.md        # Product Requirements Document
-│   ├── cesteral-mcp-design-architecture.md  # Architecture design
-│   └── mcp-tool-catalog.md      # All MCP tools reference
+│   ├── PRD.md                   # Product Requirements Document
+│   └── repository-structure.md  # Package and platform layout
 │
 ├── package.json                 # Root workspace config
 ├── pnpm-workspace.yaml          # pnpm workspace definition
@@ -328,10 +325,10 @@ cesteral-mcp-servers/
 
 | Tool                      | Description                           | Parameters                                          |
 | ------------------------- | ------------------------------------- | --------------------------------------------------- |
-| `get_campaign_delivery`   | Fetch delivery metrics for date range | `campaignId`, `startDate`, `endDate`, `platform`    |
+| `get_campaign_delivery`   | Fetch delivery metrics for date range | `campaignId`, `advertiserId`, `startDate`, `endDate` |
 | `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS         | `campaignId`, `dateRange`                           |
 | `get_historical_metrics`  | Time-series data for trends           | `campaignId`, `startDate`, `endDate`, `granularity` |
-| `get_pacing_status`       | Real-time pacing calculation          | `campaignId`                                        |
+| `get_pacing_status`       | Real-time pacing calculation          | `campaignId`, `advertiserId`                        |
 | `run_custom_query`        | Execute dynamic DBM report queries    | `reportType`, `filters`, `metrics`, `dimensions`    |
 
 ### DV360 Management Server Tools
@@ -344,7 +341,7 @@ cesteral-mcp-servers/
 | `dv360_update_entity`                | Update any supported DV360 entity with updateMask   | `entityType`, IDs, `data`, `updateMask` |
 | `dv360_adjust_line_item_bids`        | Batch bid adjustments for multiple line items       | `advertiserId`, `adjustments[]` |
 
-See [packages/dv360-mcp](packages/dv360-mcp) for the full 10-tool reference including targeting and bulk operations.
+See [packages/dv360-mcp](packages/dv360-mcp) for the full 16-tool reference including custom bidding, targeting, and bulk operations.
 
 ### The Trade Desk Server Tools
 
@@ -356,7 +353,7 @@ See [packages/dv360-mcp](packages/dv360-mcp) for the full 10-tool reference incl
 | `ttd_bulk_update_status`   | Batch pause/resume/archive entities          | `entityType`, `entityIds[]`, `status` |
 | `ttd_graphql_query`        | Execute GraphQL query against TTD API        | `query`, `variables` |
 
-See [packages/ttd-mcp](packages/ttd-mcp) for the full 14-tool reference including bulk CRUD and bid adjustments.
+See [packages/ttd-mcp](packages/ttd-mcp) for the full 18-tool reference including bulk CRUD, bid adjustments, and GraphQL operations.
 
 ### Google Ads Server Tools
 
@@ -440,35 +437,22 @@ AI Agent:
 
 ## Deployment
 
-### Development Environment
+### Deploy Individual Servers
 
 ```bash
-# Deploy to dev (scales to zero when idle)
-pnpm run deploy:dev
+# Deploy a specific server to a specific environment
+./scripts/deploy.sh dbm-mcp dev
+./scripts/deploy.sh dv360-mcp staging
+./scripts/deploy.sh ttd-mcp prod
+./scripts/deploy.sh gads-mcp dev
+./scripts/deploy.sh meta-mcp prod
 ```
 
-### Staging Environment
+### Deploy All Servers
 
 ```bash
-# Deploy to staging (1 warm instance)
-pnpm run deploy:staging
-```
-
-### Production Environment
-
-```bash
-# Deploy to production (1+ warm instances)
-pnpm run deploy:prod
-```
-
-### Individual Server Deployment
-
-```bash
-# Deploy only reporting server
-pnpm run deploy:reporting --env=dev
-
-# Deploy only optimization server
-pnpm run deploy:optimization --env=prod
+# Build and deploy all servers
+./scripts/build-all.sh
 ```
 
 ---
@@ -521,24 +505,22 @@ pnpm run lint
 ### Running Locally
 
 ```bash
-# Start dbm server locally
-cd packages/dbm-mcp
-pnpm run dev
-
-# Start dv360 server locally
-cd packages/dv360-mcp
-pnpm run dev
-
+# Start any server locally using the dev script
+./scripts/dev-server.sh dbm-mcp     # port 3001
+./scripts/dev-server.sh dv360-mcp   # port 3002
+./scripts/dev-server.sh ttd-mcp     # port 3003
+./scripts/dev-server.sh gads-mcp    # port 3004
+./scripts/dev-server.sh meta-mcp    # port 3005
 ```
 
 ### Testing MCP Tools
 
 ```bash
 # Use MCP Inspector to test tools
-npx @modelcontextprotocol/inspector packages/reporting-mcp
+npx @modelcontextprotocol/inspector packages/dbm-mcp
 
 # Or use curl to test HTTP transport
-curl -X POST http://localhost:8080/mcp \
+curl -X POST http://localhost:3001/mcp \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -590,7 +572,7 @@ curl -X POST http://localhost:8080/mcp \
 - Docker (containerization)
 - Turborepo (monorepo builds)
 - pnpm (package management)
-- GitHub Actions (CI/CD)
+- Google Cloud Build (CI/CD)
 
 ---
 

@@ -55,7 +55,7 @@ Cesteral's product is a two-layer system. Understanding the layers is essential 
 
 ### Why not MIT / Apache 2.0 (fully open source)?
 
-MIT/Apache would allow any competitor to fork the connectors and launch a competing hosted service with zero friction. While the connectors themselves are commodity, they represent significant engineering effort (48 tools across 5 platforms, auth flows, session management, per-platform quirks). Giving that away unconditionally hands a free head start to competitors.
+MIT/Apache would allow any competitor to fork the connectors and launch a competing hosted service with zero friction. While the connectors themselves are commodity, they represent significant engineering effort (63 tools across 5 platforms, auth flows, session management, per-platform quirks). Giving that away unconditionally hands a free head start to competitors.
 
 ### Why not fully proprietary?
 

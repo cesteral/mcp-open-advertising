@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the Cesteral platform - an AI-native programmatic advertising optimization system built on four independent MCP (Model Context Protocol) servers.
+This repository contains the Cesteral platform - an AI-native programmatic advertising optimization system built on five independent MCP (Model Context Protocol) servers.
 
 ## Repository Layout
 
@@ -13,6 +13,7 @@ cesteral-mcp-servers/
 │   ├── dv360-mcp/                  # Server 2: DV360 entity management
 │   ├── ttd-mcp/                    # Server 3: The Trade Desk management & reporting
 │   ├── gads-mcp/                   # Server 4: Google Ads management & reporting
+│   ├── meta-mcp/                   # Server 5: Meta Ads management
 │   └── shared/                     # Shared types, utilities, auth, observability
 ├── docs/                           # Documentation
 ├── mcp-ts-quickstart-template/     # MCP server template (reference)
@@ -23,7 +24,7 @@ cesteral-mcp-servers/
 └── CLAUDE.md                       # Claude Code instructions
 ```
 
-## Four MCP Servers
+## Five MCP Servers
 
 ### 1. **dbm-mcp** (Reporting Server)
 
@@ -120,6 +121,38 @@ cesteral-mcp-servers/
 - `gads_bulk_mutate`
 - `gads_bulk_update_status`
 
+### 5. **meta-mcp** (Meta Ads Server)
+
+**Purpose**: Meta Ads campaign management
+
+**Responsibilities**:
+
+- Full CRUD on Meta Ads entities (campaigns, ad sets, ads, creatives, custom audiences)
+- Performance insights with dimensional breakdowns
+- Targeting search and delivery estimates
+- Bulk operations and entity duplication
+- Per-session auth via Bearer token
+
+**Platform**: Meta Marketing API v21.0
+
+**Key Tools**:
+
+- `meta_list_entities`
+- `meta_get_entity`
+- `meta_create_entity`
+- `meta_update_entity`
+- `meta_delete_entity`
+- `meta_list_ad_accounts`
+- `meta_get_insights`
+- `meta_get_insights_breakdowns`
+- `meta_bulk_update_status`
+- `meta_bulk_create_entities`
+- `meta_search_targeting`
+- `meta_get_targeting_options`
+- `meta_duplicate_entity`
+- `meta_get_delivery_estimate`
+- `meta_get_ad_previews`
+
 ---
 
 ## Directory Details
@@ -137,7 +170,7 @@ Documentation for the platform:
 
 ### `/mcp-ts-quickstart-template`
 
-Template structure for MCP servers (used as reference for building the four servers):
+Template structure for MCP servers (used as reference for building the five servers):
 
 - `src/mcp-server/` - MCP tool definitions
 - `src/services/` - Business logic and integrations
@@ -157,7 +190,7 @@ Automation scripts for deployment and operations:
 
 Infrastructure as Code for GCP resources:
 
-- Cloud Run services (4 MCP servers)
+- Cloud Run services (5 MCP servers)
 - BigQuery datasets and tables
 - Cloud Storage buckets
 - Pub/Sub topics
@@ -177,30 +210,27 @@ Infrastructure as Code for GCP resources:
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         AI Clients                              │
-│                   (Claude Desktop, Custom Agents)               │
-└────────────────┬────────────────┬──────────────────────────────┘
-                 │                │
-                 │ HTTPS/MCP      │ JWT Bearer Tokens
-                 │                │
-    ┌────────────┼────────────────┼──────────────┼────────────┐
-    │            │                │              │            │
-    ▼            ▼                ▼              ▼            │
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│   dbm-mcp    │ │  dv360-mcp   │ │   ttd-mcp    │ │  gads-mcp    │
-│              │ │              │ │              │ │              │
-│  Reporting   │ │ DV360 Mgmt   │ │  TTD Mgmt    │ │ Google Ads   │
-│  Server      │ │   Server     │ │   Server     │ │   Server     │
-│              │ │              │ │              │ │              │
-│ Bid Manager  │ │ DV360 API    │ │ TTD REST     │ │ Google Ads   │
-│ API queries  │ │ CRUD ops     │ │ API CRUD     │ │ API CRUD     │
-│              │ │              │ │              │ │              │
-└──────┬───────┘ └──────┬───────┘ └──────┬───────┘ └──────┬───────┘
-       │                │                │                │
-       └────────────────┼────────────────┼────────────────┘
-                        │
-                        ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                              AI Clients                                  │
+│                    (Claude Desktop, Custom Agents)                        │
+└───────┬──────────────┬──────────────┬──────────────┬──────────────┬──────┘
+        │              │              │              │              │
+        │ HTTPS/MCP    │              │              │    JWT Bearer Tokens
+        │              │              │              │              │
+        ▼              ▼              ▼              ▼              ▼
+┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
+│  dbm-mcp   │ │ dv360-mcp  │ │  ttd-mcp   │ │ gads-mcp   │ │ meta-mcp   │
+│            │ │            │ │            │ │            │ │            │
+│ Reporting  │ │ DV360 Mgmt │ │ TTD Mgmt   │ │ Google Ads │ │ Meta Ads   │
+│ Server     │ │  Server    │ │  Server    │ │  Server    │ │  Server    │
+│            │ │            │ │            │ │            │ │            │
+│ Bid Mgr    │ │ DV360 API  │ │ TTD REST   │ │ Google Ads │ │ Meta Graph │
+│ API        │ │ CRUD ops   │ │ API CRUD   │ │ API CRUD   │ │ API CRUD   │
+└─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘
+      │              │              │              │              │
+      └──────────────┼──────────────┼──────────────┼──────────────┘
+                     │              │
+                     ▼              ▼
            ┌────────────────────────┐
            │  GCP Data & Compute    │
            │                        │
@@ -212,18 +242,19 @@ Infrastructure as Code for GCP resources:
            └────────┬───────────────┘
                     │
                     ▼
-           ┌────────────────────┐
-           │   External APIs    │
-           │  • DV360 API       │
-           │  • Bid Manager API │
-           │  • TTD REST API    │
-           │  • Google Ads API  │
-           └────────────────────┘
+           ┌─────────────────────────┐
+           │    External APIs        │
+           │  • DV360 API            │
+           │  • Bid Manager API      │
+           │  • TTD REST API         │
+           │  • Google Ads API       │
+           │  • Meta Marketing API   │
+           └─────────────────────────┘
 ```
 
 ### Access Patterns
 
-- **Direct access (default)**: clients connect to any subset of `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, and `gads-mcp` in the same session.
+- **Direct access (default)**: clients connect to any subset of `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, and `meta-mcp` in the same session.
 - **Optional orchestration service**: for policy-heavy or high-scale workflows, an internal orchestration service can act as an MCP client to multiple servers and return a single consolidated result.
 
 ---
@@ -232,18 +263,19 @@ Infrastructure as Code for GCP resources:
 
 **Repository State**: Production-ready
 
-- All four MCP servers implemented with Streamable HTTP transport (Hono)
+- All five MCP servers implemented with Streamable HTTP transport (Hono)
 - Shared package provides auth strategies, observability, rate limiting, tool handler factory
 - Per-session service architecture with `SessionServiceStore` pattern
 - DV360 servers (dbm-mcp, dv360-mcp) use Google auth adapters
 - TTD server (ttd-mcp) uses partner token auth via `TtdAuthAdapter`
 - Google Ads server (gads-mcp) uses OAuth2 developer token auth via `GAdsAuthAdapter`
+- Meta server (meta-mcp) uses Bearer token auth via `MetaBearerAuthStrategy`
 - OpenTelemetry consolidated in shared package
 
 **Next Steps**:
 
-1. ~~Production API integrations~~ ✅ Complete — all four servers have live API integrations
-2. ~~Align Terraform and CI/CD for independent deployment of all four servers~~ ✅ Complete
+1. ~~Production API integrations~~ ✅ Complete — all five servers have live API integrations
+2. ~~Align Terraform and CI/CD for independent deployment of all five servers~~ ✅ Complete
 3. Standardize versioning and compatibility metadata across servers/contracts
 4. Deploy servers to GCP Cloud Run
 
@@ -256,7 +288,7 @@ Infrastructure as Code for GCP resources:
 - **Cloud Platform**: Google Cloud Platform (GCP)
 - **Infrastructure**: Terraform
 - **Protocol**: Model Context Protocol (MCP) via `@modelcontextprotocol/sdk`
-- **Authentication**: Google headers, TTD partner tokens, Google Ads OAuth, JWT
+- **Authentication**: Google headers, TTD partner tokens, Google Ads OAuth, Meta Bearer, JWT
 - **Observability**: OpenTelemetry (traces + metrics)
 - **Containerization**: Docker
 - **Monorepo**: pnpm workspaces + Turborepo
@@ -287,4 +319,4 @@ Infrastructure as Code for GCP resources:
 
 ---
 
-_Last updated: 2026-02-13_
+_Last updated: 2026-02-27_

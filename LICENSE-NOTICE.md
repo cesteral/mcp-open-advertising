@@ -1,6 +1,6 @@
 # License Notice
 
-Use the following header in source files when the repository transitions to BSL 1.1 (Phase 2).
+Use the following header in source files.
 
 ## Source File Header
 

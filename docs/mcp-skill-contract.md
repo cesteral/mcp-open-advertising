@@ -85,7 +85,7 @@ The MCP Prompts underneath remain the single source of truth regardless of which
 
 | Workflow ID | Purpose | Primary Prompt(s) |
 |---|---|---|
-| `mcp.explore.tools_and_schemas` | Discover capabilities with minimal context use | `tool_schema_exploration_workflow` (dbm-mcp), `gads_tool_schema_exploration` (gads-mcp), `ttd_tool_schema_exploration` (ttd-mcp) |
+| `mcp.explore.tools_and_schemas` | Discover capabilities with minimal context use | `tool_schema_exploration_workflow` (dbm-mcp), `gads_tool_schema_exploration` (gads-mcp), `ttd_tool_schema_exploration` (ttd-mcp), `meta_tool_schema_exploration` (meta-mcp) |
 | `mcp.execute.dv360_entity_update` | Perform safe schema-first DV360 updates | `entity_update_execution_workflow` (dv360-mcp) |
 | `mcp.execute.dv360_budget_reallocation` | Analyze and reallocate DV360 budgets | `budget_reallocation_workflow` (dv360-mcp) |
 | `mcp.execute.ttd_entity_update` | Perform safe schema-first TTD updates | `ttd_campaign_setup_workflow` (ttd-mcp) |
@@ -97,6 +97,9 @@ The MCP Prompts underneath remain the single source of truth regardless of which
 | `mcp.execute.gads_entity_management` | Safe Google Ads entity CRUD | `gads_campaign_setup_workflow` (gads-mcp) |
 | `mcp.execute.gads_bulk_operations` | Batch Google Ads mutate operations | `gads_campaign_setup_workflow` (gads-mcp) |
 | `mcp.troubleshoot.delivery` | Diagnose and fix underdelivery | `troubleshoot_underdelivery` (dv360-mcp), `troubleshoot_report` (dbm-mcp) |
+| `mcp.execute.meta_campaign_setup` | Create complete Meta Ads campaign structures | `meta_campaign_setup_workflow` (meta-mcp) |
+| `mcp.execute.meta_insights` | Build and execute Meta Ads insights queries | `meta_insights_reporting_workflow` (meta-mcp) |
+| `mcp.troubleshoot.meta_entity` | Diagnose and fix Meta Ads entity issues | `meta_troubleshoot_entity` (meta-mcp) |
 
 ## Multi-Server Access Model
 
@@ -112,6 +115,7 @@ Canonical package ownership is defined in `docs/mcp-skill-contract.json` under `
 - `dv360-mcp` -> `dv360-management`
 - `ttd-mcp` -> `ttd`
 - `gads-mcp` -> `google-ads`
+- `meta-mcp` -> `meta-ads`
 
 Any new platform package must:
 
@@ -143,6 +147,9 @@ To avoid ambiguity when multiple platform servers expose similar resource famili
 - TTD:
   - `ttd:entity-schema://{entityType}`
   - `ttd:entity-examples://{entityType}`
+- Meta:
+  - `meta:entity-schema://{entityType}`
+  - `meta:entity-examples://{entityType}`
 
 Migration guidance:
 

@@ -53,6 +53,15 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `gads_troubleshoot_entity` | Diagnose Google Ads entity issues and policy violations | `entityType`, `customerId` |
 | `gaql_reporting_workflow` | Build and execute GAQL-based reporting queries | `customerId` |
 
+### meta-mcp (4 prompts)
+
+| Prompt | Description | Key Arguments |
+|--------|-------------|---------------|
+| `meta_campaign_setup_workflow` | Complete Meta Ads campaign creation (Campaign → Ad Set → Ad Creative → Ad) | `adAccountId` (required) |
+| `meta_tool_schema_exploration` | Discover Meta MCP tools, resources, and schemas | _(none)_ |
+| `meta_troubleshoot_entity` | Diagnose Meta Ads entity issues and delivery problems | `entityType`, `entityId` |
+| `meta_insights_reporting_workflow` | Build and execute Meta Ads insights queries with breakdowns | `adAccountId` (required), `entityLevel` (optional) |
+
 ## When to Use Prompts
 
 ### Use Prompts For:
@@ -100,7 +109,7 @@ Based on common workflows not yet covered:
 
 ## Key Metrics
 
-**Current Prompts:** 15
+**Current Prompts:** 19
 **Average Size:** ~8KB when invoked
 **Context Cost:** 0KB when not invoked
 **Build Status:** ✅ Clean
@@ -114,3 +123,4 @@ Based on common workflows not yet covered:
 - DV360 Prompts: `packages/dv360-mcp/src/mcp-server/prompts/`
 - TTD Prompts: `packages/ttd-mcp/src/mcp-server/prompts/`
 - Google Ads Prompts: `packages/gads-mcp/src/mcp-server/prompts/`
+- Meta Prompts: `packages/meta-mcp/src/mcp-server/prompts/`

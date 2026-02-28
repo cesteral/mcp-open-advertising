@@ -2,7 +2,7 @@
 
 ## Context
 
-Evaluator hooks fire after every tool execution across all 4 MCP servers, detecting issues like broad payloads (>25 fields), slow latency (>20s), and excessive updateMask breadth. But these findings only emit OTEL metrics and then vanish — no persistence, no pattern detection, no way for agents to learn from past mistakes. This plan implements **Phase 2 of self-improving-skills.md**: persist evaluator findings to disk, detect recurring patterns across sessions, and expose them to AI agents via MCP resources.
+Evaluator hooks fire after every tool execution across all 5 MCP servers, detecting issues like broad payloads (>25 fields), slow latency (>20s), and excessive updateMask breadth. But these findings only emit OTEL metrics and then vanish — no persistence, no pattern detection, no way for agents to learn from past mistakes. This plan implements **Phase 2 of self-improving-skills.md**: persist evaluator findings to disk, detect recurring patterns across sessions, and expose them to AI agents via MCP resources.
 
 **Outcome**: After this work, an AI agent can read `findings://patterns/all` and see "agents consistently send broad TTD payloads (15 occurrences, 82% confidence)" — then adjust its behavior or propose a skill improvement.
 
@@ -119,7 +119,7 @@ if (opts.findingBuffer && hasEvaluator) {
 
 Push happens for ALL evaluations (not just when issues > 0) — findings with 0 issues but with quality scores are valuable baseline data.
 
-### Step 8: Session services — 4 files (MODIFY)
+### Step 8: Session services — 5 files (MODIFY)
 
 Add `findingBuffer: FindingBuffer` to each server's `SessionServices` interface and create it in `createSessionServices()`:
 
@@ -127,6 +127,7 @@ Add `findingBuffer: FindingBuffer` to each server's `SessionServices` interface 
 - `packages/dv360-mcp/src/services/session-services.ts`
 - `packages/dbm-mcp/src/services/session-services.ts`
 - `packages/gads-mcp/src/services/session-services.ts`
+- `packages/meta-mcp/src/services/session-services.ts`
 
 Pattern (TTD example):
 
@@ -144,7 +145,7 @@ export function createSessionServices(...): SessionServices {
 }
 ```
 
-### Step 9: Server.ts — pass buffer to tool registration — 4 files (MODIFY)
+### Step 9: Server.ts — pass buffer to tool registration — 5 files (MODIFY)
 
 Each `createMcpServer()` resolves the session's finding buffer and passes it to `registerToolsFromDefinitions`. Also accept optional `findingDeps` for resource registration.
 
@@ -152,6 +153,7 @@ Each `createMcpServer()` resolves the session's finding buffer and passes it to 
 - `packages/dv360-mcp/src/mcp-server/server.ts`
 - `packages/dbm-mcp/src/mcp-server/server.ts`
 - `packages/gads-mcp/src/mcp-server/server.ts`
+- `packages/meta-mcp/src/mcp-server/server.ts`
 
 Pattern (TTD example):
 
@@ -182,7 +184,7 @@ export async function createMcpServer(
 }
 ```
 
-### Step 10: Finding resources — 4 files (NEW)
+### Step 10: Finding resources — 5 files (NEW)
 
 Each server gets a `findings.resource.ts` file with a factory function:
 
@@ -190,6 +192,7 @@ Each server gets a `findings.resource.ts` file with a factory function:
 - `packages/dv360-mcp/src/mcp-server/resources/definitions/findings.resource.ts`
 - `packages/ttd-mcp/src/mcp-server/resources/definitions/findings.resource.ts`
 - `packages/gads-mcp/src/mcp-server/resources/definitions/findings.resource.ts`
+- `packages/meta-mcp/src/mcp-server/resources/definitions/findings.resource.ts`
 
 ```typescript
 export function createFindingResources(deps: {
@@ -227,7 +230,7 @@ export function createFindingResources(deps: {
 
 **Note**: `findings://patterns/{workflowId}` is deferred — using `findings://patterns/all` instead to avoid `ResourceTemplate` complexity. Agents can filter from the returned JSON.
 
-### Step 11: Transport wiring — 4 files (MODIFY)
+### Step 11: Transport wiring — 5 files (MODIFY)
 
 Each server's `streamable-http-transport.ts` creates the `FindingStore` singleton, wires the cleanup hook, and passes finding deps to `createMcpServer`.
 
@@ -235,6 +238,7 @@ Each server's `streamable-http-transport.ts` creates the `FindingStore` singleto
 - `packages/dv360-mcp/src/mcp-server/transports/streamable-http-transport.ts`
 - `packages/ttd-mcp/src/mcp-server/transports/streamable-http-transport.ts`
 - `packages/gads-mcp/src/mcp-server/transports/streamable-http-transport.ts`
+- `packages/meta-mcp/src/mcp-server/transports/streamable-http-transport.ts`
 
 Pattern:
 
@@ -319,15 +323,15 @@ Add finding resources to each server's resource index if not handled via finding
 | `packages/shared/src/utils/resource-handler-factory.ts`                                       | MODIFY (async getContent)                   | 5    |
 | `packages/shared/src/utils/mcp-transport-helpers.ts`                                          | MODIFY (onBeforeCleanup hook)               | 6    |
 | `packages/shared/src/utils/tool-handler-factory.ts`                                           | MODIFY (findingBuffer option + push)        | 7    |
-| `packages/{dbm,dv360,ttd,gads}-mcp/src/services/session-services.ts`                          | MODIFY x4 (add findingBuffer)               | 8    |
-| `packages/{dbm,dv360,ttd,gads}-mcp/src/mcp-server/server.ts`                                  | MODIFY x4 (pass buffer, accept findingDeps) | 9    |
-| `packages/{dbm,dv360,ttd,gads}-mcp/src/mcp-server/resources/definitions/findings.resource.ts` | NEW x4                                      | 10   |
-| `packages/{dbm,dv360,ttd,gads}-mcp/src/mcp-server/transports/streamable-http-transport.ts`    | MODIFY x4 (FindingStore + cleanup hook)     | 11   |
+| `packages/{dbm,dv360,ttd,gads,meta}-mcp/src/services/session-services.ts`                          | MODIFY x5 (add findingBuffer)               | 8    |
+| `packages/{dbm,dv360,ttd,gads,meta}-mcp/src/mcp-server/server.ts`                                  | MODIFY x5 (pass buffer, accept findingDeps) | 9    |
+| `packages/{dbm,dv360,ttd,gads,meta}-mcp/src/mcp-server/resources/definitions/findings.resource.ts` | NEW x5                                      | 10   |
+| `packages/{dbm,dv360,ttd,gads,meta}-mcp/src/mcp-server/transports/streamable-http-transport.ts`    | MODIFY x5 (FindingStore + cleanup hook)     | 11   |
 | `packages/shared/tests/utils/finding-buffer.test.ts`                                          | NEW                                         | test |
 | `packages/shared/tests/utils/finding-store.test.ts`                                           | NEW                                         | test |
 | `packages/shared/tests/utils/finding-integration.test.ts`                                     | NEW                                         | test |
 
-**Totals**: 7 new files + 3 new test files + 17 modified files = 27 files
+**Totals**: 7 new files + 3 new test files + 21 modified files = 31 files
 
 ---
 

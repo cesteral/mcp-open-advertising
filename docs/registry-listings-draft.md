@@ -112,4 +112,4 @@ Five production-ready MCP servers providing ~63 tools for programmatic advertisi
 **Links:**
 - GitHub: https://github.com/cesteral/cesteral-mcp-servers
 - Landing page: https://cesteral.com
-- Demo/screenshots: _(update when available)_
+- Demo/screenshots: See repository README for workflow examples

@@ -4,7 +4,7 @@ This directory defines governance standards for MCP workflows, telemetry, and sk
 
 ## Scope
 
-- Applies to `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, and any future platform package.
+- Applies to `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, and any future platform package.
 - Covers how workflow contracts are updated and validated.
 - Covers how interaction findings become approved playbook updates.
 - Covers telemetry requirements for evaluator feedback loops.

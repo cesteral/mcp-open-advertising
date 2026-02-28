@@ -52,14 +52,14 @@ Current stable version is v2.5.1; v3.0.0-beta adds delivery forecasting and comm
 
 Since no official MCP servers exist for DV360 or The Trade Desk, Cesteral's implementations are unmatched:
 
-**Cesteral dv360-mcp** -- 17 tools:
+**Cesteral dv360-mcp** -- 16 tools:
 - Full entity CRUD (list, get, create, update, delete)
 - Targeting CRUD (list, get, create, delete assigned targeting options + validation)
 - Custom bidding algorithms (create, manage scripts, manage rules, list)
 - Workflow tools (bulk status updates, bid adjustments)
 - Dynamic schema pattern with MCP Resources for stdio compatibility
 
-**Cesteral ttd-mcp** -- 14 tools:
+**Cesteral ttd-mcp** -- 18 tools:
 - Full entity CRUD across 9 entity types
 - Bulk operations (create, update, status, archive)
 - Reporting (async report generation + CSV download/parse)
@@ -77,13 +77,13 @@ Since no official MCP servers exist for DV360 or The Trade Desk, Cesteral's impl
 
 2. **The official Google Ads server covers ~5% of what dbm-mcp does.** It has no custom query builder, no MCP Resources for schema discovery, no structured output formatting. Even as a reporting-only server, it is far less capable.
 
-3. **Cross-server orchestration is our differentiator.** The three-server architecture (reporting via dbm-mcp, DV360 management via dv360-mcp, TTD management via ttd-mcp) enables end-to-end workflows like "detect underdelivery -> analyze metrics -> adjust bids" that no single official server could replicate.
+3. **Cross-server orchestration is our differentiator.** The five-server architecture (reporting via dbm-mcp, DV360 management via dv360-mcp, TTD management via ttd-mcp, Google Ads management via gads-mcp, Meta Ads management via meta-mcp) enables end-to-end workflows like "detect underdelivery -> analyze metrics -> adjust bids" that no single official server could replicate.
 
 4. **Domain-specific design patterns add significant value.** Dynamic schema introspection, simplified schemas + MCP Resources for stdio compatibility, parent-ID validation, entity validation dry-runs -- these are purpose-built for programmatic advertising automation and would not exist in generic official servers.
 
 5. **We control the release cycle.** When DV360 API v4 adds entity types or TTD's REST API changes, we can update immediately. Official servers from platform vendors typically lag behind their own API releases.
 
-6. **Stack consistency.** All three Cesteral servers share TypeScript, tsyringe DI, Pino logging, Zod validation, and the `@cesteral/shared` package. Adopting a Python-based official server would fragment the stack and increase maintenance burden.
+6. **Stack consistency.** All five Cesteral servers share TypeScript, tsyringe DI, Pino logging, Zod validation, and the `@cesteral/shared` package. Adopting a Python-based official server would fragment the stack and increase maintenance burden.
 
 ### Where official servers could add value
 
@@ -91,7 +91,7 @@ Since no official MCP servers exist for DV360 or The Trade Desk, Cesteral's impl
 |---|---|
 | **Expanding to Google Ads** (search, PMax campaigns) | Evaluate the official `google-ads-mcp` as a starting point; likely need to fork and extend for write operations and richer tooling |
 | **Expanding to Amazon Ads** | The official Amazon Ads MCP server is the most complete; evaluate whether it meets requirements before building custom |
-| **Expanding to Meta/Facebook Ads** | No official server exists; would need to build from scratch following Cesteral patterns |
+| **Meta/Facebook Ads** | Cesteral `meta-mcp` already built with 15 tools (full CRUD, insights, targeting, bulk operations) |
 
 Even in expansion scenarios, we would likely outgrow official servers quickly due to the depth of tooling needed for production programmatic workflows.
 

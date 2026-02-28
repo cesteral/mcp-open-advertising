@@ -11,7 +11,7 @@ Management server for DV360 campaign entities. Provides CRUD operations for camp
 - **Schema-Driven Architecture**: Auto-generated TypeScript types and Zod schemas from DV360 OpenAPI specification
 - **Dynamic Entity System**: Supports 11 DV360 entity types with minimal configuration
 - **Production-Grade**: OpenTelemetry instrumentation, structured logging, rate limiting, JWT authentication
-- **MCP Protocol**: Full Model Context Protocol implementation with HTTP/SSE and stdio transports
+- **MCP Protocol**: Full Model Context Protocol implementation with Streamable HTTP and stdio transports
 - **Claude Desktop Integration**: Seamless integration with Claude Desktop for AI-powered DV360 management
 
 ## Context Efficiency Notes
@@ -40,7 +40,7 @@ See [CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md) for detailed setup
 
 The server is built with production-grade architecture and complete functionality:
 
-- ✅ HTTP/SSE transport with session management
+- ✅ Streamable HTTP transport with session management
 - ✅ 16 MCP tools, all connected to DV360 API
 - ✅ OAuth2 service account authentication
 - ✅ Rate limiting and error handling
@@ -230,16 +230,10 @@ pnpm run test              # Run tests (when implemented)
 curl http://localhost:3002/health
 ```
 
-**SSE Endpoint (MCP Protocol):**
+**MCP Endpoint:**
 
 ```bash
-curl http://localhost:3002/sse
-```
-
-**List Tools (via MCP):**
-
-```bash
-curl -X POST http://localhost:3002/sse \
+curl -X POST http://localhost:3002/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
@@ -266,7 +260,7 @@ For production deployment via Cloud Run, see root-level Terraform configuration.
 - **`src/config/`** - Environment configuration
 - **`src/container/`** - Dependency injection setup (tsyringe)
 - **`src/mcp-server/server.ts`** - MCP server creation
-- **`src/mcp-server/transports/http-transport.ts`** - HTTP/SSE transport layer
+- **`src/mcp-server/transports/streamable-http-transport.ts`** - Streamable HTTP transport layer
 - **`src/mcp-server/tools/`** - MCP tool definitions
 - **`src/services/dv360/`** - DV360 API client service
 - **`src/generated/schemas/`** - Auto-generated TypeScript types and Zod schemas

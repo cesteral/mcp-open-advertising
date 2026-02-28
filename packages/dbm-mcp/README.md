@@ -13,6 +13,7 @@ Fetch delivery metrics (impressions, clicks, spend, conversions) for a campaign 
 
 **Parameters:**
 - `campaignId` (string): Campaign ID
+- `advertiserId` (string): DV360 Advertiser ID
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
 
@@ -71,7 +72,7 @@ Set via `MCP_AUTH_MODE` environment variable.
 ## Architecture
 
 ### Transport
-- **HTTP/SSE**: MCP protocol over Server-Sent Events at `/sse`
+- **Streamable HTTP**: MCP protocol via Streamable HTTP transport at `/mcp`
 - **Health check**: `/health` endpoint
 
 ### Data Sources
@@ -119,14 +120,13 @@ See root `.env.example` for all required variables:
 pnpm run dev:http
 
 # In another terminal, use MCP Inspector
-npx @modelcontextprotocol/inspector http://localhost:3001/sse
+npx @modelcontextprotocol/inspector http://localhost:3001/mcp
 ```
 
 ## API Endpoints
 
 - `GET /health` - Health check
-- `GET /sse` - MCP protocol via Server-Sent Events
-- `POST /message` - Not implemented (use SSE)
+- `POST /mcp` - MCP protocol via Streamable HTTP transport
 
 ## Contributing
 

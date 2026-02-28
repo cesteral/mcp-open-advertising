@@ -73,7 +73,7 @@ File: `src/mcp-server/server.ts`
 
 Files: `src/mcp-server/tools/definitions/*.tool.ts`
 
-- 14 tools across CRUD, reporting, bulk operations, and advanced GraphQL/query scenarios.
+- 18 tools across CRUD, reporting, bulk operations, and advanced GraphQL/query scenarios.
 - Each tool declares:
   - `inputSchema`
   - `outputSchema`

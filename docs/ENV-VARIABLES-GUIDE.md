@@ -19,7 +19,11 @@ cesteral-mcp-servers/
     │   └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
     ├── dbm-mcp/
     │   └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
-    └── ttd-mcp/
+    ├── ttd-mcp/
+    │   └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
+    ├── gads-mcp/
+    │   └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
+    └── meta-mcp/
         └── src/config/index.ts  # Calls dotenv.config() → loads from ROOT .env
 ```
 
@@ -89,7 +93,9 @@ cesteral-mcp-servers/
     │   ├── .env.example  ← OPTIONAL: Package-specific docs only
     │   └── src/config/index.ts
     ├── dbm-mcp/
-    └── ttd-mcp/
+    ├── ttd-mcp/
+    ├── gads-mcp/
+    └── meta-mcp/
 ```
 
 ### Root `.env.example` (Template)
@@ -114,7 +120,7 @@ GCP_REGION=us-central1
 
 # Authentication
 JWT_SECRET=your-jwt-secret-here
-MCP_AUTH_MODE=none                              # none | jwt | google-headers | ttd-headers
+MCP_AUTH_MODE=none                              # none | jwt | google-headers | gads-headers | ttd-headers | meta-bearer
 MCP_AUTH_SECRET_KEY=
 
 # MCP Session Management
@@ -181,6 +187,15 @@ GADS_REFRESH_TOKEN=your-oauth-refresh-token
 GADS_LOGIN_CUSTOMER_ID=                         # Optional: MCC login customer ID (no dashes)
 GADS_API_BASE_URL=https://googleads.googleapis.com/v23
 GADS_RATE_LIMIT_PER_MINUTE=100
+
+# ---------- meta-mcp (Meta Ads Server) ----------
+META_MCP_PORT=3005
+META_MCP_HOST=0.0.0.0
+
+# Meta API Configuration
+META_ACCESS_TOKEN=your-meta-access-token
+META_API_BASE_URL=https://graph.facebook.com/v21.0
+META_RATE_LIMIT_PER_MINUTE=60
 ```
 
 ### Local `.env` (Your Actual Values)
