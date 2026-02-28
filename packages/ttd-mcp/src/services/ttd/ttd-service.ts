@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import { getEntityConfig, type TtdEntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 
 /**

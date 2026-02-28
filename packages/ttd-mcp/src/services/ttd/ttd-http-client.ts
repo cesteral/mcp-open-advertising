@@ -2,7 +2,7 @@ import type { Logger } from "pino";
 import type { TtdAuthAdapter } from "../../auth/ttd-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1_000;

@@ -15,6 +15,10 @@ import {
   entityUpdateExecutionPrompt,
   getEntityUpdateExecutionPromptMessage,
 } from "./definitions/entity-update-execution.prompt.js";
+import {
+  toolSchemaExplorationPrompt,
+  getToolSchemaExplorationMessage,
+} from "./definitions/tool-schema-exploration.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -54,6 +58,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: entityUpdateExecutionPrompt,
       generateMessage: getEntityUpdateExecutionPromptMessage,
+    },
+  ],
+  [
+    toolSchemaExplorationPrompt.name,
+    {
+      prompt: toolSchemaExplorationPrompt,
+      generateMessage: getToolSchemaExplorationMessage,
     },
   ],
 ]);

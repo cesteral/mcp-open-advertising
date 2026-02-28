@@ -4,7 +4,7 @@ import { createLogger } from "@cesteral/shared";
 import { appConfig } from "../../config/index.js";
 import * as Tokens from "../tokens.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
-import { requestContextService } from "../../utils/internal/request-context.js";
+import { requestContextService } from "@cesteral/shared";
 
 export function registerCoreServices(logger?: Logger): void {
   container.register(Tokens.AppConfig, { useValue: appConfig });

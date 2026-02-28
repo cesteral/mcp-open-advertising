@@ -2,7 +2,7 @@ import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 
 /**
  * Retry configuration for transient errors (429 / 5xx).

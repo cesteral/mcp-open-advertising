@@ -11,7 +11,7 @@ import {
   buildTargetingIds,
 } from '../utils/targeting-metadata.js';
 import { getTargetingRequiredIdInputShape } from '../utils/targeting-input-shape.js';
-import type { RequestContext } from '../../../utils/internal/request-context.js';
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from '../../../types-global/mcp.js';
 
 const TOOL_NAME = 'dv360_list_assigned_targeting';

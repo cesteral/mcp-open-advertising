@@ -14,6 +14,7 @@ export { SessionServiceStore } from "@cesteral/shared";
 import { BidManagerService } from "./bid-manager/BidManagerService.js";
 import { createGoogleAuthFromAdapter } from "./bid-manager/auth-bridge.js";
 import type { AppConfig } from "../config/index.js";
+import { rateLimiter } from "../utils/security/rate-limiter.js";
 
 /**
  * All services scoped to a single session.
@@ -42,7 +43,7 @@ export function createSessionServices(
   });
 
   // Create BidManagerService with the pre-initialized client
-  const bidManagerService = new BidManagerService(config, logger, bidManagerClient);
+  const bidManagerService = new BidManagerService(config, logger, bidManagerClient, rateLimiter);
 
   return {
     bidManagerService,

@@ -3,7 +3,7 @@
  */
 
 import type { z } from "zod";
-import type { RequestContext } from "../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import type { ElicitRequestFormParams, ElicitRequestURLParams, ElicitResult } from "@modelcontextprotocol/sdk/types.js";
 import type { ToolInputExample } from "@cesteral/shared";
 

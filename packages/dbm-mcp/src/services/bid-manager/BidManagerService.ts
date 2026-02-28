@@ -9,6 +9,7 @@
 import type { Logger } from "pino";
 import type { AppConfig } from "../../config/index.js";
 import type { BidManagerClient } from "./client.js";
+import type { RateLimiter } from "@cesteral/shared";
 import {
   QueryCreationError,
   QueryExecutionError,
@@ -80,6 +81,7 @@ export class BidManagerService {
     private config: AppConfig,
     private logger: Logger,
     private client: BidManagerClient,
+    private rateLimiter?: RateLimiter,
   ) {}
 
   /**
@@ -89,6 +91,7 @@ export class BidManagerService {
     this.logger.info({ title: spec.metadata.title }, "Creating Bid Manager query");
 
     try {
+      await this.rateLimiter?.consume("bidmanager:global");
       const response = await this.client.queries.create({
         requestBody: {
           metadata: {
@@ -138,6 +141,7 @@ export class BidManagerService {
     this.logger.info({ queryId }, "Running Bid Manager query");
 
     try {
+      await this.rateLimiter?.consume("bidmanager:global");
       const response = await this.client.queries.run({ queryId });
 
       const reportId = response.data.key?.reportId;
@@ -165,6 +169,7 @@ export class BidManagerService {
    */
   async getReportStatus(queryId: string, reportId: string): Promise<ReportMetadata> {
     try {
+      await this.rateLimiter?.consume("bidmanager:global");
       const response = await this.client.queries.reports.get({ queryId, reportId });
 
       return {
@@ -426,6 +431,7 @@ export class BidManagerService {
     this.logger.info({ gcsPath: gcsPath.substring(0, 100) + "..." }, "Fetching report data");
 
     try {
+      await this.rateLimiter?.consume("bidmanager:global");
       const response = await fetch(gcsPath);
 
       if (!response.ok) {

@@ -5,7 +5,7 @@ import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { createFindingResources } from "./resources/definitions/findings.resource.js";
 import { promptRegistry } from "./prompts/index.js";
-import { createRequestContext } from "../utils/internal/request-context.js";
+import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
   EvaluatorIssueClass,
@@ -147,7 +147,7 @@ export async function createMcpServer(
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
     createRequestContext: (params) =>
-      createRequestContext({
+      createOperationContext({
         operation: params.operation,
         additionalContext: params.additionalContext,
       }),

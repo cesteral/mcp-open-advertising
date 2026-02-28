@@ -1,6 +1,6 @@
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "../../utils/internal/request-context.js";
+import type { RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
   type MetaEntityType,
