@@ -4,7 +4,7 @@ Meta Ads MCP Server - Campaign management via Meta Marketing API v21.0.
 
 ## Purpose
 
-Management server for Meta Ads. Provides 17 tools across 5 entity types for full CRUD operations, performance insights, targeting discovery, bulk operations, and specialized features like entity duplication and delivery estimates. Designed for AI agents to manage Meta Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for Meta Ads. Provides 18 tools across 5 entity types for full CRUD operations, performance insights, targeting discovery, bulk operations, and specialized features like entity duplication and delivery estimates. Designed for AI agents to manage Meta Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
 
 ## Features
 
@@ -51,7 +51,7 @@ Create a new Meta Ads entity.
 Update an existing Meta Ads entity (POST with PATCH semantics).
 
 **Parameters:**
-- `entityType` (string, required): Type of entity to update
+- `entityType` (string, optional): Type of entity to update (informational only, not used in API call)
 - `entityId` (string, required): The entity ID to update
 - `data` (object, required): Fields to update as key-value pairs
 
@@ -70,6 +70,7 @@ List ad accounts accessible to the authenticated user.
 **Parameters:**
 - `fields` (string[], optional): Field names to return (defaults to id, name, account_status, currency, timezone_name, amount_spent, balance)
 - `limit` (number, optional): Number of accounts to return (1-100)
+- `after` (string, optional): Pagination cursor from previous response
 
 ### Insights
 
@@ -107,7 +108,7 @@ Get performance insights broken down by dimension (age, gender, country, device,
 Batch update status for multiple Meta Ads entities.
 
 **Parameters:**
-- `entityType` (string, required): Type of entities to update
+- `entityType` (string, optional): Type of entities to update (informational only, not used in API call)
 - `entityIds` (string[], required): Entity IDs to update (max 50)
 - `status` (string, required): `ACTIVE`, `PAUSED`, or `ARCHIVED`
 
@@ -119,9 +120,16 @@ Batch create multiple entities of the same type.
 - `adAccountId` (string, required): Ad Account ID
 - `items` (array, required): Array of entity data objects (max 50)
 
+#### 11. `meta_bulk_update_entities`
+Batch update multiple entities with individual data payloads.
+
+**Parameters:**
+- `entityType` (string, optional): Type of entities being updated (informational only, not used in API call)
+- `items` (array, required): Array of update items (max 50), each with `entityId` and `data`
+
 ### Targeting
 
-#### 11. `meta_search_targeting`
+#### 12. `meta_search_targeting`
 Search for targeting options (interests, behaviors, demographics) by keyword.
 
 **Parameters:**
@@ -129,7 +137,7 @@ Search for targeting options (interests, behaviors, demographics) by keyword.
 - `query` (string, required): Search keyword
 - `limit` (number, optional): Max results (1-100, default 25)
 
-#### 12. `meta_get_targeting_options`
+#### 13. `meta_get_targeting_options`
 Browse available targeting categories for an ad account.
 
 **Parameters:**
@@ -138,7 +146,7 @@ Browse available targeting categories for an ad account.
 
 ### Specialized
 
-#### 13. `meta_duplicate_entity`
+#### 14. `meta_duplicate_entity`
 Duplicate a campaign, ad set, or ad via `POST /{id}/copies`.
 
 **Parameters:**
@@ -147,7 +155,7 @@ Duplicate a campaign, ad set, or ad via `POST /{id}/copies`.
 - `renameOptions` (object, optional): Object with `prefix` and/or `suffix` for naming
 - `statusOption` (string, optional): Status for copy (`ACTIVE`, `PAUSED`, `INHERITED`)
 
-#### 14. `meta_get_delivery_estimate`
+#### 15. `meta_get_delivery_estimate`
 Get estimated audience size and delivery estimates for a targeting spec.
 
 **Parameters:**
@@ -155,12 +163,29 @@ Get estimated audience size and delivery estimates for a targeting spec.
 - `targetingSpec` (object, required): Targeting specification (must include `geo_locations` or `custom_audiences`)
 - `optimizationGoal` (string, optional): Optimization goal (e.g., `LINK_CLICKS`, `REACH`, `CONVERSIONS`)
 
-#### 15. `meta_get_ad_previews`
+#### 16. `meta_get_ad_previews`
 Get preview HTML for an ad in a specific format.
 
 **Parameters:**
 - `adId` (string, required): Ad ID to preview
 - `adFormat` (string, required): Ad format (e.g., `DESKTOP_FEED_STANDARD`, `MOBILE_FEED_STANDARD`, `INSTAGRAM_STANDARD`)
+
+#### 17. `meta_adjust_bids`
+Batch adjust ad set bid amounts with percentage or absolute changes.
+
+**Parameters:**
+- `adAccountId` (string, required): Ad Account ID
+- `adjustments` (array, required): Array of bid adjustments (max 50), each with `adSetId`, `adjustmentType` (percentage/absolute), and `value`
+
+#### 18. `meta_validate_entity`
+Client-side validation of entity payloads without making API calls.
+
+**Parameters:**
+- `entityType` (string, required): Type of entity to validate
+- `mode` (string, required): Validation mode (`create` or `update`)
+- `data` (object, required): Entity data to validate
+- `adAccountId` (string, optional): Required for create mode
+- `entityId` (string, optional): Required for update mode
 
 ## Supported Entity Types
 
@@ -178,7 +203,7 @@ Get preview HTML for an ad in a specific format.
 
 **Phase: Production-Ready**
 
-All 17 tools are fully implemented using Meta Marketing API v21.0 with Bearer token authentication, insights reporting, and targeting discovery.
+All 18 tools are fully implemented using Meta Marketing API v21.0 with Bearer token authentication, insights reporting, and targeting discovery.
 
 ## Development
 

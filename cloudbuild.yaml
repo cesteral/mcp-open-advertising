@@ -23,6 +23,7 @@ steps:
         pnpm install --frozen-lockfile
         pnpm run build
         pnpm run typecheck
+        pnpm run test
         pnpm run validate:skills
     id: 'test'
 

@@ -45,6 +45,8 @@ Fetch these resources for detailed schema information:
 ### Bulk Operations
 - \`meta_bulk_update_status\` — Batch status updates
 - \`meta_bulk_create_entities\` — Batch creation
+- \`meta_bulk_update_entities\` — Batch updates with individual data
+- \`meta_adjust_bids\` — Batch adjust ad set bids
 
 ### Targeting
 - \`meta_search_targeting\` — Search interests, locations, etc.
@@ -54,6 +56,9 @@ Fetch these resources for detailed schema information:
 - \`meta_duplicate_entity\` — Copy campaigns/adSets/ads
 - \`meta_get_delivery_estimate\` — Audience size estimation
 - \`meta_get_ad_previews\` — Ad preview HTML
+
+### Validation
+- \`meta_validate_entity\` — Client-side entity validation
 
 ## Recommended Exploration Order
 

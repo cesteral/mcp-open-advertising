@@ -41,7 +41,7 @@ See [CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md) for detailed setup
 The server is built with production-grade architecture and complete functionality:
 
 - ✅ Streamable HTTP transport with session management
-- ✅ 16 MCP tools, all connected to DV360 API
+- ✅ 19 MCP tools, all connected to DV360 API
 - ✅ OAuth2 service account authentication
 - ✅ Rate limiting and error handling
 - ✅ OpenTelemetry observability
