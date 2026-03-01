@@ -102,6 +102,28 @@ export const updateEntityTool = {
     openWorldHint: false,
     idempotentHint: false,
   },
+  inputExamples: [
+    {
+      label: "Update campaign name",
+      input: {
+        entityType: "campaign",
+        customerId: "1234567890",
+        entityId: "123456",
+        data: { name: "Updated Campaign Name" },
+        updateMask: "name",
+      },
+    },
+    {
+      label: "Pause an ad group",
+      input: {
+        entityType: "adGroup",
+        customerId: "1234567890",
+        entityId: "789012",
+        data: { status: "PAUSED" },
+        updateMask: "status",
+      },
+    },
+  ],
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
 };

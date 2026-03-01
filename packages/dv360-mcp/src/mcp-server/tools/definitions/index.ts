@@ -28,6 +28,9 @@ export { createAssignedTargetingTool } from "./create-assigned-targeting.tool.js
 export { deleteAssignedTargetingTool } from "./delete-assigned-targeting.tool.js";
 export { validateTargetingConfigTool } from "./validate-targeting-config.tool.js";
 
+// Validation
+export { validateEntityTool } from "./validate-entity.tool.js";
+
 // Export all tools as an array for easy registration
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -47,6 +50,7 @@ import { getAssignedTargetingTool } from "./get-assigned-targeting.tool.js";
 import { createAssignedTargetingTool } from "./create-assigned-targeting.tool.js";
 import { deleteAssignedTargetingTool } from "./delete-assigned-targeting.tool.js";
 import { validateTargetingConfigTool } from "./validate-targeting-config.tool.js";
+import { validateEntityTool } from "./validate-entity.tool.js";
 import type { ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
@@ -72,4 +76,6 @@ export const allTools: ToolDefinitionForFactory[] = [
   createAssignedTargetingTool,
   deleteAssignedTargetingTool,
   validateTargetingConfigTool,
+  // Validation
+  validateEntityTool,
 ];

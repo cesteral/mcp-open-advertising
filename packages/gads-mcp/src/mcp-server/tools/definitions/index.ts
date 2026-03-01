@@ -1,8 +1,8 @@
 /**
  * Tool definitions barrel export
  *
- * 11 tools total:
- *   4 read:  gaql search, list accounts, get entity, list entities
+ * 12 tools total:
+ *   5 read:  gaql search, list accounts, get entity, list entities, get insights
  *   6 write: create entity, update entity, remove entity, bulk mutate, bulk update status, adjust bids
  *   1 validate: validate entity (dry-run via validateOnly)
  */
@@ -11,6 +11,7 @@ export { gaqlSearchTool } from "./gaql-search.tool.js";
 export { listAccountsTool } from "./list-accounts.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
+export { getInsightsTool } from "./get-insights.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { removeEntityTool } from "./remove-entity.tool.js";
@@ -23,6 +24,7 @@ import { gaqlSearchTool } from "./gaql-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
+import { getInsightsTool } from "./get-insights.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { removeEntityTool } from "./remove-entity.tool.js";
@@ -38,6 +40,7 @@ export const allTools: ToolDefinitionForFactory[] = [
   listAccountsTool,
   getEntityTool,
   listEntitiesTool,
+  getInsightsTool,
   // ── Write Tools ──
   createEntityTool,
   updateEntityTool,

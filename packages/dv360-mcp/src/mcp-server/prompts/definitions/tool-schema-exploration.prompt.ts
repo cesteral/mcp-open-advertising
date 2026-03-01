@@ -91,7 +91,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (18 tools)
+## Available Tools Summary (19 tools)
 
 ### Entity CRUD (9 tools)
 | Tool | Purpose | Notes |
@@ -122,6 +122,11 @@ Inspect the output, then iterate with more specific calls.
 | \`dv360_create_assigned_targeting\` | Create targeting | Assign to entity |
 | \`dv360_delete_assigned_targeting\` | Remove targeting | By targeting type |
 | \`dv360_validate_targeting_config\` | Validate config | Dry-run check |
+
+### Validation (1 tool)
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| \`dv360_validate_entity\` | Client-side schema validation | No API call, readOnly |
 
 ---
 

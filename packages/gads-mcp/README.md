@@ -53,9 +53,20 @@ List entities with optional GAQL filters and pagination.
 - `pageToken` (string, optional): Pagination token
 - `orderBy` (string, optional): GAQL ORDER BY clause
 
+#### 5. `gads_get_insights`
+Get performance insights for Google Ads entities using preset parameters. Convenience wrapper around GAQL.
+
+**Parameters:**
+- `customerId` (string): Google Ads customer ID
+- `entityType` (string): Entity type (`campaign`, `adGroup`, `ad`, `keyword`)
+- `entityId` (string, optional): Filter to a specific entity
+- `dateRange` (string): Date range preset (`TODAY`, `YESTERDAY`, `LAST_7_DAYS`, `LAST_30_DAYS`, `THIS_MONTH`, `LAST_MONTH`, `LAST_90_DAYS`)
+- `metrics` (string[], optional): Custom metrics (defaults to impressions, clicks, cost_micros, conversions, ctr, average_cpc)
+- `limit` (number, optional): Max results (default 50)
+
 ### Write Tools
 
-#### 5. `gads_create_entity`
+#### 6. `gads_create_entity`
 Create a new Google Ads entity via the :mutate API.
 
 **Parameters:**
@@ -63,7 +74,7 @@ Create a new Google Ads entity via the :mutate API.
 - `customerId` (string): Google Ads customer ID
 - `data` (object): Entity data fields
 
-#### 6. `gads_update_entity`
+#### 7. `gads_update_entity`
 Update an existing entity with updateMask discipline.
 
 **Parameters:**
@@ -73,7 +84,7 @@ Update an existing entity with updateMask discipline.
 - `data` (object): Fields to update
 - `updateMask` (string): Comma-separated list of fields to update
 
-#### 7. `gads_remove_entity`
+#### 8. `gads_remove_entity`
 Remove an entity via the :mutate API (sets status to REMOVED).
 
 **Parameters:**
@@ -81,7 +92,7 @@ Remove an entity via the :mutate API (sets status to REMOVED).
 - `customerId` (string): Google Ads customer ID
 - `entityId` (string): The entity ID
 
-#### 8. `gads_bulk_mutate`
+#### 9. `gads_bulk_mutate`
 Execute multiple create/update/remove operations in a single API call.
 
 **Parameters:**
@@ -90,7 +101,7 @@ Execute multiple create/update/remove operations in a single API call.
 - `operations` (array): Array of mutate operation objects
 - `partialFailure` (boolean, optional): Allow partial success (default: false)
 
-#### 9. `gads_bulk_update_status`
+#### 10. `gads_bulk_update_status`
 Batch update statuses for multiple entities.
 
 **Parameters:**
@@ -98,6 +109,27 @@ Batch update statuses for multiple entities.
 - `customerId` (string): Google Ads customer ID
 - `entityIds` (string[]): Entity IDs to update (max 100)
 - `status` (string): `ENABLED`, `PAUSED`, or `REMOVED`
+
+#### 11. `gads_adjust_bids`
+Batch adjust ad group bids with safe read-modify-write pattern.
+
+**Parameters:**
+- `customerId` (string): Google Ads customer ID
+- `adjustments` (array): Array of bid adjustments (max 50), each with `adGroupId` and optional `cpcBidMicros`/`cpmBidMicros`
+- `reason` (string, optional): Reason for the bid adjustment (for audit trail)
+
+### Validate Tools
+
+#### 12. `gads_validate_entity`
+Dry-run validate an entity payload via the Google Ads API with `validateOnly: true`.
+
+**Parameters:**
+- `entityType` (string): Type of entity to validate
+- `customerId` (string): Google Ads customer ID
+- `mode` (string): `create` or `update`
+- `data` (object): Entity data to validate
+- `entityId` (string, optional): Required for update mode
+- `updateMask` (string, optional): Required for update mode
 
 ## Supported Entity Types
 

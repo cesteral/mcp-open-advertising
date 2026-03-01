@@ -163,6 +163,7 @@ export const adjustBidsTool = {
   inputSchema: AdjustBidsInputSchema,
   outputSchema: AdjustBidsOutputSchema,
   annotations: {
+    readOnlyHint: false,
     destructiveHint: true,
     idempotentHint: true,
     openWorldHint: false,

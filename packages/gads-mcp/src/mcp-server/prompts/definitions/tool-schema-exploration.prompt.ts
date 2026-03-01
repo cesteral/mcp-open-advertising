@@ -90,7 +90,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (11 tools)
+## Available Tools Summary (12 tools)
 
 ### Read Tools
 | Tool | Purpose | Notes |
@@ -99,6 +99,7 @@ Inspect the output, then iterate with more specific calls.
 | \`gads_list_accounts\` | List accessible customer accounts | No arguments needed |
 | \`gads_get_entity\` | Get a single entity by type/ID | Returns full entity |
 | \`gads_list_entities\` | List entities with optional GAQL filters | Supports pagination |
+| \`gads_get_insights\` | Performance insights with preset params | Convenience wrapper |
 
 ### Write Tools
 | Tool | Purpose | Notes |

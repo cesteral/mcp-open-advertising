@@ -169,6 +169,27 @@ export class MetaService {
     };
   }
 
+  /**
+   * Bulk update entities with arbitrary data.
+   * Each item is updated individually with concurrency limit.
+   */
+  async bulkUpdateEntities(
+    items: Array<{ entityId: string; data: Record<string, unknown> }>,
+    context?: RequestContext
+  ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
+    const bulkResults = await this.executeBulk(items, async (item) => {
+      return this.updateEntity(item.entityId, item.data, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: items[i].entityId,
+        success: r.success,
+        error: r.error,
+      })),
+    };
+  }
+
   // ─── Duplicate ──────────────────────────────────────────────────
 
   /**
