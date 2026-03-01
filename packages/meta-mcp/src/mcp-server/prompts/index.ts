@@ -31,6 +31,10 @@ import {
   crossPlatformPerformancePrompt,
   getCrossPlatformPerformanceMessage,
 } from "./definitions/cross-platform-performance.prompt.js";
+import {
+  crossPlatformCampaignSetupPrompt,
+  getCrossPlatformCampaignSetupMessage,
+} from "./definitions/cross-platform-campaign-setup.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -85,6 +89,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: crossPlatformPerformancePrompt,
       generateMessage: getCrossPlatformPerformanceMessage,
+    },
+  ],
+  [
+    crossPlatformCampaignSetupPrompt.name,
+    {
+      prompt: crossPlatformCampaignSetupPrompt,
+      generateMessage: getCrossPlatformCampaignSetupMessage,
     },
   ],
 ]);

@@ -31,6 +31,14 @@ import {
   crossPlatformPerformancePrompt,
   getCrossPlatformPerformanceMessage,
 } from "./definitions/cross-platform-performance.prompt.js";
+import {
+  entityActivationPrompt,
+  getEntityActivationPromptMessage,
+} from "./definitions/entity-activation.prompt.js";
+import {
+  crossPlatformCampaignSetupPrompt,
+  getCrossPlatformCampaignSetupMessage,
+} from "./definitions/cross-platform-campaign-setup.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -98,6 +106,20 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: crossPlatformPerformancePrompt,
       generateMessage: getCrossPlatformPerformanceMessage,
+    },
+  ],
+  [
+    entityActivationPrompt.name,
+    {
+      prompt: entityActivationPrompt,
+      generateMessage: getEntityActivationPromptMessage,
+    },
+  ],
+  [
+    crossPlatformCampaignSetupPrompt.name,
+    {
+      prompt: crossPlatformCampaignSetupPrompt,
+      generateMessage: getCrossPlatformCampaignSetupMessage,
     },
   ],
 ]);

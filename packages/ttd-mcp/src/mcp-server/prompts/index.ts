@@ -25,6 +25,14 @@ import {
   crossPlatformPerformancePrompt,
   getCrossPlatformPerformanceMessage,
 } from "./definitions/cross-platform-performance.prompt.js";
+import {
+  bulkOperationsWorkflowPrompt,
+  getBulkOperationsWorkflowMessage,
+} from "./definitions/bulk-operations-workflow.prompt.js";
+import {
+  crossPlatformCampaignSetupPrompt,
+  getCrossPlatformCampaignSetupMessage,
+} from "./definitions/cross-platform-campaign-setup.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -65,6 +73,20 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: crossPlatformPerformancePrompt,
       generateMessage: getCrossPlatformPerformanceMessage,
+    },
+  ],
+  [
+    bulkOperationsWorkflowPrompt.name,
+    {
+      prompt: bulkOperationsWorkflowPrompt,
+      generateMessage: getBulkOperationsWorkflowMessage,
+    },
+  ],
+  [
+    crossPlatformCampaignSetupPrompt.name,
+    {
+      prompt: crossPlatformCampaignSetupPrompt,
+      generateMessage: getCrossPlatformCampaignSetupMessage,
     },
   ],
 ]);
