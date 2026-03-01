@@ -19,6 +19,18 @@ import {
   toolSchemaExplorationPrompt,
   getToolSchemaExplorationMessage,
 } from "./definitions/tool-schema-exploration.prompt.js";
+import {
+  targetingManagementPrompt,
+  getTargetingManagementPromptMessage,
+} from "./definitions/targeting-management.prompt.js";
+import {
+  bulkOperationsPrompt,
+  getBulkOperationsPromptMessage,
+} from "./definitions/bulk-operations.prompt.js";
+import {
+  crossPlatformPerformancePrompt,
+  getCrossPlatformPerformanceMessage,
+} from "./definitions/cross-platform-performance.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -65,6 +77,27 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: toolSchemaExplorationPrompt,
       generateMessage: getToolSchemaExplorationMessage,
+    },
+  ],
+  [
+    targetingManagementPrompt.name,
+    {
+      prompt: targetingManagementPrompt,
+      generateMessage: getTargetingManagementPromptMessage,
+    },
+  ],
+  [
+    bulkOperationsPrompt.name,
+    {
+      prompt: bulkOperationsPrompt,
+      generateMessage: getBulkOperationsPromptMessage,
+    },
+  ],
+  [
+    crossPlatformPerformancePrompt.name,
+    {
+      prompt: crossPlatformPerformancePrompt,
+      generateMessage: getCrossPlatformPerformanceMessage,
     },
   ],
 ]);

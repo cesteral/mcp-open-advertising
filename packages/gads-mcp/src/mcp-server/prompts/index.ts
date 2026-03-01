@@ -21,6 +21,10 @@ import {
   gaqlReportingWorkflowPrompt,
   getGaqlReportingWorkflowMessage,
 } from "./definitions/gaql-reporting-workflow.prompt.js";
+import {
+  crossPlatformPerformancePrompt,
+  getCrossPlatformPerformanceMessage,
+} from "./definitions/cross-platform-performance.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -54,6 +58,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: gaqlReportingWorkflowPrompt,
       generateMessage: getGaqlReportingWorkflowMessage,
+    },
+  ],
+  [
+    crossPlatformPerformancePrompt.name,
+    {
+      prompt: crossPlatformPerformancePrompt,
+      generateMessage: getCrossPlatformPerformanceMessage,
     },
   ],
 ]);

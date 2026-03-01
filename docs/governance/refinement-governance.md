@@ -1,14 +1,14 @@
 # Refinement Governance
 
-> **Implementation Status**: Design only. The evaluator hooks exist (`tool-handler-factory.ts`), but finding persistence, pattern detection, proposal generation, and approval workflow are not yet implemented (Phases 2-3 of `docs/architecture/self-improving-skills.md`).
+> **Implementation Status**: Design only. The evaluator hooks exist (`tool-handler-factory.ts`), but finding persistence, pattern detection, proposal generation, and approval workflow are not yet implemented.
 
-This document defines how LLM -> MCP interaction findings are converted into controlled skill/playbook improvements.
+This document defines how LLM -> MCP interaction findings are converted into controlled prompt/workflow improvements.
 
 ## Lifecycle
 
 1. Capture interaction event.
 2. Classify issue or inefficiency.
-3. Generate a proposed playbook delta.
+3. Generate a proposed workflow update.
 4. Review and approve based on risk.
 5. Deploy with observe-first rollout.
 6. Measure impact and keep or roll back.
@@ -28,14 +28,9 @@ Each proposal must include:
 - `workflowId`: canonical workflow impacted.
 - `platform`: `dv360` | `dbm` | `ttd` | `gads` | future platform ID.
 - `evidence`: count, sample events, and confidence.
-- `proposedChanges`: exact docs/adapter/contract edits.
+- `proposedChanges`: exact prompt/resource/tool edits.
 - `riskClass`: low, medium, high.
 - `rollbackTrigger`: metric threshold for reverting.
-
-Use these artifacts:
-
-- Template: `docs/governance/playbook-delta-template.md`
-- JSON schema: `docs/governance/playbook-delta.schema.json`
 
 ## Approval Matrix
 

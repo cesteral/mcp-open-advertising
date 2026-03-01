@@ -16,6 +16,14 @@ import {
   toolSchemaExplorationPrompt,
   getToolSchemaExplorationMessage,
 } from "./definitions/tool-schema-exploration.prompt.js";
+import {
+  pacingPerformanceAnalysisPrompt,
+  getPacingPerformanceAnalysisMessage,
+} from "./definitions/pacing-performance-analysis.prompt.js";
+import {
+  crossPlatformPerformancePrompt,
+  getCrossPlatformPerformanceMessage,
+} from "./definitions/cross-platform-performance.prompt.js";
 import type { PromptDefinition } from "./definitions/types.js";
 
 /**
@@ -41,6 +49,20 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: toolSchemaExplorationPrompt,
       generateMessage: getToolSchemaExplorationMessage,
+    },
+  ],
+  [
+    pacingPerformanceAnalysisPrompt.name,
+    {
+      prompt: pacingPerformanceAnalysisPrompt,
+      generateMessage: getPacingPerformanceAnalysisMessage,
+    },
+  ],
+  [
+    crossPlatformPerformancePrompt.name,
+    {
+      prompt: crossPlatformPerformancePrompt,
+      generateMessage: getCrossPlatformPerformanceMessage,
     },
   ],
 ]);

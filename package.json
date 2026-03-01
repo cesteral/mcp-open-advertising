@@ -14,8 +14,6 @@
     "dev": "turbo run dev --parallel",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "generate:skills": "node scripts/generate-skill-adapters.mjs",
-    "validate:skills": "node scripts/validate-skill-adapters.mjs",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",

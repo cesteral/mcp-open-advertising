@@ -54,6 +54,8 @@ export const BulkCreateEntitiesOutputSchema = z
     totalRequested: z.number(),
     totalSucceeded: z.number(),
     totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
       z.object({
         success: z.boolean(),
@@ -91,6 +93,8 @@ export async function bulkCreateEntitiesLogic(
     totalRequested: items.length,
     totalSucceeded: succeeded,
     totalFailed: items.length - succeeded,
+    successCount: succeeded,
+    failureCount: items.length - succeeded,
     results: results.map((r) => ({
       success: r.success,
       entity: r.entity as Record<string, any> | undefined,

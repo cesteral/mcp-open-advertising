@@ -1,6 +1,6 @@
 # Evaluator Phased Rollout
 
-> **Implementation Status**: Stage 1 active (observe-only). Stages 2-3 depend on finding aggregation and pattern detection from Phases 2-3 of `docs/architecture/self-improving-skills.md`.
+> **Implementation Status**: Stage 1 active (observe-only). Stages 2-3 depend on finding aggregation and pattern detection.
 
 This rollout plan applies to `dv360-mcp`, `dbm-mcp`, `ttd-mcp`, `gads-mcp`, and `meta-mcp`.
 

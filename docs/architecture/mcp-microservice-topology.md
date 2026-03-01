@@ -50,7 +50,7 @@ Each server exposes its own resource URI patterns. These diverge by platform:
 
 ### Planned Namespaced URI Aliases
 
-The [skill contract](../mcp-skill-contract.json) recommends namespaced aliases via `preferredUriExamples` for future multi-server disambiguation. These are **not yet implemented** — only the unscoped URIs above are currently registered:
+For future multi-server disambiguation, namespaced URI aliases are planned but **not yet implemented** — only the unscoped URIs above are currently registered:
 
   - `dv360:entity-schema://{entityType}`
   - `dv360:entity-fields://{entityType}`
@@ -62,9 +62,8 @@ The [skill contract](../mcp-skill-contract.json) recommends namespaced aliases v
 
 ## Versioning and Compatibility
 
-- Contract versioning follows semantic versioning in `docs/governance/contract-versioning.md`.
 - Server runtime versions should be exposed from package metadata (not hardcoded constants).
-- Breaking URI/resource changes require a major contract version and migration notes.
+- Breaking URI/resource changes require migration notes and versioning.
 
 ## Near-Term Hardening Checklist
 

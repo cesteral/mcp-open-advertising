@@ -4,7 +4,7 @@ import {
 } from "../utils/entity-mapping-dynamic.js";
 import {
   getEntitySchemaByType,
-  extractRequiredFields,
+  getFieldSchemaByPath,
 } from "../utils/schema-introspection.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
@@ -100,43 +100,56 @@ export async function validateEntityLogic(
   // Get the Zod schema for this entity type
   const schema = getEntitySchemaByType(input.entityType);
 
-  // Run schema validation via safeParse
-  const parseResult = schema.safeParse(input.data);
-
-  if (!parseResult.success) {
-    for (const issue of parseResult.error.issues) {
-      const path = issue.path.join(".");
-      errors.push(`${path ? path + ": " : ""}${issue.message}`);
+  // For create mode, validate full payload against entity schema.
+  if (input.mode === "create") {
+    const parseResult = schema.safeParse(input.data);
+    if (!parseResult.success) {
+      for (const issue of parseResult.error.issues) {
+        const path = issue.path.join(".");
+        errors.push(`${path ? path + ": " : ""}${issue.message}`);
+      }
     }
   }
 
-  // For create mode, check required fields
-  if (input.mode === "create" && parseResult.success) {
-    const requiredFields = extractRequiredFields(schema);
-    const dataKeys = Object.keys(input.data);
-    const missingRequired = requiredFields.filter(
-      (f) => !f.includes(".") && !dataKeys.includes(f)
-    );
-    if (missingRequired.length > 0) {
-      warnings.push(
-        `Potentially missing required fields: ${missingRequired.join(", ")}`
-      );
-    }
-  }
-
-  // For update mode, validate updateMask fields exist in data
+  // For update mode, validate updateMask paths only (patch semantics).
   if (input.mode === "update" && input.updateMask) {
-    const maskFields = input.updateMask.split(",").map((f) => f.trim());
-    const dataKeys = Object.keys(input.data);
-    const missingInData = maskFields.filter((f) => {
-      // Check top-level key (updateMask can be nested like "bidStrategy.fixedBid")
-      const topLevel = f.split(".")[0];
-      return !dataKeys.includes(topLevel);
-    });
-    if (missingInData.length > 0) {
-      errors.push(
-        `updateMask fields not found in data: ${missingInData.join(", ")}`
-      );
+    const maskFields = Array.from(
+      new Set(input.updateMask.split(",").map((f) => f.trim()).filter(Boolean))
+    );
+
+    for (const fieldPath of maskFields) {
+      const fieldSchema = getFieldSchemaByPath(schema, fieldPath);
+      if (!fieldSchema) {
+        errors.push(`Unknown updateMask field path: ${fieldPath}`);
+        continue;
+      }
+
+      const pathParts = fieldPath.split(".");
+      let current: unknown = input.data;
+      let hasValue = true;
+      for (const part of pathParts) {
+        if (
+          current === null ||
+          typeof current !== "object" ||
+          !(part in (current as Record<string, unknown>))
+        ) {
+          hasValue = false;
+          break;
+        }
+        current = (current as Record<string, unknown>)[part];
+      }
+
+      if (!hasValue) {
+        errors.push(`updateMask field not found in data: ${fieldPath}`);
+        continue;
+      }
+
+      const fieldParse = fieldSchema.safeParse(current);
+      if (!fieldParse.success) {
+        for (const issue of fieldParse.error.issues) {
+          errors.push(`${fieldPath}: ${issue.message}`);
+        }
+      }
     }
   }
 

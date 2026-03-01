@@ -21,6 +21,10 @@ import {
   toolSchemaExplorationPrompt,
   getToolSchemaExplorationMessage,
 } from "./definitions/tool-schema-exploration.prompt.js";
+import {
+  crossPlatformPerformancePrompt,
+  getCrossPlatformPerformanceMessage,
+} from "./definitions/cross-platform-performance.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -54,6 +58,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: toolSchemaExplorationPrompt,
       generateMessage: getToolSchemaExplorationMessage,
+    },
+  ],
+  [
+    crossPlatformPerformancePrompt.name,
+    {
+      prompt: crossPlatformPerformancePrompt,
+      generateMessage: getCrossPlatformPerformanceMessage,
     },
   ],
 ]);

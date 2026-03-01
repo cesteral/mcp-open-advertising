@@ -1,6 +1,6 @@
 # Telemetry Governance
 
-> **Implementation Status**: Partially implemented. Tool execution spans and evaluator attributes are emitted. Metrics listed below under "Metric Conventions" are all implemented. Pattern/refinement metrics (`mcp.pattern.count`, `mcp.refinement.proposal.count`, `mcp.skill.version.active`) are planned for Phases 2-4.
+> **Implementation Status**: Partially implemented. Tool execution spans and evaluator attributes are emitted. Metrics listed below under "Metric Conventions" are all implemented. Pattern/refinement metrics (`mcp.pattern.count`, `mcp.refinement.proposal.count`) are planned for future phases.
 
 This document defines the shared telemetry contract for MCP interaction refinement across all platform packages.
 

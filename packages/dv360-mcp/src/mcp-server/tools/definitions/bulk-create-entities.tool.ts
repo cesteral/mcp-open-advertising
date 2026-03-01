@@ -51,6 +51,8 @@ export const BulkCreateEntitiesOutputSchema = z
     totalRequested: z.number().describe("Total items requested"),
     totalSucceeded: z.number().describe("Total items successfully created"),
     totalFailed: z.number().describe("Total items that failed"),
+    successCount: z.number().describe("Alias for totalSucceeded"),
+    failureCount: z.number().describe("Alias for totalFailed"),
     results: z
       .array(
         z.object({
@@ -126,6 +128,8 @@ export async function bulkCreateEntitiesLogic(
     totalRequested: input.items.length,
     totalSucceeded,
     totalFailed,
+    successCount: totalSucceeded,
+    failureCount: totalFailed,
     results,
     timestamp: new Date().toISOString(),
   };

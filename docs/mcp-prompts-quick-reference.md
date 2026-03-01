@@ -18,15 +18,17 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 
 ## Available Prompts by Server
 
-### dbm-mcp (3 prompts)
+### dbm-mcp (5 prompts)
 
 | Prompt | Description | Key Arguments |
 |--------|-------------|---------------|
 | `tool_schema_exploration_workflow` | Discover DBM tools, resources, and capabilities | _(none)_ |
 | `custom_query_workflow` | Build and execute custom Bid Manager reports | `reportType`, `timeRange` |
 | `troubleshoot_report` | Diagnose report execution failures and data issues | `queryId` (optional) |
+| `pacing_performance_analysis_workflow` | Pacing assessment and performance deep-dive with trend analysis | `campaignId`, `advertiserId`, `focus` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 
-### dv360-mcp (4 prompts)
+### dv360-mcp (8 prompts)
 
 | Prompt | Description | Key Arguments |
 |--------|-------------|---------------|
@@ -34,8 +36,12 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `entity_update_execution_workflow` | Schema-first entity update with updateMask discipline | `entityType`, `advertiserId` |
 | `troubleshoot_underdelivery` | Diagnose and remediate underdelivering campaigns/line items | `advertiserId`, `entityId` (optional) |
 | `budget_reallocation_workflow` | Analyze and redistribute budgets across IOs and line items | `advertiserId` |
+| `tool_schema_exploration_workflow` | Discover DV360 tools, resources, and capabilities | _(none)_ |
+| `targeting_management_workflow` | Manage targeting options: discover types, create/audit/delete assignments | `advertiserId`, `parentType`, `goal` |
+| `bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `advertiserId`, `operation` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 
-### ttd-mcp (4 prompts)
+### ttd-mcp (5 prompts)
 
 | Prompt | Description | Key Arguments |
 |--------|-------------|---------------|
@@ -43,8 +49,9 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `ttd_report_generation_workflow` | Build and execute TTD MyReports V3 async reports | `advertiserIds` |
 | `ttd_troubleshoot_entity` | Diagnose misconfigured or rejected TTD entities | `entityType`, `entityId` |
 | `ttd_tool_schema_exploration` | Discover TTD tools, resources, and capabilities | _(none)_ |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 
-### gads-mcp (4 prompts)
+### gads-mcp (5 prompts)
 
 | Prompt | Description | Key Arguments |
 |--------|-------------|---------------|
@@ -52,8 +59,9 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `gads_tool_schema_exploration` | Discover Google Ads tools, GAQL syntax, and capabilities | _(none)_ |
 | `gads_troubleshoot_entity` | Diagnose Google Ads entity issues and policy violations | `entityType`, `customerId` |
 | `gaql_reporting_workflow` | Build and execute GAQL-based reporting queries | `customerId` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 
-### meta-mcp (4 prompts)
+### meta-mcp (7 prompts)
 
 | Prompt | Description | Key Arguments |
 |--------|-------------|---------------|
@@ -61,6 +69,9 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `meta_tool_schema_exploration` | Discover Meta MCP tools, resources, and schemas | _(none)_ |
 | `meta_troubleshoot_entity` | Diagnose Meta Ads entity issues and delivery problems | `entityType`, `entityId` |
 | `meta_insights_reporting_workflow` | Build and execute Meta Ads insights queries with breakdowns | `adAccountId` (required), `entityLevel` (optional) |
+| `meta_entity_update_workflow` | Safe entity update with fetch-modify-verify pattern | `entityType`, `entityId` |
+| `meta_bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `adAccountId`, `operation` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 
 ## When to Use Prompts
 
@@ -78,6 +89,9 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 - **Complex troubleshooting** sequences
   - Example: "If error X, check Y, then try Z"
 
+- **Cross-platform coordination**
+  - Example: Compare performance across all platforms and reallocate budget
+
 ### Don't Use Prompts For:
 
 - **Simple operations** - Tool description is sufficient
@@ -89,27 +103,9 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 - **Operations AI can figure out** from tool descriptions alone
   - Example: "List all campaigns" - obvious from `list_entities` tool
 
-## Recommended Prompts to Add
-
-Based on common workflows not yet covered:
-
-1. **`entity_activation_workflow`** (dv360-mcp)
-   - Safe activation sequence (IO → Line Items → Campaign)
-   - Budget validation gates
-
-2. **`targeting_discovery_workflow`** (dv360-mcp)
-   - Finding valid targetingOptionIds
-   - Building complex targeting logic
-
-3. **`ttd_bulk_operations_workflow`** (ttd-mcp)
-   - Batch create/update/archive with safety checks
-
-4. **`gads_bulk_operations_workflow`** (gads-mcp)
-   - Batch mutate with payload sizing guidance
-
 ## Key Metrics
 
-**Current Prompts:** 19
+**Current Prompts:** 30
 **Average Size:** ~8KB when invoked
 **Context Cost:** 0KB when not invoked
 **Build Status:** ✅ Clean
@@ -117,8 +113,6 @@ Based on common workflows not yet covered:
 ---
 
 **Quick Links:**
-- Contract: `docs/mcp-skill-contract.json`
-- Workflow Mappings: `docs/client-workflow-mappings.md`
 - DBM Prompts: `packages/dbm-mcp/src/mcp-server/prompts/`
 - DV360 Prompts: `packages/dv360-mcp/src/mcp-server/prompts/`
 - TTD Prompts: `packages/ttd-mcp/src/mcp-server/prompts/`

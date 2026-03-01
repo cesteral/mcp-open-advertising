@@ -68,6 +68,7 @@ export const GetInsightsInputSchema = z
       .describe("Type of entity to get insights for"),
     entityId: z
       .string()
+      .regex(/^\d+$/, "entityId must be numeric")
       .optional()
       .describe("Filter to a specific entity ID"),
     dateRange: z
@@ -118,6 +119,9 @@ function buildGaqlQuery(input: GetInsightsInput): string {
   ];
 
   if (input.entityId) {
+    if (!/^\d+$/.test(input.entityId)) {
+      throw new Error("entityId must be numeric");
+    }
     whereClauses.push(`${idField} = ${input.entityId}`);
   }
 

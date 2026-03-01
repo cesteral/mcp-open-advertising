@@ -19,6 +19,18 @@ import {
   toolSchemaExplorationPrompt,
   getToolSchemaExplorationMessage,
 } from "./definitions/tool-schema-exploration.prompt.js";
+import {
+  entityUpdateWorkflowPrompt,
+  getEntityUpdateWorkflowMessage,
+} from "./definitions/entity-update-workflow.prompt.js";
+import {
+  bulkOperationsWorkflowPrompt,
+  getBulkOperationsWorkflowMessage,
+} from "./definitions/bulk-operations-workflow.prompt.js";
+import {
+  crossPlatformPerformancePrompt,
+  getCrossPlatformPerformanceMessage,
+} from "./definitions/cross-platform-performance.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -52,6 +64,27 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: toolSchemaExplorationPrompt,
       generateMessage: getToolSchemaExplorationMessage,
+    },
+  ],
+  [
+    entityUpdateWorkflowPrompt.name,
+    {
+      prompt: entityUpdateWorkflowPrompt,
+      generateMessage: getEntityUpdateWorkflowMessage,
+    },
+  ],
+  [
+    bulkOperationsWorkflowPrompt.name,
+    {
+      prompt: bulkOperationsWorkflowPrompt,
+      generateMessage: getBulkOperationsWorkflowMessage,
+    },
+  ],
+  [
+    crossPlatformPerformancePrompt.name,
+    {
+      prompt: crossPlatformPerformancePrompt,
+      generateMessage: getCrossPlatformPerformanceMessage,
     },
   ],
 ]);

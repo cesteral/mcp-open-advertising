@@ -56,6 +56,8 @@ export const BulkUpdateStatusOutputSchema = z
     totalRequested: z.number(),
     totalSucceeded: z.number(),
     totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
       z.object({
         entityId: z.string(),
@@ -93,6 +95,8 @@ export async function bulkUpdateStatusLogic(
     totalRequested: input.entityIds.length,
     totalSucceeded: succeeded,
     totalFailed: input.entityIds.length - succeeded,
+    successCount: succeeded,
+    failureCount: input.entityIds.length - succeeded,
     results,
     timestamp: new Date().toISOString(),
   };

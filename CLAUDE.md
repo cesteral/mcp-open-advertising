@@ -698,16 +698,6 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
 5. **Observability**: Structured logging throughout, designed for OpenTelemetry integration
 
-## Skill Adapter Generation
-
-- Canonical source: `skills/canonical/` (12 files, one per workflow)
-- Provider registry: `skills/providers.json` (6 providers)
-- Generate all adapters: `pnpm generate:skills`
-- Validate all adapters: `pnpm validate:skills`
-- Validate + freshness check: `pnpm validate:skills -- --check-freshness`
-
-Supported providers: Cursor, Codex, GitHub Copilot, Windsurf, Cline, Continue.dev
-
 ## Important Files
 
 - `package.json` (root) - Workspace configuration and scripts

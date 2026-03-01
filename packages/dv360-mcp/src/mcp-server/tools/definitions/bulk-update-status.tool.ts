@@ -69,6 +69,21 @@ export const BulkUpdateStatusInputSchema = z
  */
 export const BulkUpdateStatusOutputSchema = z
   .object({
+    results: z
+      .array(
+        z.object({
+          entityId: z.string(),
+          success: z.boolean(),
+          error: z.string().optional(),
+          advertiserId: z.string().optional(),
+          entityType: z.string().optional(),
+          entityName: z.string().optional(),
+          previousStatus: z.string().optional(),
+          newStatus: z.string().optional(),
+          statusChanged: z.boolean().optional(),
+        })
+      )
+      .describe("Canonical per-item result array"),
     successful: z
       .array(
         z.object({
@@ -96,6 +111,8 @@ export const BulkUpdateStatusOutputSchema = z
     totalRequested: z.number().describe("Total updates requested"),
     totalSuccessful: z.number().describe("Total successful updates"),
     totalFailed: z.number().describe("Total failed updates"),
+    successCount: z.number().describe("Alias for totalSuccessful"),
+    failureCount: z.number().describe("Alias for totalFailed"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk status update result");
@@ -200,11 +217,33 @@ export async function bulkUpdateStatusLogic(
   }
 
   return {
+    results: [
+      ...successful.map((item) => ({
+        entityId: item.entityId,
+        success: true,
+        advertiserId: item.advertiserId,
+        entityType: item.entityType,
+        entityName: item.entityName,
+        previousStatus: item.previousStatus,
+        newStatus: item.newStatus,
+        statusChanged: item.statusChanged,
+      })),
+      ...failed.map((item) => ({
+        entityId: item.entityId,
+        success: false,
+        error: item.error,
+        advertiserId: item.advertiserId,
+        entityType: item.entityType,
+        entityName: item.entityName,
+      })),
+    ],
     successful,
     failed,
     totalRequested: input.entityIds.length,
     totalSuccessful: successful.length,
     totalFailed: failed.length,
+    successCount: successful.length,
+    failureCount: failed.length,
     timestamp: new Date().toISOString(),
   };
 }

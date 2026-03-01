@@ -535,7 +535,6 @@ curl -X POST http://localhost:3001/mcp \
 
 - **[Product Requirements Document](docs/PRD.md)** - Product and system requirements
 - **[Repository Structure](docs/repository-structure.md)** - Package and platform layout
-- **[MCP Skill Contract](docs/mcp-skill-contract.md)** - Cross-client workflow contract
 - **[Microservice Topology](docs/architecture/mcp-microservice-topology.md)** - Direct + orchestration access model
 
 ---

@@ -1,6 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { allTools } from "../src/mcp-server/tools/definitions/index.js";
 
+function getObjectShape(
+  schema: any
+): Record<string, unknown> | null {
+  if (!schema?._def) return null;
+  const shapeFactory = schema._def.shape;
+  if (typeof shapeFactory === "function") {
+    return shapeFactory();
+  }
+  if (shapeFactory && typeof shapeFactory === "object") {
+    return shapeFactory as Record<string, unknown>;
+  }
+  return null;
+}
+
 describe("Cross-server contract compliance", () => {
   const toolNames = allTools.map((t) => t.name);
   const PREFIX = "ttd_";
@@ -52,6 +66,11 @@ describe("Cross-server contract compliance", () => {
           expect(tool.description.length).toBeGreaterThan(10);
         });
 
+        it("has title", () => {
+          expect(typeof (tool as any).title).toBe("string");
+          expect((tool as any).title.length).toBeGreaterThan(0);
+        });
+
         it("has inputSchema with parse method", () => {
           expect(tool.inputSchema).toBeDefined();
           expect(typeof (tool.inputSchema as any).parse).toBe("function");
@@ -69,6 +88,28 @@ describe("Cross-server contract compliance", () => {
 
         it("has logic function", () => {
           expect(typeof (tool as any).logic).toBe("function");
+        });
+
+        it("has responseFormatter function", () => {
+          expect(typeof (tool as any).responseFormatter).toBe("function");
+        });
+
+        it("canonical bulk tools expose standard bulk output fields", () => {
+          const isCanonicalBulkTool = /_(bulk_update_status|bulk_create_entities|bulk_update_entities)$/.test(
+            tool.name
+          );
+          if (!isCanonicalBulkTool) {
+            expect(true).toBe(true);
+            return;
+          }
+
+          expect((tool as any).outputSchema).toBeDefined();
+          const shape = getObjectShape((tool as any).outputSchema);
+          expect(shape).not.toBeNull();
+          expect(shape).toHaveProperty("results");
+          expect(shape).toHaveProperty("successCount");
+          expect(shape).toHaveProperty("failureCount");
+          expect(shape).toHaveProperty("timestamp");
         });
       });
     }
