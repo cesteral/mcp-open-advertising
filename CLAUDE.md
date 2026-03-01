@@ -696,7 +696,7 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management, Google Ads REST API for Google Ads management, Meta Marketing API for Meta management)
 3. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
 4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
-5. **Observability**: Structured logging throughout, designed for OpenTelemetry integration
+5. **Observability**: OTEL traces + metrics (GCP Cloud Trace/Monitoring), Pino structured logs (GCP Cloud Logging), InteractionLogger (local JSONL debugging)
 
 ## Important Files
 

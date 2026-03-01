@@ -238,5 +238,6 @@ For bulk removal, use \`gads_bulk_mutate\` with \`remove\` operations, or \`gads
 - [ ] For removes: confirmed permanence with user
 - [ ] \`partialFailure\` flag set appropriately (atomic vs independent)
 - [ ] Resource names use correct plural entity type format
+- [ ] For \`gads_bulk_mutate\`: keep operation count under 100 for best performance (API supports 5,000 but latency degrades significantly above 100)
 `;
 }

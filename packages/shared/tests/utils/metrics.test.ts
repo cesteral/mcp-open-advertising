@@ -27,13 +27,10 @@ import { __mockCounter, __mockHistogram, __mockGauge, __mockMeter } from "@opent
 
 import {
   recordToolExecution,
-  recordEvaluatorFinding,
-  recordWorkflowCallDepth,
   registerActiveSessionsGauge,
   recordAuthValidation,
   recordRateLimitHit,
 } from "../../src/utils/metrics.js";
-import { EvaluatorIssueClass } from "../../src/utils/mcp-errors.js";
 
 const mockCounter = __mockCounter as any;
 const mockHistogram = __mockHistogram as any;
@@ -70,44 +67,6 @@ describe("metrics", () => {
         tool_name: "failing_tool",
         status: "error",
       });
-    });
-  });
-
-  describe("recordEvaluatorFinding", () => {
-    it("records evaluator finding with correct labels", () => {
-      recordEvaluatorFinding("test_tool", EvaluatorIssueClass.InputQuality, true);
-
-      expect(mockCounter.add).toHaveBeenCalledWith(1, {
-        tool_name: "test_tool",
-        issue_class: "input_quality",
-        is_recoverable: "true",
-      });
-    });
-
-    it("records non-recoverable finding", () => {
-      recordEvaluatorFinding("test_tool", EvaluatorIssueClass.WorkflowSequencing, false);
-
-      expect(mockCounter.add).toHaveBeenCalledWith(1, {
-        tool_name: "test_tool",
-        issue_class: "workflow_sequencing",
-        is_recoverable: "false",
-      });
-    });
-  });
-
-  describe("recordWorkflowCallDepth", () => {
-    it("records call depth for a workflow", () => {
-      recordWorkflowCallDepth("workflow-1", 3);
-
-      expect(mockHistogram.record).toHaveBeenCalledWith(3, {
-        workflow_id: "workflow-1",
-      });
-    });
-
-    it("does nothing when workflowId is undefined", () => {
-      recordWorkflowCallDepth(undefined, 1);
-
-      expect(mockHistogram.record).not.toHaveBeenCalled();
     });
   });
 

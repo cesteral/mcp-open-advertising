@@ -8,7 +8,6 @@ import {
 import { TtdHttpClient } from "../../src/services/ttd/ttd-http-client.js";
 import { TtdService } from "../../src/services/ttd/ttd-service.js";
 import { TtdReportingService } from "../../src/services/ttd/ttd-reporting-service.js";
-import { createFindingBuffer } from "@cesteral/shared";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -47,7 +46,6 @@ function stubSessionServices(): SessionServices {
     httpClient: {} as TtdHttpClient,
     ttdService: {} as TtdService,
     ttdReportingService: {} as TtdReportingService,
-    findingBuffer: createFindingBuffer(),
   };
 }
 
@@ -56,7 +54,7 @@ function stubSessionServices(): SessionServices {
 // ---------------------------------------------------------------------------
 
 describe("createSessionServices", () => {
-  it("creates all 4 services (httpClient, ttdService, ttdReportingService, findingBuffer)", () => {
+  it("creates all 3 services (httpClient, ttdService, ttdReportingService)", () => {
     const logger = createMockLogger();
     const authAdapter = createMockAuthAdapter();
     const rateLimiter = createMockRateLimiter();
@@ -71,7 +69,6 @@ describe("createSessionServices", () => {
     expect(services.httpClient).toBeInstanceOf(TtdHttpClient);
     expect(services.ttdService).toBeInstanceOf(TtdService);
     expect(services.ttdReportingService).toBeInstanceOf(TtdReportingService);
-    expect(typeof services.findingBuffer.push).toBe("function");
   });
 
   it("returns an object with all services", () => {
@@ -89,9 +86,7 @@ describe("createSessionServices", () => {
     expect(services).toHaveProperty("httpClient");
     expect(services).toHaveProperty("ttdService");
     expect(services).toHaveProperty("ttdReportingService");
-    expect(services).toHaveProperty("findingBuffer");
-    expect(services).toHaveProperty("workflowTracker");
-    expect(Object.keys(services)).toHaveLength(5);
+    expect(Object.keys(services)).toHaveLength(3);
   });
 });
 

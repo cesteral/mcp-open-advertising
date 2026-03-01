@@ -2,8 +2,8 @@
  * Tool Handler Factory
  *
  * Extracts common MCP tool registration boilerplate into a reusable handler.
- * Both dbm-mcp and dv360-mcp servers use this to register tools with
- * consistent context creation, telemetry, error handling, and metrics.
+ * All MCP servers use this to register tools with consistent context creation,
+ * telemetry, error handling, and metrics.
  *
  * Compliant with MCP Specification 2025-11-25:
  * - Forwards title, annotations, outputSchema to the SDK
@@ -13,18 +13,10 @@
 
 import type { Logger } from "pino";
 import { z } from "zod";
-import { randomUUID } from "node:crypto";
-import { withToolSpan, withSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
-import { ErrorHandler, EvaluatorIssueClass, JsonRpcErrorCode, McpError } from "./mcp-errors.js";
-import {
-  recordToolExecution,
-  recordEvaluatorFinding,
-  recordEvaluatorRecommendation,
-  recordWorkflowCallDepth,
-} from "./metrics.js";
+import { withToolSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
+import { ErrorHandler, McpError } from "./mcp-errors.js";
+import { recordToolExecution } from "./metrics.js";
 import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
-import type { FindingBuffer, SkillContext } from "./finding-types.js";
-import type { WorkflowTracker } from "./workflow-tracker.js";
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
 
 const ADVERTISER_PARAM_KEYS = ["advertiserId", "customerId", "partnerId", "adAccountId"] as const;
@@ -95,41 +87,17 @@ export interface ToolAnnotations {
   openWorldHint?: boolean;
 }
 
-export interface ToolInteractionIssue {
-  class: EvaluatorIssueClass;
-  message: string;
-  isRecoverable?: boolean;
-  metadata?: Record<string, unknown>;
-}
-
-export interface ToolInteractionEvaluation {
-  issues: ToolInteractionIssue[];
-  inputQualityScore?: number;
-  efficiencyScore?: number;
-  recommendationAction?: "none" | "log_only" | "propose_playbook_delta" | "block";
-}
-
 export interface ToolInteractionContext {
   toolName: string;
   operation: string;
   workflowId?: string;
-  skillName?: string;
-  workflowRunId?: string;
   platform?: string;
   packageName?: string;
   requestId: string;
 }
 
-export interface ToolExecutionSnapshot {
-  args: unknown;
-  validatedInput: unknown;
-  context: ToolRequestContext;
-  result: unknown;
-  durationMs: number;
-}
-
 /**
- * Minimal tool definition interface — matches both server packages.
+ * Minimal tool definition interface — matches all server packages.
  * Includes all fields from MCP Spec 2025-11-25 (title, annotations, outputSchema).
  */
 export interface ToolDefinitionForFactory {
@@ -145,16 +113,6 @@ export interface ToolDefinitionForFactory {
     context: any,
     sdkContext?: any
   ) => Promise<any>;
-  inputRefiner?: (
-    input: any,
-    context: ToolInteractionContext,
-    sdkContext?: ToolSdkContext
-  ) => Promise<any>;
-  postExecutionEvaluator?: (
-    snapshot: ToolExecutionSnapshot,
-    context: ToolInteractionContext,
-    sdkContext?: ToolSdkContext
-  ) => Promise<ToolInteractionEvaluation>;
   responseFormatter?: (result: any, input: any) => any[];
 }
 
@@ -218,38 +176,10 @@ export interface RegisterToolsOptions {
    */
   workflowIdByToolName?: Record<string, string>;
   /**
-   * Shared evaluator config for all registered tools.
-   */
-  evaluator?: {
-    enabled: boolean;
-    observeOnly?: boolean;
-    evaluate?: (
-      snapshot: ToolExecutionSnapshot,
-      context: ToolInteractionContext,
-      sdkContext?: ToolSdkContext
-    ) => Promise<ToolInteractionEvaluation>;
-  };
-  /**
    * Optional interaction logger for persisting tool execution data to JSONL.
-   * Fires after evaluation completes. Writes are fire-and-forget.
+   * Writes are fire-and-forget.
    */
   interactionLogger?: InteractionLogger;
-  /**
-   * Optional learning extractor that auto-generates learnings from repeated evaluator findings.
-   * Fires after evaluation completes. Writes are fire-and-forget.
-   */
-  learningExtractor?: {
-    processEvaluation(toolName: string, issues: ToolInteractionIssue[], skillContext?: SkillContext): void | Promise<void>;
-  };
-  /**
-   * Optional per-session finding buffer for persisted evaluator findings.
-   */
-  findingBuffer?: FindingBuffer;
-  /**
-   * Optional per-session workflow tracker for skill attribution.
-   * When provided, tool calls with _skillContext will be recorded.
-   */
-  workflowTracker?: WorkflowTracker;
   /**
    * Optional resolver to access session auth context for authorization + audit logging.
    */
@@ -262,62 +192,6 @@ function estimatePayloadBytes(value: unknown): number {
   } catch {
     return 0;
   }
-}
-
-function clampScore(value: number | undefined): number | undefined {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return undefined;
-  }
-  return Math.min(1, Math.max(0, value));
-}
-
-/**
- * Augment a transformed JSON-like schema with the optional _skillContext property.
- * Works with both JSON Schema objects and raw Zod shape objects.
- */
-function augmentSchemaWithSkillContext(schema: unknown): unknown {
-  if (typeof schema !== "object" || schema === null) return schema;
-  if (schema instanceof z.ZodType) return schema;
-
-  const s = schema as Record<string, unknown>;
-  const skillContextJsonSchema = {
-    type: "object",
-    description:
-      "Optional skill attribution context. Pass skillName and workflowRunId " +
-      "(from start_skill_workflow) to attribute this call to a skill workflow.",
-    properties: {
-      skillName: { type: "string", description: "Name of the orchestrating skill" },
-      workflowId: { type: "string", description: "Workflow category ID" },
-      workflowRunId: { type: "string", description: "Active workflow run ID from start_skill_workflow" },
-    },
-    required: ["skillName"],
-  };
-
-  // JSON Schema style (has "properties" key)
-  if (s.properties && typeof s.properties === "object") {
-    const props = s.properties as Record<string, unknown>;
-    props._skillContext = skillContextJsonSchema;
-    return schema;
-  }
-
-  // Raw Zod shape style (flat key-value, no "properties" wrapper)
-  // In this case the schema itself IS the properties map.
-  if (
-    !s.type &&
-    !s.properties &&
-    Object.values(s).every((value) => value instanceof z.ZodType)
-  ) {
-    (s as Record<string, unknown>)._skillContext = z
-      .object({
-        skillName: z.string(),
-        workflowId: z.string().optional(),
-        workflowRunId: z.string().optional(),
-      })
-      .optional();
-    return schema;
-  }
-
-  return schema;
 }
 
 /**
@@ -343,11 +217,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     platform,
     packageName,
     workflowIdByToolName = {},
-    evaluator,
     interactionLogger,
-    learningExtractor,
-    findingBuffer,
-    workflowTracker,
     authContextResolver,
   } = opts;
 
@@ -355,10 +225,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
   for (const tool of tools) {
     // Build registration config with all MCP 2025-11-25 fields
-    const rawTransformed = transformSchema(tool.inputSchema);
-
-    // Augment the transformed input schema with optional _skillContext
-    const transformedInputSchema = augmentSchemaWithSkillContext(rawTransformed);
+    const transformedInputSchema = transformSchema(tool.inputSchema);
 
     // Embed input examples into description for universal MCP client compatibility
     const descriptionWithExamples = tool.description + formatExamplesForDescription(tool.inputExamples);
@@ -403,18 +270,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
         const startTime = Date.now();
 
         return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
-          // Declared outside try so they're accessible in the catch block
-          // for error-path interaction logging.
           let requestId: string | undefined;
-          const issues: ToolInteractionIssue[] = [];
-          let inputQualityScore: number | undefined;
-          let efficiencyScore: number | undefined;
-          let recommendationAction:
-            | "none"
-            | "log_only"
-            | "propose_playbook_delta"
-            | "block"
-            | undefined;
           let resolvedAuthContext: SessionAuthContext | undefined;
           let auditedIdentifiers: Record<string, string | string[]> = {};
 
@@ -428,26 +284,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             });
             requestId = context.requestId;
 
-            // Extract _skillContext before Zod validation (it's not in the tool's schema)
-            let skillContext: SkillContext | undefined;
-            let argsForValidation = args;
-            if (
-              typeof args === "object" &&
-              args !== null &&
-              "_skillContext" in (args as Record<string, unknown>)
-            ) {
-              const { _skillContext, ...rest } = args as Record<string, unknown>;
-              if (
-                typeof _skillContext === "object" &&
-                _skillContext !== null &&
-                "skillName" in (_skillContext as Record<string, unknown>)
-              ) {
-                skillContext = _skillContext as unknown as SkillContext;
-              }
-              argsForValidation = rest;
-            }
-
-            const validatedInput = tool.inputSchema.parse(argsForValidation);
+            const validatedInput = tool.inputSchema.parse(args);
             setSpanAttribute("tool.input.validated", true);
 
             // ── Authorization check ──────────────────────────────────────
@@ -540,9 +377,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             const interactionContext: ToolInteractionContext = {
               toolName: tool.name,
               operation: `tool:${tool.name}`,
-              workflowId: skillContext?.workflowId ?? workflowIdByToolName[tool.name],
-              skillName: skillContext?.skillName,
-              workflowRunId: skillContext?.workflowRunId,
+              workflowId: workflowIdByToolName[tool.name],
               platform,
               packageName,
               requestId: context.requestId,
@@ -552,174 +387,12 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             if (interactionContext.workflowId) {
               setSpanAttribute("mcp.workflow.id", interactionContext.workflowId);
             }
-            setSpanAttribute("mcp.tool.retry_count", 0);
 
-            const refinedInput = tool.inputRefiner
-              ? await tool.inputRefiner(validatedInput, interactionContext, sdkContext)
-              : validatedInput;
-
-            if (tool.inputRefiner) {
-              setSpanAttribute("mcp.evaluator.input_refiner.enabled", true);
-            }
-
-            const result = await tool.logic(refinedInput, context, sdkContext);
+            const result = await tool.logic(validatedInput, context, sdkContext);
             setSpanAttribute("mcp.tool.execution.success", true);
 
             const durationMs = Date.now() - startTime;
             setSpanAttribute("mcp.tool.execution.latency_ms", durationMs);
-
-            const executionSnapshot: ToolExecutionSnapshot = {
-              args,
-              validatedInput: refinedInput,
-              context,
-              result,
-              durationMs,
-            };
-
-            const observeOnly = evaluator?.observeOnly ?? true;
-            const hasEvaluator = Boolean(
-              (evaluator?.enabled && evaluator.evaluate) || tool.postExecutionEvaluator
-            );
-            if (hasEvaluator) {
-              await withSpan(
-                `tool.${tool.name}.evaluation`,
-                async () => {
-                  if (evaluator?.enabled && evaluator.evaluate) {
-                    const globalEvaluation = await evaluator.evaluate(
-                      executionSnapshot,
-                      interactionContext,
-                      sdkContext
-                    );
-                    if (globalEvaluation?.issues?.length) {
-                      issues.push(...globalEvaluation.issues);
-                    }
-                    inputQualityScore = clampScore(globalEvaluation?.inputQualityScore);
-                    efficiencyScore = clampScore(globalEvaluation?.efficiencyScore);
-                    recommendationAction = globalEvaluation?.recommendationAction;
-                  }
-
-                  if (tool.postExecutionEvaluator) {
-                    const localEvaluation = await tool.postExecutionEvaluator(
-                      executionSnapshot,
-                      interactionContext,
-                      sdkContext
-                    );
-                    if (localEvaluation?.issues?.length) {
-                      issues.push(...localEvaluation.issues);
-                    }
-                    inputQualityScore = clampScore(
-                      localEvaluation?.inputQualityScore ?? inputQualityScore
-                    );
-                    efficiencyScore = clampScore(
-                      localEvaluation?.efficiencyScore ?? efficiencyScore
-                    );
-                    recommendationAction =
-                      localEvaluation?.recommendationAction ?? recommendationAction;
-                  }
-                },
-                {
-                  "mcp.tool.name": tool.name,
-                  "mcp.workflow.id": interactionContext.workflowId ?? "unknown",
-                }
-              );
-
-              const resolvedAction = recommendationAction ?? "none";
-              setSpanAttribute("mcp.evaluator.observe_only", observeOnly);
-              setSpanAttribute("mcp.evaluator.issues.count", issues.length);
-              setSpanAttribute("mcp.evaluator.recommendation.action", resolvedAction);
-              if (inputQualityScore !== undefined) {
-                setSpanAttribute("mcp.evaluator.input_quality_score", inputQualityScore);
-              }
-              if (efficiencyScore !== undefined) {
-                setSpanAttribute("mcp.evaluator.efficiency_score", efficiencyScore);
-              }
-              recordEvaluatorRecommendation(tool.name, resolvedAction, observeOnly);
-
-              if (interactionContext.workflowId) {
-                await withSpan(
-                  `workflow.${interactionContext.workflowId}.refinement_decision`,
-                  async () => undefined,
-                  {
-                    "mcp.workflow.id": interactionContext.workflowId,
-                    "mcp.tool.name": tool.name,
-                    "mcp.evaluator.issues.count": issues.length,
-                    "mcp.evaluator.observe_only": observeOnly,
-                    "mcp.evaluator.recommendation.action": resolvedAction,
-                  }
-                );
-              }
-            }
-
-            if (findingBuffer && hasEvaluator) {
-              findingBuffer.push({
-                id: randomUUID(),
-                sessionId: sessionId ?? "unknown",
-                timestamp: new Date().toISOString(),
-                toolName: tool.name,
-                workflowId: interactionContext.workflowId,
-                skillName: interactionContext.skillName,
-                workflowRunId: interactionContext.workflowRunId,
-                platform: interactionContext.platform ?? "unknown",
-                serverPackage: interactionContext.packageName ?? "unknown",
-                issues: issues.map((issue) => ({
-                  class: issue.class,
-                  message: issue.message,
-                  isRecoverable: issue.isRecoverable,
-                  metadata: issue.metadata,
-                })),
-                inputQualityScore,
-                efficiencyScore,
-                recommendationAction: recommendationAction ?? "none",
-                durationMs,
-              });
-            }
-
-            // Fire-and-forget: feed evaluator findings to learning extractor
-            if (learningExtractor && issues.length > 0) {
-              try {
-                learningExtractor.processEvaluation(tool.name, issues, skillContext);
-              } catch {
-                // Non-critical — don't block tool response
-              }
-            }
-
-            if (issues.length > 0) {
-              for (const issue of issues) {
-                recordEvaluatorFinding(tool.name, issue.class, issue.isRecoverable ?? true);
-              }
-
-              if (
-                recommendationAction === "block" &&
-                !observeOnly &&
-                issues.some((issue) => issue.isRecoverable === false)
-              ) {
-                throw new McpError(
-                  JsonRpcErrorCode.ValidationError,
-                  "Interaction evaluator blocked tool execution due to non-recoverable issues",
-                  {
-                    toolName: tool.name,
-                    requestId: context.requestId,
-                    issues,
-                  }
-                );
-              }
-            }
-
-            // ── Workflow tracker (fire-and-forget) ─────────────────────
-            if (workflowTracker && interactionContext.workflowRunId) {
-              try {
-                workflowTracker.recordToolCall(interactionContext.workflowRunId, {
-                  toolName: tool.name,
-                  requestId: context.requestId,
-                  timestamp: new Date().toISOString(),
-                  durationMs,
-                  success: true,
-                  issueCount: issues.length,
-                });
-              } catch {
-                // Non-critical
-              }
-            }
 
             // ── Interaction logging (fire-and-forget) ────────────────────
             if (interactionLogger) {
@@ -727,33 +400,19 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 ts: new Date().toISOString(),
                 sessionId: sessionId ?? "unknown",
                 tool: tool.name,
-                params: sanitizeParams(argsForValidation) as Record<string, unknown>,
+                params: sanitizeParams(args) as Record<string, unknown>,
                 success: true,
                 durationMs,
                 workflowId: interactionContext.workflowId,
-                skillName: interactionContext.skillName,
-                workflowRunId: interactionContext.workflowRunId,
                 platform,
                 packageName,
                 requestId: context.requestId,
               };
-              if (issues.length > 0) {
-                logEntry.evaluatorIssues = issues.map((i) => i.class);
-              }
-              if (inputQualityScore !== undefined) {
-                logEntry.inputQualityScore = inputQualityScore;
-              }
-              if (efficiencyScore !== undefined) {
-                logEntry.efficiencyScore = efficiencyScore;
-              }
-              if (recommendationAction) {
-                logEntry.recommendationAction = recommendationAction;
-              }
               interactionLogger.append(logEntry);
             }
 
             const content = tool.responseFormatter
-              ? tool.responseFormatter(result, refinedInput)
+              ? tool.responseFormatter(result, validatedInput)
               : [
                   {
                     type: "text" as const,
@@ -802,7 +461,6 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             recordToolExecution(tool.name, "success", Date.now() - startTime);
-            recordWorkflowCallDepth(workflowIdByToolName[tool.name], 1);
 
             // MCP Spec 2025-11-25: return structuredContent alongside content
             // when outputSchema is defined. This enables typed result parsing.
@@ -840,7 +498,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               );
             }
 
-            // Log failed interactions with any evaluator data collected before failure
+            // Log failed interactions
             if (interactionLogger) {
               const errorLogEntry: InteractionLogEntry = {
                 ts: new Date().toISOString(),
@@ -854,18 +512,6 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 packageName,
                 requestId,
               };
-              if (issues.length > 0) {
-                errorLogEntry.evaluatorIssues = issues.map((i) => i.class);
-              }
-              if (inputQualityScore !== undefined) {
-                errorLogEntry.inputQualityScore = inputQualityScore;
-              }
-              if (efficiencyScore !== undefined) {
-                errorLogEntry.efficiencyScore = efficiencyScore;
-              }
-              if (recommendationAction) {
-                errorLogEntry.recommendationAction = recommendationAction;
-              }
               interactionLogger.append(errorLogEntry);
             }
 

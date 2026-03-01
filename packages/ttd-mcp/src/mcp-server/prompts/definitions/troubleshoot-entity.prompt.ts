@@ -121,6 +121,7 @@ Input: { "reportName": "Delivery Check", "dateRange": "Yesterday", "dimensions":
 - TTD uses **PUT for updates** — the payload replaces the full entity. To change one field, GET the entity first, modify the field, then PUT the full object back.
 - \`Availability: "Archived"\` is effectively a soft delete — entities cannot be un-archived.
 - Changes to bids and budgets take effect within minutes; targeting changes may take longer.
+- Payloads with more than 25 fields consistently show higher latency (>20s). When updating, prefer smaller staged updates — only include fields that actually need to change alongside any required fields.
 
 ## Related Resources
 - \`entity-schema://${entityType}\` — Field reference for ${entityType}

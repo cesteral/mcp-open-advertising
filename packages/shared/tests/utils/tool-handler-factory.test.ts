@@ -11,13 +11,9 @@ vi.mock("../../src/utils/telemetry.js", () => ({
 
 vi.mock("../../src/utils/metrics.js", () => ({
   recordToolExecution: vi.fn(),
-  recordEvaluatorFinding: vi.fn(),
-  recordEvaluatorRecommendation: vi.fn(),
-  recordWorkflowCallDepth: vi.fn(),
 }));
 
 import { registerToolsFromDefinitions, formatExamplesForDescription, type ToolDefinitionForFactory, type ToolInputExample } from "../../src/utils/tool-handler-factory.js";
-import { EvaluatorIssueClass } from "../../src/utils/mcp-errors.js";
 import { recordToolExecution } from "../../src/utils/metrics.js";
 
 function createMockLogger() {
@@ -338,137 +334,6 @@ describe("registerToolsFromDefinitions", () => {
       "error_tool",
       "error",
       expect.any(Number)
-    );
-  });
-
-  it("invokes learningExtractor when evaluator issues are present", async () => {
-    const processEvaluation = vi.fn();
-
-    registerToolsFromDefinitions({
-      server,
-      tools: [
-        {
-          name: "learning_tool",
-          description: "Test",
-          inputSchema: z.object({}),
-          logic: vi.fn().mockResolvedValue({ ok: true }),
-        },
-      ],
-      logger,
-      transformSchema: (schema) => schema,
-      createRequestContext,
-      evaluator: {
-        enabled: true,
-        evaluate: vi.fn().mockResolvedValue({
-          issues: [
-            {
-              class: EvaluatorIssueClass.InputQuality,
-              message: "payload too broad",
-              isRecoverable: true,
-            },
-          ],
-        }),
-      },
-      learningExtractor: {
-        processEvaluation,
-      },
-    });
-
-    const handler = server.getHandler("learning_tool")!;
-    await handler({});
-
-    expect(processEvaluation).toHaveBeenCalledWith(
-      "learning_tool",
-      expect.arrayContaining([
-        expect.objectContaining({
-          class: EvaluatorIssueClass.InputQuality,
-        }),
-      ]),
-      undefined
-    );
-  });
-
-  it("pushes persisted findings to findingBuffer for evaluated calls", async () => {
-    const push = vi.fn();
-
-    registerToolsFromDefinitions({
-      server,
-      tools: [
-        {
-          name: "finding_tool",
-          description: "Test",
-          inputSchema: z.object({}),
-          logic: vi.fn().mockResolvedValue({ ok: true }),
-        },
-      ],
-      logger,
-      transformSchema: (schema) => schema,
-      createRequestContext,
-      sessionId: "session-test",
-      platform: "ttd",
-      packageName: "ttd-mcp",
-      evaluator: {
-        enabled: true,
-        evaluate: vi.fn().mockResolvedValue({
-          issues: [],
-          recommendationAction: "none",
-        }),
-      },
-      findingBuffer: {
-        push,
-        getAll: vi.fn(),
-        getByWorkflow: vi.fn(),
-        size: vi.fn(),
-        clear: vi.fn(),
-      },
-    });
-
-    const handler = server.getHandler("finding_tool")!;
-    await handler({});
-
-    expect(push).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sessionId: "session-test",
-        toolName: "finding_tool",
-        platform: "ttd",
-        serverPackage: "ttd-mcp",
-        recommendationAction: "none",
-      })
-    );
-  });
-
-  it("calls inputRefiner before tool logic when defined", async () => {
-    const logicFn = vi.fn().mockResolvedValue({});
-    const refiner = vi.fn().mockResolvedValue({ id: "refined-id" });
-
-    registerToolsFromDefinitions({
-      server,
-      tools: [
-        {
-          name: "refined_tool",
-          description: "Test",
-          inputSchema: z.object({ id: z.string() }),
-          logic: logicFn,
-          inputRefiner: refiner,
-        },
-      ],
-      logger,
-      transformSchema: (schema) => schema,
-      createRequestContext,
-    });
-
-    const handler = server.getHandler("refined_tool")!;
-    await handler({ id: "original" });
-
-    expect(refiner).toHaveBeenCalledWith(
-      { id: "original" },
-      expect.objectContaining({ toolName: "refined_tool" }),
-      expect.any(Object)
-    );
-    expect(logicFn).toHaveBeenCalledWith(
-      { id: "refined-id" },
-      expect.any(Object),
-      expect.any(Object)
     );
   });
 

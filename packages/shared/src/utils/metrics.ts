@@ -6,7 +6,6 @@
  */
 
 import { metrics, type Counter, type Histogram, type ObservableGauge } from "@opentelemetry/api";
-import { EvaluatorIssueClass } from "./mcp-errors.js";
 
 const METER_NAME = "cesteral-mcp";
 
@@ -20,9 +19,6 @@ function getMeter() {
 
 let toolExecutionCounter: Counter | undefined;
 let toolExecutionDuration: Histogram | undefined;
-let evaluatorFindingCounter: Counter | undefined;
-let evaluatorRecommendationCounter: Counter | undefined;
-let workflowCallDepthHistogram: Histogram | undefined;
 
 /**
  * Record a tool execution with status and duration.
@@ -47,71 +43,6 @@ export function recordToolExecution(
 
   toolExecutionCounter.add(1, { tool_name: toolName, status });
   toolExecutionDuration.record(durationMs, { tool_name: toolName, status });
-}
-
-/**
- * Record a standardized evaluator finding.
- */
-export function recordEvaluatorFinding(
-  toolName: string,
-  issueClass: EvaluatorIssueClass,
-  isRecoverable: boolean
-): void {
-  if (!evaluatorFindingCounter) {
-    evaluatorFindingCounter = getMeter().createCounter("mcp.evaluator.finding.count", {
-      description: "Number of evaluator findings emitted by tool execution",
-      unit: "1",
-    });
-  }
-
-  evaluatorFindingCounter.add(1, {
-    tool_name: toolName,
-    issue_class: issueClass,
-    is_recoverable: String(isRecoverable),
-  });
-}
-
-/**
- * Record evaluator recommendation actions for governance dashboards.
- */
-export function recordEvaluatorRecommendation(
-  toolName: string,
-  action: "none" | "log_only" | "propose_playbook_delta" | "block",
-  observeOnly: boolean
-): void {
-  if (!evaluatorRecommendationCounter) {
-    evaluatorRecommendationCounter = getMeter().createCounter(
-      "mcp.evaluator.recommendation.count",
-      {
-        description: "Number of evaluator recommendation actions emitted by tool execution",
-        unit: "1",
-      }
-    );
-  }
-
-  evaluatorRecommendationCounter.add(1, {
-    tool_name: toolName,
-    action,
-    observe_only: String(observeOnly),
-  });
-}
-
-/**
- * Record workflow call depth for efficiency tracking.
- */
-export function recordWorkflowCallDepth(workflowId: string | undefined, callDepth: number): void {
-  if (!workflowId) {
-    return;
-  }
-
-  if (!workflowCallDepthHistogram) {
-    workflowCallDepthHistogram = getMeter().createHistogram("mcp.workflow.call_depth", {
-      description: "Depth of tool calls per workflow execution",
-      unit: "1",
-    });
-  }
-
-  workflowCallDepthHistogram.record(callDepth, { workflow_id: workflowId });
 }
 
 // ---------------------------------------------------------------------------

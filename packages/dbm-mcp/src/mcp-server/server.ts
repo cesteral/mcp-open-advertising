@@ -1,30 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { join } from "node:path";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
-import { createFindingResources } from "./resources/definitions/findings.resource.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
-  EvaluatorIssueClass,
   extractZodShape,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   InteractionLogger,
-  LearningExtractor,
-  createSubmitLearningTool,
-  createLearningsResources,
-  type FindingStore,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
-  createDefaultWorkflowEvaluator,
-  createWorkflowLifecycleTools,
-  type ToolExecutionSnapshot,
-  type ToolInteractionContext,
-  type ToolInteractionEvaluation,
   type StorageBackend,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
@@ -32,12 +20,6 @@ import packageJson from "../../package.json" with { type: "json" };
 
 const DBM_PACKAGE_NAME = "dbm-mcp";
 const DBM_PLATFORM = "dv360-reporting";
-const LEARNINGS_ROOT = join(process.cwd(), "learnings");
-
-interface FindingDeps {
-  findingStore: FindingStore;
-  storageBackend?: StorageBackend;
-}
 
 const dbmWorkflowIdByToolName: Record<string, string> = {
   get_campaign_delivery: "mcp.troubleshoot.delivery",
@@ -47,45 +29,13 @@ const dbmWorkflowIdByToolName: Record<string, string> = {
   run_custom_query: "mcp.execute.dbm_custom_query",
 };
 
-async function evaluateDbmInteraction(
-  snapshot: ToolExecutionSnapshot,
-  interactionContext: ToolInteractionContext
-): Promise<ToolInteractionEvaluation> {
-  const issues: ToolInteractionEvaluation["issues"] = [];
-  if (snapshot.durationMs > 15_000) {
-    issues.push({
-      class: EvaluatorIssueClass.Efficiency,
-      message: "Tool latency exceeded 15s threshold",
-      isRecoverable: true,
-    });
-  }
-  if (
-    interactionContext.workflowId === "mcp.execute.dbm_custom_query" &&
-    typeof snapshot.validatedInput === "object" &&
-    snapshot.validatedInput &&
-    "dimensions" in (snapshot.validatedInput as Record<string, unknown>) &&
-    Array.isArray((snapshot.validatedInput as Record<string, unknown>).dimensions) &&
-    ((snapshot.validatedInput as Record<string, unknown>).dimensions as unknown[]).length > 12
-  ) {
-    issues.push({
-      class: EvaluatorIssueClass.InputQuality,
-      message: "Query dimensions may be broader than necessary",
-      isRecoverable: true,
-    });
-  }
-  return {
-    issues,
-    recommendationAction: issues.length > 0 ? "propose_playbook_delta" : "none",
-  };
-}
-
 /**
  * Create and configure MCP server instance
  */
 export async function createMcpServer(
   logger: Logger,
   sessionId?: string,
-  findingDeps?: FindingDeps
+  storageBackend?: StorageBackend
 ): Promise<McpServer> {
   const server = new McpServer({
     name: "dbm-mcp",
@@ -94,35 +44,16 @@ export async function createMcpServer(
   });
 
   // Interaction logger for persisting tool execution data
-  const storageBackend = findingDeps?.storageBackend;
   const interactionLogger = new InteractionLogger({
     serverName: DBM_PACKAGE_NAME,
     logger,
     storageBackend,
   });
 
-  // Learning extractor (created per-server to support optional GCS backend)
-  const learningExtractor = new LearningExtractor({
-    learningsRoot: LEARNINGS_ROOT,
-    dataDir: join(process.cwd(), "data", "learnings", DBM_PACKAGE_NAME),
-    storageBackend,
-  });
-
-  // Register all tools via shared factory (includes submit_learning + workflow lifecycle)
-  const submitLearningTool = createSubmitLearningTool(LEARNINGS_ROOT);
-  const sessionServices = sessionId ? sessionServiceStore.get(sessionId) : undefined;
-  const workflowEvaluator = createDefaultWorkflowEvaluator();
-  const workflowTools = createWorkflowLifecycleTools({
-    getTracker: () => sessionServices?.workflowTracker,
-    getEvaluator: () => workflowEvaluator,
-    getFindingBuffer: () => sessionServices?.findingBuffer,
-    platform: DBM_PLATFORM,
-    packageName: DBM_PACKAGE_NAME,
-    sessionId,
-  });
+  // Register all tools via shared factory
   registerToolsFromDefinitions({
     server,
-    tools: [...allTools, submitLearningTool, ...workflowTools],
+    tools: allTools,
     logger,
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
@@ -135,34 +66,16 @@ export async function createMcpServer(
     packageName: DBM_PACKAGE_NAME,
     platform: DBM_PLATFORM,
     workflowIdByToolName: dbmWorkflowIdByToolName,
-    evaluator: {
-      enabled: process.env.MCP_EVALUATOR_ENABLED !== "false",
-      observeOnly: process.env.MCP_EVALUATOR_OBSERVE_ONLY !== "false",
-      evaluate: evaluateDbmInteraction,
-    },
     interactionLogger,
-    learningExtractor,
-    findingBuffer: sessionServices?.findingBuffer,
-    workflowTracker: sessionServices?.workflowTracker,
     authContextResolver: sessionId
       ? () => sessionServiceStore.getAuthContext(sessionId)
       : undefined,
   });
 
-  // Register all resources via shared factory (platform + learnings)
-  const learningsResources = createLearningsResources({
-    learningsRoot: LEARNINGS_ROOT,
-    serverPlatform: "dbm",
-  });
-  const findingResources = findingDeps
-    ? createFindingResources({
-        findingStore: findingDeps.findingStore,
-        getFindingBuffer: () => sessionId ? sessionServiceStore.get(sessionId)?.findingBuffer : undefined,
-      })
-    : [];
+  // Register all resources via shared factory
   registerStaticResourcesFromDefinitions({
     server,
-    resources: [...allResources, ...learningsResources, ...findingResources],
+    resources: allResources,
     logger,
   });
 

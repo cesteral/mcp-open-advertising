@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { TtdAuthAdapter } from "../auth/ttd-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { SessionServiceStore, createFindingBuffer, createWorkflowTracker, type FindingBuffer, type WorkflowTracker } from "@cesteral/shared";
+import { SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { TtdHttpClient } from "./ttd/ttd-http-client.js";
 import { TtdService } from "./ttd/ttd-service.js";
@@ -11,8 +11,6 @@ export interface SessionServices {
   httpClient: TtdHttpClient;
   ttdService: TtdService;
   ttdReportingService: TtdReportingService;
-  findingBuffer: FindingBuffer;
-  workflowTracker: WorkflowTracker;
 }
 
 export function createSessionServices(
@@ -29,8 +27,6 @@ export function createSessionServices(
     httpClient,
     ttdService,
     ttdReportingService,
-    findingBuffer: createFindingBuffer(),
-    workflowTracker: createWorkflowTracker(),
   };
 }
 

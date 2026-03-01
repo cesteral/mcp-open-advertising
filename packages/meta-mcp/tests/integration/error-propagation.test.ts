@@ -89,12 +89,6 @@ vi.mock("../../src/services/session-services.js", async () => {
       metaService: mockState.metaService,
       metaInsightsService: { getInsights: vi.fn(), getInsightsBreakdowns: vi.fn() } as any,
       metaTargetingService: { searchTargeting: vi.fn(), getTargetingOptions: vi.fn() } as any,
-      findingBuffer: { push: vi.fn(), clear: vi.fn().mockReturnValue([]) },
-      workflowTracker: {
-        recordToolCall: vi.fn(),
-        startWorkflow: vi.fn(),
-        completeWorkflow: vi.fn(),
-      },
     })),
   };
 });

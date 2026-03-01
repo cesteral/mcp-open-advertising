@@ -2,8 +2,7 @@
  * Interaction Logger
  *
  * Append-only JSONL logger capturing tool execution data.
- * Feeds the learnings-based self-improvement system by persisting
- * raw interaction data that was previously only emitted via OTEL.
+ * Persists raw interaction data alongside OTEL traces for local debugging.
  *
  * Features:
  * - Append-only JSONL format (one line per tool call)
@@ -31,13 +30,7 @@ export interface InteractionLogEntry {
   params: Record<string, unknown>;
   success: boolean;
   durationMs: number;
-  evaluatorIssues?: string[];
-  inputQualityScore?: number;
-  efficiencyScore?: number;
-  recommendationAction?: string;
   workflowId?: string;
-  skillName?: string;
-  workflowRunId?: string;
   platform?: string;
   packageName?: string;
   requestId?: string;

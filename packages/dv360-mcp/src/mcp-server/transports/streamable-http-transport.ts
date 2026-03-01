@@ -5,7 +5,7 @@
  * Uses Hono + @hono/mcp for the Streamable HTTP transport.
  */
 import { readFileSync } from "fs";
-import { join } from "node:path";
+
 import { StreamableHTTPTransport } from "@hono/mcp";
 import { type ServerType, serve } from "@hono/node-server";
 import { Hono } from "hono";
@@ -29,7 +29,6 @@ import {
   validateSessionReuse,
   oauthProtectedResourceBody,
   SessionManager,
-  createFindingStore,
   resolveStorageBackend,
   type AuthMode,
   type GoogleAuthAdapter,
@@ -84,17 +83,6 @@ export function createMcpHttpServer(
     ? resolveStorageBackend({ gcsBucket: config.gcsBucketName, gcsPrefix: "dv360-mcp" })
     : undefined;
 
-  const findingStore = createFindingStore({
-    filePath: storageBackend
-      ? "findings/dv360-mcp-findings.jsonl"
-      : join(process.cwd(), "data", "findings", "dv360-mcp-findings.jsonl"),
-    retentionDays: 30,
-    logger,
-    storageBackend,
-  });
-  findingStore.prune().catch((error) => {
-    logger.warn({ error }, "Failed to prune finding store on startup");
-  });
 
   const sessionTransports = new Map<string, McpSessionTransport>();
 
@@ -108,12 +96,6 @@ export function createMcpHttpServer(
           sessionTransports.delete(sessionId);
         }
 
-        const services = sessionServiceStore.get(sessionId);
-        if (!services?.findingBuffer) return;
-        const findings = services.findingBuffer.clear();
-        if (findings.length > 0) {
-          await findingStore.append(findings);
-        }
       },
     }
   );
@@ -374,7 +356,7 @@ export function createMcpHttpServer(
     // Get or create cached MCP server for this session
     let mcpServer = sessions.getServer(sessionId);
     if (!mcpServer) {
-      mcpServer = await createMcpServer(logger, sessionId, { findingStore, storageBackend });
+      mcpServer = await createMcpServer(logger, sessionId, storageBackend);
       sessions.setServer(sessionId, mcpServer);
       logger.debug({ sessionId }, "Created new MCP server instance for session");
     }
