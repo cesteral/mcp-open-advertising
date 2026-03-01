@@ -52,9 +52,10 @@ Pick one immediate action:
 | Task | Start Here |
 |------|-----------|
 | Create a full campaign structure | Prompt: \`full_campaign_setup_workflow\` |
-| Troubleshoot underdelivery | Prompt: \`troubleshoot_underdelivery_workflow\` |
+| Troubleshoot underdelivery | Prompt: \`troubleshoot_underdelivery\` |
 | Reallocate budgets | Prompt: \`budget_reallocation_workflow\` |
 | Update entities safely | Prompt: \`entity_update_execution_workflow\` |
+| Set up custom bidding | Prompt: \`custom_bidding_workflow\` |
 | Understand entity fields | Resource: \`entity-schema://{entityType}\` |
 | See CRUD examples | Resource: \`entity-examples://{entityType}\` |
 | List updateMask field paths | Resource: \`entity-fields://{entityType}\` |
@@ -139,9 +140,10 @@ Inspect the output, then iterate with more specific calls.
 
 ## Suggested Next Steps
 - For campaign setup: invoke \`full_campaign_setup_workflow\` prompt
-- For troubleshooting: invoke \`troubleshoot_underdelivery_workflow\` prompt
+- For troubleshooting: invoke \`troubleshoot_underdelivery\` prompt
 - For budget work: invoke \`budget_reallocation_workflow\` prompt
 - For entity updates: invoke \`entity_update_execution_workflow\` prompt
-- For targeting: use \`dv360_list_assigned_targeting\` → \`dv360_create_assigned_targeting\`
+- For targeting: invoke \`targeting_management_workflow\` prompt
+- For custom bidding: invoke \`custom_bidding_workflow\` prompt
 `;
 }

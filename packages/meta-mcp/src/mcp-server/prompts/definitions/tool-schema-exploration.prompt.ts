@@ -2,11 +2,31 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const toolSchemaExplorationPrompt: Prompt = {
   name: "meta_tool_schema_exploration",
-  description: "Guide for discovering and understanding Meta MCP tools, resources, and schemas",
+  description:
+    "Guide for discovering and understanding Meta MCP tools, resources, and schemas",
+  arguments: [
+    {
+      name: "objective",
+      description:
+        "Exploration objective (e.g., campaign management, insights, targeting, bulk operations)",
+      required: false,
+    },
+  ],
 };
 
-export function getToolSchemaExplorationMessage(): string {
+export function getToolSchemaExplorationMessage(
+  args?: Record<string, string>
+): string {
+  const objective = args?.objective || "general capability discovery";
   return `# Meta MCP Tool & Schema Exploration Guide
+
+## Context
+- Server: meta-mcp (Meta Ads Campaign Management)
+- Objective: ${objective}
+
+Use this workflow to discover Meta MCP capabilities while minimizing token usage.
+
+---
 
 ## Available MCP Resources
 
@@ -59,6 +79,18 @@ Fetch these resources for detailed schema information:
 
 ### Validation
 - \`meta_validate_entity\` — Client-side entity validation
+
+## Workflow Prompts
+
+| Task | Prompt |
+|------|--------|
+| Create a full campaign structure | \`meta_campaign_setup_workflow\` |
+| Research audiences & build targeting | \`meta_targeting_discovery_workflow\` |
+| Update entities safely | \`meta_entity_update_workflow\` |
+| Duplicate campaigns/ad sets/ads | \`meta_entity_duplication_workflow\` |
+| Bulk create/update/status/bids | \`meta_bulk_operations_workflow\` |
+| Performance insights & breakdowns | \`meta_insights_reporting_workflow\` |
+| Troubleshoot entity issues | \`meta_troubleshoot_entity\` |
 
 ## Recommended Exploration Order
 

@@ -29,7 +29,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
-### dv360-mcp (10 prompts)
+### dv360-mcp (11 prompts)
 
 | Prompt | Description | Key Arguments |
 |--------|-------------|---------------|
@@ -40,6 +40,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `tool_schema_exploration_workflow` | Discover DV360 tools, resources, and capabilities | _(none)_ |
 | `targeting_management_workflow` | Manage targeting options: discover types, create/audit/delete assignments | `advertiserId`, `parentType`, `goal` |
 | `bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `advertiserId`, `operation` |
+| `custom_bidding_workflow` | Create algorithms, upload scripts/rules, check readiness, assign to line items | `advertiserId` (required), `algorithmType` (optional) |
 | `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 | `entity_activation_workflow` | Safe step-by-step activation of DV360 entities (IO → Line Items → Campaign) | `advertiserId` (required), `campaignId` (required) |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
@@ -68,16 +69,18 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `gads_bulk_operations_workflow` | Batch mutate, status changes, bid adjustments, and entity removal | `customerId`, `operation` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
-### meta-mcp (8 prompts)
+### meta-mcp (10 prompts)
 
 | Prompt | Description | Key Arguments |
 |--------|-------------|---------------|
 | `meta_campaign_setup_workflow` | Complete Meta Ads campaign creation (Campaign → Ad Set → Ad Creative → Ad) | `adAccountId` (required) |
-| `meta_tool_schema_exploration` | Discover Meta MCP tools, resources, and schemas | _(none)_ |
+| `meta_tool_schema_exploration` | Discover Meta MCP tools, resources, and schemas | `objective` (optional) |
 | `meta_troubleshoot_entity` | Diagnose Meta Ads entity issues and delivery problems | `entityType`, `entityId` |
 | `meta_insights_reporting_workflow` | Build and execute Meta Ads insights queries with breakdowns | `adAccountId` (required), `entityLevel` (optional) |
 | `meta_entity_update_workflow` | Safe entity update with fetch-modify-verify pattern | `entityType`, `entityId` |
 | `meta_bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `adAccountId`, `operation` |
+| `meta_targeting_discovery_workflow` | Search interests, browse categories, build targeting specs, estimate reach | `adAccountId` (required), `goal` (optional) |
+| `meta_entity_duplication_workflow` | Duplicate campaigns/ad sets/ads for A/B testing and scaling | `entityType` (required), `entityId` (required) |
 | `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
@@ -113,7 +116,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 
 ## Key Metrics
 
-**Current Prompts:** 38
+**Current Prompts:** 41
 **Average Size:** ~8KB when invoked
 **Context Cost:** 0KB when not invoked
 **Build Status:** ✅ Clean

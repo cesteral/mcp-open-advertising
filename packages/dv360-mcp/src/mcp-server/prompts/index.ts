@@ -39,6 +39,10 @@ import {
   crossPlatformCampaignSetupPrompt,
   getCrossPlatformCampaignSetupMessage,
 } from "./definitions/cross-platform-campaign-setup.prompt.js";
+import {
+  customBiddingWorkflowPrompt,
+  getCustomBiddingWorkflowMessage,
+} from "./definitions/custom-bidding-workflow.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -120,6 +124,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: crossPlatformCampaignSetupPrompt,
       generateMessage: getCrossPlatformCampaignSetupMessage,
+    },
+  ],
+  [
+    customBiddingWorkflowPrompt.name,
+    {
+      prompt: customBiddingWorkflowPrompt,
+      generateMessage: getCustomBiddingWorkflowMessage,
     },
   ],
 ]);

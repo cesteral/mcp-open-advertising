@@ -94,14 +94,33 @@ Input: {
 
 ---
 
-## Step 4: Interpret Results
+## Step 4: Download & Parse Results
+
+\`ttd_get_report\` returns a \`downloadUrl\` pointing to a CSV file. Use \`ttd_download_report\` to fetch and parse the data:
+
+\`\`\`
+Tool: ttd_download_report
+Input: {
+  "downloadUrl": "{downloadUrl from Step 3}",
+  "maxRows": 1000
+}
+\`\`\`
 
 The tool returns:
-- \`reportScheduleId\` — the ID of the created report schedule
-- \`execution\` — execution details and status
-- \`downloadUrl\` — URL to download results (if available)
+- \`headers\` — Column names from the CSV
+- \`rows\` — Parsed data rows as JSON objects (keyed by header name)
+- \`totalRows\` / \`returnedRows\` — Row counts
+- \`truncated\` — Whether rows were capped by \`maxRows\`
 
-If no \`downloadUrl\` is returned, the report may still be processing. Wait and retry.
+### Handling Large Reports
+
+| \`maxRows\` | Use Case |
+|-----------|----------|
+| 100 | Quick preview / spot-check |
+| 1000 | Default — sufficient for most analyses |
+| 5000–10000 | Large reports with many dimensions |
+
+⚠️ **GOTCHA**: If \`ttd_get_report\` returns no \`downloadUrl\`, the report may still be processing. Wait and retry the \`ttd_get_report\` call.
 
 ---
 

@@ -149,24 +149,15 @@ npx tsx tests/test-prompt.ts
 - Conditional sections (targeting)
 - Message length
 
-## Future Prompts (Recommended)
+## Future Prompts (Status)
 
-Based on your legacy code patterns, consider adding:
+Based on legacy code patterns and coverage gap analysis:
 
-1. **`bulk_update_workflow`**
-   - Safe bulk operations with validation gates
-   - Preview changes before execution
-   - Rollback guidance
+1. ~~**`bulk_update_workflow`**~~ → ✅ **Delivered** as `bulk_operations_workflow` (dv360-mcp, meta-mcp)
 
-2. **`troubleshoot_api_errors`**
-   - DV360 API error code → solution mapping
-   - Common permission issues
-   - Debugging checklist
+2. ~~**`troubleshoot_api_errors`**~~ → Partially covered by `troubleshoot_underdelivery` (dv360-mcp) and `troubleshoot_entity` (ttd/gads/meta). Consider a dedicated DV360 API error-code prompt if troubleshooting gaps emerge in production.
 
-3. **`entity_activation_workflow`**
-   - Safe activation sequence (IO → Line Items → Campaign)
-   - Budget validation before activation
-   - Rollback if activation fails
+3. ~~**`entity_activation_workflow`**~~ → Covered within `full_campaign_setup_workflow` (dv360-mcp) which includes an activation sequence section (IO → Line Items → Campaign).
 
 ## Key Learnings from Legacy Code
 
