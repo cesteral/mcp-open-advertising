@@ -16,6 +16,7 @@ Convenience wrapper around GAQL that constructs queries from simple inputs. For 
 **Date ranges:** TODAY, YESTERDAY, LAST_7_DAYS, LAST_30_DAYS, THIS_MONTH, LAST_MONTH, LAST_90_DAYS`;
 
 const ENTITY_TYPE_ENUM = ["campaign", "adGroup", "ad", "keyword"] as const;
+const METRIC_NAME_PATTERN = /^(metrics\.)?[a-z_][a-z0-9_]*$/;
 
 const DATE_RANGE_ENUM = [
   "TODAY",
@@ -61,7 +62,7 @@ export const GetInsightsInputSchema = z
   .object({
     customerId: z
       .string()
-      .min(1)
+      .regex(/^\d+$/, "customerId must be numeric")
       .describe("Google Ads customer ID (no dashes)"),
     entityType: z
       .enum(ENTITY_TYPE_ENUM)
@@ -75,7 +76,14 @@ export const GetInsightsInputSchema = z
       .enum(DATE_RANGE_ENUM)
       .describe("Date range for metrics"),
     metrics: z
-      .array(z.string())
+      .array(
+        z
+          .string()
+          .regex(
+            METRIC_NAME_PATTERN,
+            "metrics must be metric names like 'clicks' or 'metrics.clicks'"
+          )
+      )
       .optional()
       .describe(
         "Metrics to include (defaults to impressions, clicks, cost_micros, conversions, ctr, average_cpc)"
@@ -109,7 +117,12 @@ function buildGaqlQuery(input: GetInsightsInput): string {
 
   const metricFields =
     input.metrics && input.metrics.length > 0
-      ? input.metrics.map((m) => (m.startsWith("metrics.") ? m : `metrics.${m}`))
+      ? input.metrics.map((m) => {
+          if (!METRIC_NAME_PATTERN.test(m)) {
+            throw new Error(`Invalid metric name: ${m}`);
+          }
+          return m.startsWith("metrics.") ? m : `metrics.${m}`;
+        })
       : DEFAULT_METRICS;
 
   const selectFields = [idField, nameField, ...metricFields].join(", ");

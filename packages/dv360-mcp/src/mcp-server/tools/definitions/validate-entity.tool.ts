@@ -117,6 +117,10 @@ export async function validateEntityLogic(
       new Set(input.updateMask.split(",").map((f) => f.trim()).filter(Boolean))
     );
 
+    if (maskFields.length === 0) {
+      errors.push("updateMask must include at least one field path");
+    }
+
     for (const fieldPath of maskFields) {
       const fieldSchema = getFieldSchemaByPath(schema, fieldPath);
       if (!fieldSchema) {
