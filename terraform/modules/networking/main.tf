@@ -187,6 +187,7 @@ resource "google_compute_firewall" "allow_health_checks" {
 
   allow {
     protocol = "tcp"
+    ports    = ["8080"]
   }
 
   source_ranges = [

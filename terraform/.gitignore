@@ -34,5 +34,6 @@ override.tf.json
 .terraformrc
 terraform.rc
 
-# Ignore lock files (some prefer to commit these)
-.terraform.lock.hcl
+# Lock file should be committed for reproducible provider versions
+# See: https://developer.hashicorp.com/terraform/language/files/dependency-lock
+# .terraform.lock.hcl

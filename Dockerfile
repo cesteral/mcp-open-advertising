@@ -39,7 +39,11 @@ COPY --from=builder /app/packages/${SERVER_NAME}/package.json ./packages/${SERVE
 WORKDIR /app/packages/${SERVER_NAME}
 
 # Expose port (will be overridden by Cloud Run)
-EXPOSE 3000
+EXPOSE 8080
+
+# Health check for local dev and non-Cloud-Run deployments
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -q -O- http://localhost:8080/health || exit 1
 
 # Run as non-root user for security
 USER node

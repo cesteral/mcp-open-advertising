@@ -5,8 +5,6 @@
   </p>
 </div>
 
-
-
 ---
 
 ## ✨ Features
@@ -115,20 +113,20 @@ npm install
 
 All configuration is centralized and validated at startup in `src/config/index.ts`. Key environment variables in your `.env` file include:
 
-| Variable | Description | Default |
-| :-- | :-- | :-- |
-| `MCP_TRANSPORT_TYPE` | Transport to run (always `http` for Campaign Guardian). | `http` |
-| `MCP_SESSION_MODE` | Session handling: `stateless`, `stateful`, or `auto`. | `auto` |
-| `MCP_HTTP_PORT` | Port for the HTTP server. | `8080` |
-| `MCP_HTTP_HOST` | Host for the HTTP server (0.0.0.0 for Cloud Run). | `0.0.0.0` |
-| `MCP_AUTH_MODE` | Authentication mode (use `jwt` for production). | `none` |
-| `MCP_AUTH_SECRET_KEY` | **Required for `jwt` auth.** 32+ character secret shared with Teams bot. | `(none)` |
-| `MCP_ALLOWED_ORIGINS` | Optional CSV list of allowed origins for CORS. | `(none)` |
-| `OTEL_ENABLED` | Enable OpenTelemetry pipeline. | `true` |
-| `OTEL_SERVICE_NAME` | Service name for OpenTelemetry traces/metrics. | `(from package.json)` |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | OTLP endpoint for traces (e.g., Google Cloud Trace). | `(none)` |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | OTLP endpoint for metrics. | `(none)` |
-| `MCP_LOG_LEVEL` | Minimum log level (`debug`, `info`, `warn`, `error`, etc.). | `debug` |
+| Variable                              | Description                                                              | Default               |
+| :------------------------------------ | :----------------------------------------------------------------------- | :-------------------- |
+| `MCP_TRANSPORT_TYPE`                  | Transport to run (always `http` for Campaign Guardian).                  | `http`                |
+| `MCP_SESSION_MODE`                    | Session handling: `stateless`, `stateful`, or `auto`.                    | `auto`                |
+| `MCP_HTTP_PORT`                       | Port for the HTTP server.                                                | `8080`                |
+| `MCP_HTTP_HOST`                       | Host for the HTTP server (0.0.0.0 for Cloud Run).                        | `0.0.0.0`             |
+| `MCP_AUTH_MODE`                       | Authentication mode (use `jwt` for production).                          | `none`                |
+| `MCP_AUTH_SECRET_KEY`                 | **Required for `jwt` auth.** 32+ character secret shared with Teams bot. | `(none)`              |
+| `MCP_ALLOWED_ORIGINS`                 | Optional CSV list of allowed origins for CORS.                           | `(none)`              |
+| `OTEL_ENABLED`                        | Enable OpenTelemetry pipeline.                                           | `true`                |
+| `OTEL_SERVICE_NAME`                   | Service name for OpenTelemetry traces/metrics.                           | `(from package.json)` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`  | OTLP endpoint for traces (e.g., Google Cloud Trace).                     | `(none)`              |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | OTLP endpoint for metrics.                                               | `(none)`              |
+| `MCP_LOG_LEVEL`                       | Minimum log level (`debug`, `info`, `warn`, `error`, etc.).              | `debug`               |
 
 ### Authentication & Authorization
 
@@ -140,6 +138,7 @@ All configuration is centralized and validated at startup in `src/config/index.t
 Campaign Guardian v1 is **stateless** and does not require persistent storage. The MCP server reads directly from DV360/Bid Manager APIs and returns validation results without caching. A no-op storage provider is included to satisfy the `IStorageProvider` interface but performs no actual operations.
 
 Future versions may add persistent storage for:
+
 - Caching validation results for improved performance
 - Storing historical metrics and trend data
 - Maintaining user preferences and saved queries
@@ -178,17 +177,19 @@ npm run test
 
 ### GCP Cloud Run Deployment
 
-Campaign Guardian is designed for GCP Cloud Run deployment:
+Cesteral intelligence. is designed for GCP Cloud Run deployment:
 
 1. **Build Docker Image:**
+
    ```sh
-   docker build -t gcr.io/YOUR_PROJECT/campaign-guardian-mcp:latest .
+   docker build -t gcr.io/cesteral-labs/cesteral-mcp:latest .
    ```
 
 2. **Deploy to Cloud Run:**
+
    ```sh
-   gcloud run deploy campaign-guardian-mcp \
-     --image gcr.io/YOUR_PROJECT/campaign-guardian-mcp:latest \
+   gcloud run deploy cesteral-mcp \
+     --image gcr.io/cesteral-labs/cesteral-mcp:latest \
      --platform managed \
      --region europe-west2 \
      --allow-unauthenticated
@@ -199,17 +200,17 @@ Campaign Guardian is designed for GCP Cloud Run deployment:
 
 ## 📂 Project Structure
 
-| Directory | Purpose & Contents | Guide |
-| :-- | :-- | :-- |
-| `src/mcp-server/tools/definitions` | Declarative tool definitions (`*.tool.ts`). | [📖 MCP Guide](src/mcp-server/) |
-| `src/mcp-server/resources/definitions` | Declarative resource definitions (`*.resource.ts`). | [📖 MCP Guide](src/mcp-server/) |
-| `src/mcp-server/prompts/definitions` | Prompt definitions registered with the server. | [📖 MCP Guide](src/mcp-server/) |
-| `src/mcp-server/transports` | HTTP transport implementation plus auth middleware. | [📖 MCP Guide](src/mcp-server/) |
-| `src/storage` | `StorageService` with no-op provider (stateless architecture). | [💾 Storage Guide](src/storage/) |
-| `src/container` | DI tokens and registration functions. | [📦 Container Guide](src/container/) |
-| `src/utils` | Shared utilities for logging, request context, security, networking, telemetry, and more. |  |
-| `src/config` | Environment parsing + Zod validation. |  |
-| `src/services` | Optional home for your external service integrations (template ships empty). | [🔌 Services Guide](src/services/) |
+| Directory                              | Purpose & Contents                                                                        | Guide                                |
+| :------------------------------------- | :---------------------------------------------------------------------------------------- | :----------------------------------- |
+| `src/mcp-server/tools/definitions`     | Declarative tool definitions (`*.tool.ts`).                                               | [📖 MCP Guide](src/mcp-server/)      |
+| `src/mcp-server/resources/definitions` | Declarative resource definitions (`*.resource.ts`).                                       | [📖 MCP Guide](src/mcp-server/)      |
+| `src/mcp-server/prompts/definitions`   | Prompt definitions registered with the server.                                            | [📖 MCP Guide](src/mcp-server/)      |
+| `src/mcp-server/transports`            | HTTP transport implementation plus auth middleware.                                       | [📖 MCP Guide](src/mcp-server/)      |
+| `src/storage`                          | `StorageService` with no-op provider (stateless architecture).                            | [💾 Storage Guide](src/storage/)     |
+| `src/container`                        | DI tokens and registration functions.                                                     | [📦 Container Guide](src/container/) |
+| `src/utils`                            | Shared utilities for logging, request context, security, networking, telemetry, and more. |                                      |
+| `src/config`                           | Environment parsing + Zod validation.                                                     |                                      |
+| `src/services`                         | Optional home for your external service integrations (template ships empty).              | [🔌 Services Guide](src/services/)   |
 
 ## 📚 Documentation
 
