@@ -1,5 +1,5 @@
 /**
- * @fileoverview Pino-backed singleton logger for Campaign Guardian.
+ * @fileoverview Pino-backed singleton logger for Cesteral MCP Server.
  * Implements RFC5424 level mapping, structured context, automatic trace injection via
  * OpenTelemetry, and graceful shutdown. Designed for GCP Cloud Run/Functions deployment.
  * @module src/utils/internal/logger
@@ -43,8 +43,7 @@ const pinoToMcpLevelSeverity: Record<string, number> = {
   debug: 7,
 };
 
-// Campaign Guardian runs on GCP Cloud Run/Functions (Node.js), not true serverless
-// Keep this for potential future use, but should always be false for Campaign Guardian
+// This server runs on GCP Cloud Run/Functions (Node.js), not true serverless
 const isServerless =
   typeof process === 'undefined' || process.env.IS_SERVERLESS === 'true';
 
@@ -54,7 +53,7 @@ export class Logger {
   private interactionLogger?: PinoLogger | undefined;
   private initialized = false;
   private currentMcpLevel: McpLogLevel = 'info';
-  private transportType: 'stdio' | 'http' | undefined; // Campaign Guardian uses 'http' only
+  private transportType: 'stdio' | 'http' | undefined;
 
   private rateLimitThreshold = 10;
   private rateLimitWindow = 60000;

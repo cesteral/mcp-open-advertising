@@ -1,7 +1,7 @@
 # Agent Protocol & Architectural Mandate
 
 **Version:** 1.0.0
-**Target Project:** Campaign Guardian MCP Server
+**Target Project:** Cesteral MCP Server
 **Last Updated:** 2025-11-03
 
 ---
@@ -18,7 +18,7 @@
    The handler provides both `appContext` (logging/tracing) and the raw `sdkContext` (elicitation, sampling, roots). Keep the same `appContext` flowing through nested calls for correlated telemetry.
 
 4. **Stateless Architecture (v1)**
-   Campaign Guardian v1 is stateless and does not use persistent storage. The `StorageService` uses a no-op provider. All data is read directly from DV360/Bid Manager APIs.
+   This server is stateless and does not use persistent storage. The `StorageService` uses a no-op provider.
 
 5. **GCP Cloud Run Deployment**
    Everything must run in HTTP mode for Cloud Run deployment. The server listens on port 8080 (Cloud Run default) and uses Hono for HTTP transport. STDIO transport has been removed.
@@ -136,7 +136,7 @@ Explore the subdirectories (`internal/`, `metrics/`, `network/`, `security/`, `t
 ## VII. Authentication & Authorization
 
 - **HTTP transport:** Controlled via `MCP_AUTH_MODE` (`none` | `jwt` | `oauth`).
-  - `jwt`: use `MCP_AUTH_SECRET_KEY`. Recommended for Teams bot → MCP server communication.
+  - `jwt`: use `MCP_AUTH_SECRET_KEY`. Recommended for MCP client → server communication.
   - `oauth`: JWKS verification with `OAUTH_ISSUER_URL`, optional `OAUTH_JWKS_URI`, and `OAUTH_AUDIENCE`. Cooldown/timeouts are configurable.
 - **Scopes:** Enforced by the `withToolAuth` / `withResourceAuth` wrappers. When auth is disabled, wrappers allow everything so you can reuse the same definitions.
 - **Endpoints:** `/healthz` and `GET /mcp` stay open. `POST`/`DELETE /mcp` are protected when auth is enabled. CORS defaults to `*` unless `MCP_ALLOWED_ORIGINS` provides a CSV list.
@@ -208,12 +208,12 @@ Leave unset variables at their defaults unless the deployment requires overrides
 
 ## XII. GCP Cloud Run Deployment
 
-- Campaign Guardian is designed for **GCP Cloud Run** deployment.
+- This server is designed for **GCP Cloud Run** deployment.
 - **HTTP transport only** - listens on port 8080 (Cloud Run default) on all interfaces (0.0.0.0).
 - **Stateless architecture** - no persistent storage required for v1.
 - **Authentication:**
-  - JWT for Teams bot → MCP server communication (`MCP_AUTH_MODE=jwt`)
-  - Service accounts for MCP server → DV360/Bid Manager APIs
+  - JWT for MCP client → server communication (`MCP_AUTH_MODE=jwt`)
+  - Service accounts for MCP server → platform APIs
 - **OpenTelemetry enabled by default** for production monitoring.
 - Infrastructure managed via Terraform for reproducible deployments.
 - Use `npm run dev` for local development to match production runtime.
@@ -222,7 +222,7 @@ Leave unset variables at their defaults unless the deployment requires overrides
 
 ## XIII. Multi-Tenancy Context
 
-- Campaign Guardian v1 is stateless, but `context.tenantId` is still used for logging and future extensibility.
+- This server is stateless by default, but `context.tenantId` is still used for logging and future extensibility.
 - Validation rules: max 128 characters, alphanumeric plus `- _ .`, must start/end with alphanumeric, no `../` or consecutive dots.
 - **HTTP + Auth:** When auth is enabled, tenant IDs flow from the JWT `tid` claim via `requestContextService.withAuthInfo()`.
 - Storage operations are no-ops in v1, but the interface is preserved for future caching or persistence features.

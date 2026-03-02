@@ -152,9 +152,9 @@ const start = async (): Promise<void> => {
   // Pass transport type to logger to ensure STDIO mode uses plain JSON (no ANSI colors)
   await logger.initialize(validatedMcpLogLevel, config.mcpTransportType);
 
-  // Campaign Guardian v1 is stateless - no storage initialization needed
+  // Stateless — no storage initialization needed
   logger.info(
-    'Campaign Guardian MCP Server (stateless mode - no persistent storage)',
+    'MCP Server starting (stateless mode - no persistent storage)',
     requestContextService.createRequestContext({ operation: 'ServerInit' }),
   );
 

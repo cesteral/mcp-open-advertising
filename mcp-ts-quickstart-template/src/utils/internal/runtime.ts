@@ -1,13 +1,13 @@
 /**
  * @fileoverview Runtime capability detection for Node.js environment.
- * Campaign Guardian runs in Node.js on GCP Cloud Run/Functions.
+ * This server runs in Node.js on GCP Cloud Run/Functions.
  * @module src/utils/internal/runtime
  */
 
 export interface RuntimeCapabilities {
   isNode: boolean;
-  isWorkerLike: boolean; // Kept for compatibility, always false for Campaign Guardian
-  isBrowserLike: boolean; // Kept for compatibility, always false for Campaign Guardian
+  isWorkerLike: boolean; // Kept for compatibility, always false for this server
+  isBrowserLike: boolean; // Kept for compatibility, always false for this server
   hasProcess: boolean;
   hasBuffer: boolean;
   hasTextEncoder: boolean;
@@ -65,7 +65,7 @@ const hasPerformanceNow = hasPerformanceNowFunction();
 
 /**
  * Safely checks if WorkerGlobalScope exists.
- * Not used in Campaign Guardian (GCP Node.js only), kept for compatibility.
+ * Not used in this server (GCP Node.js only), kept for compatibility.
  */
 const hasWorkerGlobalScope = (): boolean => {
   try {
@@ -75,7 +75,7 @@ const hasWorkerGlobalScope = (): boolean => {
   }
 };
 
-// For Campaign Guardian on GCP, these should always be false (Node.js only)
+// For GCP deployment, these should always be false (Node.js only)
 const isWorkerLike = !isNode && hasWorkerGlobalScope();
 const isBrowserLike = !isNode && !isWorkerLike && safeHas('window');
 

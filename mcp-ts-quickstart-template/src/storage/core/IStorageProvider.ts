@@ -10,7 +10,7 @@ import type { RequestContext } from '@/utils/index.js';
  * Options for storage operations.
  *
  * @property ttl - Time-to-live for the stored item, in seconds. If not provided, the item is stored indefinitely.
- *   For Campaign Guardian (Supabase): TTL managed via an `expires_at` column; expired rows are handled by database queries.
+ *   For Supabase: TTL managed via an `expires_at` column; expired rows are handled by database queries.
  */
 export interface StorageOptions {
   /**
@@ -123,7 +123,7 @@ export interface IStorageProvider {
    * Retrieves multiple values from storage in a single operation.
    * More efficient than multiple individual get() calls.
    *
-   * For Campaign Guardian (Supabase): Single SQL query with IN clause (fast, database-optimized).
+   * For Supabase: Single SQL query with IN clause (fast, database-optimized).
    *
    * @param tenantId The unique identifier for the tenant.
    * @param keys Array of keys to retrieve. Empty array returns empty Map.
@@ -140,7 +140,7 @@ export interface IStorageProvider {
    * Stores multiple values in a single operation.
    * More efficient than multiple individual set() calls.
    *
-   * For Campaign Guardian (Supabase): Single SQL batch upsert (fast, immediately consistent).
+   * For Supabase: Single SQL batch upsert (fast, immediately consistent).
    *
    * @param tenantId The unique identifier for the tenant.
    * @param entries Map of key-value pairs to store. Empty map is a no-op.
@@ -159,7 +159,7 @@ export interface IStorageProvider {
    * Deletes multiple keys in a single operation.
    * More efficient than multiple individual delete() calls.
    *
-   * For Campaign Guardian (Supabase): Single SQL DELETE with IN clause (fast, database-optimized).
+   * For Supabase: Single SQL DELETE with IN clause (fast, database-optimized).
    *
    * @param tenantId The unique identifier for the tenant.
    * @param keys Array of keys to delete. Empty array returns 0.

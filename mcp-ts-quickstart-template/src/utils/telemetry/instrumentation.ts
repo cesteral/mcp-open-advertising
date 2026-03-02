@@ -20,7 +20,7 @@ let initializationPromise: Promise<void> | null = null;
 
 /**
  * Determines if the NodeSDK can be used in the current runtime.
- * For Campaign Guardian, this should always be true (GCP Node.js environment).
+ * For this server, this should always be true (GCP Node.js environment).
  */
 function canUseNodeSDK(): boolean {
   return (
@@ -33,7 +33,7 @@ function canUseNodeSDK(): boolean {
 /**
  * Detects cloud platform and provider for resource attributes.
  * Enriches telemetry with GCP deployment environment metadata.
- * Campaign Guardian is designed for GCP Cloud Run or Cloud Functions.
+ * This server is designed for GCP Cloud Run or Cloud Functions.
  *
  * @returns Record of cloud-related resource attributes
  */

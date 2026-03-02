@@ -1,7 +1,7 @@
 /**
- * @fileoverview Storage factory stub for Campaign Guardian.
- * Campaign Guardian v1 does not require persistent storage - it's a stateless
- * service that reads from DV360/Bid Manager APIs and returns validation results.
+ * @fileoverview Storage factory stub for stateless MCP server.
+ * This server does not require persistent storage - it's a stateless
+ * service that reads from platform APIs and returns results.
  * Storage layer is kept for future use but returns a no-op provider.
  * @module src/storage/core/storageFactory
  */
@@ -19,9 +19,9 @@ export interface StorageFactoryDeps {
 }
 
 /**
- * Creates and returns a no-op storage provider for Campaign Guardian v1.
+ * Creates and returns a no-op storage provider for this stateless server.
  *
- * Campaign Guardian is stateless and does not persist data. This factory returns
+ * This server is stateless and does not persist data. This factory returns
  * a no-op provider that satisfies the IStorageProvider interface but performs no
  * actual storage operations.
  *
@@ -47,7 +47,7 @@ export function createStorageProvider(
     operation: 'createStorageProvider',
   });
 
-  logger.info('Creating no-op storage provider (Campaign Guardian v1 is stateless)', context);
+  logger.info('Creating no-op storage provider (stateless — no persistent storage)', context);
 
   return new NoOpStorageProvider();
 }

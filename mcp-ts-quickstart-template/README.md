@@ -1,6 +1,6 @@
 <div align="center">
-  <h1>Campaign Guardian MCP Server</h1>
-  <p><b>Production-grade TypeScript MCP server for DV360 Campaign Guardian Teams Bot. Built for GCP Cloud Run deployment with stateless architecture, featuring declarative tools, robust error handling, DI, and OpenTelemetry observability.</b>
+  <h1>Cesteral MCP Server</h1>
+  <p><b>Production-grade TypeScript MCP server template. Built for GCP Cloud Run deployment with stateless architecture, featuring declarative tools, robust error handling, DI, and OpenTelemetry observability.</b>
   <div>HTTP Transport • Stateless • GCP Cloud Run • OpenTelemetry</div>
   </p>
 </div>
@@ -88,7 +88,7 @@ This template includes working examples to get you started.
 
 ### Deployment Configuration
 
-Campaign Guardian MCP server is designed to be called by the Microsoft Teams bot over HTTP. The server runs on GCP Cloud Run with the following configuration:
+This MCP server is designed to be called by MCP clients over HTTP. The server runs on GCP Cloud Run with the following configuration:
 
 - **Transport:** HTTP only (port 8080 for Cloud Run)
 - **Architecture:** Stateless - no persistent storage (reads from DV360/Bid Manager APIs)
@@ -115,12 +115,12 @@ All configuration is centralized and validated at startup in `src/config/index.t
 
 | Variable                              | Description                                                              | Default               |
 | :------------------------------------ | :----------------------------------------------------------------------- | :-------------------- |
-| `MCP_TRANSPORT_TYPE`                  | Transport to run (always `http` for Campaign Guardian).                  | `http`                |
+| `MCP_TRANSPORT_TYPE`                  | Transport to run (always `http` for this server).                        | `http`                |
 | `MCP_SESSION_MODE`                    | Session handling: `stateless`, `stateful`, or `auto`.                    | `auto`                |
 | `MCP_HTTP_PORT`                       | Port for the HTTP server.                                                | `8080`                |
 | `MCP_HTTP_HOST`                       | Host for the HTTP server (0.0.0.0 for Cloud Run).                        | `0.0.0.0`             |
 | `MCP_AUTH_MODE`                       | Authentication mode (use `jwt` for production).                          | `none`                |
-| `MCP_AUTH_SECRET_KEY`                 | **Required for `jwt` auth.** 32+ character secret shared with Teams bot. | `(none)`              |
+| `MCP_AUTH_SECRET_KEY`                 | **Required for `jwt` auth.** 32+ character secret shared with the MCP client. | `(none)`         |
 | `MCP_ALLOWED_ORIGINS`                 | Optional CSV list of allowed origins for CORS.                           | `(none)`              |
 | `OTEL_ENABLED`                        | Enable OpenTelemetry pipeline.                                           | `true`                |
 | `OTEL_SERVICE_NAME`                   | Service name for OpenTelemetry traces/metrics.                           | `(from package.json)` |
@@ -135,7 +135,7 @@ All configuration is centralized and validated at startup in `src/config/index.t
 
 ### Storage
 
-Campaign Guardian v1 is **stateless** and does not require persistent storage. The MCP server reads directly from DV360/Bid Manager APIs and returns validation results without caching. A no-op storage provider is included to satisfy the `IStorageProvider` interface but performs no actual operations.
+This server is **stateless** and does not require persistent storage. The MCP server reads directly from platform APIs and returns results without caching. A no-op storage provider is included to satisfy the `IStorageProvider` interface but performs no actual operations.
 
 Future versions may add persistent storage for:
 
@@ -260,10 +260,10 @@ For a strict set of rules when using this template with an AI agent, please refe
 ## ❓ FAQ
 
 - **Why is storage disabled?**
-  - Campaign Guardian v1 is stateless and reads directly from DV360/Bid Manager APIs. No caching or persistence is needed for the initial release.
+  - This server is stateless and reads directly from platform APIs. No caching or persistence is needed for the initial release.
 - **Can I add persistent storage later?**
-  - Yes! The storage interface is preserved. Future versions may add caching for validation results or historical metrics.
+  - Yes! The storage interface is preserved. Future versions may add caching for results or historical metrics.
 - **Why HTTP-only transport?**
-  - Campaign Guardian is designed to be called by Microsoft Teams bot over HTTP. STDIO transport is not needed for this use case.
+  - This server is designed to be called by MCP clients over HTTP. STDIO transport is not needed for this use case.
 - **What about OpenTelemetry?**
   - OpenTelemetry is **enabled by default** for production monitoring. Configure OTLP endpoints in your environment variables to send traces to Google Cloud Trace or other backends.

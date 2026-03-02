@@ -1,6 +1,5 @@
 /**
  * @fileoverview Manages the lifecycle of the HTTP MCP transport.
- * Campaign Guardian uses HTTP-only transport for Teams bot integration.
  * @module src/mcp-server/transports/manager
  */
 import type { ServerType } from '@hono/node-server';
@@ -34,7 +33,7 @@ export class TransportManager {
       transport: 'http',
     });
 
-    this.logger.info('Starting HTTP transport for Campaign Guardian', context);
+    this.logger.info('Starting HTTP transport', context);
 
     const mcpServer = await this.createMcpServer();
     this.serverInstance = await startHttpTransport(mcpServer, context);

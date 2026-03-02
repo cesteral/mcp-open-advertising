@@ -1,6 +1,6 @@
 /**
- * @fileoverview No-op storage provider for Campaign Guardian v1.
- * Campaign Guardian is stateless and does not persist data. This provider
+ * @fileoverview No-op storage provider for stateless MCP servers.
+ * This server is stateless and does not persist data. This provider
  * satisfies the IStorageProvider interface but performs no actual operations.
  * @module src/storage/core/NoOpStorageProvider
  */
@@ -17,8 +17,8 @@ import { logger } from '@/utils/index.js';
  * No-op storage provider that implements IStorageProvider but performs no operations.
  * All methods return empty results or resolve immediately without side effects.
  *
- * This is used in Campaign Guardian v1 where no persistent storage is needed.
- * The MCP server is stateless and only reads from DV360/Bid Manager APIs.
+ * Used in stateless server configurations where no persistent storage is needed.
+ * The MCP server is stateless and reads directly from platform APIs.
  */
 export class NoOpStorageProvider implements IStorageProvider {
   async get<T>(

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Configures and starts the HTTP MCP transport using Hono.
- * Campaign Guardian uses HTTP transport for Teams bot integration on GCP Cloud Run/Functions.
+ * This server uses HTTP transport on GCP Cloud Run/Functions.
  *
  * Implements MCP Specification 2025-06-18 Streamable HTTP Transport.
  * @see {@link https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http | MCP Streamable HTTP Transport}
@@ -47,8 +47,8 @@ class McpSessionTransport extends StreamableHTTPTransport {
 /**
  * Creates a Hono HTTP application for the MCP server.
  *
- * For Campaign Guardian, this creates a Node.js HTTP app (HonoNodeBindings)
- * that runs on GCP Cloud Run/Functions and is called by the Teams bot.
+ * For this server, this creates a Node.js HTTP app (HonoNodeBindings)
+ * that runs on GCP Cloud Run/Functions and is called by the MCP client.
  *
  * @template TBindings - The Hono binding type (must extend object, defaults to HonoNodeBindings for Node.js)
  * @param mcpServer - The MCP server instance

@@ -1,9 +1,9 @@
 # Storage Module
 
-**Version:** 2.4.6 (Campaign Guardian v1: Stateless)
+**Version:** 2.4.6 (Stateless)
 **Module:** `src/storage`
 
-Storage abstraction layer providing a unified interface for multiple backend implementations. **Campaign Guardian v1 uses a stateless architecture with no persistent storage.** The storage interface is preserved for future extensibility (e.g., caching validation results, storing historical metrics).
+Storage abstraction layer providing a unified interface for multiple backend implementations. **This server uses a stateless architecture with no persistent storage.** The storage interface is preserved for future extensibility (e.g., caching results, storing historical metrics).
 
 ---
 
@@ -23,10 +23,10 @@ Storage abstraction layer providing a unified interface for multiple backend imp
 
 The storage module provides a **provider-agnostic persistence layer** for the MCP server. All storage operations flow through a single `StorageService` facade, which delegates to a configured backend provider via dependency injection.
 
-**Campaign Guardian v1 Status:**
+**Current Status:**
 - **Current Implementation**: No-op provider (stateless architecture)
-- **Data Source**: Reads directly from DV360/Bid Manager APIs
-- **Future Extensibility**: Storage interface preserved for v2 features:
+- **Data Source**: Reads directly from platform APIs
+- **Future Extensibility**: Storage interface preserved for future features:
   - Caching API responses for improved performance
   - Storing historical campaign metrics
   - Maintaining user preferences and saved queries
@@ -36,7 +36,7 @@ The storage module provides a **provider-agnostic persistence layer** for the MC
 - **Abstraction**: Business logic never depends on concrete storage implementations
 - **Multi-Tenancy**: All operations require a `tenantId` for data isolation
 - **Security**: Centralized validation prevents path traversal, injection attacks, and cross-tenant data access
-- **Stateless v1**: Campaign Guardian v1 uses a no-op provider (no persistence)
+- **Stateless v1**: This server uses a no-op provider (no persistence)
 - **GCP Cloud Run**: Designed for stateless Cloud Run deployment
 
 ### Design Philosophy (v1)
@@ -79,15 +79,15 @@ src/storage/
 └── index.ts                # Barrel exports
 ```
 
-**Note**: Campaign Guardian v1 uses only `NoOpStorageProvider`. All other providers have been removed for the stateless architecture.
+**Note**: This server uses only `NoOpStorageProvider`. All other providers have been removed for the stateless architecture.
 
 ---
 
-## Supported Providers (Campaign Guardian v1)
+## Supported Providers (v1)
 
 ### Current Provider: No-Op (Stateless)
 
-**Campaign Guardian v1 uses a stateless architecture** and does not persist any data. All storage operations are no-ops.
+**This server uses a stateless architecture** and does not persist any data. All storage operations are no-ops.
 
 | Provider    | Runtime | Setup | Persistence | Best For                        |
 | :---------- | :------ | :---- | :---------- | :------------------------------ |
@@ -103,7 +103,7 @@ export function createStorageProvider(
   config: AppConfig,
   deps: StorageFactoryDeps = {},
 ): IStorageProvider {
-  logger.info('Creating no-op storage provider (Campaign Guardian v1 is stateless)', context);
+  logger.info('Creating no-op storage provider (stateless — no persistent storage)', context);
   return new NoOpStorageProvider();
 }
 ```
@@ -124,7 +124,7 @@ See git history for provider implementations that were removed for v1 stateless 
 
 ## Features (Interface Design)
 
-**Note**: Campaign Guardian v1 is stateless. These features describe the storage interface design, preserved for future extensibility.
+**Note**: This server is stateless. These features describe the storage interface design, preserved for future extensibility.
 
 ### Multi-Tenancy
 
@@ -201,7 +201,7 @@ For MCP resource pagination (outside storage), use utilities from `@/utils/index
 
 ## Usage Examples (v1: No-Op)
 
-**Campaign Guardian v1 is stateless.** All storage operations are no-ops but the interface is preserved for future use.
+**This server is stateless.** All storage operations are no-ops but the interface is preserved for future use.
 
 ### Basic Operations (No-Op in v1)
 
@@ -231,9 +231,9 @@ const deleted = await storage.delete('session:abc', context);
 // deleted === false
 ```
 
-### Data Source for Campaign Guardian
+### Data Source
 
-Instead of using storage, Campaign Guardian reads directly from DV360/Bid Manager APIs:
+Instead of using storage, this server reads directly from platform APIs:
 
 ```typescript
 import type { ToolDefinition } from '@/mcp-server/tools/utils/index.js';
@@ -284,7 +284,7 @@ if (cached) {
 
 ## Adding a New Provider (Future v2+)
 
-**Campaign Guardian v1 does not use persistent storage.** This section is preserved for future reference when storage is needed.
+**This server does not use persistent storage.** This section is preserved for future reference when storage is needed.
 
 When adding a provider in future versions, refer to the git history for examples of provider implementations that were removed for v1.
 
@@ -594,7 +594,7 @@ See complete examples:
 
 ---
 
-## Troubleshooting (Campaign Guardian v1)
+## Troubleshooting
 
 ### Common Errors
 
@@ -603,11 +603,11 @@ See complete examples:
 | `Tenant ID is required for storage operations`                            | `context.tenantId` is missing       | Set explicitly in `createRequestContext({ tenantId: '...' })` or ensure JWT has `tid` claim |
 | `Invalid tenant ID: exceeds maximum length of 128 characters`             | Tenant ID too long                  | Use shorter identifiers (UUIDs or short hashes)                                                                  |
 
-**Note**: Campaign Guardian v1 uses no-op storage, so most storage errors won't occur. Tenant ID validation still applies for logging and context tracking.
+**Note**: This server uses no-op storage, so most storage errors won't occur. Tenant ID validation still applies for logging and context tracking.
 
 ### No Persistent Data
 
-Campaign Guardian v1 reads directly from DV360/Bid Manager APIs and does not cache or persist data:
+This server reads directly from platform APIs and does not cache or persist data:
 
 ```typescript
 // ❌ Don't rely on storage in v1

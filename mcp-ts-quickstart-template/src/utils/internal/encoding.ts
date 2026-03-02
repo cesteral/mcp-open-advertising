@@ -30,7 +30,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
 
 /**
  * Encodes a string to base64 in a cross-platform manner.
- * Uses Node.js Buffer for Campaign Guardian (GCP Node.js environment).
+ * Uses Node.js Buffer for this server (GCP Node.js environment).
  * Web API fallback kept for compatibility but not used in production.
  *
  * @param str - The string to encode.
@@ -50,7 +50,7 @@ export function stringToBase64(str: string): string {
 
 /**
  * Decodes a base64 string to UTF-8 in a cross-platform manner.
- * Uses Node.js Buffer for Campaign Guardian (GCP Node.js environment).
+ * Uses Node.js Buffer for this server (GCP Node.js environment).
  * Web API fallback kept for compatibility but not used in production.
  *
  * @param base64 - The base64 string to decode.

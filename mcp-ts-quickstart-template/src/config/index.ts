@@ -85,7 +85,7 @@ const ConfigSchema = z.object({
       z.enum(['development', 'production', 'testing']),
     )
     .default('development'),
-  // Campaign Guardian uses HTTP-only transport for Teams bot integration
+  // HTTP-only transport
   mcpTransportType: z.literal('http').default('http'),
   mcpSessionMode: z.preprocess(
     emptyStringAsUndefined,
@@ -125,7 +125,7 @@ const ConfigSchema = z.object({
       defaultClientRedirectUris: z.array(z.string()).optional(),
     })
     .optional(),
-  // Campaign Guardian v1 does not use persistent storage
+  // Stateless — no persistent storage
   // Storage configuration removed - service is stateless
   openTelemetry: z.object({
     enabled: z.coerce.boolean().default(true), // Enable by default for production monitoring
@@ -204,7 +204,7 @@ const parseConfig = () => {
                 .filter(Boolean),
           }
         : undefined,
-    // Campaign Guardian v1 does not use persistent storage
+    // Stateless — no persistent storage
     // Supabase and storage config removed
     openTelemetry: {
       enabled: env.OTEL_ENABLED,
