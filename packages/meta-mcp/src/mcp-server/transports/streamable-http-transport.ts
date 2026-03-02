@@ -256,7 +256,7 @@ export function createMcpHttpServer(
       return c.json({ error: "Invalid session ID format" }, 400);
     }
 
-    if (providedSessionId && !sessionServiceStore.get(providedSessionId)) {
+    if (providedSessionId && !sessionServiceStore.get(providedSessionId) && !sessions.sessionCreatedAt.has(providedSessionId)) {
       return c.json({ error: "Session not found or expired" }, 404);
     }
 
@@ -337,28 +337,30 @@ export function createMcpHttpServer(
           allowedAdvertisers: authResult.allowedAdvertisers,
         });
       } else if (config.mcpAuthMode === "none" || config.mcpAuthMode === "jwt") {
-        // For none/jwt modes without a platform adapter, require env var token
-        if (!config.metaAccessToken) {
+        // For none/jwt modes without a platform adapter, use env var token if available
+        if (config.metaAccessToken) {
+          const { MetaAccessTokenAdapter } = await import("../../auth/meta-auth-adapter.js");
+          const envAdapter = new MetaAccessTokenAdapter(config.metaAccessToken, config.metaApiBaseUrl);
+          await envAdapter.validate();
+          const services = createSessionServices(
+            envAdapter,
+            config.metaApiBaseUrl,
+            logger,
+            rateLimiter
+          );
+          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
+          sessionServiceStore.setAuthContext(sessionId, {
+            authInfo: authResult.authInfo,
+            credentialFingerprint: authResult.credentialFingerprint,
+            allowedAdvertisers: authResult.allowedAdvertisers,
+          });
+        } else if (config.mcpAuthMode !== "none") {
           return c.json(
             { error: "Meta access token required. Set META_ACCESS_TOKEN env var, or use MCP_AUTH_MODE=meta-bearer." },
             400
           );
         }
-        const { MetaAccessTokenAdapter } = await import("../../auth/meta-auth-adapter.js");
-        const envAdapter = new MetaAccessTokenAdapter(config.metaAccessToken, config.metaApiBaseUrl);
-        await envAdapter.validate();
-        const services = createSessionServices(
-          envAdapter,
-          config.metaApiBaseUrl,
-          logger,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        sessionServiceStore.setAuthContext(sessionId, {
-          authInfo: authResult.authInfo,
-          credentialFingerprint: authResult.credentialFingerprint,
-          allowedAdvertisers: authResult.allowedAdvertisers,
-        });
+        // none auth without credentials — protocol-only session (tools will fail at runtime)
       } else {
         return c.json(
           { error: "Meta API credentials required for this server." },

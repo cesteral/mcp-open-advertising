@@ -128,6 +128,38 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
+  // Elicit confirmation for irreversible archive operations
+  if (input.status === "ENTITY_STATUS_ARCHIVED" && sdkContext?.elicitInput) {
+    const elicitResult = await sdkContext.elicitInput({
+      message: `You are about to archive ${input.entityIds.length} ${input.entityType}(s). This action is irreversible — archived entities cannot be reactivated. Proceed?`,
+      requestedSchema: {
+        type: "object" as const,
+        properties: {
+          confirm: {
+            type: "boolean" as const,
+            title: "Confirm archive",
+            description: `Archive ${input.entityIds.length} ${input.entityType}(s) permanently`,
+            default: false,
+          },
+        },
+      },
+    });
+
+    if (elicitResult.action !== "accept" || !elicitResult.content?.confirm) {
+      return {
+        results: [],
+        successful: [],
+        failed: [],
+        totalRequested: input.entityIds.length,
+        totalSuccessful: 0,
+        totalFailed: 0,
+        successCount: 0,
+        failureCount: 0,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
   const { dv360Service } = resolveSessionServices(sdkContext);
   const advertiserId = input.advertiserId;
 

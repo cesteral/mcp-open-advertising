@@ -1,0 +1,48 @@
+# Expected conformance test failures for Cesteral MCP servers.
+# These scenarios require specific tool/resource behaviors that our
+# business-domain servers don't expose (e.g., returning audio content,
+# binary resources, or sampling support).
+#
+# As new capabilities are added, scenarios should be removed from this list.
+
+expected_failures:
+  # Content type scenarios — our tools return text/JSON only
+  - tools-call-image
+  - tools-call-audio
+  - tools-call-embedded-resource
+  - tools-call-mixed-content
+
+  # Logging — not exposed as an MCP capability
+  - logging-set-level
+  - tools-call-with-logging
+
+  # Progress tokens — not currently implemented
+  - tools-call-with-progress
+
+  # Sampling — servers don't request LLM completions from clients
+  - tools-call-sampling
+
+  # Resource subscriptions — not implemented (polling is sufficient)
+  - resources-subscribe
+  - resources-unsubscribe
+
+  # Binary resources — all resources are text/JSON
+  - resources-read-binary
+
+  # Completion — not implemented
+  - completion-complete
+
+  # Elicitation — partially implemented, conformance test may expect specific behavior
+  - tools-call-elicitation
+  - elicitation-sep1034-defaults
+  - elicitation-sep1330-enums
+
+  # SSE scenarios — we use Streamable HTTP, not SSE polling
+  - server-sse-polling
+  - server-sse-multiple-streams
+
+  # JSON Schema 2020-12 — our tools use Zod-generated JSON Schema (draft-07)
+  - json-schema-2020-12
+
+  # DNS rebinding — tested separately via our own security tests
+  - dns-rebinding-protection

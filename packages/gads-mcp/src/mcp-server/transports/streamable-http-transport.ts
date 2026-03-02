@@ -261,7 +261,7 @@ export function createMcpHttpServer(
       return c.json({ error: "Invalid session ID format" }, 400);
     }
 
-    if (providedSessionId && !sessionServiceStore.get(providedSessionId)) {
+    if (providedSessionId && !sessionServiceStore.get(providedSessionId) && !sessions.sessionCreatedAt.has(providedSessionId)) {
       return c.json({ error: "Session not found or expired" }, 404);
     }
 
@@ -343,34 +343,36 @@ export function createMcpHttpServer(
           allowedAdvertisers: authResult.allowedAdvertisers,
         });
       } else if (config.mcpAuthMode === "none" || config.mcpAuthMode === "jwt") {
-        // For none/jwt modes without a platform adapter, require env var creds
-        if (!config.gadsDeveloperToken || !config.gadsClientId || !config.gadsClientSecret || !config.gadsRefreshToken) {
+        // For none/jwt modes without a platform adapter, use env var creds if available
+        if (config.gadsDeveloperToken && config.gadsClientId && config.gadsClientSecret && config.gadsRefreshToken) {
+          const { GAdsRefreshTokenAuthAdapter } = await import("../../auth/gads-auth-adapter.js");
+          const envAdapter = new GAdsRefreshTokenAuthAdapter({
+            developerToken: config.gadsDeveloperToken,
+            clientId: config.gadsClientId,
+            clientSecret: config.gadsClientSecret,
+            refreshToken: config.gadsRefreshToken,
+            loginCustomerId: config.gadsLoginCustomerId,
+          });
+          await envAdapter.validate();
+          const services = createSessionServices(
+            envAdapter,
+            config.gadsApiBaseUrl,
+            logger,
+            rateLimiter
+          );
+          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
+          sessionServiceStore.setAuthContext(sessionId, {
+            authInfo: authResult.authInfo,
+            credentialFingerprint: authResult.credentialFingerprint,
+            allowedAdvertisers: authResult.allowedAdvertisers,
+          });
+        } else if (config.mcpAuthMode !== "none") {
           return c.json(
             { error: "Google Ads credentials required. Set GADS_DEVELOPER_TOKEN, GADS_CLIENT_ID, GADS_CLIENT_SECRET, and GADS_REFRESH_TOKEN env vars, or use MCP_AUTH_MODE=gads-headers." },
             400
           );
         }
-        const { GAdsRefreshTokenAuthAdapter } = await import("../../auth/gads-auth-adapter.js");
-        const envAdapter = new GAdsRefreshTokenAuthAdapter({
-          developerToken: config.gadsDeveloperToken,
-          clientId: config.gadsClientId,
-          clientSecret: config.gadsClientSecret,
-          refreshToken: config.gadsRefreshToken,
-          loginCustomerId: config.gadsLoginCustomerId,
-        });
-        await envAdapter.validate();
-        const services = createSessionServices(
-          envAdapter,
-          config.gadsApiBaseUrl,
-          logger,
-          rateLimiter
-        );
-        sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
-        sessionServiceStore.setAuthContext(sessionId, {
-          authInfo: authResult.authInfo,
-          credentialFingerprint: authResult.credentialFingerprint,
-          allowedAdvertisers: authResult.allowedAdvertisers,
-        });
+        // none auth without credentials — protocol-only session (tools will fail at runtime)
       } else {
         return c.json(
           { error: "Google Ads API credentials required for this server." },
