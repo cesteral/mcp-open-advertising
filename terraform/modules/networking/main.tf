@@ -23,6 +23,10 @@ resource "google_compute_network" "vpc" {
   project                 = var.project_id
   auto_create_subnetworks = false
   description             = "VPC for Cesteral MCP Server"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Create subnet for serverless connector

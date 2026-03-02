@@ -199,6 +199,17 @@ variable "authorized_invokers" {
   default     = []
 }
 
+variable "service_resource_overrides" {
+  description = "Per-service Cloud Run resource overrides. Keys are service names (dbm-mcp, dv360-mcp, etc.)"
+  type = map(object({
+    min_instances = optional(number)
+    max_instances = optional(number)
+    cpu_limit     = optional(string)
+    memory_limit  = optional(string)
+  }))
+  default = {}
+}
+
 # ============================================================================
 # MCP SERVER CONFIGURATION
 # ============================================================================
@@ -224,48 +235,6 @@ variable "log_level" {
 # ============================================================================
 # SECRET MANAGER CONFIGURATION
 # ============================================================================
-
-variable "secret_names" {
-  description = "List of secret names to create (shared secrets)"
-  type        = list(string)
-  default = [
-    "cesteral-jwt-secret-key"
-  ]
-}
-
-variable "dbm_secret_names" {
-  description = "Secret names specific to dbm-mcp"
-  type        = list(string)
-  default = [
-    "cesteral-jwt-secret-key",
-    "cesteral-dv360-oauth-client-id",
-    "cesteral-dv360-oauth-client-secret",
-    "cesteral-dv360-refresh-token",
-    "cesteral-bid-manager-api-key",
-    "cesteral-beam-api-key"
-  ]
-}
-
-variable "dv360_secret_names" {
-  description = "Secret names specific to dv360-mcp"
-  type        = list(string)
-  default = [
-    "cesteral-jwt-secret-key",
-    "cesteral-dv360-oauth-client-id",
-    "cesteral-dv360-oauth-client-secret",
-    "cesteral-dv360-refresh-token"
-  ]
-}
-
-variable "ttd_secret_names" {
-  description = "Secret names specific to ttd-mcp"
-  type        = list(string)
-  default = [
-    "cesteral-jwt-secret-key",
-    "cesteral-ttd-partner-id",
-    "cesteral-ttd-api-secret"
-  ]
-}
 
 variable "dbm_secret_env_vars" {
   description = "Map of env vars to secrets for dbm-mcp"
@@ -349,18 +318,6 @@ variable "ttd_secret_env_vars" {
   }
 }
 
-variable "gads_secret_names" {
-  description = "Secret names specific to gads-mcp"
-  type        = list(string)
-  default = [
-    "cesteral-jwt-secret-key",
-    "cesteral-gads-developer-token",
-    "cesteral-gads-client-id",
-    "cesteral-gads-client-secret",
-    "cesteral-gads-refresh-token"
-  ]
-}
-
 variable "gads_secret_env_vars" {
   description = "Map of env vars to secrets for gads-mcp"
   type = map(object({
@@ -389,15 +346,6 @@ variable "gads_secret_env_vars" {
       version     = "latest"
     }
   }
-}
-
-variable "meta_secret_names" {
-  description = "Secret names specific to meta-mcp"
-  type        = list(string)
-  default = [
-    "cesteral-jwt-secret-key",
-    "cesteral-meta-access-token"
-  ]
 }
 
 variable "meta_secret_env_vars" {
@@ -469,15 +417,6 @@ variable "scheduler_timezone" {
 # ============================================================================
 # MONITORING CONFIGURATION
 # ============================================================================
-
-variable "monitoring_services" {
-  description = "Cloud Run services to monitor (name + URL pairs)"
-  type = list(object({
-    name = string
-    url  = string
-  }))
-  default = []
-}
 
 variable "monitoring_notification_channels" {
   description = "Notification channel IDs for monitoring alerts"

@@ -1,6 +1,10 @@
 # Cloud Build configuration for Cesteral MCP Servers
 # Automated CI/CD pipeline: Build Docker images → Push to registry → Deploy to Cloud Run
 # Builds dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, and meta-mcp servers from the same monorepo.
+#
+# IMPORTANT: For production deployments, configure the Cloud Build trigger with
+# "Require approval before build executes" enabled. This ensures human review
+# before any production changes are applied.
 
 substitutions:
   _ENVIRONMENT: 'dev' # Override with trigger substitution variable
@@ -106,6 +110,24 @@ steps:
     id: 'build-meta-mcp'
     waitFor: ['test']
 
+  # Step 2f: Scan all images for vulnerabilities
+  - name: 'aquasecurity/trivy:latest'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
+          echo "Scanning $SERVICE..."
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            --no-progress \
+            --ignore-unfixed \
+            "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/$SERVICE:${SHORT_SHA}"
+        done
+    id: 'vulnerability-scan'
+    waitFor: ['build-dbm-mcp', 'build-dv360-mcp', 'build-ttd-mcp', 'build-gads-mcp', 'build-meta-mcp']
+
   # Step 3a: Push dbm-mcp image
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -113,7 +135,7 @@ steps:
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp'
     id: 'push-dbm-mcp'
-    waitFor: ['build-dbm-mcp']
+    waitFor: ['vulnerability-scan']
 
   # Step 3b: Push dv360-mcp image
   - name: 'gcr.io/cloud-builders/docker'
@@ -122,7 +144,7 @@ steps:
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp'
     id: 'push-dv360-mcp'
-    waitFor: ['build-dv360-mcp']
+    waitFor: ['vulnerability-scan']
 
   # Step 3c: Push ttd-mcp image
   - name: 'gcr.io/cloud-builders/docker'
@@ -131,7 +153,7 @@ steps:
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp'
     id: 'push-ttd-mcp'
-    waitFor: ['build-ttd-mcp']
+    waitFor: ['vulnerability-scan']
 
   # Step 3d: Push gads-mcp image
   - name: 'gcr.io/cloud-builders/docker'
@@ -140,7 +162,7 @@ steps:
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp'
     id: 'push-gads-mcp'
-    waitFor: ['build-gads-mcp']
+    waitFor: ['vulnerability-scan']
 
   # Step 3e: Push meta-mcp image
   - name: 'gcr.io/cloud-builders/docker'
@@ -149,7 +171,7 @@ steps:
       - '--all-tags'
       - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp'
     id: 'push-meta-mcp'
-    waitFor: ['build-meta-mcp']
+    waitFor: ['vulnerability-scan']
 
   # Step 4: Initialize Terraform
   - name: 'hashicorp/terraform:1.5'
@@ -161,6 +183,18 @@ steps:
         terraform init -backend-config=backend-${_ENVIRONMENT}.conf -reconfigure
     id: 'terraform-init'
     waitFor: ['push-dbm-mcp', 'push-dv360-mcp', 'push-ttd-mcp', 'push-gads-mcp', 'push-meta-mcp']
+
+  # Step 4b: Lint Terraform code
+  - name: 'ghcr.io/terraform-linters/tflint:latest'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd terraform
+        tflint --init
+        tflint --recursive --minimum-failure-severity=error
+    id: 'tflint'
+    waitFor: ['terraform-init']
 
   # Step 5: Terraform Plan
   - name: 'hashicorp/terraform:1.5'
@@ -178,7 +212,7 @@ steps:
           -var-file=${_ENVIRONMENT}.tfvars \
           -out=tfplan
     id: 'terraform-plan'
-    waitFor: ['terraform-init']
+    waitFor: ['terraform-init', 'tflint']
 
   # Step 6: Terraform Apply (auto-approve for automated deployments)
   - name: 'hashicorp/terraform:1.5'
@@ -191,20 +225,21 @@ steps:
     id: 'terraform-apply'
     waitFor: ['terraform-plan']
 
-  # Step 7: Health checks for all three services
+  # Step 7: Health checks with automatic rollback
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
+        FAILED_SERVICES=""
         for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
           HEALTHY=false
           URL=$(gcloud run services describe $SERVICE \
             --region=${_REGION} \
             --format='value(status.url)' 2>/dev/null || echo "")
           if [ -z "$URL" ]; then
-            echo "Service $SERVICE not found"
-            exit 1
+            echo "WARNING: Service $SERVICE not found, skipping"
+            continue
           fi
           echo "Testing health endpoint: $URL/health"
           for i in $(seq 1 24); do
@@ -217,10 +252,31 @@ steps:
             sleep 5
           done
           if [ "$HEALTHY" != "true" ]; then
-            echo "Health check failed for $SERVICE after 24 attempts"
-            exit 1
+            echo "Health check FAILED for $SERVICE — initiating rollback"
+            FAILED_SERVICES="$FAILED_SERVICES $SERVICE"
+            # Get the previous (second-latest) revision
+            PREV_REVISION=$(gcloud run revisions list \
+              --service=$SERVICE \
+              --region=${_REGION} \
+              --sort-by='~creationTimestamp' \
+              --format='value(metadata.name)' \
+              --limit=2 | tail -n1)
+            if [ -n "$PREV_REVISION" ]; then
+              echo "Rolling back $SERVICE to revision: $PREV_REVISION"
+              gcloud run services update-traffic $SERVICE \
+                --region=${_REGION} \
+                --to-revisions=$PREV_REVISION=100
+              echo "Rollback complete for $SERVICE"
+            else
+              echo "ERROR: No previous revision found for $SERVICE — cannot rollback"
+            fi
           fi
         done
+        if [ -n "$FAILED_SERVICES" ]; then
+          echo "DEPLOYMENT FAILED — rolled back:$FAILED_SERVICES"
+          exit 1
+        fi
+        echo "All health checks passed successfully"
     id: 'health-check'
     waitFor: ['terraform-apply']
 

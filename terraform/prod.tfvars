@@ -57,11 +57,11 @@ artifact_registry_repo_name = "cesteral"
 # Monitoring
 monitoring_notification_email = "daniel@cesteral.com"
 
-# Fill in Cloud Run URLs after first `terraform apply`
-monitoring_services = [
-  { name = "dbm-mcp", url = "https://dbm-mcp-placeholder.europe-west2.run.app" },
-  { name = "dv360-mcp", url = "https://dv360-mcp-placeholder.europe-west2.run.app" },
-  { name = "ttd-mcp", url = "https://ttd-mcp-placeholder.europe-west2.run.app" },
-  { name = "gads-mcp", url = "https://gads-mcp-placeholder.europe-west2.run.app" },
-  { name = "meta-mcp", url = "https://meta-mcp-placeholder.europe-west2.run.app" },
-]
+# Per-service resource overrides (heavy reporting server gets more resources)
+service_resource_overrides = {
+  "dbm-mcp" = {
+    cpu_limit     = "2"
+    memory_limit  = "1Gi"
+    max_instances = 10
+  }
+}

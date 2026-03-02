@@ -162,9 +162,62 @@ if [ "$PLAN_ONLY" = false ]; then
             print_error "Deployment cancelled"
             exit 1
         fi
+
+        # Show plan output for secondary review
+        print_step "Reviewing Terraform plan before apply..."
+        terraform show tfplan
+        print_warn "Please review the plan output above."
+        read -p "Proceed with apply? (yes/no): " confirm_apply
+        if [ "$confirm_apply" != "yes" ]; then
+            print_error "Deployment cancelled after plan review"
+            exit 1
+        fi
     fi
 
     terraform apply tfplan
+
+    # Post-deploy health checks with rollback
+    print_step "Running post-deploy health checks..."
+    FAILED_SERVICES=""
+    for SERVER in "${SERVERS[@]}"; do
+        SERVER_URL=$(terraform output -raw ${SERVER//-/_}_mcp_service_url 2>/dev/null || echo "")
+        if [ -z "$SERVER_URL" ]; then
+            print_warn "Could not get URL for $SERVER, skipping health check"
+            continue
+        fi
+        HEALTHY=false
+        for i in $(seq 1 24); do
+            if curl -s -o /dev/null -w "%{http_code}" "$SERVER_URL/health" | grep -q "200"; then
+                print_info "Health check passed for $SERVER"
+                HEALTHY=true
+                break
+            fi
+            echo "Waiting for $SERVER to be ready... (attempt $i/24)"
+            sleep 5
+        done
+        if [ "$HEALTHY" != "true" ]; then
+            print_error "Health check FAILED for $SERVER"
+            FAILED_SERVICES="$FAILED_SERVICES $SERVER"
+            # Rollback: route traffic to previous revision
+            PREV_REVISION=$(gcloud run revisions list \
+                --service=$SERVER \
+                --region=$REGION \
+                --sort-by='~creationTimestamp' \
+                --format='value(metadata.name)' \
+                --limit=2 | tail -n1)
+            if [ -n "$PREV_REVISION" ]; then
+                print_warn "Rolling back $SERVER to revision: $PREV_REVISION"
+                gcloud run services update-traffic $SERVER \
+                    --region=$REGION \
+                    --to-revisions=$PREV_REVISION=100
+            fi
+        fi
+    done
+    if [ -n "$FAILED_SERVICES" ]; then
+        print_error "Deployment FAILED — rolled back:$FAILED_SERVICES"
+        exit 1
+    fi
+    print_info "All health checks passed!"
 
     # Get outputs
     print_step "Retrieving deployment information..."

@@ -296,10 +296,10 @@ resource "google_monitoring_dashboard" "cesteral" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"run.googleapis.com/request_count\" resource.type=\"cloud_run_revision\""
                     aggregation = {
-                      alignmentPeriod     = "60s"
-                      perSeriesAligner    = "ALIGN_RATE"
-                      crossSeriesReducer  = "REDUCE_SUM"
-                      groupByFields       = ["resource.labels.service_name"]
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_RATE"
+                      crossSeriesReducer = "REDUCE_SUM"
+                      groupByFields      = ["resource.labels.service_name"]
                     }
                   }
                 }
@@ -319,10 +319,10 @@ resource "google_monitoring_dashboard" "cesteral" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"run.googleapis.com/request_latencies\" resource.type=\"cloud_run_revision\""
                     aggregation = {
-                      alignmentPeriod     = "60s"
-                      perSeriesAligner    = "ALIGN_PERCENTILE_99"
-                      crossSeriesReducer  = "REDUCE_MAX"
-                      groupByFields       = ["resource.labels.service_name"]
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_PERCENTILE_99"
+                      crossSeriesReducer = "REDUCE_MAX"
+                      groupByFields      = ["resource.labels.service_name"]
                     }
                   }
                 }
@@ -342,10 +342,10 @@ resource "google_monitoring_dashboard" "cesteral" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"workload.googleapis.com/mcp.tool.execution.count\""
                     aggregation = {
-                      alignmentPeriod     = "60s"
-                      perSeriesAligner    = "ALIGN_RATE"
-                      crossSeriesReducer  = "REDUCE_SUM"
-                      groupByFields       = ["metric.labels.tool_name", "metric.labels.status"]
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_RATE"
+                      crossSeriesReducer = "REDUCE_SUM"
+                      groupByFields      = ["metric.labels.tool_name", "metric.labels.status"]
                     }
                   }
                 }
@@ -365,10 +365,10 @@ resource "google_monitoring_dashboard" "cesteral" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"workload.googleapis.com/mcp.tool.execution.duration_ms\""
                     aggregation = {
-                      alignmentPeriod     = "60s"
-                      perSeriesAligner    = "ALIGN_DELTA"
-                      crossSeriesReducer  = "REDUCE_PERCENTILE_99"
-                      groupByFields       = ["metric.labels.tool_name"]
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_DELTA"
+                      crossSeriesReducer = "REDUCE_PERCENTILE_99"
+                      groupByFields      = ["metric.labels.tool_name"]
                     }
                   }
                 }
@@ -410,10 +410,10 @@ resource "google_monitoring_dashboard" "cesteral" {
                   timeSeriesFilter = {
                     filter = "metric.type=\"workload.googleapis.com/mcp.auth.validation.count\""
                     aggregation = {
-                      alignmentPeriod     = "60s"
-                      perSeriesAligner    = "ALIGN_RATE"
-                      crossSeriesReducer  = "REDUCE_SUM"
-                      groupByFields       = ["metric.labels.result"]
+                      alignmentPeriod    = "60s"
+                      perSeriesAligner   = "ALIGN_RATE"
+                      crossSeriesReducer = "REDUCE_SUM"
+                      groupByFields      = ["metric.labels.result"]
                     }
                   }
                 }
@@ -442,9 +442,9 @@ resource "google_logging_metric" "audit_access_denied" {
   EOT
 
   metric_descriptor {
-    metric_kind = "DELTA"
-    value_type  = "INT64"
-    unit        = "1"
+    metric_kind  = "DELTA"
+    value_type   = "INT64"
+    unit         = "1"
     display_name = "Cesteral Audit Access Denied"
 
     labels {

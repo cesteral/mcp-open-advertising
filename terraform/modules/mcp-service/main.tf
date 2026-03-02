@@ -21,6 +21,10 @@ resource "google_service_account" "runtime" {
   display_name = "Cesteral ${var.service_name} Runtime Service Account"
   description  = "Service account for ${var.service_name} runtime and scheduled jobs"
   project      = var.project_id
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Grant runtime service account access to secrets
@@ -55,6 +59,7 @@ resource "google_project_iam_member" "runtime_trace_agent" {
 
 # Grant runtime service account Vertex AI permissions (for Gemini API)
 resource "google_project_iam_member" "runtime_vertex_ai_user" {
+  count   = var.enable_vertex_ai ? 1 : 0
   project = var.project_id
   role    = "roles/aiplatform.user"
   member  = "serviceAccount:${google_service_account.runtime.email}"
@@ -86,6 +91,10 @@ resource "google_secret_manager_secret" "secrets" {
 
   replication {
     auto {}
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -234,7 +243,7 @@ resource "google_cloud_run_v2_service" "mcp_server" {
 
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
-    percent = 100
+    percent = var.traffic_latest_percent
   }
 
   depends_on = [
