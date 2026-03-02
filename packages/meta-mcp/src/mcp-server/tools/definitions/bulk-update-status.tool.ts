@@ -56,6 +56,34 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
+  // Elicit confirmation for irreversible archive operations
+  if (input.status === "ARCHIVED" && sdkContext?.elicitInput) {
+    const entityLabel = input.entityType ?? "entity";
+    const elicitResult = (await sdkContext.elicitInput({
+      message: `You are about to archive ${input.entityIds.length} ${entityLabel}(s). This action is irreversible — archived entities cannot be reactivated. Proceed?`,
+      requestedSchema: {
+        type: "object" as const,
+        properties: {
+          confirm: {
+            type: "boolean" as const,
+            title: "Confirm archive",
+            description: `Archive ${input.entityIds.length} ${entityLabel}(s) permanently`,
+            default: false,
+          },
+        },
+      },
+    })) as { action: string; content?: Record<string, unknown> };
+
+    if (elicitResult.action !== "accept" || !elicitResult.content?.confirm) {
+      return {
+        results: [],
+        successCount: 0,
+        failureCount: 0,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
   const { metaService } = resolveSessionServices(sdkContext);
 
   const result = await metaService.bulkUpdateStatus(

@@ -5,6 +5,7 @@ import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
+import { registerRunCustomQueryAsyncTool } from "./tools/definitions/run-custom-query-async.tool.js";
 import {
   extractZodShape,
   registerToolsFromDefinitions,
@@ -87,6 +88,9 @@ export async function createMcpServer(
     generateMessage: def.generateMessage,
   }));
   registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
+
+  // Register experimental task-based tools
+  registerRunCustomQueryAsyncTool(server, logger, sessionId);
 
   return server;
 }

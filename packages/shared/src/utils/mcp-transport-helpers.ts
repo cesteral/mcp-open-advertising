@@ -78,14 +78,21 @@ export function oauthProtectedResourceBody(
   requestUrl: string
 ): { body: Record<string, unknown>; status: number } {
   if (authMode === "jwt") {
-    return {
-      body: {
-        resource: requestUrl.replace("/.well-known/oauth-protected-resource", ""),
-        bearer_methods_supported: ["header"],
-        scopes_supported: [],
-      },
-      status: 200,
+    const resourceUri =
+      process.env.MCP_RESOURCE_URI ||
+      requestUrl.replace("/.well-known/oauth-protected-resource", "");
+
+    const body: Record<string, unknown> = {
+      resource: resourceUri,
+      bearer_methods_supported: ["header"],
+      scopes_supported: [],
     };
+
+    if (process.env.MCP_RESOURCE_DOCS_URI) {
+      body.resource_documentation = process.env.MCP_RESOURCE_DOCS_URI;
+    }
+
+    return { body, status: 200 };
   }
   return {
     body: { error: "OAuth not configured on this server" },

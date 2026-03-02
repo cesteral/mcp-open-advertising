@@ -260,7 +260,7 @@ export function createMcpHttpServer(
       return c.json({ error: "Invalid session ID format" }, 400);
     }
 
-    if (providedSessionId && !sessionServiceStore.get(providedSessionId)) {
+    if (providedSessionId && !sessionServiceStore.get(providedSessionId) && !sessions.sessionCreatedAt.has(providedSessionId)) {
       return c.json({ error: "Session not found or expired" }, 404);
     }
 
@@ -340,12 +340,13 @@ export function createMcpHttpServer(
           credentialFingerprint: authResult.credentialFingerprint,
           allowedAdvertisers: authResult.allowedAdvertisers,
         });
-      } else {
+      } else if (config.mcpAuthMode !== "none") {
         return c.json(
           { error: "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers." },
           400
         );
       }
+      // none auth without credentials — protocol-only session (tools will fail at runtime)
       sessions.trackSession(sessionId);
 
       logger.info(

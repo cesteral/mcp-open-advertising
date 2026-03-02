@@ -18,9 +18,15 @@ export interface JwtPayload {
 export async function verifyJwt(token: string, secret: string): Promise<JwtPayload> {
   try {
     const secretKey = new TextEncoder().encode(secret);
+    // RFC 8707: prefer MCP_RESOURCE_URI as audience (the server's resource indicator)
+    const audience =
+      process.env.MCP_RESOURCE_URI ||
+      process.env.JWT_AUDIENCE ||
+      "cesteral-services";
+
     const { payload } = await jose.jwtVerify(token, secretKey, {
       issuer: process.env.JWT_ISSUER || "cesteral-mcp",
-      audience: process.env.JWT_AUDIENCE || "cesteral-services",
+      audience,
     });
 
     return payload as JwtPayload;
@@ -58,7 +64,7 @@ export async function createJwt(
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setIssuer(process.env.JWT_ISSUER || "cesteral-mcp")
-    .setAudience(process.env.JWT_AUDIENCE || "cesteral-services")
+    .setAudience(process.env.MCP_RESOURCE_URI || process.env.JWT_AUDIENCE || "cesteral-services")
     .setExpirationTime(expiresIn)
     .sign(secretKey);
 

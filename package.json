@@ -17,9 +17,12 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "test:conformance": "./scripts/conformance-test.sh",
+    "test:conformance:ci": "./scripts/conformance-test.sh --ci"
   },
   "devDependencies": {
+    "@modelcontextprotocol/conformance": "^0.1.15",
     "@types/node": "^20.17.6",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
