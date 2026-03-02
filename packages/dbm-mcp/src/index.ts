@@ -17,6 +17,7 @@ import {
   createSessionServices,
   sessionServiceStore,
 } from "./services/session-services.js";
+import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("dbm-mcp", transportMode, otelLogMixin());
@@ -51,7 +52,7 @@ function setupStdioCredentials(sessionId: string): boolean {
     "https://www.googleapis.com/auth/doubleclickbidmanager",
   ]);
 
-  const services = createSessionServices(authAdapter, mcpConfig, logger);
+  const services = createSessionServices(authAdapter, mcpConfig, logger, rateLimiter);
   sessionServiceStore.set(sessionId, services);
   logger.info("Stdio session services created successfully");
   return true;
@@ -68,4 +69,5 @@ bootstrapMcpServer({
   createMcpServer,
   runStdio: runStdioServer,
   startHttp: startHttpServer,
+  onShutdown: () => rateLimiter.destroy(),
 });

@@ -7,6 +7,7 @@
  */
 
 import { createHash } from "crypto";
+import { fetchWithTimeout } from "../utils/fetch-with-timeout.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -117,14 +118,19 @@ export class ServiceAccountAuthAdapter implements GoogleAuthAdapter {
 
     const assertion = `${jwtHeader}.${jwtPayload}.${signature}`;
 
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        assertion,
-      }),
-    });
+    const response = await fetchWithTimeout(
+      "https://oauth2.googleapis.com/token",
+      10_000,
+      undefined,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+          assertion,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");
@@ -185,16 +191,21 @@ export class OAuth2RefreshTokenAuthAdapter implements GoogleAuthAdapter {
   }
 
   private async refreshAccessToken(): Promise<void> {
-    const response = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        client_id: this.credentials.clientId,
-        client_secret: this.credentials.clientSecret,
-        refresh_token: this.credentials.refreshToken,
-      }),
-    });
+    const response = await fetchWithTimeout(
+      "https://oauth2.googleapis.com/token",
+      10_000,
+      undefined,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          client_id: this.credentials.clientId,
+          client_secret: this.credentials.clientSecret,
+          refresh_token: this.credentials.refreshToken,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const body = await response.text().catch(() => "");

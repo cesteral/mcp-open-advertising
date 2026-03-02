@@ -36,7 +36,6 @@ export interface OtelConfig {
   otelServiceName: string;
   otelExporterOtlpTracesEndpoint?: string;
   otelExporterOtlpMetricsEndpoint?: string;
-  otelSamplingRatio?: number;
   gcpExporter?: boolean;
 }
 
@@ -322,7 +321,8 @@ export function setSpanAttribute(
 /**
  * Record error on current active span.
  */
-export function recordSpanError(error: Error): void {
+export function recordSpanError(error: unknown): void {
+  if (!(error instanceof Error)) return;
   const currentSpan = trace.getActiveSpan();
   if (currentSpan) {
     currentSpan.recordException(error);

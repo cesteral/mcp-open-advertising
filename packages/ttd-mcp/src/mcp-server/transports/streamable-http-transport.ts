@@ -10,6 +10,7 @@ import { StreamableHTTPTransport } from "@hono/mcp";
 import { type ServerType, serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
 import type { Logger } from "pino";
 import type { AppConfig } from "../../config/index.js";
 import { createMcpServer } from "../server.js";
@@ -217,6 +218,11 @@ export function createMcpHttpServer(
     await sessions.cleanupSession(sessionId);
     return c.json({ status: "terminated", sessionId }, 200);
   });
+
+  // -----------------------------------------------------------------------
+  // Request body size limit (10 MB)
+  // -----------------------------------------------------------------------
+  app.post("*", bodyLimit({ maxSize: 10 * 1024 * 1024 }));
 
   // -----------------------------------------------------------------------
   // POST /mcp — JSON-RPC over Streamable HTTP

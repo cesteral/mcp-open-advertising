@@ -1,6 +1,5 @@
 export * from "./fetch-with-timeout.js";
 export * from "./logger.js";
-export * from "./errors.js";
 export * from "./mcp-errors.js";
 export * from "./request-context.js";
 export * from "./telemetry.js";

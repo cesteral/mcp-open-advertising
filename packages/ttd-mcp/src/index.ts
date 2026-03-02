@@ -65,4 +65,5 @@ bootstrapMcpServer({
   createMcpServer,
   runStdio: runStdioServer,
   startHttp: startHttpServer,
+  onShutdown: () => rateLimiter.destroy(),
 });

@@ -8,13 +8,12 @@
 
 import { google } from "googleapis";
 import type { Logger } from "pino";
-import type { GoogleAuthAdapter } from "@cesteral/shared";
+import type { GoogleAuthAdapter, RateLimiter } from "@cesteral/shared";
 import { SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { BidManagerService } from "./bid-manager/BidManagerService.js";
 import { createGoogleAuthFromAdapter } from "./bid-manager/auth-bridge.js";
 import type { AppConfig } from "../config/index.js";
-import { rateLimiter } from "../utils/security/rate-limiter.js";
 
 /**
  * All services scoped to a single session.
@@ -29,7 +28,8 @@ export interface SessionServices {
 export function createSessionServices(
   authAdapter: GoogleAuthAdapter,
   config: AppConfig,
-  logger: Logger
+  logger: Logger,
+  rateLimiter: RateLimiter
 ): SessionServices {
   // Bridge GoogleAuthAdapter → googleapis OAuth2Client
   const googleAuth = createGoogleAuthFromAdapter(authAdapter);

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import * as jose from "jose";
-import { AuthenticationError } from "../utils/errors.js";
+import { McpError, JsonRpcErrorCode } from "../utils/mcp-errors.js";
 
 export interface JwtPayload {
   sub: string; // User ID
@@ -26,12 +26,12 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
     return payload as JwtPayload;
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {
-      throw new AuthenticationError("Token has expired");
+      throw new McpError(JsonRpcErrorCode.Unauthorized, "Token has expired");
     }
     if (error instanceof jose.errors.JWTInvalid) {
-      throw new AuthenticationError("Invalid token");
+      throw new McpError(JsonRpcErrorCode.Unauthorized, "Invalid token");
     }
-    throw new AuthenticationError("Token verification failed");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Token verification failed");
   }
 }
 
@@ -70,12 +70,12 @@ export async function createJwt(
  */
 export function extractBearerToken(authHeader?: string): string {
   if (!authHeader) {
-    throw new AuthenticationError("Missing Authorization header");
+    throw new McpError(JsonRpcErrorCode.Unauthorized,"Missing Authorization header");
   }
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer") {
-    throw new AuthenticationError("Invalid Authorization header format. Expected: Bearer <token>");
+    throw new McpError(JsonRpcErrorCode.Unauthorized,"Invalid Authorization header format. Expected: Bearer <token>");
   }
 
   return parts[1];

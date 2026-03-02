@@ -105,6 +105,9 @@ export interface BootstrapOptions<TConfig, TServer extends { close(): Promise<vo
   // HTTP mode callback
   /** Start the HTTP server */
   startHttp: (config: TConfig, logger: Logger) => Promise<HttpServerResult>;
+
+  /** Optional cleanup hook called during shutdown (e.g., destroy rate limiter) */
+  onShutdown?: () => void;
 }
 
 /**
@@ -142,6 +145,7 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
       // Graceful shutdown for stdio mode
       const handleStdioShutdown = () => {
         logger.info("Received shutdown signal (stdio mode) – closing MCP server");
+        opts.onShutdown?.();
         server.close().catch((err: unknown) => {
           logger.error({ err }, "Error closing MCP server");
         });
@@ -172,8 +176,9 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
           }
         });
 
-        // 2. Clean up sessions
+        // 2. Clean up sessions and resources
         await shutdown();
+        opts.onShutdown?.();
 
         // 3. Allow brief window for in-flight requests to complete, then exit
         setTimeout(() => {
