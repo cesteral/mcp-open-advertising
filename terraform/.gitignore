@@ -15,7 +15,6 @@ crash.*.log
 # But keep the example/template files
 *.tfvars
 !dev.tfvars
-!staging.tfvars
 !prod.tfvars
 
 # Ignore override files

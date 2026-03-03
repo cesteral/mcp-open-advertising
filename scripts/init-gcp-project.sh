@@ -38,15 +38,12 @@ case $ENVIRONMENT in
     dev)
         PROJECT_ID="cesteral-dev" # TODO: Update with actual project ID
         ;;
-    staging)
-        PROJECT_ID="cesteral-staging" # TODO: Update with actual project ID
-        ;;
     prod)
         PROJECT_ID="cesteral-prod" # TODO: Update with actual project ID
         ;;
     *)
         print_error "Invalid environment: $ENVIRONMENT"
-        print_info "Valid environments: dev, staging, prod"
+        print_info "Valid environments: dev, prod"
         exit 1
         ;;
 esac

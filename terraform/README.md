@@ -9,8 +9,8 @@ terraform/
 ├── main.tf                 # Root orchestration (modules, locals, provider)
 ├── variables.tf            # All input variables
 ├── outputs.tf              # Service URLs, networking info, deployment summary
-├── backend-{env}.conf      # GCS backend config per environment
-├── {env}.tfvars            # Environment-specific values
+├── backend-{dev,prod}.conf # GCS backend config per environment
+├── {dev,prod}.tfvars       # Environment-specific values
 └── modules/
     ├── mcp-service/        # Parameterized Cloud Run service (instantiated 5x)
     ├── networking/         # VPC, VPC connector, Cloud NAT, firewall rules
@@ -46,7 +46,6 @@ Creates observability infrastructure:
 | Environment | Project ID | State Bucket | Key Differences |
 |---|---|---|---|
 | **dev** | `cesteral-labs` | `cesteral-labs-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
-| **staging** | `cesteral-staging` | `cesteral-staging-terraform-state` | 1 min instance, info logging |
 | **prod** | `cesteral-prod` | `cesteral-prod-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory |
 
 ## Common Operations
@@ -70,8 +69,8 @@ terraform apply
 
 ```bash
 # Re-initialize with different backend
-terraform init -backend-config=backend-staging.conf -reconfigure
-terraform plan -var-file=staging.tfvars ...
+terraform init -backend-config=backend-prod.conf -reconfigure
+terraform plan -var-file=prod.tfvars ...
 ```
 
 ### Deploying with the deploy script

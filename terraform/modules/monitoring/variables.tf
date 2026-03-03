@@ -10,7 +10,7 @@ variable "region" {
 
 variable "environment" {
   type        = string
-  description = "Environment name (dev, staging, prod)"
+  description = "Environment name (dev, prod)"
 }
 
 variable "services" {
