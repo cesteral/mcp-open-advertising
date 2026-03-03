@@ -153,12 +153,19 @@ locals {
     memory_limit  = var.memory_limit
   }
 
+  empty_service_override = {
+    min_instances = null
+    max_instances = null
+    cpu_limit     = null
+    memory_limit  = null
+  }
+
   # Merge per-service overrides with defaults
-  dbm_resources   = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "dbm-mcp", {}) : k => v if v != null })
-  dv360_resources = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "dv360-mcp", {}) : k => v if v != null })
-  ttd_resources   = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "ttd-mcp", {}) : k => v if v != null })
-  gads_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "gads-mcp", {}) : k => v if v != null })
-  meta_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "meta-mcp", {}) : k => v if v != null })
+  dbm_resources   = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "dbm-mcp", local.empty_service_override) : k => v if v != null })
+  dv360_resources = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "dv360-mcp", local.empty_service_override) : k => v if v != null })
+  ttd_resources   = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "ttd-mcp", local.empty_service_override) : k => v if v != null })
+  gads_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "gads-mcp", local.empty_service_override) : k => v if v != null })
+  meta_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "meta-mcp", local.empty_service_override) : k => v if v != null })
 }
 
 # ============================================================================
