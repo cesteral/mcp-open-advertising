@@ -104,11 +104,3 @@ export function createOperationContext(params?: {
     operation: params?.operation,
   };
 }
-
-/**
- * Request context service — convenience object for DI registration.
- */
-export const requestContextService = {
-  createOperationContext,
-  generateRequestContextId,
-};

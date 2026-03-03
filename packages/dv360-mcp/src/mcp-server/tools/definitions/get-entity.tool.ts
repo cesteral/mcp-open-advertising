@@ -74,7 +74,7 @@ export async function getEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetEntityOutput> {
-  // Resolve DV360Service from container
+  // Resolve services for this session
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Extract entity IDs using utility

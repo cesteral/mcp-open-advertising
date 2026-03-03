@@ -145,7 +145,7 @@ export async function runCustomQueryLogic(
     );
   }
 
-  // Resolve BidManagerService from DI container
+  // Resolve services for this session
   const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Execute custom query via BidManagerService

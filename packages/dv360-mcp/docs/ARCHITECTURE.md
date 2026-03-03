@@ -57,7 +57,7 @@ The **dv360-mcp** server is a production-grade MCP (Model Context Protocol) serv
 
 ### Design Philosophy
 
-This server adopts the **advanced patterns** from `mcp-ts-quickstart-template` with an **entity-centric tool architecture**:
+This server uses an **entity-centric tool architecture**:
 
 - **Entity-Centric Tools**: Generic CRUD operations on DV360 entities (not operation-specific tools)
 - **"Logic Throws, Handler Catches"**: Pure business logic throws `McpError`, handlers catch and format
@@ -1054,10 +1054,6 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 - **MCP Protocol:**
   - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io/)
   - [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) - Official SDK (includes SSE transport)
-- **Advanced Patterns:**
-  - [`mcp-ts-quickstart-template/`](../../mcp-ts-quickstart-template/) - Production-grade patterns
-  - [`mcp-ts-quickstart-template/AGENTS.md`](../../mcp-ts-quickstart-template/AGENTS.md) - Development rules
-  - [`mcp-ts-quickstart-template/src/mcp-server/`](../../mcp-ts-quickstart-template/src/mcp-server/) - Reference implementation
 - **DV360 API:**
   - [Display & Video 360 API v4](https://developers.google.com/display-video/api/reference/rest/v4)
   - [Service Account Authentication](https://developers.google.com/identity/protocols/oauth2/service-account)
@@ -1073,32 +1069,6 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 ---
 
 ## Appendix: Key Design Decisions
-
-### Why Advanced Patterns over Simplified?
-
-**Decision:** Adopt advanced patterns from `mcp-ts-quickstart-template`
-
-**Rationale:**
-
-1. **Production-grade requirements**: dv360-mcp will handle real money (campaign budgets, bids)
-2. **Multi-tenancy**: Need tenant isolation via RequestContext
-3. **Observability**: OpenTelemetry tracing critical for debugging distributed systems
-4. **Security**: Scope-based auth prevents unauthorized budget/bid changes
-5. **Maintainability**: Declarative tool pattern scales better than imperative handlers
-
-**Trade-offs:**
-
-- More boilerplate (McpError, RequestContext propagation, withToolAuth wrappers)
-- Steeper learning curve for contributors
-- Longer initial implementation time
-
-**Mitigation:**
-
-- Comprehensive documentation (this doc + inline comments)
-- Reference examples in `mcp-ts-quickstart-template/`
-- Code generation scripts for new tools (future)
-
----
 
 ### Why Entity-Centric Tools over Operation-Specific Tools?
 

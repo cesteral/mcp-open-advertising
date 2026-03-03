@@ -1,8 +1,6 @@
-import "reflect-metadata";
 import { readFileSync } from "fs";
 
 import { mcpConfig } from "./config/index.js";
-import { composeContainer } from "./container/index.js";
 import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
@@ -69,7 +67,6 @@ bootstrapMcpServer({
   config: mcpConfig,
   logger,
   transportMode,
-  composeContainer,
   initOtel: initializeOpenTelemetry,
   setupStdioSession: setupStdioCredentials,
   createMcpServer,

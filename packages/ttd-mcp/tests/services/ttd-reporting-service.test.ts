@@ -1,4 +1,3 @@
-import "reflect-metadata";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { TtdReportingService, type TtdReportConfig } from "../../src/services/ttd/ttd-reporting-service.js";
 

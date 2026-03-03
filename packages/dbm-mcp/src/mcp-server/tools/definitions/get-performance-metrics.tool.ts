@@ -66,7 +66,7 @@ export async function getPerformanceMetricsLogic(
   _context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetPerformanceMetricsOutput> {
-  // Resolve BidManagerService from DI container
+  // Resolve services for this session
   const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Fetch performance metrics (includes calculated KPIs)

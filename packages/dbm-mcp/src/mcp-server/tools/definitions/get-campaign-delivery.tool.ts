@@ -60,7 +60,7 @@ export async function getCampaignDeliveryLogic(
   _context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetCampaignDeliveryOutput> {
-  // Resolve BidManagerService from DI container
+  // Resolve services for this session
   const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Fetch delivery metrics via Bid Manager API

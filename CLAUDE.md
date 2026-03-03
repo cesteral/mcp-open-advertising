@@ -119,7 +119,6 @@ packages/{server-name}/
 ├── src/
 │   ├── index.ts                    # Entry point (starts HTTP server)
 │   ├── config/                     # Environment configuration
-│   ├── container/                  # Dependency injection setup (tsyringe)
 │   ├── mcp-server/
 │   │   ├── tools/                  # MCP tool definitions
 │   │   │   ├── index.ts            # Exports all tools
@@ -131,7 +130,6 @@ packages/{server-name}/
 │   └── utils/                      # Helper utilities
 ```
 
-**Note**: The `mcp-ts-quickstart-template/` directory contains a more sophisticated template with additional infrastructure (McpError, withToolAuth, RequestContext patterns, elicitation). Cesteral currently uses a simplified version focused on the core MCP protocol. Refer to the template for advanced patterns if needed.
 
 ### Creating a New MCP Tool
 
@@ -229,23 +227,21 @@ export async function handleMyTool(params, _extra, sdkContext) {
 #### How It Works
 
 ```
-Generated Zod Schemas (zod.js)
-    ↓ (runtime introspection)
-schemaIntrospection.ts → getAvailableEntitySchemas()
-    ↓ (pattern matching for entity-like exports)
-entityMappingDynamic.ts → getSupportedEntityTypesDynamic()
+STATIC_ENTITY_API_METADATA (entity-mapping-dynamic.ts)
+    ↓ (static registry — one entry per entity type)
+getSupportedEntityTypes()
     ↓ (used by BOTH)
 ┌─────────────────────┬──────────────────────┐
 │ Simplified Schemas  │  Full Schemas        │
 │ (for MCP tools)     │  (server validation) │
 └─────────────────────┴──────────────────────┘
          ↓                      ↓
-    MCP Resources (also dynamic)
+    MCP Resources (one per entity type)
 ```
 
 **Key Features**:
-1. ✅ **Fully Dynamic** - Both simplified and full schemas use `getSupportedEntityTypesDynamic()`
-2. ✅ **Single Source of Truth** - All entity discovery flows through `schemaIntrospection.ts`
+1. ✅ **Static Registry** - Entity types declared in `STATIC_ENTITY_API_METADATA` in `entity-mapping-dynamic.ts`
+2. ✅ **Single Source of Truth** - All entity discovery flows through the static registry
 3. ✅ **Stdio Compatible** - Simplified schemas are ~2KB vs ~1MB+ for full schemas
 4. ✅ **Complete Validation** - Server-side still uses full Zod schemas for strict validation
 
@@ -269,12 +265,11 @@ entity-examples://lineItem   → Curated example payloads with common patterns
 
 #### Adding New Entity Types
 
-When new entity types are added to `generated/schemas/zod.js`:
-1. ✅ `schemaIntrospection.ts` auto-discovers them via pattern matching
-2. ✅ Simplified schemas automatically include them in enum
-3. ✅ Full schemas automatically add them to discriminated union
-4. ✅ MCP Resources automatically provide schema/fields/examples
-5. ✅ **No manual updates needed anywhere**
+When adding a new entity type:
+1. Add a 5-line entry to `STATIC_ENTITY_API_METADATA` in `packages/dv360-mcp/src/mcp-server/tools/utils/entity-mapping-dynamic.ts` (entity type key, API path, ID field name, parent ID field, and Zod schema reference)
+2. Simplified schemas automatically include the new type in the enum (derived from the registry)
+3. Full schemas automatically add the type to the discriminated union (derived from the registry)
+4. MCP Resources automatically provide schema/fields/examples for the new type
 
 #### Testing Schema Sizes
 
@@ -375,40 +370,6 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
 - Include common errors table with solutions
 - Reference MCP Resources for schema details
 - Keep tone instructional but friendly
-
-## Dependency Injection Pattern
-
-All services use **tsyringe** for dependency injection:
-
-```typescript
-// In container/index.ts
-import "reflect-metadata"; // Required at top
-import { container } from "tsyringe";
-
-export function setupContainer() {
-  const logger = createLogger("server-name");
-  container.register("Logger", { useValue: logger });
-
-  // Register services
-  container.register(MyService, { useClass: MyService });
-
-  return container;
-}
-
-// In service file
-import { injectable, inject } from "tsyringe";
-
-@injectable()
-export class MyService {
-  constructor(@inject("Logger") private logger: Logger) {}
-
-  async doSomething() {
-    this.logger.info("Doing something");
-  }
-}
-```
-
-**Important**: Always import `"reflect-metadata"` at the top of `index.ts` before any other imports.
 
 ## Common Development Patterns
 
@@ -734,17 +695,3 @@ When making changes that span multiple packages:
 
 No need to manually rebuild individual packages - Turborepo's dependency graph handles this automatically.
 
-## Advanced MCP Server Patterns (Optional)
-
-The `mcp-ts-quickstart-template/` directory contains a production-grade MCP server template with advanced patterns:
-
-- **Error Handling**: `McpError` class with JSON-RPC error codes
-- **Authorization**: `withToolAuth`/`withResourceAuth` wrappers for scope-based access control
-- **Request Context**: Structured context passing for tracing and multi-tenancy
-- **Elicitation**: Patterns for requesting missing user input via `sdkContext.elicitInput()`
-- **OpenTelemetry**: Full observability setup with traces and metrics
-- **Resource Definitions**: URI-based resources with pagination support
-
-See `mcp-ts-quickstart-template/AGENTS.md` for detailed architectural guidelines if adopting these patterns.
-
-**Current Status**: Cesteral uses a simplified MCP implementation. These advanced patterns are available for future adoption if needed.

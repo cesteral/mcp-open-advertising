@@ -4,22 +4,10 @@ import { getTransformedSchema } from "./schema-transforms.js";
 
 /**
  * Schema introspection utilities
- * Dynamically extracts metadata from generated Zod schemas
+ * Provides Zod schema lookup, field extraction, and type inspection
  */
-
-/**
- * Cache for available entity schemas (performance optimization)
- */
-let cachedEntitySchemas: Map<string, z.ZodTypeAny> | null = null;
-
-const ENTITY_FIELD_KEYWORDS = new Set(["displayName", "entityStatus", "name"]);
-const ENTITY_ID_SUFFIX = /Id$/;
 
 const MAX_FIELD_DEPTH = 5;
-
-function pascalToCamel(value: string): string {
-  return value.charAt(0).toLowerCase() + value.slice(1);
-}
 
 function unwrapSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
   let current = schema;
@@ -40,62 +28,6 @@ function unwrapSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
   }
 
   return current;
-}
-
-function isLikelyEntitySchema(schema: z.ZodTypeAny): boolean {
-  const concrete = unwrapSchema(schema);
-  if (!(concrete instanceof z.ZodObject)) {
-    return false;
-  }
-
-  const shape = (concrete as z.ZodObject<any>).shape;
-  const keys = Object.keys(shape);
-  const hasKeyword = keys.some((key) => ENTITY_FIELD_KEYWORDS.has(key));
-  const hasId = keys.some((key) => ENTITY_ID_SUFFIX.test(key));
-
-  return hasKeyword && hasId;
-}
-
-/**
- * Extract all available entity schemas from generated schemas
- * This auto-discovers what entities are available based on what was generated
- *
- * @param refresh - Force refresh the cache (default: false)
- * @returns Map of entity type to Zod schema
- */
-export function getAvailableEntitySchemas(refresh = false): Map<string, z.ZodTypeAny> {
-  if (!refresh && cachedEntitySchemas) {
-    return cachedEntitySchemas;
-  }
-
-  const entitySchemas = new Map<string, z.ZodTypeAny>();
-
-  for (const [exportName, schema] of Object.entries(schemas)) {
-    if (!(schema instanceof z.ZodType)) {
-      continue;
-    }
-
-    if (!/^[A-Z]/.test(exportName)) {
-      continue;
-    }
-
-    if (!isLikelyEntitySchema(schema as z.ZodTypeAny)) {
-      continue;
-    }
-
-    entitySchemas.set(pascalToCamel(exportName), schema as z.ZodTypeAny);
-  }
-
-  cachedEntitySchemas = entitySchemas;
-
-  return entitySchemas;
-}
-
-/**
- * Clear the schema cache (useful for testing or hot-reload scenarios)
- */
-export function clearSchemaCache(): void {
-  cachedEntitySchemas = null;
 }
 
 /**
@@ -306,14 +238,6 @@ export function getEntitySchemaByType(entityType: string): z.ZodTypeAny {
 
   // Fallback to generic record
   return z.record(z.any());
-}
-
-/**
- * Get all supported entity types (dynamically from schemas)
- */
-export function getAvailableEntityTypes(): string[] {
-  const schemas = getAvailableEntitySchemas();
-  return Array.from(schemas.keys());
 }
 
 /**

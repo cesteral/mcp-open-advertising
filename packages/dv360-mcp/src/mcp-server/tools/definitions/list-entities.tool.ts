@@ -97,7 +97,7 @@ export async function listEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListEntitiesOutput> {
-  // Resolve DV360Service from container
+  // Resolve services for this session
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Extract parent IDs using utility

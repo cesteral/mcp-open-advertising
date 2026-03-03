@@ -81,7 +81,7 @@ export async function getPacingStatusLogic(
   _context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetPacingStatusOutput> {
-  // Resolve BidManagerService from DI container
+  // Resolve services for this session
   const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Get pacing status from Bid Manager API

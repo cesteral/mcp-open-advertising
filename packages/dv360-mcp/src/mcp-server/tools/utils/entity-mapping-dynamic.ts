@@ -1,6 +1,5 @@
 import { z } from "zod";
 import {
-  getAvailableEntitySchemas,
   getEntitySchemaByType,
   extractRequiredFields,
   hasGeneratedSchema,
@@ -123,24 +122,8 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
   },
 };
 
-const ENTITY_API_METADATA_CACHE = new Map<string, EntityApiMetadata>();
-
 function getEntityApiMetadata(entityType: string): EntityApiMetadata | undefined {
-  if (STATIC_ENTITY_API_METADATA[entityType]) {
-    return STATIC_ENTITY_API_METADATA[entityType];
-  }
-
-  if (ENTITY_API_METADATA_CACHE.has(entityType)) {
-    return ENTITY_API_METADATA_CACHE.get(entityType);
-  }
-
-  if (hasGeneratedSchema(entityType)) {
-    const suggestion = suggestApiMetadata(entityType);
-    ENTITY_API_METADATA_CACHE.set(entityType, suggestion);
-    return suggestion;
-  }
-
-  return undefined;
+  return STATIC_ENTITY_API_METADATA[entityType];
 }
 
 /**
@@ -365,12 +348,7 @@ function inferFilterableFields(entityType: string): string[] {
 export function getAllEntityConfigs(): Map<string, EntityConfig> {
   const configs = new Map<string, EntityConfig>();
 
-  const entityTypes = new Set([
-    ...Object.keys(STATIC_ENTITY_API_METADATA),
-    ...getAvailableEntitySchemas().keys(),
-  ]);
-
-  for (const entityType of entityTypes) {
+  for (const entityType of Object.keys(STATIC_ENTITY_API_METADATA)) {
     const config = buildEntityConfig(entityType);
     if (config) {
       configs.set(entityType, config);
@@ -444,44 +422,6 @@ export function getEntitySchemaForOperation(
   return schema;
 }
 
-/**
- * Auto-discover new entities from generated schemas
- * Returns entities that have schemas but no API metadata yet
- */
-export function discoverNewEntities(): string[] {
-  const availableSchemas = getAvailableEntitySchemas();
-  const configuredEntities = new Set([
-    ...Object.keys(STATIC_ENTITY_API_METADATA),
-    ...ENTITY_API_METADATA_CACHE.keys(),
-  ]);
-
-  const newEntities: string[] = [];
-  for (const entityType of availableSchemas.keys()) {
-    if (!configuredEntities.has(entityType)) {
-      newEntities.push(entityType);
-    }
-  }
-
-  return newEntities;
-}
-
-/**
- * Generate API metadata suggestion for a new entity
- * (Helper for developers adding new entities)
- */
-export function suggestApiMetadata(entityType: string): EntityApiMetadata {
-  // Guess API path based on common patterns
-  const pluralEntity = entityType + "s";
-
-  // Most DV360 entities are under /advertisers/{advertiserId}
-  const guessedPath = `/advertisers/{advertiserId}/${pluralEntity}`;
-
-  return {
-    apiPathTemplate: guessedPath,
-    parentResourceIds: ["advertiserId"],
-    supportsFilter: true,
-  };
-}
 
 /**
  * Get entity relationships for a given entity type

@@ -16,7 +16,6 @@ cesteral-mcp-servers/
 │   ├── meta-mcp/                   # Server 5: Meta Ads management
 │   └── shared/                     # Shared types, utilities, auth, observability
 ├── docs/                           # Documentation
-├── mcp-ts-quickstart-template/     # MCP server template (reference)
 ├── scripts/                        # Deployment and automation scripts
 ├── terraform/                      # Infrastructure as Code (GCP)
 ├── cloudbuild.yaml                 # Cloud Build CI/CD pipeline
@@ -167,16 +166,6 @@ Documentation for the platform:
 - `architecture/mcp-microservice-topology.md` - Microservice + orchestration access model
 - `governance/` - Architecture decision records and governance docs
 - `packages/` - Per-package documentation
-
-### `/mcp-ts-quickstart-template`
-
-Template structure for MCP servers (used as reference for building the five servers):
-
-- `src/mcp-server/` - MCP tool definitions
-- `src/services/` - Business logic and integrations
-- `src/http-transport.ts` - Express HTTP server for MCP protocol
-- `Dockerfile` - Container build configuration
-- `package.json` - Dependencies and scripts
 
 ### `/scripts`
 

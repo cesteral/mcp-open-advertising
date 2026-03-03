@@ -89,8 +89,6 @@ export interface BootstrapOptions<TConfig, TServer extends { close(): Promise<vo
   transportMode: "stdio" | "http";
 
   // Lifecycle hooks
-  /** Compose DI container */
-  composeContainer: (logger: Logger) => void;
   /** Initialize OpenTelemetry */
   initOtel: (config: TConfig, logger: Logger) => void;
 
@@ -123,10 +121,6 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
   opts.initOtel(opts.config, logger);
 
   try {
-    // Compose DI container
-    logger.info("Composing dependency injection container");
-    opts.composeContainer(logger);
-
     if (transportMode === "stdio") {
       logger.info("Starting in stdio mode");
 

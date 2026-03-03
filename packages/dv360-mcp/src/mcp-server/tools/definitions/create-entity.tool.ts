@@ -164,7 +164,7 @@ export async function createEntityLogic(
   // Note: validateEntityRelationships is already called inside the superRefine
   // of FullCreateEntityInputSchema.parse(input) above, so no duplicate call needed.
 
-  // Resolve DV360Service from container
+  // Resolve services for this session
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   // Extract parent IDs using utility

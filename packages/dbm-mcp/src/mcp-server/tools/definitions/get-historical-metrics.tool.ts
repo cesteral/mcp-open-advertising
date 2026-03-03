@@ -75,7 +75,7 @@ export async function getHistoricalMetricsLogic(
   _context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<GetHistoricalMetricsOutput> {
-  // Resolve BidManagerService from DI container
+  // Resolve services for this session
   const { bidManagerService } = resolveSessionServices(sdkContext);
 
   // Fetch historical metrics via Bid Manager API

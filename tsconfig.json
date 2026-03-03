@@ -23,8 +23,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "isolatedModules": true
   },
   "exclude": ["node_modules", "dist", "build", "**/*.test.ts", "**/*.spec.ts"]
