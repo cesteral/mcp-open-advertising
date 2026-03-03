@@ -57,14 +57,6 @@ resource "google_project_iam_member" "runtime_trace_agent" {
   member  = "serviceAccount:${google_service_account.runtime.email}"
 }
 
-# Grant runtime service account Vertex AI permissions (for Gemini API)
-resource "google_project_iam_member" "runtime_vertex_ai_user" {
-  count   = var.enable_vertex_ai ? 1 : 0
-  project = var.project_id
-  role    = "roles/aiplatform.user"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
-}
-
 # ============================================================================
 # GCS PERSISTENCE (learnings, findings, interaction logs)
 # ============================================================================
@@ -243,7 +235,7 @@ resource "google_cloud_run_v2_service" "mcp_server" {
 
   traffic {
     type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
-    percent = var.traffic_latest_percent
+    percent = 100
   }
 
   depends_on = [

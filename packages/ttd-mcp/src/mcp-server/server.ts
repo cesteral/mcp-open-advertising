@@ -14,7 +14,6 @@ import {
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
-  type StorageBackend,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 import packageJson from "../../package.json" with { type: "json" };
@@ -54,7 +53,7 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
 export async function createMcpServer(
   logger: Logger,
   sessionId?: string,
-  storageBackend?: StorageBackend
+  gcsBucket?: string
 ): Promise<McpServer> {
   const server = new McpServer({
     name: "ttd-mcp",
@@ -66,7 +65,7 @@ export async function createMcpServer(
   const interactionLogger = new InteractionLogger({
     serverName: TTD_PACKAGE_NAME,
     logger,
-    storageBackend,
+    gcsBucket,
   });
 
   // Register all tools via shared factory

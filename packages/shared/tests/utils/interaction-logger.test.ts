@@ -4,6 +4,33 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { InteractionLogger, generateEntryId } from "../../src/utils/interaction-logger.js";
 
+// ---------------------------------------------------------------------------
+// GCS mock — maintained at module level so vi.mock hoisting works correctly
+// ---------------------------------------------------------------------------
+
+const gcsFiles = new Map<string, string>();
+
+vi.mock("@google-cloud/storage", () => ({
+  Storage: vi.fn().mockImplementation(() => ({
+    bucket: vi.fn().mockReturnValue({
+      file: vi.fn().mockImplementation((objectPath: string) => ({
+        download: vi.fn().mockImplementation(async () => {
+          const content = gcsFiles.get(objectPath);
+          if (!content) {
+            const err: any = new Error("Not found");
+            err.code = 404;
+            throw err;
+          }
+          return [Buffer.from(content)];
+        }),
+        save: vi.fn().mockImplementation(async (content: string) => {
+          gcsFiles.set(objectPath, content);
+        }),
+      })),
+    }),
+  })),
+}));
+
 const tempDirs: string[] = [];
 
 function createTempDir(): string {
@@ -16,6 +43,7 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) {
     rmSync(dir, { recursive: true, force: true });
   }
+  gcsFiles.clear();
 });
 
 describe("generateEntryId", () => {
@@ -86,30 +114,7 @@ describe("InteractionLogger", () => {
     expect(lines[0].id).not.toBe(lines[1].id);
   });
 
-  it("buffers and flushes entries when storageBackend is provided", async () => {
-    const files = new Map<string, string>();
-    const storageBackend = {
-      type: "local" as const,
-      async readFile(path: string): Promise<string | null> {
-        return files.get(path) ?? null;
-      },
-      async writeFile(path: string, content: string): Promise<void> {
-        files.set(path, content);
-      },
-      async appendFile(path: string, content: string): Promise<void> {
-        files.set(path, (files.get(path) ?? "") + content);
-      },
-      async exists(path: string): Promise<boolean> {
-        return files.has(path);
-      },
-      async listFiles(_prefix: string, _extension?: string): Promise<string[]> {
-        return [];
-      },
-      async mkdir(_path: string): Promise<void> {
-        // no-op
-      },
-    };
-
+  it("buffers and flushes entries when gcsBucket is provided", async () => {
     const logger = {
       info: vi.fn(),
       warn: vi.fn(),
@@ -124,7 +129,7 @@ describe("InteractionLogger", () => {
     const interactionLogger = new InteractionLogger({
       serverName: "test-server",
       logger,
-      storageBackend,
+      gcsBucket: "test-bucket",
       flushIntervalMs: 5,
     });
 
@@ -148,8 +153,9 @@ describe("InteractionLogger", () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
     await interactionLogger.close();
 
-    const [path, payload] = Array.from(files.entries())[0] ?? [];
-    expect(path).toMatch(/^interactions\/test-server-\d{4}-\d{2}-\d{2}\.jsonl$/);
+    // gcsObjectPath = `${gcsPrefix}/${filePath}` where gcsPrefix defaults to serverName
+    const [path, payload] = Array.from(gcsFiles.entries())[0] ?? [];
+    expect(path).toMatch(/^test-server\/interactions\/test-server-\d{4}-\d{2}-\d{2}\.jsonl$/);
     const lines = (payload ?? "").trim().split("\n").map((line) => JSON.parse(line) as { id: string });
     expect(lines).toHaveLength(2);
     expect(lines[0].id).not.toBe(lines[1].id);

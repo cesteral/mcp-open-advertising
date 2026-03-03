@@ -188,27 +188,3 @@ variable "scheduler_timezone" {
   type        = string
   default     = "America/New_York"
 }
-
-# ============================================================================
-# VERTEX AI CONFIGURATION
-# ============================================================================
-
-variable "enable_vertex_ai" {
-  description = "Grant Vertex AI (aiplatform.user) role to the service account"
-  type        = bool
-  default     = false
-}
-
-# ============================================================================
-# TRAFFIC SPLITTING CONFIGURATION
-# ============================================================================
-
-variable "traffic_latest_percent" {
-  description = "Percentage of traffic to route to the latest revision (0-100). Use less than 100 for canary deployments."
-  type        = number
-  default     = 100
-  validation {
-    condition     = var.traffic_latest_percent >= 0 && var.traffic_latest_percent <= 100
-    error_message = "traffic_latest_percent must be between 0 and 100."
-  }
-}

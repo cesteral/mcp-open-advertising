@@ -51,7 +51,6 @@ inflight_schedule     = "0 */3 * * *" # Every 3 hours
 scheduler_timezone    = "America/New_York"
 
 # Artifact Registry
-use_artifact_registry       = true
 artifact_registry_repo_name = "cesteral"
 
 # Monitoring

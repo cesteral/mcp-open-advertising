@@ -9,14 +9,13 @@
  * - File rotation by date and size (configurable)
  * - Secret sanitization (strips tokens/keys from logged params)
  * - Fire-and-forget writes (no blocking the tool response)
- * - Optional StorageBackend for GCS persistence (buffered writes)
+ * - Optional GCS bucket for cloud persistence (buffered writes)
  */
 
 import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from "node:fs";
 import { join, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import type { Logger } from "pino";
-import type { StorageBackend } from "./storage-backend.js";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,9 +44,11 @@ export interface InteractionLoggerOptions {
   maxFileSizeBytes?: number;
   /** Logger for internal diagnostics. */
   logger: Logger;
-  /** Optional StorageBackend for GCS persistence. When provided, entries are buffered and flushed periodically. */
-  storageBackend?: StorageBackend;
-  /** Flush interval in ms for StorageBackend mode. Default: 5000 (5s). */
+  /** GCS bucket name. When provided, entries are buffered and flushed to GCS periodically. */
+  gcsBucket?: string;
+  /** Prefix for all GCS paths (typically the server name). Defaults to serverName. */
+  gcsPrefix?: string;
+  /** Flush interval in ms for GCS mode. Default: 5000 (5s). */
   flushIntervalMs?: number;
 }
 
@@ -131,7 +132,8 @@ export class InteractionLogger {
   private readonly serverName: string;
   private readonly maxFileSizeBytes: number;
   private readonly logger: Logger;
-  private readonly storageBackend?: StorageBackend;
+  private readonly gcsBucket?: string;
+  private readonly gcsPrefix: string;
 
   // Local FS mode
   private currentDate: string = "";
@@ -139,19 +141,21 @@ export class InteractionLogger {
   private currentFilePath: string = "";
   private entryNonce = 0;
 
-  // StorageBackend buffered mode
+  // GCS buffered mode
   private buffer: string[] = [];
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private flushing = false;
+  private bucketPromise: Promise<any> | null = null;
 
   constructor(options: InteractionLoggerOptions) {
     this.dataDir = options.dataDir ?? join(process.cwd(), "data", "interactions");
     this.serverName = options.serverName;
     this.maxFileSizeBytes = options.maxFileSizeBytes ?? 10 * 1024 * 1024; // 10 MB
     this.logger = options.logger;
-    this.storageBackend = options.storageBackend;
+    this.gcsBucket = options.gcsBucket;
+    this.gcsPrefix = options.gcsPrefix ?? options.serverName;
 
-    if (this.storageBackend) {
+    if (this.gcsBucket) {
       const interval = options.flushIntervalMs ?? 5000;
       this.flushTimer = setInterval(() => {
         this.flushBuffer().catch((err) => {
@@ -180,7 +184,7 @@ export class InteractionLogger {
       }
       const line = JSON.stringify(entry) + "\n";
 
-      if (this.storageBackend) {
+      if (this.gcsBucket) {
         this.buffer.push(line);
       } else {
         const stream = this.getStream();
@@ -192,7 +196,7 @@ export class InteractionLogger {
   }
 
   /**
-   * Flush and close the underlying write stream or storage backend buffer.
+   * Flush and close the underlying write stream or GCS buffer.
    */
   async close(): Promise<void> {
     if (this.flushTimer) {
@@ -200,7 +204,7 @@ export class InteractionLogger {
       this.flushTimer = null;
     }
 
-    if (this.storageBackend) {
+    if (this.gcsBucket) {
       await this.flushBuffer();
     } else {
       if (this.stream) {
@@ -230,19 +234,54 @@ export class InteractionLogger {
   // ── Private ──────────────────────────────────────────────────────────────
 
   private async flushBuffer(): Promise<void> {
-    if (!this.storageBackend || this.buffer.length === 0 || this.flushing) return;
+    if (!this.gcsBucket || this.buffer.length === 0 || this.flushing) return;
     this.flushing = true;
     try {
       const lines = this.buffer.splice(0);
       const payload = lines.join("");
       const today = new Date().toISOString().slice(0, 10);
       const filePath = `interactions/${this.serverName}-${today}.jsonl`;
-      await this.storageBackend.appendFile(filePath, payload);
+      await this.appendToGcs(filePath, payload);
     } catch (error) {
-      this.logger.warn({ error }, "InteractionLogger: failed to flush buffer to storage backend");
+      this.logger.warn({ error }, "InteractionLogger: failed to flush buffer to GCS");
     } finally {
       this.flushing = false;
     }
+  }
+
+  private async getBucket(): Promise<any> {
+    if (!this.bucketPromise) {
+      const bucketName = this.gcsBucket!;
+      this.bucketPromise = (async () => {
+        const moduleName = "@google-cloud/storage";
+        const gcsModule = await import(moduleName);
+        const StorageCtor = (gcsModule as { Storage: new () => any }).Storage;
+        const storage = new StorageCtor();
+        return storage.bucket(bucketName);
+      })();
+    }
+    return this.bucketPromise;
+  }
+
+  private gcsObjectPath(path: string): string {
+    return this.gcsPrefix ? `${this.gcsPrefix}/${path}` : path;
+  }
+
+  private async appendToGcs(path: string, content: string): Promise<void> {
+    const bucket = await this.getBucket();
+    const file = bucket.file(this.gcsObjectPath(path));
+    let existing = "";
+    try {
+      const [data] = await file.download();
+      existing = data.toString("utf-8");
+    } catch (err: any) {
+      if (err.code !== 404) throw err;
+      // File doesn't exist yet — start fresh
+    }
+    await file.save(existing + content, {
+      contentType: "text/plain; charset=utf-8",
+      resumable: false,
+    });
   }
 
   private getStream(): WriteStream {

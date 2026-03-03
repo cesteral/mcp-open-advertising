@@ -30,7 +30,6 @@ import {
   validateSessionReuse,
   oauthProtectedResourceBody,
   SessionManager,
-  resolveStorageBackend,
   type AuthMode,
 } from "@cesteral/shared";
 import { MetaBearerAuthStrategy } from "../../auth/meta-auth-strategy.js";
@@ -80,11 +79,6 @@ export function createMcpHttpServer(
   logger: Logger
 ): { app: Hono<{ Bindings: HonoBindings }>; shutdown: () => Promise<void> } {
   const app = new Hono<{ Bindings: HonoBindings }>();
-
-  const storageBackend = config.gcsBucketName
-    ? resolveStorageBackend({ gcsBucket: config.gcsBucketName, gcsPrefix: "meta-mcp" })
-    : undefined;
-
 
   const sessionTransports = new Map<string, McpSessionTransport>();
 
@@ -383,7 +377,7 @@ export function createMcpHttpServer(
     // Get or create cached MCP server for this session
     let mcpServer = sessions.getServer(sessionId);
     if (!mcpServer) {
-      mcpServer = await createMcpServer(logger, sessionId, storageBackend);
+      mcpServer = await createMcpServer(logger, sessionId, config.gcsBucketName);
       sessions.setServer(sessionId, mcpServer);
       logger.debug({ sessionId }, "Created new MCP server instance for session");
     }

@@ -28,12 +28,6 @@ variable "environment" {
 # CONTAINER REGISTRY CONFIGURATION
 # ============================================================================
 
-variable "use_artifact_registry" {
-  description = "Use Artifact Registry (true) or Container Registry (false)"
-  type        = bool
-  default     = true
-}
-
 variable "artifact_registry_repo_name" {
   description = "Name of Artifact Registry repository"
   type        = string
