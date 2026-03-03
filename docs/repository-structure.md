@@ -161,11 +161,16 @@ cesteral-mcp-servers/
 Documentation for the platform:
 
 - `PRD.md` - Product Requirements Document
-- `ENV-VARIABLES-GUIDE.md` - Environment variable configuration
+- `CROSS_SERVER_CONTRACT.md` - Cross-server API contract
 - `repository-structure.md` - This file
-- `architecture/mcp-microservice-topology.md` - Microservice + orchestration access model
-- `governance/` - Architecture decision records and governance docs
-- `packages/` - Per-package documentation
+- `architecture/` - Microservice topology and system design
+- `business/` - Licensing strategy and business model analysis
+- `features/` - Implemented feature design docs (MCP prompts, OpenAPI spec extraction)
+- `governance/` - Architecture decision records, governance docs, and rollout plans
+- `guides/` - Practical how-to references (env variables, package template, platform mapping)
+- `plans/` - Active implementation plans; `plans/archive/` for completed plans
+- `research/` - Research and advanced topics
+- `strategy/` - Business positioning and build-vs-buy decisions
 
 ### `/scripts`
 
@@ -191,7 +196,6 @@ Infrastructure as Code for GCP resources:
 **Environments**:
 
 - `dev.tfvars` - Development environment
-- `staging.tfvars` - Staging environment
 - `prod.tfvars` - Production environment
 
 ---

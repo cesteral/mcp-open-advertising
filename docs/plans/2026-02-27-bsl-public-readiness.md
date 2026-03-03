@@ -116,7 +116,7 @@ Draft listing content for the three major MCP registries. Don't publish yet — 
 - Link to GitHub repo (once public) and landing page (once built)
 - Screenshots / demo (once landing page exists)
 
-**Output:** A single markdown file `docs/registry-listings-draft.md` with all three drafts.
+**Output:** A single markdown file `docs/strategy/registry-listings-draft.md` with all three drafts.
 
 ---
 

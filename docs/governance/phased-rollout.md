@@ -23,7 +23,7 @@ This rollout plan applies to `dv360-mcp`, `dbm-mcp`, `ttd-mcp`, `gads-mcp`, and 
 3. `ttd-mcp`
 4. `gads-mcp`
 5. `meta-mcp`
-6. Future packages using `docs/packages/package-template.md`
+6. Future packages using `docs/guides/package-template.md`
 
 ## Entry Criteria (per package)
 

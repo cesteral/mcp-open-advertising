@@ -11,8 +11,8 @@ This directory defines governance standards for MCP workflows and telemetry acro
 ## Governance Documents
 
 - `docs/governance/telemetry-governance.md`
-- `docs/packages/package-template.md`
-- `docs/packages/platform-mapping.md`
+- `docs/guides/package-template.md`
+- `docs/guides/platform-mapping.md`
 
 ## Operating Model
 
@@ -42,6 +42,6 @@ This directory defines governance standards for MCP workflows and telemetry acro
 
 Every new platform package must add:
 
-- Platform entry in `docs/packages/platform-mapping.md`
+- Platform entry in `docs/guides/platform-mapping.md`
 - MCP prompts for core workflows
 - MCP resources for entity schemas and examples
