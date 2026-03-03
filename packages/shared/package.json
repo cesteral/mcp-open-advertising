@@ -29,7 +29,11 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@google-cloud/opentelemetry-cloud-monitoring-exporter": "^0.20.0",
+    "@google-cloud/opentelemetry-cloud-trace-exporter": "^2.0.0",
     "@google-cloud/storage": "^7.19.0",
+    "@hono/mcp": "^0.2.3",
+    "@hono/node-server": "^1.19.9",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/auto-instrumentations-node": "^0.67.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.208.0",
@@ -38,9 +42,8 @@
     "@opentelemetry/sdk-metrics": "^2.2.0",
     "@opentelemetry/sdk-node": "^0.208.0",
     "@opentelemetry/semantic-conventions": "^1.38.0",
-    "@google-cloud/opentelemetry-cloud-trace-exporter": "^2.0.0",
-    "@google-cloud/opentelemetry-cloud-monitoring-exporter": "^0.20.0",
     "dotenv": "^17.2.3",
+    "hono": "^4.11.9",
     "jose": "^6.1.0",
     "pino": "^10.1.0",
     "pino-pretty": "^13.1.2",

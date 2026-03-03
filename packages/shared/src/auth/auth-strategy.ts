@@ -189,7 +189,8 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
   async getCredentialFingerprint(
     headers: Record<string, string | string[] | undefined>
   ): Promise<string | undefined> {
-    const { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } = await import("./jwt.js");
+    const { extractBearerToken, decodeJwtPayload, getJwtCredentialFingerprint } =
+      await import("./jwt.js");
 
     const authHeader = typeof headers["authorization"] === "string"
       ? headers["authorization"]
@@ -198,7 +199,9 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
         : undefined;
 
     const token = extractBearerToken(authHeader);
-    const payload = await verifyJwt(token, this.secret);
+    // Lightweight decode — skips expensive signature/claims verification.
+    // Full verify() already ran when the session was first created.
+    const payload = decodeJwtPayload(token);
 
     return getJwtCredentialFingerprint(payload);
   }
