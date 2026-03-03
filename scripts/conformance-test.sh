@@ -33,6 +33,7 @@ CORE_SCENARIOS=(
   "server-initialize"
   "ping"
   "tools-list"
+  "tools-call"
 )
 
 CI_MODE=false

@@ -6,6 +6,11 @@
 # As new capabilities are added, scenarios should be removed from this list.
 
 expected_failures:
+  # tools-call — conformance expects a generic echo/test tool; our domain tools
+  # require specific arguments and auth context. TODO: add a conformance-test
+  # tool or adapter to pass this scenario.
+  - tools-call
+
   # Content type scenarios — our tools return text/JSON only
   - tools-call-image
   - tools-call-audio

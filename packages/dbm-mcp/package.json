@@ -15,7 +15,8 @@
     "start": "node dist/index.js",
     "typecheck": "pnpm run generate && tsc --noEmit",
     "lint": "eslint src/",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@cesteral/shared": "workspace:*",
