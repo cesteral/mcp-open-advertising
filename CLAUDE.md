@@ -108,7 +108,7 @@ pnpm run build
 - Root `tsconfig.json` sets base config
 - Each package has its own `tsconfig.json` extending the root
 - Uses ES modules (`"type": "module"` in package.json)
-- Target: ES2022, Module: NodeNext
+- Target: ES2022, Module: ESNext, moduleResolution: bundler
 
 ## MCP Server Architecture Pattern
 

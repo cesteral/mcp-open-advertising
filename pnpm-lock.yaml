@@ -333,6 +333,12 @@ importers:
       '@google-cloud/storage':
         specifier: ^7.19.0
         version: 7.19.0
+      '@hono/mcp':
+        specifier: ^0.2.3
+        version: 0.2.3(@modelcontextprotocol/sdk@1.27.1)(hono-rate-limiter@0.4.2)(hono@4.11.9)(zod@3.25.76)
+      '@hono/node-server':
+        specifier: ^1.19.9
+        version: 1.19.9(hono@4.11.9)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -360,6 +366,9 @@ importers:
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
+      hono:
+        specifier: ^4.11.9
+        version: 4.11.9
       jose:
         specifier: ^6.1.0
         version: 6.1.1

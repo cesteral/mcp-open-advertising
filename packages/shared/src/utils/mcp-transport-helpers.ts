@@ -195,6 +195,7 @@ interface SessionManagerOptions {
  */
 export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
   readonly sessionCreatedAt = new Map<string, number>();
+  readonly sessionLastActivity = new Map<string, number>();
   readonly sessionServers = new Map<string, TMcpServer>();
   private sweepTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -204,7 +205,19 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
   ) {}
 
   trackSession(sessionId: string): void {
-    this.sessionCreatedAt.set(sessionId, Date.now());
+    const now = Date.now();
+    this.sessionCreatedAt.set(sessionId, now);
+    this.sessionLastActivity.set(sessionId, now);
+  }
+
+  /**
+   * Update the last-activity timestamp for a session.
+   * Call this on every inbound request to extend the idle timeout.
+   */
+  touchSession(sessionId: string): void {
+    if (this.sessionCreatedAt.has(sessionId)) {
+      this.sessionLastActivity.set(sessionId, Date.now());
+    }
   }
 
   getServer(sessionId: string): TMcpServer | undefined {
@@ -227,17 +240,20 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
     }
     this.sessionServiceStore.delete(sessionId);
     this.sessionCreatedAt.delete(sessionId);
+    this.sessionLastActivity.delete(sessionId);
   }
 
   startSweep(timeoutMs: number, logger: Logger): void {
     if (this.sweepTimer) clearInterval(this.sweepTimer);
     this.sweepTimer = setInterval(() => {
       const now = Date.now();
-      for (const [sessionId, createdAt] of this.sessionCreatedAt) {
-        if (now - createdAt > timeoutMs) {
+      for (const [sessionId] of this.sessionCreatedAt) {
+        const lastActivity = this.sessionLastActivity.get(sessionId) ?? 0;
+        const idleMs = now - lastActivity;
+        if (idleMs > timeoutMs) {
           logger.info(
-            { sessionId, ageMs: now - createdAt },
-            "Session timed out — cleaning up"
+            { sessionId, idleMs },
+            "Session timed out (idle) — cleaning up"
           );
           this.cleanupSession(sessionId).catch(() => {});
         }
@@ -267,5 +283,6 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
     }
     this.sessionServers.clear();
     this.sessionCreatedAt.clear();
+    this.sessionLastActivity.clear();
   }
 }

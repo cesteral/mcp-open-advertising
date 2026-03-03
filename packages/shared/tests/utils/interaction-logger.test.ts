@@ -154,8 +154,9 @@ describe("InteractionLogger", () => {
     await interactionLogger.close();
 
     // gcsObjectPath = `${gcsPrefix}/${filePath}` where gcsPrefix defaults to serverName
+    // Instance-unique paths include a hex instanceId to prevent cross-instance races
     const [path, payload] = Array.from(gcsFiles.entries())[0] ?? [];
-    expect(path).toMatch(/^test-server\/interactions\/test-server-\d{4}-\d{2}-\d{2}\.jsonl$/);
+    expect(path).toMatch(/^test-server\/interactions\/test-server-[a-f0-9]{8}-\d{4}-\d{2}-\d{2}\.jsonl$/);
     const lines = (payload ?? "").trim().split("\n").map((line) => JSON.parse(line) as { id: string });
     expect(lines).toHaveLength(2);
     expect(lines[0].id).not.toBe(lines[1].id);

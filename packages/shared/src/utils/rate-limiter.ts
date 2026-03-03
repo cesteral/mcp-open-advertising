@@ -6,6 +6,7 @@
  */
 
 import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
+import { recordRateLimitHit } from "./metrics.js";
 
 /**
  * Sliding window rate limiter with automatic cleanup.
@@ -61,6 +62,8 @@ export class RateLimiter {
       const oldestTimestamp = timestamps[0] || now;
       const retryAfterMs = windowMs - (now - oldestTimestamp);
       const retryAfterSeconds = Math.ceil(retryAfterMs / 1000);
+
+      recordRateLimitHit(key);
 
       throw new McpError(
         JsonRpcErrorCode.RateLimited,

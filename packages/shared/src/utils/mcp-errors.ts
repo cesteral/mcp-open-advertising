@@ -171,12 +171,38 @@ export class ErrorHandler {
     return mcpError;
   }
 
+  /**
+   * Map an HTTP status code to the corresponding JsonRpcErrorCode.
+   * Returns undefined if the status doesn't map to a known code.
+   */
+  private static mapHttpStatusToCode(status: number): JsonRpcErrorCode | undefined {
+    if (status === 400) return JsonRpcErrorCode.InvalidRequest;
+    if (status === 401) return JsonRpcErrorCode.Unauthorized;
+    if (status === 403) return JsonRpcErrorCode.Forbidden;
+    if (status === 404) return JsonRpcErrorCode.NotFound;
+    if (status === 409) return JsonRpcErrorCode.Conflict;
+    if (status === 429) return JsonRpcErrorCode.RateLimited;
+    if (status === 504) return JsonRpcErrorCode.Timeout;
+    if (status >= 500) return JsonRpcErrorCode.ServiceUnavailable;
+    return undefined;
+  }
+
   private static convertToMcpError(error: unknown): McpError {
     if (error instanceof McpError) {
       return error;
     }
 
     if (error instanceof Error) {
+      // Prefer structured status codes over message substring matching
+      const statusCode = (error as any).statusCode ?? (error as any).status ?? (error as any).code;
+      if (typeof statusCode === "number" && statusCode >= 100) {
+        const mapped = this.mapHttpStatusToCode(statusCode);
+        if (mapped !== undefined) {
+          return new McpError(mapped, error.message, undefined, { cause: error });
+        }
+      }
+
+      // Fall back to message-based classification
       const errorMessage = error.message.toLowerCase();
 
       if (errorMessage.includes("not found")) {

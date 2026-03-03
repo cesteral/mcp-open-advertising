@@ -14,7 +14,7 @@
 
 import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from "node:fs";
 import { join, dirname } from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type { Logger } from "pino";
 
 // ---------------------------------------------------------------------------
@@ -142,6 +142,7 @@ export class InteractionLogger {
   private entryNonce = 0;
 
   // GCS buffered mode
+  private readonly instanceId: string;
   private buffer: string[] = [];
   private flushTimer: ReturnType<typeof setInterval> | null = null;
   private flushing = false;
@@ -154,6 +155,7 @@ export class InteractionLogger {
     this.logger = options.logger;
     this.gcsBucket = options.gcsBucket;
     this.gcsPrefix = options.gcsPrefix ?? options.serverName;
+    this.instanceId = randomBytes(4).toString("hex");
 
     if (this.gcsBucket) {
       const interval = options.flushIntervalMs ?? 5000;
@@ -240,7 +242,8 @@ export class InteractionLogger {
       const lines = this.buffer.splice(0);
       const payload = lines.join("");
       const today = new Date().toISOString().slice(0, 10);
-      const filePath = `interactions/${this.serverName}-${today}.jsonl`;
+      // Instance-unique path prevents read-modify-write races between Cloud Run instances
+      const filePath = `interactions/${this.serverName}-${this.instanceId}-${today}.jsonl`;
       await this.appendToGcs(filePath, payload);
     } catch (error) {
       this.logger.warn({ error }, "InteractionLogger: failed to flush buffer to GCS");
@@ -270,6 +273,8 @@ export class InteractionLogger {
   private async appendToGcs(path: string, content: string): Promise<void> {
     const bucket = await this.getBucket();
     const file = bucket.file(this.gcsObjectPath(path));
+    // Instance-unique paths eliminate cross-instance races; the flushing
+    // flag prevents concurrent flushes within the same instance.
     let existing = "";
     try {
       const [data] = await file.download();

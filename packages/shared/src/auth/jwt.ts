@@ -42,6 +42,24 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
 }
 
 /**
+ * Decode a JWT payload without cryptographic verification.
+ * Used for lightweight operations (e.g., fingerprinting on session reuse)
+ * where the token was already fully verified at session creation.
+ */
+export function decodeJwtPayload(token: string): JwtPayload {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Malformed JWT: expected 3 segments");
+  }
+  try {
+    const decoded = Buffer.from(parts[1], "base64url").toString("utf-8");
+    return JSON.parse(decoded) as JwtPayload;
+  } catch {
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Malformed JWT: unable to decode payload");
+  }
+}
+
+/**
  * Create a stable credential fingerprint from JWT identity claims.
  */
 export function getJwtCredentialFingerprint(payload: JwtPayload): string {
