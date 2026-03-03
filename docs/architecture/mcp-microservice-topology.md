@@ -75,9 +75,9 @@ For future multi-server disambiguation, namespaced URI aliases are planned but *
 
 ### P1
 
-- Add namespaced resource URI aliases while preserving legacy URIs.
-- Standardize service compatibility metadata exposed to clients.
-- Ensure per-service telemetry identity (`service.name`) and cross-server trace propagation conventions.
+- 🚧 Not started — Add namespaced resource URI aliases while preserving legacy URIs.
+- 🚧 Not started — Standardize service compatibility metadata exposed to clients.
+- 🚧 Not started — Ensure per-service telemetry identity (`service.name`) and cross-server trace propagation conventions.
 
 ### P2
 

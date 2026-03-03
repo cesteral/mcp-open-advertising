@@ -1,5 +1,7 @@
 # Cross-Server Contract
 
+**Last Updated:** 2026-03-03
+
 Standards that all management MCP servers (dv360-mcp, ttd-mcp, gads-mcp, meta-mcp) must follow for consistent AI agent orchestration.
 
 ## Required Tool Categories
@@ -35,23 +37,34 @@ Some naming differences across servers are intentional and match platform API co
 
 ## Required Tool Structure
 
-Every tool definition must include:
+Every tool definition object passed to `registerToolsFromDefinitions()` must include these required fields:
 - `name` — Tool name following `{prefix}_{action}` pattern
-- `title` — Human-readable display title
 - `description` — Tool description (>10 chars)
-- `inputSchema` — Zod schema with `.parse()` method
-- `inputExamples` — At least 1 example input
-- `annotations` — Object with `readOnlyHint` boolean
-- `logic` — Async handler function
-- `responseFormatter` — Function to format tool response
+- `inputSchema` — A `z.ZodTypeAny` instance; the factory calls `.parse()` on it for input validation
+- `logic` — Async handler function `(input, context, sdkContext?) => Promise<any>`
+
+These fields are strongly recommended and present in all current tool definitions:
+- `title` — Human-readable display title (forwarded to MCP SDK as the tool's display name)
+- `outputSchema` — A `z.ZodTypeAny` instance describing the structured return type; when present, the factory returns `structuredContent` alongside `content` (MCP Spec 2025-11-25)
+- `inputExamples` — Array of `{ label: string, input: Record<string, unknown> }` objects; embedded into the tool description as a markdown Examples section for universal MCP client compatibility
+- `annotations` — Object with any combination of `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` booleans (all current tools provide all four)
+- `responseFormatter` — Function `(result, input?) => ContentBlock[]` to format the tool response; when absent, the factory serializes the result to JSON text
 
 ## Bulk Result Conventions
 
 All bulk operation tools must return results in this format:
-- `results[]` — Array with per-item objects containing:
+- `results[]` — Canonical per-item array; each item contains:
   - `success: boolean`
   - `error?: string` (present when success is false)
-  - Entity-specific ID field (e.g., `entityId`, `adSetId`)
-- `successCount: number`
-- `failureCount: number`
+  - `entityId: string` — the affected entity's ID (all current bulk tools use `entityId`)
+- `successCount: number` — count of successful items
+- `failureCount: number` — count of failed items
 - `timestamp: string` (ISO 8601)
+
+Some tools return additional aggregate fields alongside `results[]`:
+- `totalRequested: number` — total items submitted
+- `totalSuccessful` / `totalSucceeded: number` — aliases for successCount (naming varies by server)
+- `totalFailed: number` — alias for failureCount
+- `successful[]` / `failed[]` — typed sub-arrays of successful and failed items with enriched fields (e.g., previousStatus, newStatus); present in dv360-mcp bulk tools
+
+These additional fields supplement but do not replace the canonical `results[]` + `successCount` + `failureCount` shape.

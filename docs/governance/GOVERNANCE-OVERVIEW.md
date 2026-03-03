@@ -10,17 +10,24 @@ This directory defines governance standards for MCP workflows and telemetry acro
 
 ## Governance Documents
 
-- `docs/governance/telemetry-governance.md`
+- `docs/governance/telemetry-governance.md` — telemetry contract (partially implemented)
 - `docs/guides/package-template.md`
 - `docs/guides/platform-mapping.md`
 
+> [!NOTE]
+> `refinement-governance.md` and `phased-rollout.md` have moved to `docs/plans/future/`. They describe the intended evaluator/refinement system, which is **not yet implemented** in main branch.
+
 ## Operating Model
+
+> [!NOTE]
+> Steps 1–6 below describe the **intended future workflow** once the evaluator system ships. Current governance in main branch is limited to: CI gates (step 6), change classification (step 4), and the telemetry contract. See `docs/plans/future/` for the full design.
 
 1. Capture LLM -> MCP interaction findings (errors, retries, inefficiencies).
 2. Classify findings with shared taxonomy and confidence level.
 3. Propose prompt/resource/tool updates based on findings.
 4. Route changes through risk-based approval.
 5. Deploy changes with monitoring and rollback criteria.
+6. Measure impact and keep or roll back.
 
 ## Ownership
 
