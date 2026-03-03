@@ -50,6 +50,7 @@ export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
     nextCursor: z.string().optional().describe("Cursor for next page"),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     totalCount: z.number().describe("Number of entities in this page"),
     timestamp: z.string().datetime(),
   })
@@ -78,6 +79,7 @@ export async function listEntitiesLogic(
   return {
     entities: result.entities as Record<string, unknown>[],
     nextCursor: result.nextCursor,
+    has_more: !!result.nextCursor,
     totalCount: (result.entities as unknown[]).length,
     timestamp: new Date().toISOString(),
   };

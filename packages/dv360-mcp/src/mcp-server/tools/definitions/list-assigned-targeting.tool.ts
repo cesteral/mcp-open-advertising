@@ -60,6 +60,7 @@ export const ListAssignedTargetingOutputSchema = z
   .object({
     assignedTargetingOptions: z.array(z.record(z.any())).describe('List of assigned targeting options'),
     nextPageToken: z.string().optional().describe('Token for next page of results'),
+    has_more: z.boolean().describe('Whether more results are available via pagination'),
     totalCount: z.number().describe('Number of options in this page'),
     parentType: z.string().describe('Parent entity type'),
     targetingType: z.string().describe('Targeting type queried'),
@@ -95,6 +96,7 @@ export async function listAssignedTargetingLogic(
   return {
     assignedTargetingOptions: result.assignedTargetingOptions as Record<string, any>[],
     nextPageToken: result.nextPageToken,
+    has_more: !!result.nextPageToken,
     totalCount: result.assignedTargetingOptions.length,
     parentType: input.parentType,
     targetingType: input.targetingType,

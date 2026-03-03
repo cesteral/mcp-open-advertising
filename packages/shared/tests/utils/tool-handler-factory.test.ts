@@ -13,7 +13,7 @@ vi.mock("../../src/utils/metrics.js", () => ({
   recordToolExecution: vi.fn(),
 }));
 
-import { registerToolsFromDefinitions, formatExamplesForDescription, type ToolDefinitionForFactory, type ToolInputExample } from "../../src/utils/tool-handler-factory.js";
+import { registerToolsFromDefinitions, formatExamplesForDescription, truncateTextContent, RESPONSE_CHARACTER_LIMIT, type ToolDefinitionForFactory, type ToolInputExample } from "../../src/utils/tool-handler-factory.js";
 import { recordToolExecution } from "../../src/utils/metrics.js";
 
 function createMockLogger() {
@@ -410,5 +410,228 @@ describe("formatExamplesForDescription", () => {
     expect(result).toContain("```json");
     expect(result).toContain('"key": "value"');
     expect(result).toContain("```");
+  });
+});
+
+describe("RESPONSE_CHARACTER_LIMIT", () => {
+  it("exports the default limit as 25,000", () => {
+    expect(RESPONSE_CHARACTER_LIMIT).toBe(25_000);
+  });
+});
+
+describe("truncateTextContent", () => {
+  it("does not truncate text under the limit", () => {
+    const content = [{ type: "text", text: "short response" }];
+    const result = truncateTextContent(content, 100);
+    expect(result).toEqual(content);
+    expect(result[0].text).toBe("short response");
+  });
+
+  it("does not truncate text exactly at the limit", () => {
+    const text = "x".repeat(100);
+    const content = [{ type: "text", text }];
+    const result = truncateTextContent(content, 100);
+    expect(result[0].text).toBe(text);
+  });
+
+  it("truncates text exceeding the limit with a diagnostic message", () => {
+    const originalText = "a".repeat(200);
+    const content = [{ type: "text", text: originalText }];
+    const result = truncateTextContent(content, 50);
+
+    expect(result[0].text).toContain("a".repeat(50));
+    expect(result[0].text).toContain("--- Response truncated");
+    expect(result[0].text).toContain("50 of 200 characters shown");
+    expect(result[0].text).toContain("Use pagination parameters or filters to narrow results.");
+  });
+
+  it("formats large numbers with locale separators in truncation message", () => {
+    const originalText = "b".repeat(45_123);
+    const content = [{ type: "text", text: originalText }];
+    const result = truncateTextContent(content, 25_000);
+
+    expect(result[0].text).toContain("25,000");
+    expect(result[0].text).toContain("45,123");
+  });
+
+  it("leaves non-text content blocks untouched", () => {
+    const content = [
+      { type: "image", data: "base64data", mimeType: "image/png" },
+      { type: "resource", uri: "file:///data.csv" },
+    ];
+    const result = truncateTextContent(content, 10);
+    expect(result).toEqual(content);
+  });
+
+  it("independently truncates each text block in a multi-block array", () => {
+    const content = [
+      { type: "text", text: "short" },
+      { type: "text", text: "x".repeat(200) },
+      { type: "text", text: "also short" },
+    ];
+    const result = truncateTextContent(content, 50);
+
+    // First block: untouched
+    expect(result[0].text).toBe("short");
+    // Second block: truncated
+    expect(result[1].text).toContain("--- Response truncated");
+    expect(result[1].text!.startsWith("x".repeat(50))).toBe(true);
+    // Third block: untouched
+    expect(result[2].text).toBe("also short");
+  });
+
+  it("handles text blocks without a text property gracefully", () => {
+    const content = [{ type: "text" }];
+    const result = truncateTextContent(content, 10);
+    expect(result).toEqual([{ type: "text" }]);
+  });
+});
+
+describe("registerToolsFromDefinitions - response truncation", () => {
+  let logger: ReturnType<typeof createMockLogger>;
+  let server: ReturnType<typeof createMockServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    logger = createMockLogger();
+    server = createMockServer();
+  });
+
+  it("truncates tool response text exceeding the default limit", async () => {
+    const bigPayload = { data: "z".repeat(30_000) };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [
+        {
+          name: "big_tool",
+          description: "Returns big data",
+          inputSchema: z.object({}),
+          logic: vi.fn().mockResolvedValue(bigPayload),
+        },
+      ],
+      logger,
+      transformSchema: (schema) => schema,
+      createRequestContext,
+    });
+
+    const handler = server.getHandler("big_tool")!;
+    const result = await handler({});
+
+    expect(result.content[0].text).toContain("--- Response truncated");
+    // The truncated text starts with the first 25,000 chars of the serialized JSON
+    expect(result.content[0].text.length).toBeLessThan(JSON.stringify(bigPayload).length + 200);
+  });
+
+  it("does not truncate tool response text under the default limit", async () => {
+    const smallPayload = { data: "hello" };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [
+        {
+          name: "small_tool",
+          description: "Returns small data",
+          inputSchema: z.object({}),
+          logic: vi.fn().mockResolvedValue(smallPayload),
+        },
+      ],
+      logger,
+      transformSchema: (schema) => schema,
+      createRequestContext,
+    });
+
+    const handler = server.getHandler("small_tool")!;
+    const result = await handler({});
+
+    expect(result.content[0].text).toBe(JSON.stringify(smallPayload));
+    expect(result.content[0].text).not.toContain("--- Response truncated");
+  });
+
+  it("respects custom responseCharacterLimit from options", async () => {
+    const payload = { data: "y".repeat(200) };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [
+        {
+          name: "custom_limit_tool",
+          description: "Test custom limit",
+          inputSchema: z.object({}),
+          logic: vi.fn().mockResolvedValue(payload),
+        },
+      ],
+      logger,
+      transformSchema: (schema) => schema,
+      createRequestContext,
+      responseCharacterLimit: 50,
+    });
+
+    const handler = server.getHandler("custom_limit_tool")!;
+    const result = await handler({});
+
+    expect(result.content[0].text).toContain("--- Response truncated");
+    expect(result.content[0].text).toContain("50 of");
+  });
+
+  it("does not truncate structuredContent even when text content is truncated", async () => {
+    const bigResult = { items: Array.from({ length: 500 }, (_, i) => ({ id: i, name: "item-" + "x".repeat(100) })) };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [
+        {
+          name: "structured_tool",
+          description: "Returns structured + text",
+          inputSchema: z.object({}),
+          outputSchema: z.object({ items: z.array(z.any()) }),
+          logic: vi.fn().mockResolvedValue(bigResult),
+        },
+      ],
+      logger,
+      transformSchema: (schema) => schema,
+      createRequestContext,
+      responseCharacterLimit: 100,
+    });
+
+    const handler = server.getHandler("structured_tool")!;
+    const result = await handler({});
+
+    // Text content should be truncated
+    expect(result.content[0].text).toContain("--- Response truncated");
+    // structuredContent should be the full, untruncated result
+    expect(result.structuredContent).toEqual(bigResult);
+  });
+
+  it("truncates custom responseFormatter output when it exceeds the limit", async () => {
+    const formatter = vi.fn().mockReturnValue([
+      { type: "text", text: "Summary: short" },
+      { type: "text", text: "Details: " + "d".repeat(300) },
+    ]);
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [
+        {
+          name: "formatted_tool",
+          description: "Custom formatted",
+          inputSchema: z.object({}),
+          logic: vi.fn().mockResolvedValue({}),
+          responseFormatter: formatter,
+        },
+      ],
+      logger,
+      transformSchema: (schema) => schema,
+      createRequestContext,
+      responseCharacterLimit: 50,
+    });
+
+    const handler = server.getHandler("formatted_tool")!;
+    const result = await handler({});
+
+    // First block is under limit — untouched
+    expect(result.content[0].text).toBe("Summary: short");
+    // Second block exceeds limit — truncated
+    expect(result.content[1].text).toContain("--- Response truncated");
   });
 });

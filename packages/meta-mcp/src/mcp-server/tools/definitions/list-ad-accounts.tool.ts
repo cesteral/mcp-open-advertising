@@ -34,6 +34,7 @@ export const ListAdAccountsOutputSchema = z
     accounts: z.array(z.record(z.any())).describe("List of ad accounts"),
     totalCount: z.number(),
     nextCursor: z.string().optional().describe("Cursor for the next page of results"),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     timestamp: z.string().datetime(),
   })
   .describe("Ad accounts list result");
@@ -59,6 +60,7 @@ export async function listAdAccountsLogic(
     accounts: result.accounts as Record<string, unknown>[],
     totalCount: (result.accounts as unknown[]).length,
     nextCursor: result.nextCursor,
+    has_more: !!result.nextCursor,
     timestamp: new Date().toISOString(),
   };
 }

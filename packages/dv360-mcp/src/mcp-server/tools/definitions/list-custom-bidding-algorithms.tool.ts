@@ -87,6 +87,7 @@ export const ListCustomBiddingAlgorithmsOutputSchema = z
       .describe("List of algorithms"),
     totalCount: z.number(),
     nextPageToken: z.string().optional(),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     timestamp: z.string().datetime(),
   })
   .describe("List custom bidding algorithms result");
@@ -156,6 +157,7 @@ export async function listCustomBiddingAlgorithmsLogic(
     algorithms,
     totalCount: algorithms.length,
     nextPageToken,
+    has_more: !!nextPageToken,
     timestamp: new Date().toISOString(),
   };
 }

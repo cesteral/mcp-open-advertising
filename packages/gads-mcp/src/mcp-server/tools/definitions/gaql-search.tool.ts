@@ -45,6 +45,7 @@ export const GAQLSearchOutputSchema = z
     results: z.array(z.record(z.any())).describe("Query result rows"),
     totalResultsCount: z.number().optional().describe("Total results available"),
     nextPageToken: z.string().optional().describe("Token for next page"),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     timestamp: z.string().datetime(),
   })
   .describe("GAQL search results");
@@ -71,6 +72,7 @@ export async function gaqlSearchLogic(
     results: result.results as Record<string, any>[],
     totalResultsCount: result.totalResultsCount,
     nextPageToken: result.nextPageToken,
+    has_more: !!result.nextPageToken,
     timestamp: new Date().toISOString(),
   };
 }

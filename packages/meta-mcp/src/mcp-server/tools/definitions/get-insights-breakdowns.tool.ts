@@ -72,6 +72,7 @@ export const GetInsightsBreakdownsOutputSchema = z
   .object({
     data: z.array(z.record(z.any())).describe("Breakdown data rows"),
     nextCursor: z.string().optional(),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     totalCount: z.number(),
     timestamp: z.string().datetime(),
   })
@@ -106,6 +107,7 @@ export async function getInsightsBreakdownsLogic(
   return {
     data: result.data as Record<string, unknown>[],
     nextCursor: result.nextCursor,
+    has_more: !!result.nextCursor,
     totalCount: (result.data as unknown[]).length,
     timestamp: new Date().toISOString(),
   };

@@ -81,6 +81,7 @@ export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
     nextPageToken: z.string().optional().describe("Token for next page of results"),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     totalCount: z.number().describe("Number of entities in this page"),
     timestamp: z.string().datetime(),
   })
@@ -138,6 +139,7 @@ export async function listEntitiesLogic(
   return {
     entities: result.entities as Record<string, any>[],
     nextPageToken: result.nextPageToken,
+    has_more: !!result.nextPageToken,
     totalCount: result.entities.length,
     timestamp: new Date().toISOString(),
   };

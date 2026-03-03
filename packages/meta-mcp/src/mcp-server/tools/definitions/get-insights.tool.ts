@@ -66,6 +66,7 @@ export const GetInsightsOutputSchema = z
   .object({
     data: z.array(z.record(z.any())).describe("Insights data rows"),
     nextCursor: z.string().optional().describe("Cursor for next page"),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     summary: z.record(z.any()).optional().describe("Summary statistics"),
     totalCount: z.number(),
     timestamp: z.string().datetime(),
@@ -99,6 +100,7 @@ export async function getInsightsLogic(
   return {
     data: result.data as Record<string, unknown>[],
     nextCursor: result.nextCursor,
+    has_more: !!result.nextCursor,
     summary: result.summary as Record<string, unknown> | undefined,
     totalCount: (result.data as unknown[]).length,
     timestamp: new Date().toISOString(),

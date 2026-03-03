@@ -19,6 +19,13 @@ import { recordToolExecution } from "./metrics.js";
 import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
 
+/**
+ * Default maximum character length for text content blocks in tool responses.
+ * Prevents context window overflow for AI agents processing large responses.
+ * Can be overridden per-server via RegisterToolsOptions.responseCharacterLimit.
+ */
+export const RESPONSE_CHARACTER_LIMIT = 25_000;
+
 const ADVERTISER_PARAM_KEYS = ["advertiserId", "customerId", "partnerId", "adAccountId"] as const;
 const ADVERTISER_PARAM_ARRAY_KEYS = ["advertiserIds", "customerIds", "adAccountIds"] as const;
 
@@ -184,6 +191,12 @@ export interface RegisterToolsOptions {
    * Optional resolver to access session auth context for authorization + audit logging.
    */
   authContextResolver?: () => SessionAuthContext | undefined;
+  /**
+   * Maximum character length for text content blocks in tool responses.
+   * Text blocks exceeding this limit are truncated with a diagnostic message.
+   * Defaults to RESPONSE_CHARACTER_LIMIT (25,000).
+   */
+  responseCharacterLimit?: number;
 }
 
 function estimatePayloadBytes(value: unknown): number {
@@ -192,6 +205,34 @@ function estimatePayloadBytes(value: unknown): number {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Truncate text content blocks that exceed the character limit.
+ * Non-text content blocks (e.g. image, resource) are passed through unchanged.
+ *
+ * @returns A new content array with oversized text blocks truncated and a
+ *          diagnostic message appended indicating how much was omitted.
+ */
+export function truncateTextContent(
+  content: Array<{ type: string; text?: string; [key: string]: unknown }>,
+  limit: number,
+): Array<{ type: string; text?: string; [key: string]: unknown }> {
+  return content.map((block) => {
+    if (block.type !== "text" || typeof block.text !== "string") {
+      return block;
+    }
+    if (block.text.length <= limit) {
+      return block;
+    }
+
+    const originalLength = block.text.length;
+    const truncatedText =
+      block.text.slice(0, limit) +
+      `\n\n--- Response truncated (${limit.toLocaleString("en-US")} of ${originalLength.toLocaleString("en-US")} characters shown). Use pagination parameters or filters to narrow results. ---`;
+
+    return { ...block, text: truncatedText };
+  });
 }
 
 /**
@@ -219,7 +260,12 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     workflowIdByToolName = {},
     interactionLogger,
     authContextResolver,
+    responseCharacterLimit = RESPONSE_CHARACTER_LIMIT,
   } = opts;
+
+  if (!Number.isFinite(responseCharacterLimit) || responseCharacterLimit < 1) {
+    throw new Error(`responseCharacterLimit must be a positive finite number, got ${responseCharacterLimit}`);
+  }
 
   const auditLogger = logger.child({ component: "audit" });
 
@@ -411,7 +457,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               interactionLogger.append(logEntry);
             }
 
-            const content = tool.responseFormatter
+            const rawContent = tool.responseFormatter
               ? tool.responseFormatter(result, validatedInput)
               : [
                   {
@@ -422,6 +468,16 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                         : JSON.stringify(result),
                   },
                 ];
+
+            // Truncate oversized text content blocks to prevent context window overflow
+            const content = truncateTextContent(rawContent, responseCharacterLimit);
+
+            if (content.some((block, i) => block !== rawContent[i])) {
+              logger.warn(
+                { toolName: tool.name, requestId: context.requestId, limit: responseCharacterLimit },
+                "Tool response text truncated"
+              );
+            }
 
             if (tool.outputSchema && tool.responseFormatter) {
               const hasVerbosePayloadText = content.some(
