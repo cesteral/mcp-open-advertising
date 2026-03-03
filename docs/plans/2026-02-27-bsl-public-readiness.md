@@ -1,7 +1,12 @@
 # BSL 1.1 Public Readiness — MCP Servers
 
 **Date:** February 27, 2026
-**Status:** Planning
+**Status:** ✅ Complete (Task 7 pending post-deploy)
+
+> [!NOTE]
+> **Last Updated:** 2026-03-03 — Tasks 1–6 complete per audit. Task 7 (update monitoring
+> URLs) is a manual post-deploy step; execute after first successful `terraform apply`.
+
 **Addresses triggers:** #4 (READMEs polished) + preparation checklist items
 
 ---
@@ -12,7 +17,7 @@
 
 ---
 
-### Task 1: Commit pending Terraform fixes
+### ✅ Task 1: Commit pending Terraform fixes
 
 The working tree has uncommitted changes across 5 Terraform files that fix the error rate alert (adds a denominator filter for proper percentage calculation) and add variable validation blocks. These should be committed before further infra work.
 
@@ -28,7 +33,7 @@ The working tree has uncommitted changes across 5 Terraform files that fix the e
 
 ---
 
-### Task 2: Add meta-mcp to Terraform
+### ✅ Task 2: Add meta-mcp to Terraform
 
 meta-mcp server code is complete (committed at `4abd96f`) but has no Terraform module instance. Add a fifth `module "meta_mcp"` block to `terraform/main.tf` following the existing pattern (dbm, dv360, ttd, gads).
 
@@ -48,7 +53,7 @@ meta-mcp server code is complete (committed at `4abd96f`) but has no Terraform m
 
 ---
 
-### Task 3: Add meta-mcp to CI/CD pipeline
+### ✅ Task 3: Add meta-mcp to CI/CD pipeline
 
 Both Cloud Build configs build/deploy only 4 servers. Add meta-mcp as the fifth.
 
@@ -60,7 +65,7 @@ Both Cloud Build configs build/deploy only 4 servers. Add meta-mcp as the fifth.
 
 ---
 
-### Task 4: Audit repository for sensitive artifacts
+### ✅ Task 4: Audit repository for sensitive artifacts
 
 Systematic sweep for hardcoded credentials, internal URLs, debug artifacts, and anything inappropriate for a public repo. This is a preparation checklist item from the licensing strategy.
 
@@ -75,7 +80,7 @@ Systematic sweep for hardcoded credentials, internal URLs, debug artifacts, and 
 
 ---
 
-### Task 5: Polish per-package READMEs for external audience
+### ✅ Task 5: Polish per-package READMEs for external audience
 
 The root README was polished in commit `c2363b5`. The 6 package READMEs need review and update for an external audience (someone discovering these on GitHub).
 
@@ -99,7 +104,7 @@ The root README was polished in commit `c2363b5`. The 6 package READMEs need rev
 
 ---
 
-### Task 6: Prep MCP registry draft listings
+### ✅ Task 6: Prep MCP registry draft listings
 
 Draft listing content for the three major MCP registries. Don't publish yet — these are ready-to-submit when Trigger #2 (landing page) is met.
 

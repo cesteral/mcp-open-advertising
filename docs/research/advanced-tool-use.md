@@ -1,5 +1,10 @@
 # Advanced Tool Use — Anthropic API Research
 
+> [!NOTE]
+> **Reference Document.** This doc covers Anthropic beta API features (Tool Search, Programmatic Tool Calling, Tool Use Examples, Tool Runner). Beta APIs evolve — verify against current [Anthropic API documentation](https://docs.anthropic.com) before implementing. Last reviewed: February 2026.
+> `inputExamples` is implemented across all tools. `defer_loading`, `allowed_callers`, and
+> `betaZodTool` are researched but not used in this codebase.
+
 > **Purpose**: Reference document for Cesteral Intelligence engineers building MCP tools and AI-driven workflows. Covers three advanced tool use features, the SDK tool runner, and design best practices.
 >
 > **Sources**: [Implement Tool Use](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/implement-tool-use) · [Tool Search](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/tool-search) · [Programmatic Tool Calling](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/programmatic-tool-calling) · [Writing Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents)

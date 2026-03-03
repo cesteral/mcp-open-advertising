@@ -1,6 +1,9 @@
 # Evaluator Phased Rollout
 
-> **Implementation Status**: Stage 1 active (observe-only). Stages 2-3 depend on finding aggregation and pattern detection.
+> [!WARNING]
+> **Status: Not in production.** Feature flags `MCP_EVALUATOR_ENABLED` and
+> `MCP_EVALUATOR_OBSERVE_ONLY` do not exist in main branch. Stage 1 is not active.
+> This is a rollout plan for when the evaluator ships from its dev worktree.
 
 This rollout plan applies to `dv360-mcp`, `dbm-mcp`, `ttd-mcp`, `gads-mcp`, and `meta-mcp`.
 

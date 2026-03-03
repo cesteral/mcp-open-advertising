@@ -1,5 +1,11 @@
 # MCP Prompts Implementation Summary
 
+> [!NOTE]
+> **Status: Fully Implemented.** As of February 2026, all 41 prompts described in this
+> document and the [quick reference](../guides/mcp-prompts-quick-reference.md) are
+> implemented across all five MCP servers. References to "future prompts" in this doc
+> are complete.
+
 ## Overview
 
 Added MCP Prompts support to `dv360-mcp` server to provide workflow guidance for complex multi-step operations. This complements the existing Tools + Resources architecture with on-demand workflow instructions.

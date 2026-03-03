@@ -1,6 +1,10 @@
 # Refinement Governance
 
-> **Implementation Status**: Design only. The evaluator hooks exist (`tool-handler-factory.ts`), but finding persistence, pattern detection, proposal generation, and approval workflow are not yet implemented.
+> [!WARNING]
+> **Status: Not in production.** The refinement and evaluator system described here exists
+> only in a development worktree (`/worktrees/cross-server-fixes`). Main branch has zero
+> implementation of finding capture, proposal generation, or pattern detection. This
+> document describes the intended design, not current behavior.
 
 This document defines how LLM -> MCP interaction findings are converted into controlled prompt/workflow improvements.
 

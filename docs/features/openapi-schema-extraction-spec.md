@@ -1,5 +1,12 @@
 # OpenAPI Schema Extraction Specification
 
+> [!NOTE]
+> **Status: Implemented (dv360-mcp only).** The schema extraction system described here
+> is fully built and integrated into the dv360-mcp build pipeline. See
+> `packages/dv360-mcp/scripts/` for implementation and
+> `packages/dv360-mcp/config/schema-extraction.config.ts` for configuration.
+> Extension to other servers is not yet planned.
+
 ## Overview
 
 This document specifies a hybrid approach for dynamically extracting and generating type-safe schemas from Google API Discovery Documents for the DV360 MCP server. The system combines declarative configuration with intelligent dependency resolution to minimize repository bloat while maintaining complete type safety.

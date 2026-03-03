@@ -310,6 +310,10 @@ Infrastructure as Code for GCP resources:
 - Other: $5-10/month
 - **Total**: ~$155-240/month
 
+> [!NOTE]
+> Cost estimate based on GCP pricing as of February 2026. Validate against actual
+> billing before using for planning.
+
 ---
 
 _Last updated: 2026-02-27_
