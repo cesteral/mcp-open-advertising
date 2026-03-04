@@ -1,6 +1,6 @@
 # Cloud Build configuration for Cesteral MCP Servers
 # Automated CI/CD pipeline: Build Docker images → Push to registry → Deploy to Cloud Run
-# Builds dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, and meta-mcp servers from the same monorepo.
+# Builds dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, and tiktok-mcp servers from the same monorepo.
 #
 # IMPORTANT: For production deployments, configure the Cloud Build trigger with
 # "Require approval before build executes" enabled. This ensures human review
@@ -110,13 +110,45 @@ steps:
     id: 'build-meta-mcp'
     waitFor: ['test']
 
-  # Step 2f: Scan all images for vulnerabilities
+  # Step 2f: Build linkedin-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=linkedin-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-linkedin-mcp'
+    waitFor: ['test']
+
+  # Step 2g: Build tiktok-mcp Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${SHORT_SHA}'
+      - '-t'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${_ENVIRONMENT}-latest'
+      - '--build-arg'
+      - 'SERVER_NAME=tiktok-mcp'
+      - '-f'
+      - 'Dockerfile'
+      - '.'
+    id: 'build-tiktok-mcp'
+    waitFor: ['test']
+
+  # Step 2h: Scan all images for vulnerabilities
   - name: 'aquasecurity/trivy:0.55.2'
     entrypoint: 'sh'
     args:
       - '-c'
       - |
-        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
+        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp; do
           echo "Scanning $SERVICE..."
           trivy image \
             --severity HIGH,CRITICAL \
@@ -126,7 +158,7 @@ steps:
             "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/$SERVICE:${SHORT_SHA}"
         done
     id: 'vulnerability-scan'
-    waitFor: ['build-dbm-mcp', 'build-dv360-mcp', 'build-ttd-mcp', 'build-gads-mcp', 'build-meta-mcp']
+    waitFor: ['build-dbm-mcp', 'build-dv360-mcp', 'build-ttd-mcp', 'build-gads-mcp', 'build-meta-mcp', 'build-linkedin-mcp', 'build-tiktok-mcp']
 
   # Step 3a: Push dbm-mcp image
   - name: 'gcr.io/cloud-builders/docker'
@@ -173,6 +205,24 @@ steps:
     id: 'push-meta-mcp'
     waitFor: ['vulnerability-scan']
 
+  # Step 3f: Push linkedin-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp'
+    id: 'push-linkedin-mcp'
+    waitFor: ['vulnerability-scan']
+
+  # Step 3g: Push tiktok-mcp image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp'
+    id: 'push-tiktok-mcp'
+    waitFor: ['vulnerability-scan']
+
   # Step 4: Initialize Terraform
   - name: 'hashicorp/terraform:1.9'
     entrypoint: 'sh'
@@ -182,7 +232,7 @@ steps:
         cd terraform
         terraform init -backend-config=backend-${_ENVIRONMENT}.conf -reconfigure
     id: 'terraform-init'
-    waitFor: ['push-dbm-mcp', 'push-dv360-mcp', 'push-ttd-mcp', 'push-gads-mcp', 'push-meta-mcp']
+    waitFor: ['push-dbm-mcp', 'push-dv360-mcp', 'push-ttd-mcp', 'push-gads-mcp', 'push-meta-mcp', 'push-linkedin-mcp', 'push-tiktok-mcp']
 
   # Step 4b: Validate Terraform configuration
   - name: 'hashicorp/terraform:1.9'
@@ -220,6 +270,8 @@ steps:
           -var="ttd_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}" \
           -var="gads_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}" \
           -var="meta_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}" \
+          -var="linkedin_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${SHORT_SHA}" \
+          -var="tiktok_mcp_image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${SHORT_SHA}" \
           -var-file=${_ENVIRONMENT}.tfvars \
           -out=tfplan
     id: 'terraform-plan'
@@ -243,7 +295,7 @@ steps:
       - '-c'
       - |
         FAILED_SERVICES=""
-        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
+        for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp; do
           HEALTHY=false
           URL=$(gcloud run services describe $SERVICE \
             --region=${_REGION} \
@@ -303,6 +355,10 @@ images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${_ENVIRONMENT}-latest'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${_ENVIRONMENT}-latest'
 
 # Artifacts to store
 artifacts:

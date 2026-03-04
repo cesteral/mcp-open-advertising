@@ -11,6 +11,8 @@ dv360_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dv360-mcp:
 ttd_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/ttd-mcp:latest"
 gads_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/gads-mcp:latest"
 meta_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/meta-mcp:latest"
+linkedin_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/linkedin-mcp:latest"
+tiktok_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/tiktok-mcp:latest"
 
 # Networking
 create_vpc             = true

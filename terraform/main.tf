@@ -139,6 +139,8 @@ locals {
   ttd_secret_names   = distinct(values({ for k, v in var.ttd_secret_env_vars : k => v.secret_name }))
   gads_secret_names  = distinct(values({ for k, v in var.gads_secret_env_vars : k => v.secret_name }))
   meta_secret_names  = distinct(values({ for k, v in var.meta_secret_env_vars : k => v.secret_name }))
+  linkedin_secret_names = distinct(values({ for k, v in var.linkedin_secret_env_vars : k => v.secret_name }))
+  tiktok_secret_names = distinct(values({ for k, v in var.tiktok_secret_env_vars : k => v.secret_name }))
 }
 
 # ============================================================================
@@ -166,6 +168,8 @@ locals {
   ttd_resources   = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "ttd-mcp", local.empty_service_override) : k => v if v != null })
   gads_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "gads-mcp", local.empty_service_override) : k => v if v != null })
   meta_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "meta-mcp", local.empty_service_override) : k => v if v != null })
+  linkedin_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "linkedin-mcp", local.empty_service_override) : k => v if v != null })
+  tiktok_resources  = merge(local.service_defaults, { for k, v in lookup(var.service_resource_overrides, "tiktok-mcp", local.empty_service_override) : k => v if v != null })
 }
 
 # ============================================================================
@@ -369,6 +373,88 @@ module "meta_mcp" {
 }
 
 # ============================================================================
+# LINKEDIN ADS MCP SERVICE
+# ============================================================================
+
+module "linkedin_mcp" {
+  source = "./modules/mcp-service"
+
+  service_name    = "linkedin-mcp"
+  container_image = var.linkedin_mcp_image
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  # Cloud Run configuration
+  min_instances         = local.linkedin_resources.min_instances
+  max_instances         = local.linkedin_resources.max_instances
+  cpu_limit             = local.linkedin_resources.cpu_limit
+  memory_limit          = local.linkedin_resources.memory_limit
+  cpu_always_allocated  = var.cpu_always_allocated
+  allow_unauthenticated = var.allow_unauthenticated
+  authorized_invokers   = var.authorized_invokers
+  vpc_connector_name    = module.networking.vpc_connector_id
+
+  # MCP server configuration
+  mcp_session_mode       = var.mcp_session_mode
+  mcp_auth_mode          = var.mcp_auth_mode
+  log_level              = var.log_level
+  enable_gcs_persistence = var.enable_gcs_persistence
+  gcs_bucket_name        = var.gcs_bucket_name
+
+  # Secrets (linkedin-specific — derived from secret_env_vars)
+  secret_names    = local.linkedin_secret_names
+  secret_env_vars = var.linkedin_secret_env_vars
+
+  # No scheduler jobs for LinkedIn server
+  enable_scheduler_jobs = false
+
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+}
+
+# ============================================================================
+# TIKTOK ADS MCP SERVICE
+# ============================================================================
+
+module "tiktok_mcp" {
+  source = "./modules/mcp-service"
+
+  service_name    = "tiktok-mcp"
+  container_image = var.tiktok_mcp_image
+
+  project_id  = var.project_id
+  region      = var.region
+  environment = var.environment
+
+  # Cloud Run configuration
+  min_instances         = local.tiktok_resources.min_instances
+  max_instances         = local.tiktok_resources.max_instances
+  cpu_limit             = local.tiktok_resources.cpu_limit
+  memory_limit          = local.tiktok_resources.memory_limit
+  cpu_always_allocated  = var.cpu_always_allocated
+  allow_unauthenticated = var.allow_unauthenticated
+  authorized_invokers   = var.authorized_invokers
+  vpc_connector_name    = module.networking.vpc_connector_id
+
+  # MCP server configuration
+  mcp_session_mode       = var.mcp_session_mode
+  mcp_auth_mode          = var.mcp_auth_mode
+  log_level              = var.log_level
+  enable_gcs_persistence = var.enable_gcs_persistence
+  gcs_bucket_name        = var.gcs_bucket_name
+
+  # Secrets (tiktok-specific — derived from secret_env_vars)
+  secret_names    = local.tiktok_secret_names
+  secret_env_vars = var.tiktok_secret_env_vars
+
+  # No scheduler jobs for TikTok server
+  enable_scheduler_jobs = false
+
+  depends_on = [module.networking, google_storage_bucket.gcs_persistence]
+}
+
+# ============================================================================
 # MONITORING MODULE
 # ============================================================================
 
@@ -385,6 +471,8 @@ module "monitoring" {
     { name = "ttd-mcp", url = module.ttd_mcp.cloud_run_service_url },
     { name = "gads-mcp", url = module.gads_mcp.cloud_run_service_url },
     { name = "meta-mcp", url = module.meta_mcp.cloud_run_service_url },
+    { name = "linkedin-mcp", url = module.linkedin_mcp.cloud_run_service_url },
+    { name = "tiktok-mcp", url = module.tiktok_mcp.cloud_run_service_url },
   ]
   notification_channels = var.monitoring_notification_channels
   notification_email    = var.monitoring_notification_email

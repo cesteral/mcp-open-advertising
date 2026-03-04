@@ -31,7 +31,7 @@ GitHub Repository
 Cloud Build Trigger (automatic)
     ↓
 cloudbuild.yaml execution:
-    1. Build Docker images (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp)
+    1. Build Docker images (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp)
     2. Push to Artifact Registry
     3. Run Terraform
     4. Deploy to Cloud Run

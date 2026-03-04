@@ -1,0 +1,68 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LinkedInReportingService } from "../../src/services/linkedin/linkedin-reporting-service.js";
+
+const mockRateLimiter = {
+  consume: vi.fn().mockResolvedValue(undefined),
+  destroy: vi.fn(),
+};
+
+const mockHttpClient = {
+  get: vi.fn(),
+};
+
+describe("LinkedInReportingService", () => {
+  let service: LinkedInReportingService;
+
+  beforeEach(() => {
+    service = new LinkedInReportingService(mockRateLimiter as any, mockHttpClient as any);
+    vi.clearAllMocks();
+  });
+
+  it("builds analytics query and returns parsed elements", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({
+      elements: [{ impressions: 100, clicks: 10 }],
+      paging: { total: 1 },
+    });
+
+    const result = await service.getAnalytics(
+      "urn:li:sponsoredAccount:123",
+      { start: "2026-03-01", end: "2026-03-04" },
+      ["impressions", "clicks"],
+      "CAMPAIGN",
+      "DAILY"
+    );
+
+    expect(result.elements).toHaveLength(1);
+    const [path, params] = mockHttpClient.get.mock.calls[0];
+    expect(path).toBe("/v2/adAnalytics");
+    expect(params.pivot).toBe("CAMPAIGN");
+    expect(params.timeGranularity).toBe("DAILY");
+    expect(params.fields).toContain("impressions");
+    expect(mockRateLimiter.consume).toHaveBeenCalledWith("linkedin:urn:li:sponsoredAccount:123");
+  });
+
+  it("returns breakdown results for multiple pivots", async () => {
+    mockHttpClient.get
+      .mockResolvedValueOnce({ elements: [{ impressions: 100 }] })
+      .mockResolvedValueOnce({ elements: [{ impressions: 200 }] });
+
+    const result = await service.getAnalyticsBreakdowns(
+      "urn:li:sponsoredAccount:123",
+      { start: "2026-03-01", end: "2026-03-04" },
+      ["CAMPAIGN", "CREATIVE"]
+    );
+
+    expect(result.results).toHaveLength(2);
+    expect(result.results[0].pivot).toBe("CAMPAIGN");
+    expect(result.results[1].pivot).toBe("CREATIVE");
+  });
+
+  it("throws on invalid date format", async () => {
+    await expect(
+      service.getAnalytics(
+        "urn:li:sponsoredAccount:123",
+        { start: "invalid-date", end: "2026-03-04" }
+      )
+    ).rejects.toThrow("Invalid date format");
+  });
+});

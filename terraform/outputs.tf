@@ -96,6 +96,44 @@ output "meta_mcp_service_account_email" {
 }
 
 # ============================================================================
+# LINKEDIN-MCP OUTPUTS
+# ============================================================================
+
+output "linkedin_mcp_service_url" {
+  description = "URL of the linkedin-mcp Cloud Run service"
+  value       = module.linkedin_mcp.cloud_run_service_url
+}
+
+output "linkedin_mcp_service_name" {
+  description = "Name of the linkedin-mcp Cloud Run service"
+  value       = module.linkedin_mcp.cloud_run_service_name
+}
+
+output "linkedin_mcp_service_account_email" {
+  description = "Email of the linkedin-mcp runtime service account"
+  value       = module.linkedin_mcp.runtime_service_account_email
+}
+
+# ============================================================================
+# TIKTOK-MCP OUTPUTS
+# ============================================================================
+
+output "tiktok_mcp_service_url" {
+  description = "URL of the tiktok-mcp Cloud Run service"
+  value       = module.tiktok_mcp.cloud_run_service_url
+}
+
+output "tiktok_mcp_service_name" {
+  description = "Name of the tiktok-mcp Cloud Run service"
+  value       = module.tiktok_mcp.cloud_run_service_name
+}
+
+output "tiktok_mcp_service_account_email" {
+  description = "Email of the tiktok-mcp runtime service account"
+  value       = module.tiktok_mcp.runtime_service_account_email
+}
+
+# ============================================================================
 # SCHEDULER OUTPUTS (dbm-mcp only)
 # ============================================================================
 
@@ -143,5 +181,7 @@ output "deployment_info" {
     ttd_mcp_url   = module.ttd_mcp.cloud_run_service_url
     gads_mcp_url  = module.gads_mcp.cloud_run_service_url
     meta_mcp_url  = module.meta_mcp.cloud_run_service_url
+    linkedin_mcp_url = module.linkedin_mcp.cloud_run_service_url
+    tiktok_mcp_url = module.tiktok_mcp.cloud_run_service_url
   }
 }

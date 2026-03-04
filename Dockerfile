@@ -14,6 +14,8 @@ COPY packages/dv360-mcp/package.json ./packages/dv360-mcp/
 COPY packages/ttd-mcp/package.json ./packages/ttd-mcp/
 COPY packages/gads-mcp/package.json ./packages/gads-mcp/
 COPY packages/meta-mcp/package.json ./packages/meta-mcp/
+COPY packages/linkedin-mcp/package.json ./packages/linkedin-mcp/
+COPY packages/tiktok-mcp/package.json ./packages/tiktok-mcp/
 RUN pnpm install --frozen-lockfile
 
 # Build all packages

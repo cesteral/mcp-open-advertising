@@ -83,7 +83,7 @@ Builds Docker images for all servers and deploys infrastructure using Terraform.
 ```
 
 **What it does:**
-- Builds Docker images for `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, and `meta-mcp`
+- Builds Docker images for `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, and `tiktok-mcp`
 - Pushes images to Artifact Registry
 - Initializes Terraform with environment-specific backend
 - Runs Terraform plan
@@ -210,7 +210,7 @@ gcloud secrets list --project=cesteral-dev
 
 ### View Cloud Run services
 ```bash
-for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp; do
   gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
     --project=cesteral-dev
@@ -234,7 +234,7 @@ gcloud scheduler jobs list \
 
 ### Test health endpoints
 ```bash
-for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp; do
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp; do
   SERVICE_URL=$(gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
     --project=cesteral-dev \

@@ -12,13 +12,13 @@
 
 ## Overview
 
-Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on five independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
+Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on seven independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
 
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, Meta, and future DSPs
-- **🔧 Composable Architecture** - Five independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Seven independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -27,13 +27,15 @@ Cesteral is a **Model Context Protocol (MCP) based optimization platform** that 
 
 ## Architecture
 
-Cesteral uses a **GCP-native architecture** with five independently deployable Cloud Run MCP services:
+Cesteral uses a **GCP-native architecture** with seven independently deployable Cloud Run MCP services:
 
 - `dbm-mcp` for reporting and query workflows
 - `dv360-mcp` for DV360 management workflows
 - `ttd-mcp` for The Trade Desk management/reporting workflows
 - `gads-mcp` for Google Ads campaign management and reporting workflows
 - `meta-mcp` for Meta Ads campaign management
+- `linkedin-mcp` for LinkedIn Ads campaign management and analytics
+- `tiktok-mcp` for TikTok Ads campaign management and async reporting
 
 ### Access Model
 
@@ -110,6 +112,28 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: Meta Marketing API v21.0
 
+### Server 6: `linkedin-mcp`
+
+**LinkedIn Ads campaign management and analytics**
+
+- Full CRUD on LinkedIn entities (ad accounts, campaign groups, campaigns, creatives, conversion rules)
+- Analytics and pivot breakdowns via LinkedIn Marketing API v2
+- Targeting search, delivery forecasts, and ad previews
+- Per-session auth via LinkedIn bearer token
+
+**Platform**: LinkedIn Marketing API v2
+
+### Server 7: `tiktok-mcp`
+
+**TikTok Ads campaign management and reporting**
+
+- Full CRUD on TikTok entities (campaigns, ad groups, ads, creatives)
+- Async reporting flow (submit, poll, download) with breakdown support
+- Targeting search, audience estimates, and ad previews
+- Per-session auth via TikTok bearer token + advertiser ID header
+
+**Platform**: TikTok Marketing API v1.3
+
 ---
 
 ## Current Status
@@ -117,13 +141,13 @@ This dual-access model preserves service autonomy while enabling cross-server au
 **Phase: Production-Ready ✅**
 
 The platform currently includes:
-- ✅ Five implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`)
+- ✅ Seven implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`)
 - ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
 - ✅ Live platform API integrations and Streamable HTTP transports
 - ✅ Terraform + Cloud Build coverage for independent service deployment
 
 **Current Focus:**
-1. Production hardening and operational reliability across all five servers
+1. Production hardening and operational reliability across all seven servers
 2. Cross-platform workflow coverage and contract governance
 3. Telemetry dashboards and observability improvements
 
@@ -190,6 +214,12 @@ pnpm run dev
 
 # Start meta-mcp (port 3005)
 ./scripts/dev-server.sh meta-mcp
+
+# Start linkedin-mcp (port 3006)
+./scripts/dev-server.sh linkedin-mcp
+
+# Start tiktok-mcp (port 3007)
+./scripts/dev-server.sh tiktok-mcp
 ```
 
 ### 6. Deploy Infrastructure
@@ -278,12 +308,8 @@ cesteral-mcp-servers/
 │   │   └── package.json
 │   │
 │   ├── meta-mcp/                # MCP Server 5: Meta Ads
-│   │   ├── src/
-│   │   │   ├── mcp-server/      # MCP tool definitions + transports
-│   │   │   ├── services/        # Meta Graph API client
-│   │   │   └── index.ts
-│   │   ├── Dockerfile
-│   │   └── package.json
+│   ├── linkedin-mcp/            # MCP Server 6: LinkedIn Ads
+│   ├── tiktok-mcp/              # MCP Server 7: TikTok Ads
 │   │
 │   └── shared/                  # Shared code
 │       ├── types/               # Zod schemas, TypeScript types
@@ -377,6 +403,14 @@ See [packages/gads-mcp](packages/gads-mcp) for the full 9-tool reference includi
 | `meta_get_delivery_estimate`  | Audience size estimation                 | `adAccountId`, `targetingSpec` |
 
 See [packages/meta-mcp](packages/meta-mcp) for the full 15-tool reference including insights breakdowns, duplication, and ad previews.
+
+### LinkedIn Ads Server Tools
+
+See [packages/linkedin-mcp](packages/linkedin-mcp) for the full 18-tool reference including CRUD, analytics breakdowns, delivery forecast, and ad previews.
+
+### TikTok Ads Server Tools
+
+See [packages/tiktok-mcp](packages/tiktok-mcp) for the full 18-tool reference including CRUD, async reporting, audience estimates, and ad previews.
 
 ---
 
@@ -511,6 +545,8 @@ pnpm run lint
 ./scripts/dev-server.sh ttd-mcp     # port 3003
 ./scripts/dev-server.sh gads-mcp    # port 3004
 ./scripts/dev-server.sh meta-mcp    # port 3005
+./scripts/dev-server.sh linkedin-mcp # port 3006
+./scripts/dev-server.sh tiktok-mcp   # port 3007
 ```
 
 ### Testing MCP Tools

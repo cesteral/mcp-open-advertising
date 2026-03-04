@@ -59,6 +59,16 @@ variable "meta_mcp_image" {
   type        = string
 }
 
+variable "linkedin_mcp_image" {
+  description = "Full container image URL for linkedin-mcp server"
+  type        = string
+}
+
+variable "tiktok_mcp_image" {
+  description = "Full container image URL for tiktok-mcp server"
+  type        = string
+}
+
 # ============================================================================
 # NETWORKING VARIABLES
 # ============================================================================
@@ -355,6 +365,46 @@ variable "meta_secret_env_vars" {
     }
     META_ACCESS_TOKEN = {
       secret_name = "cesteral-meta-access-token"
+      version     = "latest"
+    }
+  }
+}
+
+variable "linkedin_secret_env_vars" {
+  description = "Map of env vars to secrets for linkedin-mcp"
+  type = map(object({
+    secret_name = string
+    version     = string
+  }))
+  default = {
+    MCP_AUTH_SECRET_KEY = {
+      secret_name = "cesteral-jwt-secret-key"
+      version     = "latest"
+    }
+    LINKEDIN_ACCESS_TOKEN = {
+      secret_name = "cesteral-linkedin-access-token"
+      version     = "latest"
+    }
+  }
+}
+
+variable "tiktok_secret_env_vars" {
+  description = "Map of env vars to secrets for tiktok-mcp"
+  type = map(object({
+    secret_name = string
+    version     = string
+  }))
+  default = {
+    MCP_AUTH_SECRET_KEY = {
+      secret_name = "cesteral-jwt-secret-key"
+      version     = "latest"
+    }
+    TIKTOK_ACCESS_TOKEN = {
+      secret_name = "cesteral-tiktok-access-token"
+      version     = "latest"
+    }
+    TIKTOK_ADVERTISER_ID = {
+      secret_name = "cesteral-tiktok-advertiser-id"
       version     = "latest"
     }
   }
