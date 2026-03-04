@@ -111,7 +111,7 @@ steps:
     waitFor: ['test']
 
   # Step 2f: Scan all images for vulnerabilities
-  - name: 'aquasecurity/trivy:latest'
+  - name: 'aquasecurity/trivy:0.55.2'
     entrypoint: 'sh'
     args:
       - '-c'
@@ -174,7 +174,7 @@ steps:
     waitFor: ['vulnerability-scan']
 
   # Step 4: Initialize Terraform
-  - name: 'hashicorp/terraform:1.5'
+  - name: 'hashicorp/terraform:1.9'
     entrypoint: 'sh'
     args:
       - '-c'
@@ -184,8 +184,19 @@ steps:
     id: 'terraform-init'
     waitFor: ['push-dbm-mcp', 'push-dv360-mcp', 'push-ttd-mcp', 'push-gads-mcp', 'push-meta-mcp']
 
-  # Step 4b: Lint Terraform code
-  - name: 'ghcr.io/terraform-linters/tflint:latest'
+  # Step 4b: Validate Terraform configuration
+  - name: 'hashicorp/terraform:1.9'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        cd terraform
+        terraform validate
+    id: 'terraform-validate'
+    waitFor: ['terraform-init']
+
+  # Step 4c: Lint Terraform code
+  - name: 'ghcr.io/terraform-linters/tflint:v0.53.0'
     entrypoint: 'sh'
     args:
       - '-c'
@@ -197,7 +208,7 @@ steps:
     waitFor: ['terraform-init']
 
   # Step 5: Terraform Plan
-  - name: 'hashicorp/terraform:1.5'
+  - name: 'hashicorp/terraform:1.9'
     entrypoint: 'sh'
     args:
       - '-c'
@@ -212,10 +223,10 @@ steps:
           -var-file=${_ENVIRONMENT}.tfvars \
           -out=tfplan
     id: 'terraform-plan'
-    waitFor: ['terraform-init', 'tflint']
+    waitFor: ['terraform-validate', 'tflint']
 
   # Step 6: Terraform Apply (auto-approve for automated deployments)
-  - name: 'hashicorp/terraform:1.5'
+  - name: 'hashicorp/terraform:1.9'
     entrypoint: 'sh'
     args:
       - '-c'

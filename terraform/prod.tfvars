@@ -1,7 +1,7 @@
 # Production environment configuration
 
 # Project configuration
-project_id  = "cesteral-prod" # TODO: Replace with actual prod project ID
+project_id  = "cesteral-prod"
 region      = "europe-west2"
 environment = "prod"
 

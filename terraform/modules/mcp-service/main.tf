@@ -135,7 +135,7 @@ resource "google_cloud_run_v2_service" "mcp_server" {
           cpu    = var.cpu_limit
           memory = var.memory_limit
         }
-        cpu_idle = var.cpu_always_allocated
+        cpu_idle = !var.cpu_always_allocated
       }
 
       # Startup probe

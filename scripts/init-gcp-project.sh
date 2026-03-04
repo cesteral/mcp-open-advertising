@@ -36,10 +36,10 @@ PROJECT_ID="" # Will be set based on environment
 # Set project ID based on environment
 case $ENVIRONMENT in
     dev)
-        PROJECT_ID="cesteral-dev" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-dev"
         ;;
     prod)
-        PROJECT_ID="cesteral-prod" # TODO: Update with actual project ID
+        PROJECT_ID="cesteral-prod"
         ;;
     *)
         print_error "Invalid environment: $ENVIRONMENT"
