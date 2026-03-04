@@ -1,0 +1,401 @@
+import { LinkedInHttpClient } from "./linkedin-http-client.js";
+import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RequestContext } from "@cesteral/shared";
+import {
+  getEntityConfig,
+  type LinkedInEntityType,
+} from "../../mcp-server/tools/utils/entity-mapping.js";
+
+/**
+ * LinkedIn Service — Generic CRUD operations for LinkedIn Ads entities,
+ * plus bulk operations and targeting search.
+ *
+ * Uses entity-mapping.ts for API path construction and LinkedInHttpClient
+ * for authenticated HTTP calls with retry logic.
+ *
+ * LinkedIn API uses URN IDs like urn:li:sponsoredAccount:123.
+ * These must be URL-encoded when used in path segments.
+ */
+export class LinkedInService {
+  constructor(
+    private readonly rateLimiter: RateLimiter,
+    private readonly httpClient: LinkedInHttpClient
+  ) {}
+
+  // ─── Standard CRUD ─────────────────────────────────────────────────
+
+  async listEntities(
+    entityType: LinkedInEntityType,
+    adAccountUrn?: string,
+    start?: number,
+    count?: number,
+    context?: RequestContext
+  ): Promise<{ entities: unknown[]; total?: number; start?: number }> {
+    const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume(`linkedin:${adAccountUrn ?? "default"}`);
+
+    const params: Record<string, string> = {
+      q: "search",
+      start: String(start ?? 0),
+      count: String(Math.min(count ?? 25, 100)),
+    };
+
+    if (adAccountUrn && entityType !== "adAccount") {
+      // Scope by account using encoded URN
+      params["accounts[0]"] = adAccountUrn;
+    }
+
+    const result = (await this.httpClient.get(
+      config.apiPath,
+      params,
+      context
+    )) as Record<string, unknown>;
+
+    const entities = (result.elements as unknown[]) || [];
+    const paging = result.paging as Record<string, unknown> | undefined;
+
+    return {
+      entities,
+      total: paging?.total as number | undefined,
+      start: paging?.start as number | undefined,
+    };
+  }
+
+  async getEntity(
+    entityType: LinkedInEntityType,
+    entityUrn: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume(`linkedin:default`);
+
+    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
+    return this.httpClient.get(`${config.apiPath}/${encodedUrn}`, undefined, context);
+  }
+
+  async createEntity(
+    entityType: LinkedInEntityType,
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const config = getEntityConfig(entityType);
+
+    // Writes consume 3x rate limit tokens
+    await this.rateLimiter.consume(`linkedin:default`, 3);
+
+    return this.httpClient.post(config.apiPath, data, context);
+  }
+
+  async updateEntity(
+    entityType: LinkedInEntityType,
+    entityUrn: string,
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const config = getEntityConfig(entityType);
+
+    // Writes consume 3x rate limit tokens
+    await this.rateLimiter.consume(`linkedin:default`, 3);
+
+    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
+    return this.httpClient.patch(`${config.apiPath}/${encodedUrn}`, data, context);
+  }
+
+  async deleteEntity(
+    entityType: LinkedInEntityType,
+    entityUrn: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume(`linkedin:default`, 3);
+
+    const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
+    return this.httpClient.delete(`${config.apiPath}/${encodedUrn}`, context);
+  }
+
+  // ─── Ad Accounts ───────────────────────────────────────────────────
+
+  /**
+   * List ad accounts accessible to the authenticated user.
+   */
+  async listAdAccounts(
+    start?: number,
+    count?: number,
+    context?: RequestContext
+  ): Promise<{ accounts: unknown[]; total?: number }> {
+    await this.rateLimiter.consume(`linkedin:default`);
+
+    const params: Record<string, string> = {
+      q: "search",
+      start: String(start ?? 0),
+      count: String(Math.min(count ?? 25, 100)),
+    };
+
+    const result = (await this.httpClient.get("/v2/adAccounts", params, context)) as Record<string, unknown>;
+
+    const accounts = (result.elements as unknown[]) || [];
+    const paging = result.paging as Record<string, unknown> | undefined;
+
+    return {
+      accounts,
+      total: paging?.total as number | undefined,
+    };
+  }
+
+  // ─── Bulk Operations ──────────────────────────────────────────────
+
+  /**
+   * Bulk update entity statuses.
+   * Each entity is updated individually with concurrency limit.
+   */
+  async bulkUpdateStatus(
+    entityType: LinkedInEntityType,
+    entityUrns: string[],
+    status: string,
+    context?: RequestContext
+  ): Promise<{ results: Array<{ entityUrn: string; success: boolean; error?: string }> }> {
+    const bulkResults = await this.executeBulk(entityUrns, async (entityUrn) => {
+      return this.updateEntity(entityType, entityUrn, { status }, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityUrn: entityUrns[i],
+        success: r.success,
+        error: r.error,
+      })),
+    };
+  }
+
+  /**
+   * Bulk create entities of the same type.
+   * Sends individual create calls with concurrency limit.
+   */
+  async bulkCreateEntities(
+    entityType: LinkedInEntityType,
+    items: Record<string, unknown>[],
+    context?: RequestContext
+  ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
+    const results = await this.executeBulk(items, async (data) => {
+      return this.createEntity(entityType, data, context);
+    });
+    return { results };
+  }
+
+  /**
+   * Bulk update entities with arbitrary data.
+   * Each item is updated individually with concurrency limit.
+   */
+  async bulkUpdateEntities(
+    entityType: LinkedInEntityType,
+    items: Array<{ entityUrn: string; data: Record<string, unknown> }>,
+    context?: RequestContext
+  ): Promise<{ results: Array<{ entityUrn: string; success: boolean; error?: string }> }> {
+    const bulkResults = await this.executeBulk(items, async (item) => {
+      return this.updateEntity(entityType, item.entityUrn, item.data, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityUrn: items[i].entityUrn,
+        success: r.success,
+        error: r.error,
+      })),
+    };
+  }
+
+  // ─── Bid Adjustments ──────────────────────────────────────────────
+
+  /**
+   * Adjust bids for campaigns via read-modify-write.
+   */
+  async adjustBids(
+    adjustments: Array<{ campaignUrn: string; bidAmount: Record<string, unknown> }>,
+    context?: RequestContext
+  ): Promise<{ results: Array<{ campaignUrn: string; success: boolean; error?: string }> }> {
+    const results: Array<{ campaignUrn: string; success: boolean; error?: string }> = [];
+
+    for (const adjustment of adjustments) {
+      try {
+        await this.updateEntity(
+          "campaign",
+          adjustment.campaignUrn,
+          { unitCost: adjustment.bidAmount },
+          context
+        );
+        results.push({ campaignUrn: adjustment.campaignUrn, success: true });
+      } catch (error) {
+        results.push({
+          campaignUrn: adjustment.campaignUrn,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
+    return { results };
+  }
+
+  // ─── Targeting Search ────────────────────────────────────────────
+
+  /**
+   * Search targeting facets (interests, locations, etc.)
+   */
+  async searchTargeting(
+    facetType: string,
+    query?: string,
+    limit?: number,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume(`linkedin:default`);
+
+    const params: Record<string, string> = {
+      q: "type",
+      facetType,
+      count: String(Math.min(limit ?? 20, 100)),
+    };
+
+    if (query) {
+      params.query = query;
+    }
+
+    return this.httpClient.get("/v2/adTargetingFacets", params, context);
+  }
+
+  /**
+   * Browse targeting categories / facets for an ad account.
+   */
+  async getTargetingOptions(
+    adAccountUrn: string,
+    facetType?: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume(`linkedin:default`);
+
+    const params: Record<string, string> = {
+      q: "account",
+      account: adAccountUrn,
+    };
+
+    if (facetType) {
+      params.facetType = facetType;
+    }
+
+    return this.httpClient.get("/v2/adTargetingFacets", params, context);
+  }
+
+  // ─── Duplicate Entity ────────────────────────────────────────────
+
+  /**
+   * Duplicate an entity by reading it and creating a copy.
+   * LinkedIn does not have a native copy endpoint, so this is a manual copy.
+   */
+  async duplicateEntity(
+    entityType: LinkedInEntityType,
+    entityUrn: string,
+    options?: { newName?: string },
+    context?: RequestContext
+  ): Promise<unknown> {
+    // Read source entity
+    const source = (await this.getEntity(entityType, entityUrn, context)) as Record<string, unknown>;
+
+    // Build copy payload — strip read-only fields
+    const copyData: Record<string, unknown> = { ...source };
+    delete copyData.id;
+    delete copyData.changeAuditStamps;
+    delete copyData.created;
+    delete copyData.lastModified;
+
+    if (options?.newName) {
+      copyData.name = options.newName;
+    } else if (typeof copyData.name === "string") {
+      copyData.name = `Copy of ${copyData.name}`;
+    }
+
+    // Set to draft/paused status
+    copyData.status = "DRAFT";
+
+    return this.createEntity(entityType, copyData, context);
+  }
+
+  // ─── Delivery Forecast ────────────────────────────────────────────
+
+  /**
+   * Get delivery forecast for targeting criteria.
+   */
+  async getDeliveryForecast(
+    adAccountUrn: string,
+    targetingCriteria: Record<string, unknown>,
+    optimizationTargetType?: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume(`linkedin:default`);
+
+    const requestBody: Record<string, unknown> = {
+      account: adAccountUrn,
+      targetingCriteria,
+    };
+
+    if (optimizationTargetType) {
+      requestBody.optimizationTargetType = optimizationTargetType;
+    }
+
+    return this.httpClient.post("/v2/adForecastsV2", requestBody, context);
+  }
+
+  // ─── Ad Previews ─────────────────────────────────────────────────
+
+  /**
+   * Get ad preview for a creative.
+   */
+  async getAdPreviews(
+    creativeUrn: string,
+    adFormat?: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume(`linkedin:default`);
+
+    const encodedUrn = LinkedInHttpClient.encodeUrn(creativeUrn);
+    const params: Record<string, string> = {};
+
+    if (adFormat) {
+      params.adFormat = adFormat;
+    }
+
+    return this.httpClient.get(`/v2/adCreativePreviews/${encodedUrn}`, params, context);
+  }
+
+  // ─── Internal Helpers ────────────────────────────────────────────
+
+  private async executeBulk<T>(
+    items: T[],
+    operation: (item: T) => Promise<unknown>
+  ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
+    const CONCURRENCY = 5;
+    const results: Array<{ success: boolean; entity?: unknown; error?: string }> = new Array(items.length);
+
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const batch = items.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.allSettled(
+        batch.map((item) => operation(item))
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        if (result.status === "fulfilled") {
+          results[i + j] = { success: true, entity: result.value };
+        } else {
+          results[i + j] = {
+            success: false,
+            error: result.reason?.message ?? String(result.reason),
+          };
+        }
+      }
+    }
+
+    return results;
+  }
+}

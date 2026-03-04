@@ -4,18 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cesteral is an AI-native programmatic advertising optimization platform built on five independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), and Meta Ads campaign management (meta-mcp).
+Cesteral is an AI-native programmatic advertising optimization platform built on seven independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), and TikTok Ads management (tiktok-mcp).
 
 ### Current Project Status
 
 **Phase: Production-Ready ✅**
 
-All five MCP servers are fully implemented with live API integrations:
+All seven MCP servers are fully implemented with live API integrations:
 - **dbm-mcp**: Bid Manager API v2 for DV360 reporting
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
 - **gads-mcp**: Google Ads REST API v23 for Google Ads campaign management & reporting
 - **meta-mcp**: Meta Marketing API v21.0 for Meta Ads campaign management
+- **linkedin-mcp**: LinkedIn Marketing API v2 for LinkedIn Ads management (port 3006)
+- **tiktok-mcp**: TikTok Marketing API v1.3 for TikTok Ads management (port 3007)
 
 ## Essential Commands
 
@@ -33,6 +35,8 @@ cd packages/dv360-mcp && pnpm run dev:http
 cd packages/ttd-mcp && pnpm run dev:http
 cd packages/gads-mcp && pnpm run dev:http
 cd packages/meta-mcp && pnpm run dev:http
+cd packages/linkedin-mcp && pnpm run dev:http
+cd packages/tiktok-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -73,6 +77,12 @@ Use the dev-server script (automatically uses correct port for each server):
 
 # Start meta-mcp (port 3005)
 ./scripts/dev-server.sh meta-mcp
+
+# Start linkedin-mcp (port 3006)
+./scripts/dev-server.sh linkedin-mcp
+
+# Start tiktok-mcp (port 3007)
+./scripts/dev-server.sh tiktok-mcp
 ```
 
 ## Monorepo Architecture
@@ -82,12 +92,14 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 ### Core Packages
 1. **`@cesteral/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Five MCP Servers
+### Seven MCP Servers
 1. **`@cesteral/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
 4. **`@cesteral/gads-mcp`** - Google Ads campaign management & reporting (CRUD via Google Ads REST API v23)
 5. **`@cesteral/meta-mcp`** - Meta Ads campaign management (CRUD via Meta Marketing API v21.0)
+6. **`@cesteral/linkedin-mcp`** - LinkedIn Ads campaign management (CRUD via LinkedIn Marketing API v2)
+7. **`@cesteral/tiktok-mcp`** - TikTok Ads campaign management (CRUD via TikTok Marketing API v1.3)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -573,7 +585,85 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `meta_adjust_bids` | Batch adjust ad set bids | `adAccountId`, `adjustments[]` |
 | `meta_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
 
-### How the Five Servers Work Together
+### linkedin-mcp (LinkedIn Ads Server) Tools — 18 Tools, 5 Entity Types
+
+**Supported entity types:** `adAccount`, `campaignGroup`, `campaign`, `creative`, `conversionRule`
+**Auth:** `MCP_AUTH_MODE=linkedin-bearer`, `LINKEDIN_ACCESS_TOKEN` env var, `LinkedIn-Version: 202409` header on all requests
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `linkedin_list_entities` | List LinkedIn entities with offset pagination | `entityType`, `adAccountUrn?`, `start?`, `count?` |
+| `linkedin_get_entity` | Get single entity by URN | `entityType`, `entityUrn` |
+| `linkedin_create_entity` | Create a LinkedIn entity | `entityType`, `data` |
+| `linkedin_update_entity` | Update entity (PATCH) | `entityType`, `entityUrn`, `data` |
+| `linkedin_delete_entity` | Delete a LinkedIn entity | `entityType`, `entityUrn` |
+| `linkedin_list_ad_accounts` | List accessible ad accounts | `start?`, `count?` |
+
+#### Analytics
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `linkedin_get_analytics` | Delivery metrics via `/v2/adAnalytics` | `adAccountUrn`, `startDate`, `endDate`, `metrics?`, `pivot?` |
+| `linkedin_get_analytics_breakdowns` | Metrics with breakdowns (geo, device, etc.) | `adAccountUrn`, `startDate`, `endDate`, `pivots[]` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `linkedin_bulk_update_status` | Batch pause/archive entities | `entityType`, `entityUrns[]`, `status` |
+| `linkedin_bulk_create_entities` | Batch entity creation (up to 50) | `entityType`, `items[]` |
+| `linkedin_bulk_update_entities` | Batch entity updates (up to 50) | `entityType`, `items[]` |
+| `linkedin_adjust_bids` | Batch adjust campaign bids (read-modify-write) | `adjustments[]` |
+
+#### Targeting & Specialized
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `linkedin_search_targeting` | Search audience facets (skills, companies, locations) | `facetType`, `query?`, `limit?` |
+| `linkedin_get_targeting_options` | Browse targeting categories | `adAccountUrn`, `facetType?` |
+| `linkedin_duplicate_entity` | Copy campaign groups, campaigns, creatives | `entityType`, `entityUrn`, `options?` |
+| `linkedin_get_delivery_forecast` | Audience/delivery forecast for targeting config | `adAccountUrn`, `targetingCriteria` |
+| `linkedin_get_ad_previews` | Ad preview rendering | `creativeUrn`, `adFormat?` |
+| `linkedin_validate_entity` | Dry-run validate entity payload (no API call) | `entityType`, `mode`, `data` |
+
+### tiktok-mcp (TikTok Ads Server) Tools — 18 Tools, 4 Entity Types
+
+**Supported entity types:** `campaign`, `adGroup`, `ad`, `creative`
+**Auth:** `MCP_AUTH_MODE=tiktok-bearer`, `TIKTOK_ACCESS_TOKEN` + `TIKTOK_ADVERTISER_ID` env vars, `X-TikTok-Advertiser-Id` header in HTTP mode
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `tiktok_list_entities` | List entities with page pagination | `entityType`, `advertiserId`, `filters?`, `page?`, `pageSize?` |
+| `tiktok_get_entity` | Get single entity by ID | `entityType`, `advertiserId`, `entityId` |
+| `tiktok_create_entity` | Create a TikTok entity | `entityType`, `advertiserId`, `data` |
+| `tiktok_update_entity` | Update entity fields | `entityType`, `advertiserId`, `entityId`, `data` |
+| `tiktok_delete_entity` | Delete entities | `entityType`, `advertiserId`, `entityIds[]` |
+| `tiktok_list_advertisers` | List accessible advertiser accounts | _(none)_ |
+
+#### Reporting (Async)
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `tiktok_get_report` | Submit async report and download results | `advertiserId`, `dimensions[]`, `metrics[]`, `startDate`, `endDate` |
+| `tiktok_get_report_breakdowns` | Report with breakdown dimensions | `advertiserId`, `dimensions[]`, `breakdowns[]`, `metrics[]`, `startDate`, `endDate` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `tiktok_bulk_update_status` | Batch enable/disable/delete entities | `entityType`, `advertiserId`, `entityIds[]`, `operationStatus` |
+| `tiktok_bulk_create_entities` | Batch entity creation (up to 50) | `entityType`, `advertiserId`, `items[]` |
+| `tiktok_bulk_update_entities` | Batch entity updates (up to 50) | `entityType`, `advertiserId`, `items[]` |
+| `tiktok_adjust_bids` | Batch adjust ad group bid prices (read-modify-write) | `advertiserId`, `adjustments[]` |
+
+#### Targeting & Specialized
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `tiktok_search_targeting` | Search interest categories, behaviors, demographics | `advertiserId`, `targetingType`, `query?` |
+| `tiktok_get_targeting_options` | Browse targeting categories | `advertiserId`, `targetingType?` |
+| `tiktok_duplicate_entity` | Copy campaigns, ad groups, ads | `entityType`, `advertiserId`, `entityId`, `options?` |
+| `tiktok_get_audience_estimate` | Audience size estimation for targeting config | `advertiserId`, `targetingConfig` |
+| `tiktok_get_ad_previews` | Ad preview for video/image ads | `advertiserId`, `adId`, `adFormat?` |
+| `tiktok_validate_entity` | Dry-run validate entity payload (no API call) | `entityType`, `mode`, `data` |
+
+### How the Seven Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**
 1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
@@ -604,6 +694,8 @@ Each server runs on a different port:
 - `ttd-mcp`: port 3003
 - `gads-mcp`: port 3004
 - `meta-mcp`: port 3005
+- `linkedin-mcp`: port 3006
+- `tiktok-mcp`: port 3007
 
 Test MCP endpoint:
 ```bash

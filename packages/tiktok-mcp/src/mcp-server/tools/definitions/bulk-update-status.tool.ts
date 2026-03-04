@@ -1,0 +1,137 @@
+import { z } from "zod";
+import { resolveSessionServices } from "../utils/resolve-session.js";
+import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
+import type { RequestContext } from "@cesteral/shared";
+import type { SdkContext } from "../../../types-global/mcp.js";
+
+const TOOL_NAME = "tiktok_bulk_update_status";
+const TOOL_TITLE = "TikTok Bulk Status Update";
+const TOOL_DESCRIPTION = `Batch update the status of TikTok Ads entities.
+
+**Supported entity types:** ${getEntityTypeEnum().join(", ")}
+
+**Operation status values:**
+- **ENABLE** — Activate entities
+- **DISABLE** — Pause entities
+- **DELETE** — Delete entities (irreversible)
+
+TikTok's status update API accepts an array of IDs in a single request.`;
+
+export const BulkUpdateStatusInputSchema = z
+  .object({
+    entityType: z
+      .enum(getEntityTypeEnum())
+      .describe("Type of entities to update"),
+    advertiserId: z
+      .string()
+      .min(1)
+      .describe("TikTok Advertiser ID"),
+    entityIds: z
+      .array(z.string().min(1))
+      .min(1)
+      .max(20)
+      .describe("Array of entity IDs to update (max 20)"),
+    operationStatus: z
+      .enum(["ENABLE", "DISABLE", "DELETE"])
+      .describe("Target status to apply"),
+  })
+  .describe("Parameters for bulk status update of TikTok Ads entities");
+
+export const BulkUpdateStatusOutputSchema = z
+  .object({
+    totalRequested: z.number(),
+    totalSucceeded: z.number(),
+    totalFailed: z.number(),
+    results: z.array(
+      z.object({
+        entityId: z.string(),
+        success: z.boolean(),
+        error: z.string().optional(),
+      })
+    ),
+    timestamp: z.string().datetime(),
+  })
+  .describe("Bulk status update result");
+
+type BulkUpdateStatusInput = z.infer<typeof BulkUpdateStatusInputSchema>;
+type BulkUpdateStatusOutput = z.infer<typeof BulkUpdateStatusOutputSchema>;
+
+export async function bulkUpdateStatusLogic(
+  input: BulkUpdateStatusInput,
+  context: RequestContext,
+  sdkContext?: SdkContext
+): Promise<BulkUpdateStatusOutput> {
+  const { tiktokService } = resolveSessionServices(sdkContext);
+
+  const result = await tiktokService.bulkUpdateStatus(
+    input.entityType as TikTokEntityType,
+    input.entityIds,
+    input.operationStatus,
+    context
+  );
+
+  const totalSucceeded = result.results.filter((r) => r.success).length;
+
+  return {
+    totalRequested: input.entityIds.length,
+    totalSucceeded,
+    totalFailed: input.entityIds.length - totalSucceeded,
+    results: result.results,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): unknown[] {
+  const lines: string[] = [
+    `Status updates: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
+    "",
+  ];
+
+  for (const r of result.results) {
+    if (r.success) {
+      lines.push(`  ${r.entityId}: SUCCESS`);
+    } else {
+      lines.push(`  ${r.entityId}: FAILED - ${r.error}`);
+    }
+  }
+
+  lines.push("", `Timestamp: ${result.timestamp}`);
+
+  return [{ type: "text" as const, text: lines.join("\n") }];
+}
+
+export const bulkUpdateStatusTool = {
+  name: TOOL_NAME,
+  title: TOOL_TITLE,
+  description: TOOL_DESCRIPTION,
+  inputSchema: BulkUpdateStatusInputSchema,
+  outputSchema: BulkUpdateStatusOutputSchema,
+  annotations: {
+    readOnlyHint: false,
+    openWorldHint: false,
+    idempotentHint: true,
+    destructiveHint: true,
+  },
+  inputExamples: [
+    {
+      label: "Pause multiple campaigns",
+      input: {
+        entityType: "campaign",
+        advertiserId: "1234567890",
+        entityIds: ["1800111111111", "1800222222222"],
+        operationStatus: "DISABLE",
+      },
+    },
+    {
+      label: "Enable multiple ad groups",
+      input: {
+        entityType: "adGroup",
+        advertiserId: "1234567890",
+        entityIds: ["1700111111111"],
+        operationStatus: "ENABLE",
+      },
+    },
+  ],
+  logic: bulkUpdateStatusLogic,
+  responseFormatter: bulkUpdateStatusResponseFormatter,
+};

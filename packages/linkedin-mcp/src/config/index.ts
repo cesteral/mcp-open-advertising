@@ -1,0 +1,63 @@
+import { z } from "zod";
+import {
+  loadDotEnv,
+  BaseConfigSchema,
+  getBaseEnvConfig,
+  parseConfigWithSchema,
+  getDefaultHost,
+} from "@cesteral/shared";
+
+// Load .env file from package root
+loadDotEnv();
+
+const ConfigSchema = BaseConfigSchema.extend({
+  // Defaults for this server
+  serviceName: z.string().default("linkedin-mcp"),
+  port: z.number().int().min(1).max(65535).default(3006),
+  otelServiceName: z.string().default("linkedin-mcp"),
+
+  // Auth — LinkedIn-specific modes
+  mcpAuthMode: z.enum(["linkedin-bearer", "jwt", "none"]).default("linkedin-bearer"),
+
+  // LinkedIn API Configuration
+  linkedinApiBaseUrl: z
+    .string()
+    .url()
+    .default("https://api.linkedin.com"),
+  linkedinApiVersion: z.string().default("202409"),
+  linkedinRateLimitPerMinute: z.number().default(100),
+
+  // Stdio fallback: LinkedIn access token from env vars
+  linkedinAccessToken: z.string().optional(),
+});
+
+export type AppConfig = z.infer<typeof ConfigSchema>;
+
+export function parseConfig(): AppConfig {
+  const defaultHost = getDefaultHost();
+
+  const rawConfig: Record<string, unknown> = {
+    ...getBaseEnvConfig(defaultHost),
+
+    // Server-specific overrides
+    serviceName: process.env.SERVICE_NAME,
+    port: process.env.LINKEDIN_MCP_PORT ? Number(process.env.LINKEDIN_MCP_PORT) : undefined,
+    host: process.env.LINKEDIN_MCP_HOST || defaultHost,
+
+    // LinkedIn API
+    linkedinApiBaseUrl: process.env.LINKEDIN_API_BASE_URL,
+    linkedinApiVersion: process.env.LINKEDIN_API_VERSION,
+    linkedinRateLimitPerMinute: process.env.LINKEDIN_RATE_LIMIT_PER_MINUTE
+      ? Number(process.env.LINKEDIN_RATE_LIMIT_PER_MINUTE)
+      : undefined,
+
+    // Stdio fallback credentials
+    linkedinAccessToken: process.env.LINKEDIN_ACCESS_TOKEN,
+  };
+
+  return parseConfigWithSchema(ConfigSchema, rawConfig);
+}
+
+export const mcpConfig = parseConfig();
+
+export const appConfig: AppConfig = mcpConfig;
