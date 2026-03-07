@@ -259,6 +259,14 @@ terraform apply -var-file=dev.tfvars
     "cesteral-meta": {
       "url": "https://meta.cesteral.com/mcp",
       "apiKey": "your-meta-api-key"
+    },
+    "cesteral-linkedin": {
+      "url": "https://linkedin.cesteral.com/mcp",
+      "apiKey": "your-linkedin-api-key"
+    },
+    "cesteral-tiktok": {
+      "url": "https://tiktok.cesteral.com/mcp",
+      "apiKey": "your-tiktok-api-key"
     }
   }
 }
@@ -512,6 +520,8 @@ Access Cloud Monitoring dashboards:
 - [TTD Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/ttd-mcp)
 - [Google Ads Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/gads-mcp)
 - [Meta Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/meta-mcp)
+- [LinkedIn Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/linkedin-mcp)
+- [TikTok Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/tiktok-mcp)
 
 ---
 

@@ -19,6 +19,8 @@ Clients connect directly to one or more MCP servers:
 - `ttd-mcp`
 - `gads-mcp`
 - `meta-mcp`
+- `linkedin-mcp`
+- `tiktok-mcp`
 
 Use this mode when clients can manage multi-step logic and retries.
 
@@ -46,6 +48,8 @@ Each server exposes its own resource URI patterns. These diverge by platform:
 | `ttd-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}`, `entity-hierarchy://all`, `report-reference://all` | Includes hierarchy and report reference resources |
 | `gads-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}`, `entity-hierarchy://gads`, `gaql-reference://syntax` | Includes GAQL reference and entity examples |
 | `meta-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}` | Meta entity resources |
+| `linkedin-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}` | LinkedIn entity resources |
+| `tiktok-mcp` | `entity-schema://{entityType}`, `entity-examples://{entityType}` | TikTok entity resources |
 | `dbm-mcp` | `metric-types://`, `filter-types://`, `query-examples://all`, `report-types://all`, `compatibility-rules://all` | Reporting-oriented — no entity-schema resources |
 
 ### Planned Namespaced URI Aliases
@@ -69,8 +73,8 @@ For future multi-server disambiguation, namespaced URI aliases are planned but *
 
 ### P0
 
-- Align CI/CD and Terraform to deploy all five MCP servers independently.
-  - **Status**: ✅ Complete — `cloudbuild.yaml`, `cloudbuild-manual.yaml`, and Terraform now cover `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, and `meta-mcp`.
+- Align CI/CD and Terraform to deploy all seven MCP servers independently.
+  - **Status**: ✅ Complete — `cloudbuild.yaml`, `cloudbuild-manual.yaml`, and Terraform now cover `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, and `tiktok-mcp`.
 - Keep docs and architecture diagrams consistent with actual deployable services.
 
 ### P1

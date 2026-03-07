@@ -26,13 +26,13 @@
 
 Cesteral is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk, Google Ads, Meta).
 
-Built on five separate Model Context Protocol (MCP) servers, Cesteral enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
+Built on seven Model Context Protocol (MCP) servers, Cesteral enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
 
 ### Key Differentiators
 
 - **AI-First Interface**: MCP protocol as primary interface, not an afterthought
-- **Multi-Platform Support**: DV360, The Trade Desk, Google Ads, and Meta supported, extensible to additional DSPs
-- **Composable Architecture**: Five separate MCP servers can be used independently or combined
+- **Multi-Platform Support**: DV360, The Trade Desk, Google Ads, Meta, LinkedIn, and TikTok supported, extensible to additional DSPs
+- **Composable Architecture**: Seven separate MCP servers can be used independently or combined
 - **Transparent Decision-Making**: All optimization decisions are explainable and auditable
 - **Cost-Efficient**: Hybrid cloud architecture reduces costs by 40-60% vs. traditional approaches
 
@@ -93,7 +93,7 @@ Programmatic advertising campaign optimization is:
 ### Primary Users (AI Agents)
 
 **Claude Desktop / API**
-- Connects to all five MCP servers simultaneously
+- Connects to all seven MCP servers simultaneously
 - Executes optimization workflows based on prompts
 - Makes routine bid adjustment decisions
 - Escalates edge cases to humans
@@ -196,7 +196,49 @@ Programmatic advertising campaign optimization is:
 
 ---
 
-### Feature 4: Scheduled Automation
+### Feature 4: LinkedIn Ads Management (`linkedin-mcp`)
+
+**Description**: LinkedIn Ads campaign entity management — full CRUD operations plus analytics via the LinkedIn Marketing API v2.
+
+**Capabilities**:
+- **Entity CRUD**: Create, read, update, and delete LinkedIn entities (adAccounts, campaignGroups, campaigns, creatives, conversionRules)
+- **Analytics**: Delivery metrics and breakdowns via `/v2/adAnalytics`
+- **Targeting**: Search audience facets (skills, companies, locations) and browse targeting categories
+
+**User Value**:
+- AI agents can manage LinkedIn campaigns alongside other platform campaigns
+- Unified tooling pattern across platforms (same CRUD verbs, similar tool structure)
+- Bearer token auth model keeps credentials per-session
+
+**Technical Details**:
+- Uses LinkedIn Marketing API v2 via direct HTTP
+- `LinkedIn-Version: 202409` header injected on all requests
+- Auth via Bearer token (`LINKEDIN_ACCESS_TOKEN` env var for stdio mode)
+
+---
+
+### Feature 5: TikTok Ads Management (`tiktok-mcp`)
+
+**Description**: TikTok Ads campaign entity management — full CRUD operations plus async reporting via the TikTok Marketing API v1.3.
+
+**Capabilities**:
+- **Entity CRUD**: Create, read, update, and delete TikTok entities (campaigns, adGroups, ads, creatives)
+- **Reporting**: Submit async reports and download results with breakdown dimensions
+- **Targeting**: Search interest categories, behaviors, and demographics
+
+**User Value**:
+- AI agents can manage TikTok campaigns alongside other platform campaigns
+- Unified tooling pattern across platforms (same CRUD verbs, similar tool structure)
+- Advertiser ID threading model supports multiple advertiser accounts per session
+
+**Technical Details**:
+- Uses TikTok Marketing API v1.3 via direct HTTP
+- `X-TikTok-Advertiser-Id` header required for HTTP mode
+- Auth via Bearer token + advertiser ID (`TIKTOK_ACCESS_TOKEN` + `TIKTOK_ADVERTISER_ID` env vars for stdio mode)
+
+---
+
+### Feature 6: Scheduled Automation
 
 **Description**: Background processes that run on schedules to enable continuous optimization.
 
@@ -232,7 +274,7 @@ Programmatic advertising campaign optimization is:
 
 ---
 
-### Feature 5: AI Agent Guidance (MCP Prompts)
+### Feature 7: AI Agent Guidance (MCP Prompts)
 
 **Description**: Pre-built workflow prompts that guide AI agents through complex optimization scenarios.
 
@@ -273,6 +315,8 @@ cesteral-mcp-servers/
 │   ├── ttd-mcp/                 # Server 3: The Trade Desk entity management & reporting
 │   ├── gads-mcp/                # Server 4: Google Ads management & reporting
 │   ├── meta-mcp/                # Server 5: Meta Ads management
+│   ├── linkedin-mcp/            # Server 6: LinkedIn Ads management
+│   ├── tiktok-mcp/              # Server 7: TikTok Ads management
 │   └── shared/                  # Shared types, utilities, auth, observability
 ├── terraform/                   # Infrastructure as Code
 ├── scripts/                     # Deployment automation
@@ -309,6 +353,8 @@ cesteral-mcp-servers/
 - The Trade Desk REST API
 - Google Ads REST API v23
 - Meta Marketing API v21.0
+- LinkedIn Marketing API v2
+- TikTok Marketing API v1.3
 
 ### Data Flow Example: Optimize Campaign Bids
 
@@ -516,7 +562,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 - CI/CD pipeline (Cloud Build)
 
 **Success Criteria**:
-- All five MCP servers deploy successfully
+- All seven MCP servers deploy successfully
 - Can insert/query test data in BigQuery
 - MCP Gateway responds to basic requests
 
@@ -579,8 +625,8 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 **Goals**: Add Google Ads and Meta platform support ✅ Complete
 
 **Deliverables**:
-- Google Ads MCP server (`gads-mcp`) with 9 tools for entity CRUD and GAQL reporting
-- Meta Ads MCP server (`meta-mcp`) with 15 tools for entity CRUD, insights, and targeting
+- Google Ads MCP server (`gads-mcp`) with 12 tools for entity CRUD and GAQL reporting
+- Meta Ads MCP server (`meta-mcp`) with 18 tools for entity CRUD, insights, and targeting
 
 **Success Criteria**:
 - AI agent can manage Google Ads and Meta campaigns
@@ -588,7 +634,21 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 ---
 
-### Phase 6: Production Hardening (Weeks 29-32)
+### Phase 6: LinkedIn & TikTok Expansion (Weeks 29-34)
+
+**Goals**: Add LinkedIn and TikTok platform support ✅ Complete
+
+**Deliverables**:
+- LinkedIn Ads MCP server (`linkedin-mcp`) with 18 tools for entity CRUD, analytics, and targeting
+- TikTok Ads MCP server (`tiktok-mcp`) with 18 tools for entity CRUD, reporting, and targeting
+
+**Success Criteria**:
+- AI agent can manage LinkedIn and TikTok campaigns
+- Bearer token auth pattern consistent with Meta server
+
+---
+
+### Phase 7: Production Hardening (Weeks 35-38)
 
 **Goals**: Comprehensive testing, monitoring, documentation
 

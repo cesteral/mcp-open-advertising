@@ -59,8 +59,6 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 | [`governance/GOVERNANCE-OVERVIEW.md`](governance/GOVERNANCE-OVERVIEW.md) | ✅ Active | Governance scope and operating model |
 | [`governance/telemetry-governance.md`](governance/telemetry-governance.md) | ⚠️ Partially implemented | Telemetry contract (tool spans live; evaluator spans planned) |
 | [`governance/playbook-delta.schema.json`](governance/playbook-delta.schema.json) | ✅ Active | JSON schema for playbook deltas |
-| [`plans/future/refinement-governance.md`](plans/future/refinement-governance.md) | ⚠️ Future | LLM-MCP refinement lifecycle (not in production) |
-| [`plans/future/phased-rollout.md`](plans/future/phased-rollout.md) | ⚠️ Future | Evaluator rollout plan (not in production) |
 
 ---
 
@@ -71,6 +69,5 @@ Implementation plans currently in progress or recently completed:
 | Document | Description |
 |---|---|
 | [`plans/2026-02-27-bsl-public-readiness.md`](plans/2026-02-27-bsl-public-readiness.md) | BSL 1.1 public release readiness checklist |
-| [`plans/archive/`](plans/archive/) | Completed plans (OTEL observability, Meta MCP, pre-deploy security fixes) |
 
 ---

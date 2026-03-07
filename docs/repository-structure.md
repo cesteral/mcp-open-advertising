@@ -256,7 +256,7 @@ Infrastructure as Code for GCP resources:
 
 **Repository State**: Production-ready
 
-- All five MCP servers implemented with Streamable HTTP transport (Hono)
+- All seven MCP servers implemented with Streamable HTTP transport (Hono)
 - Shared package provides auth strategies, observability, rate limiting, tool handler factory
 - Per-session service architecture with `SessionServiceStore` pattern
 - DV360 servers (dbm-mcp, dv360-mcp) use Google auth adapters
