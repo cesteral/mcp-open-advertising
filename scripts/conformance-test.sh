@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Run MCP conformance tests against one or all servers.
 # Usage:
-#   ./scripts/conformance-test.sh              # test all servers
+#   ./scripts/conformance-test.sh              # test all servers (4 core scenarios)
 #   ./scripts/conformance-test.sh dbm-mcp      # test a single server
 #   ./scripts/conformance-test.sh --ci         # CI mode (non-zero exit on failure)
+#   ./scripts/conformance-test.sh --full       # also run full active suite (slow: ~3min/server)
 #
 # Requires: pnpm, npx, node >=20
 # Starts each server with MCP_AUTH_MODE=none, runs conformance scenarios, then stops it.
@@ -35,16 +36,18 @@ CORE_SCENARIOS=(
   "server-initialize"
   "ping"
   "tools-list"
-  "tools-call"
+  "tools-call-simple-text"
 )
 
 CI_MODE=false
+FULL_SUITE=false
 TARGET_SERVER=""
 
 # Parse args
 for arg in "$@"; do
   case "$arg" in
     --ci) CI_MODE=true ;;
+    --full) FULL_SUITE=true ;;
     *) TARGET_SERVER="$arg" ;;
   esac
 done
@@ -119,9 +122,11 @@ for SERVER in "${SERVERS[@]}"; do
     fi
   done
 
-  # Also run the expected-failures baseline if it exists
+  # Optionally run the full active suite with expected-failures baseline.
+  # Not run by default because elicitation scenarios block for ~60s each.
+  # Run with: ./scripts/conformance-test.sh --full
   EXPECTED_FAILURES="$ROOT_DIR/conformance/expected-failures.yaml"
-  if [ -f "$EXPECTED_FAILURES" ]; then
+  if $FULL_SUITE && [ -f "$EXPECTED_FAILURES" ]; then
     echo "  Running active suite with expected-failures baseline..."
     npx @modelcontextprotocol/conformance server \
       --url "$SERVER_URL" \

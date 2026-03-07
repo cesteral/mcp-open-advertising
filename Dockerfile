@@ -5,7 +5,7 @@ FROM node:20-alpine AS base
 RUN npm install -g pnpm@8.15.0
 WORKDIR /app
 
-# Install dependencies
+# Install all dependencies (including devDeps for build)
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY packages/shared/package.json ./packages/shared/
@@ -18,12 +18,15 @@ COPY packages/linkedin-mcp/package.json ./packages/linkedin-mcp/
 COPY packages/tiktok-mcp/package.json ./packages/tiktok-mcp/
 RUN pnpm install --frozen-lockfile
 
-# Build all packages
+# Build all packages, then deploy production-only bundle for the target server.
+# `pnpm deploy` copies workspace deps as real files (not symlinks) — correct for Docker.
 FROM base AS builder
+ARG SERVER_NAME
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages ./packages
 COPY . .
 RUN pnpm run build
+RUN pnpm --filter "@cesteral/${SERVER_NAME}" deploy --prod /app/deploy
 
 # Production image for specific server
 FROM base AS runner
@@ -31,14 +34,11 @@ ARG SERVER_NAME
 ENV NODE_ENV=production
 ENV SERVER_NAME=${SERVER_NAME}
 
-# Copy only necessary files
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
-COPY --from=builder /app/packages/shared/package.json ./packages/shared/
-COPY --from=builder /app/packages/${SERVER_NAME}/dist ./packages/${SERVER_NAME}/dist
-COPY --from=builder /app/packages/${SERVER_NAME}/package.json ./packages/${SERVER_NAME}/
-
-WORKDIR /app/packages/${SERVER_NAME}
+# pnpm deploy produces a self-contained directory:
+#   node_modules/  — production deps only, workspace packages copied as files
+#   dist/          — compiled server code
+#   package.json
+COPY --from=builder /app/deploy ./
 
 # Expose port (will be overridden by Cloud Run)
 EXPOSE 8080
