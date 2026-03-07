@@ -76,7 +76,7 @@ Get delivery metrics for LinkedIn Ads entities via `/v2/adAnalytics`.
 - `adAccountUrn` (string, required): Ad Account URN
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
-- `metrics` (string[], optional): Metrics to return (e.g., `impressions`, `clicks`, `costInLocalCurrency`)
+- `metrics` (string[], optional): Metrics to return (e.g., `impressions`, `clicks`, `costInUsd`)
 - `pivot` (string, optional): Pivot dimension (e.g., `CAMPAIGN`, `CREATIVE`)
 
 #### 8. `linkedin_get_analytics_breakdowns`
@@ -211,7 +211,7 @@ pnpm run typecheck
 ## Environment Variables
 
 - `LINKEDIN_MCP_PORT`: Server port (default: 3006)
-- `LINKEDIN_MCP_HOST`: Server host (default: 127.0.0.1)
+- `LINKEDIN_MCP_HOST`: Server host (default: `127.0.0.1` in development, `0.0.0.0` in production)
 - `MCP_AUTH_MODE`: Authentication mode - `linkedin-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `LINKEDIN_API_BASE_URL`: LinkedIn API base URL (default: `https://api.linkedin.com`)
@@ -224,9 +224,8 @@ pnpm run typecheck
 ### Key Components
 
 - **`LinkedInHttpClient`** - HTTP client for LinkedIn Marketing API v2 with versioned headers
-- **`LinkedInService`** - CRUD, bulk ops, duplication, delivery forecasts, ad previews
-- **`LinkedInAnalyticsService`** - Analytics queries with breakdowns and pivots
-- **`LinkedInTargetingService`** - Targeting search and category browsing
+- **`LinkedInService`** - CRUD, bulk ops, duplication, targeting, delivery forecasts, ad previews
+- **`LinkedInReportingService`** - Analytics queries with breakdowns and pivots
 - **`LinkedInBearerAuthStrategy`** - Bearer token auth via LinkedIn API validation
 - **`LinkedInAuthAdapter`** - Token management for per-session API calls
 - **`SessionServiceStore`** - Per-session service instances keyed by session ID

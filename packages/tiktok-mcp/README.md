@@ -220,7 +220,7 @@ pnpm run typecheck
 ## Environment Variables
 
 - `TIKTOK_MCP_PORT`: Server port (default: 3007)
-- `TIKTOK_MCP_HOST`: Server host (default: 127.0.0.1)
+- `TIKTOK_MCP_HOST`: Server host (default: `127.0.0.1` in development, `0.0.0.0` in production)
 - `MCP_AUTH_MODE`: Authentication mode - `tiktok-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 - `TIKTOK_API_BASE_URL`: TikTok Business API base URL (default: `https://business-api.tiktok.com`)
@@ -234,9 +234,8 @@ pnpm run typecheck
 ### Key Components
 
 - **`TikTokHttpClient`** - HTTP client for TikTok Marketing API v1.3
-- **`TikTokService`** - CRUD, bulk ops, duplication, audience estimates, ad previews
+- **`TikTokService`** - CRUD, bulk ops, duplication, targeting, audience estimates, ad previews
 - **`TikTokReportingService`** - Async report submission, polling, and download
-- **`TikTokTargetingService`** - Targeting search and category browsing
 - **`TikTokBearerAuthStrategy`** - Bearer token + advertiser ID auth
 - **`TikTokAuthAdapter`** - Token + advertiser ID management for per-session API calls
 - **`SessionServiceStore`** - Per-session service instances keyed by session ID
