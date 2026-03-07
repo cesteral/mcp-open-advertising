@@ -5,7 +5,8 @@
  *   6 core: list entities, get entity, create entity, update entity, delete entity, list ad accounts
  *   2 insights: get insights, get insights breakdowns
  *   2 targeting: search targeting, get targeting options
- *   4 bulk: bulk update status, bulk create entities, bulk update entities, adjust bids
+ *   3 bulk: bulk update status, bulk create entities, bulk update entities
+ *   1 bids: adjust bids
  *   3 specialized: duplicate entity, get delivery estimate, get ad previews
  *   1 validation: validate entity (client-side)
  */
