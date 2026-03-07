@@ -433,6 +433,14 @@ export async function startMcpHttpServer(
   logger: Logger,
   platformConfig: TransportFactoryConfig
 ): Promise<McpHttpServer> {
+  if (config.mcpAuthMode === "none") {
+    logger.warn(
+      "MCP_AUTH_MODE=none — server has no authentication. " +
+      "Sessions without platform credentials will accept protocol messages but tool calls will fail at runtime. " +
+      "This mode is intended for local development only."
+    );
+  }
+
   const { app, shutdown } = createMcpHttpTransport(config, logger, platformConfig);
 
   const server = serve(

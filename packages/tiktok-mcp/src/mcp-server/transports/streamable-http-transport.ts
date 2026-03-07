@@ -42,6 +42,9 @@ function buildPlatformConfig(
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
       "X-TikTok-Advertiser-Id",
+      "X-TikTok-App-Id",
+      "X-TikTok-App-Secret",
+      "X-TikTok-Refresh-Token",
     ],
     authErrorHint:
       config.mcpAuthMode === "tiktok-bearer"
@@ -63,16 +66,33 @@ function buildPlatformConfig(
         return { services };
       }
 
-      // For none/jwt modes without a platform adapter, use env var token if available
+      // For none/jwt modes without a platform adapter, use env var credentials
       if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const tiktokToken = (appConfig as AppConfig).tiktokAccessToken;
-        const tiktokAdvertiserId = (appConfig as AppConfig).tiktokAdvertiserId;
+        const cfg = appConfig as AppConfig;
+        const tiktokAdvertiserId = cfg.tiktokAdvertiserId;
+
+        // Prefer refresh token flow if app credentials are available
+        if (cfg.tiktokAppId && cfg.tiktokAppSecret && cfg.tiktokRefreshToken && tiktokAdvertiserId) {
+          const { TikTokRefreshTokenAdapter } = await import("../../auth/tiktok-auth-adapter.js");
+          const envAdapter = new TikTokRefreshTokenAdapter(
+            { appId: cfg.tiktokAppId, appSecret: cfg.tiktokAppSecret, refreshToken: cfg.tiktokRefreshToken },
+            tiktokAdvertiserId,
+            cfg.tiktokApiBaseUrl
+          );
+          await envAdapter.validate();
+          const services = createSessionServices(envAdapter, cfg.tiktokApiBaseUrl, log, rateLimiter);
+          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
+          return { services };
+        }
+
+        // Fallback: static access token
+        const tiktokToken = cfg.tiktokAccessToken;
         if (tiktokToken && tiktokAdvertiserId) {
           const { TikTokAccessTokenAdapter } = await import("../../auth/tiktok-auth-adapter.js");
           const envAdapter = new TikTokAccessTokenAdapter(
             tiktokToken,
             tiktokAdvertiserId,
-            (appConfig as AppConfig).tiktokApiBaseUrl
+            cfg.tiktokApiBaseUrl
           );
           await envAdapter.validate();
           const services = createSessionServices(

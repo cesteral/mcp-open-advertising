@@ -344,9 +344,9 @@ describe("getTtdCredentialFingerprint", () => {
     expect(fingerprint).not.toBe(other);
   });
 
-  it("returns 16-character hex string", () => {
+  it("returns 32-character hex string", () => {
     const fingerprint = getTtdCredentialFingerprint(MOCK_CREDENTIALS);
-    expect(fingerprint).toHaveLength(16);
-    expect(fingerprint).toMatch(/^[0-9a-f]{16}$/);
+    expect(fingerprint).toHaveLength(32);
+    expect(fingerprint).toMatch(/^[0-9a-f]{32}$/);
   });
 });

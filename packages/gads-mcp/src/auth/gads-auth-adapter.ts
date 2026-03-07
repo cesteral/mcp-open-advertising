@@ -182,7 +182,7 @@ export function getGAdsCredentialFingerprint(credentials: GAdsCredentials): stri
   return createHash("sha256")
     .update(credentials.clientId)
     .digest("hex")
-    .substring(0, 16);
+    .substring(0, 32);
 }
 
 function extractHeader(

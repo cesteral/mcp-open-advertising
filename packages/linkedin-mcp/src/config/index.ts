@@ -29,6 +29,11 @@ const ConfigSchema = BaseConfigSchema.extend({
 
   // Stdio fallback: LinkedIn access token from env vars
   linkedinAccessToken: z.string().optional(),
+
+  // Refresh token flow: client credentials + refresh token (recommended for production)
+  linkedinClientId: z.string().optional(),
+  linkedinClientSecret: z.string().optional(),
+  linkedinRefreshToken: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -53,6 +58,11 @@ export function parseConfig(): AppConfig {
 
     // Stdio fallback credentials
     linkedinAccessToken: process.env.LINKEDIN_ACCESS_TOKEN,
+
+    // Refresh token flow credentials
+    linkedinClientId: process.env.LINKEDIN_CLIENT_ID,
+    linkedinClientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+    linkedinRefreshToken: process.env.LINKEDIN_REFRESH_TOKEN,
   };
 
   return parseConfigWithSchema(ConfigSchema, rawConfig);

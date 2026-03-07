@@ -140,7 +140,7 @@ export function getTtdCredentialFingerprint(credentials: TtdCredentials): string
   return createHash("sha256")
     .update(credentials.partnerId)
     .digest("hex")
-    .substring(0, 16);
+    .substring(0, 32);
 }
 
 function extractHeader(

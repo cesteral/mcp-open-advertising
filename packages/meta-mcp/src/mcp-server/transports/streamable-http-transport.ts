@@ -41,6 +41,8 @@ function buildPlatformConfig(
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-Meta-App-Id",
+      "X-Meta-App-Secret",
     ],
     authErrorHint:
       config.mcpAuthMode === "meta-bearer"
@@ -62,12 +64,29 @@ function buildPlatformConfig(
         return { services };
       }
 
-      // For none/jwt modes without a platform adapter, use env var token if available
+      // For none/jwt modes without a platform adapter, use env var credentials
       if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const metaToken = (appConfig as AppConfig).metaAccessToken;
+        const cfg = appConfig as AppConfig;
+        const metaToken = cfg.metaAccessToken;
+
+        // Prefer token exchange flow if app credentials are available
+        if (metaToken && cfg.metaAppId && cfg.metaAppSecret) {
+          const { MetaRefreshTokenAdapter } = await import("../../auth/meta-auth-adapter.js");
+          const envAdapter = new MetaRefreshTokenAdapter(
+            metaToken,
+            { appId: cfg.metaAppId, appSecret: cfg.metaAppSecret },
+            cfg.metaApiBaseUrl
+          );
+          await envAdapter.validate();
+          const services = createSessionServices(envAdapter, cfg.metaApiBaseUrl, log, rateLimiter);
+          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
+          return { services };
+        }
+
+        // Fallback: static access token
         if (metaToken) {
           const { MetaAccessTokenAdapter } = await import("../../auth/meta-auth-adapter.js");
-          const envAdapter = new MetaAccessTokenAdapter(metaToken, (appConfig as AppConfig).metaApiBaseUrl);
+          const envAdapter = new MetaAccessTokenAdapter(metaToken, cfg.metaApiBaseUrl);
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,

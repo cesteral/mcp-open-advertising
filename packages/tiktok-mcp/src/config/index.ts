@@ -30,6 +30,11 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Stdio fallback: TikTok access token and default advertiser ID
   tiktokAccessToken: z.string().optional(),
   tiktokAdvertiserId: z.string().optional(),
+
+  // Refresh token flow: app credentials + refresh token (recommended for production)
+  tiktokAppId: z.string().optional(),
+  tiktokAppSecret: z.string().optional(),
+  tiktokRefreshToken: z.string().optional(),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -55,6 +60,11 @@ export function parseConfig(): AppConfig {
     // Stdio fallback credentials
     tiktokAccessToken: process.env.TIKTOK_ACCESS_TOKEN,
     tiktokAdvertiserId: process.env.TIKTOK_ADVERTISER_ID,
+
+    // Refresh token flow credentials
+    tiktokAppId: process.env.TIKTOK_APP_ID,
+    tiktokAppSecret: process.env.TIKTOK_APP_SECRET,
+    tiktokRefreshToken: process.env.TIKTOK_REFRESH_TOKEN,
   };
 
   return parseConfigWithSchema(ConfigSchema, rawConfig);

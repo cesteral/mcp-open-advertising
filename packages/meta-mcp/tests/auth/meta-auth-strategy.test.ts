@@ -47,8 +47,8 @@ describe("MetaBearerAuthStrategy", () => {
       });
       expect(result.platformAuthAdapter).toBeDefined();
       expect(result.credentialFingerprint).toBeDefined();
-      expect(result.credentialFingerprint).toHaveLength(16);
-      expect(result.credentialFingerprint).toMatch(/^[0-9a-f]{16}$/);
+      expect(result.credentialFingerprint).toHaveLength(32);
+      expect(result.credentialFingerprint).toMatch(/^[0-9a-f]{32}$/);
     });
 
     it("throws on invalid token", async () => {
@@ -73,6 +73,94 @@ describe("MetaBearerAuthStrategy", () => {
     });
   });
 
+  describe("verify() with app credentials (token exchange flow)", () => {
+    it("prefers token exchange when X-Meta-App-Id and X-Meta-App-Secret headers are present", async () => {
+      // First call: token exchange (POST /oauth/access_token)
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: "long-lived-token",
+          token_type: "bearer",
+          expires_in: 5184000,
+        }),
+      } as unknown as Response);
+      // Second call: /me validation
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: "user-exchange-123", name: "Exchange User" }),
+      } as unknown as Response);
+
+      const strategy = new MetaBearerAuthStrategy("https://graph.test/v21.0", mockLogger);
+      const result = await strategy.verify({
+        authorization: "Bearer short-lived-token",
+        "x-meta-app-id": "app-123",
+        "x-meta-app-secret": "secret-456",
+      });
+
+      expect(result.authInfo).toEqual({
+        clientId: "user-exchange-123",
+        subject: "user-exchange-123",
+        authType: "meta-bearer",
+      });
+      expect(result.platformAuthAdapter).toBeDefined();
+      expect(result.credentialFingerprint).toBeDefined();
+      expect(result.credentialFingerprint).toHaveLength(32);
+
+      // 2 fetch calls: token exchange + /me
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+
+    it("uses stable fingerprint based on appId (not rotating token)", async () => {
+      // Token exchange
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: "ll-token",
+          token_type: "bearer",
+          expires_in: 5184000,
+        }),
+      } as unknown as Response);
+      // /me
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: "user-1", name: "User" }),
+      } as unknown as Response);
+
+      const strategy = new MetaBearerAuthStrategy("https://graph.test/v21.0", mockLogger);
+      const result = await strategy.verify({
+        authorization: "Bearer any-token",
+        "x-meta-app-id": "stable-app-id",
+        "x-meta-app-secret": "secret",
+      });
+
+      // Fingerprint should be based on appId, not rotating access token
+      const fpFromStrategy = await strategy.getCredentialFingerprint({
+        authorization: "Bearer different-token",
+        "x-meta-app-id": "stable-app-id",
+        "x-meta-app-secret": "secret",
+      });
+      expect(result.credentialFingerprint).toBe(fpFromStrategy);
+    });
+
+    it("falls back to static token when only app-id is present (no secret)", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: "user-static", name: "Static User" }),
+      } as unknown as Response);
+
+      const strategy = new MetaBearerAuthStrategy("https://graph.test/v21.0", mockLogger);
+      const result = await strategy.verify({
+        authorization: "Bearer static-token",
+        "x-meta-app-id": "app-123",
+        // Missing x-meta-app-secret
+      });
+
+      expect(result.authInfo.clientId).toBe("user-static");
+      // Only 1 fetch (/me for static token)
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("getCredentialFingerprint()", () => {
     it("returns fingerprint without network call (no validate())", async () => {
       const strategy = new MetaBearerAuthStrategy("https://graph.test/v21.0", mockLogger);
@@ -81,8 +169,8 @@ describe("MetaBearerAuthStrategy", () => {
       });
 
       expect(fingerprint).toBeDefined();
-      expect(fingerprint).toHaveLength(16);
-      expect(fingerprint).toMatch(/^[0-9a-f]{16}$/);
+      expect(fingerprint).toHaveLength(32);
+      expect(fingerprint).toMatch(/^[0-9a-f]{32}$/);
 
       // No network call should have been made
       expect(mockFetchWithTimeout).not.toHaveBeenCalled();

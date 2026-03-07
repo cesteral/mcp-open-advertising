@@ -53,8 +53,8 @@ describe("TikTokBearerAuthStrategy", () => {
       });
       expect(result.platformAuthAdapter).toBeDefined();
       expect(result.credentialFingerprint).toBeDefined();
-      expect(result.credentialFingerprint).toHaveLength(16);
-      expect(result.credentialFingerprint).toMatch(/^[0-9a-f]{16}$/);
+      expect(result.credentialFingerprint).toHaveLength(32);
+      expect(result.credentialFingerprint).toMatch(/^[0-9a-f]{32}$/);
     });
 
     it("throws when Authorization header is missing", async () => {
@@ -120,6 +120,118 @@ describe("TikTokBearerAuthStrategy", () => {
     });
   });
 
+  describe("verify() with refresh token credentials", () => {
+    it("prefers refresh token flow when X-TikTok-App-Id/Secret/Refresh-Token headers are present", async () => {
+      // First call: token exchange (getAccessToken)
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          code: 0,
+          message: "OK",
+          data: { access_token: "refreshed-token", expires_in: 86400 },
+        }),
+      } as unknown as Response);
+      // Second call: user info validation
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          code: 0,
+          message: "OK",
+          data: { display_name: "Refresh User" },
+        }),
+      } as unknown as Response);
+
+      const strategy = new TikTokBearerAuthStrategy(
+        "https://business-api.tiktok.com",
+        mockLogger
+      );
+      const result = await strategy.verify({
+        authorization: "Bearer ignored-static-token",
+        "x-tiktok-advertiser-id": "1234567890",
+        "x-tiktok-app-id": "app-123",
+        "x-tiktok-app-secret": "secret-456",
+        "x-tiktok-refresh-token": "refresh-789",
+      });
+
+      expect(result.authInfo).toMatchObject({
+        clientId: "Refresh User",
+        authType: "tiktok-bearer",
+      });
+      expect(result.platformAuthAdapter).toBeDefined();
+      expect(result.credentialFingerprint).toBeDefined();
+      expect(result.credentialFingerprint).toHaveLength(32);
+
+      // Should have made 2 fetch calls (token exchange + user info)
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+
+    it("uses stable fingerprint based on appId (not rotating token)", async () => {
+      // Token exchange
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          code: 0,
+          message: "OK",
+          data: { access_token: "token-a", expires_in: 86400 },
+        }),
+      } as unknown as Response);
+      // User info
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ code: 0, message: "OK", data: { display_name: "User" } }),
+      } as unknown as Response);
+
+      const strategy = new TikTokBearerAuthStrategy(
+        "https://business-api.tiktok.com",
+        mockLogger
+      );
+      const result = await strategy.verify({
+        authorization: "Bearer any-token",
+        "x-tiktok-advertiser-id": "adv-1",
+        "x-tiktok-app-id": "app-stable",
+        "x-tiktok-app-secret": "secret",
+        "x-tiktok-refresh-token": "refresh",
+      });
+
+      // Fingerprint should be based on appId + advertiserId, not the rotating access token
+      const fpFromStrategy = await strategy.getCredentialFingerprint({
+        authorization: "Bearer different-token",
+        "x-tiktok-advertiser-id": "adv-1",
+        "x-tiktok-app-id": "app-stable",
+        "x-tiktok-app-secret": "secret",
+        "x-tiktok-refresh-token": "refresh",
+      });
+      expect(result.credentialFingerprint).toBe(fpFromStrategy);
+    });
+
+    it("falls back to static token when refresh credentials are incomplete", async () => {
+      // Only app-id provided, no secret or refresh token — should fall back to static
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          code: 0,
+          message: "OK",
+          data: { display_name: "Static User" },
+        }),
+      } as unknown as Response);
+
+      const strategy = new TikTokBearerAuthStrategy(
+        "https://business-api.tiktok.com",
+        mockLogger
+      );
+      const result = await strategy.verify({
+        authorization: "Bearer static-token",
+        "x-tiktok-advertiser-id": "1234567890",
+        "x-tiktok-app-id": "app-123",
+        // Missing app-secret and refresh-token
+      });
+
+      expect(result.authInfo.clientId).toBe("Static User");
+      // Only 1 fetch (user info validation for static token)
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("getCredentialFingerprint()", () => {
     it("returns fingerprint without network call", async () => {
       const strategy = new TikTokBearerAuthStrategy(
@@ -132,8 +244,8 @@ describe("TikTokBearerAuthStrategy", () => {
       });
 
       expect(fingerprint).toBeDefined();
-      expect(fingerprint).toHaveLength(16);
-      expect(fingerprint).toMatch(/^[0-9a-f]{16}$/);
+      expect(fingerprint).toHaveLength(32);
+      expect(fingerprint).toMatch(/^[0-9a-f]{32}$/);
 
       // No network call should have been made
       expect(mockFetchWithTimeout).not.toHaveBeenCalled();

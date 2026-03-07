@@ -284,9 +284,9 @@ describe("parseGAdsCredentialsFromHeaders", () => {
 });
 
 describe("getGAdsCredentialFingerprint", () => {
-  it("produces a 16-character hex string", () => {
+  it("produces a 32-character hex string", () => {
     const fingerprint = getGAdsCredentialFingerprint(VALID_CREDENTIALS);
-    expect(fingerprint).toHaveLength(16);
+    expect(fingerprint).toHaveLength(32);
     expect(fingerprint).toMatch(/^[0-9a-f]+$/);
   });
 

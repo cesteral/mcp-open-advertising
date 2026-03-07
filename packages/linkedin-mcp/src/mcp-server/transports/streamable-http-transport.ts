@@ -41,6 +41,9 @@ function buildPlatformConfig(
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
+      "X-LinkedIn-Client-Id",
+      "X-LinkedIn-Client-Secret",
+      "X-LinkedIn-Refresh-Token",
     ],
     authErrorHint:
       config.mcpAuthMode === "linkedin-bearer"
@@ -63,15 +66,32 @@ function buildPlatformConfig(
         return { services };
       }
 
-      // For none/jwt modes without a platform adapter, use env var token if available
+      // For none/jwt modes without a platform adapter, use env var credentials
       if (appConfig.mcpAuthMode === "none" || appConfig.mcpAuthMode === "jwt") {
-        const linkedInToken = (appConfig as AppConfig).linkedinAccessToken;
+        const cfg = appConfig as AppConfig;
+
+        // Prefer refresh token flow if client credentials are available
+        if (cfg.linkedinClientId && cfg.linkedinClientSecret && cfg.linkedinRefreshToken) {
+          const { LinkedInRefreshTokenAdapter } = await import("../../auth/linkedin-auth-adapter.js");
+          const envAdapter = new LinkedInRefreshTokenAdapter(
+            { clientId: cfg.linkedinClientId, clientSecret: cfg.linkedinClientSecret, refreshToken: cfg.linkedinRefreshToken },
+            cfg.linkedinApiBaseUrl,
+            cfg.linkedinApiVersion
+          );
+          await envAdapter.validate();
+          const services = createSessionServices(envAdapter, cfg.linkedinApiBaseUrl, cfg.linkedinApiVersion, log, rateLimiter);
+          sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
+          return { services };
+        }
+
+        // Fallback: static access token
+        const linkedInToken = cfg.linkedinAccessToken;
         if (linkedInToken) {
           const { LinkedInAccessTokenAdapter } = await import("../../auth/linkedin-auth-adapter.js");
           const envAdapter = new LinkedInAccessTokenAdapter(
             linkedInToken,
-            (appConfig as AppConfig).linkedinApiBaseUrl,
-            (appConfig as AppConfig).linkedinApiVersion
+            cfg.linkedinApiBaseUrl,
+            cfg.linkedinApiVersion
           );
           await envAdapter.validate();
           const services = createSessionServices(
