@@ -6,11 +6,13 @@ export { entityHierarchyResource } from "./entity-hierarchy.resource.js";
 export { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas.resource.js";
 export { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 export { analyticsReferenceResource } from "./analytics-reference.resource.js";
+export { targetingReferenceResource } from "./targeting-reference.resource.js";
 
 import { entityHierarchyResource } from "./entity-hierarchy.resource.js";
 import { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas.resource.js";
 import { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 import { analyticsReferenceResource } from "./analytics-reference.resource.js";
+import { targetingReferenceResource } from "./targeting-reference.resource.js";
 import type { Resource } from "../types.js";
 
 /**
@@ -23,4 +25,5 @@ export const allResources: Resource[] = [
   entityExampleAllResource,
   ...entityExampleResources,
   analyticsReferenceResource,
+  targetingReferenceResource,
 ];

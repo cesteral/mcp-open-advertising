@@ -94,7 +94,7 @@ tiktok_get_report({
 
 ## Resource References
 
-- Fetch \`reporting-reference://all\` for full metrics and dimensions list
+- Fetch \`reporting-reference://tiktok\` for full metrics and dimensions list
 - Fetch \`entity-hierarchy://tiktok/all\` for entity relationships
 
 ## Common Dimensions

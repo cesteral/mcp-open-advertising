@@ -143,7 +143,7 @@ TikTok uses page-based pagination (NOT cursor-based):
 }
 
 export const entityHierarchyResource: Resource = {
-  uri: "entity-hierarchy://all",
+  uri: "entity-hierarchy://tiktok/all",
   name: "TikTok Entity Hierarchy",
   description:
     "Parent-child relationships between TikTok Ads entities, API patterns, and creation ordering",

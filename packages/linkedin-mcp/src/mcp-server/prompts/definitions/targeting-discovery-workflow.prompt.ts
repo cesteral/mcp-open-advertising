@@ -223,8 +223,8 @@ Use the targeting criteria when creating or updating a campaign:
 ---
 
 ## Related Resources
-- \`targeting-reference://all\` — Full targeting facets reference
-- \`entity-schema://campaign\` — Campaign fields including targetingCriteria
-- \`entity-examples://campaign\` — Example campaign payloads with targeting
+- \`targeting-reference://linkedin\` — Full targeting facets reference
+- \`entity-schema://linkedin/campaign\` — Campaign fields including targetingCriteria
+- \`entity-examples://linkedin/campaign\` — Example campaign payloads with targeting
 `;
 }

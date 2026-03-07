@@ -36,15 +36,15 @@ Fetch these resources for detailed schema information:
 | Resource URI | Content |
 |-------------|---------|
 | \`entity-hierarchy://linkedin/all\` | Entity relationships, API patterns, creation order |
-| \`entity-schema://adAccount\` | Ad Account fields |
-| \`entity-schema://campaignGroup\` | Campaign Group fields |
-| \`entity-schema://campaign\` | Campaign fields + targeting criteria |
-| \`entity-schema://creative\` | Creative fields |
-| \`entity-schema://conversionRule\` | Conversion Rule fields |
-| \`entity-examples://all\` | All entity examples |
-| \`entity-examples://{type}\` | Examples for specific type |
-| \`analytics-reference://all\` | Metrics, pivots, time granularities |
-| \`targeting-reference://all\` | Targeting facets and URN formats |
+| \`entity-schema://linkedin/adAccount\` | Ad Account fields |
+| \`entity-schema://linkedin/campaignGroup\` | Campaign Group fields |
+| \`entity-schema://linkedin/campaign\` | Campaign fields + targeting criteria |
+| \`entity-schema://linkedin/creative\` | Creative fields |
+| \`entity-schema://linkedin/conversionRule\` | Conversion Rule fields |
+| \`entity-examples://linkedin/all\` | All entity examples |
+| \`entity-examples://linkedin/{type}\` | Examples for specific type |
+| \`analytics-reference://linkedin\` | Metrics, pivots, time granularities |
+| \`targeting-reference://linkedin\` | Targeting facets and URN formats |
 
 ## Tool Categories
 
@@ -96,7 +96,7 @@ Fetch these resources for detailed schema information:
 
 1. Start with \`linkedin_list_ad_accounts\` to find your account
 2. Fetch \`entity-hierarchy://linkedin/all\` for API patterns and URN formats
-3. Fetch \`entity-schema://{type}\` for field details
-4. Fetch \`entity-examples://{type}\` for payload templates
+3. Fetch \`entity-schema://linkedin/{type}\` for field details
+4. Fetch \`entity-examples://linkedin/{type}\` for payload templates
 `;
 }

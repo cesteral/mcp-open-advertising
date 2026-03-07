@@ -204,8 +204,8 @@ Use the targeting when creating or updating an ad group:
 ---
 
 ## Related Resources
-- \`reporting-reference://all\` — Reporting metrics and dimensions
-- \`entity-schema://adGroup\` — Ad Group fields including all targeting parameters
-- \`entity-examples://adGroup\` — Example ad group payloads with targeting
+- \`reporting-reference://tiktok\` — Reporting metrics and dimensions
+- \`entity-schema://tiktok/adGroup\` — Ad Group fields including all targeting parameters
+- \`entity-examples://tiktok/adGroup\` — Example ad group payloads with targeting
 `;
 }

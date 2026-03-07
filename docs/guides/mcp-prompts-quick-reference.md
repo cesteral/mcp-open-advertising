@@ -108,7 +108,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `tiktok_troubleshoot_entity` | Diagnose TikTok Ads entity issues, ad review status, and delivery problems | `entityType`, `entityId`, `advertiserId` |
 | `tiktok_reporting_workflow` | Submit async reports and retrieve results with dimensions and breakdowns | `advertiserId` (required), `reportLevel` (optional) |
 | `tiktok_entity_update_workflow` | Safe entity update — field changes vs status changes (separate endpoints) | `entityType`, `entityId`, `advertiserId` |
-| `tiktok_bulk_operations_workflow` | Batch create, update, status change, archive, and bid adjustments | `advertiserId`, `operation` |
+| `tiktok_bulk_operations_workflow` | Batch create, update, status change, archive, and bid adjustments | `advertiserId`, `entityType` |
 | `tiktok_targeting_discovery_workflow` | Search interest categories, browse behaviors, build targeting, estimate audience | `advertiserId` (required), `goal` (optional) |
 | `tiktok_entity_duplication_workflow` | Duplicate campaigns/ad groups/ads for A/B testing and scaling | `entityType` (required), `entityId` (required), `advertiserId` (required) |
 | `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |

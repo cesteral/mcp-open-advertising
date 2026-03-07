@@ -54,7 +54,7 @@ Before updating, always read the entity's current configuration:
 
 Review the current values. Save the current state for rollback reference.
 
-**Resource reference:** Fetch \`entity-schema://${entityType}\` for the full field schema and \`entity-examples://${entityType}\` for common update patterns.
+**Resource reference:** Fetch \`entity-schema://linkedin/${entityType}\` for the full field schema and \`entity-examples://linkedin/${entityType}\` for common update patterns.
 
 ---
 

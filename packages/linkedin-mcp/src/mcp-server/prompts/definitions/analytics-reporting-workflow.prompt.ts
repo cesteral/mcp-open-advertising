@@ -84,7 +84,7 @@ linkedin_get_analytics({
 
 ## Resource References
 
-- Fetch \`analytics-reference://all\` for full metrics and pivot list
+- Fetch \`analytics-reference://linkedin\` for full metrics and pivot list
 - Fetch \`entity-hierarchy://linkedin/all\` for entity relationships
 
 ## Available Pivots

@@ -36,13 +36,13 @@ Fetch these resources for detailed schema information:
 | Resource URI | Content |
 |-------------|---------|
 | \`entity-hierarchy://tiktok/all\` | Entity relationships, API patterns, creation order |
-| \`entity-schema://campaign\` | Campaign fields |
-| \`entity-schema://adGroup\` | Ad Group fields + targeting |
-| \`entity-schema://ad\` | Ad fields |
-| \`entity-schema://creative\` | Creative fields |
-| \`entity-examples://all\` | All entity examples |
-| \`entity-examples://{type}\` | Examples for specific type |
-| \`reporting-reference://all\` | Metrics, dimensions, and breakdown options |
+| \`entity-schema://tiktok/campaign\` | Campaign fields |
+| \`entity-schema://tiktok/adGroup\` | Ad Group fields + targeting |
+| \`entity-schema://tiktok/ad\` | Ad fields |
+| \`entity-schema://tiktok/creative\` | Creative fields |
+| \`entity-examples://tiktok/all\` | All entity examples |
+| \`entity-examples://tiktok/{type}\` | Examples for specific type |
+| \`reporting-reference://tiktok\` | Metrics, dimensions, and breakdown options |
 
 ## Tool Categories
 
@@ -94,7 +94,7 @@ Fetch these resources for detailed schema information:
 
 1. Start with \`tiktok_list_advertisers\` to find your account
 2. Fetch \`entity-hierarchy://tiktok/all\` for API patterns
-3. Fetch \`entity-schema://{type}\` for field details
-4. Fetch \`entity-examples://{type}\` for payload templates
+3. Fetch \`entity-schema://tiktok/{type}\` for field details
+4. Fetch \`entity-examples://tiktok/{type}\` for payload templates
 `;
 }
