@@ -49,8 +49,8 @@ describe("LinkedIn MCP definitions coverage", () => {
   it("exposes expected definitions", () => {
     expect(allTools).toHaveLength(24); // 18 business tools + 6 conformance tools
     expect(allResources.length).toBeGreaterThan(4);
-    expect(getAllPrompts()).toHaveLength(2);
-    expect(promptRegistry.size).toBe(2);
+    expect(getAllPrompts()).toHaveLength(10);
+    expect(promptRegistry.size).toBe(10);
     expect(getPromptDefinition("linkedin_campaign_setup_workflow")).toBeDefined();
   });
 

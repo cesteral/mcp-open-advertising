@@ -84,6 +84,36 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
+### linkedin-mcp (10 prompts)
+
+| Prompt | Description | Key Arguments |
+|--------|-------------|---------------|
+| `linkedin_campaign_setup_workflow` | Complete LinkedIn campaign creation (Campaign Group → Campaign → Creative) | `adAccountUrn` (required), `includeTargeting` (optional) |
+| `linkedin_tool_schema_exploration` | Discover LinkedIn MCP tools, resources, and schemas | `objective` (optional) |
+| `linkedin_troubleshoot_entity` | Diagnose LinkedIn Ads entity issues and delivery problems | `entityType`, `entityUrn` |
+| `linkedin_analytics_reporting_workflow` | Build and execute LinkedIn analytics queries with pivots and breakdowns | `adAccountUrn` (required), `pivot` (optional) |
+| `linkedin_entity_update_workflow` | Safe entity update with fetch-modify-verify pattern and URN-based IDs | `entityType`, `entityUrn` |
+| `linkedin_bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `adAccountUrn`, `operation` |
+| `linkedin_targeting_discovery_workflow` | Search facets, browse categories, build targeting criteria, estimate delivery | `adAccountUrn` (required), `goal` (optional) |
+| `linkedin_entity_duplication_workflow` | Duplicate campaign groups/campaigns/creatives for A/B testing and scaling | `entityType` (required), `entityUrn` (required) |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
+
+### tiktok-mcp (10 prompts)
+
+| Prompt | Description | Key Arguments |
+|--------|-------------|---------------|
+| `tiktok_campaign_setup_workflow` | Complete TikTok campaign creation (Campaign → Ad Group → Ad) | `advertiserId` (required), `objective` (optional) |
+| `tiktok_tool_schema_exploration` | Discover TikTok MCP tools, resources, and schemas | `objective` (optional) |
+| `tiktok_troubleshoot_entity` | Diagnose TikTok Ads entity issues, ad review status, and delivery problems | `entityType`, `entityId`, `advertiserId` |
+| `tiktok_reporting_workflow` | Submit async reports and retrieve results with dimensions and breakdowns | `advertiserId` (required), `reportLevel` (optional) |
+| `tiktok_entity_update_workflow` | Safe entity update — field changes vs status changes (separate endpoints) | `entityType`, `entityId`, `advertiserId` |
+| `tiktok_bulk_operations_workflow` | Batch create, update, status change, archive, and bid adjustments | `advertiserId`, `operation` |
+| `tiktok_targeting_discovery_workflow` | Search interest categories, browse behaviors, build targeting, estimate audience | `advertiserId` (required), `goal` (optional) |
+| `tiktok_entity_duplication_workflow` | Duplicate campaigns/ad groups/ads for A/B testing and scaling | `entityType` (required), `entityId` (required), `advertiserId` (required) |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
+
 ## When to Use Prompts
 
 ### Use Prompts For:
@@ -116,7 +146,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 
 ## Key Metrics
 
-**Current Prompts:** 41
+**Current Prompts:** 61
 **Average Size:** ~8KB when invoked
 **Context Cost:** 0KB when not invoked
 **Build Status:** ✅ Clean
@@ -129,3 +159,5 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 - TTD Prompts: `packages/ttd-mcp/src/mcp-server/prompts/`
 - Google Ads Prompts: `packages/gads-mcp/src/mcp-server/prompts/`
 - Meta Prompts: `packages/meta-mcp/src/mcp-server/prompts/`
+- LinkedIn Prompts: `packages/linkedin-mcp/src/mcp-server/prompts/`
+- TikTok Prompts: `packages/tiktok-mcp/src/mcp-server/prompts/`
