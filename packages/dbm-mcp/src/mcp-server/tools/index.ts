@@ -10,7 +10,7 @@ import { getPerformanceMetricsTool } from "./definitions/get-performance-metrics
 import { getHistoricalMetricsTool } from "./definitions/get-historical-metrics.tool.js";
 import { getPacingStatusTool } from "./definitions/get-pacing-status.tool.js";
 import { runCustomQueryTool } from "./definitions/run-custom-query.tool.js";
-import type { ToolDefinitionForFactory } from "@cesteral/shared";
+import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 /**
  * All tool definitions for the DBM MCP server.
@@ -22,4 +22,6 @@ export const allTools: ToolDefinitionForFactory[] = [
   getHistoricalMetricsTool,
   getPacingStatusTool,
   runCustomQueryTool,
+  // ── Conformance ──
+  ...conformanceTools,
 ];

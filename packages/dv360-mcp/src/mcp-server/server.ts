@@ -57,11 +57,18 @@ export async function createMcpServer(
   resourceRegistry.registerAll();
   logger.info({ resourceCount: resourceRegistry.getResourceCount() }, "Registered MCP resources");
 
-  const server = new McpServer({
-    name: "dv360-mcp",
-    version: packageJson.version,
-    description: "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
-  });
+  const server = new McpServer(
+    {
+      name: "dv360-mcp",
+      version: packageJson.version,
+      description: "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
+    },
+    {
+      capabilities: {
+        logging: {},
+      },
+    }
+  );
 
   // Interaction logger for persisting tool execution data
   const interactionLogger = new InteractionLogger({

@@ -58,7 +58,7 @@ describe("TikTok MCP definitions coverage", () => {
   });
 
   it("exposes expected definitions", () => {
-    expect(allTools).toHaveLength(18);
+    expect(allTools).toHaveLength(24); // 18 business tools + 6 conformance tools
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(2);
     expect(promptRegistry.size).toBe(2);

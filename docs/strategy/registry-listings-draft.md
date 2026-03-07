@@ -11,20 +11,22 @@ Ready-to-submit listings for the three major MCP registries. Submit once the rep
 **Category:** Advertising / Marketing
 
 **Description:**
-Five production-ready MCP servers for programmatic advertising management across DV360, Google Ads, Meta Ads, and The Trade Desk. Provides ~63 tools for campaign CRUD, reporting, bulk operations, targeting, custom bidding, and performance insights — all accessible to AI agents via the Model Context Protocol.
+Seven production-ready MCP servers for programmatic advertising management across DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads. Provides ~99 tools for campaign CRUD, reporting, bulk operations, targeting, custom bidding, and performance insights — all accessible to AI agents via the Model Context Protocol.
 
-**Platforms:** Google Display & Video 360, Google Ads, Meta Ads, The Trade Desk, Bid Manager (reporting)
+**Platforms:** Google Display & Video 360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, TikTok Ads, Bid Manager (reporting)
 
-**Tool Count:** ~63 tools across 5 servers
+**Tool Count:** ~99 tools across 7 servers
 - dbm-mcp: 5 reporting tools (delivery metrics, performance KPIs, pacing, custom queries)
-- dv360-mcp: 16 management tools (entity CRUD, batch ops, custom bidding, targeting)
+- dv360-mcp: 19 management tools (entity CRUD, batch ops, custom bidding, targeting, validation)
 - ttd-mcp: 18 management tools (entity CRUD, bulk ops, reporting, GraphQL)
-- gads-mcp: 9 management tools (entity CRUD, GAQL queries, bulk mutate)
-- meta-mcp: 15 management tools (entity CRUD, insights, targeting, duplication, previews)
+- gads-mcp: 12 management tools (entity CRUD, GAQL queries, bulk mutate, insights)
+- meta-mcp: 18 management tools (entity CRUD, insights, targeting, duplication, previews)
+- linkedin-mcp: 18 management tools (entity CRUD, analytics, targeting, duplication, forecasting)
+- tiktok-mcp: 18 management tools (entity CRUD, reporting, targeting, duplication, audience estimation)
 
 **Auth:**
 - Hosted: JWT authentication — Early Access (request access at cesteral.com)
-- Self-hosted: Platform-specific credentials (Google OAuth2, TTD partner tokens, Meta Bearer tokens)
+- Self-hosted: Platform-specific credentials (Google OAuth2, TTD partner tokens, Meta Bearer tokens, LinkedIn Bearer tokens, TikTok Bearer tokens)
 
 **Deployment:**
 - Self-hosted via Docker + Terraform on GCP Cloud Run
@@ -47,16 +49,18 @@ Five production-ready MCP servers for programmatic advertising management across
 
 **Category:** Advertising / Marketing
 
-**Short Description:** AI-native programmatic advertising optimization across DV360, Google Ads, Meta Ads, and The Trade Desk via 5 MCP servers with ~63 tools.
+**Short Description:** AI-native programmatic advertising optimization across DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads via 7 MCP servers with ~99 tools.
 
 **Long Description:**
-Cesteral provides five independent MCP servers for managing programmatic advertising campaigns across major platforms. Built for AI agents, each server wraps a platform API and exposes tools via the Model Context Protocol:
+Cesteral provides seven independent MCP servers for managing programmatic advertising campaigns across major platforms. Built for AI agents, each server wraps a platform API and exposes tools via the Model Context Protocol:
 
 - **dbm-mcp** — DV360 reporting via Bid Manager API v2 (delivery metrics, pacing, custom queries)
 - **dv360-mcp** — DV360 campaign management via DV360 API v4 (11 entity types, targeting, custom bidding)
 - **ttd-mcp** — The Trade Desk management via TTD REST API (9 entity types, GraphQL, bulk operations)
 - **gads-mcp** — Google Ads management via REST API v23 (GAQL queries, entity CRUD, bulk mutate)
 - **meta-mcp** — Meta Ads management via Marketing API v21.0 (insights, targeting discovery, duplication)
+- **linkedin-mcp** — LinkedIn Ads management via Marketing API v2 (analytics, targeting, forecasting)
+- **tiktok-mcp** — TikTok Ads management via Marketing API v1.3 (reporting, targeting, audience estimation)
 
 All servers feature per-session authentication, OpenTelemetry observability, rate limiting, and structured logging. Deploy self-hosted on GCP Cloud Run with included Terraform and CI/CD configuration.
 
@@ -68,6 +72,8 @@ All servers feature per-session authentication, OpenTelemetry observability, rat
 | ttd-mcp | TTD partner token headers | JWT (Early Access) |
 | gads-mcp | Google Ads OAuth2 headers | JWT (Early Access) |
 | meta-mcp | Meta Bearer token | JWT (Early Access) |
+| linkedin-mcp | LinkedIn Bearer token | JWT (Early Access) |
+| tiktok-mcp | TikTok Bearer token | JWT (Early Access) |
 
 Hosted option coming soon — request early access at https://cesteral.com
 
@@ -85,22 +91,24 @@ Hosted option coming soon — request early access at https://cesteral.com
 
 **Category:** Advertising / Marketing
 
-**Tagline:** AI-native programmatic advertising management for DV360, Google Ads, Meta Ads, and The Trade Desk
+**Tagline:** AI-native programmatic advertising management for DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads
 
 **Description:**
-Five production-ready MCP servers providing ~63 tools for programmatic advertising campaign management. Each server wraps a major advertising platform API and exposes operations through the Model Context Protocol, enabling AI agents to manage campaigns, analyze performance, adjust bids, and configure targeting across platforms.
+Seven production-ready MCP servers providing ~99 tools for programmatic advertising campaign management. Each server wraps a major advertising platform API and exposes operations through the Model Context Protocol, enabling AI agents to manage campaigns, analyze performance, adjust bids, and configure targeting across platforms.
 
 **Key capabilities:**
-- Campaign lifecycle management (create, update, pause, archive) across 4 platforms
+- Campaign lifecycle management (create, update, pause, archive) across 6 platforms
 - Performance reporting with custom metrics, breakdowns, and time series
 - Bulk operations for bid adjustments, status updates, and entity creation
-- Targeting configuration and audience discovery (DV360, Meta)
+- Targeting configuration and audience discovery (DV360, Meta, LinkedIn, TikTok)
 - Custom bidding algorithm management (DV360)
 - GAQL query execution for flexible Google Ads reporting
 - GraphQL API access for advanced Trade Desk operations
+- LinkedIn analytics with multi-pivot breakdowns
+- TikTok async reporting with breakdown dimensions
 
 **Architecture:**
-- 5 independent servers, each deployable as a separate container
+- 7 independent servers, each deployable as a separate container
 - Per-session authentication with platform-specific credential handling
 - OpenTelemetry traces and metrics for production observability
 - TypeScript/Node.js with Zod runtime validation

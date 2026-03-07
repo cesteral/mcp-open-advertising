@@ -47,7 +47,7 @@ import { getAdPreviewsTool } from "./get-ad-previews.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
-import type { ToolDefinitionForFactory } from "@cesteral/shared";
+import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -76,4 +76,6 @@ export const allTools: ToolDefinitionForFactory[] = [
   adjustBidsTool,
   // ── Validation ──
   validateEntityTool,
+  // ── Conformance ──
+  ...conformanceTools,
 ];

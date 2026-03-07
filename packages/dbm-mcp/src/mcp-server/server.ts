@@ -37,11 +37,18 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer({
-    name: "dbm-mcp",
-    version: packageJson.version,
-    description: "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
-  });
+  const server = new McpServer(
+    {
+      name: "dbm-mcp",
+      version: packageJson.version,
+      description: "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
+    },
+    {
+      capabilities: {
+        logging: {},
+      },
+    }
+  );
 
   // Interaction logger for persisting tool execution data
   const interactionLogger = new InteractionLogger({

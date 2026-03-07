@@ -6,20 +6,11 @@
 # As new capabilities are added, scenarios should be removed from this list.
 
 expected_failures:
-  # tools-call — conformance expects a generic echo/test tool; our domain tools
-  # require specific arguments and auth context. TODO: add a conformance-test
-  # tool or adapter to pass this scenario.
-  - tools-call
-
   # Content type scenarios — our tools return text/JSON only
   - tools-call-image
   - tools-call-audio
   - tools-call-embedded-resource
   - tools-call-mixed-content
-
-  # Logging — not exposed as an MCP capability
-  - logging-set-level
-  - tools-call-with-logging
 
   # Progress tokens — not currently implemented
   - tools-call-with-progress
@@ -36,11 +27,6 @@ expected_failures:
 
   # Completion — not implemented
   - completion-complete
-
-  # Elicitation — partially implemented, conformance test may expect specific behavior
-  - tools-call-elicitation
-  - elicitation-sep1034-defaults
-  - elicitation-sep1330-enums
 
   # SSE scenarios — we use Streamable HTTP, not SSE polling
   - server-sse-polling

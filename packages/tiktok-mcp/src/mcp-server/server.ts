@@ -56,11 +56,18 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer({
-    name: "tiktok-mcp",
-    version: packageJson.version,
-    description: "TikTok Ads campaign management and reporting via TikTok Marketing API v1.3. Supports 4 entity types (campaign, adGroup, ad, creative), async reporting with breakdowns, bulk operations, targeting search, audience estimation, and ad previews.",
-  });
+  const server = new McpServer(
+    {
+      name: "tiktok-mcp",
+      version: packageJson.version,
+      description: "TikTok Ads campaign management and reporting via TikTok Marketing API v1.3. Supports 4 entity types (campaign, adGroup, ad, creative), async reporting with breakdowns, bulk operations, targeting search, audience estimation, and ad previews.",
+    },
+    {
+      capabilities: {
+        logging: {},
+      },
+    }
+  );
 
   // Interaction logger for persisting tool execution data
   const interactionLogger = new InteractionLogger({

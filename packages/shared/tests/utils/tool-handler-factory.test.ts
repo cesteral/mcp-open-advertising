@@ -36,6 +36,7 @@ function createMockServer() {
     server: {
       elicitInput: vi.fn().mockResolvedValue({}),
     },
+    sendLoggingMessage: vi.fn().mockResolvedValue(undefined),
     registerTool: vi.fn().mockImplementation((name: string, _config: any, handler: any) => {
       handlers.set(name, handler);
     }),

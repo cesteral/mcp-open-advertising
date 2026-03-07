@@ -32,7 +32,7 @@ import { bulkMutateTool } from "./bulk-mutate.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
-import type { ToolDefinitionForFactory } from "@cesteral/shared";
+import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
   // ── Read Tools ──
@@ -50,4 +50,6 @@ export const allTools: ToolDefinitionForFactory[] = [
   adjustBidsTool,
   // ── Validate Tools ──
   validateEntityTool,
+  // ── Conformance ──
+  ...conformanceTools,
 ];

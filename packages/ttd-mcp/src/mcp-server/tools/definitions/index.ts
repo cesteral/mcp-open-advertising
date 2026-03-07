@@ -44,7 +44,7 @@ import { graphqlQueryBulkTool } from "./graphql-query-bulk.tool.js";
 import { graphqlMutationBulkTool } from "./graphql-mutation-bulk.tool.js";
 import { graphqlBulkJobTool } from "./graphql-bulk-job.tool.js";
 import { graphqlCancelBulkJobTool } from "./graphql-cancel-bulk-job.tool.js";
-import type { ToolDefinitionForFactory } from "@cesteral/shared";
+import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -70,4 +70,6 @@ export const allTools: ToolDefinitionForFactory[] = [
   graphqlMutationBulkTool,
   graphqlBulkJobTool,
   graphqlCancelBulkJobTool,
+  // ── Conformance ──
+  ...conformanceTools,
 ];

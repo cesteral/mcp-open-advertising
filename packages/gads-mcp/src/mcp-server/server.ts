@@ -45,14 +45,21 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer({
-    name: "gads-mcp",
-    version: packageJson.version,
-    description:
-      "Google Ads campaign management and reporting via Google Ads REST API v23. " +
-      "Supports GAQL queries, account listing, and full CRUD for 6 entity types " +
-      "(campaign, adGroup, ad, keyword, campaignBudget, asset) with bulk operations.",
-  });
+  const server = new McpServer(
+    {
+      name: "gads-mcp",
+      version: packageJson.version,
+      description:
+        "Google Ads campaign management and reporting via Google Ads REST API v23. " +
+        "Supports GAQL queries, account listing, and full CRUD for 6 entity types " +
+        "(campaign, adGroup, ad, keyword, campaignBudget, asset) with bulk operations.",
+    },
+    {
+      capabilities: {
+        logging: {},
+      },
+    }
+  );
 
   // Interaction logger for persisting tool execution data
   const interactionLogger = new InteractionLogger({

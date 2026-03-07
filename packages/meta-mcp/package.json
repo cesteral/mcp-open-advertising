@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "Meta Ads MCP Server - Campaign entity management and reporting via Meta Marketing API v21.0",
   "license": "BSL-1.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
+    "directory": "packages/meta-mcp"
+  },
+  "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
+  "keywords": ["mcp", "model-context-protocol", "advertising", "meta-ads", "facebook-ads"],
+  "files": ["dist/", "README.md", "LICENSE"],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

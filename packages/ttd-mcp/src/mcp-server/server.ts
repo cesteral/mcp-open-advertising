@@ -55,11 +55,18 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer({
-    name: "ttd-mcp",
-    version: packageJson.version,
-    description: "The Trade Desk campaign management, reporting, and optimization via TTD API v3 + GraphQL. Supports 9 entity types (advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList), bulk operations, bid adjustments, GraphQL passthrough, and async report generation with download/parse.",
-  });
+  const server = new McpServer(
+    {
+      name: "ttd-mcp",
+      version: packageJson.version,
+      description: "The Trade Desk campaign management, reporting, and optimization via TTD API v3 + GraphQL. Supports 9 entity types (advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList), bulk operations, bid adjustments, GraphQL passthrough, and async report generation with download/parse.",
+    },
+    {
+      capabilities: {
+        logging: {},
+      },
+    }
+  );
 
   // Interaction logger for persisting tool execution data
   const interactionLogger = new InteractionLogger({

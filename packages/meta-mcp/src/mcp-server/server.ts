@@ -55,11 +55,18 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer({
-    name: "meta-mcp",
-    version: packageJson.version,
-    description: "Meta Ads campaign management, reporting, and optimization via Meta Marketing API v21.0. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
-  });
+  const server = new McpServer(
+    {
+      name: "meta-mcp",
+      version: packageJson.version,
+      description: "Meta Ads campaign management, reporting, and optimization via Meta Marketing API v21.0. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
+    },
+    {
+      capabilities: {
+        logging: {},
+      },
+    }
+  );
 
   // Interaction logger for persisting tool execution data
   const interactionLogger = new InteractionLogger({

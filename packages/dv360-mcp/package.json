@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "DV360 MCP Server - Campaign entity management and configuration",
   "license": "BSL-1.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
+    "directory": "packages/dv360-mcp"
+  },
+  "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
+  "keywords": ["mcp", "model-context-protocol", "advertising", "dv360", "display-video-360"],
+  "files": ["dist/", "README.md", "LICENSE"],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "Shared infrastructure utilities and authentication for Cesteral MCP servers",
   "license": "BSL-1.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
+    "directory": "packages/shared"
+  },
+  "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
+  "keywords": ["mcp", "model-context-protocol", "advertising", "shared", "utilities"],
+  "files": ["dist/", "README.md", "LICENSE"],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

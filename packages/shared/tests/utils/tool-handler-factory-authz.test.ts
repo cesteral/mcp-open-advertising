@@ -23,6 +23,7 @@ function createMockServer() {
   const handlers = new Map<string, (args: unknown) => Promise<unknown>>();
   return {
     server: { elicitInput: vi.fn() },
+    sendLoggingMessage: vi.fn().mockResolvedValue(undefined),
     registerTool: vi.fn((name: string, _config: unknown, handler: (args: unknown) => Promise<unknown>) => {
       handlers.set(name, handler);
     }),

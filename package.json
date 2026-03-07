@@ -2,7 +2,7 @@
   "name": "cesteral-mcp",
   "version": "1.0.0",
   "private": true,
-  "description": "Cesteral - AI-native programmatic advertising optimization platform with five independent MCP servers",
+  "description": "Cesteral - AI-native programmatic advertising optimization platform with seven independent MCP servers",
   "license": "BSL-1.1",
   "type": "module",
   "engines": {

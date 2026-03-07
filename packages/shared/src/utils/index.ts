@@ -17,3 +17,4 @@ export * from "./server-bootstrap.js";
 export * from "./interaction-logger.js";
 export * from "./retryable-fetch.js";
 export * from "./mcp-http-transport-factory.js";
+export * from "./conformance-echo-tool.js";

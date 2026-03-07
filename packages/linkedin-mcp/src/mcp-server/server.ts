@@ -56,12 +56,19 @@ export async function createMcpServer(
   sessionId?: string,
   gcsBucket?: string
 ): Promise<McpServer> {
-  const server = new McpServer({
-    name: "linkedin-mcp",
-    version: packageJson.version,
-    description:
-      "LinkedIn Ads campaign management, analytics, and optimization via LinkedIn Marketing API v2. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics with pivot breakdowns, bulk operations, targeting search, delivery forecasts, and ad previews.",
-  });
+  const server = new McpServer(
+    {
+      name: "linkedin-mcp",
+      version: packageJson.version,
+      description:
+        "LinkedIn Ads campaign management, analytics, and optimization via LinkedIn Marketing API v2. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics with pivot breakdowns, bulk operations, targeting search, delivery forecasts, and ad previews.",
+    },
+    {
+      capabilities: {
+        logging: {},
+      },
+    }
+  );
 
   // Interaction logger for persisting tool execution data
   const interactionLogger = new InteractionLogger({

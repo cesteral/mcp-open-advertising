@@ -49,7 +49,7 @@ import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 import { getAdPreviewsTool } from "./get-ad-previews.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
-import type { ToolDefinitionForFactory } from "@cesteral/shared";
+import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -78,4 +78,6 @@ export const allTools: ToolDefinitionForFactory[] = [
   getAdPreviewsTool,
   // ── Validation ──
   validateEntityTool,
+  // ── Conformance ──
+  ...conformanceTools,
 ];

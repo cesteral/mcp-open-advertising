@@ -51,7 +51,7 @@ import { createAssignedTargetingTool } from "./create-assigned-targeting.tool.js
 import { deleteAssignedTargetingTool } from "./delete-assigned-targeting.tool.js";
 import { validateTargetingConfigTool } from "./validate-targeting-config.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
-import type { ToolDefinitionForFactory } from "@cesteral/shared";
+import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 export const allTools: ToolDefinitionForFactory[] = [
   // Tier 1: Entity CRUD (generic tools handle all entity types dynamically)
@@ -78,4 +78,6 @@ export const allTools: ToolDefinitionForFactory[] = [
   validateTargetingConfigTool,
   // Validation
   validateEntityTool,
+  // ── Conformance ──
+  ...conformanceTools,
 ];

@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "TikTok Ads MCP Server - Campaign entity management and reporting via TikTok Marketing API v1.3",
   "license": "BSL-1.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
+    "directory": "packages/tiktok-mcp"
+  },
+  "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
+  "keywords": ["mcp", "model-context-protocol", "advertising", "tiktok-ads"],
+  "files": ["dist/", "README.md", "LICENSE"],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

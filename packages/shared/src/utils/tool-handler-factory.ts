@@ -55,6 +55,7 @@ export interface ToolSdkContext {
   requestId?: string;
   sessionId?: string;
   elicitInput?: (params: Record<string, unknown>) => Promise<unknown>;
+  sendLoggingMessage?: (params: { level: string; logger?: string; data?: unknown }) => Promise<void>;
   [key: string]: unknown;
 }
 
@@ -143,6 +144,7 @@ interface McpServerLike {
   server: {
     elicitInput: (params: any) => Promise<any>;
   };
+  sendLoggingMessage(params: { level: string; logger?: string; data?: unknown }): Promise<void>;
   registerTool(
     name: string,
     config: ToolRegistrationConfig,
@@ -313,6 +315,13 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       async (args: unknown) => {
         logger.info({ toolName: tool.name, arguments: args }, "Handling tool call");
 
+        // Send MCP logging notification for tool invocation
+        server.sendLoggingMessage({
+          level: "info",
+          logger: tool.name,
+          data: `Invoking tool: ${tool.name}`,
+        }).catch(() => { /* ignore if no client connected */ });
+
         const startTime = Date.now();
 
         return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
@@ -419,6 +428,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               elicitInput: async (params) => {
                 return server.server.elicitInput(params);
               },
+              sendLoggingMessage: async (params) => {
+                return server.sendLoggingMessage(params);
+              },
             };
             const interactionContext: ToolInteractionContext = {
               toolName: tool.name,
@@ -499,6 +511,13 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               "Tool executed successfully"
             );
 
+            // Send MCP logging notification for successful completion
+            server.sendLoggingMessage({
+              level: "info",
+              logger: tool.name,
+              data: `Tool ${tool.name} completed successfully`,
+            }).catch(() => { /* ignore if no client connected */ });
+
             if (resolvedAuthContext) {
               auditLogger.info(
                 {
@@ -576,6 +595,13 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               { operation: `tool:${tool.name}`, input: args },
               logger
             );
+
+            // Send MCP logging notification for tool failure
+            server.sendLoggingMessage({
+              level: "error",
+              logger: tool.name,
+              data: `Tool ${tool.name} failed: ${(error as Error).message}`,
+            }).catch(() => { /* ignore if no client connected */ });
 
             const isProduction = process.env.NODE_ENV === "production";
             const sanitizedData = ErrorHandler.sanitizeErrorData(mcpError.data);
