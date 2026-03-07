@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the Cesteral platform - an AI-native programmatic advertising optimization system built on five independent MCP (Model Context Protocol) servers.
+This repository contains the Cesteral platform - an AI-native programmatic advertising optimization system built on seven independent MCP (Model Context Protocol) servers.
 
 ## Repository Layout
 
@@ -14,6 +14,8 @@ cesteral-mcp-servers/
 │   ├── ttd-mcp/                    # Server 3: The Trade Desk management & reporting
 │   ├── gads-mcp/                   # Server 4: Google Ads management & reporting
 │   ├── meta-mcp/                   # Server 5: Meta Ads management
+│   ├── linkedin-mcp/               # Server 6: LinkedIn Ads management
+│   ├── tiktok-mcp/                 # Server 7: TikTok Ads management
 │   └── shared/                     # Shared types, utilities, auth, observability
 ├── docs/                           # Documentation
 ├── scripts/                        # Deployment and automation scripts
@@ -23,7 +25,7 @@ cesteral-mcp-servers/
 └── CLAUDE.md                       # Claude Code instructions
 ```
 
-## Five MCP Servers
+## Seven MCP Servers
 
 ### 1. **dbm-mcp** (Reporting Server)
 
@@ -154,6 +156,74 @@ cesteral-mcp-servers/
 
 ---
 
+### 6. **linkedin-mcp** (LinkedIn Ads Server)
+
+**Purpose**: LinkedIn Ads campaign management and analytics
+
+**Responsibilities**:
+
+- Full CRUD on LinkedIn entities (ad accounts, campaign groups, campaigns, creatives, conversion rules)
+- Analytics with dimensional breakdowns (geo, device, etc.)
+- Targeting search and delivery forecasts
+- Bulk operations and entity duplication
+- Per-session auth via Bearer token
+
+**Platform**: LinkedIn Marketing API v2
+
+**Key Tools**:
+
+- `linkedin_list_entities`
+- `linkedin_get_entity`
+- `linkedin_create_entity`
+- `linkedin_update_entity`
+- `linkedin_delete_entity`
+- `linkedin_list_ad_accounts`
+- `linkedin_get_analytics`
+- `linkedin_get_analytics_breakdowns`
+- `linkedin_bulk_update_status`
+- `linkedin_bulk_create_entities`
+- `linkedin_search_targeting`
+- `linkedin_get_targeting_options`
+- `linkedin_duplicate_entity`
+- `linkedin_get_delivery_forecast`
+- `linkedin_get_ad_previews`
+
+---
+
+### 7. **tiktok-mcp** (TikTok Ads Server)
+
+**Purpose**: TikTok Ads campaign management and reporting
+
+**Responsibilities**:
+
+- Full CRUD on TikTok entities (campaigns, ad groups, ads, creatives)
+- Async reporting with breakdown dimensions
+- Targeting search and audience estimates
+- Bulk operations and entity duplication
+- Per-session auth via Bearer token + advertiser ID
+
+**Platform**: TikTok Marketing API v1.3
+
+**Key Tools**:
+
+- `tiktok_list_entities`
+- `tiktok_get_entity`
+- `tiktok_create_entity`
+- `tiktok_update_entity`
+- `tiktok_delete_entity`
+- `tiktok_list_advertisers`
+- `tiktok_get_report`
+- `tiktok_get_report_breakdowns`
+- `tiktok_bulk_update_status`
+- `tiktok_bulk_create_entities`
+- `tiktok_search_targeting`
+- `tiktok_get_targeting_options`
+- `tiktok_duplicate_entity`
+- `tiktok_get_audience_estimate`
+- `tiktok_get_ad_previews`
+
+---
+
 ## Directory Details
 
 ### `/docs`
@@ -184,7 +254,7 @@ Automation scripts for deployment and operations:
 
 Infrastructure as Code for GCP resources:
 
-- Cloud Run services (5 MCP servers)
+- Cloud Run services (7 MCP servers)
 - BigQuery datasets and tables
 - Cloud Storage buckets
 - Pub/Sub topics
@@ -203,27 +273,27 @@ Infrastructure as Code for GCP resources:
 ## Architecture Overview
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                              AI Clients                                  │
-│                    (Claude Desktop, Custom Agents)                        │
-└───────┬──────────────┬──────────────┬──────────────┬──────────────┬──────┘
-        │              │              │              │              │
-        │ HTTPS/MCP    │              │              │    JWT Bearer Tokens
-        │              │              │              │              │
-        ▼              ▼              ▼              ▼              ▼
-┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐
-│  dbm-mcp   │ │ dv360-mcp  │ │  ttd-mcp   │ │ gads-mcp   │ │ meta-mcp   │
-│            │ │            │ │            │ │            │ │            │
-│ Reporting  │ │ DV360 Mgmt │ │ TTD Mgmt   │ │ Google Ads │ │ Meta Ads   │
-│ Server     │ │  Server    │ │  Server    │ │  Server    │ │  Server    │
-│            │ │            │ │            │ │            │ │            │
-│ Bid Mgr    │ │ DV360 API  │ │ TTD REST   │ │ Google Ads │ │ Meta Graph │
-│ API        │ │ CRUD ops   │ │ API CRUD   │ │ API CRUD   │ │ API CRUD   │
-└─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └─────┬──────┘
-      │              │              │              │              │
-      └──────────────┼──────────────┼──────────────┼──────────────┘
-                     │              │
-                     ▼              ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                          AI Clients                                              │
+│                                (Claude Desktop, Custom Agents)                                    │
+└──┬──────────┬──────────┬──────────┬──────────┬──────────┬──────────┬─────────────────────────────┘
+   │          │          │          │          │          │          │
+   │ HTTPS/MCP│          │          │          │          │    JWT Bearer Tokens
+   │          │          │          │          │          │          │
+   ▼          ▼          ▼          ▼          ▼          ▼          ▼
+┌─────────┐┌─────────┐┌─────────┐┌─────────┐┌─────────┐┌──────────┐┌──────────┐
+│ dbm-mcp ││dv360-mcp││ ttd-mcp ││gads-mcp ││meta-mcp ││linkedin- ││ tiktok-  │
+│         ││         ││         ││         ││         ││  mcp     ││  mcp     │
+│Reporting││DV360    ││TTD Mgmt ││Google   ││Meta Ads ││LinkedIn  ││TikTok   │
+│ Server  ││Mgmt Svr ││ Server  ││Ads Svr  ││ Server  ││Ads Svr   ││Ads Svr  │
+│         ││         ││         ││         ││         ││          ││          │
+│Bid Mgr  ││DV360 API││TTD REST ││Google   ││Meta     ││LinkedIn  ││TikTok   │
+│API      ││CRUD ops ││API CRUD ││Ads CRUD ││API CRUD ││API CRUD  ││API CRUD │
+└────┬────┘└────┬────┘└────┬────┘└────┬────┘└────┬────┘└─────┬────┘└─────┬───┘
+     │          │          │          │          │           │           │
+     └──────────┼──────────┼──────────┼──────────┼───────────┼───────────┘
+                │          │          │
+                ▼          ▼          ▼
            ┌────────────────────────┐
            │  GCP Data & Compute    │
            │                        │
@@ -235,19 +305,21 @@ Infrastructure as Code for GCP resources:
            └────────┬───────────────┘
                     │
                     ▼
-           ┌─────────────────────────┐
-           │    External APIs        │
-           │  • DV360 API            │
-           │  • Bid Manager API      │
-           │  • TTD REST API         │
-           │  • Google Ads API       │
-           │  • Meta Marketing API   │
-           └─────────────────────────┘
+           ┌─────────────────────────────┐
+           │    External APIs            │
+           │  • DV360 API                │
+           │  • Bid Manager API          │
+           │  • TTD REST API             │
+           │  • Google Ads API           │
+           │  • Meta Marketing API       │
+           │  • LinkedIn Marketing API   │
+           │  • TikTok Marketing API     │
+           └─────────────────────────────┘
 ```
 
 ### Access Patterns
 
-- **Direct access (default)**: clients connect to any subset of `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, and `meta-mcp` in the same session.
+- **Direct access (default)**: clients connect to any subset of `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, and `tiktok-mcp` in the same session.
 - **Optional orchestration service**: for policy-heavy or high-scale workflows, an internal orchestration service can act as an MCP client to multiple servers and return a single consolidated result.
 
 ---
@@ -267,8 +339,8 @@ Infrastructure as Code for GCP resources:
 
 **Next Steps**:
 
-1. ~~Production API integrations~~ ✅ Complete — all five servers have live API integrations
-2. ~~Align Terraform and CI/CD for independent deployment of all five servers~~ ✅ Complete
+1. ~~Production API integrations~~ ✅ Complete — all seven servers have live API integrations
+2. ~~Align Terraform and CI/CD for independent deployment of all seven servers~~ ✅ Complete
 3. Standardize versioning and compatibility metadata across servers/contracts
 4. Deploy servers to GCP Cloud Run
 
@@ -281,7 +353,7 @@ Infrastructure as Code for GCP resources:
 - **Cloud Platform**: Google Cloud Platform (GCP)
 - **Infrastructure**: Terraform
 - **Protocol**: Model Context Protocol (MCP) via `@modelcontextprotocol/sdk`
-- **Authentication**: Google headers, TTD partner tokens, Google Ads OAuth, Meta Bearer, JWT
+- **Authentication**: Google headers, TTD partner tokens, Google Ads OAuth, Meta Bearer, LinkedIn Bearer, TikTok Bearer, JWT
 - **Observability**: OpenTelemetry (traces + metrics)
 - **Containerization**: Docker
 - **Monorepo**: pnpm workspaces + Turborepo

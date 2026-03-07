@@ -6,6 +6,15 @@ DBM MCP Server - Generic cross-platform reporting and metrics server.
 
 Read-only reporting server that provides delivery metrics, performance calculations, time-series data, and pacing status. Platform-agnostic design supports DV360, Google Ads, Meta, The Trade Desk, and Amazon DSP.
 
+## Features
+
+- **Per-session Google auth** via `GoogleAuthAdapter` with `X-DV360-*` request headers
+- **Streamable HTTP + stdio transports** via Hono + `@hono/mcp`
+- **OpenTelemetry** instrumentation for traces and metrics
+- **Rate limiting** via shared `RateLimiter` class
+- **Structured logging** via Pino
+- **Read-only reporting** -- no write operations, no entity mutation
+
 ## MCP Tools
 
 ### 1. `get_campaign_delivery`
