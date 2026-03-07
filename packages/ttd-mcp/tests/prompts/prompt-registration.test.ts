@@ -4,7 +4,7 @@ import {
   getAllPrompts,
 } from "../../src/mcp-server/prompts/index.js";
 
-const EXPECTED_COUNT = 7;
+const EXPECTED_COUNT = 10;
 
 describe("MCP Prompt Registration", () => {
   it("registers expected number of prompts", () => {

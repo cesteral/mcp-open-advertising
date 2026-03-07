@@ -5,6 +5,7 @@ import {
   getEntityConfig,
   type TikTokEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import type { Logger } from "pino";
 
 /** TikTok page_info response shape */
 interface TikTokPageInfo {
@@ -34,7 +35,8 @@ interface TikTokListData {
 export class TikTokService {
   constructor(
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: TikTokHttpClient
+    private readonly httpClient: TikTokHttpClient,
+    private readonly logger: Logger
   ) {}
 
   // ─── Standard CRUD ──────────────────────────────────────────────
@@ -174,6 +176,7 @@ export class TikTokService {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsDuplicate) {
+      this.logger.debug({ entityType }, "Duplicate skipped: entity type does not support duplication");
       throw new Error(`Entity type ${entityType} does not support duplication`);
     }
 
@@ -262,12 +265,14 @@ export class TikTokService {
     operationStatus: "ENABLE" | "DISABLE" | "DELETE",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
+    this.logger.debug({ entityType, count: entityIds.length, operationStatus }, "Bulk status update");
     try {
       await this.updateEntityStatus(entityType, entityIds, operationStatus, context);
       return {
         results: entityIds.map((entityId) => ({ entityId, success: true })),
       };
     } catch (error) {
+      this.logger.debug({ entityType, error }, "Bulk status update failed for all entities");
       return {
         results: entityIds.map((entityId) => ({
           entityId,

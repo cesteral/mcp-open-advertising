@@ -15,6 +15,8 @@ const mockRateLimiter = {
   destroy: vi.fn(),
 };
 
+const mockLogger: any = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
 const mockHttpClient = {
   post: vi.fn(),
   get: vi.fn(),
@@ -24,7 +26,7 @@ describe("TikTokReportingService", () => {
   let service: TikTokReportingService;
 
   beforeEach(() => {
-    service = new TikTokReportingService(mockRateLimiter as any, mockHttpClient as any);
+    service = new TikTokReportingService(mockRateLimiter as any, mockHttpClient as any, mockLogger);
     vi.clearAllMocks();
   });
 

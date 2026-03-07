@@ -2,9 +2,7 @@ import type { TikTokHttpClient } from "./tiktok-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
 import { fetchWithTimeout } from "@cesteral/shared";
-
-const POLL_INTERVAL_MS = 10_000;
-const MAX_POLL_ATTEMPTS = 30;
+import type { Logger } from "pino";
 
 /** TikTok report task status values */
 type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
@@ -41,7 +39,10 @@ export interface TikTokReportConfig {
 export class TikTokReportingService {
   constructor(
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: TikTokHttpClient
+    private readonly httpClient: TikTokHttpClient,
+    private readonly logger: Logger,
+    private readonly pollIntervalMs: number = 10_000,
+    private readonly maxPollAttempts: number = 30
   ) {}
 
   /**
@@ -81,7 +82,9 @@ export class TikTokReportingService {
     taskId: string,
     context?: RequestContext
   ): Promise<ReportTaskCheckData> {
-    for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+    this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
+
+    for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
       await this.rateLimiter.consume(`tiktok:reporting`);
 
       const result = (await this.httpClient.get(
@@ -91,15 +94,23 @@ export class TikTokReportingService {
       )) as ReportTaskCheckData;
 
       if (result.status === "DONE" || result.status === "FAILED") {
+        this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
         return result;
       }
 
+      const attemptsRemaining = this.maxPollAttempts - attempt - 1;
+      if (attemptsRemaining <= 3) {
+        this.logger.warn({ taskId, attemptsRemaining, status: result.status }, "Report poll nearing attempt limit");
+      } else {
+        this.logger.debug({ taskId, attempt, status: result.status }, "Report still pending, waiting");
+      }
+
       // Wait before next poll
-      await this.sleep(POLL_INTERVAL_MS);
+      await this.sleep(this.pollIntervalMs);
     }
 
     throw new Error(
-      `Report task ${taskId} did not complete after ${MAX_POLL_ATTEMPTS} polling attempts (${(MAX_POLL_ATTEMPTS * POLL_INTERVAL_MS) / 1000}s)`
+      `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts (${(this.maxPollAttempts * this.pollIntervalMs) / 1000}s)`
     );
   }
 
@@ -120,7 +131,7 @@ export class TikTokReportingService {
     }
 
     const csvText = await response.text();
-    const lines = csvText.trim().split("\n");
+    const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
 
     if (lines.length === 0) {
       return { rows: [], headers: [], totalRows: 0 };

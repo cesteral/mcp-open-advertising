@@ -18,11 +18,13 @@ const mockRateLimiter: any = {
   destroy: vi.fn(),
 };
 
+const mockLogger: any = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
 describe("TikTokService", () => {
   let service: TikTokService;
 
   beforeEach(() => {
-    service = new TikTokService(mockRateLimiter, mockHttpClient);
+    service = new TikTokService(mockRateLimiter, mockHttpClient, mockLogger);
     mockGet.mockReset();
     mockPost.mockReset();
     mockDelete.mockReset();

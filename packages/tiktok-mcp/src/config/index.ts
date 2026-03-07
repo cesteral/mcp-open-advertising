@@ -35,6 +35,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   tiktokAppId: z.string().optional(),
   tiktokAppSecret: z.string().optional(),
   tiktokRefreshToken: z.string().optional(),
+
+  // Reporting poll configuration
+  tiktokReportPollIntervalMs: z.number().default(10_000),
+  tiktokReportMaxPollAttempts: z.number().default(30),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -65,6 +69,14 @@ export function parseConfig(): AppConfig {
     tiktokAppId: process.env.TIKTOK_APP_ID,
     tiktokAppSecret: process.env.TIKTOK_APP_SECRET,
     tiktokRefreshToken: process.env.TIKTOK_REFRESH_TOKEN,
+
+    // Reporting poll configuration
+    tiktokReportPollIntervalMs: process.env.TIKTOK_REPORT_POLL_INTERVAL_MS
+      ? Number(process.env.TIKTOK_REPORT_POLL_INTERVAL_MS)
+      : undefined,
+    tiktokReportMaxPollAttempts: process.env.TIKTOK_REPORT_MAX_POLL_ATTEMPTS
+      ? Number(process.env.TIKTOK_REPORT_MAX_POLL_ATTEMPTS)
+      : undefined,
   };
 
   return parseConfigWithSchema(ConfigSchema, rawConfig);

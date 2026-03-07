@@ -6,6 +6,7 @@ export { SessionServiceStore } from "@cesteral/shared";
 import { TikTokHttpClient } from "./tiktok/tiktok-http-client.js";
 import { TikTokService } from "./tiktok/tiktok-service.js";
 import { TikTokReportingService } from "./tiktok/tiktok-reporting-service.js";
+import { appConfig } from "../config/index.js";
 
 export interface SessionServices {
   httpClient: TikTokHttpClient;
@@ -25,8 +26,14 @@ export function createSessionServices(
     baseUrl,
     logger
   );
-  const tiktokService = new TikTokService(rateLimiter, httpClient);
-  const tiktokReportingService = new TikTokReportingService(rateLimiter, httpClient);
+  const tiktokService = new TikTokService(rateLimiter, httpClient, logger);
+  const tiktokReportingService = new TikTokReportingService(
+    rateLimiter,
+    httpClient,
+    logger,
+    appConfig.tiktokReportPollIntervalMs,
+    appConfig.tiktokReportMaxPollAttempts
+  );
 
   return {
     httpClient,

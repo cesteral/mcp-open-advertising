@@ -6,15 +6,17 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_validate_entity";
 const TOOL_TITLE = "Validate TTD Entity";
-const TOOL_DESCRIPTION = `Test a TTD entity payload against the TTD API.
+const TOOL_DESCRIPTION = `⚠️ WARNING: This tool makes REAL API calls — it is NOT a safe dry-run. Successful calls WILL create or update real entities in TTD.
+
+Test a TTD entity payload against the TTD API.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 Sends the payload to the TTD API and reports whether it succeeds or what validation errors exist.
 
-**WARNING: This is NOT a true dry-run.** TTD has no native dry-run/validate-only mode:
-- In **create** mode, a successful call **CREATES** the entity.
-- In **update** mode, a successful call **UPDATES** the entity.
+**Why this is not a dry-run:** TTD has no native dry-run/validate-only mode:
+- In **create** mode, a successful call **CREATES** the entity (permanent side effect).
+- In **update** mode, a successful call **UPDATES** the entity (permanent side effect).
 
 Use this tool primarily to **diagnose validation failures** (400 errors) by testing payloads incrementally. If the call succeeds, the side effect has already occurred.`;
 
@@ -114,7 +116,7 @@ export const validateEntityTool = {
   },
   inputExamples: [
     {
-      label: "Validate a new campaign payload before creating",
+      label: "⚠️ Test a new campaign payload (WILL create entity if valid)",
       input: {
         entityType: "campaign",
         mode: "create",
@@ -129,7 +131,7 @@ export const validateEntityTool = {
       },
     },
     {
-      label: "Validate an ad group update payload",
+      label: "⚠️ Test an ad group update payload (WILL update entity if valid)",
       input: {
         entityType: "adGroup",
         mode: "update",

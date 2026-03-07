@@ -50,7 +50,7 @@ type DownloadOutput = z.infer<typeof DownloadReportOutputSchema>;
  * Parse CSV text into an array of row objects keyed by header names.
  */
 function parseCsv(csvText: string): { headers: string[]; rows: Record<string, string>[] } {
-  const lines = csvText.trim().split("\n");
+  const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
   if (lines.length === 0) return { headers: [], rows: [] };
 
   const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));

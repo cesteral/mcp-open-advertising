@@ -92,20 +92,19 @@ export class LinkedInReportingService {
     filters?: Record<string, string>,
     context?: RequestContext
   ): Promise<{ results: Array<{ pivot: string; elements: unknown[] }> }> {
-    // Run one analytics query per pivot dimension
-    const pivotResults = await Promise.all(
-      pivots.map(async (pivot) => {
-        const result = await this.getAnalytics(
-          adAccountUrn,
-          dateRange,
-          metrics,
-          pivot,
-          filters?.timeGranularity,
-          context
-        );
-        return { pivot, elements: result.elements };
-      })
-    );
+    // Process pivots sequentially to avoid rate limit bursts (typical: 2-5 pivots)
+    const pivotResults: Array<{ pivot: string; elements: unknown[] }> = [];
+    for (const pivot of pivots) {
+      const result = await this.getAnalytics(
+        adAccountUrn,
+        dateRange,
+        metrics,
+        pivot,
+        filters?.timeGranularity,
+        context
+      );
+      pivotResults.push({ pivot, elements: result.elements });
+    }
 
     return { results: pivotResults };
   }
