@@ -11,7 +11,7 @@ export const bulkOperationsWorkflowPrompt: Prompt = {
     },
     {
       name: "entityType",
-      description: "Entity type to operate on (campaign, adGroup, ad, creative)",
+      description: "Entity type to operate on (campaign, adGroup, ad)",
       required: false,
     },
   ],

@@ -92,7 +92,7 @@ linkedin_list_entities({
   "count": 50
 })
 \`\`\`
-` : operation === "create" ? "" : `
+` : `
 ## Bulk Update Workflow
 
 ### Step 1: List entities to update

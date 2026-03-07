@@ -46,7 +46,8 @@ linkedin_get_analytics({
   "startDate": "2026-02-01",
   "endDate": "2026-03-07",
   "metrics": ["impressions", "clicks", "costInUsd", "conversions"],
-  "pivot": "CAMPAIGN"
+  "pivot": "CAMPAIGN",
+  "campaigns": ["${entityUrn}"]
 })
 \`\`\`
 
