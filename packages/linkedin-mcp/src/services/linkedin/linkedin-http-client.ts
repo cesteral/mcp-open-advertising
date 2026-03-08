@@ -151,7 +151,6 @@ export class LinkedInHttpClient {
           Authorization: `Bearer ${accessToken}`,
           "LinkedIn-Version": apiVersion,
           "X-Restli-Protocol-Version": "2.0.0",
-          ...(options?.headers as Record<string, string> | undefined),
         };
       },
       mapStatusCode: (status: number, _body: string) => mapLinkedInErrorToJsonRpc(status),

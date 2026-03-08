@@ -132,10 +132,7 @@ export class MetaGraphApiClient {
     context?: RequestContext,
     options?: RequestInit
   ): Promise<unknown> {
-    const maxRetries = META_RETRY_CONFIG.maxRetries ?? 3;
-    const initialBackoffMs = META_RETRY_CONFIG.initialBackoffMs ?? 1_000;
-    const maxBackoffMs = META_RETRY_CONFIG.maxBackoffMs ?? 10_000;
-    const timeoutMs = META_RETRY_CONFIG.timeoutMs ?? 10_000;
+    const { maxRetries, initialBackoffMs, maxBackoffMs, timeoutMs } = META_RETRY_CONFIG as Required<typeof META_RETRY_CONFIG>;
 
     let lastError: McpError | undefined;
 
