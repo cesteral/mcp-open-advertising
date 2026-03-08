@@ -11,8 +11,8 @@ const TOOL_TITLE = "Bulk Create DV360 Entities";
 
 const TOOL_DESCRIPTION =
   "Batch create up to 50 DV360 entities of the same type. " +
-  "Loops through items individually (DV360 API has no native batch endpoint). " +
-  "Returns partial success results — failed items do not block remaining creates. " +
+  "Runs creates in parallel batches of up to 5 (DV360 API has no native batch endpoint). " +
+  "Failed items do not block the remaining batch — partial success is returned. " +
   "Fetch entity-schema://{entityType} and entity-examples://{entityType} before calling.";
 
 /**
