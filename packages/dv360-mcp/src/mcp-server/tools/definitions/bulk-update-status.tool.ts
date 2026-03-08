@@ -109,10 +109,8 @@ export const BulkUpdateStatusOutputSchema = z
       )
       .describe("Failed updates with error messages"),
     totalRequested: z.number().describe("Total updates requested"),
-    totalSuccessful: z.number().describe("Total successful updates"),
-    totalFailed: z.number().describe("Total failed updates"),
-    successCount: z.number().describe("Alias for totalSuccessful"),
-    failureCount: z.number().describe("Alias for totalFailed"),
+    successCount: z.number().describe("Total successful updates"),
+    failureCount: z.number().describe("Total failed updates"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk status update result");
@@ -151,8 +149,6 @@ export async function bulkUpdateStatusLogic(
         successful: [],
         failed: [],
         totalRequested: input.entityIds.length,
-        totalSuccessful: 0,
-        totalFailed: 0,
         successCount: 0,
         failureCount: 0,
         timestamp: new Date().toISOString(),
@@ -272,8 +268,6 @@ export async function bulkUpdateStatusLogic(
     successful,
     failed,
     totalRequested: input.entityIds.length,
-    totalSuccessful: successful.length,
-    totalFailed: failed.length,
     successCount: successful.length,
     failureCount: failed.length,
     timestamp: new Date().toISOString(),
@@ -287,7 +281,7 @@ export function bulkUpdateStatusResponseFormatter(
   result: BulkUpdateStatusOutput,
   input?: BulkUpdateStatusInput
 ): any {
-  const summary = `Bulk status update completed: ${result.totalSuccessful}/${result.totalRequested} successful`;
+  const summary = `Bulk status update completed: ${result.successCount}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0
       ? `\n\nSuccessful updates:\n${JSON.stringify(result.successful, null, 2)}`
