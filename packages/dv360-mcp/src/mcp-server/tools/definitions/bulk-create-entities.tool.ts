@@ -119,7 +119,7 @@ export async function bulkCreateEntitiesLogic(
  */
 export function bulkCreateEntitiesResponseFormatter(
   result: BulkCreateEntitiesOutput
-): any {
+): unknown[] {
   const summary = `Bulk create ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`;
 
   const successResults = result.results.filter((r) => r.success);

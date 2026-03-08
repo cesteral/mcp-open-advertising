@@ -40,8 +40,8 @@ export const BulkUpdateStatusInputSchema = z
 export const BulkUpdateStatusOutputSchema = z
   .object({
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
       z.object({
         entityId: z.string(),
@@ -70,12 +70,12 @@ export async function bulkUpdateStatusLogic(
     context
   );
 
-  const totalSucceeded = result.results.filter((r) => r.success).length;
+  const successCount = result.results.filter((r) => r.success).length;
 
   return {
     totalRequested: input.entityIds.length,
-    totalSucceeded,
-    totalFailed: input.entityIds.length - totalSucceeded,
+    successCount,
+    failureCount: input.entityIds.length - successCount,
     results: result.results,
     timestamp: new Date().toISOString(),
   };
@@ -83,7 +83,7 @@ export async function bulkUpdateStatusLogic(
 
 export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): unknown[] {
   const lines: string[] = [
-    `Status updates: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
+    `Status updates: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",
   ];
 
