@@ -12,10 +12,6 @@ const TIKTOK_RETRY_CONFIG: RetryConfig = {
   platformName: "TikTok",
 };
 
-const MAX_RETRIES = TIKTOK_RETRY_CONFIG.maxRetries as number;
-const INITIAL_BACKOFF_MS = TIKTOK_RETRY_CONFIG.initialBackoffMs as number;
-const MAX_BACKOFF_MS = TIKTOK_RETRY_CONFIG.maxBackoffMs as number;
-
 /** TikTok standard API response shape */
 interface TikTokApiResponse {
   code: number;
@@ -158,12 +154,12 @@ export class TikTokHttpClient {
   ): Promise<unknown> {
     let lastError: McpError | undefined;
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= TIKTOK_RETRY_CONFIG.maxRetries!; attempt++) {
       const accessToken = await this.authAdapter.getAccessToken();
 
       const response = await fetchWithTimeout(
         url,
-        30_000,
+        TIKTOK_RETRY_CONFIG.timeoutMs!,
         context,
         {
           ...options,
@@ -190,7 +186,7 @@ export class TikTokHttpClient {
           }
         );
 
-        if (!isRetryableTikTokError(0, response.status) || attempt >= MAX_RETRIES) {
+        if (!isRetryableTikTokError(0, response.status) || attempt >= TIKTOK_RETRY_CONFIG.maxRetries!) {
           throw mcpError;
         }
 
@@ -217,7 +213,7 @@ export class TikTokHttpClient {
           }
         );
 
-        if (!isRetryableTikTokError(json.code, response.status) || attempt >= MAX_RETRIES) {
+        if (!isRetryableTikTokError(json.code, response.status) || attempt >= TIKTOK_RETRY_CONFIG.maxRetries!) {
           throw mcpError;
         }
 
@@ -230,7 +226,7 @@ export class TikTokHttpClient {
             tiktokCode: json.code,
             tiktokMessage: json.message,
             attempt: attempt + 1,
-            maxRetries: MAX_RETRIES,
+            maxRetries: TIKTOK_RETRY_CONFIG.maxRetries,
             requestId: context?.requestId,
           },
           "Retrying TikTok API request after transient error"
@@ -253,15 +249,15 @@ export class TikTokHttpClient {
 
   private calculateBackoff(attempt: number, response: Response): number {
     let delayMs = Math.min(
-      INITIAL_BACKOFF_MS * Math.pow(2, attempt),
-      MAX_BACKOFF_MS
+      TIKTOK_RETRY_CONFIG.initialBackoffMs! * Math.pow(2, attempt),
+      TIKTOK_RETRY_CONFIG.maxBackoffMs!
     );
 
     const retryAfter = response.headers.get("Retry-After");
     if (retryAfter) {
       const retryAfterSeconds = parseInt(retryAfter, 10);
       if (!isNaN(retryAfterSeconds)) {
-        delayMs = Math.min(retryAfterSeconds * 1000, MAX_BACKOFF_MS);
+        delayMs = Math.min(retryAfterSeconds * 1000, TIKTOK_RETRY_CONFIG.maxBackoffMs!);
       }
     }
 
