@@ -29,11 +29,13 @@ export interface TtdReportConfig {
  * 3. Download the result
  */
 export class TtdReportingService {
+  private static readonly MAX_BACKOFF_MS = 10_000;
+
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: TtdHttpClient,
     private readonly logger: Logger,
-    private readonly pollIntervalMs: number = 5_000,
+    private readonly pollIntervalMs: number = 2_000,
     private readonly maxPollAttempts: number = 60 // 5 min max
   ) {}
 
@@ -216,12 +218,16 @@ export class TtdReportingService {
         );
       }
 
-      await this.sleep(this.pollIntervalMs);
+      await this.sleep(this.computeBackoff(attempt));
     }
 
     throw new Error(
       `Report polling timed out after ${this.maxPollAttempts} attempts`
     );
+  }
+
+  private computeBackoff(attempt: number): number {
+    return Math.min(this.pollIntervalMs * Math.pow(2, attempt), TtdReportingService.MAX_BACKOFF_MS);
   }
 
   private sleep(ms: number): Promise<void> {

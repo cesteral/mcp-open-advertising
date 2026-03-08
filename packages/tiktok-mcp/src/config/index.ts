@@ -37,7 +37,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   tiktokRefreshToken: z.string().optional(),
 
   // Reporting poll configuration
-  tiktokReportPollIntervalMs: z.number().default(10_000),
+  tiktokReportPollIntervalMs: z.number().default(2_000),
   tiktokReportMaxPollAttempts: z.number().default(30),
 });
 
