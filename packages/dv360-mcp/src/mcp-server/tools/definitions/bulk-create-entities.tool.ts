@@ -80,48 +80,33 @@ export async function bulkCreateEntitiesLogic(
 ): Promise<BulkCreateEntitiesOutput> {
   const { dv360Service } = resolveSessionServices(sdkContext);
 
-  const results: BulkCreateEntitiesOutput["results"] = [];
-  let totalSucceeded = 0;
-  let totalFailed = 0;
+  // Pre-process all items (merge IDs, extract parent IDs) before parallel execution
+  const preparedItems = input.items.map((itemData) => ({
+    entityIds: extractParentIds({ advertiserId: input.advertiserId }),
+    mergedData: mergeIdsIntoData(
+      input.entityType,
+      itemData as Record<string, unknown>,
+      { advertiserId: input.advertiserId } as Record<string, unknown>
+    ),
+  }));
 
-  for (let i = 0; i < input.items.length; i++) {
-    const itemData = input.items[i];
+  // Run creates in parallel with concurrency=5
+  const bulkResults = await dv360Service.bulkCreateEntities(
+    input.entityType,
+    preparedItems,
+    context
+  );
 
-    try {
-      // Merge advertiserId (and any other parent IDs) into each item's data
-      const mergedData = mergeIdsIntoData(
-        input.entityType,
-        itemData as Record<string, unknown>,
-        { advertiserId: input.advertiserId } as Record<string, unknown>
-      );
+  // Map bulk results back to the indexed result format callers depend on
+  const results: BulkCreateEntitiesOutput["results"] = bulkResults.map((r, i) => ({
+    index: i,
+    success: r.success,
+    ...(r.success ? { entity: r.entity as Record<string, any> } : {}),
+    ...(r.error !== undefined ? { error: r.error } : {}),
+  }));
 
-      // Build entityIds from the input-level parent IDs
-      const entityIds = extractParentIds({
-        advertiserId: input.advertiserId,
-      });
-
-      const entity = await dv360Service.createEntity(
-        input.entityType,
-        entityIds,
-        mergedData,
-        context
-      );
-
-      results.push({
-        index: i,
-        success: true,
-        entity: entity as Record<string, any>,
-      });
-      totalSucceeded++;
-    } catch (error: any) {
-      results.push({
-        index: i,
-        success: false,
-        error: error.message || String(error),
-      });
-      totalFailed++;
-    }
-  }
+  const totalSucceeded = results.filter((r) => r.success).length;
+  const totalFailed = results.filter((r) => !r.success).length;
 
   return {
     entityType: input.entityType,
