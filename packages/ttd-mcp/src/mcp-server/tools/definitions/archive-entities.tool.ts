@@ -32,8 +32,8 @@ export const ArchiveEntitiesOutputSchema = z
   .object({
     entityType: z.string(),
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
       z.object({
         entityId: z.string(),
@@ -66,8 +66,8 @@ export async function archiveEntitiesLogic(
   return {
     entityType: input.entityType,
     totalRequested: input.entityIds.length,
-    totalSucceeded: succeeded,
-    totalFailed: input.entityIds.length - succeeded,
+    successCount: succeeded,
+    failureCount: input.entityIds.length - succeeded,
     results,
     timestamp: new Date().toISOString(),
   };
@@ -77,7 +77,7 @@ export function archiveEntitiesResponseFormatter(result: ArchiveOutput): unknown
   return [
     {
       type: "text" as const,
-      text: `Archive ${result.entityType}: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Archive ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

@@ -7,7 +7,6 @@ import { DV360Service } from "./dv360/DV360-service.js";
 import { TargetingService } from "./targeting/targeting-service.js";
 
 export interface SessionServices {
-  httpClient: DV360HttpClient;
   dv360Service: DV360Service;
   targetingService: TargetingService;
 }
@@ -22,7 +21,6 @@ export function createSessionServices(
   const dv360Service = new DV360Service(logger, rateLimiter, httpClient);
   const targetingService = new TargetingService(logger, rateLimiter, httpClient);
   return {
-    httpClient,
     dv360Service,
     targetingService,
   };

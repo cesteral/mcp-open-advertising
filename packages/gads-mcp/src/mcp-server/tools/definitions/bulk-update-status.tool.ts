@@ -54,8 +54,6 @@ export const BulkUpdateStatusOutputSchema = z
     entityType: z.string(),
     targetStatus: z.string(),
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
     successCount: z.number(),
     failureCount: z.number(),
     results: z.array(
@@ -93,8 +91,6 @@ export async function bulkUpdateStatusLogic(
     entityType: input.entityType,
     targetStatus: input.status,
     totalRequested: input.entityIds.length,
-    totalSucceeded: succeeded,
-    totalFailed: input.entityIds.length - succeeded,
     successCount: succeeded,
     failureCount: input.entityIds.length - succeeded,
     results,
@@ -106,7 +102,7 @@ export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): any
   return [
     {
       type: "text" as const,
-      text: `Bulk status update → ${result.targetStatus} for ${result.entityType}: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Bulk status update → ${result.targetStatus} for ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

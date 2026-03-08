@@ -192,7 +192,7 @@ describe("ttd advanced tools", () => {
       createMockSdkContext()
     );
 
-    expect(result.totalSucceeded).toBe(1);
+    expect(result.successCount).toBe(1);
     expect(result.results[0].entityId).toBe("c1");
   });
 

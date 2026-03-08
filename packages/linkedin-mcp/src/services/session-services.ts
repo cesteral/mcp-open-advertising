@@ -8,7 +8,6 @@ import { LinkedInService } from "./linkedin/linkedin-service.js";
 import { LinkedInReportingService } from "./linkedin/linkedin-reporting-service.js";
 
 export interface SessionServices {
-  httpClient: LinkedInHttpClient;
   linkedInService: LinkedInService;
   linkedInReportingService: LinkedInReportingService;
 }
@@ -24,7 +23,6 @@ export function createSessionServices(
   const linkedInService = new LinkedInService(rateLimiter, httpClient);
   const linkedInReportingService = new LinkedInReportingService(rateLimiter, httpClient);
   return {
-    httpClient,
     linkedInService,
     linkedInReportingService,
   };

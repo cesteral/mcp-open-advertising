@@ -9,7 +9,6 @@ import { MetaInsightsService } from "./meta/meta-insights-service.js";
 import { MetaTargetingService } from "./meta/meta-targeting-service.js";
 
 export interface SessionServices {
-  httpClient: MetaGraphApiClient;
   metaService: MetaService;
   metaInsightsService: MetaInsightsService;
   metaTargetingService: MetaTargetingService;
@@ -26,7 +25,6 @@ export function createSessionServices(
   const metaInsightsService = new MetaInsightsService(rateLimiter, httpClient, logger);
   const metaTargetingService = new MetaTargetingService(rateLimiter, httpClient, logger);
   return {
-    httpClient,
     metaService,
     metaInsightsService,
     metaTargetingService,

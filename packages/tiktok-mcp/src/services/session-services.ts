@@ -9,7 +9,6 @@ import { TikTokReportingService } from "./tiktok/tiktok-reporting-service.js";
 import { appConfig } from "../config/index.js";
 
 export interface SessionServices {
-  httpClient: TikTokHttpClient;
   tiktokService: TikTokService;
   tiktokReportingService: TikTokReportingService;
 }
@@ -36,7 +35,6 @@ export function createSessionServices(
   );
 
   return {
-    httpClient,
     tiktokService,
     tiktokReportingService,
   };
