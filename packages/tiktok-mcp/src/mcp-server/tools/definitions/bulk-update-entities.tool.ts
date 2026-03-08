@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
+import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -40,13 +41,11 @@ export const BulkUpdateEntitiesInputSchema = z
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     results: z.array(
-      z.object({
+      BulkOperationResultSchema.extend({
         entityId: z.string(),
-        success: z.boolean(),
-        error: z.string().optional(),
       })
     ),
     timestamp: z.string().datetime(),
@@ -73,8 +72,8 @@ export async function bulkUpdateEntitiesLogic(
 
   return {
     totalRequested: input.items.length,
-    totalSucceeded,
-    totalFailed: input.items.length - totalSucceeded,
+    successCount: totalSucceeded,
+    failureCount: input.items.length - totalSucceeded,
     results: bulkResult.results,
     timestamp: new Date().toISOString(),
   };
@@ -82,7 +81,7 @@ export async function bulkUpdateEntitiesLogic(
 
 export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateEntitiesOutput): unknown[] {
   const lines: string[] = [
-    `Bulk update: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
+    `Bulk update: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",
   ];
 

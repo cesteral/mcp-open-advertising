@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -37,11 +38,11 @@ export const BulkUpdateEntitiesInputSchema = z
 
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
-    results: z.array(z.object({
-      entityUrn: z.string(),
-      success: z.boolean(),
-      error: z.string().optional(),
-    })),
+    results: z.array(
+      BulkOperationResultSchema.extend({
+        entityUrn: z.string(),
+      })
+    ),
     successCount: z.number(),
     failureCount: z.number(),
     timestamp: z.string().datetime(),

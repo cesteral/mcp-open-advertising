@@ -59,7 +59,7 @@ export async function graphqlCancelBulkJobLogic(
   };
 }
 
-export function graphqlCancelBulkJobResponseFormatter(result: GraphqlCancelBulkJobOutput): any {
+export function graphqlCancelBulkJobResponseFormatter(result: GraphqlCancelBulkJobOutput): unknown[] {
   return [
     {
       type: "text" as const,

@@ -118,7 +118,7 @@ export async function downloadReportLogic(
   };
 }
 
-export function downloadReportResponseFormatter(result: DownloadOutput): any {
+export function downloadReportResponseFormatter(result: DownloadOutput): unknown[] {
   const truncNote = result.truncated
     ? `\n\n⚠️ Showing ${result.returnedRows} of ${result.totalRows} rows (truncated)`
     : "";

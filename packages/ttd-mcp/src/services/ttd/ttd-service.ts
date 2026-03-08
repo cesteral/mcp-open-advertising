@@ -327,19 +327,37 @@ export class TtdService {
   ): Promise<{ results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> }> {
     const partnerId = this.httpClient.partnerId;
 
-    const results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> = [];
+    // Phase 1: Fetch all current ad group entities in parallel (concurrency=5)
+    const getResults = await this.executeBulk(adjustments, async (adj) => {
+      await this.rateLimiter.consume(`ttd:${partnerId}`);
+      return this.httpClient.fetch(`/adgroup/${adj.adGroupId}`, context, { method: "GET" });
+    });
 
-    for (const adj of adjustments) {
-      try {
-        await this.rateLimiter.consume(`ttd:${partnerId}`);
+    // Separate successful GETs from failed ones; build PUT inputs for successes
+    type PutItem = {
+      adj: (typeof adjustments)[number];
+      current: Record<string, unknown>;
+    };
+    const putItems: PutItem[] = [];
+    const putIndexMap: number[] = []; // maps putItems index → adjustments index
 
-        // First GET the current entity to merge RTBAttributes
-        const current = (await this.httpClient.fetch(
-          `/adgroup/${adj.adGroupId}`,
-          context,
-          { method: "GET" }
-        )) as Record<string, unknown>;
+    const results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> =
+      new Array(adjustments.length);
 
+    for (let i = 0; i < getResults.length; i++) {
+      const getResult = getResults[i];
+      const adj = adjustments[i];
+      if (!getResult.success) {
+        results[i] = { adGroupId: adj.adGroupId, success: false, error: getResult.error };
+      } else {
+        putItems.push({ adj, current: getResult.entity as Record<string, unknown> });
+        putIndexMap.push(i);
+      }
+    }
+
+    // Phase 2: Apply bid adjustments and PUT all entities in parallel (concurrency=5)
+    if (putItems.length > 0) {
+      const putResults = await this.executeBulk(putItems, async ({ adj, current }) => {
         const rtb = (current.RTBAttributes as Record<string, unknown>) || {};
         const cc = adj.currencyCode || "USD";
 
@@ -351,22 +369,19 @@ export class TtdService {
         }
 
         // TTD PUT endpoints take no ID in URL; full entity with ID in body
-        const entity = await this.httpClient.fetch(
-          "/adgroup",
-          context,
-          {
-            method: "PUT",
-            body: JSON.stringify({ ...current, RTBAttributes: rtb }),
-          }
-        );
-
-        results.push({ adGroupId: adj.adGroupId, success: true, entity });
-      } catch (error: any) {
-        results.push({
-          adGroupId: adj.adGroupId,
-          success: false,
-          error: error?.message ?? String(error),
+        await this.rateLimiter.consume(`ttd:${partnerId}`);
+        return this.httpClient.fetch("/adgroup", context, {
+          method: "PUT",
+          body: JSON.stringify({ ...current, RTBAttributes: rtb }),
         });
+      });
+
+      // Map PUT results back to the original adjustments index, preserving adGroupId
+      for (let k = 0; k < putResults.length; k++) {
+        const origIndex = putIndexMap[k];
+        const adGroupId = adjustments[origIndex].adGroupId;
+        const putResult = putResults[k];
+        results[origIndex] = { adGroupId, success: putResult.success, entity: putResult.entity, error: putResult.error };
       }
     }
 

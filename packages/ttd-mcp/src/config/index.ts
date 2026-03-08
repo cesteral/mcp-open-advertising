@@ -39,7 +39,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   ttdApiSecret: z.string().optional(),
 
   // Report polling configuration
-  ttdReportPollIntervalMs: z.number().int().min(1000).default(5000),
+  ttdReportPollIntervalMs: z.number().int().min(1000).default(2000),
   ttdReportMaxPollAttempts: z.number().int().min(1).default(60),
 });
 

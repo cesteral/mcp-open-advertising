@@ -2,11 +2,15 @@ import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, RetryConfig } from "@cesteral/shared";
 
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 2_000;
-const MAX_BACKOFF_MS = 30_000;
+const TIKTOK_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  initialBackoffMs: 2_000,
+  maxBackoffMs: 30_000,
+  timeoutMs: 30_000,
+  platformName: "TikTok",
+};
 
 /** TikTok standard API response shape */
 interface TikTokApiResponse {
@@ -80,7 +84,7 @@ export class TikTokHttpClient {
       advertiser_id: this.advertiserId,
       ...params,
     });
-    return this.executeWithRetry(url, context, { method: "GET" });
+    return this.executeRequest(url, context, { method: "GET" });
   }
 
   /**
@@ -98,7 +102,7 @@ export class TikTokHttpClient {
       ...data,
     });
 
-    return this.executeWithRetry(url, context, {
+    return this.executeRequest(url, context, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -122,7 +126,7 @@ export class TikTokHttpClient {
       ...data,
     });
 
-    return this.executeWithRetry(url, context, {
+    return this.executeRequest(url, context, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -143,19 +147,22 @@ export class TikTokHttpClient {
     return url.toString();
   }
 
-  private async executeWithRetry(
+  private async executeRequest(
     url: string,
     context?: RequestContext,
     options?: RequestInit
   ): Promise<unknown> {
+    const maxRetries = TIKTOK_RETRY_CONFIG.maxRetries ?? 3;
+    const timeoutMs = TIKTOK_RETRY_CONFIG.timeoutMs ?? 30_000;
+
     let lastError: McpError | undefined;
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const accessToken = await this.authAdapter.getAccessToken();
 
       const response = await fetchWithTimeout(
         url,
-        30_000,
+        timeoutMs,
         context,
         {
           ...options,
@@ -182,7 +189,7 @@ export class TikTokHttpClient {
           }
         );
 
-        if (!isRetryableTikTokError(0, response.status) || attempt >= MAX_RETRIES) {
+        if (!isRetryableTikTokError(0, response.status) || attempt >= maxRetries) {
           throw mcpError;
         }
 
@@ -209,7 +216,7 @@ export class TikTokHttpClient {
           }
         );
 
-        if (!isRetryableTikTokError(json.code, response.status) || attempt >= MAX_RETRIES) {
+        if (!isRetryableTikTokError(json.code, response.status) || attempt >= maxRetries) {
           throw mcpError;
         }
 
@@ -222,7 +229,7 @@ export class TikTokHttpClient {
             tiktokCode: json.code,
             tiktokMessage: json.message,
             attempt: attempt + 1,
-            maxRetries: MAX_RETRIES,
+            maxRetries,
             requestId: context?.requestId,
           },
           "Retrying TikTok API request after transient error"
@@ -244,16 +251,19 @@ export class TikTokHttpClient {
   }
 
   private calculateBackoff(attempt: number, response: Response): number {
+    const initialBackoffMs = TIKTOK_RETRY_CONFIG.initialBackoffMs ?? 2_000;
+    const maxBackoffMs = TIKTOK_RETRY_CONFIG.maxBackoffMs ?? 30_000;
+
     let delayMs = Math.min(
-      INITIAL_BACKOFF_MS * Math.pow(2, attempt),
-      MAX_BACKOFF_MS
+      initialBackoffMs * Math.pow(2, attempt),
+      maxBackoffMs
     );
 
     const retryAfter = response.headers.get("Retry-After");
     if (retryAfter) {
       const retryAfterSeconds = parseInt(retryAfter, 10);
       if (!isNaN(retryAfterSeconds)) {
-        delayMs = Math.min(retryAfterSeconds * 1000, MAX_BACKOFF_MS);
+        delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
       }
     }
 

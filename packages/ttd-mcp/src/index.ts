@@ -40,12 +40,14 @@ function setupStdioCredentials(sessionId: string): boolean {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.ttdApiBaseUrl,
+    {
+      baseUrl: mcpConfig.ttdApiBaseUrl,
+      graphqlUrl: mcpConfig.ttdGraphqlUrl,
+      reportPollIntervalMs: mcpConfig.ttdReportPollIntervalMs,
+      reportMaxPollAttempts: mcpConfig.ttdReportMaxPollAttempts,
+    },
     logger,
-    rateLimiter,
-    mcpConfig.ttdGraphqlUrl,
-    mcpConfig.ttdReportPollIntervalMs,
-    mcpConfig.ttdReportMaxPollAttempts
+    rateLimiter
   );
 
   sessionServiceStore.set(sessionId, services);

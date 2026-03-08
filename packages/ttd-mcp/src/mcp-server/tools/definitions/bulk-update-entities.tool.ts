@@ -5,6 +5,7 @@ import {
   addParentValidationIssue,
   mergeParentIdsIntoData,
 } from "../utils/parent-id-validation.js";
+import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -59,17 +60,9 @@ export const BulkUpdateEntitiesOutputSchema = z
   .object({
     entityType: z.string(),
     totalRequested: z.number(),
-    totalSucceeded: z.number(),
-    totalFailed: z.number(),
     successCount: z.number(),
     failureCount: z.number(),
-    results: z.array(
-      z.object({
-        success: z.boolean(),
-        entity: z.record(z.any()).optional(),
-        error: z.string().optional(),
-      })
-    ),
+    results: z.array(BulkOperationResultSchema),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk entity update results");
@@ -99,8 +92,6 @@ export async function bulkUpdateEntitiesLogic(
   return {
     entityType: input.entityType,
     totalRequested: items.length,
-    totalSucceeded: succeeded,
-    totalFailed: items.length - succeeded,
     successCount: succeeded,
     failureCount: items.length - succeeded,
     results: results.map((r) => ({
@@ -112,11 +103,11 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): any {
+export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): unknown[] {
   return [
     {
       type: "text" as const,
-      text: `Bulk update ${result.entityType}: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Bulk update ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

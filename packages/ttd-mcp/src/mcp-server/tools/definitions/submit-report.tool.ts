@@ -91,7 +91,7 @@ export async function submitReportLogic(
   };
 }
 
-export function submitReportResponseFormatter(result: SubmitReportOutput): any {
+export function submitReportResponseFormatter(result: SubmitReportOutput): unknown[] {
   return [
     {
       type: "text" as const,

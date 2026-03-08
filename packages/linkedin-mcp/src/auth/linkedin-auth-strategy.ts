@@ -10,8 +10,8 @@
  * Falls back to static token if refresh credentials are not provided.
  */
 
-import type { AuthStrategy, AuthResult } from "@cesteral/shared";
 import type { Logger } from "pino";
+import { BearerAuthStrategyBase, type BearerAdapterResult } from "@cesteral/shared";
 import {
   LinkedInAccessTokenAdapter,
   LinkedInRefreshTokenAdapter,
@@ -20,77 +20,64 @@ import {
   getLinkedInCredentialFingerprint,
 } from "./linkedin-auth-adapter.js";
 
-export class LinkedInBearerAuthStrategy implements AuthStrategy {
+export class LinkedInBearerAuthStrategy extends BearerAuthStrategyBase {
+  protected readonly authType = "linkedin-bearer";
+  protected readonly platformName = "LinkedIn";
+
   constructor(
     private readonly baseUrl: string,
     private readonly apiVersion: string,
-    private readonly logger?: Logger
-  ) {}
+    logger?: Logger
+  ) {
+    super(logger);
+  }
 
-  async verify(
+  protected async resolveRefreshBranch(
     headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
-    // Prefer refresh token flow if all credentials are present
+  ): Promise<BearerAdapterResult | null> {
     const refreshCreds = parseLinkedInRefreshCredentialsFromHeaders(headers);
-    if (refreshCreds) {
-      const adapter = new LinkedInRefreshTokenAdapter(
-        refreshCreds,
-        this.baseUrl,
-        this.apiVersion
-      );
-      await adapter.validate();
+    if (!refreshCreds) return null;
 
-      this.logger?.debug(
-        { personId: adapter.personId, authFlow: "refresh-token" },
-        "LinkedIn credentials validated (refresh token flow)"
-      );
-
-      // Fingerprint based on client ID (stable, not the rotating token)
-      const fingerprint = getLinkedInCredentialFingerprint(refreshCreds.clientId);
-
-      return {
-        authInfo: {
-          clientId: adapter.personId,
-          subject: adapter.personId,
-          authType: "linkedin-bearer",
-        },
-        platformAuthAdapter: adapter,
-        credentialFingerprint: fingerprint,
-      };
-    }
-
-    // Fallback: static Bearer token
-    const token = parseLinkedInTokenFromHeaders(headers);
-    const adapter = new LinkedInAccessTokenAdapter(token, this.baseUrl, this.apiVersion);
-
+    const adapter = new LinkedInRefreshTokenAdapter(refreshCreds, this.baseUrl, this.apiVersion);
     await adapter.validate();
 
-    this.logger?.debug(
-      { personId: adapter.personId, authFlow: "static-token" },
-      "LinkedIn credentials validated (static token)"
-    );
-
-    const fingerprint = getLinkedInCredentialFingerprint(token);
-
     return {
-      authInfo: {
-        clientId: adapter.personId,
-        subject: adapter.personId,
-        authType: "linkedin-bearer",
-      },
-      platformAuthAdapter: adapter,
-      credentialFingerprint: fingerprint,
+      adapter,
+      // Fingerprint based on client ID (stable, not the rotating token)
+      fingerprint: getLinkedInCredentialFingerprint(refreshCreds.clientId),
+      userId: adapter.personId,
+      authFlow: "refresh-token",
+      logContext: { personId: adapter.personId },
     };
   }
 
-  async getCredentialFingerprint(
+  protected async resolveAccessBranch(
     headers: Record<string, string | string[] | undefined>
-  ): Promise<string | undefined> {
-    const refreshCreds = parseLinkedInRefreshCredentialsFromHeaders(headers);
-    if (refreshCreds) {
-      return getLinkedInCredentialFingerprint(refreshCreds.clientId);
-    }
+  ): Promise<BearerAdapterResult> {
+    const token = parseLinkedInTokenFromHeaders(headers);
+    const adapter = new LinkedInAccessTokenAdapter(token, this.baseUrl, this.apiVersion);
+    await adapter.validate();
 
+    return {
+      adapter,
+      fingerprint: getLinkedInCredentialFingerprint(token),
+      userId: adapter.personId,
+      authFlow: "static-token",
+      logContext: { personId: adapter.personId },
+    };
+  }
+
+  protected getRefreshFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): string | undefined {
+    const refreshCreds = parseLinkedInRefreshCredentialsFromHeaders(headers);
+    if (!refreshCreds) return undefined;
+    return getLinkedInCredentialFingerprint(refreshCreds.clientId);
+  }
+
+  protected getTokenFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): string {
     const token = parseLinkedInTokenFromHeaders(headers);
     return getLinkedInCredentialFingerprint(token);
   }

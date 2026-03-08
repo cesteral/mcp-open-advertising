@@ -128,7 +128,7 @@ export async function listEntitiesLogic(
   };
 }
 
-export function listEntitiesResponseFormatter(result: ListEntitiesOutput): any {
+export function listEntitiesResponseFormatter(result: ListEntitiesOutput): unknown[] {
   const summary = `Found ${result.totalCount} entities`;
   const pagination = result.nextPageToken
     ? `\n\nMore results available. Use pageToken: ${result.nextPageToken}`

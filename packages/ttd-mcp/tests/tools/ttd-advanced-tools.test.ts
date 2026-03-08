@@ -150,8 +150,8 @@ describe("ttd advanced tools", () => {
     );
 
     expect(result.totalRequested).toBe(2);
-    expect(result.totalSucceeded).toBe(1);
-    expect(result.totalFailed).toBe(1);
+    expect(result.successCount).toBe(1);
+    expect(result.failureCount).toBe(1);
     expect(mockTtdService.bulkCreateEntities).toHaveBeenCalledOnce();
   });
 
@@ -159,8 +159,8 @@ describe("ttd advanced tools", () => {
     const text = bulkCreateEntitiesResponseFormatter({
       entityType: "campaign",
       totalRequested: 2,
-      totalSucceeded: 1,
-      totalFailed: 1,
+      successCount: 1,
+      failureCount: 1,
       results: [{ success: true }, { success: false, error: "bad" }],
       timestamp: new Date().toISOString(),
     })[0].text;
@@ -178,7 +178,7 @@ describe("ttd advanced tools", () => {
       createMockSdkContext()
     );
 
-    expect(result.totalSucceeded).toBe(1);
+    expect(result.successCount).toBe(1);
     expect(mockTtdService.bulkUpdateEntities).toHaveBeenCalledOnce();
   });
 

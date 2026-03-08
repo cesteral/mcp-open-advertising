@@ -81,7 +81,7 @@ export async function adjustBidsLogic(
   };
 }
 
-export function adjustBidsResponseFormatter(result: AdjustBidsOutput): any {
+export function adjustBidsResponseFormatter(result: AdjustBidsOutput): unknown[] {
   const summary = result.results
     .map((r) => {
       if (r.success) {

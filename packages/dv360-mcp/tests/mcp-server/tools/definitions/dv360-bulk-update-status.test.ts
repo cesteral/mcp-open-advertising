@@ -106,8 +106,8 @@ describe("dv360_bulk_update_status", () => {
       );
 
       expect(result.totalRequested).toBe(1);
-      expect(result.totalSuccessful).toBe(1);
-      expect(result.totalFailed).toBe(0);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(0);
       expect(result.successful[0]).toEqual(
         expect.objectContaining({
           advertiserId: "adv-1",
@@ -150,7 +150,7 @@ describe("dv360_bulk_update_status", () => {
       );
 
       expect(result.totalRequested).toBe(3);
-      expect(result.totalSuccessful).toBe(3);
+      expect(result.successCount).toBe(3);
       expect(result.successful).toHaveLength(3);
     });
 
@@ -197,7 +197,7 @@ describe("dv360_bulk_update_status", () => {
         createMockSdkContext()
       );
 
-      expect(result.totalSuccessful).toBe(1);
+      expect(result.successCount).toBe(1);
       expect(result.successful[0].statusChanged).toBe(false);
       expect(mockDv360Service.updateEntity).not.toHaveBeenCalled();
     });
@@ -244,8 +244,8 @@ describe("dv360_bulk_update_status", () => {
       );
 
       expect(result.totalRequested).toBe(2);
-      expect(result.totalSuccessful).toBe(1);
-      expect(result.totalFailed).toBe(1);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(1);
       expect(result.failed[0].error).toContain("Entity not found");
       expect(result.failed[0].entityId).toBe("li-missing");
     });
@@ -276,8 +276,8 @@ describe("dv360_bulk_update_status", () => {
         createMockSdkContext()
       );
 
-      expect(result.totalSuccessful).toBe(1);
-      expect(result.totalFailed).toBe(1);
+      expect(result.successCount).toBe(1);
+      expect(result.failureCount).toBe(1);
       expect(result.failed[0].error).toContain("Permission denied");
     });
 
@@ -344,6 +344,7 @@ describe("dv360_bulk_update_status", () => {
   describe("bulkUpdateStatusResponseFormatter", () => {
     it("shows summary with success count", () => {
       const result = bulkUpdateStatusResponseFormatter({
+        results: [],
         successful: [
           {
             advertiserId: "adv-1",
@@ -356,8 +357,8 @@ describe("dv360_bulk_update_status", () => {
         ],
         failed: [],
         totalRequested: 1,
-        totalSuccessful: 1,
-        totalFailed: 0,
+        successCount: 1,
+        failureCount: 0,
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -368,6 +369,7 @@ describe("dv360_bulk_update_status", () => {
 
     it("shows failed updates when present", () => {
       const result = bulkUpdateStatusResponseFormatter({
+        results: [],
         successful: [],
         failed: [
           {
@@ -378,8 +380,8 @@ describe("dv360_bulk_update_status", () => {
           },
         ],
         totalRequested: 1,
-        totalSuccessful: 0,
-        totalFailed: 1,
+        successCount: 0,
+        failureCount: 1,
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -390,11 +392,12 @@ describe("dv360_bulk_update_status", () => {
     it("shows archive warning for ENTITY_STATUS_ARCHIVED", () => {
       const result = bulkUpdateStatusResponseFormatter(
         {
+          results: [],
           successful: [],
           failed: [],
           totalRequested: 0,
-          totalSuccessful: 0,
-          totalFailed: 0,
+          successCount: 0,
+          failureCount: 0,
           timestamp: "2025-01-01T00:00:00.000Z",
         },
         {
@@ -411,11 +414,12 @@ describe("dv360_bulk_update_status", () => {
     it("shows pause note for ENTITY_STATUS_PAUSED", () => {
       const result = bulkUpdateStatusResponseFormatter(
         {
+          results: [],
           successful: [],
           failed: [],
           totalRequested: 0,
-          totalSuccessful: 0,
-          totalFailed: 0,
+          successCount: 0,
+          failureCount: 0,
           timestamp: "2025-01-01T00:00:00.000Z",
         },
         {

@@ -8,10 +8,13 @@
  *    auto-refreshes access tokens (recommended for production, 24h token expiry)
  *
  * Falls back to static token if refresh credentials are not provided.
+ *
+ * TikTok-specific: also extracts X-TikTok-Advertiser-Id from headers, which is
+ * required for all API calls and included in the credential fingerprint.
  */
 
-import type { AuthStrategy, AuthResult } from "@cesteral/shared";
 import type { Logger } from "pino";
+import { BearerAuthStrategyBase, type BearerAdapterResult } from "@cesteral/shared";
 import {
   TikTokAccessTokenAdapter,
   TikTokRefreshTokenAdapter,
@@ -21,81 +24,68 @@ import {
   getTikTokCredentialFingerprint,
 } from "./tiktok-auth-adapter.js";
 
-export class TikTokBearerAuthStrategy implements AuthStrategy {
+export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
+  protected readonly authType = "tiktok-bearer";
+  protected readonly platformName = "TikTok";
+
   constructor(
     private readonly baseUrl: string,
-    private readonly logger?: Logger
-  ) {}
+    logger?: Logger
+  ) {
+    super(logger);
+  }
 
-  async verify(
+  protected async resolveRefreshBranch(
     headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
-    const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
-
-    // Prefer refresh token flow if all credentials are present
+  ): Promise<BearerAdapterResult | null> {
     const refreshCreds = parseTikTokRefreshCredentialsFromHeaders(headers);
-    if (refreshCreds) {
-      const adapter = new TikTokRefreshTokenAdapter(refreshCreds, advertiserId, this.baseUrl);
-      await adapter.validate();
+    if (!refreshCreds) return null;
 
-      this.logger?.debug(
-        { userId: adapter.userId, advertiserId, authFlow: "refresh-token" },
-        "TikTok credentials validated (refresh token flow)"
-      );
-
-      // Fingerprint based on app ID + advertiser (stable, not the rotating token)
-      const fingerprint = getTikTokCredentialFingerprint(
-        refreshCreds.appId,
-        advertiserId
-      );
-
-      return {
-        authInfo: {
-          clientId: adapter.userId,
-          subject: adapter.userId,
-          authType: "tiktok-bearer",
-        },
-        platformAuthAdapter: adapter,
-        credentialFingerprint: fingerprint,
-      };
-    }
-
-    // Fallback: static Bearer token
-    const token = parseTikTokTokenFromHeaders(headers);
-    const adapter = new TikTokAccessTokenAdapter(token, advertiserId, this.baseUrl);
-
+    const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
+    const adapter = new TikTokRefreshTokenAdapter(refreshCreds, advertiserId, this.baseUrl);
     await adapter.validate();
 
-    this.logger?.debug(
-      { userId: adapter.userId, advertiserId, authFlow: "static-token" },
-      "TikTok credentials validated (static token)"
-    );
-
-    const fingerprint = getTikTokCredentialFingerprint(token, advertiserId);
-
     return {
-      authInfo: {
-        clientId: adapter.userId,
-        subject: adapter.userId,
-        authType: "tiktok-bearer",
-      },
-      platformAuthAdapter: adapter,
-      credentialFingerprint: fingerprint,
+      adapter,
+      // Fingerprint based on app ID + advertiser (stable, not the rotating token)
+      fingerprint: getTikTokCredentialFingerprint(refreshCreds.appId, advertiserId),
+      userId: adapter.userId,
+      authFlow: "refresh-token",
+      logContext: { advertiserId },
     };
   }
 
-  async getCredentialFingerprint(
+  protected async resolveAccessBranch(
     headers: Record<string, string | string[] | undefined>
-  ): Promise<string | undefined> {
-    const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
-
-    // Use refresh creds fingerprint if available
-    const refreshCreds = parseTikTokRefreshCredentialsFromHeaders(headers);
-    if (refreshCreds) {
-      return getTikTokCredentialFingerprint(refreshCreds.appId, advertiserId);
-    }
-
+  ): Promise<BearerAdapterResult> {
     const token = parseTikTokTokenFromHeaders(headers);
+    const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
+    const adapter = new TikTokAccessTokenAdapter(token, advertiserId, this.baseUrl);
+    await adapter.validate();
+
+    return {
+      adapter,
+      fingerprint: getTikTokCredentialFingerprint(token, advertiserId),
+      userId: adapter.userId,
+      authFlow: "static-token",
+      logContext: { advertiserId },
+    };
+  }
+
+  protected getRefreshFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): string | undefined {
+    const refreshCreds = parseTikTokRefreshCredentialsFromHeaders(headers);
+    if (!refreshCreds) return undefined;
+    const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
+    return getTikTokCredentialFingerprint(refreshCreds.appId, advertiserId);
+  }
+
+  protected getTokenFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): string {
+    const token = parseTikTokTokenFromHeaders(headers);
+    const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
     return getTikTokCredentialFingerprint(token, advertiserId);
   }
 }

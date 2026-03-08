@@ -362,6 +362,52 @@ export class DV360Service {
   }
 
   /**
+   * Bulk create entities in parallel with concurrency=5.
+   * Mirrors the TTD executeBulk pattern — runs items in batches of 5 via
+   * Promise.allSettled so failed items never block remaining creates.
+   *
+   * @param entityType - DV360 entity type (e.g. "lineItem", "campaign")
+   * @param items - Array of pre-processed items ready to pass to createEntity
+   * @param context - Request context
+   * @returns Per-item results preserving original array indices
+   */
+  async bulkCreateEntities(
+    entityType: string,
+    items: Array<{
+      entityIds: Record<string, string>;
+      mergedData: Record<string, unknown>;
+    }>,
+    context?: RequestContext
+  ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
+    const CONCURRENCY = 5;
+    const results: Array<{ success: boolean; entity?: unknown; error?: string }> =
+      new Array(items.length);
+
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const batch = items.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.allSettled(
+        batch.map((item) =>
+          this.createEntity(entityType, item.entityIds, item.mergedData, context)
+        )
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        if (result.status === "fulfilled") {
+          results[i + j] = { success: true, entity: result.value };
+        } else {
+          results[i + j] = {
+            success: false,
+            error: result.reason?.message ?? String(result.reason),
+          };
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
    * Delete entity
    */
   async deleteEntity(

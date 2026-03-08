@@ -78,7 +78,7 @@ export async function createEntityLogic(
   };
 }
 
-export function createEntityResponseFormatter(result: CreateEntityOutput): any {
+export function createEntityResponseFormatter(result: CreateEntityOutput): unknown[] {
   return [
     {
       type: "text" as const,

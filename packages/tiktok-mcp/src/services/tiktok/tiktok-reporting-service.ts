@@ -37,11 +37,13 @@ export interface TikTokReportConfig {
  * 3. GET download URL to retrieve CSV report data
  */
 export class TikTokReportingService {
+  private static readonly MAX_BACKOFF_MS = 10_000;
+
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: TikTokHttpClient,
     private readonly logger: Logger,
-    private readonly pollIntervalMs: number = 10_000,
+    private readonly pollIntervalMs: number = 2_000,
     private readonly maxPollAttempts: number = 30
   ) {}
 
@@ -105,13 +107,17 @@ export class TikTokReportingService {
         this.logger.debug({ taskId, attempt, status: result.status }, "Report still pending, waiting");
       }
 
-      // Wait before next poll
-      await this.sleep(this.pollIntervalMs);
+      // Wait before next poll (exponential backoff)
+      await this.sleep(this.computeBackoff(attempt));
     }
 
     throw new Error(
-      `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts (${(this.maxPollAttempts * this.pollIntervalMs) / 1000}s)`
+      `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
     );
+  }
+
+  private computeBackoff(attempt: number): number {
+    return Math.min(this.pollIntervalMs * Math.pow(2, attempt), TikTokReportingService.MAX_BACKOFF_MS);
   }
 
   /**

@@ -81,7 +81,7 @@ export async function deleteEntityLogic(
   };
 }
 
-export function deleteEntityResponseFormatter(result: DeleteEntityOutput): any {
+export function deleteEntityResponseFormatter(result: DeleteEntityOutput): unknown[] {
   return [
     {
       type: "text" as const,

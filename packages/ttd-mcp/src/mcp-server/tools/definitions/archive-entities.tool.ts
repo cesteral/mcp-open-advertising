@@ -73,7 +73,7 @@ export async function archiveEntitiesLogic(
   };
 }
 
-export function archiveEntitiesResponseFormatter(result: ArchiveOutput): any {
+export function archiveEntitiesResponseFormatter(result: ArchiveOutput): unknown[] {
   return [
     {
       type: "text" as const,

@@ -1,22 +1,14 @@
 import type { Logger } from "pino";
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
-
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 2_000;
-const MAX_BACKOFF_MS = 30_000;
+import { JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
+import type { RequestContext, RetryConfig } from "@cesteral/shared";
 
 /** LinkedIn error response shape */
 interface LinkedInApiError {
   serviceErrorCode?: number;
   message?: string;
   status?: number;
-}
-
-function isRetryableLinkedInError(httpStatus: number): boolean {
-  return httpStatus === 429 || httpStatus >= 500;
 }
 
 function mapLinkedInErrorToJsonRpc(httpStatus: number): JsonRpcErrorCode {
@@ -34,6 +26,14 @@ function mapLinkedInErrorToJsonRpc(httpStatus: number): JsonRpcErrorCode {
   }
   return JsonRpcErrorCode.InvalidRequest;
 }
+
+const LINKEDIN_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  initialBackoffMs: 2_000,
+  maxBackoffMs: 30_000,
+  timeoutMs: 30_000,
+  platformName: "LinkedIn",
+};
 
 /**
  * HTTP client for LinkedIn Marketing API requests.
@@ -59,7 +59,7 @@ export class LinkedInHttpClient {
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path, params);
-    return this.executeWithRetry(url, context, { method: "GET" });
+    return this.request(url, context, { method: "GET" });
   }
 
   /**
@@ -72,7 +72,7 @@ export class LinkedInHttpClient {
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    return this.executeWithRetry(url, context, {
+    return this.request(url, context, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -91,7 +91,7 @@ export class LinkedInHttpClient {
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    return this.executeWithRetry(url, context, {
+    return this.request(url, context, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -109,7 +109,7 @@ export class LinkedInHttpClient {
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    return this.executeWithRetry(url, context, { method: "DELETE" });
+    return this.request(url, context, { method: "DELETE" });
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {
@@ -132,141 +132,39 @@ export class LinkedInHttpClient {
     return encodeURIComponent(urn);
   }
 
-  private async executeWithRetry(
+  private async request(
     url: string,
     context?: RequestContext,
     options?: RequestInit
   ): Promise<unknown> {
-    let lastError: McpError | undefined;
+    const apiVersion = this.apiVersion;
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const accessToken = await this.authAdapter.getAccessToken();
-
-      const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        "LinkedIn-Version": this.apiVersion,
-        "X-Restli-Protocol-Version": "2.0.0",
-        ...(options?.headers as Record<string, string> | undefined),
-      };
-
-      const response = await fetchWithTimeout(
-        url,
-        30_000,
-        context,
-        {
-          ...options,
-          headers,
-        },
-        undefined
-      );
-
-      // Log rate limit headers for observability
-      this.logRateLimitHeaders(response, context);
-
-      if (response.ok) {
-        if (response.status === 204) {
-          return {};
+    const result = await executeWithRetry(LINKEDIN_RETRY_CONFIG, {
+      url,
+      fetchOptions: options,
+      context,
+      logger: this.logger,
+      fetchFn: fetchWithTimeout,
+      getHeaders: async () => {
+        const accessToken = await this.authAdapter.getAccessToken();
+        return {
+          Authorization: `Bearer ${accessToken}`,
+          "LinkedIn-Version": apiVersion,
+          "X-Restli-Protocol-Version": "2.0.0",
+        };
+      },
+      mapStatusCode: (status: number, _body: string) => mapLinkedInErrorToJsonRpc(status),
+      parseErrorBody: (body: string) => {
+        try {
+          const parsed = JSON.parse(body) as LinkedInApiError;
+          return parsed.message ?? body.substring(0, 500);
+        } catch {
+          return body.substring(0, 500);
         }
-        return response.json();
-      }
+      },
+    });
 
-      const errorBody = await response.text().catch(() => "");
-      let linkedInError: LinkedInApiError | undefined;
-      try {
-        linkedInError = JSON.parse(errorBody) as LinkedInApiError;
-      } catch {
-        // Not JSON — use raw error body
-      }
-
-      const jsonRpcCode = mapLinkedInErrorToJsonRpc(response.status);
-      const errorMessage =
-        linkedInError?.message ??
-        `LinkedIn API request failed: ${response.status}`;
-
-      const mcpError = new McpError(
-        jsonRpcCode,
-        errorMessage,
-        {
-          requestId: context?.requestId,
-          httpStatus: response.status,
-          url,
-          method: options?.method ?? "GET",
-          serviceErrorCode: linkedInError?.serviceErrorCode,
-          attempt,
-        }
-      );
-
-      if (!isRetryableLinkedInError(response.status) || attempt >= MAX_RETRIES) {
-        throw mcpError;
-      }
-
-      lastError = mcpError;
-
-      let delayMs = Math.min(
-        INITIAL_BACKOFF_MS * Math.pow(2, attempt),
-        MAX_BACKOFF_MS
-      );
-
-      // Respect Retry-After header
-      const retryAfter = response.headers.get("Retry-After");
-      if (retryAfter) {
-        const retryAfterSeconds = parseInt(retryAfter, 10);
-        if (!isNaN(retryAfterSeconds)) {
-          delayMs = Math.min(retryAfterSeconds * 1000, MAX_BACKOFF_MS);
-        }
-      }
-
-      this.logger.warn(
-        {
-          url,
-          method: options?.method ?? "GET",
-          status: response.status,
-          attempt: attempt + 1,
-          maxRetries: MAX_RETRIES,
-          delayMs,
-          requestId: context?.requestId,
-        },
-        "Retrying LinkedIn API request after transient error"
-      );
-
-      await this.sleep(delayMs);
-    }
-
-    throw (
-      lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
-        requestId: context?.requestId,
-      })
-    );
+    return result;
   }
 
-  private logRateLimitHeaders(response: Response, context?: RequestContext): void {
-    const rateLimitLimit = response.headers.get("X-RateLimit-Limit");
-    const rateLimitRemaining = response.headers.get("X-RateLimit-Remaining");
-    const rateLimitReset = response.headers.get("X-RateLimit-Reset");
-
-    if (rateLimitLimit || rateLimitRemaining || rateLimitReset) {
-      this.logger.debug(
-        {
-          requestId: context?.requestId,
-          rateLimitLimit,
-          rateLimitRemaining,
-          rateLimitReset,
-        },
-        "LinkedIn API rate limit headers"
-      );
-
-      // Warn when less than 10 requests remaining
-      if (rateLimitRemaining && parseInt(rateLimitRemaining, 10) < 10) {
-        this.logger.warn(
-          { rateLimitRemaining, requestId: context?.requestId },
-          "LinkedIn API rate limit approaching threshold"
-        );
-      }
-    }
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }
