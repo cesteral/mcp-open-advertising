@@ -6,13 +6,7 @@
 
 /** Minimal duck-typed interface for sdkContext — avoids importing from MCP SDK. */
 interface ElicitContext {
-  elicitInput?: (opts: {
-    message: string;
-    requestedSchema: {
-      type: "object";
-      properties: Record<string, { type: string; title?: string; description?: string; default?: unknown }>;
-    };
-  }) => Promise<{ action: string; content?: Record<string, unknown> }>;
+  elicitInput?: (opts: Record<string, unknown>) => Promise<unknown>;
 }
 
 /**

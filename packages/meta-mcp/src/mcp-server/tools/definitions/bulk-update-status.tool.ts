@@ -2,6 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
+import { elicitArchiveConfirmation } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_bulk_update_status";
@@ -57,30 +58,11 @@ export async function bulkUpdateStatusLogic(
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
   // Elicit confirmation for irreversible archive operations
-  if (input.status === "ARCHIVED" && sdkContext?.elicitInput) {
+  if (input.status === "ARCHIVED") {
     const entityLabel = input.entityType ?? "entity";
-    const elicitResult = (await sdkContext.elicitInput({
-      message: `You are about to archive ${input.entityIds.length} ${entityLabel}(s). This action is irreversible — archived entities cannot be reactivated. Proceed?`,
-      requestedSchema: {
-        type: "object" as const,
-        properties: {
-          confirm: {
-            type: "boolean" as const,
-            title: "Confirm archive",
-            description: `Archive ${input.entityIds.length} ${entityLabel}(s) permanently`,
-            default: false,
-          },
-        },
-      },
-    })) as { action: string; content?: Record<string, unknown> };
-
-    if (elicitResult.action !== "accept" || !elicitResult.content?.confirm) {
-      return {
-        results: [],
-        successCount: 0,
-        failureCount: 0,
-        timestamp: new Date().toISOString(),
-      };
+    const confirmed = await elicitArchiveConfirmation(input.entityIds.length, entityLabel, sdkContext);
+    if (!confirmed) {
+      return { results: [], successCount: 0, failureCount: 0, timestamp: new Date().toISOString() };
     }
   }
 

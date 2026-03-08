@@ -2,6 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
+import { elicitArchiveConfirmation } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_bulk_update_status";
@@ -56,29 +57,10 @@ export async function bulkUpdateStatusLogic(
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
   // Elicit confirmation for irreversible archive operations
-  if (input.status === "ARCHIVED" && sdkContext?.elicitInput) {
-    const elicitResult = (await sdkContext.elicitInput({
-      message: `You are about to archive ${input.entityUrns.length} ${input.entityType}(s). This action is irreversible — archived entities cannot be reactivated. Proceed?`,
-      requestedSchema: {
-        type: "object" as const,
-        properties: {
-          confirm: {
-            type: "boolean" as const,
-            title: "Confirm archive",
-            description: `Archive ${input.entityUrns.length} ${input.entityType}(s) permanently`,
-            default: false,
-          },
-        },
-      },
-    })) as { action: string; content?: Record<string, unknown> };
-
-    if (elicitResult.action !== "accept" || !elicitResult.content?.confirm) {
-      return {
-        results: [],
-        successCount: 0,
-        failureCount: 0,
-        timestamp: new Date().toISOString(),
-      };
+  if (input.status === "ARCHIVED") {
+    const confirmed = await elicitArchiveConfirmation(input.entityUrns.length, input.entityType, sdkContext);
+    if (!confirmed) {
+      return { results: [], successCount: 0, failureCount: 0, timestamp: new Date().toISOString() };
     }
   }
 
