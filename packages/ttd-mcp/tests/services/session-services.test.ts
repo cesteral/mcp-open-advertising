@@ -4,7 +4,6 @@ import {
   SessionServiceStore,
   type SessionServices,
 } from "../../src/services/session-services.js";
-import { TtdHttpClient } from "../../src/services/ttd/ttd-http-client.js";
 import { TtdService } from "../../src/services/ttd/ttd-service.js";
 import { TtdReportingService } from "../../src/services/ttd/ttd-reporting-service.js";
 
@@ -42,7 +41,6 @@ function createMockRateLimiter() {
 /** Create a stub SessionServices object for store tests. */
 function stubSessionServices(): SessionServices {
   return {
-    httpClient: {} as TtdHttpClient,
     ttdService: {} as TtdService,
     ttdReportingService: {} as TtdReportingService,
   };
@@ -53,7 +51,7 @@ function stubSessionServices(): SessionServices {
 // ---------------------------------------------------------------------------
 
 describe("createSessionServices", () => {
-  it("creates all 3 services (httpClient, ttdService, ttdReportingService)", () => {
+  it("creates ttdService and ttdReportingService", () => {
     const logger = createMockLogger();
     const authAdapter = createMockAuthAdapter();
     const rateLimiter = createMockRateLimiter();
@@ -65,7 +63,6 @@ describe("createSessionServices", () => {
       rateLimiter,
     );
 
-    expect(services.httpClient).toBeInstanceOf(TtdHttpClient);
     expect(services.ttdService).toBeInstanceOf(TtdService);
     expect(services.ttdReportingService).toBeInstanceOf(TtdReportingService);
   });
@@ -82,10 +79,9 @@ describe("createSessionServices", () => {
       rateLimiter,
     );
 
-    expect(services).toHaveProperty("httpClient");
     expect(services).toHaveProperty("ttdService");
     expect(services).toHaveProperty("ttdReportingService");
-    expect(Object.keys(services)).toHaveLength(3);
+    expect(Object.keys(services)).toHaveLength(2);
   });
 });
 
