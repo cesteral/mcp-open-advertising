@@ -217,4 +217,115 @@ describe("TtdReportingService", () => {
       expect(httpClient.fetch).toHaveBeenCalledTimes(4);
     });
   });
+
+  // ==========================================================================
+  // createReportSchedule
+  // ==========================================================================
+
+  describe("createReportSchedule", () => {
+    it("calls POST to /myreports/reportschedule and returns reportScheduleId", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "sched-new" });
+
+      const result = await service.createReportSchedule(sampleReportConfig());
+
+      expect(result).toEqual({ reportScheduleId: "sched-new" });
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/myreports/reportschedule");
+      expect(options.method).toBe("POST");
+    });
+
+    it("consumes rate limiter once", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "sched-rl" });
+
+      await service.createReportSchedule(sampleReportConfig());
+
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+
+    it("does not poll or sleep", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "sched-fast" });
+
+      await service.createReportSchedule(sampleReportConfig());
+
+      // Only one fetch call (no polling)
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ==========================================================================
+  // checkReportExecution
+  // ==========================================================================
+
+  describe("checkReportExecution", () => {
+    it("returns Pending state when execution is in progress", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [{ ReportExecutionState: "Pending" }],
+      });
+
+      const result = await service.checkReportExecution("sched-1");
+
+      expect(result.reportScheduleId).toBe("sched-1");
+      expect(result.state).toBe("Pending");
+      expect(result.downloadUrl).toBeUndefined();
+    });
+
+    it("returns Complete state with downloadUrl when deliveries present", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [
+          {
+            ReportExecutionState: "Complete",
+            ReportDeliveries: [{ DownloadURL: "https://files.ttd.com/report.csv" }],
+          },
+        ],
+      });
+
+      const result = await service.checkReportExecution("sched-2");
+
+      expect(result.state).toBe("Complete");
+      expect(result.downloadUrl).toBe("https://files.ttd.com/report.csv");
+      expect(result.execution).toHaveProperty("ReportExecutionState", "Complete");
+    });
+
+    it("returns Failed state", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [{ ReportExecutionState: "Failed", ErrorMessage: "bad query" }],
+      });
+
+      const result = await service.checkReportExecution("sched-3");
+
+      expect(result.state).toBe("Failed");
+      expect(result.execution).toHaveProperty("ErrorMessage", "bad query");
+    });
+
+    it("returns Unknown state when no executions found", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: [] });
+
+      const result = await service.checkReportExecution("sched-4");
+
+      expect(result.state).toBe("Unknown");
+      expect(result.execution).toEqual({});
+    });
+
+    it("consumes rate limiter once per call", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [{ ReportExecutionState: "Pending" }],
+      });
+
+      await service.checkReportExecution("sched-5");
+
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+
+    it("makes exactly one HTTP call (no polling)", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        Result: [{ ReportExecutionState: "Pending" }],
+      });
+
+      await service.checkReportExecution("sched-6");
+
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+    });
+  });
 });

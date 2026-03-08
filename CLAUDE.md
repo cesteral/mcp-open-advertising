@@ -477,7 +477,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 |------|-------------|----------------|
 | `dv360_validate_entity` | Client-side schema validation (no API call) | `entityType`, `mode`, `data` |
 
-### ttd-mcp (The Trade Desk Server) Tools — 18 Tools, 9 Entity Types
+### ttd-mcp (The Trade Desk Server) Tools — 20 Tools, 9 Entity Types
 
 **Supported entity types:** `advertiser`, `campaign`, `adGroup`, `ad`, `creative`, `siteList`, `deal`, `conversionTracker`, `bidList`
 
@@ -494,8 +494,10 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 #### Reporting
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `ttd_get_report` | Generate async report via MyReports V3 API | `reportName`, `dateRange`, `dimensions`, `metrics`, `advertiserIds` |
+| `ttd_get_report` | Generate async report via MyReports V3 API (blocking) | `reportName`, `dateRange`, `dimensions`, `metrics`, `advertiserIds` |
 | `ttd_download_report` | Download & parse report CSV from URL | `downloadUrl`, `maxRows` |
+| `ttd_submit_report` | Submit report without waiting (non-blocking) | `reportName`, `dateRange`, `dimensions`, `metrics`, `advertiserIds` |
+| `ttd_check_report_status` | Single status check for a submitted report | `reportScheduleId` |
 
 #### Bulk Operations
 | Tool | Description | Key Parameters |
@@ -624,7 +626,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `linkedin_get_ad_previews` | Ad preview rendering | `creativeUrn`, `adFormat?` |
 | `linkedin_validate_entity` | Dry-run validate entity payload (no API call) | `entityType`, `mode`, `data` |
 
-### tiktok-mcp (TikTok Ads Server) Tools — 18 Tools, 4 Entity Types
+### tiktok-mcp (TikTok Ads Server) Tools — 21 Tools, 4 Entity Types
 
 **Supported entity types:** `campaign`, `adGroup`, `ad`, `creative`
 **Auth:** `MCP_AUTH_MODE=tiktok-bearer`, `TIKTOK_ACCESS_TOKEN` + `TIKTOK_ADVERTISER_ID` env vars, `X-TikTok-Advertiser-Id` header in HTTP mode
@@ -642,8 +644,11 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 #### Reporting (Async)
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `tiktok_get_report` | Submit async report and download results | `advertiserId`, `dimensions[]`, `metrics[]`, `startDate`, `endDate` |
-| `tiktok_get_report_breakdowns` | Report with breakdown dimensions | `advertiserId`, `dimensions[]`, `breakdowns[]`, `metrics[]`, `startDate`, `endDate` |
+| `tiktok_get_report` | Submit async report and download results (blocking) | `advertiserId`, `dimensions[]`, `metrics[]`, `startDate`, `endDate` |
+| `tiktok_get_report_breakdowns` | Report with breakdown dimensions (blocking) | `advertiserId`, `dimensions[]`, `breakdowns[]`, `metrics[]`, `startDate`, `endDate` |
+| `tiktok_submit_report` | Submit report without waiting (non-blocking) | `advertiserId`, `dimensions[]`, `metrics[]`, `startDate`, `endDate` |
+| `tiktok_check_report_status` | Single status check for a submitted report | `advertiserId`, `taskId` |
+| `tiktok_download_report` | Download & parse report CSV from URL | `downloadUrl`, `maxRows` |
 
 #### Bulk Operations
 | Tool | Description | Key Parameters |

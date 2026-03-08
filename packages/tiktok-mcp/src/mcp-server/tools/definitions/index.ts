@@ -1,10 +1,10 @@
 /**
  * Tool definitions barrel export
  *
- * 18 tools total:
+ * 21 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
- *   2 reporting: get report, get report breakdowns
+ *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
  *   2 targeting: search targeting, get targeting options
@@ -20,6 +20,9 @@ export { deleteEntityTool } from "./delete-entity.tool.js";
 export { listAdvertisersTool } from "./list-advertisers.tool.js";
 export { getReportTool } from "./get-report.tool.js";
 export { getReportBreakdownsTool } from "./get-report-breakdowns.tool.js";
+export { submitReportTool } from "./submit-report.tool.js";
+export { checkReportStatusTool } from "./check-report-status.tool.js";
+export { downloadReportTool } from "./download-report.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -39,6 +42,9 @@ import { deleteEntityTool } from "./delete-entity.tool.js";
 import { listAdvertisersTool } from "./list-advertisers.tool.js";
 import { getReportTool } from "./get-report.tool.js";
 import { getReportBreakdownsTool } from "./get-report-breakdowns.tool.js";
+import { submitReportTool } from "./submit-report.tool.js";
+import { checkReportStatusTool } from "./check-report-status.tool.js";
+import { downloadReportTool } from "./download-report.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -63,6 +69,9 @@ export const allTools: ToolDefinitionForFactory[] = [
   // ── Reporting ──
   getReportTool,
   getReportBreakdownsTool,
+  submitReportTool,
+  checkReportStatusTool,
+  downloadReportTool,
   // ── Bulk Operations ──
   bulkUpdateStatusTool,
   bulkCreateEntitiesTool,

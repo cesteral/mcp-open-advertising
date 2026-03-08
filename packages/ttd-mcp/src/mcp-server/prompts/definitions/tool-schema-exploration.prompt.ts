@@ -89,7 +89,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (18 tools)
+## Available Tools Summary (20 tools)
 
 ### Core CRUD
 | Tool | Purpose | Read/Write |
@@ -104,8 +104,10 @@ Inspect the output, then iterate with more specific calls.
 ### Reporting
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
-| \`ttd_get_report\` | Generate and retrieve reports | Read |
+| \`ttd_get_report\` | Generate and retrieve reports (blocking) | Read |
 | \`ttd_download_report\` | Download & parse report CSV | Read |
+| \`ttd_submit_report\` | Submit report without waiting (non-blocking) | Write |
+| \`ttd_check_report_status\` | Check status of submitted report | Read |
 
 ### Bulk Operations
 | Tool | Purpose | Read/Write |

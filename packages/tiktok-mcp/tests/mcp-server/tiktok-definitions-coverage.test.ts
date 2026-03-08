@@ -42,6 +42,17 @@ const tiktokReportingService = {
     totalRows: 1,
     taskId: "task-456",
   })),
+  submitReport: vi.fn(async () => ({ task_id: "task-submit-1" })),
+  checkReportStatus: vi.fn(async () => ({
+    taskId: "task-check-1",
+    status: "DONE",
+    downloadUrl: "https://example.com/report.csv",
+  })),
+  downloadReport: vi.fn(async () => ({
+    headers: ["date", "impressions"],
+    rows: [["2026-03-01", "100"]],
+    totalRows: 1,
+  })),
 };
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
@@ -58,7 +69,7 @@ describe("TikTok MCP definitions coverage", () => {
   });
 
   it("exposes expected definitions", () => {
-    expect(allTools).toHaveLength(24); // 18 business tools + 6 conformance tools
+    expect(allTools).toHaveLength(27); // 21 business tools + 6 conformance tools
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(10);
     expect(promptRegistry.size).toBe(10);

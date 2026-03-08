@@ -5,7 +5,7 @@ import { fetchWithTimeout } from "@cesteral/shared";
 import type { Logger } from "pino";
 
 /** TikTok report task status values */
-type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
+export type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
 
 /** TikTok report task check response */
 interface ReportTaskCheckData {
@@ -112,6 +112,29 @@ export class TikTokReportingService {
     throw new Error(
       `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts (${(this.maxPollAttempts * this.pollIntervalMs) / 1000}s)`
     );
+  }
+
+  /**
+   * Single status check for a report task. No polling, no sleep.
+   * Returns current status and download URL if DONE.
+   */
+  async checkReportStatus(
+    taskId: string,
+    context?: RequestContext
+  ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
+    await this.rateLimiter.consume(`tiktok:reporting`);
+
+    const result = (await this.httpClient.get(
+      "/open_api/v1.3/report/task/check/",
+      { task_id: taskId },
+      context
+    )) as ReportTaskCheckData;
+
+    return {
+      taskId: result.task_id,
+      status: result.status,
+      downloadUrl: result.download_url,
+    };
   }
 
   /**

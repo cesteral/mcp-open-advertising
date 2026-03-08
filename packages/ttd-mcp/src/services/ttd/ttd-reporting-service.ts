@@ -71,15 +71,97 @@ export class TtdReportingService {
     );
 
     // Get the download URL and fetch results
-    const downloadUrl = (execution as Record<string, unknown>).ReportDeliveries as Array<Record<string, unknown>> | undefined;
-    if (downloadUrl && downloadUrl.length > 0) {
-      const deliveryUrl = downloadUrl[0].DownloadURL as string | undefined;
+    const reportDeliveries = (execution as Record<string, unknown>).ReportDeliveries as Array<Record<string, unknown>> | undefined;
+    if (reportDeliveries && reportDeliveries.length > 0) {
+      const deliveryUrl = reportDeliveries[0].DownloadURL as string | undefined;
       if (deliveryUrl) {
         return { reportScheduleId, execution, downloadUrl: deliveryUrl };
       }
     }
 
     return { reportScheduleId, execution };
+  }
+
+  /**
+   * Create a report schedule without polling. Returns the schedule ID immediately.
+   * Use with `checkReportExecution()` for non-blocking async pattern.
+   */
+  async createReportSchedule(
+    config: TtdReportConfig,
+    context?: RequestContext
+  ): Promise<{ reportScheduleId: string }> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    const schedule = (await this.httpClient.fetch(
+      "/myreports/reportschedule",
+      context,
+      {
+        method: "POST",
+        body: JSON.stringify(config),
+      }
+    )) as Record<string, unknown>;
+
+    const reportScheduleId = schedule.ReportScheduleId as string;
+
+    this.logger.info(
+      { reportScheduleId, requestId: context?.requestId },
+      "Report schedule created (non-blocking)"
+    );
+
+    return { reportScheduleId };
+  }
+
+  /**
+   * Single status check for a report execution. No polling, no sleep.
+   * Returns current state and download URL if complete.
+   */
+  async checkReportExecution(
+    reportScheduleId: string,
+    context?: RequestContext
+  ): Promise<{
+    reportScheduleId: string;
+    state: string;
+    execution: Record<string, unknown>;
+    downloadUrl?: string;
+  }> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    const body = {
+      ReportScheduleIds: [reportScheduleId],
+      PageSize: 1,
+    };
+
+    const result = (await this.httpClient.fetch(
+      "/myreports/reportexecution/query",
+      context,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      }
+    )) as Record<string, unknown>;
+
+    const executions = (result.Result as Array<Record<string, unknown>>) || [];
+
+    if (executions.length === 0) {
+      return {
+        reportScheduleId,
+        state: "Unknown",
+        execution: {},
+      };
+    }
+
+    const execution = executions[0];
+    const state = (execution.ReportExecutionState as string) || "Unknown";
+
+    let downloadUrl: string | undefined;
+    const deliveries = execution.ReportDeliveries as Array<Record<string, unknown>> | undefined;
+    if (deliveries && deliveries.length > 0) {
+      downloadUrl = deliveries[0].DownloadURL as string | undefined;
+    }
+
+    return { reportScheduleId, state, execution, downloadUrl };
   }
 
   private async pollReportExecution(

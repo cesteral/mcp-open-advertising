@@ -96,6 +96,50 @@ describe("TikTokReportingService", () => {
     expect(result.rows).toHaveLength(1);
   });
 
+  it("checkReportStatus makes single GET and returns status", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({
+      status: "RUNNING",
+      task_id: "task-456",
+    });
+
+    const result = await service.checkReportStatus("task-456");
+
+    expect(result.taskId).toBe("task-456");
+    expect(result.status).toBe("RUNNING");
+    expect(result.downloadUrl).toBeUndefined();
+    expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
+    expect(mockHttpClient.get).toHaveBeenCalledWith(
+      "/open_api/v1.3/report/task/check/",
+      { task_id: "task-456" },
+      undefined
+    );
+  });
+
+  it("checkReportStatus returns downloadUrl when DONE", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({
+      status: "DONE",
+      task_id: "task-789",
+      download_url: "https://example.com/done-report.csv",
+    });
+
+    const result = await service.checkReportStatus("task-789");
+
+    expect(result.status).toBe("DONE");
+    expect(result.downloadUrl).toBe("https://example.com/done-report.csv");
+  });
+
+  it("checkReportStatus consumes rate limiter once", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({
+      status: "PENDING",
+      task_id: "task-rl",
+    });
+
+    await service.checkReportStatus("task-rl");
+
+    expect(mockRateLimiter.consume).toHaveBeenCalledTimes(1);
+    expect(mockRateLimiter.consume).toHaveBeenCalledWith("tiktok:reporting");
+  });
+
   it("getReportBreakdowns appends breakdown dimensions", async () => {
     const getReportSpy = vi.spyOn(service, "getReport").mockResolvedValueOnce({
       headers: ["date", "country"],
