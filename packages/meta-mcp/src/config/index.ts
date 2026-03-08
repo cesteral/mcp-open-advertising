@@ -23,8 +23,8 @@ const ConfigSchema = BaseConfigSchema.extend({
   metaApiBaseUrl: z
     .string()
     .url()
-    .default("https://graph.facebook.com/v21.0"),
-  metaApiVersion: z.string().default("v21.0"),
+    .default("https://graph.facebook.com/v22.0"),
+  metaApiVersion: z.string().default("v22.0"),
   metaRateLimitPerMinute: z.number().default(200),
 
   // Stdio fallback: Meta access token from env vars

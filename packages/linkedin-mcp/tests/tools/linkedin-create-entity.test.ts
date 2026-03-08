@@ -13,10 +13,8 @@ import {
   createEntityResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
 
-import {
-  validateEntityLogic,
-  validateEntityResponseFormatter,
-} from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
+import { validateEntityLogic } from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
+import { validateEntityResponseFormatter } from "@cesteral/shared";
 
 const mockLinkedInService = {
   createEntity: vi.fn(),

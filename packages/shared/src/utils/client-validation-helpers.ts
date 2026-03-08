@@ -81,14 +81,23 @@ export function validateRequiredFields(
 /**
  * Check a data payload for read-only fields that should not be sent to the API.
  * Returns an array of warning strings.
+ *
+ * @param messageTemplate - Optional custom message factory. Defaults to a generic
+ *   "read-only and will be ignored" message. Pass a custom template when the
+ *   platform's behaviour differs (e.g. TikTok uses "may be ignored").
  */
 export function checkReadOnlyFields(
   data: Record<string, unknown>,
-  readOnlyFields: string[]
+  readOnlyFields: string[],
+  messageTemplate?: (field: string) => string
 ): string[] {
   return readOnlyFields
     .filter((field) => field in data)
-    .map((field) => `Field "${field}" is read-only and will be ignored by the API`);
+    .map((field) =>
+      messageTemplate
+        ? messageTemplate(field)
+        : `Field "${field}" is read-only and will be ignored by the API`
+    );
 }
 
 /**

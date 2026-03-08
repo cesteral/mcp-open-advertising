@@ -7,7 +7,7 @@ const TTD_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 1_000,
   maxBackoffMs: 10_000,
-  timeoutMs: 10_000,
+  timeoutMs: 30_000,
   platformName: "TTD",
 };
 

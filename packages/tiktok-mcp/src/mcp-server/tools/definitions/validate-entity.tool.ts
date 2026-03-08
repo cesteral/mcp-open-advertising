@@ -139,7 +139,13 @@ export async function validateEntityLogic(
       errors.push("Update payload must contain at least one field to update");
     }
 
-    warnings.push(...checkReadOnlyFields(data, READ_ONLY_FIELDS));
+    warnings.push(
+      ...checkReadOnlyFields(
+        data,
+        READ_ONLY_FIELDS,
+        (field) => `Field "${field}" is a system field and may be ignored by the API on update`
+      )
+    );
   }
 
   // Budget warnings (both modes)

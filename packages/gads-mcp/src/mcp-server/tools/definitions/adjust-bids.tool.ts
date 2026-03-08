@@ -18,7 +18,9 @@ Returns both previous and new values for audit trail.
 - $1.50 CPC = "1500000"
 - $5.00 CPM = "5000000"
 
-Up to 50 ad groups can be adjusted in a single call.`;
+Up to 50 ad groups can be adjusted in a single call.
+
+**Note:** Uses a read-modify-write pattern. Concurrent bid adjustments to the same ad group may cause one update to overwrite the other. Avoid adjusting the same ad group in parallel.`;
 
 export const AdjustBidsInputSchema = z
   .object({

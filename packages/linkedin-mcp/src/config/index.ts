@@ -24,7 +24,7 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://api.linkedin.com"),
-  linkedinApiVersion: z.string().default("202409"),
+  linkedinApiVersion: z.string().default("202501"),
   linkedinRateLimitPerMinute: z.number().default(100),
 
   // Stdio fallback: LinkedIn access token from env vars

@@ -87,7 +87,7 @@ export function buildListQuery(
         conditions.push(`${field} ${value}`);
       } else {
         // Escape single quotes in filter values for GAQL safety
-        conditions.push(`${field} = '${value.replace(/'/g, "\\'")}'`);
+        conditions.push(`${field} = '${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`);
       }
     }
   }

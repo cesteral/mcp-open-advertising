@@ -375,7 +375,7 @@ cesteral-mcp-servers/
 | `dv360_update_entity`                | Update any supported DV360 entity with updateMask   | `entityType`, IDs, `data`, `updateMask` |
 | `dv360_adjust_line_item_bids`        | Batch bid adjustments for multiple line items       | `advertiserId`, `adjustments[]` |
 
-See [packages/dv360-mcp](packages/dv360-mcp) for the full 16-tool reference including custom bidding, targeting, and bulk operations.
+See [packages/dv360-mcp](packages/dv360-mcp) for the full 19-tool reference including custom bidding, targeting, and bulk operations.
 
 ### The Trade Desk Server Tools
 
@@ -398,7 +398,7 @@ See [packages/ttd-mcp](packages/ttd-mcp) for the full 18-tool reference includin
 | `gads_create_entity`    | Create entity via :mutate API            | `entityType`, `customerId`, `data` |
 | `gads_bulk_mutate`      | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
 
-See [packages/gads-mcp](packages/gads-mcp) for the full 9-tool reference including entity CRUD and bulk status updates.
+See [packages/gads-mcp](packages/gads-mcp) for the full 12-tool reference including entity CRUD and bulk status updates.
 
 ### Meta Ads Server Tools
 
@@ -410,7 +410,7 @@ See [packages/gads-mcp](packages/gads-mcp) for the full 9-tool reference includi
 | `meta_search_targeting`       | Search interests, locations, etc.        | `type`, `query`, `limit` |
 | `meta_get_delivery_estimate`  | Audience size estimation                 | `adAccountId`, `targetingSpec` |
 
-See [packages/meta-mcp](packages/meta-mcp) for the full 15-tool reference including insights breakdowns, duplication, and ad previews.
+See [packages/meta-mcp](packages/meta-mcp) for the full 18-tool reference including insights breakdowns, duplication, and ad previews.
 
 ### LinkedIn Ads Server Tools
 
@@ -488,6 +488,8 @@ AI Agent:
 ./scripts/deploy.sh ttd-mcp prod
 ./scripts/deploy.sh gads-mcp dev
 ./scripts/deploy.sh meta-mcp prod
+./scripts/deploy.sh linkedin-mcp prod
+./scripts/deploy.sh tiktok-mcp prod
 ```
 
 ### Deploy All Servers
@@ -508,7 +510,7 @@ AI Agent:
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta|linkedin|tiktok)-mcp"' --limit=50
 ```
 
 ### Metrics Dashboard
@@ -609,6 +611,8 @@ curl -X POST http://localhost:3001/mcp \
 - The Trade Desk REST API
 - Google Ads REST API v23
 - Meta Marketing API v21.0
+- LinkedIn Marketing API v2
+- TikTok Marketing API v1.3
 
 **Development Tools**
 

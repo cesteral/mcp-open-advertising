@@ -12,7 +12,9 @@ For each ad group, the tool:
 2. Updates BaseBidCPM and/or MaxBidCPM in RTBAttributes
 3. PUTs the full entity back
 
-This is a safe read-modify-write pattern that avoids accidentally clearing other fields.`;
+This is a safe read-modify-write pattern that avoids accidentally clearing other fields.
+
+**Note:** Concurrent bid adjustments to the same ad group may cause one update to overwrite the other, since TTD does not support optimistic locking. Avoid adjusting the same ad group in parallel.`;
 
 export const AdjustBidsInputSchema = z
   .object({

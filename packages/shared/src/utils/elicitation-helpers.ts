@@ -23,10 +23,8 @@ export async function elicitArchiveConfirmation(
   entityLabel: string,
   sdkContext?: ElicitContext
 ): Promise<boolean> {
-  if (!sdkContext?.elicitInput) {
-    // Elicitation not available — allow the operation to proceed.
-    return true;
-  }
+  // No elicitation available (e.g. stdio mode) — allow the operation to proceed.
+  if (!sdkContext?.elicitInput) return true;
 
   const result = (await sdkContext.elicitInput({
     message: `You are about to archive ${count} ${entityLabel}(s). This action is irreversible — archived entities cannot be reactivated. Proceed?`,
