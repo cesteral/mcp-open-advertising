@@ -36,7 +36,7 @@ export class TtdReportingService {
     private readonly httpClient: TtdHttpClient,
     private readonly logger: Logger,
     private readonly pollIntervalMs: number = 2_000,
-    private readonly maxPollAttempts: number = 60 // 5 min max
+    private readonly maxPollAttempts: number = 60 // ~10 min max with exponential backoff
   ) {}
 
   /**
