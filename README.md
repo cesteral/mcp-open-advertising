@@ -55,7 +55,7 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Direct HTTP Transport**: Each MCP server exposes the MCP protocol directly via HTTPS on Cloud Run, eliminating the need for an edge gateway layer.
 
-### Server 1: `dbm-mcp`
+### <img src="docs/logos/google-ad-manager.svg" width="20" height="20" alt="DBM"> Server 1: `dbm-mcp`
 
 **Generic cross-platform reporting queries**
 
@@ -66,7 +66,7 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platforms Supported**: DV360, Google Ads, Meta (extensible to any DSP)
 
-### Server 2: `dv360-mcp`
+### <img src="docs/logos/dv360.svg" width="20" height="20" alt="DV360"> Server 2: `dv360-mcp`
 
 **DV360 campaign entity management**
 
@@ -77,7 +77,7 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: DV360 API v4
 
-### Server 3: `ttd-mcp`
+### <img src="docs/logos/thetradedesk.svg" width="20" height="20" alt="The Trade Desk"> Server 3: `ttd-mcp`
 
 **The Trade Desk campaign entity management and reporting**
 
@@ -88,7 +88,7 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: The Trade Desk REST API
 
-### Server 4: `gads-mcp`
+### <img src="docs/logos/google-ad-manager.svg" width="20" height="20" alt="Google Ads"> Server 4: `gads-mcp`
 
 **Google Ads campaign management and reporting**
 
@@ -100,7 +100,7 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: Google Ads REST API v23
 
-### Server 5: `meta-mcp`
+### <img src="docs/logos/meta.svg" width="20" height="20" alt="Meta"> Server 5: `meta-mcp`
 
 **Meta Ads campaign management**
 
@@ -112,7 +112,7 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: Meta Marketing API v21.0
 
-### Server 6: `linkedin-mcp`
+### <img src="docs/logos/linkedin.svg" width="20" height="20" alt="LinkedIn"> Server 6: `linkedin-mcp`
 
 **LinkedIn Ads campaign management and analytics**
 
@@ -123,7 +123,7 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: LinkedIn Marketing API v2
 
-### Server 7: `tiktok-mcp`
+### <img src="docs/logos/tiktok.svg" width="20" height="20" alt="TikTok"> Server 7: `tiktok-mcp`
 
 **TikTok Ads campaign management and reporting**
 
