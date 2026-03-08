@@ -8,6 +8,12 @@
 import { z } from "zod";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
+import {
+  type FieldRule,
+  validateRequiredFields,
+  checkReadOnlyFields,
+  validateEntityResponseFormatter,
+} from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 // ---------------------------------------------------------------------------
@@ -26,12 +32,6 @@ The LinkedIn API may still reject payloads for business-rule reasons.`;
 // ---------------------------------------------------------------------------
 // Required-field definitions per entity type (create mode)
 // ---------------------------------------------------------------------------
-
-interface FieldRule {
-  field: string;
-  expectedType?: "string" | "number" | "object" | "array" | "boolean";
-  hint?: string;
-}
 
 const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
   adAccount: [
@@ -104,16 +104,6 @@ type ValidateEntityInput = z.infer<typeof ValidateEntityInputSchema>;
 type ValidateEntityOutput = z.infer<typeof ValidateEntityOutputSchema>;
 
 // ---------------------------------------------------------------------------
-// Validation helpers
-// ---------------------------------------------------------------------------
-
-function checkType(value: unknown, expected: FieldRule["expectedType"]): boolean {
-  if (expected === "array") return Array.isArray(value);
-  if (expected === "object") return typeof value === "object" && value !== null && !Array.isArray(value);
-  return typeof value === expected;
-}
-
-// ---------------------------------------------------------------------------
 // Logic (pure — no API calls, no session services)
 // ---------------------------------------------------------------------------
 
@@ -128,25 +118,7 @@ export async function validateEntityLogic(
 
   if (mode === "create") {
     const rules = REQUIRED_FIELDS_CREATE[entityType as LinkedInEntityType] ?? [];
-
-    for (const rule of rules) {
-      const value = data[rule.field];
-
-      if (value === undefined || value === null) {
-        const msg = rule.hint
-          ? `Missing required field "${rule.field}" (${rule.hint})`
-          : `Missing required field "${rule.field}"`;
-        errors.push(msg);
-        continue;
-      }
-
-      if (rule.expectedType && !checkType(value, rule.expectedType)) {
-        const actual = Array.isArray(value) ? "array" : typeof value;
-        errors.push(
-          `Field "${rule.field}" should be ${rule.expectedType} but got ${actual}${rule.hint ? ` (${rule.hint})` : ""}`
-        );
-      }
-    }
+    errors.push(...validateRequiredFields(data, rules));
 
     // Validate URN format for known URN fields
     const urnFields = ["account", "campaignGroup", "campaign"];
@@ -165,11 +137,7 @@ export async function validateEntityLogic(
       errors.push("Update payload must contain at least one field to update");
     }
 
-    for (const field of READ_ONLY_FIELDS) {
-      if (field in data) {
-        warnings.push(`Field "${field}" is read-only and will be ignored by the API`);
-      }
-    }
+    warnings.push(...checkReadOnlyFields(data, READ_ONLY_FIELDS));
   }
 
   // Budget amount format warnings (both modes)
@@ -194,41 +162,6 @@ export async function validateEntityLogic(
     warnings,
     timestamp: new Date().toISOString(),
   };
-}
-
-// ---------------------------------------------------------------------------
-// Response formatter
-// ---------------------------------------------------------------------------
-
-export function validateEntityResponseFormatter(result: ValidateEntityOutput): unknown[] {
-  const lines: string[] = [];
-
-  if (result.valid) {
-    lines.push(`Validation passed for ${result.entityType} (${result.mode})`);
-  } else {
-    lines.push(`Validation failed for ${result.entityType} (${result.mode}):`);
-    for (const err of result.errors) {
-      lines.push(`  - ${err}`);
-    }
-  }
-
-  if (result.warnings.length > 0) {
-    lines.push("");
-    lines.push("Warnings:");
-    for (const warn of result.warnings) {
-      lines.push(`  - ${warn}`);
-    }
-  }
-
-  lines.push("");
-  lines.push(`Timestamp: ${result.timestamp}`);
-
-  return [
-    {
-      type: "text" as const,
-      text: lines.join("\n"),
-    },
-  ];
 }
 
 // ---------------------------------------------------------------------------
