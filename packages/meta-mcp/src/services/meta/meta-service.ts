@@ -63,7 +63,10 @@ export class MetaService {
       context
     )) as Record<string, unknown>;
 
-    const entities = (result.data as unknown[]) || [];
+    if (result.data !== undefined && !Array.isArray(result.data)) {
+      this.logger.warn({ dataType: typeof result.data, entityType }, "Meta API returned unexpected non-array data field");
+    }
+    const entities = Array.isArray(result.data) ? result.data : [];
     const paging = result.paging as Record<string, unknown> | undefined;
     const cursors = paging?.cursors as Record<string, string> | undefined;
 
@@ -240,7 +243,10 @@ export class MetaService {
 
     const result = (await this.httpClient.get("/me/adaccounts", params, context)) as Record<string, unknown>;
 
-    const accounts = (result.data as unknown[]) || [];
+    if (result.data !== undefined && !Array.isArray(result.data)) {
+      this.logger.warn({ dataType: typeof result.data }, "Meta API returned unexpected non-array data field for ad accounts");
+    }
+    const accounts = Array.isArray(result.data) ? result.data : [];
     const paging = result.paging as Record<string, unknown> | undefined;
     const cursors = paging?.cursors as Record<string, string> | undefined;
 

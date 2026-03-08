@@ -205,6 +205,18 @@ describe("MetaService", () => {
       expect(result.entities).toEqual([]);
     });
 
+    it("returns empty entities array and logs a warning when data is not an array", async () => {
+      httpClient.get.mockResolvedValueOnce({ data: { id: "c1" } });
+
+      const result = await service.listEntities("campaign", "act_123");
+
+      expect(result.entities).toEqual([]);
+      expect(logger.warn).toHaveBeenCalledWith(
+        { dataType: "object", entityType: "campaign" },
+        "Meta API returned unexpected non-array data field"
+      );
+    });
+
     it("calls rateLimiter.consume with account key", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
@@ -514,6 +526,18 @@ describe("MetaService", () => {
       await service.listAdAccounts();
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+    });
+
+    it("returns empty accounts array and logs a warning when data is not an array", async () => {
+      httpClient.get.mockResolvedValueOnce({ data: { id: "act_1" } });
+
+      const result = await service.listAdAccounts();
+
+      expect(result.accounts).toEqual([]);
+      expect(logger.warn).toHaveBeenCalledWith(
+        { dataType: "object" },
+        "Meta API returned unexpected non-array data field for ad accounts"
+      );
     });
   });
 

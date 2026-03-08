@@ -65,4 +65,31 @@ describe("LinkedInReportingService", () => {
       )
     ).rejects.toThrow("Invalid date format");
   });
+
+  it("throws on non-YYYY-MM-DD date strings", async () => {
+    await expect(
+      service.getAnalytics(
+        "urn:li:sponsoredAccount:123",
+        { start: "2026-3-4", end: "2026-03-04" }
+      )
+    ).rejects.toThrow('Invalid date format: "2026-3-4". Expected YYYY-MM-DD.');
+  });
+
+  it("throws on datetime strings even if the calendar date is real", async () => {
+    await expect(
+      service.getAnalytics(
+        "urn:li:sponsoredAccount:123",
+        { start: "2026-03-04T12:00:00Z", end: "2026-03-04" }
+      )
+    ).rejects.toThrow('Invalid date format: "2026-03-04T12:00:00Z". Expected YYYY-MM-DD.');
+  });
+
+  it("throws on impossible calendar dates", async () => {
+    await expect(
+      service.getAnalytics(
+        "urn:li:sponsoredAccount:123",
+        { start: "2026-02-30", end: "2026-03-04" }
+      )
+    ).rejects.toThrow('Invalid date: "2026-02-30" does not represent a real calendar date.');
+  });
 });

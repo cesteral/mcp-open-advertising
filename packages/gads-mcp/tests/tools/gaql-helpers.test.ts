@@ -42,6 +42,11 @@ describe("buildListQuery", () => {
     expect(query).toContain("WHERE campaign.name = 'O\\'Brien\\'s Campaign'");
   });
 
+  it("escapes backslashes before escaping single quotes in filter values", () => {
+    const query = buildListQuery("campaign", { "campaign.name": "Path\\O'Brien" });
+    expect(query).toContain("WHERE campaign.name = 'Path\\\\O\\'Brien'");
+  });
+
   it("combines multiple filters with AND", () => {
     const query = buildListQuery("campaign", {
       "campaign.status": "= 'ENABLED'",

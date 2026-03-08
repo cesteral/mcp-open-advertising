@@ -112,14 +112,32 @@ export class LinkedInReportingService {
   // ─── Helpers ─────────────────────────────────────────────────────
 
   private parseDateParts(dateStr: string): { year: number; month: number; day: number } {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      throw new Error(
+        `Invalid date format: "${dateStr}". Expected YYYY-MM-DD.`
+      );
+    }
+
     const [yearStr, monthStr, dayStr] = dateStr.split("-");
-    const year = parseInt(yearStr ?? "2024", 10);
-    const month = parseInt(monthStr ?? "1", 10);
-    const day = parseInt(dayStr ?? "1", 10);
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+    const day = parseInt(dayStr, 10);
 
     if (isNaN(year) || isNaN(month) || isNaN(day)) {
       throw new Error(
         `Invalid date format: "${dateStr}". Expected YYYY-MM-DD.`
+      );
+    }
+
+    // Validate the date is actually real (rejects e.g. 2026-02-30)
+    const testDate = new Date(year, month - 1, day);
+    if (
+      testDate.getFullYear() !== year ||
+      testDate.getMonth() !== month - 1 ||
+      testDate.getDate() !== day
+    ) {
+      throw new Error(
+        `Invalid date: "${dateStr}" does not represent a real calendar date.`
       );
     }
 
