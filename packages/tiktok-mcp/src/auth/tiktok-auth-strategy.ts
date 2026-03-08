@@ -51,7 +51,7 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getTikTokCredentialFingerprint(refreshCreds.appId, advertiserId),
       userId: adapter.userId,
       authFlow: "refresh-token",
-      logContext: { userId: adapter.userId, advertiserId },
+      logContext: { advertiserId },
     };
   }
 
@@ -68,7 +68,7 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getTikTokCredentialFingerprint(token, advertiserId),
       userId: adapter.userId,
       authFlow: "static-token",
-      logContext: { userId: adapter.userId, advertiserId },
+      logContext: { advertiserId },
     };
   }
 

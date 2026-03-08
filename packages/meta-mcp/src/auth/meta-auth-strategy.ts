@@ -48,7 +48,6 @@ export class MetaBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getMetaCredentialFingerprint(appCreds.appId),
       userId: adapter.userId,
       authFlow: "token-exchange",
-      logContext: { userId: adapter.userId },
     };
   }
 
@@ -64,7 +63,6 @@ export class MetaBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getMetaCredentialFingerprint(token),
       userId: adapter.userId,
       authFlow: "static-token",
-      logContext: { userId: adapter.userId },
     };
   }
 
