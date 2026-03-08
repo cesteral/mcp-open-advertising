@@ -60,12 +60,14 @@ function buildPlatformConfig(
         await adapter.validate();
         const services = createSessionServices(
           adapter,
-          ttdConfig.ttdApiBaseUrl,
+          {
+            baseUrl: ttdConfig.ttdApiBaseUrl,
+            graphqlUrl: ttdConfig.ttdGraphqlUrl,
+            reportPollIntervalMs: ttdConfig.ttdReportPollIntervalMs,
+            reportMaxPollAttempts: ttdConfig.ttdReportMaxPollAttempts,
+          },
           log,
-          rateLimiter,
-          ttdConfig.ttdGraphqlUrl,
-          ttdConfig.ttdReportPollIntervalMs,
-          ttdConfig.ttdReportMaxPollAttempts
+          rateLimiter
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -85,12 +87,14 @@ function buildPlatformConfig(
         await envAdapter.validate();
         const services = createSessionServices(
           envAdapter,
-          ttdConfig.ttdApiBaseUrl,
+          {
+            baseUrl: ttdConfig.ttdApiBaseUrl,
+            graphqlUrl: ttdConfig.ttdGraphqlUrl,
+            reportPollIntervalMs: ttdConfig.ttdReportPollIntervalMs,
+            reportMaxPollAttempts: ttdConfig.ttdReportMaxPollAttempts,
+          },
           log,
-          rateLimiter,
-          ttdConfig.ttdGraphqlUrl,
-          ttdConfig.ttdReportPollIntervalMs,
-          ttdConfig.ttdReportMaxPollAttempts
+          rateLimiter
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };

@@ -58,7 +58,7 @@ describe("createSessionServices", () => {
 
     const services = createSessionServices(
       authAdapter as any,
-      "https://api.thetradedesk.com/v3",
+      { baseUrl: "https://api.thetradedesk.com/v3" },
       logger,
       rateLimiter,
     );
@@ -74,7 +74,7 @@ describe("createSessionServices", () => {
 
     const services = createSessionServices(
       authAdapter as any,
-      "https://api.thetradedesk.com/v3",
+      { baseUrl: "https://api.thetradedesk.com/v3" },
       logger,
       rateLimiter,
     );

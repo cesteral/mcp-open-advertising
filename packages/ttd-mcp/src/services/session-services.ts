@@ -8,25 +8,27 @@ import { TtdService } from "./ttd/ttd-service.js";
 import { TtdReportingService } from "./ttd/ttd-reporting-service.js";
 
 export interface SessionServices {
-  httpClient: TtdHttpClient;
   ttdService: TtdService;
   ttdReportingService: TtdReportingService;
 }
 
+export interface TtdSessionConfig {
+  baseUrl: string;
+  graphqlUrl?: string;
+  reportPollIntervalMs?: number;
+  reportMaxPollAttempts?: number;
+}
+
 export function createSessionServices(
   authAdapter: TtdAuthAdapter,
-  baseUrl: string,
+  config: TtdSessionConfig,
   logger: Logger,
-  rateLimiter: RateLimiter,
-  graphqlUrl?: string,
-  reportPollIntervalMs?: number,
-  reportMaxPollAttempts?: number
+  rateLimiter: RateLimiter
 ): SessionServices {
-  const httpClient = new TtdHttpClient(authAdapter, baseUrl, logger);
-  const ttdService = new TtdService(logger, rateLimiter, httpClient, graphqlUrl);
-  const ttdReportingService = new TtdReportingService(rateLimiter, httpClient, logger, reportPollIntervalMs, reportMaxPollAttempts);
+  const httpClient = new TtdHttpClient(authAdapter, config.baseUrl, logger);
+  const ttdService = new TtdService(logger, rateLimiter, httpClient, config.graphqlUrl);
+  const ttdReportingService = new TtdReportingService(rateLimiter, httpClient, logger, config.reportPollIntervalMs, config.reportMaxPollAttempts);
   return {
-    httpClient,
     ttdService,
     ttdReportingService,
   };
