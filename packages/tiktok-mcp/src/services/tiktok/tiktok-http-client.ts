@@ -2,11 +2,19 @@ import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, RetryConfig } from "@cesteral/shared";
 
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 2_000;
-const MAX_BACKOFF_MS = 30_000;
+const TIKTOK_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  initialBackoffMs: 2_000,
+  maxBackoffMs: 30_000,
+  timeoutMs: 30_000,
+  platformName: "TikTok",
+};
+
+const MAX_RETRIES = TIKTOK_RETRY_CONFIG.maxRetries as number;
+const INITIAL_BACKOFF_MS = TIKTOK_RETRY_CONFIG.initialBackoffMs as number;
+const MAX_BACKOFF_MS = TIKTOK_RETRY_CONFIG.maxBackoffMs as number;
 
 /** TikTok standard API response shape */
 interface TikTokApiResponse {

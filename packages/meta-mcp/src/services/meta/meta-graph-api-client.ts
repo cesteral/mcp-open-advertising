@@ -2,11 +2,7 @@ import type { Logger } from "pino";
 import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
-
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 2_000;
-const MAX_BACKOFF_MS = 30_000;
+import type { RequestContext, RetryConfig } from "@cesteral/shared";
 
 /** Meta error response shape */
 interface MetaApiError {
@@ -21,6 +17,14 @@ interface MetaApiError {
 
 /** Rate limit error codes from Meta */
 const RATE_LIMIT_CODES = new Set([4, 17, 32]);
+
+const META_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  initialBackoffMs: 2_000,
+  maxBackoffMs: 30_000,
+  timeoutMs: 30_000,
+  platformName: "Meta",
+};
 
 function isRetryableMetaError(code: number, httpStatus: number): boolean {
   return httpStatus === 429 || httpStatus >= 500 || RATE_LIMIT_CODES.has(code);
@@ -128,9 +132,14 @@ export class MetaGraphApiClient {
     context?: RequestContext,
     options?: RequestInit
   ): Promise<unknown> {
+    const maxRetries = META_RETRY_CONFIG.maxRetries ?? 3;
+    const initialBackoffMs = META_RETRY_CONFIG.initialBackoffMs ?? 1_000;
+    const maxBackoffMs = META_RETRY_CONFIG.maxBackoffMs ?? 10_000;
+    const timeoutMs = META_RETRY_CONFIG.timeoutMs ?? 10_000;
+
     let lastError: McpError | undefined;
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const accessToken = await this.authAdapter.getAccessToken();
 
       // Add access_token as query parameter (Meta standard pattern)
@@ -139,7 +148,7 @@ export class MetaGraphApiClient {
 
       const response = await fetchWithTimeout(
         urlWithAuth.toString(),
-        30_000,
+        timeoutMs,
         context,
         {
           ...options,
@@ -189,15 +198,15 @@ export class MetaGraphApiClient {
         }
       );
 
-      if (!isRetryableMetaError(metaCode, response.status) || attempt >= MAX_RETRIES) {
+      if (!isRetryableMetaError(metaCode, response.status) || attempt >= maxRetries) {
         throw mcpError;
       }
 
       lastError = mcpError;
 
       let delayMs = Math.min(
-        INITIAL_BACKOFF_MS * Math.pow(2, attempt),
-        MAX_BACKOFF_MS
+        initialBackoffMs * Math.pow(2, attempt),
+        maxBackoffMs
       );
 
       // Respect Retry-After header
@@ -205,7 +214,7 @@ export class MetaGraphApiClient {
       if (retryAfter) {
         const retryAfterSeconds = parseInt(retryAfter, 10);
         if (!isNaN(retryAfterSeconds)) {
-          delayMs = Math.min(retryAfterSeconds * 1000, MAX_BACKOFF_MS);
+          delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
         }
       }
 
@@ -216,7 +225,7 @@ export class MetaGraphApiClient {
           status: response.status,
           metaCode,
           attempt: attempt + 1,
-          maxRetries: MAX_RETRIES,
+          maxRetries,
           delayMs,
           requestId: context?.requestId,
         },
