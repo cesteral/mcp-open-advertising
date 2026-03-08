@@ -11,8 +11,8 @@
  * Falls back to static token if app credentials are not provided.
  */
 
-import type { AuthStrategy, AuthResult } from "@cesteral/shared";
 import type { Logger } from "pino";
+import { BearerAuthStrategyBase, type BearerAdapterResult } from "@cesteral/shared";
 import {
   MetaAccessTokenAdapter,
   MetaRefreshTokenAdapter,
@@ -21,72 +21,64 @@ import {
   getMetaCredentialFingerprint,
 } from "./meta-auth-adapter.js";
 
-export class MetaBearerAuthStrategy implements AuthStrategy {
+export class MetaBearerAuthStrategy extends BearerAuthStrategyBase {
+  protected readonly authType = "meta-bearer";
+  protected readonly platformName = "Meta";
+
   constructor(
     private readonly baseUrl: string,
-    private readonly logger?: Logger
-  ) {}
+    logger?: Logger
+  ) {
+    super(logger);
+  }
 
-  async verify(
+  protected async resolveRefreshBranch(
     headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
-    const token = parseMetaTokenFromHeaders(headers);
-
+  ): Promise<BearerAdapterResult | null> {
     // Prefer token exchange flow if app credentials are present
     const appCreds = parseMetaAppCredentialsFromHeaders(headers);
-    if (appCreds) {
-      const adapter = new MetaRefreshTokenAdapter(token, appCreds, this.baseUrl);
-      await adapter.validate();
+    if (!appCreds) return null;
 
-      this.logger?.debug(
-        { userId: adapter.userId, authFlow: "token-exchange" },
-        "Meta credentials validated (token exchange flow)"
-      );
-
-      // Fingerprint based on app ID (stable, not the rotating token)
-      const fingerprint = getMetaCredentialFingerprint(appCreds.appId);
-
-      return {
-        authInfo: {
-          clientId: adapter.userId,
-          subject: adapter.userId,
-          authType: "meta-bearer",
-        },
-        platformAuthAdapter: adapter,
-        credentialFingerprint: fingerprint,
-      };
-    }
-
-    // Fallback: static Bearer token
-    const adapter = new MetaAccessTokenAdapter(token, this.baseUrl);
+    const token = parseMetaTokenFromHeaders(headers);
+    const adapter = new MetaRefreshTokenAdapter(token, appCreds, this.baseUrl);
     await adapter.validate();
 
-    this.logger?.debug(
-      { userId: adapter.userId, authFlow: "static-token" },
-      "Meta credentials validated (static token)"
-    );
-
-    const fingerprint = getMetaCredentialFingerprint(token);
-
     return {
-      authInfo: {
-        clientId: adapter.userId,
-        subject: adapter.userId,
-        authType: "meta-bearer",
-      },
-      platformAuthAdapter: adapter,
-      credentialFingerprint: fingerprint,
+      adapter,
+      fingerprint: getMetaCredentialFingerprint(appCreds.appId),
+      userId: adapter.userId,
+      authFlow: "token-exchange",
+      logContext: { userId: adapter.userId },
     };
   }
 
-  async getCredentialFingerprint(
+  protected async resolveAccessBranch(
     headers: Record<string, string | string[] | undefined>
-  ): Promise<string | undefined> {
-    const appCreds = parseMetaAppCredentialsFromHeaders(headers);
-    if (appCreds) {
-      return getMetaCredentialFingerprint(appCreds.appId);
-    }
+  ): Promise<BearerAdapterResult> {
+    const token = parseMetaTokenFromHeaders(headers);
+    const adapter = new MetaAccessTokenAdapter(token, this.baseUrl);
+    await adapter.validate();
 
+    return {
+      adapter,
+      fingerprint: getMetaCredentialFingerprint(token),
+      userId: adapter.userId,
+      authFlow: "static-token",
+      logContext: { userId: adapter.userId },
+    };
+  }
+
+  protected getRefreshFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): string | undefined {
+    const appCreds = parseMetaAppCredentialsFromHeaders(headers);
+    if (!appCreds) return undefined;
+    return getMetaCredentialFingerprint(appCreds.appId);
+  }
+
+  protected getTokenFingerprint(
+    headers: Record<string, string | string[] | undefined>
+  ): string {
     const token = parseMetaTokenFromHeaders(headers);
     return getMetaCredentialFingerprint(token);
   }
