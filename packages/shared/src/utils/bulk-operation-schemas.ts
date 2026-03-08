@@ -7,13 +7,4 @@ export const BulkOperationResultSchema = z.object({
   error: z.string().optional(),
 });
 
-/** Base output schema for bulk create/update operations */
-export const BulkOperationOutputSchema = z.object({
-  results: z.array(BulkOperationResultSchema),
-  successCount: z.number(),
-  failureCount: z.number(),
-  timestamp: z.string().datetime(),
-});
-
 export type BulkOperationResult = z.infer<typeof BulkOperationResultSchema>;
-export type BulkOperationOutput = z.infer<typeof BulkOperationOutputSchema>;

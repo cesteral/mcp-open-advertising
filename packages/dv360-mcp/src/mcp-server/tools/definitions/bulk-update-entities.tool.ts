@@ -88,8 +88,8 @@ export async function bulkUpdateEntitiesLogic(
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   const results: BulkUpdateEntitiesOutput["results"] = [];
-  let totalSucceeded = 0;
-  let totalFailed = 0;
+  let successCount = 0;
+  let failureCount = 0;
 
   for (let i = 0; i < input.items.length; i++) {
     const item = input.items[i];
@@ -128,7 +128,7 @@ export async function bulkUpdateEntitiesLogic(
         success: true,
         entity: updated as Record<string, any>,
       });
-      totalSucceeded++;
+      successCount++;
     } catch (error: any) {
       results.push({
         index: i,
@@ -136,15 +136,15 @@ export async function bulkUpdateEntitiesLogic(
         success: false,
         error: error.message || String(error),
       });
-      totalFailed++;
+      failureCount++;
     }
   }
 
   return {
     entityType: input.entityType,
     totalRequested: input.items.length,
-    successCount: totalSucceeded,
-    failureCount: totalFailed,
+    successCount,
+    failureCount,
     results,
     timestamp: new Date().toISOString(),
   };

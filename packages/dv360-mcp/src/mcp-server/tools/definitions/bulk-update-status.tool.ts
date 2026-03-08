@@ -2,6 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
+import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -71,10 +72,8 @@ export const BulkUpdateStatusOutputSchema = z
   .object({
     results: z
       .array(
-        z.object({
+        BulkOperationResultSchema.extend({
           entityId: z.string(),
-          success: z.boolean(),
-          error: z.string().optional(),
           advertiserId: z.string().optional(),
           entityType: z.string().optional(),
           entityName: z.string().optional(),
