@@ -1,6 +1,6 @@
 # MCP Service Module for Cesteral
 # Parameterized module: instantiated once per MCP server (dbm-mcp, dv360-mcp, ttd-mcp)
-# Includes: Cloud Run service, Secret Manager, Cloud Scheduler, IAM
+# Includes: Cloud Run service, Secret Manager, IAM
 
 locals {
   common_labels = {
@@ -15,11 +15,11 @@ locals {
 # SERVICE ACCOUNTS
 # ============================================================================
 
-# Runtime service account for Cloud Run and Cloud Scheduler
+# Runtime service account for Cloud Run
 resource "google_service_account" "runtime" {
   account_id   = "${var.service_name}-runtime"
   display_name = "Cesteral ${var.service_name} Runtime Service Account"
-  description  = "Service account for ${var.service_name} runtime and scheduled jobs"
+  description  = "Service account for ${var.service_name} runtime"
   project      = var.project_id
 
   lifecycle {
@@ -264,91 +264,4 @@ resource "google_cloud_run_v2_service_iam_member" "invokers" {
   name     = google_cloud_run_v2_service.mcp_server.name
   role     = "roles/run.invoker"
   member   = each.value
-}
-
-# ============================================================================
-# CLOUD SCHEDULER JOBS
-# ============================================================================
-
-# Pre-flight check job (runs 2 hours before campaign starts)
-resource "google_cloud_scheduler_job" "preflight_check" {
-  count = var.enable_scheduler_jobs ? 1 : 0
-
-  name        = "${var.service_name}-preflight"
-  description = "Pre-flight campaign checks for ${var.service_name}"
-  project     = var.project_id
-  region      = var.region
-  schedule    = var.preflight_schedule
-  time_zone   = var.scheduler_timezone
-
-  http_target {
-    http_method = "POST"
-    uri         = "${google_cloud_run_v2_service.mcp_server.uri}/trigger/preflight"
-
-    headers = {
-      "Content-Type" = "application/json"
-    }
-
-    body = base64encode(jsonencode({
-      job_type = "preflight_check"
-    }))
-
-    oidc_token {
-      service_account_email = google_service_account.runtime.email
-      audience              = google_cloud_run_v2_service.mcp_server.uri
-    }
-  }
-
-  retry_config {
-    retry_count          = 3
-    max_retry_duration   = "1800s"
-    min_backoff_duration = "60s"
-    max_backoff_duration = "300s"
-  }
-}
-
-# In-flight monitoring job (runs at regular intervals)
-resource "google_cloud_scheduler_job" "inflight_monitor" {
-  count = var.enable_scheduler_jobs ? 1 : 0
-
-  name        = "${var.service_name}-inflight"
-  description = "In-flight campaign monitoring for ${var.service_name}"
-  project     = var.project_id
-  region      = var.region
-  schedule    = var.inflight_schedule
-  time_zone   = var.scheduler_timezone
-
-  http_target {
-    http_method = "POST"
-    uri         = "${google_cloud_run_v2_service.mcp_server.uri}/trigger/inflight"
-
-    headers = {
-      "Content-Type" = "application/json"
-    }
-
-    body = base64encode(jsonencode({
-      job_type = "inflight_monitor"
-    }))
-
-    oidc_token {
-      service_account_email = google_service_account.runtime.email
-      audience              = google_cloud_run_v2_service.mcp_server.uri
-    }
-  }
-
-  retry_config {
-    retry_count          = 3
-    max_retry_duration   = "900s"
-    min_backoff_duration = "30s"
-    max_backoff_duration = "180s"
-  }
-}
-
-# Grant Cloud Scheduler service account permission to invoke jobs
-resource "google_project_iam_member" "scheduler_job_runner" {
-  count = var.enable_scheduler_jobs ? 1 : 0
-
-  project = var.project_id
-  role    = "roles/cloudscheduler.jobRunner"
-  member  = "serviceAccount:${google_service_account.runtime.email}"
 }

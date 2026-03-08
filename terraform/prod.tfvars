@@ -46,12 +46,6 @@ log_level              = "info" # Production logging level
 enable_gcs_persistence = false
 gcs_bucket_name        = "cesteral-prod-mcp-persistence" # Enable when ready
 
-# Cloud Scheduler - full production schedule
-enable_scheduler_jobs = true
-preflight_schedule    = "0 4,8,12,16,20 * * *" # Every 4 hours starting at 4am
-inflight_schedule     = "0 * * * *"            # Every hour
-scheduler_timezone    = "America/New_York"
-
 # Artifact Registry
 artifact_registry_repo_name = "cesteral"
 

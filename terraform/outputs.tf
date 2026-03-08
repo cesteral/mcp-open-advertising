@@ -134,20 +134,6 @@ output "tiktok_mcp_service_account_email" {
 }
 
 # ============================================================================
-# SCHEDULER OUTPUTS (dbm-mcp only)
-# ============================================================================
-
-output "preflight_job_name" {
-  description = "Name of pre-flight scheduler job"
-  value       = module.dbm_mcp.preflight_job_name
-}
-
-output "inflight_job_name" {
-  description = "Name of in-flight scheduler job"
-  value       = module.dbm_mcp.inflight_job_name
-}
-
-# ============================================================================
 # NETWORKING OUTPUTS
 # ============================================================================
 

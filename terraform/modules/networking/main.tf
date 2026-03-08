@@ -153,30 +153,6 @@ resource "google_compute_firewall" "allow_external_apis" {
   target_tags = ["cesteral"]
 }
 
-# Allow ingress from Cloud Scheduler
-resource "google_compute_firewall" "allow_scheduler" {
-  count = var.create_vpc && var.allow_scheduler_ingress ? 1 : 0
-
-  name    = "${var.network_prefix}-allow-scheduler"
-  project = var.project_id
-  network = google_compute_network.vpc[0].name
-
-  description = "Allow ingress from Cloud Scheduler"
-  direction   = "INGRESS"
-  priority    = 1000
-
-  allow {
-    protocol = "tcp"
-    ports    = ["8080"]
-  }
-
-  source_ranges = [
-    "0.0.0.0/0" # Cloud Scheduler uses dynamic IPs
-  ]
-
-  target_tags = ["cesteral"]
-}
-
 # Allow health checks from Google Cloud load balancers
 resource "google_compute_firewall" "allow_health_checks" {
   count = var.create_vpc ? 1 : 0

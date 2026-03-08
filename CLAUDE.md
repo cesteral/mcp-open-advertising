@@ -675,17 +675,10 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 ## Deployment & Infrastructure
 
 - **Platform**: GCP Cloud Run (containerized services)
-- **Data Storage**: BigQuery (optimization configuration, task state, adjustment history)
-- **Reporting**: Bid Manager API v2 (DV360 delivery metrics - no BigQuery storage needed)
+- **Reporting**: Bid Manager API v2 (DV360 delivery metrics)
 - **Secrets**: GCP Secret Manager
 - **IaC**: Terraform (in `terraform/` directory)
 - **CI/CD**: Cloud Build (`cloudbuild.yaml`)
-
-### Cloud Scheduler Jobs (Production)
-
-Automated background jobs that invoke MCP server endpoints:
-- **report-cache-refresh** (every 4h) → dbm-mcp (pre-runs common Bid Manager queries)
-- **adjustment-executor** (every 30m) → dv360-mcp management server
 
 ### Local Testing
 Each server runs on a different port:
@@ -747,7 +740,7 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 
 1. **Separation of Concerns**: Five MCP servers with distinct responsibilities (reporting, DV360 management, TTD management, Google Ads management, Meta Ads management)
 2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management, Google Ads REST API for Google Ads management, Meta Marketing API for Meta management)
-3. **Stateless**: Servers are stateless - reporting from Bid Manager API, state in BigQuery
+3. **Stateless**: Servers are stateless - no persistent state between requests
 4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
 5. **Observability**: OTEL traces + metrics (GCP Cloud Trace/Monitoring), Pino structured logs (GCP Cloud Logging), InteractionLogger (local JSONL debugging)
 

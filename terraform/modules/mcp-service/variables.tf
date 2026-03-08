@@ -160,31 +160,3 @@ variable "gcs_bucket_name" {
     error_message = "gcs_bucket_name must be set when enable_gcs_persistence is true."
   }
 }
-
-# ============================================================================
-# CLOUD SCHEDULER CONFIGURATION
-# ============================================================================
-
-variable "enable_scheduler_jobs" {
-  description = "Enable Cloud Scheduler jobs for automated monitoring"
-  type        = bool
-  default     = false
-}
-
-variable "preflight_schedule" {
-  description = "Cron schedule for pre-flight checks"
-  type        = string
-  default     = "0 6,14,22 * * *"
-}
-
-variable "inflight_schedule" {
-  description = "Cron schedule for in-flight monitoring"
-  type        = string
-  default     = "0 * * * *"
-}
-
-variable "scheduler_timezone" {
-  description = "Timezone for Cloud Scheduler jobs (IANA timezone)"
-  type        = string
-  default     = "America/New_York"
-}

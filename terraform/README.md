@@ -19,11 +19,10 @@ terraform/
 
 ### Module: `mcp-service`
 
-Instantiated once per MCP server (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp). Creates:
+Instantiated once per MCP server (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp). Creates:
 - Cloud Run v2 service with health probes
 - Service account with least-privilege IAM
 - Secret Manager secrets (values managed externally)
-- Cloud Scheduler jobs (optional, only enabled for dbm-mcp)
 
 ### Module: `networking`
 
@@ -31,7 +30,7 @@ Creates shared networking infrastructure:
 - VPC with private Google Access
 - Serverless VPC Access Connector for Cloud Run
 - Cloud NAT for egress to external APIs
-- Firewall rules (health checks, scheduler ingress, API egress)
+- Firewall rules (health checks, API egress)
 
 ### Module: `monitoring`
 

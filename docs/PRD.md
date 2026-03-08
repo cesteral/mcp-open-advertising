@@ -240,6 +240,8 @@ Programmatic advertising campaign optimization is:
 
 ### Feature 6: Scheduled Automation
 
+> **Status: DEFERRED / OUT OF SCOPE** — This feature describes a planned autonomous optimization engine (cron-driven, BigQuery state, Pub/Sub events) that has not been implemented. The current architecture is fully AI-agent-driven (request-response via MCP). This section is retained as a future reference.
+
 **Description**: Background processes that run on schedules to enable continuous optimization.
 
 **Scheduled Functions**:

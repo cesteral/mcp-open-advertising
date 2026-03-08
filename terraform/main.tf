@@ -124,8 +124,6 @@ module "networking" {
   nat_min_ports_per_vm                = var.nat_min_ports_per_vm
   enable_endpoint_independent_mapping = var.enable_endpoint_independent_mapping
 
-  # Firewall configuration
-  allow_scheduler_ingress = var.allow_scheduler_ingress
 }
 
 # ============================================================================
@@ -207,12 +205,6 @@ module "dbm_mcp" {
   secret_names    = local.dbm_secret_names
   secret_env_vars = var.dbm_secret_env_vars
 
-  # Scheduler jobs (reporting server runs preflight/inflight)
-  enable_scheduler_jobs = var.enable_scheduler_jobs
-  preflight_schedule    = var.preflight_schedule
-  inflight_schedule     = var.inflight_schedule
-  scheduler_timezone    = var.scheduler_timezone
-
   depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
@@ -247,9 +239,6 @@ module "dv360_mcp" {
   secret_names    = local.dv360_secret_names
   secret_env_vars = var.dv360_secret_env_vars
 
-  # No scheduler jobs for management server
-  enable_scheduler_jobs = false
-
   depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
@@ -283,9 +272,6 @@ module "ttd_mcp" {
   # Secrets (ttd-specific — derived from secret_env_vars)
   secret_names    = local.ttd_secret_names
   secret_env_vars = var.ttd_secret_env_vars
-
-  # No scheduler jobs for TTD server
-  enable_scheduler_jobs = false
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
@@ -325,9 +311,6 @@ module "gads_mcp" {
   secret_names    = local.gads_secret_names
   secret_env_vars = var.gads_secret_env_vars
 
-  # No scheduler jobs for GAds server
-  enable_scheduler_jobs = false
-
   depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
@@ -365,9 +348,6 @@ module "meta_mcp" {
   # Secrets (meta-specific — derived from secret_env_vars)
   secret_names    = local.meta_secret_names
   secret_env_vars = var.meta_secret_env_vars
-
-  # No scheduler jobs for Meta server
-  enable_scheduler_jobs = false
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
@@ -407,9 +387,6 @@ module "linkedin_mcp" {
   secret_names    = local.linkedin_secret_names
   secret_env_vars = var.linkedin_secret_env_vars
 
-  # No scheduler jobs for LinkedIn server
-  enable_scheduler_jobs = false
-
   depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }
 
@@ -447,9 +424,6 @@ module "tiktok_mcp" {
   # Secrets (tiktok-specific — derived from secret_env_vars)
   secret_names    = local.tiktok_secret_names
   secret_env_vars = var.tiktok_secret_env_vars
-
-  # No scheduler jobs for TikTok server
-  enable_scheduler_jobs = false
 
   depends_on = [module.networking, google_storage_bucket.gcs_persistence]
 }

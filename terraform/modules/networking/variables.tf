@@ -131,13 +131,3 @@ variable "enable_endpoint_independent_mapping" {
   type        = bool
   default     = false
 }
-
-# ============================================================================
-# FIREWALL CONFIGURATION
-# ============================================================================
-
-variable "allow_scheduler_ingress" {
-  description = "Allow ingress from Cloud Scheduler"
-  type        = bool
-  default     = true
-}

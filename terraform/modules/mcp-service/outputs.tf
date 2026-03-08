@@ -29,13 +29,3 @@ output "secret_ids" {
   description = "Map of secret names to their resource IDs"
   value       = { for k, v in google_secret_manager_secret.secrets : k => v.id }
 }
-
-output "preflight_job_name" {
-  description = "Name of the pre-flight Cloud Scheduler job"
-  value       = var.enable_scheduler_jobs ? google_cloud_scheduler_job.preflight_check[0].name : null
-}
-
-output "inflight_job_name" {
-  description = "Name of the in-flight Cloud Scheduler job"
-  value       = var.enable_scheduler_jobs ? google_cloud_scheduler_job.inflight_monitor[0].name : null
-}

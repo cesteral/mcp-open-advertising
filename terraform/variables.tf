@@ -151,12 +151,6 @@ variable "enable_endpoint_independent_mapping" {
   default     = false
 }
 
-variable "allow_scheduler_ingress" {
-  description = "Allow Cloud Scheduler ingress"
-  type        = bool
-  default     = true
-}
-
 # ============================================================================
 # CLOUD RUN CONFIGURATION
 # ============================================================================
@@ -428,34 +422,6 @@ variable "gcs_bucket_name" {
     condition     = !var.enable_gcs_persistence || length(trim(var.gcs_bucket_name)) > 0
     error_message = "gcs_bucket_name must be set when enable_gcs_persistence is true."
   }
-}
-
-# ============================================================================
-# CLOUD SCHEDULER CONFIGURATION
-# ============================================================================
-
-variable "enable_scheduler_jobs" {
-  description = "Enable Cloud Scheduler jobs"
-  type        = bool
-  default     = true
-}
-
-variable "preflight_schedule" {
-  description = "Cron schedule for pre-flight checks"
-  type        = string
-  default     = "0 6,14,22 * * *"
-}
-
-variable "inflight_schedule" {
-  description = "Cron schedule for in-flight monitoring"
-  type        = string
-  default     = "0 * * * *"
-}
-
-variable "scheduler_timezone" {
-  description = "Timezone for scheduler jobs"
-  type        = string
-  default     = "America/New_York"
 }
 
 # ============================================================================
