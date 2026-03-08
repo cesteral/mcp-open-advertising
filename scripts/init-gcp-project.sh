@@ -59,7 +59,6 @@ print_info "Enabling required GCP APIs..."
 REQUIRED_APIS=(
     "run.googleapis.com"                    # Cloud Run
     "secretmanager.googleapis.com"          # Secret Manager
-    "cloudscheduler.googleapis.com"         # Cloud Scheduler
     "artifactregistry.googleapis.com"       # Artifact Registry
     "compute.googleapis.com"                # Compute Engine (for VPC, NAT)
     "vpcaccess.googleapis.com"              # Serverless VPC Access
@@ -154,7 +153,6 @@ TF_ROLES=(
     "roles/iam.serviceAccountAdmin"
     "roles/iam.serviceAccountUser"
     "roles/secretmanager.admin"
-    "roles/cloudscheduler.admin"
     "roles/compute.networkAdmin"
     "roles/vpcaccess.admin"
     "roles/storage.admin"

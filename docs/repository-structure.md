@@ -260,7 +260,6 @@ Infrastructure as Code for GCP resources:
 - Pub/Sub topics
 - VPC, NAT, and networking
 - Secret Manager secrets
-- Cloud Scheduler jobs
 - IAM roles and policies
 
 **Environments**:
@@ -301,7 +300,7 @@ Infrastructure as Code for GCP resources:
            │  • Cloud Storage       │
            │  • Pub/Sub             │
            │  • Secret Manager      │
-           │  • Cloud Scheduler     │
+           │                        │
            └────────┬───────────────┘
                     │
                     ▼

@@ -601,7 +601,6 @@ curl -X POST http://localhost:3001/mcp \
 - **Cloud Storage** - Object storage (SDF files, entity snapshots, task artifacts)
 - **Pub/Sub** - Event streaming (audit trail, async workflows)
 - **Secret Manager** - Credentials storage (OAuth tokens, API keys, JWT secrets)
-- **Cloud Scheduler** - Cron jobs (data sync, optimization scans)
 - **VPC & Cloud NAT** - Networking (controlled egress, static IPs)
 
 **External APIs**

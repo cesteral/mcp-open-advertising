@@ -18,7 +18,7 @@ Initializes a GCP project with all required resources and configurations.
 ```
 
 **What it does:**
-- Enables required GCP APIs (Cloud Run, Secret Manager, Cloud Scheduler, etc.)
+- Enables required GCP APIs (Cloud Run, Secret Manager, etc.)
 - Creates Artifact Registry repository for container images
 - Creates GCS bucket for Terraform state with versioning
 - Creates Terraform service account with necessary permissions
@@ -222,13 +222,6 @@ done
 gcloud logging read \
   'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta)-mcp"' \
   --limit 50 \
-  --project=cesteral-dev
-```
-
-### List Cloud Scheduler jobs
-```bash
-gcloud scheduler jobs list \
-  --location=europe-west2 \
   --project=cesteral-dev
 ```
 

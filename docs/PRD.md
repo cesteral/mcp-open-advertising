@@ -346,8 +346,7 @@ cesteral-mcp-servers/
 - **Pub/Sub**: Event streaming (audit trail, async workflows, <1M messages/month)
 - **Secret Manager**: Credentials storage (OAuth tokens, JWT secrets, API keys)
 
-**Automation**
-- **Cloud Scheduler**: Cron jobs (data sync every 4h, optimization scans every 4h, adjustment execution every 30min)
+**Networking**
 - **VPC & Cloud NAT**: Networking (controlled egress, static IPs for API allow lists)
 
 **External Integrations**
