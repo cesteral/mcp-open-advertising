@@ -20,3 +20,4 @@ export * from "./mcp-http-transport-factory.js";
 export * from "./conformance-echo-tool.js";
 export * from "./client-validation-helpers.js";
 export * from "./elicitation-helpers.js";
+export * from "./bulk-operation-schemas.js";

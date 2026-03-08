@@ -3,6 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
+import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -49,17 +50,12 @@ export const BulkCreateEntitiesOutputSchema = z
   .object({
     entityType: z.string().describe("Type of entities created"),
     totalRequested: z.number().describe("Total items requested"),
-    totalSucceeded: z.number().describe("Total items successfully created"),
-    totalFailed: z.number().describe("Total items that failed"),
-    successCount: z.number().describe("Alias for totalSucceeded"),
-    failureCount: z.number().describe("Alias for totalFailed"),
+    successCount: z.number().describe("Total items successfully created"),
+    failureCount: z.number().describe("Total items that failed"),
     results: z
       .array(
-        z.object({
+        BulkOperationResultSchema.extend({
           index: z.number().describe("Index of the item in the input array"),
-          success: z.boolean().describe("Whether this item was created successfully"),
-          entity: z.record(z.any()).optional().describe("Created entity data (on success)"),
-          error: z.string().optional().describe("Error message (on failure)"),
         })
       )
       .describe("Per-item results"),
@@ -105,16 +101,14 @@ export async function bulkCreateEntitiesLogic(
     ...(r.error !== undefined ? { error: r.error } : {}),
   }));
 
-  const totalSucceeded = results.filter((r) => r.success).length;
-  const totalFailed = results.filter((r) => !r.success).length;
+  const successCount = results.filter((r) => r.success).length;
+  const failureCount = results.filter((r) => !r.success).length;
 
   return {
     entityType: input.entityType,
     totalRequested: input.items.length,
-    totalSucceeded,
-    totalFailed,
-    successCount: totalSucceeded,
-    failureCount: totalFailed,
+    successCount,
+    failureCount,
     results,
     timestamp: new Date().toISOString(),
   };
@@ -126,7 +120,7 @@ export async function bulkCreateEntitiesLogic(
 export function bulkCreateEntitiesResponseFormatter(
   result: BulkCreateEntitiesOutput
 ): any {
-  const summary = `Bulk create ${result.entityType}: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`;
+  const summary = `Bulk create ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`;
 
   const successResults = result.results.filter((r) => r.success);
   const failedResults = result.results.filter((r) => !r.success);

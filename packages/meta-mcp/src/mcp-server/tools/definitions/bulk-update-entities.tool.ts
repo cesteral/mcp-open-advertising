@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
+import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -39,10 +40,8 @@ export const BulkUpdateEntitiesInputSchema = z
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
     results: z.array(
-      z.object({
+      BulkOperationResultSchema.extend({
         entityId: z.string(),
-        success: z.boolean(),
-        error: z.string().optional(),
       })
     ),
     successCount: z.number(),

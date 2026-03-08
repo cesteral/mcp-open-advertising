@@ -3,6 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
+import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -59,18 +60,13 @@ export const BulkUpdateEntitiesOutputSchema = z
   .object({
     entityType: z.string().describe("Type of entities updated"),
     totalRequested: z.number().describe("Total items requested"),
-    totalSucceeded: z.number().describe("Total items successfully updated"),
-    totalFailed: z.number().describe("Total items that failed"),
-    successCount: z.number().describe("Alias for totalSucceeded"),
-    failureCount: z.number().describe("Alias for totalFailed"),
+    successCount: z.number().describe("Total items successfully updated"),
+    failureCount: z.number().describe("Total items that failed"),
     results: z
       .array(
-        z.object({
+        BulkOperationResultSchema.extend({
           index: z.number().describe("Index of the item in the input array"),
           entityId: z.string().describe("Entity ID that was targeted"),
-          success: z.boolean().describe("Whether this item was updated successfully"),
-          entity: z.record(z.any()).optional().describe("Updated entity data (on success)"),
-          error: z.string().optional().describe("Error message (on failure)"),
         })
       )
       .describe("Per-item results"),
@@ -147,8 +143,6 @@ export async function bulkUpdateEntitiesLogic(
   return {
     entityType: input.entityType,
     totalRequested: input.items.length,
-    totalSucceeded,
-    totalFailed,
     successCount: totalSucceeded,
     failureCount: totalFailed,
     results,
@@ -162,7 +156,7 @@ export async function bulkUpdateEntitiesLogic(
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
 ): any {
-  const summary = `Bulk update ${result.entityType}: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`;
+  const summary = `Bulk update ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`;
 
   const successResults = result.results.filter((r) => r.success);
   const failedResults = result.results.filter((r) => !r.success);
