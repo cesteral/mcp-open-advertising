@@ -58,7 +58,7 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): any {
+export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): unknown[] {
   if (result.isComplete && result.downloadUrl) {
     return [
       {

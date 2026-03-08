@@ -90,7 +90,7 @@ export async function getReportLogic(
   };
 }
 
-export function getReportResponseFormatter(result: GetReportOutput): any {
+export function getReportResponseFormatter(result: GetReportOutput): unknown[] {
   const downloadInfo = result.downloadUrl
     ? `\n\nDownload URL: ${result.downloadUrl}`
     : "\n\nNo download URL available yet.";

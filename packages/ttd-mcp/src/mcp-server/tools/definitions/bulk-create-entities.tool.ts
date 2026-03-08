@@ -95,7 +95,7 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateOutput): any {
+export function bulkCreateEntitiesResponseFormatter(result: BulkCreateOutput): unknown[] {
   return [
     {
       type: "text" as const,

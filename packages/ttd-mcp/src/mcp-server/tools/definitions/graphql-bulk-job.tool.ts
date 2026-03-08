@@ -91,7 +91,7 @@ export async function graphqlBulkJobLogic(
   };
 }
 
-export function graphqlBulkJobResponseFormatter(result: GraphqlBulkJobOutput): any {
+export function graphqlBulkJobResponseFormatter(result: GraphqlBulkJobOutput): unknown[] {
   const lines: string[] = [
     `Bulk job: ${result.jobId}`,
     `Status: ${result.status}`,

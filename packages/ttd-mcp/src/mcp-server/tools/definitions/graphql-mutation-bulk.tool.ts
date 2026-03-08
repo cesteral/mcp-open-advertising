@@ -109,7 +109,7 @@ export async function graphqlMutationBulkLogic(
   };
 }
 
-export function graphqlMutationBulkResponseFormatter(result: GraphqlMutationBulkOutput): any {
+export function graphqlMutationBulkResponseFormatter(result: GraphqlMutationBulkOutput): unknown[] {
   return [
     {
       type: "text" as const,

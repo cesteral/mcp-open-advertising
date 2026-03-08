@@ -82,7 +82,7 @@ export async function updateEntityLogic(
   };
 }
 
-export function updateEntityResponseFormatter(result: UpdateEntityOutput): any {
+export function updateEntityResponseFormatter(result: UpdateEntityOutput): unknown[] {
   return [
     {
       type: "text" as const,

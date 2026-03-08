@@ -69,7 +69,7 @@ export async function graphqlQueryLogic(
   };
 }
 
-export function graphqlQueryResponseFormatter(result: GraphqlOutput): any {
+export function graphqlQueryResponseFormatter(result: GraphqlOutput): unknown[] {
   const errorInfo = result.errors?.length
     ? `\n\nGraphQL Errors:\n${JSON.stringify(result.errors, null, 2)}`
     : "";

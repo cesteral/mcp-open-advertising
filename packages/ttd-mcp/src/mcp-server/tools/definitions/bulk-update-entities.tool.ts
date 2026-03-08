@@ -103,7 +103,7 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): any {
+export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): unknown[] {
   return [
     {
       type: "text" as const,

@@ -84,7 +84,7 @@ export async function validateEntityLogic(
   };
 }
 
-export function validateEntityResponseFormatter(result: ValidateOutput): any {
+export function validateEntityResponseFormatter(result: ValidateOutput): unknown[] {
   if (result.valid) {
     return [
       {

@@ -89,7 +89,7 @@ export async function graphqlQueryBulkLogic(
   };
 }
 
-export function graphqlQueryBulkResponseFormatter(result: GraphqlQueryBulkOutput): any {
+export function graphqlQueryBulkResponseFormatter(result: GraphqlQueryBulkOutput): unknown[] {
   return [
     {
       type: "text" as const,

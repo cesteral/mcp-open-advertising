@@ -82,7 +82,7 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): any {
+export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): unknown[] {
   return [
     {
       type: "text" as const,
