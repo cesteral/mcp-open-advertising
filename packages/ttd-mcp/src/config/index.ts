@@ -37,6 +37,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Stdio fallback: TTD credentials from env vars
   ttdPartnerId: z.string().optional(),
   ttdApiSecret: z.string().optional(),
+
+  // Report polling configuration
+  ttdReportPollIntervalMs: z.number().int().min(1000).default(5000),
+  ttdReportMaxPollAttempts: z.number().int().min(1).default(60),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -63,6 +67,14 @@ export function parseConfig(): AppConfig {
     // Stdio fallback credentials
     ttdPartnerId: process.env.TTD_PARTNER_ID,
     ttdApiSecret: process.env.TTD_API_SECRET,
+
+    // Report polling
+    ttdReportPollIntervalMs: process.env.TTD_REPORT_POLL_INTERVAL_MS
+      ? parseInt(process.env.TTD_REPORT_POLL_INTERVAL_MS, 10)
+      : undefined,
+    ttdReportMaxPollAttempts: process.env.TTD_REPORT_MAX_POLL_ATTEMPTS
+      ? parseInt(process.env.TTD_REPORT_MAX_POLL_ATTEMPTS, 10)
+      : undefined,
   };
 
   return parseConfigWithSchema(ConfigSchema, rawConfig);

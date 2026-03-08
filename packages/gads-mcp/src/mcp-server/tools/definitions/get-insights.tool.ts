@@ -187,6 +187,7 @@ export const getInsightsTool = {
     readOnlyHint: true,
     idempotentHint: true,
     openWorldHint: true,
+    destructiveHint: false,
   },
   inputExamples: [
     {

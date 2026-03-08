@@ -22,9 +22,9 @@ export function createSessionServices(
   rateLimiter: RateLimiter
 ): SessionServices {
   const httpClient = new MetaGraphApiClient(authAdapter, baseUrl, logger);
-  const metaService = new MetaService(rateLimiter, httpClient);
-  const metaInsightsService = new MetaInsightsService(rateLimiter, httpClient);
-  const metaTargetingService = new MetaTargetingService(rateLimiter, httpClient);
+  const metaService = new MetaService(rateLimiter, httpClient, logger);
+  const metaInsightsService = new MetaInsightsService(rateLimiter, httpClient, logger);
+  const metaTargetingService = new MetaTargetingService(rateLimiter, httpClient, logger);
   return {
     httpClient,
     metaService,

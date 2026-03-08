@@ -73,7 +73,7 @@ export function csvToJson(
   delimiter: string = ",",
   nullableFields: string[] = []
 ): Record<string, string>[] {
-  const lines = csv.split("\n").filter((line) => line.trim() !== "");
+  const lines = csv.replace(/\r\n/g, "\n").split("\n").filter((line) => line.trim() !== "");
   if (lines.length === 0) return [];
 
   const firstLine = lines[0];

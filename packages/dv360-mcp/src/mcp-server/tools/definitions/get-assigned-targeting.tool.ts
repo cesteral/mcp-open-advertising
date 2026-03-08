@@ -133,6 +133,7 @@ export const getAssignedTargetingTool = {
   ],
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

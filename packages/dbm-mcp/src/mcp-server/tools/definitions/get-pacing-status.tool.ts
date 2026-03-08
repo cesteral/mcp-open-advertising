@@ -183,6 +183,7 @@ export const getPacingStatusTool: ToolDefinition<
   outputSchema: GetPacingStatusOutputSchema,
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

@@ -91,7 +91,7 @@ export const duplicateEntityTool = {
     readOnlyHint: false,
     openWorldHint: false,
     idempotentHint: false,
-    destructiveHint: false,
+    destructiveHint: true,
   },
   inputExamples: [
     {

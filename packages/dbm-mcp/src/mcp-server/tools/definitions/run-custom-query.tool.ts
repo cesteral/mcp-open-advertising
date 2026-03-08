@@ -232,6 +232,7 @@ export const runCustomQueryTool: ToolDefinition<
   outputSchema: RunCustomQueryOutputSchema,
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

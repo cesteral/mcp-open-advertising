@@ -29,13 +29,12 @@ export interface TtdReportConfig {
  * 3. Download the result
  */
 export class TtdReportingService {
-  private static readonly POLL_INTERVAL_MS = 5_000;
-  private static readonly MAX_POLL_ATTEMPTS = 60; // 5 min max
-
   constructor(
-    private readonly logger: Logger,
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: TtdHttpClient
+    private readonly httpClient: TtdHttpClient,
+    private readonly logger: Logger,
+    private readonly pollIntervalMs: number = 5_000,
+    private readonly maxPollAttempts: number = 60 // 5 min max
   ) {}
 
   /**
@@ -91,7 +90,7 @@ export class TtdReportingService {
 
     for (
       let attempt = 0;
-      attempt < TtdReportingService.MAX_POLL_ATTEMPTS;
+      attempt < this.maxPollAttempts;
       attempt++
     ) {
       await this.rateLimiter.consume(`ttd:${partnerId}`);
@@ -135,11 +134,11 @@ export class TtdReportingService {
         );
       }
 
-      await this.sleep(TtdReportingService.POLL_INTERVAL_MS);
+      await this.sleep(this.pollIntervalMs);
     }
 
     throw new Error(
-      `Report polling timed out after ${TtdReportingService.MAX_POLL_ATTEMPTS} attempts`
+      `Report polling timed out after ${this.maxPollAttempts} attempts`
     );
   }
 

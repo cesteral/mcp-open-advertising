@@ -81,6 +81,7 @@ export const getDeliveryForecastTool = {
     readOnlyHint: true,
     openWorldHint: true,
     idempotentHint: true,
+    destructiveHint: false,
   },
   inputExamples: [
     {

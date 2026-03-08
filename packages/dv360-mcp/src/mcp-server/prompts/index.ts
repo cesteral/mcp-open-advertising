@@ -43,6 +43,10 @@ import {
   customBiddingWorkflowPrompt,
   getCustomBiddingWorkflowMessage,
 } from "./definitions/custom-bidding-workflow.prompt.js";
+import {
+  entityDuplicationWorkflowPrompt,
+  getEntityDuplicationWorkflowPromptMessage,
+} from "./definitions/entity-duplication-workflow.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -131,6 +135,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: customBiddingWorkflowPrompt,
       generateMessage: getCustomBiddingWorkflowMessage,
+    },
+  ],
+  [
+    entityDuplicationWorkflowPrompt.name,
+    {
+      prompt: entityDuplicationWorkflowPrompt,
+      generateMessage: getEntityDuplicationWorkflowPromptMessage,
     },
   ],
 ]);

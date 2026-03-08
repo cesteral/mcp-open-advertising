@@ -77,6 +77,7 @@ export const getTargetingOptionsTool = {
     readOnlyHint: true,
     openWorldHint: true,
     idempotentHint: true,
+    destructiveHint: false,
   },
   inputExamples: [
     {

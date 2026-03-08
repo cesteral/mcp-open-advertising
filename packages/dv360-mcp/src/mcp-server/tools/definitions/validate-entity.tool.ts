@@ -207,6 +207,7 @@ export const validateEntityTool = {
   outputSchema: ValidateEntityOutputSchema,
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     idempotentHint: true,
     openWorldHint: false,
   },

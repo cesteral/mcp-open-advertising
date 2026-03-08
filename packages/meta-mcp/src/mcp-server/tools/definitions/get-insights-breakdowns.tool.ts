@@ -140,6 +140,7 @@ export const getInsightsBreakdownsTool = {
     readOnlyHint: true,
     openWorldHint: false,
     idempotentHint: true,
+    destructiveHint: false,
   },
   inputExamples: [
     {

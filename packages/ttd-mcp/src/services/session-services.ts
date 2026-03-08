@@ -18,11 +18,13 @@ export function createSessionServices(
   baseUrl: string,
   logger: Logger,
   rateLimiter: RateLimiter,
-  graphqlUrl?: string
+  graphqlUrl?: string,
+  reportPollIntervalMs?: number,
+  reportMaxPollAttempts?: number
 ): SessionServices {
   const httpClient = new TtdHttpClient(authAdapter, baseUrl, logger);
   const ttdService = new TtdService(logger, rateLimiter, httpClient, graphqlUrl);
-  const ttdReportingService = new TtdReportingService(logger, rateLimiter, httpClient);
+  const ttdReportingService = new TtdReportingService(rateLimiter, httpClient, logger, reportPollIntervalMs, reportMaxPollAttempts);
   return {
     httpClient,
     ttdService,

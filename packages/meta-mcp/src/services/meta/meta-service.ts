@@ -5,6 +5,7 @@ import {
   getEntityConfig,
   type MetaEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import type { Logger } from "pino";
 
 /**
  * Meta Service — Generic CRUD operations for Meta Ads entities,
@@ -17,6 +18,7 @@ export class MetaService {
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MetaGraphApiClient,
+    private readonly logger: Logger,
   ) {}
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
@@ -156,6 +158,7 @@ export class MetaService {
     status: "ACTIVE" | "PAUSED" | "ARCHIVED",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
+    this.logger.debug({ count: entityIds.length, status }, "Bulk status update");
     const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
       return this.updateEntity(entityId, { status }, context);
     });
@@ -309,6 +312,7 @@ export class MetaService {
         if (result.status === "fulfilled") {
           results[i + j] = { success: true, entity: result.value };
         } else {
+          this.logger.debug({ error: result.reason }, "Bulk operation item failed");
           results[i + j] = {
             success: false,
             error: result.reason?.message ?? String(result.reason),

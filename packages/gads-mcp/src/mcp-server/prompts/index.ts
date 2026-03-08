@@ -33,6 +33,18 @@ import {
   crossPlatformCampaignSetupPrompt,
   getCrossPlatformCampaignSetupMessage,
 } from "./definitions/cross-platform-campaign-setup.prompt.js";
+import {
+  entityUpdateWorkflowPrompt,
+  getEntityUpdateWorkflowMessage,
+} from "./definitions/entity-update-workflow.prompt.js";
+import {
+  entityDuplicationWorkflowPrompt,
+  getEntityDuplicationWorkflowMessage,
+} from "./definitions/entity-duplication-workflow.prompt.js";
+import {
+  targetingDiscoveryWorkflowPrompt,
+  getTargetingDiscoveryWorkflowMessage,
+} from "./definitions/targeting-discovery-workflow.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -87,6 +99,27 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: crossPlatformCampaignSetupPrompt,
       generateMessage: getCrossPlatformCampaignSetupMessage,
+    },
+  ],
+  [
+    entityUpdateWorkflowPrompt.name,
+    {
+      prompt: entityUpdateWorkflowPrompt,
+      generateMessage: getEntityUpdateWorkflowMessage,
+    },
+  ],
+  [
+    entityDuplicationWorkflowPrompt.name,
+    {
+      prompt: entityDuplicationWorkflowPrompt,
+      generateMessage: getEntityDuplicationWorkflowMessage,
+    },
+  ],
+  [
+    targetingDiscoveryWorkflowPrompt.name,
+    {
+      prompt: targetingDiscoveryWorkflowPrompt,
+      generateMessage: getTargetingDiscoveryWorkflowMessage,
     },
   ],
 ]);

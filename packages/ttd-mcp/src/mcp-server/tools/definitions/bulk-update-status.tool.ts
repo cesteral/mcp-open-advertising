@@ -103,6 +103,7 @@ export const bulkUpdateStatusTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
+    destructiveHint: true,
     idempotentHint: true,
   },
   inputExamples: [

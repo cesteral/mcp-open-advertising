@@ -99,6 +99,7 @@ export const gaqlSearchTool = {
   annotations: {
     readOnlyHint: true,
     openWorldHint: true,
+    destructiveHint: false,
     idempotentHint: true,
   },
   inputExamples: [

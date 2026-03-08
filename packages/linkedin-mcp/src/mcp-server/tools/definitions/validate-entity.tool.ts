@@ -245,6 +245,7 @@ export const validateEntityTool = {
     readOnlyHint: true,
     idempotentHint: true,
     openWorldHint: false,
+    destructiveHint: false,
   },
   inputExamples: [
     {

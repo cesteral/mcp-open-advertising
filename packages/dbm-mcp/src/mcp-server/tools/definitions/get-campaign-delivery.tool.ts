@@ -134,6 +134,7 @@ export const getCampaignDeliveryTool: ToolDefinition<
   outputSchema: GetCampaignDeliveryOutputSchema,
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

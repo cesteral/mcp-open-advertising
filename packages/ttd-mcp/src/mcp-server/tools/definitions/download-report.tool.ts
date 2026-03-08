@@ -140,6 +140,7 @@ export const downloadReportTool = {
   annotations: {
     readOnlyHint: true,
     openWorldHint: true,
+    destructiveHint: false,
     idempotentHint: true,
   },
   inputExamples: [

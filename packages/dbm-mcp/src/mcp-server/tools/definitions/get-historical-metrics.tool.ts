@@ -171,6 +171,7 @@ export const getHistoricalMetricsTool: ToolDefinition<
   outputSchema: GetHistoricalMetricsOutputSchema,
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

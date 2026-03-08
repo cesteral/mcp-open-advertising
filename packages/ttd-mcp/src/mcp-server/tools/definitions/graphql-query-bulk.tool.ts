@@ -107,6 +107,7 @@ export const graphqlQueryBulkTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: true,
+    destructiveHint: false,
     idempotentHint: false,
   },
   inputExamples: [

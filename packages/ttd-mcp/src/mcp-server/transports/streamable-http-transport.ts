@@ -63,7 +63,9 @@ function buildPlatformConfig(
           ttdConfig.ttdApiBaseUrl,
           log,
           rateLimiter,
-          ttdConfig.ttdGraphqlUrl
+          ttdConfig.ttdGraphqlUrl,
+          ttdConfig.ttdReportPollIntervalMs,
+          ttdConfig.ttdReportMaxPollAttempts
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -86,7 +88,9 @@ function buildPlatformConfig(
           ttdConfig.ttdApiBaseUrl,
           log,
           rateLimiter,
-          ttdConfig.ttdGraphqlUrl
+          ttdConfig.ttdGraphqlUrl,
+          ttdConfig.ttdReportPollIntervalMs,
+          ttdConfig.ttdReportMaxPollAttempts
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };

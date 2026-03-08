@@ -19,6 +19,15 @@ function createMockRateLimiter() {
   } as any;
 }
 
+function createMockLogger() {
+  return {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  } as any;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -27,11 +36,13 @@ describe("MetaInsightsService", () => {
   let service: MetaInsightsService;
   let httpClient: ReturnType<typeof createMockHttpClient>;
   let rateLimiter: ReturnType<typeof createMockRateLimiter>;
+  let logger: ReturnType<typeof createMockLogger>;
 
   beforeEach(() => {
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
-    service = new MetaInsightsService(rateLimiter, httpClient);
+    logger = createMockLogger();
+    service = new MetaInsightsService(rateLimiter, httpClient, logger);
   });
 
   // ==========================================================================

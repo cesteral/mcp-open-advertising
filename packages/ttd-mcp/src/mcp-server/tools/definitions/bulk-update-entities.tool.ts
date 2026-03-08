@@ -130,6 +130,7 @@ export const bulkUpdateEntitiesTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
+    destructiveHint: true,
     idempotentHint: false,
   },
   inputExamples: [

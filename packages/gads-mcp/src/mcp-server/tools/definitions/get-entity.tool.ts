@@ -86,6 +86,7 @@ export const getEntityTool = {
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
+    destructiveHint: false,
     idempotentHint: true,
   },
   inputExamples: [

@@ -239,6 +239,7 @@ export const validateTargetingConfigTool = {
   ],
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

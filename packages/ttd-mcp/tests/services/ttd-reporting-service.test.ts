@@ -58,7 +58,7 @@ describe("TtdReportingService", () => {
     logger = createMockLogger();
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
-    service = new TtdReportingService(logger, rateLimiter, httpClient);
+    service = new TtdReportingService(rateLimiter, httpClient, logger);
   });
 
   afterEach(() => {

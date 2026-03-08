@@ -127,6 +127,7 @@ export const getReportBreakdownsTool = {
     readOnlyHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    destructiveHint: false,
   },
   inputExamples: [
     {

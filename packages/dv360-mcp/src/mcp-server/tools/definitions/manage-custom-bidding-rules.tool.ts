@@ -310,6 +310,7 @@ export const manageCustomBiddingRulesTool = {
   ],
   annotations: {
     readOnlyHint: false,
+    destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
   },

@@ -193,7 +193,7 @@ export const updateEntityTool = {
       },
     },
   ],
-  annotations: { readOnlyHint: false, openWorldHint: false, idempotentHint: true },
+  annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: true },
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
 };

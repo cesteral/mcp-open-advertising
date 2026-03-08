@@ -68,6 +68,7 @@ export const listAccountsTool = {
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
+    destructiveHint: false,
     idempotentHint: true,
   },
   inputExamples: [

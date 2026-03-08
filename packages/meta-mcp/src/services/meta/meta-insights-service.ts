@@ -1,6 +1,7 @@
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
+import type { Logger } from "pino";
 
 /**
  * Meta Insights Service — Queries the Insights API for performance data.
@@ -11,7 +12,8 @@ import type { RequestContext } from "@cesteral/shared";
 export class MetaInsightsService {
   constructor(
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: MetaGraphApiClient
+    private readonly httpClient: MetaGraphApiClient,
+    private readonly logger: Logger
   ) {}
 
   /**
@@ -31,6 +33,7 @@ export class MetaInsightsService {
     context?: RequestContext
   ): Promise<{ data: unknown[]; nextCursor?: string; summary?: unknown }> {
     if (options.datePreset && options.timeRange) {
+      this.logger.debug({ entityId, datePreset: options.datePreset }, "Rejecting insights request: datePreset and timeRange are mutually exclusive");
       throw new Error(
         "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
       );
@@ -108,6 +111,7 @@ export class MetaInsightsService {
     context?: RequestContext
   ): Promise<{ data: unknown[]; nextCursor?: string }> {
     if (options.datePreset && options.timeRange) {
+      this.logger.debug({ entityId, datePreset: options.datePreset }, "Rejecting insights breakdowns request: datePreset and timeRange are mutually exclusive");
       throw new Error(
         "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
       );

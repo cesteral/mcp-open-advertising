@@ -43,7 +43,9 @@ function setupStdioCredentials(sessionId: string): boolean {
     mcpConfig.ttdApiBaseUrl,
     logger,
     rateLimiter,
-    mcpConfig.ttdGraphqlUrl
+    mcpConfig.ttdGraphqlUrl,
+    mcpConfig.ttdReportPollIntervalMs,
+    mcpConfig.ttdReportMaxPollAttempts
   );
 
   sessionServiceStore.set(sessionId, services);

@@ -262,6 +262,7 @@ export const createEntityTool = {
   ],
   annotations: {
     readOnlyHint: false,
+    destructiveHint: true,
     openWorldHint: false,
     idempotentHint: false,
   },

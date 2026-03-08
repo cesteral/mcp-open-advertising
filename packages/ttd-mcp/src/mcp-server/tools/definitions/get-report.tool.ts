@@ -112,6 +112,7 @@ export const getReportTool = {
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
+    destructiveHint: false,
     idempotentHint: false,
   },
   inputExamples: [

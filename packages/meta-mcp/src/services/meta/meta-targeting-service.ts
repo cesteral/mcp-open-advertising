@@ -1,6 +1,7 @@
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
+import type { Logger } from "pino";
 
 /**
  * Meta Targeting Service — Targeting search and browse operations.
@@ -11,7 +12,8 @@ import type { RequestContext } from "@cesteral/shared";
 export class MetaTargetingService {
   constructor(
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: MetaGraphApiClient
+    private readonly httpClient: MetaGraphApiClient,
+    private readonly logger: Logger
   ) {}
 
   /**
@@ -35,6 +37,7 @@ export class MetaTargetingService {
 
     // adinterestsuggestion requires interest_list instead of q
     if (normalizedType === "adinterestsuggestion") {
+      this.logger.debug({ type: normalizedType }, "Using interest_list param for adinterestsuggestion type");
       params.interest_list = query;
     } else {
       params.q = query;

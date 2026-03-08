@@ -742,7 +742,7 @@ export class BidManagerService {
     // Parse results based on output format
     if (params.outputFormat === "csv") {
       // Return raw CSV
-      const lines = csvData.trim().split("\n");
+      const lines = csvData.replace(/\r\n/g, "\n").trim().split("\n");
       const columns = lines[0]?.split(",").map((c) => c.trim()) || [];
 
       this.logger.info(
@@ -782,7 +782,7 @@ export class BidManagerService {
    * Parse CSV string to array of records
    */
   private parseCSVToRecords(csv: string): Record<string, unknown>[] {
-    const lines = csv.trim().split("\n");
+    const lines = csv.replace(/\r\n/g, "\n").trim().split("\n");
     if (lines.length < 2) return [];
 
     // Parse header - handle quoted fields

@@ -129,6 +129,7 @@ export const listEntitiesTool = {
     readOnlyHint: true,
     openWorldHint: false,
     idempotentHint: true,
+    destructiveHint: false,
   },
   inputExamples: [
     {

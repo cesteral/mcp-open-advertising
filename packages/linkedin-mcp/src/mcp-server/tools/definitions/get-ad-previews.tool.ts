@@ -75,6 +75,7 @@ export const getAdPreviewsTool = {
     readOnlyHint: true,
     openWorldHint: false,
     idempotentHint: true,
+    destructiveHint: false,
   },
   inputExamples: [
     {

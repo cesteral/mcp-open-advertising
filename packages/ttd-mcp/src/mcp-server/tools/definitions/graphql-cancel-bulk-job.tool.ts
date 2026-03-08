@@ -77,6 +77,7 @@ export const graphqlCancelBulkJobTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
+    destructiveHint: true,
     idempotentHint: true,
   },
   inputExamples: [

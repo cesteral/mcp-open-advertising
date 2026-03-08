@@ -170,6 +170,7 @@ export const listAssignedTargetingTool = {
   ],
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

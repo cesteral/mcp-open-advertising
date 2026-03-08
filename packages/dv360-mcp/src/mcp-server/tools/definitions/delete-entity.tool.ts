@@ -104,7 +104,7 @@ export const deleteEntityTool = {
       },
     },
   ],
-  annotations: { readOnlyHint: false, openWorldHint: false, idempotentHint: false },
+  annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: false },
   logic: deleteEntityLogic,
   responseFormatter: deleteEntityResponseFormatter,
 };

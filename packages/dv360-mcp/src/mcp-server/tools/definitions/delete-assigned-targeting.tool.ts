@@ -153,6 +153,7 @@ export const deleteAssignedTargetingTool = {
   ],
   annotations: {
     readOnlyHint: false,
+    destructiveHint: true,
     openWorldHint: false,
     idempotentHint: true, // Deleting the same ID twice is idempotent (second call fails gracefully)
   },

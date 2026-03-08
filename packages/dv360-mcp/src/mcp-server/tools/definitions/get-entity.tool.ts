@@ -138,6 +138,7 @@ export const getEntityTool = {
   ],
   annotations: {
     readOnlyHint: true,
+    destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
   },

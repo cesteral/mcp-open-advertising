@@ -131,6 +131,7 @@ export const getReportTool = {
     readOnlyHint: true,
     openWorldHint: false,
     idempotentHint: false,
+    destructiveHint: false,
   },
   inputExamples: [
     {
