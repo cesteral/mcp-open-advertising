@@ -14,6 +14,7 @@ import {
   checkReadOnlyFields,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
+export { validateEntityResponseFormatter };
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 // ---------------------------------------------------------------------------
