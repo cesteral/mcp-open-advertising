@@ -33,14 +33,14 @@ function createMockSdkContext(sessionId = "session-123") {
 // ── Tests ───────────────────────────────────────────────────────────────
 describe("dv360_list_custom_bidding_algorithms", () => {
   let mockDv360Service: {
-    listEntities: ReturnType<typeof vi.fn>;
+    listCustomBiddingAlgorithmsEntities: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockDv360Service = {
-      listEntities: vi.fn().mockResolvedValue({
+      listCustomBiddingAlgorithmsEntities: vi.fn().mockResolvedValue({
         entities: [
           {
             customBiddingAlgorithmId: "algo-1",
@@ -74,20 +74,20 @@ describe("dv360_list_custom_bidding_algorithms", () => {
   });
 
   describe("listCustomBiddingAlgorithmsLogic", () => {
-    it("lists algorithms with advertiserId filter", async () => {
+    it("passes advertiserId as query param (not filter expression)", async () => {
       const result = await listCustomBiddingAlgorithmsLogic(
         { advertiserId: "adv-1" },
         createMockContext(),
         createMockSdkContext()
       );
 
-      expect(mockDv360Service.listEntities).toHaveBeenCalledWith(
-        "customBiddingAlgorithm",
-        {},
-        expect.stringContaining('advertiserId="adv-1"'),
-        undefined,
-        100,
-        expect.any(Object)
+      expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
+        undefined,         // partnerId
+        "adv-1",           // advertiserId — must be 2nd positional arg (query param)
+        undefined,         // filter
+        undefined,         // pageToken
+        100,               // pageSize
+        expect.any(Object) // context
       );
       expect(result.algorithms).toHaveLength(2);
       expect(result.totalCount).toBe(2);
@@ -95,24 +95,24 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       expect(result.timestamp).toBeDefined();
     });
 
-    it("lists algorithms with partnerId filter", async () => {
+    it("passes partnerId as query param (not filter expression)", async () => {
       await listCustomBiddingAlgorithmsLogic(
         { partnerId: "partner-1" },
         createMockContext(),
         createMockSdkContext()
       );
 
-      expect(mockDv360Service.listEntities).toHaveBeenCalledWith(
-        "customBiddingAlgorithm",
-        {},
-        expect.stringContaining('partnerId="partner-1"'),
-        undefined,
-        100,
-        expect.any(Object)
+      expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
+        "partner-1",       // partnerId — must be 1st positional arg (query param)
+        undefined,         // advertiserId
+        undefined,         // filter
+        undefined,         // pageToken
+        100,               // pageSize
+        expect.any(Object) // context
       );
     });
 
-    it("combines additional filter with ID filter", async () => {
+    it("passes filter separately from partnerId/advertiserId", async () => {
       await listCustomBiddingAlgorithmsLogic(
         {
           advertiserId: "adv-1",
@@ -122,18 +122,19 @@ describe("dv360_list_custom_bidding_algorithms", () => {
         createMockSdkContext()
       );
 
-      expect(mockDv360Service.listEntities).toHaveBeenCalledWith(
-        "customBiddingAlgorithm",
-        {},
-        expect.stringContaining("AND"),
+      expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
+        undefined,
+        "adv-1",
+        'entityStatus="ENTITY_STATUS_ACTIVE"',  // filter passed as separate param, not combined
         undefined,
         100,
         expect.any(Object)
       );
 
-      const filterArg = mockDv360Service.listEntities.mock.calls[0][2];
-      expect(filterArg).toContain('entityStatus="ENTITY_STATUS_ACTIVE"');
-      expect(filterArg).toContain('advertiserId="adv-1"');
+      // Critically: advertiserId must NOT be embedded in the filter string
+      const filterArg = mockDv360Service.listCustomBiddingAlgorithmsEntities.mock.calls[0][2];
+      expect(filterArg).not.toContain("advertiserId=");
+      expect(filterArg).not.toContain("partnerId=");
     });
 
     it("throws when neither partnerId nor advertiserId is provided", async () => {
@@ -146,7 +147,17 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       ).rejects.toThrow("Either partnerId or advertiserId must be provided");
     });
 
-    it("supports pagination with pageToken", async () => {
+    it("throws when both partnerId and advertiserId are provided", async () => {
+      await expect(
+        listCustomBiddingAlgorithmsLogic(
+          { partnerId: "partner-1", advertiserId: "adv-1" } as any,
+          createMockContext(),
+          createMockSdkContext()
+        )
+      ).rejects.toThrow("Only one of partnerId or advertiserId may be specified, not both");
+    });
+
+    it("supports pagination with pageToken and pageSize", async () => {
       await listCustomBiddingAlgorithmsLogic(
         {
           advertiserId: "adv-1",
@@ -157,10 +168,10 @@ describe("dv360_list_custom_bidding_algorithms", () => {
         createMockSdkContext()
       );
 
-      expect(mockDv360Service.listEntities).toHaveBeenCalledWith(
-        "customBiddingAlgorithm",
-        {},
-        expect.any(String),
+      expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
+        undefined,
+        "adv-1",
+        undefined,
         "token-abc",
         50,
         expect.any(Object)
@@ -168,7 +179,7 @@ describe("dv360_list_custom_bidding_algorithms", () => {
     });
 
     it("sets has_more to true when nextPageToken exists", async () => {
-      mockDv360Service.listEntities.mockResolvedValueOnce({
+      mockDv360Service.listCustomBiddingAlgorithmsEntities.mockResolvedValueOnce({
         entities: [
           {
             customBiddingAlgorithmId: "algo-1",
@@ -192,7 +203,7 @@ describe("dv360_list_custom_bidding_algorithms", () => {
     });
 
     it("handles empty results", async () => {
-      mockDv360Service.listEntities.mockResolvedValueOnce({
+      mockDv360Service.listCustomBiddingAlgorithmsEntities.mockResolvedValueOnce({
         entities: [],
         nextPageToken: undefined,
       });
@@ -235,10 +246,10 @@ describe("dv360_list_custom_bidding_algorithms", () => {
         createMockSdkContext()
       );
 
-      expect(mockDv360Service.listEntities).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.any(Object),
-        expect.any(String),
+      expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
+        undefined,
+        "adv-1",
+        undefined,
         undefined,
         100,
         expect.any(Object)
@@ -246,7 +257,7 @@ describe("dv360_list_custom_bidding_algorithms", () => {
     });
 
     it("propagates service errors", async () => {
-      mockDv360Service.listEntities.mockRejectedValueOnce(
+      mockDv360Service.listCustomBiddingAlgorithmsEntities.mockRejectedValueOnce(
         new Error("API rate limit exceeded")
       );
 
@@ -395,12 +406,15 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       expect(parsed.success).toBe(true);
     });
 
-    it("accepts input with both partnerId and advertiserId", () => {
+    it("rejects input with both partnerId and advertiserId", () => {
       const parsed = ListCustomBiddingAlgorithmsInputSchema.safeParse({
         partnerId: "partner-1",
         advertiserId: "adv-1",
       });
-      expect(parsed.success).toBe(true);
+      expect(parsed.success).toBe(false);
+      expect(parsed.error?.issues[0].message).toContain(
+        "Only one of partnerId or advertiserId may be specified"
+      );
     });
 
     it("rejects input with neither partnerId nor advertiserId", () => {

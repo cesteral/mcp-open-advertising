@@ -718,6 +718,63 @@ export class DV360Service {
   }
 
   /**
+   * List custom bidding algorithms with partnerId/advertiserId as proper query params.
+   *
+   * The DV360 API requires partnerId and advertiserId as top-level query parameters,
+   * not as filter expressions. Only one of the two may be specified per request.
+   *
+   * @param partnerId - Partner ID (mutually exclusive with advertiserId)
+   * @param advertiserId - Advertiser ID (mutually exclusive with partnerId)
+   * @param filter - Optional filter expression (valid fields: customBiddingAlgorithmType, displayName, entityStatus, advertiserId, sharedWith)
+   * @param pageToken - Optional pagination token
+   * @param pageSize - Optional page size
+   * @param context - Request context
+   */
+  async listCustomBiddingAlgorithmsEntities(
+    partnerId?: string,
+    advertiserId?: string,
+    filter?: string,
+    pageToken?: string,
+    pageSize?: number,
+    context?: RequestContext
+  ): Promise<{ entities: unknown[]; nextPageToken?: string }> {
+    return withDV360ApiSpan("listCustomBiddingAlgorithmsEntities", "customBiddingAlgorithm", async () => {
+      const params = new URLSearchParams();
+      if (partnerId) {
+        params.append("partnerId", partnerId);
+        setSpanAttribute("dv360.partnerId", partnerId);
+      }
+      if (advertiserId) {
+        params.append("advertiserId", advertiserId);
+        setSpanAttribute("dv360.advertiserId", advertiserId);
+      }
+      if (filter) params.append("filter", filter);
+      if (pageToken) params.append("pageToken", pageToken);
+      if (pageSize) params.append("pageSize", pageSize.toString());
+
+      const path = `/customBiddingAlgorithms${params.toString() ? `?${params}` : ""}`;
+      setSpanAttribute("dv360.apiPath", "/customBiddingAlgorithms");
+
+      if (advertiserId) {
+        await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
+      }
+
+      const response = (await this.httpClient.fetch(path, context)) as {
+        customBiddingAlgorithms?: unknown[];
+        nextPageToken?: string;
+      };
+
+      const entities = response.customBiddingAlgorithms || [];
+      setSpanAttribute("dv360.resultCount", entities.length);
+
+      return {
+        entities,
+        nextPageToken: response.nextPageToken,
+      };
+    });
+  }
+
+  /**
    * Get a specific custom bidding rules resource
    * @param customBiddingAlgorithmId - The algorithm ID
    * @param customBiddingAlgorithmRulesId - The rules ID

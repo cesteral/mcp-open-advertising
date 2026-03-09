@@ -35,15 +35,17 @@ export const ListCustomBiddingAlgorithmsInputSchema = z
     partnerId: z
       .string()
       .optional()
-      .describe("Partner ID to list algorithms for. Either partnerId or advertiserId required."),
+      .describe("Partner ID to list algorithms for. Mutually exclusive with advertiserId."),
     advertiserId: z
       .string()
       .optional()
-      .describe("Advertiser ID to list algorithms for. Either partnerId or advertiserId required."),
+      .describe("Advertiser ID to list algorithms for. Mutually exclusive with partnerId."),
     filter: z
       .string()
       .optional()
-      .describe('Optional filter expression (e.g., entityStatus="ENTITY_STATUS_ACTIVE")'),
+      .describe(
+        'Optional filter expression. Valid fields: customBiddingAlgorithmType, displayName, entityStatus, advertiserId, sharedWith. Example: entityStatus="ENTITY_STATUS_ACTIVE"'
+      ),
     pageSize: z
       .number()
       .int()
@@ -55,6 +57,9 @@ export const ListCustomBiddingAlgorithmsInputSchema = z
   })
   .refine((input) => input.partnerId || input.advertiserId, {
     message: "Either partnerId or advertiserId must be provided",
+  })
+  .refine((input) => !(input.partnerId && input.advertiserId), {
+    message: "Only one of partnerId or advertiserId may be specified, not both",
   })
   .describe("Parameters for listing custom bidding algorithms");
 
@@ -105,34 +110,21 @@ export async function listCustomBiddingAlgorithmsLogic(
 ): Promise<ListCustomBiddingAlgorithmsOutput> {
   const { dv360Service } = resolveSessionServices(sdkContext);
 
-  // Validate that at least one ID is provided
+  // Validate that at least one ID is provided (schema refine also checks, but guard here for safety)
   if (!input.partnerId && !input.advertiserId) {
     throw new Error("Either partnerId or advertiserId must be provided");
   }
 
-  // Build IDs and filter for the query
-  const ids: Record<string, string> = {};
-
-  // Build filter expression
-  let filter = input.filter || "";
-
-  if (input.partnerId) {
-    // For partner queries, add partnerId filter
-    const partnerFilter = `partnerId="${input.partnerId}"`;
-    filter = filter ? `${filter} AND ${partnerFilter}` : partnerFilter;
+  // Validate mutual exclusivity (schema refine also checks, but guard here for safety)
+  if (input.partnerId && input.advertiserId) {
+    throw new Error("Only one of partnerId or advertiserId may be specified, not both");
   }
 
-  if (input.advertiserId) {
-    // For advertiser queries, add advertiserId filter
-    const advertiserFilter = `advertiserId="${input.advertiserId}"`;
-    filter = filter ? `${filter} AND ${advertiserFilter}` : advertiserFilter;
-  }
-
-  // Use listEntities which handles the API call
-  const { entities, nextPageToken } = await dv360Service.listEntities(
-    "customBiddingAlgorithm",
-    ids,
-    filter,
+  // Use dedicated method that passes partnerId/advertiserId as proper query params (not filter expressions)
+  const { entities, nextPageToken } = await dv360Service.listCustomBiddingAlgorithmsEntities(
+    input.partnerId,
+    input.advertiserId,
+    input.filter,
     input.pageToken,
     input.pageSize || 100,
     context
