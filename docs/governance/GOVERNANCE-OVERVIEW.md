@@ -4,7 +4,7 @@ This directory defines governance standards for MCP workflows and telemetry acro
 
 ## Scope
 
-- Applies to `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, and any future platform package.
+- Applies to `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`, and any future platform package.
 - Covers how workflow contracts are updated and validated.
 - Covers telemetry requirements for observability.
 

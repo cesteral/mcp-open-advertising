@@ -6,7 +6,7 @@ Cesteral MCP servers are maintained as a single pnpm workspace monorepo, not spl
 
 ## Why
 
-The `@cesteral/shared` package is the deciding factor. All five servers depend on it for:
+The `@cesteral/shared` package is the deciding factor. All seven servers depend on it for:
 
 - Auth strategies (`createAuthStrategy`, platform-specific adapters)
 - `SessionServiceStore` + `resolveSessionServices`

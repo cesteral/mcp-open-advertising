@@ -198,7 +198,7 @@ Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 ## Next Steps
 
 1. ✅ **Implemented:** `full_campaign_setup_workflow` prompt (dv360-mcp)
-2. ✅ **Expanded:** Prompts implemented across all five servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp)
+2. ✅ **Expanded:** Prompts implemented across all seven servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp)
 3. **Monitor Usage:** Track which prompts AI agents invoke most
 4. **Iterate:** Add prompts based on common user workflows
 

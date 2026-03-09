@@ -132,7 +132,7 @@ Programmatic advertising campaign optimization is:
 **Description**: Generic cross-platform reporting queries that normalize data from multiple advertising platforms.
 
 **Capabilities**:
-- Fetch delivery metrics (impressions, clicks, conversions, spend) for any campaign across DV360, Google Ads, Meta
+- Fetch delivery metrics (impressions, clicks, conversions, spend) for any campaign across DV360, Google Ads, Meta, The Trade Desk, LinkedIn, and TikTok
 - Calculate performance metrics (CPM, CTR, CPA, ROAS) consistently across platforms
 - Retrieve time-series data for trend analysis
 - Real-time pacing calculations vs. expected delivery
@@ -338,7 +338,7 @@ cesteral-mcp-servers/
 **Data Layer**
 - **BigQuery**: Data warehouse and operational data store
   - Normalized delivery metrics (partitioned by date, clustered by advertiser)
-  - Raw platform-specific tables (DV360, Google Ads, Meta)
+  - Raw platform-specific tables (DV360, Google Ads, Meta, The Trade Desk, LinkedIn, TikTok)
   - Optimization configuration (strategies, thresholds, schedules)
   - Task state tracking (queued, processing, completed)
   - Adjustment history and effectiveness analysis
@@ -556,7 +556,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 **Goals**: Establish monorepo, shared types, basic infrastructure
 
 **Deliverables**:
-- Monorepo structure with six packages (five servers + shared)
+- Monorepo structure with eight packages (seven servers + shared)
 - Shared TypeScript types (Zod schemas)
 - BigQuery normalized schemas deployed
 - Terraform modules for GCP infrastructure
@@ -712,7 +712,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 ### Long-Term (18+ months)
 
 **9. Cross-Platform Budget Allocation**
-- Optimize budget split across DV360, Google Ads, Meta
+- Optimize budget split across DV360, Google Ads, Meta, The Trade Desk, LinkedIn, and TikTok
 - Unified performance view across all platforms
 
 **10. Programmatic Guaranteed Support**

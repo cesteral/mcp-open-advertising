@@ -26,7 +26,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `custom_query_workflow` | Build and execute custom Bid Manager reports | `reportType`, `timeRange` |
 | `troubleshoot_report` | Diagnose report execution failures and data issues | `queryId` (optional) |
 | `pacing_performance_analysis_workflow` | Pacing assessment and performance deep-dive with trend analysis | `campaignId`, `advertiserId`, `focus` |
-| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, Meta, LinkedIn, and TikTok | `dateRange` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
 ### dv360-mcp (11 prompts)
@@ -41,7 +41,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `targeting_management_workflow` | Manage targeting options: discover types, create/audit/delete assignments | `advertiserId`, `parentType`, `goal` |
 | `bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `advertiserId`, `operation` |
 | `custom_bidding_workflow` | Create algorithms, upload scripts/rules, check readiness, assign to line items | `advertiserId` (required), `algorithmType` (optional) |
-| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, Meta, LinkedIn, and TikTok | `dateRange` |
 | `entity_activation_workflow` | Safe step-by-step activation of DV360 entities (IO → Line Items → Campaign) | `advertiserId` (required), `campaignId` (required) |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
@@ -53,7 +53,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `ttd_report_generation_workflow` | Build and execute TTD MyReports V3 async reports | `advertiserIds` |
 | `ttd_troubleshoot_entity` | Diagnose misconfigured or rejected TTD entities | `entityType`, `entityId` |
 | `ttd_tool_schema_exploration` | Discover TTD tools, resources, and capabilities | _(none)_ |
-| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, Meta, LinkedIn, and TikTok | `dateRange` |
 | `ttd_bulk_operations_workflow` | Batch create, update, status change, archive, bid adjustments, and GraphQL bulk jobs | `advertiserId`, `operation` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
@@ -65,7 +65,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `gads_tool_schema_exploration` | Discover Google Ads tools, GAQL syntax, and capabilities | _(none)_ |
 | `gads_troubleshoot_entity` | Diagnose Google Ads entity issues and policy violations | `entityType`, `customerId` |
 | `gaql_reporting_workflow` | Build and execute GAQL-based reporting queries | `customerId` |
-| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, Meta, LinkedIn, and TikTok | `dateRange` |
 | `gads_bulk_operations_workflow` | Batch mutate, status changes, bid adjustments, and entity removal | `customerId`, `operation` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
@@ -81,7 +81,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `meta_bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `adAccountId`, `operation` |
 | `meta_targeting_discovery_workflow` | Search interests, browse categories, build targeting specs, estimate reach | `adAccountId` (required), `goal` (optional) |
 | `meta_entity_duplication_workflow` | Duplicate campaigns/ad sets/ads for A/B testing and scaling | `entityType` (required), `entityId` (required) |
-| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, Meta, LinkedIn, and TikTok | `dateRange` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
 ### linkedin-mcp (10 prompts)
@@ -96,7 +96,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `linkedin_bulk_operations_workflow` | Batch create, update, status change, and bid adjustments | `adAccountUrn`, `operation` |
 | `linkedin_targeting_discovery_workflow` | Search facets, browse categories, build targeting criteria, estimate delivery | `adAccountUrn` (required), `goal` (optional) |
 | `linkedin_entity_duplication_workflow` | Duplicate campaign groups/campaigns/creatives for A/B testing and scaling | `entityType` (required), `entityUrn` (required) |
-| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, Meta, LinkedIn, and TikTok | `dateRange` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
 ### tiktok-mcp (10 prompts)
@@ -111,7 +111,7 @@ MCP Prompts are **on-demand workflow guides** that AI agents can invoke when the
 | `tiktok_bulk_operations_workflow` | Batch create, update, status change, archive, and bid adjustments | `advertiserId`, `entityType` |
 | `tiktok_targeting_discovery_workflow` | Search interest categories, browse behaviors, build targeting, estimate audience | `advertiserId` (required), `goal` (optional) |
 | `tiktok_entity_duplication_workflow` | Duplicate campaigns/ad groups/ads for A/B testing and scaling | `entityType` (required), `entityId` (required), `advertiserId` (required) |
-| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, and Meta | `dateRange` |
+| `cross_platform_performance_comparison` | Compare performance across DV360, TTD, Google Ads, Meta, LinkedIn, and TikTok | `dateRange` |
 | `cross_platform_campaign_setup` | Coordinated multi-platform campaign setup with budget allocation and phased launch | `totalBudget`, `objective` |
 
 ## When to Use Prompts
