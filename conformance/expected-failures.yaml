@@ -47,14 +47,6 @@ server:
   - prompts-get-embedded-resource
   - prompts-get-with-image
 
-  # Test fixture scenarios — require specific resource URIs / prompt names not yet registered
-  # TODO: add test://static-text resource, test://template/{id}/data template,
-  #       test_simple_prompt and test_prompt_with_arguments prompts to shared conformance fixtures
-  - resources-read-text
-  - resources-templates-read
-  - prompts-get-simple
-  - prompts-get-with-args
-
   # Logging notifications — sendLoggingMessage requires client to call logging/setLevel first;
   # conformance scenario doesn't set level before calling tool so notifications are filtered
   - tools-call-with-logging

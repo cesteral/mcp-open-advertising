@@ -968,20 +968,20 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
   - [x] Tier 1: 5 entity CRUD tools (list-entities, get-entity, create-entity, update-entity, delete-entity)
   - [x] Tier 2: 2 workflow tools (adjust-line-item-bids, bulk-update-status)
   - [ ] Tier 2: 1 workflow tool (campaign-setup-wizard) - deferred
-- [ ] **3 MCP resource definitions** (`src/mcp-server/resources/definitions/*.resource.ts`) - deferred
-  - [ ] `entity-schema://{entityType}` - Full JSON Schema with validation rules
-  - [ ] `entity-fields://{entityType}` - Lightweight flat field list
-  - [ ] `entity-examples://{entityType}` - Curated update patterns and examples
+- [x] **3 MCP resource definitions** (`src/mcp-server/resources/definitions/*.resource.ts`)
+  - [x] `entity-schema://{entityType}` - Full JSON Schema with validation rules
+  - [x] `entity-fields://{entityType}` - Lightweight flat field list
+  - [x] `entity-examples://{entityType}` - Curated update patterns and examples
 - [x] **Dynamic entity system utilities** (`src/mcp-server/tools/utils/`)
   - [x] `schemaIntrospection.ts` - Auto-discover schemas from generated/schemas/zod.ts with caching
   - [x] `entityMappingDynamic.ts` - Minimal API metadata → full EntityConfig (87% reduction)
   - [x] `entityIdExtraction.ts` - DRY utilities for ID extraction (eliminates ~70 lines of duplication)
   - ~~`entityMapping.ts`~~ - **Removed** (replaced by dynamic system)
   - ~~`requiredFields.ts`~~ - **Removed** (replaced by schema introspection)
-- [ ] **Resource utilities** (`src/mcp-server/resources/utils/`) - deferred
-  - [ ] `extractFieldsFromZodSchema.ts` - Schema introspection
-  - [ ] `entityExamples.ts` - Curated example data
-  - [ ] `resourceRegistry.ts` - ResourceRegistry class
+- [x] **Resource utilities** (`src/mcp-server/resources/utils/`)
+  - [x] `extractFieldsFromZodSchema.ts` - Schema introspection
+  - [x] `entityExamples.ts` - Curated example data
+  - [x] `resourceRegistry.ts` - ResourceRegistry class
 - [x] **DV360Service with generic entity methods** (`src/services/dv360/DV360Service.ts`)
   - [x] `listEntities()`, `getEntity()`, `createEntity()`, `updateEntity()`, `deleteEntity()`
 - [x] Dependency injection setup (`src/container/`)
@@ -1001,10 +1001,10 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 - [x] JWT authentication implemented (scope-based with withToolAuth)
 - [x] DV360 API integration with service account auth
 - [x] Rate limiting functional with memory leak prevention
-- [ ] OpenTelemetry instrumentation operational - deferred
+- [x] OpenTelemetry instrumentation operational
 - [ ] Test coverage >80% - deferred
 - [x] **Dynamic validation using generated Zod schemas**
-- [ ] **MCP resources for schema discovery** - deferred (tools currently use Record<string, any> for data fields)
+- [x] **MCP resources for schema discovery** (entity-schema, entity-fields, entity-examples)
 
 ---
 

@@ -214,6 +214,44 @@ export async function createMcpServer(
     }
   }
 
+  // Register conformance fixtures (resources + prompts) when enabled
+  if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {
+    const { conformanceResources, conformanceResourceTemplate, conformancePrompts, registerStaticResourcesFromDefinitions } = await import("@cesteral/shared");
+
+    registerStaticResourcesFromDefinitions({
+      server,
+      resources: conformanceResources,
+      logger,
+    });
+
+    const template = new ResourceTemplate(conformanceResourceTemplate.uriTemplate, { list: undefined });
+    server.registerResource(
+      "conformance_template",
+      template,
+      {
+        description: conformanceResourceTemplate.description,
+        mimeType: conformanceResourceTemplate.mimeType,
+      },
+      async (uri, variables) => {
+        const id = (variables.id as string) || "unknown";
+        const content = conformanceResourceTemplate.getContent(id);
+        return {
+          contents: [{
+            uri: uri.href,
+            mimeType: conformanceResourceTemplate.mimeType,
+            text: content,
+          }],
+        };
+      }
+    );
+
+    registerPromptsFromDefinitions({
+      server: server as unknown as McpServerPromptLike,
+      prompts: conformancePrompts,
+      logger,
+    });
+  }
+
   // Register all prompts via shared factory
   const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
     name: def.prompt.name,

@@ -7,7 +7,7 @@ export default defineConfig({
       reporter: ["text", "json-summary", "html"],
       include: ["src/**/*.ts"],
       exclude: ["src/**/index.ts", "src/config/**", "dist/**", "generated/**"],
-      thresholds: { lines: 50, branches: 40, functions: 50, statements: 50 },
+      thresholds: { lines: 65, branches: 80, functions: 55, statements: 65 },
     },
   },
 });
