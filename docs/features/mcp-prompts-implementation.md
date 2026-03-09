@@ -1,7 +1,7 @@
 # MCP Prompts Implementation Summary
 
 > [!NOTE]
-> **Status: Fully Implemented.** As of February 2026, all 41 prompts described in this
+> **Status: Fully Implemented.** As of March 2026, all 61 prompts described in this
 > document and the [quick reference](../guides/mcp-prompts-quick-reference.md) are
 > implemented across all seven MCP servers. References to "future prompts" in this doc
 > are complete.

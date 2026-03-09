@@ -14,7 +14,7 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 | [`CLAUDE.md`](../CLAUDE.md) | Primary developer guide (repo root) |
 | [`guides/ENV-VARIABLES-GUIDE.md`](guides/ENV-VARIABLES-GUIDE.md) | Environment variable reference for all servers |
 | [`CROSS_SERVER_CONTRACT.md`](CROSS_SERVER_CONTRACT.md) | Standards all management servers must follow |
-| [`guides/mcp-prompts-quick-reference.md`](guides/mcp-prompts-quick-reference.md) | Catalog of all 41 MCP prompts |
+| [`guides/mcp-prompts-quick-reference.md`](guides/mcp-prompts-quick-reference.md) | Catalog of all 61 MCP prompts |
 | [`guides/platform-mapping.md`](guides/platform-mapping.md) | Platform-to-package mapping and rules |
 
 ---

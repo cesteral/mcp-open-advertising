@@ -11,18 +11,18 @@ Ready-to-submit listings for the three major MCP registries. Submit once the rep
 **Category:** Advertising / Marketing
 
 **Description:**
-Seven production-ready MCP servers for programmatic advertising management across DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads. Provides ~99 tools for campaign CRUD, reporting, bulk operations, targeting, custom bidding, and performance insights — all accessible to AI agents via the Model Context Protocol.
+Seven production-ready MCP servers for programmatic advertising management across DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads. Provides ~114 tools for campaign CRUD, reporting, bulk operations, targeting, custom bidding, and performance insights — all accessible to AI agents via the Model Context Protocol.
 
 **Platforms:** Google Display & Video 360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, TikTok Ads, Bid Manager (reporting)
 
-**Tool Count:** ~99 tools across 7 servers
+**Tool Count:** ~114 tools across 7 servers
 - dbm-mcp: 5 reporting tools (delivery metrics, performance KPIs, pacing, custom queries)
-- dv360-mcp: 19 management tools (entity CRUD, batch ops, custom bidding, targeting, validation)
-- ttd-mcp: 18 management tools (entity CRUD, bulk ops, reporting, GraphQL)
+- dv360-mcp: 20 management tools (entity CRUD, batch ops, custom bidding, targeting, validation)
+- ttd-mcp: 20 management tools (entity CRUD, bulk ops, reporting, GraphQL)
 - gads-mcp: 12 management tools (entity CRUD, GAQL queries, bulk mutate, insights)
 - meta-mcp: 18 management tools (entity CRUD, insights, targeting, duplication, previews)
 - linkedin-mcp: 18 management tools (entity CRUD, analytics, targeting, duplication, forecasting)
-- tiktok-mcp: 18 management tools (entity CRUD, reporting, targeting, duplication, audience estimation)
+- tiktok-mcp: 21 management tools (entity CRUD, reporting, targeting, duplication, audience estimation)
 
 **Auth:**
 - Hosted: JWT authentication — Early Access (request access at cesteral.com)
@@ -49,7 +49,7 @@ Seven production-ready MCP servers for programmatic advertising management acros
 
 **Category:** Advertising / Marketing
 
-**Short Description:** AI-native programmatic advertising optimization across DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads via 7 MCP servers with ~99 tools.
+**Short Description:** AI-native programmatic advertising optimization across DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads via 7 MCP servers with ~114 tools.
 
 **Long Description:**
 Cesteral provides seven independent MCP servers for managing programmatic advertising campaigns across major platforms. Built for AI agents, each server wraps a platform API and exposes tools via the Model Context Protocol:
@@ -94,7 +94,7 @@ Hosted option coming soon — request early access at https://cesteral.com
 **Tagline:** AI-native programmatic advertising management for DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, and TikTok Ads
 
 **Description:**
-Seven production-ready MCP servers providing ~99 tools for programmatic advertising campaign management. Each server wraps a major advertising platform API and exposes operations through the Model Context Protocol, enabling AI agents to manage campaigns, analyze performance, adjust bids, and configure targeting across platforms.
+Seven production-ready MCP servers providing ~114 tools for programmatic advertising campaign management. Each server wraps a major advertising platform API and exposes operations through the Model Context Protocol, enabling AI agents to manage campaigns, analyze performance, adjust bids, and configure targeting across platforms.
 
 **Key capabilities:**
 - Campaign lifecycle management (create, update, pause, archive) across 6 platforms

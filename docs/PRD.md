@@ -24,7 +24,7 @@
 
 ## Executive Summary
 
-Cesteral is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk, Google Ads, Meta).
+Cesteral is an **AI-native programmatic advertising optimization platform** that automatically adjusts campaign bids and margins to achieve pacing and performance goals across multiple advertising platforms (DV360, The Trade Desk, Google Ads, Meta, LinkedIn, TikTok).
 
 Built on seven Model Context Protocol (MCP) servers, Cesteral enables AI agents (like Claude) to autonomously manage routine optimization while humans focus on strategic decisions.
 
@@ -545,7 +545,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 |--------|--------|-------------|
 | Time Savings | > 70% reduction in manual optimization time | Survey + time tracking |
 | Campaign Pacing Accuracy | > 90% of campaigns deliver within ±10% of target | BigQuery analysis of final pacing |
-| Multi-Platform Adoption | Support 3+ platforms (DV360, Google Ads, Meta) | Feature availability |
+| Multi-Platform Adoption | Support 6 platforms (DV360, Google Ads, Meta, TTD, LinkedIn, TikTok) | Feature availability |
 
 ---
 
@@ -641,7 +641,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 **Deliverables**:
 - LinkedIn Ads MCP server (`linkedin-mcp`) with 18 tools for entity CRUD, analytics, and targeting
-- TikTok Ads MCP server (`tiktok-mcp`) with 18 tools for entity CRUD, reporting, and targeting
+- TikTok Ads MCP server (`tiktok-mcp`) with 21 tools for entity CRUD, reporting, and targeting
 
 **Success Criteria**:
 - AI agent can manage LinkedIn and TikTok campaigns
@@ -700,8 +700,6 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 **6. Additional Platform Support**
 - Amazon DSP
-- LinkedIn Ads
-- TikTok Ads
 
 **7. Advanced Forecasting**
 - Predict end-of-flight delivery with confidence intervals

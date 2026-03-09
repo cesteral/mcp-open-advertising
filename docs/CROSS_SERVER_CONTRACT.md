@@ -28,12 +28,12 @@ Every management server MUST provide these tool categories:
 
 Some naming differences across servers are intentional and match platform API conventions:
 
-| Concept | DV360 | TTD | Google Ads | Meta |
-|---------|-------|-----|------------|------|
-| Delete tool | `dv360_delete_entity` | `ttd_delete_entity` | `gads_remove_entity` | `meta_delete_entity` |
-| Bid tool | `dv360_adjust_line_item_bids` | `ttd_adjust_bids` | `gads_adjust_bids` | `meta_adjust_bids` |
-| Account ID | `advertiserId` | `advertiserId` | `customerId` | `adAccountId` |
-| Status values | `ENTITY_STATUS_ACTIVE` | `Active` | `ENABLED` | `ACTIVE` |
+| Concept | DV360 | TTD | Google Ads | Meta | LinkedIn | TikTok |
+|---------|-------|-----|------------|------|----------|--------|
+| Delete tool | `dv360_delete_entity` | `ttd_delete_entity` | `gads_remove_entity` | `meta_delete_entity` | `linkedin_delete_entity` | `tiktok_delete_entity` |
+| Bid tool | `dv360_adjust_line_item_bids` | `ttd_adjust_bids` | `gads_adjust_bids` | `meta_adjust_bids` | `linkedin_adjust_bids` | `tiktok_adjust_bids` |
+| Account ID | `advertiserId` | `advertiserId` | `customerId` | `adAccountId` | `adAccountUrn` | `advertiserId` |
+| Status values | `ENTITY_STATUS_ACTIVE` | `Active` | `ENABLED` | `ACTIVE` | `ACTIVE` | `ENABLE`/`DISABLE` |
 
 ## Required Tool Structure
 

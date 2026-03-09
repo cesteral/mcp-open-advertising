@@ -67,10 +67,11 @@ cesteral-mcp-servers/
 
 **Key Tools**:
 
-- `list_entities` / `get_entity` / `create_entity` / `update_entity` / `delete_entity`
-- `adjust_line_item_bids` / `bulk_update_status`
-- `create_custom_bidding_algorithm` / `manage_custom_bidding_script` / `manage_custom_bidding_rules` / `list_custom_bidding_algorithms`
-- `list_assigned_targeting` / `get_assigned_targeting` / `create_assigned_targeting` / `delete_assigned_targeting` / `validate_targeting_config`
+- `dv360_list_entities` / `dv360_get_entity` / `dv360_create_entity` / `dv360_update_entity` / `dv360_delete_entity`
+- `dv360_adjust_line_item_bids` / `dv360_bulk_update_status` / `dv360_bulk_create_entities` / `dv360_bulk_update_entities`
+- `dv360_create_custom_bidding_algorithm` / `dv360_manage_custom_bidding_script` / `dv360_manage_custom_bidding_rules` / `dv360_list_custom_bidding_algorithms`
+- `dv360_list_assigned_targeting` / `dv360_get_assigned_targeting` / `dv360_create_assigned_targeting` / `dv360_delete_assigned_targeting` / `dv360_validate_targeting_config`
+- `dv360_validate_entity`
 
 ---
 
@@ -89,12 +90,11 @@ cesteral-mcp-servers/
 
 **Key Tools**:
 
-- `ttd_create_entity`
-- `ttd_get_entity`
-- `ttd_list_entities`
-- `ttd_update_entity`
-- `ttd_delete_entity`
-- `ttd_get_report`
+- `ttd_list_entities` / `ttd_get_entity` / `ttd_create_entity` / `ttd_update_entity` / `ttd_delete_entity`
+- `ttd_get_report` / `ttd_download_report` / `ttd_submit_report` / `ttd_check_report_status`
+- `ttd_bulk_create_entities` / `ttd_bulk_update_entities` / `ttd_bulk_update_status` / `ttd_archive_entities` / `ttd_adjust_bids`
+- `ttd_graphql_query` / `ttd_graphql_query_bulk` / `ttd_graphql_mutation_bulk` / `ttd_graphql_bulk_job` / `ttd_graphql_cancel_bulk_job`
+- `ttd_validate_entity`
 
 ### 4. **gads-mcp** (Google Ads Server)
 
@@ -112,15 +112,10 @@ cesteral-mcp-servers/
 
 **Key Tools**:
 
-- `gads_gaql_search`
-- `gads_list_accounts`
-- `gads_get_entity`
-- `gads_list_entities`
-- `gads_create_entity`
-- `gads_update_entity`
-- `gads_remove_entity`
-- `gads_bulk_mutate`
-- `gads_bulk_update_status`
+- `gads_gaql_search` / `gads_list_accounts` / `gads_get_entity` / `gads_list_entities` / `gads_get_insights`
+- `gads_create_entity` / `gads_update_entity` / `gads_remove_entity`
+- `gads_bulk_mutate` / `gads_bulk_update_status` / `gads_adjust_bids`
+- `gads_validate_entity`
 
 ### 5. **meta-mcp** (Meta Ads Server)
 
@@ -138,21 +133,13 @@ cesteral-mcp-servers/
 
 **Key Tools**:
 
-- `meta_list_entities`
-- `meta_get_entity`
-- `meta_create_entity`
-- `meta_update_entity`
-- `meta_delete_entity`
+- `meta_list_entities` / `meta_get_entity` / `meta_create_entity` / `meta_update_entity` / `meta_delete_entity`
 - `meta_list_ad_accounts`
-- `meta_get_insights`
-- `meta_get_insights_breakdowns`
-- `meta_bulk_update_status`
-- `meta_bulk_create_entities`
-- `meta_search_targeting`
-- `meta_get_targeting_options`
-- `meta_duplicate_entity`
-- `meta_get_delivery_estimate`
-- `meta_get_ad_previews`
+- `meta_get_insights` / `meta_get_insights_breakdowns`
+- `meta_bulk_update_status` / `meta_bulk_create_entities` / `meta_bulk_update_entities`
+- `meta_search_targeting` / `meta_get_targeting_options`
+- `meta_duplicate_entity` / `meta_get_delivery_estimate` / `meta_get_ad_previews`
+- `meta_adjust_bids` / `meta_validate_entity`
 
 ---
 
@@ -172,21 +159,13 @@ cesteral-mcp-servers/
 
 **Key Tools**:
 
-- `linkedin_list_entities`
-- `linkedin_get_entity`
-- `linkedin_create_entity`
-- `linkedin_update_entity`
-- `linkedin_delete_entity`
+- `linkedin_list_entities` / `linkedin_get_entity` / `linkedin_create_entity` / `linkedin_update_entity` / `linkedin_delete_entity`
 - `linkedin_list_ad_accounts`
-- `linkedin_get_analytics`
-- `linkedin_get_analytics_breakdowns`
-- `linkedin_bulk_update_status`
-- `linkedin_bulk_create_entities`
-- `linkedin_search_targeting`
-- `linkedin_get_targeting_options`
-- `linkedin_duplicate_entity`
-- `linkedin_get_delivery_forecast`
-- `linkedin_get_ad_previews`
+- `linkedin_get_analytics` / `linkedin_get_analytics_breakdowns`
+- `linkedin_bulk_update_status` / `linkedin_bulk_create_entities` / `linkedin_bulk_update_entities`
+- `linkedin_search_targeting` / `linkedin_get_targeting_options`
+- `linkedin_duplicate_entity` / `linkedin_get_delivery_forecast` / `linkedin_get_ad_previews`
+- `linkedin_adjust_bids` / `linkedin_validate_entity`
 
 ---
 
@@ -206,21 +185,13 @@ cesteral-mcp-servers/
 
 **Key Tools**:
 
-- `tiktok_list_entities`
-- `tiktok_get_entity`
-- `tiktok_create_entity`
-- `tiktok_update_entity`
-- `tiktok_delete_entity`
+- `tiktok_list_entities` / `tiktok_get_entity` / `tiktok_create_entity` / `tiktok_update_entity` / `tiktok_delete_entity`
 - `tiktok_list_advertisers`
-- `tiktok_get_report`
-- `tiktok_get_report_breakdowns`
-- `tiktok_bulk_update_status`
-- `tiktok_bulk_create_entities`
-- `tiktok_search_targeting`
-- `tiktok_get_targeting_options`
-- `tiktok_duplicate_entity`
-- `tiktok_get_audience_estimate`
-- `tiktok_get_ad_previews`
+- `tiktok_get_report` / `tiktok_get_report_breakdowns` / `tiktok_submit_report` / `tiktok_check_report_status` / `tiktok_download_report`
+- `tiktok_bulk_update_status` / `tiktok_bulk_create_entities` / `tiktok_bulk_update_entities`
+- `tiktok_search_targeting` / `tiktok_get_targeting_options`
+- `tiktok_duplicate_entity` / `tiktok_get_audience_estimate` / `tiktok_get_ad_previews`
+- `tiktok_adjust_bids` / `tiktok_validate_entity`
 
 ---
 
@@ -334,6 +305,8 @@ Infrastructure as Code for GCP resources:
 - TTD server (ttd-mcp) uses partner token auth via `TtdAuthAdapter`
 - Google Ads server (gads-mcp) uses OAuth2 developer token auth via `GAdsAuthAdapter`
 - Meta server (meta-mcp) uses Bearer token auth via `MetaBearerAuthStrategy`
+- LinkedIn server (linkedin-mcp) uses Bearer token auth via `LinkedInBearerAuthStrategy`
+- TikTok server (tiktok-mcp) uses Bearer token auth via `TikTokBearerAuthStrategy`
 - OpenTelemetry consolidated in shared package
 
 **Next Steps**:
@@ -387,4 +360,4 @@ Infrastructure as Code for GCP resources:
 
 ---
 
-_Last updated: 2026-02-27_
+_Last updated: 2026-03-09_
