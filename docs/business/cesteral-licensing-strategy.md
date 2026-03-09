@@ -31,10 +31,12 @@ Cesteral's product is a two-layer system. Understanding the layers is essential 
 │           (Connector / Execution Layer)           │
 │                                                  │
 │   dbm-mcp · dv360-mcp · gads-mcp                │
-│   ttd-mcp · meta-mcp                             │
+│   ttd-mcp · meta-mcp · linkedin-mcp             │
+│   tiktok-mcp                                     │
 │                                                  │
-│   5 MCP servers wrapping platform REST APIs      │
-│   Commodity connectors — no business logic       │
+│   7 MCP servers wrapping platform REST APIs      │
+│   Production-grade connectors — 113+ tools       │
+│   Full CRUD, bulk ops, validation, reporting     │
 │                                                  │
 │              LICENSE: BSL 1.1                     │
 │          (converts to Apache 2.0)                │
@@ -43,11 +45,11 @@ Cesteral's product is a two-layer system. Understanding the layers is essential 
 ┌──────────────────────────────────────────────────┐
 │            Advertising Platforms                  │
 │   DV360 · Google Ads · The Trade Desk · Meta     │
-│             Bid Manager (reporting)              │
+│   LinkedIn · TikTok · Bid Manager (reporting)    │
 └──────────────────────────────────────────────────┘
 ```
 
-**The key insight:** The MCP servers are commodity connectors that wrap public REST APIs. They contain no proprietary business logic — the intelligence lives in `cesteral-intelligence`. Opening the connectors sacrifices nothing while gaining distribution and trust.
+**The key insight:** The MCP servers are production-grade infrastructure connectors with 113+ tools across 7 advertising platforms. While the strategic intelligence lives in `cesteral-intelligence`, the connectors themselves represent significant engineering depth — full CRUD operations, bulk safety patterns, cross-platform session management, and platform-specific workflow knowledge. No single ad platform provides equivalent MCP coverage (as of March 2026, Google's official Ads MCP server offers only 2 read-only tools). Opening the connectors sacrifices no strategic value while gaining distribution, trust, and ecosystem lock-in.
 
 ---
 
@@ -55,7 +57,7 @@ Cesteral's product is a two-layer system. Understanding the layers is essential 
 
 ### Why not MIT / Apache 2.0 (fully open source)?
 
-MIT/Apache would allow any competitor to fork the connectors and launch a competing hosted service with zero friction. While the connectors themselves are commodity, they represent significant engineering effort (63 tools across 5 platforms, auth flows, session management, per-platform quirks). Giving that away unconditionally hands a free head start to competitors.
+MIT/Apache would allow any competitor to fork the connectors and launch a competing hosted service with zero friction. While the connectors themselves are commodity, they represent significant engineering effort (113+ tools across 7 platforms, auth flows, per-session service management, bulk operation safety patterns, and deep per-platform quirks). Giving that away unconditionally hands a free head start to competitors.
 
 ### Why not fully proprietary?
 
@@ -85,7 +87,7 @@ These are the specific parameters that fill the BSL 1.1 template for Cesteral:
 |-----------|-------|
 | **Licensor** | Cesteral AB |
 | **Licensed Work** | Cesteral MCP Servers (all packages in the `cesteral-mcp-servers` monorepo) |
-| **Additional Use Grant** | Production use is permitted, provided such use does not include offering the Licensed Work or any derivative work to third parties as a commercial hosted service, managed service, or embedded component that provides MCP-protocol or API access to advertising platform functionality (DV360, Google Ads, Meta Ads, The Trade Desk, or Bid Manager). |
+| **Additional Use Grant** | Production use is permitted, provided such use does not include offering the Licensed Work or any derivative work to third parties as a commercial hosted service, managed service, or embedded component that provides MCP-protocol or API access to advertising platform functionality (DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, TikTok Ads, or Bid Manager). |
 | **Change Date** | Three years from the first publication date of each version |
 | **Change License** | Apache License, Version 2.0 |
 
@@ -93,7 +95,7 @@ These are the specific parameters that fill the BSL 1.1 template for Cesteral:
 
 The change grant language is deliberately scoped:
 
-- **"advertising platform functionality (DV360, Google Ads, Meta Ads, The Trade Desk, or Bid Manager)"** — Restricts only to our specific domain. Does not broadly restrict all MCP hosting.
+- **"advertising platform functionality (DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, TikTok Ads, or Bid Manager)"** — Restricts only to our specific domain. Does not broadly restrict all MCP hosting.
 - **Permits internal production use** — An agency running the servers for their own ad accounts is explicitly allowed.
 - **Permits non-competing integration** — An analytics dashboard that happens to use our connectors as a component is fine, as long as it's not offering MCP/API access to ad platforms as its product.
 - **Only blocks competing hosted services** — The sole restriction is someone taking our code and offering it as a hosted advertising-platform connector service.
@@ -190,7 +192,7 @@ Actions to complete **now**, while still in Phase 1:
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| **Clean-room reimplementation** — competitor builds equivalent connectors from scratch | Medium | High | No license prevents this; compete on governance layer and execution speed |
+| **Clean-room reimplementation** — competitor builds equivalent connectors from scratch | Medium | Medium | 113+ tools across 7 platforms is 12-18 months of engineering; even Google's own team has only produced 2 read-only tools in 5 months. Compete on depth, cross-platform coverage, and governance layer. |
 | **Platform API changes** — Google/Meta/TTD break APIs, requiring maintenance | High | Certain (ongoing) | This affects everyone equally; fast response time is competitive advantage |
 | **BSL enforcement** — someone violates the license in another jurisdiction | Low | Low | BSL is well-established; precedent from MariaDB, HashiCorp ecosystem |
 
@@ -209,16 +211,37 @@ Cesteral's MCP servers are **connectors feeding a governance layer** — we sell
 | What's BSL-licensed | The product itself | The connector layer |
 | Revenue source | Hosted MCP access | Governance platform |
 | Why BSL works | Prevents hosting clones | Drives adoption to premium tier |
-| Platform coverage | Meta only | DV360, Google Ads, Meta, TTD, Bid Manager |
-| Architecture | Single server = product | 5 servers = connectors → governance = product |
+| Platform coverage | Meta only | DV360, Google Ads, Meta, TTD, LinkedIn, TikTok, Bid Manager (7 servers, 113+ tools) |
+| Architecture | Single server = product | 7 servers = connectors → governance = product |
 
 ### vs. Hypothetical Competitors (Syntes, Fluency, etc.)
 
 Most ad-tech competitors building MCP servers will face the same architectural decision. Cesteral's advantage is that our two-layer architecture makes BSL the obvious choice — the value is clearly in the governance layer, not the connectors. Competitors where the MCP server IS the product have a harder licensing decision.
 
-### vs. Platform-Native Solutions
+### vs. Platform-Native Solutions (Updated March 2026)
 
-Google, Meta, and TTD may eventually offer their own MCP servers. Cesteral's cross-platform governance is the defense — no single platform will build connectors to competing platforms. Having our connectors open (BSL) strengthens the argument: "use our universal connectors, governed by our platform."
+As of March 2026, the commoditization threat from platform-native MCP servers is significantly lower than anticipated:
+
+| Platform | Official MCP Server? | Capabilities | Cesteral Coverage |
+|----------|---------------------|--------------|-------------------|
+| Google Ads | Yes (experimental) | 2 read-only tools, stdio only, "not officially supported" | 12 tools, full CRUD + bulk + validation |
+| DV360 | No | — | 19 tools (management) + 5 tools (reporting) |
+| The Trade Desk | No | — | 20 tools including GraphQL |
+| Meta | No | — | 18 tools |
+| LinkedIn | No | — | 18 tools |
+| TikTok | No | — | 21 tools |
+
+**Key observations:**
+- Google's managed MCP initiative (March 2026) covers cloud infrastructure (BigQuery, GKE, Maps) — **no advertising services** are on the roadmap
+- Even Google's ad-specific server (5 months old) remains read-only and experimental
+- No platform will build cross-platform connectors — Google won't build a TTD server, Meta won't build a Google Ads server
+- Community alternatives (CData, Zapier, Pipeboard) are typically read-only or limited to 3-5 tools per platform
+
+**Defense layers:**
+1. **Cross-platform coverage** — the unified 7-server suite is itself a moat no single platform can replicate
+2. **Write-operation depth** — production-grade mutations with validation, bulk safety, and bid adjustment patterns
+3. **Governance layer** — `cesteral-intelligence` adds irreplaceable strategic value on top
+4. **Time advantage** — full-featured platform-native servers are likely years away, well beyond the BSL 3-year window
 
 ---
 
