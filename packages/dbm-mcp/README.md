@@ -85,7 +85,7 @@ Set via `MCP_AUTH_MODE` environment variable.
 - **Health check**: `/health` endpoint
 
 ### Data Sources
-- BigQuery: Normalized delivery metrics (to be implemented)
+- Bid Manager API v2: DV360 reporting queries
 
 ### Current Status
 **Phase: Production-Ready**

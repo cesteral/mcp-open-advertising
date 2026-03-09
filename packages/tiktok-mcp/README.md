@@ -4,7 +4,7 @@ TikTok Ads MCP Server - Campaign management and reporting via TikTok Marketing A
 
 ## Purpose
 
-Management server for TikTok Ads. Provides 18 tools across 4 entity types for full CRUD operations, async reporting, targeting discovery, bulk operations, and specialized features like entity duplication and audience estimation. Designed for AI agents to manage TikTok Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for TikTok Ads. Provides 21 tools across 4 entity types for full CRUD operations, async reporting, targeting discovery, bulk operations, and specialized features like entity duplication and audience estimation. Designed for AI agents to manage TikTok Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
 
 ## Features
 
@@ -92,9 +92,33 @@ Submit a report with additional breakdown dimensions.
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
 
+#### 9. `tiktok_submit_report`
+Submit an async report without waiting for completion (non-blocking).
+
+**Parameters:**
+- `advertiserId` (string, required): TikTok Advertiser ID
+- `dimensions` (string[], required): Report dimensions
+- `metrics` (string[], required): Metrics to include
+- `startDate` (string, required): Start date (YYYY-MM-DD)
+- `endDate` (string, required): End date (YYYY-MM-DD)
+
+#### 10. `tiktok_check_report_status`
+Single status check for a submitted report.
+
+**Parameters:**
+- `advertiserId` (string, required): TikTok Advertiser ID
+- `taskId` (string, required): Report task ID from submit
+
+#### 11. `tiktok_download_report`
+Download and parse report CSV from URL.
+
+**Parameters:**
+- `downloadUrl` (string, required): Report download URL
+- `maxRows` (number, optional): Maximum rows to return
+
 ### Bulk Operations
 
-#### 9. `tiktok_bulk_update_status`
+#### 12. `tiktok_bulk_update_status`
 Batch enable, disable, or delete multiple entities.
 
 **Parameters:**
@@ -103,7 +127,7 @@ Batch enable, disable, or delete multiple entities.
 - `entityIds` (string[], required): Entity IDs to update (max 50)
 - `operationStatus` (string, required): `ENABLE`, `DISABLE`, or `DELETE`
 
-#### 10. `tiktok_bulk_create_entities`
+#### 13. `tiktok_bulk_create_entities`
 Batch create multiple entities of the same type.
 
 **Parameters:**
@@ -111,7 +135,7 @@ Batch create multiple entities of the same type.
 - `advertiserId` (string, required): TikTok Advertiser ID
 - `items` (array, required): Array of entity data objects (max 50)
 
-#### 11. `tiktok_bulk_update_entities`
+#### 14. `tiktok_bulk_update_entities`
 Batch update multiple entities with individual data payloads.
 
 **Parameters:**
@@ -121,7 +145,7 @@ Batch update multiple entities with individual data payloads.
 
 ### Bid Adjustment
 
-#### 12. `tiktok_adjust_bids`
+#### 15. `tiktok_adjust_bids`
 Batch adjust ad group bid prices with safe read-modify-write pattern.
 
 **Parameters:**
@@ -130,7 +154,7 @@ Batch adjust ad group bid prices with safe read-modify-write pattern.
 
 ### Targeting
 
-#### 13. `tiktok_search_targeting`
+#### 16. `tiktok_search_targeting`
 Search for targeting options (interest categories, behaviors, demographics) by keyword.
 
 **Parameters:**
@@ -138,7 +162,7 @@ Search for targeting options (interest categories, behaviors, demographics) by k
 - `targetingType` (string, required): Type of targeting to search
 - `query` (string, optional): Search keyword
 
-#### 14. `tiktok_get_targeting_options`
+#### 17. `tiktok_get_targeting_options`
 Browse available targeting categories.
 
 **Parameters:**
@@ -147,7 +171,7 @@ Browse available targeting categories.
 
 ### Specialized
 
-#### 15. `tiktok_duplicate_entity`
+#### 18. `tiktok_duplicate_entity`
 Duplicate a campaign, ad group, or ad.
 
 **Parameters:**
@@ -156,14 +180,14 @@ Duplicate a campaign, ad group, or ad.
 - `entityId` (string, required): ID of the entity to duplicate
 - `options` (object, optional): Duplication options (e.g., rename prefix/suffix)
 
-#### 16. `tiktok_get_audience_estimate`
+#### 19. `tiktok_get_audience_estimate`
 Get estimated audience size for a targeting configuration.
 
 **Parameters:**
 - `advertiserId` (string, required): TikTok Advertiser ID
 - `targetingConfig` (object, required): Targeting specification for estimation
 
-#### 17. `tiktok_get_ad_previews`
+#### 20. `tiktok_get_ad_previews`
 Get ad preview for video or image ads.
 
 **Parameters:**
@@ -173,7 +197,7 @@ Get ad preview for video or image ads.
 
 ### Validation
 
-#### 18. `tiktok_validate_entity`
+#### 21. `tiktok_validate_entity`
 Client-side validation of entity payloads without making API calls.
 
 **Parameters:**
@@ -196,7 +220,7 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 18 tools are fully implemented using TikTok Marketing API v1.3 with Bearer token authentication, async reporting, and targeting discovery.
+All 21 tools are fully implemented using TikTok Marketing API v1.3 with Bearer token authentication, async reporting, and targeting discovery.
 
 ## Development
 

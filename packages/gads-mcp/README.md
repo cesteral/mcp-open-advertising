@@ -193,6 +193,15 @@ pnpm run test
 - **`GAdsHeadersAuthStrategy`** - Reads credentials from request headers
 - **`SessionServiceStore`** - Per-session service instances keyed by session ID
 
+### Key Gotchas
+
+- `customerId` must be numeric with no dashes (e.g., `1234567890` not `123-456-7890`)
+- Budget amounts are in **micros** (e.g., `1000000` = $1.00)
+- `campaignBudget` must be created before the campaign that references it
+- `REMOVED` status is permanent — equivalent to delete
+- `gads_validate_entity` calls the real API with `validateOnly: true` (not client-side only)
+- Composite IDs for ads: `{adGroupId}~{adId}`, for keywords: `{adGroupId}~{criterionId}`
+
 ### Transport
 
 - **Streamable HTTP**: MCP protocol via Hono + `@hono/mcp`

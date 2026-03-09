@@ -1,6 +1,6 @@
 # Cesteral - AI-Native Multi-Platform Campaign Optimization
 
-**AI-powered programmatic advertising optimization across DV360, Google Ads, Meta, and future DSPs**
+**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager**
 
 [![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -17,7 +17,7 @@ Cesteral is a **Model Context Protocol (MCP) based optimization platform** that 
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
-- **🌐 Multi-Platform Support** - Works across DV360, Google Ads, Meta, and future DSPs
+- **🌐 Multi-Platform Support** - Works across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager
 - **🔧 Composable Architecture** - Seven independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
@@ -184,7 +184,7 @@ pnpm install
 # - DV360/Google Ads OAuth credentials
 # - TTD partner credentials (optional)
 # - Meta API credentials (optional)
-# See docs/ENV-VARIABLES-GUIDE.md for full reference
+# See each server's README for required environment variables
 ```
 
 ### 4. Build All Packages
@@ -375,7 +375,7 @@ cesteral-mcp-servers/
 | `dv360_update_entity`                | Update any supported DV360 entity with updateMask   | `entityType`, IDs, `data`, `updateMask` |
 | `dv360_adjust_line_item_bids`        | Batch bid adjustments for multiple line items       | `advertiserId`, `adjustments[]` |
 
-See [packages/dv360-mcp](packages/dv360-mcp) for the full 19-tool reference including custom bidding, targeting, and bulk operations.
+See [packages/dv360-mcp](packages/dv360-mcp) for the full 20-tool reference including custom bidding, targeting, and bulk operations.
 
 ### The Trade Desk Server Tools
 
@@ -387,7 +387,7 @@ See [packages/dv360-mcp](packages/dv360-mcp) for the full 19-tool reference incl
 | `ttd_bulk_update_status`   | Batch pause/resume/archive entities          | `entityType`, `entityIds[]`, `status` |
 | `ttd_graphql_query`        | Execute GraphQL query against TTD API        | `query`, `variables` |
 
-See [packages/ttd-mcp](packages/ttd-mcp) for the full 18-tool reference including bulk CRUD, bid adjustments, and GraphQL operations.
+See [packages/ttd-mcp](packages/ttd-mcp) for the full 20-tool reference including bulk CRUD, bid adjustments, and GraphQL operations.
 
 ### Google Ads Server Tools
 
@@ -418,7 +418,7 @@ See [packages/linkedin-mcp](packages/linkedin-mcp) for the full 18-tool referenc
 
 ### TikTok Ads Server Tools
 
-See [packages/tiktok-mcp](packages/tiktok-mcp) for the full 18-tool reference including CRUD, async reporting, audience estimates, and ad previews.
+See [packages/tiktok-mcp](packages/tiktok-mcp) for the full 21-tool reference including CRUD, async reporting, audience estimates, and ad previews.
 
 ---
 

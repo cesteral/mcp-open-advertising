@@ -15,7 +15,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 - **MCP protocol** with Streamable HTTP transport (Hono)
 - **Structured output** with `outputSchema` on all tools
 
-## MCP Tools (18 tools)
+## MCP Tools (20 tools)
 
 ### Core CRUD
 
@@ -34,6 +34,8 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 |------|-------------|
 | `ttd_get_report` | Generate async report via MyReports V3 API |
 | `ttd_download_report` | Download and parse report CSV from URL |
+| `ttd_submit_report` | Submit report without waiting (non-blocking) |
+| `ttd_check_report_status` | Single status check for a submitted report |
 
 ### Bulk Operations
 
@@ -75,7 +77,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 **Phase: Production-Ready**
 
-All tools are fully implemented using TTD API v3. Entity CRUD and reporting are operational via partner token authentication.
+All 20 tools are fully implemented using TTD API v3. Entity CRUD and reporting are operational via partner token authentication.
 
 ## Development
 
@@ -116,6 +118,14 @@ pnpm run lint
 - **`TtdReportingService`** - Report generation via MyReports API
 - **`TtdHeadersAuthStrategy`** - Reads partner credentials from request headers
 - **`SessionServiceStore`** - Per-session service instances keyed by session ID
+
+### Key Gotchas
+
+- TTD uses PUT for updates (full entity replacement, not PATCH)
+- `AdvertiserId` is required in most entity payloads
+- Report generation is async: submit → poll → download CSV
+- Archive is a soft-delete; archived entities cannot be reactivated
+- GraphQL API is separate from REST and uses different auth flow
 
 ### Transport
 

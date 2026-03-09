@@ -41,14 +41,14 @@ See [CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md) for detailed setup
 The server is built with production-grade architecture and complete functionality:
 
 - ✅ Streamable HTTP transport with session management
-- ✅ 19 MCP tools, all connected to DV360 API
+- ✅ 20 MCP tools, all connected to DV360 API
 - ✅ OAuth2 service account authentication
 - ✅ Rate limiting and error handling
 - ✅ OpenTelemetry observability
 - ✅ Dynamic entity system supporting 11 entity types
 - ⚠️ Requires DV360 service account credentials (see Setup below)
 
-## MCP Tools (18 tools)
+## MCP Tools (20 tools)
 
 ### Entity Management (CRUD)
 
@@ -66,6 +66,8 @@ The server is built with production-grade architecture and complete functionalit
 |------|-------------|
 | `dv360_adjust_line_item_bids` | Batch adjust bids for multiple line items |
 | `dv360_bulk_update_status` | Batch update status for multiple entities |
+| `dv360_bulk_create_entities` | Batch create DV360 entities |
+| `dv360_bulk_update_entities` | Batch update DV360 entities |
 
 ### Custom Bidding Algorithms
 
@@ -85,6 +87,20 @@ The server is built with production-grade architecture and complete functionalit
 | `dv360_create_assigned_targeting` | Assign a targeting option |
 | `dv360_delete_assigned_targeting` | Remove an assigned targeting option |
 | `dv360_validate_targeting_config` | Validate a targeting configuration |
+
+### Validation
+
+| Tool | Description |
+|------|-------------|
+| `dv360_validate_entity` | Client-side schema validation (no API call) |
+
+## Key Gotchas
+
+- Campaigns cannot be in DRAFT status (must be ACTIVE or PAUSED)
+- Insertion Orders default to DRAFT status on creation
+- `updateMask` is required for all update operations — omitting it silently ignores fields
+- Rate limiting is per-advertiser (default 60 req/min)
+- Entity creation requires parent IDs in a specific hierarchy
 
 ## Supported Entity Types
 
