@@ -1,25 +1,33 @@
 # Cesteral MCP Servers — Licensing Strategy
 
-**Date:** February 25, 2026
+**Date:** March 9, 2026
 **Author:** Cesteral AB
-**Status:** Approved — publishing with early access gate, billing in parallel
+**Status:** Revised recommendation
 
 ---
 
 ## Executive Summary
 
-Cesteral will license its MCP server connectors (`cesteral-mcp-servers`) under the **Business Source License 1.1 (BSL 1.1)**, with an **Additional Use Grant** scoped to prevent competing hosted advertising-platform connector services. The governance and optimization platform (`cesteral-intelligence`) remains fully proprietary. This is a **staged rollout**: the repository stays private now, transitioning to public BSL 1.1 when two readiness triggers are met (billing proceeds in parallel). After three years per version, the BSL automatically converts to **Apache License 2.0**.
+Cesteral should publish `cesteral-mcp-servers` as **open source under Apache License 2.0**. `cesteral-intelligence` remains proprietary.
+
+This is the cleanest fit for Cesteral's actual architecture and go-to-market model:
+
+- The MCP servers are the **distribution layer** for trust, discoverability, and ecosystem adoption
+- The proprietary moat lives in **governance, orchestration, optimization, hosted operations, and enterprise service**
+- Self-hosting should remain available as a **trust and lead-generation channel**, not a licensing upsell
+
+This recommendation replaces the prior BSL-first strategy. BSL remains a fallback if competitive cloning becomes a materially larger risk than adoption friction, but it is not the best default for the current stage.
 
 ---
 
 ## Architecture Context
 
-Cesteral's product is a two-layer system. Understanding the layers is essential to understanding the licensing decision.
+Cesteral's product is a two-layer system:
 
 ```
 ┌──────────────────────────────────────────────────┐
 │              cesteral-intelligence                │
-│         (Governance & Optimization Layer)         │
+│         Governance & Optimization Layer           │
 │                                                  │
 │   Guardrails · Approval workflows · Audit logs   │
 │   Budget enforcement · Cross-platform strategy   │
@@ -28,236 +36,230 @@ Cesteral's product is a two-layer system. Understanding the layers is essential 
 │              LICENSE: Proprietary                 │
 ├──────────────────────────────────────────────────┤
 │              cesteral-mcp-servers                 │
-│           (Connector / Execution Layer)           │
+│           Connector / Execution Layer             │
 │                                                  │
 │   dbm-mcp · dv360-mcp · gads-mcp                │
 │   ttd-mcp · meta-mcp · linkedin-mcp             │
 │   tiktok-mcp                                     │
 │                                                  │
 │   7 MCP servers wrapping platform REST APIs      │
-│   Production-grade connectors — 113+ tools       │
-│   Full CRUD, bulk ops, validation, reporting     │
+│   113+ tools · CRUD · bulk ops · validation      │
+│   reporting · auth/session handling              │
 │                                                  │
-│              LICENSE: BSL 1.1                     │
-│          (converts to Apache 2.0)                │
+│              LICENSE: Apache 2.0                 │
 └──────────────────────────────────────────────────┘
           ↕ MCP Protocol (tools, resources, prompts)
 ┌──────────────────────────────────────────────────┐
 │            Advertising Platforms                  │
 │   DV360 · Google Ads · The Trade Desk · Meta     │
-│   LinkedIn · TikTok · Bid Manager (reporting)    │
+│   LinkedIn · TikTok · Bid Manager                │
 └──────────────────────────────────────────────────┘
 ```
 
-**The key insight:** The MCP servers are production-grade infrastructure connectors with 113+ tools across 7 advertising platforms. While the strategic intelligence lives in `cesteral-intelligence`, the connectors themselves represent significant engineering depth — full CRUD operations, bulk safety patterns, cross-platform session management, and platform-specific workflow knowledge. No single ad platform provides equivalent MCP coverage (as of March 2026, Google's official Ads MCP server offers only 2 read-only tools). Opening the connectors sacrifices no strategic value while gaining distribution, trust, and ecosystem lock-in.
+The key decision is where to optimize:
+
+- If Cesteral were selling the MCP servers themselves as the core product, source-available restrictions would be more defensible
+- Cesteral is instead selling a higher layer: managed operations, governance, orchestration, and optimization
+
+That makes the connector repo a distribution asset, not the main monetized asset.
 
 ---
 
-## Why BSL 1.1
+## Decision Framework
 
-### Why not MIT / Apache 2.0 (fully open source)?
+### Option 1: Fully closed source
 
-MIT/Apache would allow any competitor to fork the connectors and launch a competing hosted service with zero friction. While the connectors themselves are commodity, they represent significant engineering effort (113+ tools across 7 platforms, auth flows, per-session service management, bulk operation safety patterns, and deep per-platform quirks). Giving that away unconditionally hands a free head start to competitors.
+**Recommendation:** Reject.
 
-### Why not fully proprietary?
+Why it does not fit:
 
-MCP servers live and die by discoverability. The primary acquisition channels are GitHub, MCP registries, and community recommendations. A proprietary repo is invisible on all three. Additionally, enterprises connecting ad accounts with significant spend want to audit what touches their data — source visibility builds trust.
+- MCP adoption depends heavily on GitHub, registries, and community references
+- Buyers connecting ad accounts want to inspect the code that touches credentials and spend
+- Closed source weakens trust and makes the repo invisible in the channels where MCP infrastructure is discovered
+- It turns self-hosting from a growth asset into a custom-sales conversation
 
-### Why not open-core with feature gating?
+Closed source only makes sense if Cesteral decides ecosystem distribution is unimportant and wants to sell only direct managed access. That is not the current strategy.
 
-Cesteral's architecture **already is open-core** — by design, not by license gymnastics. The MCP servers are the "open core" (connectors), and `cesteral-intelligence` is the "premium tier" (governance). There is no need to split features within the connector layer because the entire value tier sits in a separate repository.
+### Option 2: BSL / source-available
 
-### Why BSL 1.1 specifically?
+**Recommendation:** Acceptable fallback, not the default.
 
-BSL 1.1 is purpose-built for this exact scenario. It provides:
+What BSL gets right:
 
-1. **Source visibility** — GitHub discoverability, community audit, MCP registry presence
-2. **Legal protection** — prevents competitors from hosting our connectors as a competing service
-3. **Time-limited restriction** — converts to Apache 2.0 after three years, building goodwill
-4. **Production use permitted** — agencies and enterprises can self-host for their own accounts
-5. **Proven model** — used by HashiCorp, Sentry, MariaDB, Outline, and dozens of infrastructure companies
+- Source visibility is better than closed source
+- It deters direct hosted clones
+- It preserves optional commercial licensing leverage
 
----
+Why BSL is still the wrong primary choice now:
 
-## BSL 1.1 Parameters
+- It is not treated as true open source by many buyers, registries, and contributors
+- Legal review friction increases for exactly the enterprise users Cesteral wants to attract
+- Community contribution incentives are weaker
+- The message gets muddled: if the real business is hosted governance and enterprise operations, Cesteral should not optimize around enforcing connector licensing
+- The repo already presents self-hosting as a legitimate path; BSL introduces friction into that path without strengthening the real moat
 
-These are the specific parameters that fill the BSL 1.1 template for Cesteral:
+BSL becomes more attractive only if there is evidence that near-term hosted cloning risk is materially more important than adoption and trust.
 
-| Parameter | Value |
-|-----------|-------|
-| **Licensor** | Cesteral AB |
-| **Licensed Work** | Cesteral MCP Servers (all packages in the `cesteral-mcp-servers` monorepo) |
-| **Additional Use Grant** | Production use is permitted, provided such use does not include offering the Licensed Work or any derivative work to third parties as a commercial hosted service, managed service, or embedded component that provides MCP-protocol or API access to advertising platform functionality (DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, TikTok Ads, or Bid Manager). |
-| **Change Date** | Three years from the first publication date of each version |
-| **Change License** | Apache License, Version 2.0 |
+### Option 3: Apache 2.0 open source
 
-### Additional Use Grant — Design Rationale
+**Recommendation:** Choose this.
 
-The change grant language is deliberately scoped:
+Why Apache 2.0 is the best fit:
 
-- **"advertising platform functionality (DV360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, TikTok Ads, or Bid Manager)"** — Restricts only to our specific domain. Does not broadly restrict all MCP hosting.
-- **Permits internal production use** — An agency running the servers for their own ad accounts is explicitly allowed.
-- **Permits non-competing integration** — An analytics dashboard that happens to use our connectors as a component is fine, as long as it's not offering MCP/API access to ad platforms as its product.
-- **Only blocks competing hosted services** — The sole restriction is someone taking our code and offering it as a hosted advertising-platform connector service.
+1. **Maximizes distribution**
+   GitHub discovery, MCP registry inclusion, and community references work best when the license is simple and widely understood.
 
-### Why Apache 2.0 as Change License (not GPL)?
+2. **Matches the actual moat**
+   The differentiator is not raw access to platform APIs. It is managed reliability, governance, orchestration, optimization logic, compliance posture, and enterprise support.
 
-Apache 2.0 is more permissive than GPL and better suited for enterprise adoption post-conversion:
+3. **Improves trust**
+   Agencies and enterprises can inspect exactly how credentials, mutations, validation, and telemetry work.
 
-- No copyleft requirements — enterprises can integrate freely
-- Patent grant included — provides IP safety
-- Compatible with virtually all other licenses
-- Standard choice for infrastructure software (Kubernetes, Terraform post-conversion, etc.)
+4. **Reduces procurement friction**
+   Apache 2.0 is familiar, OSI-approved, and broadly acceptable to enterprise legal teams.
 
----
+5. **Strengthens contribution potential**
+   External fixes, platform coverage expansions, and interoperability improvements are more likely under a standard open-source license.
 
-## Staged Rollout
-
-### Phase 1: Proprietary (Current)
-
-The repository remains private. This is where we are now.
-
-**What to do during this phase:**
-- ~~Polish READMEs and documentation for external consumption~~ ✅ Done
-- ~~Add `LICENSE.md` to the repo (ready to go when we flip)~~ ✅ Done
-- ~~Add `LICENSE-NOTICE.md` for source file headers~~ ✅ Done
-- Build the billing and subscription infrastructure in `cesteral-intelligence` *(in parallel — not a blocker for publishing)*
-- ~~Create the landing page / marketing site~~ ✅ Landing page with early access form
-- ~~Remove any internal-only references, hardcoded credentials, or debug artifacts~~ ✅ Audited
-
-### Phase 2: BSL 1.1 Public (Triggered)
-
-Make the repository public under BSL 1.1. This phase begins when **both readiness triggers** are met:
-
-| # | Trigger | Rationale |
-|---|---------|-----------|
-| 1 | **Landing page with early access form is live** | Captures demand; funnels GitHub visitors to waitlist while billing is finalized |
-| 2 | **READMEs are polished** | First impressions are permanent in open source |
-
-> **Note:** Billing infrastructure proceeds in parallel. The early access form captures demand pre-billing, removing the need to wait for a live billing system or first paying customer before publishing.
-
-**Actions on trigger:**
-1. Make `cesteral-mcp-servers` repository public
-2. Submit to MCP registries (Smithery, mcp.so, Glama)
-3. Add source file headers referencing `LICENSE-NOTICE.md`
-4. Publish announcement (blog post, social, relevant communities)
-
-### Phase 3: Apache 2.0 Conversion (Automatic)
-
-Three years after each version's publication, that version automatically converts to Apache 2.0. No action required — this is built into the BSL 1.1 mechanism.
-
-**Strategic value:** The conversion date creates urgency for competitors ("we can't just wait it out — three years is too long") while building community goodwill ("Cesteral is committed to open source long-term").
+6. **Keeps focus on execution**
+   Cesteral can compete on shipping, support, hosted experience, and cross-platform governance instead of on license enforcement.
 
 ---
 
-## Preparation Checklist
+## Monetization Under The Open-Source Model
 
-Actions to complete **now**, while still in Phase 1:
+Open-sourcing the connectors does not require open-sourcing the business.
 
-- [x] Draft licensing strategy document (this document)
-- [x] Create `LICENSE.md` with filled BSL 1.1 parameters
-- [x] Create `LICENSE-NOTICE.md` for source file headers
-- [x] Update business model analysis with Cesteral-specific context
-- [x] Audit repo for hardcoded credentials, internal URLs, debug artifacts
-- [x] Polish package READMEs for external audience
-- [x] Add CONTRIBUTING.md with CLA requirements
-- [ ] Build billing infrastructure in `cesteral-intelligence` *(in parallel — not a blocker)*
-- [x] Create landing page with early access form
-- [x] Register on MCP registries (draft listings ready)
-- [ ] Prepare announcement content (blog post, social templates)
+Cesteral should monetize:
+
+- **Managed hosting** for customers who do not want to deploy and operate seven MCP services
+- **Credential and session brokering** that removes platform-specific auth complexity from customers
+- **Governance and approval workflows** in `cesteral-intelligence`
+- **Cross-platform optimization and orchestration** that coordinate multiple connectors safely
+- **Enterprise operations**: SLAs, monitoring, upgrades, incident response, compliance support, and premium onboarding
+
+This keeps the connector layer open while preserving a proprietary and service-based revenue engine above it.
 
 ---
 
-## Risk Matrix
+## Rollout Recommendation
 
-### Risks of Waiting Too Long (Staying Proprietary)
+### Phase 1: Final polish while private
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| **MCP ecosystem land grab** — competitors claim registry presence first | High | High | Monitor registry listings monthly; have draft listings ready |
-| **Lost community trust** — "why is this closed?" suspicion from enterprises | Medium | Medium | BSL conversion addresses this; have timeline communicated |
-| **No inbound contributions** — miss bug reports and PRs from community | Low | High | Accept this cost during Phase 1; prioritize internal quality |
-| **Invisibility** — zero GitHub discovery for the connector layer | High | Certain | This is the cost of Phase 1; triggers ensure we move to Phase 2 |
+Before publication:
 
-### Risks of Going Too Early (BSL Before Readiness)
+- Finalize the Apache 2.0 license and repo metadata
+- Align README, contributing guide, registry copy, and package manifests
+- Remove stale BSL or commercial relicensing language
+- Confirm no internal-only references or sensitive material remain
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| **No conversion funnel** — GitHub stars with no revenue path | Medium | Mitigated | Early access form captures demand pre-billing; waitlist converts to paying customers once billing is live |
-| **Premature exposure** — unpolished docs create negative first impression | Medium | High (if rushed) | Trigger 2 prevents this |
-| **Competitor intelligence** — competitors read architecture before we have customers | Low | Medium | MCP servers are commodity; architecture is not the moat |
-| **Support burden** — issues/PRs from community without resources to handle | Medium | Medium | Start with "issues only, no PRs" policy; add CONTRIBUTING.md later |
+### Phase 2: Public Apache 2.0 release
 
-### Risks Regardless of Timing
+Trigger when:
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| **Clean-room reimplementation** — competitor builds equivalent connectors from scratch | Medium | Medium | 113+ tools across 7 platforms is 12-18 months of engineering; even Google's own team has only produced 2 read-only tools in 5 months. Compete on depth, cross-platform coverage, and governance layer. |
-| **Platform API changes** — Google/Meta/TTD break APIs, requiring maintenance | High | Certain (ongoing) | This affects everyone equally; fast response time is competitive advantage |
-| **BSL enforcement** — someone violates the license in another jurisdiction | Low | Low | BSL is well-established; precedent from MariaDB, HashiCorp ecosystem |
+1. The external-facing README and package docs are ready
+2. The landing page clearly explains managed hosting and the proprietary governance layer
+
+Actions:
+
+1. Make `cesteral-mcp-servers` public under Apache 2.0
+2. Submit to MCP registries
+3. Publish announcement content
+4. Position managed hosting and `cesteral-intelligence` as the premium offer
+
+There is no separate BSL stage and no delayed open-source conversion stage.
+
+---
+
+## Risks And Tradeoffs
+
+### Risks of Apache 2.0
+
+| Risk                                       | Impact | Likelihood | Mitigation                                                                                  |
+| ------------------------------------------ | ------ | ---------- | ------------------------------------------------------------------------------------------- |
+| Competitor forks or hosted clones          | Medium | Medium     | Compete on speed, quality, support, hosted reliability, and proprietary governance features |
+| Some prospects self-host instead of buying | Medium | High       | Treat self-hosting as lead-gen; convert on convenience, compliance, and governance          |
+| External contribution overhead             | Low    | Medium     | Keep contribution scope clear and maintain roadmap control                                  |
+
+### Risks of BSL instead
+
+| Risk                                                   | Impact | Likelihood | Mitigation                   |
+| ------------------------------------------------------ | ------ | ---------- | ---------------------------- |
+| Lower trust from buyers who expect open infrastructure | Medium | Medium     | Avoid by choosing Apache 2.0 |
+| Reduced contribution volume                            | Medium | High       | Avoid by choosing Apache 2.0 |
+| Procurement drag due to non-standard license review    | Medium | Medium     | Avoid by choosing Apache 2.0 |
+
+### Risks of staying closed
+
+| Risk                                         | Impact | Likelihood | Mitigation                 |
+| -------------------------------------------- | ------ | ---------- | -------------------------- |
+| Weak registry/GitHub discoverability         | High   | Certain    | Avoid by publishing        |
+| Lower enterprise trust and auditability      | High   | Medium     | Avoid by publishing source |
+| More sales friction for technical evaluators | High   | High       | Avoid by publishing source |
 
 ---
 
 ## Competitive Positioning
 
-### vs. Pipeboard (meta-ads-mcp)
+### What remains proprietary
 
-Pipeboard's MCP server **is** their product — they sell hosted access to Meta Ads MCP tools. Their BSL protects their core revenue.
+`cesteral-intelligence` remains closed and is where Cesteral should keep:
 
-Cesteral's MCP servers are **connectors feeding a governance layer** — we sell the intelligence, not the connectors. Our BSL protects against free-riding on our engineering while we give away the commodity part to drive adoption of the premium tier.
+- approval policies
+- budget governance
+- audit and compliance workflows
+- optimization logic and strategy models
+- multi-server orchestration and recommendation systems
+- customer-specific product UX and analytics
 
-| Dimension | Pipeboard | Cesteral |
-|-----------|-----------|---------|
-| What's BSL-licensed | The product itself | The connector layer |
-| Revenue source | Hosted MCP access | Governance platform |
-| Why BSL works | Prevents hosting clones | Drives adoption to premium tier |
-| Platform coverage | Meta only | DV360, Google Ads, Meta, TTD, LinkedIn, TikTok, Bid Manager (7 servers, 113+ tools) |
-| Architecture | Single server = product | 7 servers = connectors → governance = product |
+### Why open connectors still defend the business
 
-### vs. Hypothetical Competitors (Syntes, Fluency, etc.)
+- No ad platform will ship Cesteral's cross-platform governance layer
+- Most competitors can read connector code; far fewer can operate a reliable managed service and productize decisioning on top
+- Fast response to API changes, breadth across platforms, and enterprise-grade operations are durable advantages even with open code
 
-Most ad-tech competitors building MCP servers will face the same architectural decision. Cesteral's advantage is that our two-layer architecture makes BSL the obvious choice — the value is clearly in the governance layer, not the connectors. Competitors where the MCP server IS the product have a harder licensing decision.
+---
 
-### vs. Platform-Native Solutions (Updated March 2026)
+## Contributor Policy
 
-As of March 2026, the commoditization threat from platform-native MCP servers is significantly lower than anticipated:
+The repo should use a standard Apache-style inbound contribution model:
 
-| Platform | Official MCP Server? | Capabilities | Cesteral Coverage |
-|----------|---------------------|--------------|-------------------|
-| Google Ads | Yes (experimental) | 2 read-only tools, stdio only, "not officially supported" | 12 tools, full CRUD + bulk + validation |
-| DV360 | No | — | 19 tools (management) + 5 tools (reporting) |
-| The Trade Desk | No | — | 20 tools including GraphQL |
-| Meta | No | — | 18 tools |
-| LinkedIn | No | — | 18 tools |
-| TikTok | No | — | 21 tools |
+- No CLA should be required by default
+- Contributions are accepted under the repository's Apache 2.0 license unless explicitly stated otherwise
+- If Cesteral later needs a separate enterprise add-on or dual-license component, that should live outside this repository
 
-**Key observations:**
-- Google's managed MCP initiative (March 2026) covers cloud infrastructure (BigQuery, GKE, Maps) — **no advertising services** are on the roadmap
-- Even Google's ad-specific server (5 months old) remains read-only and experimental
-- No platform will build cross-platform connectors — Google won't build a TTD server, Meta won't build a Google Ads server
-- Community alternatives (CData, Zapier, Pipeboard) are typically read-only or limited to 3-5 tools per platform
+This keeps the contribution story simple and consistent with the open-source positioning.
 
-**Defense layers:**
-1. **Cross-platform coverage** — the unified 7-server suite is itself a moat no single platform can replicate
-2. **Write-operation depth** — production-grade mutations with validation, bulk safety, and bid adjustment patterns
-3. **Governance layer** — `cesteral-intelligence` adds irreplaceable strategic value on top
-4. **Time advantage** — full-featured platform-native servers are likely years away, well beyond the BSL 3-year window
+---
+
+## Recommended Repo Messaging
+
+The public message should be:
+
+- **Open-source MCP connectors** for major advertising platforms
+- **Self-hostable** for teams that want transparency and control
+- **Managed hosting available** for teams that want convenience and operational support
+- **Proprietary governance and optimization layer** for customers who need approvals, auditability, and cross-platform intelligence
+
+The message should not be:
+
+- “Open core” in a vague sense
+- “Source available” if the repo is actually Apache 2.0
+- “Commercial license required” for ordinary production use of this repository
 
 ---
 
 ## Legal Notes
 
 - **Entity:** Cesteral AB (Swedish aktiebolag)
-- **BSL 1.1 trademark:** Owned by MariaDB plc. Usage in license text is per the BSL 1.1 covenant.
-- **Apache 2.0:** Administered by the Apache Software Foundation. No trademark issues with using as change license.
-- **CLA:** A Contributor License Agreement should be established before accepting external contributions in Phase 2. Standard individual + corporate CLA recommended.
-- **Review:** This strategy should be reviewed by legal counsel before Phase 2 execution. The license text in `LICENSE.md` is based on the standard BSL 1.1 template and should be validated.
+- **License:** Apache License 2.0
+- **Review:** Legal counsel should still review public release materials, trademark usage, and managed-service terms
+- **Trademarks:** Platform names and logos remain subject to their respective trademark policies
 
 ---
 
 ## References
 
-- [BSL 1.1 Template](https://mariadb.com/bsl11/) — MariaDB plc
-- [BSL Adopter FAQ](https://mariadb.com/bsl-faq-adopting/) — MariaDB plc
-- [Cesteral Business Model Analysis](./mcp-server-business-model-analysis.md) — Pipeboard case study and licensing options
-- [LICENSE.md](../../LICENSE.md) — Ready-to-use BSL 1.1 license for this repository
+- [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0)
+- [Open Source Initiative: Apache-2.0](https://opensource.org/license/apache-2-0)
+- [LICENSE.md](../../LICENSE.md)

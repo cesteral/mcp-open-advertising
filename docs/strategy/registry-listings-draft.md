@@ -16,6 +16,7 @@ Seven production-ready MCP servers for programmatic advertising management acros
 **Platforms:** Google Display & Video 360, Google Ads, Meta Ads, The Trade Desk, LinkedIn Ads, TikTok Ads, Bid Manager (reporting)
 
 **Tool Count:** ~114 tools across 7 servers
+
 - dbm-mcp: 5 reporting tools (delivery metrics, performance KPIs, pacing, custom queries)
 - dv360-mcp: 20 management tools (entity CRUD, batch ops, custom bidding, targeting, validation)
 - ttd-mcp: 20 management tools (entity CRUD, bulk ops, reporting, GraphQL)
@@ -25,18 +26,21 @@ Seven production-ready MCP servers for programmatic advertising management acros
 - tiktok-mcp: 21 management tools (entity CRUD, reporting, targeting, duplication, audience estimation)
 
 **Auth:**
+
 - Hosted: JWT authentication — Early Access (request access at cesteral.com)
 - Self-hosted: Platform-specific credentials (Google OAuth2, TTD partner tokens, Meta Bearer tokens, LinkedIn Bearer tokens, TikTok Bearer tokens)
 
 **Deployment:**
+
 - Self-hosted via Docker + Terraform on GCP Cloud Run
 - Each server runs as an independent container
 - Full IaC included (Terraform modules, Cloud Build CI/CD)
 - Hosted option coming soon — request early access at https://cesteral.com
 
-**License:** Business Source License 1.1 (converts to Apache 2.0 after 3 years)
+**License:** Apache License 2.0
 
 **Links:**
+
 - GitHub: https://github.com/cesteral/cesteral-mcp-servers
 - Landing page: https://cesteral.com
 - Documentation: See repository README
@@ -77,9 +81,10 @@ All servers feature per-session authentication, OpenTelemetry observability, rat
 
 Hosted option coming soon — request early access at https://cesteral.com
 
-**License:** BSL 1.1
+**License:** Apache License 2.0
 
 **Links:**
+
 - GitHub: https://github.com/cesteral/cesteral-mcp-servers
 - Landing page: https://cesteral.com
 
@@ -97,6 +102,7 @@ Hosted option coming soon — request early access at https://cesteral.com
 Seven production-ready MCP servers providing ~114 tools for programmatic advertising campaign management. Each server wraps a major advertising platform API and exposes operations through the Model Context Protocol, enabling AI agents to manage campaigns, analyze performance, adjust bids, and configure targeting across platforms.
 
 **Key capabilities:**
+
 - Campaign lifecycle management (create, update, pause, archive) across 6 platforms
 - Performance reporting with custom metrics, breakdowns, and time series
 - Bulk operations for bid adjustments, status updates, and entity creation
@@ -108,6 +114,7 @@ Seven production-ready MCP servers providing ~114 tools for programmatic adverti
 - TikTok async reporting with breakdown dimensions
 
 **Architecture:**
+
 - 7 independent servers, each deployable as a separate container
 - Per-session authentication with platform-specific credential handling
 - OpenTelemetry traces and metrics for production observability
@@ -115,9 +122,10 @@ Seven production-ready MCP servers providing ~114 tools for programmatic adverti
 - Terraform + Cloud Build IaC for GCP Cloud Run deployment
 - Hosted option coming soon — request early access at https://cesteral.com
 
-**License:** Business Source License 1.1 (Apache 2.0 change date: 3 years from release)
+**License:** Apache License 2.0
 
 **Links:**
+
 - GitHub: https://github.com/cesteral/cesteral-mcp-servers
 - Landing page: https://cesteral.com
 - Demo/screenshots: See repository README for workflow examples

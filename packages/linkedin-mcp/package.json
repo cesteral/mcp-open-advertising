@@ -2,15 +2,24 @@
   "name": "@cesteral/linkedin-mcp",
   "version": "1.0.0",
   "description": "LinkedIn Ads MCP Server - Campaign entity management and reporting via LinkedIn Marketing API v2",
-  "license": "BSL-1.1",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
     "directory": "packages/linkedin-mcp"
   },
   "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
-  "keywords": ["mcp", "model-context-protocol", "advertising", "linkedin-ads"],
-  "files": ["dist/", "README.md", "LICENSE"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "advertising",
+    "linkedin-ads"
+  ],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

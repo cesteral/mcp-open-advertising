@@ -2,17 +2,19 @@
 
 **AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager**
 
-[![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE.md)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-green)](https://modelcontextprotocol.io/)
 
-> **Hosted service coming soon** — [Request early access](https://cesteral.com) for managed hosting, or self-host using the guide below.
+> **Open-source connectors, managed service coming soon** — [Request early access](https://cesteral.com) for managed hosting, or self-host using the guide below.
 
 ---
 
 ## Overview
 
 Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on seven independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
+
+This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
 
 ### Key Features
 
@@ -141,12 +143,14 @@ This dual-access model preserves service autonomy while enabling cross-server au
 **Phase: Production-Ready ✅**
 
 The platform currently includes:
+
 - ✅ Seven implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`)
 - ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
 - ✅ Live platform API integrations and Streamable HTTP transports
 - ✅ Terraform + Cloud Build coverage for independent service deployment
 
 **Current Focus:**
+
 1. Production hardening and operational reliability across all seven servers
 2. Cross-platform workflow coverage and contract governance
 3. Telemetry dashboards and observability improvements
@@ -157,8 +161,8 @@ The platform currently includes:
 
 - **Node.js** (>= 20.0.0)
 - **pnpm** (>= 8.0.0) - `npm install -g pnpm`
-- **Terraform** (>= 1.6.0) *(for deployment)*
-- **GCP Account** with billing enabled *(for deployment)*
+- **Terraform** (>= 1.6.0) _(for deployment)_
+- **GCP Account** with billing enabled _(for deployment)_
 - **Docker** (for containerization)
 
 ### 1. Clone Repository
@@ -233,7 +237,7 @@ terraform init
 terraform apply -var-file=dev.tfvars
 ```
 
-### 7. Configure AI Agent (Claude Desktop) *(After Deployment)*
+### 7. Configure AI Agent (Claude Desktop) _(After Deployment)_
 
 #### Self-hosted
 
@@ -357,58 +361,58 @@ cesteral-mcp-servers/
 
 ### Reporting Server Tools
 
-| Tool                      | Description                           | Parameters                                          |
-| ------------------------- | ------------------------------------- | --------------------------------------------------- |
+| Tool                      | Description                           | Parameters                                           |
+| ------------------------- | ------------------------------------- | ---------------------------------------------------- |
 | `get_campaign_delivery`   | Fetch delivery metrics for date range | `campaignId`, `advertiserId`, `startDate`, `endDate` |
-| `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS         | `campaignId`, `dateRange`                           |
-| `get_historical_metrics`  | Time-series data for trends           | `campaignId`, `startDate`, `endDate`, `granularity` |
-| `get_pacing_status`       | Real-time pacing calculation          | `campaignId`, `advertiserId`                        |
-| `run_custom_query`        | Execute dynamic DBM report queries    | `reportType`, `filters`, `metrics`, `dimensions`    |
+| `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS         | `campaignId`, `dateRange`                            |
+| `get_historical_metrics`  | Time-series data for trends           | `campaignId`, `startDate`, `endDate`, `granularity`  |
+| `get_pacing_status`       | Real-time pacing calculation          | `campaignId`, `advertiserId`                         |
+| `run_custom_query`        | Execute dynamic DBM report queries    | `reportType`, `filters`, `metrics`, `dimensions`     |
 
 ### DV360 Management Server Tools
 
-| Tool                                 | Description                                         | Parameters |
-| ------------------------------------ | --------------------------------------------------- | ---------- |
-| `dv360_list_entities`                | Generic list for DV360 entities                     | `entityType`, IDs, filters, paging |
-| `dv360_get_entity`                   | Fetch one DV360 entity by type/id                   | `entityType`, entity IDs |
-| `dv360_create_entity`                | Create any supported DV360 entity                   | `entityType`, IDs, `data` |
-| `dv360_update_entity`                | Update any supported DV360 entity with updateMask   | `entityType`, IDs, `data`, `updateMask` |
-| `dv360_adjust_line_item_bids`        | Batch bid adjustments for multiple line items       | `advertiserId`, `adjustments[]` |
+| Tool                          | Description                                       | Parameters                              |
+| ----------------------------- | ------------------------------------------------- | --------------------------------------- |
+| `dv360_list_entities`         | Generic list for DV360 entities                   | `entityType`, IDs, filters, paging      |
+| `dv360_get_entity`            | Fetch one DV360 entity by type/id                 | `entityType`, entity IDs                |
+| `dv360_create_entity`         | Create any supported DV360 entity                 | `entityType`, IDs, `data`               |
+| `dv360_update_entity`         | Update any supported DV360 entity with updateMask | `entityType`, IDs, `data`, `updateMask` |
+| `dv360_adjust_line_item_bids` | Batch bid adjustments for multiple line items     | `advertiserId`, `adjustments[]`         |
 
 See [packages/dv360-mcp](packages/dv360-mcp) for the full 19-tool reference including custom bidding, targeting, and bulk operations.
 
 ### The Trade Desk Server Tools
 
-| Tool                       | Description                                  | Parameters |
-| -------------------------- | -------------------------------------------- | ---------- |
-| `ttd_list_entities`        | List TTD entities with filters/paging        | `entityType`, optional filters |
-| `ttd_create_entity`        | Create a TTD entity                          | `entityType`, `data` |
-| `ttd_get_report`           | Generate async report via MyReports V3 API   | `reportName`, `dateRange`, `dimensions`, `metrics` |
-| `ttd_bulk_update_status`   | Batch pause/resume/archive entities          | `entityType`, `entityIds[]`, `status` |
-| `ttd_graphql_query`        | Execute GraphQL query against TTD API        | `query`, `variables` |
+| Tool                     | Description                                | Parameters                                         |
+| ------------------------ | ------------------------------------------ | -------------------------------------------------- |
+| `ttd_list_entities`      | List TTD entities with filters/paging      | `entityType`, optional filters                     |
+| `ttd_create_entity`      | Create a TTD entity                        | `entityType`, `data`                               |
+| `ttd_get_report`         | Generate async report via MyReports V3 API | `reportName`, `dateRange`, `dimensions`, `metrics` |
+| `ttd_bulk_update_status` | Batch pause/resume/archive entities        | `entityType`, `entityIds[]`, `status`              |
+| `ttd_graphql_query`      | Execute GraphQL query against TTD API      | `query`, `variables`                               |
 
 See [packages/ttd-mcp](packages/ttd-mcp) for the full 20-tool reference including bulk CRUD, bid adjustments, and GraphQL operations.
 
 ### Google Ads Server Tools
 
-| Tool                    | Description                              | Parameters |
-| ----------------------- | ---------------------------------------- | ---------- |
-| `gads_gaql_search`      | Execute arbitrary GAQL queries           | `customerId`, `query`, `pageSize` |
-| `gads_list_accounts`    | List accessible customer accounts        | _(none)_ |
-| `gads_create_entity`    | Create entity via :mutate API            | `entityType`, `customerId`, `data` |
-| `gads_bulk_mutate`      | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
+| Tool                 | Description                                   | Parameters                                 |
+| -------------------- | --------------------------------------------- | ------------------------------------------ |
+| `gads_gaql_search`   | Execute arbitrary GAQL queries                | `customerId`, `query`, `pageSize`          |
+| `gads_list_accounts` | List accessible customer accounts             | _(none)_                                   |
+| `gads_create_entity` | Create entity via :mutate API                 | `entityType`, `customerId`, `data`         |
+| `gads_bulk_mutate`   | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
 
 See [packages/gads-mcp](packages/gads-mcp) for the full 12-tool reference including entity CRUD and bulk status updates.
 
 ### Meta Ads Server Tools
 
-| Tool                          | Description                              | Parameters |
-| ----------------------------- | ---------------------------------------- | ---------- |
-| `meta_list_entities`          | List Meta Ads entities with filters      | `entityType`, `adAccountId`, `fields` |
-| `meta_create_entity`          | Create a Meta Ads entity                 | `entityType`, `adAccountId`, `data` |
-| `meta_get_insights`           | Performance metrics for an entity        | `entityId`, `fields`, `datePreset` |
-| `meta_search_targeting`       | Search interests, locations, etc.        | `type`, `query`, `limit` |
-| `meta_get_delivery_estimate`  | Audience size estimation                 | `adAccountId`, `targetingSpec` |
+| Tool                         | Description                         | Parameters                            |
+| ---------------------------- | ----------------------------------- | ------------------------------------- |
+| `meta_list_entities`         | List Meta Ads entities with filters | `entityType`, `adAccountId`, `fields` |
+| `meta_create_entity`         | Create a Meta Ads entity            | `entityType`, `adAccountId`, `data`   |
+| `meta_get_insights`          | Performance metrics for an entity   | `entityId`, `fields`, `datePreset`    |
+| `meta_search_targeting`      | Search interests, locations, etc.   | `type`, `query`, `limit`              |
+| `meta_get_delivery_estimate` | Audience size estimation            | `adAccountId`, `targetingSpec`        |
 
 See [packages/meta-mcp](packages/meta-mcp) for the full 18-tool reference including insights breakdowns, duplication, and ad previews.
 
@@ -642,7 +646,7 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 
 ## License
 
-[Business Source License 1.1](LICENSE.md) — converts to Apache 2.0 after 3 years.
+[Apache License 2.0](LICENSE.md).
 
 ---
 

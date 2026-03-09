@@ -2,15 +2,26 @@
   "name": "@cesteral/dbm-mcp",
   "version": "1.0.0",
   "description": "DBM MCP Server - Generic cross-platform reporting and metrics",
-  "license": "BSL-1.1",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
     "directory": "packages/dbm-mcp"
   },
   "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
-  "keywords": ["mcp", "model-context-protocol", "advertising", "dv360", "bid-manager", "reporting"],
-  "files": ["dist/", "README.md", "LICENSE"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "advertising",
+    "dv360",
+    "bid-manager",
+    "reporting"
+  ],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
