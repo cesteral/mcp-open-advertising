@@ -57,7 +57,7 @@ import { getAdPreviewsTool } from "./get-ad-previews.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
-export const allTools: ToolDefinitionForFactory[] = [
+const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
   listEntitiesTool,
   getEntityTool,
@@ -87,6 +87,13 @@ export const allTools: ToolDefinitionForFactory[] = [
   getAdPreviewsTool,
   // ── Validation ──
   validateEntityTool,
-  // ── Conformance ──
-  ...conformanceTools,
+];
+
+/**
+ * All tool definitions for the TikTok Ads MCP server.
+ * Conformance tools are only included when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
+ */
+export const allTools: ToolDefinitionForFactory[] = [
+  ...productionTools,
+  ...(process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true" ? conformanceTools : []),
 ];

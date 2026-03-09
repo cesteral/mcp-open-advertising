@@ -6,19 +6,7 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_list_entities";
 const TOOL_TITLE = "List TTD Entities";
-const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination.
-
-**Entity Hierarchy:** partner > advertiser > campaign > adGroup > ad
-
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
-
-Uses TTD API v3 scoped query endpoints. Required parent IDs depend on entity type:
-- **advertiser**: no parent required (scoped to partner)
-- **campaign, creative, siteList, deal, conversionTracker, bidList**: \`advertiserId\` required
-- **adGroup**: \`advertiserId\` + \`campaignId\` required
-- **ad**: \`advertiserId\` + \`adGroupId\` required
-
-Results are paginated; use pageToken to fetch subsequent pages.`;
+const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination. Required parent IDs: advertiser (none), campaign/creative/siteList/deal/conversionTracker/bidList (advertiserId), adGroup (advertiserId+campaignId), ad (advertiserId+adGroupId). See entity-hierarchy://ttd resource for details.`;
 
 export const ListEntitiesInputSchema = z
   .object({

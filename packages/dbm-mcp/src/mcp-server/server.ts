@@ -47,6 +47,10 @@ export async function createMcpServer(
       capabilities: {
         logging: {},
       },
+      instructions:
+        "DV360 reporting server. Provides read-only access to campaign delivery metrics, performance data, pacing, and historical trends via Bid Manager API v2. " +
+        "Start with get_campaign_delivery or get_pacing_status. Use run_custom_query for advanced Bid Manager reports. " +
+        "See MCP Resources for metric/filter references and query examples.",
     }
   );
 

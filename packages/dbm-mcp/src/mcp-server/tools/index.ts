@@ -12,16 +12,20 @@ import { getPacingStatusTool } from "./definitions/get-pacing-status.tool.js";
 import { runCustomQueryTool } from "./definitions/run-custom-query.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
-/**
- * All tool definitions for the DBM MCP server.
- * Used by server.ts for registration via registerToolsFromDefinitions().
- */
-export const allTools: ToolDefinitionForFactory[] = [
+const productionTools: ToolDefinitionForFactory[] = [
   getCampaignDeliveryTool,
   getPerformanceMetricsTool,
   getHistoricalMetricsTool,
   getPacingStatusTool,
   runCustomQueryTool,
-  // ── Conformance ──
-  ...conformanceTools,
+];
+
+/**
+ * All tool definitions for the DBM MCP server.
+ * Used by server.ts for registration via registerToolsFromDefinitions().
+ * Conformance tools are only included when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
+ */
+export const allTools: ToolDefinitionForFactory[] = [
+  ...productionTools,
+  ...(process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true" ? conformanceTools : []),
 ];

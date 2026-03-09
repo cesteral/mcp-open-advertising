@@ -60,9 +60,10 @@ export interface ToolSdkContext {
 }
 
 /**
- * A concrete input example for a tool, used to improve tool selection
- * and usage accuracy. Embedded into tool descriptions for MCP clients
- * and available as structured data for Anthropic API's input_examples.
+ * A concrete input example for a tool. Not forwarded to MCP clients via
+ * the SDK (which has no inputExamples field). Instead, consumed by:
+ *  - `createToolExamplesResource()` to generate on-demand MCP Resources
+ *  - The cesteral-intelligence frontend for Anthropic API `input_examples`
  */
 export interface ToolInputExample {
   /** Short label describing the scenario, e.g. "Create a TTD campaign" */
@@ -115,6 +116,11 @@ export interface ToolDefinitionForFactory {
   inputSchema: z.ZodTypeAny;
   outputSchema?: z.ZodTypeAny;
   annotations?: ToolAnnotations;
+  /**
+   * Input examples for this tool. Not forwarded to the MCP SDK during registration.
+   * Consumed by `createToolExamplesResource()` for on-demand MCP Resources and
+   * by the cesteral-intelligence frontend for Anthropic API `input_examples`.
+   */
   inputExamples?: ToolInputExample[];
   logic: (
     input: any,
@@ -275,11 +281,8 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     // Build registration config with all MCP 2025-11-25 fields
     const transformedInputSchema = transformSchema(tool.inputSchema);
 
-    // Embed input examples into description for universal MCP client compatibility
-    const descriptionWithExamples = tool.description + formatExamplesForDescription(tool.inputExamples);
-
     const toolConfig: ToolRegistrationConfig = {
-      description: descriptionWithExamples,
+      description: tool.description,
       inputSchema: transformedInputSchema,
     };
 

@@ -7,15 +7,7 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_list_entities";
 const TOOL_TITLE = "List Google Ads Entities";
-const TOOL_DESCRIPTION = `List Google Ads entities of a given type with optional GAQL filters.
-
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
-
-Filters are applied as GAQL WHERE conditions. Example filters:
-  { "campaign.status": "= 'ENABLED'" }
-  { "ad_group.campaign": "= 'customers/123/campaigns/456'" }
-
-For complex queries, use \`gads_gaql_search\` directly.`;
+const TOOL_DESCRIPTION = `List Google Ads entities of a given type with optional GAQL filters. Filters are applied as GAQL WHERE conditions. For complex queries, use \`gads_gaql_search\` directly.`;
 
 export const ListEntitiesInputSchema = z
   .object({

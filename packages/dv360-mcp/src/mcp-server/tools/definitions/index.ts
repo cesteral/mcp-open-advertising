@@ -53,12 +53,12 @@ import { validateTargetingConfigTool } from "./validate-targeting-config.tool.js
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
-export const allTools: ToolDefinitionForFactory[] = [
+const productionTools: ToolDefinitionForFactory[] = [
   // Tier 1: Entity CRUD (generic tools handle all entity types dynamically)
   listEntitiesTool,
   getEntityTool,
-  createEntityTool, // Now using simplified schema
-  updateEntityTool, // Now using simplified schema
+  createEntityTool,
+  updateEntityTool,
   deleteEntityTool,
   // Tier 2: Workflow Tools
   adjustLineItemBidsTool,
@@ -78,6 +78,13 @@ export const allTools: ToolDefinitionForFactory[] = [
   validateTargetingConfigTool,
   // Validation
   validateEntityTool,
-  // ── Conformance ──
-  ...conformanceTools,
+];
+
+/**
+ * All tool definitions for the DV360 MCP server.
+ * Conformance tools are only included when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
+ */
+export const allTools: ToolDefinitionForFactory[] = [
+  ...productionTools,
+  ...(process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true" ? conformanceTools : []),
 ];

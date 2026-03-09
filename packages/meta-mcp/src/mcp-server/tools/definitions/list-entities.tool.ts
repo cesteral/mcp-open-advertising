@@ -6,16 +6,7 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_list_entities";
 const TOOL_TITLE = "List Meta Ads Entities";
-const TOOL_DESCRIPTION = `List Meta Ads entities with optional filtering and cursor-based pagination.
-
-**Entity Hierarchy:** Ad Account > Campaign > Ad Set > Ad (+ Ad Creatives, Custom Audiences)
-
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
-
-All entities are scoped to an ad account. Filtering uses Meta's JSON-array format.
-Results are cursor-paginated; use \`after\` to fetch subsequent pages.
-
-**Important:** Meta returns no fields by default. Specify \`fields\` or rely on defaults.`;
+const TOOL_DESCRIPTION = `List Meta Ads entities with optional filtering and cursor-based pagination. All entities are scoped to an ad account. Specify \`fields\` to control returned data (Meta returns no fields by default). Use \`after\` cursor for subsequent pages.`;
 
 export const ListEntitiesInputSchema = z
   .object({

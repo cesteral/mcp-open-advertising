@@ -50,7 +50,7 @@ import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
-export const allTools: ToolDefinitionForFactory[] = [
+const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
   listEntitiesTool,
   getEntityTool,
@@ -73,10 +73,16 @@ export const allTools: ToolDefinitionForFactory[] = [
   duplicateEntityTool,
   getDeliveryEstimateTool,
   getAdPreviewsTool,
-  // ── Bulk Operations (continued) ──
   adjustBidsTool,
   // ── Validation ──
   validateEntityTool,
-  // ── Conformance ──
-  ...conformanceTools,
+];
+
+/**
+ * All tool definitions for the Meta Ads MCP server.
+ * Conformance tools are only included when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
+ */
+export const allTools: ToolDefinitionForFactory[] = [
+  ...productionTools,
+  ...(process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true" ? conformanceTools : []),
 ];

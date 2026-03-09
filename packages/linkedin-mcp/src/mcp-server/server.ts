@@ -67,6 +67,10 @@ export async function createMcpServer(
       capabilities: {
         logging: {},
       },
+      instructions:
+        "LinkedIn Ads campaign management server. Supports 5 entity types (adAccount, campaignGroup, campaign, creative, conversionRule), analytics, targeting, and bulk operations via LinkedIn Marketing API v2. " +
+        "Use linkedin_list_ad_accounts to discover accounts, linkedin_list_entities to browse entities. " +
+        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
     }
   );
 

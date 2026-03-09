@@ -65,6 +65,10 @@ export async function createMcpServer(
       capabilities: {
         logging: {},
       },
+      instructions:
+        "The Trade Desk campaign management and reporting server. Supports 9 entity types via TTD REST API v3 and GraphQL. " +
+        "Use ttd_list_entities to discover entities, ttd_get_report for async reporting. " +
+        "See MCP Resources for entity schemas, hierarchy docs, and report field references.",
     }
   );
 

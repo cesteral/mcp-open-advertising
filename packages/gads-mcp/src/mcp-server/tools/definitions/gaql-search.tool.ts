@@ -5,16 +5,7 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_gaql_search";
 const TOOL_TITLE = "Google Ads GAQL Search";
-const TOOL_DESCRIPTION = `Execute a Google Ads Query Language (GAQL) query.
-
-GAQL allows querying any Google Ads resource with SQL-like syntax:
-  SELECT campaign.id, campaign.name, metrics.impressions
-  FROM campaign
-  WHERE campaign.status = 'ENABLED'
-  ORDER BY metrics.impressions DESC
-  LIMIT 100
-
-Supports resource fields, segment fields, and metrics. See \`gaql-reference://syntax\` resource for full reference.`;
+const TOOL_DESCRIPTION = `Execute a Google Ads Query Language (GAQL) query against any Google Ads resource. Supports resource fields, segment fields, and metrics with SQL-like syntax. See \`gaql-reference://syntax\` resource for full reference.`;
 
 export const GAQLSearchInputSchema = z
   .object({

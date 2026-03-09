@@ -65,6 +65,10 @@ export async function createMcpServer(
       capabilities: {
         logging: {},
       },
+      instructions:
+        "Meta Ads campaign management server. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights, targeting, and bulk operations via Meta Marketing API v21.0. " +
+        "Use meta_list_ad_accounts to discover accounts, meta_list_entities to browse entities. " +
+        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
     }
   );
 

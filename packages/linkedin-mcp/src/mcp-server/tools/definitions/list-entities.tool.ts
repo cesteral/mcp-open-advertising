@@ -10,16 +10,7 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_list_entities";
 const TOOL_TITLE = "List LinkedIn Ads Entities";
-const TOOL_DESCRIPTION = `List LinkedIn Ads entities with offset-based pagination.
-
-**Entity Hierarchy:** Ad Account > Campaign Group > Campaign > Creative (+ Conversion Rules)
-
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
-
-Campaign groups, campaigns, creatives, and conversion rules require \`adAccountUrn\` for scoping.
-Results are paginated; use \`start\` offset for subsequent pages.
-
-**LinkedIn URN IDs:** All LinkedIn entity IDs are URNs like \`urn:li:sponsoredAccount:123\`.`;
+const TOOL_DESCRIPTION = `List LinkedIn Ads entities with offset-based pagination. Most entity types require \`adAccountUrn\` for scoping. All LinkedIn IDs are URNs (e.g., \`urn:li:sponsoredAccount:123\`). Use \`start\` offset for subsequent pages.`;
 
 export const ListEntitiesInputSchema = z
   .object({

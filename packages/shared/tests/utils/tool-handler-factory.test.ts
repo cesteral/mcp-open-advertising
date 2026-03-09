@@ -338,7 +338,7 @@ describe("registerToolsFromDefinitions", () => {
     );
   });
 
-  it("embeds inputExamples into tool description", () => {
+  it("does not embed inputExamples into tool description (moved to Resources)", () => {
     const examples: ToolInputExample[] = [
       { label: "Simple query", input: { id: "123" } },
       { label: "With filter", input: { id: "456", filter: "active" } },
@@ -361,12 +361,8 @@ describe("registerToolsFromDefinitions", () => {
     });
 
     const config = server.registerTool.mock.calls[0][1];
-    expect(config.description).toContain("Base description");
-    expect(config.description).toContain("### Examples");
-    expect(config.description).toContain("**Simple query:**");
-    expect(config.description).toContain("**With filter:**");
-    expect(config.description).toContain('"id": "123"');
-    expect(config.description).toContain('"filter": "active"');
+    expect(config.description).toBe("Base description");
+    expect(config.description).not.toContain("### Examples");
   });
 
   it("leaves description unchanged when no inputExamples provided", () => {

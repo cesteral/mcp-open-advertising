@@ -18,6 +18,7 @@ export * from "./interaction-logger.js";
 export * from "./retryable-fetch.js";
 export * from "./mcp-http-transport-factory.js";
 export * from "./conformance-echo-tool.js";
+export * from "./tool-examples-resource.js";
 export * from "./client-validation-helpers.js";
 export * from "./elicitation-helpers.js";
 export * from "./bulk-operation-schemas.js";

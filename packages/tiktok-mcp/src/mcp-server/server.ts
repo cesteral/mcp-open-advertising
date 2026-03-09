@@ -66,6 +66,10 @@ export async function createMcpServer(
       capabilities: {
         logging: {},
       },
+      instructions:
+        "TikTok Ads campaign management and reporting server. Supports 4 entity types (campaign, adGroup, ad, creative), async reporting, targeting, and bulk operations via TikTok Marketing API v1.3. " +
+        "Use tiktok_list_advertisers to discover accounts, tiktok_list_entities to browse entities. " +
+        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
     }
   );
 

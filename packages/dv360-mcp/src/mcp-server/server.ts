@@ -67,6 +67,10 @@ export async function createMcpServer(
       capabilities: {
         logging: {},
       },
+      instructions:
+        "DV360 campaign management server. Supports CRUD for campaigns, insertion orders, line items, and targeting via Display & Video 360 API. " +
+        "Use dv360_list_entities to discover entities, MCP Resources (entity-schema://{entityType}) for field details, " +
+        "and MCP Prompts (full_campaign_setup_workflow) for multi-step workflows.",
     }
   );
 
