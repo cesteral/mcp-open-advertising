@@ -84,6 +84,14 @@ Set via `MCP_AUTH_MODE` environment variable.
 - **Streamable HTTP**: MCP protocol via Streamable HTTP transport at `/mcp`
 - **Health check**: `/health` endpoint
 
+### Key Gotchas
+
+- Reports are async: create query → run query → poll status → fetch results
+- Report results are CSV-formatted; the server parses them into structured JSON
+- `advertiserId` is required for all reporting tools
+- Rate limits apply per Google Cloud project, not per advertiser
+- Read-only server — no entity mutation; use `dv360-mcp` for write operations
+
 ### Data Sources
 - Bid Manager API v2: DV360 reporting queries
 

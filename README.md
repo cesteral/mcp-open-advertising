@@ -375,7 +375,7 @@ cesteral-mcp-servers/
 | `dv360_update_entity`                | Update any supported DV360 entity with updateMask   | `entityType`, IDs, `data`, `updateMask` |
 | `dv360_adjust_line_item_bids`        | Batch bid adjustments for multiple line items       | `advertiserId`, `adjustments[]` |
 
-See [packages/dv360-mcp](packages/dv360-mcp) for the full 20-tool reference including custom bidding, targeting, and bulk operations.
+See [packages/dv360-mcp](packages/dv360-mcp) for the full 19-tool reference including custom bidding, targeting, and bulk operations.
 
 ### The Trade Desk Server Tools
 
