@@ -17,7 +17,7 @@ export const troubleshootReportPrompt: Prompt = {
     },
     {
       name: "queryType",
-      description: "Type of query that failed (e.g., 'run_custom_query', 'get_campaign_delivery')",
+      description: "Type of query that failed (e.g., 'dbm_run_custom_query', 'dbm_get_campaign_delivery')",
       required: false,
     },
   ],
@@ -25,7 +25,7 @@ export const troubleshootReportPrompt: Prompt = {
 
 export function getTroubleshootReportMessage(args?: Record<string, string>): string {
   const errorMessage = args?.errorMessage || "{error message}";
-  const queryType = args?.queryType || "run_custom_query";
+  const queryType = args?.queryType || "dbm_run_custom_query";
 
   return `# Troubleshooting Bid Manager Report Issues
 

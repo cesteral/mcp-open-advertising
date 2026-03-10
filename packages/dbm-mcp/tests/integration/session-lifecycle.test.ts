@@ -154,7 +154,7 @@ function buildPayload(method: string, id: number) {
     id,
     method: "tools/call",
     params: {
-      name: "run_custom_query",
+      name: "dbm_run_custom_query",
       arguments: {
         reportType: "STANDARD",
         groupBys: ["FILTER_DATE"],

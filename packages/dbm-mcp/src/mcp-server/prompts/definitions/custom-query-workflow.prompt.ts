@@ -8,7 +8,7 @@ import type { Prompt } from "./types.js";
 
 export const customQueryWorkflowPrompt: Prompt = {
   name: "custom_query_workflow",
-  description: "Step-by-step guide for building custom Bid Manager queries with the run_custom_query tool",
+  description: "Step-by-step guide for building custom Bid Manager queries with the dbm_run_custom_query tool",
   arguments: [
     {
       name: "advertiserId",
@@ -31,7 +31,7 @@ export function getCustomQueryWorkflowMessage(args?: Record<string, string>): st
 
 ## Goal: ${queryGoal}
 
-Follow these steps to build a custom Bid Manager query using the \`run_custom_query\` tool.
+Follow these steps to build a custom Bid Manager query using the \`dbm_run_custom_query\` tool.
 
 ---
 
@@ -165,9 +165,9 @@ Example query for ${queryGoal}:
 
 ## Next Steps
 
-1. Run the query with \`run_custom_query\`
+1. Run the query with \`dbm_run_custom_query\`
 2. Analyze results
 3. Refine groupBys/metrics based on findings
-4. Use \`get_historical_metrics\` for trend analysis
+4. Use \`dbm_get_historical_metrics\` for trend analysis
 `;
 }

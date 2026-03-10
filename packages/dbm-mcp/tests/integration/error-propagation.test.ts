@@ -135,7 +135,7 @@ describe("dbm transport error propagation", () => {
         id: 1,
         method: "tools/call",
         params: {
-          name: "run_custom_query",
+          name: "dbm_run_custom_query",
           arguments: {
             reportType: "STANDARD",
             groupBys: ["FILTER_NOT_REAL"],

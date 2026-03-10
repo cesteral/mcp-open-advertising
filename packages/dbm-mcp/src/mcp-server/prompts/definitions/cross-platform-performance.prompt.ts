@@ -39,7 +39,7 @@ This workflow coordinates across multiple MCP servers to gather, normalize, and 
 
 \`\`\`json
 {
-  "tool": "get_performance_metrics",
+  "tool": "dbm_get_performance_metrics",
   "params": {
     "campaignId": "{dv360CampaignId}",
     "advertiserId": "{dv360AdvertiserId}",

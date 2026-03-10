@@ -110,10 +110,10 @@ This server follows the **production-grade patterns** established in dv360-mcp:
 │                           MCP Server                                 │
 │  ┌─────────────────────┐  ┌──────────────────────────────────────┐ │
 │  │  Tool Registry      │  │  Tool Definitions (4 core tools)     │ │
-│  │  - registerAll()    │  │  - get_campaign_delivery             │ │
-│  │  - createHandler()  │  │  - get_performance_metrics           │ │
-│  └─────────────────────┘  │  - get_historical_metrics            │ │
-│  ┌─────────────────────┐  │  - get_pacing_status                 │ │
+│  │  - registerAll()    │  │  - dbm_get_campaign_delivery         │ │
+│  │  - createHandler()  │  │  - dbm_get_performance_metrics       │ │
+│  └─────────────────────┘  │  - dbm_get_historical_metrics        │ │
+│  ┌─────────────────────┐  │  - dbm_get_pacing_status             │ │
 │  │  Resource Registry  │  └──────────────────────────────────────┘ │
 │  │  - Metric Schemas   │  ┌──────────────────────────────────────┐ │
 │  │  - Report Templates │  │  Prompts (Workflow Guidance)         │ │
@@ -586,7 +586,7 @@ export const getCampaignDeliveryParamsSchema = z.object({
 
 // 2. Define tool metadata
 export const getCampaignDeliveryTool = {
-  name: "get_campaign_delivery",
+  name: "dbm_get_campaign_delivery",
   description: "Fetch DV360 delivery metrics (impressions, clicks, spend, conversions) for a campaign within a date range via Bid Manager API.",
   inputSchema: getCampaignDeliveryParamsSchema,
 };
@@ -687,7 +687,7 @@ export const getCampaignDeliveryToolDefinition = {
 Every query is automatically traced:
 
 ```
-Span: tool.get_campaign_delivery
+Span: tool.dbm_get_campaign_delivery
   ├─ Span: bidmanager.createQuery
   │   └─ Attributes: advertiserId, campaignId
   ├─ Span: bidmanager.runQuery
@@ -974,10 +974,10 @@ describe("Bid Manager Integration", () => {
 - [ ] Error handling for API errors
 
 ### Phase 3: Tool Implementation
-- [ ] `get_campaign_delivery` - Delivery metrics via Bid Manager API
-- [ ] `get_performance_metrics` - Calculate KPIs from report data
-- [ ] `get_historical_metrics` - Time-series data with daily granularity
-- [ ] `get_pacing_status` - Pacing calculation (requires budget data)
+- [ ] `dbm_get_campaign_delivery` - Delivery metrics via Bid Manager API
+- [ ] `dbm_get_performance_metrics` - Calculate KPIs from report data
+- [ ] `dbm_get_historical_metrics` - Time-series data with daily granularity
+- [ ] `dbm_get_pacing_status` - Pacing calculation (requires budget data)
 
 ### Phase 4: Resources & Prompts
 - [ ] MCP Resources for metric schemas

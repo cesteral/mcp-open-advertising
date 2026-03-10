@@ -51,7 +51,7 @@ Check whether the campaign is on track to spend its budget by flight end.
 
 \`\`\`json
 {
-  "tool": "get_pacing_status",
+  "tool": "dbm_get_pacing_status",
   "params": {
     "campaignId": "${campaignId}",
     "advertiserId": "${advertiserId}"
@@ -78,7 +78,7 @@ Get calculated performance metrics for the campaign:
 
 \`\`\`json
 {
-  "tool": "get_performance_metrics",
+  "tool": "dbm_get_performance_metrics",
   "params": {
     "campaignId": "${campaignId}",
     "advertiserId": "${advertiserId}",
@@ -104,7 +104,7 @@ Pull time-series data to spot trends over time:
 
 \`\`\`json
 {
-  "tool": "get_historical_metrics",
+  "tool": "dbm_get_historical_metrics",
   "params": {
     "campaignId": "${campaignId}",
     "advertiserId": "${advertiserId}",
@@ -131,7 +131,7 @@ For more granular analysis, compose a custom Bid Manager query:
 
 \`\`\`json
 {
-  "tool": "run_custom_query",
+  "tool": "dbm_run_custom_query",
   "params": {
     "reportType": "STANDARD",
     "timeRange": "LAST_14_DAYS",

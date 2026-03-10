@@ -366,7 +366,7 @@ Cesteral supports two access patterns. This keeps each MCP server independently 
 ```
 1. AI Agent (Claude Desktop or custom agent)
    → HTTPS POST (JWT/auth headers) → Reporting MCP Server (Cloud Run)
-   MCP method: tools/call "get_campaign_delivery"
+   MCP method: tools/call "dbm_get_campaign_delivery"
 
 2. Reporting Service
    → BigQuery: Query normalized delivery metrics tables
@@ -398,7 +398,7 @@ Cesteral supports two access patterns. This keeps each MCP server independently 
    MCP method: tools/call "optimize_campaign_bids"
 
 2. Orchestration Service (internal MCP client)
-   → Reporting MCP Server (tools/call "get_campaign_delivery")
+   → Reporting MCP Server (tools/call "dbm_get_campaign_delivery")
 
 3. Orchestration Service (policy + risk logic)
    - Apply adjustment algorithm
@@ -444,7 +444,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 **Steps**:
 1. Scheduled scan (every 4 hours) publishes `optimization.needed` events for campaigns with pacing issues
-2. AI agent consumes event, calls `get_campaign_delivery` to fetch current metrics
+2. AI agent consumes event, calls `dbm_get_campaign_delivery` to fetch current metrics
 3. AI agent analyzes pacing: Campaign at 72% pacing, expected 85% → 13% underdelivering
 4. AI agent analyzes pacing data and calculates adjustment recommendations
 5. Optimization server recommends: +12% CPM increase across 24 line items
@@ -493,7 +493,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 
 **Steps**:
 1. Campaign manager asks AI agent: "How did Campaign X perform last week compared to two weeks ago?"
-2. AI agent calls `get_campaign_delivery` for two date ranges:
+2. AI agent calls `dbm_get_campaign_delivery` for two date ranges:
    - Last week (2025-01-13 to 2025-01-19)
    - Two weeks ago (2025-01-06 to 2025-01-12)
 3. Reporting server queries BigQuery normalized tables
@@ -574,7 +574,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 **Goals**: Build `dbm-mcp` with DV360 support
 
 **Deliverables**:
-- MCP tools: `get_campaign_delivery`, `get_performance_metrics`, `get_pacing_status`
+- MCP tools: `dbm_get_campaign_delivery`, `dbm_get_performance_metrics`, `dbm_get_pacing_status`
 - DV360 reporting adapter (Bid Manager API v2)
 - BigQuery normalized tables populated from DV360
 - Scheduled data sync function (every 4 hours)

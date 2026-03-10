@@ -142,13 +142,13 @@ describe("dbm transport query workflow", () => {
     await shutdown();
   });
 
-  it("executes run_custom_query successfully over /mcp", async () => {
+  it("executes dbm_run_custom_query successfully over /mcp", async () => {
     const result = await postMcp(app, {
       jsonrpc: "2.0",
       id: 1,
       method: "tools/call",
       params: {
-        name: "run_custom_query",
+        name: "dbm_run_custom_query",
         arguments: {
           reportType: "STANDARD",
           groupBys: ["FILTER_DATE"],

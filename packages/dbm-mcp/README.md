@@ -17,7 +17,7 @@ Read-only reporting server that provides delivery metrics, performance calculati
 
 ## MCP Tools
 
-### 1. `get_campaign_delivery`
+### 1. `dbm_get_campaign_delivery`
 
 Fetch delivery metrics (impressions, clicks, spend, conversions) for a campaign within a date range.
 
@@ -28,7 +28,7 @@ Fetch delivery metrics (impressions, clicks, spend, conversions) for a campaign 
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
 
-### 2. `get_performance_metrics`
+### 2. `dbm_get_performance_metrics`
 
 Calculate performance KPIs (CPM, CTR, CPA, ROAS) from delivery data.
 
@@ -38,7 +38,7 @@ Calculate performance KPIs (CPM, CTR, CPA, ROAS) from delivery data.
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
 
-### 3. `get_historical_metrics`
+### 3. `dbm_get_historical_metrics`
 
 Fetch time-series historical metrics for trend analysis.
 
@@ -49,7 +49,7 @@ Fetch time-series historical metrics for trend analysis.
 - `endDate` (string): End date (YYYY-MM-DD)
 - `granularity` (string, optional): "daily" or "hourly" (default: "daily")
 
-### 4. `get_pacing_status`
+### 4. `dbm_get_pacing_status`
 
 Get real-time pacing status for a campaign (actual vs expected delivery).
 
@@ -57,7 +57,7 @@ Get real-time pacing status for a campaign (actual vs expected delivery).
 
 - `campaignId` (string): Campaign ID
 
-### 5. `run_custom_query`
+### 5. `dbm_run_custom_query`
 
 Compose and execute a custom Bid Manager report with specified metrics, dimensions, and filters.
 

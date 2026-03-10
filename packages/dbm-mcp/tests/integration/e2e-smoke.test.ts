@@ -180,7 +180,7 @@ describe("dbm-mcp e2e smoke tests", () => {
       id: 1,
       method: "tools/call",
       params: {
-        name: "run_custom_query",
+        name: "dbm_run_custom_query",
         arguments: {
           reportType: "STANDARD",
           groupBys: ["FILTER_DATE"],
@@ -206,7 +206,7 @@ describe("dbm-mcp e2e smoke tests", () => {
       id: 2,
       method: "tools/call",
       params: {
-        name: "get_campaign_delivery",
+        name: "dbm_get_campaign_delivery",
         arguments: {
           campaignId: "camp-001",
           advertiserId: "adv-123",
@@ -230,7 +230,7 @@ describe("dbm-mcp e2e smoke tests", () => {
       id: 3,
       method: "tools/call",
       params: {
-        name: "run_custom_query",
+        name: "dbm_run_custom_query",
         arguments: {
           reportType: "STANDARD",
           groupBys: ["FILTER_DATE"],
@@ -249,7 +249,7 @@ describe("dbm-mcp e2e smoke tests", () => {
         id: 4,
         method: "tools/call",
         params: {
-          name: "run_custom_query",
+          name: "dbm_run_custom_query",
           arguments: {
             reportType: "STANDARD",
             groupBys: ["FILTER_DATE"],
@@ -270,7 +270,7 @@ describe("dbm-mcp e2e smoke tests", () => {
       id: 5,
       method: "tools/call",
       params: {
-        name: "run_custom_query",
+        name: "dbm_run_custom_query",
         arguments: {
           // Missing required reportType, groupBys, metrics, dateRange
         },

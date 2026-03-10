@@ -78,7 +78,7 @@ Use the **dbm-mcp** reporting server to understand the current delivery situatio
 
 ### 1a. Check Pacing Status
 \`\`\`
-Tool: get_pacing_status (dbm-mcp)
+Tool: dbm_get_pacing_status (dbm-mcp)
 Parameters:
 {
   "campaignId": "${entityType === "campaign" ? entityId : "{campaignId}"}",
@@ -93,7 +93,7 @@ Parameters:
 
 ### 1b. Get Performance Metrics
 \`\`\`
-Tool: get_performance_metrics (dbm-mcp)
+Tool: dbm_get_performance_metrics (dbm-mcp)
 Parameters:
 {
   "campaignId": "${entityType === "campaign" ? entityId : "{campaignId}"}",
@@ -109,7 +109,7 @@ Parameters:
 
 ### 1c. Get Historical Trends
 \`\`\`
-Tool: get_historical_metrics (dbm-mcp)
+Tool: dbm_get_historical_metrics (dbm-mcp)
 Parameters:
 {
   "campaignId": "${entityType === "campaign" ? entityId : "{campaignId}"}",
@@ -346,7 +346,7 @@ After applying fixes, monitor to confirm delivery improves.
 
 ### 6a. Immediate Check (30 minutes after fix)
 \`\`\`
-Tool: get_pacing_status (dbm-mcp)
+Tool: dbm_get_pacing_status (dbm-mcp)
 Parameters:
 {
   "campaignId": "${entityType === "campaign" ? entityId : "{campaignId}"}",
@@ -358,7 +358,7 @@ Parameters:
 
 ### 6b. Follow-up Check (4-6 hours after fix)
 \`\`\`
-Tool: get_performance_metrics (dbm-mcp)
+Tool: dbm_get_performance_metrics (dbm-mcp)
 Parameters:
 {
   "campaignId": "${entityType === "campaign" ? entityId : "{campaignId}"}",
@@ -371,7 +371,7 @@ Parameters:
 
 ### 6c. Day-over-Day Comparison (24 hours after fix)
 \`\`\`
-Tool: get_historical_metrics (dbm-mcp)
+Tool: dbm_get_historical_metrics (dbm-mcp)
 Parameters:
 {
   "campaignId": "${entityType === "campaign" ? entityId : "{campaignId}"}",
@@ -416,7 +416,7 @@ If the above steps don't resolve underdelivery, consider:
 ## Next Steps
 
 After resolving the immediate underdelivery:
-- Set up recurring monitoring using \`get_pacing_status\`
+- Set up recurring monitoring using \`dbm_get_pacing_status\`
 - Consider the **budget_reallocation_workflow** prompt if budget needs redistribution
 - Review campaign-level frequency caps to prevent future issues
 - Document the root cause and fix for future reference

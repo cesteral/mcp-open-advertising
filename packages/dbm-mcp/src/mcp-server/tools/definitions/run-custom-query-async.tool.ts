@@ -1,5 +1,5 @@
 /**
- * Async (Task-based) version of run_custom_query.
+ * Async (Task-based) version of dbm_run_custom_query.
  *
  * Uses the MCP experimental Tasks API to return a task handle immediately,
  * while the Bid Manager report executes in the background.
@@ -27,7 +27,7 @@ import { validateQueryParams } from "../utils/query-validation.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 /**
- * Register the async task-based version of run_custom_query on the McpServer.
+ * Register the async task-based version of dbm_run_custom_query on the McpServer.
  * Uses server.experimental.tasks.registerToolTask().
  */
 export function registerRunCustomQueryAsyncTool(
@@ -46,7 +46,7 @@ export function registerRunCustomQueryAsyncTool(
         "Execute a custom Bid Manager API query asynchronously. Returns a task handle immediately — " +
         "poll via tasks/getTask for status, retrieve results via tasks/getTaskResult when complete. " +
         "Use this for large or complex queries that may take time to execute.\n\n" +
-        "Accepts the same parameters as run_custom_query.",
+        "Accepts the same parameters as dbm_run_custom_query.",
       inputSchema: inputShape,
       annotations: {
         readOnlyHint: true,
@@ -167,5 +167,5 @@ export function registerRunCustomQueryAsyncTool(
     }
   );
 
-  logger.info("Registered async task-based tool: run_custom_query_async");
+  logger.info("Registered async task-based tool: dbm_run_custom_query_async");
 }

@@ -595,7 +595,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 |------|-------------|----------------|
 | `meta_duplicate_entity` | Copy campaigns/adSets/ads | `entityId`, `options` |
 | `meta_get_delivery_estimate` | Audience size estimation | `adAccountId`, `targetingSpec` |
-| `meta_get_ad_previews` | Ad preview HTML | `adId`, `adFormat` |
+| `meta_get_ad_preview` | Ad preview HTML | `adId`, `adFormat` |
 | `meta_adjust_bids` | Batch adjust ad set bids | `adAccountId`, `adjustments[]` |
 | `meta_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
 | `meta_upload_image` | Upload image from URL to ad images library | `adAccountId`, `mediaUrl`, `name?` |
@@ -637,7 +637,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `linkedin_get_targeting_options` | Browse targeting categories | `adAccountUrn`, `facetType?` |
 | `linkedin_duplicate_entity` | Copy campaign groups, campaigns, creatives | `entityType`, `entityUrn`, `options?` |
 | `linkedin_get_delivery_forecast` | Audience/delivery forecast for targeting config | `adAccountUrn`, `targetingCriteria` |
-| `linkedin_get_ad_previews` | Ad preview rendering | `creativeUrn`, `adFormat?` |
+| `linkedin_get_ad_preview` | Ad preview rendering | `creativeUrn`, `adFormat?` |
 | `linkedin_validate_entity` | Dry-run validate entity payload (no API call) | `entityType`, `mode`, `data` |
 | `linkedin_upload_image` | Upload image from URL via 3-step LinkedIn flow | `adAccountUrn`, `mediaUrl`, `filename?` |
 
@@ -680,7 +680,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `tiktok_get_targeting_options` | Browse targeting categories | `advertiserId`, `targetingType?` |
 | `tiktok_duplicate_entity` | Copy campaigns, ad groups, ads | `entityType`, `advertiserId`, `entityId`, `options?` |
 | `tiktok_get_audience_estimate` | Audience size estimation for targeting config | `advertiserId`, `targetingConfig` |
-| `tiktok_get_ad_previews` | Ad preview for video/image ads | `advertiserId`, `adId`, `adFormat?` |
+| `tiktok_get_ad_preview` | Ad preview for video/image ads | `advertiserId`, `adId`, `adFormat?` |
 | `tiktok_validate_entity` | Dry-run validate entity payload (no API call) | `entityType`, `mode`, `data` |
 | `tiktok_upload_image` | Upload image from URL to TikTok ad image library | `advertiserId`, `mediaUrl`, `filename?` |
 | `tiktok_upload_video` | Upload video from URL to TikTok ad video library (polls) | `advertiserId`, `mediaUrl`, `videoName?` |

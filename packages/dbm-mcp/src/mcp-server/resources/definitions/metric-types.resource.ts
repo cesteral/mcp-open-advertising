@@ -56,7 +56,7 @@ This resource provides a complete reference of all ${totalMetrics} available met
 
 ## Usage
 
-When calling tools like \`run_custom_query\`, \`get_campaign_delivery\`, or \`get_historical_metrics\`, the following metrics are available.
+When calling tools like \`dbm_run_custom_query\`, \`dbm_get_campaign_delivery\`, or \`dbm_get_historical_metrics\`, the following metrics are available.
 
 **Important:** Not all metrics are available in all report types. Check the "Report Types" column to ensure compatibility.
 

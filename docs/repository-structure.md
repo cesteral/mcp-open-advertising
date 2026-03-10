@@ -43,11 +43,11 @@ cesteral-mcp-servers/
 
 **Key Tools**:
 
-- `get_campaign_delivery`
-- `get_performance_metrics`
-- `get_historical_metrics`
-- `get_pacing_status`
-- `run_custom_query`
+- `dbm_get_campaign_delivery`
+- `dbm_get_performance_metrics`
+- `dbm_get_historical_metrics`
+- `dbm_get_pacing_status`
+- `dbm_run_custom_query`
 
 ---
 
@@ -138,7 +138,7 @@ cesteral-mcp-servers/
 - `meta_get_insights` / `meta_get_insights_breakdowns`
 - `meta_bulk_update_status` / `meta_bulk_create_entities` / `meta_bulk_update_entities`
 - `meta_search_targeting` / `meta_get_targeting_options`
-- `meta_duplicate_entity` / `meta_get_delivery_estimate` / `meta_get_ad_previews`
+- `meta_duplicate_entity` / `meta_get_delivery_estimate` / `meta_get_ad_preview`
 - `meta_adjust_bids` / `meta_validate_entity`
 
 ---
@@ -164,7 +164,7 @@ cesteral-mcp-servers/
 - `linkedin_get_analytics` / `linkedin_get_analytics_breakdowns`
 - `linkedin_bulk_update_status` / `linkedin_bulk_create_entities` / `linkedin_bulk_update_entities`
 - `linkedin_search_targeting` / `linkedin_get_targeting_options`
-- `linkedin_duplicate_entity` / `linkedin_get_delivery_forecast` / `linkedin_get_ad_previews`
+- `linkedin_duplicate_entity` / `linkedin_get_delivery_forecast` / `linkedin_get_ad_preview`
 - `linkedin_adjust_bids` / `linkedin_validate_entity`
 
 ---
@@ -190,7 +190,7 @@ cesteral-mcp-servers/
 - `tiktok_get_report` / `tiktok_get_report_breakdowns` / `tiktok_submit_report` / `tiktok_check_report_status` / `tiktok_download_report`
 - `tiktok_bulk_update_status` / `tiktok_bulk_create_entities` / `tiktok_bulk_update_entities`
 - `tiktok_search_targeting` / `tiktok_get_targeting_options`
-- `tiktok_duplicate_entity` / `tiktok_get_audience_estimate` / `tiktok_get_ad_previews`
+- `tiktok_duplicate_entity` / `tiktok_get_audience_estimate` / `tiktok_get_ad_preview`
 - `tiktok_adjust_bids` / `tiktok_validate_entity`
 
 ---

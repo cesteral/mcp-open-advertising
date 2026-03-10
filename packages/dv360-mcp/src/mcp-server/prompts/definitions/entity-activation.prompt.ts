@@ -237,8 +237,8 @@ If the campaign was created as PAUSED, activate it last:
 After activation, monitor delivery:
 
 1. Wait 2-4 hours for delivery to ramp up
-2. Check pacing via **dbm-mcp**: \`get_pacing_status\`
-3. Check performance via **dbm-mcp**: \`get_performance_metrics\`
+2. Check pacing via **dbm-mcp**: \`dbm_get_pacing_status\`
+3. Check performance via **dbm-mcp**: \`dbm_get_performance_metrics\`
 
 If delivery is not starting after 4 hours, invoke the \`troubleshoot_underdelivery\` prompt.
 

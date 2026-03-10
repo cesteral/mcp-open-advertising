@@ -24,12 +24,12 @@ const toolExamplesResource = createToolExamplesResource(allTools, "dbm-mcp");
 const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "dbm-mcp",
   toolGroups: {
-    delivery: ["get_campaign_delivery", "get_pacing_status"],
-    performance: ["get_performance_metrics", "get_historical_metrics"],
-    custom: ["run_custom_query"],
+    delivery: ["dbm_get_campaign_delivery", "dbm_get_pacing_status"],
+    performance: ["dbm_get_performance_metrics", "dbm_get_historical_metrics"],
+    custom: ["dbm_run_custom_query"],
   },
   commonWorkflows: ["delivery_troubleshooting"],
-  startHere: "get_campaign_delivery",
+  startHere: "dbm_get_campaign_delivery",
 });
 
 /**

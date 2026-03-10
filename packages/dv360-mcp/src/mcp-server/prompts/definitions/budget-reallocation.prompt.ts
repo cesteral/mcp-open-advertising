@@ -110,7 +110,7 @@ Use the **dbm-mcp** reporting server to get delivery and performance metrics.
 
 ### 2a. Campaign-Level Pacing
 \`\`\`
-Tool: get_pacing_status (dbm-mcp)
+Tool: dbm_get_pacing_status (dbm-mcp)
 Parameters:
 {
   "campaignId": "${campaignId}",
@@ -120,7 +120,7 @@ Parameters:
 
 ### 2b. Performance Metrics
 \`\`\`
-Tool: get_performance_metrics (dbm-mcp)
+Tool: dbm_get_performance_metrics (dbm-mcp)
 Parameters:
 {
   "campaignId": "${campaignId}",
@@ -131,7 +131,7 @@ Parameters:
 
 ### 2c. Historical Delivery Trends
 \`\`\`
-Tool: get_historical_metrics (dbm-mcp)
+Tool: dbm_get_historical_metrics (dbm-mcp)
 Parameters:
 {
   "campaignId": "${campaignId}",
@@ -323,7 +323,7 @@ Parameters:
 
 ### 6b. Monitor Post-Reallocation (4-6 hours later)
 \`\`\`
-Tool: get_pacing_status (dbm-mcp)
+Tool: dbm_get_pacing_status (dbm-mcp)
 Parameters:
 {
   "campaignId": "${campaignId}",
@@ -338,7 +338,7 @@ Parameters:
 
 ### 6c. Day-over-Day Check (24 hours later)
 \`\`\`
-Tool: get_historical_metrics (dbm-mcp)
+Tool: dbm_get_historical_metrics (dbm-mcp)
 Parameters:
 {
   "campaignId": "${campaignId}",
