@@ -27,7 +27,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     reporting: ["tiktok_get_report", "tiktok_get_report_breakdowns", "tiktok_submit_report", "tiktok_check_report_status", "tiktok_download_report"],
     bulk: ["tiktok_bulk_update_status", "tiktok_bulk_create_entities", "tiktok_bulk_update_entities", "tiktok_adjust_bids"],
     targeting: ["tiktok_search_targeting", "tiktok_get_targeting_options"],
-    specialized: ["tiktok_duplicate_entity", "tiktok_get_audience_estimate", "tiktok_get_ad_previews"],
+    specialized: ["tiktok_duplicate_entity", "tiktok_get_audience_estimate", "tiktok_get_ad_preview"],
     validation: ["tiktok_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],

@@ -140,7 +140,7 @@ linkedin_create_entity({
 ## Step 5: Verify & Activate
 
 1. Validate payloads: \`linkedin_validate_entity\`
-2. Preview creative: \`linkedin_get_ad_previews({ creativeUrn: "..." })\`
+2. Preview creative: \`linkedin_get_ad_preview({ creativeUrn: "..." })\`
 3. Review all entities:
    - Campaign group: \`linkedin_get_entity({ entityType: "campaignGroup", entityUrn: "..." })\`
    - Campaign: \`linkedin_get_entity({ entityType: "campaign", entityUrn: "..." })\`

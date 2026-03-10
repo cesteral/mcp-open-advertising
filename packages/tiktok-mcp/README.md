@@ -224,7 +224,7 @@ Get estimated audience size for a targeting configuration.
 - `advertiserId` (string, required): TikTok Advertiser ID
 - `targetingConfig` (object, required): Targeting specification for estimation
 
-#### 20. `tiktok_get_ad_previews`
+#### 20. `tiktok_get_ad_preview`
 
 Get ad preview for video or image ads.
 

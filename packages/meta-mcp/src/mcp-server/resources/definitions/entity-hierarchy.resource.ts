@@ -87,7 +87,7 @@ Uses cursor-based pagination (\`after\` parameter).
 | \`meta_get_targeting_options\` | Browse targeting categories | |
 | \`meta_duplicate_entity\` | Duplicate campaign/adSet/ad | |
 | \`meta_get_delivery_estimate\` | Audience size estimation | |
-| \`meta_get_ad_previews\` | Ad preview HTML | |
+| \`meta_get_ad_preview\` | Ad preview HTML | |
 | \`meta_adjust_bids\` | Batch adjust ad set bid amounts | ✓ |
 | \`meta_validate_entity\` | Client-side payload validation | |
 

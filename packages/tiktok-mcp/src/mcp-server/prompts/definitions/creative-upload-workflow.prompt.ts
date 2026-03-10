@@ -94,7 +94,7 @@ tiktok_create_entity({
 ## Step 3: Preview Ad
 
 \`\`\`json
-tiktok_get_ad_previews({
+tiktok_get_ad_preview({
   "advertiserId": "${advertiserId}",
   "adId": "{ad_id_from_step_2}",
   "adFormat": "FEED"

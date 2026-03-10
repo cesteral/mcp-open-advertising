@@ -7,7 +7,7 @@
  *   2 analytics: get analytics, get analytics breakdowns
  *   4 bulk: bulk update status, bulk create entities, bulk update entities, adjust bids
  *   2 targeting: search targeting, get targeting options
- *   4 specialized: duplicate entity, get delivery forecast, get ad previews, upload image
+ *   4 specialized: duplicate entity, get delivery forecast, get ad preview, upload image
  *   1 validation: validate entity (client-side)
  */
 
@@ -27,7 +27,7 @@ export { searchTargetingTool } from "./search-targeting.tool.js";
 export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getDeliveryForecastTool } from "./get-delivery-forecast.tool.js";
-export { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { uploadImageTool } from "./upload-image.tool.js";
 
@@ -47,7 +47,7 @@ import { searchTargetingTool } from "./search-targeting.tool.js";
 import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryForecastTool } from "./get-delivery-forecast.tool.js";
-import { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
@@ -75,7 +75,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Specialized ──
   duplicateEntityTool,
   getDeliveryForecastTool,
-  getAdPreviewsTool,
+  getAdPreviewTool,
   uploadImageTool,
   // ── Validation ──
   validateEntityTool,

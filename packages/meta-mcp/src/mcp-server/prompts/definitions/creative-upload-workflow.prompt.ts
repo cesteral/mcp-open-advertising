@@ -119,7 +119,7 @@ meta_create_entity({
 ## Step 3: Preview Creative
 
 \`\`\`json
-meta_get_ad_previews({
+meta_get_ad_preview({
   "adId": "{ad_id}"
 })
 \`\`\`

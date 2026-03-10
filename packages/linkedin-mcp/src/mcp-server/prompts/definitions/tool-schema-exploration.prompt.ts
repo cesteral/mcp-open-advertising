@@ -75,7 +75,7 @@ Fetch these resources for detailed schema information:
 ### Specialized
 - \`linkedin_duplicate_entity\` — Copy campaign groups, campaigns, creatives
 - \`linkedin_get_delivery_forecast\` — Audience/delivery forecast
-- \`linkedin_get_ad_previews\` — Ad preview rendering
+- \`linkedin_get_ad_preview\` — Ad preview rendering
 
 ### Validation
 - \`linkedin_validate_entity\` — Client-side entity validation

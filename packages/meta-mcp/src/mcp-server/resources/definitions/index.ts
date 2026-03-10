@@ -29,7 +29,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     insights: ["meta_get_insights", "meta_get_insights_breakdowns"],
     bulk: ["meta_bulk_update_status", "meta_bulk_create_entities", "meta_bulk_update_entities", "meta_adjust_bids"],
     targeting: ["meta_search_targeting", "meta_get_targeting_options"],
-    specialized: ["meta_duplicate_entity", "meta_get_delivery_estimate", "meta_get_ad_previews"],
+    specialized: ["meta_duplicate_entity", "meta_get_delivery_estimate", "meta_get_ad_preview"],
     validation: ["meta_validate_entity"],
   },
   commonWorkflows: ["full_campaign_setup_workflow", "performance_analysis", "audience_targeting"],

@@ -186,7 +186,7 @@ Get audience size and delivery forecast for a targeting configuration.
 - `adAccountUrn` (string, required): Ad Account URN
 - `targetingCriteria` (object, required): Targeting criteria specification
 
-#### 17. `linkedin_get_ad_previews`
+#### 17. `linkedin_get_ad_preview`
 
 Get ad preview rendering for a creative.
 

@@ -118,7 +118,7 @@ TikTok uses page-based pagination (NOT cursor-based):
 | \`tiktok_get_targeting_options\` | Browse targeting categories | |
 | \`tiktok_duplicate_entity\` | Duplicate campaign/adGroup/ad | |
 | \`tiktok_get_audience_estimate\` | Audience size estimation | |
-| \`tiktok_get_ad_previews\` | Ad preview data | |
+| \`tiktok_get_ad_preview\` | Ad preview data | |
 | \`tiktok_validate_entity\` | Client-side payload validation | |
 
 ## Budget Notes

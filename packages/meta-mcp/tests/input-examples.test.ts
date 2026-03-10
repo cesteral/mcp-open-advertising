@@ -13,7 +13,7 @@ import { searchTargetingTool } from "../src/mcp-server/tools/definitions/search-
 import { getTargetingOptionsTool } from "../src/mcp-server/tools/definitions/get-targeting-options.tool.js";
 import { duplicateEntityTool } from "../src/mcp-server/tools/definitions/duplicate-entity.tool.js";
 import { getDeliveryEstimateTool } from "../src/mcp-server/tools/definitions/get-delivery-estimate.tool.js";
-import { getAdPreviewsTool } from "../src/mcp-server/tools/definitions/get-ad-previews.tool.js";
+import { getAdPreviewTool } from "../src/mcp-server/tools/definitions/get-ad-preview.tool.js";
 
 const toolsWithExamples = [
   listEntitiesTool,
@@ -30,7 +30,7 @@ const toolsWithExamples = [
   getTargetingOptionsTool,
   duplicateEntityTool,
   getDeliveryEstimateTool,
-  getAdPreviewsTool,
+  getAdPreviewTool,
 ] as const;
 
 describe("Input examples validation", () => {

@@ -193,7 +193,7 @@ Get estimated audience size and delivery estimates for a targeting spec.
 - `targetingSpec` (object, required): Targeting specification (must include `geo_locations` or `custom_audiences`)
 - `optimizationGoal` (string, optional): Optimization goal (e.g., `LINK_CLICKS`, `REACH`, `CONVERSIONS`)
 
-#### 16. `meta_get_ad_previews`
+#### 16. `meta_get_ad_preview`
 
 Get preview HTML for an ad in a specific format.
 

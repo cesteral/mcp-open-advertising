@@ -3,7 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
-const TOOL_NAME = "tiktok_get_ad_previews";
+const TOOL_NAME = "tiktok_get_ad_preview";
 const TOOL_TITLE = "Get TikTok Ad Preview";
 const TOOL_DESCRIPTION = `Get a preview of how a TikTok ad will appear to users.
 
@@ -12,7 +12,7 @@ be displayed on TikTok's platform.
 
 **Common ad formats:** FEED, STORY, SPARK_ADS`;
 
-export const GetAdPreviewsInputSchema = z
+export const GetAdPreviewInputSchema = z
   .object({
     advertiserId: z
       .string()
@@ -27,9 +27,9 @@ export const GetAdPreviewsInputSchema = z
       .optional()
       .describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
   })
-  .describe("Parameters for getting TikTok ad previews");
+  .describe("Parameters for getting TikTok ad preview");
 
-export const GetAdPreviewsOutputSchema = z
+export const GetAdPreviewOutputSchema = z
   .object({
     preview: z.record(z.any()).describe("Ad preview data from TikTok"),
     adId: z.string(),
@@ -37,14 +37,14 @@ export const GetAdPreviewsOutputSchema = z
   })
   .describe("Ad preview result");
 
-type GetAdPreviewsInput = z.infer<typeof GetAdPreviewsInputSchema>;
-type GetAdPreviewsOutput = z.infer<typeof GetAdPreviewsOutputSchema>;
+type GetAdPreviewInput = z.infer<typeof GetAdPreviewInputSchema>;
+type GetAdPreviewOutput = z.infer<typeof GetAdPreviewOutputSchema>;
 
-export async function getAdPreviewsLogic(
-  input: GetAdPreviewsInput,
+export async function getAdPreviewLogic(
+  input: GetAdPreviewInput,
   context: RequestContext,
   sdkContext?: SdkContext
-): Promise<GetAdPreviewsOutput> {
+): Promise<GetAdPreviewOutput> {
   const { tiktokService } = resolveSessionServices(sdkContext);
 
   const preview = await tiktokService.getAdPreviews(
@@ -60,7 +60,7 @@ export async function getAdPreviewsLogic(
   };
 }
 
-export function getAdPreviewsResponseFormatter(result: GetAdPreviewsOutput): unknown[] {
+export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): unknown[] {
   return [
     {
       type: "text" as const,
@@ -69,12 +69,12 @@ export function getAdPreviewsResponseFormatter(result: GetAdPreviewsOutput): unk
   ];
 }
 
-export const getAdPreviewsTool = {
+export const getAdPreviewTool = {
   name: TOOL_NAME,
   title: TOOL_TITLE,
   description: TOOL_DESCRIPTION,
-  inputSchema: GetAdPreviewsInputSchema,
-  outputSchema: GetAdPreviewsOutputSchema,
+  inputSchema: GetAdPreviewInputSchema,
+  outputSchema: GetAdPreviewOutputSchema,
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
@@ -98,6 +98,6 @@ export const getAdPreviewsTool = {
       },
     },
   ],
-  logic: getAdPreviewsLogic,
-  responseFormatter: getAdPreviewsResponseFormatter,
+  logic: getAdPreviewLogic,
+  responseFormatter: getAdPreviewResponseFormatter,
 };

@@ -8,7 +8,7 @@
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
  *   2 targeting: search targeting, get targeting options
- *   5 specialized: duplicate entity, get audience estimate, get ad previews, upload image, upload video
+ *   5 specialized: duplicate entity, get audience estimate, get ad preview, upload image, upload video
  *   1 validation: validate entity (client-side)
  */
 
@@ -31,7 +31,7 @@ export { searchTargetingTool } from "./search-targeting.tool.js";
 export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
-export { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { uploadImageTool } from "./upload-image.tool.js";
 export { uploadVideoTool } from "./upload-video.tool.js";
@@ -55,7 +55,7 @@ import { searchTargetingTool } from "./search-targeting.tool.js";
 import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
-import { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
@@ -88,7 +88,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Specialized ──
   duplicateEntityTool,
   getAudienceEstimateTool,
-  getAdPreviewsTool,
+  getAdPreviewTool,
   uploadImageTool,
   uploadVideoTool,
   // ── Validation ──

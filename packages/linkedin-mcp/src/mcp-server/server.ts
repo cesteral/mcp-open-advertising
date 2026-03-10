@@ -44,7 +44,7 @@ const linkedInWorkflowIdByToolName: Record<string, string> = {
   // Specialized
   linkedin_duplicate_entity: "mcp.execute.linkedin_entity_update",
   linkedin_get_delivery_forecast: "mcp.execute.linkedin_entity_read",
-  linkedin_get_ad_previews: "mcp.execute.linkedin_entity_read",
+  linkedin_get_ad_preview: "mcp.execute.linkedin_entity_read",
   linkedin_validate_entity: "mcp.execute.linkedin_entity_read",
 };
 

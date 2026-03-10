@@ -7,7 +7,7 @@
  *   2 targeting: search targeting, get targeting options
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
- *   5 specialized: duplicate entity, get delivery estimate, get ad previews, upload image, upload video
+ *   5 specialized: duplicate entity, get delivery estimate, get ad preview, upload image, upload video
  *   1 validation: validate entity (client-side)
  */
 
@@ -25,7 +25,7 @@ export { searchTargetingTool } from "./search-targeting.tool.js";
 export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
-export { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -46,7 +46,7 @@ import { searchTargetingTool } from "./search-targeting.tool.js";
 import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
-import { getAdPreviewsTool } from "./get-ad-previews.tool.js";
+import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -76,7 +76,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Specialized ──
   duplicateEntityTool,
   getDeliveryEstimateTool,
-  getAdPreviewsTool,
+  getAdPreviewTool,
   adjustBidsTool,
   uploadImageTool,
   uploadVideoTool,

@@ -99,7 +99,7 @@ Response contains \`elements\` array and \`paging\` object.
 | \`linkedin_get_targeting_options\` | Browse targeting categories | |
 | \`linkedin_duplicate_entity\` | Copy entity (read + create) | |
 | \`linkedin_get_delivery_forecast\` | Audience size estimation | |
-| \`linkedin_get_ad_previews\` | Ad creative preview | |
+| \`linkedin_get_ad_preview\` | Ad creative preview | |
 | \`linkedin_validate_entity\` | Client-side payload validation | |
 
 ## Budget Format

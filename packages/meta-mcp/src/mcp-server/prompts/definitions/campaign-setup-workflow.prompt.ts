@@ -101,7 +101,7 @@ meta_create_entity({
 ## Step 5: Verify & Activate
 
 1. Review: \`meta_get_entity\` for each created entity
-2. Preview: \`meta_get_ad_previews\` to see ad appearance
+2. Preview: \`meta_get_ad_preview\` to see ad appearance
 3. Activate: \`meta_bulk_update_status\` to set ACTIVE
 
 ## Common Gotchas

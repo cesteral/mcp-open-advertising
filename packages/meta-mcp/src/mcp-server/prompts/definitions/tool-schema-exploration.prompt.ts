@@ -75,7 +75,7 @@ Fetch these resources for detailed schema information:
 ### Specialized
 - \`meta_duplicate_entity\` — Copy campaigns/adSets/ads
 - \`meta_get_delivery_estimate\` — Audience size estimation
-- \`meta_get_ad_previews\` — Ad preview HTML
+- \`meta_get_ad_preview\` — Ad preview HTML
 
 ### Media Uploads
 - \`meta_upload_image\` — Upload image from URL to ad images library (returns imageHash)

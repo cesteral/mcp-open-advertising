@@ -90,7 +90,7 @@ tiktok_create_entity({
 ## Step 4: Verify & Activate
 
 1. Review: \`tiktok_get_entity\` for each created entity
-2. Preview ad: \`tiktok_get_ad_previews\`
+2. Preview ad: \`tiktok_get_ad_preview\`
 3. Activate: \`tiktok_bulk_update_status\` with operationStatus: "ENABLE"
 
 ## Common Gotchas

@@ -29,7 +29,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     analytics: ["linkedin_get_analytics", "linkedin_get_analytics_breakdowns"],
     bulk: ["linkedin_bulk_update_status", "linkedin_bulk_create_entities", "linkedin_bulk_update_entities", "linkedin_adjust_bids"],
     targeting: ["linkedin_search_targeting", "linkedin_get_targeting_options"],
-    specialized: ["linkedin_duplicate_entity", "linkedin_get_delivery_forecast", "linkedin_get_ad_previews"],
+    specialized: ["linkedin_duplicate_entity", "linkedin_get_delivery_forecast", "linkedin_get_ad_preview"],
     validation: ["linkedin_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "analytics_reporting", "audience_targeting"],

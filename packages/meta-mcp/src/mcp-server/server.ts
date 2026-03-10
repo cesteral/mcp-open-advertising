@@ -42,7 +42,7 @@ const metaWorkflowIdByToolName: Record<string, string> = {
   // Specialized
   meta_duplicate_entity: "mcp.execute.meta_entity_update",
   meta_get_delivery_estimate: "mcp.execute.meta_entity_read",
-  meta_get_ad_previews: "mcp.execute.meta_entity_read",
+  meta_get_ad_preview: "mcp.execute.meta_entity_read",
   meta_validate_entity: "mcp.execute.meta_entity_read",
   meta_adjust_bids: "mcp.execute.meta_bulk_operations",
 };

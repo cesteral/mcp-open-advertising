@@ -74,7 +74,7 @@ linkedin_create_entity({
 ## Step 3: Preview Creative
 
 \`\`\`json
-linkedin_get_ad_previews({
+linkedin_get_ad_preview({
   "creativeUrn": "{creativeUrn_from_step_2}",
   "adFormat": "SPONSORED_IMAGE"
 })

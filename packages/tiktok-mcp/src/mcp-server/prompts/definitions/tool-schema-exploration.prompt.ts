@@ -73,7 +73,7 @@ Fetch these resources for detailed schema information:
 ### Specialized
 - \`tiktok_duplicate_entity\` — Copy campaigns, ad groups, ads
 - \`tiktok_get_audience_estimate\` — Audience size estimation
-- \`tiktok_get_ad_previews\` — Ad preview for video/image ads
+- \`tiktok_get_ad_preview\` — Ad preview for video/image ads
 
 ### Validation
 - \`tiktok_validate_entity\` — Client-side entity validation

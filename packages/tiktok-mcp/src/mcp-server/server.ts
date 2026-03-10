@@ -44,7 +44,7 @@ const tiktokWorkflowIdByToolName: Record<string, string> = {
   // Specialized
   tiktok_duplicate_entity: "mcp.execute.tiktok_entity_update",
   tiktok_get_audience_estimate: "mcp.execute.tiktok_entity_read",
-  tiktok_get_ad_previews: "mcp.execute.tiktok_entity_read",
+  tiktok_get_ad_preview: "mcp.execute.tiktok_entity_read",
   tiktok_validate_entity: "mcp.execute.tiktok_entity_read",
 };
 
