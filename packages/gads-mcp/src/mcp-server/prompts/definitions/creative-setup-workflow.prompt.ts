@@ -153,7 +153,5 @@ gads_create_entity({
 - [ ] Preview reviewed
 - [ ] Status changed to ENABLED when ready
 
-## Pre-staging with Media Library
-Use \`media_upload_asset\` to host images, then convert to base64 or use the public URL for Google Ads asset upload.
 `;
 }

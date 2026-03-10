@@ -185,9 +185,10 @@ export class TtdService {
         );
       }
       return { valid: true };
-    } catch (error: any) {
-      const errorMessage = error?.message ?? String(error);
-      const errorBody = error?.data?.errorBody ?? errorMessage;
+    } catch (error: unknown) {
+      const err = error as Record<string, unknown> | null;
+      const errorMessage = (err as { message?: string })?.message ?? String(error);
+      const errorBody = ((err as { data?: { errorBody?: string } })?.data?.errorBody) ?? errorMessage;
       return { valid: false, errors: [errorBody] };
     }
   }

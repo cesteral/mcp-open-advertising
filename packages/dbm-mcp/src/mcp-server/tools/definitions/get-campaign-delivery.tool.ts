@@ -4,7 +4,7 @@ import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 import { calculateCTR, calculateCPM, formatMetricValue } from "../../../utils/metrics.js";
 
-const TOOL_NAME = "get_campaign_delivery";
+const TOOL_NAME = "dbm_get_campaign_delivery";
 const TOOL_TITLE = "Get Campaign Delivery";
 const TOOL_DESCRIPTION =
   "Fetch DV360 delivery metrics (impressions, clicks, spend, conversions) for a campaign within a date range via Bid Manager API";

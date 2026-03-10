@@ -116,7 +116,5 @@ tiktok_get_ad_previews({
 - [ ] Preview reviewed
 - [ ] Status changed to ENABLE when ready to launch
 
-## Pre-staging with Media Library
-Use \`media_upload_asset\` to store assets in Cesteral's media library for cross-platform reuse.
 `;
 }

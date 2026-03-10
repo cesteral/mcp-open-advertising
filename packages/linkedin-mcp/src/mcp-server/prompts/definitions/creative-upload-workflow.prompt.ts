@@ -108,7 +108,5 @@ LEARN_MORE, SIGN_UP, REGISTER, JOIN_NOW, REQUEST_DEMO, TRY_FREE, CONTACT_US, GET
 - [ ] Preview reviewed
 - [ ] Creative activated when ready
 
-## Pre-staging with Media Library
-Use \`media_upload_asset\` to store images in Cesteral's media library for reuse across LinkedIn campaigns and other platforms.
 `;
 }

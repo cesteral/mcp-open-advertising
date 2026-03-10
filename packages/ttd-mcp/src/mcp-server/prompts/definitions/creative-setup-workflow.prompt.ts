@@ -43,7 +43,6 @@ ttd_create_entity({
 \`\`\`
 
 ⚠️ **GOTCHA**: TTD requires externally hosted creative assets. Images must be publicly accessible URLs.
-Use \`media_upload_asset\` to upload to Cesteral's media library first.
 
 **Creative types:** banner, video, native, audio
 
@@ -90,7 +89,7 @@ ttd_create_entity({
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| "Image URL not accessible" | Private URL | Use public URL or Cesteral media library |
+| "Image URL not accessible" | Private URL | Use a publicly accessible URL |
 | "Invalid dimensions" | Wrong size | Match ad group placement dimensions |
 | "VAST parsing failed" | Invalid VAST XML | Validate XML before submitting |
 | "Creative rejected" | Policy violation | Review TTD creative policies |
@@ -101,7 +100,5 @@ ttd_create_entity({
 - [ ] Ad created linking creative to ad group
 - [ ] Ad enabled when ready to serve
 
-## Pre-staging with Media Library
-Use \`media_upload_asset\` to get a permanent public URL for your creative assets before using them in TTD.
 `;
 }

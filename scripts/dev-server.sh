@@ -9,7 +9,7 @@ SERVER_NAME=$1
 
 if [ -z "$SERVER_NAME" ]; then
   echo "Usage: ./scripts/dev-server.sh <server-name>"
-  echo "Available servers: dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp, media-mcp"
+  echo "Available servers: dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp"
   exit 1
 fi
 

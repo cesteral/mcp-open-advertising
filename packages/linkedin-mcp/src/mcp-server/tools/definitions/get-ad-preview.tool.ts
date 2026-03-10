@@ -3,7 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
-const TOOL_NAME = "linkedin_get_ad_previews";
+const TOOL_NAME = "linkedin_get_ad_preview";
 const TOOL_TITLE = "Get LinkedIn Ads Ad Preview";
 const TOOL_DESCRIPTION = `Get a preview of a LinkedIn Ads creative.
 
@@ -12,7 +12,7 @@ Returns preview rendering data for a creative URN.
 **adFormat values:** SINGLE_IMAGE_AD, VIDEO_AD, CAROUSEL_AD, TEXT_AD,
 SPOTLIGHT_AD, FOLLOWER_AD, MESSAGE_AD, CONVERSATION_AD`;
 
-export const GetAdPreviewsInputSchema = z
+export const GetAdPreviewInputSchema = z
   .object({
     creativeUrn: z
       .string()
@@ -25,7 +25,7 @@ export const GetAdPreviewsInputSchema = z
   })
   .describe("Parameters for getting a LinkedIn ad preview");
 
-export const GetAdPreviewsOutputSchema = z
+export const GetAdPreviewOutputSchema = z
   .object({
     preview: z.record(z.any()).describe("Preview data from LinkedIn API"),
     creativeUrn: z.string(),
@@ -33,14 +33,14 @@ export const GetAdPreviewsOutputSchema = z
   })
   .describe("Ad preview result");
 
-type GetAdPreviewsInput = z.infer<typeof GetAdPreviewsInputSchema>;
-type GetAdPreviewsOutput = z.infer<typeof GetAdPreviewsOutputSchema>;
+type GetAdPreviewInput = z.infer<typeof GetAdPreviewInputSchema>;
+type GetAdPreviewOutput = z.infer<typeof GetAdPreviewOutputSchema>;
 
-export async function getAdPreviewsLogic(
-  input: GetAdPreviewsInput,
+export async function getAdPreviewLogic(
+  input: GetAdPreviewInput,
   context: RequestContext,
   sdkContext?: SdkContext
-): Promise<GetAdPreviewsOutput> {
+): Promise<GetAdPreviewOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
   const preview = await linkedInService.getAdPreviews(
@@ -56,7 +56,7 @@ export async function getAdPreviewsLogic(
   };
 }
 
-export function getAdPreviewsResponseFormatter(result: GetAdPreviewsOutput): unknown[] {
+export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): unknown[] {
   return [
     {
       type: "text" as const,
@@ -65,12 +65,12 @@ export function getAdPreviewsResponseFormatter(result: GetAdPreviewsOutput): unk
   ];
 }
 
-export const getAdPreviewsTool = {
+export const getAdPreviewTool = {
   name: TOOL_NAME,
   title: TOOL_TITLE,
   description: TOOL_DESCRIPTION,
-  inputSchema: GetAdPreviewsInputSchema,
-  outputSchema: GetAdPreviewsOutputSchema,
+  inputSchema: GetAdPreviewInputSchema,
+  outputSchema: GetAdPreviewOutputSchema,
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
@@ -86,6 +86,6 @@ export const getAdPreviewsTool = {
       },
     },
   ],
-  logic: getAdPreviewsLogic,
-  responseFormatter: getAdPreviewsResponseFormatter,
+  logic: getAdPreviewLogic,
+  responseFormatter: getAdPreviewResponseFormatter,
 };

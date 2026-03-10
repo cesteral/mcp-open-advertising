@@ -129,7 +129,5 @@ dv360_create_entity({
 - [ ] Creative assigned to line item
 - [ ] Creative status changed to ACTIVE when campaign launches
 
-## Pre-staging with Media Library
-Use \`media_upload_asset\` to store raw creative assets before uploading to DV360.
 `;
 }

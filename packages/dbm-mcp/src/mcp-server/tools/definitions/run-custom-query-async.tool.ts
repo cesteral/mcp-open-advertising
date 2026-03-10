@@ -39,7 +39,7 @@ export function registerRunCustomQueryAsyncTool(
   const inputShape = extractZodShape(RunCustomQueryInputSchema);
 
   server.experimental.tasks.registerToolTask(
-    "run_custom_query_async",
+    "dbm_run_custom_query_async",
     {
       title: "Run Custom Query (Async)",
       description:

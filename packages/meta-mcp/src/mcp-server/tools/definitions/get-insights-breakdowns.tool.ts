@@ -38,8 +38,8 @@ export const GetInsightsBreakdownsInputSchema = z
       .describe("Date preset (last_7d, last_30d, etc.)"),
     timeRange: z
       .object({
-        since: z.string(),
-        until: z.string(),
+        since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
+        until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
       })
       .optional()
       .describe("Custom date range"),

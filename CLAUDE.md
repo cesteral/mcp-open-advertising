@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cesteral is an AI-native programmatic advertising optimization platform built on eight independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), TikTok Ads management (tiktok-mcp), and shared media library (media-mcp).
+Cesteral is an AI-native programmatic advertising optimization platform built on seven independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), and TikTok Ads management (tiktok-mcp).
 
 ### Current Project Status
 
 **Phase: Production-Ready ✅**
 
-All eight MCP servers are fully implemented with live API integrations:
+All seven MCP servers are fully implemented with live API integrations:
 - **dbm-mcp**: Bid Manager API v2 for DV360 reporting
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
@@ -18,7 +18,6 @@ All eight MCP servers are fully implemented with live API integrations:
 - **meta-mcp**: Meta Marketing API v21.0 for Meta Ads campaign management
 - **linkedin-mcp**: LinkedIn Marketing API v2 for LinkedIn Ads management (port 3006)
 - **tiktok-mcp**: TikTok Marketing API v1.3 for TikTok Ads management (port 3007)
-- **media-mcp**: Supabase Storage-backed media library for upload-once-use-everywhere workflows (port 3008)
 
 ## Essential Commands
 
@@ -38,7 +37,6 @@ cd packages/gads-mcp && pnpm run dev:http
 cd packages/meta-mcp && pnpm run dev:http
 cd packages/linkedin-mcp && pnpm run dev:http
 cd packages/tiktok-mcp && pnpm run dev:http
-cd packages/media-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -86,8 +84,6 @@ Use the dev-server script (automatically uses correct port for each server):
 # Start tiktok-mcp (port 3007)
 ./scripts/dev-server.sh tiktok-mcp
 
-# Start media-mcp (port 3008)
-./scripts/dev-server.sh media-mcp
 ```
 
 ## Monorepo Architecture
@@ -97,7 +93,7 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 ### Core Packages
 1. **`@cesteral/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Eight MCP Servers
+### Seven MCP Servers
 1. **`@cesteral/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
@@ -105,7 +101,6 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 5. **`@cesteral/meta-mcp`** - Meta Ads campaign management (CRUD via Meta Marketing API v21.0)
 6. **`@cesteral/linkedin-mcp`** - LinkedIn Ads campaign management (CRUD via LinkedIn Marketing API v2)
 7. **`@cesteral/tiktok-mcp`** - TikTok Ads campaign management (CRUD via TikTok Marketing API v1.3)
-8. **`@cesteral/media-mcp`** - Shared media library backed by Supabase Storage (upload-once-use-everywhere)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -167,7 +162,7 @@ export const getCampaignDeliveryParamsSchema = z.object({
 
 // 2. Define tool metadata for MCP
 export const getCampaignDeliveryTool = {
-  name: "get_campaign_delivery",
+  name: "dbm_get_campaign_delivery",
   description: "Fetch DV360 delivery metrics for a campaign via Bid Manager API",
   inputSchema: {
     type: "object",
@@ -441,11 +436,11 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `get_campaign_delivery` | Fetch DV360 delivery metrics via Bid Manager API | `campaignId`, `advertiserId`, `startDate`, `endDate` |
-| `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS from report data | `campaignId`, `advertiserId`, `dateRange` |
-| `get_historical_metrics` | Time-series data for trends | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
-| `get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
-| `run_custom_query` | Compose and execute custom Bid Manager reports | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
+| `dbm_get_campaign_delivery` | Fetch DV360 delivery metrics via Bid Manager API | `campaignId`, `advertiserId`, `startDate`, `endDate` |
+| `dbm_get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS from report data | `campaignId`, `advertiserId`, `dateRange` |
+| `dbm_get_historical_metrics` | Time-series data for trends | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
+| `dbm_get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
+| `dbm_run_custom_query` | Compose and execute custom Bid Manager reports | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
 ### dv360-mcp (Management Server) Tools — 20 Tools
 
@@ -690,11 +685,11 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `tiktok_upload_image` | Upload image from URL to TikTok ad image library | `advertiserId`, `mediaUrl`, `filename?` |
 | `tiktok_upload_video` | Upload video from URL to TikTok ad video library (polls) | `advertiserId`, `mediaUrl`, `videoName?` |
 
-### How the Eight Servers Work Together
+### How the Seven Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**
-1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
-2. AI agent calls **dbm-mcp** → `get_performance_metrics` to analyze current CPMs
+1. AI agent calls **dbm-mcp** → `dbm_get_pacing_status` to detect underdelivery (72% pacing)
+2. AI agent calls **dbm-mcp** → `dbm_get_performance_metrics` to analyze current CPMs
 3. AI agent calculates bid adjustments needed based on pacing data
 4. AI agent calls **dv360-mcp** → `dv360_adjust_line_item_bids` for batched line item updates
 5. AI agent confirms changes and monitors delivery improvement
@@ -716,7 +711,6 @@ Each server runs on a different port:
 - `meta-mcp`: port 3005
 - `linkedin-mcp`: port 3006
 - `tiktok-mcp`: port 3007
-- `media-mcp`: port 3008
 
 Test MCP endpoint:
 ```bash

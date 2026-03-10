@@ -154,7 +154,5 @@ meta_create_entity({
 - [ ] Ad created with creative in PAUSED status
 - [ ] Preview reviewed before activating
 
-## Pre-staging with Media Library
-Use \`media_upload_asset\` first to store assets in Cesteral's media library, then reference the publicUrl in this workflow for reuse across campaigns.
 `;
 }

@@ -22,11 +22,11 @@ const DBM_PACKAGE_NAME = "dbm-mcp";
 const DBM_PLATFORM = "dv360-reporting";
 
 const dbmWorkflowIdByToolName: Record<string, string> = {
-  get_campaign_delivery: "mcp.troubleshoot.delivery",
-  get_performance_metrics: "mcp.troubleshoot.delivery",
-  get_historical_metrics: "mcp.troubleshoot.delivery",
-  get_pacing_status: "mcp.troubleshoot.delivery",
-  run_custom_query: "mcp.execute.dbm_custom_query",
+  dbm_get_campaign_delivery: "mcp.troubleshoot.delivery",
+  dbm_get_performance_metrics: "mcp.troubleshoot.delivery",
+  dbm_get_historical_metrics: "mcp.troubleshoot.delivery",
+  dbm_get_pacing_status: "mcp.troubleshoot.delivery",
+  dbm_run_custom_query: "mcp.execute.dbm_custom_query",
 };
 
 /**
@@ -49,7 +49,7 @@ export async function createMcpServer(
       },
       instructions:
         "DV360 reporting server. Provides read-only access to campaign delivery metrics, performance data, pacing, and historical trends via Bid Manager API v2. " +
-        "Start with get_campaign_delivery or get_pacing_status. Use run_custom_query for advanced Bid Manager reports. " +
+        "Start with dbm_get_campaign_delivery or dbm_get_pacing_status. Use dbm_run_custom_query for advanced Bid Manager reports. " +
         "See MCP Resources for metric/filter references and query examples.",
     }
   );

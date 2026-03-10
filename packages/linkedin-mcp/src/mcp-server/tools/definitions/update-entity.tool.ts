@@ -85,7 +85,7 @@ export const updateEntityTool = {
   annotations: {
     readOnlyHint: false,
     openWorldHint: false,
-    idempotentHint: true,
+    idempotentHint: false,
     destructiveHint: true,
   },
   inputExamples: [

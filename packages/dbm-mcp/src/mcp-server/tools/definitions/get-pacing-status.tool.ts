@@ -3,7 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 
-const TOOL_NAME = "get_pacing_status";
+const TOOL_NAME = "dbm_get_pacing_status";
 const TOOL_TITLE = "Get Pacing Status";
 const TOOL_DESCRIPTION =
   "Get real-time pacing status for a campaign (actual vs expected delivery). Requires budget and flight dates as inputs.";

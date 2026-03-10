@@ -307,9 +307,10 @@ export class GAdsService {
         }
       );
       return { valid: true };
-    } catch (error: any) {
-      const errorMessage = error?.message ?? String(error);
-      const errorBody = error?.data?.errorBody ?? errorMessage;
+    } catch (error: unknown) {
+      const err = error as Record<string, unknown> | null;
+      const errorMessage = (err as { message?: string })?.message ?? String(error);
+      const errorBody = ((err as { data?: { errorBody?: string } })?.data?.errorBody) ?? errorMessage;
       return { valid: false, errors: [errorBody] };
     }
   }
@@ -460,15 +461,16 @@ export class GAdsService {
           newCpcBidMicros: adjustment.cpcBidMicros,
           newCpmBidMicros: adjustment.cpmBidMicros,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = (error as { message?: string })?.message ?? String(error);
         this.logger.error(
-          { adGroupId: adjustment.adGroupId, error: error?.message },
+          { adGroupId: adjustment.adGroupId, error: errorMessage },
           "Bid adjustment failed for ad group"
         );
         results.push({
           adGroupId: adjustment.adGroupId,
           success: false,
-          error: error?.message ?? String(error),
+          error: errorMessage,
         });
       }
     }
@@ -540,12 +542,13 @@ export class GAdsService {
             };
           }),
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = (error as { message?: string })?.message ?? String(error);
         return {
           results: entityIds.map((entityId) => ({
             entityId,
             success: false,
-            error: error?.message ?? String(error),
+            error: errorMessage,
           })),
         };
       }
@@ -580,12 +583,13 @@ export class GAdsService {
           };
         }),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = (error as { message?: string })?.message ?? String(error);
       return {
         results: entityIds.map((entityId) => ({
           entityId,
           success: false,
-          error: error?.message ?? String(error),
+          error: errorMessage,
         })),
       };
     }

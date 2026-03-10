@@ -1,6 +1,6 @@
 # Cesteral - AI-Native Multi-Platform Campaign Optimization
 
-**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, Bid Manager, and shared media library**
+**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -12,7 +12,7 @@
 
 ## Overview
 
-Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on eight independent MCP servers, Cesteral separates reporting, platform management, and shared media concerns while allowing cross-server workflows.
+Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on seven independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
 
 This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
 
@@ -29,7 +29,7 @@ If you want the reasoning behind this split, see [docs/business/cesteral-licensi
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager
-- **🔧 Composable Architecture** - Eight independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Seven independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -38,7 +38,7 @@ If you want the reasoning behind this split, see [docs/business/cesteral-licensi
 
 ## Architecture
 
-Cesteral uses a **GCP-native architecture** with eight independently deployable Cloud Run MCP services:
+Cesteral uses a **GCP-native architecture** with seven independently deployable Cloud Run MCP services:
 
 - `dbm-mcp` for reporting and query workflows
 - `dv360-mcp` for DV360 management workflows
@@ -47,7 +47,6 @@ Cesteral uses a **GCP-native architecture** with eight independently deployable 
 - `meta-mcp` for Meta Ads campaign management
 - `linkedin-mcp` for LinkedIn Ads campaign management and analytics
 - `tiktok-mcp` for TikTok Ads campaign management and async reporting
-- `media-mcp` for shared media library (upload-once, use across platforms)
 
 ### Access Model
 
@@ -147,18 +146,6 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: TikTok Marketing API v1.3
 
-### Server 8: `media-mcp`
-
-**Shared media library backed by Supabase Storage**
-
-- Upload assets from URL (server-side download + storage) — upload-once-use-everywhere
-- List, tag, and delete media assets with metadata
-- Generate signed upload URLs for large files (bypass server download)
-- Cross-platform asset management with advertiser-scoped paths
-- Per-session auth via Supabase service role key
-
-**Platform**: Supabase Storage JS SDK
-
 ---
 
 ## Current Status
@@ -167,14 +154,14 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 The platform currently includes:
 
-- ✅ Eight implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`, `media-mcp`)
+- ✅ Seven implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`)
 - ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
 - ✅ Live platform API integrations and Streamable HTTP transports
 - ✅ Terraform + Cloud Build coverage for independent service deployment
 
 **Current Focus:**
 
-1. Production hardening and operational reliability across all eight servers
+1. Production hardening and operational reliability across all seven servers
 2. Cross-platform workflow coverage and contract governance
 3. Telemetry dashboards and observability improvements
 
@@ -386,11 +373,11 @@ cesteral-mcp-servers/
 
 | Tool                      | Description                           | Parameters                                           |
 | ------------------------- | ------------------------------------- | ---------------------------------------------------- |
-| `get_campaign_delivery`   | Fetch delivery metrics for date range | `campaignId`, `advertiserId`, `startDate`, `endDate` |
-| `get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS         | `campaignId`, `dateRange`                            |
-| `get_historical_metrics`  | Time-series data for trends           | `campaignId`, `startDate`, `endDate`, `granularity`  |
-| `get_pacing_status`       | Real-time pacing calculation          | `campaignId`, `advertiserId`                         |
-| `run_custom_query`        | Execute dynamic DBM report queries    | `reportType`, `filters`, `metrics`, `dimensions`     |
+| `dbm_get_campaign_delivery`   | Fetch delivery metrics for date range | `campaignId`, `advertiserId`, `startDate`, `endDate` |
+| `dbm_get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS         | `campaignId`, `dateRange`                            |
+| `dbm_get_historical_metrics`  | Time-series data for trends           | `campaignId`, `startDate`, `endDate`, `granularity`  |
+| `dbm_get_pacing_status`       | Real-time pacing calculation          | `campaignId`, `advertiserId`                         |
+| `dbm_run_custom_query`        | Execute dynamic DBM report queries    | `reportType`, `filters`, `metrics`, `dimensions`     |
 
 ### DV360 Management Server Tools
 
@@ -457,13 +444,13 @@ See [packages/tiktok-mcp](packages/tiktok-mcp) for the full 21-tool reference in
 User: "How did Campaign 12345 perform last week?"
 
 AI Agent:
-1. Calls dbm-mcp.get_campaign_delivery
+1. Calls dbm-mcp.dbm_get_campaign_delivery
    - campaignId: "12345"
    - startDate: "2025-01-13"
    - endDate: "2025-01-19"
    - platform: "dv360"
 
-2. Calls dbm-mcp.get_performance_metrics
+2. Calls dbm-mcp.dbm_get_performance_metrics
    - campaignId: "12345"
    - dateRange: "last_week"
 

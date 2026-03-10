@@ -3,7 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 
-const TOOL_NAME = "get_performance_metrics";
+const TOOL_NAME = "dbm_get_performance_metrics";
 const TOOL_TITLE = "Get Performance Metrics";
 const TOOL_DESCRIPTION =
   "Calculate performance metrics (CPM, CTR, CPA, ROAS) for a campaign within a date range";

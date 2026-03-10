@@ -28,9 +28,11 @@ export const GetAnalyticsInputSchema = z
       .describe("The ad account URN (e.g., urn:li:sponsoredAccount:123)"),
     startDate: z
       .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
       .describe("Start date in YYYY-MM-DD format"),
     endDate: z
       .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
       .describe("End date in YYYY-MM-DD format"),
     metrics: z
       .array(z.string())

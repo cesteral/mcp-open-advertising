@@ -5,7 +5,7 @@ import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
-const TOOL_NAME = "run_custom_query";
+const TOOL_NAME = "dbm_run_custom_query";
 const TOOL_TITLE = "Run Custom Query";
 const TOOL_DESCRIPTION = `Execute a custom Bid Manager API query with any combination of filters and metrics.
 
