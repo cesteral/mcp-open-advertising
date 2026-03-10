@@ -53,29 +53,21 @@ export class TtdHttpClient {
     return withTtdApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      try {
-        const result = await executeWithRetry(TTD_RETRY_CONFIG, {
-          url,
-          fetchOptions: options,
-          context,
-          logger: this.logger,
-          fetchFn: fetchWithTimeout,
-          getHeaders: async () => {
-            const accessToken = await this.authAdapter.getAccessToken();
-            return {
-              "Content-Type": "application/json",
-              "TTD-Auth": accessToken,
-            };
-          },
-        });
-        span.setAttribute("http.response.status_code", 200);
-        return result;
-      } catch (error: any) {
-        if (error?.data?.httpStatus) {
-          span.setAttribute("http.response.status_code", error.data.httpStatus);
-        }
-        throw error;
-      }
+      const result = await executeWithRetry(TTD_RETRY_CONFIG, {
+        url,
+        fetchOptions: options,
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
+            "Content-Type": "application/json",
+            "TTD-Auth": accessToken,
+          };
+        },
+      });
+      return result;
     });
   }
 
@@ -100,29 +92,21 @@ export class TtdHttpClient {
     return withTtdApiSpan(`api.direct.${method}`, fullUrl, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", fullUrl);
-      try {
-        const result = await executeWithRetry(TTD_RETRY_CONFIG, {
-          url: fullUrl,
-          fetchOptions: options,
-          context,
-          logger: this.logger,
-          fetchFn: fetchWithTimeout,
-          getHeaders: async () => {
-            const accessToken = await this.authAdapter.getAccessToken();
-            return {
-              "Content-Type": "application/json",
-              "TTD-Auth": accessToken,
-            };
-          },
-        });
-        span.setAttribute("http.response.status_code", 200);
-        return result;
-      } catch (error: any) {
-        if (error?.data?.httpStatus) {
-          span.setAttribute("http.response.status_code", error.data.httpStatus);
-        }
-        throw error;
-      }
+      const result = await executeWithRetry(TTD_RETRY_CONFIG, {
+        url: fullUrl,
+        fetchOptions: options,
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
+            "Content-Type": "application/json",
+            "TTD-Auth": accessToken,
+          };
+        },
+      });
+      return result;
     });
   }
 }

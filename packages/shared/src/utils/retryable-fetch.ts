@@ -10,6 +10,7 @@ import type { Logger } from "pino";
 import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
 import { fetchWithTimeout } from "./fetch-with-timeout.js";
 import type { RequestContext } from "./request-context.js";
+import { setSpanAttribute } from "./telemetry.js";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -123,6 +124,7 @@ export async function executeWithRetry(
     });
 
     if (response.ok) {
+      setSpanAttribute("http.response.status_code", response.status);
       if (response.status === 204) {
         return {};
       }

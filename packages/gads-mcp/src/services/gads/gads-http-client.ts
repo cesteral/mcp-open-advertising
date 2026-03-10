@@ -120,36 +120,28 @@ export class GAdsHttpClient {
     return withGAdsApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      try {
-        const result = await executeWithRetry(GADS_RETRY_CONFIG, {
-          url,
-          fetchOptions: options,
-          context,
-          logger: this.logger,
-          fetchFn: fetchWithTimeout,
-          getHeaders: async () => {
-            const accessToken = await this.authAdapter.getAccessToken();
-            const headers: Record<string, string> = {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${accessToken}`,
-              "developer-token": this.authAdapter.developerToken,
-            };
-            if (this.authAdapter.loginCustomerId) {
-              headers["login-customer-id"] = this.authAdapter.loginCustomerId;
-            }
-            return headers;
-          },
-          mapStatusCode: (status) => mapGAdsStatusCode(status),
-          parseErrorBody: parseGAdsErrors,
-        });
-        span.setAttribute("http.response.status_code", 200);
-        return result;
-      } catch (error: any) {
-        if (error?.data?.httpStatus) {
-          span.setAttribute("http.response.status_code", error.data.httpStatus);
-        }
-        throw error;
-      }
+      const result = await executeWithRetry(GADS_RETRY_CONFIG, {
+        url,
+        fetchOptions: options,
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            "developer-token": this.authAdapter.developerToken,
+          };
+          if (this.authAdapter.loginCustomerId) {
+            headers["login-customer-id"] = this.authAdapter.loginCustomerId;
+          }
+          return headers;
+        },
+        mapStatusCode: (status) => mapGAdsStatusCode(status),
+        parseErrorBody: parseGAdsErrors,
+      });
+      return result;
     });
   }
 }

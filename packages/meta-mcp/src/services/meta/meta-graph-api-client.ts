@@ -3,7 +3,7 @@ import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withMetaApiSpan } from "../../utils/telemetry/tracing.js";
+import { withMetaApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
 
 /** Meta error response shape */
 interface MetaApiError {
@@ -160,16 +160,7 @@ export class MetaGraphApiClient {
     return withMetaApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      try {
-        const result = await this.executeWithRetryInner(url, context, options);
-        span.setAttribute("http.response.status_code", 200);
-        return result;
-      } catch (error: any) {
-        if (error?.data?.httpStatus) {
-          span.setAttribute("http.response.status_code", error.data.httpStatus);
-        }
-        throw error;
-      }
+      return this.executeWithRetryInner(url, context, options);
     });
   }
 
@@ -206,6 +197,7 @@ export class MetaGraphApiClient {
       this.logRateLimitHeaders(response, context);
 
       if (response.ok) {
+        setSpanAttribute("http.response.status_code", response.status);
         if (response.status === 204) {
           return {};
         }

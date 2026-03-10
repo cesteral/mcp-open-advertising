@@ -3,7 +3,7 @@ import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withTikTokApiSpan } from "../../utils/telemetry/tracing.js";
+import { withTikTokApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
 
 const TIKTOK_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -150,36 +150,42 @@ export class TikTokHttpClient {
     fileContentType: string,
     context?: RequestContext
   ): Promise<unknown> {
-    const allFields = { advertiser_id: this.advertiserId, ...fields };
-    const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
     const url = this.buildUrl(path);
-    const timeoutMs = TIKTOK_RETRY_CONFIG.timeoutMs ?? 30_000;
-    const accessToken = await this.authAdapter.getAccessToken();
-    const response = await fetchWithTimeout(url, timeoutMs, context, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": contentType,
-      },
-      body,
+
+    return withTikTokApiSpan("api.multipart.POST", path, async (span) => {
+      span.setAttribute("http.request.method", "POST");
+      span.setAttribute("http.url", url);
+      const allFields = { advertiser_id: this.advertiserId, ...fields };
+      const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
+      const timeoutMs = TIKTOK_RETRY_CONFIG.timeoutMs ?? 30_000;
+      const accessToken = await this.authAdapter.getAccessToken();
+      const response = await fetchWithTimeout(url, timeoutMs, context, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": contentType,
+        },
+        body,
+      });
+      span.setAttribute("http.response.status_code", response.status);
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new McpError(
+          mapTikTokErrorToJsonRpc(0, response.status),
+          `TikTok API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
+          { requestId: context?.requestId, httpStatus: response.status, url }
+        );
+      }
+      const json = (await response.json()) as TikTokApiResponse;
+      if (json.code !== 0) {
+        throw new McpError(
+          mapTikTokErrorToJsonRpc(json.code, response.status),
+          json.message || `TikTok API error: code=${json.code}`,
+          { requestId: context?.requestId, tiktokCode: json.code, url }
+        );
+      }
+      return json.data;
     });
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        mapTikTokErrorToJsonRpc(0, response.status),
-        `TikTok API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-        { requestId: context?.requestId, httpStatus: response.status, url }
-      );
-    }
-    const json = (await response.json()) as TikTokApiResponse;
-    if (json.code !== 0) {
-      throw new McpError(
-        mapTikTokErrorToJsonRpc(json.code, response.status),
-        json.message || `TikTok API error: code=${json.code}`,
-        { requestId: context?.requestId, tiktokCode: json.code, url }
-      );
-    }
-    return json.data;
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {
@@ -204,16 +210,7 @@ export class TikTokHttpClient {
     return withTikTokApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      try {
-        const result = await this.executeRequestInner(url, context, options);
-        span.setAttribute("http.response.status_code", 200);
-        return result;
-      } catch (error: any) {
-        if (error?.data?.httpStatus) {
-          span.setAttribute("http.response.status_code", error.data.httpStatus);
-        }
-        throw error;
-      }
+      return this.executeRequestInner(url, context, options);
     });
   }
 
@@ -269,6 +266,7 @@ export class TikTokHttpClient {
       }
 
       // Parse TikTok JSON response
+      setSpanAttribute("http.response.status_code", response.status);
       const json = (await response.json()) as TikTokApiResponse;
 
       if (json.code !== 0) {

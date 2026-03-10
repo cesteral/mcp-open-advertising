@@ -3,7 +3,7 @@ import type { GoogleAuthAdapter } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
-import { withDV360ApiSpan } from "../../utils/telemetry/tracing.js";
+import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
 
 /**
  * Retry configuration for transient errors (429 / 5xx).
@@ -72,16 +72,7 @@ export class DV360HttpClient {
     return withDV360ApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      try {
-        const result = await this.executeWithRetry(url, 10_000, context, options);
-        span.setAttribute("http.response.status_code", 200);
-        return result;
-      } catch (error: any) {
-        if (error?.data?.httpStatus) {
-          span.setAttribute("http.response.status_code", error.data.httpStatus);
-        }
-        throw error;
-      }
+      return this.executeWithRetry(url, 10_000, context, options);
     });
   }
 
@@ -100,14 +91,21 @@ export class DV360HttpClient {
     context?: RequestContext,
     options?: RequestInit
   ): Promise<Response> {
-    const accessToken = await this.authAdapter.getAccessToken();
+    const method = options?.method || "POST";
 
-    return fetchWithTimeout(url, timeoutMs, context, {
-      ...options,
-      headers: {
-        ...options?.headers,
-        Authorization: `Bearer ${accessToken}`,
-      },
+    return withDV360ApiSpan(`api.raw.${method}`, url, async (span) => {
+      span.setAttribute("http.request.method", method);
+      span.setAttribute("http.url", url);
+      const accessToken = await this.authAdapter.getAccessToken();
+      const response = await fetchWithTimeout(url, timeoutMs, context, {
+        ...options,
+        headers: {
+          ...options?.headers,
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      span.setAttribute("http.response.status_code", response.status);
+      return response;
     });
   }
 
@@ -138,6 +136,7 @@ export class DV360HttpClient {
       });
 
       if (response.ok) {
+        setSpanAttribute("http.response.status_code", response.status);
         if (response.status === 204) {
           return {};
         }

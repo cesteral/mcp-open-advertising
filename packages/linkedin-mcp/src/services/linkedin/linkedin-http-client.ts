@@ -145,21 +145,26 @@ export class LinkedInHttpClient {
     contentType: string,
     context?: RequestContext
   ): Promise<void> {
-    const accessToken = await this.authAdapter.getAccessToken();
-    const response = await fetchWithTimeout(uploadUrl, 300_000, context, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": contentType,
-        "LinkedIn-Version": this.apiVersion,
-        "X-Restli-Protocol-Version": "2.0.0",
-      },
-      body: buffer,
+    return withLinkedInApiSpan("api.binary.PUT", uploadUrl, async (span) => {
+      span.setAttribute("http.request.method", "PUT");
+      span.setAttribute("http.url", uploadUrl);
+      const accessToken = await this.authAdapter.getAccessToken();
+      const response = await fetchWithTimeout(uploadUrl, 300_000, context, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": contentType,
+          "LinkedIn-Version": this.apiVersion,
+          "X-Restli-Protocol-Version": "2.0.0",
+        },
+        body: buffer,
+      });
+      span.setAttribute("http.response.status_code", response.status);
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new Error(`LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
+      }
     });
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new Error(`LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
-    }
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {
@@ -193,39 +198,31 @@ export class LinkedInHttpClient {
     return withLinkedInApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      try {
-        const result = await executeWithRetry(LINKEDIN_RETRY_CONFIG, {
-          url,
-          fetchOptions: options,
-          context,
-          logger: this.logger,
-          fetchFn: fetchWithTimeout,
-          getHeaders: async () => {
-            const accessToken = await this.authAdapter.getAccessToken();
-            return {
-              Authorization: `Bearer ${accessToken}`,
-              "LinkedIn-Version": apiVersion,
-              "X-Restli-Protocol-Version": "2.0.0",
-            };
-          },
-          mapStatusCode: (status: number, _body: string) => mapLinkedInErrorToJsonRpc(status),
-          parseErrorBody: (body: string) => {
-            try {
-              const parsed = JSON.parse(body) as LinkedInApiError;
-              return parsed.message ?? body.substring(0, 500);
-            } catch {
-              return body.substring(0, 500);
-            }
-          },
-        });
-        span.setAttribute("http.response.status_code", 200);
-        return result;
-      } catch (error: any) {
-        if (error?.data?.httpStatus) {
-          span.setAttribute("http.response.status_code", error.data.httpStatus);
-        }
-        throw error;
-      }
+      const result = await executeWithRetry(LINKEDIN_RETRY_CONFIG, {
+        url,
+        fetchOptions: options,
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
+            Authorization: `Bearer ${accessToken}`,
+            "LinkedIn-Version": apiVersion,
+            "X-Restli-Protocol-Version": "2.0.0",
+          };
+        },
+        mapStatusCode: (status: number, _body: string) => mapLinkedInErrorToJsonRpc(status),
+        parseErrorBody: (body: string) => {
+          try {
+            const parsed = JSON.parse(body) as LinkedInApiError;
+            return parsed.message ?? body.substring(0, 500);
+          } catch {
+            return body.substring(0, 500);
+          }
+        },
+      });
+      return result;
     });
   }
 
