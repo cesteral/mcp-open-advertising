@@ -47,6 +47,10 @@ import {
   entityDuplicationWorkflowPrompt,
   getEntityDuplicationWorkflowPromptMessage,
 } from "./definitions/entity-duplication-workflow.prompt.js";
+import {
+  dv360CreativeSetupWorkflowPrompt,
+  getDv360CreativeSetupWorkflowMessage,
+} from "./definitions/creative-setup-workflow.prompt.js";
 
 /**
  * Prompt definition with message generator
@@ -142,6 +146,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: entityDuplicationWorkflowPrompt,
       generateMessage: getEntityDuplicationWorkflowPromptMessage,
+    },
+  ],
+  [
+    dv360CreativeSetupWorkflowPrompt.name,
+    {
+      prompt: dv360CreativeSetupWorkflowPrompt,
+      generateMessage: getDv360CreativeSetupWorkflowMessage,
     },
   ],
 ]);

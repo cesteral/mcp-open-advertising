@@ -22,6 +22,11 @@ export class LinkedInService {
     private readonly httpClient: LinkedInHttpClient
   ) {}
 
+  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
+  get client(): LinkedInHttpClient {
+    return this.httpClient;
+  }
+
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
   async listEntities(

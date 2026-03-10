@@ -43,6 +43,10 @@ import {
   crossPlatformCampaignSetupPrompt,
   getCrossPlatformCampaignSetupMessage,
 } from "./definitions/cross-platform-campaign-setup.prompt.js";
+import {
+  linkedInCreativeUploadWorkflowPrompt,
+  getLinkedInCreativeUploadWorkflowMessage,
+} from "./definitions/creative-upload-workflow.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -118,6 +122,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: crossPlatformCampaignSetupPrompt,
       generateMessage: getCrossPlatformCampaignSetupMessage,
+    },
+  ],
+  [
+    linkedInCreativeUploadWorkflowPrompt.name,
+    {
+      prompt: linkedInCreativeUploadWorkflowPrompt,
+      generateMessage: getLinkedInCreativeUploadWorkflowMessage,
     },
   ],
 ]);

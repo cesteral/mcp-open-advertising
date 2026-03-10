@@ -1,5 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return {
+    ...actual,
+    downloadFileToBuffer: vi.fn(async () => ({
+      buffer: Buffer.from("fake-file-content"),
+      contentType: "image/jpeg",
+      filename: "test-image.jpg",
+    })),
+  };
+});
+
 const linkedInService = {
   listEntities: vi.fn(async () => ({ entities: [{ id: "urn:li:test:1" }], total: 1, start: 0 })),
   getEntity: vi.fn(async () => ({ id: "urn:li:test:1" })),
@@ -24,6 +36,19 @@ const linkedInService = {
   duplicateEntity: vi.fn(async () => ({ id: "urn:li:test:copy" })),
   getDeliveryForecast: vi.fn(async () => ({ forecast: { impressions: 1000 } })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ preview: "<html></html>" }] })),
+  client: {
+    post: vi.fn(async () => ({
+      value: {
+        uploadMechanism: {
+          "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+            uploadUrl: "https://example.com/upload",
+          },
+        },
+        asset: "urn:li:digitalmediaAsset:test123",
+      },
+    })),
+    putBinary: vi.fn(async () => undefined),
+  },
 };
 
 const linkedInReportingService = {
@@ -48,10 +73,10 @@ describe("LinkedIn MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 24 : 18); // 18 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 25 : 19); // 19 business + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
-    expect(getAllPrompts()).toHaveLength(10);
-    expect(promptRegistry.size).toBe(10);
+    expect(getAllPrompts()).toHaveLength(11);
+    expect(promptRegistry.size).toBe(11);
     expect(getPromptDefinition("linkedin_campaign_setup_workflow")).toBeDefined();
   });
 

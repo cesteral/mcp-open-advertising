@@ -1,4 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  return {
+    ...actual,
+    downloadFileToBuffer: vi.fn(async () => ({
+      buffer: Buffer.from("fake-file-content"),
+      contentType: "image/jpeg",
+      filename: "test-image.jpg",
+    })),
+  };
+});
 
 const tiktokService = {
   listEntities: vi.fn(async () => ({
@@ -27,6 +39,17 @@ const tiktokService = {
   duplicateEntity: vi.fn(async () => ({ id: "copy" })),
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
+  client: {
+    postMultipart: vi.fn(async (path: string) => {
+      if (path.includes("image")) {
+        return { image_id: "img-test-123", image_url: "https://example.com/img.jpg", size: 1000 };
+      }
+      return { video_id: "vid-test-123", video_name: "Test Video" };
+    }),
+    post: vi.fn(async () => ({
+      list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
+    })),
+  },
 };
 
 const tiktokReportingService = {
@@ -66,14 +89,19 @@ import { getAllPrompts, getPromptDefinition, promptRegistry } from "../../src/mc
 describe("TikTok MCP definitions coverage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 27 : 21); // 21 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 29 : 23); // 23 business + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
-    expect(getAllPrompts()).toHaveLength(10);
-    expect(promptRegistry.size).toBe(10);
+    expect(getAllPrompts()).toHaveLength(11);
+    expect(promptRegistry.size).toBe(11);
     expect(getPromptDefinition("tiktok_campaign_setup_workflow")).toBeDefined();
   });
 
@@ -86,7 +114,11 @@ describe("TikTok MCP definitions coverage", () => {
       expect(example, `${tool.name} should have at least one input example`).toBeDefined();
 
       const parsedInput = tool.inputSchema.parse(example);
-      const result = await tool.logic(parsedInput as never, requestContext, sdkContext);
+      // Run logic concurrently with timer advancement to handle any sleep() calls in upload polling
+      const [result] = await Promise.all([
+        tool.logic(parsedInput as never, requestContext, sdkContext),
+        vi.runAllTimersAsync(),
+      ]);
 
       if (tool.outputSchema) {
         const parsedOutput = tool.outputSchema.parse(result);

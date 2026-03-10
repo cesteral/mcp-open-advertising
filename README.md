@@ -1,6 +1,6 @@
 # Cesteral - AI-Native Multi-Platform Campaign Optimization
 
-**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager**
+**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, Bid Manager, and shared media library**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -12,7 +12,7 @@
 
 ## Overview
 
-Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on seven independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
+Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on eight independent MCP servers, Cesteral separates reporting, platform management, and shared media concerns while allowing cross-server workflows.
 
 This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
 
@@ -20,7 +20,7 @@ This repository contains Cesteral's **open-source connector layer**. Managed hos
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager
-- **🔧 Composable Architecture** - Seven independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Eight independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -29,7 +29,7 @@ This repository contains Cesteral's **open-source connector layer**. Managed hos
 
 ## Architecture
 
-Cesteral uses a **GCP-native architecture** with seven independently deployable Cloud Run MCP services:
+Cesteral uses a **GCP-native architecture** with eight independently deployable Cloud Run MCP services:
 
 - `dbm-mcp` for reporting and query workflows
 - `dv360-mcp` for DV360 management workflows
@@ -38,6 +38,7 @@ Cesteral uses a **GCP-native architecture** with seven independently deployable 
 - `meta-mcp` for Meta Ads campaign management
 - `linkedin-mcp` for LinkedIn Ads campaign management and analytics
 - `tiktok-mcp` for TikTok Ads campaign management and async reporting
+- `media-mcp` for shared media library (upload-once, use across platforms)
 
 ### Access Model
 
@@ -132,9 +133,22 @@ This dual-access model preserves service autonomy while enabling cross-server au
 - Full CRUD on TikTok entities (campaigns, ad groups, ads, creatives)
 - Async reporting flow (submit, poll, download) with breakdown support
 - Targeting search, audience estimates, and ad previews
+- Binary image/video upload via URL-proxy pattern
 - Per-session auth via TikTok bearer token + advertiser ID header
 
 **Platform**: TikTok Marketing API v1.3
+
+### Server 8: `media-mcp`
+
+**Shared media library backed by Supabase Storage**
+
+- Upload assets from URL (server-side download + storage) — upload-once-use-everywhere
+- List, tag, and delete media assets with metadata
+- Generate signed upload URLs for large files (bypass server download)
+- Cross-platform asset management with advertiser-scoped paths
+- Per-session auth via Supabase service role key
+
+**Platform**: Supabase Storage JS SDK
 
 ---
 
@@ -144,14 +158,14 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 The platform currently includes:
 
-- ✅ Seven implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`)
+- ✅ Eight implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`, `media-mcp`)
 - ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
 - ✅ Live platform API integrations and Streamable HTTP transports
 - ✅ Terraform + Cloud Build coverage for independent service deployment
 
 **Current Focus:**
 
-1. Production hardening and operational reliability across all seven servers
+1. Production hardening and operational reliability across all eight servers
 2. Cross-platform workflow coverage and contract governance
 3. Telemetry dashboards and observability improvements
 

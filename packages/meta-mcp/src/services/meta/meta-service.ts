@@ -21,6 +21,11 @@ export class MetaService {
     private readonly logger: Logger,
   ) {}
 
+  /** Expose the underlying Graph API client for direct use (e.g., media uploads). */
+  get graphApiClient(): MetaGraphApiClient {
+    return this.httpClient;
+  }
+
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
   async listEntities(

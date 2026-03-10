@@ -77,6 +77,10 @@ Fetch these resources for detailed schema information:
 - \`meta_get_delivery_estimate\` — Audience size estimation
 - \`meta_get_ad_previews\` — Ad preview HTML
 
+### Media Uploads
+- \`meta_upload_image\` — Upload image from URL to ad images library (returns imageHash)
+- \`meta_upload_video\` — Upload video from URL to ad videos library (polls until ready)
+
 ### Validation
 - \`meta_validate_entity\` — Client-side entity validation
 

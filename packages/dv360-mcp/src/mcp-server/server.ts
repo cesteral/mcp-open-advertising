@@ -43,6 +43,8 @@ const dv360WorkflowIdByToolName: Record<string, string> = {
   dv360_create_assigned_targeting: "mcp.execute.dv360_targeting",
   dv360_delete_assigned_targeting: "mcp.execute.dv360_targeting",
   dv360_validate_targeting_config: "mcp.execute.dv360_targeting",
+  // Preview
+  dv360_get_ad_preview: "mcp.execute.dv360_entity_read",
 };
 
 /**

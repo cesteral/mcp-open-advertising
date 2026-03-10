@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (19 tools)
+## Available Tools Summary (20 tools)
 
 ### Entity CRUD (9 tools)
 | Tool | Purpose | Notes |
@@ -128,6 +128,11 @@ Inspect the output, then iterate with more specific calls.
 | Tool | Purpose | Notes |
 |------|---------|-------|
 | \`dv360_validate_entity\` | Client-side schema validation | No API call, readOnly |
+
+### Ad Previews (1 tool)
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| \`dv360_get_ad_preview\` | Get preview URL for a creative | Returns previewUrl + dimensions |
 
 ---
 

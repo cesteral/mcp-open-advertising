@@ -45,6 +45,8 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_graphql_mutation_bulk: "mcp.execute.ttd_graphql",
   ttd_graphql_bulk_job: "mcp.execute.ttd_graphql",
   ttd_graphql_cancel_bulk_job: "mcp.execute.ttd_graphql",
+  // Preview
+  ttd_get_ad_preview: "mcp.execute.ttd_entity_read",
 };
 
 /**
