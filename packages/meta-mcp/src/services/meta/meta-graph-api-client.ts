@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 
 /** Meta error response shape */
@@ -101,6 +101,28 @@ export class MetaGraphApiClient {
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     return this.executeWithRetry(url, context, { method: "DELETE" });
+  }
+
+  /**
+   * Make an authenticated POST request with multipart/form-data body.
+   * Used for media uploads (images, videos) to Meta Graph API.
+   */
+  async postMultipart(
+    path: string,
+    fields: Record<string, string>,
+    fileField: string,
+    fileBuffer: Buffer,
+    filename: string,
+    fileContentType: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
+    const url = this.buildUrl(path);
+    return this.executeWithRetry(url, context, {
+      method: "POST",
+      headers: { "Content-Type": contentType },
+      body,
+    });
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {

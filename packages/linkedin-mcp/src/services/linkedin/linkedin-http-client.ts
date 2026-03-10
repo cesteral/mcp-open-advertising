@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
 import { JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
+import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 
 /** LinkedIn error response shape */
@@ -110,6 +110,55 @@ export class LinkedInHttpClient {
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     return this.request(url, context, { method: "DELETE" });
+  }
+
+  /**
+   * Make an authenticated POST request with multipart/form-data body.
+   * LinkedIn-Version header is automatically added via the request() method.
+   */
+  async postMultipart(
+    path: string,
+    fields: Record<string, string>,
+    fileField: string,
+    fileBuffer: Buffer,
+    filename: string,
+    fileContentType: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
+    const url = this.buildUrl(path);
+    return this.request(url, context, {
+      method: "POST",
+      headers: { "Content-Type": contentType },
+      body,
+    });
+  }
+
+  /**
+   * PUT binary data directly to a URL (for LinkedIn asset upload second step).
+   * LinkedIn-Version and Auth headers are included.
+   */
+  async putBinary(
+    uploadUrl: string,
+    buffer: Buffer,
+    contentType: string,
+    context?: RequestContext
+  ): Promise<void> {
+    const accessToken = await this.authAdapter.getAccessToken();
+    const response = await fetchWithTimeout(uploadUrl, 300_000, context, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": contentType,
+        "LinkedIn-Version": this.apiVersion,
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+      body: buffer,
+    });
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      throw new Error(`LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
+    }
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {

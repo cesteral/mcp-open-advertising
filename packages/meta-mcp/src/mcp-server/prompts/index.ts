@@ -43,6 +43,10 @@ import {
   entityDuplicationWorkflowPrompt,
   getEntityDuplicationWorkflowMessage,
 } from "./definitions/entity-duplication-workflow.prompt.js";
+import {
+  creativeUploadWorkflowPrompt,
+  getCreativeUploadWorkflowMessage,
+} from "./definitions/creative-upload-workflow.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -118,6 +122,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: entityDuplicationWorkflowPrompt,
       generateMessage: getEntityDuplicationWorkflowMessage,
+    },
+  ],
+  [
+    creativeUploadWorkflowPrompt.name,
+    {
+      prompt: creativeUploadWorkflowPrompt,
+      generateMessage: getCreativeUploadWorkflowMessage,
     },
   ],
 ]);

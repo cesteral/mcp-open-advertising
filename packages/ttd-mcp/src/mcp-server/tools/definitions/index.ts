@@ -1,10 +1,11 @@
 /**
  * Tool definitions barrel export
  *
- * 20 tools total:
+ * 21 tools total:
  *   6 original: list, get, create, update, delete, report
  *   10 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report, submit report, check report status
  *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
+ *   1 preview: get ad preview
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -27,6 +28,7 @@ export { graphqlQueryBulkTool } from "./graphql-query-bulk.tool.js";
 export { graphqlMutationBulkTool } from "./graphql-mutation-bulk.tool.js";
 export { graphqlBulkJobTool } from "./graphql-bulk-job.tool.js";
 export { graphqlCancelBulkJobTool } from "./graphql-cancel-bulk-job.tool.js";
+export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -48,6 +50,7 @@ import { graphqlQueryBulkTool } from "./graphql-query-bulk.tool.js";
 import { graphqlMutationBulkTool } from "./graphql-mutation-bulk.tool.js";
 import { graphqlBulkJobTool } from "./graphql-bulk-job.tool.js";
 import { graphqlCancelBulkJobTool } from "./graphql-cancel-bulk-job.tool.js";
+import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -76,6 +79,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   graphqlMutationBulkTool,
   graphqlBulkJobTool,
   graphqlCancelBulkJobTool,
+  // ── Preview ──
+  getAdPreviewTool,
 ];
 
 /**

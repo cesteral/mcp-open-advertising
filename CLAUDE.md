@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cesteral is an AI-native programmatic advertising optimization platform built on seven independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), and TikTok Ads management (tiktok-mcp).
+Cesteral is an AI-native programmatic advertising optimization platform built on eight independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), TikTok Ads management (tiktok-mcp), and shared media library (media-mcp).
 
 ### Current Project Status
 
 **Phase: Production-Ready ✅**
 
-All seven MCP servers are fully implemented with live API integrations:
+All eight MCP servers are fully implemented with live API integrations:
 - **dbm-mcp**: Bid Manager API v2 for DV360 reporting
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
@@ -18,6 +18,7 @@ All seven MCP servers are fully implemented with live API integrations:
 - **meta-mcp**: Meta Marketing API v21.0 for Meta Ads campaign management
 - **linkedin-mcp**: LinkedIn Marketing API v2 for LinkedIn Ads management (port 3006)
 - **tiktok-mcp**: TikTok Marketing API v1.3 for TikTok Ads management (port 3007)
+- **media-mcp**: Supabase Storage-backed media library for upload-once-use-everywhere workflows (port 3008)
 
 ## Essential Commands
 
@@ -37,6 +38,7 @@ cd packages/gads-mcp && pnpm run dev:http
 cd packages/meta-mcp && pnpm run dev:http
 cd packages/linkedin-mcp && pnpm run dev:http
 cd packages/tiktok-mcp && pnpm run dev:http
+cd packages/media-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -83,6 +85,9 @@ Use the dev-server script (automatically uses correct port for each server):
 
 # Start tiktok-mcp (port 3007)
 ./scripts/dev-server.sh tiktok-mcp
+
+# Start media-mcp (port 3008)
+./scripts/dev-server.sh media-mcp
 ```
 
 ## Monorepo Architecture
@@ -92,7 +97,7 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 ### Core Packages
 1. **`@cesteral/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Seven MCP Servers
+### Eight MCP Servers
 1. **`@cesteral/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
@@ -100,6 +105,7 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 5. **`@cesteral/meta-mcp`** - Meta Ads campaign management (CRUD via Meta Marketing API v21.0)
 6. **`@cesteral/linkedin-mcp`** - LinkedIn Ads campaign management (CRUD via LinkedIn Marketing API v2)
 7. **`@cesteral/tiktok-mcp`** - TikTok Ads campaign management (CRUD via TikTok Marketing API v1.3)
+8. **`@cesteral/media-mcp`** - Shared media library backed by Supabase Storage (upload-once-use-everywhere)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -441,7 +447,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
 | `run_custom_query` | Compose and execute custom Bid Manager reports | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
-### dv360-mcp (Management Server) Tools — 19 Tools
+### dv360-mcp (Management Server) Tools — 20 Tools
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -477,7 +483,12 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 |------|-------------|----------------|
 | `dv360_validate_entity` | Client-side schema validation (no API call) | `entityType`, `mode`, `data` |
 
-### ttd-mcp (The Trade Desk Server) Tools — 20 Tools, 9 Entity Types
+#### Ad Previews
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `dv360_get_ad_preview` | Get preview URL for a creative | `advertiserId`, `creativeId` |
+
+### ttd-mcp (The Trade Desk Server) Tools — 21 Tools, 9 Entity Types
 
 **Supported entity types:** `advertiser`, `campaign`, `adGroup`, `ad`, `creative`, `siteList`, `deal`, `conversionTracker`, `bidList`
 
@@ -517,7 +528,12 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `ttd_graphql_bulk_job` | Submit async bulk GraphQL job | `operation`, `variables` |
 | `ttd_graphql_cancel_bulk_job` | Cancel a running bulk GraphQL job | `jobId` |
 
-### gads-mcp (Google Ads Server) Tools — 12 Tools, 6 Entity Types
+#### Ad Previews
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `ttd_get_ad_preview` | Get preview URL for a creative | `creativeId` |
+
+### gads-mcp (Google Ads Server) Tools — 13 Tools, 6 Entity Types
 
 **Supported entity types:** `campaign`, `adGroup`, `ad`, `keyword`, `campaignBudget`, `asset`
 
@@ -540,8 +556,9 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `gads_bulk_update_status` | Batch enable/pause/remove entities | `entityType`, `customerId`, `entityIds[]`, `status` |
 | `gads_adjust_bids` | Batch adjust ad group bids (safe read-modify-write) | `customerId`, `adjustments[]` |
 | `gads_validate_entity` | Dry-run validate entity payload | `entityType`, `customerId`, `mode`, `data` |
+| `gads_get_ad_preview` | Get ad preview HTML/URL | `customerId`, `adId` |
 
-### meta-mcp (Meta Ads Server) Tools — 18 Tools, 5 Entity Types
+### meta-mcp (Meta Ads Server) Tools — 20 Tools, 5 Entity Types
 
 **Supported entity types:** `campaign`, `adSet`, `ad`, `adCreative`, `customAudience`
 
@@ -586,8 +603,10 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `meta_get_ad_previews` | Ad preview HTML | `adId`, `adFormat` |
 | `meta_adjust_bids` | Batch adjust ad set bids | `adAccountId`, `adjustments[]` |
 | `meta_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
+| `meta_upload_image` | Upload image from URL to ad images library | `adAccountId`, `mediaUrl`, `name?` |
+| `meta_upload_video` | Upload video from URL to ad videos library (polls until ready) | `adAccountId`, `mediaUrl`, `title?` |
 
-### linkedin-mcp (LinkedIn Ads Server) Tools — 18 Tools, 5 Entity Types
+### linkedin-mcp (LinkedIn Ads Server) Tools — 19 Tools, 5 Entity Types
 
 **Supported entity types:** `adAccount`, `campaignGroup`, `campaign`, `creative`, `conversionRule`
 **Auth:** `MCP_AUTH_MODE=linkedin-bearer`, `LINKEDIN_ACCESS_TOKEN` env var, `LinkedIn-Version: 202409` header on all requests
@@ -625,8 +644,9 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `linkedin_get_delivery_forecast` | Audience/delivery forecast for targeting config | `adAccountUrn`, `targetingCriteria` |
 | `linkedin_get_ad_previews` | Ad preview rendering | `creativeUrn`, `adFormat?` |
 | `linkedin_validate_entity` | Dry-run validate entity payload (no API call) | `entityType`, `mode`, `data` |
+| `linkedin_upload_image` | Upload image from URL via 3-step LinkedIn flow | `adAccountUrn`, `mediaUrl`, `filename?` |
 
-### tiktok-mcp (TikTok Ads Server) Tools — 21 Tools, 4 Entity Types
+### tiktok-mcp (TikTok Ads Server) Tools — 23 Tools, 4 Entity Types
 
 **Supported entity types:** `campaign`, `adGroup`, `ad`, `creative`
 **Auth:** `MCP_AUTH_MODE=tiktok-bearer`, `TIKTOK_ACCESS_TOKEN` + `TIKTOK_ADVERTISER_ID` env vars, `X-TikTok-Advertiser-Id` header in HTTP mode
@@ -667,8 +687,10 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `tiktok_get_audience_estimate` | Audience size estimation for targeting config | `advertiserId`, `targetingConfig` |
 | `tiktok_get_ad_previews` | Ad preview for video/image ads | `advertiserId`, `adId`, `adFormat?` |
 | `tiktok_validate_entity` | Dry-run validate entity payload (no API call) | `entityType`, `mode`, `data` |
+| `tiktok_upload_image` | Upload image from URL to TikTok ad image library | `advertiserId`, `mediaUrl`, `filename?` |
+| `tiktok_upload_video` | Upload video from URL to TikTok ad video library (polls) | `advertiserId`, `mediaUrl`, `videoName?` |
 
-### How the Seven Servers Work Together
+### How the Eight Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**
 1. AI agent calls **dbm-mcp** → `get_pacing_status` to detect underdelivery (72% pacing)
@@ -694,6 +716,7 @@ Each server runs on a different port:
 - `meta-mcp`: port 3005
 - `linkedin-mcp`: port 3006
 - `tiktok-mcp`: port 3007
+- `media-mcp`: port 3008
 
 Test MCP endpoint:
 ```bash

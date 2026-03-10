@@ -89,7 +89,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (20 tools)
+## Available Tools Summary (21 tools)
 
 ### Core CRUD
 | Tool | Purpose | Read/Write |
@@ -130,6 +130,11 @@ Inspect the output, then iterate with more specific calls.
 | \`ttd_graphql_mutation_bulk\` | Execute bulk GraphQL mutations | Write |
 | \`ttd_graphql_bulk_job\` | Submit async bulk GraphQL job | Write |
 | \`ttd_graphql_cancel_bulk_job\` | Cancel running bulk job | Write |
+
+### Ad Previews (1 tool)
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_get_ad_preview\` | Get preview URL for a creative | Read |
 
 ### Supported Entity Types (9)
 \`advertiser\`, \`campaign\`, \`adGroup\`, \`ad\`, \`creative\`, \`siteList\`, \`deal\`, \`conversionTracker\`, \`bidList\`

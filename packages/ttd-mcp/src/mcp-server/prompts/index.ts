@@ -45,6 +45,10 @@ import {
   ttdTargetingDiscoveryWorkflowPrompt,
   getTtdTargetingDiscoveryWorkflowMessage,
 } from "./definitions/targeting-discovery-workflow.prompt.js";
+import {
+  ttdCreativeSetupWorkflowPrompt,
+  getTtdCreativeSetupWorkflowMessage,
+} from "./definitions/creative-setup-workflow.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -120,6 +124,13 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: ttdTargetingDiscoveryWorkflowPrompt,
       generateMessage: getTtdTargetingDiscoveryWorkflowMessage,
+    },
+  ],
+  [
+    ttdCreativeSetupWorkflowPrompt.name,
+    {
+      prompt: ttdCreativeSetupWorkflowPrompt,
+      generateMessage: getTtdCreativeSetupWorkflowMessage,
     },
   ],
 ]);

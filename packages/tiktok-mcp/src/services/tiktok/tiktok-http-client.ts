@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 
 const TIKTOK_RETRY_CONFIG: RetryConfig = {
@@ -133,6 +133,52 @@ export class TikTokHttpClient {
       },
       body,
     });
+  }
+
+  /**
+   * Make an authenticated POST request with multipart/form-data body.
+   * Used for media uploads (images, videos) to TikTok Marketing API.
+   * advertiser_id is automatically included as a form field.
+   */
+  async postMultipart(
+    path: string,
+    fields: Record<string, string>,
+    fileField: string,
+    fileBuffer: Buffer,
+    filename: string,
+    fileContentType: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const allFields = { advertiser_id: this.advertiserId, ...fields };
+    const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
+    const url = this.buildUrl(path);
+    const timeoutMs = TIKTOK_RETRY_CONFIG.timeoutMs ?? 30_000;
+    const accessToken = await this.authAdapter.getAccessToken();
+    const response = await fetchWithTimeout(url, timeoutMs, context, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": contentType,
+      },
+      body,
+    });
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      throw new McpError(
+        mapTikTokErrorToJsonRpc(0, response.status),
+        `TikTok API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
+        { requestId: context?.requestId, httpStatus: response.status, url }
+      );
+    }
+    const json = (await response.json()) as TikTokApiResponse;
+    if (json.code !== 0) {
+      throw new McpError(
+        mapTikTokErrorToJsonRpc(json.code, response.status),
+        json.message || `TikTok API error: code=${json.code}`,
+        { requestId: context?.requestId, tiktokCode: json.code, url }
+      );
+    }
+    return json.data;
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {

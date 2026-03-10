@@ -1,4 +1,6 @@
 export * from "./fetch-with-timeout.js";
+export * from "./download-file.js";
+export * from "./multipart-form.js";
 export * from "./logger.js";
 export * from "./mcp-errors.js";
 export * from "./request-context.js";

@@ -1,10 +1,11 @@
 /**
  * Tool definitions barrel export
  *
- * 12 tools total:
+ * 13 tools total:
  *   5 read:  gaql search, list accounts, get entity, list entities, get insights
  *   6 write: create entity, update entity, remove entity, bulk mutate, bulk update status, adjust bids
  *   1 validate: validate entity (dry-run via validateOnly)
+ *   1 preview: get ad preview
  */
 
 export { gaqlSearchTool } from "./gaql-search.tool.js";
@@ -19,6 +20,7 @@ export { bulkMutateTool } from "./bulk-mutate.tool.js";
 export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
+export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 
 import { gaqlSearchTool } from "./gaql-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
@@ -32,6 +34,7 @@ import { bulkMutateTool } from "./bulk-mutate.tool.js";
 import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
+import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -50,6 +53,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   adjustBidsTool,
   // ── Validate Tools ──
   validateEntityTool,
+  // ── Preview ──
+  getAdPreviewTool,
 ];
 
 /**

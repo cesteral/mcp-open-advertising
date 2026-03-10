@@ -39,6 +39,11 @@ export class TikTokService {
     private readonly logger: Logger
   ) {}
 
+  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
+  get client(): TikTokHttpClient {
+    return this.httpClient;
+  }
+
   // ─── Standard CRUD ──────────────────────────────────────────────
 
   async listEntities(
