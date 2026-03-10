@@ -239,7 +239,7 @@ export function adjustLineItemBidsResponseFormatter(result: AdjustLineItemBidsOu
       : "";
 
   // Add helpful reminder about bid format
-  const note = `\n\n💡 Reminder: Bid amounts are in micros (1 USD = 1,000,000 micros). This tool updates fixed bids only.`;
+  const note = `\n\nNote: Reminder: Bid amounts are in micros (1 USD = 1,000,000 micros). This tool updates fixed bids only.`;
 
   return [
     {

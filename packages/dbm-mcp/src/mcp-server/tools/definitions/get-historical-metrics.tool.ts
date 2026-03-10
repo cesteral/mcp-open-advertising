@@ -145,13 +145,13 @@ export function getHistoricalMetricsResponseFormatter(
       type: "text" as const,
       text: `Campaign ${input.campaignId} Historical Metrics (${input.startDate} to ${input.endDate}):
 
-📈 Summary (${result.summary.dataPoints} data points, ${result.granularity}):
+Summary (${result.summary.dataPoints} data points, ${result.granularity}):
 • Total Impressions: ${result.summary.totalImpressions.toLocaleString()}
 • Total Clicks: ${result.summary.totalClicks.toLocaleString()}
 • Total Spend: $${result.summary.totalSpend.toFixed(2)}
 • Total Conversions: ${result.summary.totalConversions}
 
-📊 Trend (first 5 periods):
+Trend (first 5 periods):
 ${trendsText}`,
     },
   ];

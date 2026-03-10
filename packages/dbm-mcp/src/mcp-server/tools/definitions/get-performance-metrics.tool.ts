@@ -114,14 +114,14 @@ export function getPerformanceMetricsResponseFormatter(
       type: "text" as const,
       text: `Campaign ${input.campaignId} Performance (${input.startDate} to ${input.endDate}):
 
-📈 Performance Metrics:
+Performance Metrics:
 • CPM: $${result.performance.cpm.toFixed(2)}
 • CTR: ${result.performance.ctr.toFixed(2)}%
 • CPC: $${result.performance.cpc.toFixed(2)}
 • CPA: $${result.performance.cpa.toFixed(2)}
 • ROAS: ${result.performance.roas.toFixed(2)}x
 
-📊 Base Delivery:
+Base Delivery:
 • Impressions: ${result.delivery.impressions.toLocaleString()}
 • Clicks: ${result.delivery.clicks.toLocaleString()}
 • Spend: $${result.delivery.spend.toFixed(2)}

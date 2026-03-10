@@ -191,7 +191,7 @@ export function createEntityResponseFormatter(result: CreateEntityOutput): any {
   return [
     {
       type: "text" as const,
-      text: `✓ Entity created successfully\n${JSON.stringify(result.entity, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `[OK] Entity created successfully\n${JSON.stringify(result.entity, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

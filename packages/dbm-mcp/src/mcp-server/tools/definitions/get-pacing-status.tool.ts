@@ -136,12 +136,12 @@ export function getPacingStatusResponseFormatter(
 ): any[] {
   const statusEmoji =
     result.pacing.status === "ON_PACE"
-      ? "✅"
+      ? "[OK]"
       : result.pacing.status === "AHEAD"
-        ? "⚡"
+        ? "[AHEAD]"
         : result.pacing.status === "BEHIND"
-          ? "⚠️"
-          : "🚨";
+          ? "[BEHIND]"
+          : "[CRITICAL]";
 
   return [
     {
@@ -150,17 +150,17 @@ export function getPacingStatusResponseFormatter(
 
 ${statusEmoji} Status: ${result.pacing.status}
 
-💰 Budget:
+Budget:
 • Total: $${result.budget.total.toLocaleString()}
 • Spent: $${result.budget.spent.toLocaleString()} (${result.pacing.actualSpendPercent.toFixed(1)}%)
 • Remaining: $${result.budget.remaining.toLocaleString()}
 
-📅 Flight:
+Flight:
 • ${result.flight.startDate} to ${result.flight.endDate}
 • Days: ${result.flight.daysElapsed} elapsed / ${result.flight.totalDays} total
 • Days Remaining: ${result.flight.daysRemaining}
 
-📊 Pacing Analysis:
+Pacing Analysis:
 • Expected Spend: ${result.pacing.expectedSpendPercent.toFixed(1)}%
 • Actual Spend: ${result.pacing.actualSpendPercent.toFixed(1)}%
 • Pacing Ratio: ${result.pacing.pacingRatio.toFixed(2)}x

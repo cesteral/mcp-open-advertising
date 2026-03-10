@@ -146,7 +146,7 @@ export async function validateTargetingConfigLogic(
  * Format response for MCP client
  */
 export function validateTargetingConfigResponseFormatter(result: ValidateTargetingConfigOutput): any {
-  const statusEmoji = result.valid ? '✅' : '❌';
+  const statusEmoji = result.valid ? 'PASS' : 'FAIL';
   const statusText = result.valid ? 'PASSED' : 'ISSUES FOUND';
 
   let issuesText = '';

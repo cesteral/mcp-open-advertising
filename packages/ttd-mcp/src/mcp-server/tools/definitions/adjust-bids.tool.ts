@@ -88,7 +88,7 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): unknown[]
         const rtb = (r.entity as any)?.RTBAttributes;
         const base = rtb?.BaseBidCPM?.Amount ?? "?";
         const max = rtb?.MaxBidCPM?.Amount ?? "?";
-        return `  ✓ ${r.adGroupId}: base=$${base}, max=$${max}`;
+        return `  [OK] ${r.adGroupId}: base=$${base}, max=$${max}`;
       }
       return `  ✗ ${r.adGroupId}: ${r.error}`;
     })

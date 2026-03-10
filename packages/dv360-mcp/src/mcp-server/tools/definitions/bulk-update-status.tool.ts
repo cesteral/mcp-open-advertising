@@ -295,7 +295,7 @@ export function bulkUpdateStatusResponseFormatter(
   if (input?.status === "ENTITY_STATUS_ARCHIVED") {
     note = `\n\n⚠️  Warning: Archived entities cannot be reactivated. This change is irreversible.`;
   } else if (input?.status === "ENTITY_STATUS_PAUSED") {
-    note = `\n\n💡 Note: Paused entities can be reactivated later by setting status to ENTITY_STATUS_ACTIVE.`;
+    note = `\n\nNote: Paused entities can be reactivated later by setting status to ENTITY_STATUS_ACTIVE.`;
   }
 
   return [

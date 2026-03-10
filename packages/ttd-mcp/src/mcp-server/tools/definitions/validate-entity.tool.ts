@@ -89,7 +89,7 @@ export function validateEntityResponseFormatter(result: ValidateOutput): unknown
     return [
       {
         type: "text" as const,
-        text: `✓ Validation passed for ${result.entityType} (${result.mode})\n\nTimestamp: ${result.timestamp}`,
+        text: `PASS Validation passed for ${result.entityType} (${result.mode})\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }

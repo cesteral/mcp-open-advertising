@@ -145,7 +145,7 @@ export function updateEntityResponseFormatter(
   if (input) {
     const matchingExample = findMatchingExample(input.entityType, input.data, input.updateMask);
     if (matchingExample) {
-      responseText += `\n\n✓ Applied pattern: ${matchingExample.operation}\n`;
+      responseText += `\n\n[OK] Applied pattern: ${matchingExample.operation}\n`;
       responseText += `Note: ${matchingExample.notes}`;
     }
   }

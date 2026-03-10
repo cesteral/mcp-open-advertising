@@ -96,7 +96,7 @@ export function getEntityResponseFormatter(result: GetEntityOutput): any {
   return [
     {
       type: "text" as const,
-      text: `✓ Entity retrieved\n${JSON.stringify(result.entity, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `[OK] Entity retrieved\n${JSON.stringify(result.entity, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
