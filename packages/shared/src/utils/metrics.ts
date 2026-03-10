@@ -38,6 +38,9 @@ export function recordToolExecution(
     toolExecutionDuration = getMeter().createHistogram("mcp.tool.execution.duration_ms", {
       description: "Duration of MCP tool executions in milliseconds",
       unit: "ms",
+      advice: {
+        explicitBucketBoundaries: [50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000],
+      },
     });
   }
 

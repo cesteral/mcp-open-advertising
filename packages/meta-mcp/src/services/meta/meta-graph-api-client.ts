@@ -3,6 +3,7 @@ import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
+import { withMetaApiSpan } from "../../utils/telemetry/tracing.js";
 
 /** Meta error response shape */
 interface MetaApiError {
@@ -150,6 +151,29 @@ export class MetaGraphApiClient {
   }
 
   private async executeWithRetry(
+    url: string,
+    context?: RequestContext,
+    options?: RequestInit
+  ): Promise<unknown> {
+    const method = options?.method || "GET";
+
+    return withMetaApiSpan(`api.${method}`, url, async (span) => {
+      span.setAttribute("http.request.method", method);
+      span.setAttribute("http.url", url);
+      try {
+        const result = await this.executeWithRetryInner(url, context, options);
+        span.setAttribute("http.response.status_code", 200);
+        return result;
+      } catch (error: any) {
+        if (error?.data?.httpStatus) {
+          span.setAttribute("http.response.status_code", error.data.httpStatus);
+        }
+        throw error;
+      }
+    });
+  }
+
+  private async executeWithRetryInner(
     url: string,
     context?: RequestContext,
     options?: RequestInit

@@ -37,6 +37,7 @@ import type {
   ExponentialBackoffConfig,
 } from "./types.js";
 import { safeDivide, round } from "../../utils/math.js";
+import { withBidManagerApiSpan } from "../../utils/telemetry/tracing.js";
 
 /**
  * Sleep helper function
@@ -333,6 +334,19 @@ export class BidManagerService {
       backoffConfig?: Partial<ExponentialBackoffConfig>;
     }
   ): Promise<{ gcsPath: string; queryId: string; reportId: string }> {
+    return withBidManagerApiSpan("executeQueryWithRetry", undefined, async () => {
+      return this.executeQueryWithRetryInner(spec, options);
+    });
+  }
+
+  private async executeQueryWithRetryInner(
+    spec: QuerySpec,
+    options?: {
+      maxRetries?: number;
+      retryCooldownMs?: number;
+      backoffConfig?: Partial<ExponentialBackoffConfig>;
+    }
+  ): Promise<{ gcsPath: string; queryId: string; reportId: string }> {
     const maxRetries = options?.maxRetries ?? this.config.reportQueryRetries ?? 3;
     const retryCooldownMs = options?.retryCooldownMs ?? this.config.reportRetryCooldownMs ?? 60000;
 
@@ -428,6 +442,12 @@ export class BidManagerService {
    * Fetch report data from GCS path (signed URL)
    */
   async fetchReportData(gcsPath: string): Promise<string> {
+    return withBidManagerApiSpan("fetchReportData", undefined, async () => {
+      return this.fetchReportDataInner(gcsPath);
+    });
+  }
+
+  private async fetchReportDataInner(gcsPath: string): Promise<string> {
     this.logger.info({ gcsPath: gcsPath.substring(0, 100) + "..." }, "Fetching report data");
 
     try {
@@ -468,6 +488,12 @@ export class BidManagerService {
    * and query continuation on failure.
    */
   async getDeliveryMetrics(params: GetDeliveryMetricsInput): Promise<DeliveryMetrics> {
+    return withBidManagerApiSpan("getDeliveryMetrics", undefined, async () => {
+      return this.getDeliveryMetricsInner(params);
+    });
+  }
+
+  private async getDeliveryMetricsInner(params: GetDeliveryMetricsInput): Promise<DeliveryMetrics> {
     this.logger.info(
       { advertiserId: params.advertiserId, campaignId: params.campaignId },
       "Getting delivery metrics"
@@ -521,6 +547,12 @@ export class BidManagerService {
    * and query continuation on failure.
    */
   async getHistoricalMetrics(params: GetHistoricalMetricsInput): Promise<HistoricalDataPoint[]> {
+    return withBidManagerApiSpan("getHistoricalMetrics", undefined, async () => {
+      return this.getHistoricalMetricsInner(params);
+    });
+  }
+
+  private async getHistoricalMetricsInner(params: GetHistoricalMetricsInput): Promise<HistoricalDataPoint[]> {
     this.logger.info(
       {
         advertiserId: params.advertiserId,
@@ -589,6 +621,12 @@ export class BidManagerService {
    * with feedback loops, use the cesteral-mcp optimization server.
    */
   async getPacingStatus(params: GetPacingStatusInput): Promise<PacingStatus> {
+    return withBidManagerApiSpan("getPacingStatus", undefined, async () => {
+      return this.getPacingStatusInner(params);
+    });
+  }
+
+  private async getPacingStatusInner(params: GetPacingStatusInput): Promise<PacingStatus> {
     this.logger.info(
       { advertiserId: params.advertiserId, campaignId: params.campaignId },
       "Getting pacing status"
@@ -662,8 +700,10 @@ export class BidManagerService {
   async getPerformanceMetrics(
     params: GetDeliveryMetricsInput
   ): Promise<ReturnType<typeof calculatePerformanceMetrics>> {
-    const delivery = await this.getDeliveryMetrics(params);
-    return calculatePerformanceMetrics(delivery);
+    return withBidManagerApiSpan("getPerformanceMetrics", undefined, async () => {
+      const delivery = await this.getDeliveryMetrics(params);
+      return calculatePerformanceMetrics(delivery);
+    });
   }
 
   /**
@@ -672,7 +712,27 @@ export class BidManagerService {
    * This method accepts dynamic parameters allowing flexible query construction
    * for any combination of Bid Manager API filters and metrics.
    */
-  async executeCustomQuery(params: {
+  async executeCustomQuery(params_: {
+    reportType: string;
+    groupBys: string[];
+    metrics: string[];
+    filters?: Array<{ type: string; value: string }>;
+    dateRange: { preset?: string; startDate?: string; endDate?: string };
+    outputFormat?: "structured" | "csv";
+  }): Promise<{
+    queryId: string;
+    reportId: string;
+    status: string;
+    rowCount: number;
+    columns: string[];
+    data: Record<string, unknown>[] | string;
+  }> {
+    return withBidManagerApiSpan("executeCustomQuery", undefined, async () => {
+      return this.executeCustomQueryInner(params_);
+    });
+  }
+
+  private async executeCustomQueryInner(params: {
     reportType: string;
     groupBys: string[];
     metrics: string[];

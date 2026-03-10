@@ -3,6 +3,7 @@ import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
+import { withTikTokApiSpan } from "../../utils/telemetry/tracing.js";
 
 const TIKTOK_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -194,6 +195,29 @@ export class TikTokHttpClient {
   }
 
   private async executeRequest(
+    url: string,
+    context?: RequestContext,
+    options?: RequestInit
+  ): Promise<unknown> {
+    const method = options?.method || "GET";
+
+    return withTikTokApiSpan(`api.${method}`, url, async (span) => {
+      span.setAttribute("http.request.method", method);
+      span.setAttribute("http.url", url);
+      try {
+        const result = await this.executeRequestInner(url, context, options);
+        span.setAttribute("http.response.status_code", 200);
+        return result;
+      } catch (error: any) {
+        if (error?.data?.httpStatus) {
+          span.setAttribute("http.response.status_code", error.data.httpStatus);
+        }
+        throw error;
+      }
+    });
+  }
+
+  private async executeRequestInner(
     url: string,
     context?: RequestContext,
     options?: RequestInit

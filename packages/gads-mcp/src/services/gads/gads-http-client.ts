@@ -2,6 +2,7 @@ import type { Logger } from "pino";
 import type { GAdsAuthAdapter } from "../../auth/gads-auth-adapter.js";
 import { JsonRpcErrorCode, executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
+import { withGAdsApiSpan } from "../../utils/telemetry/tracing.js";
 
 const GADS_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -109,32 +110,46 @@ export class GAdsHttpClient {
     options?: RequestInit
   ): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
+    const method = options?.method || "GET";
 
     this.logger.debug(
-      { url, method: options?.method || "GET", requestId: context?.requestId },
+      { url, method, requestId: context?.requestId },
       "Making Google Ads API request"
     );
 
-    return executeWithRetry(GADS_RETRY_CONFIG, {
-      url,
-      fetchOptions: options,
-      context,
-      logger: this.logger,
-      fetchFn: fetchWithTimeout,
-      getHeaders: async () => {
-        const accessToken = await this.authAdapter.getAccessToken();
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          "developer-token": this.authAdapter.developerToken,
-        };
-        if (this.authAdapter.loginCustomerId) {
-          headers["login-customer-id"] = this.authAdapter.loginCustomerId;
+    return withGAdsApiSpan(`api.${method}`, path, async (span) => {
+      span.setAttribute("http.request.method", method);
+      span.setAttribute("http.url", url);
+      try {
+        const result = await executeWithRetry(GADS_RETRY_CONFIG, {
+          url,
+          fetchOptions: options,
+          context,
+          logger: this.logger,
+          fetchFn: fetchWithTimeout,
+          getHeaders: async () => {
+            const accessToken = await this.authAdapter.getAccessToken();
+            const headers: Record<string, string> = {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+              "developer-token": this.authAdapter.developerToken,
+            };
+            if (this.authAdapter.loginCustomerId) {
+              headers["login-customer-id"] = this.authAdapter.loginCustomerId;
+            }
+            return headers;
+          },
+          mapStatusCode: (status) => mapGAdsStatusCode(status),
+          parseErrorBody: parseGAdsErrors,
+        });
+        span.setAttribute("http.response.status_code", 200);
+        return result;
+      } catch (error: any) {
+        if (error?.data?.httpStatus) {
+          span.setAttribute("http.response.status_code", error.data.httpStatus);
         }
-        return headers;
-      },
-      mapStatusCode: (status) => mapGAdsStatusCode(status),
-      parseErrorBody: parseGAdsErrors,
+        throw error;
+      }
     });
   }
 }

@@ -3,6 +3,7 @@ import type { GoogleAuthAdapter } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
+import { withDV360ApiSpan } from "../../utils/telemetry/tracing.js";
 
 /**
  * Retry configuration for transient errors (429 / 5xx).
@@ -61,13 +62,27 @@ export class DV360HttpClient {
     options?: RequestInit
   ): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
+    const method = options?.method || "GET";
 
     this.logger.debug(
-      { url, method: options?.method || "GET", requestId: context?.requestId },
+      { url, method, requestId: context?.requestId },
       "Making DV360 API request"
     );
 
-    return this.executeWithRetry(url, 10_000, context, options);
+    return withDV360ApiSpan(`api.${method}`, path, async (span) => {
+      span.setAttribute("http.request.method", method);
+      span.setAttribute("http.url", url);
+      try {
+        const result = await this.executeWithRetry(url, 10_000, context, options);
+        span.setAttribute("http.response.status_code", 200);
+        return result;
+      } catch (error: any) {
+        if (error?.data?.httpStatus) {
+          span.setAttribute("http.response.status_code", error.data.httpStatus);
+        }
+        throw error;
+      }
+    });
   }
 
   /**

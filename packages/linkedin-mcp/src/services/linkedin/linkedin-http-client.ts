@@ -3,6 +3,7 @@ import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
 import { JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
+import { withLinkedInApiSpan } from "../../utils/telemetry/tracing.js";
 
 /** LinkedIn error response shape */
 interface LinkedInApiError {
@@ -187,33 +188,45 @@ export class LinkedInHttpClient {
     options?: RequestInit
   ): Promise<unknown> {
     const apiVersion = this.apiVersion;
+    const method = options?.method || "GET";
 
-    const result = await executeWithRetry(LINKEDIN_RETRY_CONFIG, {
-      url,
-      fetchOptions: options,
-      context,
-      logger: this.logger,
-      fetchFn: fetchWithTimeout,
-      getHeaders: async () => {
-        const accessToken = await this.authAdapter.getAccessToken();
-        return {
-          Authorization: `Bearer ${accessToken}`,
-          "LinkedIn-Version": apiVersion,
-          "X-Restli-Protocol-Version": "2.0.0",
-        };
-      },
-      mapStatusCode: (status: number, _body: string) => mapLinkedInErrorToJsonRpc(status),
-      parseErrorBody: (body: string) => {
-        try {
-          const parsed = JSON.parse(body) as LinkedInApiError;
-          return parsed.message ?? body.substring(0, 500);
-        } catch {
-          return body.substring(0, 500);
+    return withLinkedInApiSpan(`api.${method}`, url, async (span) => {
+      span.setAttribute("http.request.method", method);
+      span.setAttribute("http.url", url);
+      try {
+        const result = await executeWithRetry(LINKEDIN_RETRY_CONFIG, {
+          url,
+          fetchOptions: options,
+          context,
+          logger: this.logger,
+          fetchFn: fetchWithTimeout,
+          getHeaders: async () => {
+            const accessToken = await this.authAdapter.getAccessToken();
+            return {
+              Authorization: `Bearer ${accessToken}`,
+              "LinkedIn-Version": apiVersion,
+              "X-Restli-Protocol-Version": "2.0.0",
+            };
+          },
+          mapStatusCode: (status: number, _body: string) => mapLinkedInErrorToJsonRpc(status),
+          parseErrorBody: (body: string) => {
+            try {
+              const parsed = JSON.parse(body) as LinkedInApiError;
+              return parsed.message ?? body.substring(0, 500);
+            } catch {
+              return body.substring(0, 500);
+            }
+          },
+        });
+        span.setAttribute("http.response.status_code", 200);
+        return result;
+      } catch (error: any) {
+        if (error?.data?.httpStatus) {
+          span.setAttribute("http.response.status_code", error.data.httpStatus);
         }
-      },
+        throw error;
+      }
     });
-
-    return result;
   }
 
 }
