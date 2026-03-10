@@ -21,31 +21,38 @@ Management and reporting server for Google Ads. Provides full CRUD operations on
 ### Read Tools
 
 #### 1. `gads_gaql_search`
+
 Execute arbitrary GAQL queries against the Google Ads API.
 
 **Parameters:**
+
 - `customerId` (string): Google Ads customer ID (no dashes)
 - `query` (string): GAQL query string
 - `pageSize` (number, optional): Results per page (default 1000, max 10000)
 - `pageToken` (string, optional): Pagination token
 
 #### 2. `gads_list_accounts`
+
 List all Google Ads customer accounts accessible to the authenticated user.
 
 **Parameters:** None
 
 #### 3. `gads_get_entity`
+
 Get a single Google Ads entity by type and ID.
 
 **Parameters:**
+
 - `entityType` (string): Type of entity to retrieve
 - `customerId` (string): Google Ads customer ID
 - `entityId` (string): The entity ID
 
 #### 4. `gads_list_entities`
+
 List entities with optional GAQL filters and pagination.
 
 **Parameters:**
+
 - `entityType` (string): Type of entities to list
 - `customerId` (string): Google Ads customer ID
 - `filters` (object, optional): GAQL filter conditions
@@ -54,9 +61,11 @@ List entities with optional GAQL filters and pagination.
 - `orderBy` (string, optional): GAQL ORDER BY clause
 
 #### 5. `gads_get_insights`
+
 Get performance insights for Google Ads entities using preset parameters. Convenience wrapper around GAQL.
 
 **Parameters:**
+
 - `customerId` (string): Google Ads customer ID
 - `entityType` (string): Entity type (`campaign`, `adGroup`, `ad`, `keyword`)
 - `entityId` (string, optional): Filter to a specific entity
@@ -67,17 +76,21 @@ Get performance insights for Google Ads entities using preset parameters. Conven
 ### Write Tools
 
 #### 6. `gads_create_entity`
+
 Create a new Google Ads entity via the :mutate API.
 
 **Parameters:**
+
 - `entityType` (string): Type of entity to create
 - `customerId` (string): Google Ads customer ID
 - `data` (object): Entity data fields
 
 #### 7. `gads_update_entity`
+
 Update an existing entity with updateMask discipline.
 
 **Parameters:**
+
 - `entityType` (string): Type of entity to update
 - `customerId` (string): Google Ads customer ID
 - `entityId` (string): The entity ID
@@ -85,35 +98,43 @@ Update an existing entity with updateMask discipline.
 - `updateMask` (string): Comma-separated list of fields to update
 
 #### 8. `gads_remove_entity`
+
 Remove an entity via the :mutate API (sets status to REMOVED).
 
 **Parameters:**
+
 - `entityType` (string): Type of entity to remove
 - `customerId` (string): Google Ads customer ID
 - `entityId` (string): The entity ID
 
 #### 9. `gads_bulk_mutate`
+
 Execute multiple create/update/remove operations in a single API call.
 
 **Parameters:**
+
 - `entityType` (string): Type of entities to mutate
 - `customerId` (string): Google Ads customer ID
 - `operations` (array): Array of mutate operation objects
 - `partialFailure` (boolean, optional): Allow partial success (default: false)
 
 #### 10. `gads_bulk_update_status`
+
 Batch update statuses for multiple entities.
 
 **Parameters:**
+
 - `entityType` (string): Type of entities to update
 - `customerId` (string): Google Ads customer ID
 - `entityIds` (string[]): Entity IDs to update (max 100)
 - `status` (string): `ENABLED`, `PAUSED`, or `REMOVED`
 
 #### 11. `gads_adjust_bids`
+
 Batch adjust ad group bids with safe read-modify-write pattern.
 
 **Parameters:**
+
 - `customerId` (string): Google Ads customer ID
 - `adjustments` (array): Array of bid adjustments (max 50), each with `adGroupId` and optional `cpcBidMicros`/`cpmBidMicros`
 - `reason` (string, optional): Reason for the bid adjustment (for audit trail)
@@ -121,9 +142,11 @@ Batch adjust ad group bids with safe read-modify-write pattern.
 ### Validate Tools
 
 #### 12. `gads_validate_entity`
+
 Dry-run validate an entity payload via the Google Ads API with `validateOnly: true`.
 
 **Parameters:**
+
 - `entityType` (string): Type of entity to validate
 - `customerId` (string): Google Ads customer ID
 - `mode` (string): `create` or `update`
@@ -133,14 +156,14 @@ Dry-run validate an entity payload via the Google Ads API with `validateOnly: tr
 
 ## Supported Entity Types
 
-| Entity Type | GAQL Resource | Mutate Endpoint | Notes |
-|-------------|---------------|-----------------|-------|
-| `campaign` | `campaign` | `campaigns:mutate` | Requires campaignBudget reference |
-| `adGroup` | `ad_group` | `adGroups:mutate` | Requires campaign reference |
-| `ad` | `ad_group_ad` | `adGroupAds:mutate` | Composite ID: `{adGroupId}~{adId}` |
-| `keyword` | `ad_group_criterion` | `adGroupCriteria:mutate` | Composite ID: `{adGroupId}~{criterionId}` |
-| `campaignBudget` | `campaign_budget` | `campaignBudgets:mutate` | Create before campaign |
-| `asset` | `asset` | `assets:mutate` | Reusable text/image/sitelink/callout |
+| Entity Type      | GAQL Resource        | Mutate Endpoint          | Notes                                     |
+| ---------------- | -------------------- | ------------------------ | ----------------------------------------- |
+| `campaign`       | `campaign`           | `campaigns:mutate`       | Requires campaignBudget reference         |
+| `adGroup`        | `ad_group`           | `adGroups:mutate`        | Requires campaign reference               |
+| `ad`             | `ad_group_ad`        | `adGroupAds:mutate`      | Composite ID: `{adGroupId}~{adId}`        |
+| `keyword`        | `ad_group_criterion` | `adGroupCriteria:mutate` | Composite ID: `{adGroupId}~{criterionId}` |
+| `campaignBudget` | `campaign_budget`    | `campaignBudgets:mutate` | Create before campaign                    |
+| `asset`          | `asset`              | `assets:mutate`          | Reusable text/image/sitelink/callout      |
 
 **Entity Hierarchy:** Customer > Campaign Budget > Campaign > Ad Group > Ad / Keyword
 
@@ -213,4 +236,4 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 ## License
 
-Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.
+Apache License 2.0 — see [LICENSE](../../LICENSE.md) for details. This package is part of Cesteral's open-source connector layer; managed hosting and higher-level governance features live outside this repository.

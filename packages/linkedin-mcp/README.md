@@ -21,58 +21,72 @@ Management server for LinkedIn Ads. Provides 18 tools across 5 entity types for 
 ### Core CRUD
 
 #### 1. `linkedin_list_entities`
+
 List LinkedIn entities with optional filtering and offset-based pagination.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entity to list
 - `adAccountUrn` (string, optional): Ad Account URN to scope results
 - `start` (number, optional): Offset for pagination (default 0)
 - `count` (number, optional): Results per page (default 25)
 
 #### 2. `linkedin_get_entity`
+
 Get a single LinkedIn entity by URN.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entity to retrieve
 - `entityUrn` (string, required): The entity URN (e.g., `urn:li:sponsoredCampaign:123`)
 
 #### 3. `linkedin_create_entity`
+
 Create a new LinkedIn entity.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entity to create
 - `data` (object, required): Entity fields as key-value pairs
 
 #### 4. `linkedin_update_entity`
+
 Update an existing LinkedIn entity (PATCH via Rest.li partial update).
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entity to update
 - `entityUrn` (string, required): The entity URN to update
 - `data` (object, required): Fields to update as key-value pairs
 
 #### 5. `linkedin_delete_entity`
+
 Delete a LinkedIn entity.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entity to delete
 - `entityUrn` (string, required): The entity URN to delete
 
 ### Account
 
 #### 6. `linkedin_list_ad_accounts`
+
 List ad accounts accessible to the authenticated user.
 
 **Parameters:**
+
 - `start` (number, optional): Offset for pagination (default 0)
 - `count` (number, optional): Number of accounts to return (default 25)
 
 ### Analytics
 
 #### 7. `linkedin_get_analytics`
+
 Get delivery metrics for LinkedIn Ads entities via `/v2/adAnalytics`.
 
 **Parameters:**
+
 - `adAccountUrn` (string, required): Ad Account URN
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
@@ -80,9 +94,11 @@ Get delivery metrics for LinkedIn Ads entities via `/v2/adAnalytics`.
 - `pivot` (string, optional): Pivot dimension (e.g., `CAMPAIGN`, `CREATIVE`)
 
 #### 8. `linkedin_get_analytics_breakdowns`
+
 Get delivery metrics broken down by dimension (geo, device, member demographics, etc.).
 
 **Parameters:**
+
 - `adAccountUrn` (string, required): Ad Account URN
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
@@ -93,93 +109,113 @@ Get delivery metrics broken down by dimension (geo, device, member demographics,
 ### Bulk Operations
 
 #### 9. `linkedin_bulk_update_status`
+
 Batch update status for multiple LinkedIn Ads entities.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entities to update
 - `entityUrns` (string[], required): Entity URNs to update (max 50)
 - `status` (string, required): `ACTIVE`, `PAUSED`, or `ARCHIVED`
 
 #### 10. `linkedin_bulk_create_entities`
+
 Batch create multiple entities of the same type.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entities to create
 - `items` (array, required): Array of entity data objects (max 50)
 
 #### 11. `linkedin_bulk_update_entities`
+
 Batch update multiple entities with individual data payloads.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entities being updated
 - `items` (array, required): Array of update items (max 50), each with `entityUrn` and `data`
 
 #### 12. `linkedin_adjust_bids`
+
 Batch adjust campaign bid amounts with percentage or absolute changes (safe read-modify-write).
 
 **Parameters:**
+
 - `adjustments` (array, required): Array of bid adjustments (max 50), each with campaign URN, `adjustmentType` (percentage/absolute), and `value`
 
 ### Targeting
 
 #### 13. `linkedin_search_targeting`
+
 Search for targeting audience facets (skills, companies, locations, job titles) by keyword.
 
 **Parameters:**
+
 - `facetType` (string, required): Facet type to search (e.g., `skills`, `companies`, `locations`, `industries`)
 - `query` (string, optional): Search keyword
 - `limit` (number, optional): Max results (default 25)
 
 #### 14. `linkedin_get_targeting_options`
+
 Browse available targeting categories for an ad account.
 
 **Parameters:**
+
 - `adAccountUrn` (string, required): Ad Account URN
 - `facetType` (string, optional): Filter by facet type
 
 ### Specialized
 
 #### 15. `linkedin_duplicate_entity`
+
 Duplicate a campaign group, campaign, or creative.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entity to duplicate (`campaignGroup`, `campaign`, `creative`)
 - `entityUrn` (string, required): URN of the entity to duplicate
 - `options` (object, optional): Duplication options (e.g., rename prefix/suffix, status)
 
 #### 16. `linkedin_get_delivery_forecast`
+
 Get audience size and delivery forecast for a targeting configuration.
 
 **Parameters:**
+
 - `adAccountUrn` (string, required): Ad Account URN
 - `targetingCriteria` (object, required): Targeting criteria specification
 
 #### 17. `linkedin_get_ad_previews`
+
 Get ad preview rendering for a creative.
 
 **Parameters:**
+
 - `creativeUrn` (string, required): Creative URN to preview
 - `adFormat` (string, optional): Ad format for preview rendering
 
 ### Validation
 
 #### 18. `linkedin_validate_entity`
+
 Client-side validation of entity payloads without making API calls.
 
 **Parameters:**
+
 - `entityType` (string, required): Type of entity to validate
 - `mode` (string, required): Validation mode (`create` or `update`)
 - `data` (object, required): Entity data to validate
 
 ## Supported Entity Types
 
-| Entity Type | API Object | Notes |
-|-------------|-----------|-------|
-| `adAccount` | Ad Account | Top-level advertising account |
-| `campaignGroup` | Campaign Group | Groups campaigns for budget and scheduling |
-| `campaign` | Campaign | Targeting, bidding, budget, objective |
-| `creative` | Creative | Ad creative content (sponsored content, message ads, etc.) |
-| `conversionRule` | Conversion Rule | Conversion tracking rules for attribution |
+| Entity Type      | API Object      | Notes                                                      |
+| ---------------- | --------------- | ---------------------------------------------------------- |
+| `adAccount`      | Ad Account      | Top-level advertising account                              |
+| `campaignGroup`  | Campaign Group  | Groups campaigns for budget and scheduling                 |
+| `campaign`       | Campaign        | Targeting, bidding, budget, objective                      |
+| `creative`       | Creative        | Ad creative content (sponsored content, message ads, etc.) |
+| `conversionRule` | Conversion Rule | Conversion tracking rules for attribution                  |
 
 **Entity Hierarchy:** Ad Account > Campaign Group > Campaign > Creative (+ Conversion Rules)
 
@@ -248,4 +284,4 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 ## License
 
-Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.
+Apache License 2.0 — see [LICENSE](../../LICENSE.md) for details. This package is part of Cesteral's open-source connector layer; managed hosting and higher-level governance features live outside this repository.

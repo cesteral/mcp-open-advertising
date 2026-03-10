@@ -52,46 +52,46 @@ The server is built with production-grade architecture and complete functionalit
 
 ### Entity Management (CRUD)
 
-| Tool | Description |
-|------|-------------|
+| Tool                  | Description                                           |
+| --------------------- | ----------------------------------------------------- |
 | `dv360_list_entities` | List entities of any type with filters and pagination |
-| `dv360_get_entity` | Get a specific entity by ID |
-| `dv360_create_entity` | Create a new entity |
-| `dv360_update_entity` | Update an entity with updateMask discipline |
-| `dv360_delete_entity` | Delete an entity |
+| `dv360_get_entity`    | Get a specific entity by ID                           |
+| `dv360_create_entity` | Create a new entity                                   |
+| `dv360_update_entity` | Update an entity with updateMask discipline           |
+| `dv360_delete_entity` | Delete an entity                                      |
 
 ### Batch Operations
 
-| Tool | Description |
-|------|-------------|
+| Tool                          | Description                               |
+| ----------------------------- | ----------------------------------------- |
 | `dv360_adjust_line_item_bids` | Batch adjust bids for multiple line items |
-| `dv360_bulk_update_status` | Batch update status for multiple entities |
-| `dv360_bulk_create_entities` | Batch create DV360 entities |
-| `dv360_bulk_update_entities` | Batch update DV360 entities |
+| `dv360_bulk_update_status`    | Batch update status for multiple entities |
+| `dv360_bulk_create_entities`  | Batch create DV360 entities               |
+| `dv360_bulk_update_entities`  | Batch update DV360 entities               |
 
 ### Custom Bidding Algorithms
 
-| Tool | Description |
-|------|-------------|
-| `dv360_create_custom_bidding_algorithm` | Create a custom bidding algorithm |
-| `dv360_manage_custom_bidding_script` | Upload/manage custom bidding scripts |
-| `dv360_manage_custom_bidding_rules` | Manage custom bidding rules |
-| `dv360_list_custom_bidding_algorithms` | List custom bidding algorithms |
+| Tool                                    | Description                          |
+| --------------------------------------- | ------------------------------------ |
+| `dv360_create_custom_bidding_algorithm` | Create a custom bidding algorithm    |
+| `dv360_manage_custom_bidding_script`    | Upload/manage custom bidding scripts |
+| `dv360_manage_custom_bidding_rules`     | Manage custom bidding rules          |
+| `dv360_list_custom_bidding_algorithms`  | List custom bidding algorithms       |
 
 ### Targeting
 
-| Tool | Description |
-|------|-------------|
-| `dv360_list_assigned_targeting` | List assigned targeting options |
-| `dv360_get_assigned_targeting` | Get a specific assigned targeting option |
-| `dv360_create_assigned_targeting` | Assign a targeting option |
-| `dv360_delete_assigned_targeting` | Remove an assigned targeting option |
-| `dv360_validate_targeting_config` | Validate a targeting configuration |
+| Tool                              | Description                              |
+| --------------------------------- | ---------------------------------------- |
+| `dv360_list_assigned_targeting`   | List assigned targeting options          |
+| `dv360_get_assigned_targeting`    | Get a specific assigned targeting option |
+| `dv360_create_assigned_targeting` | Assign a targeting option                |
+| `dv360_delete_assigned_targeting` | Remove an assigned targeting option      |
+| `dv360_validate_targeting_config` | Validate a targeting configuration       |
 
 ### Validation
 
-| Tool | Description |
-|------|-------------|
+| Tool                    | Description                                 |
+| ----------------------- | ------------------------------------------- |
 | `dv360_validate_entity` | Client-side schema validation (no API call) |
 
 ## Key Gotchas
@@ -120,11 +120,11 @@ The server supports 11 DV360 entity types through the dynamic entity system:
 
 ## Authentication Modes
 
-| Mode | Header | Description |
-|------|--------|-------------|
-| `google-headers` (default) | `X-DV360-*` | Google OAuth2 credentials via request headers |
-| `jwt` | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
-| `none` | — | No authentication (development only) |
+| Mode                       | Header                        | Description                                     |
+| -------------------------- | ----------------------------- | ----------------------------------------------- |
+| `google-headers` (default) | `X-DV360-*`                   | Google OAuth2 credentials via request headers   |
+| `jwt`                      | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
+| `none`                     | —                             | No authentication (development only)            |
 
 Set via `MCP_AUTH_MODE` environment variable.
 
@@ -396,4 +396,4 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 ## License
 
-Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.
+Apache License 2.0 — see [LICENSE](../../LICENSE.md) for details. This package is part of Cesteral's open-source connector layer; managed hosting and higher-level governance features live outside this repository.

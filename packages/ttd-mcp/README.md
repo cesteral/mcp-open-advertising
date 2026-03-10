@@ -19,57 +19,57 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Core CRUD
 
-| Tool | Description |
-|------|-------------|
-| `ttd_list_entities` | List TTD entities with optional filtering and pagination |
-| `ttd_get_entity` | Get a single TTD entity by ID |
-| `ttd_create_entity` | Create a new TTD entity |
-| `ttd_update_entity` | Update an existing TTD entity (PUT) |
-| `ttd_delete_entity` | Delete a TTD entity by ID |
-| `ttd_validate_entity` | Dry-run validate entity payload without persisting |
+| Tool                  | Description                                              |
+| --------------------- | -------------------------------------------------------- |
+| `ttd_list_entities`   | List TTD entities with optional filtering and pagination |
+| `ttd_get_entity`      | Get a single TTD entity by ID                            |
+| `ttd_create_entity`   | Create a new TTD entity                                  |
+| `ttd_update_entity`   | Update an existing TTD entity (PUT)                      |
+| `ttd_delete_entity`   | Delete a TTD entity by ID                                |
+| `ttd_validate_entity` | Dry-run validate entity payload without persisting       |
 
 ### Reporting
 
-| Tool | Description |
-|------|-------------|
-| `ttd_get_report` | Generate async report via MyReports V3 API |
-| `ttd_download_report` | Download and parse report CSV from URL |
-| `ttd_submit_report` | Submit report without waiting (non-blocking) |
-| `ttd_check_report_status` | Single status check for a submitted report |
+| Tool                      | Description                                  |
+| ------------------------- | -------------------------------------------- |
+| `ttd_get_report`          | Generate async report via MyReports V3 API   |
+| `ttd_download_report`     | Download and parse report CSV from URL       |
+| `ttd_submit_report`       | Submit report without waiting (non-blocking) |
+| `ttd_check_report_status` | Single status check for a submitted report   |
 
 ### Bulk Operations
 
-| Tool | Description |
-|------|-------------|
-| `ttd_bulk_create_entities` | Batch create campaigns/ad groups (up to 50) |
-| `ttd_bulk_update_entities` | Batch update campaigns/ad groups (up to 50) |
-| `ttd_bulk_update_status` | Batch pause/resume/archive entities |
-| `ttd_archive_entities` | Batch archive (soft-delete) entities |
-| `ttd_adjust_bids` | Batch adjust ad group bid CPMs (safe read-modify-write) |
+| Tool                       | Description                                             |
+| -------------------------- | ------------------------------------------------------- |
+| `ttd_bulk_create_entities` | Batch create campaigns/ad groups (up to 50)             |
+| `ttd_bulk_update_entities` | Batch update campaigns/ad groups (up to 50)             |
+| `ttd_bulk_update_status`   | Batch pause/resume/archive entities                     |
+| `ttd_archive_entities`     | Batch archive (soft-delete) entities                    |
+| `ttd_adjust_bids`          | Batch adjust ad group bid CPMs (safe read-modify-write) |
 
 ### Advanced (GraphQL)
 
-| Tool | Description |
-|------|-------------|
-| `ttd_graphql_query` | Execute GraphQL query/mutation against TTD GraphQL API |
-| `ttd_graphql_query_bulk` | Execute bulk GraphQL queries |
-| `ttd_graphql_mutation_bulk` | Execute bulk GraphQL mutations |
-| `ttd_graphql_bulk_job` | Submit a GraphQL bulk job |
-| `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job |
+| Tool                          | Description                                            |
+| ----------------------------- | ------------------------------------------------------ |
+| `ttd_graphql_query`           | Execute GraphQL query/mutation against TTD GraphQL API |
+| `ttd_graphql_query_bulk`      | Execute bulk GraphQL queries                           |
+| `ttd_graphql_mutation_bulk`   | Execute bulk GraphQL mutations                         |
+| `ttd_graphql_bulk_job`        | Submit a GraphQL bulk job                              |
+| `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job                      |
 
 ## Supported Entity Types
 
-| Entity Type | API Path | ID Field |
-|-------------|----------|----------|
-| `advertiser` | `/advertiser` | `AdvertiserId` |
-| `campaign` | `/campaign` | `CampaignId` |
-| `adGroup` | `/adgroup` | `AdGroupId` |
-| `ad` | `/ad` | `AdId` |
-| `creative` | `/creative` | `CreativeId` |
-| `siteList` | `/sitelist` | `SiteListId` |
-| `deal` | `/deal` | `DealId` |
+| Entity Type         | API Path               | ID Field        |
+| ------------------- | ---------------------- | --------------- |
+| `advertiser`        | `/advertiser`          | `AdvertiserId`  |
+| `campaign`          | `/campaign`            | `CampaignId`    |
+| `adGroup`           | `/adgroup`             | `AdGroupId`     |
+| `ad`                | `/ad`                  | `AdId`          |
+| `creative`          | `/creative`            | `CreativeId`    |
+| `siteList`          | `/sitelist`            | `SiteListId`    |
+| `deal`              | `/deal`                | `DealId`        |
 | `conversionTracker` | `/tracking/conversion` | `TrackingTagId` |
-| `bidList` | `/bidlist` | `BidListId` |
+| `bidList`           | `/bidlist`             | `BidListId`     |
 
 **Entity Hierarchy:** partner > advertiser > campaign > adGroup > ad
 
@@ -138,4 +138,4 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 ## License
 
-Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.
+Apache License 2.0 — see [LICENSE](../../LICENSE.md) for details. This package is part of Cesteral's open-source connector layer; managed hosting and higher-level governance features live outside this repository.

@@ -60,4 +60,4 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 ## License
 
-Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.
+Apache License 2.0 — see [LICENSE](../../LICENSE.md) for details. This package is part of Cesteral's open-source connector layer; managed hosting and higher-level governance features live outside this repository.

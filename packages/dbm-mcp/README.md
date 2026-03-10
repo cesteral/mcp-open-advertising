@@ -18,41 +18,51 @@ Read-only reporting server that provides delivery metrics, performance calculati
 ## MCP Tools
 
 ### 1. `get_campaign_delivery`
+
 Fetch delivery metrics (impressions, clicks, spend, conversions) for a campaign within a date range.
 
 **Parameters:**
+
 - `campaignId` (string): Campaign ID
 - `advertiserId` (string): DV360 Advertiser ID
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
 
 ### 2. `get_performance_metrics`
+
 Calculate performance KPIs (CPM, CTR, CPA, ROAS) from delivery data.
 
 **Parameters:**
+
 - `campaignId` (string): Campaign ID
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
 
 ### 3. `get_historical_metrics`
+
 Fetch time-series historical metrics for trend analysis.
 
 **Parameters:**
+
 - `campaignId` (string): Campaign ID
 - `startDate` (string): Start date (YYYY-MM-DD)
 - `endDate` (string): End date (YYYY-MM-DD)
 - `granularity` (string, optional): "daily" or "hourly" (default: "daily")
 
 ### 4. `get_pacing_status`
+
 Get real-time pacing status for a campaign (actual vs expected delivery).
 
 **Parameters:**
+
 - `campaignId` (string): Campaign ID
 
 ### 5. `run_custom_query`
+
 Compose and execute a custom Bid Manager report with specified metrics, dimensions, and filters.
 
 **Parameters:**
+
 - `reportType` (string): Report type
 - `timeRange` (object): Time range for the report
 - `metrics` (string[]): Metrics to include
@@ -62,11 +72,11 @@ Compose and execute a custom Bid Manager report with specified metrics, dimensio
 
 ## Authentication Modes
 
-| Mode | Header | Description |
-|------|--------|-------------|
-| `google-headers` (default) | `X-DV360-*` | Google OAuth2 credentials via request headers |
-| `jwt` | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
-| `none` | — | No authentication (development only) |
+| Mode                       | Header                        | Description                                     |
+| -------------------------- | ----------------------------- | ----------------------------------------------- |
+| `google-headers` (default) | `X-DV360-*`                   | Google OAuth2 credentials via request headers   |
+| `jwt`                      | `Authorization: Bearer <JWT>` | JWT token authentication for hosted deployments |
+| `none`                     | —                             | No authentication (development only)            |
 
 Set via `MCP_AUTH_MODE` environment variable.
 
@@ -81,6 +91,7 @@ Set via `MCP_AUTH_MODE` environment variable.
 ## Architecture
 
 ### Transport
+
 - **Streamable HTTP**: MCP protocol via Streamable HTTP transport at `/mcp`
 - **Health check**: `/health` endpoint
 
@@ -93,9 +104,11 @@ Set via `MCP_AUTH_MODE` environment variable.
 - Read-only server — no entity mutation; use `dv360-mcp` for write operations
 
 ### Data Sources
+
 - Bid Manager API v2: DV360 reporting queries
 
 ### Current Status
+
 **Phase: Production-Ready**
 
 All tools are fully implemented using Bid Manager API v2 for DV360 reporting. Entity retrieval is handled by the separate `@cesteral/dv360-mcp` server.
@@ -125,6 +138,7 @@ pnpm run lint
 ## Environment Variables
 
 See root `.env.example` for all required variables:
+
 - `DBM_MCP_PORT`: Server port (default: 3001)
 - `DBM_MCP_HOST`: Server host (default: 0.0.0.0)
 - `GCP_PROJECT_ID`: Google Cloud project ID
@@ -151,4 +165,4 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 ## License
 
-Business Source License 1.1 — see [LICENSE](../../LICENSE) for details.
+Apache License 2.0 — see [LICENSE](../../LICENSE.md) for details. This package is part of Cesteral's open-source connector layer; managed hosting and higher-level governance features live outside this repository.

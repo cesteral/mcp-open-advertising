@@ -16,6 +16,15 @@ Cesteral is a **Model Context Protocol (MCP) based optimization platform** that 
 
 This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
 
+## Open Source And Commercial Model
+
+- `cesteral-mcp-servers` is open source under [Apache License 2.0](LICENSE.md)
+- The repository is intended to be fully self-hostable for teams that want transparency and control
+- Cesteral's commercial offering is the layer above these connectors: managed hosting, governance workflows, orchestration, and enterprise operations
+- `cesteral-intelligence` remains proprietary
+
+If you want the reasoning behind this split, see [docs/business/cesteral-licensing-strategy.md](docs/business/cesteral-licensing-strategy.md).
+
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
