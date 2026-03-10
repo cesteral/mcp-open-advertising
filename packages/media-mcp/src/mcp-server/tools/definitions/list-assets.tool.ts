@@ -16,6 +16,7 @@ export const ListAssetsInputSchema = z.object({
 export const ListAssetsOutputSchema = z.object({
   assets: z.array(z.object({
     assetId: z.string(),
+    storagePath: z.string().describe("Storage path — use with media_get_asset, media_tag_asset, media_delete_asset"),
     publicUrl: z.string(),
     contentType: z.string(),
     sizeBytes: z.number(),

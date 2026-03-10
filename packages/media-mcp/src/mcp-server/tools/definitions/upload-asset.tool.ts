@@ -23,6 +23,7 @@ export const UploadAssetInputSchema = z.object({
 
 export const UploadAssetOutputSchema = z.object({
   assetId: z.string().describe("Unique asset identifier (UUID)"),
+  storagePath: z.string().describe("Storage path used by media_get_asset, media_tag_asset, and media_delete_asset"),
   publicUrl: z.string().describe("Permanent public URL of the uploaded asset"),
   contentType: z.string().describe("MIME type of the uploaded file"),
   sizeBytes: z.number().describe("File size in bytes"),
@@ -45,6 +46,7 @@ export async function uploadAssetLogic(
   const result = await mediaService.uploadAsset(input, context);
   return {
     assetId: result.assetId,
+    storagePath: result.storagePath,
     publicUrl: result.publicUrl,
     contentType: result.contentType,
     sizeBytes: result.sizeBytes,

@@ -26,15 +26,13 @@ export const GetAdPreviewInputSchema = z
 
 export const GetAdPreviewOutputSchema = z
   .object({
-    adPreviewHtml: z.string().optional().describe("HTML preview placeholder with ad resource name"),
-    previewUrl: z.string().optional().describe("Preview URL if available"),
-    adType: z.string().optional().describe("Ad type"),
+    adType: z.string().optional().describe("Ad type (e.g., RESPONSIVE_SEARCH_AD, IMAGE_AD)"),
     finalUrls: z.array(z.string()).optional().describe("Final destination URLs for the ad"),
     adId: z.string(),
     customerId: z.string(),
-    resourceName: z.string().optional().describe("Ad resource name for use with generateAdPreview API"),
+    resourceName: z.string().describe("Ad resource name for use with generateAdPreview API (customers/{customerId}/ads/{adId})"),
   })
-  .describe("Google Ads ad preview");
+  .describe("Google Ads ad entity data. Use resourceName with the Google Ads generateAdPreview API to obtain an HTML preview.");
 
 type GetAdPreviewInput = z.infer<typeof GetAdPreviewInputSchema>;
 type GetAdPreviewOutput = z.infer<typeof GetAdPreviewOutputSchema>;
@@ -67,8 +65,6 @@ export async function getAdPreviewLogic(
   const resourceName = ad?.resourceName ?? `customers/${input.customerId}/ads/${input.adId}`;
 
   return {
-    adPreviewHtml: `<!-- Ad resource: ${resourceName} -->\n<p>Use the Google Ads generateAdPreview API with resource name "${resourceName}" for a full HTML preview.</p>`,
-    previewUrl: undefined,
     adType: ad?.type,
     finalUrls: ad?.finalUrls,
     adId: input.adId,
@@ -90,12 +86,7 @@ export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): unkno
   if (result.finalUrls && result.finalUrls.length > 0) {
     lines.push(`Final URLs: ${result.finalUrls.join(", ")}`);
   }
-  if (result.previewUrl) {
-    lines.push("", `Preview URL: ${result.previewUrl}`);
-  }
-  if (result.adPreviewHtml) {
-    lines.push("", result.adPreviewHtml);
-  }
+  lines.push("", `Use resourceName with the Google Ads generateAdPreview API for an HTML render.`);
 
   return [
     {

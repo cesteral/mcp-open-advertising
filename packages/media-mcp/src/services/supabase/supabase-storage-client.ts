@@ -3,6 +3,7 @@ import type { Logger } from "pino";
 
 export interface AssetMetadata {
   assetId: string;
+  storagePath: string;
   publicUrl: string;
   contentType: string;
   sizeBytes: number;
@@ -51,7 +52,8 @@ export class SupabaseStorageClient {
   async listFiles(
     prefix: string,
     limit = 50,
-    offset = 0
+    offset = 0,
+    search?: string
   ): Promise<Array<{ name: string; metadata: Record<string, string> }>> {
     const { data, error } = await this.client.storage
       .from(this.bucketName)
@@ -59,6 +61,7 @@ export class SupabaseStorageClient {
         limit,
         offset,
         sortBy: { column: "created_at", order: "desc" },
+        ...(search !== undefined ? { search } : {}),
       });
 
     if (error) {
@@ -86,6 +89,37 @@ export class SupabaseStorageClient {
 
     if (error) {
       throw new Error(`Storage delete failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Write a small JSON sidecar file. Used for persistent tag storage.
+   * Upserts so tag updates replace the previous record.
+   */
+  async uploadJson(path: string, data: unknown): Promise<void> {
+    const buffer = Buffer.from(JSON.stringify(data));
+    const { error } = await this.client.storage
+      .from(this.bucketName)
+      .upload(path, buffer, { contentType: "application/json", upsert: true });
+
+    if (error) {
+      throw new Error(`Failed to write sidecar at ${path}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Read a JSON sidecar file. Returns null if the file does not exist.
+   */
+  async downloadJson(path: string): Promise<unknown> {
+    const { data, error } = await this.client.storage
+      .from(this.bucketName)
+      .download(path);
+
+    if (error || !data) return null;
+    try {
+      return JSON.parse(await data.text());
+    } catch {
+      return null;
     }
   }
 
