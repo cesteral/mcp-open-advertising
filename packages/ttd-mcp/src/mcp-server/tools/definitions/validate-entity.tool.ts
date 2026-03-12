@@ -1,24 +1,99 @@
+/**
+ * ttd_validate_entity — Client-side schema validation for TTD entities.
+ *
+ * TTD has no native dry-run / validate-only mode, so this tool
+ * validates payloads against known required-field rules before hitting the API.
+ * It is purely local — no API calls, no session services needed.
+ */
+
 import { z } from "zod";
-import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
+import type { RequestContext } from "@cesteral/shared";
+import {
+  type FieldRule,
+  validateRequiredFields,
+  checkReadOnlyFields,
+  validateEntityResponseFormatter as sharedValidateEntityResponseFormatter,
+} from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
-const TOOL_NAME = "ttd_validate_entity";
-const TOOL_TITLE = "Validate TTD Entity";
-const TOOL_DESCRIPTION = `⚠️ WARNING: This tool makes REAL API calls — it is NOT a safe dry-run. Successful calls WILL create or update real entities in TTD.
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
-Test a TTD entity payload against the TTD API.
+const TOOL_NAME = "ttd_validate_entity";
+const TOOL_TITLE = "TTD Entity Validation (Client-Side)";
+const TOOL_DESCRIPTION = `Validate an entity payload against known TTD requirements without calling the API. Checks required fields, data types, and common configuration mistakes.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Sends the payload to the TTD API and reports whether it succeeds or what validation errors exist.
+This is a pure client-side check — it catches missing required fields and
+obvious type errors. The TTD API may still reject payloads for business-rule
+reasons (e.g., invalid pacing mode / budget combinations).`;
 
-**Why this is not a dry-run:** TTD has no native dry-run/validate-only mode:
-- In **create** mode, a successful call **CREATES** the entity (permanent side effect).
-- In **update** mode, a successful call **UPDATES** the entity (permanent side effect).
+// ---------------------------------------------------------------------------
+// Required-field definitions per entity type (create mode)
+// ---------------------------------------------------------------------------
 
-Use this tool primarily to **diagnose validation failures** (400 errors) by testing payloads incrementally. If the call succeeds, the side effect has already occurred.`;
+const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
+  advertiser: [
+    { field: "PartnerID", expectedType: "string" },
+    { field: "AdvertiserName", expectedType: "string" },
+    { field: "CurrencyCode", expectedType: "string", hint: "e.g., USD, EUR, GBP" },
+  ],
+  campaign: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "CampaignName", expectedType: "string" },
+    { field: "Budget", expectedType: "object", hint: "{ Amount, CurrencyCode }" },
+    { field: "StartDate", expectedType: "string", hint: "ISO-8601 datetime" },
+    { field: "PacingMode", expectedType: "string", hint: "e.g., PaceEvenly, PaceAhead, PaceAsap" },
+  ],
+  adGroup: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "CampaignId", expectedType: "string" },
+    { field: "AdGroupName", expectedType: "string" },
+    { field: "RTBAttributes", expectedType: "object", hint: "must contain BudgetSettings and BaseBidCPM" },
+  ],
+  ad: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "AdGroupId", expectedType: "string" },
+    { field: "CreativeIds", expectedType: "array", hint: "array of creative IDs to associate" },
+  ],
+  creative: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "CreativeName", expectedType: "string" },
+  ],
+  siteList: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "SiteListName", expectedType: "string" },
+  ],
+  deal: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "DealName", expectedType: "string" },
+  ],
+  conversionTracker: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "TrackingTagName", expectedType: "string" },
+  ],
+  bidList: [
+    { field: "AdvertiserId", expectedType: "string" },
+    { field: "BidListName", expectedType: "string" },
+  ],
+};
+
+/** Fields that are always read-only and cannot be set via the API. */
+const READ_ONLY_FIELDS = [
+  "CampaignId", "AdGroupId", "AdId", "CreativeId",
+  "SiteListId", "DealId", "TrackingTagId", "BidListId",
+  "CreatedAtUtc", "LastUpdatedAtUtc",
+];
+
+/** Budget-related fields — warn if values look suspiciously low. */
+const BUDGET_FIELDS = ["Amount"];
+
+// ---------------------------------------------------------------------------
+// Input / Output schemas
+// ---------------------------------------------------------------------------
 
 export const ValidateEntityInputSchema = z
   .object({
@@ -27,80 +102,122 @@ export const ValidateEntityInputSchema = z
       .describe("Type of entity to validate"),
     mode: z
       .enum(["create", "update"])
-      .describe("Validation mode: 'create' for new entity, 'update' for existing"),
+      .describe("Whether validating for creation or update"),
     entityId: z
       .string()
       .optional()
-      .describe("Entity ID (required for update mode)"),
+      .describe("Entity ID (recommended for update mode)"),
     data: z
       .record(z.any())
-      .describe("Entity data payload to validate"),
-  })
-  .superRefine((val, ctx) => {
-    if (val.mode === "update" && !val.entityId) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "entityId is required when mode is 'update' — without it the request would fall through to a create operation",
-        path: ["entityId"],
-      });
-    }
+      .describe("Entity payload to validate"),
   })
   .describe("Parameters for validating a TTD entity payload");
 
 export const ValidateEntityOutputSchema = z
   .object({
-    valid: z.boolean().describe("Whether the payload is valid"),
-    entityType: z.string(),
-    mode: z.string(),
-    errors: z.array(z.string()).optional().describe("Validation error messages"),
-    timestamp: z.string().datetime(),
+    valid: z.boolean().describe("Whether the payload passed validation"),
+    entityType: z.string().describe("Entity type that was validated"),
+    mode: z.string().describe("Validation mode (create or update)"),
+    errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
+    warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    timestamp: z.string().datetime().describe("ISO-8601 timestamp of validation"),
   })
-  .describe("Entity validation result");
+  .describe("Validation result");
 
-type ValidateInput = z.infer<typeof ValidateEntityInputSchema>;
-type ValidateOutput = z.infer<typeof ValidateEntityOutputSchema>;
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type ValidateEntityInput = z.infer<typeof ValidateEntityInputSchema>;
+type ValidateEntityOutput = z.infer<typeof ValidateEntityOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// Logic (pure — no API calls, no session services)
+// ---------------------------------------------------------------------------
 
 export async function validateEntityLogic(
-  input: ValidateInput,
-  context: RequestContext,
-  sdkContext?: SdkContext
-): Promise<ValidateOutput> {
-  const { ttdService } = resolveSessionServices(sdkContext);
+  input: ValidateEntityInput,
+  _context: RequestContext,
+  _sdkContext?: SdkContext
+): Promise<ValidateEntityOutput> {
+  const { entityType, mode, data } = input;
+  const errors: string[] = [];
+  const warnings: string[] = [];
 
-  const result = await ttdService.testCreateOrUpdate(
-    input.entityType as TtdEntityType,
-    input.data,
-    input.mode as "create" | "update",
-    input.entityId,
-    context
-  );
+  if (mode === "create") {
+    // Required-field checks
+    const rules = REQUIRED_FIELDS_CREATE[entityType as TtdEntityType] ?? [];
+    errors.push(...validateRequiredFields(data, rules));
+
+    // Campaign-specific: Budget must have Amount and CurrencyCode
+    if (entityType === "campaign" && data.Budget && typeof data.Budget === "object") {
+      const budget = data.Budget as Record<string, unknown>;
+      if (budget.Amount === undefined) {
+        errors.push('Field "Budget.Amount" is required');
+      }
+      if (!budget.CurrencyCode) {
+        errors.push('Field "Budget.CurrencyCode" is required');
+      }
+    }
+
+    // AdGroup-specific: RTBAttributes must contain BudgetSettings and BaseBidCPM
+    if (entityType === "adGroup" && data.RTBAttributes && typeof data.RTBAttributes === "object") {
+      const rtb = data.RTBAttributes as Record<string, unknown>;
+      if (!rtb.BudgetSettings) {
+        warnings.push('Field "RTBAttributes.BudgetSettings" is recommended for ad group creation');
+      }
+      if (!rtb.BaseBidCPM) {
+        warnings.push('Field "RTBAttributes.BaseBidCPM" is recommended for ad group creation');
+      }
+    }
+  }
+
+  if (mode === "update") {
+    if (Object.keys(data).length === 0) {
+      errors.push("Update payload must contain at least one field to update");
+    }
+
+    warnings.push(
+      ...checkReadOnlyFields(
+        data,
+        READ_ONLY_FIELDS,
+        (field) => `Field "${field}" is a system field and may be ignored by the API on update`
+      )
+    );
+  }
+
+  // Budget warnings (both modes) — check nested Budget.Amount
+  const budgetObj = data.Budget;
+  if (budgetObj && typeof budgetObj === "object") {
+    const amount = (budgetObj as Record<string, unknown>).Amount;
+    if (amount !== undefined && typeof amount === "number" && amount <= 0) {
+      errors.push('Field "Budget.Amount" must be a positive number');
+    }
+  }
+
+  // Top-level Amount fields (e.g., in BaseBidCPM objects)
+  for (const field of BUDGET_FIELDS) {
+    const value = data[field];
+    if (value !== undefined && typeof value === "number" && value <= 0) {
+      errors.push(`Field "${field}" must be a positive number`);
+    }
+  }
 
   return {
-    valid: result.valid,
-    entityType: input.entityType,
-    mode: input.mode,
-    errors: result.errors,
+    valid: errors.length === 0,
+    entityType,
+    mode,
+    errors,
+    warnings,
     timestamp: new Date().toISOString(),
   };
 }
 
-export function validateEntityResponseFormatter(result: ValidateOutput): McpTextContent[] {
-  if (result.valid) {
-    return [
-      {
-        type: "text" as const,
-        text: `PASS Validation passed for ${result.entityType} (${result.mode})\n\nTimestamp: ${result.timestamp}`,
-      },
-    ];
-  }
+// ---------------------------------------------------------------------------
+// Tool definition (exported for allTools array)
+// ---------------------------------------------------------------------------
 
-  return [
-    {
-      type: "text" as const,
-      text: `✗ Validation failed for ${result.entityType} (${result.mode})\n\nErrors:\n${result.errors?.map((e) => `  - ${e}`).join("\n") ?? "Unknown error"}\n\nTimestamp: ${result.timestamp}`,
-    },
-  ];
-}
+export const validateEntityResponseFormatter = sharedValidateEntityResponseFormatter;
 
 export const validateEntityTool = {
   name: TOOL_NAME,
@@ -109,14 +226,14 @@ export const validateEntityTool = {
   inputSchema: ValidateEntityInputSchema,
   outputSchema: ValidateEntityOutputSchema,
   annotations: {
-    readOnlyHint: false,
-    destructiveHint: true,
+    readOnlyHint: true,
+    idempotentHint: true,
     openWorldHint: false,
-    idempotentHint: false,
+    destructiveHint: false,
   },
   inputExamples: [
     {
-      label: "⚠️ Test a new campaign payload (WILL create entity if valid)",
+      label: "Valid campaign create",
       input: {
         entityType: "campaign",
         mode: "create",
@@ -131,19 +248,12 @@ export const validateEntityTool = {
       },
     },
     {
-      label: "⚠️ Test an ad group update payload (WILL update entity if valid)",
+      label: "Missing required fields (ad group)",
       input: {
         entityType: "adGroup",
-        mode: "update",
-        entityId: "adg111aaa",
+        mode: "create",
         data: {
-          AdvertiserId: "adv123abc",
-          CampaignId: "camp456def",
           AdGroupName: "Prospecting - Display",
-          RTBAttributes: {
-            BudgetSettings: { DailyBudget: { Amount: 750, CurrencyCode: "USD" } },
-            BaseBidCPM: { Amount: 5.0, CurrencyCode: "USD" },
-          },
         },
       },
     },

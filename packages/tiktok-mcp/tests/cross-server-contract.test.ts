@@ -17,7 +17,7 @@ function getObjectShape(
 
 describe("Cross-server contract compliance", () => {
   const toolNames = allTools.map((t) => t.name);
-  const PREFIX = "gads_";
+  const PREFIX = "tiktok_";
 
   describe("required tool categories", () => {
     it("has list_entities tool", () => {
@@ -56,6 +56,10 @@ describe("Cross-server contract compliance", () => {
 
     it("has validate_entity tool", () => {
       expect(toolNames).toContain(`${PREFIX}validate_entity`);
+    });
+
+    it("has list_advertisers tool", () => {
+      expect(toolNames).toContain(`${PREFIX}list_advertisers`);
     });
   });
 
@@ -113,13 +117,5 @@ describe("Cross-server contract compliance", () => {
         });
       });
     }
-  });
-
-  describe("mutating tool safety metadata", () => {
-    it("marks bulk create as destructive", () => {
-      expect(
-        allTools.find((tool) => tool.name === "gads_bulk_create_entities")?.annotations.destructiveHint
-      ).toBe(true);
-    });
   });
 });

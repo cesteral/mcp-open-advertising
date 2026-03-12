@@ -718,6 +718,214 @@ export class DV360Service {
   }
 
   /**
+   * Upload an asset (image or video) to DV360 via the multipart upload endpoint.
+   *
+   * Uses the upload base URL: POST /upload/displayvideo/v4/advertisers/{advertiserId}/assets
+   *
+   * @param advertiserId - The advertiser to upload the asset for
+   * @param fileBuffer - The raw file bytes
+   * @param filename - Original filename (used in Content-Disposition)
+   * @param contentType - MIME type of the file (e.g., image/png, video/mp4)
+   * @param context - Request context
+   * @returns The created asset resource with assetId
+   */
+  async uploadAsset(
+    advertiserId: string,
+    fileBuffer: Buffer,
+    filename: string,
+    contentType: string,
+    context?: RequestContext
+  ): Promise<{ asset: { mediaId: string; content?: string }; assignedTargetingOptions?: unknown[] }> {
+    return withDV360ApiSpan("uploadAsset", advertiserId, async () => {
+      setSpanAttribute("dv360.advertiserId", advertiserId);
+      setSpanAttribute("dv360.filename", filename);
+      setSpanAttribute("dv360.contentType", contentType);
+      setSpanAttribute("dv360.fileSize", fileBuffer.length);
+
+      await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
+
+      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/advertisers/${advertiserId}/assets`;
+
+      // DV360 asset upload uses multipart/related:
+      // Part 1: JSON metadata
+      // Part 2: Binary file data
+      const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+      const jsonPart = JSON.stringify({ filename });
+      const bodyParts = [
+        `--${boundary}\r\n`,
+        `Content-Type: application/json; charset=UTF-8\r\n\r\n`,
+        `${jsonPart}\r\n`,
+        `--${boundary}\r\n`,
+        `Content-Type: ${contentType}\r\n`,
+        `Content-Transfer-Encoding: binary\r\n\r\n`,
+      ];
+
+      // Build the multipart body with binary data
+      const headerBuffer = Buffer.from(bodyParts.join(""));
+      const footerBuffer = Buffer.from(`\r\n--${boundary}--\r\n`);
+      const body = Buffer.concat([headerBuffer, fileBuffer, footerBuffer]);
+
+      this.logger.debug(
+        { uploadUrl, advertiserId, filename, contentType, requestId: context?.requestId },
+        "Uploading asset to DV360"
+      );
+
+      const response = await this.httpClient.fetchRaw(uploadUrl, 120_000, context, {
+        method: "POST",
+        headers: {
+          "Content-Type": `multipart/related; boundary=${boundary}`,
+        },
+        body,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new McpError(
+          response.status >= 500
+            ? JsonRpcErrorCode.ServiceUnavailable
+            : JsonRpcErrorCode.InvalidRequest,
+          `Failed to upload asset to DV360: ${response.status} ${response.statusText}`,
+          {
+            requestId: context?.requestId,
+            httpStatus: response.status,
+            advertiserId,
+            filename,
+            errorBody: errorBody.substring(0, 500),
+          }
+        );
+      }
+
+      return (await response.json()) as {
+        asset: { mediaId: string; content?: string };
+        assignedTargetingOptions?: unknown[];
+      };
+    });
+  }
+
+  /**
+   * Duplicate a DV360 entity by fetching it and creating a copy.
+   *
+   * DV360 does not have a native :duplicate endpoint for most entity types.
+   * This implements copy-on-read: GET entity -> strip read-only fields -> POST create.
+   *
+   * @param entityType - Entity type to duplicate (insertionOrder, lineItem)
+   * @param ids - Entity IDs including advertiserId and the entity ID
+   * @param displayName - Optional override display name for the copy
+   * @param context - Request context
+   * @returns The newly created entity
+   */
+  async duplicateEntity(
+    entityType: string,
+    ids: Record<string, string>,
+    displayName?: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return withDV360ApiSpan("duplicateEntity", entityType, async () => {
+      setSpanAttribute("dv360.entityType", entityType);
+
+      // Fetch the source entity
+      const source = (await this.getEntity(entityType, ids, context)) as Record<string, unknown>;
+
+      // Strip read-only / server-generated fields
+      const readOnlyFields = [
+        "name",                     // resource name (e.g., advertisers/123/lineItems/456)
+        `${entityType}Id`,          // server-assigned ID
+        "updateTime",
+        "createTime",
+        "entityStatus",             // will default to DRAFT on creation
+      ];
+
+      const copyData: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(source)) {
+        if (!readOnlyFields.includes(key)) {
+          copyData[key] = value;
+        }
+      }
+
+      // Override display name if provided
+      if (displayName) {
+        copyData.displayName = displayName;
+      } else if (copyData.displayName) {
+        copyData.displayName = `Copy of ${copyData.displayName as string}`;
+      }
+
+      // Create the copy using the parent IDs
+      const parentIds: Record<string, string> = {};
+      for (const [key, val] of Object.entries(ids)) {
+        if (key !== `${entityType}Id`) {
+          parentIds[key] = val;
+        }
+      }
+
+      return this.createEntity(entityType, parentIds, copyData, context);
+    });
+  }
+
+  /**
+   * Get a delivery/targeting forecast for a line item via DV360 API.
+   *
+   * Uses the lineItems:generateDefault endpoint to get forecast data
+   * for the given advertiser, or reads an existing line item's targeting
+   * to provide reach estimation context.
+   *
+   * @param advertiserId - The advertiser ID
+   * @param lineItemId - Optional: existing line item to read forecast for
+   * @param context - Request context
+   * @returns Forecast data from DV360
+   */
+  async getDeliveryEstimate(
+    advertiserId: string,
+    lineItemId?: string,
+    context?: RequestContext
+  ): Promise<Record<string, unknown>> {
+    return withDV360ApiSpan("getDeliveryEstimate", advertiserId, async () => {
+      setSpanAttribute("dv360.advertiserId", advertiserId);
+
+      await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
+
+      if (lineItemId) {
+        setSpanAttribute("dv360.lineItemId", lineItemId);
+
+        // Fetch line item details including budget and targeting info
+        const lineItem = (await this.httpClient.fetch(
+          `/advertisers/${advertiserId}/lineItems/${lineItemId}`,
+          context
+        )) as Record<string, unknown>;
+
+        // Fetch targeting assigned to this line item
+        const targeting = (await this.httpClient.fetch(
+          `/advertisers/${advertiserId}/lineItems/${lineItemId}:bulkListAssignedTargetingOptions`,
+          context
+        )) as Record<string, unknown>;
+
+        return {
+          lineItem,
+          assignedTargetingOptions: targeting,
+          source: "lineItem",
+        };
+      }
+
+      // Use generateDefault to get a default line item structure
+      // which includes DV360's recommended settings and targeting defaults
+      const result = (await this.httpClient.fetch(
+        `/advertisers/${advertiserId}/lineItems:generateDefault`,
+        context,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ advertiserId }),
+        }
+      )) as Record<string, unknown>;
+
+      return {
+        defaultLineItem: result,
+        source: "generateDefault",
+      };
+    });
+  }
+
+  /**
    * List custom bidding algorithms with partnerId/advertiserId as proper query params.
    *
    * The DV360 API requires partnerId and advertiserId as top-level query parameters,

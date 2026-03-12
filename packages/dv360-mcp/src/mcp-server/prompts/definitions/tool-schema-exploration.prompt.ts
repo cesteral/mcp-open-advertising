@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (20 tools)
+## Available Tools Summary (24 tools)
 
 ### Entity CRUD (9 tools)
 | Tool | Purpose | Notes |
@@ -133,6 +133,18 @@ Inspect the output, then iterate with more specific calls.
 | Tool | Purpose | Notes |
 |------|---------|-------|
 | \`dv360_get_ad_preview\` | Get preview URL for a creative | Returns previewUrl + dimensions |
+
+### Media Upload (2 tools)
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| \`dv360_upload_image\` | Upload image asset from URL | Returns assetId for creatives |
+| \`dv360_upload_video\` | Upload video asset from URL | Returns assetId for video creatives |
+
+### Specialized (2 tools)
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| \`dv360_duplicate_entity\` | Duplicate an IO or line item | Copy-on-read with optional rename |
+| \`dv360_get_delivery_estimate\` | Get delivery/targeting info | Line item config or defaults |
 
 ---
 

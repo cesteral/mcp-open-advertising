@@ -1,37 +1,36 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
-const TOOL_NAME = "linkedin_upload_image";
-const TOOL_TITLE = "Upload Image to LinkedIn Ads";
-const TOOL_DESCRIPTION = `Upload an image to LinkedIn Ads from a URL.
+const TOOL_NAME = "linkedin_upload_video";
+const TOOL_TITLE = "Upload Video to LinkedIn Ads";
+const TOOL_DESCRIPTION = `Upload a video to LinkedIn Ads from a URL.
 
-The server downloads the image and uploads it to LinkedIn's Digital Media Assets library.
+The server downloads the video and uploads it to LinkedIn's Digital Media Assets library.
 Uses LinkedIn's 3-step upload flow: register → upload binary → confirm.
 
-**Image requirements:**
-- Formats: JPEG, PNG, GIF
-- Min: 400x400px (Sponsored Content), recommended 1200x627px
-- Max file size: 5MB
-- Aspect ratios: 1.91:1 (horizontal), 1:1 (square), 2:3 (vertical)
+**Video requirements:**
+- Formats: MP4 (H.264)
+- Max file size: 200MB
+- Duration: 3 seconds to 30 minutes
+- Recommended: 1920x1080px (16:9), 1080x1080px (1:1)
 
 **Usage:** The returned assetUrn is referenced in creative → content → media → reference`;
 
-export const UploadImageInputSchema = z.object({
+export const UploadVideoInputSchema = z.object({
   adAccountUrn: z.string().describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
-  filename: z.string().optional().describe("Override filename"),
-}).describe("Parameters for uploading an image to LinkedIn");
+  mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+}).describe("Parameters for uploading a video to LinkedIn");
 
-export const UploadImageOutputSchema = z.object({
+export const UploadVideoOutputSchema = z.object({
   assetUrn: z.string().describe("Asset URN (urn:li:digitalmediaAsset:...) for use in creative payloads"),
   uploadedAt: z.string().datetime(),
-}).describe("Uploaded LinkedIn image asset");
+}).describe("Uploaded LinkedIn video asset");
 
-type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
-type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
+type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
+type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
 
 interface LinkedInRegisterUploadResponse {
   value?: {
@@ -45,18 +44,18 @@ interface LinkedInRegisterUploadResponse {
   };
 }
 
-export async function uploadImageLogic(
-  input: UploadImageInput,
+export async function uploadVideoLogic(
+  input: UploadVideoInput,
   context: RequestContext,
   sdkContext?: SdkContext
-): Promise<UploadImageOutput> {
+): Promise<UploadVideoOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
   // Step 1: Register upload
   const registerPayload = {
     registerUploadRequest: {
       owner: input.adAccountUrn,
-      recipes: ["urn:li:digitalmediaRecipe:ads-image"],
+      recipes: ["urn:li:digitalmediaRecipe:ads-video"],
       serviceRelationships: [
         {
           identifier: "urn:li:userGeneratedContent",
@@ -81,10 +80,10 @@ export async function uploadImageLogic(
     throw new Error("LinkedIn register upload failed: missing uploadUrl or asset URN");
   }
 
-  // Step 2: Download file and PUT binary
+  // Step 2: Download file and PUT binary (5 min timeout for larger videos)
   const { buffer, contentType } = await downloadFileToBuffer(
     input.mediaUrl,
-    120_000,
+    300_000,
     context
   );
 
@@ -96,19 +95,19 @@ export async function uploadImageLogic(
   };
 }
 
-export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
+export function uploadVideoResponseFormatter(result: UploadVideoOutput): unknown[] {
   return [{
     type: "text" as const,
-    text: `Image uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
+    text: `Video uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
   }];
 }
 
-export const uploadImageTool = {
+export const uploadVideoTool = {
   name: TOOL_NAME,
   title: TOOL_TITLE,
   description: TOOL_DESCRIPTION,
-  inputSchema: UploadImageInputSchema,
-  outputSchema: UploadImageOutputSchema,
+  inputSchema: UploadVideoInputSchema,
+  outputSchema: UploadVideoOutputSchema,
   annotations: {
     readOnlyHint: false,
     openWorldHint: true,
@@ -117,13 +116,13 @@ export const uploadImageTool = {
   },
   inputExamples: [
     {
-      label: "Upload a banner image for LinkedIn ads",
+      label: "Upload a video ad for LinkedIn",
       input: {
         adAccountUrn: "urn:li:sponsoredAccount:123456",
-        mediaUrl: "https://example.com/banner-1200x627.jpg",
+        mediaUrl: "https://example.com/video-ad-1080p.mp4",
       },
     },
   ],
-  logic: uploadImageLogic,
-  responseFormatter: uploadImageResponseFormatter,
+  logic: uploadVideoLogic,
+  responseFormatter: uploadVideoResponseFormatter,
 };

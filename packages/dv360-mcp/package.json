@@ -32,7 +32,7 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "generate:schemas": "tsx scripts/generate-schemas.ts",
     "generate:schemas:watch": "tsx watch scripts/generate-schemas.ts"

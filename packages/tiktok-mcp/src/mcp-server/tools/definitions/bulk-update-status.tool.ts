@@ -2,6 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import { elicitArchiveConfirmation } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_bulk_update_status";
@@ -61,6 +62,14 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
+  // Elicit confirmation for irreversible DELETE operations
+  if (input.operationStatus === "DELETE") {
+    const confirmed = await elicitArchiveConfirmation(input.entityIds.length, input.entityType, sdkContext);
+    if (!confirmed) {
+      return { totalRequested: 0, successCount: 0, failureCount: 0, results: [], timestamp: new Date().toISOString() };
+    }
+  }
+
   const { tiktokService } = resolveSessionServices(sdkContext);
 
   const result = await tiktokService.bulkUpdateStatus(

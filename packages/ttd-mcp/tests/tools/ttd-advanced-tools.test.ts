@@ -241,12 +241,7 @@ describe("ttd advanced tools", () => {
     expect(text).toContain("bad query");
   });
 
-  it("validateEntityLogic returns service validation response", async () => {
-    mockTtdService.testCreateOrUpdate.mockResolvedValueOnce({
-      valid: false,
-      errors: ["Missing field"],
-    });
-
+  it("validateEntityLogic detects missing required fields (client-side)", async () => {
     const result = await validateEntityLogic(
       {
         entityType: "campaign" as any,
@@ -258,7 +253,8 @@ describe("ttd advanced tools", () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(["Missing field"]);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.warnings).toBeDefined();
   });
 
   it("validateEntityResponseFormatter shows success and failure variants", () => {
@@ -266,6 +262,8 @@ describe("ttd advanced tools", () => {
       valid: true,
       entityType: "campaign",
       mode: "create",
+      errors: [],
+      warnings: [],
       timestamp: new Date().toISOString(),
     })[0].text;
     expect(okText).toContain("Validation passed");
@@ -275,6 +273,7 @@ describe("ttd advanced tools", () => {
       entityType: "campaign",
       mode: "create",
       errors: ["Bad payload"],
+      warnings: [],
       timestamp: new Date().toISOString(),
     })[0].text;
     expect(badText).toContain("Validation failed");

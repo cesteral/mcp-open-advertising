@@ -114,4 +114,18 @@ describe("Cross-server contract compliance", () => {
       });
     }
   });
+
+  describe("mutating tool safety metadata", () => {
+    it("marks new write tools as destructive", () => {
+      expect(
+        allTools.find((tool) => tool.name === "dv360_upload_image")?.annotations.destructiveHint
+      ).toBe(true);
+      expect(
+        allTools.find((tool) => tool.name === "dv360_upload_video")?.annotations.destructiveHint
+      ).toBe(true);
+      expect(
+        allTools.find((tool) => tool.name === "dv360_duplicate_entity")?.annotations.destructiveHint
+      ).toBe(true);
+    });
+  });
 });

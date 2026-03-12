@@ -34,6 +34,14 @@ export { validateEntityTool } from "./validate-entity.tool.js";
 // Tier 4: Preview
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 
+// Tier 5: Media Upload
+export { uploadImageTool } from "./upload-image.tool.js";
+export { uploadVideoTool } from "./upload-video.tool.js";
+
+// Tier 5: Specialized
+export { duplicateEntityTool } from "./duplicate-entity.tool.js";
+export { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
+
 // Export all tools as an array for easy registration
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -55,6 +63,10 @@ import { deleteAssignedTargetingTool } from "./delete-assigned-targeting.tool.js
 import { validateTargetingConfigTool } from "./validate-targeting-config.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
+import { uploadImageTool } from "./upload-image.tool.js";
+import { uploadVideoTool } from "./upload-video.tool.js";
+import { duplicateEntityTool } from "./duplicate-entity.tool.js";
+import { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -84,6 +96,12 @@ const productionTools: ToolDefinitionForFactory[] = [
   validateEntityTool,
   // Tier 4: Preview
   getAdPreviewTool,
+  // Tier 5: Media Upload
+  uploadImageTool,
+  uploadVideoTool,
+  // Tier 5: Specialized
+  duplicateEntityTool,
+  getDeliveryEstimateTool,
 ];
 
 /**
