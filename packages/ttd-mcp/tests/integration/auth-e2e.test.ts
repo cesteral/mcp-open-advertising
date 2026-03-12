@@ -11,8 +11,17 @@ const API_BASE = "https://api.example.test/v3";
 
 vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@cesteral/shared")>();
+  const extractHeader = (
+    headers: Record<string, string | string[] | undefined>,
+    name: string
+  ): string | undefined => {
+    const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const value = key ? headers[key] : undefined;
+    return Array.isArray(value) ? value[0] : value;
+  };
   return {
     ...actual,
+    extractHeader,
     fetchWithTimeout: vi.fn(async (url: string) => {
       // Auth token exchange — valid credentials
       if (url.includes(AUTH_URL)) {

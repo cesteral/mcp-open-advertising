@@ -8,7 +8,15 @@ import {
 // Mock fetchWithTimeout from shared
 vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@cesteral/shared")>();
-  return { ...actual, fetchWithTimeout: vi.fn() };
+  const extractHeader = (
+    headers: Record<string, string | string[] | undefined>,
+    name: string
+  ): string | undefined => {
+    const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const value = key ? headers[key] : undefined;
+    return Array.isArray(value) ? value[0] : value;
+  };
+  return { ...actual, extractHeader, fetchWithTimeout: vi.fn() };
 });
 
 import { fetchWithTimeout } from "@cesteral/shared";
