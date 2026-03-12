@@ -62,7 +62,7 @@ export const listUserProfilesTool = {
   outputSchema: ListUserProfilesOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },

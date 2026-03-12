@@ -74,7 +74,7 @@ export const createEntityTool = {
   outputSchema: CreateEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: true,
     idempotentHint: false,
   },

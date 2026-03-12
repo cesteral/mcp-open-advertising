@@ -9,7 +9,6 @@ import { CM360ReportingService } from "./cm360/cm360-reporting-service.js";
 export interface SessionServices {
   cm360Service: CM360Service;
   cm360ReportingService: CM360ReportingService;
-  cm360HttpClient: CM360HttpClient;
 }
 
 export function createSessionServices(
@@ -24,7 +23,6 @@ export function createSessionServices(
   return {
     cm360Service,
     cm360ReportingService,
-    cm360HttpClient: httpClient,
   };
 }
 

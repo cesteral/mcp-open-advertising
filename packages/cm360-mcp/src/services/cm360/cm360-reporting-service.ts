@@ -2,6 +2,7 @@ import type { Logger } from "pino";
 import type { CM360HttpClient } from "./cm360-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 
 export interface CM360ReportConfig {
   name: string;
@@ -165,8 +166,10 @@ export class CM360ReportingService {
       }
 
       if (status === "FAILED" || status === "CANCELLED") {
-        throw new Error(
-          `CM360 report ${status.toLowerCase()}: ${JSON.stringify(file)}`
+        throw new McpError(
+          JsonRpcErrorCode.InternalError,
+          `CM360 report ${status.toLowerCase()}`,
+          { reportId, fileId, status, file }
         );
       }
 
@@ -178,9 +181,21 @@ export class CM360ReportingService {
       await this.sleep(this.computeBackoff(attempt));
     }
 
-    throw new Error(
-      `CM360 report polling timed out after ${this.maxPollAttempts} attempts`
+    throw new McpError(
+      JsonRpcErrorCode.Timeout,
+      `CM360 report polling timed out after ${this.maxPollAttempts} attempts`,
+      { reportId, fileId }
     );
+  }
+
+  async downloadReportFile(
+    downloadUrl: string,
+    timeoutMs: number = 30_000,
+    context?: RequestContext
+  ): Promise<Response> {
+    return this.httpClient.fetchRaw(downloadUrl, timeoutMs, context, {
+      method: "GET",
+    });
   }
 
   private computeBackoff(attempt: number): number {

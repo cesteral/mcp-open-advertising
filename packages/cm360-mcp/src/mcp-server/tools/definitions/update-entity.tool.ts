@@ -80,7 +80,7 @@ export const updateEntityTool = {
   outputSchema: UpdateEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: true,
     idempotentHint: true,
   },

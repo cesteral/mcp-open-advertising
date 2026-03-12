@@ -77,7 +77,7 @@ export const deleteEntityTool = {
   outputSchema: DeleteEntityOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: true,
     idempotentHint: true,
   },

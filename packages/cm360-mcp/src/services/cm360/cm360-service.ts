@@ -94,6 +94,37 @@ export class CM360Service {
     });
   }
 
+  async listTargetingOptions(
+    profileId: string,
+    targetingType: string,
+    filters?: Record<string, unknown>,
+    pageToken?: string,
+    maxResults?: number,
+    context?: RequestContext
+  ): Promise<{ options: unknown[]; nextPageToken?: string }> {
+    await this.rateLimiter.consume("cm360");
+
+    const params = new URLSearchParams();
+    if (pageToken) params.set("pageToken", pageToken);
+    if (maxResults) params.set("maxResults", String(maxResults));
+    if (filters) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null) {
+          params.set(key, String(value));
+        }
+      }
+    }
+
+    const queryString = params.toString();
+    const path = `/userprofiles/${profileId}/${targetingType}${queryString ? `?${queryString}` : ""}`;
+
+    const result = (await this.httpClient.fetch(path, context)) as Record<string, unknown>;
+    const options = (result[targetingType] as unknown[]) || [];
+    const nextPageToken = result.nextPageToken as string | undefined;
+
+    return { options, nextPageToken };
+  }
+
   async deleteEntity(
     entityType: CM360EntityType,
     profileId: string,

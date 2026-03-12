@@ -68,25 +68,16 @@ export async function listTargetingOptionsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListTargetingOptionsOutput> {
-  const { cm360HttpClient } = resolveSessionServices(sdkContext);
+  const { cm360Service } = resolveSessionServices(sdkContext);
 
-  const params = new URLSearchParams();
-  if (input.pageToken) params.set("pageToken", input.pageToken);
-  if (input.maxResults) params.set("maxResults", String(input.maxResults));
-  if (input.filters) {
-    for (const [key, value] of Object.entries(input.filters)) {
-      if (value !== undefined && value !== null) {
-        params.set(key, String(value));
-      }
-    }
-  }
-
-  const queryString = params.toString();
-  const path = `/userprofiles/${input.profileId}/${input.targetingType}${queryString ? `?${queryString}` : ""}`;
-
-  const result = (await cm360HttpClient.fetch(path, context)) as Record<string, unknown>;
-  const options = (result[input.targetingType] as unknown[]) || [];
-  const nextPageToken = result.nextPageToken as string | undefined;
+  const { options, nextPageToken } = await cm360Service.listTargetingOptions(
+    input.profileId,
+    input.targetingType,
+    input.filters,
+    input.pageToken,
+    input.maxResults,
+    context
+  );
 
   return {
     options: options as Record<string, any>[],
@@ -121,7 +112,7 @@ export const listTargetingOptionsTool = {
   outputSchema: ListTargetingOptionsOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },

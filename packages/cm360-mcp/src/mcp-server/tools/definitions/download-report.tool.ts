@@ -43,13 +43,12 @@ export async function downloadReportLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DownloadReportOutput> {
-  const { cm360HttpClient } = resolveSessionServices(sdkContext);
+  const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
-  const response = await cm360HttpClient.fetchRaw(
+  const response = await cm360ReportingService.downloadReportFile(
     input.downloadUrl,
     30_000,
-    context,
-    { method: "GET" }
+    context
   );
 
   if (!response.ok) {
@@ -148,7 +147,7 @@ export const downloadReportTool = {
   outputSchema: DownloadReportOutputSchema,
   annotations: {
     readOnlyHint: true,
-    openWorldHint: false,
+    openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
   },
