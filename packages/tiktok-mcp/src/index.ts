@@ -46,7 +46,11 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
     authAdapter,
     mcpConfig.tiktokApiBaseUrl,
     logger,
-    rateLimiter
+    rateLimiter,
+    {
+      reportPollIntervalMs: mcpConfig.tiktokReportPollIntervalMs,
+      reportMaxPollAttempts: mcpConfig.tiktokReportMaxPollAttempts,
+    }
   );
 
   sessionServiceStore.set(sessionId, services);

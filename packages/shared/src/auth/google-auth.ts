@@ -299,6 +299,12 @@ export function parseCredentialsFromHeaders(
       );
     }
 
+    if (parsed.token_uri !== undefined && typeof parsed.token_uri !== "string") {
+      throw new Error(
+        "Invalid service account JSON: token_uri must be a string."
+      );
+    }
+
     return parsed as unknown as ServiceAccountCredentials;
   }
 

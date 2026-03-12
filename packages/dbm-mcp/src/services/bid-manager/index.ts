@@ -7,13 +7,10 @@
 // Main service
 export { BidManagerService } from "./BidManagerService.js";
 
-// Client factory
+// Client types
 export {
-  createGoogleAuth,
-  createBidManagerClient,
-  parseServiceAccountCredentials,
   type BidManagerClient,
-  type ServiceAccountCredentials,
+  type GoogleAuthClient,
 } from "./client.js";
 
 // Type schemas (Zod)

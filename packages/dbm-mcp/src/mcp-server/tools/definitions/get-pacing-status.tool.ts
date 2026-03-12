@@ -35,7 +35,6 @@ export const GetPacingStatusOutputSchema = z
   .object({
     advertiserId: z.string(),
     campaignId: z.string(),
-    campaignName: z.string(),
     budget: z.object({
       total: z.number(),
       spent: z.number(),
@@ -102,7 +101,6 @@ export async function getPacingStatusLogic(
   return {
     advertiserId: input.advertiserId,
     campaignId: input.campaignId,
-    campaignName: input.campaignId,
     budget: {
       total: input.budgetTotal,
       spent: pacingStatus.spendToDate,
@@ -146,7 +144,7 @@ export function getPacingStatusResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Campaign "${result.campaignName}" Pacing Status:
+      text: `Campaign "${result.campaignId}" Pacing Status:
 
 ${statusEmoji} Status: ${result.pacing.status}
 

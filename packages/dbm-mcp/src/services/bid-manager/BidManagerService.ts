@@ -9,6 +9,7 @@
 import type { Logger } from "pino";
 import type { AppConfig } from "../../config/index.js";
 import type { BidManagerClient } from "./client.js";
+import { csvToJson } from "./report-parser.js";
 import type { RateLimiter } from "@cesteral/shared";
 import {
   QueryCreationError,
@@ -821,7 +822,7 @@ export class BidManagerService {
     }
 
     // Parse CSV to structured data
-    const records = this.parseCSVToRecords(csvData);
+    const records = csvToJson(csvData);
 
     this.logger.info(
       { rowCount: records.length, columnsCount: Object.keys(records[0] || {}).length },
@@ -838,70 +839,4 @@ export class BidManagerService {
     };
   }
 
-  /**
-   * Parse CSV string to array of records
-   */
-  private parseCSVToRecords(csv: string): Record<string, unknown>[] {
-    const lines = csv.replace(/\r\n/g, "\n").trim().split("\n");
-    if (lines.length < 2) return [];
-
-    // Parse header - handle quoted fields
-    const headers = this.parseCSVLine(lines[0]);
-    const records: Record<string, unknown>[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      const values = this.parseCSVLine(line);
-      const record: Record<string, unknown> = {};
-
-      for (let j = 0; j < headers.length; j++) {
-        const header = headers[j].trim();
-        const value = values[j]?.trim() || "";
-
-        // Try to parse as number
-        if (value !== "" && !isNaN(Number(value))) {
-          record[header] = Number(value);
-        } else {
-          record[header] = value;
-        }
-      }
-
-      records.push(record);
-    }
-
-    return records;
-  }
-
-  /**
-   * Parse a single CSV line, handling quoted fields
-   */
-  private parseCSVLine(line: string): string[] {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if (char === '"') {
-        // Check for escaped quote
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++; // Skip next quote
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === "," && !inQuotes) {
-        result.push(current);
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-
-    result.push(current);
-    return result;
-  }
 }

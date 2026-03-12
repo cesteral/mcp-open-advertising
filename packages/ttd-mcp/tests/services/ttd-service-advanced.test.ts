@@ -42,11 +42,11 @@ describe("TtdService advanced methods", () => {
     vi.clearAllMocks();
   });
 
-  describe("validateEntity", () => {
+  describe("testCreateOrUpdate", () => {
     it("returns valid=true for create when API call succeeds", async () => {
       httpClient.fetch.mockResolvedValueOnce({ CampaignId: "c1" });
 
-      const result = await service.validateEntity(
+      const result = await service.testCreateOrUpdate(
         "campaign",
         { CampaignName: "A" },
         "create"
@@ -61,7 +61,7 @@ describe("TtdService advanced methods", () => {
     it("returns valid=true for update when API call succeeds", async () => {
       httpClient.fetch.mockResolvedValueOnce({ CampaignId: "c1" });
 
-      const result = await service.validateEntity(
+      const result = await service.testCreateOrUpdate(
         "campaign",
         { CampaignName: "A" },
         "update",
@@ -79,7 +79,7 @@ describe("TtdService advanced methods", () => {
     it("returns valid=false and error message when API call fails", async () => {
       httpClient.fetch.mockRejectedValueOnce(new Error("Invalid payload"));
 
-      const result = await service.validateEntity(
+      const result = await service.testCreateOrUpdate(
         "campaign",
         { CampaignName: "" },
         "create"

@@ -56,11 +56,13 @@ function buildPlatformConfig(
       // For tiktok-bearer mode, the adapter is returned via platformAuthAdapter
       const adapter = authResult.platformAuthAdapter as TikTokAuthAdapter | undefined;
       if (adapter) {
+        const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          (appConfig as AppConfig).tiktokApiBaseUrl,
+          cfg.tiktokApiBaseUrl,
           log,
-          rateLimiter
+          rateLimiter,
+          { reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts }
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -80,7 +82,7 @@ function buildPlatformConfig(
             cfg.tiktokApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, cfg.tiktokApiBaseUrl, log, rateLimiter);
+          const services = createSessionServices(envAdapter, cfg.tiktokApiBaseUrl, log, rateLimiter, { reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts });
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -95,11 +97,13 @@ function buildPlatformConfig(
             cfg.tiktokApiBaseUrl
           );
           await envAdapter.validate();
+          const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            (appConfig as AppConfig).tiktokApiBaseUrl,
+            cfgFallback.tiktokApiBaseUrl,
             log,
-            rateLimiter
+            rateLimiter,
+            { reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts }
           );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };

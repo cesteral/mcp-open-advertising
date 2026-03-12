@@ -193,8 +193,10 @@ export class ErrorHandler {
     }
 
     if (error instanceof Error) {
-      // Prefer structured status codes over message substring matching
-      const statusCode = (error as any).statusCode ?? (error as any).status ?? (error as any).code;
+      // Prefer structured HTTP status codes over message substring matching.
+      // Only check .statusCode and .status — NOT .code, which Node.js uses for
+      // string error codes (e.g. "ECONNREFUSED") and gRPC uses for non-HTTP numerics.
+      const statusCode = (error as any).statusCode ?? (error as any).status;
       if (typeof statusCode === "number" && statusCode >= 100) {
         const mapped = this.mapHttpStatusToCode(statusCode);
         if (mapped !== undefined) {

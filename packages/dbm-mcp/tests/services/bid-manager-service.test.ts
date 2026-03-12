@@ -6,6 +6,10 @@ import type { AppConfig } from "../../src/config/index.js";
 // ---------------------------------------------------------------------------
 
 vi.mock("../../src/services/bid-manager/report-parser.js", () => ({
+  csvToJson: vi.fn().mockReturnValue([
+    { impressions: "1000", clicks: "50" },
+    { impressions: "2000", clicks: "100" },
+  ]),
   parseCSVToDeliveryMetrics: vi.fn().mockReturnValue({
     impressions: 10000,
     clicks: 200,
@@ -1088,8 +1092,8 @@ describe("BidManagerService", () => {
       expect(Array.isArray(result.data)).toBe(true);
       const data = result.data as Record<string, unknown>[];
       expect(data).toHaveLength(2);
-      expect(data[0]).toEqual({ impressions: 1000, clicks: 50 });
-      expect(data[1]).toEqual({ impressions: 2000, clicks: 100 });
+      expect(data[0]).toEqual({ impressions: "1000", clicks: "50" });
+      expect(data[1]).toEqual({ impressions: "2000", clicks: "100" });
       expect(result.columns).toEqual(["impressions", "clicks"]);
       expect(result.rowCount).toBe(2);
     });

@@ -207,6 +207,10 @@ export class InteractionLogger {
     }
 
     if (this.gcsBucket) {
+      // Wait for any in-progress flush to complete before final drain
+      while (this.flushing) {
+        await new Promise((r) => setTimeout(r, 50));
+      }
       await this.flushBuffer();
     } else {
       if (this.stream) {

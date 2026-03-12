@@ -115,7 +115,6 @@ export class RateLimiter {
    */
   clear(): void {
     this.requests.clear();
-    this.compiledPatterns.clear();
   }
 
   private findLimitConfig(

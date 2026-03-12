@@ -149,9 +149,16 @@ export function createMcpHttpTransport(
   const sessionTransports = new Map<string, McpSessionTransport>();
   const { sessionServiceStore, authStrategy } = platformConfig;
 
-  const pkg: { version: string } = JSON.parse(
-    readFileSync(platformConfig.packageJsonPath, "utf-8")
-  );
+  let pkg: { version: string };
+  try {
+    pkg = JSON.parse(readFileSync(platformConfig.packageJsonPath, "utf-8"));
+  } catch {
+    logger.warn(
+      { path: platformConfig.packageJsonPath },
+      "Failed to read package.json for version info, using fallback"
+    );
+    pkg = { version: "unknown" };
+  }
 
   const sessions = new SessionManager<McpServerLike>(
     sessionServiceStore,

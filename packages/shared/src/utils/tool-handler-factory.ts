@@ -326,7 +326,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
       tool.name,
       toolConfig,
       async (args: unknown) => {
-        logger.info({ toolName: tool.name, arguments: args }, "Handling tool call");
+        logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
 
         // Send MCP logging notification for tool invocation
         server.sendLoggingMessage({

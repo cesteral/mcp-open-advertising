@@ -152,11 +152,13 @@ export class TtdService {
   // ─── Validate-Only (Dry Run) ──────────────────────────────────────
 
   /**
-   * Validate an entity payload without persisting it.
-   * Sends the data with the same endpoint but uses TTD's validation
-   * semantics (POST for create, PUT for update) and wraps errors.
+   * Test an entity payload against the TTD API.
+   *
+   * WARNING: TTD has no dry-run mode. A successful create-mode call
+   * CREATES a real entity; a successful update-mode call UPDATES it.
+   * Use this primarily to diagnose validation failures (400 errors).
    */
-  async validateEntity(
+  async testCreateOrUpdate(
     entityType: TtdEntityType,
     data: Record<string, unknown>,
     mode: "create" | "update",

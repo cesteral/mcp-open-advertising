@@ -67,7 +67,7 @@ export async function validateEntityLogic(
 ): Promise<ValidateOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  const result = await ttdService.validateEntity(
+  const result = await ttdService.testCreateOrUpdate(
     input.entityType as TtdEntityType,
     input.data,
     input.mode as "create" | "update",

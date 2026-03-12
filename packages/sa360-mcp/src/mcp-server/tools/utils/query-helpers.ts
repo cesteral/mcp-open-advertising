@@ -148,6 +148,10 @@ export function buildGetByIdQuery(
   entityType: SA360EntityType,
   entityId: string
 ): string {
+  if (!/^\d+$/.test(entityId)) {
+    throw new Error(`Invalid entity ID: "${entityId}". Entity IDs must be numeric.`);
+  }
+
   const config = getEntityConfig(entityType);
   const fields = DEFAULT_SELECT_FIELDS[entityType] || [config.idField];
 

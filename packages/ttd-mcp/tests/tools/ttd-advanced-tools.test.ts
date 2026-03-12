@@ -126,7 +126,7 @@ describe("ttd advanced tools", () => {
         data: { advertiser: { id: "a1" } },
         errors: [],
       }),
-      validateEntity: vi.fn().mockResolvedValue({ valid: true }),
+      testCreateOrUpdate: vi.fn().mockResolvedValue({ valid: true }),
       adjustBids: vi.fn(),
     };
 
@@ -242,7 +242,7 @@ describe("ttd advanced tools", () => {
   });
 
   it("validateEntityLogic returns service validation response", async () => {
-    mockTtdService.validateEntity.mockResolvedValueOnce({
+    mockTtdService.testCreateOrUpdate.mockResolvedValueOnce({
       valid: false,
       errors: ["Missing field"],
     });

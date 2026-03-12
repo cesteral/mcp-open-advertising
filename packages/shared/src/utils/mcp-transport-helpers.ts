@@ -69,6 +69,19 @@ export function extractHeadersMap(rawHeaders: Headers): Record<string, string> {
   return Object.fromEntries([...rawHeaders.entries()].map(([k, v]) => [k, v]));
 }
 
+/**
+ * Extract a single header value from a headers record, handling case-insensitive
+ * lookup and array values. Shared across all platform auth adapters.
+ */
+export function extractHeader(
+  headers: Record<string, string | string[] | undefined>,
+  name: string
+): string | undefined {
+  const value = headers[name] ?? headers[name.toLowerCase()];
+  if (Array.isArray(value)) return value[0];
+  return value;
+}
+
 // ---------------------------------------------------------------------------
 // RFC 9728 OAuth Protected Resource Metadata
 // ---------------------------------------------------------------------------

@@ -10,7 +10,7 @@
  */
 
 import { createHash } from "crypto";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
 
 /**
  * SA360 credentials parsed from HTTP headers or environment variables.
@@ -165,13 +165,4 @@ export function getSA360CredentialFingerprint(credentials: SA360Credentials): st
     .update(credentials.clientId)
     .digest("hex")
     .substring(0, 32);
-}
-
-function extractHeader(
-  headers: Record<string, string | string[] | undefined>,
-  name: string
-): string | undefined {
-  const value = headers[name] ?? headers[name.toLowerCase()];
-  if (Array.isArray(value)) return value[0];
-  return value;
 }
