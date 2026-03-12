@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
+import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
@@ -8,6 +9,7 @@ import {
   extractZodShape,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
+  registerStaticResourcesFromDefinitions,
   InteractionLogger,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
@@ -94,6 +96,13 @@ export async function createMcpServer(
     authContextResolver: sessionId
       ? () => sessionServiceStore.getAuthContext(sessionId)
       : undefined,
+  });
+
+  // Register all resources via shared factory
+  registerStaticResourcesFromDefinitions({
+    server,
+    resources: allResources,
+    logger,
   });
 
   // Register conformance fixtures (resources + prompts) when enabled

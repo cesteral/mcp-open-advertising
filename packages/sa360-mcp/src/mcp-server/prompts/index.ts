@@ -1,10 +1,36 @@
 /**
  * SA360 MCP Prompts Registry
- *
- * Prompts provide step-by-step workflow guidance for complex multi-step operations.
  */
 
 import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
+import {
+  toolSchemaExplorationPrompt,
+  getToolSchemaExplorationMessage,
+} from "./definitions/tool-schema-exploration.prompt.js";
+import {
+  queryLanguageWorkflowPrompt,
+  getQueryLanguageWorkflowMessage,
+} from "./definitions/query-language-workflow.prompt.js";
+import {
+  conversionUploadWorkflowPrompt,
+  getConversionUploadWorkflowMessage,
+} from "./definitions/conversion-upload-workflow.prompt.js";
+import {
+  crossEngineReportingWorkflowPrompt,
+  getCrossEngineReportingWorkflowMessage,
+} from "./definitions/cross-engine-reporting-workflow.prompt.js";
+import {
+  troubleshootEntityPrompt,
+  getTroubleshootEntityMessage,
+} from "./definitions/troubleshoot-entity.prompt.js";
+import {
+  crossPlatformCampaignSetupPrompt,
+  getCrossPlatformCampaignSetupMessage,
+} from "./definitions/cross-platform-campaign-setup.prompt.js";
+import {
+  crossPlatformPerformancePrompt,
+  getCrossPlatformPerformanceMessage,
+} from "./definitions/cross-platform-performance.prompt.js";
 
 export interface PromptDefinition {
   prompt: Prompt;
@@ -12,7 +38,55 @@ export interface PromptDefinition {
 }
 
 export const promptRegistry: Map<string, PromptDefinition> = new Map([
-  // No prompts defined yet — SA360 is primarily read-only with simple workflows
+  [
+    toolSchemaExplorationPrompt.name,
+    {
+      prompt: toolSchemaExplorationPrompt,
+      generateMessage: getToolSchemaExplorationMessage,
+    },
+  ],
+  [
+    queryLanguageWorkflowPrompt.name,
+    {
+      prompt: queryLanguageWorkflowPrompt,
+      generateMessage: getQueryLanguageWorkflowMessage,
+    },
+  ],
+  [
+    conversionUploadWorkflowPrompt.name,
+    {
+      prompt: conversionUploadWorkflowPrompt,
+      generateMessage: getConversionUploadWorkflowMessage,
+    },
+  ],
+  [
+    crossEngineReportingWorkflowPrompt.name,
+    {
+      prompt: crossEngineReportingWorkflowPrompt,
+      generateMessage: getCrossEngineReportingWorkflowMessage,
+    },
+  ],
+  [
+    troubleshootEntityPrompt.name,
+    {
+      prompt: troubleshootEntityPrompt,
+      generateMessage: getTroubleshootEntityMessage,
+    },
+  ],
+  [
+    crossPlatformCampaignSetupPrompt.name,
+    {
+      prompt: crossPlatformCampaignSetupPrompt,
+      generateMessage: getCrossPlatformCampaignSetupMessage,
+    },
+  ],
+  [
+    crossPlatformPerformancePrompt.name,
+    {
+      prompt: crossPlatformPerformancePrompt,
+      generateMessage: getCrossPlatformPerformanceMessage,
+    },
+  ],
 ]);
 
 export function getAllPrompts(): Prompt[] {

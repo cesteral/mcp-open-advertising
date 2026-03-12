@@ -4,6 +4,7 @@
 
 export type { Resource } from "./types.js";
 
+import { definitionResources } from "./definitions/index.js";
 import { allTools } from "../tools/definitions/index.js";
 import {
   createToolExamplesResource,
@@ -26,6 +27,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "sa360_search_fields",
     ],
     write: ["sa360_insert_conversions", "sa360_update_conversions"],
+    validation: ["sa360_validate_conversion"],
   },
   commonWorkflows: ["cross_engine_performance_analysis", "offline_conversion_upload"],
   startHere: "sa360_list_accounts",
@@ -35,6 +37,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
  * All resources for registration
  */
 export const allResources: Resource[] = [
+  ...definitionResources,
   ...(toolExamplesResource ? [toolExamplesResource as unknown as Resource] : []),
   serverCapabilitiesResource as unknown as Resource,
 ];
