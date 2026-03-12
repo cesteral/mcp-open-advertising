@@ -18,6 +18,8 @@ This table tracks current and planned ad-platform packages.
 
 | Platform | Proposed Package | Notes |
 |---|---|---|
+| Pinterest Ads | `packages/pinterest-mcp` | Follow TikTok-style full management/reporting surface |
+| Snapchat Ads | `packages/snapchat-mcp` | Preserve Snap terminology such as Ad Squad |
 | Amazon DSP | `packages/amazon-dsp-mcp` | Include MCP prompts and resources at package introduction |
 
 ## Rules

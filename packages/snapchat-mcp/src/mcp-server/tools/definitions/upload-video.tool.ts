@@ -1,0 +1,157 @@
+import { z } from "zod";
+import { resolveSessionServices } from "../utils/resolve-session.js";
+import { downloadFileToBuffer } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import type { SdkContext } from "../../../types-global/mcp.js";
+
+const TOOL_NAME = "snapchat_upload_video";
+const TOOL_TITLE = "Upload Video to Snapchat Ads";
+const TOOL_DESCRIPTION = `Upload a video to Snapchat Ads Library from a URL.
+
+The server downloads the video and uploads it to Snapchat's ad video library.
+Polls until binding is complete (up to 10 minutes).
+
+**Video requirements:**
+- Formats: MP4, MOV, AVI (H.264/H.265 codec recommended)
+- Max file size: 500MB
+- Min resolution: 540x960px (9:16), 960x540px (16:9), or 640x640px (1:1)
+- Duration: 5 to 60 seconds for In-Feed ads
+
+**Usage:** The returned videoId is used in ad creative payloads.`;
+
+export const UploadVideoInputSchema = z.object({
+  adAccountId: z.string().describe("Snapchat Advertiser ID"),
+  mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+  videoName: z.string().optional().describe("Optional name for the video in the library"),
+}).describe("Parameters for uploading a video to Snapchat");
+
+export const UploadVideoOutputSchema = z.object({
+  videoId: z.string().describe("Video ID for use in ad creative payloads"),
+  videoName: z.string().optional(),
+  duration: z.number().optional().describe("Video duration in seconds"),
+  uploadedAt: z.string().datetime(),
+}).describe("Uploaded Snapchat video info");
+
+type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
+type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
+
+interface SnapchatVideoUploadResponse {
+  video_id?: string;
+  video_name?: string;
+}
+
+interface SnapchatVideoInfoItem {
+  video_id: string;
+  video_name?: string;
+  duration?: number;
+  video_status?: string;
+}
+
+interface SnapchatVideoInfoResponse {
+  list?: SnapchatVideoInfoItem[];
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function uploadVideoLogic(
+  input: UploadVideoInput,
+  context: RequestContext,
+  sdkContext?: SdkContext
+): Promise<UploadVideoOutput> {
+  const { snapchatService } = resolveSessionServices(sdkContext);
+
+  const { buffer, contentType, filename } = await downloadFileToBuffer(
+    input.mediaUrl,
+    600_000, // 10 min for large videos
+    context
+  );
+
+  const fields: Record<string, string> = {};
+  if (input.videoName) fields.video_name = input.videoName;
+
+  const uploadResult = await snapchatService.client.postMultipart(
+    "/open_api/v1.3/file/video/ad/upload/",
+    fields,
+    "video_file",
+    buffer,
+    filename,
+    contentType,
+    context
+  ) as SnapchatVideoUploadResponse;
+
+  const videoId = uploadResult.video_id;
+  if (!videoId) {
+    throw new Error("Snapchat video upload failed: no video_id returned");
+  }
+
+  // Poll for bind_success status (max 10 min, 20s intervals)
+  const maxAttempts = 30;
+  const pollIntervalMs = 20_000;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await sleep(pollIntervalMs);
+
+    const statusResult = await snapchatService.client.post(
+      "/open_api/v1.3/file/video/ad/info/",
+      { video_ids: [videoId] },
+      context
+    ) as SnapchatVideoInfoResponse;
+
+    const videoInfo = statusResult.list?.[0];
+    const videoStatus = videoInfo?.video_status ?? "processing";
+
+    if (videoStatus === "bind_success") {
+      return {
+        videoId,
+        videoName: videoInfo?.video_name ?? input.videoName,
+        duration: videoInfo?.duration,
+        uploadedAt: new Date().toISOString(),
+      };
+    }
+
+    if (videoStatus === "error" || videoStatus === "deleted") {
+      throw new Error(`Snapchat video processing failed: status=${videoStatus}`);
+    }
+  }
+
+  return {
+    videoId,
+    videoName: uploadResult.video_name ?? input.videoName,
+    uploadedAt: new Date().toISOString(),
+  };
+}
+
+export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
+  return [{
+    type: "text" as const,
+    text: `Video uploaded to Snapchat!\n\nVideo ID: ${result.videoId}${result.videoName ? `\nName: ${result.videoName}` : ""}${result.duration !== undefined ? `\nDuration: ${result.duration}s` : ""}\n\nUse videoId in your ad creative payload`,
+  }];
+}
+
+export const uploadVideoTool = {
+  name: TOOL_NAME,
+  title: TOOL_TITLE,
+  description: TOOL_DESCRIPTION,
+  inputSchema: UploadVideoInputSchema,
+  outputSchema: UploadVideoOutputSchema,
+  annotations: {
+    readOnlyHint: false,
+    openWorldHint: true,
+    idempotentHint: false,
+    destructiveHint: false,
+  },
+  inputExamples: [
+    {
+      label: "Upload a Snapchat campaign video",
+      input: {
+        adAccountId: "1234567890",
+        mediaUrl: "https://example.com/video.mp4",
+        videoName: "Summer Campaign 2025",
+      },
+    },
+  ],
+  logic: uploadVideoLogic,
+  responseFormatter: uploadVideoResponseFormatter,
+};

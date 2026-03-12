@@ -1,6 +1,6 @@
 # Cesteral - AI-Native Multi-Platform Campaign Optimization
 
-**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager**
+**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, CM360, SA360, Pinterest, Snapchat, Amazon DSP, and Bid Manager**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -12,7 +12,7 @@
 
 ## Overview
 
-Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on seven independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
+Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on twelve independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
 
 This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
 
@@ -38,7 +38,7 @@ If you want the reasoning behind this split, see [docs/business/cesteral-licensi
 
 ## Architecture
 
-Cesteral uses a **GCP-native architecture** with seven independently deployable Cloud Run MCP services:
+Cesteral uses a **GCP-native architecture** with twelve independently deployable Cloud Run MCP services:
 
 - `dbm-mcp` for reporting and query workflows
 - `dv360-mcp` for DV360 management workflows
@@ -47,6 +47,11 @@ Cesteral uses a **GCP-native architecture** with seven independently deployable 
 - `meta-mcp` for Meta Ads campaign management
 - `linkedin-mcp` for LinkedIn Ads campaign management and analytics
 - `tiktok-mcp` for TikTok Ads campaign management and async reporting
+- `cm360-mcp` for Campaign Manager 360 management workflows
+- `sa360-mcp` for Search Ads 360 reporting and conversion workflows
+- `pinterest-mcp` for Pinterest Ads campaign management and reporting
+- `snapchat-mcp` for Snapchat Ads campaign management and reporting
+- `amazon-dsp-mcp` for Amazon DSP campaign management and reporting
 
 ### Access Model
 

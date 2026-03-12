@@ -1,0 +1,60 @@
+{
+  "name": "@cesteral/pinterest-mcp",
+  "version": "1.0.0",
+  "description": "Pinterest Ads MCP Server - Campaign entity management and reporting via Pinterest Marketing API v1.3",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
+    "directory": "packages/pinterest-mcp"
+  },
+  "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "advertising",
+    "pinterest-ads"
+  ],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "dev:http": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@cesteral/shared": "workspace:*",
+    "@hono/mcp": "^0.2.3",
+    "@hono/node-server": "^1.19.9",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.67.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.208.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.208.0",
+    "@opentelemetry/resources": "^2.2.0",
+    "@opentelemetry/sdk-metrics": "^2.2.0",
+    "@opentelemetry/sdk-node": "^0.208.0",
+    "@opentelemetry/semantic-conventions": "^1.38.0",
+    "dotenv": "^17.2.3",
+    "hono": "^4.11.9",
+    "pino": "^10.1.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.0"
+  }
+}
