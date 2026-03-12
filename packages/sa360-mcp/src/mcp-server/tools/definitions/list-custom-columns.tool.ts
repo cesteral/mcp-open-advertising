@@ -13,7 +13,7 @@ export const ListCustomColumnsInputSchema = z
   .object({
     customerId: z
       .string()
-      .min(1)
+      .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
   })
   .describe("Parameters for listing custom columns");

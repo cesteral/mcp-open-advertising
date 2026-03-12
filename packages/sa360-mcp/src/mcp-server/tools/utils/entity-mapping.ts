@@ -92,3 +92,34 @@ export function getEntityTypeEnum(): [string, ...string[]] {
   const types = getSupportedEntityTypes();
   return types as [string, ...string[]];
 }
+
+// ---------------------------------------------------------------------------
+// Insights-specific helpers
+// ---------------------------------------------------------------------------
+
+/** Entity types that support metrics queries (have associated metrics in SA360). */
+export type SA360InsightsEntityType = "campaign" | "adGroup" | "adGroupAd" | "adGroupCriterion";
+
+const INSIGHTS_ENTITY_CONFIGS: Record<SA360InsightsEntityType, { queryResource: string; idField: string; nameField: string }> = {
+  campaign: { queryResource: "campaign", idField: "campaign.id", nameField: "campaign.name" },
+  adGroup: { queryResource: "ad_group", idField: "ad_group.id", nameField: "ad_group.name" },
+  adGroupAd: { queryResource: "ad_group_ad", idField: "ad_group_ad.ad.id", nameField: "ad_group_ad.ad.name" },
+  adGroupCriterion: { queryResource: "ad_group_criterion", idField: "ad_group_criterion.criterion_id", nameField: "ad_group_criterion.keyword.text" },
+};
+
+export function getInsightsQueryResource(entityType: SA360InsightsEntityType): string {
+  return INSIGHTS_ENTITY_CONFIGS[entityType].queryResource;
+}
+
+export function getInsightsIdField(entityType: SA360InsightsEntityType): string {
+  return INSIGHTS_ENTITY_CONFIGS[entityType].idField;
+}
+
+export function getInsightsNameField(entityType: SA360InsightsEntityType): string {
+  return INSIGHTS_ENTITY_CONFIGS[entityType].nameField;
+}
+
+export function getInsightsEntityTypeEnum(): [string, ...string[]] {
+  const types = Object.keys(INSIGHTS_ENTITY_CONFIGS) as string[];
+  return types as [string, ...string[]];
+}

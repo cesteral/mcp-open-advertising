@@ -70,6 +70,48 @@ describe("SA360 Query Helpers", () => {
         expect(query).toContain("FROM");
       }
     });
+
+    it("should reject filter field names with invalid characters", () => {
+      expect(() =>
+        buildListQuery("campaign", { "campaign.status; DROP TABLE": "= 'ENABLED'" })
+      ).toThrow("Invalid filter field name");
+    });
+
+    it("should reject filter field names starting with numbers", () => {
+      expect(() =>
+        buildListQuery("campaign", { "1invalid": "= 'ENABLED'" })
+      ).toThrow("Invalid filter field name");
+    });
+
+    it("should reject filter field names with uppercase", () => {
+      expect(() =>
+        buildListQuery("campaign", { "Campaign.Status": "= 'ENABLED'" })
+      ).toThrow("Invalid filter field name");
+    });
+
+    it("should accept valid dotted filter field names", () => {
+      const query = buildListQuery("campaign", {
+        "campaign.status": "= 'ENABLED'",
+      });
+      expect(query).toContain("campaign.status = 'ENABLED'");
+    });
+
+    it("should reject orderBy field names with invalid characters", () => {
+      expect(() =>
+        buildListQuery("campaign", undefined, "campaign.name; DROP TABLE ASC")
+      ).toThrow("Invalid orderBy field name");
+    });
+
+    it("should reject orderBy field names starting with uppercase", () => {
+      expect(() =>
+        buildListQuery("campaign", undefined, "Campaign.name ASC")
+      ).toThrow("Invalid orderBy field name");
+    });
+
+    it("should accept valid orderBy with direction", () => {
+      const query = buildListQuery("campaign", undefined, "campaign.name DESC");
+      expect(query).toContain("ORDER BY campaign.name DESC");
+    });
   });
 
   describe("buildGetByIdQuery", () => {

@@ -1,10 +1,11 @@
 /**
  * Tool definitions barrel export
  *
- * 10 tools total:
+ * 11 tools total:
  *   8 read:  sa360 search, list accounts, get entity, list entities, get insights,
  *            get insights breakdowns, list custom columns, search fields
  *   2 write: insert conversions, update conversions (v2 API)
+ *   1 validation: validate conversion
  */
 
 export { sa360SearchTool } from "./sa360-search.tool.js";
@@ -17,6 +18,7 @@ export { listCustomColumnsTool } from "./list-custom-columns.tool.js";
 export { searchFieldsTool } from "./search-fields.tool.js";
 export { insertConversionsTool } from "./insert-conversions.tool.js";
 export { updateConversionsTool } from "./update-conversions.tool.js";
+export { validateConversionTool } from "./validate-conversion.tool.js";
 
 import { sa360SearchTool } from "./sa360-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
@@ -28,6 +30,7 @@ import { listCustomColumnsTool } from "./list-custom-columns.tool.js";
 import { searchFieldsTool } from "./search-fields.tool.js";
 import { insertConversionsTool } from "./insert-conversions.tool.js";
 import { updateConversionsTool } from "./update-conversions.tool.js";
+import { validateConversionTool } from "./validate-conversion.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -43,6 +46,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Write Tools (v2 API) ──
   insertConversionsTool,
   updateConversionsTool,
+  // ── Validation Tools ──
+  validateConversionTool,
 ];
 
 /**

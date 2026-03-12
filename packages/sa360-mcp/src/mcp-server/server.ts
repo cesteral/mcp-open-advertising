@@ -34,6 +34,8 @@ const sa360WorkflowIdByToolName: Record<string, string> = {
   // Write tools (v2 API)
   sa360_insert_conversions: "mcp.execute.sa360_conversions",
   sa360_update_conversions: "mcp.execute.sa360_conversions",
+  // Validation tools
+  sa360_validate_conversion: "mcp.execute.sa360_validation",
 };
 
 /**

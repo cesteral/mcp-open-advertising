@@ -1,5 +1,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  getInsightsEntityTypeEnum,
+  getInsightsQueryResource,
+  getInsightsIdField,
+  getInsightsNameField,
+  type SA360InsightsEntityType,
+} from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -11,7 +18,6 @@ Adds segment dimensions to the query to break down metrics by device, date, netw
 
 **Supported breakdowns:** segments.date, segments.device, segments.ad_network_type, segments.conversion_action, segments.day_of_week, segments.month, segments.quarter, segments.week, segments.year`;
 
-const ENTITY_TYPE_ENUM = ["campaign", "adGroup", "adGroupAd", "adGroupCriterion"] as const;
 const METRIC_NAME_PATTERN = /^(metrics\.)?[a-z_][a-z0-9_]*$/;
 const SEGMENT_NAME_PATTERN = /^(segments\.)?[a-z_][a-z0-9_.]*$/;
 
@@ -32,27 +38,6 @@ const DEFAULT_METRICS = [
   "metrics.conversions",
 ];
 
-const QUERY_RESOURCE_MAP: Record<string, string> = {
-  campaign: "campaign",
-  adGroup: "ad_group",
-  adGroupAd: "ad_group_ad",
-  adGroupCriterion: "ad_group_criterion",
-};
-
-const ENTITY_ID_FIELD_MAP: Record<string, string> = {
-  campaign: "campaign.id",
-  adGroup: "ad_group.id",
-  adGroupAd: "ad_group_ad.ad.id",
-  adGroupCriterion: "ad_group_criterion.criterion_id",
-};
-
-const ENTITY_NAME_FIELD_MAP: Record<string, string> = {
-  campaign: "campaign.name",
-  adGroup: "ad_group.name",
-  adGroupAd: "ad_group_ad.ad.name",
-  adGroupCriterion: "ad_group_criterion.keyword.text",
-};
-
 export const GetInsightsBreakdownsInputSchema = z
   .object({
     customerId: z
@@ -60,7 +45,7 @@ export const GetInsightsBreakdownsInputSchema = z
       .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
     entityType: z
-      .enum(ENTITY_TYPE_ENUM)
+      .enum(getInsightsEntityTypeEnum())
       .describe("Type of entity to get insights for"),
     entityId: z
       .string()
@@ -89,6 +74,10 @@ export const GetInsightsBreakdownsInputSchema = z
       .optional()
       .default(100)
       .describe("Max results to return (default 100)"),
+    pageToken: z
+      .string()
+      .optional()
+      .describe("Page token for pagination (from previous response)"),
   })
   .describe("Parameters for getting SA360 insights with breakdowns");
 
@@ -98,6 +87,8 @@ export const GetInsightsBreakdownsOutputSchema = z
     totalResults: z.number().describe("Number of results returned"),
     dateRange: z.string().describe("Date range used"),
     breakdowns: z.array(z.string()).describe("Breakdown dimensions used"),
+    nextPageToken: z.string().optional().describe("Token to fetch the next page of results"),
+    has_more: z.boolean().describe("Whether more results are available via pagination"),
     timestamp: z.string().datetime(),
   })
   .describe("SA360 performance insights with breakdowns");
@@ -106,9 +97,10 @@ type GetInsightsBreakdownsInput = z.infer<typeof GetInsightsBreakdownsInputSchem
 type GetInsightsBreakdownsOutput = z.infer<typeof GetInsightsBreakdownsOutputSchema>;
 
 function buildBreakdownQuery(input: GetInsightsBreakdownsInput): string {
-  const resource = QUERY_RESOURCE_MAP[input.entityType];
-  const idField = ENTITY_ID_FIELD_MAP[input.entityType];
-  const nameField = ENTITY_NAME_FIELD_MAP[input.entityType];
+  const entityType = input.entityType as SA360InsightsEntityType;
+  const resource = getInsightsQueryResource(entityType);
+  const idField = getInsightsIdField(entityType);
+  const nameField = getInsightsNameField(entityType);
 
   const metricFields =
     input.metrics && input.metrics.length > 0
@@ -145,7 +137,7 @@ export async function getInsightsBreakdownsLogic(
     input.customerId,
     query,
     input.limit,
-    undefined,
+    input.pageToken,
     context
   );
 
@@ -154,15 +146,20 @@ export async function getInsightsBreakdownsLogic(
     totalResults: result.results.length,
     dateRange: input.dateRange,
     breakdowns: input.breakdowns,
+    nextPageToken: result.nextPageToken,
+    has_more: !!result.nextPageToken,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function getInsightsBreakdownsResponseFormatter(result: GetInsightsBreakdownsOutput): any {
+  const paginationNote = result.has_more
+    ? ` — more pages available (use pageToken: "${result.nextPageToken}")`
+    : "";
   return [
     {
       type: "text" as const,
-      text: `Insights with breakdowns [${result.breakdowns.join(", ")}] (${result.dateRange}): ${result.totalResults} results\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Insights with breakdowns [${result.breakdowns.join(", ")}] (${result.dateRange}): ${result.totalResults} results${paginationNote}\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

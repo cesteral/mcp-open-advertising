@@ -8,6 +8,24 @@
 import { getEntityConfig, type SA360EntityType } from "./entity-mapping.js";
 
 /**
+ * Regex for valid SA360 query field names (e.g., "campaign.status", "ad_group.name").
+ * Defense-in-depth: prevents injection into query strings even though the API also validates.
+ */
+const VALID_FIELD_NAME = /^[a-z_][a-z0-9_.]*$/;
+
+/**
+ * Validate a field name for use in SA360 queries.
+ * Throws if the field name contains characters outside the allowed pattern.
+ */
+function validateFieldName(field: string, context: string): void {
+  if (!VALID_FIELD_NAME.test(field)) {
+    throw new Error(
+      `Invalid ${context} field name: "${field}". Field names must match pattern [a-z_][a-z0-9_.]* (lowercase letters, digits, underscores, and dots).`
+    );
+  }
+}
+
+/**
  * Common fields for each entity type.
  * These are the default fields selected when listing entities.
  */
@@ -98,6 +116,7 @@ export function buildListQuery(
 
   if (filters) {
     for (const [field, value] of Object.entries(filters)) {
+      validateFieldName(field, "filter");
       // Support operator in the value: "= ENABLED", "> 1000", "IN ('ENABLED', 'PAUSED')"
       if (value.match(/^(=|!=|>|<|>=|<=|IN|LIKE|CONTAINS|NOT|BETWEEN|DURING|IS)\s/i)) {
         conditions.push(`${field} ${value}`);
@@ -113,6 +132,9 @@ export function buildListQuery(
   }
 
   if (orderBy) {
+    // Extract the field name from "field ASC" or "field DESC" or just "field"
+    const orderByField = orderBy.split(/\s+/)[0];
+    validateFieldName(orderByField, "orderBy");
     query += ` ORDER BY ${orderBy}`;
   }
 

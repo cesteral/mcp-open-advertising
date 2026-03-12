@@ -19,7 +19,7 @@ export const GetEntityInputSchema = z
       .describe("Type of entity to retrieve"),
     customerId: z
       .string()
-      .min(1)
+      .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
     entityId: z
       .string()

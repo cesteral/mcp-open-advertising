@@ -685,6 +685,34 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `tiktok_upload_image` | Upload image from URL to TikTok ad image library | `advertiserId`, `mediaUrl`, `filename?` |
 | `tiktok_upload_video` | Upload video from URL to TikTok ad video library (polls) | `advertiserId`, `mediaUrl`, `videoName?` |
 
+### sa360-mcp (Search Ads 360 Server) Tools — 11 Tools
+
+**Auth:** `MCP_AUTH_MODE=sa360-headers | jwt | none`, Google OAuth2 (SA or refresh token), scope `doubleclicksearch`
+**APIs:** SA360 Reporting API v0 (reads) + legacy DoubleClick Search v2 (conversion upload)
+
+#### Read Tools
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `sa360_search` | Execute arbitrary SA360 query language queries | `customerId`, `query`, `pageSize?`, `pageToken?` |
+| `sa360_list_accounts` | List accessible SA360 customer accounts | _(none)_ |
+| `sa360_get_entity` | Get a single entity by type and ID | `entityType`, `customerId`, `entityId` |
+| `sa360_list_entities` | List entities with query filters | `entityType`, `customerId`, `filters?`, `orderBy?` |
+| `sa360_get_insights` | Performance insights with preset params | `customerId`, `entityType`, `dateRange`, `metrics?`, `pageToken?` |
+| `sa360_get_insights_breakdowns` | Metrics with segment breakdowns | `customerId`, `entityType`, `dateRange`, `breakdowns[]`, `pageToken?` |
+| `sa360_list_custom_columns` | List custom columns for an account | `customerId` |
+| `sa360_search_fields` | Search available SA360 query fields | `query?`, `resourceType?` |
+
+#### Write Tools (v2 API)
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `sa360_insert_conversions` | Insert offline conversions | `agencyId`, `advertiserId`, `conversions[]` |
+| `sa360_update_conversions` | Update existing conversions | `agencyId`, `advertiserId`, `conversions[]` |
+
+#### Validation Tools
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `sa360_validate_conversion` | Validate conversion payload (no API call) | `mode`, `conversion` |
+
 ### How the Seven Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**

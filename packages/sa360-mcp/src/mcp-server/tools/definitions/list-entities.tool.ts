@@ -17,7 +17,7 @@ export const ListEntitiesInputSchema = z
       .describe("Type of entity to list"),
     customerId: z
       .string()
-      .min(1)
+      .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
     filters: z
       .record(z.string())
