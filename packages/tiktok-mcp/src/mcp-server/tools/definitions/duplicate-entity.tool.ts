@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_duplicate_entity";
@@ -67,7 +67,7 @@ export async function duplicateEntityLogic(
   };
 }
 
-export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): unknown[] {
+export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

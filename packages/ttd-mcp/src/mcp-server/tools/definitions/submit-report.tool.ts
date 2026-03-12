@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_submit_report";
@@ -91,7 +91,7 @@ export async function submitReportLogic(
   };
 }
 
-export function submitReportResponseFormatter(result: SubmitReportOutput): unknown[] {
+export function submitReportResponseFormatter(result: SubmitReportOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

@@ -11,7 +11,7 @@ import {
   buildTargetingIds,
 } from '../utils/targeting-metadata.js';
 import { getTargetingRequiredIdInputShape } from '../utils/targeting-input-shape.js';
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from '../../../types-global/mcp.js';
 
 const TOOL_NAME = 'dv360_list_assigned_targeting';
@@ -107,7 +107,7 @@ export async function listAssignedTargetingLogic(
 /**
  * Format response for MCP client
  */
-export function listAssignedTargetingResponseFormatter(result: ListAssignedTargetingOutput): any {
+export function listAssignedTargetingResponseFormatter(result: ListAssignedTargetingOutput): McpTextContent[] {
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
   const summary = `Found ${result.totalCount} ${result.targetingType} targeting options for ${result.parentType}`;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_list_ad_accounts";
@@ -69,7 +69,7 @@ export async function listAdAccountsLogic(
   };
 }
 
-export function listAdAccountsResponseFormatter(result: ListAdAccountsOutput): unknown[] {
+export function listAdAccountsResponseFormatter(result: ListAdAccountsOutput): McpTextContent[] {
   const totalInfo = result.total !== undefined ? ` (total: ${result.total})` : "";
   return [
     {

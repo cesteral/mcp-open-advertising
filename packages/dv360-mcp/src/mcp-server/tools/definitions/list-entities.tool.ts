@@ -5,7 +5,7 @@ import {
   getEntityConfigDynamic,
 } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_list_entities";
@@ -148,7 +148,7 @@ export async function listEntitiesLogic(
 /**
  * Format response for MCP client
  */
-export function listEntitiesResponseFormatter(result: ListEntitiesOutput): any {
+export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
   const summary = `Found ${result.totalCount} entities`;
   const pagination = result.nextPageToken
     ? `\n\nMore results available. Use nextPageToken: ${result.nextPageToken}`

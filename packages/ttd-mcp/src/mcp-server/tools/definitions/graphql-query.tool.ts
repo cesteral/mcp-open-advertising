@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_graphql_query";
@@ -69,7 +69,7 @@ export async function graphqlQueryLogic(
   };
 }
 
-export function graphqlQueryResponseFormatter(result: GraphqlOutput): unknown[] {
+export function graphqlQueryResponseFormatter(result: GraphqlOutput): McpTextContent[] {
   const errorInfo = result.errors?.length
     ? `\n\nGraphQL Errors:\n${JSON.stringify(result.errors, null, 2)}`
     : "";

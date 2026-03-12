@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_bulk_mutate";
@@ -85,7 +85,7 @@ export async function bulkMutateLogic(
   };
 }
 
-export function bulkMutateResponseFormatter(result: BulkMutateOutput): any {
+export function bulkMutateResponseFormatter(result: BulkMutateOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

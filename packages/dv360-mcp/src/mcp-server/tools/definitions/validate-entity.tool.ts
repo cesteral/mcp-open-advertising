@@ -6,7 +6,7 @@ import {
   getEntitySchemaByType,
   getFieldSchemaByPath,
 } from "../utils/schema-introspection.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_validate_entity";
@@ -169,7 +169,7 @@ export async function validateEntityLogic(
 
 export function validateEntityResponseFormatter(
   result: ValidateEntityOutput
-): any {
+): McpTextContent[] {
   const parts: string[] = [];
 
   if (result.valid) {

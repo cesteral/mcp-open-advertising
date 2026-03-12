@@ -8,7 +8,7 @@ import {
   getValidateIdsFieldName,
 } from '../utils/targeting-input-shape.js';
 import { getSupportedTargetingParentTypes } from '../utils/targeting-metadata.js';
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from '../../../types-global/mcp.js';
 
 const TOOL_NAME = 'dv360_validate_targeting_config';
@@ -145,7 +145,7 @@ export async function validateTargetingConfigLogic(
 /**
  * Format response for MCP client
  */
-export function validateTargetingConfigResponseFormatter(result: ValidateTargetingConfigOutput): any {
+export function validateTargetingConfigResponseFormatter(result: ValidateTargetingConfigOutput): McpTextContent[] {
   const statusEmoji = result.valid ? 'PASS' : 'FAIL';
   const statusText = result.valid ? 'PASSED' : 'ISSUES FOUND';
 

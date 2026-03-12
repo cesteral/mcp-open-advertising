@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
@@ -176,7 +176,7 @@ export async function runCustomQueryLogic(
 export function runCustomQueryResponseFormatter(
   result: RunCustomQueryOutput,
   input: RunCustomQueryInput
-): any[] {
+): McpTextContent[] {
   const dateRangeStr =
     "preset" in input.dateRange
       ? input.dateRange.preset

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_graphql_bulk_job";
@@ -91,7 +91,7 @@ export async function graphqlBulkJobLogic(
   };
 }
 
-export function graphqlBulkJobResponseFormatter(result: GraphqlBulkJobOutput): unknown[] {
+export function graphqlBulkJobResponseFormatter(result: GraphqlBulkJobOutput): McpTextContent[] {
   const lines: string[] = [
     `Bulk job: ${result.jobId}`,
     `Status: ${result.status}`,

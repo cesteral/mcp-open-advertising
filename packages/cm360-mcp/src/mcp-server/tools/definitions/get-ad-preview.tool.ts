@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "cm360_get_ad_preview";
@@ -63,7 +63,7 @@ export async function getAdPreviewLogic(
   };
 }
 
-export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): unknown[] {
+export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTextContent[] {
   const nameInfo = result.adName ? ` (${result.adName})` : "";
   const previewInfo = result.previewUrl
     ? `\n\nPreview URL: ${result.previewUrl}`

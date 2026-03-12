@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "sa360_list_custom_columns";
@@ -45,7 +45,7 @@ export async function listCustomColumnsLogic(
   };
 }
 
-export function listCustomColumnsResponseFormatter(result: ListCustomColumnsOutput): any {
+export function listCustomColumnsResponseFormatter(result: ListCustomColumnsOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

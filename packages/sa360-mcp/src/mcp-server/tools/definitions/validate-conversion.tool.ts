@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "sa360_validate_conversion";
@@ -157,7 +157,7 @@ export async function validateConversionLogic(
   };
 }
 
-export function validateConversionResponseFormatter(result: ValidateConversionOutput): any {
+export function validateConversionResponseFormatter(result: ValidateConversionOutput): McpTextContent[] {
   const statusIcon = result.valid ? "VALID" : "INVALID";
   const parts = [`Validation: ${statusIcon} (mode: ${result.mode})`];
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_delete_entity";
@@ -81,7 +81,7 @@ export async function deleteEntityLogic(
   };
 }
 
-export function deleteEntityResponseFormatter(result: DeleteEntityOutput): unknown[] {
+export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

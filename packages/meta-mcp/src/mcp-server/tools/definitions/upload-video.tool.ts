@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_upload_video";
@@ -124,7 +124,7 @@ export async function uploadVideoLogic(
   };
 }
 
-export function uploadVideoResponseFormatter(result: UploadVideoOutput): unknown[] {
+export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
   return [{
     type: "text" as const,
     text: `Video uploaded to Meta!\n\nVideo ID: ${result.videoId}\nStatus: ${result.status}${result.title ? `\nTitle: ${result.title}` : ""}\n\nUse videoId in adCreative.video_data.video_id`,

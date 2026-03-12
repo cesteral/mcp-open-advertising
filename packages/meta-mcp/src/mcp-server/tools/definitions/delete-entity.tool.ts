@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_delete_entity";
@@ -60,7 +60,7 @@ export async function deleteEntityLogic(
   };
 }
 
-export function deleteEntityResponseFormatter(result: DeleteEntityOutput): unknown[] {
+export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
   const status = result.success ? "deleted successfully" : "deletion returned unexpected response";
   return [
     {

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_get_targeting_options";
@@ -53,7 +53,7 @@ export async function getTargetingOptionsLogic(
   };
 }
 
-export function getTargetingOptionsResponseFormatter(result: GetTargetingOptionsOutput): unknown[] {
+export function getTargetingOptionsResponseFormatter(result: GetTargetingOptionsOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

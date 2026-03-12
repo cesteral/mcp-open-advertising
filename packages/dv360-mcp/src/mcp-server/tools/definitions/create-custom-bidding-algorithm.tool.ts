@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
@@ -255,7 +255,7 @@ export async function createCustomBiddingAlgorithmLogic(
  */
 export function createCustomBiddingAlgorithmResponseFormatter(
   result: CreateCustomBiddingAlgorithmOutput
-): any {
+): McpTextContent[] {
   let message = `Custom bidding algorithm created successfully!\n\n`;
   message += `**Algorithm Details:**\n`;
   message += `- ID: ${result.algorithm.customBiddingAlgorithmId}\n`;

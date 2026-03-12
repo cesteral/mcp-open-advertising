@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_download_report";
@@ -118,7 +118,7 @@ export async function downloadReportLogic(
   };
 }
 
-export function downloadReportResponseFormatter(result: DownloadOutput): unknown[] {
+export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {
   const truncNote = result.truncated
     ? `\n\n⚠️ Showing ${result.returnedRows} of ${result.totalRows} rows (truncated)`
     : "";

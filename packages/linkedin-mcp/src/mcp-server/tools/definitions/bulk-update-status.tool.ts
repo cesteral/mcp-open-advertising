@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import { elicitArchiveConfirmation } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -83,7 +83,7 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): unknown[] {
+export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dbm_get_historical_metrics";
@@ -131,7 +131,7 @@ export async function getHistoricalMetricsLogic(
 export function getHistoricalMetricsResponseFormatter(
   result: GetHistoricalMetricsOutput,
   input: GetHistoricalMetricsInput
-): any[] {
+): McpTextContent[] {
   const trendsText = result.timeSeries
     .slice(0, 5)
     .map(

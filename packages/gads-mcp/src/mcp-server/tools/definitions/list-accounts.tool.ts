@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_list_accounts";
@@ -48,7 +48,7 @@ export async function listAccountsLogic(
   };
 }
 
-export function listAccountsResponseFormatter(result: ListAccountsOutput): any {
+export function listAccountsResponseFormatter(result: ListAccountsOutput): McpTextContent[] {
   const lines = result.customerIds.map((id, i) => `  ${i + 1}. ${id} (${result.resourceNames[i]})`);
 
   return [

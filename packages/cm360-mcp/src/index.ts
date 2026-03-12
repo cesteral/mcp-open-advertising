@@ -24,7 +24,7 @@ const logger = createServerLogger("cm360-mcp", transportMode, otelLogMixin());
  * Set up credentials for stdio mode from environment variables.
  * Creates a GoogleAuthAdapter and session services for the "stdio" session.
  */
-function setupStdioCredentials(sessionId: string): boolean {
+async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   let credentialsJson: string | undefined;
 
   if (mcpConfig.cm360ServiceAccountFile) {
@@ -49,6 +49,9 @@ function setupStdioCredentials(sessionId: string): boolean {
   const authAdapter = createGoogleAuthAdapter(credentials, [
     "https://www.googleapis.com/auth/dfareporting",
   ]);
+
+  // Validate credentials at startup to fail fast on invalid service account
+  await authAdapter.validate();
 
   const services = createSessionServices(
     authAdapter,

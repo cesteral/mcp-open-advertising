@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_bulk_update_entities";
@@ -79,7 +79,7 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateEntitiesOutput): unknown[] {
+export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateEntitiesOutput): McpTextContent[] {
   const lines: string[] = [
     `Bulk update: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_remove_entity";
@@ -76,7 +76,7 @@ export async function removeEntityLogic(
   };
 }
 
-export function removeEntityResponseFormatter(result: RemoveEntityOutput): any {
+export function removeEntityResponseFormatter(result: RemoveEntityOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

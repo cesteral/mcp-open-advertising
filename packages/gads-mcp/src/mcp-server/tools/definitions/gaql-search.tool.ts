@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_gaql_search";
@@ -68,7 +68,7 @@ export async function gaqlSearchLogic(
   };
 }
 
-export function gaqlSearchResponseFormatter(result: GAQLSearchOutput): any {
+export function gaqlSearchResponseFormatter(result: GAQLSearchOutput): McpTextContent[] {
   const summary = `GAQL query returned ${result.results.length} results${
     result.totalResultsCount ? ` (${result.totalResultsCount} total)` : ""
   }${result.nextPageToken ? " — more pages available" : ""}`;

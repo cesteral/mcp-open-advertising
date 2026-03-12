@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_get_report";
@@ -90,7 +90,7 @@ export async function getReportLogic(
   };
 }
 
-export function getReportResponseFormatter(result: GetReportOutput): unknown[] {
+export function getReportResponseFormatter(result: GetReportOutput): McpTextContent[] {
   const downloadInfo = result.downloadUrl
     ? `\n\nDownload URL: ${result.downloadUrl}`
     : "\n\nNo download URL available yet.";

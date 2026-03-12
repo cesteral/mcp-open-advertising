@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "sa360_search_fields";
@@ -57,7 +57,7 @@ export async function searchFieldsLogic(
   };
 }
 
-export function searchFieldsResponseFormatter(result: SearchFieldsOutput): any {
+export function searchFieldsResponseFormatter(result: SearchFieldsOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

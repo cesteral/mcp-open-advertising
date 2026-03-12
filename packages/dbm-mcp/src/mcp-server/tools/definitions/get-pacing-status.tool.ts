@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dbm_get_pacing_status";
@@ -133,7 +133,7 @@ export async function getPacingStatusLogic(
 export function getPacingStatusResponseFormatter(
   result: GetPacingStatusOutput,
   _input: GetPacingStatusInput
-): any[] {
+): McpTextContent[] {
   const statusEmoji =
     result.pacing.status === "ON_PACE"
       ? "[OK]"

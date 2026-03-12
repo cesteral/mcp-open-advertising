@@ -5,7 +5,7 @@ import {
   addParentValidationIssue,
   mergeParentIdsIntoData,
 } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_update_entity";
@@ -82,7 +82,7 @@ export async function updateEntityLogic(
   };
 }
 
-export function updateEntityResponseFormatter(result: UpdateEntityOutput): unknown[] {
+export function updateEntityResponseFormatter(result: UpdateEntityOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

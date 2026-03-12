@@ -12,7 +12,7 @@ import {
   buildTargetingIds,
 } from '../utils/targeting-metadata.js';
 import { getTargetingRequiredIdInputShape } from '../utils/targeting-input-shape.js';
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from '../../../types-global/mcp.js';
 
 const TOOL_NAME = 'dv360_create_assigned_targeting';
@@ -121,7 +121,7 @@ export async function createAssignedTargetingLogic(
 /**
  * Format response for MCP client
  */
-export function createAssignedTargetingResponseFormatter(result: CreateAssignedTargetingOutput): any {
+export function createAssignedTargetingResponseFormatter(result: CreateAssignedTargetingOutput): McpTextContent[] {
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
   const schemaName = getTargetingDetailSchemaName(result.targetingType as TargetingType);

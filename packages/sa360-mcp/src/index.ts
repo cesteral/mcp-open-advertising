@@ -21,7 +21,7 @@ const logger = createServerLogger("sa360-mcp", transportMode, otelLogMixin());
  * Set up credentials for stdio mode from environment variables.
  * Creates a SA360RefreshTokenAuthAdapter and session services for the "stdio" session.
  */
-function setupStdioCredentials(sessionId: string): boolean {
+async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   const clientId = mcpConfig.sa360ClientId;
   const clientSecret = mcpConfig.sa360ClientSecret;
   const refreshToken = mcpConfig.sa360RefreshToken;
@@ -40,6 +40,9 @@ function setupStdioCredentials(sessionId: string): boolean {
     refreshToken,
     loginCustomerId: mcpConfig.sa360LoginCustomerId,
   });
+
+  // Validate credentials at startup to fail fast on invalid OAuth2 tokens
+  await authAdapter.validate();
 
   const services = createSessionServices(
     authAdapter,

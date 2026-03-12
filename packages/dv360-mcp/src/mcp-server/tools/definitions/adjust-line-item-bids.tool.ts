@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
@@ -227,7 +227,7 @@ export async function adjustLineItemBidsLogic(
 /**
  * Format response for MCP client
  */
-export function adjustLineItemBidsResponseFormatter(result: AdjustLineItemBidsOutput): any {
+export function adjustLineItemBidsResponseFormatter(result: AdjustLineItemBidsOutput): McpTextContent[] {
   const summary = `Batch bid adjustment completed: ${result.totalSuccessful}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0

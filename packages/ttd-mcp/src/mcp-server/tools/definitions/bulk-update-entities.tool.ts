@@ -6,7 +6,7 @@ import {
   mergeParentIdsIntoData,
 } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_bulk_update_entities";
@@ -103,7 +103,7 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): unknown[] {
+export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

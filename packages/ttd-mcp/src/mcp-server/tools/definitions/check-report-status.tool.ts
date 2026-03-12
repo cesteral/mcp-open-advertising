@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_check_report_status";
@@ -58,7 +58,7 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): unknown[] {
+export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
   if (result.isComplete && result.downloadUrl) {
     return [
       {

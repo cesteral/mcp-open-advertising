@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_search_targeting";
@@ -69,7 +69,7 @@ export async function searchTargetingLogic(
   };
 }
 
-export function searchTargetingResponseFormatter(result: SearchTargetingOutput): unknown[] {
+export function searchTargetingResponseFormatter(result: SearchTargetingOutput): McpTextContent[] {
   const summary = `Found ${result.totalCount} targeting option(s)`;
   const data = result.totalCount > 0
     ? `\n\n${JSON.stringify(result.results, null, 2)}`

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "cm360_download_report";
@@ -114,7 +114,7 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-export function downloadReportResponseFormatter(result: DownloadReportOutput): unknown[] {
+export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
   const truncatedNote = result.truncated
     ? `\n\nResults truncated to ${result.totalRows} rows.`
     : "";

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "cm360_check_report_status";
@@ -66,7 +66,7 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): unknown[] {
+export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
   const downloadInfo = result.downloadUrl
     ? `\n\nDownload URL: ${result.downloadUrl}\nUse cm360_download_report to fetch results.`
     : "";

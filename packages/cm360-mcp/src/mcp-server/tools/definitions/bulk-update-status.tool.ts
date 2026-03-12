@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "cm360_bulk_update_status";
@@ -87,7 +87,7 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): unknown[] {
+export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
   const summary = `Bulk status update: ${result.updated} succeeded, ${result.failed} failed`;
   const details = result.results
     .filter((r) => !r.success)

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_adjust_bids";
@@ -125,7 +125,7 @@ function formatMicrosAsDollars(micros?: string): string {
   return `$${(num / 1_000_000).toFixed(2)}`;
 }
 
-export function adjustBidsResponseFormatter(result: AdjustBidsOutput): any {
+export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
   const lines = result.results.map((r) => {
     if (r.success) {
       const parts: string[] = [];

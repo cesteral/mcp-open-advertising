@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_get_delivery_forecast";
@@ -62,7 +62,7 @@ export async function getDeliveryForecastLogic(
 
 export function getDeliveryForecastResponseFormatter(
   result: GetDeliveryForecastOutput
-): unknown[] {
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

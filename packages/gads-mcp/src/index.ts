@@ -21,7 +21,7 @@ const logger = createServerLogger("gads-mcp", transportMode, otelLogMixin());
  * Set up credentials for stdio mode from environment variables.
  * Creates a GAdsRefreshTokenAuthAdapter and session services for the "stdio" session.
  */
-function setupStdioCredentials(sessionId: string): boolean {
+async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   const developerToken = mcpConfig.gadsDeveloperToken;
   const clientId = mcpConfig.gadsClientId;
   const clientSecret = mcpConfig.gadsClientSecret;
@@ -42,6 +42,9 @@ function setupStdioCredentials(sessionId: string): boolean {
     refreshToken,
     loginCustomerId: mcpConfig.gadsLoginCustomerId,
   });
+
+  // Validate credentials at startup to fail fast on invalid OAuth2 tokens
+  await authAdapter.validate();
 
   const services = createSessionServices(
     authAdapter,

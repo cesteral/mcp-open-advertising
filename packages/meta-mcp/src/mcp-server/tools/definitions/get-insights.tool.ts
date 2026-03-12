@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_get_insights";
@@ -107,7 +107,7 @@ export async function getInsightsLogic(
   };
 }
 
-export function getInsightsResponseFormatter(result: GetInsightsOutput): unknown[] {
+export function getInsightsResponseFormatter(result: GetInsightsOutput): McpTextContent[] {
   const summary = `Retrieved ${result.totalCount} insight row(s)`;
   const data = result.totalCount > 0
     ? `\n\n${JSON.stringify(result.data, null, 2)}`

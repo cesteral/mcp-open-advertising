@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_get_insights";
@@ -168,7 +168,7 @@ export async function getInsightsLogic(
   };
 }
 
-export function getInsightsResponseFormatter(result: GetInsightsOutput): any {
+export function getInsightsResponseFormatter(result: GetInsightsOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

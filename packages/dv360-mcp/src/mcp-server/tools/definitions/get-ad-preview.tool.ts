@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_get_ad_preview";
@@ -83,7 +83,7 @@ export async function getAdPreviewLogic(
   };
 }
 
-export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): unknown[] {
+export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTextContent[] {
   const lines: string[] = [
     "DV360 Creative Preview",
     "",

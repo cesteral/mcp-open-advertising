@@ -11,7 +11,7 @@ import {
   findMatchingExample,
 } from "../utils/entity-examples.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_update_entity";
@@ -138,7 +138,7 @@ export async function updateEntityLogic(
 export function updateEntityResponseFormatter(
   result: UpdateEntityOutput,
   input?: UpdateEntityInput
-): any {
+): McpTextContent[] {
   let responseText = "Entity updated successfully:\n" + JSON.stringify(result.entity, null, 2);
 
   // Add helpful note if this matches a known pattern

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_update_entity";
@@ -70,7 +70,7 @@ export async function updateEntityLogic(
   };
 }
 
-export function updateEntityResponseFormatter(result: UpdateEntityOutput): unknown[] {
+export function updateEntityResponseFormatter(result: UpdateEntityOutput): McpTextContent[] {
   const status = result.success ? "updated successfully" : "update returned unexpected response";
   const entityLabel = result.entityType ?? "Entity";
   return [

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "cm360_list_user_profiles";
@@ -40,7 +40,7 @@ export async function listUserProfilesLogic(
   };
 }
 
-export function listUserProfilesResponseFormatter(result: ListUserProfilesOutput): unknown[] {
+export function listUserProfilesResponseFormatter(result: ListUserProfilesOutput): McpTextContent[] {
   const profiles =
     result.totalCount > 0
       ? `\n\nProfiles:\n${JSON.stringify(result.profiles, null, 2)}`

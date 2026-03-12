@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_download_report";
@@ -71,7 +71,7 @@ export async function downloadReportLogic(
   };
 }
 
-export function downloadReportResponseFormatter(result: DownloadOutput): any {
+export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {
   const truncNote = result.truncated
     ? `\n\nShowing ${result.returnedRows} of ${result.totalRows} rows (truncated)`
     : "";

@@ -7,7 +7,7 @@ import {
   getInsightsNameField,
   type SA360InsightsEntityType,
 } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "sa360_get_insights_breakdowns";
@@ -152,7 +152,7 @@ export async function getInsightsBreakdownsLogic(
   };
 }
 
-export function getInsightsBreakdownsResponseFormatter(result: GetInsightsBreakdownsOutput): any {
+export function getInsightsBreakdownsResponseFormatter(result: GetInsightsBreakdownsOutput): McpTextContent[] {
   const paginationNote = result.has_more
     ? ` — more pages available (use pageToken: "${result.nextPageToken}")`
     : "";

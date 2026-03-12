@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_validate_entity";
 const TOOL_TITLE = "Validate CM360 Entity";
@@ -88,7 +88,7 @@ export async function validateEntityLogic(
   };
 }
 
-export function validateEntityResponseFormatter(result: ValidateEntityOutput): unknown[] {
+export function validateEntityResponseFormatter(result: ValidateEntityOutput): McpTextContent[] {
   const status = result.valid ? "VALID" : "INVALID";
   const errorList = result.errors.length > 0
     ? `\n\nErrors:\n${result.errors.map((e) => `  - ${e}`).join("\n")}`

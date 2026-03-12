@@ -39,6 +39,16 @@ function normalizeAccountId(id: string): string {
 }
 
 /**
+ * MCP text content block — the standard return type for tool response formatters.
+ * All responseFormatter functions should return `McpTextContent[]`.
+ */
+export interface McpTextContent {
+  type: "text";
+  text: string;
+  [key: string]: unknown;
+}
+
+/**
  * Request context created per tool invocation
  */
 export interface ToolRequestContext {
@@ -127,7 +137,7 @@ export interface ToolDefinitionForFactory {
     context: any,
     sdkContext?: any
   ) => Promise<any>;
-  responseFormatter?: (result: any, input: any) => any[];
+  responseFormatter?: (result: any, input: any) => McpTextContent[];
 }
 
 /**

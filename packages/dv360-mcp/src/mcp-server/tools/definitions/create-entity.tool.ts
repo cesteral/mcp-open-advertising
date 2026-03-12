@@ -11,7 +11,7 @@ import {
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { createSimplifiedCreateEntityInputSchema } from "../utils/simplified-schemas.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_create_entity";
@@ -187,7 +187,7 @@ export async function createEntityLogic(
 /**
  * Format response for MCP client
  */
-export function createEntityResponseFormatter(result: CreateEntityOutput): any {
+export function createEntityResponseFormatter(result: CreateEntityOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

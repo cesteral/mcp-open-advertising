@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MetaEntityType } from "../utils/entity-mapping.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "meta_bulk_create_entities";
@@ -69,7 +69,7 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): unknown[] {
+export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

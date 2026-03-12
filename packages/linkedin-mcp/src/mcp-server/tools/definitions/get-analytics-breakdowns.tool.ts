@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_get_analytics_breakdowns";
@@ -85,7 +85,7 @@ export async function getAnalyticsBreakdownsLogic(
 
 export function getAnalyticsBreakdownsResponseFormatter(
   result: GetAnalyticsBreakdownsOutput
-): unknown[] {
+): McpTextContent[] {
   const lines: string[] = [
     `Analytics Breakdowns — Date range: ${result.dateRange.start} to ${result.dateRange.end}`,
     "",

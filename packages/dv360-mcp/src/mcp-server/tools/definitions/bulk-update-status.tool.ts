@@ -3,7 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_bulk_update_status";
@@ -279,7 +279,7 @@ export async function bulkUpdateStatusLogic(
 export function bulkUpdateStatusResponseFormatter(
   result: BulkUpdateStatusOutput,
   input?: BulkUpdateStatusInput
-): any {
+): McpTextContent[] {
   const summary = `Bulk status update completed: ${result.successCount}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0

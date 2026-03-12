@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "sa360_update_conversions";
@@ -82,7 +82,7 @@ export async function updateConversionsLogic(
   };
 }
 
-export function updateConversionsResponseFormatter(result: UpdateConversionsOutput): any {
+export function updateConversionsResponseFormatter(result: UpdateConversionsOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

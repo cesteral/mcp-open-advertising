@@ -5,7 +5,7 @@ import {
   isAccountScopedEntity,
   type LinkedInEntityType,
 } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_list_entities";
@@ -91,7 +91,7 @@ export async function listEntitiesLogic(
   };
 }
 
-export function listEntitiesResponseFormatter(result: ListEntitiesOutput): unknown[] {
+export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
   const totalInfo = result.total !== undefined ? ` (total: ${result.total})` : "";
   const summary = `Found ${result.count} entities${totalInfo}`;
   const pagination = result.hasMore

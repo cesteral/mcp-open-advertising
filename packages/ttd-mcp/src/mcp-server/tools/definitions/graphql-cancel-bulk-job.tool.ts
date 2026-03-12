@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_graphql_cancel_bulk_job";
@@ -59,7 +59,7 @@ export async function graphqlCancelBulkJobLogic(
   };
 }
 
-export function graphqlCancelBulkJobResponseFormatter(result: GraphqlCancelBulkJobOutput): unknown[] {
+export function graphqlCancelBulkJobResponseFormatter(result: GraphqlCancelBulkJobOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

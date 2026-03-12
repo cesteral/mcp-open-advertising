@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 import { calculateCTR, calculateCPM, formatMetricValue } from "../../../utils/metrics.js";
 
@@ -97,7 +97,7 @@ export async function getCampaignDeliveryLogic(
 export function getCampaignDeliveryResponseFormatter(
   result: GetCampaignDeliveryOutput,
   input: GetCampaignDeliveryInput
-): any[] {
+): McpTextContent[] {
   // Use declarative metrics utilities instead of inline calculations
   const ctr = calculateCTR(result.metrics.clicks, result.metrics.impressions);
   const cpm = calculateCPM(result.metrics.spend, result.metrics.impressions);

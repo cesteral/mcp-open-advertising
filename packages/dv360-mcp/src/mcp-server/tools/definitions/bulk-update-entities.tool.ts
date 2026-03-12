@@ -4,7 +4,7 @@ import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_bulk_update_entities";
@@ -155,7 +155,7 @@ export async function bulkUpdateEntitiesLogic(
  */
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
-): any {
+): McpTextContent[] {
   const summary = `Bulk update ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`;
 
   const successResults = result.results.filter((r) => r.success);

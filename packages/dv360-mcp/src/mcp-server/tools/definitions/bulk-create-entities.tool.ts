@@ -4,7 +4,7 @@ import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_bulk_create_entities";
@@ -119,7 +119,7 @@ export async function bulkCreateEntitiesLogic(
  */
 export function bulkCreateEntitiesResponseFormatter(
   result: BulkCreateEntitiesOutput
-): unknown[] {
+): McpTextContent[] {
   const summary = `Bulk create ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`;
 
   const successResults = result.results.filter((r) => r.success);

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_get_report";
@@ -95,7 +95,7 @@ export async function getReportLogic(
   };
 }
 
-export function getReportResponseFormatter(result: GetReportOutput): unknown[] {
+export function getReportResponseFormatter(result: GetReportOutput): McpTextContent[] {
   const headerLine = result.headers.join(", ");
   const previewRows = result.rows.slice(0, 5).map((row) => row.join(", "));
   const truncated = result.rows.length > 5

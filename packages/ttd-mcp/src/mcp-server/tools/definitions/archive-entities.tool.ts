@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getArchiveSupportedEntityTypes, type TtdEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_archive_entities";
@@ -73,7 +73,7 @@ export async function archiveEntitiesLogic(
   };
 }
 
-export function archiveEntitiesResponseFormatter(result: ArchiveOutput): unknown[] {
+export function archiveEntitiesResponseFormatter(result: ArchiveOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

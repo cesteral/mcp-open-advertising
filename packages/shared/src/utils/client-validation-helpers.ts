@@ -5,6 +5,8 @@
  * Pure functions — no API calls, no side effects.
  */
 
+import type { McpTextContent } from "./tool-handler-factory.js";
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -106,7 +108,7 @@ export function checkReadOnlyFields(
  */
 export function validateEntityResponseFormatter(
   result: ValidateEntityResult
-): unknown[] {
+): McpTextContent[] {
   const lines: string[] = [];
 
   if (result.valid) {

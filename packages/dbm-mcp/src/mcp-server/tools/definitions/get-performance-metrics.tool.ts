@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dbm_get_performance_metrics";
@@ -108,7 +108,7 @@ export async function getPerformanceMetricsLogic(
 export function getPerformanceMetricsResponseFormatter(
   result: GetPerformanceMetricsOutput,
   input: GetPerformanceMetricsInput
-): any[] {
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

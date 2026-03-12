@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_bulk_update_status";
@@ -82,7 +82,7 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): unknown[] {
+export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

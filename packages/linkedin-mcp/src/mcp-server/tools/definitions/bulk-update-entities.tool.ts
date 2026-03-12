@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_bulk_update_entities";
@@ -77,7 +77,7 @@ export async function bulkUpdateEntitiesLogic(
 
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
-): unknown[] {
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

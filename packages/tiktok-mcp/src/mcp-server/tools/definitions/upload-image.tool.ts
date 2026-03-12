@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_upload_image";
@@ -78,7 +78,7 @@ export async function uploadImageLogic(
   };
 }
 
-export function uploadImageResponseFormatter(result: UploadImageOutput): unknown[] {
+export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
   return [{
     type: "text" as const,
     text: `Image uploaded to TikTok!\n\nImage ID: ${result.imageId}${result.url ? `\nPreview URL: ${result.url}` : ""}${result.size !== undefined ? `\nSize: ${result.size} bytes` : ""}\n\nUse imageId in your ad creative payload`,

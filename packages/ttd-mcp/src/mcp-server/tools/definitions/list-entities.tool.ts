@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "ttd_list_entities";
@@ -116,7 +116,7 @@ export async function listEntitiesLogic(
   };
 }
 
-export function listEntitiesResponseFormatter(result: ListEntitiesOutput): unknown[] {
+export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
   const summary = `Found ${result.totalCount} entities`;
   const pagination = result.nextPageToken
     ? `\n\nMore results available. Use pageToken: ${result.nextPageToken}`

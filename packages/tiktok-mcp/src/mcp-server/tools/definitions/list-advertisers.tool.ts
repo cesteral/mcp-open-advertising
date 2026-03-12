@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "tiktok_list_advertisers";
@@ -45,7 +45,7 @@ export async function listAdvertisersLogic(
   };
 }
 
-export function listAdvertisersResponseFormatter(result: ListAdvertisersOutput): unknown[] {
+export function listAdvertisersResponseFormatter(result: ListAdvertisersOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

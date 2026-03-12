@@ -2,7 +2,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getStatusCapableEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "gads_bulk_update_status";
@@ -98,7 +98,7 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): any {
+export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,

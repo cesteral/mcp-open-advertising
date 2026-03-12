@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "cm360_bulk_create_entities";
@@ -82,7 +82,7 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): unknown[] {
+export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): McpTextContent[] {
   const summary = `Bulk create: ${result.created} succeeded, ${result.failed} failed`;
   const failures = result.results
     .filter((r) => !r.success)

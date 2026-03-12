@@ -5,7 +5,7 @@ import {
 } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_get_entity";
@@ -92,7 +92,7 @@ export async function getEntityLogic(
 /**
  * Format response for MCP client
  */
-export function getEntityResponseFormatter(result: GetEntityOutput): any {
+export function getEntityResponseFormatter(result: GetEntityOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,
