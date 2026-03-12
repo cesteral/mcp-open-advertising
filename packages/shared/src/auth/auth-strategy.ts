@@ -70,8 +70,9 @@ export interface AuthStrategy {
    */
   verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult>;
   /**
-   * Optional lightweight fingerprint extraction for session reuse checks.
-   * Implementations should avoid network calls where possible.
+   * Optional fingerprint extraction for session reuse checks.
+   * Implementations should avoid network calls where possible, but may still
+   * perform full local verification when token validity must be re-checked.
    */
   getCredentialFingerprint?(
     headers: Record<string, string | string[] | undefined>
@@ -189,7 +190,7 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
   async getCredentialFingerprint(
     headers: Record<string, string | string[] | undefined>
   ): Promise<string | undefined> {
-    const { extractBearerToken, decodeJwtPayload, getJwtCredentialFingerprint } =
+    const { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } =
       await import("./jwt.js");
 
     const authHeader = typeof headers["authorization"] === "string"
@@ -199,9 +200,7 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
         : undefined;
 
     const token = extractBearerToken(authHeader);
-    // Lightweight decode — skips expensive signature/claims verification.
-    // Full verify() already ran when the session was first created.
-    const payload = decodeJwtPayload(token);
+    const payload = await verifyJwt(token, this.secret);
 
     return getJwtCredentialFingerprint(payload);
   }

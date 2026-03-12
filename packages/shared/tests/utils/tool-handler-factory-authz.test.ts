@@ -379,4 +379,119 @@ describe("tool-handler-factory authorization", () => {
     expect((result as any).content[0].text).toContain("Access denied");
     expect(metaBulkTool.logic).not.toHaveBeenCalled();
   });
+
+  it("blocks tool call when adAccountUrn is not in allowedAdvertisers", async () => {
+    const linkedInTool = {
+      name: "linkedin_tool",
+      description: "LinkedIn scoped tool",
+      inputSchema: z.object({
+        adAccountUrn: z.string(),
+      }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+
+    const authContext: SessionAuthContext = {
+      authInfo: { clientId: "user@test.com", authType: "jwt" },
+      allowedAdvertisers: ["urn:li:sponsoredAccount:111222333"],
+    };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [linkedInTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      authContextResolver: () => authContext,
+    });
+
+    const result = await server.callTool("linkedin_tool", {
+      adAccountUrn: "urn:li:sponsoredAccount:999888777",
+    });
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("adAccountUrn");
+    expect(linkedInTool.logic).not.toHaveBeenCalled();
+  });
+
+  it("allows LinkedIn URN input when allowedAdvertisers contains bare numeric ID", async () => {
+    const linkedInTool = {
+      name: "linkedin_tool_ok",
+      description: "LinkedIn scoped tool",
+      inputSchema: z.object({
+        adAccountUrn: z.string(),
+      }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+
+    const authContext: SessionAuthContext = {
+      authInfo: { clientId: "user@test.com", authType: "jwt" },
+      allowedAdvertisers: ["111222333"],
+    };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [linkedInTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      authContextResolver: () => authContext,
+    });
+
+    const result = await server.callTool("linkedin_tool_ok", {
+      adAccountUrn: "urn:li:sponsoredAccount:111222333",
+    });
+
+    expect((result as any).isError).toBeUndefined();
+    expect(linkedInTool.logic).toHaveBeenCalled();
+  });
+
+  it("blocks nested filters with unauthorized scoped IDs", async () => {
+    const filteredTool = {
+      name: "filtered_tool",
+      description: "Tool with nested filters",
+      inputSchema: z.object({
+        filters: z.object({
+          advertiserId: z.string(),
+        }),
+      }),
+      logic: vi.fn().mockResolvedValue({ ok: true }),
+    };
+
+    const authContext: SessionAuthContext = {
+      authInfo: { clientId: "user@test.com", authType: "jwt" },
+      allowedAdvertisers: ["adv123"],
+    };
+
+    registerToolsFromDefinitions({
+      server,
+      tools: [filteredTool],
+      logger,
+      sessionId: "s1",
+      transformSchema: (s) => s,
+      createRequestContext: ({ operation }) => ({
+        requestId: "req-1",
+        timestamp: new Date().toISOString(),
+        operation,
+      }),
+      authContextResolver: () => authContext,
+    });
+
+    const result = await server.callTool("filtered_tool", {
+      filters: { advertiserId: "adv999" },
+    });
+
+    expect((result as any).isError).toBe(true);
+    expect((result as any).content[0].text).toContain("filters.advertiserId");
+    expect(filteredTool.logic).not.toHaveBeenCalled();
+  });
 });

@@ -26,16 +26,78 @@ import type { SessionAuthContext } from "../auth/auth-strategy.js";
  */
 export const RESPONSE_CHARACTER_LIMIT = 25_000;
 
-const ADVERTISER_PARAM_KEYS = ["advertiserId", "customerId", "partnerId", "adAccountId"] as const;
-const ADVERTISER_PARAM_ARRAY_KEYS = ["advertiserIds", "customerIds", "adAccountIds"] as const;
+const SCOPED_ID_KEYS = new Set<string>([
+  "advertiserId",
+  "customerId",
+  "partnerId",
+  "adAccountId",
+  "adAccountUrn",
+] as const);
+const SCOPED_ID_ARRAY_KEYS = new Set<string>([
+  "advertiserIds",
+  "customerIds",
+  "adAccountIds",
+] as const);
 
 /**
- * Normalize a Meta ad account ID by stripping the `act_` prefix.
- * This allows allowedAdvertisers to store bare numeric IDs while
- * tool params may arrive with the `act_` prefix.
+ * Normalize scoped account IDs across platform-specific formats so JWT scope
+ * claims can be compared consistently.
  */
-function normalizeAccountId(id: string): string {
-  return id.startsWith("act_") ? id.slice(4) : id;
+function normalizeScopedId(id: string): string {
+  if (id.startsWith("act_")) {
+    return id.slice(4);
+  }
+
+  const linkedInMatch = /^urn:li:sponsoredAccount:(.+)$/.exec(id);
+  if (linkedInMatch) {
+    return linkedInMatch[1];
+  }
+
+  return id;
+}
+
+interface ScopedIdentifier {
+  path: string;
+  value: string;
+}
+
+function collectScopedIdentifiers(
+  value: unknown,
+  path = ""
+): ScopedIdentifier[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      collectScopedIdentifiers(item, `${path}[${index}]`)
+    );
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, nestedValue]) => {
+    const currentPath = path ? `${path}.${key}` : key;
+
+    if (SCOPED_ID_KEYS.has(key)) {
+      return typeof nestedValue === "string"
+        ? [{ path: currentPath, value: nestedValue }]
+        : [];
+    }
+
+    if (SCOPED_ID_ARRAY_KEYS.has(key)) {
+      return Array.isArray(nestedValue)
+        ? nestedValue
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => ({ path: currentPath, value: item }))
+        : [];
+    }
+
+    if (nestedValue && typeof nestedValue === "object") {
+      return collectScopedIdentifiers(nestedValue, currentPath);
+    }
+
+    return [];
+  });
 }
 
 /**
@@ -360,76 +422,49 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               resolvedAuthContext = authContextResolver();
               if (resolvedAuthContext && resolvedAuthContext.allowedAdvertisers !== undefined) {
                 const input = validatedInput as Record<string, unknown>;
-                const allowedAdvertisers = resolvedAuthContext.allowedAdvertisers;
+                const allowedAdvertisers = resolvedAuthContext.allowedAdvertisers.map(normalizeScopedId);
+                const scopedIdentifiers = collectScopedIdentifiers(input);
 
-                for (const key of ADVERTISER_PARAM_KEYS) {
-                  const value = input[key];
-                  if (typeof value === "string") {
-                    auditedIdentifiers[key] = value;
-                    const normalizedValue = normalizeAccountId(value);
-                    if (!allowedAdvertisers.some((a) => normalizeAccountId(a) === normalizedValue)) {
-                      auditLogger.warn(
-                        {
-                          event: "tool_access_denied",
-                          sessionId,
-                          clientId: resolvedAuthContext.authInfo.clientId,
-                          authType: resolvedAuthContext.authInfo.authType,
-                          tool: tool.name,
-                          [key]: value,
-                          authorized: false,
-                          reason: "advertiser not in allowed scope",
-                        },
-                        "Authorization denied"
-                      );
+                for (const identifier of scopedIdentifiers) {
+                  const path = identifier.path;
+                  const value = identifier.value;
 
-                      recordToolExecution(tool.name, "error", Date.now() - startTime);
-
-                      return {
-                        content: [
-                          {
-                            type: "text" as const,
-                            text: "Access denied: " + key + ' "' + value + '" is not in your authorized scope.',
-                          },
-                        ],
-                        isError: true,
-                      };
-                    }
+                  if (auditedIdentifiers[path]) {
+                    const existing = auditedIdentifiers[path];
+                    auditedIdentifiers[path] = Array.isArray(existing)
+                      ? [...existing, value]
+                      : [existing, value];
+                  } else {
+                    auditedIdentifiers[path] = value;
                   }
-                }
 
-                for (const key of ADVERTISER_PARAM_ARRAY_KEYS) {
-                  const value = input[key];
-                  if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
-                    const ids = value as string[];
-                    auditedIdentifiers[key] = ids;
-                    const deniedId = ids.find((id) => !allowedAdvertisers.some((a) => normalizeAccountId(a) === normalizeAccountId(id)));
-                    if (deniedId) {
-                      auditLogger.warn(
+                  if (!allowedAdvertisers.includes(normalizeScopedId(value))) {
+                    auditLogger.warn(
+                      {
+                        event: "tool_access_denied",
+                        sessionId,
+                        clientId: resolvedAuthContext.authInfo.clientId,
+                        authType: resolvedAuthContext.authInfo.authType,
+                        tool: tool.name,
+                        scopedField: path,
+                        scopedValue: value,
+                        authorized: false,
+                        reason: "advertiser not in allowed scope",
+                      },
+                      "Authorization denied"
+                    );
+
+                    recordToolExecution(tool.name, "error", Date.now() - startTime);
+
+                    return {
+                      content: [
                         {
-                          event: "tool_access_denied",
-                          sessionId,
-                          clientId: resolvedAuthContext.authInfo.clientId,
-                          authType: resolvedAuthContext.authInfo.authType,
-                          tool: tool.name,
-                          [key]: deniedId,
-                          authorized: false,
-                          reason: "advertiser not in allowed scope",
+                          type: "text" as const,
+                          text: `Access denied: ${path} "${value}" is not in your authorized scope.`,
                         },
-                        "Authorization denied"
-                      );
-
-                      recordToolExecution(tool.name, "error", Date.now() - startTime);
-
-                      return {
-                        content: [
-                          {
-                            type: "text" as const,
-                            text: "Access denied: " + key + ' contains ID "' + deniedId + '" outside your authorized scope.',
-                          },
-                        ],
-                        isError: true,
-                      };
-                    }
+                      ],
+                      isError: true,
+                    };
                   }
                 }
               }

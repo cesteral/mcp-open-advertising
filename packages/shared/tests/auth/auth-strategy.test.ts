@@ -19,7 +19,6 @@ vi.mock("../../src/auth/google-auth.js", () => ({
 vi.mock("../../src/auth/jwt.js", () => ({
   extractBearerToken: vi.fn(),
   verifyJwt: vi.fn(),
-  decodeJwtPayload: vi.fn(),
   getJwtCredentialFingerprint: vi.fn(),
 }));
 
@@ -30,7 +29,7 @@ import {
   getCredentialFingerprint,
 } from "../../src/auth/google-auth.js";
 
-import { extractBearerToken, verifyJwt, decodeJwtPayload, getJwtCredentialFingerprint } from "../../src/auth/jwt.js";
+import { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } from "../../src/auth/jwt.js";
 
 // Cast to vi.Mock for easier typing
 const mockParseCredentials = parseCredentialsFromHeaders as ReturnType<typeof vi.fn>;
@@ -38,7 +37,6 @@ const mockCreateAdapter = createGoogleAuthAdapter as ReturnType<typeof vi.fn>;
 const mockGetFingerprint = getCredentialFingerprint as ReturnType<typeof vi.fn>;
 const mockExtractBearer = extractBearerToken as ReturnType<typeof vi.fn>;
 const mockVerifyJwt = verifyJwt as ReturnType<typeof vi.fn>;
-const mockDecodeJwtPayload = decodeJwtPayload as ReturnType<typeof vi.fn>;
 const mockGetJwtFingerprint = getJwtCredentialFingerprint as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
@@ -272,9 +270,9 @@ describe("JwtBearerAuthStrategy", () => {
     expect(mockExtractBearer).toHaveBeenCalledWith("Bearer first-token");
   });
 
-  it("extracts fingerprint via getCredentialFingerprint (lightweight decode)", async () => {
+  it("extracts fingerprint via getCredentialFingerprint after full verification", async () => {
     mockExtractBearer.mockReturnValue("tok");
-    mockDecodeJwtPayload.mockReturnValue({
+    mockVerifyJwt.mockResolvedValue({
       sub: "user-1",
       iss: "issuer",
       aud: "aud",
@@ -288,9 +286,7 @@ describe("JwtBearerAuthStrategy", () => {
 
     expect(fp).toBe("fp-derived");
     expect(mockGetJwtFingerprint).toHaveBeenCalled();
-    // Should use lightweight decode, NOT full verifyJwt
-    expect(mockDecodeJwtPayload).toHaveBeenCalledWith("tok");
-    expect(mockVerifyJwt).not.toHaveBeenCalled();
+    expect(mockVerifyJwt).toHaveBeenCalledWith("tok", "secret");
   });
 
   it("throws when Authorization header is missing", async () => {

@@ -139,4 +139,23 @@ describe("jwt e2e — real token generation and verification", () => {
 
     expect(result1.credentialFingerprint).not.toBe(result2.credentialFingerprint);
   });
+
+  it("getCredentialFingerprint rejects expired JWTs", async () => {
+    const strategy = new JwtBearerAuthStrategy(SECRET);
+    const expiredTime = Math.floor(Date.now() / 1000) - 3600;
+    const token = await createToken({ exp: expiredTime });
+
+    await expect(
+      strategy.getCredentialFingerprint({ authorization: `Bearer ${token}` })
+    ).rejects.toThrow(McpError);
+  });
+
+  it("getCredentialFingerprint rejects invalid signature", async () => {
+    const strategy = new JwtBearerAuthStrategy(SECRET);
+    const token = await createToken({ secret: "wrong-secret-different-key-here" });
+
+    await expect(
+      strategy.getCredentialFingerprint({ authorization: `Bearer ${token}` })
+    ).rejects.toThrow(McpError);
+  });
 });
