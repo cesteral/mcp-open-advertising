@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "linkedin_upload_video";
@@ -95,7 +95,7 @@ export async function uploadVideoLogic(
   };
 }
 
-export function uploadVideoResponseFormatter(result: UploadVideoOutput): unknown[] {
+export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
   return [{
     type: "text" as const,
     text: `Video uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,

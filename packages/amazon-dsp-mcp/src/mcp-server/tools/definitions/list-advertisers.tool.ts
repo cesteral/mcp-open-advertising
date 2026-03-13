@@ -3,7 +3,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
-const TOOL_NAME = "amazon_dsp_list_profiles";
+const TOOL_NAME = "amazon_dsp_list_advertisers";
 const TOOL_TITLE = "List AmazonDsp Advertisers";
 const TOOL_DESCRIPTION = `List AmazonDsp advertiser accounts accessible to the authenticated user.
 

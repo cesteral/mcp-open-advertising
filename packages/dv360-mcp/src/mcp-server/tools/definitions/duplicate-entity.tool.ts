@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_duplicate_entity";
@@ -90,7 +90,7 @@ export async function duplicateEntityLogic(
   };
 }
 
-export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): unknown[] {
+export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {
   const entity = result.duplicatedEntity;
   const newId =
     entity[`${result.entityType}Id`] ??

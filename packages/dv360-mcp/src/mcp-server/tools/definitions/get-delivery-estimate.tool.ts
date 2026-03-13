@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import type { RequestContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "dv360_get_delivery_estimate";
@@ -59,7 +59,7 @@ export async function getDeliveryEstimateLogic(
   };
 }
 
-export function getDeliveryEstimateResponseFormatter(result: GetDeliveryEstimateOutput): unknown[] {
+export function getDeliveryEstimateResponseFormatter(result: GetDeliveryEstimateOutput): McpTextContent[] {
   const source = (result.estimate as Record<string, unknown>).source as string | undefined;
   const header = source === "lineItem"
     ? "DV360 Line Item Delivery Info"
