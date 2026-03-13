@@ -69,6 +69,7 @@ describe("snapchat_create_entity tool", () => {
       expect(result.timestamp).toBeDefined();
       expect(mockCreateEntity).toHaveBeenCalledWith(
         "campaign",
+        { adAccountId: "1234567890" },
         {
           campaign_name: "Test Campaign",
           objective_type: "TRAFFIC",

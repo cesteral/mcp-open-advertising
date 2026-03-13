@@ -58,7 +58,7 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
       "start_time",
       "end_time",
     ],
-    supportsDuplicate: false,
+    supportsDuplicate: true,
   },
   adGroup: {
     listPath: "/v1/campaigns/{campaignId}/adsquads",
@@ -80,7 +80,7 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
       "optimization_goal",
       "placement",
     ],
-    supportsDuplicate: false,
+    supportsDuplicate: true,
   },
   ad: {
     listPath: "/v1/adsquads/{adSquadId}/ads",
@@ -93,7 +93,7 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
     entityKey: "ad",
     displayName: "Ad",
     defaultFields: ["id", "name", "status", "ad_squad_id", "creative_id", "type"],
-    supportsDuplicate: false,
+    supportsDuplicate: true,
   },
   creative: {
     listPath: "/v1/adaccounts/{adAccountId}/creatives",

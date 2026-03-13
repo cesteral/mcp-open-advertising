@@ -14,8 +14,8 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 
 const snapchatService = {
   listEntities: vi.fn(async () => ({
-    entities: [{ campaign_id: "123" }],
-    pageInfo: { page: 1, page_size: 10, total_number: 1, total_page: 1 },
+    entities: [{ id: "123", name: "Test Campaign" }],
+    nextCursor: undefined,
   })),
   getEntity: vi.fn(async () => ({ campaign_id: "123" })),
   createEntity: vi.fn(async () => ({ campaign_id: "new" })),
@@ -25,7 +25,7 @@ const snapchatService = {
   bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),
-  bulkCreateEntities: vi.fn(async (_entityType: string, items: unknown[]) => ({
+  bulkCreateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: unknown[]) => ({
     results: items.map(() => ({ success: true, entity: { id: "new" } })),
   })),
   bulkUpdateEntities: vi.fn(async (_entityType: string, items: Array<{ entityId: string }>) => ({

@@ -5,116 +5,99 @@ import type { Resource } from "../types.js";
 import { getSupportedEntityTypes, type SnapchatEntityType } from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_SCHEMA_CONTENT: Record<SnapchatEntityType, string> = {
-  campaign: `# Snapchat Campaign Fields
+  campaign: JSON.stringify({
+    type: "object",
+    required: ["name", "objective", "ad_account_id"],
+    properties: {
+      name: { type: "string", description: "Campaign name" },
+      objective: {
+        type: "string",
+        enum: [
+          "AWARENESS",
+          "APP_INSTALLS",
+          "DRIVE_REPLAY",
+          "LEAD_GENERATION",
+          "WEBSITE_CONVERSIONS",
+          "PRODUCT_CATALOG_SALES",
+          "VIDEO_VIEWS",
+        ],
+      },
+      status: { type: "string", enum: ["ACTIVE", "PAUSED"] },
+      ad_account_id: { type: "string", description: "Ad account ID" },
+      daily_budget_micro: {
+        type: "integer",
+        description: "Daily budget in micro-currency (1 USD = 1,000,000)",
+      },
+      lifetime_spend_cap_micro: {
+        type: "integer",
+        description: "Lifetime spend cap in micro-currency",
+      },
+      start_time: {
+        type: "string",
+        format: "date-time",
+        description: "Campaign start time (ISO 8601)",
+      },
+      end_time: {
+        type: "string",
+        format: "date-time",
+        description: "Campaign end time (ISO 8601)",
+      },
+    },
+  }, null, 2),
 
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| campaign_name | string | Campaign display name (max 512 chars) |
-| objective_type | string | Campaign objective: TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS, LEAD_GENERATION, CATALOG_SALES, COMMUNITY_INTERACTION |
-| budget_mode | string | BUDGET_MODE_DAY (daily) or BUDGET_MODE_TOTAL (lifetime) |
-| budget | number | Budget in account currency |
+  adGroup: JSON.stringify({
+    type: "object",
+    required: ["name", "campaign_id"],
+    properties: {
+      name: { type: "string" },
+      campaign_id: { type: "string" },
+      status: { type: "string", enum: ["ACTIVE", "PAUSED"] },
+      daily_budget_micro: { type: "integer" },
+      bid_micro: {
+        type: "integer",
+        description: "Bid amount in micro-currency",
+      },
+      optimization_goal: {
+        type: "string",
+        enum: ["SWIPE", "PIXEL_PAGE_VIEW", "APP_INSTALL", "VIDEO_VIEWS", "STORY_OPENS"],
+      },
+      placement: {
+        type: "string",
+        enum: ["SNAP_ADS", "AUDIENCE_NETWORK", "BOTH"],
+      },
+    },
+  }, null, 2),
 
-## Optional Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| status | string | CAMPAIGN_STATUS_ENABLE or CAMPAIGN_STATUS_DISABLE (default: CAMPAIGN_STATUS_ENABLE) |
-| roas_bid | number | Target ROAS (for ROAS optimization) |
-| is_smart_performance_campaign | boolean | Enable smart performance campaign |
-| app_promotion_type | string | DOWNLOAD_FROM_MARKET or OPEN_URL (for app objectives) |
+  ad: JSON.stringify({
+    type: "object",
+    required: ["name", "ad_squad_id", "creative_id"],
+    properties: {
+      name: { type: "string" },
+      ad_squad_id: { type: "string" },
+      creative_id: { type: "string" },
+      status: { type: "string", enum: ["ACTIVE", "PAUSED"] },
+      type: { type: "string", enum: ["SNAP_AD", "STORY", "COLLECTION"] },
+    },
+  }, null, 2),
 
-## Read-Only Fields
-campaign_id, created_time, modify_time, ad_account_id
-`,
-
-  adGroup: `# Snapchat Ad Group Fields
-
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| campaign_id | string | Parent campaign ID |
-| adgroup_name | string | Ad group display name |
-| placement_type | string | PLACEMENT_TYPE_NORMAL (auto-placement) or PLACEMENT_TYPE_SEARCH |
-| budget_mode | string | BUDGET_MODE_DAY or BUDGET_MODE_TOTAL |
-| budget | number | Budget in account currency |
-| schedule_type | string | SCHEDULE_START_END or SCHEDULE_ALWAYS |
-| optimize_goal | string | CLICK, CONVERT, SHOW, REACH, VIDEO_VIEW, LEAD, APP_INSTALL |
-
-## Optional Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| schedule_start_time | string | Start time (YYYY-MM-DD HH:mm:ss) — required if schedule_type=SCHEDULE_START_END |
-| schedule_end_time | string | End time (YYYY-MM-DD HH:mm:ss) |
-| bid_price | number | Bid price in account currency |
-| bid_type | string | BID_TYPE_NO_BID, BID_TYPE_CUSTOM, BID_TYPE_MAX_CONVERSION |
-| age | array | Age ranges: AGE_13_17, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_54, AGE_55_100 |
-| gender | array | GENDER_UNLIMITED, GENDER_MALE, GENDER_FEMALE |
-| location_ids | array | Array of location IDs (country codes or region IDs) |
-| interest_category_ids | array | Interest category IDs |
-| languages | array | Language codes (e.g., ["en", "zh"]) |
-| placements | array | Specific placement IDs |
-| device_platforms | array | DESKTOP or MOBILE |
-| operating_systems | array | IOS or ANDROID |
-
-## Read-Only Fields
-adgroup_id, campaign_id (inherited), created_time, modify_time
-`,
-
-  ad: `# Snapchat Ad Fields
-
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| adgroup_id | string | Parent ad group ID |
-| ad_name | string | Ad display name |
-| creative_type | string | SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL |
-
-## Creative Fields (one required)
-| Field | Type | Description |
-|-------|------|-------------|
-| video_id | string | Video ID from Snapchat Creative Library |
-| image_ids | array | Array of image IDs (for image/carousel ads) |
-
-## Optional Creative Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| ad_text | string | Ad copy text (max 100 chars) |
-| app_name | string | App name shown in the ad |
-| landing_page_url | string | Destination URL |
-| display_name | string | Display brand name |
-| profile_image_url | string | Brand profile image URL |
-| call_to_action | string | CTA text: LEARN_MORE, SHOP_NOW, DOWNLOAD, SIGN_UP, etc. |
-| status | string | AD_STATUS_ENABLE or AD_STATUS_DISABLE |
-
-## Read-Only Fields
-ad_id, adgroup_id (inherited), created_time, modify_time
-`,
-
-  creative: `# Snapchat Creative Fields
-
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| display_name | string | Creative display name |
-
-## Creative Asset Fields (provide at least one)
-| Field | Type | Description |
-|-------|------|-------------|
-| video_id | string | Video asset ID from Creative Library |
-| image_ids | array | Array of image asset IDs |
-
-## Optional Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| ad_text | string | Ad copy text |
-| call_to_action | string | CTA: LEARN_MORE, SHOP_NOW, DOWNLOAD, etc. |
-| landing_page_url | string | Destination URL |
-| profile_image_url | string | Brand profile image |
-| app_name | string | App name for app install ads |
-
-## Read-Only Fields
-creative_id, ad_account_id, created_time
-`,
+  creative: JSON.stringify({
+    type: "object",
+    required: ["name", "type", "ad_account_id"],
+    properties: {
+      name: { type: "string" },
+      type: {
+        type: "string",
+        enum: ["SNAP_AD", "STORY", "COLLECTION", "APP_INSTALL", "WEB_VIEW"],
+      },
+      ad_account_id: { type: "string" },
+      brand_name: { type: "string" },
+      headline: { type: "string" },
+      call_to_action: {
+        type: "string",
+        enum: ["INSTALL_NOW", "SHOP_NOW", "LEARN_MORE", "SIGN_UP", "WATCH_NOW"],
+      },
+    },
+  }, null, 2),
 };
 
 function buildEntitySchemaMarkdown(entityType: SnapchatEntityType): string {
