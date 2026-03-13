@@ -18,8 +18,8 @@ import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
  * Pinterest v5 user account response shape
  */
 interface PinterestUserAccountResponse {
-  username?: string;
-  account_type?: string;
+  username: string;
+  account_type: string;
 }
 
 /**
