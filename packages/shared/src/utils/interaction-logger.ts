@@ -71,25 +71,15 @@ export function generateEntryId(input: GenerateEntryIdInput): string {
     .slice(0, 16);
 }
 
-// Secrets / tokens that should never be logged
-const SENSITIVE_KEYS = new Set([
-  "apiSecret",
-  "api_secret",
-  "apiKey",
-  "api_key",
-  "accessToken",
-  "access_token",
-  "refreshToken",
-  "refresh_token",
-  "token",
-  "secret",
-  "password",
-  "credential",
-  "credentials",
-  "authorization",
-  "x-ttd-api-secret",
-  "x-ttd-partner-id",
-]);
+// Keys are redacted if they contain any of these substrings (case-insensitive).
+// Covers: access_token, refresh_token, api_secret, app_secret, client_secret,
+// authorization, x-ttd-api-secret, x-pinterest-app-secret, etc.
+const SENSITIVE_KEY_PATTERNS = ["secret", "token", "authorization", "password", "key", "credential"];
+
+function isSensitiveKey(key: string): boolean {
+  const lower = key.toLowerCase();
+  return SENSITIVE_KEY_PATTERNS.some(pattern => lower.includes(pattern));
+}
 
 // ---------------------------------------------------------------------------
 // Sanitiser
@@ -111,7 +101,7 @@ export function sanitizeParams(input: unknown, depth = 0): unknown {
   if (typeof input === "object") {
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
-      if (SENSITIVE_KEYS.has(key.toLowerCase())) {
+      if (isSensitiveKey(key)) {
         result[key] = "[REDACTED]";
       } else {
         result[key] = sanitizeParams(value, depth + 1);
