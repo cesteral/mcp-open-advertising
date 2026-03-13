@@ -14,7 +14,7 @@ export const amazonDspToolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getTiktokToolSchemaExplorationMessage(
+export function getAmazonDspToolSchemaExplorationMessage(
   args?: Record<string, string>,
 ): string {
   const objective = args?.objective || "general capability discovery";

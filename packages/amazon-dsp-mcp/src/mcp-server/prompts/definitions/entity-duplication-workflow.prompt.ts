@@ -13,7 +13,7 @@ export const amazonDspEntityDuplicationWorkflowPrompt: Prompt = {
   arguments: [
     {
       name: "entityType",
-      description: "Entity type to duplicate: campaign, adGroup, or ad",
+      description: "Entity type to duplicate: order, lineItem, or creative",
       required: true,
     },
     {
@@ -29,7 +29,7 @@ export const amazonDspEntityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityDuplicationWorkflowMessage(
+export function getAmazonDspEntityDuplicationWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";
@@ -50,9 +50,9 @@ Advertiser ID: \`${profileId}\`
 
 | What Gets Copied | Details |
 |------------------|---------|
-| **Campaign** | Structure, budget mode, objective |
-| **Ad Group** | Targeting, bid, schedule, budget |
-| **Ad** | Creative reference, copy, CTA, landing page |
+| **Order** | Structure, budget, flight dates |
+| **Line Item** | Targeting, bidding, schedule, budget |
+| **Creative** | Creative type, assets, click URL |
 
 ---
 
@@ -93,7 +93,7 @@ Confirm this is the right entity and note its current state.
 
 The response includes the new entity ID.
 
-⚠️ **GOTCHA**: Duplicated entities are created in **DISABLE** status by default. Enable only after review.
+⚠️ **GOTCHA**: Duplicated entities are created in **paused** state by default. Enable only after review.
 
 ---
 
@@ -111,32 +111,34 @@ Use the returned entity ID to modify the copy:
     "profileId": "${profileId}",
     "entityId": "{newEntityId}",
     "data": {
-      "campaign_name": "Campaign B - Broad Targeting Test",
-      "budget": 150
+      "name": "Order B - Broad Targeting Test",
+      "budget": 5000
     }
   }
 }
 \`\`\`
 
-### Update Targeting (Ad Group)
+### Update Targeting (Line Item)
 
 \`\`\`json
 {
   "tool": "amazon_dsp_update_entity",
   "params": {
-    "entityType": "adGroup",
-    "profileId": "${profileId}",
-    "entityId": "{newAdGroupId}",
+    "entityType": "lineItem",
+    "advertiserId": "${profileId}",
+    "entityId": "{newLineItemId}",
     "data": {
-      "age": ["AGE_35_44", "AGE_45_54"],
-      "gender": ["GENDER_FEMALE"],
-      "location_ids": ["GB", "CA"]
+      "name": "Line Item B - UK/CA Expansion",
+      "budget": 1000,
+      "targeting": {
+        "geoLocations": [{ "id": "GB" }, { "id": "CA" }]
+      }
     }
   }
 }
 \`\`\`
 
-⚠️ **GOTCHA**: Budget values are in **account currency** — \`budget: 150\` means $150.00.
+⚠️ **GOTCHA**: Budget values are in **USD** — \`budget: 1000\` means $1000.00.
 
 ---
 
@@ -151,7 +153,7 @@ After reviewing and customizing the copy:
     "entityType": "${entityType}",
     "profileId": "${profileId}",
     "entityIds": ["{newEntityId}"],
-    "operationStatus": "ENABLE"
+    "state": "delivering"
   }
 }
 \`\`\`
@@ -162,24 +164,24 @@ After reviewing and customizing the copy:
 
 ### A/B Testing
 
-1. Duplicate the ad group
-2. Change targeting or bid on the copy
-3. Enable both and compare via \`amazon_dsp_get_report\`
+1. Duplicate the line item
+2. Change targeting or bidding on the copy
+3. Set both to \`delivering\` and compare via \`amazon_dsp_get_report\`
 
 ### Scaling to New Geos
 
-1. Duplicate a proven ad group
-2. Update \`location_ids\` on the copy
+1. Duplicate a proven line item
+2. Update \`targeting.geoLocations\` on the copy
 3. Adjust budget for the new market
-4. Enable
+4. Set state to \`delivering\`
 
 ### Creative Testing
 
-1. Duplicate an ad
-2. Update \`ad_text\` or CTA on the copy
-3. Run both ads in the same ad group
+1. Duplicate a creative
+2. Update the click URL or name on the copy
+3. Associate both creatives with the same line item
 
-⚠️ **GOTCHA**: Video IDs are immutable — you cannot change the video on an existing ad. Create a new ad instead of duplicating if you want different video creative.
+⚠️ **GOTCHA**: Creative assets (images/videos) cannot be changed on an existing creative. Create a new creative instead if you need different media.
 
 ---
 
@@ -201,10 +203,10 @@ After duplication, verify the copy:
 ## Success Criteria
 
 - [ ] Source entity reviewed before duplication
-- [ ] Copy created (check DISABLE status)
+- [ ] Copy created (check paused state)
 - [ ] Copy renamed to distinguish from original
 - [ ] Desired changes applied (targeting, budget, creative)
 - [ ] Copy verified via \`amazon_dsp_get_entity\`
-- [ ] Enabled only after review via \`amazon_dsp_bulk_update_status\`
+- [ ] Set to \`delivering\` only after review via \`amazon_dsp_bulk_update_status\`
 `;
 }

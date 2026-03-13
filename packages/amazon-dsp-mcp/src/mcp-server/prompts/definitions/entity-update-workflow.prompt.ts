@@ -14,7 +14,7 @@ export const amazonDspEntityUpdateWorkflowPrompt: Prompt = {
   arguments: [
     {
       name: "entityType",
-      description: "Entity type to update: campaign, adGroup, or ad",
+      description: "Entity type to update: order, lineItem, or creative",
       required: true,
     },
     {
@@ -30,7 +30,7 @@ export const amazonDspEntityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityUpdateWorkflowMessage(
+export function getAmazonDspEntityUpdateWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";
@@ -68,61 +68,57 @@ Review the current values. Save the current state for rollback reference.
 
 ## Step 2: Update Entity Fields
 
-Use \`amazon_dsp_update_entity\` for **field changes** (name, budget, bid, targeting):
+Use \`amazon_dsp_update_entity\` for **field changes** (name, budget, bidding):
 
-### Campaign Updates
+### Order Updates
 
 \`\`\`json
 {
   "tool": "amazon_dsp_update_entity",
   "params": {
-    "entityType": "campaign",
-    "profileId": "${profileId}",
+    "entityType": "order",
+    "advertiserId": "${profileId}",
     "entityId": "${entityId}",
     "data": {
-      "campaign_name": "Updated Campaign Name",
-      "budget": 200,
-      "budget_mode": "BUDGET_MODE_DAY"
+      "name": "Updated Order Name",
+      "budget": 5000
     }
   }
 }
 \`\`\`
 
-### Ad Group Updates
+### Line Item Updates
 
 \`\`\`json
 {
   "tool": "amazon_dsp_update_entity",
   "params": {
-    "entityType": "adGroup",
-    "profileId": "${profileId}",
+    "entityType": "lineItem",
+    "advertiserId": "${profileId}",
     "entityId": "${entityId}",
     "data": {
-      "adgroup_name": "Updated Ad Group",
-      "budget": 100,
-      "bid_price": 0.8,
-      "age": ["AGE_25_34", "AGE_35_44"],
-      "gender": ["GENDER_UNLIMITED"],
-      "location_ids": ["US", "GB"]
+      "name": "Updated Line Item",
+      "budget": 1000,
+      "bidding": {
+        "base": 2.50
+      }
     }
   }
 }
 \`\`\`
 
-### Ad Updates
+### Creative Updates
 
 \`\`\`json
 {
   "tool": "amazon_dsp_update_entity",
   "params": {
-    "entityType": "ad",
-    "profileId": "${profileId}",
+    "entityType": "creative",
+    "advertiserId": "${profileId}",
     "entityId": "${entityId}",
     "data": {
-      "ad_name": "Updated Ad Name",
-      "ad_text": "New ad copy (max 100 chars)",
-      "call_to_action": "SHOP_NOW",
-      "landing_page_url": "https://example.com/new-page"
+      "name": "Updated Creative Name",
+      "clickUrl": "https://example.com/new-landing-page"
     }
   }
 }
@@ -130,25 +126,23 @@ Use \`amazon_dsp_update_entity\` for **field changes** (name, budget, bid, targe
 
 ---
 
-## Step 3: Update Status (Separate Endpoint)
+## Step 3: Update Status (via state field)
 
-⚠️ **CRITICAL GOTCHA**: AmazonDsp uses a **separate endpoint** for status changes. Do NOT include \`operation_status\` in \`amazon_dsp_update_entity\` — it won't work.
-
-Use \`amazon_dsp_bulk_update_status\` for all status changes:
+⚠️ **GOTCHA**: Amazon DSP uses the \`state\` field in the entity body to change delivery status. Use \`amazon_dsp_bulk_update_status\` for batch status changes:
 
 \`\`\`json
 {
   "tool": "amazon_dsp_bulk_update_status",
   "params": {
     "entityType": "${entityType}",
-    "profileId": "${profileId}",
+    "advertiserId": "${profileId}",
     "entityIds": ["${entityId}"],
-    "operationStatus": "ENABLE"
+    "state": "delivering"
   }
 }
 \`\`\`
 
-Valid status values: \`"ENABLE"\`, \`"DISABLE"\`, \`"DELETE"\`
+Valid state values: \`"delivering"\`, \`"paused"\`, \`"archived"\`
 
 ---
 
@@ -161,7 +155,7 @@ After the update call succeeds, verify the changes:
   "tool": "amazon_dsp_get_entity",
   "params": {
     "entityType": "${entityType}",
-    "profileId": "${profileId}",
+    "advertiserId": "${profileId}",
     "entityId": "${entityId}"
   }
 }
@@ -171,11 +165,10 @@ After the update call succeeds, verify the changes:
 
 ## Gotchas
 
-- **Status changes use a different tool**: Never use \`amazon_dsp_update_entity\` for enabling/disabling entities — use \`amazon_dsp_bulk_update_status\`.
-- **Budget values are in account currency**: \`budget: 100\` means $100.00 (not cents, not micros).
-- **Targeting replaces on ad group**: When updating targeting fields on an ad group, include all targeting you want to keep.
-- **Video IDs are immutable**: You cannot change the video on an existing ad. Delete and recreate instead.
-- **Ad review re-triggered**: Updating ad copy or creative may trigger a new review cycle (24-48h).
+- **Archive is permanent**: Setting \`state: "archived"\` via \`amazon_dsp_delete_entity\` cannot be undone — there is no DELETE endpoint, only soft-archive.
+- **Budget values are in USD**: \`budget: 1000\` means $1000.00 (not cents, not micros).
+- **Line item budget cannot exceed order budget**: Validate parent order budget before updating.
+- **Creative updates may trigger re-review**: Updating creative assets or click URLs may restart review cycles.
 
 ---
 

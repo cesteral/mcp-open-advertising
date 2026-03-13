@@ -13,27 +13,27 @@ import {
 } from "./definitions/bulk-operations-workflow.prompt.js";
 import {
   amazonDspToolSchemaExplorationPrompt,
-  getTiktokToolSchemaExplorationMessage,
+  getAmazonDspToolSchemaExplorationMessage,
 } from "./definitions/tool-schema-exploration.prompt.js";
 import {
   amazonDspTroubleshootEntityPrompt,
-  getTiktokTroubleshootEntityMessage,
+  getAmazonDspTroubleshootEntityMessage,
 } from "./definitions/troubleshoot-entity.prompt.js";
 import {
   amazonDspReportingWorkflowPrompt,
-  getTiktokReportingWorkflowMessage,
+  getAmazonDspReportingWorkflowMessage,
 } from "./definitions/reporting-workflow.prompt.js";
 import {
   amazonDspEntityUpdateWorkflowPrompt,
-  getTiktokEntityUpdateWorkflowMessage,
+  getAmazonDspEntityUpdateWorkflowMessage,
 } from "./definitions/entity-update-workflow.prompt.js";
 import {
   amazonDspTargetingDiscoveryWorkflowPrompt,
-  getTiktokTargetingDiscoveryWorkflowMessage,
+  getAmazonDspTargetingDiscoveryWorkflowMessage,
 } from "./definitions/targeting-discovery-workflow.prompt.js";
 import {
   amazonDspEntityDuplicationWorkflowPrompt,
-  getTiktokEntityDuplicationWorkflowMessage,
+  getAmazonDspEntityDuplicationWorkflowMessage,
 } from "./definitions/entity-duplication-workflow.prompt.js";
 import {
   crossPlatformPerformancePrompt,
@@ -45,7 +45,7 @@ import {
 } from "./definitions/cross-platform-campaign-setup.prompt.js";
 import {
   amazonDspCreativeUploadWorkflowPrompt,
-  getTiktokCreativeUploadWorkflowMessage,
+  getAmazonDspCreativeUploadWorkflowMessage,
 } from "./definitions/creative-upload-workflow.prompt.js";
 
 export interface PromptDefinition {
@@ -72,42 +72,42 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     amazonDspToolSchemaExplorationPrompt.name,
     {
       prompt: amazonDspToolSchemaExplorationPrompt,
-      generateMessage: getTiktokToolSchemaExplorationMessage,
+      generateMessage: getAmazonDspToolSchemaExplorationMessage,
     },
   ],
   [
     amazonDspTroubleshootEntityPrompt.name,
     {
       prompt: amazonDspTroubleshootEntityPrompt,
-      generateMessage: getTiktokTroubleshootEntityMessage,
+      generateMessage: getAmazonDspTroubleshootEntityMessage,
     },
   ],
   [
     amazonDspReportingWorkflowPrompt.name,
     {
       prompt: amazonDspReportingWorkflowPrompt,
-      generateMessage: getTiktokReportingWorkflowMessage,
+      generateMessage: getAmazonDspReportingWorkflowMessage,
     },
   ],
   [
     amazonDspEntityUpdateWorkflowPrompt.name,
     {
       prompt: amazonDspEntityUpdateWorkflowPrompt,
-      generateMessage: getTiktokEntityUpdateWorkflowMessage,
+      generateMessage: getAmazonDspEntityUpdateWorkflowMessage,
     },
   ],
   [
     amazonDspTargetingDiscoveryWorkflowPrompt.name,
     {
       prompt: amazonDspTargetingDiscoveryWorkflowPrompt,
-      generateMessage: getTiktokTargetingDiscoveryWorkflowMessage,
+      generateMessage: getAmazonDspTargetingDiscoveryWorkflowMessage,
     },
   ],
   [
     amazonDspEntityDuplicationWorkflowPrompt.name,
     {
       prompt: amazonDspEntityDuplicationWorkflowPrompt,
-      generateMessage: getTiktokEntityDuplicationWorkflowMessage,
+      generateMessage: getAmazonDspEntityDuplicationWorkflowMessage,
     },
   ],
   [
@@ -128,7 +128,7 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     amazonDspCreativeUploadWorkflowPrompt.name,
     {
       prompt: amazonDspCreativeUploadWorkflowPrompt,
-      generateMessage: getTiktokCreativeUploadWorkflowMessage,
+      generateMessage: getAmazonDspCreativeUploadWorkflowMessage,
     },
   ],
 ]);

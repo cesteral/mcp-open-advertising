@@ -1,7 +1,7 @@
 import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const amazonDspCreativeUploadWorkflowPrompt: Prompt = {
-  name: "creative_upload_workflow",
+  name: "amazon_dsp_creative_upload_workflow",
   description: "Step-by-step guide for uploading creative assets and creating AmazonDsp Ads creatives",
   arguments: [
     {
@@ -17,7 +17,7 @@ export const amazonDspCreativeUploadWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokCreativeUploadWorkflowMessage(args?: Record<string, string>): string {
+export function getAmazonDspCreativeUploadWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
   const creativeType = args?.creativeType || "video";
 
@@ -69,35 +69,32 @@ When \`video_status == "bind_success"\`, the video is ready.
 - Duration: 5-60 seconds for In-Feed ads
 `}
 
-## Step 2: Create Ad
+## Step 2: Create Creative
 
 \`\`\`json
 amazon_dsp_create_entity({
-  "entityType": "ad",
-  "profileId": "${profileId}",
+  "entityType": "creative",
+  "advertiserId": "${profileId}",
   "data": {
-    "adgroup_id": "{your_adgroup_id}",
-    "ad_name": "Your Ad Name",
-    "ad_format": "SINGLE_VIDEO",
-    ${creativeType === "image" ? `"image_ids": ["{imageId_from_step_1}"],
-    "ad_text": "Your ad copy here",` : `"video_id": "{videoId_from_step_1}",
-    "ad_text": "Your ad copy here",`}
-    "landing_page_url": "https://yoursite.com",
-    "call_to_action": "LEARN_MORE",
-    "status": "DISABLE"
+    "name": "Your Creative Name",
+    "advertiserId": "${profileId}",
+    "creativeType": "${creativeType === "image" ? "IMAGE" : "VIDEO"}",
+    ${creativeType === "image" ? `"imageId": "{imageId_from_step_1}",` : `"videoId": "{videoId_from_step_1}",`}
+    "clickUrl": "https://yoursite.com",
+    "state": "paused"
   }
 })
 \`\`\`
 
-⚠️ **GOTCHA**: AmazonDsp ads go through a review process. Initial status should be DISABLE (paused) until ready to launch.
+⚠️ **GOTCHA**: Amazon DSP creatives go through a review process. Initial state should be \`paused\` until ready to launch.
 
-## Step 3: Preview Ad
+## Step 3: Preview Creative
 
 \`\`\`json
 amazon_dsp_get_ad_preview({
-  "profileId": "${profileId}",
-  "adId": "{ad_id_from_step_2}",
-  "adFormat": "FEED"
+  "advertiserId": "${profileId}",
+  "adId": "{creative_id_from_step_2}",
+  "adFormat": "DISPLAY"
 })
 \`\`\`
 
@@ -112,9 +109,9 @@ amazon_dsp_get_ad_preview({
 
 ## Success Criteria
 - [ ] Media uploaded (imageId or videoId obtained)
-- [ ] Ad created with DISABLE status
+- [ ] Creative created with paused state
 - [ ] Preview reviewed
-- [ ] Status changed to ENABLE when ready to launch
+- [ ] State changed to delivering when ready to launch
 
 `;
 }

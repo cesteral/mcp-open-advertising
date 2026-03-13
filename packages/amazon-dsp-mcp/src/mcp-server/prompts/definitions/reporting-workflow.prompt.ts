@@ -18,13 +18,13 @@ export const amazonDspReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokReportingWorkflowMessage(
+export function getAmazonDspReportingWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const profileId = args?.profileId || "{profileId}";
-  const reportLevel = args?.reportLevel || "AUCTION";
+  const reportLevel = args?.reportLevel || "LINE_ITEM";
 
-  return `# AmazonDsp Reporting Workflow
+  return `# Amazon DSP Reporting Workflow
 
 Advertiser: \`${profileId}\`
 Report Level: \`${reportLevel}\`
@@ -33,44 +33,44 @@ Report Level: \`${reportLevel}\`
 
 ## Overview
 
-AmazonDsp reports are **async** — \`amazon_dsp_get_report\` submits the job, polls for completion, and returns the results when ready.
+Amazon DSP reports are **async** — \`amazon_dsp_get_report\` submits the job, polls for completion, and returns the results when ready.
 
 ---
 
-## Step 1: Basic Campaign Report
+## Step 1: Basic Order Report
 
 \`\`\`json
 amazon_dsp_get_report({
-  "profileId": "${profileId}",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "ctr", "cpc", "conversions", "cost_per_conversion"],
+  "advertiserId": "${profileId}",
+  "reportType": "CAMPAIGN",
+  "dimensions": ["orderId", "date"],
+  "metrics": ["impressions", "clickThroughs", "totalCost"],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
 
-## Step 2: Ad Group Level Report
+## Step 2: Line Item Level Report
 
 \`\`\`json
 amazon_dsp_get_report({
-  "profileId": "${profileId}",
-  "dimensions": ["adgroup_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "video_play_actions", "video_watched_2s", "video_watched_6s"],
+  "advertiserId": "${profileId}",
+  "reportType": "LINE_ITEM",
+  "dimensions": ["lineItemId", "date"],
+  "metrics": ["impressions", "clickThroughs", "totalCost", "videoCompletions", "videoFirstQuartile", "videoMidpoint"],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
 \`\`\`
 
-## Step 3: Breakdown Report
-
-Add demographic and contextual breakdowns to your report:
+## Step 3: Creative Report with Shopping Attribution
 
 \`\`\`json
-amazon_dsp_get_report_breakdowns({
-  "profileId": "${profileId}",
-  "dimensions": ["campaign_id"],
-  "breakdowns": ["gender", "age"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
+amazon_dsp_get_report({
+  "advertiserId": "${profileId}",
+  "reportType": "CREATIVE",
+  "dimensions": ["creativeId", "date"],
+  "metrics": ["impressions", "totalCost", "detailPageViews", "purchases", "sales14d", "newToBrandPurchases"],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
@@ -80,12 +80,13 @@ amazon_dsp_get_report_breakdowns({
 
 \`\`\`json
 amazon_dsp_get_report({
-  "profileId": "${profileId}",
-  "dimensions": ["ad_id"],
+  "advertiserId": "${profileId}",
+  "reportType": "CREATIVE",
+  "dimensions": ["creativeId"],
   "metrics": [
-    "impressions", "video_play_actions", "video_watched_2s",
-    "video_watched_6s", "video_views_p25", "video_views_p50",
-    "video_views_p75", "video_views_p100"
+    "impressions", "videoCompletions",
+    "videoFirstQuartile", "videoMidpoint",
+    "videoThirdQuartile", "viewableImpressions"
   ],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
@@ -101,32 +102,31 @@ amazon_dsp_get_report({
 
 | Dimension | Level |
 |-----------|-------|
-| \`campaign_id\` | Campaign |
-| \`adgroup_id\` | Ad Group |
-| \`ad_id\` | Ad |
-| \`stat_time_day\` | Daily breakdown |
-| \`stat_time_hour\` | Hourly breakdown |
+| \`orderId\` | Order |
+| \`lineItemId\` | Line Item |
+| \`creativeId\` | Creative |
+| \`advertiserId\` | Advertiser |
+| \`date\` | Daily breakdown |
 
 ## Common Metrics
 
 | Metric | Description |
 |--------|-------------|
 | \`impressions\` | Total impressions |
-| \`clicks\` | Total clicks |
-| \`spend\` | Total spend (account currency) |
-| \`ctr\` | Click-through rate |
-| \`cpc\` | Cost per click |
-| \`conversions\` | Total conversions |
-| \`cost_per_conversion\` | CPA |
-| \`video_play_actions\` | Video starts |
-| \`video_watched_2s\` | 2-second video views |
-| \`video_watched_6s\` | 6-second video views |
+| \`clickThroughs\` | Total clicks |
+| \`totalCost\` | Total spend (USD) |
+| \`viewableImpressions\` | Viewable impressions |
+| \`videoCompletions\` | 100% video completions |
+| \`detailPageViews\` | Amazon product detail page views |
+| \`purchases\` | Total purchase events |
+| \`sales14d\` | Total sales (14-day attribution) |
+| \`newToBrandPurchases\` | Purchases from new-to-brand customers |
+| \`brandedSearches\` | Branded keyword searches |
 
 ## Tips
 
 - Reports may take **30 seconds to several minutes** depending on date range and data volume
-- Data has a **24-48 hour lag** for finalized metrics
-- Max date range per report is **180 days**
-- Budget and spend values are in **account currency** (not cents, not micros)
+- Amazon shopping metrics (\`detailPageViews\`, \`purchases\`, \`sales14d\`) require Amazon attribution setup
+- Budget and spend values are in **USD**
 `;
 }

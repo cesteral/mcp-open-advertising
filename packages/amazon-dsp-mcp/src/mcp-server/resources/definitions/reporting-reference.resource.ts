@@ -1,140 +1,127 @@
 /**
- * AmazonDsp Reporting Reference Resource
+ * Amazon DSP Reporting Reference Resource
  */
 import type { Resource } from "../types.js";
 
 let cachedContent: string | undefined;
 
 function formatReportingReferenceMarkdown(): string {
-  return `# AmazonDsp Ads Reporting Reference
+  return `# Amazon DSP Reporting Reference
 
 ## Report Types
 
 | Report Type | Description |
 |-------------|-------------|
-| BASIC | Standard delivery and performance metrics |
-| AUDIENCE | Audience breakdown metrics (requires audience dimensions) |
-| PLAYABLE_MATERIAL | Playable ad performance metrics |
+| CAMPAIGN | Order-level delivery and performance metrics |
+| LINE_ITEM | Line item-level metrics breakdown |
+| CREATIVE | Creative-level engagement and delivery metrics |
 
 ## Async Reporting Flow
 
-1. **Submit**: POST \`/open_api/v1.3/report/task/create/\` → get \`task_id\`
-2. **Poll**: GET \`/open_api/v1.3/report/task/check/?task_id={id}\` → check \`status\`
-3. **Download**: GET the \`download_url\` when status = "DONE"
+Amazon DSP reporting is **async**:
 
-Status values: PENDING → RUNNING → DONE | FAILED
+1. **Submit**: POST report request → get \`reportId\`
+2. **Poll**: GET \`/dsp/reports/{reportId}\` → check \`status\`
+3. **Download**: GET the \`location\` URL when status = "SUCCESS"
+
+Status values: PENDING → IN_PROGRESS → SUCCESS | FAILURE
 
 Use \`amazon_dsp_get_report\` or \`amazon_dsp_get_report_breakdowns\` — these tools handle the full flow automatically.
 
 ## Common Dimensions
 
-### Time Dimensions
-| Dimension | Description |
-|-----------|-------------|
-| stat_time_day | Daily breakdown (YYYY-MM-DD) |
-| stat_time_hour | Hourly breakdown |
-
 ### Entity Dimensions
 | Dimension | Description |
 |-----------|-------------|
-| profile_id | Advertiser ID |
-| campaign_id | Campaign ID |
-| adgroup_id | Ad group ID |
-| ad_id | Ad ID |
-
-### Audience Dimensions (AUDIENCE report type)
-| Dimension | Description |
-|-----------|-------------|
-| gender | User gender breakdown |
-| age | User age group breakdown |
-| country_code | Country (ISO 2-letter code) |
-| province_id | Province/region ID |
-| platform | Operating system platform |
-| device_brand_id | Device brand |
-| interest_category | Interest category |
-| placement | Ad placement |
-| language | User language |
+| \`advertiserId\` | Advertiser ID |
+| \`orderId\` | Order ID |
+| \`lineItemId\` | Line Item ID |
+| \`creativeId\` | Creative ID |
+| \`date\` | Daily breakdown (YYYY-MM-DD) |
 
 ## Common Metrics
 
 ### Delivery Metrics
 | Metric | Description |
 |--------|-------------|
-| impressions | Total impressions |
-| reach | Unique users reached |
-| frequency | Average impressions per user |
-| clicks | Total clicks |
-| ctr | Click-through rate (%) |
-| cpm | Cost per mille (per 1000 impressions) |
-| cpc | Cost per click |
-| spend | Total amount spent |
+| \`impressions\` | Total impressions served |
+| \`clickThroughs\` | Total clicks on ads |
+| \`totalCost\` | Total amount spent (USD) |
+
+### Viewability Metrics
+| Metric | Description |
+|--------|-------------|
+| \`viewableImpressions\` | Impressions meeting viewability standards |
+| \`measurableImpressions\` | Impressions eligible for viewability measurement |
 
 ### Video Metrics
 | Metric | Description |
 |--------|-------------|
-| video_play_actions | Total video plays |
-| video_watched_2s | 2-second video views |
-| video_watched_6s | 6-second video views |
-| video_views_p25 | 25% video completion |
-| video_views_p50 | 50% video completion |
-| video_views_p75 | 75% video completion |
-| video_views_p100 | 100% completion (full views) |
-| average_video_play | Average play duration (seconds) |
+| \`videoCompletions\` | 100% video completions |
+| \`videoFirstQuartile\` | 25% video completion count |
+| \`videoMidpoint\` | 50% video completion count |
+| \`videoThirdQuartile\` | 75% video completion count |
 
-### Conversion Metrics
+### Amazon Shopping Performance Metrics
 | Metric | Description |
 |--------|-------------|
-| conversions | Total conversion events |
-| conversion_rate | Conversions / clicks (%) |
-| cost_per_conversion | Spend / conversions |
-| real_time_conversions | Real-time tracked conversions |
-| total_purchase_value | Total purchase value |
-| total_sales | Total sales count |
-| cost_per_1000_reached | CPM by unique reach |
-
-### Engagement Metrics
-| Metric | Description |
-|--------|-------------|
-| profile_visits | Profile page visits |
-| follows | New followers gained |
-| likes | Likes on ads |
-| comments | Comments on ads |
-| shares | Shares of ads |
-| engaged_view | Engaged views (6s+ or interaction) |
+| \`detailPageViews\` | Amazon product detail page views (DPVR) |
+| \`brandedSearches\` | Branded keyword searches attributable to ads |
+| \`newToBrandPurchases\` | Purchases from customers new to the brand |
+| \`purchases\` | Total purchase events |
+| \`sales14d\` | Total sales within 14-day attribution window (USD) |
 
 ## Example Report Configurations
 
-### Campaign Daily Delivery Report
+### Order Daily Delivery Report
 \`\`\`json
 {
-  "profileId": "1234567890",
-  "reportType": "BASIC",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "ctr", "cpc"],
+  "advertiserId": "1234567890",
+  "reportType": "CAMPAIGN",
+  "dimensions": ["orderId", "date"],
+  "metrics": ["impressions", "clickThroughs", "totalCost"],
   "startDate": "2026-03-01",
   "endDate": "2026-03-07"
 }
 \`\`\`
 
-### Ad Performance with Video Metrics
+### Line Item Performance with Video Metrics
 \`\`\`json
 {
-  "profileId": "1234567890",
-  "reportType": "BASIC",
-  "dimensions": ["ad_id"],
-  "metrics": ["impressions", "spend", "video_play_actions", "video_views_p100", "average_video_play"],
+  "advertiserId": "1234567890",
+  "reportType": "LINE_ITEM",
+  "dimensions": ["lineItemId"],
+  "metrics": [
+    "impressions", "totalCost", "videoCompletions",
+    "videoFirstQuartile", "videoMidpoint", "videoThirdQuartile"
+  ],
   "startDate": "2026-03-01",
   "endDate": "2026-03-07"
 }
 \`\`\`
 
-### Country Breakdown Report
+### Creative Shopping Attribution Report
 \`\`\`json
 {
-  "profileId": "1234567890",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "breakdowns": ["country_code"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
+  "advertiserId": "1234567890",
+  "reportType": "CREATIVE",
+  "dimensions": ["creativeId", "date"],
+  "metrics": [
+    "impressions", "clickThroughs", "totalCost",
+    "detailPageViews", "purchases", "sales14d", "newToBrandPurchases"
+  ],
+  "startDate": "2026-03-01",
+  "endDate": "2026-03-07"
+}
+\`\`\`
+
+### Branded Search Impact Report
+\`\`\`json
+{
+  "advertiserId": "1234567890",
+  "reportType": "LINE_ITEM",
+  "dimensions": ["lineItemId", "date"],
+  "metrics": ["impressions", "totalCost", "brandedSearches", "detailPageViews"],
   "startDate": "2026-03-01",
   "endDate": "2026-03-07"
 }
@@ -144,8 +131,8 @@ Use \`amazon_dsp_get_report\` or \`amazon_dsp_get_report_breakdowns\` — these 
 
 export const reportingReferenceResource: Resource = {
   uri: "reporting-reference://amazonDsp",
-  name: "AmazonDsp Reporting Reference",
-  description: "Available dimensions, metrics, report types, and example configurations for AmazonDsp Ads reporting",
+  name: "Amazon DSP Reporting Reference",
+  description: "Available dimensions, metrics, report types, and example configurations for Amazon DSP reporting",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatReportingReferenceMarkdown();

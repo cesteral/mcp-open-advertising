@@ -25,7 +25,7 @@ export const amazonDspTargetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokTargetingDiscoveryWorkflowMessage(
+export function getAmazonDspTargetingDiscoveryWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const profileId = args?.profileId || "{profileId}";

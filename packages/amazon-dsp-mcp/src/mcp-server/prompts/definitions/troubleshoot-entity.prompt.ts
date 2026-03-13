@@ -6,7 +6,7 @@ export const amazonDspTroubleshootEntityPrompt: Prompt = {
   arguments: [
     {
       name: "entityType",
-      description: "Entity type (campaign, adGroup, ad, creative)",
+      description: "Entity type (order, lineItem, creative)",
       required: true,
     },
     {
@@ -22,7 +22,7 @@ export const amazonDspTroubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getTiktokTroubleshootEntityMessage(
+export function getAmazonDspTroubleshootEntityMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";
@@ -50,8 +50,8 @@ Check: operation_status, primary_status, secondary_status, and any rejection rea
 \`\`\`json
 amazon_dsp_get_report({
   "profileId": "${profileId}",
-  "dimensions": ["campaign_id", "stat_time_day"],
-  "metrics": ["impressions", "clicks", "spend", "conversions"],
+  "dimensions": ["orderId", "date"],
+  "metrics": ["impressions", "clickThroughs", "totalCost"],
   "startDate": "2026-02-01",
   "endDate": "2026-03-07"
 })
@@ -72,8 +72,8 @@ amazon_dsp_get_entity({
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| No delivery | Entity DISABLED | Use \`amazon_dsp_bulk_update_status\` with operationStatus: "ENABLE" |
-| No delivery, ENABLE | Parent disabled | Enable parent campaign or ad group |
+| No delivery | Entity paused | Use \`amazon_dsp_bulk_update_status\` with state: "delivering" |
+| No delivery, delivering | Parent paused | Set parent order or line item to "delivering" |
 | No delivery, all ENABLE | Budget exhausted | Increase budget |
 | No delivery, budget OK | Targeting too narrow | Check audience estimate |
 | Ad under review | AmazonDsp ad review in progress | Allow 24-48h for review |
@@ -102,14 +102,14 @@ amazon_dsp_validate_entity({
 
 ## Status Update Tool
 
-AmazonDsp uses a separate status endpoint — do NOT use \`amazon_dsp_update_entity\` for status changes:
+Amazon DSP uses a \`state\` field to change delivery status — use \`amazon_dsp_bulk_update_status\`:
 
 \`\`\`json
 amazon_dsp_bulk_update_status({
   "entityType": "${entityType}",
-  "profileId": "${profileId}",
+  "advertiserId": "${profileId}",
   "entityIds": ["${entityId}"],
-  "operationStatus": "ENABLE"
+  "state": "delivering"
 })
 \`\`\`
 `;
