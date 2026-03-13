@@ -49,10 +49,11 @@ export async function deleteEntityLogic(
 ): Promise<DeleteEntityOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
-  await snapchatService.deleteEntity(
-    input.entityType as SnapchatEntityType,
-    input.entityIds,
-    context
+  // Delete each entity individually (Snapchat uses DELETE on entity-specific paths)
+  await Promise.all(
+    input.entityIds.map((entityId) =>
+      snapchatService.deleteEntity(input.entityType as SnapchatEntityType, entityId, context)
+    )
   );
 
   return {

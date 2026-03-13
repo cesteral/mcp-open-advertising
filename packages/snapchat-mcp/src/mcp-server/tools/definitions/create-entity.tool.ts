@@ -56,6 +56,7 @@ export async function createEntityLogic(
 
   const entity = await snapchatService.createEntity(
     input.entityType as SnapchatEntityType,
+    { adAccountId: input.adAccountId },
     input.data,
     context
   );

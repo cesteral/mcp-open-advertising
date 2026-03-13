@@ -59,6 +59,7 @@ export async function bulkCreateEntitiesLogic(
 
   const bulkResult = await snapchatService.bulkCreateEntities(
     input.entityType as SnapchatEntityType,
+    { adAccountId: input.adAccountId },
     input.items,
     context
   );

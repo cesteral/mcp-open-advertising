@@ -1,43 +1,64 @@
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
+  interpolatePath,
   type SnapchatEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
-import type { Logger } from "pino";
 
-/** Snapchat page_info response shape */
-interface SnapchatPageInfo {
-  page: number;
-  page_size: number;
-  total_number: number;
-  total_page: number;
-}
-
-/** Snapchat list response data shape */
-interface SnapchatListData {
-  list: unknown[];
-  page_info: SnapchatPageInfo;
+/** Snapchat pagination response (cursor-based) */
+interface SnapchatPaging {
+  cursor?: string;
 }
 
 /**
- * Snapchat Service — Generic CRUD operations for Snapchat Marketing API entities,
- * plus bulk operations and entity duplication.
+ * Unwrap array of entity items from Snapchat response envelope.
+ * Input: { request_status, <responseKey>: [{ sub_request_status, <entityKey>: {...} }] }
+ * Output: array of inner entity objects
+ */
+function unwrapEntities(responseKey: string, entityKey: string, response: unknown): unknown[] {
+  const envelope = response as Record<string, unknown>;
+  const items = envelope[responseKey];
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((item: any) => item.sub_request_status === "SUCCESS" || item.sub_request_status === undefined)
+    .map((item: any) => item[entityKey] ?? item);
+}
+
+function unwrapSingleEntity(responseKey: string, entityKey: string, response: unknown): unknown {
+  const entities = unwrapEntities(responseKey, entityKey, response);
+  return entities[0];
+}
+
+function extractNextCursor(response: unknown): string | undefined {
+  const envelope = response as Record<string, unknown>;
+  const paging = envelope["paging"] as SnapchatPaging | undefined;
+  return paging?.cursor;
+}
+
+/**
+ * Snapchat Service — Generic CRUD operations for Snapchat Ads API v1 entities.
  *
- * Key differences from Meta:
- * - ad_account_id is always required (injected by SnapchatHttpClient)
- * - Updates use POST (not PATCH), with entity ID in the body
- * - Status updates use separate /status/update/ endpoints
- * - Deletes use separate /delete/ endpoints (POST with IDs array)
- * - Pagination is page-based (page, page_size), not cursor-based
+ * Key Snapchat API patterns:
+ * - ad_account_id is in URL paths (not query params or body)
+ * - List paths use adAccountId or parent entity ID (e.g., campaignId for adGroups)
+ * - Updates use PUT on entity-specific paths (/v1/campaigns/{entityId})
+ * - Deletes use DELETE on entity-specific paths
+ * - Pagination is cursor-based (pass `cursor` in query params)
+ * - Create/update body wraps entity in: { <responseKey>: [{ ...data }] }
+ * - Response envelope: { request_status, <responseKey>: [{ sub_request_status, <entityKey>: {...} }] }
  */
 export class SnapchatService {
+  private readonly rateLimiter: RateLimiter;
+
   constructor(
-    private readonly rateLimiter: RateLimiter,
     private readonly httpClient: SnapchatHttpClient,
-    private readonly logger: Logger
-  ) {}
+    private readonly orgId: string,
+    private readonly adAccountId: string
+  ) {
+    this.rateLimiter = new RateLimiter({ tokensPerInterval: 120, interval: "minute" });
+  }
 
   /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
   get client(): SnapchatHttpClient {
@@ -48,35 +69,32 @@ export class SnapchatService {
 
   async listEntities(
     entityType: SnapchatEntityType,
-    filters?: Record<string, unknown>,
-    page = 1,
-    pageSize = 10,
+    filters?: Record<string, string>,
+    cursor?: string,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; pageInfo: SnapchatPageInfo }> {
+  ): Promise<{ entities: unknown[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const config = getEntityConfig(entityType);
-    const params: Record<string, string> = {
-      page: String(page),
-      page_size: String(pageSize),
-      fields: JSON.stringify(config.defaultFields),
+
+    const pathParams: Record<string, string> = {
+      adAccountId: filters?.adAccountId ?? this.adAccountId,
+      ...(filters?.campaignId ? { campaignId: filters.campaignId } : {}),
+      ...(filters?.adSquadId ? { adSquadId: filters.adSquadId } : {}),
     };
 
-    if (filters && Object.keys(filters).length > 0) {
-      params.filtering = JSON.stringify(filters);
+    const interpolatedPath = interpolatePath(config.listPath, pathParams);
+
+    const queryParams: Record<string, string> = {};
+    if (cursor) {
+      queryParams.cursor = cursor;
     }
 
-    const result = (await this.httpClient.get(config.listPath, params, context)) as SnapchatListData;
+    const response = await this.httpClient.get(interpolatedPath, queryParams, context);
+    const entities = unwrapEntities(config.responseKey, config.entityKey, response);
+    const nextCursor = extractNextCursor(response);
 
-    return {
-      entities: result?.list ?? [],
-      pageInfo: result?.page_info ?? {
-        page,
-        page_size: pageSize,
-        total_number: 0,
-        total_page: 0,
-      },
-    };
+    return { entities, nextCursor };
   }
 
   async getEntity(
@@ -87,24 +105,21 @@ export class SnapchatService {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const config = getEntityConfig(entityType);
-    const params: Record<string, string> = {
-      [config.idsField]: JSON.stringify([entityId]),
-      page_size: "1",
-      fields: JSON.stringify(config.defaultFields),
-    };
+    const interpolatedPath = interpolatePath(config.updatePath, { entityId });
 
-    const result = (await this.httpClient.get(config.listPath, params, context)) as SnapchatListData;
+    const response = await this.httpClient.get(interpolatedPath, undefined, context);
 
-    const list = result?.list ?? [];
-    if (list.length === 0) {
+    const entity = unwrapSingleEntity(config.responseKey, config.entityKey, response);
+    if (!entity) {
       throw new Error(`${config.displayName} with ID ${entityId} not found`);
     }
 
-    return list[0];
+    return entity;
   }
 
   async createEntity(
     entityType: SnapchatEntityType,
+    filters: Record<string, string>,
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
@@ -112,12 +127,23 @@ export class SnapchatService {
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    return this.httpClient.post(config.createPath, data, context);
+    const pathParams: Record<string, string> = {
+      adAccountId: filters.adAccountId ?? this.adAccountId,
+      ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
+      ...(filters.adSquadId ? { adSquadId: filters.adSquadId } : {}),
+    };
+    const interpolatedPath = interpolatePath(config.createPath, pathParams);
+
+    const body = { [config.responseKey]: [data] };
+    const response = await this.httpClient.post(interpolatedPath, body, context);
+
+    return unwrapSingleEntity(config.responseKey, config.entityKey, response);
   }
 
   async updateEntity(
     entityType: SnapchatEntityType,
     entityId: string,
+    _filters: Record<string, string>,
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
@@ -125,41 +151,41 @@ export class SnapchatService {
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    // Snapchat uses POST for updates, with entity ID in body
-    return this.httpClient.post(config.updatePath, {
-      [config.idField]: entityId,
-      ...data,
-    }, context);
+    const interpolatedPath = interpolatePath(config.updatePath, { entityId });
+    const body = { [config.responseKey]: [{ id: entityId, ...data }] };
+    const response = await this.httpClient.put(interpolatedPath, body, context);
+
+    return unwrapSingleEntity(config.responseKey, config.entityKey, response);
   }
 
   async deleteEntity(
     entityType: SnapchatEntityType,
-    entityIds: string[],
+    entityId: string,
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    return this.httpClient.post(config.deletePath, {
-      [config.idsField]: entityIds,
-    }, context);
+    const interpolatedPath = interpolatePath(config.deletePath, { entityId });
+    return this.httpClient.delete(interpolatedPath, undefined, context);
   }
 
   async updateEntityStatus(
     entityType: SnapchatEntityType,
-    entityIds: string[],
-    operationStatus: "ENABLE" | "DISABLE" | "DELETE",
+    entityId: string,
+    status: "ACTIVE" | "PAUSED" | "ARCHIVED",
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    return this.httpClient.post(config.statusUpdatePath, {
-      [config.idsField]: entityIds,
-      operation_status: operationStatus,
-    }, context);
+    const interpolatedPath = interpolatePath(config.statusUpdatePath, { entityId });
+    const body = { [config.responseKey]: [{ id: entityId, status }] };
+    const response = await this.httpClient.put(interpolatedPath, body, context);
+
+    return unwrapSingleEntity(config.responseKey, config.entityKey, response);
   }
 
   // ─── Advertiser Account ──────────────────────────────────────────
@@ -167,7 +193,7 @@ export class SnapchatService {
   async listAdAccounts(context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    return this.httpClient.get("/open_api/v1.3/advertiser/info/", {}, context);
+    return this.httpClient.get(`/v1/organizations/${this.orgId}/adaccounts`, {}, context);
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────
@@ -181,19 +207,17 @@ export class SnapchatService {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsDuplicate) {
-      this.logger.debug({ entityType }, "Duplicate skipped: entity type does not support duplication");
       throw new Error(`Entity type ${entityType} does not support duplication`);
     }
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    // Snapchat copy endpoints follow pattern /{entity}/copy/
-    const copyPath = config.createPath.replace("/create/", "/copy/");
+    // Snapchat copy body: { <responseKey>: [{ id: entityId, ...options }] }
+    const body = { [config.responseKey]: [{ id: entityId, ...options }] };
+    // Derive copy path from createPath by replacing /campaigns with /campaigns/copy (example)
+    const copyPath = config.createPath.replace(new RegExp(`/${config.responseKey}$`), `/${config.responseKey}/copy`);
 
-    return this.httpClient.post(copyPath, {
-      [config.idField]: entityId,
-      ...options,
-    }, context);
+    return this.httpClient.post(copyPath, body, context);
   }
 
   // ─── Bid Adjustment ─────────────────────────────────────────────
@@ -208,11 +232,11 @@ export class SnapchatService {
       try {
         // Read current ad group state
         const entity = (await this.getEntity("adGroup", adjustment.adGroupId, context)) as Record<string, unknown>;
-        const previousBid = entity.bid_price != null ? Number(entity.bid_price) : undefined;
+        const previousBid = entity.bid_micro != null ? Number(entity.bid_micro) : undefined;
 
         // Update bid
-        await this.updateEntity("adGroup", adjustment.adGroupId, {
-          bid_price: adjustment.bidPrice,
+        await this.updateEntity("adGroup", adjustment.adGroupId, {}, {
+          bid_micro: adjustment.bidPrice,
         }, context);
 
         results.push({
@@ -237,11 +261,12 @@ export class SnapchatService {
 
   async bulkCreateEntities(
     entityType: SnapchatEntityType,
+    filters: Record<string, string>,
     items: Record<string, unknown>[],
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
     const results = await this.executeBulk(items, async (data) => {
-      return this.createEntity(entityType, data, context);
+      return this.createEntity(entityType, filters, data, context);
     });
     return { results };
   }
@@ -252,7 +277,7 @@ export class SnapchatService {
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const bulkResults = await this.executeBulk(items, async (item) => {
-      return this.updateEntity(entityType, item.entityId, item.data, context);
+      return this.updateEntity(entityType, item.entityId, {}, item.data, context);
     });
 
     return {
@@ -267,25 +292,20 @@ export class SnapchatService {
   async bulkUpdateStatus(
     entityType: SnapchatEntityType,
     entityIds: string[],
-    operationStatus: "ENABLE" | "DISABLE" | "DELETE",
+    status: "ACTIVE" | "PAUSED" | "ARCHIVED",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    this.logger.debug({ entityType, count: entityIds.length, operationStatus }, "Bulk status update");
-    try {
-      await this.updateEntityStatus(entityType, entityIds, operationStatus, context);
-      return {
-        results: entityIds.map((entityId) => ({ entityId, success: true })),
-      };
-    } catch (error) {
-      this.logger.debug({ entityType, error }, "Bulk status update failed for all entities");
-      return {
-        results: entityIds.map((entityId) => ({
-          entityId,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        })),
-      };
-    }
+    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+      return this.updateEntityStatus(entityType, entityId, status, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: entityIds[i],
+        success: r.success,
+        error: r.error,
+      })),
+    };
   }
 
   // ─── Targeting ───────────────────────────────────────────────────
@@ -307,7 +327,7 @@ export class SnapchatService {
       params.keyword = query;
     }
 
-    return this.httpClient.get("/open_api/v1.3/search/targeting/", params, context);
+    return this.httpClient.get(`/v1/adaccounts/${this.adAccountId}/targeting`, params, context);
   }
 
   async getTargetingOptions(
@@ -318,10 +338,10 @@ export class SnapchatService {
 
     const params: Record<string, string> = {};
     if (targetingType) {
-      params.objective_type = targetingType;
+      params.targeting_type = targetingType;
     }
 
-    return this.httpClient.get("/open_api/v1.3/targeting/list/", params, context);
+    return this.httpClient.get(`/v1/adaccounts/${this.adAccountId}/targeting`, params, context);
   }
 
   // ─── Audience Estimate ──────────────────────────────────────────
@@ -332,27 +352,19 @@ export class SnapchatService {
   ): Promise<unknown> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    return this.httpClient.post("/open_api/v1.3/audience/estimate/", targetingConfig, context);
+    return this.httpClient.post(`/v1/adaccounts/${this.adAccountId}/audience_size`, targetingConfig, context);
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────
 
   async getAdPreviews(
     adId: string,
-    adFormat?: string,
+    _adFormat?: string,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    const params: Record<string, string> = {
-      ad_id: adId,
-    };
-
-    if (adFormat) {
-      params.ad_format = adFormat;
-    }
-
-    return this.httpClient.get("/open_api/v1.3/ad/preview/", params, context);
+    return this.httpClient.get(`/v1/ads/${adId}`, undefined, context);
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────

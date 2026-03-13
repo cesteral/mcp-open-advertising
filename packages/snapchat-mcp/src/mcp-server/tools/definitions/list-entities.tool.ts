@@ -6,13 +6,13 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "snapchat_list_entities";
 const TOOL_TITLE = "List Snapchat Ads Entities";
-const TOOL_DESCRIPTION = `List Snapchat Ads entities with optional filtering and page-based pagination.
+const TOOL_DESCRIPTION = `List Snapchat Ads entities with optional filtering and cursor-based pagination.
 
 **Entity Hierarchy:** Advertiser > Campaign > Ad Group > Ad (+ Creatives)
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-All entities are scoped to an advertiser account. Pagination uses \`page\` (1-based) and \`pageSize\`.`;
+All entities are scoped to an advertiser account. Pagination uses cursor-based paging.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -23,35 +23,25 @@ export const ListEntitiesInputSchema = z
       .string()
       .min(1)
       .describe("Snapchat Advertiser ID"),
-    filters: z
-      .record(z.unknown())
+    campaignId: z
+      .string()
       .optional()
-      .describe("Optional filter criteria (e.g., { status: 'ACTIVE' })"),
-    page: z
-      .number()
-      .int()
-      .min(1)
+      .describe("Campaign ID (required for adGroup entity type)"),
+    adSquadId: z
+      .string()
       .optional()
-      .default(1)
-      .describe("Page number (1-based, default 1)"),
-    pageSize: z
-      .number()
-      .int()
-      .min(1)
-      .max(1000)
+      .describe("Ad Squad ID (required for ad entity type)"),
+    cursor: z
+      .string()
       .optional()
-      .default(10)
-      .describe("Number of entities per page (default 10, max 1000)"),
+      .describe("Pagination cursor from previous response"),
   })
   .describe("Parameters for listing Snapchat Ads entities");
 
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    page: z.number().describe("Current page number"),
-    pageSize: z.number().describe("Number of results per page"),
-    totalNumber: z.number().describe("Total number of entities"),
-    totalPage: z.number().describe("Total number of pages"),
+    nextCursor: z.string().optional().describe("Cursor for next page (undefined if no more results)"),
     has_more: z.boolean().describe("Whether more pages are available"),
     timestamp: z.string().datetime(),
   })
@@ -67,31 +57,29 @@ export async function listEntitiesLogic(
 ): Promise<ListEntitiesOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
+  const filters: Record<string, string> = { adAccountId: input.adAccountId };
+  if (input.campaignId) filters.campaignId = input.campaignId;
+  if (input.adSquadId) filters.adSquadId = input.adSquadId;
+
   const result = await snapchatService.listEntities(
     input.entityType as SnapchatEntityType,
-    input.filters,
-    input.page,
-    input.pageSize,
+    filters,
+    input.cursor,
     context
   );
 
-  const { pageInfo } = result;
-
   return {
     entities: result.entities as Record<string, unknown>[],
-    page: pageInfo.page,
-    pageSize: pageInfo.page_size,
-    totalNumber: pageInfo.total_number,
-    totalPage: pageInfo.total_page,
-    has_more: pageInfo.page < pageInfo.total_page,
+    nextCursor: result.nextCursor,
+    has_more: !!result.nextCursor,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.entities.length} entities (page ${result.page}/${result.totalPage}, total ${result.totalNumber})`;
+  const summary = `Found ${result.entities.length} entities`;
   const pagination = result.has_more
-    ? `\n\nMore results available. Use page: ${result.page + 1}`
+    ? `\n\nMore results available. Use cursor: ${result.nextCursor}`
     : "";
   const entities =
     result.entities.length > 0
@@ -120,20 +108,18 @@ export const listEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "List active campaigns",
+      label: "List campaigns",
       input: {
         entityType: "campaign",
         adAccountId: "1234567890",
-        filters: { status: "CAMPAIGN_STATUS_ENABLE" },
-        page: 1,
-        pageSize: 10,
       },
     },
     {
-      label: "List ad groups",
+      label: "List ad groups for a campaign",
       input: {
         entityType: "adGroup",
         adAccountId: "1234567890",
+        campaignId: "campaign_abc123",
       },
     },
   ],

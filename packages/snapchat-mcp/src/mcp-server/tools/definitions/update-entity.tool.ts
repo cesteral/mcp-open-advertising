@@ -57,6 +57,7 @@ export async function updateEntityLogic(
   await snapchatService.updateEntity(
     input.entityType as SnapchatEntityType,
     input.entityId,
+    { adAccountId: input.adAccountId },
     input.data,
     context
   );
