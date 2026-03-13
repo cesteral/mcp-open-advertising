@@ -97,6 +97,13 @@ export abstract class BearerAuthStrategyBase implements AuthStrategy {
       `${this.platformName} credentials validated (${branch.authFlow})`
     );
 
+    // NOTE: allowedAdvertisers is intentionally not set for bearer-token sessions.
+    // Bearer token auth is trusted at the connection level (the token itself acts
+    // as the credential bound to the ad account via the adapter's adAccountId/profileId).
+    // JWT scope enforcement (allowedAdvertisers check in registerToolsFromDefinitions)
+    // only activates in jwt mode where the JWT explicitly declares allowed advertiser IDs.
+    // If per-call advertiser scoping is needed in bearer-token mode, implement it
+    // inside the individual auth adapters' validate() method or add it here.
     return {
       authInfo: {
         clientId: branch.userId,
