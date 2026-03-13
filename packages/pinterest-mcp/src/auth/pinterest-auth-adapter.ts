@@ -205,6 +205,8 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
       scope: "ads:read,ads:write",
     }).toString();
 
+    // Pinterest OAuth2 token endpoint is always on api.pinterest.com, regardless of this.baseUrl.
+    // this.baseUrl controls the ad-entity API host (business-api.pinterest.com by default).
     const response = await fetchWithTimeout(
       "https://api.pinterest.com/v5/oauth/token",
       10_000,
