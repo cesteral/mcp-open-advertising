@@ -1,121 +1,129 @@
 /**
  * Pinterest Entity Mapping
  *
- * Static configuration for Pinterest Marketing API entity types.
- * All entities require ad_account_id in query params (GET) or body (POST).
- * Pinterest uses separate endpoints for status updates and deletes.
+ * Static configuration for Pinterest Marketing API v5 entity types.
+ * Pinterest v5 uses path-based URL structure with ad_account_id in the URL path.
+ * Use interpolatePath() to substitute {adAccountId} and {entityId} placeholders at runtime.
  */
 
 export type PinterestEntityType = "campaign" | "adGroup" | "ad" | "creative";
 
 export interface PinterestEntityConfig {
-  /** API path for list/get (GET) */
+  /** Path template for list/get. {adAccountId} is substituted at runtime. */
   listPath: string;
-  /** API path for create (POST) */
+  /** Path template for create (POST). */
   createPath: string;
-  /** API path for update (POST) */
+  /** Path template for PATCH update (bulk). {adAccountId} substituted. */
   updatePath: string;
-  /** API path for status update (POST) */
+  /** Path for status update — same as updatePath (status is a field). */
   statusUpdatePath: string;
-  /** API path for delete (POST) */
+  /** Path for DELETE. May use {adAccountId} for query-param style or {entityId} for single. */
   deletePath: string;
-  /** API path for duplicate/copy (POST), if supported */
   duplicatePath?: string;
-  /** The field name used as the entity's primary ID */
+  /** Primary ID field name in API response (e.g., "id") */
   idField: string;
-  /** The field name used in arrays for bulk operations (e.g., campaign_ids) */
-  idsField: string;
-  /** Display name for messages */
+  /** Query param name for batch delete (e.g., "campaign_ids") */
+  deleteIdsParam: string;
   displayName: string;
-  /** Default fields to return when listing/getting */
   defaultFields: string[];
-  /** Whether the entity supports duplication */
   supportsDuplicate?: boolean;
 }
 
 const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   campaign: {
-    listPath: "/open_api/v1.3/campaign/get/",
-    createPath: "/open_api/v1.3/campaign/create/",
-    updatePath: "/open_api/v1.3/campaign/update/",
-    statusUpdatePath: "/open_api/v1.3/campaign/status/update/",
-    deletePath: "/open_api/v1.3/campaign/delete/",
-    idField: "campaign_id",
-    idsField: "campaign_ids",
+    listPath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    createPath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    updatePath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    statusUpdatePath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    deletePath: "/v5/ad_accounts/{adAccountId}/campaigns",
+    idField: "id",
+    deleteIdsParam: "campaign_ids",
     displayName: "Campaign",
     defaultFields: [
-      "campaign_id",
-      "campaign_name",
+      "id",
+      "name",
       "status",
       "objective_type",
-      "budget",
-      "budget_mode",
+      "daily_spend_cap",
+      "lifetime_spend_cap",
       "created_time",
-      "modify_time",
+      "updated_time",
     ],
-    supportsDuplicate: true,
+    supportsDuplicate: false,
   },
   adGroup: {
-    listPath: "/open_api/v1.3/adgroup/get/",
-    createPath: "/open_api/v1.3/adgroup/create/",
-    updatePath: "/open_api/v1.3/adgroup/update/",
-    statusUpdatePath: "/open_api/v1.3/adgroup/status/update/",
-    deletePath: "/open_api/v1.3/adgroup/delete/",
-    idField: "adgroup_id",
-    idsField: "adgroup_ids",
+    listPath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    createPath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    updatePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    statusUpdatePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    deletePath: "/v5/ad_accounts/{adAccountId}/ad_groups",
+    idField: "id",
+    deleteIdsParam: "ad_group_ids",
     displayName: "Ad Group",
     defaultFields: [
-      "adgroup_id",
-      "adgroup_name",
-      "campaign_id",
+      "id",
+      "name",
       "status",
-      "budget",
-      "budget_mode",
-      "schedule_type",
+      "campaign_id",
+      "budget_in_micro_currency",
+      "pacing_delivery_type",
+      "bid_strategy_type",
       "created_time",
     ],
-    supportsDuplicate: true,
+    supportsDuplicate: false,
   },
   ad: {
-    listPath: "/open_api/v1.3/ad/get/",
-    createPath: "/open_api/v1.3/ad/create/",
-    updatePath: "/open_api/v1.3/ad/update/",
-    statusUpdatePath: "/open_api/v1.3/ad/status/update/",
-    deletePath: "/open_api/v1.3/ad/delete/",
-    idField: "ad_id",
-    idsField: "ad_ids",
+    listPath: "/v5/ad_accounts/{adAccountId}/ads",
+    createPath: "/v5/ad_accounts/{adAccountId}/ads",
+    updatePath: "/v5/ad_accounts/{adAccountId}/ads",
+    statusUpdatePath: "/v5/ad_accounts/{adAccountId}/ads",
+    deletePath: "/v5/ad_accounts/{adAccountId}/ads",
+    idField: "id",
+    deleteIdsParam: "ad_ids",
     displayName: "Ad",
     defaultFields: [
-      "ad_id",
-      "adgroup_id",
-      "ad_name",
+      "id",
+      "name",
       "status",
+      "ad_group_id",
       "creative_type",
-      "image_ids",
-      "video_id",
+      "pin_id",
       "created_time",
     ],
-    supportsDuplicate: true,
+    supportsDuplicate: false,
   },
   creative: {
-    listPath: "/open_api/v1.3/creative/adcreative/get/",
-    createPath: "/open_api/v1.3/creative/adcreative/create/",
-    updatePath: "/open_api/v1.3/creative/adcreative/update/",
-    statusUpdatePath: "/open_api/v1.3/creative/adcreative/update/",
-    deletePath: "/open_api/v1.3/creative/adcreative/delete/",
-    idField: "creative_id",
-    idsField: "creative_ids",
-    displayName: "Creative",
+    listPath: "/v5/pins/{entityId}",
+    createPath: "/v5/pins",
+    updatePath: "/v5/pins/{entityId}",
+    statusUpdatePath: "/v5/pins/{entityId}",
+    deletePath: "/v5/pins/{entityId}",
+    idField: "id",
+    deleteIdsParam: "pin_id",
+    displayName: "Pin (Creative)",
     defaultFields: [
-      "creative_id",
-      "ad_account_id",
-      "display_name",
-      "image_ids",
-      "video_id",
-      "created_time",
+      "id",
+      "title",
+      "description",
+      "media",
+      "link",
+      "created_at",
     ],
+    supportsDuplicate: false,
   },
 };
+
+/**
+ * Substitute {placeholder} tokens in a path template.
+ * Example: interpolatePath("/v5/ad_accounts/{adAccountId}/campaigns", { adAccountId: "act_123" })
+ *   → "/v5/ad_accounts/act_123/campaigns"
+ */
+export function interpolatePath(path: string, params: Record<string, string>): string {
+  return Object.entries(params).reduce(
+    (acc, [key, val]) => acc.replace(`{${key}}`, val),
+    path
+  );
+}
 
 export function getEntityConfig(entityType: PinterestEntityType): PinterestEntityConfig {
   const config = ENTITY_CONFIGS[entityType];
