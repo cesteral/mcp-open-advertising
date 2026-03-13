@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { InteractionLogger, generateEntryId } from "../../src/utils/interaction-logger.js";
+import { InteractionLogger, generateEntryId, sanitizeParams } from "../../src/utils/interaction-logger.js";
 
 // ---------------------------------------------------------------------------
 // GCS mock — maintained at module level so vi.mock hoisting works correctly
@@ -60,6 +60,13 @@ describe("generateEntryId", () => {
 
     expect(idA).not.toBe(idB);
     expect(idA).not.toBe(idC);
+  });
+});
+
+describe("sanitizeParams", () => {
+  it("redacts x-ttd-partner-id header", () => {
+    const result = sanitizeParams({ "x-ttd-partner-id": "abc123" }) as Record<string, unknown>;
+    expect(result["x-ttd-partner-id"]).toBe("[REDACTED]");
   });
 });
 

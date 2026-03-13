@@ -74,7 +74,7 @@ export function generateEntryId(input: GenerateEntryIdInput): string {
 // Keys are redacted if they contain any of these substrings (case-insensitive).
 // Covers: access_token, refresh_token, api_secret, app_secret, client_secret,
 // authorization, x-ttd-api-secret, x-pinterest-app-secret, etc.
-const SENSITIVE_KEY_PATTERNS = ["secret", "token", "authorization", "password", "key", "credential"];
+const SENSITIVE_KEY_PATTERNS = ["secret", "token", "authorization", "password", "key", "credential", "partner-id"];
 
 function isSensitiveKey(key: string): boolean {
   const lower = key.toLowerCase();
