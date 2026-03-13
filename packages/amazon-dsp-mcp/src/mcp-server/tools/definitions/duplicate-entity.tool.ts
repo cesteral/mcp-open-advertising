@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getDuplicateEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -8,7 +8,7 @@ const TOOL_NAME = "amazon_dsp_duplicate_entity";
 const TOOL_TITLE = "Duplicate AmazonDsp Ads Entity";
 const TOOL_DESCRIPTION = `Duplicate a AmazonDsp Ads entity (copy it).
 
-**Supported entity types:** ${getDuplicateEntityTypeEnum().join(", ")}
+**Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 Creates a copy of the entity. The copy is created in DISABLED status by default.
 Use the returned entity ID to make modifications before enabling.`;
@@ -16,7 +16,7 @@ Use the returned entity ID to make modifications before enabling.`;
 export const DuplicateEntityInputSchema = z
   .object({
     entityType: z
-      .enum(getDuplicateEntityTypeEnum())
+      .enum(getEntityTypeEnum())
       .describe("Type of entity to duplicate"),
     profileId: z
       .string()
@@ -90,21 +90,21 @@ export const duplicateEntityTool = {
   },
   inputExamples: [
     {
-      label: "Duplicate a campaign",
+      label: "Duplicate an order (campaign)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
-        entityId: "1800123456789",
+        entityId: "ord_123456789",
       },
     },
     {
-      label: "Duplicate an ad group with new name",
+      label: "Duplicate a line item with new name",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
-        entityId: "1700123456789",
+        entityId: "li_123456789",
         options: {
-          adgroup_name: "Copy of Ad Group A",
+          name: "Copy of Line Item A",
         },
       },
     },

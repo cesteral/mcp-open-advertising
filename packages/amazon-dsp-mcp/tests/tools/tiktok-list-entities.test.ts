@@ -45,87 +45,84 @@ describe("amazonDsp_list_entities tool", () => {
   describe("listEntitiesLogic()", () => {
     it("returns formatted entity list with pagination info", async () => {
       const mockEntities = [
-        { campaign_id: "1800000001", campaign_name: "Campaign A", status: "CAMPAIGN_STATUS_ENABLE" },
-        { campaign_id: "1800000002", campaign_name: "Campaign B", status: "CAMPAIGN_STATUS_DISABLE" },
+        { orderId: "ord_001", name: "Order A", status: "DELIVERING" },
+        { orderId: "ord_002", name: "Order B", status: "PAUSED" },
       ];
 
       mockListEntities.mockResolvedValueOnce({
         entities: mockEntities,
         pageInfo: {
-          page: 1,
-          page_size: 10,
-          total_number: 2,
-          total_page: 1,
+          startIndex: 0,
+          count: 25,
+          totalResults: 2,
         },
       });
 
       const result = await listEntitiesLogic(
         {
-          entityType: "campaign",
+          entityType: "order",
           profileId: "1234567890",
-          page: 1,
-          pageSize: 10,
+          startIndex: 0,
+          pageSize: 25,
         },
         baseContext,
         baseSdkContext
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.page).toBe(1);
-      expect(result.totalNumber).toBe(2);
-      expect(result.totalPage).toBe(1);
-      expect(result.has_more).toBe(false);
+      expect(result.startIndex).toBe(0);
+      expect(result.totalResults).toBe(2);
+      expect(result.hasMore).toBe(false);
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates has_more when more pages available", async () => {
+    it("indicates hasMore when more pages available", async () => {
       mockListEntities.mockResolvedValueOnce({
-        entities: [{ campaign_id: "1800000001" }],
+        entities: [{ orderId: "ord_001" }],
         pageInfo: {
-          page: 1,
-          page_size: 1,
-          total_number: 5,
-          total_page: 5,
+          startIndex: 0,
+          count: 1,
+          totalResults: 5,
         },
       });
 
       const result = await listEntitiesLogic(
         {
-          entityType: "campaign",
+          entityType: "order",
           profileId: "1234567890",
-          page: 1,
+          startIndex: 0,
           pageSize: 1,
         },
         baseContext,
         baseSdkContext
       );
 
-      expect(result.has_more).toBe(true);
+      expect(result.hasMore).toBe(true);
     });
 
     it("passes filters to service when provided", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [],
-        pageInfo: { page: 1, page_size: 10, total_number: 0, total_page: 0 },
+        pageInfo: { startIndex: 25, count: 25, totalResults: 50 },
       });
 
       await listEntitiesLogic(
         {
-          entityType: "adGroup",
+          entityType: "lineItem",
           profileId: "1234567890",
-          filters: { status: "ACTIVE" },
-          page: 2,
-          pageSize: 5,
+          filters: { orderId: "ord_123" },
+          startIndex: 25,
+          pageSize: 25,
         },
         baseContext,
         baseSdkContext
       );
 
       expect(mockListEntities).toHaveBeenCalledWith(
-        "adGroup",
-        { status: "ACTIVE" },
-        2,
-        5,
+        "lineItem",
+        { orderId: "ord_123" },
+        25,
+        25,
         baseContext
       );
     });
@@ -134,12 +131,11 @@ describe("amazonDsp_list_entities tool", () => {
   describe("listEntitiesResponseFormatter()", () => {
     it("formats results with entity count and pagination", () => {
       const result = {
-        entities: [{ campaign_id: "abc" }],
-        page: 1,
-        pageSize: 10,
-        totalNumber: 1,
-        totalPage: 1,
-        has_more: false,
+        entities: [{ orderId: "ord_001" }],
+        startIndex: 0,
+        pageSize: 25,
+        totalResults: 1,
+        hasMore: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -147,17 +143,15 @@ describe("amazonDsp_list_entities tool", () => {
       expect(formatted).toHaveLength(1);
       expect((formatted[0] as any).type).toBe("text");
       expect((formatted[0] as any).text).toContain("Found 1 entities");
-      expect((formatted[0] as any).text).toContain("page 1/1");
     });
 
     it("indicates no entities found", () => {
       const result = {
         entities: [],
-        page: 1,
-        pageSize: 10,
-        totalNumber: 0,
-        totalPage: 0,
-        has_more: false,
+        startIndex: 0,
+        pageSize: 25,
+        totalResults: 0,
+        hasMore: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -165,26 +159,25 @@ describe("amazonDsp_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows pagination hint when has_more is true", () => {
+    it("shows pagination hint when hasMore is true", () => {
       const result = {
-        entities: [{ campaign_id: "abc" }],
-        page: 1,
-        pageSize: 1,
-        totalNumber: 3,
-        totalPage: 3,
-        has_more: true,
+        entities: [{ orderId: "ord_001" }],
+        startIndex: 0,
+        pageSize: 25,
+        totalResults: 50,
+        hasMore: true,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
       const formatted = listEntitiesResponseFormatter(result);
-      expect((formatted[0] as any).text).toContain("page: 2");
+      expect((formatted[0] as any).text).toContain("startIndex: 25");
     });
   });
 
   describe("input schema validation", () => {
     it("accepts valid input", () => {
       const result = ListEntitiesInputSchema.safeParse({
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
       });
       expect(result.success).toBe(true);
@@ -200,23 +193,23 @@ describe("amazonDsp_list_entities tool", () => {
 
     it("rejects empty advertiser ID", () => {
       const result = ListEntitiesInputSchema.safeParse({
-        entityType: "campaign",
+        entityType: "order",
         profileId: "",
       });
       expect(result.success).toBe(false);
     });
 
-    it("rejects page size over 1000", () => {
+    it("rejects page size over 100", () => {
       const result = ListEntitiesInputSchema.safeParse({
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
-        pageSize: 1001,
+        pageSize: 101,
       });
       expect(result.success).toBe(false);
     });
 
     it("accepts all supported entity types", () => {
-      const types = ["campaign", "adGroup", "ad", "creative"];
+      const types = ["order", "lineItem", "creative"];
       for (const entityType of types) {
         const result = ListEntitiesInputSchema.safeParse({
           entityType,

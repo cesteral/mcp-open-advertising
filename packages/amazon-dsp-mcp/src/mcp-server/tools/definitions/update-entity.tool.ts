@@ -92,25 +92,25 @@ export const updateEntityTool = {
   },
   inputExamples: [
     {
-      label: "Update campaign name and budget",
+      label: "Update order (campaign) name and budget",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
-        entityId: "1800123456789",
+        entityId: "ord_123456789",
         data: {
-          campaign_name: "Updated Campaign Name",
-          budget: 200,
+          name: "Updated Order Name",
+          budget: 20000,
         },
       },
     },
     {
-      label: "Update ad group bid",
+      label: "Update line item bid",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
-        entityId: "1700123456789",
+        entityId: "li_123456789",
         data: {
-          bid_price: 1.5,
+          bidding: { bidPrice: 2.0 },
         },
       },
     },

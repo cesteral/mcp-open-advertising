@@ -6,16 +6,16 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "amazon_dsp_bulk_update_status";
 const TOOL_TITLE = "AmazonDsp Bulk Status Update";
-const TOOL_DESCRIPTION = `Batch update the status of AmazonDsp Ads entities.
+const TOOL_DESCRIPTION = `Batch update the status of Amazon DSP entities.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-**Operation status values:**
-- **ENABLE** — Activate entities
-- **DISABLE** — Pause entities
-- **DELETE** — Delete entities (irreversible)
+**Status values:**
+- **DELIVERING** — Activate/resume entities
+- **PAUSED** — Pause entities
+- **ARCHIVED** — Archive entities (equivalent to soft delete)
 
-AmazonDsp's status update API accepts an array of IDs in a single request.`;
+Amazon DSP updates each entity individually via PUT to the entity-specific path.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
@@ -32,8 +32,8 @@ export const BulkUpdateStatusInputSchema = z
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
     operationStatus: z
-      .enum(["ENABLE", "DISABLE", "DELETE"])
-      .describe("Target status to apply"),
+      .enum(["DELIVERING", "PAUSED", "ARCHIVED"])
+      .describe("Target status to apply (DELIVERING=active, PAUSED=paused, ARCHIVED=soft delete)"),
   })
   .describe("Parameters for bulk status update of AmazonDsp Ads entities");
 
@@ -66,7 +66,7 @@ export async function bulkUpdateStatusLogic(
   const result = await amazonDspService.bulkUpdateStatus(
     input.entityType as AmazonDspEntityType,
     input.entityIds,
-    input.operationStatus,
+    input.operationStatus as string,
     context
   );
 
@@ -114,21 +114,21 @@ export const bulkUpdateStatusTool = {
   },
   inputExamples: [
     {
-      label: "Pause multiple campaigns",
+      label: "Pause multiple orders (campaigns)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
-        entityIds: ["1800111111111", "1800222222222"],
-        operationStatus: "DISABLE",
+        entityIds: ["ord_111111", "ord_222222"],
+        operationStatus: "PAUSED",
       },
     },
     {
-      label: "Enable multiple ad groups",
+      label: "Resume multiple line items",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
-        entityIds: ["1700111111111"],
-        operationStatus: "ENABLE",
+        entityIds: ["li_111111"],
+        operationStatus: "DELIVERING",
       },
     },
   ],

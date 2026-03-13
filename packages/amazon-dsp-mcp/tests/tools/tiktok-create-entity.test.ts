@@ -42,67 +42,63 @@ describe("amazonDsp_create_entity tool", () => {
   const baseSdkContext = { sessionId: "test-session" } as any;
 
   describe("createEntityLogic()", () => {
-    it("creates a campaign successfully", async () => {
+    it("creates an order successfully", async () => {
       const mockEntity = {
-        campaign_id: "1800999888777",
-        campaign_name: "Test Campaign",
+        orderId: "ord_999888777",
+        name: "Test Order",
       };
-      mockCreateEntity.mockResolvedValueOnce(mockEntity);
+      mockCreateEntity.mockResolvedValueOnce({ orders: [mockEntity] });
 
       const result = await createEntityLogic(
         {
-          entityType: "campaign",
+          entityType: "order",
           profileId: "1234567890",
           data: {
-            campaign_name: "Test Campaign",
-            objective_type: "TRAFFIC",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 100,
+            name: "Test Order",
+            advertiserId: "adv_123",
+            budget: 10000,
+            startDate: "2026-07-01",
+            endDate: "2026-07-31",
           },
         },
         baseContext,
         baseSdkContext
       );
 
-      expect(result.entity).toEqual(mockEntity);
-      expect(result.entityType).toBe("campaign");
+      expect(result.entityType).toBe("order");
       expect(result.timestamp).toBeDefined();
       expect(mockCreateEntity).toHaveBeenCalledWith(
-        "campaign",
+        "order",
         {
-          campaign_name: "Test Campaign",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Test Order",
+          advertiserId: "adv_123",
+          budget: 10000,
+          startDate: "2026-07-01",
+          endDate: "2026-07-31",
         },
         baseContext
       );
     });
 
-    it("creates an ad group successfully", async () => {
-      const mockEntity = { adgroup_id: "1700999888777" };
-      mockCreateEntity.mockResolvedValueOnce(mockEntity);
+    it("creates a line item successfully", async () => {
+      const mockEntity = { lineItemId: "li_999888777" };
+      mockCreateEntity.mockResolvedValueOnce({ lineItems: [mockEntity] });
 
       const result = await createEntityLogic(
         {
-          entityType: "adGroup",
+          entityType: "lineItem",
           profileId: "1234567890",
           data: {
-            campaign_id: "1800123456789",
-            adgroup_name: "Test Ad Group",
-            placement_type: "PLACEMENT_TYPE_NORMAL",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 50,
-            schedule_type: "SCHEDULE_ALWAYS",
-            optimize_goal: "CLICK",
+            name: "Test Line Item",
+            orderId: "ord_123456789",
+            budget: 2000,
           },
         },
         baseContext,
         baseSdkContext
       );
 
-      expect(result.entity).toEqual(mockEntity);
-      expect(result.entityType).toBe("adGroup");
+      expect(result.entityType).toBe("lineItem");
     });
 
     it("propagates errors from the service", async () => {
@@ -111,9 +107,9 @@ describe("amazonDsp_create_entity tool", () => {
       await expect(
         createEntityLogic(
           {
-            entityType: "campaign",
+            entityType: "order",
             profileId: "1234567890",
-            data: { campaign_name: "Bad Campaign", objective_type: "TRAFFIC" },
+            data: { name: "Bad Order", advertiserId: "adv_123" },
           },
           baseContext,
           baseSdkContext
@@ -125,37 +121,37 @@ describe("amazonDsp_create_entity tool", () => {
   describe("createEntityResponseFormatter()", () => {
     it("formats create result with entity type", () => {
       const result = {
-        entity: { campaign_id: "1800999888777", campaign_name: "Test" },
-        entityType: "campaign",
+        entity: { orderId: "ord_999888777", name: "Test" },
+        entityType: "order",
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
       const formatted = createEntityResponseFormatter(result);
       expect(formatted).toHaveLength(1);
       expect((formatted[0] as any).type).toBe("text");
-      expect((formatted[0] as any).text).toContain("campaign created successfully");
-      expect((formatted[0] as any).text).toContain("1800999888777");
+      expect((formatted[0] as any).text).toContain("order created successfully");
     });
   });
 
   describe("input schema validation", () => {
-    it("accepts valid campaign creation payload", () => {
+    it("accepts valid order creation payload", () => {
       const result = CreateEntityInputSchema.safeParse({
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         data: {
-          campaign_name: "Test",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Test",
+          advertiserId: "adv_123",
+          budget: 1000,
+          startDate: "2026-07-01",
+          endDate: "2026-07-31",
         },
       });
       expect(result.success).toBe(true);
     });
 
-    it("rejects empty data object", () => {
+    it("rejects empty data object type", () => {
       const result = CreateEntityInputSchema.safeParse({
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         data: "not-an-object",
       });

@@ -6,13 +6,14 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "amazon_dsp_list_entities";
 const TOOL_TITLE = "List AmazonDsp Ads Entities";
-const TOOL_DESCRIPTION = `List AmazonDsp Ads entities with optional filtering and page-based pagination.
+const TOOL_DESCRIPTION = `List Amazon DSP entities with optional filtering and offset-based pagination.
 
-**Entity Hierarchy:** Advertiser > Campaign > Ad Group > Ad (+ Creatives)
+**Entity Hierarchy:** Advertiser > Order (Campaign) > Line Item (Ad Group) > Creative
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-All entities are scoped to an advertiser account. Pagination uses \`page\` (1-based) and \`pageSize\`.`;
+All entities are scoped to an advertiser account. Pagination uses \`startIndex\` (offset) and \`pageSize\`.
+Use the entity-specific filter param: orders filter by \`advertiserId\`, lineItems filter by \`orderId\`.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -22,37 +23,36 @@ export const ListEntitiesInputSchema = z
     profileId: z
       .string()
       .min(1)
-      .describe("AmazonDsp Advertiser ID"),
+      .describe("Amazon DSP Advertiser ID (used as the scope/profile)"),
     filters: z
-      .record(z.unknown())
+      .record(z.string())
       .optional()
-      .describe("Optional filter criteria (e.g., { status: 'ACTIVE' })"),
-    page: z
+      .describe("Optional filter criteria (e.g., { advertiserId: '123', orderId: '456' })"),
+    startIndex: z
       .number()
       .int()
-      .min(1)
+      .min(0)
       .optional()
-      .default(1)
-      .describe("Page number (1-based, default 1)"),
+      .default(0)
+      .describe("Start index for offset pagination (default 0)"),
     pageSize: z
       .number()
       .int()
       .min(1)
-      .max(1000)
+      .max(100)
       .optional()
-      .default(10)
-      .describe("Number of entities per page (default 10, max 1000)"),
+      .default(25)
+      .describe("Number of entities per page (default 25, max 100)"),
   })
-  .describe("Parameters for listing AmazonDsp Ads entities");
+  .describe("Parameters for listing Amazon DSP entities");
 
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    page: z.number().describe("Current page number"),
+    startIndex: z.number().describe("Current start index"),
     pageSize: z.number().describe("Number of results per page"),
-    totalNumber: z.number().describe("Total number of entities"),
-    totalPage: z.number().describe("Total number of pages"),
-    has_more: z.boolean().describe("Whether more pages are available"),
+    totalResults: z.number().describe("Total number of entities"),
+    hasMore: z.boolean().describe("Whether more pages are available"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -70,7 +70,7 @@ export async function listEntitiesLogic(
   const result = await amazonDspService.listEntities(
     input.entityType as AmazonDspEntityType,
     input.filters,
-    input.page,
+    input.startIndex,
     input.pageSize,
     context
   );
@@ -79,19 +79,18 @@ export async function listEntitiesLogic(
 
   return {
     entities: result.entities as Record<string, unknown>[],
-    page: pageInfo.page,
-    pageSize: pageInfo.page_size,
-    totalNumber: pageInfo.total_number,
-    totalPage: pageInfo.total_page,
-    has_more: pageInfo.page < pageInfo.total_page,
+    startIndex: pageInfo.startIndex,
+    pageSize: pageInfo.count,
+    totalResults: pageInfo.totalResults,
+    hasMore: pageInfo.startIndex + pageInfo.count < pageInfo.totalResults,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.entities.length} entities (page ${result.page}/${result.totalPage}, total ${result.totalNumber})`;
-  const pagination = result.has_more
-    ? `\n\nMore results available. Use page: ${result.page + 1}`
+  const summary = `Found ${result.entities.length} entities (startIndex ${result.startIndex}, total ${result.totalResults})`;
+  const pagination = result.hasMore
+    ? `\n\nMore results available. Use startIndex: ${result.startIndex + result.pageSize}`
     : "";
   const entities =
     result.entities.length > 0
@@ -120,20 +119,21 @@ export const listEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "List active campaigns",
+      label: "List active orders (campaigns)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
-        filters: { status: "CAMPAIGN_STATUS_ENABLE" },
-        page: 1,
-        pageSize: 10,
+        filters: { advertiserId: "adv_123" },
+        startIndex: 0,
+        pageSize: 25,
       },
     },
     {
-      label: "List ad groups",
+      label: "List line items for an order",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
+        filters: { orderId: "ord_456" },
       },
     },
   ],

@@ -6,12 +6,12 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "amazon_dsp_delete_entity";
 const TOOL_TITLE = "Delete AmazonDsp Ads Entity";
-const TOOL_DESCRIPTION = `Delete one or more AmazonDsp Ads entities.
+const TOOL_DESCRIPTION = `Archive one or more Amazon DSP entities (equivalent to deletion).
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-AmazonDsp delete uses a POST to the /delete/ endpoint with an array of entity IDs.
-Deleted entities cannot be recovered. Consider using \`amazon_dsp_bulk_update_status\` with DISABLE first.`;
+Amazon DSP has no DELETE endpoint. Archiving sets status to ARCHIVED via PUT.
+Archived entities cannot be recovered. Consider using \`amazon_dsp_bulk_update_status\` with PAUSED first.`;
 
 export const DeleteEntityInputSchema = z
   .object({
@@ -49,11 +49,14 @@ export async function deleteEntityLogic(
 ): Promise<DeleteEntityOutput> {
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
-  await amazonDspService.deleteEntity(
-    input.entityType as AmazonDspEntityType,
-    input.entityIds,
-    context
-  );
+  // Archive each entity individually (Amazon DSP has no bulk delete endpoint)
+  for (const entityId of input.entityIds) {
+    await amazonDspService.deleteEntity(
+      input.entityType as AmazonDspEntityType,
+      entityId,
+      context
+    );
+  }
 
   return {
     deleted: true,
@@ -86,19 +89,19 @@ export const deleteEntityTool = {
   },
   inputExamples: [
     {
-      label: "Delete a single campaign",
+      label: "Archive a single order (campaign)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
-        entityIds: ["1800123456789"],
+        entityIds: ["ord_123456789"],
       },
     },
     {
-      label: "Delete multiple ad groups",
+      label: "Archive multiple line items",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
-        entityIds: ["1700111111111", "1700222222222"],
+        entityIds: ["li_111111", "li_222222"],
       },
     },
   ],

@@ -4,16 +4,16 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "amazon_dsp_adjust_bids";
-const TOOL_TITLE = "AmazonDsp Ad Group Bid Adjustment";
-const TOOL_DESCRIPTION = `Batch adjust ad group bid prices with safe read-modify-write.
+const TOOL_TITLE = "Amazon DSP Line Item Bid Adjustment";
+const TOOL_DESCRIPTION = `Batch adjust line item bid prices with safe read-modify-write.
 
 Reads current bid prices, applies new values, and reports previous/new amounts.
 Bid prices are in the advertiser's account currency.
 
 **Gotchas:**
-- Only applies to ad groups with manual bidding (bid_price field).
-- Ad groups using automated bidding strategies may ignore bid_price.
-- Each read + write pair consumes rate limit tokens.
+- Only applies to line items with manual bidding (bidding.bidPrice field).
+- Line items using automated bidding strategies may ignore bid price.
+- Each read + write pair consumes API quota.
 - Max 50 adjustments per call.`;
 
 export const AdjustBidsInputSchema = z
@@ -25,10 +25,10 @@ export const AdjustBidsInputSchema = z
     adjustments: z
       .array(
         z.object({
-          adGroupId: z
+          lineItemId: z
             .string()
             .min(1)
-            .describe("The ad group ID to adjust"),
+            .describe("The line item ID to adjust"),
           bidPrice: z
             .number()
             .positive()
@@ -43,7 +43,7 @@ export const AdjustBidsInputSchema = z
       .optional()
       .describe("Optional reason for the bid adjustment"),
   })
-  .describe("Parameters for batch bid adjustment on AmazonDsp ad groups");
+  .describe("Parameters for batch bid adjustment on Amazon DSP line items");
 
 export const AdjustBidsOutputSchema = z
   .object({
@@ -52,7 +52,7 @@ export const AdjustBidsOutputSchema = z
     totalFailed: z.number(),
     results: z.array(
       z.object({
-        adGroupId: z.string(),
+        lineItemId: z.string(),
         success: z.boolean(),
         previousBid: z.number().optional(),
         newBid: z.number().optional(),
@@ -75,7 +75,7 @@ export async function adjustBidsLogic(
 
   const result = await amazonDspService.adjustBids(
     input.adjustments.map((a) => ({
-      adGroupId: a.adGroupId,
+      lineItemId: a.lineItemId,
       bidPrice: a.bidPrice,
     })),
     context
@@ -101,9 +101,9 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
   for (const r of result.results) {
     if (r.success) {
       const prev = r.previousBid ?? "unknown";
-      lines.push(`  ${r.adGroupId}: ${prev} -> ${r.newBid}`);
+      lines.push(`  ${r.lineItemId}: ${prev} -> ${r.newBid}`);
     } else {
-      lines.push(`  ${r.adGroupId}: FAILED - ${r.error}`);
+      lines.push(`  ${r.lineItemId}: FAILED - ${r.error}`);
     }
   }
 
@@ -129,7 +129,7 @@ export const adjustBidsTool = {
       label: "Single bid adjustment",
       input: {
         profileId: "1234567890",
-        adjustments: [{ adGroupId: "1700123456789", bidPrice: 1.5 }],
+        adjustments: [{ lineItemId: "1700123456789", bidPrice: 1.5 }],
       },
     },
     {
@@ -137,8 +137,8 @@ export const adjustBidsTool = {
       input: {
         profileId: "1234567890",
         adjustments: [
-          { adGroupId: "1700111111111", bidPrice: 2.0 },
-          { adGroupId: "1700222222222", bidPrice: 1.2 },
+          { lineItemId: "1700111111111", bidPrice: 2.0 },
+          { lineItemId: "1700222222222", bidPrice: 1.2 },
         ],
         reason: "Increase bids to improve delivery pacing",
       },

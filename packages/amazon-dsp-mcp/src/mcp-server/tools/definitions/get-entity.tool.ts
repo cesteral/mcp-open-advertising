@@ -78,19 +78,19 @@ export const getEntityTool = {
   },
   inputExamples: [
     {
-      label: "Get a campaign by ID",
+      label: "Get an order (campaign) by ID",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
-        entityId: "1800123456789",
+        entityId: "ord_123456789",
       },
     },
     {
-      label: "Get an ad group by ID",
+      label: "Get a line item (ad group) by ID",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
-        entityId: "1700123456789",
+        entityId: "li_123456789",
       },
     },
   ],

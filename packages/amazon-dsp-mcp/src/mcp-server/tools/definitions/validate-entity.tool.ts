@@ -38,35 +38,29 @@ reasons (e.g., invalid objective/placement combinations).`;
 // ---------------------------------------------------------------------------
 
 const REQUIRED_FIELDS_CREATE: Record<AmazonDspEntityType, FieldRule[]> = {
-  campaign: [
-    { field: "campaign_name", expectedType: "string" },
-    { field: "objective_type", expectedType: "string", hint: "e.g., TRAFFIC, APP_INSTALLS, CONVERSIONS" },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
+  order: [
+    { field: "name", expectedType: "string" },
+    { field: "advertiserId", expectedType: "string" },
     { field: "budget", expectedType: "number", hint: "budget amount in account currency" },
+    { field: "startDate", expectedType: "string", hint: "ISO date string (YYYY-MM-DD)" },
+    { field: "endDate", expectedType: "string", hint: "ISO date string (YYYY-MM-DD)" },
   ],
-  adGroup: [
-    { field: "campaign_id", expectedType: "string" },
-    { field: "adgroup_name", expectedType: "string" },
-    { field: "placement_type", expectedType: "string", hint: "e.g., PLACEMENT_TYPE_NORMAL, PLACEMENT_TYPE_SEARCH" },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
+  lineItem: [
+    { field: "name", expectedType: "string" },
+    { field: "orderId", expectedType: "string", hint: "Parent order ID" },
     { field: "budget", expectedType: "number" },
-    { field: "schedule_type", expectedType: "string", hint: "SCHEDULE_START_END or SCHEDULE_ALWAYS" },
-    { field: "optimize_goal", expectedType: "string", hint: "e.g., CLICK, CONVERT, SHOW, REACH" },
-  ],
-  ad: [
-    { field: "adgroup_id", expectedType: "string" },
-    { field: "ad_name", expectedType: "string" },
-    { field: "creative_type", expectedType: "string", hint: "e.g., SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL" },
   ],
   creative: [
-    { field: "display_name", expectedType: "string" },
+    { field: "name", expectedType: "string" },
+    { field: "advertiserId", expectedType: "string" },
+    { field: "creativeType", expectedType: "string", hint: "IMAGE, VIDEO, or RICH_MEDIA" },
   ],
 };
 
 /** Fields that are always read-only and cannot be set via the API. */
 const READ_ONLY_FIELDS = [
-  "campaign_id", "adgroup_id", "ad_id", "creative_id",
-  "created_time", "modify_time",
+  "orderId", "lineItemId", "creativeId",
+  "createdTime", "modifiedTime",
 ];
 
 // ---------------------------------------------------------------------------
@@ -126,10 +120,10 @@ export async function validateEntityLogic(
     const rules = REQUIRED_FIELDS_CREATE[entityType as AmazonDspEntityType] ?? [];
     errors.push(...validateRequiredFields(data, rules));
 
-    // Ad-specific: creative requires at least one of image_ids or video_id
-    if (entityType === "ad") {
-      if (!data.image_ids && !data.video_id) {
-        warnings.push('Ad creative requires either "image_ids" (array) or "video_id" (string)');
+    // Creative-specific: requires clickThroughUrl
+    if (entityType === "creative") {
+      if (!data.clickThroughUrl) {
+        warnings.push('Creative should include "clickThroughUrl" for click tracking');
       }
     }
   }
@@ -184,27 +178,28 @@ export const validateEntityTool = {
   },
   inputExamples: [
     {
-      label: "Valid campaign create",
+      label: "Valid order create",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         mode: "create",
         profileId: "1234567890",
         data: {
-          campaign_name: "Summer Sale 2026",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Summer Sale 2026",
+          advertiserId: "adv_123",
+          budget: 10000,
+          startDate: "2026-07-01",
+          endDate: "2026-07-31",
         },
       },
     },
     {
-      label: "Missing required fields (ad group)",
+      label: "Missing required fields (line item)",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         mode: "create",
         profileId: "1234567890",
         data: {
-          adgroup_name: "Test Ad Group",
+          name: "Test Line Item",
         },
       },
     },

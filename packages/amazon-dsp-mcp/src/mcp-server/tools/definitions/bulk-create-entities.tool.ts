@@ -114,22 +114,24 @@ export const bulkCreateEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "Bulk create campaigns",
+      label: "Bulk create orders (campaigns)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         items: [
           {
-            campaign_name: "Campaign A",
-            objective_type: "TRAFFIC",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 100,
+            name: "Order A",
+            advertiserId: "adv_123",
+            budget: 10000,
+            startDate: "2026-07-01",
+            endDate: "2026-07-31",
           },
           {
-            campaign_name: "Campaign B",
-            objective_type: "APP_INSTALLS",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 200,
+            name: "Order B",
+            advertiserId: "adv_123",
+            budget: 20000,
+            startDate: "2026-08-01",
+            endDate: "2026-08-31",
           },
         ],
       },

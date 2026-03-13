@@ -14,14 +14,14 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 
 const amazonDspService = {
   listEntities: vi.fn(async () => ({
-    entities: [{ campaign_id: "123" }],
-    pageInfo: { page: 1, page_size: 10, total_number: 1, total_page: 1 },
+    entities: [{ orderId: "ord_123" }],
+    pageInfo: { startIndex: 0, count: 25, totalResults: 1 },
   })),
-  getEntity: vi.fn(async () => ({ campaign_id: "123" })),
-  createEntity: vi.fn(async () => ({ campaign_id: "new" })),
+  getEntity: vi.fn(async () => ({ orderId: "ord_123" })),
+  createEntity: vi.fn(async () => ({ orders: [{ orderId: "ord_new" }] })),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
-  listProfiles: vi.fn(async () => ({ list: [{ profile_id: "123" }] })),
+  listAdvertisers: vi.fn(async () => ({ advertisers: [{ advertiserId: "adv_123", name: "Test Advertiser" }] })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),
@@ -31,13 +31,13 @@ const amazonDspService = {
   bulkUpdateEntities: vi.fn(async (_entityType: string, items: Array<{ entityId: string }>) => ({
     results: items.map((item) => ({ entityId: item.entityId, success: true })),
   })),
-  adjustBids: vi.fn(async (adjustments: Array<{ adGroupId: string }>) => ({
-    results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
+  adjustBids: vi.fn(async (adjustments: Array<{ lineItemId: string }>) => ({
+    results: adjustments.map((a) => ({ lineItemId: a.lineItemId, success: true, newBid: 1 })),
   })),
   searchTargeting: vi.fn(async () => ({ list: [{ id: "targeting-1" }] })),
   getTargetingOptions: vi.fn(async () => ({ list: [{ id: "targeting-option-1" }] })),
   duplicateEntity: vi.fn(async () => ({ id: "copy" })),
-  getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
+  getAudienceEstimate: vi.fn(async () => ({ audienceSize: 1000 })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
   client: {
     postMultipart: vi.fn(async (path: string) => {

@@ -1,126 +1,81 @@
 /**
- * AmazonDsp Entity Mapping
+ * Amazon DSP Entity Mapping
  *
- * Static configuration for AmazonDsp Marketing API entity types.
- * All entities require profile_id in query params (GET) or body (POST).
- * AmazonDsp uses separate endpoints for status updates and deletes.
+ * Amazon DSP entity terminology differs from TikTok:
+ * - "Orders" = Campaigns
+ * - "Line Items" = Ad Groups
+ * - "Creatives" = Creatives/Ads
+ *
+ * Key Amazon DSP patterns:
+ * - No DELETE endpoint — archive via PUT with { status: "ARCHIVED" }
+ * - Offset pagination: startIndex + count query params
+ * - Response includes totalResults
+ * - Required headers: Amazon-Advertising-API-ClientId + Amazon-Advertising-API-Scope
  */
 
-export type AmazonDspEntityType = "campaign" | "adGroup" | "ad" | "creative";
+export type AmazonDspEntityType = "order" | "lineItem" | "creative";
 
 export interface AmazonDspEntityConfig {
-  /** API path for list/get (GET) */
+  /** API path for list (GET with query params) */
   listPath: string;
+  /** API path for get single entity */
+  getPath: string;
   /** API path for create (POST) */
   createPath: string;
-  /** API path for update (POST) */
+  /** API path for update (PUT) */
   updatePath: string;
-  /** API path for status update (POST) */
-  statusUpdatePath: string;
-  /** API path for delete (POST) */
-  deletePath: string;
-  /** API path for duplicate/copy (POST), if supported */
-  duplicatePath?: string;
-  /** The field name used as the entity's primary ID */
+  /** Primary ID field name in the response */
   idField: string;
-  /** The field name used in arrays for bulk operations (e.g., campaign_ids) */
-  idsField: string;
-  /** Display name for messages */
+  /** Response array key (e.g., "orders") */
+  responseKey: string;
+  /** Query param name for parent filter on list (e.g., "advertiserId", "orderId") */
+  listFilterParam: string;
+  /** Display name */
   displayName: string;
-  /** Default fields to return when listing/getting */
+  /** Default fields to return */
   defaultFields: string[];
-  /** Whether the entity supports duplication */
-  supportsDuplicate?: boolean;
 }
 
 const ENTITY_CONFIGS: Record<AmazonDspEntityType, AmazonDspEntityConfig> = {
-  campaign: {
-    listPath: "/open_api/v1.3/campaign/get/",
-    createPath: "/open_api/v1.3/campaign/create/",
-    updatePath: "/open_api/v1.3/campaign/update/",
-    statusUpdatePath: "/open_api/v1.3/campaign/status/update/",
-    deletePath: "/open_api/v1.3/campaign/delete/",
-    idField: "campaign_id",
-    idsField: "campaign_ids",
-    displayName: "Campaign",
-    defaultFields: [
-      "campaign_id",
-      "campaign_name",
-      "status",
-      "objective_type",
-      "budget",
-      "budget_mode",
-      "created_time",
-      "modify_time",
-    ],
-    supportsDuplicate: true,
+  order: {
+    listPath: "/dsp/orders",
+    getPath: "/dsp/orders/{entityId}",
+    createPath: "/dsp/orders",
+    updatePath: "/dsp/orders/{entityId}",
+    idField: "orderId",
+    responseKey: "orders",
+    listFilterParam: "advertiserId",
+    displayName: "Order (Campaign)",
+    defaultFields: ["orderId", "name", "advertiserId", "budget", "startDate", "endDate", "status"],
   },
-  adGroup: {
-    listPath: "/open_api/v1.3/adgroup/get/",
-    createPath: "/open_api/v1.3/adgroup/create/",
-    updatePath: "/open_api/v1.3/adgroup/update/",
-    statusUpdatePath: "/open_api/v1.3/adgroup/status/update/",
-    deletePath: "/open_api/v1.3/adgroup/delete/",
-    idField: "adgroup_id",
-    idsField: "adgroup_ids",
-    displayName: "Ad Group",
-    defaultFields: [
-      "adgroup_id",
-      "adgroup_name",
-      "campaign_id",
-      "status",
-      "budget",
-      "budget_mode",
-      "schedule_type",
-      "created_time",
-    ],
-    supportsDuplicate: true,
-  },
-  ad: {
-    listPath: "/open_api/v1.3/ad/get/",
-    createPath: "/open_api/v1.3/ad/create/",
-    updatePath: "/open_api/v1.3/ad/update/",
-    statusUpdatePath: "/open_api/v1.3/ad/status/update/",
-    deletePath: "/open_api/v1.3/ad/delete/",
-    idField: "ad_id",
-    idsField: "ad_ids",
-    displayName: "Ad",
-    defaultFields: [
-      "ad_id",
-      "adgroup_id",
-      "ad_name",
-      "status",
-      "creative_type",
-      "image_ids",
-      "video_id",
-      "created_time",
-    ],
-    supportsDuplicate: true,
+  lineItem: {
+    listPath: "/dsp/lineItems",
+    getPath: "/dsp/lineItems/{entityId}",
+    createPath: "/dsp/lineItems",
+    updatePath: "/dsp/lineItems/{entityId}",
+    idField: "lineItemId",
+    responseKey: "lineItems",
+    listFilterParam: "orderId",
+    displayName: "Line Item (Ad Group)",
+    defaultFields: ["lineItemId", "name", "orderId", "budget", "bidding", "status", "targetingCriteria"],
   },
   creative: {
-    listPath: "/open_api/v1.3/creative/adcreative/get/",
-    createPath: "/open_api/v1.3/creative/adcreative/create/",
-    updatePath: "/open_api/v1.3/creative/adcreative/update/",
-    statusUpdatePath: "/open_api/v1.3/creative/adcreative/update/",
-    deletePath: "/open_api/v1.3/creative/adcreative/delete/",
-    idField: "creative_id",
-    idsField: "creative_ids",
+    listPath: "/dsp/creatives",
+    getPath: "/dsp/creatives/{entityId}",
+    createPath: "/dsp/creatives",
+    updatePath: "/dsp/creatives/{entityId}",
+    idField: "creativeId",
+    responseKey: "creatives",
+    listFilterParam: "advertiserId",
     displayName: "Creative",
-    defaultFields: [
-      "creative_id",
-      "profile_id",
-      "display_name",
-      "image_ids",
-      "video_id",
-      "created_time",
-    ],
+    defaultFields: ["creativeId", "name", "advertiserId", "creativeType", "clickThroughUrl"],
   },
 };
 
 export function getEntityConfig(entityType: AmazonDspEntityType): AmazonDspEntityConfig {
   const config = ENTITY_CONFIGS[entityType];
   if (!config) {
-    throw new Error(`Unknown AmazonDsp entity type: ${entityType}`);
+    throw new Error(`Unknown Amazon DSP entity type: ${entityType}`);
   }
   return config;
 }
@@ -130,17 +85,15 @@ export function getSupportedEntityTypes(): AmazonDspEntityType[] {
 }
 
 export function getEntityTypeEnum(): [string, ...string[]] {
-  const types = getSupportedEntityTypes();
-  return types as [string, ...string[]];
+  return getSupportedEntityTypes() as [string, ...string[]];
 }
 
-export function getDuplicateSupportedEntityTypes(): AmazonDspEntityType[] {
-  return (Object.entries(ENTITY_CONFIGS) as [AmazonDspEntityType, AmazonDspEntityConfig][])
-    .filter(([, config]) => config.supportsDuplicate)
-    .map(([type]) => type);
-}
-
-export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
-  const types = getDuplicateSupportedEntityTypes();
-  return types as [string, ...string[]];
+/**
+ * Interpolate path template placeholders.
+ */
+export function interpolatePath(path: string, params: Record<string, string>): string {
+  return Object.entries(params).reduce(
+    (acc, [key, val]) => acc.replace(`{${key}}`, val),
+    path
+  );
 }

@@ -11,15 +11,14 @@ const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Key requirements by entity type:**
-- **campaign**: requires \`campaign_name\`, \`objective_type\` (e.g., TRAFFIC, APP_INSTALLS), \`budget_mode\` (BUDGET_MODE_DAY or BUDGET_MODE_TOTAL), \`budget\`
-- **adGroup**: requires \`campaign_id\`, \`adgroup_name\`, \`placement_type\`, \`budget_mode\`, \`budget\`, \`schedule_type\`, \`optimize_goal\`
-- **ad**: requires \`adgroup_id\`, \`ad_name\`, \`creative_type\`, creative fields (image_ids or video_id)
-- **creative**: requires \`display_name\`, creative content (image_ids or video_id)
+- **order**: requires \`name\`, \`advertiserId\`, \`budget\`, \`startDate\`, \`endDate\`
+- **lineItem**: requires \`name\`, \`orderId\`, \`budget\`
+- **creative**: requires \`name\`, \`advertiserId\`, \`creativeType\` (IMAGE, VIDEO, RICH_MEDIA)
 
 **Gotchas:**
 - Budget values are in the advertiser's account currency
-- All status values use prefix format (e.g., CAMPAIGN_STATUS_ENABLE)
-- profile_id is automatically injected`;
+- Status values: DELIVERING, PAUSED, ARCHIVED
+- Amazon-Advertising-API-Scope header is automatically injected from the session profile ID`;
 
 export const CreateEntityInputSchema = z
   .object({
@@ -90,33 +89,29 @@ export const createEntityTool = {
   },
   inputExamples: [
     {
-      label: "Create a traffic campaign",
+      label: "Create an order (campaign)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         data: {
-          campaign_name: "Summer Sale 2026",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Summer Sale 2026",
+          advertiserId: "adv_123",
+          budget: 10000,
+          startDate: "2026-07-01",
+          endDate: "2026-07-31",
         },
       },
     },
     {
-      label: "Create an ad group",
+      label: "Create a line item (ad group)",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
         data: {
-          campaign_id: "1800123456789",
-          adgroup_name: "US 25-44 Interest Targeting",
-          placement_type: "PLACEMENT_TYPE_NORMAL",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 50,
-          schedule_type: "SCHEDULE_START_END",
-          schedule_start_time: "2026-01-01 00:00:00",
-          schedule_end_time: "2026-12-31 23:59:59",
-          optimize_goal: "CLICK",
+          name: "US Display — Retargeting",
+          orderId: "ord_123456789",
+          budget: 2000,
+          bidding: { bidPrice: 2.5 },
         },
       },
     },

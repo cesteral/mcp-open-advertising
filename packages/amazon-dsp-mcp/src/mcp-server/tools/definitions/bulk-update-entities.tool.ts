@@ -112,13 +112,13 @@ export const bulkUpdateEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "Bulk update campaign budgets",
+      label: "Bulk update order (campaign) budgets",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         items: [
-          { entityId: "1800111111111", data: { budget: 150 } },
-          { entityId: "1800222222222", data: { budget: 250 } },
+          { entityId: "ord_111111", data: { budget: 15000 } },
+          { entityId: "ord_222222", data: { budget: 25000 } },
         ],
       },
     },
