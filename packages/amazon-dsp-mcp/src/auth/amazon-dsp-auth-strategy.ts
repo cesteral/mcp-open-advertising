@@ -25,7 +25,7 @@ import {
 } from "./amazon-dsp-auth-adapter.js";
 
 export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
-  protected readonly authType = "amazon_dsp-bearer";
+  protected readonly authType = "amazon-dsp-bearer";
   protected readonly platformName = "AmazonDsp";
 
   constructor(

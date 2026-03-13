@@ -30,7 +30,7 @@ function buildPlatformConfig(
 ): TransportFactoryConfig {
   return {
     authStrategy:
-      config.mcpAuthMode === "amazon-bearer"
+      config.mcpAuthMode === "amazon-dsp-bearer"
         ? new AmazonDspBearerAuthStrategy(config.amazonDspApiBaseUrl, logger)
         : createAuthStrategy(config.mcpAuthMode as AuthMode, {
             jwtSecret: config.mcpAuthSecretKey,
@@ -48,7 +48,7 @@ function buildPlatformConfig(
       "X-AmazonDsp-Refresh-Token",
     ],
     authErrorHint:
-      config.mcpAuthMode === "amazon-bearer"
+      config.mcpAuthMode === "amazon-dsp-bearer"
         ? "Provide an Amazon access token via Authorization: Bearer <token>, profile ID via Amazon-Advertising-API-Scope, and client ID via Amazon-Advertising-API-ClientId."
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
@@ -113,7 +113,7 @@ function buildPlatformConfig(
           return {
             services: null,
             error: {
-              message: "Amazon DSP access token and profile ID required. Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID env vars, or use MCP_AUTH_MODE=amazon-bearer.",
+              message: "Amazon DSP access token and profile ID required. Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID env vars, or use MCP_AUTH_MODE=amazon-dsp-bearer.",
               status: 400 as const,
             },
           };
