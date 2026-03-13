@@ -80,9 +80,8 @@ Use \`pinterest_update_entity\` for **field changes** (name, budget, bid, target
     "adAccountId": "${adAccountId}",
     "entityId": "${entityId}",
     "data": {
-      "campaign_name": "Updated Campaign Name",
-      "budget": 200,
-      "budget_mode": "BUDGET_MODE_DAY"
+      "name": "Updated Campaign Name",
+      "daily_spend_cap": 100000000
     }
   }
 }
@@ -98,7 +97,7 @@ Use \`pinterest_update_entity\` for **field changes** (name, budget, bid, target
     "adAccountId": "${adAccountId}",
     "entityId": "${entityId}",
     "data": {
-      "adgroup_name": "Updated Ad Group",
+      "name": "Updated Ad Group",
       "budget": 100,
       "bid_price": 0.8,
       "age": ["AGE_25_34", "AGE_35_44"],
@@ -143,12 +142,12 @@ Use \`pinterest_bulk_update_status\` for all status changes:
     "entityType": "${entityType}",
     "adAccountId": "${adAccountId}",
     "entityIds": ["${entityId}"],
-    "operationStatus": "ENABLE"
+    "operationStatus": "ACTIVE"
   }
 }
 \`\`\`
 
-Valid status values: \`"ENABLE"\`, \`"DISABLE"\`, \`"DELETE"\`
+Valid status values: \`"ACTIVE"\`, \`"PAUSED"\`, \`"DELETE"\`
 
 ---
 

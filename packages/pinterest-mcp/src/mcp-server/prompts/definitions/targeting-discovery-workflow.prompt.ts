@@ -180,10 +180,9 @@ Use the targeting when creating or updating an ad group:
     "adAccountId": "${adAccountId}",
     "data": {
       "campaign_id": "{campaignId}",
-      "adgroup_name": "US Fitness Enthusiasts 18-34",
+      "name": "US Fitness Enthusiasts 18-34",
       "placement_type": "PLACEMENT_TYPE_NORMAL",
-      "budget_mode": "BUDGET_MODE_DAY",
-      "budget": 50,
+      "daily_spend_cap": 50000000,
       "schedule_type": "SCHEDULE_START_END",
       "schedule_start_time": "2026-03-10 00:00:00",
       "schedule_end_time": "2026-12-31 23:59:59",

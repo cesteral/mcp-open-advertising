@@ -37,13 +37,13 @@ pinterest_bulk_update_status({
   "entityType": "${entityType}",
   "adAccountId": "${adAccountId}",
   "entityIds": ["ID_1", "ID_2", "ID_3"],
-  "operationStatus": "DISABLE"
+  "operationStatus": "PAUSED"
 })
 \`\`\`
 
 **Operation status values:**
-- \`ENABLE\` — Activate entities
-- \`DISABLE\` — Pause entities
+- \`ACTIVE\` — Activate entities
+- \`PAUSED\` — Pause entities
 - \`DELETE\` — Permanently delete (irreversible!)
 
 ---
@@ -58,16 +58,14 @@ pinterest_bulk_create_entities({
   "adAccountId": "${adAccountId}",
   "items": [
     {
-      "campaign_name": "Campaign A",
-      "objective_type": "TRAFFIC",
-      "budget_mode": "BUDGET_MODE_DAY",
-      "budget": 100
+      "name": "Campaign A",
+      "objective_type": "AWARENESS",
+      "daily_spend_cap": 50000000
     },
     {
-      "campaign_name": "Campaign B",
+      "name": "Campaign B",
       "objective_type": "CONVERSIONS",
-      "budget_mode": "BUDGET_MODE_DAY",
-      "budget": 200
+      "daily_spend_cap": 100000000
     }
   ]
 })
@@ -122,9 +120,9 @@ pinterest_adjust_bids({
 
 \`\`\`
 1. pinterest_list_entities (get campaign IDs)
-2. pinterest_bulk_update_status (DISABLE all)
+2. pinterest_bulk_update_status (PAUSED all)
 3. pinterest_bulk_update_entities (adjust budgets/settings)
-4. pinterest_bulk_update_status (ENABLE selected)
+4. pinterest_bulk_update_status (ACTIVE selected)
 \`\`\`
 `;
 }
