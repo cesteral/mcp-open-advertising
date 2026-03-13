@@ -33,14 +33,13 @@ describe("SnapchatBearerAuthStrategy", () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { display_name: "Test Advertiser", email: "test@example.com" },
+          request_status: "SUCCESS",
+          me: { id: "snap_user_123", display_name: "Test Advertiser", email: "test@example.com" },
         }),
       } as unknown as Response);
 
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       const result = await strategy.verify({
@@ -59,7 +58,7 @@ describe("SnapchatBearerAuthStrategy", () => {
 
     it("throws when Authorization header is missing", async () => {
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       await expect(
@@ -69,34 +68,12 @@ describe("SnapchatBearerAuthStrategy", () => {
 
     it("throws when X-Snapchat-Advertiser-Id header is missing", async () => {
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       await expect(
         strategy.verify({ authorization: "Bearer test-token" })
       ).rejects.toThrow("Missing required X-Snapchat-Advertiser-Id header");
-    });
-
-    it("throws on invalid token (Snapchat code != 0)", async () => {
-      mockFetchWithTimeout.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          code: 40001,
-          message: "Access token expired",
-          data: null,
-        }),
-      } as unknown as Response);
-
-      const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
-        mockLogger
-      );
-      await expect(
-        strategy.verify({
-          authorization: "Bearer bad-token",
-          "x-snapchat-advertiser-id": "1234567890",
-        })
-      ).rejects.toThrow("Snapchat token validation failed");
     });
 
     it("throws on HTTP error during validation", async () => {
@@ -108,7 +85,7 @@ describe("SnapchatBearerAuthStrategy", () => {
       } as unknown as Response);
 
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       await expect(
@@ -116,33 +93,32 @@ describe("SnapchatBearerAuthStrategy", () => {
           authorization: "Bearer bad-token",
           "x-snapchat-advertiser-id": "1234567890",
         })
-      ).rejects.toThrow("Snapchat token validation HTTP error");
+      ).rejects.toThrow("401");
     });
   });
 
   describe("verify() with refresh token credentials", () => {
     it("prefers refresh token flow when X-Snapchat-App-Id/Secret/Refresh-Token headers are present", async () => {
-      // First call: token exchange (getAccessToken)
+      // First call: token exchange (getAccessToken) — flat OAuth2 response
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { access_token: "refreshed-token", expires_in: 86400 },
+          access_token: "refreshed-token",
+          token_type: "bearer",
+          expires_in: 86400,
         }),
       } as unknown as Response);
-      // Second call: user info validation
+      // Second call: user info validation — Snapchat /v1/me response
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { display_name: "Refresh User" },
+          request_status: "SUCCESS",
+          me: { id: "snap_refresh_user", display_name: "Refresh User" },
         }),
       } as unknown as Response);
 
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       const result = await strategy.verify({
@@ -154,7 +130,7 @@ describe("SnapchatBearerAuthStrategy", () => {
       });
 
       expect(result.authInfo).toMatchObject({
-        clientId: "Refresh User",
+        clientId: "snap_refresh_user",
         authType: "snapchat-bearer",
       });
       expect(result.platformAuthAdapter).toBeDefined();
@@ -166,23 +142,22 @@ describe("SnapchatBearerAuthStrategy", () => {
     });
 
     it("uses stable fingerprint based on appId (not rotating token)", async () => {
-      // Token exchange
+      // Token exchange — flat OAuth2
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { access_token: "token-a", expires_in: 86400 },
+          access_token: "token-a",
+          expires_in: 86400,
         }),
       } as unknown as Response);
-      // User info
+      // User info — Snapchat /v1/me
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ code: 0, message: "OK", data: { display_name: "User" } }),
+        json: async () => ({ request_status: "SUCCESS", me: { id: "stable_user", display_name: "User" } }),
       } as unknown as Response);
 
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       const result = await strategy.verify({
@@ -209,14 +184,13 @@ describe("SnapchatBearerAuthStrategy", () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { display_name: "Static User" },
+          request_status: "SUCCESS",
+          me: { id: "static_user_id", display_name: "Static User" },
         }),
       } as unknown as Response);
 
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       const result = await strategy.verify({
@@ -226,7 +200,7 @@ describe("SnapchatBearerAuthStrategy", () => {
         // Missing app-secret and refresh-token
       });
 
-      expect(result.authInfo.clientId).toBe("Static User");
+      expect(result.authInfo.clientId).toBe("static_user_id");
       // Only 1 fetch (user info validation for static token)
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
@@ -235,7 +209,7 @@ describe("SnapchatBearerAuthStrategy", () => {
   describe("getCredentialFingerprint()", () => {
     it("returns fingerprint without network call", async () => {
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       const fingerprint = await strategy.getCredentialFingerprint({
@@ -253,7 +227,7 @@ describe("SnapchatBearerAuthStrategy", () => {
 
     it("returns consistent fingerprint for same token + advertiser ID", async () => {
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       const fp1 = await strategy.getCredentialFingerprint({
@@ -269,7 +243,7 @@ describe("SnapchatBearerAuthStrategy", () => {
 
     it("returns different fingerprints for different advertiser IDs", async () => {
       const strategy = new SnapchatBearerAuthStrategy(
-        "https://business-api.snapchat.com",
+        "https://adsapi.snapchat.com",
         mockLogger
       );
       const fp1 = await strategy.getCredentialFingerprint({

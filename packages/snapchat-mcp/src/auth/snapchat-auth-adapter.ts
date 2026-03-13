@@ -4,10 +4,12 @@
  * Two adapter implementations:
  * 1. SnapchatAccessTokenAdapter — holds a pre-generated static access token.
  * 2. SnapchatRefreshTokenAdapter — uses app credentials + refresh token to
- *    auto-refresh access tokens (24h expiry). Same caching + mutex pattern
- *    as TTD's TtdApiTokenAuthAdapter.
+ *    auto-refresh access tokens. Same caching + mutex pattern as TTD's
+ *    TtdApiTokenAuthAdapter.
  *
- * Validates tokens by calling GET /open_api/v1.3/user/info/.
+ * Validates tokens by calling GET /v1/me on the Snapchat Ads API.
+ * Token refresh uses POST https://accounts.snapchat.com/login/oauth2/access_token
+ * with a form-encoded body (standard OAuth2 flat response, no data wrapper).
  * Token is passed via Authorization: Bearer <token> header.
  */
 
@@ -15,13 +17,13 @@ import { createHash } from "crypto";
 import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
 
 /**
- * Snapchat API response shape (success)
+ * Snapchat /v1/me response shape
  */
-interface SnapchatUserInfoResponse {
-  code: number;
-  message: string;
-  data?: {
-    display_name?: string;
+interface SnapchatMeResponse {
+  request_status: string;
+  me: {
+    id: string;
+    display_name: string;
     email?: string;
   };
 }
@@ -38,7 +40,7 @@ export interface SnapchatAuthAdapter {
 
 /**
  * Simple access token adapter — holds a pre-generated Snapchat access token.
- * Validates the token on first use by calling GET /open_api/v1.3/user/info/.
+ * Validates the token on first use by calling GET /v1/me.
  */
 export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
   private validated = false;
@@ -47,7 +49,7 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
   constructor(
     private readonly accessToken: string,
     private readonly _adAccountId: string,
-    private readonly baseUrl: string = "https://business-api.snapchat.com"
+    private readonly baseUrl: string = "https://adsapi.snapchat.com"
   ) {}
 
   get userId(): string {
@@ -63,7 +65,7 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
   }
 
   /**
-   * Validate the access token by calling GET /open_api/v1.3/user/info/.
+   * Validate the access token by calling GET /v1/me.
    * Must be called before the adapter is used.
    */
   async validate(): Promise<void> {
@@ -72,7 +74,7 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
     }
 
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/user/info/`,
+      `${this.baseUrl}/v1/me`,
       10_000,
       undefined,
       {
@@ -91,15 +93,9 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
       );
     }
 
-    const data = (await response.json()) as SnapchatUserInfoResponse;
+    const data = (await response.json()) as SnapchatMeResponse;
 
-    if (data.code !== 0) {
-      throw new Error(
-        `Snapchat token validation failed: code=${data.code} message=${data.message}`
-      );
-    }
-
-    this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
+    this._userId = data.me?.id ?? "unknown";
     this.validated = true;
   }
 }
@@ -114,25 +110,23 @@ export interface SnapchatRefreshCredentials {
 }
 
 /**
- * Snapchat OAuth2 token response shape.
+ * Snapchat OAuth2 token response shape (flat, no data wrapper).
  */
 interface SnapchatTokenResponse {
-  code: number;
-  message: string;
-  data?: {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number; // seconds (typically 86400 = 24h)
-  };
+  access_token: string;
+  token_type?: string;
+  expires_in: number;
+  refresh_token?: string;
+  scope?: string;
 }
 
 /**
  * Refresh token adapter — uses app credentials + refresh token to obtain
  * and auto-refresh access tokens via Snapchat's OAuth2 endpoint.
  *
- * Snapchat access tokens expire after 24 hours. This adapter caches them
- * with a 60-second expiry buffer and uses a mutex to prevent concurrent
- * token requests (same pattern as TTD's TtdApiTokenAuthAdapter).
+ * Snapchat access tokens expire. This adapter caches them with a 60-second
+ * expiry buffer and uses a mutex to prevent concurrent token requests (same
+ * pattern as TTD's TtdApiTokenAuthAdapter).
  */
 export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
   private cachedToken: string | null = null;
@@ -146,7 +140,7 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
   constructor(
     private readonly credentials: SnapchatRefreshCredentials,
     private readonly _adAccountId: string,
-    private readonly baseUrl: string = "https://business-api.snapchat.com"
+    private readonly baseUrl: string = "https://adsapi.snapchat.com"
   ) {
     this.currentRefreshToken = credentials.refreshToken;
   }
@@ -163,9 +157,9 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
 
-    // Validate the token against user info endpoint
+    // Validate the token against the Snapchat /v1/me endpoint
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/user/info/`,
+      `${this.baseUrl}/v1/me`,
       10_000,
       undefined,
       {
@@ -184,14 +178,8 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
       );
     }
 
-    const data = (await response.json()) as SnapchatUserInfoResponse;
-    if (data.code !== 0) {
-      throw new Error(
-        `Snapchat token validation failed: code=${data.code} message=${data.message}`
-      );
-    }
-
-    this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
+    const data = (await response.json()) as SnapchatMeResponse;
+    this._userId = data.me?.id ?? "unknown";
   }
 
   async getAccessToken(): Promise<string> {
@@ -212,19 +200,25 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
   }
 
   private async refreshAccessToken(): Promise<string> {
+    const body = new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: this.credentials.appId,
+      client_secret: this.credentials.appSecret,
+      refresh_token: this.currentRefreshToken,
+    }).toString();
+
+    // Snapchat OAuth2 token endpoint is always on accounts.snapchat.com, regardless of this.baseUrl.
+    // this.baseUrl controls the Ads API host (adsapi.snapchat.com by default).
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/oauth2/access_token/`,
+      "https://accounts.snapchat.com/login/oauth2/access_token",
       10_000,
       undefined,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          app_id: this.credentials.appId,
-          secret: this.credentials.appSecret,
-          grant_type: "refresh_token",
-          refresh_token: this.currentRefreshToken,
-        }),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
       }
     );
 
@@ -236,19 +230,19 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
     }
 
     const data = (await response.json()) as SnapchatTokenResponse;
-    if (data.code !== 0 || !data.data?.access_token) {
+    if (!data.access_token) {
       throw new Error(
-        `Snapchat token refresh failed: code=${data.code} message=${data.message}`
+        `Snapchat token refresh failed: missing access_token in response`
       );
     }
 
-    this.cachedToken = data.data.access_token;
+    this.cachedToken = data.access_token;
     this.tokenExpiresAt =
-      Date.now() + data.data.expires_in * 1000 - SnapchatRefreshTokenAdapter.EXPIRY_BUFFER_MS;
+      Date.now() + data.expires_in * 1000 - SnapchatRefreshTokenAdapter.EXPIRY_BUFFER_MS;
 
     // Snapchat may rotate the refresh token — store the new one
-    if (data.data.refresh_token) {
-      this.currentRefreshToken = data.data.refresh_token;
+    if (data.refresh_token) {
+      this.currentRefreshToken = data.refresh_token;
     }
 
     return this.cachedToken;
