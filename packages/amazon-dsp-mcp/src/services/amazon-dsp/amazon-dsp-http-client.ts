@@ -1,7 +1,7 @@
 import type { Logger } from "pino";
 import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
+import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withAmazonDspApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
 
@@ -13,84 +13,66 @@ const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   platformName: "AmazonDsp",
 };
 
-/** AmazonDsp standard API response shape */
-interface AmazonDspApiResponse {
-  code: number;
-  message: string;
-  data: unknown;
-  request_id?: string;
+/** Amazon DSP error codes that indicate rate limiting */
+const RATE_LIMIT_HTTP_STATUS = 429;
+
+function isRetryableAmazonDspError(httpStatus: number): boolean {
+  return httpStatus === RATE_LIMIT_HTTP_STATUS || httpStatus >= 500;
 }
 
-/** AmazonDsp error codes that indicate token expiry or auth failure */
-const AUTH_ERROR_CODES = new Set([40001, 40002, 40013]);
-
-/** AmazonDsp error codes that indicate rate limiting */
-const RATE_LIMIT_CODES = new Set([40100, 40101]);
-
-function isRetryableAmazonDspError(amazonDspCode: number, httpStatus: number): boolean {
-  // Auth errors (40001, 40002, 40013) are not transient — fail fast, no retry
-  return (
-    httpStatus === 429 ||
-    httpStatus >= 500 ||
-    RATE_LIMIT_CODES.has(amazonDspCode)
-  );
-}
-
-function mapAmazonDspErrorToJsonRpc(amazonDspCode: number, httpStatus: number): JsonRpcErrorCode {
-  if (AUTH_ERROR_CODES.has(amazonDspCode) || httpStatus === 401) {
+function mapAmazonDspErrorToJsonRpc(httpStatus: number): JsonRpcErrorCode {
+  if (httpStatus === 401) {
     return JsonRpcErrorCode.Unauthorized;
   }
-  if (RATE_LIMIT_CODES.has(amazonDspCode) || httpStatus === 429) {
+  if (httpStatus === RATE_LIMIT_HTTP_STATUS) {
     return JsonRpcErrorCode.RateLimited;
   }
   if (httpStatus === 403) {
     return JsonRpcErrorCode.Forbidden;
   }
-  if (httpStatus >= 500 || amazonDspCode >= 50000) {
+  if (httpStatus >= 500) {
     return JsonRpcErrorCode.ServiceUnavailable;
   }
   return JsonRpcErrorCode.InvalidRequest;
 }
 
 /**
- * HTTP client for AmazonDsp Marketing API requests.
+ * HTTP client for Amazon DSP Advertising API requests.
  *
- * Handles authentication via Bearer token, automatic profile_id injection,
- * retry with exponential backoff, and AmazonDsp-specific error parsing.
+ * Handles authentication via Bearer token, required Amazon API headers,
+ * retry with exponential backoff, and error parsing.
  *
- * Key AmazonDsp patterns:
- * - GET requests: profile_id goes in query params
- * - POST requests: profile_id goes in JSON body
- * - DELETE requests: profile_id goes in JSON body
- * - Response shape: { code: 0, message: "OK", data: {...} }
+ * Key Amazon DSP patterns:
+ * - ALL requests require Amazon-Advertising-API-Scope: {profileId} header
+ * - ALL requests require Amazon-Advertising-API-ClientId: {clientId} header (when available)
+ * - Response is raw JSON (no TikTok-style { code: 0, data: ... } envelope)
+ * - No DELETE endpoint — archive via PUT with { status: "ARCHIVED" }
+ * - Offset pagination: startIndex + count query params
  */
 export class AmazonDspHttpClient {
   constructor(
     private readonly authAdapter: AmazonDspAuthAdapter,
     private readonly profileId: string,
     private readonly baseUrl: string,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly clientId?: string
   ) {}
 
   /**
    * Make an authenticated GET request.
-   * profile_id is automatically injected into query params.
+   * Amazon-Advertising-API-Scope is automatically injected as a header.
    */
   async get(
     path: string,
     params?: Record<string, string>,
     context?: RequestContext
   ): Promise<unknown> {
-    const url = this.buildUrl(path, {
-      profile_id: this.profileId,
-      ...params,
-    });
+    const url = this.buildUrl(path, params);
     return this.executeRequest(url, context, { method: "GET" });
   }
 
   /**
    * Make an authenticated POST request with JSON body.
-   * profile_id is automatically injected into the body.
    */
   async post(
     path: string,
@@ -98,10 +80,7 @@ export class AmazonDspHttpClient {
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    const body = JSON.stringify({
-      profile_id: this.profileId,
-      ...data,
-    });
+    const body = JSON.stringify(data ?? {});
 
     return this.executeRequest(url, context, {
       method: "POST",
@@ -113,78 +92,23 @@ export class AmazonDspHttpClient {
   }
 
   /**
-   * Make an authenticated DELETE request with JSON body.
-   * profile_id is automatically injected into the body.
+   * Make an authenticated PUT request with JSON body.
+   * Used for updates and archive-based deletes.
    */
-  async delete(
+  async put(
     path: string,
     data?: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    const body = JSON.stringify({
-      profile_id: this.profileId,
-      ...data,
-    });
+    const body = JSON.stringify(data ?? {});
 
     return this.executeRequest(url, context, {
-      method: "DELETE",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
       body,
-    });
-  }
-
-  /**
-   * Make an authenticated POST request with multipart/form-data body.
-   * Used for media uploads (images, videos) to AmazonDsp Marketing API.
-   * profile_id is automatically included as a form field.
-   */
-  async postMultipart(
-    path: string,
-    fields: Record<string, string>,
-    fileField: string,
-    fileBuffer: Buffer,
-    filename: string,
-    fileContentType: string,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const url = this.buildUrl(path);
-
-    return withAmazonDspApiSpan("api.multipart.POST", path, async (span) => {
-      span.setAttribute("http.request.method", "POST");
-      span.setAttribute("http.url", url);
-      const allFields = { profile_id: this.profileId, ...fields };
-      const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
-      const timeoutMs = AMAZON_DSP_RETRY_CONFIG.timeoutMs ?? 30_000;
-      const accessToken = await this.authAdapter.getAccessToken();
-      const response = await fetchWithTimeout(url, timeoutMs, context, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": contentType,
-        },
-        body,
-      });
-      span.setAttribute("http.response.status_code", response.status);
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        throw new McpError(
-          mapAmazonDspErrorToJsonRpc(0, response.status),
-          `AmazonDsp API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          { requestId: context?.requestId, httpStatus: response.status, url }
-        );
-      }
-      const json = (await response.json()) as AmazonDspApiResponse;
-      if (json.code !== 0) {
-        throw new McpError(
-          mapAmazonDspErrorToJsonRpc(json.code, response.status),
-          json.message || `AmazonDsp API error: code=${json.code}`,
-          { requestId: context?.requestId, amazonDspCode: json.code, url }
-        );
-      }
-      return json.data;
     });
   }
 
@@ -198,6 +122,21 @@ export class AmazonDspHttpClient {
       }
     }
     return url.toString();
+  }
+
+  private buildAmazonHeaders(accessToken: string, extraHeaders?: Record<string, string>): Record<string, string> {
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      "Amazon-Advertising-API-Scope": this.profileId,
+      ...extraHeaders,
+    };
+
+    if (this.clientId) {
+      headers["Amazon-Advertising-API-ClientId"] = this.clientId;
+    }
+
+    return headers;
   }
 
   private async executeRequest(
@@ -227,26 +166,29 @@ export class AmazonDspHttpClient {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const accessToken = await this.authAdapter.getAccessToken();
 
+      const extraHeaders = (options?.headers as Record<string, string>) ?? {};
+      const { "Content-Type": _ct, ...otherHeaders } = extraHeaders;
+      const mergedHeaders = this.buildAmazonHeaders(accessToken, otherHeaders);
+      if (_ct) {
+        mergedHeaders["Content-Type"] = _ct;
+      }
+
       const response = await fetchWithTimeout(
         url,
         timeoutMs,
         context,
         {
           ...options,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
-            ...options?.headers,
-          },
+          headers: mergedHeaders,
         }
       );
 
       if (!response.ok) {
-        // HTTP-level error before we can read JSON
+        // HTTP-level error
         const errorBody = await response.text().catch(() => "");
         const mcpError = new McpError(
-          mapAmazonDspErrorToJsonRpc(0, response.status),
-          `AmazonDsp API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
+          mapAmazonDspErrorToJsonRpc(response.status),
+          `Amazon DSP API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
           {
             requestId: context?.requestId,
             httpStatus: response.status,
@@ -256,7 +198,7 @@ export class AmazonDspHttpClient {
           }
         );
 
-        if (!isRetryableAmazonDspError(0, response.status) || attempt >= maxRetries) {
+        if (!isRetryableAmazonDspError(response.status) || attempt >= maxRetries) {
           throw mcpError;
         }
 
@@ -265,49 +207,10 @@ export class AmazonDspHttpClient {
         continue;
       }
 
-      // Parse AmazonDsp JSON response
+      // Parse raw Amazon DSP JSON response (no envelope)
       setSpanAttribute("http.response.status_code", response.status);
-      const json = (await response.json()) as AmazonDspApiResponse;
-
-      if (json.code !== 0) {
-        const jsonRpcCode = mapAmazonDspErrorToJsonRpc(json.code, response.status);
-        const mcpError = new McpError(
-          jsonRpcCode,
-          json.message || `AmazonDsp API error: code=${json.code}`,
-          {
-            requestId: context?.requestId,
-            amazonDspCode: json.code,
-            amazonDspRequestId: json.request_id,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
-          }
-        );
-
-        if (!isRetryableAmazonDspError(json.code, response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-
-        this.logger.warn(
-          {
-            url,
-            method: options?.method ?? "GET",
-            amazonDspCode: json.code,
-            amazonDspMessage: json.message,
-            attempt: attempt + 1,
-            maxRetries,
-            requestId: context?.requestId,
-          },
-          "Retrying AmazonDsp API request after transient error"
-        );
-
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
-      }
-
-      return json.data;
+      const json = await response.json();
+      return json;
     }
 
     throw (
