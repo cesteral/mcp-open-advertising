@@ -13,7 +13,7 @@ describe("AmazonDspService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new AmazonDspService(mockHttpClient as any, "adv_123");
+    service = new AmazonDspService(mockHttpClient as any);
   });
 
   describe("listEntities", () => {

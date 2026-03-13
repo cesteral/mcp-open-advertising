@@ -1,4 +1,3 @@
-import type { Logger } from "pino";
 import type { SnapchatAuthAdapter } from "../../auth/snapchat-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
@@ -48,9 +47,7 @@ function isRetryableStatus(httpStatus: number): boolean {
 export class SnapchatHttpClient {
   constructor(
     private readonly authAdapter: SnapchatAuthAdapter,
-    private readonly adAccountId: string,
-    private readonly baseUrl: string,
-    private readonly logger: Logger
+    private readonly baseUrl: string
   ) {}
 
   /** Make an authenticated GET request. Returns raw Snapchat envelope. */

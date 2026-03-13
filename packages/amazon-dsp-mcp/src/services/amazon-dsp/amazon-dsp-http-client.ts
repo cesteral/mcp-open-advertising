@@ -1,4 +1,3 @@
-import type { Logger } from "pino";
 import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout } from "@cesteral/shared";
@@ -54,7 +53,6 @@ export class AmazonDspHttpClient {
     private readonly authAdapter: AmazonDspAuthAdapter,
     private readonly profileId: string,
     private readonly baseUrl: string,
-    private readonly logger: Logger,
     private readonly clientId?: string
   ) {}
 

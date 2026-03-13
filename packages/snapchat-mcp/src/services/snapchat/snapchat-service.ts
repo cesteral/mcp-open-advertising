@@ -57,7 +57,7 @@ export class SnapchatService {
     private readonly orgId: string,
     private readonly adAccountId: string
   ) {
-    this.rateLimiter = new RateLimiter({ tokensPerInterval: 120, interval: "minute" });
+    this.rateLimiter = new RateLimiter();
   }
 
   /** Expose the underlying HTTP client for direct use (e.g., media uploads). */

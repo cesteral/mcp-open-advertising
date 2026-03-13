@@ -26,9 +26,7 @@ export function createSessionServices(
 ): SessionServices {
   const httpClient = new SnapchatHttpClient(
     authAdapter,
-    authAdapter.adAccountId,
-    baseUrl,
-    logger
+    baseUrl
   );
   const snapchatService = new SnapchatService(
     httpClient,

@@ -27,10 +27,9 @@ export function createSessionServices(
   const httpClient = new AmazonDspHttpClient(
     authAdapter,
     authAdapter.profileId,
-    baseUrl,
-    logger
+    baseUrl
   );
-  const amazonDspService = new AmazonDspService(httpClient, authAdapter.profileId);
+  const amazonDspService = new AmazonDspService(httpClient);
   const amazonDspReportingService = new AmazonDspReportingService(
     rateLimiter,
     httpClient,

@@ -31,8 +31,7 @@ interface AmazonDspListResponse {
  */
 export class AmazonDspService {
   constructor(
-    private readonly httpClient: AmazonDspHttpClient,
-    private readonly defaultAdvertiserId: string
+    private readonly httpClient: AmazonDspHttpClient
   ) {}
 
   /** Expose the underlying HTTP client for direct use. */
