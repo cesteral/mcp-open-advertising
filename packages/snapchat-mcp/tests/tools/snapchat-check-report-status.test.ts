@@ -43,7 +43,7 @@ describe("checkReportStatusLogic", () => {
   it("returns complete status with downloadUrl", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-1",
-      status: "DONE",
+      status: "COMPLETE",
       downloadUrl: "https://example.com/report.csv",
     });
 
@@ -54,7 +54,7 @@ describe("checkReportStatusLogic", () => {
     );
 
     expect(result.taskId).toBe("task-1");
-    expect(result.status).toBe("DONE");
+    expect(result.status).toBe("COMPLETE");
     expect(result.isComplete).toBe(true);
     expect(result.downloadUrl).toBe("https://example.com/report.csv");
   });
@@ -93,10 +93,10 @@ describe("checkReportStatusLogic", () => {
 });
 
 describe("checkReportStatusResponseFormatter", () => {
-  it("shows download guidance when DONE with URL", () => {
+  it("shows download guidance when COMPLETE with URL", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-1",
-      status: "DONE",
+      status: "COMPLETE",
       isComplete: true,
       downloadUrl: "https://example.com/report.csv",
       timestamp: new Date().toISOString(),

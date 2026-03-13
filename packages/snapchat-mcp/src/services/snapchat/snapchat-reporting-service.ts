@@ -5,35 +5,37 @@ import { fetchWithTimeout } from "@cesteral/shared";
 import type { Logger } from "pino";
 
 /** Snapchat report task status values */
-export type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
+export type ReportTaskStatus = "PENDING" | "RUNNING" | "COMPLETE" | "FAILED";
 
-/** Snapchat report task check response */
+/** Snapchat async stats report check response */
 interface ReportTaskCheckData {
   status: ReportTaskStatus;
   download_url?: string;
-  task_id: string;
+  id: string;
+}
+
+/** Snapchat report filter */
+export interface SnapchatReportFilter {
+  field: string;
+  operator: string;
+  values: string[];
 }
 
 /** Snapchat report configuration */
 export interface SnapchatReportConfig {
-  report_type?: "BASIC" | "AUDIENCE" | "PLAYABLE_MATERIAL";
-  dimensions: string[];
-  metrics: string[];
-  start_date: string;
-  end_date: string;
-  page?: number;
-  page_size?: number;
-  filtering?: Record<string, unknown>[];
-  order_field?: string;
-  order_type?: "ASC" | "DESC";
+  fields: string[];
+  granularity?: "DAY" | "HOUR" | "LIFETIME";
+  start_time: string;
+  end_time: string;
+  filters?: SnapchatReportFilter[];
 }
 
 /**
- * Snapchat Reporting Service — Handles async reporting via Snapchat Marketing API.
+ * Snapchat Reporting Service — Handles async reporting via Snapchat Ads API v1.
  *
  * Snapchat reporting uses an async polling pattern:
- * 1. POST to create a report task → get task_id
- * 2. GET to poll task status until DONE or FAILED
+ * 1. POST /v1/adaccounts/{adAccountId}/stats/async_reporting → get report id
+ * 2. GET /v1/adaccounts/{adAccountId}/stats/async_reports/{id} → poll until COMPLETE
  * 3. GET download URL to retrieve CSV report data
  */
 export class SnapchatReportingService {
@@ -42,6 +44,7 @@ export class SnapchatReportingService {
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: SnapchatHttpClient,
+    private readonly adAccountId: string,
     private readonly logger: Logger,
     private readonly pollIntervalMs: number = 2_000,
     private readonly maxPollAttempts: number = 30
@@ -49,7 +52,7 @@ export class SnapchatReportingService {
 
   /**
    * Submit a report task.
-   * Returns the task_id for polling.
+   * Returns the report id for polling.
    */
   async submitReport(
     reportConfig: SnapchatReportConfig,
@@ -58,27 +61,27 @@ export class SnapchatReportingService {
     await this.rateLimiter.consume(`snapchat:reporting`);
 
     const result = (await this.httpClient.post(
-      "/open_api/v1.3/report/task/create/",
+      `/v1/adaccounts/${this.adAccountId}/stats/async_reporting`,
       {
-        report_type: reportConfig.report_type ?? "BASIC",
-        dimensions: reportConfig.dimensions,
-        metrics: reportConfig.metrics,
-        start_date: reportConfig.start_date,
-        end_date: reportConfig.end_date,
-        ...(reportConfig.page ? { page: reportConfig.page } : {}),
-        ...(reportConfig.page_size ? { page_size: reportConfig.page_size } : {}),
-        ...(reportConfig.filtering ? { filtering: reportConfig.filtering } : {}),
-        ...(reportConfig.order_field ? { order_field: reportConfig.order_field } : {}),
-        ...(reportConfig.order_type ? { order_type: reportConfig.order_type } : {}),
+        fields: reportConfig.fields,
+        granularity: reportConfig.granularity ?? "DAY",
+        start_time: reportConfig.start_time,
+        end_time: reportConfig.end_time,
+        ...(reportConfig.filters ? { filters: reportConfig.filters } : {}),
       },
       context
-    )) as { task_id: string };
+    )) as { request_status: string; async_stats_reports?: Array<{ id: string; status: string; download_url: string | null }> };
 
-    return result;
+    const reportId = result.async_stats_reports?.[0]?.id;
+    if (!reportId) {
+      throw new Error("Snapchat async reporting: no report id returned from submit");
+    }
+
+    return { task_id: reportId };
   }
 
   /**
-   * Poll a report task until it is DONE or FAILED.
+   * Poll a report task until it is COMPLETE or FAILED.
    */
   async pollReport(
     taskId: string,
@@ -89,13 +92,24 @@ export class SnapchatReportingService {
     for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
       await this.rateLimiter.consume(`snapchat:reporting`);
 
-      const result = (await this.httpClient.get(
-        "/open_api/v1.3/report/task/check/",
-        { task_id: taskId },
+      const envelope = (await this.httpClient.get(
+        `/v1/adaccounts/${this.adAccountId}/stats/async_reports/${taskId}`,
+        undefined,
         context
-      )) as ReportTaskCheckData;
+      )) as { request_status: string; async_stats_report?: { id: string; status: string; download_url?: string } };
 
-      if (result.status === "DONE" || result.status === "FAILED") {
+      const report = envelope.async_stats_report;
+      if (!report) {
+        throw new Error(`Snapchat report poll: unexpected response shape for task ${taskId}`);
+      }
+
+      const result: ReportTaskCheckData = {
+        id: report.id,
+        status: report.status as ReportTaskStatus,
+        download_url: report.download_url,
+      };
+
+      if (result.status === "COMPLETE" || result.status === "FAILED") {
         this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
         return result;
       }
@@ -122,7 +136,7 @@ export class SnapchatReportingService {
 
   /**
    * Single status check for a report task. No polling, no sleep.
-   * Returns current status and download URL if DONE.
+   * Returns current status and download URL if COMPLETE.
    */
   async checkReportStatus(
     taskId: string,
@@ -130,16 +144,21 @@ export class SnapchatReportingService {
   ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
     await this.rateLimiter.consume(`snapchat:reporting`);
 
-    const result = (await this.httpClient.get(
-      "/open_api/v1.3/report/task/check/",
-      { task_id: taskId },
+    const envelope = (await this.httpClient.get(
+      `/v1/adaccounts/${this.adAccountId}/stats/async_reports/${taskId}`,
+      undefined,
       context
-    )) as ReportTaskCheckData;
+    )) as { request_status: string; async_stats_report?: { id: string; status: string; download_url?: string } };
+
+    const report = envelope.async_stats_report;
+    if (!report) {
+      throw new Error(`Snapchat report status: unexpected response shape for task ${taskId}`);
+    }
 
     return {
-      taskId: result.task_id,
-      status: result.status,
-      downloadUrl: result.download_url,
+      taskId: report.id,
+      status: report.status as ReportTaskStatus,
+      downloadUrl: report.download_url,
     };
   }
 
@@ -206,7 +225,7 @@ export class SnapchatReportingService {
 
   /**
    * Get report with dimensional breakdowns.
-   * Adds breakdown dimensions to the report config.
+   * Adds breakdown fields to the report config.
    */
   async getReportBreakdowns(
     reportConfig: SnapchatReportConfig,
@@ -215,7 +234,7 @@ export class SnapchatReportingService {
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: SnapchatReportConfig = {
       ...reportConfig,
-      dimensions: [...reportConfig.dimensions, ...breakdowns],
+      fields: [...reportConfig.fields, ...breakdowns],
     };
 
     return this.getReport(configWithBreakdowns, context);

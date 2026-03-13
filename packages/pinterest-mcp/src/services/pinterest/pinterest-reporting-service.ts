@@ -5,36 +5,35 @@ import { fetchWithTimeout } from "@cesteral/shared";
 import type { Logger } from "pino";
 
 /** Pinterest report task status values */
-export type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
+export type ReportTaskStatus = "IN_PROGRESS" | "FINISHED" | "FAILED" | "EXPIRED" | "DOES_NOT_EXIST";
 
 /** Pinterest report task check response */
 interface ReportTaskCheckData {
-  status: ReportTaskStatus;
-  download_url?: string;
-  task_id: string;
+  report_status: ReportTaskStatus;
+  url?: string;
+  size?: number;
+  token: string;
 }
 
 /** Pinterest report configuration */
 export interface PinterestReportConfig {
-  report_type?: "BASIC" | "AUDIENCE" | "PLAYABLE_MATERIAL";
-  dimensions: string[];
-  metrics: string[];
+  type?: "CAMPAIGN" | "AD_GROUP" | "AD" | "KEYWORD" | "ACCOUNT";
+  columns: string[];
   start_date: string;
   end_date: string;
-  page?: number;
-  page_size?: number;
-  filtering?: Record<string, unknown>[];
-  order_field?: string;
-  order_type?: "ASC" | "DESC";
+  granularity?: "TOTAL" | "DAY" | "HOUR" | "WEEK" | "MONTH";
+  campaign_ids?: string[];
+  ad_group_ids?: string[];
+  ad_ids?: string[];
 }
 
 /**
- * Pinterest Reporting Service — Handles async reporting via Pinterest Marketing API.
+ * Pinterest Reporting Service — Handles async reporting via Pinterest Marketing API v5.
  *
  * Pinterest reporting uses an async polling pattern:
- * 1. POST to create a report task → get task_id
- * 2. GET to poll task status until DONE or FAILED
- * 3. GET download URL to retrieve CSV report data
+ * 1. POST /v5/ad_accounts/{adAccountId}/reports → get token
+ * 2. GET /v5/ad_accounts/{adAccountId}/reports/{token} → poll until FINISHED
+ * 3. GET download url to retrieve CSV report data
  */
 export class PinterestReportingService {
   private static readonly MAX_BACKOFF_MS = 10_000;
@@ -49,7 +48,7 @@ export class PinterestReportingService {
 
   /**
    * Submit a report task.
-   * Returns the task_id for polling.
+   * Returns the token (report ID) for polling.
    */
   async submitReport(
     reportConfig: PinterestReportConfig,
@@ -57,28 +56,28 @@ export class PinterestReportingService {
   ): Promise<{ task_id: string }> {
     await this.rateLimiter.consume(`pinterest:reporting`);
 
+    const adAccountId = this.httpClient.accountId;
+
     const result = (await this.httpClient.post(
-      "/open_api/v1.3/report/task/create/",
+      `/v5/ad_accounts/${adAccountId}/reports`,
       {
-        report_type: reportConfig.report_type ?? "BASIC",
-        dimensions: reportConfig.dimensions,
-        metrics: reportConfig.metrics,
+        type: reportConfig.type ?? "CAMPAIGN",
+        columns: reportConfig.columns,
         start_date: reportConfig.start_date,
         end_date: reportConfig.end_date,
-        ...(reportConfig.page ? { page: reportConfig.page } : {}),
-        ...(reportConfig.page_size ? { page_size: reportConfig.page_size } : {}),
-        ...(reportConfig.filtering ? { filtering: reportConfig.filtering } : {}),
-        ...(reportConfig.order_field ? { order_field: reportConfig.order_field } : {}),
-        ...(reportConfig.order_type ? { order_type: reportConfig.order_type } : {}),
+        ...(reportConfig.granularity ? { granularity: reportConfig.granularity } : {}),
+        ...(reportConfig.campaign_ids ? { campaign_ids: reportConfig.campaign_ids } : {}),
+        ...(reportConfig.ad_group_ids ? { ad_group_ids: reportConfig.ad_group_ids } : {}),
+        ...(reportConfig.ad_ids ? { ad_ids: reportConfig.ad_ids } : {}),
       },
       context
-    )) as { task_id: string };
+    )) as { token: string };
 
-    return result;
+    return { task_id: result.token };
   }
 
   /**
-   * Poll a report task until it is DONE or FAILED.
+   * Poll a report task until it is FINISHED or FAILED/EXPIRED.
    */
   async pollReport(
     taskId: string,
@@ -86,25 +85,31 @@ export class PinterestReportingService {
   ): Promise<ReportTaskCheckData> {
     this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
 
+    const adAccountId = this.httpClient.accountId;
+
     for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
       await this.rateLimiter.consume(`pinterest:reporting`);
 
       const result = (await this.httpClient.get(
-        "/open_api/v1.3/report/task/check/",
-        { task_id: taskId },
+        `/v5/ad_accounts/${adAccountId}/reports/${taskId}`,
+        undefined,
         context
       )) as ReportTaskCheckData;
 
-      if (result.status === "DONE" || result.status === "FAILED") {
-        this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
+      if (
+        result.report_status === "FINISHED" ||
+        result.report_status === "FAILED" ||
+        result.report_status === "EXPIRED"
+      ) {
+        this.logger.debug({ taskId, status: result.report_status, attempt }, "Report poll complete");
         return result;
       }
 
       const attemptsRemaining = this.maxPollAttempts - attempt - 1;
       if (attemptsRemaining <= 3) {
-        this.logger.warn({ taskId, attemptsRemaining, status: result.status }, "Report poll nearing attempt limit");
+        this.logger.warn({ taskId, attemptsRemaining, status: result.report_status }, "Report poll nearing attempt limit");
       } else {
-        this.logger.debug({ taskId, attempt, status: result.status }, "Report still pending, waiting");
+        this.logger.debug({ taskId, attempt, status: result.report_status }, "Report still pending, waiting");
       }
 
       // Wait before next poll (exponential backoff)
@@ -122,7 +127,7 @@ export class PinterestReportingService {
 
   /**
    * Single status check for a report task. No polling, no sleep.
-   * Returns current status and download URL if DONE.
+   * Returns current status and download URL if FINISHED.
    */
   async checkReportStatus(
     taskId: string,
@@ -130,16 +135,18 @@ export class PinterestReportingService {
   ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
     await this.rateLimiter.consume(`pinterest:reporting`);
 
+    const adAccountId = this.httpClient.accountId;
+
     const result = (await this.httpClient.get(
-      "/open_api/v1.3/report/task/check/",
-      { task_id: taskId },
+      `/v5/ad_accounts/${adAccountId}/reports/${taskId}`,
+      undefined,
       context
     )) as ReportTaskCheckData;
 
     return {
-      taskId: result.task_id,
-      status: result.status,
-      downloadUrl: result.download_url,
+      taskId: result.token,
+      status: result.report_status,
+      downloadUrl: result.url,
     };
   }
 
@@ -188,15 +195,15 @@ export class PinterestReportingService {
     const { task_id } = await this.submitReport(reportConfig, context);
     const taskResult = await this.pollReport(task_id, context);
 
-    if (taskResult.status === "FAILED") {
-      throw new Error(`Pinterest report task ${task_id} failed`);
+    if (taskResult.report_status === "FAILED" || taskResult.report_status === "EXPIRED") {
+      throw new Error(`Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`);
     }
 
-    if (!taskResult.download_url) {
+    if (!taskResult.url) {
       throw new Error(`Pinterest report task ${task_id} completed but has no download URL`);
     }
 
-    const reportData = await this.downloadReport(taskResult.download_url, 10_000, context);
+    const reportData = await this.downloadReport(taskResult.url, 10_000, context);
 
     return {
       ...reportData,
@@ -206,7 +213,7 @@ export class PinterestReportingService {
 
   /**
    * Get report with dimensional breakdowns.
-   * Adds breakdown dimensions to the report config.
+   * Adds breakdown columns to the report config.
    */
   async getReportBreakdowns(
     reportConfig: PinterestReportConfig,
@@ -215,7 +222,7 @@ export class PinterestReportingService {
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: PinterestReportConfig = {
       ...reportConfig,
-      dimensions: [...reportConfig.dimensions, ...breakdowns],
+      columns: [...reportConfig.columns, ...breakdowns],
     };
 
     return this.getReport(configWithBreakdowns, context);

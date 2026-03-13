@@ -4,48 +4,61 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "amazon_dsp_get_report_breakdowns";
-const TOOL_TITLE = "Get AmazonDsp Ads Report with Breakdowns";
-const TOOL_DESCRIPTION = `Submit and retrieve an async AmazonDsp Ads report with dimensional breakdowns.
+const TOOL_TITLE = "Get Amazon DSP Report with Breakdowns";
+const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP report with additional breakdown groupBy dimensions.
 
-Like \`amazon_dsp_get_report\` but adds breakdown dimensions for more granular data.
+Like \`amazon_dsp_get_report\` but adds extra breakdown dimensions for more granular data.
 
-**Common breakdown dimensions:** country_code, platform, gender, age, interest_category, placement
+**Common breakdown groupBy:** date, geography, device, creative
 
-Results are broken down by each combination of base dimensions + breakdown dimensions.`;
+Results include metrics broken down by the additional groupBy dimensions.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
     profileId: z
       .string()
       .min(1)
-      .describe("AmazonDsp Advertiser ID"),
-    reportType: z
-      .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
+      .describe("Amazon DSP Profile/Advertiser ID"),
+    name: z
+      .string()
       .optional()
-      .default("BASIC")
-      .describe("Report type (default: BASIC)"),
-    dimensions: z
+      .describe("Report name (optional)"),
+    startDate: z
+      .string()
+      .regex(/^\d{8}$/)
+      .describe("Start date (YYYYMMDD format, e.g. 20240101)"),
+    endDate: z
+      .string()
+      .regex(/^\d{8}$/)
+      .describe("End date (YYYYMMDD format, e.g. 20240131)"),
+    reportTypeId: z
+      .string()
+      .min(1)
+      .describe("Report type ID (e.g. dspLineItem, dspOrder, dspCreative)"),
+    groupBy: z
       .array(z.string())
       .min(1)
-      .describe("Base dimensions for the report (e.g., ['campaign_id', 'stat_time_day'])"),
+      .describe("Base dimensions to group by (e.g. ['order', 'lineItem'])"),
     breakdowns: z
       .array(z.string())
       .min(1)
-      .describe("Breakdown dimensions to add (e.g., ['country_code', 'gender'])"),
-    metrics: z
+      .describe("Additional breakdown groupBy dimensions (e.g. ['date', 'geography'])"),
+    columns: z
       .array(z.string())
       .min(1)
-      .describe("Metrics to include (e.g., ['impressions', 'clicks', 'spend'])"),
-    startDate: z
+      .describe("Metrics/columns to include (e.g. ['impressions', 'clickThroughs', 'totalCost'])"),
+    timeUnit: z
+      .enum(["DAILY", "SUMMARY"])
+      .optional()
+      .default("DAILY")
+      .describe("Time unit for the report (default: DAILY)"),
+    adProduct: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Start date (YYYY-MM-DD)"),
-    endDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("End date (YYYY-MM-DD)"),
+      .optional()
+      .default("DSP")
+      .describe("Ad product type (default: DSP)"),
   })
-  .describe("Parameters for generating a AmazonDsp Ads report with breakdowns");
+  .describe("Parameters for generating an Amazon DSP report with breakdowns");
 
 export const GetReportBreakdownsOutputSchema = z
   .object({
@@ -53,7 +66,7 @@ export const GetReportBreakdownsOutputSchema = z
     headers: z.array(z.string()).describe("CSV column headers"),
     rows: z.array(z.array(z.string())).describe("CSV data rows"),
     totalRows: z.number().describe("Total number of data rows"),
-    appliedDimensions: z.array(z.string()).describe("All dimensions used (base + breakdowns)"),
+    appliedGroupBy: z.array(z.string()).describe("All groupBy dimensions used (base + breakdowns)"),
     timestamp: z.string().datetime(),
   })
   .describe("Report with breakdowns result");
@@ -70,11 +83,16 @@ export async function getReportBreakdownsLogic(
 
   const result = await amazonDspReportingService.getReportBreakdowns(
     {
-      report_type: input.reportType,
-      dimensions: input.dimensions,
-      metrics: input.metrics,
-      start_date: input.startDate,
-      end_date: input.endDate,
+      name: input.name,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      configuration: {
+        adProduct: input.adProduct,
+        groupBy: input.groupBy,
+        columns: input.columns,
+        reportTypeId: input.reportTypeId,
+        timeUnit: input.timeUnit,
+      },
     },
     input.breakdowns,
     context
@@ -85,7 +103,7 @@ export async function getReportBreakdownsLogic(
     headers: result.headers,
     rows: result.rows,
     totalRows: result.totalRows,
-    appliedDimensions: [...input.dimensions, ...input.breakdowns],
+    appliedGroupBy: [...input.groupBy, ...input.breakdowns],
     timestamp: new Date().toISOString(),
   };
 }
@@ -102,7 +120,7 @@ export function getReportBreakdownsResponseFormatter(result: GetReportBreakdowns
       type: "text" as const,
       text: [
         `Report task: ${result.taskId}`,
-        `Applied dimensions: ${result.appliedDimensions.join(", ")}`,
+        `Applied groupBy: ${result.appliedGroupBy.join(", ")}`,
         `Total rows: ${result.totalRows}`,
         "",
         `Headers: ${headerLine}`,
@@ -131,25 +149,29 @@ export const getReportBreakdownsTool = {
   },
   inputExamples: [
     {
-      label: "Campaign report broken down by country",
+      label: "Line item report broken down by geography",
       input: {
         profileId: "1234567890",
-        dimensions: ["campaign_id", "stat_time_day"],
-        breakdowns: ["country_code"],
-        metrics: ["impressions", "clicks", "spend", "ctr"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        startDate: "20260301",
+        endDate: "20260304",
+        reportTypeId: "dspLineItem",
+        groupBy: ["order", "lineItem"],
+        breakdowns: ["geography"],
+        columns: ["impressions", "clickThroughs", "totalCost"],
+        timeUnit: "DAILY",
       },
     },
     {
-      label: "Ad group report broken down by gender and age",
+      label: "Order report broken down by device",
       input: {
         profileId: "1234567890",
-        dimensions: ["adgroup_id"],
-        breakdowns: ["gender", "age"],
-        metrics: ["impressions", "clicks", "spend", "conversions"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        startDate: "20260301",
+        endDate: "20260304",
+        reportTypeId: "dspOrder",
+        groupBy: ["order"],
+        breakdowns: ["device"],
+        columns: ["impressions", "clickThroughs", "totalCost"],
+        timeUnit: "SUMMARY",
       },
     },
   ],

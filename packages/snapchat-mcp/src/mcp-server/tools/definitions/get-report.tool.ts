@@ -7,49 +7,42 @@ const TOOL_NAME = "snapchat_get_report";
 const TOOL_TITLE = "Get Snapchat Ads Report";
 const TOOL_DESCRIPTION = `Submit and retrieve an async Snapchat Ads performance report.
 
-Follows the async polling pattern: submit task → poll until DONE → download CSV.
+Follows the async polling pattern: submit task → poll until COMPLETE → download CSV.
 This may take 30s–5 minutes depending on the data volume.
 
-**Common dimensions:** campaign_id, adgroup_id, ad_id, stat_time_day, stat_time_hour, country_code
-**Common metrics:** spend, impressions, clicks, ctr, cpm, cpc, conversions, conversion_rate, reach, frequency
-
-**Report types:** BASIC (default), AUDIENCE, PLAYABLE_MATERIAL`;
+**Common fields:** impressions, swipes, spend, video_views, conversion_purchases, reach, frequency, cpm, cpsu
+**Granularity:** DAY (default), HOUR, LIFETIME
+**start_time/end_time:** ISO 8601 format (e.g. 2024-01-01T00:00:00Z)`;
 
 export const GetReportInputSchema = z
   .object({
     adAccountId: z
       .string()
       .min(1)
-      .describe("Snapchat Advertiser ID"),
-    reportType: z
-      .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
-      .optional()
-      .default("BASIC")
-      .describe("Report type (default: BASIC)"),
-    dimensions: z
+      .describe("Snapchat Ad Account ID"),
+    fields: z
       .array(z.string())
       .min(1)
-      .describe("Dimensions for the report (e.g., ['campaign_id', 'stat_time_day'])"),
-    metrics: z
-      .array(z.string())
-      .min(1)
-      .describe("Metrics to include (e.g., ['impressions', 'clicks', 'spend'])"),
-    startDate: z
+      .describe("Metric fields to include (e.g. ['impressions', 'swipes', 'spend'])"),
+    startTime: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Start date (YYYY-MM-DD)"),
-    endDate: z
+      .describe("Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z)"),
+    endTime: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("End date (YYYY-MM-DD)"),
-    orderField: z
-      .string()
+      .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z)"),
+    granularity: z
+      .enum(["DAY", "HOUR", "LIFETIME"])
       .optional()
-      .describe("Field to order results by"),
-    orderType: z
-      .enum(["ASC", "DESC"])
+      .default("DAY")
+      .describe("Time granularity (default: DAY)"),
+    filters: z
+      .array(z.object({
+        field: z.string().describe("Filter field (e.g. campaign_id)"),
+        operator: z.string().describe("Filter operator (e.g. IN)"),
+        values: z.array(z.string()).describe("Filter values"),
+      }))
       .optional()
-      .describe("Sort order"),
+      .describe("Optional filters for the report"),
   })
   .describe("Parameters for generating a Snapchat Ads report");
 
@@ -75,13 +68,11 @@ export async function getReportLogic(
 
   const result = await snapchatReportingService.getReport(
     {
-      report_type: input.reportType,
-      dimensions: input.dimensions,
-      metrics: input.metrics,
-      start_date: input.startDate,
-      end_date: input.endDate,
-      ...(input.orderField ? { order_field: input.orderField } : {}),
-      ...(input.orderType ? { order_type: input.orderType } : {}),
+      fields: input.fields,
+      granularity: input.granularity,
+      start_time: input.startTime,
+      end_time: input.endTime,
+      ...(input.filters ? { filters: input.filters } : {}),
     },
     context
   );
@@ -138,23 +129,21 @@ export const getReportTool = {
       label: "Campaign delivery report for last 7 days",
       input: {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks", "spend", "ctr", "cpc"],
-        startDate: "2026-02-24",
-        endDate: "2026-03-04",
+        fields: ["impressions", "swipes", "spend", "cpm"],
+        startTime: "2026-02-24T00:00:00Z",
+        endTime: "2026-03-04T23:59:59Z",
+        granularity: "DAY",
+        filters: [{ field: "campaign_id", operator: "IN", values: ["camp_123"] }],
       },
     },
     {
-      label: "Ad group performance report",
+      label: "Ad squad performance report",
       input: {
         adAccountId: "1234567890",
-        reportType: "BASIC",
-        dimensions: ["adgroup_id"],
-        metrics: ["impressions", "clicks", "spend", "conversions", "conversion_rate"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
-        orderField: "spend",
-        orderType: "DESC",
+        fields: ["impressions", "swipes", "spend", "conversion_purchases"],
+        startTime: "2026-03-01T00:00:00Z",
+        endTime: "2026-03-04T23:59:59Z",
+        granularity: "DAY",
       },
     },
   ],

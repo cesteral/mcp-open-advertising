@@ -11,7 +11,7 @@ Returns a \`taskId\` immediately. Use \`pinterest_check_report_status\` to poll 
 
 **Non-blocking workflow:**
 1. \`pinterest_submit_report\` → get \`taskId\`
-2. \`pinterest_check_report_status\` (repeat every 10s) → wait for "DONE"
+2. \`pinterest_check_report_status\` (repeat every 10s) → wait for "FINISHED"
 3. \`pinterest_download_report\` with the \`downloadUrl\` → get parsed data
 
 Use \`pinterest_get_report\` instead for a blocking convenience shortcut.`;
@@ -21,20 +21,16 @@ export const SubmitReportInputSchema = z
     adAccountId: z
       .string()
       .min(1)
-      .describe("Pinterest Advertiser ID"),
-    reportType: z
-      .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
+      .describe("Pinterest Ad Account ID"),
+    type: z
+      .enum(["CAMPAIGN", "AD_GROUP", "AD", "KEYWORD", "ACCOUNT"])
       .optional()
-      .default("BASIC")
-      .describe("Report type (default: BASIC)"),
-    dimensions: z
+      .default("CAMPAIGN")
+      .describe("Report type (default: CAMPAIGN)"),
+    columns: z
       .array(z.string())
       .min(1)
-      .describe("Dimensions for the report (e.g., ['campaign_id', 'stat_time_day'])"),
-    metrics: z
-      .array(z.string())
-      .min(1)
-      .describe("Metrics to include (e.g., ['impressions', 'clicks', 'spend'])"),
+      .describe("Columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -43,20 +39,29 @@ export const SubmitReportInputSchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .describe("End date (YYYY-MM-DD)"),
-    orderField: z
-      .string()
+    granularity: z
+      .enum(["TOTAL", "DAY", "HOUR", "WEEK", "MONTH"])
       .optional()
-      .describe("Field to order results by"),
-    orderType: z
-      .enum(["ASC", "DESC"])
+      .default("DAY")
+      .describe("Time granularity for the report (default: DAY)"),
+    campaignIds: z
+      .array(z.string())
       .optional()
-      .describe("Sort order"),
+      .describe("Filter by campaign IDs"),
+    adGroupIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter by ad group IDs"),
+    adIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter by ad IDs"),
   })
   .describe("Parameters for submitting a Pinterest Ads report");
 
 export const SubmitReportOutputSchema = z
   .object({
-    taskId: z.string().describe("Report task ID for status polling"),
+    taskId: z.string().describe("Report token/task ID for status polling"),
     timestamp: z.string().datetime(),
   })
   .describe("Report submission result");
@@ -73,13 +78,14 @@ export async function submitReportLogic(
 
   const result = await pinterestReportingService.submitReport(
     {
-      report_type: input.reportType,
-      dimensions: input.dimensions,
-      metrics: input.metrics,
+      type: input.type,
+      columns: input.columns,
       start_date: input.startDate,
       end_date: input.endDate,
-      ...(input.orderField ? { order_field: input.orderField } : {}),
-      ...(input.orderType ? { order_type: input.orderType } : {}),
+      granularity: input.granularity,
+      ...(input.campaignIds ? { campaign_ids: input.campaignIds } : {}),
+      ...(input.adGroupIds ? { ad_group_ids: input.adGroupIds } : {}),
+      ...(input.adIds ? { ad_ids: input.adIds } : {}),
     },
     context
   );
@@ -116,10 +122,11 @@ export const submitReportTool = {
       label: "Submit campaign performance report",
       input: {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks", "spend", "ctr", "cpc"],
+        type: "CAMPAIGN",
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CTR", "CPM"],
         startDate: "2026-02-24",
         endDate: "2026-03-04",
+        granularity: "DAY",
       },
     },
   ],

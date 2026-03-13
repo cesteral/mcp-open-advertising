@@ -4,13 +4,13 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "amazon_dsp_check_report_status";
-const TOOL_TITLE = "Check AmazonDsp Report Status";
-const TOOL_DESCRIPTION = `Check the status of a previously submitted AmazonDsp report task.
+const TOOL_TITLE = "Check Amazon DSP Report Status";
+const TOOL_DESCRIPTION = `Check the status of a previously submitted Amazon DSP report task.
 
 Makes a single API call to check task status. Does not poll or wait.
 
-**Statuses:** PENDING, RUNNING, DONE, FAILED
-- If DONE with a \`downloadUrl\`, use \`amazon_dsp_download_report\` to fetch results.
+**Statuses:** PENDING, PROCESSING, COMPLETED, FAILURE
+- If COMPLETED with a \`downloadUrl\`, use \`amazon_dsp_download_report\` to fetch results.
 - If not done, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
@@ -18,20 +18,20 @@ export const CheckReportStatusInputSchema = z
     profileId: z
       .string()
       .min(1)
-      .describe("AmazonDsp Advertiser ID"),
+      .describe("Amazon DSP Profile/Advertiser ID"),
     taskId: z
       .string()
       .min(1)
       .describe("Report task ID from amazon_dsp_submit_report"),
   })
-  .describe("Parameters for checking AmazonDsp report status");
+  .describe("Parameters for checking Amazon DSP report status");
 
 export const CheckReportStatusOutputSchema = z
   .object({
     taskId: z.string().describe("Report task ID"),
     status: z.string().describe("Current task status"),
-    isComplete: z.boolean().describe("Whether the report is complete (DONE)"),
-    downloadUrl: z.string().optional().describe("Download URL when DONE"),
+    isComplete: z.boolean().describe("Whether the report is complete (COMPLETED)"),
+    downloadUrl: z.string().optional().describe("Download URL when COMPLETED"),
     timestamp: z.string().datetime(),
   })
   .describe("Report status check result");
@@ -54,7 +54,7 @@ export async function checkReportStatusLogic(
   return {
     taskId: result.taskId,
     status: result.status,
-    isComplete: result.status === "DONE",
+    isComplete: result.status === "COMPLETED",
     downloadUrl: result.downloadUrl,
     timestamp: new Date().toISOString(),
   };
@@ -70,7 +70,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
     ];
   }
 
-  if (result.status === "FAILED") {
+  if (result.status === "FAILURE") {
     return [
       {
         type: "text" as const,
@@ -104,7 +104,7 @@ export const checkReportStatusTool = {
       label: "Check report task status",
       input: {
         profileId: "1234567890",
-        taskId: "task-abc123",
+        taskId: "rpt-abc123",
       },
     },
   ],

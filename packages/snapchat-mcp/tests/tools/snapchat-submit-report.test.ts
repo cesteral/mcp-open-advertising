@@ -41,37 +41,34 @@ const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("submitReportLogic", () => {
   it("returns taskId and timestamp", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "task-new-1" });
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-new-1" });
 
     const result = await submitReportLogic(
       {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id"],
-        metrics: ["impressions"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        fields: ["impressions", "swipes"],
+        startTime: "2026-03-01T00:00:00Z",
+        endTime: "2026-03-04T23:59:59Z",
       },
       baseContext,
       baseSdkContext
     );
 
-    expect(result.taskId).toBe("task-new-1");
+    expect(result.taskId).toBe("rpt-new-1");
     expect(result.timestamp).toBeDefined();
   });
 
   it("passes report config to submitReport", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "task-cfg" });
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-cfg" });
 
     await submitReportLogic(
       {
         adAccountId: "1234567890",
-        reportType: "AUDIENCE",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
-        orderField: "spend",
-        orderType: "DESC",
+        fields: ["impressions", "swipes", "spend"],
+        startTime: "2026-03-01T00:00:00Z",
+        endTime: "2026-03-04T23:59:59Z",
+        granularity: "DAY",
+        filters: [{ field: "campaign_id", operator: "IN", values: ["camp_123"] }],
       },
       baseContext,
       baseSdkContext
@@ -79,28 +76,25 @@ describe("submitReportLogic", () => {
 
     expect(mockSubmitReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        report_type: "AUDIENCE",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks"],
-        start_date: "2026-03-01",
-        end_date: "2026-03-04",
-        order_field: "spend",
-        order_type: "DESC",
+        fields: ["impressions", "swipes", "spend"],
+        start_time: "2026-03-01T00:00:00Z",
+        end_time: "2026-03-04T23:59:59Z",
+        granularity: "DAY",
+        filters: [{ field: "campaign_id", operator: "IN", values: ["camp_123"] }],
       }),
       baseContext
     );
   });
 
   it("calls submitReport, not getReport", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "task-sub" });
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-sub" });
 
     await submitReportLogic(
       {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id"],
-        metrics: ["impressions"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        fields: ["impressions"],
+        startTime: "2026-03-01T00:00:00Z",
+        endTime: "2026-03-04T23:59:59Z",
       },
       baseContext,
       baseSdkContext
@@ -113,13 +107,13 @@ describe("submitReportLogic", () => {
 describe("submitReportResponseFormatter", () => {
   it("includes guidance to use snapchat_check_report_status", () => {
     const content = submitReportResponseFormatter({
-      taskId: "task-abc",
+      taskId: "rpt-abc",
       timestamp: new Date().toISOString(),
     });
 
     expect(content).toHaveLength(1);
     expect(content[0].type).toBe("text");
-    expect(content[0].text).toContain("Report submitted: task-abc");
+    expect(content[0].text).toContain("Report submitted: rpt-abc");
     expect(content[0].text).toContain("snapchat_check_report_status");
   });
 });

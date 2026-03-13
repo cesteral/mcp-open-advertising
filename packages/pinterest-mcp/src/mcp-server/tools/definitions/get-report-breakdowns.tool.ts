@@ -5,37 +5,33 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "pinterest_get_report_breakdowns";
 const TOOL_TITLE = "Get Pinterest Ads Report with Breakdowns";
-const TOOL_DESCRIPTION = `Submit and retrieve an async Pinterest Ads report with dimensional breakdowns.
+const TOOL_DESCRIPTION = `Submit and retrieve an async Pinterest Ads report with additional columns for breakdowns.
 
-Like \`pinterest_get_report\` but adds breakdown dimensions for more granular data.
+Like \`pinterest_get_report\` but adds extra columns for more granular data.
 
-**Common breakdown dimensions:** country_code, platform, gender, age, interest_category, placement
+**Common extra columns:** COUNTRY_CODE, DEVICE_TYPE, GENDER, AGE_BUCKET
 
-Results are broken down by each combination of base dimensions + breakdown dimensions.`;
+Results include metrics broken down by the additional columns.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
     adAccountId: z
       .string()
       .min(1)
-      .describe("Pinterest Advertiser ID"),
-    reportType: z
-      .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
+      .describe("Pinterest Ad Account ID"),
+    type: z
+      .enum(["CAMPAIGN", "AD_GROUP", "AD", "KEYWORD", "ACCOUNT"])
       .optional()
-      .default("BASIC")
-      .describe("Report type (default: BASIC)"),
-    dimensions: z
+      .default("CAMPAIGN")
+      .describe("Report type (default: CAMPAIGN)"),
+    columns: z
       .array(z.string())
       .min(1)
-      .describe("Base dimensions for the report (e.g., ['campaign_id', 'stat_time_day'])"),
+      .describe("Base columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"),
     breakdowns: z
       .array(z.string())
       .min(1)
-      .describe("Breakdown dimensions to add (e.g., ['country_code', 'gender'])"),
-    metrics: z
-      .array(z.string())
-      .min(1)
-      .describe("Metrics to include (e.g., ['impressions', 'clicks', 'spend'])"),
+      .describe("Additional breakdown columns to add (e.g. ['COUNTRY_CODE', 'DEVICE_TYPE'])"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -44,16 +40,33 @@ export const GetReportBreakdownsInputSchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .describe("End date (YYYY-MM-DD)"),
+    granularity: z
+      .enum(["TOTAL", "DAY", "HOUR", "WEEK", "MONTH"])
+      .optional()
+      .default("DAY")
+      .describe("Time granularity for the report (default: DAY)"),
+    campaignIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter by campaign IDs"),
+    adGroupIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter by ad group IDs"),
+    adIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter by ad IDs"),
   })
   .describe("Parameters for generating a Pinterest Ads report with breakdowns");
 
 export const GetReportBreakdownsOutputSchema = z
   .object({
-    taskId: z.string().describe("Report task ID"),
+    taskId: z.string().describe("Report token/task ID"),
     headers: z.array(z.string()).describe("CSV column headers"),
     rows: z.array(z.array(z.string())).describe("CSV data rows"),
     totalRows: z.number().describe("Total number of data rows"),
-    appliedDimensions: z.array(z.string()).describe("All dimensions used (base + breakdowns)"),
+    appliedColumns: z.array(z.string()).describe("All columns used (base + breakdowns)"),
     timestamp: z.string().datetime(),
   })
   .describe("Report with breakdowns result");
@@ -70,11 +83,14 @@ export async function getReportBreakdownsLogic(
 
   const result = await pinterestReportingService.getReportBreakdowns(
     {
-      report_type: input.reportType,
-      dimensions: input.dimensions,
-      metrics: input.metrics,
+      type: input.type,
+      columns: input.columns,
       start_date: input.startDate,
       end_date: input.endDate,
+      granularity: input.granularity,
+      ...(input.campaignIds ? { campaign_ids: input.campaignIds } : {}),
+      ...(input.adGroupIds ? { ad_group_ids: input.adGroupIds } : {}),
+      ...(input.adIds ? { ad_ids: input.adIds } : {}),
     },
     input.breakdowns,
     context
@@ -85,7 +101,7 @@ export async function getReportBreakdownsLogic(
     headers: result.headers,
     rows: result.rows,
     totalRows: result.totalRows,
-    appliedDimensions: [...input.dimensions, ...input.breakdowns],
+    appliedColumns: [...input.columns, ...input.breakdowns],
     timestamp: new Date().toISOString(),
   };
 }
@@ -102,7 +118,7 @@ export function getReportBreakdownsResponseFormatter(result: GetReportBreakdowns
       type: "text" as const,
       text: [
         `Report task: ${result.taskId}`,
-        `Applied dimensions: ${result.appliedDimensions.join(", ")}`,
+        `Applied columns: ${result.appliedColumns.join(", ")}`,
         `Total rows: ${result.totalRows}`,
         "",
         `Headers: ${headerLine}`,
@@ -134,22 +150,24 @@ export const getReportBreakdownsTool = {
       label: "Campaign report broken down by country",
       input: {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id", "stat_time_day"],
-        breakdowns: ["country_code"],
-        metrics: ["impressions", "clicks", "spend", "ctr"],
+        type: "CAMPAIGN",
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR"],
+        breakdowns: ["COUNTRY_CODE"],
         startDate: "2026-03-01",
         endDate: "2026-03-04",
+        granularity: "DAY",
       },
     },
     {
-      label: "Ad group report broken down by gender and age",
+      label: "Ad group report broken down by device type",
       input: {
         adAccountId: "1234567890",
-        dimensions: ["adgroup_id"],
-        breakdowns: ["gender", "age"],
-        metrics: ["impressions", "clicks", "spend", "conversions"],
+        type: "AD_GROUP",
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR"],
+        breakdowns: ["DEVICE_TYPE"],
         startDate: "2026-03-01",
         endDate: "2026-03-04",
+        granularity: "TOTAL",
       },
     },
   ],

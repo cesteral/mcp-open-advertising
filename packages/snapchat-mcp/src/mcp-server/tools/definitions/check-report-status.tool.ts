@@ -9,8 +9,8 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted Snapchat re
 
 Makes a single API call to check task status. Does not poll or wait.
 
-**Statuses:** PENDING, RUNNING, DONE, FAILED
-- If DONE with a \`downloadUrl\`, use \`snapchat_download_report\` to fetch results.
+**Statuses:** PENDING, RUNNING, COMPLETE, FAILED
+- If COMPLETE with a \`downloadUrl\`, use \`snapchat_download_report\` to fetch results.
 - If not done, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
@@ -18,7 +18,7 @@ export const CheckReportStatusInputSchema = z
     adAccountId: z
       .string()
       .min(1)
-      .describe("Snapchat Advertiser ID"),
+      .describe("Snapchat Ad Account ID"),
     taskId: z
       .string()
       .min(1)
@@ -30,8 +30,8 @@ export const CheckReportStatusOutputSchema = z
   .object({
     taskId: z.string().describe("Report task ID"),
     status: z.string().describe("Current task status"),
-    isComplete: z.boolean().describe("Whether the report is complete (DONE)"),
-    downloadUrl: z.string().optional().describe("Download URL when DONE"),
+    isComplete: z.boolean().describe("Whether the report is complete (COMPLETE)"),
+    downloadUrl: z.string().optional().describe("Download URL when COMPLETE"),
     timestamp: z.string().datetime(),
   })
   .describe("Report status check result");
@@ -54,7 +54,7 @@ export async function checkReportStatusLogic(
   return {
     taskId: result.taskId,
     status: result.status,
-    isComplete: result.status === "DONE",
+    isComplete: result.status === "COMPLETE",
     downloadUrl: result.downloadUrl,
     timestamp: new Date().toISOString(),
   };
@@ -104,7 +104,7 @@ export const checkReportStatusTool = {
       label: "Check report task status",
       input: {
         adAccountId: "1234567890",
-        taskId: "task-abc123",
+        taskId: "rpt-abc123",
       },
     },
   ],

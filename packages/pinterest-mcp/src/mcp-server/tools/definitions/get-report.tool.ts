@@ -7,33 +7,28 @@ const TOOL_NAME = "pinterest_get_report";
 const TOOL_TITLE = "Get Pinterest Ads Report";
 const TOOL_DESCRIPTION = `Submit and retrieve an async Pinterest Ads performance report.
 
-Follows the async polling pattern: submit task → poll until DONE → download CSV.
+Follows the async polling pattern: submit task → poll until FINISHED → download CSV.
 This may take 30s–5 minutes depending on the data volume.
 
-**Common dimensions:** campaign_id, adgroup_id, ad_id, stat_time_day, stat_time_hour, country_code
-**Common metrics:** spend, impressions, clicks, ctr, cpm, cpc, conversions, conversion_rate, reach, frequency
-
-**Report types:** BASIC (default), AUDIENCE, PLAYABLE_MATERIAL`;
+**Common columns:** IMPRESSION_1, CLICKTHROUGH_1, SPEND_IN_DOLLAR, CTR, CPM, CPC, TOTAL_CONVERSIONS, REACH
+**Report types:** CAMPAIGN (default), AD_GROUP, AD, KEYWORD, ACCOUNT
+**Granularity:** DAY (default), TOTAL, HOUR, WEEK, MONTH`;
 
 export const GetReportInputSchema = z
   .object({
     adAccountId: z
       .string()
       .min(1)
-      .describe("Pinterest Advertiser ID"),
-    reportType: z
-      .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
+      .describe("Pinterest Ad Account ID"),
+    type: z
+      .enum(["CAMPAIGN", "AD_GROUP", "AD", "KEYWORD", "ACCOUNT"])
       .optional()
-      .default("BASIC")
-      .describe("Report type (default: BASIC)"),
-    dimensions: z
+      .default("CAMPAIGN")
+      .describe("Report type (default: CAMPAIGN)"),
+    columns: z
       .array(z.string())
       .min(1)
-      .describe("Dimensions for the report (e.g., ['campaign_id', 'stat_time_day'])"),
-    metrics: z
-      .array(z.string())
-      .min(1)
-      .describe("Metrics to include (e.g., ['impressions', 'clicks', 'spend'])"),
+      .describe("Columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -42,20 +37,29 @@ export const GetReportInputSchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .describe("End date (YYYY-MM-DD)"),
-    orderField: z
-      .string()
+    granularity: z
+      .enum(["TOTAL", "DAY", "HOUR", "WEEK", "MONTH"])
       .optional()
-      .describe("Field to order results by"),
-    orderType: z
-      .enum(["ASC", "DESC"])
+      .default("DAY")
+      .describe("Time granularity for the report (default: DAY)"),
+    campaignIds: z
+      .array(z.string())
       .optional()
-      .describe("Sort order"),
+      .describe("Filter by campaign IDs"),
+    adGroupIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter by ad group IDs"),
+    adIds: z
+      .array(z.string())
+      .optional()
+      .describe("Filter by ad IDs"),
   })
   .describe("Parameters for generating a Pinterest Ads report");
 
 export const GetReportOutputSchema = z
   .object({
-    taskId: z.string().describe("Report task ID"),
+    taskId: z.string().describe("Report token/task ID"),
     headers: z.array(z.string()).describe("CSV column headers"),
     rows: z.array(z.array(z.string())).describe("CSV data rows"),
     totalRows: z.number().describe("Total number of data rows"),
@@ -75,13 +79,14 @@ export async function getReportLogic(
 
   const result = await pinterestReportingService.getReport(
     {
-      report_type: input.reportType,
-      dimensions: input.dimensions,
-      metrics: input.metrics,
+      type: input.type,
+      columns: input.columns,
       start_date: input.startDate,
       end_date: input.endDate,
-      ...(input.orderField ? { order_field: input.orderField } : {}),
-      ...(input.orderType ? { order_type: input.orderType } : {}),
+      granularity: input.granularity,
+      ...(input.campaignIds ? { campaign_ids: input.campaignIds } : {}),
+      ...(input.adGroupIds ? { ad_group_ids: input.adGroupIds } : {}),
+      ...(input.adIds ? { ad_ids: input.adIds } : {}),
     },
     context
   );
@@ -138,23 +143,22 @@ export const getReportTool = {
       label: "Campaign delivery report for last 7 days",
       input: {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks", "spend", "ctr", "cpc"],
+        type: "CAMPAIGN",
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CTR", "CPM"],
         startDate: "2026-02-24",
         endDate: "2026-03-04",
+        granularity: "DAY",
       },
     },
     {
       label: "Ad group performance report",
       input: {
         adAccountId: "1234567890",
-        reportType: "BASIC",
-        dimensions: ["adgroup_id"],
-        metrics: ["impressions", "clicks", "spend", "conversions", "conversion_rate"],
+        type: "AD_GROUP",
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "TOTAL_CONVERSIONS"],
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        orderField: "spend",
-        orderType: "DESC",
+        granularity: "TOTAL",
       },
     },
   ],

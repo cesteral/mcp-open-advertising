@@ -9,29 +9,29 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted Pinterest r
 
 Makes a single API call to check task status. Does not poll or wait.
 
-**Statuses:** PENDING, RUNNING, DONE, FAILED
-- If DONE with a \`downloadUrl\`, use \`pinterest_download_report\` to fetch results.
-- If not done, call this tool again in ~10 seconds.`;
+**Statuses:** IN_PROGRESS, FINISHED, FAILED, EXPIRED, DOES_NOT_EXIST
+- If FINISHED with a \`downloadUrl\`, use \`pinterest_download_report\` to fetch results.
+- If not finished, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
   .object({
     adAccountId: z
       .string()
       .min(1)
-      .describe("Pinterest Advertiser ID"),
+      .describe("Pinterest Ad Account ID"),
     taskId: z
       .string()
       .min(1)
-      .describe("Report task ID from pinterest_submit_report"),
+      .describe("Report token/task ID from pinterest_submit_report"),
   })
   .describe("Parameters for checking Pinterest report status");
 
 export const CheckReportStatusOutputSchema = z
   .object({
-    taskId: z.string().describe("Report task ID"),
+    taskId: z.string().describe("Report token/task ID"),
     status: z.string().describe("Current task status"),
-    isComplete: z.boolean().describe("Whether the report is complete (DONE)"),
-    downloadUrl: z.string().optional().describe("Download URL when DONE"),
+    isComplete: z.boolean().describe("Whether the report is complete (FINISHED)"),
+    downloadUrl: z.string().optional().describe("Download URL when FINISHED"),
     timestamp: z.string().datetime(),
   })
   .describe("Report status check result");
@@ -54,7 +54,7 @@ export async function checkReportStatusLogic(
   return {
     taskId: result.taskId,
     status: result.status,
-    isComplete: result.status === "DONE",
+    isComplete: result.status === "FINISHED",
     downloadUrl: result.downloadUrl,
     timestamp: new Date().toISOString(),
   };
@@ -70,11 +70,11 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
     ];
   }
 
-  if (result.status === "FAILED") {
+  if (result.status === "FAILED" || result.status === "EXPIRED") {
     return [
       {
         type: "text" as const,
-        text: `Report failed: ${result.taskId}\n\nThe report task failed. Check the report configuration and try again.\n\nTimestamp: ${result.timestamp}`,
+        text: `Report failed: ${result.taskId}\nStatus: ${result.status}\n\nThe report task failed. Check the report configuration and try again.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }
@@ -104,7 +104,7 @@ export const checkReportStatusTool = {
       label: "Check report task status",
       input: {
         adAccountId: "1234567890",
-        taskId: "task-abc123",
+        taskId: "token-abc123",
       },
     },
   ],

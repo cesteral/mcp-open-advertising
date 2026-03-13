@@ -4,37 +4,39 @@ import type { RequestContext } from "@cesteral/shared";
 import { fetchWithTimeout } from "@cesteral/shared";
 import type { Logger } from "pino";
 
-/** AmazonDsp report task status values */
-export type ReportTaskStatus = "PENDING" | "RUNNING" | "DONE" | "FAILED";
+/** Amazon DSP report task status values */
+export type ReportTaskStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILURE";
 
-/** AmazonDsp report task check response */
+/** Amazon DSP report task check response */
 interface ReportTaskCheckData {
+  reportId: string;
   status: ReportTaskStatus;
-  download_url?: string;
-  task_id: string;
+  url?: string;
+  fileSize?: number;
 }
 
-/** AmazonDsp report configuration */
+/** Amazon DSP report configuration */
 export interface AmazonDspReportConfig {
-  report_type?: "BASIC" | "AUDIENCE" | "PLAYABLE_MATERIAL";
-  dimensions: string[];
-  metrics: string[];
-  start_date: string;
-  end_date: string;
-  page?: number;
-  page_size?: number;
-  filtering?: Record<string, unknown>[];
-  order_field?: string;
-  order_type?: "ASC" | "DESC";
+  name?: string;
+  startDate: string;
+  endDate: string;
+  configuration: {
+    adProduct?: string;
+    groupBy: string[];
+    columns: string[];
+    reportTypeId: string;
+    timeUnit?: "DAILY" | "SUMMARY";
+    format?: "JSON" | "GZIP_JSON";
+  };
 }
 
 /**
- * AmazonDsp Reporting Service — Handles async reporting via AmazonDsp Marketing API.
+ * AmazonDsp Reporting Service — Handles async reporting via Amazon DSP Reporting API.
  *
- * AmazonDsp reporting uses an async polling pattern:
- * 1. POST to create a report task → get task_id
- * 2. GET to poll task status until DONE or FAILED
- * 3. GET download URL to retrieve CSV report data
+ * Amazon DSP reporting uses an async polling pattern:
+ * 1. POST /reporting/reports → get reportId
+ * 2. GET /reporting/reports/{reportId} → poll until COMPLETED or FAILURE
+ * 3. GET url (presigned) to retrieve report data
  */
 export class AmazonDspReportingService {
   private static readonly MAX_BACKOFF_MS = 10_000;
@@ -49,7 +51,7 @@ export class AmazonDspReportingService {
 
   /**
    * Submit a report task.
-   * Returns the task_id for polling.
+   * Returns the reportId for polling.
    */
   async submitReport(
     reportConfig: AmazonDspReportConfig,
@@ -58,27 +60,28 @@ export class AmazonDspReportingService {
     await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
     const result = (await this.httpClient.post(
-      "/open_api/v1.3/report/task/create/",
+      "/reporting/reports",
       {
-        report_type: reportConfig.report_type ?? "BASIC",
-        dimensions: reportConfig.dimensions,
-        metrics: reportConfig.metrics,
-        start_date: reportConfig.start_date,
-        end_date: reportConfig.end_date,
-        ...(reportConfig.page ? { page: reportConfig.page } : {}),
-        ...(reportConfig.page_size ? { page_size: reportConfig.page_size } : {}),
-        ...(reportConfig.filtering ? { filtering: reportConfig.filtering } : {}),
-        ...(reportConfig.order_field ? { order_field: reportConfig.order_field } : {}),
-        ...(reportConfig.order_type ? { order_type: reportConfig.order_type } : {}),
+        name: reportConfig.name ?? "MCP Report",
+        startDate: reportConfig.startDate,
+        endDate: reportConfig.endDate,
+        configuration: {
+          adProduct: reportConfig.configuration.adProduct ?? "DSP",
+          groupBy: reportConfig.configuration.groupBy,
+          columns: reportConfig.configuration.columns,
+          reportTypeId: reportConfig.configuration.reportTypeId,
+          timeUnit: reportConfig.configuration.timeUnit ?? "DAILY",
+          format: reportConfig.configuration.format ?? "JSON",
+        },
       },
       context
-    )) as { task_id: string };
+    )) as { reportId: string; status: string };
 
-    return result;
+    return { task_id: result.reportId };
   }
 
   /**
-   * Poll a report task until it is DONE or FAILED.
+   * Poll a report task until it is COMPLETED or FAILURE.
    */
   async pollReport(
     taskId: string,
@@ -90,12 +93,12 @@ export class AmazonDspReportingService {
       await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
       const result = (await this.httpClient.get(
-        "/open_api/v1.3/report/task/check/",
-        { task_id: taskId },
+        `/reporting/reports/${taskId}`,
+        undefined,
         context
       )) as ReportTaskCheckData;
 
-      if (result.status === "DONE" || result.status === "FAILED") {
+      if (result.status === "COMPLETED" || result.status === "FAILURE") {
         this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
         return result;
       }
@@ -122,7 +125,7 @@ export class AmazonDspReportingService {
 
   /**
    * Single status check for a report task. No polling, no sleep.
-   * Returns current status and download URL if DONE.
+   * Returns current status and download URL if COMPLETED.
    */
   async checkReportStatus(
     taskId: string,
@@ -131,20 +134,20 @@ export class AmazonDspReportingService {
     await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
     const result = (await this.httpClient.get(
-      "/open_api/v1.3/report/task/check/",
-      { task_id: taskId },
+      `/reporting/reports/${taskId}`,
+      undefined,
       context
     )) as ReportTaskCheckData;
 
     return {
-      taskId: result.task_id,
+      taskId: result.reportId,
       status: result.status,
-      downloadUrl: result.download_url,
+      downloadUrl: result.url,
     };
   }
 
   /**
-   * Download a report CSV from a URL.
+   * Download a report from a URL.
    */
   async downloadReport(
     downloadUrl: string,
@@ -155,7 +158,7 @@ export class AmazonDspReportingService {
 
     if (!response.ok) {
       throw new Error(
-        `Failed to download AmazonDsp report: ${response.status} ${response.statusText}`
+        `Failed to download Amazon DSP report: ${response.status} ${response.statusText}`
       );
     }
 
@@ -188,15 +191,15 @@ export class AmazonDspReportingService {
     const { task_id } = await this.submitReport(reportConfig, context);
     const taskResult = await this.pollReport(task_id, context);
 
-    if (taskResult.status === "FAILED") {
-      throw new Error(`AmazonDsp report task ${task_id} failed`);
+    if (taskResult.status === "FAILURE") {
+      throw new Error(`Amazon DSP report task ${task_id} failed`);
     }
 
-    if (!taskResult.download_url) {
-      throw new Error(`AmazonDsp report task ${task_id} completed but has no download URL`);
+    if (!taskResult.url) {
+      throw new Error(`Amazon DSP report task ${task_id} completed but has no download URL`);
     }
 
-    const reportData = await this.downloadReport(taskResult.download_url, 10_000, context);
+    const reportData = await this.downloadReport(taskResult.url, 10_000, context);
 
     return {
       ...reportData,
@@ -206,7 +209,7 @@ export class AmazonDspReportingService {
 
   /**
    * Get report with dimensional breakdowns.
-   * Adds breakdown dimensions to the report config.
+   * Adds breakdown groupBy dimensions to the report config.
    */
   async getReportBreakdowns(
     reportConfig: AmazonDspReportConfig,
@@ -215,7 +218,10 @@ export class AmazonDspReportingService {
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: AmazonDspReportConfig = {
       ...reportConfig,
-      dimensions: [...reportConfig.dimensions, ...breakdowns],
+      configuration: {
+        ...reportConfig.configuration,
+        groupBy: [...reportConfig.configuration.groupBy, ...breakdowns],
+      },
     };
 
     return this.getReport(configWithBreakdowns, context);

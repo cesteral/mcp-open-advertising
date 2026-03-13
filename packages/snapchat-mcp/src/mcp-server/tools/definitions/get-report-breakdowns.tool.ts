@@ -5,45 +5,47 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "snapchat_get_report_breakdowns";
 const TOOL_TITLE = "Get Snapchat Ads Report with Breakdowns";
-const TOOL_DESCRIPTION = `Submit and retrieve an async Snapchat Ads report with dimensional breakdowns.
+const TOOL_DESCRIPTION = `Submit and retrieve an async Snapchat Ads report with additional breakdown fields.
 
-Like \`snapchat_get_report\` but adds breakdown dimensions for more granular data.
+Like \`snapchat_get_report\` but adds extra breakdown fields for more granular data.
 
-**Common breakdown dimensions:** country_code, platform, gender, age, interest_category, placement
+**Common breakdown fields:** country_code, platform, gender, age, interest_category, placement
 
-Results are broken down by each combination of base dimensions + breakdown dimensions.`;
+Results include metrics with the additional breakdown field values.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
     adAccountId: z
       .string()
       .min(1)
-      .describe("Snapchat Advertiser ID"),
-    reportType: z
-      .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
-      .optional()
-      .default("BASIC")
-      .describe("Report type (default: BASIC)"),
-    dimensions: z
+      .describe("Snapchat Ad Account ID"),
+    fields: z
       .array(z.string())
       .min(1)
-      .describe("Base dimensions for the report (e.g., ['campaign_id', 'stat_time_day'])"),
+      .describe("Base metric fields to include (e.g. ['impressions', 'swipes', 'spend'])"),
     breakdowns: z
       .array(z.string())
       .min(1)
-      .describe("Breakdown dimensions to add (e.g., ['country_code', 'gender'])"),
-    metrics: z
-      .array(z.string())
-      .min(1)
-      .describe("Metrics to include (e.g., ['impressions', 'clicks', 'spend'])"),
-    startDate: z
+      .describe("Additional breakdown fields to add (e.g. ['country_code', 'gender'])"),
+    startTime: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Start date (YYYY-MM-DD)"),
-    endDate: z
+      .describe("Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z)"),
+    endTime: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("End date (YYYY-MM-DD)"),
+      .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z)"),
+    granularity: z
+      .enum(["DAY", "HOUR", "LIFETIME"])
+      .optional()
+      .default("DAY")
+      .describe("Time granularity (default: DAY)"),
+    filters: z
+      .array(z.object({
+        field: z.string().describe("Filter field (e.g. campaign_id)"),
+        operator: z.string().describe("Filter operator (e.g. IN)"),
+        values: z.array(z.string()).describe("Filter values"),
+      }))
+      .optional()
+      .describe("Optional filters for the report"),
   })
   .describe("Parameters for generating a Snapchat Ads report with breakdowns");
 
@@ -53,7 +55,7 @@ export const GetReportBreakdownsOutputSchema = z
     headers: z.array(z.string()).describe("CSV column headers"),
     rows: z.array(z.array(z.string())).describe("CSV data rows"),
     totalRows: z.number().describe("Total number of data rows"),
-    appliedDimensions: z.array(z.string()).describe("All dimensions used (base + breakdowns)"),
+    appliedFields: z.array(z.string()).describe("All fields used (base + breakdowns)"),
     timestamp: z.string().datetime(),
   })
   .describe("Report with breakdowns result");
@@ -70,11 +72,11 @@ export async function getReportBreakdownsLogic(
 
   const result = await snapchatReportingService.getReportBreakdowns(
     {
-      report_type: input.reportType,
-      dimensions: input.dimensions,
-      metrics: input.metrics,
-      start_date: input.startDate,
-      end_date: input.endDate,
+      fields: input.fields,
+      granularity: input.granularity,
+      start_time: input.startTime,
+      end_time: input.endTime,
+      ...(input.filters ? { filters: input.filters } : {}),
     },
     input.breakdowns,
     context
@@ -85,7 +87,7 @@ export async function getReportBreakdownsLogic(
     headers: result.headers,
     rows: result.rows,
     totalRows: result.totalRows,
-    appliedDimensions: [...input.dimensions, ...input.breakdowns],
+    appliedFields: [...input.fields, ...input.breakdowns],
     timestamp: new Date().toISOString(),
   };
 }
@@ -102,7 +104,7 @@ export function getReportBreakdownsResponseFormatter(result: GetReportBreakdowns
       type: "text" as const,
       text: [
         `Report task: ${result.taskId}`,
-        `Applied dimensions: ${result.appliedDimensions.join(", ")}`,
+        `Applied fields: ${result.appliedFields.join(", ")}`,
         `Total rows: ${result.totalRows}`,
         "",
         `Headers: ${headerLine}`,
@@ -134,22 +136,22 @@ export const getReportBreakdownsTool = {
       label: "Campaign report broken down by country",
       input: {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id", "stat_time_day"],
+        fields: ["impressions", "swipes", "spend"],
         breakdowns: ["country_code"],
-        metrics: ["impressions", "clicks", "spend", "ctr"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        startTime: "2026-03-01T00:00:00Z",
+        endTime: "2026-03-04T23:59:59Z",
+        granularity: "DAY",
       },
     },
     {
-      label: "Ad group report broken down by gender and age",
+      label: "Ad squad report broken down by gender and age",
       input: {
         adAccountId: "1234567890",
-        dimensions: ["adgroup_id"],
+        fields: ["impressions", "swipes", "spend"],
         breakdowns: ["gender", "age"],
-        metrics: ["impressions", "clicks", "spend", "conversions"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        startTime: "2026-03-01T00:00:00Z",
+        endTime: "2026-03-04T23:59:59Z",
+        granularity: "DAY",
       },
     },
   ],

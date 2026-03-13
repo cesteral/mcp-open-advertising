@@ -36,6 +36,7 @@ export function createSessionServices(
   const snapchatReportingService = new SnapchatReportingService(
     rateLimiter,
     httpClient,
+    authAdapter.adAccountId,
     logger,
     sessionConfig.reportPollIntervalMs,
     sessionConfig.reportMaxPollAttempts

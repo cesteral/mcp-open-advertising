@@ -22,41 +22,53 @@ const mockHttpClient = {
   get: vi.fn(),
 };
 
+const TEST_AD_ACCOUNT_ID = "acct-snap-123";
+
 describe("SnapchatReportingService", () => {
   let service: SnapchatReportingService;
 
   beforeEach(() => {
-    service = new SnapchatReportingService(mockRateLimiter as any, mockHttpClient as any, mockLogger);
+    service = new SnapchatReportingService(
+      mockRateLimiter as any,
+      mockHttpClient as any,
+      TEST_AD_ACCOUNT_ID,
+      mockLogger
+    );
     vi.clearAllMocks();
   });
 
-  it("submitReport sends create request and returns task id", async () => {
-    mockHttpClient.post.mockResolvedValueOnce({ task_id: "task-123" });
-
-    const result = await service.submitReport({
-      dimensions: ["campaign_id"],
-      metrics: ["impressions"],
-      start_date: "2026-03-01",
-      end_date: "2026-03-04",
+  it("submitReport sends create request to Snapchat async_reporting endpoint and returns report id", async () => {
+    mockHttpClient.post.mockResolvedValueOnce({
+      request_status: "SUCCESS",
+      async_stats_reports: [{ id: "rpt-123", status: "PENDING", download_url: null }],
     });
 
-    expect(result.task_id).toBe("task-123");
+    const result = await service.submitReport({
+      fields: ["impressions", "swipes"],
+      start_time: "2026-03-01T00:00:00Z",
+      end_time: "2026-03-04T23:59:59Z",
+    });
+
+    expect(result.task_id).toBe("rpt-123");
     expect(mockHttpClient.post).toHaveBeenCalledWith(
-      "/open_api/v1.3/report/task/create/",
-      expect.objectContaining({ dimensions: ["campaign_id"] }),
+      `/v1/adaccounts/${TEST_AD_ACCOUNT_ID}/stats/async_reporting`,
+      expect.objectContaining({ fields: ["impressions", "swipes"] }),
       undefined
     );
   });
 
-  it("pollReport returns DONE result", async () => {
+  it("pollReport returns COMPLETE result", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
-      status: "DONE",
-      task_id: "task-123",
-      download_url: "https://example.com/report.csv",
+      request_status: "SUCCESS",
+      async_stats_report: {
+        id: "rpt-123",
+        status: "COMPLETE",
+        download_url: "https://example.com/report.csv",
+      },
     });
 
-    const result = await service.pollReport("task-123");
-    expect(result.status).toBe("DONE");
+    const result = await service.pollReport("rpt-123");
+    expect(result.status).toBe("COMPLETE");
     expect(result.download_url).toContain("report.csv");
   });
 
@@ -74,11 +86,17 @@ describe("SnapchatReportingService", () => {
   });
 
   it("getReport runs submit -> poll -> download flow", async () => {
-    mockHttpClient.post.mockResolvedValueOnce({ task_id: "task-xyz" });
+    mockHttpClient.post.mockResolvedValueOnce({
+      request_status: "SUCCESS",
+      async_stats_reports: [{ id: "rpt-xyz", status: "PENDING", download_url: null }],
+    });
     mockHttpClient.get.mockResolvedValueOnce({
-      status: "DONE",
-      task_id: "task-xyz",
-      download_url: "https://example.com/task-xyz.csv",
+      request_status: "SUCCESS",
+      async_stats_report: {
+        id: "rpt-xyz",
+        status: "COMPLETE",
+        download_url: "https://example.com/rpt-xyz.csv",
+      },
     });
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
@@ -86,82 +104,89 @@ describe("SnapchatReportingService", () => {
     } as unknown as Response);
 
     const result = await service.getReport({
-      dimensions: ["campaign_id"],
-      metrics: ["impressions"],
-      start_date: "2026-03-01",
-      end_date: "2026-03-04",
+      fields: ["impressions"],
+      start_time: "2026-03-01T00:00:00Z",
+      end_time: "2026-03-04T23:59:59Z",
     });
 
-    expect(result.taskId).toBe("task-xyz");
+    expect(result.taskId).toBe("rpt-xyz");
     expect(result.rows).toHaveLength(1);
   });
 
-  it("checkReportStatus makes single GET and returns status", async () => {
+  it("checkReportStatus makes single GET to Snapchat async_reports endpoint and returns status", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
-      status: "RUNNING",
-      task_id: "task-456",
+      request_status: "SUCCESS",
+      async_stats_report: {
+        id: "rpt-456",
+        status: "RUNNING",
+      },
     });
 
-    const result = await service.checkReportStatus("task-456");
+    const result = await service.checkReportStatus("rpt-456");
 
-    expect(result.taskId).toBe("task-456");
+    expect(result.taskId).toBe("rpt-456");
     expect(result.status).toBe("RUNNING");
     expect(result.downloadUrl).toBeUndefined();
     expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
     expect(mockHttpClient.get).toHaveBeenCalledWith(
-      "/open_api/v1.3/report/task/check/",
-      { task_id: "task-456" },
+      `/v1/adaccounts/${TEST_AD_ACCOUNT_ID}/stats/async_reports/rpt-456`,
+      undefined,
       undefined
     );
   });
 
-  it("checkReportStatus returns downloadUrl when DONE", async () => {
+  it("checkReportStatus returns downloadUrl when COMPLETE", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
-      status: "DONE",
-      task_id: "task-789",
-      download_url: "https://example.com/done-report.csv",
+      request_status: "SUCCESS",
+      async_stats_report: {
+        id: "rpt-789",
+        status: "COMPLETE",
+        download_url: "https://example.com/done-report.csv",
+      },
     });
 
-    const result = await service.checkReportStatus("task-789");
+    const result = await service.checkReportStatus("rpt-789");
 
-    expect(result.status).toBe("DONE");
+    expect(result.status).toBe("COMPLETE");
     expect(result.downloadUrl).toBe("https://example.com/done-report.csv");
   });
 
   it("checkReportStatus consumes rate limiter once", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
-      status: "PENDING",
-      task_id: "task-rl",
+      request_status: "SUCCESS",
+      async_stats_report: {
+        id: "rpt-rl",
+        status: "PENDING",
+      },
     });
 
-    await service.checkReportStatus("task-rl");
+    await service.checkReportStatus("rpt-rl");
 
     expect(mockRateLimiter.consume).toHaveBeenCalledTimes(1);
     expect(mockRateLimiter.consume).toHaveBeenCalledWith("snapchat:reporting");
   });
 
-  it("getReportBreakdowns appends breakdown dimensions", async () => {
+  it("getReportBreakdowns appends breakdown fields", async () => {
     const getReportSpy = vi.spyOn(service, "getReport").mockResolvedValueOnce({
       headers: ["date", "country"],
       rows: [["2026-03-01", "US"]],
       totalRows: 1,
-      taskId: "task-bd",
+      taskId: "rpt-bd",
     });
 
     const result = await service.getReportBreakdowns(
       {
-        dimensions: ["campaign_id"],
-        metrics: ["impressions"],
-        start_date: "2026-03-01",
-        end_date: "2026-03-04",
+        fields: ["impressions"],
+        start_time: "2026-03-01T00:00:00Z",
+        end_time: "2026-03-04T23:59:59Z",
       },
-      ["country"]
+      ["swipes"]
     );
 
     expect(getReportSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ dimensions: ["campaign_id", "country"] }),
+      expect.objectContaining({ fields: ["impressions", "swipes"] }),
       undefined
     );
-    expect(result.taskId).toBe("task-bd");
+    expect(result.taskId).toBe("rpt-bd");
   });
 });
