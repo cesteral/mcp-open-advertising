@@ -1,119 +1,120 @@
 /**
  * Snapchat Entity Mapping
  *
- * Static configuration for Snapchat Marketing API entity types.
- * All entities require ad_account_id in query params (GET) or body (POST).
- * Snapchat uses separate endpoints for status updates and deletes.
+ * Static configuration for Snapchat Ads API v1 entity types.
+ * Entity hierarchy: Campaigns → Ad Squads (adGroups) → Ads, Creatives
+ *
+ * Key Snapchat API patterns:
+ * - List/create use adAccountId or parent entity ID in path
+ * - Update/delete use entity-specific path with {entityId}
+ * - Response envelope: { request_status, <responseKey>: [{ sub_request_status, <entityKey>: {...} }] }
  */
 
 export type SnapchatEntityType = "campaign" | "adGroup" | "ad" | "creative";
 
 export interface SnapchatEntityConfig {
-  /** API path for list/get (GET) */
+  /** Path template for GET list (may contain {adAccountId}, {campaignId}, {adSquadId}) */
   listPath: string;
-  /** API path for create (POST) */
+  /** Path template for POST create (usually adAccountId-based) */
   createPath: string;
-  /** API path for update (POST) */
+  /** Path template for PUT update (entity-specific: /v1/{entity}s/{entityId}) */
   updatePath: string;
-  /** API path for status update (POST) */
+  /** Path template for status update — same as updatePath for Snapchat */
   statusUpdatePath: string;
-  /** API path for delete (POST) */
+  /** Path template for DELETE (entity-specific: /v1/{entity}s/{entityId}) */
   deletePath: string;
-  /** API path for duplicate/copy (POST), if supported */
-  duplicatePath?: string;
-  /** The field name used as the entity's primary ID */
+  /** Primary ID field in the response object */
   idField: string;
-  /** The field name used in arrays for bulk operations (e.g., campaign_ids) */
-  idsField: string;
-  /** Display name for messages */
+  /** Response envelope array key (e.g., "campaigns", "adsquads") */
+  responseKey: string;
+  /** Inner entity key within each envelope item (e.g., "campaign", "adsquad") */
+  entityKey: string;
+  /** Display name for error messages */
   displayName: string;
-  /** Default fields to return when listing/getting */
+  /** Default fields to include in responses */
   defaultFields: string[];
-  /** Whether the entity supports duplication */
   supportsDuplicate?: boolean;
 }
 
 const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
   campaign: {
-    listPath: "/open_api/v1.3/campaign/get/",
-    createPath: "/open_api/v1.3/campaign/create/",
-    updatePath: "/open_api/v1.3/campaign/update/",
-    statusUpdatePath: "/open_api/v1.3/campaign/status/update/",
-    deletePath: "/open_api/v1.3/campaign/delete/",
-    idField: "campaign_id",
-    idsField: "campaign_ids",
+    listPath: "/v1/adaccounts/{adAccountId}/campaigns",
+    createPath: "/v1/adaccounts/{adAccountId}/campaigns",
+    updatePath: "/v1/campaigns/{entityId}",
+    statusUpdatePath: "/v1/campaigns/{entityId}",
+    deletePath: "/v1/campaigns/{entityId}",
+    idField: "id",
+    responseKey: "campaigns",
+    entityKey: "campaign",
     displayName: "Campaign",
     defaultFields: [
-      "campaign_id",
-      "campaign_name",
+      "id",
+      "name",
       "status",
-      "objective_type",
-      "budget",
-      "budget_mode",
-      "created_time",
-      "modify_time",
+      "ad_account_id",
+      "objective",
+      "daily_budget_micro",
+      "lifetime_spend_cap_micro",
+      "start_time",
+      "end_time",
     ],
-    supportsDuplicate: true,
+    supportsDuplicate: false,
   },
   adGroup: {
-    listPath: "/open_api/v1.3/adgroup/get/",
-    createPath: "/open_api/v1.3/adgroup/create/",
-    updatePath: "/open_api/v1.3/adgroup/update/",
-    statusUpdatePath: "/open_api/v1.3/adgroup/status/update/",
-    deletePath: "/open_api/v1.3/adgroup/delete/",
-    idField: "adgroup_id",
-    idsField: "adgroup_ids",
-    displayName: "Ad Group",
+    listPath: "/v1/campaigns/{campaignId}/adsquads",
+    createPath: "/v1/adaccounts/{adAccountId}/adsquads",
+    updatePath: "/v1/adsquads/{entityId}",
+    statusUpdatePath: "/v1/adsquads/{entityId}",
+    deletePath: "/v1/adsquads/{entityId}",
+    idField: "id",
+    responseKey: "adsquads",
+    entityKey: "adsquad",
+    displayName: "Ad Squad",
     defaultFields: [
-      "adgroup_id",
-      "adgroup_name",
-      "campaign_id",
+      "id",
+      "name",
       "status",
-      "budget",
-      "budget_mode",
-      "schedule_type",
-      "created_time",
+      "campaign_id",
+      "daily_budget_micro",
+      "bid_micro",
+      "optimization_goal",
+      "placement",
     ],
-    supportsDuplicate: true,
+    supportsDuplicate: false,
   },
   ad: {
-    listPath: "/open_api/v1.3/ad/get/",
-    createPath: "/open_api/v1.3/ad/create/",
-    updatePath: "/open_api/v1.3/ad/update/",
-    statusUpdatePath: "/open_api/v1.3/ad/status/update/",
-    deletePath: "/open_api/v1.3/ad/delete/",
-    idField: "ad_id",
-    idsField: "ad_ids",
+    listPath: "/v1/adsquads/{adSquadId}/ads",
+    createPath: "/v1/adaccounts/{adAccountId}/ads",
+    updatePath: "/v1/ads/{entityId}",
+    statusUpdatePath: "/v1/ads/{entityId}",
+    deletePath: "/v1/ads/{entityId}",
+    idField: "id",
+    responseKey: "ads",
+    entityKey: "ad",
     displayName: "Ad",
-    defaultFields: [
-      "ad_id",
-      "adgroup_id",
-      "ad_name",
-      "status",
-      "creative_type",
-      "image_ids",
-      "video_id",
-      "created_time",
-    ],
-    supportsDuplicate: true,
+    defaultFields: ["id", "name", "status", "ad_squad_id", "creative_id", "type"],
+    supportsDuplicate: false,
   },
   creative: {
-    listPath: "/open_api/v1.3/creative/adcreative/get/",
-    createPath: "/open_api/v1.3/creative/adcreative/create/",
-    updatePath: "/open_api/v1.3/creative/adcreative/update/",
-    statusUpdatePath: "/open_api/v1.3/creative/adcreative/update/",
-    deletePath: "/open_api/v1.3/creative/adcreative/delete/",
-    idField: "creative_id",
-    idsField: "creative_ids",
+    listPath: "/v1/adaccounts/{adAccountId}/creatives",
+    createPath: "/v1/adaccounts/{adAccountId}/creatives",
+    updatePath: "/v1/creatives/{entityId}",
+    statusUpdatePath: "/v1/creatives/{entityId}",
+    deletePath: "/v1/creatives/{entityId}",
+    idField: "id",
+    responseKey: "creatives",
+    entityKey: "creative",
     displayName: "Creative",
     defaultFields: [
-      "creative_id",
+      "id",
+      "name",
+      "type",
       "ad_account_id",
-      "display_name",
-      "image_ids",
-      "video_id",
-      "created_time",
+      "brand_name",
+      "headline",
+      "call_to_action",
     ],
+    supportsDuplicate: false,
   },
 };
 
@@ -143,4 +144,16 @@ export function getDuplicateSupportedEntityTypes(): SnapchatEntityType[] {
 export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
   const types = getDuplicateSupportedEntityTypes();
   return types as [string, ...string[]];
+}
+
+/**
+ * Interpolate path template placeholders.
+ * e.g. interpolatePath("/v1/adaccounts/{adAccountId}/campaigns", { adAccountId: "123" })
+ * → "/v1/adaccounts/123/campaigns"
+ */
+export function interpolatePath(path: string, params: Record<string, string>): string {
+  return Object.entries(params).reduce(
+    (acc, [key, val]) => acc.replace(`{${key}}`, val),
+    path
+  );
 }
