@@ -6,12 +6,12 @@ export const campaignSetupWorkflowPrompt: Prompt = {
   arguments: [
     {
       name: "adAccountId",
-      description: "Pinterest Advertiser ID (e.g., 1234567890)",
+      description: "Pinterest Ad Account ID (e.g., 549755885175)",
       required: true,
     },
     {
       name: "objective",
-      description: "Campaign objective (e.g., TRAFFIC, APP_INSTALLS, CONVERSIONS)",
+      description: "Campaign objective (e.g., AWARENESS, CONSIDERATION, VIDEO_VIEW, CATALOG_SALES, CONVERSIONS, APP_INSTALL, SHOPPING)",
       required: false,
     },
   ],
@@ -19,13 +19,13 @@ export const campaignSetupWorkflowPrompt: Prompt = {
 
 export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
-  const objective = args?.objective || "TRAFFIC";
+  const objective = args?.objective || "AWARENESS";
 
   return `# Pinterest Campaign Setup Workflow
 
 ## Prerequisites
-- Advertiser ID: \`${adAccountId}\`
-- Verify access: \`pinterest_list_ad_accounts\`
+- Ad Account ID: \`${adAccountId}\`
+- Verify access: \`pinterest_list_advertisers\`
 
 ## Step 1: Create Campaign
 
@@ -34,15 +34,17 @@ pinterest_create_entity({
   "entityType": "campaign",
   "adAccountId": "${adAccountId}",
   "data": {
-    "campaign_name": "Your Campaign Name",
+    "name": "Your Campaign Name",
     "objective_type": "${objective}",
-    "budget_mode": "BUDGET_MODE_DAY",
-    "budget": 100
+    "status": "ACTIVE",
+    "daily_spend_cap": 50000000
   }
 })
 \`\`\`
 
-**Campaign Objectives:** TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS, LEAD_GENERATION, CATALOG_SALES, COMMUNITY_INTERACTION
+**Campaign Objectives:** AWARENESS, CONSIDERATION, VIDEO_VIEW, CATALOG_SALES, CONVERSIONS, APP_INSTALL, SHOPPING
+
+**Status values:** ACTIVE, PAUSED, ARCHIVED
 
 ## Step 2: Create Ad Group
 
@@ -51,55 +53,56 @@ pinterest_create_entity({
   "entityType": "adGroup",
   "adAccountId": "${adAccountId}",
   "data": {
+    "name": "Your Ad Group Name",
     "campaign_id": "CAMPAIGN_ID_FROM_STEP_1",
-    "adgroup_name": "Your Ad Group Name",
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
-    "budget_mode": "BUDGET_MODE_DAY",
-    "budget": 50,
-    "schedule_type": "SCHEDULE_START_END",
-    "schedule_start_time": "2026-03-01 00:00:00",
-    "schedule_end_time": "2026-12-31 23:59:59",
-    "optimize_goal": "CLICK",
-    "bid_type": "BID_TYPE_CUSTOM",
-    "bid_price": 0.5,
-    "age": ["AGE_18_24", "AGE_25_34"],
-    "gender": ["GENDER_UNLIMITED"],
-    "location_ids": ["US"]
+    "status": "ACTIVE",
+    "budget_in_micro_currency": 10000000,
+    "pacing_delivery_type": "STANDARD",
+    "bid_strategy_type": "AUTOMATIC_BID",
+    "start_time": "2026-04-01T00:00:00",
+    "targeting_spec": {
+      "age_bucket": ["35-44", "45-49"],
+      "gender": ["female"],
+      "geo": [{ "country": "US" }],
+      "interest": ["food", "fashion"]
+    }
   }
 })
 \`\`\`
 
 ## Step 3: Create Ad(s)
 
+> ⚠️ **GOTCHA:** Ads reference Pinterest Pins by pin_id — create/upload the Pin first before creating the Ad.
+
 \`\`\`json
 pinterest_create_entity({
   "entityType": "ad",
   "adAccountId": "${adAccountId}",
   "data": {
-    "adgroup_id": "ADGROUP_ID_FROM_STEP_2",
-    "ad_name": "Your Ad Name",
-    "creative_type": "SINGLE_VIDEO",
-    "video_id": "YOUR_VIDEO_ID",
-    "ad_text": "Your ad copy text (max 100 chars)",
-    "call_to_action": "LEARN_MORE",
-    "landing_page_url": "https://example.com"
+    "name": "Your Ad Name",
+    "ad_group_id": "ADGROUP_ID_FROM_STEP_2",
+    "creative_type": "REGULAR",
+    "pin_id": "YOUR_PIN_ID",
+    "status": "ACTIVE"
   }
 })
 \`\`\`
+
+**Creative types:** REGULAR, VIDEO, SHOPPING, CAROUSEL
 
 ## Step 4: Verify & Activate
 
 1. Review: \`pinterest_get_entity\` for each created entity
 2. Preview ad: \`pinterest_get_ad_preview\`
-3. Activate: \`pinterest_bulk_update_status\` with operationStatus: "ENABLE"
+3. Activate: \`pinterest_bulk_update_status\` with status: "ACTIVE"
 
 ## Common Gotchas
 
-- ⚠️ Campaigns are created in **ENABLE** status by default — use DISABLE if not ready
-- ⚠️ Ad groups require \`schedule_start_time\` when \`schedule_type\` is SCHEDULE_START_END
-- ⚠️ Video IDs must be uploaded to Pinterest Creative Library first
-- ⚠️ Budget values are in account currency (NOT cents)
-- ⚠️ All status updates use separate /status/update/ endpoints — use \`pinterest_bulk_update_status\`
+- ⚠️ **GOTCHA: Pinterest budgets use micro-currency (1 USD = 1,000,000). $50/day → daily_spend_cap: 50000000**
+- ⚠️ **GOTCHA: Ads reference Pinterest Pins by pin_id — create/upload the Pin first before creating the Ad**
+- ⚠️ **GOTCHA: Status values are ACTIVE/PAUSED/ARCHIVED (not ENABLE/DISABLE)**
+- ⚠️ Ad group budget (\`budget_in_micro_currency\`) must also be in micro-currency
+- ⚠️ \`start_time\` and \`end_time\` use ISO 8601 datetime strings (e.g., "2026-04-01T00:00:00")
 - ⚠️ Reporting has a 24-48h lag for finalized data
 `;
 }

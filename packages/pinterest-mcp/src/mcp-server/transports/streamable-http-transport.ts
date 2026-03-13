@@ -62,7 +62,8 @@ function buildPlatformConfig(
           cfg.pinterestApiBaseUrl,
           log,
           rateLimiter,
-          { reportPollIntervalMs: cfg.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts }
+          { reportPollIntervalMs: cfg.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts },
+          cfg.pinterestApiVersion
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -82,7 +83,7 @@ function buildPlatformConfig(
             cfg.pinterestApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, cfg.pinterestApiBaseUrl, log, rateLimiter, { reportPollIntervalMs: cfg.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts });
+          const services = createSessionServices(envAdapter, cfg.pinterestApiBaseUrl, log, rateLimiter, { reportPollIntervalMs: cfg.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts }, cfg.pinterestApiVersion);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -103,7 +104,8 @@ function buildPlatformConfig(
             cfgFallback.pinterestApiBaseUrl,
             log,
             rateLimiter,
-            { reportPollIntervalMs: cfgFallback.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.pinterestReportMaxPollAttempts }
+            { reportPollIntervalMs: cfgFallback.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.pinterestReportMaxPollAttempts },
+            cfgFallback.pinterestApiVersion
           );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };

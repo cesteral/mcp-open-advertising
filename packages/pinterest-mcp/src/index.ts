@@ -50,7 +50,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
     {
       reportPollIntervalMs: mcpConfig.pinterestReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.pinterestReportMaxPollAttempts,
-    }
+    },
+    mcpConfig.pinterestApiVersion
   );
 
   sessionServiceStore.set(sessionId, services);

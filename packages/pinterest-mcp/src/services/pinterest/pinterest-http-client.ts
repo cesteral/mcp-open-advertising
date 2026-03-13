@@ -56,7 +56,8 @@ export class PinterestHttpClient {
     private readonly authAdapter: PinterestAuthAdapter,
     private readonly adAccountId: string,
     private readonly baseUrl: string,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly apiVersion: string = "v5"
   ) {}
 
   /**
@@ -64,6 +65,13 @@ export class PinterestHttpClient {
    */
   get accountId(): string {
     return this.adAccountId;
+  }
+
+  /**
+   * Expose the API version (for reference and future use in path construction).
+   */
+  get version(): string {
+    return this.apiVersion;
   }
 
   /**

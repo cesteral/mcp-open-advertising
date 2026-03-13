@@ -7,87 +7,87 @@ import { getSupportedEntityTypes, type PinterestEntityType } from "../../tools/u
 const ENTITY_EXAMPLE_CONTENT: Record<PinterestEntityType, string> = {
   campaign: `# Pinterest Campaign Examples
 
-## Create a Traffic Campaign (daily budget)
+## Create an Awareness Campaign (daily budget $50/day)
 \`\`\`json
 {
   "entityType": "campaign",
-  "adAccountId": "1234567890",
+  "adAccountId": "549755885175",
   "data": {
-    "campaign_name": "Summer Sale 2026 - Traffic",
-    "objective_type": "TRAFFIC",
-    "budget_mode": "BUDGET_MODE_DAY",
-    "budget": 100
+    "name": "Spring Sale Awareness",
+    "objective_type": "AWARENESS",
+    "status": "ACTIVE",
+    "daily_spend_cap": 50000000
   }
 }
 \`\`\`
 
-## Create an App Install Campaign (lifetime budget)
+## Create a Conversions Campaign (lifetime budget)
 \`\`\`json
 {
   "entityType": "campaign",
-  "adAccountId": "1234567890",
+  "adAccountId": "549755885175",
   "data": {
-    "campaign_name": "App Install Q1 2026",
-    "objective_type": "APP_INSTALLS",
-    "budget_mode": "BUDGET_MODE_TOTAL",
-    "budget": 5000
+    "name": "Q2 2026 Conversions",
+    "objective_type": "CONVERSIONS",
+    "status": "ACTIVE",
+    "lifetime_spend_cap": 1000000000
   }
 }
 \`\`\`
 
-## Update Campaign Budget
+## Pause a Campaign
 \`\`\`json
 {
   "entityType": "campaign",
-  "adAccountId": "1234567890",
-  "entityId": "1800123456789",
+  "adAccountId": "549755885175",
+  "entityId": "549755885175",
   "data": {
-    "budget": 200
+    "status": "PAUSED"
   }
 }
 \`\`\`
+
+> **Budget note:** Pinterest uses micro-currency. $50/day = \`daily_spend_cap: 50000000\`
 `,
 
   adGroup: `# Pinterest Ad Group Examples
 
-## Create an Ad Group with Interest Targeting
+## Create an Ad Group with Audience Targeting
 \`\`\`json
 {
   "entityType": "adGroup",
-  "adAccountId": "1234567890",
+  "adAccountId": "549755885175",
   "data": {
-    "campaign_id": "1800123456789",
-    "adgroup_name": "US Gaming 18-34",
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
-    "budget_mode": "BUDGET_MODE_DAY",
-    "budget": 50,
-    "schedule_type": "SCHEDULE_START_END",
-    "schedule_start_time": "2026-03-01 00:00:00",
-    "schedule_end_time": "2026-03-31 23:59:59",
-    "optimize_goal": "CLICK",
-    "bid_type": "BID_TYPE_CUSTOM",
-    "bid_price": 0.5,
-    "age": ["AGE_18_24", "AGE_25_34"],
-    "gender": ["GENDER_UNLIMITED"],
-    "location_ids": ["US"],
-    "interest_category_ids": ["123456789"]
+    "name": "Women 25-34 US",
+    "campaign_id": "549755885175",
+    "status": "ACTIVE",
+    "budget_in_micro_currency": 10000000,
+    "pacing_delivery_type": "STANDARD",
+    "bid_strategy_type": "AUTOMATIC_BID",
+    "start_time": "2026-04-01T00:00:00",
+    "targeting_spec": {
+      "age_bucket": ["35-44", "45-49"],
+      "gender": ["female"],
+      "geo": [{ "country": "US" }],
+      "interest": ["fashion", "beauty", "lifestyle"]
+    }
   }
 }
 \`\`\`
 
-## Create an Always-On Ad Group (no schedule end)
+## Create an Always-On Ad Group (no end time)
 \`\`\`json
 {
   "entityType": "adGroup",
-  "adAccountId": "1234567890",
+  "adAccountId": "549755885175",
   "data": {
-    "campaign_id": "1800123456789",
-    "adgroup_name": "Retargeting - Website Visitors",
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
-    "budget_mode": "BUDGET_MODE_DAY",
-    "budget": 30,
-    "schedule_type": "SCHEDULE_ALWAYS",
-    "optimize_goal": "CONVERT"
+    "name": "Retargeting - Site Visitors",
+    "campaign_id": "549755885175",
+    "status": "ACTIVE",
+    "budget_in_micro_currency": 5000000,
+    "pacing_delivery_type": "STANDARD",
+    "bid_strategy_type": "MAX_BID",
+    "start_time": "2026-04-01T00:00:00"
   }
 }
 \`\`\`
@@ -95,68 +95,71 @@ const ENTITY_EXAMPLE_CONTENT: Record<PinterestEntityType, string> = {
 
   ad: `# Pinterest Ad Examples
 
-## Create a Single Video Ad
+## Create a Regular (static image) Ad
 \`\`\`json
 {
   "entityType": "ad",
-  "adAccountId": "1234567890",
+  "adAccountId": "549755885175",
   "data": {
-    "adgroup_id": "1700123456789",
-    "ad_name": "Summer Sale Video Ad",
-    "creative_type": "SINGLE_VIDEO",
-    "video_id": "v0200fg10000cekdqpbc77ue1tvq1ns0",
-    "ad_text": "Shop our Summer Sale — up to 50% off!",
-    "call_to_action": "SHOP_NOW",
-    "landing_page_url": "https://example.com/summer-sale"
+    "name": "Spring Pin Ad",
+    "ad_group_id": "2680060704746",
+    "creative_type": "REGULAR",
+    "pin_id": "1234567890",
+    "status": "ACTIVE"
   }
 }
 \`\`\`
 
-## Create a Single Image Ad
+## Create a Video Ad
 \`\`\`json
 {
   "entityType": "ad",
-  "adAccountId": "1234567890",
+  "adAccountId": "549755885175",
   "data": {
-    "adgroup_id": "1700123456789",
-    "ad_name": "Product Banner Ad",
-    "creative_type": "SINGLE_IMAGE",
-    "image_ids": ["imt0000100000011abc123"],
-    "ad_text": "Discover our new collection",
-    "call_to_action": "LEARN_MORE",
-    "landing_page_url": "https://example.com/new-arrivals"
+    "name": "Product Video Ad",
+    "ad_group_id": "2680060704746",
+    "creative_type": "VIDEO",
+    "pin_id": "9876543210",
+    "status": "ACTIVE"
   }
 }
 \`\`\`
+
+> **Note:** Ads reference Pinterest Pins by pin_id. Create/upload the Pin before creating the Ad.
 `,
 
-  creative: `# Pinterest Creative Examples
-
-## Create a Video Creative
-\`\`\`json
-{
-  "entityType": "creative",
-  "adAccountId": "1234567890",
-  "data": {
-    "display_name": "Summer Sale Video Creative",
-    "video_id": "v0200fg10000cekdqpbc77ue1tvq1ns0",
-    "ad_text": "Shop the Summer Sale — 50% off!",
-    "call_to_action": "SHOP_NOW",
-    "landing_page_url": "https://example.com/sale"
-  }
-}
-\`\`\`
+  creative: `# Pinterest Creative (Pin) Examples
 
 ## Create an Image Creative
 \`\`\`json
 {
   "entityType": "creative",
-  "adAccountId": "1234567890",
+  "adAccountId": "549755885175",
   "data": {
-    "display_name": "Product Banner Creative",
-    "image_ids": ["imt0000100000011abc123"],
-    "ad_text": "New arrivals every week",
-    "call_to_action": "LEARN_MORE"
+    "title": "Spring Sale - 50% Off",
+    "description": "Shop our Spring Sale collection — up to 50% off select items",
+    "link": "https://example.com/spring-sale",
+    "media": {
+      "source_type": "image_url",
+      "url": "https://example.com/spring-banner.jpg"
+    }
+  }
+}
+\`\`\`
+
+## Create a Video Creative
+\`\`\`json
+{
+  "entityType": "creative",
+  "adAccountId": "549755885175",
+  "data": {
+    "title": "New Collection Highlight",
+    "description": "Discover our newest arrivals for the season",
+    "link": "https://example.com/new-arrivals",
+    "media": {
+      "source_type": "video_url",
+      "url": "https://example.com/product-video.mp4"
+    }
   }
 }
 \`\`\`

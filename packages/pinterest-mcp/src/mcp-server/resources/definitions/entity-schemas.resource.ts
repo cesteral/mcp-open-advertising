@@ -5,115 +5,106 @@ import type { Resource } from "../types.js";
 import { getSupportedEntityTypes, type PinterestEntityType } from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_SCHEMA_CONTENT: Record<PinterestEntityType, string> = {
-  campaign: `# Pinterest Campaign Fields
+  campaign: `# Pinterest Campaign Schema (v5)
 
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| campaign_name | string | Campaign display name (max 512 chars) |
-| objective_type | string | Campaign objective: TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS, LEAD_GENERATION, CATALOG_SALES, COMMUNITY_INTERACTION |
-| budget_mode | string | BUDGET_MODE_DAY (daily) or BUDGET_MODE_TOTAL (lifetime) |
-| budget | number | Budget in account currency |
+\`\`\`json
+{
+  "type": "object",
+  "required": ["name", "objective_type"],
+  "properties": {
+    "name": { "type": "string", "description": "Campaign name" },
+    "objective_type": {
+      "type": "string",
+      "enum": ["AWARENESS", "CONSIDERATION", "VIDEO_VIEW", "CATALOG_SALES", "CONVERSIONS", "APP_INSTALL", "SHOPPING"],
+      "description": "Campaign objective"
+    },
+    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED"], "default": "ACTIVE" },
+    "daily_spend_cap": { "type": "integer", "description": "Daily budget cap in micro-currency (1 USD = 1000000)" },
+    "lifetime_spend_cap": { "type": "integer", "description": "Total lifetime budget in micro-currency" }
+  }
+}
+\`\`\`
 
-## Optional Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| status | string | CAMPAIGN_STATUS_ENABLE or CAMPAIGN_STATUS_DISABLE (default: CAMPAIGN_STATUS_ENABLE) |
-| roas_bid | number | Target ROAS (for ROAS optimization) |
-| is_smart_performance_campaign | boolean | Enable smart performance campaign |
-| app_promotion_type | string | DOWNLOAD_FROM_MARKET or OPEN_URL (for app objectives) |
-
-## Read-Only Fields
-campaign_id, created_time, modify_time, ad_account_id
+## Notes
+- Budgets use **micro-currency**: $50/day → \`daily_spend_cap: 50000000\`
+- Status values: ACTIVE, PAUSED, ARCHIVED (not ENABLE/DISABLE)
+- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`, \`ad_account_id\`
 `,
 
-  adGroup: `# Pinterest Ad Group Fields
+  adGroup: `# Pinterest Ad Group Schema (v5)
 
-## Required Fields (create)
+\`\`\`json
+{
+  "type": "object",
+  "required": ["name", "campaign_id", "budget_in_micro_currency"],
+  "properties": {
+    "name": { "type": "string" },
+    "campaign_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED"] },
+    "budget_in_micro_currency": { "type": "integer", "description": "Budget in micro-currency (1 USD = 1000000)" },
+    "pacing_delivery_type": { "type": "string", "enum": ["STANDARD", "ACCELERATED"] },
+    "bid_strategy_type": { "type": "string", "enum": ["AUTOMATIC_BID", "MAX_BID", "TARGET_AVG_BID"] },
+    "targeting_spec": { "type": "object", "description": "Audience targeting configuration" },
+    "start_time": { "type": "string", "format": "date-time", "description": "ISO 8601 start datetime (e.g. 2026-04-01T00:00:00)" },
+    "end_time": { "type": "string", "format": "date-time", "description": "ISO 8601 end datetime" }
+  }
+}
+\`\`\`
+
+## targeting_spec fields
 | Field | Type | Description |
 |-------|------|-------------|
-| campaign_id | string | Parent campaign ID |
-| adgroup_name | string | Ad group display name |
-| placement_type | string | PLACEMENT_TYPE_NORMAL (auto-placement) or PLACEMENT_TYPE_SEARCH |
-| budget_mode | string | BUDGET_MODE_DAY or BUDGET_MODE_TOTAL |
-| budget | number | Budget in account currency |
-| schedule_type | string | SCHEDULE_START_END or SCHEDULE_ALWAYS |
-| optimize_goal | string | CLICK, CONVERT, SHOW, REACH, VIDEO_VIEW, LEAD, APP_INSTALL |
+| age_bucket | array | Age ranges: "18-24", "25-34", "35-44", "45-49", "50-54", "55-64", "65+" |
+| gender | array | "female", "male", "unknown" |
+| geo | array | Array of objects with \`country\` (ISO 2-letter code) |
+| interest | array | Interest keywords (e.g., "food", "fashion", "travel") |
 
-## Optional Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| schedule_start_time | string | Start time (YYYY-MM-DD HH:mm:ss) — required if schedule_type=SCHEDULE_START_END |
-| schedule_end_time | string | End time (YYYY-MM-DD HH:mm:ss) |
-| bid_price | number | Bid price in account currency |
-| bid_type | string | BID_TYPE_NO_BID, BID_TYPE_CUSTOM, BID_TYPE_MAX_CONVERSION |
-| age | array | Age ranges: AGE_13_17, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_54, AGE_55_100 |
-| gender | array | GENDER_UNLIMITED, GENDER_MALE, GENDER_FEMALE |
-| location_ids | array | Array of location IDs (country codes or region IDs) |
-| interest_category_ids | array | Interest category IDs |
-| languages | array | Language codes (e.g., ["en", "zh"]) |
-| placements | array | Specific placement IDs |
-| device_platforms | array | DESKTOP or MOBILE |
-| operating_systems | array | IOS or ANDROID |
-
-## Read-Only Fields
-adgroup_id, campaign_id (inherited), created_time, modify_time
+## Notes
+- Budget is per-ad-group in micro-currency
+- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`
 `,
 
-  ad: `# Pinterest Ad Fields
+  ad: `# Pinterest Ad Schema (v5)
 
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| adgroup_id | string | Parent ad group ID |
-| ad_name | string | Ad display name |
-| creative_type | string | SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL |
+\`\`\`json
+{
+  "type": "object",
+  "required": ["name", "ad_group_id", "creative_type"],
+  "properties": {
+    "name": { "type": "string" },
+    "ad_group_id": { "type": "string" },
+    "status": { "type": "string", "enum": ["ACTIVE", "PAUSED", "ARCHIVED"] },
+    "creative_type": { "type": "string", "enum": ["REGULAR", "VIDEO", "SHOPPING", "CAROUSEL"] },
+    "pin_id": { "type": "string", "description": "ID of the Pinterest Pin to promote" }
+  }
+}
+\`\`\`
 
-## Creative Fields (one required)
-| Field | Type | Description |
-|-------|------|-------------|
-| video_id | string | Video ID from Pinterest Creative Library |
-| image_ids | array | Array of image IDs (for image/carousel ads) |
-
-## Optional Creative Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| ad_text | string | Ad copy text (max 100 chars) |
-| app_name | string | App name shown in the ad |
-| landing_page_url | string | Destination URL |
-| display_name | string | Display brand name |
-| profile_image_url | string | Brand profile image URL |
-| call_to_action | string | CTA text: LEARN_MORE, SHOP_NOW, DOWNLOAD, SIGN_UP, etc. |
-| status | string | AD_STATUS_ENABLE or AD_STATUS_DISABLE |
-
-## Read-Only Fields
-ad_id, adgroup_id (inherited), created_time, modify_time
+## Notes
+- \`pin_id\` is required — create/upload the Pinterest Pin before creating the Ad
+- Creative types: REGULAR (static image), VIDEO, SHOPPING (product pin), CAROUSEL
+- Read-only fields: \`id\`, \`created_time\`, \`updated_time\`
 `,
 
-  creative: `# Pinterest Creative Fields
+  creative: `# Pinterest Creative (Pin) Schema (v5)
 
-## Required Fields (create)
-| Field | Type | Description |
-|-------|------|-------------|
-| display_name | string | Creative display name |
+\`\`\`json
+{
+  "type": "object",
+  "required": ["title", "description"],
+  "properties": {
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "link": { "type": "string", "description": "Destination URL" },
+    "media": { "type": "object", "description": "Media asset configuration" }
+  }
+}
+\`\`\`
 
-## Creative Asset Fields (provide at least one)
-| Field | Type | Description |
-|-------|------|-------------|
-| video_id | string | Video asset ID from Creative Library |
-| image_ids | array | Array of image asset IDs |
-
-## Optional Fields
-| Field | Type | Description |
-|-------|------|-------------|
-| ad_text | string | Ad copy text |
-| call_to_action | string | CTA: LEARN_MORE, SHOP_NOW, DOWNLOAD, etc. |
-| landing_page_url | string | Destination URL |
-| profile_image_url | string | Brand profile image |
-| app_name | string | App name for app install ads |
-
-## Read-Only Fields
-creative_id, ad_account_id, created_time
+## Notes
+- A creative represents a Pinterest Pin that can be promoted as an ad
+- \`media\` object contains image or video asset references
+- Read-only fields: \`id\`, \`created_time\`, \`ad_account_id\`
 `,
 };
 

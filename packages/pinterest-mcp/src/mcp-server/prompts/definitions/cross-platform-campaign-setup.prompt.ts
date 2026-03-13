@@ -9,7 +9,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const crossPlatformCampaignSetupPrompt: Prompt = {
   name: "cross_platform_campaign_setup",
   description:
-    "Guide for setting up a coordinated multi-platform campaign across DV360 (dv360-mcp), The Trade Desk (ttd-mcp), Google Ads (gads-mcp), and Meta Ads (meta-mcp). Covers platform selection, budget allocation, naming conventions, and phased launch.",
+    "Guide for setting up a coordinated multi-platform campaign across DV360 (dv360-mcp), The Trade Desk (ttd-mcp), Google Ads (gads-mcp), Meta Ads (meta-mcp), and Pinterest (pinterest-mcp). Covers platform selection, budget allocation, naming conventions, and phased launch.",
   arguments: [
     {
       name: "totalBudget",
@@ -47,10 +47,11 @@ Choose platforms based on your objective and audience:
 
 | Objective | Recommended Platforms | Rationale |
 |-----------|----------------------|-----------|
-| **Awareness** | DV360 + Meta | DV360 for programmatic display/video reach, Meta for social reach |
-| **Consideration** | DV360 + TTD + Meta | Broad programmatic reach with social engagement |
+| **Awareness** | DV360 + Meta + Pinterest | DV360 for programmatic display/video reach, Meta & Pinterest for social/visual reach |
+| **Consideration** | DV360 + TTD + Meta + Pinterest | Broad programmatic reach with social and visual discovery engagement |
 | **Conversion** | Google Ads + Meta + TTD | Search intent (Google) + social retargeting (Meta) + programmatic (TTD) |
-| **Full-Funnel** | All 4 platforms | Maximum reach across all touchpoints |
+| **Shopping / E-commerce** | Pinterest + Meta + Google Ads | Pinterest for visual discovery/shopping intent, Meta for retargeting, Google for search |
+| **Full-Funnel** | All 5 platforms | Maximum reach across all touchpoints |
 
 ---
 
@@ -65,19 +66,21 @@ Allocate based on historical CPA/ROAS data. Use the \`cross_platform_performance
 
 | Platform | Allocation | Budget |
 |----------|-----------|--------|
-| DV360 | 25% | \$${totalBudget} × 0.25 |
-| TTD | 25% | \$${totalBudget} × 0.25 |
-| Google Ads | 25% | \$${totalBudget} × 0.25 |
-| Meta | 25% | \$${totalBudget} × 0.25 |
+| DV360 | 20% | \$${totalBudget} × 0.20 |
+| TTD | 20% | \$${totalBudget} × 0.20 |
+| Google Ads | 20% | \$${totalBudget} × 0.20 |
+| Meta | 20% | \$${totalBudget} × 0.20 |
+| Pinterest | 20% | \$${totalBudget} × 0.20 |
 
 ### Objective-Weighted
 
-| Platform | Awareness | Consideration | Conversion |
-|----------|-----------|---------------|------------|
-| DV360 | 35% | 25% | 15% |
-| TTD | 25% | 25% | 20% |
-| Google Ads | 10% | 20% | 40% |
-| Meta | 30% | 30% | 25% |
+| Platform | Awareness | Consideration | Conversion | Shopping |
+|----------|-----------|---------------|------------|----------|
+| DV360 | 30% | 20% | 15% | 5% |
+| TTD | 20% | 20% | 20% | 10% |
+| Google Ads | 10% | 20% | 40% | 25% |
+| Meta | 25% | 25% | 20% | 30% |
+| Pinterest | 15% | 15% | 5% | 30% |
 
 ---
 
@@ -92,6 +95,7 @@ Use consistent naming across all platforms for easy cross-platform tracking:
 - \`Acme_Conv_TTD_US_Retargeting_202603\`
 - \`Acme_Conv_GADS_US_Search_202603\`
 - \`Acme_Conv_META_US_Lookalike_202603\`
+- \`Acme_Aware_PIN_US_Shopping_202603\`
 
 ---
 
@@ -149,18 +153,36 @@ Key steps:
 
 ⚠️ **Meta budget values are in cents** (5000 = $50.00)
 
+### Pinterest (via pinterest-mcp)
+
+Use the \`pinterest_campaign_setup_workflow\` prompt for detailed guidance.
+
+Key steps:
+1. Create Campaign (ACTIVE or PAUSED)
+2. Create Ad Groups with targeting_spec
+3. Upload/identify Pinterest Pin to promote
+4. Create Ads referencing the Pin by pin_id
+5. Activate via \`pinterest_bulk_update_status\`
+
+⚠️ **Pinterest budget values are in micro-currency** (50000000 = $50.00)
+
+Best for: E-commerce, lifestyle, food/beauty brands — high visual discovery and shopping intent
+
 ---
 
 ## Step 5: Budget Value Reference
 
 Critical — each platform uses different units:
 
-| Platform | Unit | $100.00 Budget | $5.00 Bid |
-|----------|------|---------------|-----------|
-| **DV360** | Micros | 100000000 | 5000000 |
-| **TTD** | Dollars | 100.00 | 5.00 |
-| **Google Ads** | Micros | 100000000 | 5000000 |
-| **Meta** | Cents | 10000 | 500 |
+| Platform | Unit | $100.00 Budget | $5.00 Bid | Best For |
+|----------|------|---------------|-----------|----------|
+| **DV360** | Micros | 100000000 | 5000000 | Programmatic display/video |
+| **TTD** | Dollars | 100.00 | 5.00 | Programmatic DSP |
+| **Google Ads** | Micros | 100000000 | 5000000 | Search intent |
+| **Meta** | Cents | 10000 | 500 | Social retargeting |
+| **Pinterest** | Micro-currency | 100000000 | 5000000 | Visual discovery, shopping intent |
+
+**Pinterest example:** $50/day → \`daily_spend_cap: 50000000\`
 
 ---
 

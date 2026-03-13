@@ -22,13 +22,15 @@ export function createSessionServices(
   baseUrl: string,
   logger: Logger,
   rateLimiter: RateLimiter,
-  sessionConfig: PinterestSessionConfig
+  sessionConfig: PinterestSessionConfig,
+  apiVersion: string = "v5"
 ): SessionServices {
   const httpClient = new PinterestHttpClient(
     authAdapter,
     authAdapter.adAccountId,
     baseUrl,
-    logger
+    logger,
+    apiVersion
   );
   const pinterestService = new PinterestService(rateLimiter, httpClient, logger);
   const pinterestReportingService = new PinterestReportingService(
