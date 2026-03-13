@@ -13,56 +13,37 @@ const SNAPCHAT_RETRY_CONFIG: RetryConfig = {
   platformName: "Snapchat",
 };
 
-/** Snapchat standard API response shape */
-interface SnapchatApiResponse {
-  code: number;
-  message: string;
-  data: unknown;
+/** Snapchat response envelope shape */
+interface SnapchatEnvelope {
+  request_status: string;
   request_id?: string;
+  display_message?: string;
+  error_code?: number;
+  [key: string]: unknown;
 }
 
-/** Snapchat error codes that indicate token expiry or auth failure */
-const AUTH_ERROR_CODES = new Set([40001, 40002, 40013]);
-
-/** Snapchat error codes that indicate rate limiting */
-const RATE_LIMIT_CODES = new Set([40100, 40101]);
-
-function isRetryableSnapchatError(snapchatCode: number, httpStatus: number): boolean {
-  // Auth errors (40001, 40002, 40013) are not transient — fail fast, no retry
-  return (
-    httpStatus === 429 ||
-    httpStatus >= 500 ||
-    RATE_LIMIT_CODES.has(snapchatCode)
-  );
-}
-
-function mapSnapchatErrorToJsonRpc(snapchatCode: number, httpStatus: number): JsonRpcErrorCode {
-  if (AUTH_ERROR_CODES.has(snapchatCode) || httpStatus === 401) {
-    return JsonRpcErrorCode.Unauthorized;
-  }
-  if (RATE_LIMIT_CODES.has(snapchatCode) || httpStatus === 429) {
-    return JsonRpcErrorCode.RateLimited;
-  }
-  if (httpStatus === 403) {
-    return JsonRpcErrorCode.Forbidden;
-  }
-  if (httpStatus >= 500 || snapchatCode >= 50000) {
-    return JsonRpcErrorCode.ServiceUnavailable;
-  }
+function mapHttpStatusToJsonRpc(httpStatus: number): JsonRpcErrorCode {
+  if (httpStatus === 401) return JsonRpcErrorCode.Unauthorized;
+  if (httpStatus === 403) return JsonRpcErrorCode.Forbidden;
+  if (httpStatus === 429) return JsonRpcErrorCode.RateLimited;
+  if (httpStatus >= 500) return JsonRpcErrorCode.ServiceUnavailable;
   return JsonRpcErrorCode.InvalidRequest;
 }
 
+function isRetryableStatus(httpStatus: number): boolean {
+  return httpStatus === 429 || httpStatus >= 500;
+}
+
 /**
- * HTTP client for Snapchat Marketing API requests.
+ * HTTP client for Snapchat Ads API requests.
  *
- * Handles authentication via Bearer token, automatic ad_account_id injection,
- * retry with exponential backoff, and Snapchat-specific error parsing.
+ * Handles authentication via Bearer token, retry with exponential backoff,
+ * and Snapchat-specific response envelope parsing.
  *
  * Key Snapchat patterns:
- * - GET requests: ad_account_id goes in query params
- * - POST requests: ad_account_id goes in JSON body
- * - DELETE requests: ad_account_id goes in JSON body
- * - Response shape: { code: 0, message: "OK", data: {...} }
+ * - ad_account_id is in URL paths (not injected into query params or body)
+ * - Response: { request_status: "SUCCESS"|"FAILED", <entityKey>s: [...] }
+ * - Updates use PUT, deletes use DELETE on entity-specific paths
  */
 export class SnapchatHttpClient {
   constructor(
@@ -72,74 +53,57 @@ export class SnapchatHttpClient {
     private readonly logger: Logger
   ) {}
 
-  /**
-   * Make an authenticated GET request.
-   * ad_account_id is automatically injected into query params.
-   */
+  /** Make an authenticated GET request. Returns raw Snapchat envelope. */
   async get(
     path: string,
     params?: Record<string, string>,
     context?: RequestContext
   ): Promise<unknown> {
-    const url = this.buildUrl(path, {
-      ad_account_id: this.adAccountId,
-      ...params,
-    });
+    const url = this.buildUrl(path, params);
     return this.executeRequest(url, context, { method: "GET" });
   }
 
-  /**
-   * Make an authenticated POST request with JSON body.
-   * ad_account_id is automatically injected into the body.
-   */
+  /** Make an authenticated POST request with JSON body. Returns raw Snapchat envelope. */
   async post(
     path: string,
-    data?: Record<string, unknown>,
+    data?: Record<string, unknown> | unknown[],
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    const body = JSON.stringify({
-      ad_account_id: this.adAccountId,
-      ...data,
-    });
-
     return this.executeRequest(url, context, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
   }
 
-  /**
-   * Make an authenticated DELETE request with JSON body.
-   * ad_account_id is automatically injected into the body.
-   */
-  async delete(
+  /** Make an authenticated PUT request with JSON body. Returns raw Snapchat envelope. */
+  async put(
     path: string,
     data?: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    const body = JSON.stringify({
-      ad_account_id: this.adAccountId,
-      ...data,
-    });
-
     return this.executeRequest(url, context, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body,
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+  }
+
+  /** Make an authenticated DELETE request. Returns raw Snapchat envelope. */
+  async delete(
+    path: string,
+    _params?: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const url = this.buildUrl(path);
+    return this.executeRequest(url, context, { method: "DELETE" });
   }
 
   /**
    * Make an authenticated POST request with multipart/form-data body.
    * Used for media uploads (images, videos) to Snapchat Marketing API.
-   * ad_account_id is automatically included as a form field.
    */
   async postMultipart(
     path: string,
@@ -155,8 +119,7 @@ export class SnapchatHttpClient {
     return withSnapchatApiSpan("api.multipart.POST", path, async (span) => {
       span.setAttribute("http.request.method", "POST");
       span.setAttribute("http.url", url);
-      const allFields = { ad_account_id: this.adAccountId, ...fields };
-      const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
+      const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
       const timeoutMs = SNAPCHAT_RETRY_CONFIG.timeoutMs ?? 30_000;
       const accessToken = await this.authAdapter.getAccessToken();
       const response = await fetchWithTimeout(url, timeoutMs, context, {
@@ -168,23 +131,26 @@ export class SnapchatHttpClient {
         body,
       });
       span.setAttribute("http.response.status_code", response.status);
+
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
         throw new McpError(
-          mapSnapchatErrorToJsonRpc(0, response.status),
+          mapHttpStatusToJsonRpc(response.status),
           `Snapchat API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
           { requestId: context?.requestId, httpStatus: response.status, url }
         );
       }
-      const json = (await response.json()) as SnapchatApiResponse;
-      if (json.code !== 0) {
+
+      const json = (await response.json()) as SnapchatEnvelope;
+      if (json.request_status === "FAILED") {
         throw new McpError(
-          mapSnapchatErrorToJsonRpc(json.code, response.status),
-          json.message || `Snapchat API error: code=${json.code}`,
-          { requestId: context?.requestId, snapchatCode: json.code, url }
+          JsonRpcErrorCode.InvalidRequest,
+          json.display_message ?? `Snapchat API error: request_status=FAILED`,
+          { requestId: context?.requestId, errorCode: json.error_code, url }
         );
       }
-      return json.data;
+
+      return json;
     });
   }
 
@@ -241,22 +207,17 @@ export class SnapchatHttpClient {
         }
       );
 
+      setSpanAttribute("http.response.status_code", response.status);
+
       if (!response.ok) {
-        // HTTP-level error before we can read JSON
         const errorBody = await response.text().catch(() => "");
         const mcpError = new McpError(
-          mapSnapchatErrorToJsonRpc(0, response.status),
+          mapHttpStatusToJsonRpc(response.status),
           `Snapchat API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          {
-            requestId: context?.requestId,
-            httpStatus: response.status,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
-          }
+          { requestId: context?.requestId, httpStatus: response.status, url, method: options?.method ?? "GET", attempt }
         );
 
-        if (!isRetryableSnapchatError(0, response.status) || attempt >= maxRetries) {
+        if (!isRetryableStatus(response.status) || attempt >= maxRetries) {
           throw mcpError;
         }
 
@@ -265,56 +226,22 @@ export class SnapchatHttpClient {
         continue;
       }
 
-      // Parse Snapchat JSON response
-      setSpanAttribute("http.response.status_code", response.status);
-      const json = (await response.json()) as SnapchatApiResponse;
+      const json = (await response.json()) as SnapchatEnvelope;
 
-      if (json.code !== 0) {
-        const jsonRpcCode = mapSnapchatErrorToJsonRpc(json.code, response.status);
-        const mcpError = new McpError(
-          jsonRpcCode,
-          json.message || `Snapchat API error: code=${json.code}`,
-          {
-            requestId: context?.requestId,
-            snapchatCode: json.code,
-            snapchatRequestId: json.request_id,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
-          }
+      if (json.request_status === "FAILED") {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidRequest,
+          json.display_message ?? `Snapchat API error: request_status=FAILED`,
+          { requestId: context?.requestId, errorCode: json.error_code, url, method: options?.method ?? "GET", attempt }
         );
-
-        if (!isRetryableSnapchatError(json.code, response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-
-        this.logger.warn(
-          {
-            url,
-            method: options?.method ?? "GET",
-            snapchatCode: json.code,
-            snapchatMessage: json.message,
-            attempt: attempt + 1,
-            maxRetries,
-            requestId: context?.requestId,
-          },
-          "Retrying Snapchat API request after transient error"
-        );
-
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
       }
 
-      return json.data;
+      return json;
     }
 
     throw (
       lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
-        requestId: context?.requestId,
-      })
+      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", { requestId: context?.requestId })
     );
   }
 
@@ -322,10 +249,7 @@ export class SnapchatHttpClient {
     const initialBackoffMs = SNAPCHAT_RETRY_CONFIG.initialBackoffMs ?? 2_000;
     const maxBackoffMs = SNAPCHAT_RETRY_CONFIG.maxBackoffMs ?? 30_000;
 
-    let delayMs = Math.min(
-      initialBackoffMs * Math.pow(2, attempt),
-      maxBackoffMs
-    );
+    let delayMs = Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs);
 
     const retryAfter = response.headers.get("Retry-After");
     if (retryAfter) {
