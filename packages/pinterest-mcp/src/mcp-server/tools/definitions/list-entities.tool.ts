@@ -6,13 +6,13 @@ import type { SdkContext } from "../../../types-global/mcp.js";
 
 const TOOL_NAME = "pinterest_list_entities";
 const TOOL_TITLE = "List Pinterest Ads Entities";
-const TOOL_DESCRIPTION = `List Pinterest Ads entities with optional filtering and page-based pagination.
+const TOOL_DESCRIPTION = `List Pinterest Ads entities with optional filtering and cursor-based pagination.
 
 **Entity Hierarchy:** Advertiser > Campaign > Ad Group > Ad (+ Creatives)
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-All entities are scoped to an advertiser account. Pagination uses \`page\` (1-based) and \`pageSize\`.`;
+All entities are scoped to an advertiser account. Pagination uses cursor-based \`bookmark\` tokens.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -23,35 +23,33 @@ export const ListEntitiesInputSchema = z
       .string()
       .min(1)
       .describe("Pinterest Advertiser ID"),
-    filters: z
-      .record(z.unknown())
+    campaignId: z
+      .string()
       .optional()
-      .describe("Optional filter criteria (e.g., { status: 'ACTIVE' })"),
-    page: z
-      .number()
-      .int()
-      .min(1)
+      .describe("Filter by campaign ID (for adGroup/ad entity types)"),
+    adGroupId: z
+      .string()
       .optional()
-      .default(1)
-      .describe("Page number (1-based, default 1)"),
+      .describe("Filter by ad group ID (for ad entity type)"),
+    bookmark: z
+      .string()
+      .optional()
+      .describe("Cursor for next page (from previous response's bookmark)"),
     pageSize: z
       .number()
       .int()
       .min(1)
-      .max(1000)
+      .max(250)
       .optional()
-      .default(10)
-      .describe("Number of entities per page (default 10, max 1000)"),
+      .default(25)
+      .describe("Number of entities per page (default 25, max 250)"),
   })
   .describe("Parameters for listing Pinterest Ads entities");
 
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    page: z.number().describe("Current page number"),
-    pageSize: z.number().describe("Number of results per page"),
-    totalNumber: z.number().describe("Total number of entities"),
-    totalPage: z.number().describe("Total number of pages"),
+    bookmark: z.string().nullable().describe("Cursor for next page (null if no more pages)"),
     has_more: z.boolean().describe("Whether more pages are available"),
     timestamp: z.string().datetime(),
   })
@@ -69,29 +67,28 @@ export async function listEntitiesLogic(
 
   const result = await pinterestService.listEntities(
     input.entityType as PinterestEntityType,
-    input.filters,
-    input.page,
+    {
+      adAccountId: input.adAccountId,
+      campaignId: input.campaignId,
+      adGroupId: input.adGroupId,
+    },
+    input.bookmark,
     input.pageSize,
     context
   );
 
-  const { pageInfo } = result;
-
   return {
     entities: result.entities as Record<string, unknown>[],
-    page: pageInfo.page,
-    pageSize: pageInfo.page_size,
-    totalNumber: pageInfo.total_number,
-    totalPage: pageInfo.total_page,
-    has_more: pageInfo.page < pageInfo.total_page,
+    bookmark: result.pageInfo.bookmark,
+    has_more: result.pageInfo.bookmark != null,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.entities.length} entities (page ${result.page}/${result.totalPage}, total ${result.totalNumber})`;
+  const summary = `Found ${result.entities.length} entities`;
   const pagination = result.has_more
-    ? `\n\nMore results available. Use page: ${result.page + 1}`
+    ? `\n\nMore results available. Use bookmark: ${result.bookmark}`
     : "";
   const entities =
     result.entities.length > 0
@@ -120,20 +117,27 @@ export const listEntitiesTool = {
   },
   inputExamples: [
     {
-      label: "List active campaigns",
+      label: "List campaigns",
       input: {
         entityType: "campaign",
         adAccountId: "1234567890",
-        filters: { status: "CAMPAIGN_STATUS_ENABLE" },
-        page: 1,
-        pageSize: 10,
+        pageSize: 25,
       },
     },
     {
-      label: "List ad groups",
+      label: "List ad groups in a campaign",
       input: {
         entityType: "adGroup",
         adAccountId: "1234567890",
+        campaignId: "1800123456789",
+      },
+    },
+    {
+      label: "List next page using bookmark",
+      input: {
+        entityType: "campaign",
+        adAccountId: "1234567890",
+        bookmark: "ZmVlZDE%3D",
       },
     },
   ],

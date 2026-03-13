@@ -56,6 +56,7 @@ export async function createEntityLogic(
 
   const entity = await pinterestService.createEntity(
     input.entityType as PinterestEntityType,
+    { adAccountId: input.adAccountId },
     input.data,
     context
   );

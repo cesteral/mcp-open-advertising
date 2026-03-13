@@ -56,6 +56,7 @@ export async function updateEntityLogic(
 
   await pinterestService.updateEntity(
     input.entityType as PinterestEntityType,
+    { adAccountId: input.adAccountId },
     input.entityId,
     input.data,
     context

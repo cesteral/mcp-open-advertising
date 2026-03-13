@@ -74,6 +74,7 @@ export async function adjustBidsLogic(
   const { pinterestService } = resolveSessionServices(sdkContext);
 
   const result = await pinterestService.adjustBids(
+    { adAccountId: input.adAccountId },
     input.adjustments.map((a) => ({
       adGroupId: a.adGroupId,
       bidPrice: a.bidPrice,

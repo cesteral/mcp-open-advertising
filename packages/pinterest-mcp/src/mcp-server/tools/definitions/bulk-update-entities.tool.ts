@@ -64,6 +64,7 @@ export async function bulkUpdateEntitiesLogic(
 
   const bulkResult = await pinterestService.bulkUpdateEntities(
     input.entityType as PinterestEntityType,
+    { adAccountId: input.adAccountId },
     input.items,
     context
   );

@@ -65,6 +65,7 @@ export async function bulkUpdateStatusLogic(
 
   const result = await pinterestService.bulkUpdateStatus(
     input.entityType as PinterestEntityType,
+    { adAccountId: input.adAccountId },
     input.entityIds,
     input.operationStatus,
     context

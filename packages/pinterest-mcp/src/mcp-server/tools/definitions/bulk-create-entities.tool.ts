@@ -59,6 +59,7 @@ export async function bulkCreateEntitiesLogic(
 
   const bulkResult = await pinterestService.bulkCreateEntities(
     input.entityType as PinterestEntityType,
+    { adAccountId: input.adAccountId },
     input.items,
     context
   );

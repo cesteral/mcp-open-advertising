@@ -14,24 +14,24 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 
 const pinterestService = {
   listEntities: vi.fn(async () => ({
-    entities: [{ campaign_id: "123" }],
-    pageInfo: { page: 1, page_size: 10, total_number: 1, total_page: 1 },
+    entities: [{ id: "123", name: "Campaign A" }],
+    pageInfo: { bookmark: null },
   })),
-  getEntity: vi.fn(async () => ({ campaign_id: "123" })),
-  createEntity: vi.fn(async () => ({ campaign_id: "new" })),
-  updateEntity: vi.fn(async () => ({})),
+  getEntity: vi.fn(async () => ({ id: "123", name: "Campaign A" })),
+  createEntity: vi.fn(async () => ({ id: "new", name: "New Campaign" })),
+  updateEntity: vi.fn(async () => ({ id: "123" })),
   deleteEntity: vi.fn(async () => ({})),
-  listAdAccounts: vi.fn(async () => ({ list: [{ ad_account_id: "123" }] })),
-  bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
+  listAdAccounts: vi.fn(async () => ({ items: [{ id: "123" }], bookmark: null })),
+  bulkUpdateStatus: vi.fn(async (_entityType: string, _filters: unknown, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),
-  bulkCreateEntities: vi.fn(async (_entityType: string, items: unknown[]) => ({
+  bulkCreateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: unknown[]) => ({
     results: items.map(() => ({ success: true, entity: { id: "new" } })),
   })),
-  bulkUpdateEntities: vi.fn(async (_entityType: string, items: Array<{ entityId: string }>) => ({
+  bulkUpdateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: Array<{ entityId: string }>) => ({
     results: items.map((item) => ({ entityId: item.entityId, success: true })),
   })),
-  adjustBids: vi.fn(async (adjustments: Array<{ adGroupId: string }>) => ({
+  adjustBids: vi.fn(async (_filters: unknown, adjustments: Array<{ adGroupId: string }>) => ({
     results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
   })),
   searchTargeting: vi.fn(async () => ({ list: [{ id: "targeting-1" }] })),

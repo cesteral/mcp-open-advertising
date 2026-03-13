@@ -70,14 +70,15 @@ describe("PinterestHttpClient", () => {
   }
 
   describe("GET requests", () => {
-    it("injects ad_account_id into query params", async () => {
+    it("passes query params to the URL", async () => {
       mockPinterestSuccessResponse({ items: [], bookmark: null });
 
       await client.get("/ad_accounts/549755813599/campaigns", { order: "ASCENDING" });
 
       const calledUrl = mockFetchWithTimeout.mock.calls[0][0] as string;
-      expect(calledUrl).toContain(`ad_account_id=${AD_ACCOUNT_ID}`);
       expect(calledUrl).toContain("order=ASCENDING");
+      // v5: adAccountId is in the path, NOT auto-injected as query param
+      expect(calledUrl).not.toContain("ad_account_id=");
     });
 
     it("sets Authorization: Bearer header", async () => {
@@ -134,19 +135,20 @@ describe("PinterestHttpClient", () => {
   });
 
   describe("POST requests", () => {
-    it("injects ad_account_id into JSON body", async () => {
-      mockPinterestSuccessResponse({ id: "687201361754", name: "New Campaign" });
+    it("serializes body as JSON without injecting ad_account_id", async () => {
+      mockPinterestSuccessResponse({ items: [{ id: "687201361754", name: "New Campaign" }] });
 
-      await client.post("/ad_accounts/549755813599/campaigns", {
-        name: "New Campaign",
-        objective_type: "AWARENESS",
-      });
+      await client.post("/ad_accounts/549755813599/campaigns", [
+        { name: "New Campaign", objective_type: "AWARENESS" },
+      ]);
 
       const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
       const body = JSON.parse(options.body as string);
-      expect(body.ad_account_id).toBe(AD_ACCOUNT_ID);
-      expect(body.name).toBe("New Campaign");
-      expect(body.objective_type).toBe("AWARENESS");
+      // v5: body is array, adAccountId is in the URL path — NOT auto-injected
+      expect(Array.isArray(body)).toBe(true);
+      expect(body[0].name).toBe("New Campaign");
+      expect(body[0].objective_type).toBe("AWARENESS");
+      expect(body[0].ad_account_id).toBeUndefined();
     });
 
     it("sets Content-Type: application/json header", async () => {
@@ -181,15 +183,21 @@ describe("PinterestHttpClient", () => {
   });
 
   describe("DELETE requests", () => {
-    it("injects ad_account_id into body and uses DELETE method", async () => {
+    it("uses DELETE method and passes params as query string", async () => {
       mockPinterestSuccessResponse({});
 
-      await client.delete("/ad_accounts/549755813599/campaigns/687201361754");
+      await client.delete(
+        "/ad_accounts/549755813599/campaigns",
+        { campaign_ids: "687201361754,687201361755" }
+      );
 
+      const calledUrl = mockFetchWithTimeout.mock.calls[0][0] as string;
       const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
-      const body = JSON.parse(options.body as string);
-      expect(body.ad_account_id).toBe(AD_ACCOUNT_ID);
+      // v5: IDs go in query params, not body
       expect(options.method).toBe("DELETE");
+      expect(calledUrl).toContain("campaign_ids=687201361754%2C687201361755");
+      // No body for DELETE
+      expect(options.body).toBeUndefined();
     });
   });
 

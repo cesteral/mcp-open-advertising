@@ -39,16 +39,17 @@ function mapHttpStatusToJsonRpc(httpStatus: number): JsonRpcErrorCode {
 /**
  * HTTP client for Pinterest Marketing API v5 requests.
  *
- * Handles authentication via Bearer token, automatic ad_account_id injection,
- * retry with exponential backoff, and Pinterest-specific error parsing.
+ * Handles authentication via Bearer token, retry with exponential backoff,
+ * and Pinterest-specific error parsing.
  *
  * Pinterest v5 uses standard HTTP status codes — NO { code, data } response envelope.
  * Successful responses return data at the top level (e.g. { items: [...], bookmark: "..." }).
  *
- * Key Pinterest patterns:
- * - GET requests: ad_account_id goes in query params
- * - POST requests: ad_account_id goes in JSON body
- * - DELETE requests: ad_account_id goes in JSON body
+ * Key Pinterest v5 patterns:
+ * - ad_account_id is in the URL path (interpolated before calling these methods)
+ * - GET requests: additional filters go in query params
+ * - POST/PATCH requests: body is an array of entity objects
+ * - DELETE requests: entity IDs go in query params
  */
 export class PinterestHttpClient {
   constructor(
@@ -59,35 +60,35 @@ export class PinterestHttpClient {
   ) {}
 
   /**
+   * Expose the stored ad account ID (useful for callers that need it for path interpolation).
+   */
+  get accountId(): string {
+    return this.adAccountId;
+  }
+
+  /**
    * Make an authenticated GET request.
-   * ad_account_id is automatically injected into query params.
    */
   async get(
     path: string,
     params?: Record<string, string>,
     context?: RequestContext
   ): Promise<unknown> {
-    const url = this.buildUrl(path, {
-      ad_account_id: this.adAccountId,
-      ...params,
-    });
+    const url = this.buildUrl(path, params);
     return this.executeRequest(url, context, { method: "GET" });
   }
 
   /**
    * Make an authenticated POST request with JSON body.
-   * ad_account_id is automatically injected into the body.
+   * Body can be an object or an array (Pinterest v5 create/update use array bodies).
    */
   async post(
     path: string,
-    data?: Record<string, unknown>,
+    data?: unknown,
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    const body = JSON.stringify({
-      ad_account_id: this.adAccountId,
-      ...data,
-    });
+    const body = JSON.stringify(data ?? {});
 
     return this.executeRequest(url, context, {
       method: "POST",
@@ -99,22 +100,19 @@ export class PinterestHttpClient {
   }
 
   /**
-   * Make an authenticated DELETE request with JSON body.
-   * ad_account_id is automatically injected into the body.
+   * Make an authenticated PATCH request with JSON body.
+   * Pinterest v5 uses PATCH for bulk updates (body is an array of partial entity objects).
    */
-  async delete(
+  async patch(
     path: string,
-    data?: Record<string, unknown>,
+    data?: unknown,
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    const body = JSON.stringify({
-      ad_account_id: this.adAccountId,
-      ...data,
-    });
+    const body = JSON.stringify(data ?? {});
 
     return this.executeRequest(url, context, {
-      method: "DELETE",
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
@@ -123,9 +121,24 @@ export class PinterestHttpClient {
   }
 
   /**
+   * Make an authenticated DELETE request.
+   * Pinterest v5 delete endpoints use query params for entity IDs (e.g. ?campaign_ids=123,456).
+   */
+  async delete(
+    path: string,
+    params?: Record<string, string>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const url = this.buildUrl(path, params);
+
+    return this.executeRequest(url, context, {
+      method: "DELETE",
+    });
+  }
+
+  /**
    * Make an authenticated POST request with multipart/form-data body.
    * Used for media uploads (images, videos) to Pinterest Marketing API.
-   * ad_account_id is automatically included as a form field.
    */
   async postMultipart(
     path: string,
@@ -141,8 +154,7 @@ export class PinterestHttpClient {
     return withPinterestApiSpan("api.multipart.POST", path, async (span) => {
       span.setAttribute("http.request.method", "POST");
       span.setAttribute("http.url", url);
-      const allFields = { ad_account_id: this.adAccountId, ...fields };
-      const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
+      const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
       const timeoutMs = PINTEREST_RETRY_CONFIG.timeoutMs ?? 30_000;
       const accessToken = await this.authAdapter.getAccessToken();
       const response = await fetchWithTimeout(url, timeoutMs, context, {

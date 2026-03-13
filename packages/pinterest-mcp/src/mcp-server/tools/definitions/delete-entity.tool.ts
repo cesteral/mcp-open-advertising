@@ -51,6 +51,7 @@ export async function deleteEntityLogic(
 
   await pinterestService.deleteEntity(
     input.entityType as PinterestEntityType,
+    { adAccountId: input.adAccountId },
     input.entityIds,
     context
   );

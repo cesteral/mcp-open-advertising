@@ -50,6 +50,7 @@ export async function getDeliveryEstimateLogic(
   const { pinterestService } = resolveSessionServices(sdkContext);
 
   const estimate = await pinterestService.getAudienceEstimate(
+    { adAccountId: input.adAccountId },
     input.targetingConfig,
     context
   );

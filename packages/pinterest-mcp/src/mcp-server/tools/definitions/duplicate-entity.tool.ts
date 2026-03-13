@@ -54,6 +54,7 @@ export async function duplicateEntityLogic(
 
   const newEntity = await pinterestService.duplicateEntity(
     input.entityType as PinterestEntityType,
+    { adAccountId: input.adAccountId },
     input.entityId,
     input.options,
     context

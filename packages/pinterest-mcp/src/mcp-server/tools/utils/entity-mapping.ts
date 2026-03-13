@@ -49,7 +49,7 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
       "created_time",
       "updated_time",
     ],
-    supportsDuplicate: false,
+    supportsDuplicate: true,
   },
   adGroup: {
     listPath: "/v5/ad_accounts/{adAccountId}/ad_groups",

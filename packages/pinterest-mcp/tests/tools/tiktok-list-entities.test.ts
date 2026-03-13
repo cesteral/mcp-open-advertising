@@ -43,19 +43,16 @@ describe("pinterest_list_entities tool", () => {
   const baseSdkContext = { sessionId: "test-session" } as any;
 
   describe("listEntitiesLogic()", () => {
-    it("returns formatted entity list with pagination info", async () => {
+    it("returns formatted entity list with bookmark pagination info", async () => {
       const mockEntities = [
-        { campaign_id: "1800000001", campaign_name: "Campaign A", status: "CAMPAIGN_STATUS_ENABLE" },
-        { campaign_id: "1800000002", campaign_name: "Campaign B", status: "CAMPAIGN_STATUS_DISABLE" },
+        { id: "687201361754", name: "Campaign A", status: "ACTIVE" },
+        { id: "687201361755", name: "Campaign B", status: "PAUSED" },
       ];
 
       mockListEntities.mockResolvedValueOnce({
         entities: mockEntities,
         pageInfo: {
-          page: 1,
-          page_size: 10,
-          total_number: 2,
-          total_page: 1,
+          bookmark: null,
         },
       });
 
@@ -63,29 +60,23 @@ describe("pinterest_list_entities tool", () => {
         {
           entityType: "campaign",
           adAccountId: "1234567890",
-          page: 1,
-          pageSize: 10,
+          pageSize: 25,
         },
         baseContext,
         baseSdkContext
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.page).toBe(1);
-      expect(result.totalNumber).toBe(2);
-      expect(result.totalPage).toBe(1);
+      expect(result.bookmark).toBeNull();
       expect(result.has_more).toBe(false);
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates has_more when more pages available", async () => {
+    it("indicates has_more when bookmark is present", async () => {
       mockListEntities.mockResolvedValueOnce({
-        entities: [{ campaign_id: "1800000001" }],
+        entities: [{ id: "687201361754" }],
         pageInfo: {
-          page: 1,
-          page_size: 1,
-          total_number: 5,
-          total_page: 5,
+          bookmark: "ZmVlZDE%3D",
         },
       });
 
@@ -93,7 +84,6 @@ describe("pinterest_list_entities tool", () => {
         {
           entityType: "campaign",
           adAccountId: "1234567890",
-          page: 1,
           pageSize: 1,
         },
         baseContext,
@@ -101,20 +91,20 @@ describe("pinterest_list_entities tool", () => {
       );
 
       expect(result.has_more).toBe(true);
+      expect(result.bookmark).toBe("ZmVlZDE%3D");
     });
 
-    it("passes filters to service when provided", async () => {
+    it("passes filters object to service", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [],
-        pageInfo: { page: 1, page_size: 10, total_number: 0, total_page: 0 },
+        pageInfo: { bookmark: null },
       });
 
       await listEntitiesLogic(
         {
           entityType: "adGroup",
           adAccountId: "1234567890",
-          filters: { status: "ACTIVE" },
-          page: 2,
+          campaignId: "1800000001",
           pageSize: 5,
         },
         baseContext,
@@ -123,22 +113,49 @@ describe("pinterest_list_entities tool", () => {
 
       expect(mockListEntities).toHaveBeenCalledWith(
         "adGroup",
-        { status: "ACTIVE" },
-        2,
+        {
+          adAccountId: "1234567890",
+          campaignId: "1800000001",
+          adGroupId: undefined,
+        },
+        undefined,
         5,
+        baseContext
+      );
+    });
+
+    it("passes bookmark cursor to service when provided", async () => {
+      mockListEntities.mockResolvedValueOnce({
+        entities: [],
+        pageInfo: { bookmark: null },
+      });
+
+      await listEntitiesLogic(
+        {
+          entityType: "campaign",
+          adAccountId: "1234567890",
+          bookmark: "ZmVlZDE%3D",
+          pageSize: 25,
+        },
+        baseContext,
+        baseSdkContext
+      );
+
+      expect(mockListEntities).toHaveBeenCalledWith(
+        "campaign",
+        expect.objectContaining({ adAccountId: "1234567890" }),
+        "ZmVlZDE%3D",
+        25,
         baseContext
       );
     });
   });
 
   describe("listEntitiesResponseFormatter()", () => {
-    it("formats results with entity count and pagination", () => {
+    it("formats results with entity count", () => {
       const result = {
-        entities: [{ campaign_id: "abc" }],
-        page: 1,
-        pageSize: 10,
-        totalNumber: 1,
-        totalPage: 1,
+        entities: [{ id: "687201361754" }],
+        bookmark: null,
         has_more: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
@@ -147,16 +164,12 @@ describe("pinterest_list_entities tool", () => {
       expect(formatted).toHaveLength(1);
       expect((formatted[0] as any).type).toBe("text");
       expect((formatted[0] as any).text).toContain("Found 1 entities");
-      expect((formatted[0] as any).text).toContain("page 1/1");
     });
 
     it("indicates no entities found", () => {
       const result = {
         entities: [],
-        page: 1,
-        pageSize: 10,
-        totalNumber: 0,
-        totalPage: 0,
+        bookmark: null,
         has_more: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
@@ -165,19 +178,16 @@ describe("pinterest_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows pagination hint when has_more is true", () => {
+    it("shows bookmark hint when has_more is true", () => {
       const result = {
-        entities: [{ campaign_id: "abc" }],
-        page: 1,
-        pageSize: 1,
-        totalNumber: 3,
-        totalPage: 3,
+        entities: [{ id: "687201361754" }],
+        bookmark: "ZmVlZDE%3D",
         has_more: true,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
       const formatted = listEntitiesResponseFormatter(result);
-      expect((formatted[0] as any).text).toContain("page: 2");
+      expect((formatted[0] as any).text).toContain("bookmark: ZmVlZDE%3D");
     });
   });
 
@@ -206,11 +216,11 @@ describe("pinterest_list_entities tool", () => {
       expect(result.success).toBe(false);
     });
 
-    it("rejects page size over 1000", () => {
+    it("rejects page size over 250", () => {
       const result = ListEntitiesInputSchema.safeParse({
         entityType: "campaign",
         adAccountId: "1234567890",
-        pageSize: 1001,
+        pageSize: 251,
       });
       expect(result.success).toBe(false);
     });

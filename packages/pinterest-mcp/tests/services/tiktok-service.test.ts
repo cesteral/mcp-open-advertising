@@ -1,14 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PinterestService } from "../../src/services/pinterest/pinterest-service.js";
 
-// Mock the HTTP client
+// Mock the HTTP client (Pinterest v5 — get, post, patch, delete)
 const mockGet = vi.fn();
 const mockPost = vi.fn();
+const mockPatch = vi.fn();
 const mockDelete = vi.fn();
 
 const mockHttpClient: any = {
   get: mockGet,
   post: mockPost,
+  patch: mockPatch,
   delete: mockDelete,
 };
 
@@ -22,186 +24,218 @@ const mockLogger: any = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: v
 
 describe("PinterestService", () => {
   let service: PinterestService;
+  const filters = { adAccountId: "549755813599" };
 
   beforeEach(() => {
     service = new PinterestService(mockRateLimiter, mockHttpClient, mockLogger);
     mockGet.mockReset();
     mockPost.mockReset();
+    mockPatch.mockReset();
     mockDelete.mockReset();
     mockConsume.mockResolvedValue(undefined);
   });
 
   describe("listEntities()", () => {
-    it("calls correct GET path for campaigns", async () => {
+    it("calls correct GET path for campaigns with interpolated adAccountId", async () => {
       mockGet.mockResolvedValueOnce({
-        list: [{ campaign_id: "123" }],
-        page_info: { page: 1, page_size: 10, total_number: 1, total_page: 1 },
+        items: [{ id: "687201361754", name: "Campaign A" }],
+        bookmark: null,
       });
 
-      const result = await service.listEntities("campaign");
+      const result = await service.listEntities("campaign", filters);
 
       expect(mockGet).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/get/",
-        expect.objectContaining({ page: "1", page_size: "10" }),
+        "/v5/ad_accounts/549755813599/campaigns",
+        expect.objectContaining({ page_size: "25" }),
         undefined
       );
       expect(result.entities).toHaveLength(1);
-      expect(result.pageInfo.total_number).toBe(1);
+      expect(result.pageInfo.bookmark).toBeNull();
     });
 
     it("calls correct GET path for ad groups", async () => {
-      mockGet.mockResolvedValueOnce({
-        list: [],
-        page_info: { page: 1, page_size: 10, total_number: 0, total_page: 0 },
-      });
+      mockGet.mockResolvedValueOnce({ items: [], bookmark: null });
 
-      await service.listEntities("adGroup", {}, 2, 5);
+      await service.listEntities("adGroup", filters, "cursor123", 5);
 
       expect(mockGet).toHaveBeenCalledWith(
-        "/open_api/v1.3/adgroup/get/",
-        expect.objectContaining({ page: "2", page_size: "5" }),
+        "/v5/ad_accounts/549755813599/ad_groups",
+        expect.objectContaining({ page_size: "5", bookmark: "cursor123" }),
         undefined
       );
     });
 
-    it("includes filters as JSON string when provided", async () => {
-      mockGet.mockResolvedValueOnce({
-        list: [],
-        page_info: { page: 1, page_size: 10, total_number: 0, total_page: 0 },
-      });
+    it("passes campaignId and adGroupId filters as query params when provided", async () => {
+      mockGet.mockResolvedValueOnce({ items: [], bookmark: null });
 
-      await service.listEntities("campaign", { status: "ENABLE" });
+      await service.listEntities(
+        "ad",
+        { adAccountId: "549755813599", campaignId: "111", adGroupId: "222" }
+      );
 
       expect(mockGet).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/get/",
-        expect.objectContaining({ filtering: JSON.stringify({ status: "ENABLE" }) }),
+        "/v5/ad_accounts/549755813599/ads",
+        expect.objectContaining({ campaign_id: "111", ad_group_id: "222" }),
         undefined
       );
+    });
+
+    it("returns bookmark from response", async () => {
+      mockGet.mockResolvedValueOnce({
+        items: [{ id: "1" }],
+        bookmark: "ZmVlZDE%3D",
+      });
+
+      const result = await service.listEntities("campaign", filters);
+      expect(result.pageInfo.bookmark).toBe("ZmVlZDE%3D");
     });
   });
 
   describe("createEntity()", () => {
-    it("calls correct POST path for campaigns", async () => {
-      mockPost.mockResolvedValueOnce({ campaign_id: "1800000001" });
+    it("calls correct POST path with array body for campaigns", async () => {
+      mockPost.mockResolvedValueOnce({ items: [{ id: "687201361754" }] });
 
-      const data = { campaign_name: "Test", objective_type: "TRAFFIC" };
-      await service.createEntity("campaign", data);
+      const data = { name: "Test Campaign", status: "ACTIVE" };
+      await service.createEntity("campaign", filters, data);
 
       expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/create/",
-        data,
+        "/v5/ad_accounts/549755813599/campaigns",
+        [data],
         undefined
       );
     });
 
     it("calls correct POST path for ads", async () => {
-      mockPost.mockResolvedValueOnce({ ad_id: "1600000001" });
+      mockPost.mockResolvedValueOnce({ items: [{ id: "1600000001" }] });
 
-      const data = { adgroup_id: "1700000001", ad_name: "Test Ad" };
-      await service.createEntity("ad", data);
+      const data = { name: "Test Ad", ad_group_id: "1700000001" };
+      await service.createEntity("ad", filters, data);
 
       expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/ad/create/",
-        data,
+        "/v5/ad_accounts/549755813599/ads",
+        [data],
         undefined
       );
+    });
+
+    it("returns first item from response", async () => {
+      const created = { id: "687201361754", name: "Test" };
+      mockPost.mockResolvedValueOnce({ items: [created] });
+
+      const result = await service.createEntity("campaign", filters, { name: "Test" });
+      expect(result).toEqual(created);
     });
   });
 
   describe("updateEntity()", () => {
-    it("calls correct POST update path with entity ID in body", async () => {
-      mockPost.mockResolvedValueOnce({});
+    it("calls PATCH with array body containing id", async () => {
+      mockPatch.mockResolvedValueOnce({ items: [{ id: "687201361754" }] });
 
-      await service.updateEntity("campaign", "1800000001", {
-        campaign_name: "Updated Name",
+      await service.updateEntity("campaign", filters, "687201361754", {
+        name: "Updated Name",
       });
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/update/",
-        expect.objectContaining({
-          campaign_id: "1800000001",
-          campaign_name: "Updated Name",
-        }),
+      expect(mockPatch).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/campaigns",
+        [{ id: "687201361754", name: "Updated Name" }],
         undefined
       );
+    });
+
+    it("returns first item from response", async () => {
+      const updated = { id: "687201361754", name: "Updated" };
+      mockPatch.mockResolvedValueOnce({ items: [updated] });
+
+      const result = await service.updateEntity("campaign", filters, "687201361754", { name: "Updated" });
+      expect(result).toEqual(updated);
     });
   });
 
   describe("deleteEntity()", () => {
-    it("calls correct POST delete path with IDs array", async () => {
-      mockPost.mockResolvedValueOnce({});
+    it("calls DELETE with query params using deleteIdsParam", async () => {
+      mockDelete.mockResolvedValueOnce({});
 
-      await service.deleteEntity("campaign", ["1800000001", "1800000002"]);
+      await service.deleteEntity("campaign", filters, ["111", "222"]);
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/delete/",
-        { campaign_ids: ["1800000001", "1800000002"] },
+      expect(mockDelete).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/campaigns",
+        { campaign_ids: "111,222" },
+        undefined
+      );
+    });
+
+    it("uses correct deleteIdsParam for ad groups", async () => {
+      mockDelete.mockResolvedValueOnce({});
+
+      await service.deleteEntity("adGroup", filters, ["333"]);
+
+      expect(mockDelete).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/ad_groups",
+        { ad_group_ids: "333" },
         undefined
       );
     });
   });
 
   describe("updateEntityStatus()", () => {
-    it("calls status update endpoint with operation_status", async () => {
-      mockPost.mockResolvedValueOnce({});
+    it("calls updateEntity with status field for each ID", async () => {
+      mockPatch.mockResolvedValue({ items: [{ id: "111" }] });
 
-      await service.updateEntityStatus("adGroup", ["1700000001", "1700000002"], "DISABLE");
-
-      expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/adgroup/status/update/",
-        {
-          adgroup_ids: ["1700000001", "1700000002"],
-          operation_status: "DISABLE",
-        },
-        undefined
+      const results = await service.updateEntityStatus(
+        "adGroup",
+        filters,
+        ["111", "222"],
+        "ACTIVE"
       );
+
+      expect(mockPatch).toHaveBeenCalledTimes(2);
+      expect(results).toHaveLength(2);
     });
 
-    it("supports ENABLE operation", async () => {
-      mockPost.mockResolvedValueOnce({});
+    it("supports different status values", async () => {
+      mockPatch.mockResolvedValueOnce({ items: [{ id: "111" }] });
 
-      await service.updateEntityStatus("campaign", ["1800000001"], "ENABLE");
+      await service.updateEntityStatus("campaign", filters, ["111"], "PAUSED");
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/status/update/",
-        expect.objectContaining({ operation_status: "ENABLE" }),
+      expect(mockPatch).toHaveBeenCalledWith(
+        "/v5/ad_accounts/549755813599/campaigns",
+        [{ id: "111", status: "PAUSED" }],
         undefined
       );
     });
   });
 
   describe("getEntity()", () => {
-    it("queries by ID and returns first result", async () => {
-      const mockEntity = { campaign_id: "1800000001", campaign_name: "Test" };
+    it("returns single entity from list response by id", async () => {
+      const mockEntity = { id: "687201361754", name: "Campaign A" };
       mockGet.mockResolvedValueOnce({
-        list: [mockEntity],
-        page_info: { page: 1, page_size: 1, total_number: 1, total_page: 1 },
+        items: [mockEntity],
+        bookmark: null,
       });
 
-      const result = await service.getEntity("campaign", "1800000001");
+      // getEntity uses listPath which for campaign has no {entityId}, so it falls through to list
+      const result = await service.getEntity("campaign", filters, "687201361754");
       expect(result).toEqual(mockEntity);
     });
 
-    it("throws when entity not found", async () => {
-      mockGet.mockResolvedValueOnce({
-        list: [],
-        page_info: { page: 1, page_size: 1, total_number: 0, total_page: 0 },
-      });
+    it("throws when entity not found in list", async () => {
+      mockGet.mockResolvedValueOnce({ items: [], bookmark: null });
 
-      await expect(service.getEntity("campaign", "nonexistent-id")).rejects.toThrow(
-        "not found"
-      );
+      await expect(
+        service.getEntity("campaign", filters, "nonexistent-id")
+      ).rejects.toThrow("not found");
     });
   });
 
   describe("bulkUpdateStatus()", () => {
     it("returns success results for all entity IDs on success", async () => {
-      mockPost.mockResolvedValueOnce({});
+      mockPatch.mockResolvedValue({ items: [{}] });
 
       const result = await service.bulkUpdateStatus(
         "campaign",
-        ["1800000001", "1800000002"],
-        "DISABLE"
+        filters,
+        ["111", "222"],
+        "PAUSED"
       );
 
       expect(result.results).toHaveLength(2);
@@ -210,12 +244,13 @@ describe("PinterestService", () => {
     });
 
     it("returns failure results when status update throws", async () => {
-      mockPost.mockRejectedValueOnce(new Error("API error"));
+      mockPatch.mockRejectedValueOnce(new Error("API error"));
 
       const result = await service.bulkUpdateStatus(
         "campaign",
-        ["1800000001"],
-        "DISABLE"
+        filters,
+        ["111"],
+        "PAUSED"
       );
 
       expect(result.results[0].success).toBe(false);

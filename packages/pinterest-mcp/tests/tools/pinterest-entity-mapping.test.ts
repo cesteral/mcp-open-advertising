@@ -109,9 +109,9 @@ describe("Pinterest Entity Mapping", () => {
     });
   });
 
-  describe("campaign supportsDuplicate is false", () => {
-    it("campaign does not support duplication", () => {
-      expect(getEntityConfig("campaign").supportsDuplicate).toBe(false);
+  describe("supportsDuplicate flags", () => {
+    it("campaign supports duplication", () => {
+      expect(getEntityConfig("campaign").supportsDuplicate).toBe(true);
     });
 
     it("adGroup does not support duplication", () => {
@@ -146,14 +146,18 @@ describe("Pinterest Entity Mapping", () => {
   });
 
   describe("getDuplicateSupportedEntityTypes()", () => {
-    it("returns empty array since no Pinterest entity supports duplication", () => {
-      expect(getDuplicateSupportedEntityTypes()).toHaveLength(0);
+    it("returns entity types that support duplication", () => {
+      const types = getDuplicateSupportedEntityTypes();
+      expect(types).toContain("campaign");
+      expect(types.length).toBeGreaterThan(0);
     });
   });
 
   describe("getDuplicateEntityTypeEnum()", () => {
-    it("returns empty array", () => {
-      expect(getDuplicateEntityTypeEnum()).toHaveLength(0);
+    it("returns non-empty array", () => {
+      const enumTypes = getDuplicateEntityTypeEnum();
+      expect(enumTypes.length).toBeGreaterThan(0);
+      expect(enumTypes).toContain("campaign");
     });
   });
 

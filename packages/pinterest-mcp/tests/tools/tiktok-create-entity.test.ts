@@ -44,8 +44,8 @@ describe("pinterest_create_entity tool", () => {
   describe("createEntityLogic()", () => {
     it("creates a campaign successfully", async () => {
       const mockEntity = {
-        campaign_id: "1800999888777",
-        campaign_name: "Test Campaign",
+        id: "687201361754",
+        name: "Test Campaign",
       };
       mockCreateEntity.mockResolvedValueOnce(mockEntity);
 
@@ -55,9 +55,8 @@ describe("pinterest_create_entity tool", () => {
           adAccountId: "1234567890",
           data: {
             campaign_name: "Test Campaign",
-            objective_type: "TRAFFIC",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 100,
+            objective_type: "AWARENESS",
+            daily_spend_cap: 1000000,
           },
         },
         baseContext,
@@ -67,20 +66,21 @@ describe("pinterest_create_entity tool", () => {
       expect(result.entity).toEqual(mockEntity);
       expect(result.entityType).toBe("campaign");
       expect(result.timestamp).toBeDefined();
+      // Service now receives (entityType, filters, data, context)
       expect(mockCreateEntity).toHaveBeenCalledWith(
         "campaign",
+        { adAccountId: "1234567890" },
         {
           campaign_name: "Test Campaign",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          objective_type: "AWARENESS",
+          daily_spend_cap: 1000000,
         },
         baseContext
       );
     });
 
     it("creates an ad group successfully", async () => {
-      const mockEntity = { adgroup_id: "1700999888777" };
+      const mockEntity = { id: "1700999888777" };
       mockCreateEntity.mockResolvedValueOnce(mockEntity);
 
       const result = await createEntityLogic(
@@ -89,12 +89,8 @@ describe("pinterest_create_entity tool", () => {
           adAccountId: "1234567890",
           data: {
             campaign_id: "1800123456789",
-            adgroup_name: "Test Ad Group",
-            placement_type: "PLACEMENT_TYPE_NORMAL",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 50,
-            schedule_type: "SCHEDULE_ALWAYS",
-            optimize_goal: "CLICK",
+            name: "Test Ad Group",
+            budget_in_micro_currency: 50000000,
           },
         },
         baseContext,
@@ -113,7 +109,7 @@ describe("pinterest_create_entity tool", () => {
           {
             entityType: "campaign",
             adAccountId: "1234567890",
-            data: { campaign_name: "Bad Campaign", objective_type: "TRAFFIC" },
+            data: { name: "Bad Campaign" },
           },
           baseContext,
           baseSdkContext
@@ -125,7 +121,7 @@ describe("pinterest_create_entity tool", () => {
   describe("createEntityResponseFormatter()", () => {
     it("formats create result with entity type", () => {
       const result = {
-        entity: { campaign_id: "1800999888777", campaign_name: "Test" },
+        entity: { id: "687201361754", name: "Test" },
         entityType: "campaign",
         timestamp: "2026-03-04T00:00:00.000Z",
       };
@@ -134,7 +130,7 @@ describe("pinterest_create_entity tool", () => {
       expect(formatted).toHaveLength(1);
       expect((formatted[0] as any).type).toBe("text");
       expect((formatted[0] as any).text).toContain("campaign created successfully");
-      expect((formatted[0] as any).text).toContain("1800999888777");
+      expect((formatted[0] as any).text).toContain("687201361754");
     });
   });
 
@@ -144,16 +140,14 @@ describe("pinterest_create_entity tool", () => {
         entityType: "campaign",
         adAccountId: "1234567890",
         data: {
-          campaign_name: "Test",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Test",
+          objective_type: "AWARENESS",
         },
       });
       expect(result.success).toBe(true);
     });
 
-    it("rejects empty data object", () => {
+    it("rejects non-object data", () => {
       const result = CreateEntityInputSchema.safeParse({
         entityType: "campaign",
         adAccountId: "1234567890",

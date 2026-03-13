@@ -48,6 +48,7 @@ export async function getAdPreviewLogic(
   const { pinterestService } = resolveSessionServices(sdkContext);
 
   const preview = await pinterestService.getAdPreviews(
+    { adAccountId: input.adAccountId },
     input.adId,
     input.adFormat,
     context
