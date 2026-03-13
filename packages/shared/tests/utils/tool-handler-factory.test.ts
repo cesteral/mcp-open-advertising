@@ -484,6 +484,120 @@ describe("truncateTextContent", () => {
   });
 });
 
+describe("registerToolsFromDefinitions - error format consistency", () => {
+  let logger: ReturnType<typeof createMockLogger>;
+  let server: ReturnType<typeof createMockServer>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    logger = createMockLogger();
+    server = createMockServer();
+  });
+
+  it("non-production errors return same JSON structure as production errors", async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
+    try {
+      registerToolsFromDefinitions({
+        server,
+        tools: [
+          {
+            name: "failing_tool",
+            description: "Fails",
+            inputSchema: z.object({}),
+            logic: vi.fn().mockRejectedValue(new Error("Tool exploded in dev")),
+          },
+        ],
+        logger,
+        transformSchema: (schema) => schema,
+        createRequestContext,
+      });
+
+      const handler = server.getHandler("failing_tool")!;
+      const result = await handler({});
+
+      expect(result.isError).toBe(true);
+      const text = result.content[0].text;
+      // Must be parseable JSON
+      let parsed: any;
+      expect(() => { parsed = JSON.parse(text); }).not.toThrow();
+      // Must contain the same fields as production (error + code)
+      expect(parsed).toHaveProperty("error");
+      expect(parsed).toHaveProperty("code");
+      expect(parsed.error).toContain("Tool exploded in dev");
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it("production errors return JSON with error/code fields", async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    try {
+      registerToolsFromDefinitions({
+        server,
+        tools: [
+          {
+            name: "prod_failing_tool",
+            description: "Fails in prod",
+            inputSchema: z.object({}),
+            logic: vi.fn().mockRejectedValue(new Error("Tool exploded in prod")),
+          },
+        ],
+        logger,
+        transformSchema: (schema) => schema,
+        createRequestContext,
+      });
+
+      const handler = server.getHandler("prod_failing_tool")!;
+      const result = await handler({});
+
+      expect(result.isError).toBe(true);
+      const text = result.content[0].text;
+      let parsed: any;
+      expect(() => { parsed = JSON.parse(text); }).not.toThrow();
+      expect(parsed).toHaveProperty("error");
+      expect(parsed).toHaveProperty("code");
+      expect(parsed.error).toContain("Tool exploded in prod");
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+
+  it("non-production errors may include stack field for debugging", async () => {
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
+    try {
+      registerToolsFromDefinitions({
+        server,
+        tools: [
+          {
+            name: "stack_tool",
+            description: "Fails with stack",
+            inputSchema: z.object({}),
+            logic: vi.fn().mockRejectedValue(new Error("Stack trace test")),
+          },
+        ],
+        logger,
+        transformSchema: (schema) => schema,
+        createRequestContext,
+      });
+
+      const handler = server.getHandler("stack_tool")!;
+      const result = await handler({});
+
+      const text = result.content[0].text;
+      const parsed = JSON.parse(text);
+      // stack is optional but if present should be a string
+      if ("stack" in parsed) {
+        expect(typeof parsed.stack).toBe("string");
+      }
+    } finally {
+      process.env.NODE_ENV = originalEnv;
+    }
+  });
+});
+
 describe("registerToolsFromDefinitions - response truncation", () => {
   let logger: ReturnType<typeof createMockLogger>;
   let server: ReturnType<typeof createMockServer>;

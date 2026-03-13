@@ -653,21 +653,25 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
             const isProduction = process.env.NODE_ENV === "production";
             const sanitizedData = ErrorHandler.sanitizeErrorData(mcpError.data);
-            const errorMessage = isProduction
-              ? mcpError.message
-              : `Error: ${mcpError.message}`;
+
+            // Both production and non-production return the same JSON shape so
+            // AI agents can parse tool error responses consistently regardless of
+            // environment. Non-production additionally includes a `stack` field
+            // for easier debugging.
+            const errorPayload: Record<string, unknown> = {
+              error: mcpError.message,
+              code: mcpError.code,
+              data: sanitizedData ?? null,
+            };
+            if (!isProduction && (error as Error)?.stack) {
+              errorPayload.stack = (error as Error).stack;
+            }
 
             return {
               content: [
                 {
                   type: "text" as const,
-                  text: isProduction
-                    ? JSON.stringify({
-                        error: errorMessage,
-                        code: mcpError.code,
-                        ...(sanitizedData && { data: sanitizedData }),
-                      })
-                    : `Error: ${mcpError.message}`,
+                  text: JSON.stringify(errorPayload),
                 },
               ],
               isError: true,
