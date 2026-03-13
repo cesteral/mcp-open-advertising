@@ -8,36 +8,34 @@ const TOOL_NAME = "pinterest_upload_image";
 const TOOL_TITLE = "Upload Image to Pinterest Ads";
 const TOOL_DESCRIPTION = `Upload an image to Pinterest Ads Library from a URL.
 
-The server downloads the image and uploads it to Pinterest's ad image library.
-Returns the imageId for use in ad creatives.
+The server downloads the image and uploads it to Pinterest's ad media library.
+Returns the mediaId for use in ad creatives.
 
 **Image requirements:**
 - Formats: JPEG, PNG
 - Max file size: 100KB (for feed ads), 500KB (for other placements)
 - Recommended dimensions: 1200x628px, 1080x1080px, 720x1280px
 
-**Usage:** The returned imageId is used in ad creative payloads.`;
+**Usage:** The returned mediaId is used in ad creative payloads.`;
 
 export const UploadImageInputSchema = z.object({
-  adAccountId: z.string().describe("Pinterest Advertiser ID"),
+  adAccountId: z.string().describe("Pinterest Ad Account ID"),
   mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
   filename: z.string().optional().describe("Override filename (otherwise derived from URL)"),
 }).describe("Parameters for uploading an image to Pinterest");
 
 export const UploadImageOutputSchema = z.object({
-  imageId: z.string().describe("Image ID for use in ad creative payloads"),
-  url: z.string().optional().describe("Preview URL of the uploaded image"),
-  size: z.number().optional().describe("File size in bytes"),
+  mediaId: z.string().describe("Media ID for use in ad creative payloads"),
+  mediaType: z.string().optional().describe("Media type"),
   uploadedAt: z.string().datetime(),
 }).describe("Uploaded Pinterest image info");
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
 
-interface PinterestImageUploadResponse {
-  image_id?: string;
-  image_url?: string;
-  size?: number;
+interface PinterestMediaUploadResponse {
+  media_id?: string;
+  media_type?: string;
 }
 
 export async function uploadImageLogic(
@@ -46,6 +44,8 @@ export async function uploadImageLogic(
   sdkContext?: SdkContext
 ): Promise<UploadImageOutput> {
   const { pinterestService } = resolveSessionServices(sdkContext);
+
+  const adAccountId = pinterestService.client.accountId;
 
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,
@@ -56,24 +56,23 @@ export async function uploadImageLogic(
   const effectiveFilename = input.filename ?? filename;
 
   const result = await pinterestService.client.postMultipart(
-    "/open_api/v1.3/file/image/ad/upload/",
+    `/v5/ad_accounts/${adAccountId}/media`,
     {},
-    "image_file",
+    "file",
     buffer,
     effectiveFilename,
     contentType,
     context
-  ) as PinterestImageUploadResponse;
+  ) as PinterestMediaUploadResponse;
 
-  const imageId = result.image_id;
-  if (!imageId) {
-    throw new Error("Pinterest image upload failed: no image_id returned");
+  const mediaId = result.media_id;
+  if (!mediaId) {
+    throw new Error("Pinterest image upload failed: no media_id returned");
   }
 
   return {
-    imageId,
-    url: result.image_url,
-    size: result.size,
+    mediaId,
+    mediaType: result.media_type,
     uploadedAt: new Date().toISOString(),
   };
 }
@@ -81,7 +80,7 @@ export async function uploadImageLogic(
 export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
   return [{
     type: "text" as const,
-    text: `Image uploaded to Pinterest!\n\nImage ID: ${result.imageId}${result.url ? `\nPreview URL: ${result.url}` : ""}${result.size !== undefined ? `\nSize: ${result.size} bytes` : ""}\n\nUse imageId in your ad creative payload`,
+    text: `Image uploaded to Pinterest!\n\nMedia ID: ${result.mediaId}${result.mediaType ? `\nMedia Type: ${result.mediaType}` : ""}\n\nUse mediaId in your ad creative payload`,
   }];
 }
 

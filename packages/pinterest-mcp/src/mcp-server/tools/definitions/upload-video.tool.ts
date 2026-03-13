@@ -8,47 +8,43 @@ const TOOL_NAME = "pinterest_upload_video";
 const TOOL_TITLE = "Upload Video to Pinterest Ads";
 const TOOL_DESCRIPTION = `Upload a video to Pinterest Ads Library from a URL.
 
-The server downloads the video and uploads it to Pinterest's ad video library.
-Polls until binding is complete (up to 10 minutes).
+The server downloads the video and uploads it to Pinterest's ad media library.
+Polls until processing is complete (up to 10 minutes).
 
 **Video requirements:**
-- Formats: MP4, MOV, AVI (H.264/H.265 codec recommended)
+- Formats: MP4, MOV (H.264 codec recommended)
 - Max file size: 500MB
-- Min resolution: 540x960px (9:16), 960x540px (16:9), or 640x640px (1:1)
-- Duration: 5 to 60 seconds for In-Feed ads
+- Min resolution: 240px on shortest side
+- Duration: 2 to 60 seconds for standard ads
 
-**Usage:** The returned videoId is used in ad creative payloads.`;
+**Usage:** The returned mediaId is used in ad creative payloads.`;
 
 export const UploadVideoInputSchema = z.object({
-  adAccountId: z.string().describe("Pinterest Advertiser ID"),
+  adAccountId: z.string().describe("Pinterest Ad Account ID"),
   mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
   videoName: z.string().optional().describe("Optional name for the video in the library"),
 }).describe("Parameters for uploading a video to Pinterest");
 
 export const UploadVideoOutputSchema = z.object({
-  videoId: z.string().describe("Video ID for use in ad creative payloads"),
-  videoName: z.string().optional(),
-  duration: z.number().optional().describe("Video duration in seconds"),
+  mediaId: z.string().describe("Media ID for use in ad creative payloads"),
+  mediaStatus: z.string().optional().describe("Final media processing status"),
   uploadedAt: z.string().datetime(),
 }).describe("Uploaded Pinterest video info");
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
 
-interface PinterestVideoUploadResponse {
-  video_id?: string;
-  video_name?: string;
+interface PinterestMediaUploadResponse {
+  media_id?: string;
+  media_type?: string;
 }
 
-interface PinterestVideoInfoItem {
-  video_id: string;
-  video_name?: string;
-  duration?: number;
-  video_status?: string;
-}
-
-interface PinterestVideoInfoResponse {
-  list?: PinterestVideoInfoItem[];
+interface PinterestMediaStatusResponse {
+  media_id?: string;
+  media_processing_record?: {
+    status?: string;
+  };
+  media_type?: string;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -62,63 +58,60 @@ export async function uploadVideoLogic(
 ): Promise<UploadVideoOutput> {
   const { pinterestService } = resolveSessionServices(sdkContext);
 
+  const adAccountId = pinterestService.client.accountId;
+
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,
     600_000, // 10 min for large videos
     context
   );
 
-  const fields: Record<string, string> = {};
-  if (input.videoName) fields.video_name = input.videoName;
-
   const uploadResult = await pinterestService.client.postMultipart(
-    "/open_api/v1.3/file/video/ad/upload/",
-    fields,
-    "video_file",
+    `/v5/ad_accounts/${adAccountId}/media`,
+    {},
+    "file",
     buffer,
-    filename,
+    input.videoName ?? filename,
     contentType,
     context
-  ) as PinterestVideoUploadResponse;
+  ) as PinterestMediaUploadResponse;
 
-  const videoId = uploadResult.video_id;
-  if (!videoId) {
-    throw new Error("Pinterest video upload failed: no video_id returned");
+  const mediaId = uploadResult.media_id;
+  if (!mediaId) {
+    throw new Error("Pinterest video upload failed: no media_id returned");
   }
 
-  // Poll for bind_success status (max 10 min, 20s intervals)
+  // Poll for processing status (max 10 min, 20s intervals)
   const maxAttempts = 30;
   const pollIntervalMs = 20_000;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);
 
-    const statusResult = await pinterestService.client.post(
-      "/open_api/v1.3/file/video/ad/info/",
-      { video_ids: [videoId] },
+    const statusResult = await pinterestService.client.get(
+      `/v5/ad_accounts/${adAccountId}/media/${mediaId}`,
+      undefined,
       context
-    ) as PinterestVideoInfoResponse;
+    ) as PinterestMediaStatusResponse;
 
-    const videoInfo = statusResult.list?.[0];
-    const videoStatus = videoInfo?.video_status ?? "processing";
+    const status = statusResult.media_processing_record?.status ?? "processing";
 
-    if (videoStatus === "bind_success") {
+    if (status === "succeeded" || status === "SUCCEEDED") {
       return {
-        videoId,
-        videoName: videoInfo?.video_name ?? input.videoName,
-        duration: videoInfo?.duration,
+        mediaId,
+        mediaStatus: status,
         uploadedAt: new Date().toISOString(),
       };
     }
 
-    if (videoStatus === "error" || videoStatus === "deleted") {
-      throw new Error(`Pinterest video processing failed: status=${videoStatus}`);
+    if (status === "failed" || status === "FAILED") {
+      throw new Error(`Pinterest video processing failed: status=${status}`);
     }
   }
 
+  // Return mediaId even if polling timed out — video may still be processing
   return {
-    videoId,
-    videoName: uploadResult.video_name ?? input.videoName,
+    mediaId,
     uploadedAt: new Date().toISOString(),
   };
 }
@@ -126,7 +119,7 @@ export async function uploadVideoLogic(
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
   return [{
     type: "text" as const,
-    text: `Video uploaded to Pinterest!\n\nVideo ID: ${result.videoId}${result.videoName ? `\nName: ${result.videoName}` : ""}${result.duration !== undefined ? `\nDuration: ${result.duration}s` : ""}\n\nUse videoId in your ad creative payload`,
+    text: `Video uploaded to Pinterest!\n\nMedia ID: ${result.mediaId}${result.mediaStatus ? `\nStatus: ${result.mediaStatus}` : ""}\n\nUse mediaId in your ad creative payload`,
   }];
 }
 

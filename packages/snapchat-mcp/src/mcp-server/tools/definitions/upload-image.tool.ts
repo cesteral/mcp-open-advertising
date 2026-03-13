@@ -8,36 +8,42 @@ const TOOL_NAME = "snapchat_upload_image";
 const TOOL_TITLE = "Upload Image to Snapchat Ads";
 const TOOL_DESCRIPTION = `Upload an image to Snapchat Ads Library from a URL.
 
-The server downloads the image and uploads it to Snapchat's ad image library.
-Returns the imageId for use in ad creatives.
+The server downloads the image and uploads it to Snapchat's media library.
+Returns the mediaId for use in creative payloads.
 
 **Image requirements:**
 - Formats: JPEG, PNG
-- Max file size: 100KB (for feed ads), 500KB (for other placements)
-- Recommended dimensions: 1200x628px, 1080x1080px, 720x1280px
+- Max file size: 5MB
+- Recommended dimensions: 1080x1920px (9:16 vertical), 1080x1080px (1:1)
 
-**Usage:** The returned imageId is used in ad creative payloads.`;
+**Usage:** The returned mediaId is used in creative payloads.`;
 
 export const UploadImageInputSchema = z.object({
-  adAccountId: z.string().describe("Snapchat Advertiser ID"),
+  adAccountId: z.string().describe("Snapchat Ad Account ID"),
   mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
-  filename: z.string().optional().describe("Override filename (otherwise derived from URL)"),
+  name: z.string().optional().describe("Name for the media in the library"),
 }).describe("Parameters for uploading an image to Snapchat");
 
 export const UploadImageOutputSchema = z.object({
-  imageId: z.string().describe("Image ID for use in ad creative payloads"),
-  url: z.string().optional().describe("Preview URL of the uploaded image"),
-  size: z.number().optional().describe("File size in bytes"),
+  mediaId: z.string().describe("Media ID for use in creative payloads"),
+  mediaStatus: z.string().optional().describe("Media processing status"),
   uploadedAt: z.string().datetime(),
 }).describe("Uploaded Snapchat image info");
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
 
-interface SnapchatImageUploadResponse {
-  image_id?: string;
-  image_url?: string;
-  size?: number;
+interface SnapchatMediaItem {
+  id?: string;
+  media_status?: string;
+}
+
+interface SnapchatMediaUploadResponse {
+  request_status?: string;
+  media?: Array<{
+    sub_request_status?: string;
+    media?: SnapchatMediaItem;
+  }>;
 }
 
 export async function uploadImageLogic(
@@ -53,27 +59,31 @@ export async function uploadImageLogic(
     context
   );
 
-  const effectiveFilename = input.filename ?? filename;
+  const fields: Record<string, string> = {
+    upload_type: "IMAGE",
+    ad_account_id: input.adAccountId,
+    name: input.name ?? filename,
+  };
 
   const result = await snapchatService.client.postMultipart(
-    "/open_api/v1.3/file/image/ad/upload/",
-    {},
-    "image_file",
+    "/v1/media",
+    fields,
+    "file",
     buffer,
-    effectiveFilename,
+    filename,
     contentType,
     context
-  ) as SnapchatImageUploadResponse;
+  ) as SnapchatMediaUploadResponse;
 
-  const imageId = result.image_id;
-  if (!imageId) {
-    throw new Error("Snapchat image upload failed: no image_id returned");
+  const mediaItem = result.media?.[0]?.media;
+  const mediaId = mediaItem?.id;
+  if (!mediaId) {
+    throw new Error("Snapchat image upload failed: no media id returned");
   }
 
   return {
-    imageId,
-    url: result.image_url,
-    size: result.size,
+    mediaId,
+    mediaStatus: mediaItem?.media_status,
     uploadedAt: new Date().toISOString(),
   };
 }
@@ -81,7 +91,7 @@ export async function uploadImageLogic(
 export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
   return [{
     type: "text" as const,
-    text: `Image uploaded to Snapchat!\n\nImage ID: ${result.imageId}${result.url ? `\nPreview URL: ${result.url}` : ""}${result.size !== undefined ? `\nSize: ${result.size} bytes` : ""}\n\nUse imageId in your ad creative payload`,
+    text: `Image uploaded to Snapchat!\n\nMedia ID: ${result.mediaId}${result.mediaStatus ? `\nStatus: ${result.mediaStatus}` : ""}\n\nUse mediaId in your creative payload`,
   }];
 }
 
@@ -103,6 +113,7 @@ export const uploadImageTool = {
       input: {
         adAccountId: "1234567890",
         mediaUrl: "https://example.com/banner.jpg",
+        name: "Summer Banner",
       },
     },
   ],
