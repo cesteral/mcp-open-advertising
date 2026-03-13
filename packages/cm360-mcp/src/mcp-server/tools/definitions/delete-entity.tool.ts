@@ -10,7 +10,7 @@ const TOOL_DESCRIPTION = `Delete a Campaign Manager 360 entity.
 
 **Supported entity types:** ${getDeletableEntityTypeEnum().join(", ")}
 
-Only creative and floodlightActivity support deletion. Other entity types must be archived by updating their status.`;
+Only floodlightActivity supports deletion. Other entity types must be archived by updating their status.`;
 
 export const DeleteEntityInputSchema = z
   .object({
@@ -82,14 +82,6 @@ export const deleteEntityTool = {
     idempotentHint: true,
   },
   inputExamples: [
-    {
-      label: "Delete a creative",
-      input: {
-        profileId: "123456",
-        entityType: "creative",
-        entityId: "789012",
-      },
-    },
     {
       label: "Delete a floodlight activity",
       input: {

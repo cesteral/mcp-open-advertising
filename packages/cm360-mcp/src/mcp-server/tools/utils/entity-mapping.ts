@@ -33,7 +33,7 @@ const ENTITY_CONFIGS: Record<CM360EntityType, CM360EntityConfig> = {
   creative: {
     apiCollection: "creatives",
     idField: "id",
-    supportsDelete: true,
+    supportsDelete: false,
   },
   site: {
     apiCollection: "sites",

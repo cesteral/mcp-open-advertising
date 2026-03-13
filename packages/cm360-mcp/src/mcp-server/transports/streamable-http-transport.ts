@@ -29,7 +29,10 @@ function buildPlatformConfig(
 ): TransportFactoryConfig {
   return {
     authStrategy: createAuthStrategy(config.mcpAuthMode as AuthMode, {
-      scopes: ["https://www.googleapis.com/auth/dfareporting"],
+      scopes: [
+        "https://www.googleapis.com/auth/dfareporting",
+        "https://www.googleapis.com/auth/dfatrafficking",
+      ],
       jwtSecret: config.mcpAuthSecretKey,
       logger,
     }),

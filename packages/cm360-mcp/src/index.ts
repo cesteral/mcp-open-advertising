@@ -48,6 +48,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   const credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
   const authAdapter = createGoogleAuthAdapter(credentials, [
     "https://www.googleapis.com/auth/dfareporting",
+    "https://www.googleapis.com/auth/dfatrafficking",
   ]);
 
   // Validate credentials at startup to fail fast on invalid service account

@@ -28,7 +28,7 @@ CM360 complements the existing Google stack in this monorepo:
 
 - Node.js >= 20
 - pnpm >= 8
-- Google Cloud service account with CM360 API access (scope: `https://www.googleapis.com/auth/dfareporting`)
+- Google Cloud service account with CM360 API access (scopes: `dfareporting` for reporting, `dfatrafficking` for entity CRUD)
 
 ### 1. Install & Build
 
@@ -126,7 +126,7 @@ CM360 entities managed by this server:
 | `campaign` | campaigns | No | Archive via status update |
 | `placement` | placements | No | |
 | `ad` | ads | No | |
-| `creative` | creatives | Yes | |
+| `creative` | creatives | No | |
 | `site` | sites | No | |
 | `advertiser` | advertisers | No | |
 | `floodlightActivity` | floodlightActivities | Yes | Conversion tracking |
@@ -154,7 +154,7 @@ All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection
 | `cm360_get_entity` | Get a single entity by ID | `profileId`, `entityType`, `entityId` |
 | `cm360_create_entity` | Create any supported entity | `profileId`, `entityType`, `data` |
 | `cm360_update_entity` | Update entity (PUT semantics -- full object required) | `profileId`, `entityType`, `entityId`, `data` |
-| `cm360_delete_entity` | Delete entity (creative, floodlightActivity only) | `profileId`, `entityType`, `entityId` |
+| `cm360_delete_entity` | Delete entity (floodlightActivity only) | `profileId`, `entityType`, `entityId` |
 | `cm360_validate_entity` | Dry-run validate payload (no API call) | `entityType`, `mode`, `data` |
 
 **CM360 update pattern**: CM360 uses PUT (full replacement), not PATCH. Always fetch the current entity with `cm360_get_entity` first, modify the fields you need, then pass the complete object to `cm360_update_entity`.
