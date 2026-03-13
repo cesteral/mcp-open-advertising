@@ -1,45 +1,41 @@
 import type { AmazonDspHttpClient } from "./amazon-dsp-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
+  interpolatePath,
   type AmazonDspEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
-import type { Logger } from "pino";
 
-/** AmazonDsp page_info response shape */
+/** Amazon DSP offset pagination response shape */
 interface AmazonDspPageInfo {
-  page: number;
-  page_size: number;
-  total_number: number;
-  total_page: number;
+  startIndex: number;
+  count: number;
+  totalResults: number;
 }
 
-/** AmazonDsp list response data shape */
-interface AmazonDspListData {
-  list: unknown[];
-  page_info: AmazonDspPageInfo;
+/** Amazon DSP list response shape (raw from API) */
+interface AmazonDspListResponse {
+  [key: string]: unknown;
+  totalResults?: number;
 }
 
 /**
- * AmazonDsp Service — Generic CRUD operations for AmazonDsp Marketing API entities,
- * plus bulk operations and entity duplication.
+ * AmazonDspService — Generic CRUD operations for Amazon DSP Advertising API entities.
  *
- * Key differences from Meta:
- * - profile_id is always required (injected by AmazonDspHttpClient)
- * - Updates use POST (not PATCH), with entity ID in the body
- * - Status updates use separate /status/update/ endpoints
- * - Deletes use separate /delete/ endpoints (POST with IDs array)
- * - Pagination is page-based (page, page_size), not cursor-based
+ * Key Amazon DSP patterns:
+ * - No DELETE endpoint — archive via PUT with { status: "ARCHIVED" }
+ * - Offset pagination: startIndex + count query params, response includes totalResults
+ * - Create wraps data in { [responseKey]: [data] } body
+ * - Updates use PUT to entity-specific path
+ * - List filter uses entity-specific listFilterParam (advertiserId or orderId)
  */
 export class AmazonDspService {
   constructor(
-    private readonly rateLimiter: RateLimiter,
     private readonly httpClient: AmazonDspHttpClient,
-    private readonly logger: Logger
+    private readonly defaultAdvertiserId: string
   ) {}
 
-  /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
+  /** Expose the underlying HTTP client for direct use. */
   get client(): AmazonDspHttpClient {
     return this.httpClient;
   }
@@ -48,33 +44,38 @@ export class AmazonDspService {
 
   async listEntities(
     entityType: AmazonDspEntityType,
-    filters?: Record<string, unknown>,
-    page = 1,
-    pageSize = 10,
+    filters?: Record<string, string>,
+    startIndex = 0,
+    pageSize = 25,
     context?: RequestContext
   ): Promise<{ entities: unknown[]; pageInfo: AmazonDspPageInfo }> {
-    await this.rateLimiter.consume(`amazon_dsp:default`);
-
     const config = getEntityConfig(entityType);
+
     const params: Record<string, string> = {
-      page: String(page),
-      page_size: String(pageSize),
-      fields: JSON.stringify(config.defaultFields),
+      startIndex: String(startIndex),
+      count: String(pageSize),
     };
 
-    if (filters && Object.keys(filters).length > 0) {
-      params.filtering = JSON.stringify(filters);
+    // Apply entity-specific filter param if provided
+    if (filters) {
+      for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null) {
+          params[key] = value;
+        }
+      }
     }
 
-    const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspListData;
+    const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspListResponse;
+
+    const entities = (result?.[config.responseKey] as unknown[]) ?? [];
+    const totalResults = result?.totalResults ?? 0;
 
     return {
-      entities: result?.list ?? [],
-      pageInfo: result?.page_info ?? {
-        page,
-        page_size: pageSize,
-        total_number: 0,
-        total_page: 0,
+      entities,
+      pageInfo: {
+        startIndex,
+        count: pageSize,
+        totalResults,
       },
     };
   }
@@ -84,23 +85,9 @@ export class AmazonDspService {
     entityId: string,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume(`amazon_dsp:default`);
-
     const config = getEntityConfig(entityType);
-    const params: Record<string, string> = {
-      [config.idsField]: JSON.stringify([entityId]),
-      page_size: "1",
-      fields: JSON.stringify(config.defaultFields),
-    };
-
-    const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspListData;
-
-    const list = result?.list ?? [];
-    if (list.length === 0) {
-      throw new Error(`${config.displayName} with ID ${entityId} not found`);
-    }
-
-    return list[0];
+    const path = interpolatePath(config.getPath, { entityId });
+    return this.httpClient.get(path, undefined, context);
   }
 
   async createEntity(
@@ -109,10 +96,9 @@ export class AmazonDspService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`amazon_dsp:default`, 3);
-
-    return this.httpClient.post(config.createPath, data, context);
+    // Amazon DSP create wraps data in { [responseKey]: [data] } body
+    const body = { [config.responseKey]: [data] };
+    return this.httpClient.post(config.createPath, body, context);
   }
 
   async updateEntity(
@@ -122,52 +108,99 @@ export class AmazonDspService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`amazon_dsp:default`, 3);
-
-    // AmazonDsp uses POST for updates, with entity ID in body
-    return this.httpClient.post(config.updatePath, {
-      [config.idField]: entityId,
-      ...data,
-    }, context);
+    const path = interpolatePath(config.updatePath, { entityId });
+    return this.httpClient.put(path, data, context);
   }
 
+  /**
+   * Archive an entity via PUT with { status: "ARCHIVED" }.
+   * Amazon DSP has no DELETE endpoint — archiving is the equivalent of deletion.
+   */
   async deleteEntity(
     entityType: AmazonDspEntityType,
-    entityIds: string[],
+    entityId: string,
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`amazon_dsp:default`, 3);
-
-    return this.httpClient.post(config.deletePath, {
-      [config.idsField]: entityIds,
-    }, context);
+    const path = interpolatePath(config.updatePath, { entityId });
+    return this.httpClient.put(path, { status: "ARCHIVED" }, context);
   }
 
   async updateEntityStatus(
     entityType: AmazonDspEntityType,
-    entityIds: string[],
-    operationStatus: "ENABLE" | "DISABLE" | "DELETE",
+    entityId: string,
+    status: string,
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`amazon_dsp:default`, 3);
-
-    return this.httpClient.post(config.statusUpdatePath, {
-      [config.idsField]: entityIds,
-      operation_status: operationStatus,
-    }, context);
+    const path = interpolatePath(config.updatePath, { entityId });
+    return this.httpClient.put(path, { status }, context);
   }
 
   // ─── Advertiser Account ──────────────────────────────────────────
 
-  async listProfiles(context?: RequestContext): Promise<unknown> {
-    await this.rateLimiter.consume(`amazon_dsp:default`);
+  async listAdvertisers(
+    startIndex = 0,
+    pageSize = 25,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const params: Record<string, string> = {
+      startIndex: String(startIndex),
+      count: String(pageSize),
+    };
+    return this.httpClient.get("/dsp/advertisers", params, context);
+  }
 
-    return this.httpClient.get("/open_api/v1.3/advertiser/info/", {}, context);
+  // ─── Targeting ───────────────────────────────────────────────────
+
+  async searchTargeting(
+    targetingType: string,
+    query?: string,
+    limit = 20,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const params: Record<string, string> = {
+      targetingType,
+      count: String(limit),
+    };
+    if (query) {
+      params.query = query;
+    }
+    return this.httpClient.get("/dsp/targeting/search", params, context);
+  }
+
+  async getTargetingOptions(
+    targetingType?: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const params: Record<string, string> = {};
+    if (targetingType) {
+      params.targetingType = targetingType;
+    }
+    return this.httpClient.get("/dsp/targeting/options", params, context);
+  }
+
+  // ─── Audience Estimate ──────────────────────────────────────────
+
+  async getAudienceEstimate(
+    targetingConfig: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.httpClient.post("/dsp/audience/estimate", targetingConfig, context);
+  }
+
+  // ─── Ad Previews ────────────────────────────────────────────────
+
+  async getAdPreviews(
+    adId: string,
+    adFormat?: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const params: Record<string, string> = { adId };
+    if (adFormat) {
+      params.adFormat = adFormat;
+    }
+    return this.httpClient.get("/dsp/ads/preview", params, context);
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────
@@ -179,51 +212,38 @@ export class AmazonDspService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-
-    if (!config.supportsDuplicate) {
-      this.logger.debug({ entityType }, "Duplicate skipped: entity type does not support duplication");
-      throw new Error(`Entity type ${entityType} does not support duplication`);
-    }
-
-    await this.rateLimiter.consume(`amazon_dsp:default`, 3);
-
-    // AmazonDsp copy endpoints follow pattern /{entity}/copy/
-    const copyPath = config.createPath.replace("/create/", "/copy/");
-
-    return this.httpClient.post(copyPath, {
-      [config.idField]: entityId,
-      ...options,
-    }, context);
+    const path = interpolatePath(config.updatePath, { entityId });
+    return this.httpClient.post(path + "/copy", { ...options }, context);
   }
 
   // ─── Bid Adjustment ─────────────────────────────────────────────
 
   async adjustBids(
-    adjustments: Array<{ adGroupId: string; bidPrice: number }>,
+    adjustments: Array<{ lineItemId: string; bidPrice: number }>,
     context?: RequestContext
-  ): Promise<{ results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> }> {
-    const results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> = [];
+  ): Promise<{ results: Array<{ lineItemId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> }> {
+    const results: Array<{ lineItemId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> = [];
 
     for (const adjustment of adjustments) {
       try {
-        // Read current ad group state
-        const entity = (await this.getEntity("adGroup", adjustment.adGroupId, context)) as Record<string, unknown>;
-        const previousBid = entity.bid_price != null ? Number(entity.bid_price) : undefined;
+        // Read current line item state
+        const entity = (await this.getEntity("lineItem", adjustment.lineItemId, context)) as Record<string, unknown>;
+        const previousBid = entity.bidding != null ? (entity.bidding as Record<string, unknown>).bidPrice as number | undefined : undefined;
 
         // Update bid
-        await this.updateEntity("adGroup", adjustment.adGroupId, {
-          bid_price: adjustment.bidPrice,
+        await this.updateEntity("lineItem", adjustment.lineItemId, {
+          bidding: { bidPrice: adjustment.bidPrice },
         }, context);
 
         results.push({
-          adGroupId: adjustment.adGroupId,
+          lineItemId: adjustment.lineItemId,
           success: true,
           previousBid,
           newBid: adjustment.bidPrice,
         });
       } catch (error) {
         results.push({
-          adGroupId: adjustment.adGroupId,
+          lineItemId: adjustment.lineItemId,
           success: false,
           error: error instanceof Error ? error.message : String(error),
         });
@@ -267,92 +287,20 @@ export class AmazonDspService {
   async bulkUpdateStatus(
     entityType: AmazonDspEntityType,
     entityIds: string[],
-    operationStatus: "ENABLE" | "DISABLE" | "DELETE",
+    status: string,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    this.logger.debug({ entityType, count: entityIds.length, operationStatus }, "Bulk status update");
-    try {
-      await this.updateEntityStatus(entityType, entityIds, operationStatus, context);
-      return {
-        results: entityIds.map((entityId) => ({ entityId, success: true })),
-      };
-    } catch (error) {
-      this.logger.debug({ entityType, error }, "Bulk status update failed for all entities");
-      return {
-        results: entityIds.map((entityId) => ({
-          entityId,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        })),
-      };
-    }
-  }
+    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+      return this.updateEntityStatus(entityType, entityId, status, context);
+    });
 
-  // ─── Targeting ───────────────────────────────────────────────────
-
-  async searchTargeting(
-    targetingType: string,
-    query?: string,
-    limit = 20,
-    context?: RequestContext
-  ): Promise<unknown> {
-    await this.rateLimiter.consume(`amazon_dsp:default`);
-
-    const params: Record<string, string> = {
-      targeting_type: targetingType,
-      count: String(limit),
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: entityIds[i],
+        success: r.success,
+        error: r.error,
+      })),
     };
-
-    if (query) {
-      params.keyword = query;
-    }
-
-    return this.httpClient.get("/open_api/v1.3/search/targeting/", params, context);
-  }
-
-  async getTargetingOptions(
-    targetingType?: string,
-    context?: RequestContext
-  ): Promise<unknown> {
-    await this.rateLimiter.consume(`amazon_dsp:default`);
-
-    const params: Record<string, string> = {};
-    if (targetingType) {
-      params.objective_type = targetingType;
-    }
-
-    return this.httpClient.get("/open_api/v1.3/targeting/list/", params, context);
-  }
-
-  // ─── Audience Estimate ──────────────────────────────────────────
-
-  async getAudienceEstimate(
-    targetingConfig: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    await this.rateLimiter.consume(`amazon_dsp:default`);
-
-    return this.httpClient.post("/open_api/v1.3/audience/estimate/", targetingConfig, context);
-  }
-
-  // ─── Ad Previews ────────────────────────────────────────────────
-
-  async getAdPreviews(
-    adId: string,
-    adFormat?: string,
-    context?: RequestContext
-  ): Promise<unknown> {
-    await this.rateLimiter.consume(`amazon_dsp:default`);
-
-    const params: Record<string, string> = {
-      ad_id: adId,
-    };
-
-    if (adFormat) {
-      params.ad_format = adFormat;
-    }
-
-    return this.httpClient.get("/open_api/v1.3/ad/preview/", params, context);
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────
