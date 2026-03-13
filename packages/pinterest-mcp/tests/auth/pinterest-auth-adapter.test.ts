@@ -28,11 +28,33 @@ describe("PinterestAccessTokenAdapter", () => {
   });
 
   describe("validate()", () => {
-    it("validates token successfully on v5 user_account response", async () => {
+    it("calls GET /v5/user_account (not TikTok endpoint)", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          username: "testadvertiser",
+          username: "pinterestuser",
+          account_type: "BUSINESS",
+        }),
+      } as unknown as Response);
+
+      const adapter = new PinterestAccessTokenAdapter(
+        "test-token",
+        "1234567890",
+        "https://api.pinterest.com"
+      );
+
+      await adapter.validate();
+
+      const call = mockFetchWithTimeout.mock.calls[0];
+      const url = call[0] as string;
+      expect(url).toBe("https://api.pinterest.com/v5/user_account");
+    });
+
+    it("validates token successfully and sets userId from username field", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          username: "pinterestuser",
           account_type: "BUSINESS",
         }),
       } as unknown as Response);
@@ -44,11 +66,46 @@ describe("PinterestAccessTokenAdapter", () => {
       );
 
       await expect(adapter.validate()).resolves.toBeUndefined();
-      expect(adapter.userId).toBe("testadvertiser");
+      expect(adapter.userId).toBe("pinterestuser");
       expect(adapter.adAccountId).toBe("1234567890");
     });
 
-    it("throws on HTTP error", async () => {
+    it("uses 'unknown' when username is missing from response", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          account_type: "BUSINESS",
+        }),
+      } as unknown as Response);
+
+      const adapter = new PinterestAccessTokenAdapter(
+        "test-token",
+        "1234567890",
+        "https://api.pinterest.com"
+      );
+
+      await adapter.validate();
+      expect(adapter.userId).toBe("unknown");
+    });
+
+    it("throws on HTTP error (no code check — HTTP status only)", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        text: async () => "Invalid token",
+      } as unknown as Response);
+
+      const adapter = new PinterestAccessTokenAdapter(
+        "bad-token",
+        "1234567890",
+        "https://api.pinterest.com"
+      );
+
+      await expect(adapter.validate()).rejects.toThrow("Pinterest token validation HTTP error");
+    });
+
+    it("throws on 500 HTTP error", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
         status: 500,
@@ -59,7 +116,7 @@ describe("PinterestAccessTokenAdapter", () => {
       const adapter = new PinterestAccessTokenAdapter(
         "test-token",
         "1234567890",
-        "https://business-api.pinterest.com"
+        "https://api.pinterest.com"
       );
 
       await expect(adapter.validate()).rejects.toThrow("Pinterest token validation HTTP error");
@@ -69,7 +126,7 @@ describe("PinterestAccessTokenAdapter", () => {
       mockFetchWithTimeout.mockResolvedValue({
         ok: true,
         json: async () => ({
-          username: "testadvertiser",
+          username: "pinterestuser",
           account_type: "BUSINESS",
         }),
       } as unknown as Response);
@@ -77,13 +134,37 @@ describe("PinterestAccessTokenAdapter", () => {
       const adapter = new PinterestAccessTokenAdapter(
         "test-token",
         "1234567890",
-        "https://business-api.pinterest.com"
+        "https://api.pinterest.com"
       );
 
       await adapter.validate();
       await adapter.validate(); // second call should be a no-op
 
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+
+    it("passes Authorization Bearer header to user_account endpoint", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          username: "pinterestuser",
+          account_type: "BUSINESS",
+        }),
+      } as unknown as Response);
+
+      const adapter = new PinterestAccessTokenAdapter(
+        "my-secret-token",
+        "1234567890",
+        "https://api.pinterest.com"
+      );
+
+      await adapter.validate();
+
+      const call = mockFetchWithTimeout.mock.calls[0];
+      const options = call[3] as RequestInit;
+      expect((options.headers as Record<string, string>)["Authorization"]).toBe(
+        "Bearer my-secret-token"
+      );
     });
   });
 
@@ -92,7 +173,7 @@ describe("PinterestAccessTokenAdapter", () => {
       const adapter = new PinterestAccessTokenAdapter(
         "my-access-token",
         "1234567890",
-        "https://business-api.pinterest.com"
+        "https://api.pinterest.com"
       );
       expect(await adapter.getAccessToken()).toBe("my-access-token");
     });
@@ -103,7 +184,7 @@ describe("PinterestAccessTokenAdapter", () => {
       const adapter = new PinterestAccessTokenAdapter(
         "test-token",
         "9876543210",
-        "https://business-api.pinterest.com"
+        "https://api.pinterest.com"
       );
       expect(adapter.adAccountId).toBe("9876543210");
     });
@@ -204,15 +285,107 @@ describe("PinterestRefreshTokenAdapter", () => {
     } as unknown as Response);
   }
 
-  function mockUserInfoSuccess() {
+  function mockUserAccountSuccess(username = "Test User") {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        username: "testuser",
+        username,
         account_type: "BUSINESS",
       }),
     } as unknown as Response);
   }
+
+  describe("validate()", () => {
+    it("calls GET /v5/user_account (not TikTok endpoint)", async () => {
+      const adapter = new PinterestRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "adv-123",
+        "https://api.pinterest.com"
+      );
+
+      // First call: token exchange
+      mockTokenExchangeSuccess();
+      // Second call: user account validation
+      mockUserAccountSuccess();
+
+      await adapter.validate();
+
+      const userAccountCall = mockFetchWithTimeout.mock.calls[1];
+      const url = userAccountCall[0] as string;
+      expect(url).toBe("https://api.pinterest.com/v5/user_account");
+    });
+
+    it("validates token and sets userId from username field", async () => {
+      const adapter = new PinterestRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "adv-123",
+        "https://api.pinterest.com"
+      );
+
+      mockTokenExchangeSuccess();
+      mockUserAccountSuccess("pinterestuser");
+
+      await adapter.validate();
+
+      expect(adapter.userId).toBe("pinterestuser");
+      expect(adapter.adAccountId).toBe("adv-123");
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+
+    it("uses 'unknown' when username is missing from user_account response", async () => {
+      const adapter = new PinterestRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "adv-123",
+        "https://api.pinterest.com"
+      );
+
+      mockTokenExchangeSuccess();
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ account_type: "BUSINESS" }),
+      } as unknown as Response);
+
+      await adapter.validate();
+      expect(adapter.userId).toBe("unknown");
+    });
+
+    it("passes exchanged token in Authorization header to user_account", async () => {
+      const adapter = new PinterestRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "adv-123",
+        "https://api.pinterest.com"
+      );
+
+      mockTokenExchangeSuccess();
+      mockUserAccountSuccess();
+
+      await adapter.validate();
+
+      const userAccountCall = mockFetchWithTimeout.mock.calls[1];
+      const options = userAccountCall[3] as RequestInit;
+      expect((options.headers as Record<string, string>)["Authorization"]).toBe(
+        "Bearer new-access-token"
+      );
+    });
+
+    it("throws on HTTP error from user_account (no code check)", async () => {
+      const adapter = new PinterestRefreshTokenAdapter(
+        MOCK_REFRESH_CREDENTIALS,
+        "adv-123",
+        "https://api.pinterest.com"
+      );
+
+      mockTokenExchangeSuccess();
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        text: async () => "Invalid token",
+      } as unknown as Response);
+
+      await expect(adapter.validate()).rejects.toThrow("Pinterest token validation HTTP error");
+    });
+  });
 
   describe("getAccessToken", () => {
     it("fetches new token when no cache", async () => {
@@ -389,39 +562,6 @@ describe("PinterestRefreshTokenAdapter", () => {
       await expect(adapter.getAccessToken()).rejects.toThrow(
         "Pinterest token refresh failed: code=40100 message=Unauthorized"
       );
-    });
-  });
-
-  describe("validate", () => {
-    it("validates token via user info endpoint", async () => {
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123",
-        "https://business-api.pinterest.com"
-      );
-
-      // First call: token exchange
-      mockTokenExchangeSuccess();
-      // Second call: user info validation
-      mockUserInfoSuccess();
-
-      await adapter.validate();
-
-      expect(adapter.userId).toBe("testuser");
-      expect(adapter.adAccountId).toBe("adv-123");
-      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
-
-      // Verify the user account call used the exchanged token
-      const userInfoCall = mockFetchWithTimeout.mock.calls[1];
-      const userInfoUrl = userInfoCall[0] as string;
-      const userInfoOptions = userInfoCall[3] as RequestInit;
-
-      expect(userInfoUrl).toBe(
-        "https://business-api.pinterest.com/v5/user_account"
-      );
-      expect(
-        (userInfoOptions.headers as Record<string, string>)["Authorization"]
-      ).toBe("Bearer new-access-token");
     });
   });
 

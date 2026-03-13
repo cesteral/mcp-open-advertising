@@ -33,9 +33,8 @@ describe("PinterestBearerAuthStrategy", () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { display_name: "Test Advertiser", email: "test@example.com" },
+          username: "testadvertiser",
+          account_type: "BUSINESS",
         }),
       } as unknown as Response);
 
@@ -77,14 +76,12 @@ describe("PinterestBearerAuthStrategy", () => {
       ).rejects.toThrow("Missing required X-Pinterest-Advertiser-Id header");
     });
 
-    it("throws on invalid token (Pinterest code != 0)", async () => {
+    it("throws on invalid token (HTTP 401)", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          code: 40001,
-          message: "Access token expired",
-          data: null,
-        }),
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        text: async () => "Access token expired",
       } as unknown as Response);
 
       const strategy = new PinterestBearerAuthStrategy(
@@ -96,7 +93,7 @@ describe("PinterestBearerAuthStrategy", () => {
           authorization: "Bearer bad-token",
           "x-pinterest-advertiser-id": "1234567890",
         })
-      ).rejects.toThrow("Pinterest token validation failed");
+      ).rejects.toThrow("Pinterest token validation HTTP error");
     });
 
     it("throws on HTTP error during validation", async () => {
@@ -131,13 +128,12 @@ describe("PinterestBearerAuthStrategy", () => {
           data: { access_token: "refreshed-token", expires_in: 86400 },
         }),
       } as unknown as Response);
-      // Second call: user info validation
+      // Second call: user account validation
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { display_name: "Refresh User" },
+          username: "refreshuser",
+          account_type: "BUSINESS",
         }),
       } as unknown as Response);
 
@@ -154,7 +150,7 @@ describe("PinterestBearerAuthStrategy", () => {
       });
 
       expect(result.authInfo).toMatchObject({
-        clientId: "Refresh User",
+        clientId: "refreshuser",
         authType: "pinterest-bearer",
       });
       expect(result.platformAuthAdapter).toBeDefined();
@@ -175,10 +171,10 @@ describe("PinterestBearerAuthStrategy", () => {
           data: { access_token: "token-a", expires_in: 86400 },
         }),
       } as unknown as Response);
-      // User info
+      // User account
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ code: 0, message: "OK", data: { display_name: "User" } }),
+        json: async () => ({ username: "stableuser", account_type: "BUSINESS" }),
       } as unknown as Response);
 
       const strategy = new PinterestBearerAuthStrategy(
@@ -209,9 +205,8 @@ describe("PinterestBearerAuthStrategy", () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { display_name: "Static User" },
+          username: "staticuser",
+          account_type: "BUSINESS",
         }),
       } as unknown as Response);
 
@@ -226,8 +221,8 @@ describe("PinterestBearerAuthStrategy", () => {
         // Missing app-secret and refresh-token
       });
 
-      expect(result.authInfo.clientId).toBe("Static User");
-      // Only 1 fetch (user info validation for static token)
+      expect(result.authInfo.clientId).toBe("staticuser");
+      // Only 1 fetch (user account validation for static token)
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
   });

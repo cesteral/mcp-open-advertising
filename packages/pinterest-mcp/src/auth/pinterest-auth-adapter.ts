@@ -7,7 +7,7 @@
  *    auto-refresh access tokens (24h expiry). Same caching + mutex pattern
  *    as TTD's TtdApiTokenAuthAdapter.
  *
- * Validates tokens by calling GET /open_api/v1.3/user/info/.
+ * Validates tokens by calling GET /v5/user_account.
  * Token is passed via Authorization: Bearer <token> header.
  */
 
@@ -15,15 +15,11 @@ import { createHash } from "crypto";
 import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
 
 /**
- * Pinterest API response shape (success)
+ * Pinterest v5 user account response shape
  */
-interface PinterestUserInfoResponse {
-  code: number;
-  message: string;
-  data?: {
-    display_name?: string;
-    email?: string;
-  };
+interface PinterestUserAccountResponse {
+  username?: string;
+  account_type?: string;
 }
 
 /**
@@ -63,7 +59,7 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
   }
 
   /**
-   * Validate the access token by calling GET /open_api/v1.3/user/info/.
+   * Validate the access token by calling GET /v5/user_account.
    * Must be called before the adapter is used.
    */
   async validate(): Promise<void> {
@@ -72,7 +68,7 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
     }
 
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/user/info/`,
+      `${this.baseUrl}/v5/user_account`,
       10_000,
       undefined,
       {
@@ -91,15 +87,9 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
       );
     }
 
-    const data = (await response.json()) as PinterestUserInfoResponse;
+    const data = (await response.json()) as PinterestUserAccountResponse;
 
-    if (data.code !== 0) {
-      throw new Error(
-        `Pinterest token validation failed: code=${data.code} message=${data.message}`
-      );
-    }
-
-    this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
+    this._userId = data.username ?? "unknown";
     this.validated = true;
   }
 }
@@ -163,9 +153,9 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
 
-    // Validate the token against user info endpoint
+    // Validate the token against the Pinterest v5 user account endpoint
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/user/info/`,
+      `${this.baseUrl}/v5/user_account`,
       10_000,
       undefined,
       {
@@ -184,14 +174,9 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
       );
     }
 
-    const data = (await response.json()) as PinterestUserInfoResponse;
-    if (data.code !== 0) {
-      throw new Error(
-        `Pinterest token validation failed: code=${data.code} message=${data.message}`
-      );
-    }
+    const data = (await response.json()) as PinterestUserAccountResponse;
 
-    this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
+    this._userId = data.username ?? "unknown";
   }
 
   async getAccessToken(): Promise<string> {
