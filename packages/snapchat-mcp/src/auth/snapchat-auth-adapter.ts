@@ -21,7 +21,7 @@ import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
  */
 interface SnapchatMeResponse {
   request_status: string;
-  me: {
+  me?: {
     id: string;
     display_name: string;
     email?: string;
