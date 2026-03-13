@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cesteral is an AI-native programmatic advertising optimization platform built on seven independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), and TikTok Ads management (tiktok-mcp).
+Cesteral is an AI-native programmatic advertising optimization platform built on ten independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), TikTok Ads management (tiktok-mcp), Pinterest Ads management (pinterest-mcp), Snapchat Ads management (snapchat-mcp), and Amazon DSP management (amazon-dsp-mcp).
 
 ### Current Project Status
 
 **Phase: Production-Ready ✅**
 
-All seven MCP servers are fully implemented with live API integrations:
+All ten MCP servers are fully implemented with live API integrations:
 - **dbm-mcp**: Bid Manager API v2 for DV360 reporting
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
@@ -18,6 +18,9 @@ All seven MCP servers are fully implemented with live API integrations:
 - **meta-mcp**: Meta Marketing API v21.0 for Meta Ads campaign management
 - **linkedin-mcp**: LinkedIn Marketing API v2 for LinkedIn Ads management (port 3006)
 - **tiktok-mcp**: TikTok Marketing API v1.3 for TikTok Ads management (port 3007)
+- **pinterest-mcp**: Pinterest Ads API v5 for Pinterest campaign management (port 3011)
+- **snapchat-mcp**: Snapchat Ads API v1 for Snapchat campaign management (port 3009)
+- **amazon-dsp-mcp**: Amazon DSP API for Amazon programmatic display (port 3012)
 
 ## Essential Commands
 
@@ -37,6 +40,9 @@ cd packages/gads-mcp && pnpm run dev:http
 cd packages/meta-mcp && pnpm run dev:http
 cd packages/linkedin-mcp && pnpm run dev:http
 cd packages/tiktok-mcp && pnpm run dev:http
+cd packages/pinterest-mcp && pnpm run dev:http
+cd packages/snapchat-mcp && pnpm run dev:http
+cd packages/amazon-dsp-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -84,6 +90,15 @@ Use the dev-server script (automatically uses correct port for each server):
 # Start tiktok-mcp (port 3007)
 ./scripts/dev-server.sh tiktok-mcp
 
+# Start pinterest-mcp (port 3011)
+./scripts/dev-server.sh pinterest-mcp
+
+# Start snapchat-mcp (port 3009)
+./scripts/dev-server.sh snapchat-mcp
+
+# Start amazon-dsp-mcp (port 3012)
+./scripts/dev-server.sh amazon-dsp-mcp
+
 ```
 
 ## Monorepo Architecture
@@ -93,7 +108,7 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 ### Core Packages
 1. **`@cesteral/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Seven MCP Servers
+### Ten MCP Servers
 1. **`@cesteral/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
@@ -101,6 +116,9 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 5. **`@cesteral/meta-mcp`** - Meta Ads campaign management (CRUD via Meta Marketing API v21.0)
 6. **`@cesteral/linkedin-mcp`** - LinkedIn Ads campaign management (CRUD via LinkedIn Marketing API v2)
 7. **`@cesteral/tiktok-mcp`** - TikTok Ads campaign management (CRUD via TikTok Marketing API v1.3)
+8. **`@cesteral/pinterest-mcp`** - Pinterest Ads campaign management (CRUD via Pinterest Ads API v5)
+9. **`@cesteral/snapchat-mcp`** - Snapchat Ads campaign management (CRUD via Snapchat Ads API v1)
+10. **`@cesteral/amazon-dsp-mcp`** - Amazon programmatic display management (CRUD via Amazon DSP API)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -739,6 +757,9 @@ Each server runs on a different port:
 - `meta-mcp`: port 3005
 - `linkedin-mcp`: port 3006
 - `tiktok-mcp`: port 3007
+- `pinterest-mcp`: port 3011
+- `snapchat-mcp`: port 3009
+- `amazon-dsp-mcp`: port 3012
 
 Test MCP endpoint:
 ```bash
