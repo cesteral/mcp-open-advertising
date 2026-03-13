@@ -33,7 +33,7 @@ describe("AmazonDspBearerAuthStrategy", () => {
     const strategy = new AmazonDspBearerAuthStrategy(baseUrl);
     const result = await strategy.verify({
       authorization: "Bearer static_token",
-      "x-amazon-dsp-advertiser-id": "profile_123",
+      "amazon-advertising-api-scope": "profile_123",
     });
     expect(result.authInfo.authType).toBe("amazon-dsp-bearer");
   });
@@ -44,18 +44,18 @@ describe("AmazonDspBearerAuthStrategy", () => {
       "x-amazon-dsp-app-id": "app123",
       "x-amazon-dsp-app-secret": "secret456",
       "x-amazon-dsp-refresh-token": "refresh789",
-      "x-amazon-dsp-advertiser-id": "profile_456",
+      "amazon-advertising-api-scope": "profile_456",
     });
     expect(result.authInfo.authType).toBe("amazon-dsp-bearer");
   });
 
-  it("rejects when advertiser ID header is missing", async () => {
+  it("rejects when Amazon-Advertising-API-Scope header is missing", async () => {
     const strategy = new AmazonDspBearerAuthStrategy(baseUrl);
     await expect(
       strategy.verify({
         authorization: "Bearer static_token",
-        // no x-amazon-dsp-advertiser-id
+        // no amazon-advertising-api-scope
       })
-    ).rejects.toThrow("X-AmazonDsp-Advertiser-Id");
+    ).rejects.toThrow("Amazon-Advertising-API-Scope");
   });
 });

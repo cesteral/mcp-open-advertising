@@ -20,7 +20,7 @@ import {
   AmazonDspRefreshTokenAdapter,
   parseAmazonDspTokenFromHeaders,
   parseAmazonDspRefreshCredentialsFromHeaders,
-  getAmazonDspAdvertiserIdFromHeaders,
+  getAmazonDspProfileIdFromHeaders,
   getAmazonDspCredentialFingerprint,
 } from "./amazon-dsp-auth-adapter.js";
 
@@ -41,7 +41,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
     const refreshCreds = parseAmazonDspRefreshCredentialsFromHeaders(headers);
     if (!refreshCreds) return null;
 
-    const profileId = getAmazonDspAdvertiserIdFromHeaders(headers);
+    const profileId = getAmazonDspProfileIdFromHeaders(headers);
     const adapter = new AmazonDspRefreshTokenAdapter(refreshCreds, profileId, this.baseUrl);
     await adapter.validate();
 
@@ -59,7 +59,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
     headers: Record<string, string | string[] | undefined>
   ): Promise<BearerAdapterResult> {
     const token = parseAmazonDspTokenFromHeaders(headers);
-    const profileId = getAmazonDspAdvertiserIdFromHeaders(headers);
+    const profileId = getAmazonDspProfileIdFromHeaders(headers);
     const adapter = new AmazonDspAccessTokenAdapter(token, profileId, this.baseUrl);
     await adapter.validate();
 
@@ -77,7 +77,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
   ): string | undefined {
     const refreshCreds = parseAmazonDspRefreshCredentialsFromHeaders(headers);
     if (!refreshCreds) return undefined;
-    const profileId = getAmazonDspAdvertiserIdFromHeaders(headers);
+    const profileId = getAmazonDspProfileIdFromHeaders(headers);
     return getAmazonDspCredentialFingerprint(refreshCreds.appId, profileId);
   }
 
@@ -85,7 +85,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
     headers: Record<string, string | string[] | undefined>
   ): string {
     const token = parseAmazonDspTokenFromHeaders(headers);
-    const profileId = getAmazonDspAdvertiserIdFromHeaders(headers);
+    const profileId = getAmazonDspProfileIdFromHeaders(headers);
     return getAmazonDspCredentialFingerprint(token, profileId);
   }
 }

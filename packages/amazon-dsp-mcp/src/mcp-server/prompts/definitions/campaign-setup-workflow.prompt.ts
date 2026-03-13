@@ -2,16 +2,16 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "amazon_dsp_campaign_setup_workflow",
-  description: "Step-by-step guide for creating a complete AmazonDsp Ads campaign structure (Campaign > Ad Group > Ad)",
+  description: "Step-by-step guide for creating a complete Amazon DSP campaign structure (Order > Line Item > Creative)",
   arguments: [
     {
       name: "profileId",
-      description: "AmazonDsp Advertiser ID (e.g., 1234567890)",
+      description: "Amazon DSP Entity ID / Profile ID (from Amazon-Advertising-API-Scope header)",
       required: true,
     },
     {
       name: "objective",
-      description: "Campaign objective (e.g., TRAFFIC, APP_INSTALLS, CONVERSIONS)",
+      description: "Campaign goal (e.g., REACH, REMARKETING, BEHAVIORAL_RETARGETING, CONTEXTUAL_TARGETING)",
       required: false,
     },
   ],
@@ -19,87 +19,105 @@ export const campaignSetupWorkflowPrompt: Prompt = {
 
 export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
-  const objective = args?.objective || "TRAFFIC";
+  const objective = args?.objective || "REACH";
 
-  return `# AmazonDsp Campaign Setup Workflow
+  return `# Amazon DSP Campaign Setup Workflow
 
 ## Prerequisites
-- Advertiser ID: \`${profileId}\`
-- Verify access: \`amazon_dsp_list_profiles\`
+- DSP Entity ID (Profile ID): \`${profileId}\`
+- Ensure \`Amazon-Advertising-API-Scope\` header is set to your DSP entity ID
+- Verify advertiser access: \`amazon_dsp_list_entities\` with entityType: "advertiser"
 
-## Step 1: Create Campaign
+⚠️ **GOTCHA: Amazon-Advertising-API-Scope header must contain your DSP entity ID (profile ID).**
+⚠️ **GOTCHA: Budget amounts are in USD dollars (not micro-currency). $50 → budget: 50.00**
+⚠️ **GOTCHA: Amazon DSP has no DELETE endpoint. Use status: "ARCHIVED" to remove entities.**
+
+## Step 1: Create Order (Campaign)
+
+Orders are the top-level campaign entity in Amazon DSP.
 
 \`\`\`json
 amazon_dsp_create_entity({
-  "entityType": "campaign",
+  "entityType": "order",
   "profileId": "${profileId}",
   "data": {
-    "campaign_name": "Your Campaign Name",
-    "objective_type": "${objective}",
-    "budget_mode": "BUDGET_MODE_DAY",
-    "budget": 100
+    "name": "Q1 Brand Awareness Campaign",
+    "advertiserId": "ADVERTISER_ID",
+    "budget": 50000.00,
+    "startDate": "2026-01-01T00:00:00Z",
+    "endDate": "2026-03-31T23:59:59Z",
+    "status": "DELIVERING"
   }
 })
 \`\`\`
 
-**Campaign Objectives:** TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS, LEAD_GENERATION, CATALOG_SALES, COMMUNITY_INTERACTION
+**Campaign Goals / Objectives:** REACH, REMARKETING, BEHAVIORAL_RETARGETING, CONTEXTUAL_TARGETING
 
-## Step 2: Create Ad Group
+## Step 2: Create Line Item (Ad Group)
+
+Line Items define targeting, bidding, and budget allocation within an Order.
 
 \`\`\`json
 amazon_dsp_create_entity({
-  "entityType": "adGroup",
+  "entityType": "lineItem",
   "profileId": "${profileId}",
   "data": {
-    "campaign_id": "CAMPAIGN_ID_FROM_STEP_1",
-    "adgroup_name": "Your Ad Group Name",
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
-    "budget_mode": "BUDGET_MODE_DAY",
-    "budget": 50,
-    "schedule_type": "SCHEDULE_START_END",
-    "schedule_start_time": "2026-03-01 00:00:00",
-    "schedule_end_time": "2026-12-31 23:59:59",
-    "optimize_goal": "CLICK",
-    "bid_type": "BID_TYPE_CUSTOM",
-    "bid_price": 0.5,
-    "age": ["AGE_18_24", "AGE_25_34"],
-    "gender": ["GENDER_UNLIMITED"],
-    "location_ids": ["US"]
+    "name": "Prospecting - Desktop Display",
+    "orderId": "ORDER_ID_FROM_STEP_1",
+    "budget": 10000.00,
+    "status": "DELIVERING",
+    "bidding": {
+      "bidOptimization": "${objective === "REACH" ? "AUTO" : "MANUAL"}",
+      "bidAmount": 2.50
+    },
+    "targetingCriteria": {
+      "audience": {
+        "include": [{ "type": "BEHAVIORAL", "value": ["in-market-auto"] }]
+      }
+    }
   }
 })
 \`\`\`
 
-## Step 3: Create Ad(s)
+## Step 3: Create Creative
+
+Creatives define the ad format and click-through destination.
 
 \`\`\`json
 amazon_dsp_create_entity({
-  "entityType": "ad",
+  "entityType": "creative",
   "profileId": "${profileId}",
   "data": {
-    "adgroup_id": "ADGROUP_ID_FROM_STEP_2",
-    "ad_name": "Your Ad Name",
-    "creative_type": "SINGLE_VIDEO",
-    "video_id": "YOUR_VIDEO_ID",
-    "ad_text": "Your ad copy text (max 100 chars)",
-    "call_to_action": "LEARN_MORE",
-    "landing_page_url": "https://example.com"
+    "name": "300x250 Banner - Brand",
+    "advertiserId": "ADVERTISER_ID",
+    "clickThroughUrl": "https://example.com/landing",
+    "creativeType": "DISPLAY",
+    "status": "ACTIVE"
   }
 })
 \`\`\`
+
+**Creative Types:** DISPLAY, VIDEO
 
 ## Step 4: Verify & Activate
 
-1. Review: \`amazon_dsp_get_entity\` for each created entity
-2. Preview ad: \`amazon_dsp_get_ad_preview\`
-3. Activate: \`amazon_dsp_bulk_update_status\` with operationStatus: "ENABLE"
+1. Review entities: \`amazon_dsp_get_entity\` for each created entity
+2. Activate if paused: \`amazon_dsp_bulk_update_status\` with status: "DELIVERING"
 
-## Common Gotchas
+## Common Errors
 
-- ⚠️ Campaigns are created in **ENABLE** status by default — use DISABLE if not ready
-- ⚠️ Ad groups require \`schedule_start_time\` when \`schedule_type\` is SCHEDULE_START_END
-- ⚠️ Video IDs must be uploaded to AmazonDsp Creative Library first
-- ⚠️ Budget values are in account currency (NOT cents)
-- ⚠️ All status updates use separate /status/update/ endpoints — use \`amazon_dsp_bulk_update_status\`
-- ⚠️ Reporting has a 24-48h lag for finalized data
+| Error | Cause | Fix |
+|-------|-------|-----|
+| 401 Unauthorized | Missing or invalid access token | Check Authorization: Bearer header |
+| 403 Forbidden | Missing API scope header | Set Amazon-Advertising-API-Scope to your DSP entity ID |
+| 400 Bad Request | Invalid date format | Use ISO 8601: YYYY-MM-DDTHH:mm:ssZ |
+| 400 Bad Request | Budget too low | Amazon DSP requires minimum budget thresholds |
+
+## Success Criteria
+
+- [ ] Order created with correct budget and date range
+- [ ] Line Item linked to Order via orderId
+- [ ] Creative linked to correct advertiserId
+- [ ] All entities in DELIVERING status
 `;
 }

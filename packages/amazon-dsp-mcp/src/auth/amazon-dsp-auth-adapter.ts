@@ -284,18 +284,21 @@ export function parseAmazonDspTokenFromHeaders(
 }
 
 /**
- * Extract AmazonDsp advertiser ID from HTTP headers.
- * Expects `X-Amazon-Dsp-Advertiser-Id: <id>` header.
+ * Extract Amazon DSP profile ID from HTTP headers.
+ * Expects `Amazon-Advertising-API-Scope: <profileId>` header (real Amazon DSP header).
  */
-export function getAmazonDspAdvertiserIdFromHeaders(
+export function getAmazonDspProfileIdFromHeaders(
   headers: Record<string, string | string[] | undefined>
 ): string {
   const profileId =
-    extractHeader(headers, "x-amazon-dsp-advertiser-id") ??
-    extractHeader(headers, "X-AmazonDsp-Advertiser-Id");
+    extractHeader(headers, "amazon-advertising-api-scope") ??
+    extractHeader(headers, "Amazon-Advertising-API-Scope");
 
   if (!profileId) {
-    throw new Error("Missing required X-AmazonDsp-Advertiser-Id header");
+    throw new Error(
+      "Missing required Amazon-Advertising-API-Scope header (DSP entity ID / profile ID). " +
+      "Also ensure Amazon-Advertising-API-ClientId header is set."
+    );
   }
 
   return profileId;
