@@ -123,9 +123,9 @@ describe("PinterestBearerAuthStrategy", () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { access_token: "refreshed-token", expires_in: 86400 },
+          access_token: "refreshed-token",
+          token_type: "bearer",
+          expires_in: 86400,
         }),
       } as unknown as Response);
       // Second call: user account validation
@@ -166,9 +166,9 @@ describe("PinterestBearerAuthStrategy", () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 0,
-          message: "OK",
-          data: { access_token: "token-a", expires_in: 86400 },
+          access_token: "token-a",
+          token_type: "bearer",
+          expires_in: 86400,
         }),
       } as unknown as Response);
       // User account

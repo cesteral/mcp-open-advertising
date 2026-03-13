@@ -104,16 +104,14 @@ export interface PinterestRefreshCredentials {
 }
 
 /**
- * Pinterest OAuth2 token response shape.
+ * Pinterest OAuth2 token response shape (v5 standard OAuth2, no wrapper envelope).
  */
 interface PinterestTokenResponse {
-  code: number;
-  message: string;
-  data?: {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number; // seconds (typically 86400 = 24h)
-  };
+  access_token: string;
+  token_type: string;
+  expires_in: number; // seconds (typically 2592000 = 30 days)
+  refresh_token?: string;
+  scope?: string;
 }
 
 /**
@@ -197,19 +195,27 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
   }
 
   private async refreshAccessToken(): Promise<string> {
+    const b64 = Buffer.from(
+      `${this.credentials.appId}:${this.credentials.appSecret}`
+    ).toString("base64");
+
+    const body = new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: this.currentRefreshToken,
+      scope: "ads:read,ads:write",
+    }).toString();
+
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/oauth2/access_token/`,
+      "https://api.pinterest.com/v5/oauth/token",
       10_000,
       undefined,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          app_id: this.credentials.appId,
-          secret: this.credentials.appSecret,
-          grant_type: "refresh_token",
-          refresh_token: this.currentRefreshToken,
-        }),
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Authorization: `Basic ${b64}`,
+        },
+        body,
       }
     );
 
@@ -221,19 +227,19 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
     }
 
     const data = (await response.json()) as PinterestTokenResponse;
-    if (data.code !== 0 || !data.data?.access_token) {
+    if (!data.access_token) {
       throw new Error(
-        `Pinterest token refresh failed: code=${data.code} message=${data.message}`
+        `Pinterest token refresh failed: missing access_token in response`
       );
     }
 
-    this.cachedToken = data.data.access_token;
+    this.cachedToken = data.access_token;
     this.tokenExpiresAt =
-      Date.now() + data.data.expires_in * 1000 - PinterestRefreshTokenAdapter.EXPIRY_BUFFER_MS;
+      Date.now() + data.expires_in * 1000 - PinterestRefreshTokenAdapter.EXPIRY_BUFFER_MS;
 
     // Pinterest may rotate the refresh token — store the new one
-    if (data.data.refresh_token) {
-      this.currentRefreshToken = data.data.refresh_token;
+    if (data.refresh_token) {
+      this.currentRefreshToken = data.refresh_token;
     }
 
     return this.cachedToken;

@@ -269,13 +269,10 @@ describe("PinterestRefreshTokenAdapter", () => {
   });
 
   function mockTokenExchangeSuccess(body = {
-    code: 0,
-    message: "OK",
-    data: {
-      access_token: "new-access-token",
-      expires_in: 86400,
-      refresh_token: "new-refresh-token",
-    },
+    access_token: "new-access-token",
+    token_type: "bearer",
+    expires_in: 86400,
+    refresh_token: "new-refresh-token",
   }) {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
@@ -382,6 +379,91 @@ describe("PinterestRefreshTokenAdapter", () => {
       } as unknown as Response);
 
       await expect(adapter.validate()).rejects.toThrow("Pinterest token validation HTTP error");
+    });
+  });
+
+  describe("getAccessToken", () => {
+    it("calls POST https://api.pinterest.com/v5/oauth/token with form-encoded body and Basic auth", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "new_access_token", token_type: "bearer", expires_in: 2592000 }),
+      } as unknown as Response);
+
+      const adapter = new PinterestRefreshTokenAdapter(
+        { appId: "my_app_id", appSecret: "my_secret", refreshToken: "initial_rt" },
+        "act_123",
+        "https://api.pinterest.com"
+      );
+
+      const token = await adapter.getAccessToken();
+      expect(token).toBe("new_access_token");
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+
+      const [url, , , init] = mockFetchWithTimeout.mock.calls[0] as [string, number, unknown, RequestInit & { headers: Record<string, string> }];
+      expect(url).toBe("https://api.pinterest.com/v5/oauth/token");
+      expect(init.headers["Content-Type"]).toBe("application/x-www-form-urlencoded");
+      expect(init.headers["Authorization"]).toMatch(/^Basic /);
+
+      const b64 = init.headers["Authorization"].replace("Basic ", "");
+      expect(Buffer.from(b64, "base64").toString()).toBe("my_app_id:my_secret");
+      expect(init.body).toContain("grant_type=refresh_token");
+      expect(init.body).toContain("refresh_token=initial_rt");
+      expect(init.body).toContain("scope=");
+    });
+
+    it("reads access_token from top-level response (not data.access_token)", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "top_level_token", expires_in: 2592000 }),
+      } as unknown as Response);
+
+      const adapter = new PinterestRefreshTokenAdapter(
+        { appId: "a", appSecret: "b", refreshToken: "r" },
+        "act_1",
+        "https://api.pinterest.com"
+      );
+
+      expect(await adapter.getAccessToken()).toBe("top_level_token");
+    });
+
+    it("rotates refresh token when response includes new one", async () => {
+      mockFetchWithTimeout
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t1", expires_in: 100, refresh_token: "new_rt" }) } as unknown as Response)
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t2", expires_in: 100 }) } as unknown as Response);
+
+      const adapter = new PinterestRefreshTokenAdapter(
+        { appId: "a", appSecret: "b", refreshToken: "old_rt" },
+        "act_1",
+        "https://api.pinterest.com"
+      );
+
+      // First call uses old_rt, gets new_rt back
+      await adapter.getAccessToken();
+
+      // Expire the cache
+      // @ts-ignore
+      adapter.tokenExpiresAt = 0;
+
+      // Second call should use new_rt
+      await adapter.getAccessToken();
+
+      const [, , , secondCallInit] = mockFetchWithTimeout.mock.calls[1] as [string, number, unknown, RequestInit & { body: string }];
+      expect(secondCallInit.body).toContain("refresh_token=new_rt");
+    });
+
+    it("throws if response has no access_token", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ error: "invalid_grant" }),
+      } as unknown as Response);
+
+      const adapter = new PinterestRefreshTokenAdapter(
+        { appId: "a", appSecret: "b", refreshToken: "bad" },
+        "act_1",
+        "https://api.pinterest.com"
+      );
+
+      await expect(adapter.getAccessToken()).rejects.toThrow("access_token");
     });
   });
 

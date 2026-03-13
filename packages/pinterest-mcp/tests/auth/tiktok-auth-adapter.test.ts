@@ -178,13 +178,10 @@ const MOCK_REFRESH_CREDENTIALS = {
 };
 
 const MOCK_TOKEN_EXCHANGE_RESPONSE = {
-  code: 0,
-  message: "OK",
-  data: {
-    access_token: "new-access-token",
-    expires_in: 86400,
-    refresh_token: "new-refresh-token",
-  },
+  access_token: "new-access-token",
+  token_type: "bearer",
+  expires_in: 86400,
+  refresh_token: "new-refresh-token",
 };
 
 describe("PinterestRefreshTokenAdapter", () => {
@@ -228,21 +225,16 @@ describe("PinterestRefreshTokenAdapter", () => {
       expect(token).toBe("new-access-token");
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
 
-      // Verify correct POST body
+      // Verify correct POST URL, headers, and form-encoded body
       const call = mockFetchWithTimeout.mock.calls[0];
       const url = call[0] as string;
-      const options = call[3] as RequestInit;
-      const body = JSON.parse(options.body as string);
+      const options = call[3] as RequestInit & { headers: Record<string, string> };
 
-      expect(url).toBe(
-        "https://business-api.pinterest.com/open_api/v1.3/oauth2/access_token/"
-      );
-      expect(body).toEqual({
-        app_id: "test-app-id",
-        secret: "test-app-secret",
-        grant_type: "refresh_token",
-        refresh_token: "test-refresh-token",
-      });
+      expect(url).toBe("https://api.pinterest.com/v5/oauth/token");
+      expect(options.headers["Content-Type"]).toBe("application/x-www-form-urlencoded");
+      expect(options.headers["Authorization"]).toMatch(/^Basic /);
+      expect(options.body).toContain("grant_type=refresh_token");
+      expect(options.body).toContain("refresh_token=test-refresh-token");
     });
 
     it("returns cached token when not expired", async () => {
@@ -283,13 +275,10 @@ describe("PinterestRefreshTokenAdapter", () => {
       vi.advanceTimersByTime(86341 * 1000);
 
       mockTokenExchangeSuccess({
-        code: 0,
-        message: "OK",
-        data: {
-          access_token: "refreshed-token",
-          expires_in: 86400,
-          refresh_token: "another-refresh",
-        },
+        access_token: "refreshed-token",
+        token_type: "bearer",
+        expires_in: 86400,
+        refresh_token: "another-refresh",
       });
 
       const second = await adapter.getAccessToken();
@@ -371,7 +360,7 @@ describe("PinterestRefreshTokenAdapter", () => {
       );
     });
 
-    it("error on non-zero Pinterest code", async () => {
+    it("error when access_token is missing from response", async () => {
       const adapter = new PinterestRefreshTokenAdapter(
         MOCK_REFRESH_CREDENTIALS,
         "adv-123"
@@ -380,14 +369,13 @@ describe("PinterestRefreshTokenAdapter", () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          code: 40100,
-          message: "Unauthorized",
-          data: null,
+          error: "invalid_grant",
+          error_description: "The refresh token is invalid",
         }),
       } as unknown as Response);
 
       await expect(adapter.getAccessToken()).rejects.toThrow(
-        "Pinterest token refresh failed: code=40100 message=Unauthorized"
+        "Pinterest token refresh failed: missing access_token in response"
       );
     });
   });
@@ -436,13 +424,10 @@ describe("PinterestRefreshTokenAdapter", () => {
 
       // First exchange returns a new refresh_token
       mockTokenExchangeSuccess({
-        code: 0,
-        message: "OK",
-        data: {
-          access_token: "token-1",
-          expires_in: 86400,
-          refresh_token: "rotated-refresh-token",
-        },
+        access_token: "token-1",
+        token_type: "bearer",
+        expires_in: 86400,
+        refresh_token: "rotated-refresh-token",
       });
 
       const first = await adapter.getAccessToken();
@@ -453,13 +438,10 @@ describe("PinterestRefreshTokenAdapter", () => {
 
       // Second exchange
       mockTokenExchangeSuccess({
-        code: 0,
-        message: "OK",
-        data: {
-          access_token: "token-2",
-          expires_in: 86400,
-          refresh_token: "rotated-again",
-        },
+        access_token: "token-2",
+        token_type: "bearer",
+        expires_in: 86400,
+        refresh_token: "rotated-again",
       });
 
       const second = await adapter.getAccessToken();
@@ -467,8 +449,8 @@ describe("PinterestRefreshTokenAdapter", () => {
 
       // Verify the second exchange used the rotated refresh token
       const secondCall = mockFetchWithTimeout.mock.calls[1];
-      const secondBody = JSON.parse((secondCall[3] as RequestInit).body as string);
-      expect(secondBody.refresh_token).toBe("rotated-refresh-token");
+      const secondBody = (secondCall[3] as RequestInit).body as string;
+      expect(secondBody).toContain("refresh_token=rotated-refresh-token");
     });
   });
 });
