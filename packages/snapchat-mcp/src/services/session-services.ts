@@ -30,11 +30,9 @@ export function createSessionServices(
     baseUrl,
     logger
   );
-  // orgId is not available in auth adapter — use adAccountId as placeholder
-  // until an orgId header/env var is added
   const snapchatService = new SnapchatService(
     httpClient,
-    authAdapter.adAccountId,
+    authAdapter.orgId,
     authAdapter.adAccountId
   );
   const snapchatReportingService = new SnapchatReportingService(

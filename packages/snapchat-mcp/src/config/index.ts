@@ -27,9 +27,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   snapchatApiVersion: z.string().default("v1"),
   snapchatRateLimitPerMinute: z.number().default(100),
 
-  // Stdio fallback: Snapchat access token and default ad account ID
+  // Stdio fallback: Snapchat access token, ad account ID, and org ID
   snapchatAccessToken: z.string().optional(),
   snapchatAdAccountId: z.string().optional(),
+  snapchatOrgId: z.string().optional(),
 
   // Refresh token flow: app credentials + refresh token (recommended for production)
   snapchatAppId: z.string().optional(),
@@ -64,6 +65,7 @@ export function parseConfig(): AppConfig {
     // Stdio fallback credentials
     snapchatAccessToken: process.env.SNAPCHAT_ACCESS_TOKEN,
     snapchatAdAccountId: process.env.SNAPCHAT_AD_ACCOUNT_ID,
+    snapchatOrgId: process.env.SNAPCHAT_ORG_ID,
 
     // Refresh token flow credentials
     snapchatAppId: process.env.SNAPCHAT_APP_ID,

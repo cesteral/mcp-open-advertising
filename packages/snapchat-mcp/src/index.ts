@@ -36,7 +36,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   const authAdapter = new SnapchatAccessTokenAdapter(
     accessToken,
     adAccountId,
-    mcpConfig.snapchatApiBaseUrl
+    mcpConfig.snapchatApiBaseUrl,
+    mcpConfig.snapchatOrgId ?? ""
   );
 
   // Validate token at startup to fail fast on invalid credentials

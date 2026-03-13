@@ -21,6 +21,7 @@ import {
   parseSnapchatTokenFromHeaders,
   parseSnapchatRefreshCredentialsFromHeaders,
   getSnapchatAdvertiserIdFromHeaders,
+  getSnapchatOrgIdFromHeaders,
   getSnapchatCredentialFingerprint,
 } from "./snapchat-auth-adapter.js";
 
@@ -42,7 +43,8 @@ export class SnapchatBearerAuthStrategy extends BearerAuthStrategyBase {
     if (!refreshCreds) return null;
 
     const adAccountId = getSnapchatAdvertiserIdFromHeaders(headers);
-    const adapter = new SnapchatRefreshTokenAdapter(refreshCreds, adAccountId, this.baseUrl);
+    const orgId = getSnapchatOrgIdFromHeaders(headers);
+    const adapter = new SnapchatRefreshTokenAdapter(refreshCreds, adAccountId, this.baseUrl, orgId);
     await adapter.validate();
 
     return {
@@ -51,7 +53,7 @@ export class SnapchatBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getSnapchatCredentialFingerprint(refreshCreds.appId, adAccountId),
       userId: adapter.userId,
       authFlow: "refresh-token",
-      logContext: { adAccountId },
+      logContext: { adAccountId, orgId },
     };
   }
 
@@ -60,7 +62,8 @@ export class SnapchatBearerAuthStrategy extends BearerAuthStrategyBase {
   ): Promise<BearerAdapterResult> {
     const token = parseSnapchatTokenFromHeaders(headers);
     const adAccountId = getSnapchatAdvertiserIdFromHeaders(headers);
-    const adapter = new SnapchatAccessTokenAdapter(token, adAccountId, this.baseUrl);
+    const orgId = getSnapchatOrgIdFromHeaders(headers);
+    const adapter = new SnapchatAccessTokenAdapter(token, adAccountId, this.baseUrl, orgId);
     await adapter.validate();
 
     return {
@@ -68,7 +71,7 @@ export class SnapchatBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getSnapchatCredentialFingerprint(token, adAccountId),
       userId: adapter.userId,
       authFlow: "static-token",
-      logContext: { adAccountId },
+      logContext: { adAccountId, orgId },
     };
   }
 

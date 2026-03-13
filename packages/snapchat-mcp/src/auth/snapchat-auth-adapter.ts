@@ -36,6 +36,8 @@ export interface SnapchatAuthAdapter {
   validate(): Promise<void>;
   readonly userId: string;
   readonly adAccountId: string;
+  /** Snapchat organization ID — required for /v1/organizations/{orgId}/adaccounts */
+  readonly orgId: string;
 }
 
 /**
@@ -49,7 +51,8 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
   constructor(
     private readonly accessToken: string,
     private readonly _adAccountId: string,
-    private readonly baseUrl: string = "https://adsapi.snapchat.com"
+    private readonly baseUrl: string = "https://adsapi.snapchat.com",
+    private readonly _orgId: string = ""
   ) {}
 
   get userId(): string {
@@ -58,6 +61,10 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
 
   get adAccountId(): string {
     return this._adAccountId;
+  }
+
+  get orgId(): string {
+    return this._orgId;
   }
 
   async getAccessToken(): Promise<string> {
@@ -140,7 +147,8 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
   constructor(
     private readonly credentials: SnapchatRefreshCredentials,
     private readonly _adAccountId: string,
-    private readonly baseUrl: string = "https://adsapi.snapchat.com"
+    private readonly baseUrl: string = "https://adsapi.snapchat.com",
+    private readonly _orgId: string = ""
   ) {
     this.currentRefreshToken = credentials.refreshToken;
   }
@@ -151,6 +159,10 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
 
   get adAccountId(): string {
     return this._adAccountId;
+  }
+
+  get orgId(): string {
+    return this._orgId;
   }
 
   async validate(): Promise<void> {
@@ -304,6 +316,16 @@ export function getSnapchatAdvertiserIdFromHeaders(
   }
 
   return adAccountId;
+}
+
+/**
+ * Extract Snapchat organization ID from HTTP headers.
+ * Expects `X-Snapchat-Org-Id: <id>` header (optional — only required for listAdAccounts).
+ */
+export function getSnapchatOrgIdFromHeaders(
+  headers: Record<string, string | string[] | undefined>
+): string {
+  return extractHeader(headers, "x-snapchat-org-id") ?? "";
 }
 
 /**

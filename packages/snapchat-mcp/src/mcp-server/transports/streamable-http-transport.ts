@@ -79,7 +79,8 @@ function buildPlatformConfig(
           const envAdapter = new SnapchatRefreshTokenAdapter(
             { appId: cfg.snapchatAppId, appSecret: cfg.snapchatAppSecret, refreshToken: cfg.snapchatRefreshToken },
             snapchatAdAccountId,
-            cfg.snapchatApiBaseUrl
+            cfg.snapchatApiBaseUrl,
+            cfg.snapchatOrgId ?? ""
           );
           await envAdapter.validate();
           const services = createSessionServices(envAdapter, cfg.snapchatApiBaseUrl, log, rateLimiter, { reportPollIntervalMs: cfg.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts });
@@ -94,7 +95,8 @@ function buildPlatformConfig(
           const envAdapter = new SnapchatAccessTokenAdapter(
             snapchatToken,
             snapchatAdAccountId,
-            cfg.snapchatApiBaseUrl
+            cfg.snapchatApiBaseUrl,
+            cfg.snapchatOrgId ?? ""
           );
           await envAdapter.validate();
           const cfgFallback = appConfig as AppConfig;
