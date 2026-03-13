@@ -9,7 +9,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const crossPlatformCampaignSetupPrompt: Prompt = {
   name: "cross_platform_campaign_setup",
   description:
-    "Guide for setting up a coordinated multi-platform campaign across DV360 (dv360-mcp), The Trade Desk (ttd-mcp), Google Ads (gads-mcp), Meta Ads (meta-mcp), and Pinterest (pinterest-mcp). Covers platform selection, budget allocation, naming conventions, and phased launch.",
+    "Guide for setting up a coordinated multi-platform campaign across DV360 (dv360-mcp), The Trade Desk (ttd-mcp), Google Ads (gads-mcp), Meta Ads (meta-mcp), LinkedIn (linkedin-mcp), TikTok (tiktok-mcp), Pinterest (pinterest-mcp), Snapchat (snapchat-mcp), and Amazon DSP (amazon-dsp-mcp). Covers platform selection, budget allocation, naming conventions, and phased launch.",
   arguments: [
     {
       name: "totalBudget",
@@ -47,11 +47,13 @@ Choose platforms based on your objective and audience:
 
 | Objective | Recommended Platforms | Rationale |
 |-----------|----------------------|-----------|
-| **Awareness** | DV360 + Meta + Pinterest | DV360 for programmatic display/video reach, Meta & Pinterest for social/visual reach |
-| **Consideration** | DV360 + TTD + Meta + Pinterest | Broad programmatic reach with social and visual discovery engagement |
-| **Conversion** | Google Ads + Meta + TTD | Search intent (Google) + social retargeting (Meta) + programmatic (TTD) |
-| **Shopping / E-commerce** | Pinterest + Meta + Google Ads | Pinterest for visual discovery/shopping intent, Meta for retargeting, Google for search |
-| **Full-Funnel** | All 5 platforms | Maximum reach across all touchpoints |
+| **Awareness** | DV360 + Meta + TikTok + Pinterest | DV360 for programmatic display/video reach, Meta/TikTok for social reach, Pinterest for visual discovery |
+| **Consideration** | DV360 + TTD + Meta + LinkedIn | Broad programmatic reach with social engagement and B2B professional targeting |
+| **Conversion** | Google Ads + Meta + TTD + Amazon DSP | Search intent (Google) + social retargeting (Meta) + programmatic (TTD) + retail intent (Amazon) |
+| **B2B** | LinkedIn + Google Ads + Meta | Professional audience targeting on LinkedIn, search intent, social retargeting |
+| **Gen Z / Video** | TikTok + Snapchat + Meta | Short-form video engagement across Gen Z/Millennial audiences |
+| **Shopping / E-commerce** | Pinterest + Meta + Google Ads + Amazon DSP | Visual discovery + social + search + retail intent |
+| **Full-Funnel** | All 9 platforms | Maximum reach across all touchpoints |
 
 ---
 
@@ -66,21 +68,29 @@ Allocate based on historical CPA/ROAS data. Use the \`cross_platform_performance
 
 | Platform | Allocation | Budget |
 |----------|-----------|--------|
-| DV360 | 20% | \$${totalBudget} × 0.20 |
-| TTD | 20% | \$${totalBudget} × 0.20 |
-| Google Ads | 20% | \$${totalBudget} × 0.20 |
-| Meta | 20% | \$${totalBudget} × 0.20 |
-| Pinterest | 20% | \$${totalBudget} × 0.20 |
+| DV360 | 15% | \$${totalBudget} × 0.15 |
+| TTD | 15% | \$${totalBudget} × 0.15 |
+| Google Ads | 15% | \$${totalBudget} × 0.15 |
+| Meta | 15% | \$${totalBudget} × 0.15 |
+| LinkedIn | 10% | \$${totalBudget} × 0.10 |
+| TikTok | 10% | \$${totalBudget} × 0.10 |
+| Pinterest | 10% | \$${totalBudget} × 0.10 |
+| Snapchat | 5% | \$${totalBudget} × 0.05 |
+| Amazon DSP | 5% | \$${totalBudget} × 0.05 |
 
 ### Objective-Weighted
 
-| Platform | Awareness | Consideration | Conversion | Shopping |
-|----------|-----------|---------------|------------|----------|
-| DV360 | 30% | 20% | 15% | 5% |
-| TTD | 20% | 20% | 20% | 10% |
-| Google Ads | 10% | 20% | 40% | 25% |
-| Meta | 25% | 25% | 20% | 30% |
-| Pinterest | 15% | 15% | 5% | 30% |
+| Platform | Awareness | Consideration | Conversion | B2B | Shopping |
+|----------|-----------|---------------|------------|-----|----------|
+| DV360 | 25% | 20% | 10% | 5% | 5% |
+| TTD | 15% | 15% | 15% | 5% | 10% |
+| Google Ads | 5% | 15% | 30% | 20% | 20% |
+| Meta | 20% | 20% | 15% | 15% | 20% |
+| LinkedIn | 5% | 10% | 5% | 35% | 2% |
+| TikTok | 15% | 10% | 10% | 5% | 8% |
+| Pinterest | 10% | 5% | 5% | 0% | 20% |
+| Snapchat | 5% | 5% | 5% | 0% | 5% |
+| Amazon DSP | 0% | 0% | 5% | 15% | 10% |
 
 ---
 
@@ -95,7 +105,11 @@ Use consistent naming across all platforms for easy cross-platform tracking:
 - \`Acme_Conv_TTD_US_Retargeting_202603\`
 - \`Acme_Conv_GADS_US_Search_202603\`
 - \`Acme_Conv_META_US_Lookalike_202603\`
-- \`Acme_Aware_PIN_US_Shopping_202603\`
+- \`Acme_B2B_LI_US_Professionals_202603\`
+- \`Acme_Aware_TT_US_GenZ_202603\`
+- \`Acme_Shop_PIN_US_ShoppingIntent_202603\`
+- \`Acme_Aware_SNAP_US_GenZ_202603\`
+- \`Acme_Conv_AMZN_US_Retargeting_202603\`
 
 ---
 
@@ -168,6 +182,64 @@ Key steps:
 
 Best for: E-commerce, lifestyle, food/beauty brands — high visual discovery and shopping intent
 
+### LinkedIn Ads (via linkedin-mcp)
+
+Use the \`linkedin_campaign_setup_workflow\` prompt for detailed guidance.
+
+Key steps:
+1. Create Campaign Group (ACTIVE or PAUSED)
+2. Create Campaign with targeting criteria and CPM bid
+3. Create Creative linked to the campaign
+4. Activate via \`linkedin_bulk_update_status\`
+
+⚠️ **LinkedIn budget values are in dollars** ($100.00 = 100.00)
+
+Best for: B2B, professional audiences, job title/company/skill targeting
+
+### TikTok Ads (via tiktok-mcp)
+
+Use the \`tiktok_campaign_setup_workflow\` prompt for detailed guidance.
+
+Key steps:
+1. Create Campaign with objective and budget
+2. Create Ad Group with targeting and schedule
+3. Upload creatives via \`tiktok_upload_video\` or \`tiktok_upload_image\`
+4. Create Ads referencing the creative
+5. Enable via \`tiktok_bulk_update_status\`
+
+⚠️ **TikTok budget values are in dollars** ($100.00 = 100.00)
+
+Best for: Short-form video, Gen Z/Millennial audiences, entertainment and lifestyle brands
+
+### Snapchat (via snapchat-mcp)
+
+Use the \`snapchat_campaign_setup_workflow\` prompt for detailed guidance.
+
+Key steps:
+1. Create Campaign with objective and budget
+2. Create Ad Squad (Ad Group) with targeting and placement
+3. Upload creative via \`snapchat_upload_media\`
+4. Create Ads referencing the creative
+5. Activate via \`snapchat_bulk_update_status\`
+
+⚠️ **Snapchat budget values are in micro-currency** (1 = $0.000001, so $100.00 = 100000000)
+
+Best for: Gen Z audiences, AR lenses, video/story formats
+
+### Amazon DSP (via amazon-dsp-mcp)
+
+Use the \`amazon_dsp_campaign_setup_workflow\` prompt for detailed guidance.
+
+Key steps:
+1. Create Order (equivalent to Campaign) with flight dates and budget
+2. Create Line Item with targeting and bid
+3. Create Creative and attach to Line Item
+4. Activate Order
+
+⚠️ **Amazon DSP budget values are in dollars** ($100.00 = 100.00)
+
+Best for: Retail/commerce intent, first-party Amazon audience data, programmatic display
+
 ---
 
 ## Step 5: Budget Value Reference
@@ -180,7 +252,11 @@ Critical — each platform uses different units:
 | **TTD** | Dollars | 100.00 | 5.00 | Programmatic DSP |
 | **Google Ads** | Micros | 100000000 | 5000000 | Search intent |
 | **Meta** | Cents | 10000 | 500 | Social retargeting |
-| **Pinterest** | Micro-currency | 100000000 | 5000000 | Visual discovery, shopping intent |
+| **LinkedIn** | Dollars | 100.00 | 5.00 | B2B professional audiences |
+| **TikTok** | Dollars | 100.00 | 5.00 | Short-form video, Gen Z |
+| **Pinterest** | Micro-currency | 100000000 | 5000000 | Visual discovery, shopping |
+| **Snapchat** | Micro-currency | 100000000 | 5000000 | Gen Z, AR/video |
+| **Amazon DSP** | Dollars | 100.00 | 5.00 | Retail/commerce intent |
 
 **Pinterest example:** $50/day → \`daily_spend_cap: 50000000\`
 
