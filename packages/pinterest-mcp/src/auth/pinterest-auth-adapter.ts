@@ -34,7 +34,7 @@ export interface PinterestAuthAdapter {
 
 /**
  * Simple access token adapter — holds a pre-generated Pinterest access token.
- * Validates the token on first use by calling GET /open_api/v1.3/user/info/.
+ * Validates the token on first use by calling GET /v5/user_account.
  */
 export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
   private validated = false;
