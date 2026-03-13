@@ -13,56 +13,42 @@ const PINTEREST_RETRY_CONFIG: RetryConfig = {
   platformName: "Pinterest",
 };
 
-/** Pinterest standard API response shape */
-interface PinterestApiResponse {
-  code: number;
-  message: string;
-  data: unknown;
-  request_id?: string;
+/** HTTP status codes that indicate rate limiting */
+const RATE_LIMIT_HTTP_STATUSES = new Set([429]);
+
+function isRetryablePinterestError(httpStatus: number): boolean {
+  return httpStatus === 429 || httpStatus >= 500;
 }
 
-/** Pinterest error codes that indicate token expiry or auth failure */
-const AUTH_ERROR_CODES = new Set([40001, 40002, 40013]);
-
-/** Pinterest error codes that indicate rate limiting */
-const RATE_LIMIT_CODES = new Set([40100, 40101]);
-
-function isRetryablePinterestError(pinterestCode: number, httpStatus: number): boolean {
-  // Auth errors (40001, 40002, 40013) are not transient — fail fast, no retry
-  return (
-    httpStatus === 429 ||
-    httpStatus >= 500 ||
-    RATE_LIMIT_CODES.has(pinterestCode)
-  );
-}
-
-function mapPinterestErrorToJsonRpc(pinterestCode: number, httpStatus: number): JsonRpcErrorCode {
-  if (AUTH_ERROR_CODES.has(pinterestCode) || httpStatus === 401) {
+function mapHttpStatusToJsonRpc(httpStatus: number): JsonRpcErrorCode {
+  if (httpStatus === 401) {
     return JsonRpcErrorCode.Unauthorized;
   }
-  if (RATE_LIMIT_CODES.has(pinterestCode) || httpStatus === 429) {
+  if (RATE_LIMIT_HTTP_STATUSES.has(httpStatus)) {
     return JsonRpcErrorCode.RateLimited;
   }
   if (httpStatus === 403) {
     return JsonRpcErrorCode.Forbidden;
   }
-  if (httpStatus >= 500 || pinterestCode >= 50000) {
+  if (httpStatus >= 500) {
     return JsonRpcErrorCode.ServiceUnavailable;
   }
   return JsonRpcErrorCode.InvalidRequest;
 }
 
 /**
- * HTTP client for Pinterest Marketing API requests.
+ * HTTP client for Pinterest Marketing API v5 requests.
  *
  * Handles authentication via Bearer token, automatic ad_account_id injection,
  * retry with exponential backoff, and Pinterest-specific error parsing.
+ *
+ * Pinterest v5 uses standard HTTP status codes — NO { code, data } response envelope.
+ * Successful responses return data at the top level (e.g. { items: [...], bookmark: "..." }).
  *
  * Key Pinterest patterns:
  * - GET requests: ad_account_id goes in query params
  * - POST requests: ad_account_id goes in JSON body
  * - DELETE requests: ad_account_id goes in JSON body
- * - Response shape: { code: 0, message: "OK", data: {...} }
  */
 export class PinterestHttpClient {
   constructor(
@@ -168,23 +154,7 @@ export class PinterestHttpClient {
         body,
       });
       span.setAttribute("http.response.status_code", response.status);
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        throw new McpError(
-          mapPinterestErrorToJsonRpc(0, response.status),
-          `Pinterest API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          { requestId: context?.requestId, httpStatus: response.status, url }
-        );
-      }
-      const json = (await response.json()) as PinterestApiResponse;
-      if (json.code !== 0) {
-        throw new McpError(
-          mapPinterestErrorToJsonRpc(json.code, response.status),
-          json.message || `Pinterest API error: code=${json.code}`,
-          { requestId: context?.requestId, pinterestCode: json.code, url }
-        );
-      }
-      return json.data;
+      return this.parseResponse(response, url, context);
     });
   }
 
@@ -241,12 +211,13 @@ export class PinterestHttpClient {
         }
       );
 
+      setSpanAttribute("http.response.status_code", response.status);
+
       if (!response.ok) {
-        // HTTP-level error before we can read JSON
         const errorBody = await response.text().catch(() => "");
         const mcpError = new McpError(
-          mapPinterestErrorToJsonRpc(0, response.status),
-          `Pinterest API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
+          mapHttpStatusToJsonRpc(response.status),
+          `Pinterest API error ${response.status} ${response.statusText}: ${errorBody.substring(0, 500)}`,
           {
             requestId: context?.requestId,
             httpStatus: response.status,
@@ -256,35 +227,7 @@ export class PinterestHttpClient {
           }
         );
 
-        if (!isRetryablePinterestError(0, response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
-      }
-
-      // Parse Pinterest JSON response
-      setSpanAttribute("http.response.status_code", response.status);
-      const json = (await response.json()) as PinterestApiResponse;
-
-      if (json.code !== 0) {
-        const jsonRpcCode = mapPinterestErrorToJsonRpc(json.code, response.status);
-        const mcpError = new McpError(
-          jsonRpcCode,
-          json.message || `Pinterest API error: code=${json.code}`,
-          {
-            requestId: context?.requestId,
-            pinterestCode: json.code,
-            pinterestRequestId: json.request_id,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
-          }
-        );
-
-        if (!isRetryablePinterestError(json.code, response.status) || attempt >= maxRetries) {
+        if (!isRetryablePinterestError(response.status) || attempt >= maxRetries) {
           throw mcpError;
         }
 
@@ -294,8 +237,7 @@ export class PinterestHttpClient {
           {
             url,
             method: options?.method ?? "GET",
-            pinterestCode: json.code,
-            pinterestMessage: json.message,
+            httpStatus: response.status,
             attempt: attempt + 1,
             maxRetries,
             requestId: context?.requestId,
@@ -307,7 +249,8 @@ export class PinterestHttpClient {
         continue;
       }
 
-      return json.data;
+      // Pinterest v5: return the raw JSON body — no envelope to unwrap
+      return response.json() as Promise<unknown>;
     }
 
     throw (
@@ -316,6 +259,26 @@ export class PinterestHttpClient {
         requestId: context?.requestId,
       })
     );
+  }
+
+  /**
+   * Parse a Pinterest v5 API response.
+   * Pinterest returns plain JSON with standard HTTP status codes — no { code, data } envelope.
+   */
+  private async parseResponse<T>(
+    response: Response,
+    url: string,
+    context?: RequestContext
+  ): Promise<T> {
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      throw new McpError(
+        mapHttpStatusToJsonRpc(response.status),
+        `Pinterest API error ${response.status} ${response.statusText}: ${errorBody.substring(0, 500)}`,
+        { requestId: context?.requestId, httpStatus: response.status, url }
+      );
+    }
+    return response.json() as Promise<T>;
   }
 
   private calculateBackoff(attempt: number, response: Response): number {
