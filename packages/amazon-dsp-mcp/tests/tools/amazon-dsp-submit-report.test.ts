@@ -41,37 +41,39 @@ const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("submitReportLogic", () => {
   it("returns taskId and timestamp", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "task-new-1" });
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-new-1" });
 
     const result = await submitReportLogic(
       {
         profileId: "1234567890",
-        dimensions: ["campaign_id"],
-        metrics: ["impressions"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        startDate: "20260301",
+        endDate: "20260304",
+        reportTypeId: "dspLineItem",
+        groupBy: ["order", "lineItem"],
+        columns: ["impressions", "clickThroughs", "totalCost"],
       },
       baseContext,
       baseSdkContext
     );
 
-    expect(result.taskId).toBe("task-new-1");
+    expect(result.taskId).toBe("rpt-new-1");
     expect(result.timestamp).toBeDefined();
   });
 
   it("passes report config to submitReport", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "task-cfg" });
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-cfg" });
 
     await submitReportLogic(
       {
         profileId: "1234567890",
-        reportType: "AUDIENCE",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
-        orderField: "spend",
-        orderType: "DESC",
+        name: "My Test Report",
+        startDate: "20260301",
+        endDate: "20260304",
+        reportTypeId: "dspOrder",
+        groupBy: ["order"],
+        columns: ["impressions", "clickThroughs"],
+        timeUnit: "SUMMARY",
+        adProduct: "DSP",
       },
       baseContext,
       baseSdkContext
@@ -79,28 +81,31 @@ describe("submitReportLogic", () => {
 
     expect(mockSubmitReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        report_type: "AUDIENCE",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks"],
-        start_date: "2026-03-01",
-        end_date: "2026-03-04",
-        order_field: "spend",
-        order_type: "DESC",
+        name: "My Test Report",
+        startDate: "20260301",
+        endDate: "20260304",
+        configuration: expect.objectContaining({
+          reportTypeId: "dspOrder",
+          groupBy: ["order"],
+          columns: ["impressions", "clickThroughs"],
+          timeUnit: "SUMMARY",
+        }),
       }),
       baseContext
     );
   });
 
   it("calls submitReport, not getReport", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "task-sub" });
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-sub" });
 
     await submitReportLogic(
       {
         profileId: "1234567890",
-        dimensions: ["campaign_id"],
-        metrics: ["impressions"],
-        startDate: "2026-03-01",
-        endDate: "2026-03-04",
+        startDate: "20260301",
+        endDate: "20260304",
+        reportTypeId: "dspLineItem",
+        groupBy: ["lineItem"],
+        columns: ["impressions"],
       },
       baseContext,
       baseSdkContext
@@ -113,13 +118,13 @@ describe("submitReportLogic", () => {
 describe("submitReportResponseFormatter", () => {
   it("includes guidance to use amazon_dsp_check_report_status", () => {
     const content = submitReportResponseFormatter({
-      taskId: "task-abc",
+      taskId: "rpt-abc",
       timestamp: new Date().toISOString(),
     });
 
     expect(content).toHaveLength(1);
     expect(content[0].type).toBe("text");
-    expect(content[0].text).toContain("Report submitted: task-abc");
+    expect(content[0].text).toContain("Report submitted: rpt-abc");
     expect(content[0].text).toContain("amazon_dsp_check_report_status");
   });
 });

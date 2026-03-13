@@ -40,65 +40,65 @@ const baseContext = { requestId: "test-req" } as any;
 const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("checkReportStatusLogic", () => {
-  it("returns complete status with downloadUrl", async () => {
+  it("returns complete status with downloadUrl when COMPLETED", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
-      taskId: "task-1",
-      status: "DONE",
-      downloadUrl: "https://example.com/report.csv",
+      taskId: "rpt-1",
+      status: "COMPLETED",
+      downloadUrl: "https://example.com/report.json",
     });
 
     const result = await checkReportStatusLogic(
-      { profileId: "1234567890", taskId: "task-1" },
+      { profileId: "1234567890", taskId: "rpt-1" },
       baseContext,
       baseSdkContext
     );
 
-    expect(result.taskId).toBe("task-1");
-    expect(result.status).toBe("DONE");
+    expect(result.taskId).toBe("rpt-1");
+    expect(result.status).toBe("COMPLETED");
     expect(result.isComplete).toBe(true);
-    expect(result.downloadUrl).toBe("https://example.com/report.csv");
+    expect(result.downloadUrl).toBe("https://example.com/report.json");
   });
 
   it("returns pending status with isComplete false", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
-      taskId: "task-2",
-      status: "RUNNING",
+      taskId: "rpt-2",
+      status: "PROCESSING",
     });
 
     const result = await checkReportStatusLogic(
-      { profileId: "1234567890", taskId: "task-2" },
+      { profileId: "1234567890", taskId: "rpt-2" },
       baseContext,
       baseSdkContext
     );
 
-    expect(result.status).toBe("RUNNING");
+    expect(result.status).toBe("PROCESSING");
     expect(result.isComplete).toBe(false);
     expect(result.downloadUrl).toBeUndefined();
   });
 
   it("calls checkReportStatus with correct taskId", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
-      taskId: "task-xyz",
+      taskId: "rpt-xyz",
       status: "PENDING",
     });
 
     await checkReportStatusLogic(
-      { profileId: "1234567890", taskId: "task-xyz" },
+      { profileId: "1234567890", taskId: "rpt-xyz" },
       baseContext,
       baseSdkContext
     );
 
-    expect(mockCheckReportStatus).toHaveBeenCalledWith("task-xyz", baseContext);
+    expect(mockCheckReportStatus).toHaveBeenCalledWith("rpt-xyz", baseContext);
   });
 });
 
 describe("checkReportStatusResponseFormatter", () => {
-  it("shows download guidance when DONE with URL", () => {
+  it("shows download guidance when COMPLETED with URL", () => {
     const content = checkReportStatusResponseFormatter({
-      taskId: "task-1",
-      status: "DONE",
+      taskId: "rpt-1",
+      status: "COMPLETED",
       isComplete: true,
-      downloadUrl: "https://example.com/report.csv",
+      downloadUrl: "https://example.com/report.json",
       timestamp: new Date().toISOString(),
     });
 
@@ -108,8 +108,8 @@ describe("checkReportStatusResponseFormatter", () => {
 
   it("shows retry guidance when in progress", () => {
     const content = checkReportStatusResponseFormatter({
-      taskId: "task-2",
-      status: "RUNNING",
+      taskId: "rpt-2",
+      status: "PROCESSING",
       isComplete: false,
       timestamp: new Date().toISOString(),
     });
@@ -119,10 +119,10 @@ describe("checkReportStatusResponseFormatter", () => {
     expect(content[0].text).toContain("10 seconds");
   });
 
-  it("shows failure message when FAILED", () => {
+  it("shows failure message when FAILURE", () => {
     const content = checkReportStatusResponseFormatter({
-      taskId: "task-3",
-      status: "FAILED",
+      taskId: "rpt-3",
+      status: "FAILURE",
       isComplete: false,
       timestamp: new Date().toISOString(),
     });

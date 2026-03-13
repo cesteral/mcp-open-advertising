@@ -46,8 +46,7 @@ describe("submitReportLogic", () => {
     const result = await submitReportLogic(
       {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id"],
-        metrics: ["impressions"],
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1"],
         startDate: "2026-03-01",
         endDate: "2026-03-04",
       },
@@ -65,13 +64,12 @@ describe("submitReportLogic", () => {
     await submitReportLogic(
       {
         adAccountId: "1234567890",
-        reportType: "AUDIENCE",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks"],
+        type: "CAMPAIGN",
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR"],
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        orderField: "spend",
-        orderType: "DESC",
+        granularity: "DAY",
+        campaignIds: ["cmp-123"],
       },
       baseContext,
       baseSdkContext
@@ -79,13 +77,12 @@ describe("submitReportLogic", () => {
 
     expect(mockSubmitReport).toHaveBeenCalledWith(
       expect.objectContaining({
-        report_type: "AUDIENCE",
-        dimensions: ["campaign_id", "stat_time_day"],
-        metrics: ["impressions", "clicks"],
+        type: "CAMPAIGN",
+        columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR"],
         start_date: "2026-03-01",
         end_date: "2026-03-04",
-        order_field: "spend",
-        order_type: "DESC",
+        granularity: "DAY",
+        campaign_ids: ["cmp-123"],
       }),
       baseContext
     );
@@ -97,8 +94,7 @@ describe("submitReportLogic", () => {
     await submitReportLogic(
       {
         adAccountId: "1234567890",
-        dimensions: ["campaign_id"],
-        metrics: ["impressions"],
+        columns: ["IMPRESSION_1"],
         startDate: "2026-03-01",
         endDate: "2026-03-04",
       },

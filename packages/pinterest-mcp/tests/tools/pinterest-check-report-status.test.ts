@@ -43,7 +43,7 @@ describe("checkReportStatusLogic", () => {
   it("returns complete status with downloadUrl", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-1",
-      status: "DONE",
+      status: "FINISHED",
       downloadUrl: "https://example.com/report.csv",
     });
 
@@ -54,7 +54,7 @@ describe("checkReportStatusLogic", () => {
     );
 
     expect(result.taskId).toBe("task-1");
-    expect(result.status).toBe("DONE");
+    expect(result.status).toBe("FINISHED");
     expect(result.isComplete).toBe(true);
     expect(result.downloadUrl).toBe("https://example.com/report.csv");
   });
@@ -62,7 +62,7 @@ describe("checkReportStatusLogic", () => {
   it("returns pending status with isComplete false", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-2",
-      status: "RUNNING",
+      status: "IN_PROGRESS",
     });
 
     const result = await checkReportStatusLogic(
@@ -71,7 +71,7 @@ describe("checkReportStatusLogic", () => {
       baseSdkContext
     );
 
-    expect(result.status).toBe("RUNNING");
+    expect(result.status).toBe("IN_PROGRESS");
     expect(result.isComplete).toBe(false);
     expect(result.downloadUrl).toBeUndefined();
   });
@@ -79,7 +79,7 @@ describe("checkReportStatusLogic", () => {
   it("calls checkReportStatus with correct taskId", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "task-xyz",
-      status: "PENDING",
+      status: "IN_PROGRESS",
     });
 
     await checkReportStatusLogic(
@@ -93,10 +93,10 @@ describe("checkReportStatusLogic", () => {
 });
 
 describe("checkReportStatusResponseFormatter", () => {
-  it("shows download guidance when DONE with URL", () => {
+  it("shows download guidance when FINISHED with URL", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-1",
-      status: "DONE",
+      status: "FINISHED",
       isComplete: true,
       downloadUrl: "https://example.com/report.csv",
       timestamp: new Date().toISOString(),
@@ -109,7 +109,7 @@ describe("checkReportStatusResponseFormatter", () => {
   it("shows retry guidance when in progress", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "task-2",
-      status: "RUNNING",
+      status: "IN_PROGRESS",
       isComplete: false,
       timestamp: new Date().toISOString(),
     });
