@@ -7,7 +7,7 @@ import { entityHierarchyResource } from "./entity-hierarchy.resource.js";
 import { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas.resource.js";
 import { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 import { reportingReferenceResource } from "./reporting-reference.resource.js";
-import { allTools } from "../../tools/definitions/index.js";
+import { productionTools as allTools } from "../../tools/definitions/index.js";
 import {
   createToolExamplesResource,
   createServerCapabilitiesResource,

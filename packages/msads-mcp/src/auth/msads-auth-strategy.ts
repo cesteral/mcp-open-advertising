@@ -59,9 +59,9 @@ export class MsAdsBearerAuthStrategy implements AuthStrategy {
     };
   }
 
-  getCredentialFingerprint(
+  async getCredentialFingerprint(
     headers: Record<string, string | string[] | undefined>
-  ): string | undefined {
+  ): Promise<string | undefined> {
     try {
       const accessToken = parseMsAdsTokenFromHeaders(headers);
       const developerToken = getMsAdsDeveloperTokenFromHeaders(headers);

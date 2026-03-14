@@ -64,8 +64,8 @@ describe("MsAdsBearerAuthStrategy", () => {
       "x-msads-account-id": "acct-id",
     };
 
-    const fp1 = strategy.getCredentialFingerprint(headers);
-    const fp2 = strategy.getCredentialFingerprint(headers);
+    const fp1 = await strategy.getCredentialFingerprint(headers);
+    const fp2 = await strategy.getCredentialFingerprint(headers);
     expect(fp1).toBe(fp2);
   });
 });

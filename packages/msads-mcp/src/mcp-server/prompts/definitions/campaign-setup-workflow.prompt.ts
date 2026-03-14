@@ -10,10 +10,9 @@ export const campaignSetupWorkflowPrompt: Prompt = {
 };
 
 export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
-  const accountId = args?.accountId || "{accountId}";
   const campaignType = args?.campaignType || "Search";
 
-  return `# Microsoft Ads Campaign Setup Workflow
+  return `# Microsoft Ads Campaign Setup Workflow (Account: ${args?.accountId || "{accountId}"})
 
 ## Step 1: Create Budget (optional — for shared budgets)
 \`\`\`json
