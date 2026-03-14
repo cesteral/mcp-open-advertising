@@ -1,6 +1,6 @@
 # Cesteral - AI-Native Multi-Platform Campaign Optimization
 
-**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, CM360, SA360, Pinterest, Snapchat, Amazon DSP, and Bid Manager**
+**AI-powered programmatic advertising optimization across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, CM360, SA360, Pinterest, Snapchat, Amazon DSP, Microsoft Ads, and Bid Manager**
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
@@ -27,7 +27,7 @@
 
 ## Overview
 
-Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on twelve independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
+Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on thirteen independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
 
 This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
 
@@ -44,7 +44,7 @@ If you want the reasoning behind this split, see [docs/business/cesteral-licensi
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
 - **🌐 Multi-Platform Support** - Works across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, CM360, SA360, Pinterest, Snapchat, Amazon DSP, and Bid Manager
-- **🔧 Composable Architecture** - Twelve independent MCP servers can be used separately or combined
+- **🔧 Composable Architecture** - Thirteen independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -53,7 +53,7 @@ If you want the reasoning behind this split, see [docs/business/cesteral-licensi
 
 ## Architecture
 
-Cesteral uses a **GCP-native architecture** with twelve independently deployable Cloud Run MCP services:
+Cesteral uses a **GCP-native architecture** with thirteen independently deployable Cloud Run MCP services:
 
 - `dbm-mcp` for reporting and query workflows
 - `dv360-mcp` for DV360 management workflows
@@ -67,6 +67,7 @@ Cesteral uses a **GCP-native architecture** with twelve independently deployable
 - `pinterest-mcp` for Pinterest Ads campaign management and reporting
 - `snapchat-mcp` for Snapchat Ads campaign management and reporting
 - `amazon-dsp-mcp` for Amazon DSP campaign management and reporting
+- `msads-mcp` for Microsoft Advertising campaign management and reporting
 
 ### Access Model
 
@@ -220,6 +221,18 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: Amazon DSP API
 
+### <img src="docs/logos/microsoft-bing.svg" width="20" height="20" alt="Microsoft Ads"> Server 13: `msads-mcp`
+
+**Microsoft Advertising campaign management and reporting**
+
+- Full CRUD on Microsoft Ads entities (campaigns, ad groups, ads, keywords, budgets, ad extensions, audiences, labels)
+- Async reporting with configurable aggregation (daily, weekly, monthly, hourly)
+- Google Ads import via ImportJobs API
+- Ad extension and criterion management
+- Per-session auth via access token + developer token + customer/account IDs
+
+**Platform**: Microsoft Advertising REST API v13
+
 ---
 
 ## Current Status
@@ -228,14 +241,14 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 The platform currently includes:
 
-- ✅ Twelve implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`, `cm360-mcp`, `sa360-mcp`, `pinterest-mcp`, `snapchat-mcp`, `amazon-dsp-mcp`)
+- ✅ Thirteen implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`, `cm360-mcp`, `sa360-mcp`, `pinterest-mcp`, `snapchat-mcp`, `amazon-dsp-mcp`, `msads-mcp`)
 - ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
 - ✅ Live platform API integrations and Streamable HTTP transports
 - ✅ Terraform + Cloud Build coverage for independent service deployment
 
 **Current Focus:**
 
-1. Production hardening and operational reliability across all twelve servers
+1. Production hardening and operational reliability across all thirteen servers
 2. Cross-platform workflow coverage and contract governance
 3. Telemetry dashboards and observability improvements
 
@@ -308,6 +321,24 @@ pnpm run dev
 
 # Start tiktok-mcp (port 3007)
 ./scripts/dev-server.sh tiktok-mcp
+
+# Start cm360-mcp (port 3008)
+./scripts/dev-server.sh cm360-mcp
+
+# Start sa360-mcp (port 3010)
+./scripts/dev-server.sh sa360-mcp
+
+# Start pinterest-mcp (port 3011)
+./scripts/dev-server.sh pinterest-mcp
+
+# Start snapchat-mcp (port 3009)
+./scripts/dev-server.sh snapchat-mcp
+
+# Start amazon-dsp-mcp (port 3012)
+./scripts/dev-server.sh amazon-dsp-mcp
+
+# Start msads-mcp (port 3013)
+./scripts/dev-server.sh msads-mcp
 ```
 
 ### 6. Deploy Infrastructure
@@ -355,6 +386,30 @@ terraform apply -var-file=dev.tfvars
     "cesteral-tiktok": {
       "url": "https://tiktok.cesteral.com/mcp",
       "apiKey": "your-tiktok-api-key"
+    },
+    "cesteral-cm360": {
+      "url": "https://cm360.cesteral.com/mcp",
+      "apiKey": "your-cm360-api-key"
+    },
+    "cesteral-sa360": {
+      "url": "https://sa360.cesteral.com/mcp",
+      "apiKey": "your-sa360-api-key"
+    },
+    "cesteral-pinterest": {
+      "url": "https://pinterest.cesteral.com/mcp",
+      "apiKey": "your-pinterest-api-key"
+    },
+    "cesteral-snapchat": {
+      "url": "https://snapchat.cesteral.com/mcp",
+      "apiKey": "your-snapchat-api-key"
+    },
+    "cesteral-amazon-dsp": {
+      "url": "https://amazon-dsp.cesteral.com/mcp",
+      "apiKey": "your-amazon-dsp-api-key"
+    },
+    "cesteral-msads": {
+      "url": "https://msads.cesteral.com/mcp",
+      "apiKey": "your-msads-api-key"
     }
   }
 }
@@ -406,6 +461,12 @@ cesteral-mcp-servers/
 │   ├── meta-mcp/                # MCP Server 5: Meta Ads
 │   ├── linkedin-mcp/            # MCP Server 6: LinkedIn Ads
 │   ├── tiktok-mcp/              # MCP Server 7: TikTok Ads
+│   ├── cm360-mcp/               # MCP Server 8: Campaign Manager 360
+│   ├── sa360-mcp/               # MCP Server 9: Search Ads 360
+│   ├── pinterest-mcp/           # MCP Server 10: Pinterest Ads
+│   ├── snapchat-mcp/            # MCP Server 11: Snapchat Ads
+│   ├── amazon-dsp-mcp/          # MCP Server 12: Amazon DSP
+│   ├── msads-mcp/               # MCP Server 13: Microsoft Ads
 │   │
 │   └── shared/                  # Shared code
 │       ├── types/               # Zod schemas, TypeScript types
@@ -463,7 +524,7 @@ cesteral-mcp-servers/
 | `dv360_update_entity`         | Update any supported DV360 entity with updateMask | `entityType`, IDs, `data`, `updateMask` |
 | `dv360_adjust_line_item_bids` | Batch bid adjustments for multiple line items     | `advertiserId`, `adjustments[]`         |
 
-See [packages/dv360-mcp](packages/dv360-mcp) for the full 19-tool reference including custom bidding, targeting, and bulk operations.
+See [packages/dv360-mcp](packages/dv360-mcp) for the full 24-tool reference including custom bidding, targeting, and bulk operations.
 
 ### The Trade Desk Server Tools
 
@@ -475,7 +536,7 @@ See [packages/dv360-mcp](packages/dv360-mcp) for the full 19-tool reference incl
 | `ttd_bulk_update_status` | Batch pause/resume/archive entities        | `entityType`, `entityIds[]`, `status`              |
 | `ttd_graphql_query`      | Execute GraphQL query against TTD API      | `query`, `variables`                               |
 
-See [packages/ttd-mcp](packages/ttd-mcp) for the full 20-tool reference including bulk CRUD, bid adjustments, and GraphQL operations.
+See [packages/ttd-mcp](packages/ttd-mcp) for the full 21-tool reference including bulk CRUD, bid adjustments, and GraphQL operations.
 
 ### Google Ads Server Tools
 
@@ -486,7 +547,7 @@ See [packages/ttd-mcp](packages/ttd-mcp) for the full 20-tool reference includin
 | `gads_create_entity` | Create entity via :mutate API                 | `entityType`, `customerId`, `data`         |
 | `gads_bulk_mutate`   | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
 
-See [packages/gads-mcp](packages/gads-mcp) for the full 12-tool reference including entity CRUD and bulk status updates.
+See [packages/gads-mcp](packages/gads-mcp) for the full 14-tool reference including entity CRUD and bulk status updates.
 
 ### Meta Ads Server Tools
 
@@ -498,15 +559,39 @@ See [packages/gads-mcp](packages/gads-mcp) for the full 12-tool reference includ
 | `meta_search_targeting`      | Search interests, locations, etc.   | `type`, `query`, `limit`              |
 | `meta_get_delivery_estimate` | Audience size estimation            | `adAccountId`, `targetingSpec`        |
 
-See [packages/meta-mcp](packages/meta-mcp) for the full 18-tool reference including insights breakdowns, duplication, and ad previews.
+See [packages/meta-mcp](packages/meta-mcp) for the full 20-tool reference including insights breakdowns, duplication, and ad previews.
 
 ### LinkedIn Ads Server Tools
 
-See [packages/linkedin-mcp](packages/linkedin-mcp) for the full 18-tool reference including CRUD, analytics breakdowns, delivery forecast, and ad previews.
+See [packages/linkedin-mcp](packages/linkedin-mcp) for the full 20-tool reference including CRUD, analytics breakdowns, delivery forecast, and ad previews.
 
 ### TikTok Ads Server Tools
 
-See [packages/tiktok-mcp](packages/tiktok-mcp) for the full 21-tool reference including CRUD, async reporting, audience estimates, and ad previews.
+See [packages/tiktok-mcp](packages/tiktok-mcp) for the full 23-tool reference including CRUD, async reporting, audience estimates, and ad previews.
+
+### CM360 Server Tools
+
+See [packages/cm360-mcp](packages/cm360-mcp) for the full 16-tool reference including CRUD, async reporting, and targeting options.
+
+### SA360 Server Tools
+
+See [packages/sa360-mcp](packages/sa360-mcp) for the full 11-tool reference including GAQL-style queries, conversion management, and custom columns.
+
+### Pinterest Ads Server Tools
+
+See [packages/pinterest-mcp](packages/pinterest-mcp) for the full 20-tool reference including CRUD, async reporting, targeting, and delivery estimates.
+
+### Snapchat Ads Server Tools
+
+See [packages/snapchat-mcp](packages/snapchat-mcp) for the full 21-tool reference including CRUD, async reporting, bid adjustments, and audience estimates.
+
+### Amazon DSP Server Tools
+
+See [packages/amazon-dsp-mcp](packages/amazon-dsp-mcp) for the full 20-tool reference including CRUD, async reporting, bid adjustments, and audience targeting.
+
+### Microsoft Ads Server Tools
+
+See [packages/msads-mcp](packages/msads-mcp) for the full 19-tool reference including CRUD, async reporting, Google Ads import, and ad extension management.
 
 ---
 
@@ -578,6 +663,12 @@ AI Agent:
 ./scripts/deploy.sh meta-mcp prod
 ./scripts/deploy.sh linkedin-mcp prod
 ./scripts/deploy.sh tiktok-mcp prod
+./scripts/deploy.sh cm360-mcp prod
+./scripts/deploy.sh sa360-mcp prod
+./scripts/deploy.sh pinterest-mcp prod
+./scripts/deploy.sh snapchat-mcp prod
+./scripts/deploy.sh amazon-dsp-mcp prod
+./scripts/deploy.sh msads-mcp prod
 ```
 
 ### Deploy All Servers
@@ -598,7 +689,7 @@ AI Agent:
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta|linkedin|tiktok)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta|linkedin|tiktok|cm360|sa360|pinterest|snapchat|amazon-dsp|msads)-mcp"' --limit=50
 ```
 
 ### Metrics Dashboard
@@ -612,6 +703,12 @@ Access Cloud Monitoring dashboards:
 - [Meta Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/meta-mcp)
 - [LinkedIn Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/linkedin-mcp)
 - [TikTok Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/tiktok-mcp)
+- [CM360 Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/cm360-mcp)
+- [SA360 Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/sa360-mcp)
+- [Pinterest Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/pinterest-mcp)
+- [Snapchat Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/snapchat-mcp)
+- [Amazon DSP Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/amazon-dsp-mcp)
+- [Microsoft Ads Server Metrics](https://console.cloud.google.com/monitoring/dashboards/custom/msads-mcp)
 
 ---
 
@@ -647,6 +744,12 @@ pnpm run lint
 ./scripts/dev-server.sh meta-mcp    # port 3005
 ./scripts/dev-server.sh linkedin-mcp # port 3006
 ./scripts/dev-server.sh tiktok-mcp   # port 3007
+./scripts/dev-server.sh cm360-mcp   # port 3008
+./scripts/dev-server.sh sa360-mcp   # port 3010
+./scripts/dev-server.sh pinterest-mcp # port 3011
+./scripts/dev-server.sh snapchat-mcp  # port 3009
+./scripts/dev-server.sh amazon-dsp-mcp # port 3012
+./scripts/dev-server.sh msads-mcp     # port 3013
 ```
 
 ### Testing MCP Tools
@@ -701,6 +804,12 @@ curl -X POST http://localhost:3001/mcp \
 - Meta Marketing API v21.0
 - LinkedIn Marketing API v2
 - TikTok Marketing API v1.3
+- CM360 API v5
+- SA360 Reporting API v0 + DoubleClick Search v2
+- Pinterest Ads API v5
+- Snapchat Ads API v1
+- Amazon DSP API
+- Microsoft Advertising REST API v13
 
 **Development Tools**
 

@@ -13,7 +13,7 @@ loadDotEnv();
 const ConfigSchema = BaseConfigSchema.extend({
   // Defaults for this server
   serviceName: z.string().default("snapchat-mcp"),
-  port: z.number().int().min(1).max(65535).default(3012),
+  port: z.number().int().min(1).max(65535).default(3009),
   otelServiceName: z.string().default("snapchat-mcp"),
 
   // Auth — Snapchat-specific modes

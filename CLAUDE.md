@@ -4,13 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Cesteral is an AI-native programmatic advertising optimization platform built on ten independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), TikTok Ads management (tiktok-mcp), Pinterest Ads management (pinterest-mcp), Snapchat Ads management (snapchat-mcp), and Amazon DSP management (amazon-dsp-mcp).
+Cesteral is an AI-native programmatic advertising optimization platform built on thirteen independent MCP (Model Context Protocol) servers. The architecture enables clean separation between reporting (dbm-mcp), DV360 campaign management (dv360-mcp), The Trade Desk campaign management (ttd-mcp), Google Ads campaign management (gads-mcp), Meta Ads campaign management (meta-mcp), LinkedIn Ads management (linkedin-mcp), TikTok Ads management (tiktok-mcp), Campaign Manager 360 management (cm360-mcp), Search Ads 360 reporting (sa360-mcp), Pinterest Ads management (pinterest-mcp), Snapchat Ads management (snapchat-mcp), Amazon DSP management (amazon-dsp-mcp), and Microsoft Ads management (msads-mcp).
 
 ### Current Project Status
 
 **Phase: Production-Ready ✅**
 
-All ten MCP servers are fully implemented with live API integrations:
+All thirteen MCP servers are fully implemented with live API integrations:
 - **dbm-mcp**: Bid Manager API v2 for DV360 reporting
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
@@ -18,9 +18,12 @@ All ten MCP servers are fully implemented with live API integrations:
 - **meta-mcp**: Meta Marketing API v22.0 for Meta Ads campaign management
 - **linkedin-mcp**: LinkedIn Marketing API v2 for LinkedIn Ads management (port 3006)
 - **tiktok-mcp**: TikTok Marketing API v1.3 for TikTok Ads management (port 3007)
+- **cm360-mcp**: CM360 API v5 for Campaign Manager 360 management (port 3008)
+- **sa360-mcp**: SA360 Reporting API v0 for Search Ads 360 reporting & conversions (port 3010)
 - **pinterest-mcp**: Pinterest Ads API v5 for Pinterest campaign management (port 3011)
 - **snapchat-mcp**: Snapchat Ads API v1 for Snapchat campaign management (port 3009)
 - **amazon-dsp-mcp**: Amazon DSP API for Amazon programmatic display (port 3012)
+- **msads-mcp**: Microsoft Advertising REST API v13 for Microsoft Ads management (port 3013)
 
 ## Essential Commands
 
@@ -43,6 +46,9 @@ cd packages/tiktok-mcp && pnpm run dev:http
 cd packages/pinterest-mcp && pnpm run dev:http
 cd packages/snapchat-mcp && pnpm run dev:http
 cd packages/amazon-dsp-mcp && pnpm run dev:http
+cd packages/cm360-mcp && pnpm run dev:http
+cd packages/sa360-mcp && pnpm run dev:http
+cd packages/msads-mcp && pnpm run dev:http
 
 # Type checking across all packages
 pnpm run typecheck
@@ -99,6 +105,15 @@ Use the dev-server script (automatically uses correct port for each server):
 # Start amazon-dsp-mcp (port 3012)
 ./scripts/dev-server.sh amazon-dsp-mcp
 
+# Start cm360-mcp (port 3008)
+./scripts/dev-server.sh cm360-mcp
+
+# Start sa360-mcp (port 3010)
+./scripts/dev-server.sh sa360-mcp
+
+# Start msads-mcp (port 3013)
+./scripts/dev-server.sh msads-mcp
+
 ```
 
 ## Monorepo Architecture
@@ -108,7 +123,7 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 ### Core Packages
 1. **`@cesteral/shared`** - Shared types, utilities, authentication (Zod schemas, logging via Pino, JWT auth via Jose)
 
-### Ten MCP Servers
+### Thirteen MCP Servers
 1. **`@cesteral/dbm-mcp`** - DV360 reporting queries via Bid Manager API v2 (read-only)
 2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
@@ -119,6 +134,9 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 8. **`@cesteral/pinterest-mcp`** - Pinterest Ads campaign management (CRUD via Pinterest Ads API v5)
 9. **`@cesteral/snapchat-mcp`** - Snapchat Ads campaign management (CRUD via Snapchat Ads API v1)
 10. **`@cesteral/amazon-dsp-mcp`** - Amazon programmatic display management (CRUD via Amazon DSP API)
+11. **`@cesteral/cm360-mcp`** - Campaign Manager 360 management (CRUD via CM360 API v5)
+12. **`@cesteral/sa360-mcp`** - Search Ads 360 reporting & conversion management (via SA360 Reporting API v0 + DS v2)
+13. **`@cesteral/msads-mcp`** - Microsoft Ads campaign management (CRUD via Microsoft Advertising REST API v13)
 
 **Important**: Each MCP server exposes tools via the Model Context Protocol (MCP) for external AI agents (Claude Desktop, etc.).
 
@@ -446,9 +464,9 @@ const params = schema.parse(rawInput); // Throws on invalid input
 
 ## MCP Tools Catalog
 
-Complete reference of all MCP tools across the five servers:
+Complete reference of all MCP tools across all thirteen servers:
 
-### dbm-mcp (Reporting Server) Tools
+### dbm-mcp (Reporting Server) Tools — 6 Tools
 
 Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query → run → poll → fetch results).
 
@@ -459,8 +477,9 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `dbm_get_historical_metrics` | Time-series data for trends | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
 | `dbm_get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
 | `dbm_run_custom_query` | Compose and execute custom Bid Manager reports | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
+| `dbm_run_custom_query_async` | Submit custom query without waiting (non-blocking) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
-### dv360-mcp (Management Server) Tools — 20 Tools
+### dv360-mcp (Management Server) Tools — 24 Tools
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -496,10 +515,22 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 |------|-------------|----------------|
 | `dv360_validate_entity` | Client-side schema validation (no API call) | `entityType`, `mode`, `data` |
 
+#### Duplication & Delivery
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `dv360_duplicate_entity` | Copy/duplicate DV360 entities | `entityType`, entity IDs, `options?` |
+| `dv360_get_delivery_estimate` | Audience size and delivery estimation | `advertiserId`, `targetingConfig` |
+
 #### Ad Previews
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
 | `dv360_get_ad_preview` | Get preview URL for a creative | `advertiserId`, `creativeId` |
+
+#### Media Upload
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `dv360_upload_image` | Upload image from URL to DV360 media library | `advertiserId`, `mediaUrl`, `name?` |
+| `dv360_upload_video` | Upload video from URL to DV360 media library | `advertiserId`, `mediaUrl`, `title?` |
 
 ### ttd-mcp (The Trade Desk Server) Tools — 21 Tools, 9 Entity Types
 
@@ -546,7 +577,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 |------|-------------|----------------|
 | `ttd_get_ad_preview` | Get preview URL for a creative | `creativeId` |
 
-### gads-mcp (Google Ads Server) Tools — 13 Tools, 6 Entity Types
+### gads-mcp (Google Ads Server) Tools — 14 Tools, 6 Entity Types
 
 **Supported entity types:** `campaign`, `adGroup`, `ad`, `keyword`, `campaignBudget`, `asset`
 
@@ -566,6 +597,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `gads_update_entity` | Update entity with updateMask | `entityType`, `customerId`, `entityId`, `data`, `updateMask` |
 | `gads_remove_entity` | Remove entity via :mutate API | `entityType`, `customerId`, `entityId` |
 | `gads_bulk_mutate` | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
+| `gads_bulk_create_entities` | Batch entity creation | `entityType`, `customerId`, `items[]` |
 | `gads_bulk_update_status` | Batch enable/pause/remove entities | `entityType`, `customerId`, `entityIds[]`, `status` |
 | `gads_adjust_bids` | Batch adjust ad group bids (safe read-modify-write) | `customerId`, `adjustments[]` |
 | `gads_validate_entity` | Dry-run validate entity payload | `entityType`, `customerId`, `mode`, `data` |
@@ -619,7 +651,7 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 | `meta_upload_image` | Upload image from URL to ad images library | `adAccountId`, `mediaUrl`, `name?` |
 | `meta_upload_video` | Upload video from URL to ad videos library (polls until ready) | `adAccountId`, `mediaUrl`, `title?` |
 
-### linkedin-mcp (LinkedIn Ads Server) Tools — 19 Tools, 5 Entity Types
+### linkedin-mcp (LinkedIn Ads Server) Tools — 20 Tools, 5 Entity Types
 
 **Supported entity types:** `adAccount`, `campaignGroup`, `campaign`, `creative`, `conversionRule`
 **Auth:** `MCP_AUTH_MODE=linkedin-bearer`, `LINKEDIN_ACCESS_TOKEN` env var, `LinkedIn-Version: 202409` header on all requests
@@ -731,7 +763,208 @@ Uses Bid Manager API v2 for DV360 reporting. Reports are async (create query →
 |------|-------------|----------------|
 | `sa360_validate_conversion` | Validate conversion payload (no API call) | `mode`, `conversion` |
 
-### How the Seven Servers Work Together
+### cm360-mcp (Campaign Manager 360 Server) Tools — 16 Tools, 8 Entity Types
+
+**Supported entity types:** `campaign`, `placement`, `ad`, `creative`, `site`, `advertiser`, `floodlightActivity`, `floodlightConfiguration`
+**Auth:** `MCP_AUTH_MODE=google-headers | jwt | none`, Google OAuth2
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `cm360_list_user_profiles` | List CM360 user profiles | _(none)_ |
+| `cm360_list_entities` | List CM360 entities with filtering and pagination | `profileId`, `entityType`, `filters?`, `pageToken?`, `maxResults?` |
+| `cm360_get_entity` | Retrieve a single CM360 entity by type/id | `profileId`, `entityType`, `entityIds` |
+| `cm360_create_entity` | Create a new CM360 entity | `profileId`, `entityType`, `data` |
+| `cm360_update_entity` | Update a CM360 entity | `profileId`, `entityType`, `entityIds`, `data`, `updateMask` |
+| `cm360_delete_entity` | Delete CM360 entities | `profileId`, `entityType`, `entityIds` |
+| `cm360_validate_entity` | Dry-run validate entity payload (no API call) | `profileId`, `entityType`, `mode`, `data` |
+
+#### Reporting
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `cm360_get_report` | Create and run CM360 report (blocking) | `profileId`, `name`, `type`, `criteria?` |
+| `cm360_submit_report` | Submit report without waiting (non-blocking) | `profileId`, `name`, `type`, `criteria?` |
+| `cm360_check_report_status` | Check single report status | `profileId`, `reportId` |
+| `cm360_download_report` | Download and parse report file | `profileId`, `reportId`, `fileId`, `maxRows?` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `cm360_bulk_update_status` | Batch status updates | `profileId`, `entityType`, `entityIds[]`, `entityStatus` |
+| `cm360_bulk_create_entities` | Batch entity creation | `profileId`, `entityType`, `items[]` |
+| `cm360_bulk_update_entities` | Batch entity updates | `profileId`, `entityType`, `items[]` |
+
+#### Specialized
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `cm360_get_ad_preview` | Get preview URL for a creative | `profileId`, `creativeId` |
+| `cm360_list_targeting_options` | List available targeting options | `profileId`, `targetingType?` |
+
+### pinterest-mcp (Pinterest Ads Server) Tools — 20 Tools, 4 Entity Types
+
+**Supported entity types:** `campaign`, `adGroup`, `ad`, `creative`
+**Auth:** `MCP_AUTH_MODE=pinterest-bearer`, `PINTEREST_ACCESS_TOKEN` env var
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `pinterest_list_entities` | List Pinterest entities with cursor pagination | `entityType`, `adAccountId`, `bookmark?`, `pageSize?` |
+| `pinterest_get_entity` | Retrieve a single entity by type/id | `entityType`, `entityId`, `adAccountId` |
+| `pinterest_create_entity` | Create a Pinterest Ads entity | `entityType`, `adAccountId`, `data` |
+| `pinterest_update_entity` | Update entity with updateMask | `entityType`, `entityId`, `data`, `updateMask` |
+| `pinterest_delete_entity` | Delete Pinterest Ads entities | `entityType`, `entityIds[]`, `adAccountId` |
+| `pinterest_list_advertisers` | List accessible advertiser accounts | _(none)_ |
+
+#### Reporting (Async)
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `pinterest_get_report` | Submit and retrieve async report (blocking) | `adAccountId`, `columns[]`, `startDate`, `endDate`, `granularity?` |
+| `pinterest_get_report_breakdowns` | Report with breakdown dimensions (blocking) | `adAccountId`, `columns[]`, `breakdowns[]`, `startDate`, `endDate` |
+| `pinterest_submit_report` | Submit report without waiting (non-blocking) | `adAccountId`, `columns[]`, `startDate`, `endDate` |
+| `pinterest_check_report_status` | Single report status check | `taskId` |
+| `pinterest_download_report` | Download and parse report CSV | `downloadUrl`, `maxRows?` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `pinterest_bulk_update_status` | Batch status updates | `entityType`, `entityIds[]`, `status` |
+| `pinterest_bulk_create_entities` | Batch entity creation | `entityType`, `adAccountId`, `items[]` |
+| `pinterest_bulk_update_entities` | Batch entity updates | `entityType`, `adAccountId`, `items[]` |
+
+#### Targeting & Specialized
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `pinterest_search_targeting` | Search targeting options | `adAccountId`, `targetingType`, `query?` |
+| `pinterest_get_targeting_options` | Browse targeting categories | `adAccountId`, `targetingType?` |
+| `pinterest_duplicate_entity` | Copy campaigns | `entityType`, `entityId`, `options?` |
+| `pinterest_get_delivery_estimate` | Audience size estimation | `adAccountId`, `targetingSpec` |
+| `pinterest_get_ad_preview` | Ad preview rendering | `adId`, `adFormat?` |
+| `pinterest_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
+
+### snapchat-mcp (Snapchat Ads Server) Tools — 21 Tools, 4 Entity Types
+
+**Supported entity types:** `campaign`, `adGroup`, `ad`, `creative`
+**Auth:** `MCP_AUTH_MODE=snapchat-bearer`, `SNAPCHAT_ACCESS_TOKEN` env var
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `snapchat_list_entities` | List Snapchat entities with cursor pagination | `entityType`, `adAccountId`, `cursor?` |
+| `snapchat_get_entity` | Get single entity by ID | `entityType`, `entityId`, `adAccountId` |
+| `snapchat_create_entity` | Create a Snapchat entity | `entityType`, `adAccountId`, `data` |
+| `snapchat_update_entity` | Update entity fields | `entityType`, `entityId`, `data` |
+| `snapchat_delete_entity` | Delete entities | `entityType`, `entityIds[]` |
+| `snapchat_list_advertisers` | List accessible advertiser accounts | _(none)_ |
+
+#### Reporting (Async)
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `snapchat_get_report` | Submit and retrieve async report (blocking) | `adAccountId`, `columns[]`, `startDate`, `endDate`, `granularity?` |
+| `snapchat_get_report_breakdowns` | Report with breakdown dimensions (blocking) | `adAccountId`, `columns[]`, `breakdowns[]`, `startDate`, `endDate` |
+| `snapchat_submit_report` | Submit report without waiting (non-blocking) | `adAccountId`, `columns[]`, `startDate`, `endDate` |
+| `snapchat_check_report_status` | Single report status check | `taskId` |
+| `snapchat_download_report` | Download and parse report CSV | `downloadUrl`, `maxRows?` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `snapchat_bulk_update_status` | Batch enable/disable/delete entities | `entityType`, `adAccountId`, `entityIds[]`, `status` |
+| `snapchat_bulk_create_entities` | Batch entity creation (up to 50) | `entityType`, `adAccountId`, `items[]` |
+| `snapchat_bulk_update_entities` | Batch entity updates (up to 50) | `entityType`, `adAccountId`, `items[]` |
+| `snapchat_adjust_bids` | Batch adjust ad squad bid prices | `adAccountId`, `adjustments[]` |
+
+#### Targeting & Specialized
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `snapchat_search_targeting` | Search targeting options | `adAccountId`, `targetingType`, `query?` |
+| `snapchat_get_targeting_options` | Browse targeting categories | `adAccountId`, `targetingType?` |
+| `snapchat_duplicate_entity` | Copy campaigns, ad squads, ads | `entityType`, `entityId`, `options?` |
+| `snapchat_get_audience_estimate` | Audience size estimation | `adAccountId`, `targetingConfig` |
+| `snapchat_get_ad_preview` | Ad preview rendering | `adAccountId`, `adId`, `adFormat?` |
+| `snapchat_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
+
+### amazon-dsp-mcp (Amazon DSP Server) Tools — 20 Tools, 3 Entity Types
+
+**Supported entity types:** `order` (campaign), `lineItem` (ad group), `creative`
+**Auth:** `MCP_AUTH_MODE=amazon-dsp-bearer`, `AMAZON_DSP_ACCESS_TOKEN` + `AMAZON_DSP_PROFILE_ID` env vars
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `amazon_dsp_list_entities` | List Amazon DSP entities with pagination | `entityType`, `profileId`, `filters?`, `pageSize?` |
+| `amazon_dsp_get_entity` | Get single entity by ID | `entityType`, `entityId`, `profileId` |
+| `amazon_dsp_create_entity` | Create an Amazon DSP entity | `entityType`, `profileId`, `data` |
+| `amazon_dsp_update_entity` | Update entity via PUT | `entityType`, `entityId`, `data` |
+| `amazon_dsp_delete_entity` | Archive entities (soft-delete) | `entityType`, `entityIds[]`, `profileId` |
+| `amazon_dsp_list_profiles` | List accessible advertiser profiles | _(none)_ |
+
+#### Reporting (Async)
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `amazon_dsp_get_report` | Submit and retrieve async report (blocking) | `profileId`, `columns[]`, `startDate`, `endDate`, `granularity?` |
+| `amazon_dsp_get_report_breakdowns` | Report with breakdown dimensions (blocking) | `profileId`, `columns[]`, `breakdowns[]`, `startDate`, `endDate` |
+| `amazon_dsp_submit_report` | Submit report without waiting (non-blocking) | `profileId`, `columns[]`, `startDate`, `endDate` |
+| `amazon_dsp_check_report_status` | Single report status check | `taskId` |
+| `amazon_dsp_download_report` | Download and parse report CSV | `downloadUrl`, `maxRows?` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `amazon_dsp_bulk_update_status` | Batch status updates | `entityType`, `entityIds[]`, `status` |
+| `amazon_dsp_bulk_create_entities` | Batch entity creation (up to 50) | `entityType`, `profileId`, `items[]` |
+| `amazon_dsp_bulk_update_entities` | Batch entity updates (up to 50) | `entityType`, `profileId`, `items[]` |
+
+#### Targeting & Specialized
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `amazon_dsp_adjust_bids` | Batch adjust line item bids | `profileId`, `adjustments[]` |
+| `amazon_dsp_search_targeting` | Search audience segments | `profileId`, `targetingType`, `query?` |
+| `amazon_dsp_get_targeting_options` | Browse targeting categories | `profileId`, `targetingType?` |
+| `amazon_dsp_get_audience_estimate` | Audience size estimation | `profileId`, `targetingConfig` |
+| `amazon_dsp_get_ad_preview` | Ad preview rendering | `profileId`, `creativeId` |
+| `amazon_dsp_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
+
+### msads-mcp (Microsoft Advertising Server) Tools — 19 Tools, 8 Entity Types
+
+**Supported entity types:** `campaign`, `adGroup`, `ad`, `keyword`, `budget`, `adExtension`, `audience`, `label`
+**Auth:** `MCP_AUTH_MODE=msads-bearer`, `MSADS_ACCESS_TOKEN` + `MSADS_DEVELOPER_TOKEN` + `MSADS_CUSTOMER_ID` + `MSADS_ACCOUNT_ID` env vars
+
+#### Core CRUD
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `msads_list_entities` | List Microsoft Ads entities | `entityType`, `accountId?`, `parentId?`, `filters?` |
+| `msads_get_entity` | Get a single entity by type/id | `entityType`, `entityId`, `accountId?` |
+| `msads_create_entity` | Create entity via Campaign Management API | `entityType`, `accountId?`, `data` |
+| `msads_update_entity` | Update entity with updateMask | `entityType`, `entityId`, `data`, `updateMask` |
+| `msads_delete_entity` | Delete entity | `entityType`, `entityId`, `accountId?` |
+| `msads_list_accounts` | List accessible customer accounts | _(none)_ |
+
+#### Reporting (Async)
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `msads_get_report` | Submit async report and download results (blocking) | `reportType`, `accountId`, `columns[]`, `startDate`, `endDate`, `aggregation?` |
+| `msads_submit_report` | Submit report without waiting (non-blocking) | `reportType`, `accountId`, `columns[]`, `startDate`, `endDate` |
+| `msads_check_report_status` | Single report status check | `reportRequestId` |
+| `msads_download_report` | Download and parse report CSV | `downloadUrl`, `maxRows?` |
+
+#### Bulk Operations
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `msads_bulk_create_entities` | Batch entity creation | `entityType`, `accountId`, `items[]` |
+| `msads_bulk_update_entities` | Batch entity updates | `entityType`, `accountId`, `items[]` |
+| `msads_bulk_update_status` | Batch status updates | `entityType`, `entityIds[]`, `status` |
+| `msads_adjust_bids` | Batch adjust ad group bids | `accountId`, `adjustments[]` |
+
+#### Advanced & Import
+| Tool | Description | Key Parameters |
+|------|-------------|----------------|
+| `msads_manage_ad_extensions` | Add/update/delete ad extensions | `accountId`, `adExtensions[]` |
+| `msads_manage_criterions` | Manage targeting criteria | `entityType`, `accountId`, `parentId?`, `items[]` |
+| `msads_get_ad_preview` | Get ad preview HTML/URL | `accountId`, `adId` |
+| `msads_validate_entity` | Dry-run validate entity payload | `entityType`, `mode`, `data` |
+| `msads_import_from_google` | Import campaigns from Google Ads | `operation`, `data` |
+
+### How the Servers Work Together
 
 **Example: Investigating and fixing an underdelivering campaign**
 1. AI agent calls **dbm-mcp** → `dbm_get_pacing_status` to detect underdelivery (72% pacing)
@@ -760,6 +993,9 @@ Each server runs on a different port:
 - `pinterest-mcp`: port 3011
 - `snapchat-mcp`: port 3009
 - `amazon-dsp-mcp`: port 3012
+- `cm360-mcp`: port 3008
+- `sa360-mcp`: port 3010
+- `msads-mcp`: port 3013
 
 Test MCP endpoint:
 ```bash
@@ -779,7 +1015,7 @@ View logs for specific server:
 gcloud run services logs tail dbm-mcp --region=europe-west2
 
 # Recent errors across all servers
-gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta)-mcp"' --limit=50
+gcloud logging read 'severity>=ERROR AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta|linkedin|tiktok|cm360|sa360|pinterest|snapchat|amazon-dsp|msads)-mcp"' --limit=50
 ```
 
 View costs:
@@ -809,8 +1045,8 @@ After deploying to Cloud Run, configure Claude Desktop to connect to the MCP ser
 
 ## Key Design Principles
 
-1. **Separation of Concerns**: Five MCP servers with distinct responsibilities (reporting, DV360 management, TTD management, Google Ads management, Meta Ads management)
-2. **Multi-Platform**: Servers are purpose-built per platform (Bid Manager API for reporting, DV360 API for DV360 management, TTD REST API for TTD management, Google Ads REST API for Google Ads management, Meta Marketing API for Meta management)
+1. **Separation of Concerns**: Thirteen MCP servers with distinct responsibilities per advertising platform
+2. **Multi-Platform**: Servers are purpose-built per platform with dedicated API clients and auth strategies
 3. **Stateless**: Servers are stateless - no persistent state between requests
 4. **Type Safety**: Zod schemas for runtime validation, TypeScript for compile-time safety
 5. **Observability**: OTEL traces + metrics (GCP Cloud Trace/Monitoring), Pino structured logs (GCP Cloud Logging), InteractionLogger (local JSONL debugging)

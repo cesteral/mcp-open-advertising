@@ -13,7 +13,7 @@ loadDotEnv();
 const ConfigSchema = BaseConfigSchema.extend({
   // Defaults for this server
   serviceName: z.string().default("amazon-dsp-mcp"),
-  port: z.number().int().min(1).max(65535).default(3013),
+  port: z.number().int().min(1).max(65535).default(3012),
   otelServiceName: z.string().default("amazon-dsp-mcp"),
 
   // Auth — Amazon DSP-specific modes
