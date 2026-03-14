@@ -7,3 +7,4 @@ export {
   getMsAdsAccountIdFromHeaders,
   getMsAdsCredentialFingerprint,
 } from "./msads-auth-adapter.js";
+export { MsAdsBearerAuthStrategy } from "./msads-auth-strategy.js";
