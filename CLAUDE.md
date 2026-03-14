@@ -15,7 +15,7 @@ All ten MCP servers are fully implemented with live API integrations:
 - **dv360-mcp**: DV360 API v4 for campaign entity management
 - **ttd-mcp**: TTD REST API for The Trade Desk campaign management & reporting
 - **gads-mcp**: Google Ads REST API v23 for Google Ads campaign management & reporting
-- **meta-mcp**: Meta Marketing API v21.0 for Meta Ads campaign management
+- **meta-mcp**: Meta Marketing API v22.0 for Meta Ads campaign management
 - **linkedin-mcp**: LinkedIn Marketing API v2 for LinkedIn Ads management (port 3006)
 - **tiktok-mcp**: TikTok Marketing API v1.3 for TikTok Ads management (port 3007)
 - **pinterest-mcp**: Pinterest Ads API v5 for Pinterest campaign management (port 3011)
@@ -113,7 +113,7 @@ This is a **pnpm workspace** monorepo managed by **Turborepo**. The workspace co
 2. **`@cesteral/dv360-mcp`** - DV360 campaign entity management (CRUD via DV360 API & SDF files)
 3. **`@cesteral/ttd-mcp`** - The Trade Desk campaign management & reporting (CRUD via TTD REST API)
 4. **`@cesteral/gads-mcp`** - Google Ads campaign management & reporting (CRUD via Google Ads REST API v23)
-5. **`@cesteral/meta-mcp`** - Meta Ads campaign management (CRUD via Meta Marketing API v21.0)
+5. **`@cesteral/meta-mcp`** - Meta Ads campaign management (CRUD via Meta Marketing API v22.0)
 6. **`@cesteral/linkedin-mcp`** - LinkedIn Ads campaign management (CRUD via LinkedIn Marketing API v2)
 7. **`@cesteral/tiktok-mcp`** - TikTok Ads campaign management (CRUD via TikTok Marketing API v1.3)
 8. **`@cesteral/pinterest-mcp`** - Pinterest Ads campaign management (CRUD via Pinterest Ads API v5)
