@@ -30,7 +30,7 @@ export const pinterestEntityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityUpdateWorkflowMessage(
+export function getPinterestEntityUpdateWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";

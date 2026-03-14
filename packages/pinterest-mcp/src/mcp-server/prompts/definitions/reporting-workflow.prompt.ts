@@ -18,7 +18,7 @@ export const pinterestReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokReportingWorkflowMessage(
+export function getPinterestReportingWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";

@@ -29,7 +29,7 @@ export const snapchatEntityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityDuplicationWorkflowMessage(
+export function getSnapchatEntityDuplicationWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";

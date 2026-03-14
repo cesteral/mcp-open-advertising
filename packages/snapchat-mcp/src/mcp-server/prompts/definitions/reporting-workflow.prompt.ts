@@ -18,7 +18,7 @@ export const snapchatReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokReportingWorkflowMessage(
+export function getSnapchatReportingWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";

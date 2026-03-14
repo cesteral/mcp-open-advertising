@@ -14,7 +14,7 @@ export const pinterestToolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getTiktokToolSchemaExplorationMessage(
+export function getPinterestToolSchemaExplorationMessage(
   args?: Record<string, string>,
 ): string {
   const objective = args?.objective || "general capability discovery";

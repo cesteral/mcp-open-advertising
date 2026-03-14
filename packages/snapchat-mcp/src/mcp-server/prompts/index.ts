@@ -13,27 +13,27 @@ import {
 } from "./definitions/bulk-operations-workflow.prompt.js";
 import {
   snapchatToolSchemaExplorationPrompt,
-  getTiktokToolSchemaExplorationMessage,
+  getSnapchatToolSchemaExplorationMessage,
 } from "./definitions/tool-schema-exploration.prompt.js";
 import {
   snapchatTroubleshootEntityPrompt,
-  getTiktokTroubleshootEntityMessage,
+  getSnapchatTroubleshootEntityMessage,
 } from "./definitions/troubleshoot-entity.prompt.js";
 import {
   snapchatReportingWorkflowPrompt,
-  getTiktokReportingWorkflowMessage,
+  getSnapchatReportingWorkflowMessage,
 } from "./definitions/reporting-workflow.prompt.js";
 import {
   snapchatEntityUpdateWorkflowPrompt,
-  getTiktokEntityUpdateWorkflowMessage,
+  getSnapchatEntityUpdateWorkflowMessage,
 } from "./definitions/entity-update-workflow.prompt.js";
 import {
   snapchatTargetingDiscoveryWorkflowPrompt,
-  getTiktokTargetingDiscoveryWorkflowMessage,
+  getSnapchatTargetingDiscoveryWorkflowMessage,
 } from "./definitions/targeting-discovery-workflow.prompt.js";
 import {
   snapchatEntityDuplicationWorkflowPrompt,
-  getTiktokEntityDuplicationWorkflowMessage,
+  getSnapchatEntityDuplicationWorkflowMessage,
 } from "./definitions/entity-duplication-workflow.prompt.js";
 import {
   crossPlatformPerformancePrompt,
@@ -45,7 +45,7 @@ import {
 } from "./definitions/cross-platform-campaign-setup.prompt.js";
 import {
   snapchatCreativeUploadWorkflowPrompt,
-  getTiktokCreativeUploadWorkflowMessage,
+  getSnapchatCreativeUploadWorkflowMessage,
 } from "./definitions/creative-upload-workflow.prompt.js";
 
 export interface PromptDefinition {
@@ -72,42 +72,42 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     snapchatToolSchemaExplorationPrompt.name,
     {
       prompt: snapchatToolSchemaExplorationPrompt,
-      generateMessage: getTiktokToolSchemaExplorationMessage,
+      generateMessage: getSnapchatToolSchemaExplorationMessage,
     },
   ],
   [
     snapchatTroubleshootEntityPrompt.name,
     {
       prompt: snapchatTroubleshootEntityPrompt,
-      generateMessage: getTiktokTroubleshootEntityMessage,
+      generateMessage: getSnapchatTroubleshootEntityMessage,
     },
   ],
   [
     snapchatReportingWorkflowPrompt.name,
     {
       prompt: snapchatReportingWorkflowPrompt,
-      generateMessage: getTiktokReportingWorkflowMessage,
+      generateMessage: getSnapchatReportingWorkflowMessage,
     },
   ],
   [
     snapchatEntityUpdateWorkflowPrompt.name,
     {
       prompt: snapchatEntityUpdateWorkflowPrompt,
-      generateMessage: getTiktokEntityUpdateWorkflowMessage,
+      generateMessage: getSnapchatEntityUpdateWorkflowMessage,
     },
   ],
   [
     snapchatTargetingDiscoveryWorkflowPrompt.name,
     {
       prompt: snapchatTargetingDiscoveryWorkflowPrompt,
-      generateMessage: getTiktokTargetingDiscoveryWorkflowMessage,
+      generateMessage: getSnapchatTargetingDiscoveryWorkflowMessage,
     },
   ],
   [
     snapchatEntityDuplicationWorkflowPrompt.name,
     {
       prompt: snapchatEntityDuplicationWorkflowPrompt,
-      generateMessage: getTiktokEntityDuplicationWorkflowMessage,
+      generateMessage: getSnapchatEntityDuplicationWorkflowMessage,
     },
   ],
   [
@@ -128,7 +128,7 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     snapchatCreativeUploadWorkflowPrompt.name,
     {
       prompt: snapchatCreativeUploadWorkflowPrompt,
-      generateMessage: getTiktokCreativeUploadWorkflowMessage,
+      generateMessage: getSnapchatCreativeUploadWorkflowMessage,
     },
   ],
 ]);

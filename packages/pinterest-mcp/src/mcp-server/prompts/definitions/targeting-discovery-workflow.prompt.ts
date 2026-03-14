@@ -25,7 +25,7 @@ export const pinterestTargetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokTargetingDiscoveryWorkflowMessage(
+export function getPinterestTargetingDiscoveryWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";

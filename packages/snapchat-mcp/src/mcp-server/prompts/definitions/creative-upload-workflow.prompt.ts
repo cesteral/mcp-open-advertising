@@ -17,7 +17,7 @@ export const snapchatCreativeUploadWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokCreativeUploadWorkflowMessage(args?: Record<string, string>): string {
+export function getSnapchatCreativeUploadWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
   const creativeType = args?.creativeType || "video";
 

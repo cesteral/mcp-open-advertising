@@ -30,7 +30,7 @@ export const snapchatEntityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityUpdateWorkflowMessage(
+export function getSnapchatEntityUpdateWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";

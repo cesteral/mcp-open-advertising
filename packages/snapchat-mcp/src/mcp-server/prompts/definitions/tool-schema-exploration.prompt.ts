@@ -14,7 +14,7 @@ export const snapchatToolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getTiktokToolSchemaExplorationMessage(
+export function getSnapchatToolSchemaExplorationMessage(
   args?: Record<string, string>,
 ): string {
   const objective = args?.objective || "general capability discovery";

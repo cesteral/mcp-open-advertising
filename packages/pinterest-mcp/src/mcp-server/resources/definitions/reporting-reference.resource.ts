@@ -18,11 +18,11 @@ function formatReportingReferenceMarkdown(): string {
 
 ## Async Reporting Flow
 
-1. **Submit**: POST \`/open_api/v1.3/report/task/create/\` → get \`task_id\`
-2. **Poll**: GET \`/open_api/v1.3/report/task/check/?task_id={id}\` → check \`status\`
-3. **Download**: GET the \`download_url\` when status = "DONE"
+1. **Submit**: POST \`/v5/ad_accounts/{ad_account_id}/reports\` → get \`token\`
+2. **Poll**: GET \`/v5/ad_accounts/{ad_account_id}/reports/{token}\` → check \`status\`
+3. **Download**: GET the \`download_url\` when status = "FINISHED"
 
-Status values: PENDING → RUNNING → DONE | FAILED
+Status values: FINISHED | FAILED
 
 Use \`pinterest_get_report\` or \`pinterest_get_report_breakdowns\` — these tools handle the full flow automatically.
 

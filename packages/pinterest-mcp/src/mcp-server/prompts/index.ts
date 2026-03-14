@@ -13,27 +13,27 @@ import {
 } from "./definitions/bulk-operations-workflow.prompt.js";
 import {
   pinterestToolSchemaExplorationPrompt,
-  getTiktokToolSchemaExplorationMessage,
+  getPinterestToolSchemaExplorationMessage,
 } from "./definitions/tool-schema-exploration.prompt.js";
 import {
   pinterestTroubleshootEntityPrompt,
-  getTiktokTroubleshootEntityMessage,
+  getPinterestTroubleshootEntityMessage,
 } from "./definitions/troubleshoot-entity.prompt.js";
 import {
   pinterestReportingWorkflowPrompt,
-  getTiktokReportingWorkflowMessage,
+  getPinterestReportingWorkflowMessage,
 } from "./definitions/reporting-workflow.prompt.js";
 import {
   pinterestEntityUpdateWorkflowPrompt,
-  getTiktokEntityUpdateWorkflowMessage,
+  getPinterestEntityUpdateWorkflowMessage,
 } from "./definitions/entity-update-workflow.prompt.js";
 import {
   pinterestTargetingDiscoveryWorkflowPrompt,
-  getTiktokTargetingDiscoveryWorkflowMessage,
+  getPinterestTargetingDiscoveryWorkflowMessage,
 } from "./definitions/targeting-discovery-workflow.prompt.js";
 import {
   pinterestEntityDuplicationWorkflowPrompt,
-  getTiktokEntityDuplicationWorkflowMessage,
+  getPinterestEntityDuplicationWorkflowMessage,
 } from "./definitions/entity-duplication-workflow.prompt.js";
 import {
   crossPlatformPerformancePrompt,
@@ -45,7 +45,7 @@ import {
 } from "./definitions/cross-platform-campaign-setup.prompt.js";
 import {
   pinterestCreativeUploadWorkflowPrompt,
-  getTiktokCreativeUploadWorkflowMessage,
+  getPinterestCreativeUploadWorkflowMessage,
 } from "./definitions/creative-upload-workflow.prompt.js";
 
 export interface PromptDefinition {
@@ -72,42 +72,42 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     pinterestToolSchemaExplorationPrompt.name,
     {
       prompt: pinterestToolSchemaExplorationPrompt,
-      generateMessage: getTiktokToolSchemaExplorationMessage,
+      generateMessage: getPinterestToolSchemaExplorationMessage,
     },
   ],
   [
     pinterestTroubleshootEntityPrompt.name,
     {
       prompt: pinterestTroubleshootEntityPrompt,
-      generateMessage: getTiktokTroubleshootEntityMessage,
+      generateMessage: getPinterestTroubleshootEntityMessage,
     },
   ],
   [
     pinterestReportingWorkflowPrompt.name,
     {
       prompt: pinterestReportingWorkflowPrompt,
-      generateMessage: getTiktokReportingWorkflowMessage,
+      generateMessage: getPinterestReportingWorkflowMessage,
     },
   ],
   [
     pinterestEntityUpdateWorkflowPrompt.name,
     {
       prompt: pinterestEntityUpdateWorkflowPrompt,
-      generateMessage: getTiktokEntityUpdateWorkflowMessage,
+      generateMessage: getPinterestEntityUpdateWorkflowMessage,
     },
   ],
   [
     pinterestTargetingDiscoveryWorkflowPrompt.name,
     {
       prompt: pinterestTargetingDiscoveryWorkflowPrompt,
-      generateMessage: getTiktokTargetingDiscoveryWorkflowMessage,
+      generateMessage: getPinterestTargetingDiscoveryWorkflowMessage,
     },
   ],
   [
     pinterestEntityDuplicationWorkflowPrompt.name,
     {
       prompt: pinterestEntityDuplicationWorkflowPrompt,
-      generateMessage: getTiktokEntityDuplicationWorkflowMessage,
+      generateMessage: getPinterestEntityDuplicationWorkflowMessage,
     },
   ],
   [
@@ -128,7 +128,7 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     pinterestCreativeUploadWorkflowPrompt.name,
     {
       prompt: pinterestCreativeUploadWorkflowPrompt,
-      generateMessage: getTiktokCreativeUploadWorkflowMessage,
+      generateMessage: getPinterestCreativeUploadWorkflowMessage,
     },
   ],
 ]);

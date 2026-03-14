@@ -29,7 +29,7 @@ export const pinterestEntityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityDuplicationWorkflowMessage(
+export function getPinterestEntityDuplicationWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";

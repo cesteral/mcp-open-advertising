@@ -22,7 +22,7 @@ export const snapchatTroubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getTiktokTroubleshootEntityMessage(
+export function getSnapchatTroubleshootEntityMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";

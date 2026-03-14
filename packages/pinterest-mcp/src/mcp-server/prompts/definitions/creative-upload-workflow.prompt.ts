@@ -17,7 +17,7 @@ export const pinterestCreativeUploadWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokCreativeUploadWorkflowMessage(args?: Record<string, string>): string {
+export function getPinterestCreativeUploadWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
   const creativeType = args?.creativeType || "video";
 

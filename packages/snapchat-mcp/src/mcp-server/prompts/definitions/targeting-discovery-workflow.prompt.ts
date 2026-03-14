@@ -25,7 +25,7 @@ export const snapchatTargetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokTargetingDiscoveryWorkflowMessage(
+export function getSnapchatTargetingDiscoveryWorkflowMessage(
   args?: Record<string, string>,
 ): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";

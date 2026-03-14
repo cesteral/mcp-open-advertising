@@ -22,10 +22,10 @@ Advertiser (ad_account_id: XXXXXXXXXX)
 
 | Entity Type | List Endpoint | Create Endpoint | ID Field |
 |-------------|---------------|-----------------|----------|
-| **campaign** | \`/open_api/v1.3/campaign/get/\` | \`/open_api/v1.3/campaign/create/\` | campaign_id |
-| **adGroup** | \`/open_api/v1.3/adgroup/get/\` | \`/open_api/v1.3/adgroup/create/\` | adgroup_id |
-| **ad** | \`/open_api/v1.3/ad/get/\` | \`/open_api/v1.3/ad/create/\` | ad_id |
-| **creative** | \`/open_api/v1.3/creative/adcreative/get/\` | \`/open_api/v1.3/creative/adcreative/create/\` | creative_id |
+| **campaign** | \`GET /v5/ad_accounts/{ad_account_id}/campaigns\` | \`POST /v5/ad_accounts/{ad_account_id}/campaigns\` | id |
+| **adGroup** | \`GET /v5/ad_accounts/{ad_account_id}/ad_groups\` | \`POST /v5/ad_accounts/{ad_account_id}/ad_groups\` | id |
+| **ad** | \`GET /v5/ad_accounts/{ad_account_id}/ads\` | \`POST /v5/ad_accounts/{ad_account_id}/ads\` | id |
+| **creative** | \`GET /v5/pins/{pin_id}\` | \`POST /v5/pins\` | id |
 
 ## Key Relationships
 
@@ -49,54 +49,46 @@ Full campaign structure (top-down):
 
 ## Pinterest API Patterns
 
-### Read: GET with ad_account_id in query params
+### Read: GET with ad_account_id in URL path
 \`\`\`
-GET /open_api/v1.3/campaign/get/?ad_account_id=123&page=1&page_size=10
+GET /v5/ad_accounts/123/campaigns?page_size=25&bookmark=<cursor>
 Authorization: Bearer <token>
 \`\`\`
 
-### Create: POST with ad_account_id in JSON body
+### Create: POST with entity fields in JSON body
 \`\`\`
-POST /open_api/v1.3/campaign/create/
-{ "ad_account_id": "123", "campaign_name": "...", ... }
-\`\`\`
-
-### Update: POST with entity ID + ad_account_id in JSON body
-\`\`\`
-POST /open_api/v1.3/campaign/update/
-{ "ad_account_id": "123", "campaign_id": "456", "budget": 200 }
+POST /v5/ad_accounts/123/campaigns
+{ "name": "My Campaign", "objective_type": "TRAFFIC", "status": "ACTIVE", ... }
 \`\`\`
 
-### Status Update: Separate endpoint, POST with IDs array
+### Update: PATCH with changed fields in JSON body
 \`\`\`
-POST /open_api/v1.3/campaign/status/update/
-{ "ad_account_id": "123", "campaign_ids": ["456", "789"], "operation_status": "DISABLE" }
+PATCH /v5/ad_accounts/123/campaigns
+{ "items": [{ "id": "456", "name": "Updated Name", "status": "PAUSED" }] }
 \`\`\`
 
-### Delete: Separate endpoint, POST with IDs array
+### Delete: DELETE with IDs in query params
 \`\`\`
-POST /open_api/v1.3/campaign/delete/
-{ "ad_account_id": "123", "campaign_ids": ["456"] }
+DELETE /v5/ad_accounts/123/campaigns?campaign_ids=456&campaign_ids=789
 \`\`\`
 
 ### Response Shape
-All Pinterest API responses follow this structure:
+List responses use cursor-based pagination:
 \`\`\`json
 {
-  "code": 0,
-  "message": "OK",
-  "data": { "list": [...], "page_info": { "page": 1, "page_size": 10, "total_number": 100, "total_page": 10 } }
+  "items": [...],
+  "bookmark": "<next_cursor>"
 }
 \`\`\`
-- \`code: 0\` = success
-- \`code != 0\` = error (check \`message\` for details)
+- \`bookmark\` is absent when there are no more pages
+- Single-entity responses return the entity object directly
 
 ## Pagination
 
-Pinterest uses page-based pagination (NOT cursor-based):
-- \`page\` — page number (1-based)
-- \`page_size\` — items per page (max 1000 for some endpoints)
-- Response: \`page_info.total_page\` shows total pages
+Pinterest uses cursor-based pagination (NOT page-number based):
+- \`page_size\` — items per page (default 25, max 250)
+- \`bookmark\` — cursor token for next page (pass from previous response)
+- Response: no \`bookmark\` = last page
 
 ## Available Tools Summary
 

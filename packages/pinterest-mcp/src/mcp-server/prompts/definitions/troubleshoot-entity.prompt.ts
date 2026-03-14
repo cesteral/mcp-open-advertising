@@ -22,7 +22,7 @@ export const pinterestTroubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getTiktokTroubleshootEntityMessage(
+export function getPinterestTroubleshootEntityMessage(
   args?: Record<string, string>,
 ): string {
   const entityType = args?.entityType || "{entityType}";
