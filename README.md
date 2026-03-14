@@ -8,6 +8,21 @@
 
 > **Open-source connectors, managed service coming soon** — [Request early access](https://cesteral.com) for managed hosting, or self-host using the guide below.
 
+<p align="center">
+  <img src="docs/logos/dv360.svg" width="32" height="32" alt="DV360" title="DV360">&nbsp;&nbsp;
+  <img src="docs/logos/google-ad-manager.svg" width="32" height="32" alt="Google Ads" title="Google Ads">&nbsp;&nbsp;
+  <img src="docs/logos/thetradedesk.svg" width="32" height="32" alt="The Trade Desk" title="The Trade Desk">&nbsp;&nbsp;
+  <img src="docs/logos/meta.svg" width="32" height="32" alt="Meta" title="Meta Ads">&nbsp;&nbsp;
+  <img src="docs/logos/linkedin.svg" width="32" height="32" alt="LinkedIn" title="LinkedIn Ads">&nbsp;&nbsp;
+  <img src="docs/logos/tiktok.svg" width="32" height="32" alt="TikTok" title="TikTok Ads">&nbsp;&nbsp;
+  <img src="docs/logos/campaign-manager.svg" width="32" height="32" alt="CM360" title="Campaign Manager 360">&nbsp;&nbsp;
+  <img src="docs/logos/search-ads-360.svg" width="32" height="32" alt="SA360" title="Search Ads 360">&nbsp;&nbsp;
+  <img src="docs/logos/pinterest.svg" width="32" height="32" alt="Pinterest" title="Pinterest Ads">&nbsp;&nbsp;
+  <img src="docs/logos/snapchat.svg" width="32" height="32" alt="Snapchat" title="Snapchat Ads">&nbsp;&nbsp;
+  <img src="docs/logos/amazon.svg" width="32" height="32" alt="Amazon DSP" title="Amazon DSP">&nbsp;&nbsp;
+  <img src="docs/logos/microsoft-bing.svg" width="32" height="32" alt="Microsoft Ads" title="Microsoft Ads (Bing)">
+</p>
+
 ---
 
 ## Overview
@@ -28,8 +43,8 @@ If you want the reasoning behind this split, see [docs/business/cesteral-licensi
 ### Key Features
 
 - **🤖 AI-Native Design** - Claude and other AI agents as primary interface
-- **🌐 Multi-Platform Support** - Works across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, and Bid Manager
-- **🔧 Composable Architecture** - Seven independent MCP servers can be used separately or combined
+- **🌐 Multi-Platform Support** - Works across DV360, Google Ads, The Trade Desk, Meta, LinkedIn, TikTok, CM360, SA360, Pinterest, Snapchat, Amazon DSP, and Bid Manager
+- **🔧 Composable Architecture** - Twelve independent MCP servers can be used separately or combined
 - **📊 Intelligent Optimization** - Automatically adjusts bids and margins using proven pacing algorithms
 - **🔍 Full Transparency** - Every decision is explainable and auditable
 - **💰 Cost-Efficient** - GCP-native architecture optimized for efficiency
@@ -151,6 +166,60 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 **Platform**: TikTok Marketing API v1.3
 
+### <img src="docs/logos/campaign-manager.svg" width="20" height="20" alt="CM360"> Server 8: `cm360-mcp`
+
+**Campaign Manager 360 management workflows**
+
+- Full CRUD on CM360 entities (campaigns, placements, ads, creatives)
+- Floodlight configuration and conversion tracking
+- Per-session auth via Google OAuth2
+
+**Platform**: CM360 API v5
+
+### <img src="docs/logos/search-ads-360.svg" width="20" height="20" alt="SA360"> Server 9: `sa360-mcp`
+
+**Search Ads 360 reporting and conversion workflows**
+
+- Execute SA360 query language queries for reporting
+- Performance insights with segment breakdowns
+- Offline conversion upload and management (insert, update, validate)
+- Custom column and field discovery
+
+**Platform**: SA360 Reporting API v0 + DoubleClick Search v2
+
+### <img src="docs/logos/pinterest.svg" width="20" height="20" alt="Pinterest"> Server 10: `pinterest-mcp`
+
+**Pinterest Ads campaign management and reporting**
+
+- Full CRUD on Pinterest entities (campaigns, ad groups, ads, creatives)
+- Async reporting with breakdown support
+- Targeting search and audience estimates
+- Per-session auth via Pinterest bearer token
+
+**Platform**: Pinterest Ads API v5
+
+### <img src="docs/logos/snapchat.svg" width="20" height="20" alt="Snapchat"> Server 11: `snapchat-mcp`
+
+**Snapchat Ads campaign management and reporting**
+
+- Full CRUD on Snapchat entities (campaigns, ad squads, ads, creatives)
+- Async reporting with breakdown support
+- Targeting search, audience estimates, and ad previews
+- Per-session auth via Snapchat bearer token
+
+**Platform**: Snapchat Ads API v1
+
+### <img src="docs/logos/amazon.svg" width="20" height="20" alt="Amazon DSP"> Server 12: `amazon-dsp-mcp`
+
+**Amazon DSP campaign management and reporting**
+
+- Full CRUD on Amazon DSP entities (orders, line items, creatives)
+- Async reporting with breakdown support
+- Targeting and audience management
+- Per-session auth via Amazon DSP bearer token
+
+**Platform**: Amazon DSP API
+
 ---
 
 ## Current Status
@@ -159,14 +228,14 @@ This dual-access model preserves service autonomy while enabling cross-server au
 
 The platform currently includes:
 
-- ✅ Seven implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`)
+- ✅ Twelve implemented MCP server packages (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`, `cm360-mcp`, `sa360-mcp`, `pinterest-mcp`, `snapchat-mcp`, `amazon-dsp-mcp`)
 - ✅ Shared runtime package (`@cesteral/shared`) for auth, telemetry, and common handlers
 - ✅ Live platform API integrations and Streamable HTTP transports
 - ✅ Terraform + Cloud Build coverage for independent service deployment
 
 **Current Focus:**
 
-1. Production hardening and operational reliability across all seven servers
+1. Production hardening and operational reliability across all twelve servers
 2. Cross-platform workflow coverage and contract governance
 3. Telemetry dashboards and observability improvements
 
