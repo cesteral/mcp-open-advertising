@@ -1,8 +1,26 @@
 # Cross-Server Contract
 
-**Last Updated:** 2026-03-03
+**Last Updated:** 2026-03-15
 
-Standards that all management MCP servers in this repository should follow for consistent AI agent orchestration. The original contract was defined around the first six management servers and should be expanded as newer platform packages are normalized.
+Standards that all MCP servers in this repository should follow for consistent AI agent orchestration.
+
+## Server Inventory
+
+| Server | Prefix | Type | Account ID Field |
+|--------|--------|------|------------------|
+| dbm-mcp | `dbm` | Reporting only | `advertiserId` |
+| dv360-mcp | `dv360` | Management | `advertiserId` |
+| ttd-mcp | `ttd` | Management | `advertiserId` |
+| gads-mcp | `gads` | Management | `customerId` |
+| meta-mcp | `meta` | Management | `adAccountId` |
+| linkedin-mcp | `linkedin` | Management | `adAccountUrn` |
+| tiktok-mcp | `tiktok` | Management | `advertiserId` |
+| cm360-mcp | `cm360` | Management | `profileId` |
+| sa360-mcp | `sa360` | Reporting + conversions | `customerId` |
+| pinterest-mcp | `pinterest` | Management | `adAccountId` |
+| snapchat-mcp | `snapchat` | Management | `adAccountId` |
+| amazon-dsp-mcp | `amazon_dsp` | Management | `profileId` |
+| msads-mcp | `msads` | Management | `accountId` |
 
 ## Required Tool Categories
 
@@ -24,16 +42,20 @@ Every management server MUST provide these tool categories:
 ### Validation
 - `{prefix}_validate_entity` — Validate entity payloads (client-side or server-side)
 
+### Exceptions
+
+- **dbm-mcp**: Reporting only — provides query tools, not CRUD. No management tools required.
+- **sa360-mcp**: Reporting + conversion upload — provides query/insights tools and conversion insert/update. No entity CRUD required.
+
 ## Intentional Naming Differences
 
 Some naming differences across servers are intentional and match platform API conventions:
 
-| Concept | DV360 | TTD | Google Ads | Meta | LinkedIn | TikTok |
-|---------|-------|-----|------------|------|----------|--------|
-| Delete tool | `dv360_delete_entity` | `ttd_delete_entity` | `gads_remove_entity` | `meta_delete_entity` | `linkedin_delete_entity` | `tiktok_delete_entity` |
-| Bid tool | `dv360_adjust_line_item_bids` | `ttd_adjust_bids` | `gads_adjust_bids` | `meta_adjust_bids` | `linkedin_adjust_bids` | `tiktok_adjust_bids` |
-| Account ID | `advertiserId` | `advertiserId` | `customerId` | `adAccountId` | `adAccountUrn` | `advertiserId` |
-| Status values | `ENTITY_STATUS_ACTIVE` | `Active` | `ENABLED` | `ACTIVE` | `ACTIVE` | `ENABLE`/`DISABLE` |
+| Concept | DV360 | TTD | Google Ads | Meta | LinkedIn | TikTok | CM360 | Pinterest | Snapchat | Amazon DSP | MS Ads |
+|---------|-------|-----|------------|------|----------|--------|-------|-----------|----------|------------|--------|
+| Delete tool | `delete_entity` | `delete_entity` | `remove_entity` | `delete_entity` | `delete_entity` | `delete_entity` | `delete_entity` | `delete_entity` | `delete_entity` | `delete_entity` | `delete_entity` |
+| Bid tool | `adjust_line_item_bids` | `adjust_bids` | `adjust_bids` | `adjust_bids` | `adjust_bids` | `adjust_bids` | N/A | `adjust_bids` | `adjust_bids` | `adjust_bids` | `adjust_bids` |
+| Status values | `ENTITY_STATUS_ACTIVE` | `Active` | `ENABLED` | `ACTIVE` | `ACTIVE` | `ENABLE`/`DISABLE` | `true`/`false` | `ACTIVE` | `ACTIVE` | `RUNNING` | `Active` |
 
 ## Required Tool Structure
 

@@ -1,0 +1,8 @@
+# Default owners for everything
+* @cesteral/platform
+
+# Infrastructure requires platform team review
+terraform/ @cesteral/platform
+cloudbuild*.yaml @cesteral/platform
+Dockerfile @cesteral/platform
+scripts/ @cesteral/platform

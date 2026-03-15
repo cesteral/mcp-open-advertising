@@ -12,14 +12,14 @@ terraform/
 ├── backend-{dev,prod}.conf # GCS backend config per environment
 ├── {dev,prod}.tfvars       # Environment-specific values
 └── modules/
-    ├── mcp-service/        # Parameterized Cloud Run service (instantiated 5x)
+    ├── mcp-service/        # Parameterized Cloud Run service (instantiated 13x)
     ├── networking/         # VPC, VPC connector, Cloud NAT, firewall rules
     └── monitoring/         # Uptime checks, alert policies, dashboard
 ```
 
 ### Module: `mcp-service`
 
-Instantiated once per MCP server (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp). Creates:
+Instantiated once per MCP server across all 13 services. Creates:
 - Cloud Run v2 service with health probes
 - Service account with least-privilege IAM
 - Secret Manager secrets (values managed externally)
@@ -38,13 +38,13 @@ Creates observability infrastructure:
 - Uptime checks per service
 - Alert policies (error rate, P99 latency, instance count, uptime)
 - Custom log-based metric for access denied events
-- Monitoring dashboard with 7 widgets
+- Monitoring dashboard with fleet-wide widgets
 
 ## Environments
 
 | Environment | Project ID | State Bucket | Key Differences |
 |---|---|---|---|
-| **dev** | `cesteral-labs` | `cesteral-labs-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
+| **dev** | `cesteral-dev` | `cesteral-dev-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
 | **prod** | `cesteral-prod` | `cesteral-prod-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory |
 
 ## Common Operations
@@ -53,7 +53,7 @@ Creates observability infrastructure:
 
 ```bash
 # 1. Create the state bucket (once per environment)
-gsutil mb -l europe-west2 gs://cesteral-labs-terraform-state
+gsutil mb -l europe-west2 gs://cesteral-dev-terraform-state
 
 # 2. Initialize terraform with backend config
 cd terraform

@@ -12,173 +12,36 @@ options:
   logging: CLOUD_LOGGING_ONLY
 
 steps:
-  # Step 1a: Build dbm-mcp Docker image
   - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'sh'
     args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${_ENVIRONMENT}-latest'
-      - '--build-arg'
-      - 'SERVER_NAME=dbm-mcp'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-    id: 'build-dbm-mcp'
+      - '-c'
+      - |
+        set -eu
+        SERVICES="dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp cm360-mcp sa360-mcp pinterest-mcp snapchat-mcp amazon-dsp-mcp msads-mcp"
+        for SERVICE in $SERVICES; do
+          docker build \
+            -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${SERVICE}:${SHORT_SHA}" \
+            -t "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${SERVICE}:${_ENVIRONMENT}-latest" \
+            --build-arg "SERVER_NAME=${SERVICE}" \
+            -f Dockerfile . &
+        done
+        wait
+    id: 'build-images'
 
-  # Step 1b: Build dv360-mcp Docker image
   - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'sh'
     args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp:${_ENVIRONMENT}-latest'
-      - '--build-arg'
-      - 'SERVER_NAME=dv360-mcp'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-    id: 'build-dv360-mcp'
-
-  # Step 1c: Build ttd-mcp Docker image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp:${_ENVIRONMENT}-latest'
-      - '--build-arg'
-      - 'SERVER_NAME=ttd-mcp'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-    id: 'build-ttd-mcp'
-
-  # Step 1d: Build gads-mcp Docker image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp:${_ENVIRONMENT}-latest'
-      - '--build-arg'
-      - 'SERVER_NAME=gads-mcp'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-    id: 'build-gads-mcp'
-
-  # Step 1e: Build meta-mcp Docker image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp:${_ENVIRONMENT}-latest'
-      - '--build-arg'
-      - 'SERVER_NAME=meta-mcp'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-    id: 'build-meta-mcp'
-
-  # Step 1f: Build linkedin-mcp Docker image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${_ENVIRONMENT}-latest'
-      - '--build-arg'
-      - 'SERVER_NAME=linkedin-mcp'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-    id: 'build-linkedin-mcp'
-
-  # Step 1g: Build tiktok-mcp Docker image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'build'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${SHORT_SHA}'
-      - '-t'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${_ENVIRONMENT}-latest'
-      - '--build-arg'
-      - 'SERVER_NAME=tiktok-mcp'
-      - '-f'
-      - 'Dockerfile'
-      - '.'
-    id: 'build-tiktok-mcp'
-
-  # Step 2a: Push dbm-mcp image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp'
-    id: 'push-dbm-mcp'
-    waitFor: ['build-dbm-mcp']
-
-  # Step 2b: Push dv360-mcp image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dv360-mcp'
-    id: 'push-dv360-mcp'
-    waitFor: ['build-dv360-mcp']
-
-  # Step 2c: Push ttd-mcp image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/ttd-mcp'
-    id: 'push-ttd-mcp'
-    waitFor: ['build-ttd-mcp']
-
-  # Step 2d: Push gads-mcp image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/gads-mcp'
-    id: 'push-gads-mcp'
-    waitFor: ['build-gads-mcp']
-
-  # Step 2e: Push meta-mcp image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/meta-mcp'
-    id: 'push-meta-mcp'
-    waitFor: ['build-meta-mcp']
-
-  # Step 2f: Push linkedin-mcp image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp'
-    id: 'push-linkedin-mcp'
-    waitFor: ['build-linkedin-mcp']
-
-  # Step 2g: Push tiktok-mcp image
-  - name: 'gcr.io/cloud-builders/docker'
-    args:
-      - 'push'
-      - '--all-tags'
-      - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp'
-    id: 'push-tiktok-mcp'
-    waitFor: ['build-tiktok-mcp']
+      - '-c'
+      - |
+        set -eu
+        SERVICES="dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp cm360-mcp sa360-mcp pinterest-mcp snapchat-mcp amazon-dsp-mcp msads-mcp"
+        for SERVICE in $SERVICES; do
+          docker push --all-tags "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/${SERVICE}" &
+        done
+        wait
+    id: 'push-images'
+    waitFor: ['build-images']
 
 images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dbm-mcp:${SHORT_SHA}'
@@ -195,5 +58,17 @@ images:
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/linkedin-mcp:${_ENVIRONMENT}-latest'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${SHORT_SHA}'
   - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/tiktok-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/cm360-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/cm360-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/sa360-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/sa360-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/pinterest-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/pinterest-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/snapchat-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/snapchat-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/amazon-dsp-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/amazon-dsp-mcp:${_ENVIRONMENT}-latest'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/msads-mcp:${SHORT_SHA}'
+  - '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/msads-mcp:${_ENVIRONMENT}-latest'
 
-timeout: '600s' # 10 minutes
+timeout: '900s'

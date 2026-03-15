@@ -27,11 +27,11 @@ git push -u origin main
 
 ```
 GitHub Repository
-    ↓ (push to main/staging/dev)
+    ↓ (push to main/dev)
 Cloud Build Trigger (automatic)
     ↓
 cloudbuild.yaml execution:
-    1. Build Docker images (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp)
+    1. Build Docker images for all 13 MCP servers
     2. Push to Artifact Registry
     3. Run Terraform
     4. Deploy to Cloud Run
@@ -75,17 +75,6 @@ cloudbuild.yaml execution:
      --substitutions="_ENVIRONMENT=prod,_REGION=europe-west2"
    ```
 
-   **Staging Trigger** (staging branch):
-   ```bash
-   gcloud builds triggers create github \
-     --name="cesteral-staging-deploy" \
-     --repo-name="cesteral" \
-     --repo-owner="YOUR_GITHUB_ORG" \
-     --branch-pattern="^staging$" \
-     --build-config="cloudbuild.yaml" \
-     --substitutions="_ENVIRONMENT=staging,_REGION=europe-west2"
-   ```
-
    **Development Trigger** (dev branch):
    ```bash
    gcloud builds triggers create github \
@@ -101,7 +90,6 @@ cloudbuild.yaml execution:
 
 ```
 main     → Production deployment (auto-deploy on push)
-staging  → Staging deployment (auto-deploy on push)
 dev      → Development deployment (auto-deploy on push)
 feature/* → No auto-deploy (manual testing only)
 ```
@@ -143,10 +131,7 @@ gh pr create --title "Add campaign name validation" --base dev
 # 5. After review, merge to dev
 # → Cloud Build automatically deploys to dev environment
 
-# 6. Test in dev, then merge to staging
-# → Cloud Build automatically deploys to staging
-
-# 7. Test in staging, then merge to main
+# 6. Test in dev, then merge to main
 # → Cloud Build automatically deploys to production
 ```
 
@@ -221,4 +206,4 @@ terraform force-unlock LOCK_ID
 3. Set up Cloud Build triggers
 4. Create Terraform backend configs (`terraform/backend-*.conf`)
 5. Create Terraform variable files (`terraform/*.tfvars`)
-6. Test deployment to dev environment
+6. Test deployment to the `cesteral-dev` environment

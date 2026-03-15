@@ -16,6 +16,12 @@ COPY packages/gads-mcp/package.json ./packages/gads-mcp/
 COPY packages/meta-mcp/package.json ./packages/meta-mcp/
 COPY packages/linkedin-mcp/package.json ./packages/linkedin-mcp/
 COPY packages/tiktok-mcp/package.json ./packages/tiktok-mcp/
+COPY packages/cm360-mcp/package.json ./packages/cm360-mcp/
+COPY packages/sa360-mcp/package.json ./packages/sa360-mcp/
+COPY packages/pinterest-mcp/package.json ./packages/pinterest-mcp/
+COPY packages/snapchat-mcp/package.json ./packages/snapchat-mcp/
+COPY packages/amazon-dsp-mcp/package.json ./packages/amazon-dsp-mcp/
+COPY packages/msads-mcp/package.json ./packages/msads-mcp/
 RUN pnpm install --frozen-lockfile
 
 # Build all packages, then deploy production-only bundle for the target server.

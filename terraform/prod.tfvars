@@ -6,13 +6,19 @@ region      = "europe-west2"
 environment = "prod"
 
 # Container images (update after first build)
-dbm_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dbm-mcp:latest"
-dv360_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dv360-mcp:latest"
-ttd_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/ttd-mcp:latest"
-gads_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/gads-mcp:latest"
-meta_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/meta-mcp:latest"
-linkedin_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/linkedin-mcp:latest"
-tiktok_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/tiktok-mcp:latest"
+dbm_mcp_image        = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dbm-mcp:latest"
+dv360_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/dv360-mcp:latest"
+ttd_mcp_image        = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/ttd-mcp:latest"
+gads_mcp_image       = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/gads-mcp:latest"
+meta_mcp_image       = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/meta-mcp:latest"
+linkedin_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/linkedin-mcp:latest"
+tiktok_mcp_image     = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/tiktok-mcp:latest"
+cm360_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/cm360-mcp:latest"
+sa360_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/sa360-mcp:latest"
+pinterest_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/pinterest-mcp:latest"
+snapchat_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/snapchat-mcp:latest"
+amazon_dsp_mcp_image = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/amazon-dsp-mcp:latest"
+msads_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-prod/cesteral/msads-mcp:latest"
 
 # Networking
 create_vpc             = true

@@ -107,12 +107,12 @@ variable "mcp_session_mode" {
 }
 
 variable "mcp_auth_mode" {
-  description = "MCP authentication mode (none, jwt, oauth)"
+  description = "MCP authentication mode for the target server"
   type        = string
   default     = "jwt"
   validation {
-    condition     = contains(["none", "jwt", "oauth"], var.mcp_auth_mode)
-    error_message = "MCP auth mode must be none, jwt, or oauth."
+    condition     = length(trimspace(var.mcp_auth_mode)) > 0
+    error_message = "MCP auth mode must be a non-empty string."
   }
 }
 

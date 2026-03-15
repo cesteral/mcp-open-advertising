@@ -43,11 +43,8 @@ Interactively creates and populates Secret Manager secrets.
 ```
 
 **What it does:**
-- Creates Secret Manager secrets for:
-  - JWT secret key (for MCP authentication)
-  - DV360 OAuth credentials (client ID, secret, refresh token)
-  - Bid Manager API key
-  - TTD partner credentials (partner ID, API secret)
+- Creates Secret Manager secrets for the full 13-server fleet
+- Covers shared auth plus DBM/DV360/CM360 service-account JSON, Google Ads, SA360, TTD, Meta, LinkedIn, TikTok, Pinterest, Snapchat, Amazon DSP, and Microsoft Ads credentials
 - Prompts for each secret value interactively
 - Stores secrets securely in Secret Manager
 
@@ -104,26 +101,17 @@ Builds Docker images for all servers and deploys infrastructure using Terraform.
 
 ### Initial Setup (One-time per environment)
 
-1. **Update Configuration Files**
-   ```bash
-   # Update project IDs in:
-   # - scripts/init-gcp-project.sh
-   # - scripts/create-secrets.sh
-   # - scripts/deploy.sh
-   # - terraform/dev.tfvars (or staging.tfvars, prod.tfvars)
-   ```
-
-2. **Initialize GCP Project**
+1. **Initialize GCP Project**
    ```bash
    ./scripts/init-gcp-project.sh dev
    ```
 
-3. **Create Secrets**
+2. **Create Secrets**
    ```bash
    ./scripts/create-secrets.sh dev
    ```
 
-4. **Initial Deployment**
+3. **Initial Deployment**
    ```bash
    ./scripts/deploy.sh dev
    ```
@@ -210,7 +198,7 @@ gcloud secrets list --project=cesteral-dev
 
 ### View Cloud Run services
 ```bash
-for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp; do
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp cm360-mcp sa360-mcp pinterest-mcp snapchat-mcp amazon-dsp-mcp msads-mcp; do
   gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
     --project=cesteral-dev
@@ -220,14 +208,14 @@ done
 ### View logs
 ```bash
 gcloud logging read \
-  'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta)-mcp"' \
+  'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta|linkedin|tiktok|cm360|sa360|pinterest|snapchat|amazon-dsp|msads)-mcp"' \
   --limit 50 \
   --project=cesteral-dev
 ```
 
 ### Test health endpoints
 ```bash
-for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp; do
+for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp cm360-mcp sa360-mcp pinterest-mcp snapchat-mcp amazon-dsp-mcp msads-mcp; do
   SERVICE_URL=$(gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
     --project=cesteral-dev \
