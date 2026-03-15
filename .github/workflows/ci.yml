@@ -61,3 +61,16 @@ jobs:
       - name: Terraform format check
         working-directory: terraform
         run: terraform fmt -check -recursive
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

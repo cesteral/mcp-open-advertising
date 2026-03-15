@@ -1,0 +1,6 @@
+[allowlist]
+  paths = [
+    '''\.env\.example$''',
+    '''tests?/.*fixture''',
+    '''terraform/.*variables.*\.tf$''',
+  ]
