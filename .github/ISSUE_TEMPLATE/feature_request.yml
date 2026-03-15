@@ -1,0 +1,51 @@
+name: Feature Request
+description: Suggest a feature or improvement
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      description: Which server does this relate to?
+      options:
+        - dbm-mcp
+        - dv360-mcp
+        - ttd-mcp
+        - gads-mcp
+        - meta-mcp
+        - linkedin-mcp
+        - tiktok-mcp
+        - cm360-mcp
+        - sa360-mcp
+        - pinterest-mcp
+        - snapchat-mcp
+        - amazon-dsp-mcp
+        - msads-mcp
+        - shared
+        - Not server-specific
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or features you've considered.
+    validations:
+      required: false

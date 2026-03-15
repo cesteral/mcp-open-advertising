@@ -1,0 +1,46 @@
+{
+  "name": "@cesteral/cm360-mcp",
+  "display_name": "Campaign Manager 360 MCP Server",
+  "description": "Campaign Manager 360 management — CRUD, Floodlight tracking, async reporting, and targeting",
+  "version": "1.0.0",
+  "protocol_version": "2024-11-05",
+  "transports": ["streamable-http", "stdio"],
+  "tools": [
+    "cm360_list_user_profiles",
+    "cm360_list_entities",
+    "cm360_get_entity",
+    "cm360_create_entity",
+    "cm360_update_entity",
+    "cm360_delete_entity",
+    "cm360_validate_entity",
+    "cm360_get_report",
+    "cm360_submit_report",
+    "cm360_check_report_status",
+    "cm360_download_report",
+    "cm360_bulk_update_status",
+    "cm360_bulk_create_entities",
+    "cm360_bulk_update_entities",
+    "cm360_get_ad_preview",
+    "cm360_list_targeting_options"
+  ],
+  "resources": [],
+  "prompts": [
+    "campaign_setup_workflow",
+    "report_generation_workflow",
+    "troubleshoot_entity",
+    "tool_schema_exploration",
+    "cross_platform_performance",
+    "bulk_operations_workflow",
+    "cross_platform_campaign_setup",
+    "entity_update_workflow",
+    "entity_duplication_workflow",
+    "targeting_discovery_workflow",
+    "cm360_creative_setup_workflow"
+  ],
+  "auth": {
+    "modes": ["google-headers", "jwt", "none"]
+  },
+  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
+  "license": "Apache-2.0",
+  "tags": ["advertising", "cm360", "google", "campaign-management", "ad-serving"]
+}

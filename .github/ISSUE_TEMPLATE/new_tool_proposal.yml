@@ -1,0 +1,77 @@
+name: New Tool Proposal
+description: Propose a new MCP tool for an existing or new server
+labels: ["new-tool"]
+body:
+  - type: dropdown
+    id: server
+    attributes:
+      label: Server
+      description: Which server should this tool belong to?
+      options:
+        - dbm-mcp
+        - dv360-mcp
+        - ttd-mcp
+        - gads-mcp
+        - meta-mcp
+        - linkedin-mcp
+        - tiktok-mcp
+        - cm360-mcp
+        - sa360-mcp
+        - pinterest-mcp
+        - snapchat-mcp
+        - amazon-dsp-mcp
+        - msads-mcp
+        - New server
+    validations:
+      required: true
+
+  - type: input
+    id: tool-name
+    attributes:
+      label: Tool Name
+      description: "Follow the naming convention: {prefix}_{verb}_{noun} (e.g., dv360_list_entities)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What does this tool do?
+    validations:
+      required: true
+
+  - type: input
+    id: api-endpoint
+    attributes:
+      label: Platform API Endpoint
+      description: The underlying API endpoint this tool would call.
+    validations:
+      required: true
+
+  - type: textarea
+    id: parameters
+    attributes:
+      label: Parameters
+      description: List the tool parameters with types and descriptions.
+      placeholder: |
+        - `adAccountId` (string, required): The advertiser account ID
+        - `entityType` (string, required): Type of entity
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: Describe a concrete use case for this tool.
+    validations:
+      required: true
+
+  - type: textarea
+    id: similar-tools
+    attributes:
+      label: Similar Tools
+      description: List similar tools in other servers, if any.
+    validations:
+      required: false

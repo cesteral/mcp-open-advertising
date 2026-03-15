@@ -10,11 +10,12 @@ This project is licensed under the [Apache License 2.0](LICENSE.md). Unless you 
 
 ### Reporting Issues
 
-Issues are always welcome. When filing an issue:
+Issues are always welcome. We provide [issue templates](https://github.com/cesteral/cesteral-mcp-servers/issues/new/choose) for common scenarios:
 
 - **Bug reports**: Include the server name, steps to reproduce, expected vs actual behavior, and relevant logs
 - **Feature requests**: Describe the use case, not just the desired solution. Explain what you're trying to accomplish
-- **Security vulnerabilities**: Do **not** file a public issue. Email security@cesteral.com instead
+- **New tool proposals**: Propose new MCP tools for existing or new servers
+- **Security vulnerabilities**: Do **not** file a public issue. See [SECURITY.md](SECURITY.md) for reporting instructions
 
 ### Pull Requests
 
@@ -132,4 +133,12 @@ pnpm run build
 
 ## Code of Conduct
 
-Be respectful, constructive, and professional. We're building infrastructure that manages significant advertising spend, so accuracy and reliability matter more than velocity.
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). Please read it before participating.
+
+## Security
+
+To report security vulnerabilities, see [SECURITY.md](SECURITY.md). Do not open public issues for security concerns.
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for current priorities and areas where contributions are most needed.
