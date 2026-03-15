@@ -96,7 +96,7 @@ export function getBaseEnvConfig(defaultHost: string): Record<string, unknown> {
     otelExporterOtlpMetricsEndpoint: process.env.OTEL_EXPORTER_OTLP_METRICS_ENDPOINT,
 
     // GCS Persistence
-    gcsBucketName: process.env.GCS_BUCKET_NAME || undefined,
+    gcsBucketName: process.env.GCS_BUCKET_NAME,
 
     // Host
     host: defaultHost,

@@ -17,7 +17,6 @@ import { z } from "zod";
  */
 export const ReportTypeSchema = z.enum([
   "STANDARD", // Standard delivery metrics (most common)
-  "AUDIENCE_COMPOSITION", // Audience demographic breakdowns (deprecated but functional)
   "FLOODLIGHT", // Conversion tracking reports
   "YOUTUBE", // YouTube-specific metrics
   "GRP", // Gross Rating Point reports

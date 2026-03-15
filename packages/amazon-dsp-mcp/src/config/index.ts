@@ -85,5 +85,3 @@ export function parseConfig(): AppConfig {
 }
 
 export const mcpConfig = parseConfig();
-
-export const appConfig: AppConfig = mcpConfig;

@@ -96,19 +96,5 @@ export function parseConfig(): AppConfig {
 
 /**
  * Global configuration instance
- * Exported for backward compatibility with existing code
  */
 export const mcpConfig = parseConfig();
-
-/**
- * Type-safe configuration access
- */
-export const appConfig: AppConfig = mcpConfig;
-
-/**
- * Legacy exports for backward compatibility
- */
-export const gcpConfig = {
-  projectId: mcpConfig.gcpProjectId || "",
-  region: process.env.GCP_REGION || "us-central1",
-};

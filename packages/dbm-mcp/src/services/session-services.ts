@@ -1,7 +1,7 @@
 /**
  * Per-Session Service Factory & Store for DBM-MCP
  *
- * Each SSE session gets its own BidManagerService instance backed by the
+ * Each HTTP session gets its own BidManagerService instance backed by the
  * user-provided GoogleAuthAdapter. Services are created when the session
  * starts and cleaned up when it closes or times out.
  */

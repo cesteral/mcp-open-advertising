@@ -213,20 +213,6 @@ export class InteractionLogger {
     }
   }
 
-  /**
-   * Synchronous close for backward compatibility (local FS only).
-   */
-  closeSync(): void {
-    if (this.flushTimer) {
-      clearInterval(this.flushTimer);
-      this.flushTimer = null;
-    }
-    if (this.stream) {
-      this.stream.end();
-      this.stream = null;
-    }
-  }
-
   // ── Private ──────────────────────────────────────────────────────────────
 
   private async flushBuffer(): Promise<void> {
