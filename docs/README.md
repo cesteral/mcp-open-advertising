@@ -44,11 +44,10 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 > [!NOTE]
 > [`features/openapi-schema-extraction-spec.md`](features/openapi-schema-extraction-spec.md) is a forward-looking spec and has not been implemented.
 
-### Business & Licensing
+### Business & Strategy
 
 | Document                                                                                 | Description                                                                    |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [`business/cesteral-licensing-strategy.md`](business/cesteral-licensing-strategy.md)     | Licensing recommendation for open-source connectors and proprietary governance |
 | [`strategy/scaling-strategy-build-vs-buy.md`](strategy/scaling-strategy-build-vs-buy.md) | Build vs Buy analysis                                                          |
 | [`strategy/registry-listings-draft.md`](strategy/registry-listings-draft.md)             | Draft MCP registry listings                                                    |
 
@@ -61,13 +60,5 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 | [`governance/playbook-delta.schema.json`](governance/playbook-delta.schema.json) | ✅ Active                | JSON schema for playbook deltas                               |
 
 ---
-
-## Active Plans
-
-Implementation plans currently in progress or recently completed:
-
-| Document                                                                             | Description                                          |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| [`business/cesteral-licensing-strategy.md`](business/cesteral-licensing-strategy.md) | Current recommendation for public Apache 2.0 release |
 
 ---

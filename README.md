@@ -31,14 +31,13 @@ Cesteral is a **Model Context Protocol (MCP) based optimization platform** that 
 
 This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
 
-## Open Source And Commercial Model
+## Open Source and Commercial Model
 
-- `cesteral-mcp-servers` is open source under [Apache License 2.0](LICENSE.md)
-- The repository is intended to be fully self-hostable for teams that want transparency and control
-- Cesteral's commercial offering is the layer above these connectors: managed hosting, governance workflows, orchestration, and enterprise operations
-- `cesteral-intelligence` remains proprietary
+These MCP servers are open source under [Apache License 2.0](LICENSE.md) and fully self-hostable. Each server gives AI agents full CRUD access, async reporting, bulk operations, and targeting search for its platform — everything needed to read, write, and optimise campaigns programmatically.
 
-If you want the reasoning behind this split, see [docs/business/cesteral-licensing-strategy.md](docs/business/cesteral-licensing-strategy.md).
+**[Cesteral Intelligence](https://cesteral.com)** is our commercial agent harness that sits above these connectors, adding governance guardrails, cross-platform orchestration, and managed hosting so autonomous workflows can run safely at scale.
+
+→ [Learn more](https://cesteral.com) · [Book a demo](mailto:sales@cesteral.com?subject=Book%20a%20Cesteral%20demo)
 
 ### Key Features
 
@@ -481,7 +480,6 @@ cesteral-mcp-servers/
 │   │   ├── monitoring/          # Dashboards and alerts
 │   │   └── networking/          # VPC, NAT, firewall
 │   ├── dev.tfvars
-│   ├── staging.tfvars
 │   ├── prod.tfvars
 │   └── main.tf
 │
@@ -652,30 +650,17 @@ AI Agent:
 
 ## Deployment
 
-### Deploy Individual Servers
+### Deploy Environments
 
 ```bash
-# Deploy a specific server to a specific environment
-./scripts/deploy.sh dbm-mcp dev
-./scripts/deploy.sh dv360-mcp staging
-./scripts/deploy.sh ttd-mcp prod
-./scripts/deploy.sh gads-mcp dev
-./scripts/deploy.sh meta-mcp prod
-./scripts/deploy.sh linkedin-mcp prod
-./scripts/deploy.sh tiktok-mcp prod
-./scripts/deploy.sh cm360-mcp prod
-./scripts/deploy.sh sa360-mcp prod
-./scripts/deploy.sh pinterest-mcp prod
-./scripts/deploy.sh snapchat-mcp prod
-./scripts/deploy.sh amazon-dsp-mcp prod
-./scripts/deploy.sh msads-mcp prod
-```
+# Deploy all 13 servers to dev
+./scripts/deploy.sh dev
 
-### Deploy All Servers
+# Plan only
+./scripts/deploy.sh dev --plan-only
 
-```bash
-# Build and deploy all servers
-./scripts/build-all.sh
+# Deploy all 13 servers to production
+./scripts/deploy.sh prod
 ```
 
 ---
