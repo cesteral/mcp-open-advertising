@@ -32,7 +32,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://desk.thetradedesk.com/graphql"),
-  ttdRateLimitPerMinute: z.number().default(100),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via TTD_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  ttdRateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback: TTD credentials from env vars
   ttdPartnerId: z.string().optional(),

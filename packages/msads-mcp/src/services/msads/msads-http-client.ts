@@ -9,6 +9,7 @@ const MSADS_RETRY_CONFIG: RetryConfig = {
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "Microsoft Ads",
+  tokenExpiryHint: "Microsoft Ads token expired. Regenerate via Microsoft identity platform.",
 };
 
 /**

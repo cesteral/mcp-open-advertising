@@ -214,7 +214,10 @@ export class MetaGraphApiClient {
 
       const metaCode = metaError?.error?.code ?? 0;
       const jsonRpcCode = mapMetaErrorToJsonRpc(metaCode, response.status);
-      const errorMessage = metaError?.error?.message ?? `Meta API request failed: ${response.status}`;
+      let errorMessage = metaError?.error?.message ?? `Meta API request failed: ${response.status}`;
+      if (metaCode === 190 || response.status === 401) {
+        errorMessage += "\n\nAction required: Meta access token expired. Generate a new token in Meta Business Suite or use a System User token.";
+      }
 
       const redactedUrl = urlWithAuth.toString().replace(/access_token=[^&]+/, "access_token=***");
       const mcpError = new McpError(
@@ -230,6 +233,9 @@ export class MetaGraphApiClient {
           metaType: metaError?.error?.type,
           fbtraceId: metaError?.error?.fbtrace_id,
           attempt,
+          ...(metaCode === 190 || response.status === 401
+            ? { tokenExpiryHint: "Meta access token expired. Generate a new token in Meta Business Suite or use a System User token." }
+            : {}),
         }
       );
 

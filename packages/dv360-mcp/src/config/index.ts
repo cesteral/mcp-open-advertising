@@ -31,7 +31,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://displayvideo.googleapis.com/v4"),
-  dv360RateLimitPerMinute: z.number().default(60),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via DV360_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  dv360RateLimitPerMinute: z.number().default(6),
 
   // Stdio fallback: service account credentials from env vars
   // Used only in stdio transport mode (e.g., Claude Desktop local)

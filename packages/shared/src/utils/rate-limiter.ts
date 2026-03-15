@@ -192,8 +192,13 @@ export class RateLimiter {
  * @param requestsPerMinute Sliding-window request cap
  * @returns Configured RateLimiter instance ready for use
  *
+ * **Multi-instance caveat:** Rate limiting is per-process. When running multiple
+ * instances (e.g., Cloud Run auto-scaling), the effective limit is
+ * `configured_limit × instance_count`. Server defaults are set conservatively
+ * assuming 10 instances. Override via environment variables for different scaling profiles.
+ *
  * @example
- *   export const rateLimiter = createPlatformRateLimiter("bidmanager", 100);
+ *   export const rateLimiter = createPlatformRateLimiter("bidmanager", 10);
  */
 export function createPlatformRateLimiter(
   platformName: string,

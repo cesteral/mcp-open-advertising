@@ -34,7 +34,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://bulk.api.bingads.microsoft.com/Bulk/v13"),
-  msadsRateLimitPerMinute: z.number().default(100),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via MSADS_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  msadsRateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback credentials
   msadsAccessToken: z.string().optional(),

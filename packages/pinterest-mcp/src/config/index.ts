@@ -25,7 +25,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .url()
     .default("https://api.pinterest.com"),
   pinterestApiVersion: z.string().default("v5"),
-  pinterestRateLimitPerMinute: z.number().default(100),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via PINTEREST_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  pinterestRateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback: Pinterest access token and default ad account ID
   pinterestAccessToken: z.string().optional(),

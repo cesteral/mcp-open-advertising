@@ -31,7 +31,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   serviceAccountFile: z.string().optional(), // Path to service account JSON file
 
   // Rate Limiting
-  rateLimitPerMinute: z.number().default(100), // Bid Manager API is less restrictive
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  rateLimitPerMinute: z.number().default(10),
 
   // Report Settings (Bid Manager async reports with exponential backoff)
   reportCacheTtlMs: z.number().default(300000), // 5 minute cache

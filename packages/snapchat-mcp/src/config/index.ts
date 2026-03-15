@@ -25,7 +25,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .url()
     .default("https://adsapi.snapchat.com"),
   snapchatApiVersion: z.string().default("v1"),
-  snapchatRateLimitPerMinute: z.number().default(100),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via SNAPCHAT_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  snapchatRateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback: Snapchat access token, ad account ID, and org ID
   snapchatAccessToken: z.string().optional(),

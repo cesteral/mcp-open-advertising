@@ -11,6 +11,7 @@ const PINTEREST_RETRY_CONFIG: RetryConfig = {
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "Pinterest",
+  tokenExpiryHint: "Pinterest token expired. Regenerate at developers.pinterest.com.",
 };
 
 /**

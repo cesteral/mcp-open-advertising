@@ -25,7 +25,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .url()
     .default("https://business-api.tiktok.com"),
   tiktokApiVersion: z.string().default("v1.3"),
-  tiktokRateLimitPerMinute: z.number().default(100),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via TIKTOK_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  tiktokRateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback: TikTok access token and default advertiser ID
   tiktokAccessToken: z.string().optional(),

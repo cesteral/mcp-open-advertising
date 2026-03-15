@@ -25,7 +25,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .url()
     .default("https://advertising-api.amazon.com"),
   amazonDspApiVersion: z.string().default("dsp"),
-  amazonDspRateLimitPerMinute: z.number().default(100),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via AMAZON_DSP_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  amazonDspRateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback: Amazon DSP access token and default profile ID
   amazonDspAccessToken: z.string().optional(),

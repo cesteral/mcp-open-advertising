@@ -28,7 +28,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://www.googleapis.com/doubleclicksearch/v2"),
-  sa360RateLimitPerMinute: z.number().default(100),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via SA360_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  sa360RateLimitPerMinute: z.number().default(10),
 
   // Stdio fallback: SA360 credentials from env vars
   sa360ClientId: z.string().optional(),

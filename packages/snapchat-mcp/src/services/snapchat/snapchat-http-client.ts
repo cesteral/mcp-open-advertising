@@ -10,6 +10,7 @@ const SNAPCHAT_RETRY_CONFIG: RetryConfig = {
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "Snapchat",
+  tokenExpiryHint: "Snapchat token expired. Regenerate in Snap Business Manager.",
 };
 
 /** Snapchat response envelope shape */

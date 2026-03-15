@@ -34,6 +34,7 @@ const LINKEDIN_RETRY_CONFIG: RetryConfig = {
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "LinkedIn",
+  tokenExpiryHint: "LinkedIn token expired. Regenerate at linkedin.com/developers.",
 };
 
 /**

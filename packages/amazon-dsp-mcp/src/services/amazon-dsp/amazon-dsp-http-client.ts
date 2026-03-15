@@ -9,6 +9,7 @@ const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "AmazonDsp",
+  tokenExpiryHint: "Amazon DSP token expired. Regenerate via Login with Amazon.",
 };
 
 /**

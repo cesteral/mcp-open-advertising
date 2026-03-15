@@ -11,6 +11,7 @@ const TIKTOK_RETRY_CONFIG: RetryConfig = {
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "TikTok",
+  tokenExpiryHint: "TikTok token expired. Regenerate in TikTok Business Center.",
 };
 
 /** TikTok standard API response shape */

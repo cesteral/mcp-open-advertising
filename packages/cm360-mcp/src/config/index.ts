@@ -18,7 +18,10 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://dfareporting.googleapis.com/dfareporting/v5"),
-  cm360RateLimitPerMinute: z.number().default(50),
+  // Conservative default: platform_quota / max_instances (10).
+  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
+  // Override via CM360_RATE_LIMIT_PER_MINUTE for different scaling profiles.
+  cm360RateLimitPerMinute: z.number().default(5),
   cm360ServiceAccountJson: z.string().optional(),
   cm360ServiceAccountFile: z.string().optional(),
 });

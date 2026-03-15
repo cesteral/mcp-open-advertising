@@ -27,6 +27,8 @@ export interface RetryConfig {
   timeoutMs?: number;
   /** Platform name for log messages (e.g. "TTD", "Google Ads"). */
   platformName: string;
+  /** Actionable hint appended to 401 errors for bearer-token platforms. */
+  tokenExpiryHint?: string;
 }
 
 /** Signature matching fetchWithTimeout for dependency injection in tests. */
@@ -212,9 +214,14 @@ export async function executeWithRetry(
       ? parseErrorBody(errorBody)
       : errorBody.substring(0, 500);
 
+    let errorMessage = `${config.platformName} API request failed: ${response.status} ${response.statusText}${errorSummary ? ` — ${errorSummary}` : ""}`;
+    if (response.status === 401 && config.tokenExpiryHint) {
+      errorMessage += `\n\nAction required: ${config.tokenExpiryHint}`;
+    }
+
     const mcpError = new McpError(
       errorCode,
-      `${config.platformName} API request failed: ${response.status} ${response.statusText}${errorSummary ? ` — ${errorSummary}` : ""}`,
+      errorMessage,
       {
         requestId: context?.requestId,
         httpStatus: response.status,
@@ -222,6 +229,9 @@ export async function executeWithRetry(
         method: fetchOptions?.method ?? "GET",
         errorBody: errorBody.substring(0, 500),
         attempt,
+        ...(response.status === 401 && config.tokenExpiryHint
+          ? { tokenExpiryHint: config.tokenExpiryHint }
+          : {}),
       }
     );
 
