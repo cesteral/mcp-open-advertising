@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-03-03
 
-Standards that all management MCP servers (dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp) must follow for consistent AI agent orchestration.
+Standards that all management MCP servers in this repository should follow for consistent AI agent orchestration. The original contract was defined around the first six management servers and should be expanded as newer platform packages are normalized.
 
 ## Required Tool Categories
 

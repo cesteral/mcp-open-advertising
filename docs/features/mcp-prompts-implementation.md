@@ -3,7 +3,8 @@
 > [!NOTE]
 > **Status: Fully Implemented.** As of March 2026, all 61 prompts described in this
 > document and the [quick reference](../guides/mcp-prompts-quick-reference.md) are
-> implemented across all seven MCP servers. References to "future prompts" in this doc
+> implemented across the original seven prompt-enabled MCP servers. References to
+> "future prompts" in this doc
 > are complete.
 
 ## Overview
@@ -198,7 +199,7 @@ Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 ## Next Steps
 
 1. ✅ **Implemented:** `full_campaign_setup_workflow` prompt (dv360-mcp)
-2. ✅ **Expanded:** Prompts implemented across all seven servers (dbm-mcp, dv360-mcp, ttd-mcp, gads-mcp, meta-mcp, linkedin-mcp, tiktok-mcp)
+2. ✅ **Expanded:** Prompts implemented across the original seven prompt-enabled servers (`dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`)
 3. **Monitor Usage:** Track which prompts AI agents invoke most
 4. **Iterate:** Add prompts based on common user workflows
 

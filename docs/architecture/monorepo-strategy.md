@@ -6,7 +6,7 @@ Cesteral MCP servers are maintained as a single pnpm workspace monorepo, not spl
 
 ## Why
 
-The `@cesteral/shared` package is the deciding factor. All seven servers depend on it for:
+The `@cesteral/shared` package is the deciding factor. All 13 connector servers depend on it for:
 
 - Auth strategies (`createAuthStrategy`, platform-specific adapters)
 - `SessionServiceStore` + `resolveSessionServices`
@@ -17,7 +17,7 @@ In a polyrepo, `@cesteral/shared` would need to become a published npm package (
 
 ## Deployments Are Already Independent
 
-The monorepo does not couple deployments. Each server already has:
+The monorepo does not couple deployments. Each connector server already has:
 - Its own Docker image
 - Its own Cloud Run service
 - Independent rollout/rollback
@@ -31,7 +31,7 @@ Split into separate repos only if:
 | Trigger | Action |
 |---|---|
 | Dedicated team per platform | Separate repo per platform for access control |
-| Open-sourcing individual servers | Extract that server to a public repo |
+| Splitting OSS connectors from proprietary product code | Keep connectors here; place hosted Intelligence in a separate private repo/service boundary |
 | Shared package grows too large | Publish `@cesteral/shared` to a private npm registry |
 
 Until one of these applies, the monorepo is the right structure.

@@ -93,7 +93,7 @@ Programmatic advertising campaign optimization is:
 ### Primary Users (AI Agents)
 
 **Claude Desktop / API**
-- Connects to all seven MCP servers simultaneously
+- Connects to the MCP servers needed for a given workflow, up to the full 13-server fleet
 - Executes optimization workflows based on prompts
 - Makes routine bid adjustment decisions
 - Escalates edge cases to humans
@@ -545,7 +545,7 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 |--------|--------|-------------|
 | Time Savings | > 70% reduction in manual optimization time | Survey + time tracking |
 | Campaign Pacing Accuracy | > 90% of campaigns deliver within ±10% of target | BigQuery analysis of final pacing |
-| Multi-Platform Adoption | Support 6 platforms (DV360, Google Ads, Meta, TTD, LinkedIn, TikTok) | Feature availability |
+| Multi-Platform Adoption | Support the full connector fleet across 13 MCP servers and major ad platforms | Feature availability |
 
 ---
 
@@ -556,14 +556,14 @@ Pattern B is recommended when you need centralized retries, policy enforcement, 
 **Goals**: Establish monorepo, shared types, basic infrastructure
 
 **Deliverables**:
-- Monorepo structure with eight packages (seven servers + shared)
+- Monorepo structure with connector packages plus a shared package
 - Shared TypeScript types (Zod schemas)
 - BigQuery normalized schemas deployed
 - Terraform modules for GCP infrastructure
 - CI/CD pipeline (Cloud Build)
 
 **Success Criteria**:
-- All seven MCP servers deploy successfully
+- All targeted MCP servers deploy successfully
 - Can insert/query test data in BigQuery
 - MCP Gateway responds to basic requests
 

@@ -9,7 +9,7 @@
 
 ## Why Move
 
-media-mcp wraps Cesteral's own Supabase infrastructure, not a third-party ad platform API. Unlike the seven open-source MCP servers (which are connectors to DV360, Google Ads, TTD, Meta, LinkedIn, TikTok, Bid Manager), the media library is a **product feature** scoped to Cesteral Intelligence users. It belongs in the proprietary project, not the open-source connector layer.
+media-mcp wraps Cesteral's own Supabase infrastructure, not a third-party ad platform API. Unlike the open-source MCP connector servers in this repository, the media library is a **product feature** scoped to Cesteral Intelligence users. It belongs in the proprietary hosted product, not the open-source connector layer.
 
 ---
 

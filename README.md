@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![MCP](https://img.shields.io/badge/MCP-2024--11--05-green)](https://modelcontextprotocol.io/)
 
-> **Open-source connectors, managed service coming soon** — [Request early access](https://cesteral.com) for managed hosting, or self-host using the guide below.
+> **Open-source connectors, hosted Intelligence layer above them** — [Request early access](https://cesteral.com) for managed hosting, or self-host using the guide below.
 
 <p align="center">
   <img src="docs/logos/dv360.svg" width="32" height="32" alt="DV360" title="DV360">&nbsp;&nbsp;
@@ -29,15 +29,19 @@
 
 Cesteral is a **Model Context Protocol (MCP) based optimization platform** that enables AI agents to autonomously manage programmatic advertising campaigns. Built on thirteen independent MCP servers, Cesteral separates reporting and platform management concerns while allowing cross-server workflows.
 
-This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, and higher-level orchestration live in Cesteral's commercial product offering.
+This repository contains Cesteral's **open-source connector layer**. Managed hosting, governance workflows, higher-level orchestration, and the commercial agent experience live in `Cesteral Intelligence`, Cesteral's hosted product above these servers.
 
 ## Open Source and Commercial Model
 
 These MCP servers are open source under [Apache License 2.0](LICENSE.md) and fully self-hostable. Each server gives AI agents full CRUD access, async reporting, bulk operations, and targeting search for its platform — everything needed to read, write, and optimise campaigns programmatically.
 
-**[Cesteral Intelligence](https://cesteral.com)** is our commercial agent harness that sits above these connectors, adding governance guardrails, cross-platform orchestration, and managed hosting so autonomous workflows can run safely at scale.
+**[Cesteral Intelligence](https://cesteral.com)** is our proprietary hosted control plane and agent layer. Customers configure the connector fleet through Cesteral-hosted infrastructure, while the underlying MCP servers remain open source and self-hostable outside the product.
+
+At launch, the commercial product uses **Cesteral-hosted MCP servers only**. Supporting customer-hosted MCP servers inside Intelligence is a possible future mode, but it is not part of the initial product surface.
 
 → [Learn more](https://cesteral.com) · [Book a demo](mailto:sales@cesteral.com?subject=Book%20a%20Cesteral%20demo)
+
+See [docs/architecture/oss-vs-intelligence-boundary.md](docs/architecture/oss-vs-intelligence-boundary.md) for the canonical OSS vs. hosted-product boundary.
 
 ### Key Features
 
@@ -70,10 +74,10 @@ Cesteral uses a **GCP-native architecture** with thirteen independently deployab
 
 ### Access Model
 
-- **Direct microservice access (default)**: AI clients connect to one or more MCP servers directly.
-- **Optional orchestration layer (recommended for complex automation)**: a dedicated orchestration service can call multiple MCP servers as internal MCP clients for multi-step workflows.
+- **Open-source mode**: AI clients or internal systems connect directly to one or more MCP servers.
+- **Cesteral Intelligence mode**: the hosted product calls a Cesteral-operated MCP fleet and layers tenancy, credentials, approvals, orchestration, and governance above it.
 
-This dual-access model preserves service autonomy while enabling cross-server automation when needed.
+This preserves service autonomy in OSS while making the commercial value live above the connector layer rather than inside it.
 
 ### Key Architectural Decisions
 

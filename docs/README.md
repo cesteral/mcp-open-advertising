@@ -16,6 +16,7 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 | [`CROSS_SERVER_CONTRACT.md`](CROSS_SERVER_CONTRACT.md)                           | Standards all management servers must follow   |
 | [`guides/mcp-prompts-quick-reference.md`](guides/mcp-prompts-quick-reference.md) | Catalog of all 61 MCP prompts                  |
 | [`guides/platform-mapping.md`](guides/platform-mapping.md)                       | Platform-to-package mapping and rules          |
+| [`architecture/oss-vs-intelligence-boundary.md`](architecture/oss-vs-intelligence-boundary.md) | Canonical OSS vs hosted-product boundary       |
 
 ---
 
@@ -31,6 +32,7 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 | [`guides/platform-mapping.md`](guides/platform-mapping.md)                               | Platform-to-package mapping and naming rules          |
 | [`guides/package-template.md`](guides/package-template.md)                               | Scaffold template for adding a new MCP server package |
 | [`architecture/mcp-microservice-topology.md`](architecture/mcp-microservice-topology.md) | Service topology and inter-server access patterns     |
+| [`architecture/oss-vs-intelligence-boundary.md`](architecture/oss-vs-intelligence-boundary.md) | Product boundary between OSS connectors and hosted Intelligence |
 
 ### Contributors & Feature Design
 
@@ -50,6 +52,7 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | [`strategy/scaling-strategy-build-vs-buy.md`](strategy/scaling-strategy-build-vs-buy.md) | Build vs Buy analysis                                                          |
 | [`strategy/registry-listings-draft.md`](strategy/registry-listings-draft.md)             | Draft MCP registry listings                                                    |
+| [`architecture/oss-vs-intelligence-boundary.md`](architecture/oss-vs-intelligence-boundary.md) | Canonical line between OSS connector layer and proprietary hosted product |
 
 ### Operations & Governance
 
