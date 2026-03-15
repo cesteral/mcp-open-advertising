@@ -18,8 +18,8 @@ fi
 
 ENVIRONMENT=$1
 case "$ENVIRONMENT" in
-  dev) PROJECT_ID="open-agentic-advertising-dev" ;;
-  prod) PROJECT_ID="open-agentic-advertising-prod" ;;
+  dev) PROJECT_ID="${GCP_PROJECT_DEV:?Set GCP_PROJECT_DEV to your dev GCP project ID}" ;;
+  prod) PROJECT_ID="${GCP_PROJECT_PROD:?Set GCP_PROJECT_PROD to your prod GCP project ID}" ;;
   *)
     print_error "Invalid environment: $ENVIRONMENT"
     exit 1

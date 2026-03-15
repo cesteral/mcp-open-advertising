@@ -1,5 +1,5 @@
 # Backend configuration for dev environment
 # Usage: terraform init -backend-config=backend-dev.conf
 
-bucket = "open-agentic-advertising-dev-terraform-state"
+bucket = "YOUR_GCP_PROJECT_DEV-terraform-state"
 prefix = "terraform/state"

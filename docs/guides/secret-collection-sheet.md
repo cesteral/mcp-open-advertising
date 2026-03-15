@@ -1,6 +1,6 @@
-# `open-agentic-advertising-dev` Secret Collection Sheet
+# Secret Collection Sheet
 
-Use this sheet to gather the values required by `./scripts/create-secrets.sh dev`.
+Use this sheet to gather the values required by `./scripts/create-secrets.sh <environment>`.
 
 Important:
 

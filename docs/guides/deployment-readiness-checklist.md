@@ -4,11 +4,11 @@ Use this checklist before promoting any environment.
 
 ## Environment Baseline
 
-- Confirm the target GCP project exists and matches the environment mapping:
-  - `dev` -> `open-agentic-advertising-dev`
-  - `prod` -> `open-agentic-advertising-prod`
+- Confirm the target GCP project exists and matches your environment mapping:
+  - `dev` -> `YOUR_GCP_PROJECT_DEV`
+  - `prod` -> `YOUR_GCP_PROJECT_PROD`
 - Confirm the Terraform backend bucket exists for the environment.
-- Confirm Artifact Registry repository `cesteral` exists in `europe-west2`.
+- Confirm Artifact Registry repository `YOUR_REGISTRY` exists in your chosen region.
 - Confirm required APIs are enabled: Cloud Run, Secret Manager, Artifact Registry, Compute Engine, VPC Access, Logging, Monitoring, Trace, Cloud Build, IAM, Resource Manager, Storage.
 
 ## Per-Service Rollout

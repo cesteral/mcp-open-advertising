@@ -150,7 +150,7 @@ For automated deployments, use Cloud Build instead:
 gcloud builds submit \
   --config=cloudbuild.yaml \
   --substitutions=_ENVIRONMENT=dev \
-  --project=open-agentic-advertising-dev
+  --project=YOUR_GCP_PROJECT_DEV
 
 # Or set up automated triggers in Cloud Console
 # Triggers > Create Trigger > Connect Repository
@@ -188,7 +188,7 @@ terraform force-unlock <LOCK_ID>
 ### Secret not found
 ```bash
 # List secrets
-gcloud secrets list --project=open-agentic-advertising-dev
+gcloud secrets list --project=YOUR_GCP_PROJECT_DEV
 
 # Re-run secret creation
 ./scripts/create-secrets.sh dev
@@ -201,7 +201,7 @@ gcloud secrets list --project=open-agentic-advertising-dev
 for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp cm360-mcp sa360-mcp pinterest-mcp snapchat-mcp amazon-dsp-mcp msads-mcp; do
   gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
-    --project=open-agentic-advertising-dev
+    --project=YOUR_GCP_PROJECT_DEV
 done
 ```
 
@@ -210,7 +210,7 @@ done
 gcloud logging read \
   'resource.type=cloud_run_revision AND resource.labels.service_name=~"(dbm|dv360|ttd|gads|meta|linkedin|tiktok|cm360|sa360|pinterest|snapchat|amazon-dsp|msads)-mcp"' \
   --limit 50 \
-  --project=open-agentic-advertising-dev
+  --project=YOUR_GCP_PROJECT_DEV
 ```
 
 ### Test health endpoints
@@ -218,7 +218,7 @@ gcloud logging read \
 for SERVICE in dbm-mcp dv360-mcp ttd-mcp gads-mcp meta-mcp linkedin-mcp tiktok-mcp cm360-mcp sa360-mcp pinterest-mcp snapchat-mcp amazon-dsp-mcp msads-mcp; do
   SERVICE_URL=$(gcloud run services describe "$SERVICE" \
     --region=europe-west2 \
-    --project=open-agentic-advertising-dev \
+    --project=YOUR_GCP_PROJECT_DEV \
     --format='value(status.url)')
   curl "$SERVICE_URL/health"
 done

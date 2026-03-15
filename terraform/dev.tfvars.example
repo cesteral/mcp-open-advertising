@@ -1,0 +1,59 @@
+# Development environment configuration
+
+# Project configuration
+project_id  = "YOUR_GCP_PROJECT_DEV"
+region      = "europe-west2"
+environment = "dev"
+
+# Container images (update after first build)
+dbm_mcp_image        = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/dbm-mcp:latest"
+dv360_mcp_image      = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/dv360-mcp:latest"
+ttd_mcp_image        = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/ttd-mcp:latest"
+gads_mcp_image       = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/gads-mcp:latest"
+meta_mcp_image       = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/meta-mcp:latest"
+linkedin_mcp_image   = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/linkedin-mcp:latest"
+tiktok_mcp_image     = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/tiktok-mcp:latest"
+cm360_mcp_image      = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/cm360-mcp:latest"
+sa360_mcp_image      = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/sa360-mcp:latest"
+pinterest_mcp_image  = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/pinterest-mcp:latest"
+snapchat_mcp_image   = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/snapchat-mcp:latest"
+amazon_dsp_mcp_image = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/amazon-dsp-mcp:latest"
+msads_mcp_image      = "europe-west2-docker.pkg.dev/YOUR_GCP_PROJECT_DEV/cesteral/msads-mcp:latest"
+
+# Networking
+create_vpc             = true
+serverless_subnet_cidr = "10.8.0.0/28"
+
+# VPC connector - smaller for dev
+connector_machine_type   = "e2-micro"
+connector_min_instances  = 2
+connector_max_instances  = 3
+connector_min_throughput = 200
+connector_max_throughput = 300
+
+# Cloud NAT
+enable_nat_logging                  = true
+nat_log_filter                      = "ALL" # More verbose logging in dev
+nat_min_ports_per_vm                = 64
+enable_endpoint_independent_mapping = false
+
+# Cloud Run - conservative scaling for dev
+min_instances         = 0 # Scale to zero in dev
+max_instances         = 3 # Lower max for dev
+cpu_limit             = "1"
+memory_limit          = "512Mi"
+cpu_always_allocated  = false
+allow_unauthenticated = false # Still require auth in dev
+
+# MCP Server configuration
+mcp_session_mode       = "stateless"
+mcp_auth_mode          = "jwt"
+log_level              = "debug" # More verbose logging in dev
+enable_gcs_persistence = false
+gcs_bucket_name        = "YOUR_GCP_PROJECT_DEV-mcp-persistence" # Enable when ready
+
+# Artifact Registry
+artifact_registry_repo_name = "YOUR_REGISTRY"
+
+# Monitoring
+monitoring_notification_email = "your-email@example.com"

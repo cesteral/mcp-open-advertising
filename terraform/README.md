@@ -44,16 +44,20 @@ Creates observability infrastructure:
 
 | Environment | Project ID | State Bucket | Key Differences |
 |---|---|---|---|
-| **dev** | `open-agentic-advertising-dev` | `open-agentic-advertising-dev-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
-| **prod** | `open-agentic-advertising-prod` | `open-agentic-advertising-prod-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory |
+| **dev** | `YOUR_GCP_PROJECT_DEV` | `YOUR_GCP_PROJECT_DEV-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
+| **prod** | `YOUR_GCP_PROJECT_PROD` | `YOUR_GCP_PROJECT_PROD-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory |
 
 ## Common Operations
 
 ### First-time setup
 
 ```bash
+# 0. Copy example files and fill in your values
+cp backend-dev.conf.example backend-dev.conf
+cp dev.tfvars.example dev.tfvars
+
 # 1. Create the state bucket (once per environment)
-gsutil mb -l europe-west2 gs://open-agentic-advertising-dev-terraform-state
+gsutil mb -l europe-west2 gs://YOUR_GCP_PROJECT_DEV-terraform-state
 
 # 2. Initialize terraform with backend config
 cd terraform

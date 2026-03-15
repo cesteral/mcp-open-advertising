@@ -69,7 +69,7 @@ This script interactively prompts for each secret. It checks if each secret alre
 
 **Intelligence mode minimum:** Only `cesteral-jwt-secret-key` is required. Skip all platform-specific secrets.
 
-**Self-hosted mode:** Populate all secrets for the platforms you need. Reference the [secret collection sheet](./open-agentic-advertising-dev-secret-collection-sheet.md) for the full list of required values per platform.
+**Self-hosted mode:** Populate all secrets for the platforms you need. Reference the [secret collection sheet](./secret-collection-sheet.md) for the full list of required values per platform.
 
 <details>
 <summary>Full secret inventory (40 secrets)</summary>

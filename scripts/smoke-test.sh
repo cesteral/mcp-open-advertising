@@ -15,8 +15,8 @@ ENVIRONMENT=${1:-dev}
 REGION="europe-west2"
 
 case "$ENVIRONMENT" in
-  dev) PROJECT_ID="open-agentic-advertising-dev" ;;
-  prod) PROJECT_ID="open-agentic-advertising-prod" ;;
+  dev) PROJECT_ID="${GCP_PROJECT_DEV:?Set GCP_PROJECT_DEV to your dev GCP project ID}" ;;
+  prod) PROJECT_ID="${GCP_PROJECT_PROD:?Set GCP_PROJECT_PROD to your prod GCP project ID}" ;;
   *)
     echo "Usage: $0 <dev|prod>"
     exit 1

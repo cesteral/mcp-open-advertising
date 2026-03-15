@@ -84,3 +84,7 @@ credentials.json
 
 # DO NOT ignore generated schemas (these are committed)
 # src/generated/schemas/
+
+# Terraform local config (use *.example files as templates)
+terraform/*.tfvars
+terraform/backend-*.conf

@@ -17,7 +17,7 @@ git add .
 git commit -m "Initial commit: Cesteral MCP Server"
 
 # 4. Create GitHub repository (via GitHub CLI or web interface)
-gh repo create cesteral --private --source=. --remote=origin
+gh repo create YOUR_ORG/YOUR_REPO --private --source=. --remote=origin
 
 # 5. Push to GitHub
 git push -u origin main
@@ -67,8 +67,8 @@ cloudbuild.yaml execution:
    **Production Trigger** (main branch):
    ```bash
    gcloud builds triggers create github \
-     --name="open-agentic-advertising-prod-deploy" \
-     --repo-name="cesteral" \
+     --name="YOUR_PROJECT-prod-deploy" \
+     --repo-name="YOUR_REPO" \
      --repo-owner="YOUR_GITHUB_ORG" \
      --branch-pattern="^main$" \
      --build-config="cloudbuild.yaml" \
@@ -78,8 +78,8 @@ cloudbuild.yaml execution:
    **Development Trigger** (dev branch):
    ```bash
    gcloud builds triggers create github \
-     --name="open-agentic-advertising-dev-deploy" \
-     --repo-name="cesteral" \
+     --name="YOUR_PROJECT-dev-deploy" \
+     --repo-name="YOUR_REPO" \
      --repo-owner="YOUR_GITHUB_ORG" \
      --branch-pattern="^dev$" \
      --build-config="cloudbuild.yaml" \
@@ -206,4 +206,4 @@ terraform force-unlock LOCK_ID
 3. Set up Cloud Build triggers
 4. Create Terraform backend configs (`terraform/backend-*.conf`)
 5. Create Terraform variable files (`terraform/*.tfvars`)
-6. Test deployment to the `open-agentic-advertising-dev` environment
+6. Test deployment to your dev environment
