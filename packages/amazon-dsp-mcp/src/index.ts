@@ -44,13 +44,13 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.amazonDspApiBaseUrl,
-    logger,
-    rateLimiter,
     {
+      baseUrl: mcpConfig.amazonDspApiBaseUrl,
       reportPollIntervalMs: mcpConfig.amazonDspReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.amazonDspReportMaxPollAttempts,
-    }
+    },
+    logger,
+    rateLimiter
   );
 
   sessionServiceStore.set(sessionId, services);

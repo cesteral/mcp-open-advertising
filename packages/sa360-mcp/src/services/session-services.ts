@@ -15,15 +15,19 @@ export interface SessionServices {
   conversionService: ConversionService;
 }
 
+export interface SA360SessionConfig {
+  baseUrl: string;
+  v2BaseUrl: string;
+}
+
 export function createSessionServices(
   authAdapter: SA360AuthAdapter,
-  baseUrl: string,
-  v2BaseUrl: string,
+  config: SA360SessionConfig,
   logger: Logger,
   rateLimiter: RateLimiter
 ): SessionServices {
-  const httpClient = new SA360HttpClient(authAdapter, baseUrl, logger);
-  const v2HttpClient = new SA360V2HttpClient(authAdapter, v2BaseUrl, logger);
+  const httpClient = new SA360HttpClient(authAdapter, config.baseUrl, logger);
+  const v2HttpClient = new SA360V2HttpClient(authAdapter, config.v2BaseUrl, logger);
   const sa360Service = new SA360Service(logger, rateLimiter, httpClient);
   const conversionService = new ConversionService(logger, rateLimiter, v2HttpClient);
   return {

@@ -13,21 +13,21 @@ export interface SessionServices {
 }
 
 export interface TikTokSessionConfig {
+  baseUrl: string;
   reportPollIntervalMs: number;
   reportMaxPollAttempts: number;
 }
 
 export function createSessionServices(
   authAdapter: TikTokAuthAdapter,
-  baseUrl: string,
+  config: TikTokSessionConfig,
   logger: Logger,
-  rateLimiter: RateLimiter,
-  sessionConfig: TikTokSessionConfig
+  rateLimiter: RateLimiter
 ): SessionServices {
   const httpClient = new TikTokHttpClient(
     authAdapter,
     authAdapter.advertiserId,
-    baseUrl,
+    config.baseUrl,
     logger
   );
   const tiktokService = new TikTokService(rateLimiter, httpClient, logger);
@@ -35,8 +35,8 @@ export function createSessionServices(
     rateLimiter,
     httpClient,
     logger,
-    sessionConfig.reportPollIntervalMs,
-    sessionConfig.reportMaxPollAttempts
+    config.reportPollIntervalMs,
+    config.reportMaxPollAttempts
   );
 
   return {

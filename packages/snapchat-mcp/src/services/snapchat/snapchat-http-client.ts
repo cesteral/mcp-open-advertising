@@ -1,8 +1,8 @@
 import type { SnapchatAuthAdapter } from "../../auth/snapchat-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
+import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withSnapchatApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
+import { withSnapchatApiSpan } from "../../utils/telemetry/tracing.js";
 
 const SNAPCHAT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -29,8 +29,21 @@ function mapHttpStatusToJsonRpc(httpStatus: number): JsonRpcErrorCode {
   return JsonRpcErrorCode.InvalidRequest;
 }
 
-function isRetryableStatus(httpStatus: number): boolean {
-  return httpStatus === 429 || httpStatus >= 500;
+/**
+ * Validate the Snapchat response envelope.
+ * Returns the full envelope on success, throws McpError on FAILED status.
+ */
+function validateSnapchatEnvelope(body: unknown): unknown {
+  const json = body as SnapchatEnvelope;
+  if (json.request_status !== "FAILED") {
+    return json;
+  }
+
+  throw new McpError(
+    JsonRpcErrorCode.InvalidRequest,
+    json.display_message ?? `Snapchat API error: request_status=FAILED`,
+    { errorCode: json.error_code }
+  );
 }
 
 /**
@@ -47,7 +60,8 @@ function isRetryableStatus(httpStatus: number): boolean {
 export class SnapchatHttpClient {
   constructor(
     private readonly authAdapter: SnapchatAuthAdapter,
-    private readonly baseUrl: string
+    private readonly baseUrl: string,
+    private readonly logger: import("pino").Logger
   ) {}
 
   /** Make an authenticated GET request. Returns raw Snapchat envelope. */
@@ -173,93 +187,21 @@ export class SnapchatHttpClient {
     return withSnapchatApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      return this.executeRequestInner(url, context, options);
-    });
-  }
-
-  private async executeRequestInner(
-    url: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    const maxRetries = SNAPCHAT_RETRY_CONFIG.maxRetries ?? 3;
-    const timeoutMs = SNAPCHAT_RETRY_CONFIG.timeoutMs ?? 30_000;
-
-    let lastError: McpError | undefined;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const accessToken = await this.authAdapter.getAccessToken();
-
-      const response = await fetchWithTimeout(
+      return executeWithRetry(SNAPCHAT_RETRY_CONFIG, {
         url,
-        timeoutMs,
+        fetchOptions: options,
         context,
-        {
-          ...options,
-          headers: {
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
-            ...options?.headers,
-          },
-        }
-      );
-
-      setSpanAttribute("http.response.status_code", response.status);
-
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        const mcpError = new McpError(
-          mapHttpStatusToJsonRpc(response.status),
-          `Snapchat API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          { requestId: context?.requestId, httpStatus: response.status, url, method: options?.method ?? "GET", attempt }
-        );
-
-        if (!isRetryableStatus(response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
-      }
-
-      const json = (await response.json()) as SnapchatEnvelope;
-
-      if (json.request_status === "FAILED") {
-        throw new McpError(
-          JsonRpcErrorCode.InvalidRequest,
-          json.display_message ?? `Snapchat API error: request_status=FAILED`,
-          { requestId: context?.requestId, errorCode: json.error_code, url, method: options?.method ?? "GET", attempt }
-        );
-      }
-
-      return json;
-    }
-
-    throw (
-      lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", { requestId: context?.requestId })
-    );
-  }
-
-  private calculateBackoff(attempt: number, response: Response): number {
-    const initialBackoffMs = SNAPCHAT_RETRY_CONFIG.initialBackoffMs ?? 2_000;
-    const maxBackoffMs = SNAPCHAT_RETRY_CONFIG.maxBackoffMs ?? 30_000;
-
-    let delayMs = Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs);
-
-    const retryAfter = response.headers.get("Retry-After");
-    if (retryAfter) {
-      const retryAfterSeconds = parseInt(retryAfter, 10);
-      if (!isNaN(retryAfterSeconds)) {
-        delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
-      }
-    }
-
-    return delayMs;
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+          };
+        },
+        validateResponseBody: validateSnapchatEnvelope,
+      });
+    });
   }
 }

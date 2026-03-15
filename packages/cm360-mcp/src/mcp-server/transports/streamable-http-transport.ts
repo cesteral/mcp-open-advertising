@@ -59,7 +59,7 @@ function buildPlatformConfig(
         await adapter.validate();
         const services = createSessionServices(
           adapter,
-          (appConfig as AppConfig).cm360ApiBaseUrl,
+          { baseUrl: (appConfig as AppConfig).cm360ApiBaseUrl },
           log,
           rateLimiter
         );

@@ -60,10 +60,9 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          cfg.amazonDspApiBaseUrl,
+          { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts },
           log,
-          rateLimiter,
-          { reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts }
+          rateLimiter
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -83,7 +82,7 @@ function buildPlatformConfig(
             cfg.amazonDspApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, cfg.amazonDspApiBaseUrl, log, rateLimiter, { reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts });
+          const services = createSessionServices(envAdapter, { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts }, log, rateLimiter);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -101,10 +100,9 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            cfgFallback.amazonDspApiBaseUrl,
+            { baseUrl: cfgFallback.amazonDspApiBaseUrl, reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts },
             log,
-            rateLimiter,
-            { reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts }
+            rateLimiter
           );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };

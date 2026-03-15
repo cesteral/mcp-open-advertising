@@ -58,8 +58,7 @@ function buildPlatformConfig(
         await adapter.validate();
         const services = createSessionServices(
           adapter,
-          (appConfig as AppConfig).sa360ApiBaseUrl,
-          (appConfig as AppConfig).sa360V2ApiBaseUrl,
+          { baseUrl: (appConfig as AppConfig).sa360ApiBaseUrl, v2BaseUrl: (appConfig as AppConfig).sa360V2ApiBaseUrl },
           log,
           rateLimiter
         );
@@ -87,8 +86,7 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            typedConfig.sa360ApiBaseUrl,
-            typedConfig.sa360V2ApiBaseUrl,
+            { baseUrl: typedConfig.sa360ApiBaseUrl, v2BaseUrl: typedConfig.sa360V2ApiBaseUrl },
             log,
             rateLimiter
           );

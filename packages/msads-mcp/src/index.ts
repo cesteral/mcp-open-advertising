@@ -43,14 +43,14 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.msadsCampaignApiBaseUrl,
-    mcpConfig.msadsReportingApiBaseUrl,
-    logger,
-    rateLimiter,
     {
+      campaignApiBaseUrl: mcpConfig.msadsCampaignApiBaseUrl,
+      reportingApiBaseUrl: mcpConfig.msadsReportingApiBaseUrl,
       reportPollIntervalMs: mcpConfig.msadsReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.msadsReportMaxPollAttempts,
-    }
+    },
+    logger,
+    rateLimiter
   );
 
   sessionServiceStore.set(sessionId, services);

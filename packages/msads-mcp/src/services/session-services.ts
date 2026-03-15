@@ -12,6 +12,8 @@ export interface SessionServices {
 }
 
 export interface MsAdsSessionConfig {
+  campaignApiBaseUrl: string;
+  reportingApiBaseUrl: string;
   reportPollIntervalMs: number;
   reportMaxPollAttempts: number;
 }
@@ -20,21 +22,19 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
 
 export function createSessionServices(
   authAdapter: MsAdsAuthAdapter,
-  campaignApiBaseUrl: string,
-  reportingApiBaseUrl: string,
+  config: MsAdsSessionConfig,
   logger: Logger,
-  _rateLimiter: RateLimiter,
-  sessionConfig: MsAdsSessionConfig
+  _rateLimiter: RateLimiter
 ): SessionServices {
-  const campaignClient = new MsAdsHttpClient(authAdapter, campaignApiBaseUrl);
-  const reportingClient = new MsAdsHttpClient(authAdapter, reportingApiBaseUrl);
+  const campaignClient = new MsAdsHttpClient(authAdapter, config.campaignApiBaseUrl, logger);
+  const reportingClient = new MsAdsHttpClient(authAdapter, config.reportingApiBaseUrl, logger);
 
   const msadsService = new MsAdsService(campaignClient, logger);
   const msadsReportingService = new MsAdsReportingService(
     reportingClient,
     logger,
-    sessionConfig.reportPollIntervalMs,
-    sessionConfig.reportMaxPollAttempts
+    config.reportPollIntervalMs,
+    config.reportMaxPollAttempts
   );
 
   return { msadsService, msadsReportingService };

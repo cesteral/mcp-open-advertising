@@ -45,13 +45,13 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.snapchatApiBaseUrl,
-    logger,
-    rateLimiter,
     {
+      baseUrl: mcpConfig.snapchatApiBaseUrl,
       reportPollIntervalMs: mcpConfig.snapchatReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.snapchatReportMaxPollAttempts,
-    }
+    },
+    logger,
+    rateLimiter
   );
 
   sessionServiceStore.set(sessionId, services);

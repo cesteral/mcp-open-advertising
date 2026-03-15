@@ -43,8 +43,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.linkedinApiBaseUrl,
-    mcpConfig.linkedinApiVersion,
+    { baseUrl: mcpConfig.linkedinApiBaseUrl, apiVersion: mcpConfig.linkedinApiVersion },
     logger,
     rateLimiter
   );

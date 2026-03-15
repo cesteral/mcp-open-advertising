@@ -56,7 +56,7 @@ function buildPlatformConfig(
       if (adapter) {
         const services = createSessionServices(
           adapter,
-          (appConfig as AppConfig).metaApiBaseUrl,
+          { baseUrl: (appConfig as AppConfig).metaApiBaseUrl },
           log,
           rateLimiter
         );
@@ -78,7 +78,7 @@ function buildPlatformConfig(
             cfg.metaApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, cfg.metaApiBaseUrl, log, rateLimiter);
+          const services = createSessionServices(envAdapter, { baseUrl: cfg.metaApiBaseUrl }, log, rateLimiter);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -90,7 +90,7 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            (appConfig as AppConfig).metaApiBaseUrl,
+            { baseUrl: (appConfig as AppConfig).metaApiBaseUrl },
             log,
             rateLimiter
           );

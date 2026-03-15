@@ -57,14 +57,9 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          cfg.msadsCampaignApiBaseUrl,
-          cfg.msadsReportingApiBaseUrl,
+          { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
           log,
-          rateLimiter,
-          {
-            reportPollIntervalMs: cfg.msadsReportPollIntervalMs,
-            reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts,
-          }
+          rateLimiter
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -87,14 +82,9 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            cfg.msadsCampaignApiBaseUrl,
-            cfg.msadsReportingApiBaseUrl,
+            { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
             log,
-            rateLimiter,
-            {
-              reportPollIntervalMs: cfg.msadsReportPollIntervalMs,
-              reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts,
-            }
+            rateLimiter
           );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };

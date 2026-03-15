@@ -44,14 +44,14 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.pinterestApiBaseUrl,
-    logger,
-    rateLimiter,
     {
+      baseUrl: mcpConfig.pinterestApiBaseUrl,
+      apiVersion: mcpConfig.pinterestApiVersion,
       reportPollIntervalMs: mcpConfig.pinterestReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.pinterestReportMaxPollAttempts,
     },
-    mcpConfig.pinterestApiVersion
+    logger,
+    rateLimiter
   );
 
   sessionServiceStore.set(sessionId, services);

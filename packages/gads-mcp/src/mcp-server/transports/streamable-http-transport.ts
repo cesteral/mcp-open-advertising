@@ -59,7 +59,7 @@ function buildPlatformConfig(
         await adapter.validate();
         const services = createSessionServices(
           adapter,
-          (appConfig as AppConfig).gadsApiBaseUrl,
+          { baseUrl: (appConfig as AppConfig).gadsApiBaseUrl },
           log,
           rateLimiter
         );
@@ -89,7 +89,7 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            typedConfig.gadsApiBaseUrl,
+            { baseUrl: typedConfig.gadsApiBaseUrl },
             log,
             rateLimiter
           );

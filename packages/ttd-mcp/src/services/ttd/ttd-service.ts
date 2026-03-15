@@ -2,6 +2,7 @@ import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { getEntityConfig, type TtdEntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 
 /**
@@ -188,10 +189,19 @@ export class TtdService {
       }
       return { valid: true };
     } catch (error: unknown) {
-      const err = error as Record<string, unknown> | null;
-      const errorMessage = (err as { message?: string })?.message ?? String(error);
-      const errorBody = ((err as { data?: { errorBody?: string } })?.data?.errorBody) ?? errorMessage;
-      return { valid: false, errors: [errorBody] };
+      // Only treat client-error McpErrors as validation results.
+      // Re-throw network, auth, rate-limit, and 5xx errors.
+      const CLIENT_ERROR_CODES = new Set([
+        JsonRpcErrorCode.InvalidRequest,
+        JsonRpcErrorCode.InvalidParams,
+        JsonRpcErrorCode.NotFound,
+      ]);
+      if (error instanceof McpError && CLIENT_ERROR_CODES.has(error.code)) {
+        const errorMessage = error.message ?? String(error);
+        const errorBody = (error.data as { errorBody?: string } | undefined)?.errorBody ?? errorMessage;
+        return { valid: false, errors: [errorBody] };
+      }
+      throw error;
     }
   }
 

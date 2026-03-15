@@ -1,9 +1,9 @@
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
+import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withTikTokApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
+import { withTikTokApiSpan } from "../../utils/telemetry/tracing.js";
 
 const TIKTOK_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -27,15 +27,6 @@ const AUTH_ERROR_CODES = new Set([40001, 40002, 40013]);
 /** TikTok error codes that indicate rate limiting */
 const RATE_LIMIT_CODES = new Set([40100, 40101]);
 
-function isRetryableTikTokError(tiktokCode: number, httpStatus: number): boolean {
-  // Auth errors (40001, 40002, 40013) are not transient — fail fast, no retry
-  return (
-    httpStatus === 429 ||
-    httpStatus >= 500 ||
-    RATE_LIMIT_CODES.has(tiktokCode)
-  );
-}
-
 function mapTikTokErrorToJsonRpc(tiktokCode: number, httpStatus: number): JsonRpcErrorCode {
   if (AUTH_ERROR_CODES.has(tiktokCode) || httpStatus === 401) {
     return JsonRpcErrorCode.Unauthorized;
@@ -50,6 +41,31 @@ function mapTikTokErrorToJsonRpc(tiktokCode: number, httpStatus: number): JsonRp
     return JsonRpcErrorCode.ServiceUnavailable;
   }
   return JsonRpcErrorCode.InvalidRequest;
+}
+
+/**
+ * Validate the TikTok response envelope.
+ * Returns `json.data` on success (code === 0).
+ * Throws McpError on failure, with `retryable = true` for rate-limit codes.
+ */
+function validateTikTokEnvelope(body: unknown): unknown {
+  const json = body as TikTokApiResponse;
+  if (json.code === 0) {
+    return json.data;
+  }
+
+  const jsonRpcCode = mapTikTokErrorToJsonRpc(json.code, 200);
+  const retryable = RATE_LIMIT_CODES.has(json.code);
+
+  throw new McpError(
+    jsonRpcCode,
+    json.message || `TikTok API error: code=${json.code}`,
+    {
+      tiktokCode: json.code,
+      tiktokRequestId: json.request_id,
+      retryable,
+    }
+  );
 }
 
 /**
@@ -210,135 +226,21 @@ export class TikTokHttpClient {
     return withTikTokApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      return this.executeRequestInner(url, context, options);
-    });
-  }
-
-  private async executeRequestInner(
-    url: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    const maxRetries = TIKTOK_RETRY_CONFIG.maxRetries ?? 3;
-    const timeoutMs = TIKTOK_RETRY_CONFIG.timeoutMs ?? 30_000;
-
-    let lastError: McpError | undefined;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const accessToken = await this.authAdapter.getAccessToken();
-
-      const response = await fetchWithTimeout(
+      return executeWithRetry(TIKTOK_RETRY_CONFIG, {
         url,
-        timeoutMs,
+        fetchOptions: options,
         context,
-        {
-          ...options,
-          headers: {
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
-            ...options?.headers,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        // HTTP-level error before we can read JSON
-        const errorBody = await response.text().catch(() => "");
-        const mcpError = new McpError(
-          mapTikTokErrorToJsonRpc(0, response.status),
-          `TikTok API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          {
-            requestId: context?.requestId,
-            httpStatus: response.status,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
-          }
-        );
-
-        if (!isRetryableTikTokError(0, response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
-      }
-
-      // Parse TikTok JSON response
-      setSpanAttribute("http.response.status_code", response.status);
-      const json = (await response.json()) as TikTokApiResponse;
-
-      if (json.code !== 0) {
-        const jsonRpcCode = mapTikTokErrorToJsonRpc(json.code, response.status);
-        const mcpError = new McpError(
-          jsonRpcCode,
-          json.message || `TikTok API error: code=${json.code}`,
-          {
-            requestId: context?.requestId,
-            tiktokCode: json.code,
-            tiktokRequestId: json.request_id,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
-          }
-        );
-
-        if (!isRetryableTikTokError(json.code, response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-
-        this.logger.warn(
-          {
-            url,
-            method: options?.method ?? "GET",
-            tiktokCode: json.code,
-            tiktokMessage: json.message,
-            attempt: attempt + 1,
-            maxRetries,
-            requestId: context?.requestId,
-          },
-          "Retrying TikTok API request after transient error"
-        );
-
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
-      }
-
-      return json.data;
-    }
-
-    throw (
-      lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
-        requestId: context?.requestId,
-      })
-    );
-  }
-
-  private calculateBackoff(attempt: number, response: Response): number {
-    const initialBackoffMs = TIKTOK_RETRY_CONFIG.initialBackoffMs ?? 2_000;
-    const maxBackoffMs = TIKTOK_RETRY_CONFIG.maxBackoffMs ?? 30_000;
-
-    let delayMs = Math.min(
-      initialBackoffMs * Math.pow(2, attempt),
-      maxBackoffMs
-    );
-
-    const retryAfter = response.headers.get("Retry-After");
-    if (retryAfter) {
-      const retryAfterSeconds = parseInt(retryAfter, 10);
-      if (!isNaN(retryAfterSeconds)) {
-        delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
-      }
-    }
-
-    return delayMs;
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+          };
+        },
+        validateResponseBody: validateTikTokEnvelope,
+      });
+    });
   }
 }

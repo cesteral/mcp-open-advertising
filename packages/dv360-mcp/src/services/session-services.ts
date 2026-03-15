@@ -6,6 +6,10 @@ import { DV360HttpClient } from "./dv360/dv360-http-client.js";
 import { DV360Service } from "./dv360/DV360-service.js";
 import { TargetingService } from "./targeting/targeting-service.js";
 
+export interface DV360SessionConfig {
+  baseUrl: string;
+}
+
 export interface SessionServices {
   dv360Service: DV360Service;
   targetingService: TargetingService;
@@ -13,11 +17,11 @@ export interface SessionServices {
 
 export function createSessionServices(
   authAdapter: GoogleAuthAdapter,
-  baseUrl: string,
+  config: DV360SessionConfig,
   logger: Logger,
   rateLimiter: RateLimiter
 ): SessionServices {
-  const httpClient = new DV360HttpClient(authAdapter, baseUrl, logger);
+  const httpClient = new DV360HttpClient(authAdapter, config.baseUrl, logger);
   const dv360Service = new DV360Service(logger, rateLimiter, httpClient);
   const targetingService = new TargetingService(logger, rateLimiter, httpClient);
   return {

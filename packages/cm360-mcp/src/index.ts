@@ -56,7 +56,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.cm360ApiBaseUrl,
+    { baseUrl: mcpConfig.cm360ApiBaseUrl },
     logger,
     rateLimiter
   );

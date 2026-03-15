@@ -72,11 +72,11 @@ describe("amazonDsp_list_entities tool", () => {
       expect(result.entities).toHaveLength(2);
       expect(result.startIndex).toBe(0);
       expect(result.totalResults).toBe(2);
-      expect(result.hasMore).toBe(false);
+      expect(result.has_more).toBe(false);
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates hasMore when more pages available", async () => {
+    it("indicates has_more when more pages available", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [{ orderId: "ord_001" }],
         pageInfo: {
@@ -97,7 +97,7 @@ describe("amazonDsp_list_entities tool", () => {
         baseSdkContext
       );
 
-      expect(result.hasMore).toBe(true);
+      expect(result.has_more).toBe(true);
     });
 
     it("passes filters to service when provided", async () => {
@@ -135,7 +135,7 @@ describe("amazonDsp_list_entities tool", () => {
         startIndex: 0,
         pageSize: 25,
         totalResults: 1,
-        hasMore: false,
+        has_more: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -151,7 +151,7 @@ describe("amazonDsp_list_entities tool", () => {
         startIndex: 0,
         pageSize: 25,
         totalResults: 0,
-        hasMore: false,
+        has_more: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -159,13 +159,13 @@ describe("amazonDsp_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows pagination hint when hasMore is true", () => {
+    it("shows pagination hint when has_more is true", () => {
       const result = {
         entities: [{ orderId: "ord_001" }],
         startIndex: 0,
         pageSize: 25,
         totalResults: 50,
-        hasMore: true,
+        has_more: true,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 

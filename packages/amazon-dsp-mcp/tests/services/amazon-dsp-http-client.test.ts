@@ -16,6 +16,10 @@ const mockAdapter = {
   clientId: "client_abc",
 } as unknown as AmazonDspAuthAdapter;
 
+const mockLogger: any = {
+  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+};
+mockLogger.child.mockReturnValue(mockLogger);
 
 describe("AmazonDspHttpClient", () => {
   let client: AmazonDspHttpClient;
@@ -25,7 +29,8 @@ describe("AmazonDspHttpClient", () => {
     client = new AmazonDspHttpClient(
       mockAdapter,
       "profile_123",
-      "https://advertising-api.amazon.com"
+      "https://advertising-api.amazon.com",
+      mockLogger
     );
   });
 
@@ -47,7 +52,7 @@ describe("AmazonDspHttpClient", () => {
       json: async () => ({ orders: [] }),
     });
     // Create client with adapter that has clientId
-    const clientWithId = new AmazonDspHttpClient(mockAdapter, "profile_123", "https://advertising-api.amazon.com", "client_abc");
+    const clientWithId = new AmazonDspHttpClient(mockAdapter, "profile_123", "https://advertising-api.amazon.com", mockLogger, "client_abc");
     await clientWithId.get("/dsp/orders");
     const headers = mockFetch.mock.calls[0][3].headers;
     expect(headers["Amazon-Advertising-API-ClientId"]).toBe("client_abc");

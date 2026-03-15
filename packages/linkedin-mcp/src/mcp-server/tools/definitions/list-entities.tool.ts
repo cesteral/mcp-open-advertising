@@ -42,7 +42,7 @@ export const ListEntitiesOutputSchema = z
     entities: z.array(z.record(z.any())).describe("List of entities"),
     total: z.number().optional().describe("Total number of matching entities"),
     start: z.number().optional().describe("Current offset"),
-    hasMore: z.boolean().describe("Whether more results are available"),
+    has_more: z.boolean().describe("Whether more results are available"),
     count: z.number().describe("Number of entities in this page"),
     timestamp: z.string().datetime(),
   })
@@ -77,7 +77,7 @@ export async function listEntitiesLogic(
   const total = result.total;
   const currentStart = result.start ?? 0;
   const requestedCount = input.count ?? 25;
-  const hasMore = total !== undefined
+  const has_more = total !== undefined
     ? currentStart + pageSize < total
     : pageSize >= requestedCount;
 
@@ -85,7 +85,7 @@ export async function listEntitiesLogic(
     entities: result.entities as Record<string, unknown>[],
     total,
     start: currentStart,
-    hasMore,
+    has_more,
     count: pageSize,
     timestamp: new Date().toISOString(),
   };
@@ -94,7 +94,7 @@ export async function listEntitiesLogic(
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
   const totalInfo = result.total !== undefined ? ` (total: ${result.total})` : "";
   const summary = `Found ${result.count} entities${totalInfo}`;
-  const pagination = result.hasMore
+  const pagination = result.has_more
     ? `\n\nMore results available. Use start: ${(result.start ?? 0) + result.count}`
     : "";
   const entities =

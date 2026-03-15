@@ -1,6 +1,7 @@
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import type { Logger } from "pino";
 
 /**
@@ -34,7 +35,8 @@ export class MetaInsightsService {
   ): Promise<{ data: unknown[]; nextCursor?: string; summary?: unknown }> {
     if (options.datePreset && options.timeRange) {
       this.logger.debug({ entityId, datePreset: options.datePreset }, "Rejecting insights request: datePreset and timeRange are mutually exclusive");
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
         "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
       );
     }
@@ -112,7 +114,8 @@ export class MetaInsightsService {
   ): Promise<{ data: unknown[]; nextCursor?: string }> {
     if (options.datePreset && options.timeRange) {
       this.logger.debug({ entityId, datePreset: options.datePreset }, "Rejecting insights breakdowns request: datePreset and timeRange are mutually exclusive");
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
         "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
       );
     }

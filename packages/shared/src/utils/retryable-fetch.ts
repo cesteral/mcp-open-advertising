@@ -1,9 +1,9 @@
 /**
  * Retryable Fetch — shared retry/backoff logic for platform HTTP clients
  *
- * Extracts the common retry loop used by TTD, GADS, and Meta HTTP clients.
- * Platform-specific concerns (auth headers, error parsing, status mapping)
- * are injected via the `RetryConfig` callbacks.
+ * Extracts the common retry loop used by all platform HTTP clients.
+ * Platform-specific concerns (auth headers, error parsing, status mapping,
+ * response envelope validation) are injected via callbacks.
  */
 
 import type { Logger } from "pino";
@@ -60,6 +60,16 @@ export interface RetryableRequestOptions {
    * Override the fetch function (for testing). Defaults to fetchWithTimeout.
    */
   fetchFn?: FetchWithTimeoutFn;
+  /**
+   * Validate the parsed response body after a successful HTTP response (2xx).
+   * Use this for platforms that wrap responses in an envelope (e.g., TikTok's
+   * `{ code, message, data }` or Snapchat's `{ request_status, ... }`).
+   *
+   * - Return the unwrapped/validated data on success.
+   * - Throw McpError on failure. Set `data.retryable = true` on the error
+   *   if the envelope error is transient and should be retried.
+   */
+  validateResponseBody?: (body: unknown) => unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +98,30 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function calculateBackoff(
+  attempt: number,
+  initialBackoffMs: number,
+  maxBackoffMs: number,
+  response: Response
+): number {
+  let delayMs = Math.min(
+    initialBackoffMs * Math.pow(2, attempt),
+    maxBackoffMs
+  );
+
+  if (response.status === 429) {
+    const retryAfter = response.headers.get("Retry-After");
+    if (retryAfter) {
+      const retryAfterSeconds = parseInt(retryAfter, 10);
+      if (!isNaN(retryAfterSeconds)) {
+        delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
+      }
+    }
+  }
+
+  return delayMs;
+}
+
 // ---------------------------------------------------------------------------
 // Core retry loop
 // ---------------------------------------------------------------------------
@@ -97,6 +131,10 @@ function sleep(ms: number): Promise<void> {
  *
  * Retries on HTTP 429 and 5xx. Respects `Retry-After` header for 429s.
  * Returns parsed JSON on success, or `{}` for 204 No Content.
+ *
+ * If `validateResponseBody` is provided, calls it after parsing a successful
+ * response. If the validator throws with `data.retryable = true`, the request
+ * is retried up to `maxRetries` times.
  */
 export async function executeWithRetry(
   config: RetryConfig,
@@ -107,7 +145,10 @@ export async function executeWithRetry(
   const maxBackoffMs = config.maxBackoffMs ?? DEFAULT_MAX_BACKOFF_MS;
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  const { url, fetchOptions, context, logger, getHeaders, mapStatusCode, parseErrorBody } = options;
+  const {
+    url, fetchOptions, context, logger, getHeaders,
+    mapStatusCode, parseErrorBody, validateResponseBody,
+  } = options;
   const doFetch = options.fetchFn ?? fetchWithTimeout;
 
   let lastError: McpError | undefined;
@@ -128,7 +169,39 @@ export async function executeWithRetry(
       if (response.status === 204) {
         return {};
       }
-      return response.json();
+
+      const body = await response.json();
+
+      if (validateResponseBody) {
+        try {
+          return validateResponseBody(body);
+        } catch (envelopeError: unknown) {
+          if (
+            envelopeError instanceof McpError &&
+            (envelopeError.data as Record<string, unknown>)?.retryable === true &&
+            attempt < maxRetries
+          ) {
+            lastError = envelopeError;
+            const delayMs = calculateBackoff(attempt, initialBackoffMs, maxBackoffMs, response);
+            logger.warn(
+              {
+                url,
+                method: fetchOptions?.method ?? "GET",
+                attempt: attempt + 1,
+                maxRetries,
+                delayMs,
+                requestId: context?.requestId,
+              },
+              `Retrying ${config.platformName} API request after envelope validation error`
+            );
+            await sleep(delayMs);
+            continue;
+          }
+          throw envelopeError;
+        }
+      }
+
+      return body;
     }
 
     const errorBody = await response.text().catch(() => "");
@@ -158,20 +231,7 @@ export async function executeWithRetry(
 
     lastError = mcpError;
 
-    let delayMs = Math.min(
-      initialBackoffMs * Math.pow(2, attempt),
-      maxBackoffMs
-    );
-
-    if (response.status === 429) {
-      const retryAfter = response.headers.get("Retry-After");
-      if (retryAfter) {
-        const retryAfterSeconds = parseInt(retryAfter, 10);
-        if (!isNaN(retryAfterSeconds)) {
-          delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
-        }
-      }
-    }
+    const delayMs = calculateBackoff(attempt, initialBackoffMs, maxBackoffMs, response);
 
     logger.warn(
       {

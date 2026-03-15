@@ -13,32 +13,32 @@ export interface SessionServices {
 }
 
 export interface PinterestSessionConfig {
+  baseUrl: string;
+  apiVersion: string;
   reportPollIntervalMs: number;
   reportMaxPollAttempts: number;
 }
 
 export function createSessionServices(
   authAdapter: PinterestAuthAdapter,
-  baseUrl: string,
+  config: PinterestSessionConfig,
   logger: Logger,
-  rateLimiter: RateLimiter,
-  sessionConfig: PinterestSessionConfig,
-  apiVersion: string = "v5"
+  rateLimiter: RateLimiter
 ): SessionServices {
   const httpClient = new PinterestHttpClient(
     authAdapter,
     authAdapter.adAccountId,
-    baseUrl,
+    config.baseUrl,
     logger,
-    apiVersion
+    config.apiVersion
   );
   const pinterestService = new PinterestService(rateLimiter, httpClient, logger);
   const pinterestReportingService = new PinterestReportingService(
     rateLimiter,
     httpClient,
     logger,
-    sessionConfig.reportPollIntervalMs,
-    sessionConfig.reportMaxPollAttempts
+    config.reportPollIntervalMs,
+    config.reportMaxPollAttempts
   );
 
   return {

@@ -54,11 +54,11 @@ describe("linkedin_list_entities tool", () => {
       expect(result.entities[0]).toMatchObject({ name: "Test Campaign" });
       expect(result.count).toBe(1);
       expect(result.total).toBe(1);
-      expect(result.hasMore).toBe(false);
+      expect(result.has_more).toBe(false);
       expect(result.timestamp).toBeDefined();
     });
 
-    it("correctly calculates hasMore when total exceeds current page", async () => {
+    it("correctly calculates has_more when total exceeds current page", async () => {
       const entities = Array.from({ length: 25 }, (_, i) => ({ id: i }));
       mockLinkedInService.listEntities.mockResolvedValueOnce({
         entities,
@@ -75,7 +75,7 @@ describe("linkedin_list_entities tool", () => {
         mockContext as any
       );
 
-      expect(result.hasMore).toBe(true);
+      expect(result.has_more).toBe(true);
       expect(result.count).toBe(25);
     });
 
@@ -142,7 +142,7 @@ describe("linkedin_list_entities tool", () => {
         entities: [{ id: 1, name: "Campaign A" }],
         total: 5,
         start: 0,
-        hasMore: true,
+        has_more: true,
         count: 1,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
@@ -160,7 +160,7 @@ describe("linkedin_list_entities tool", () => {
         entities: [],
         total: 0,
         start: 0,
-        hasMore: false,
+        has_more: false,
         count: 0,
         timestamp: "2026-03-04T00:00:00.000Z",
       };

@@ -12,14 +12,18 @@ export interface SessionServices {
   linkedInReportingService: LinkedInReportingService;
 }
 
+export interface LinkedInSessionConfig {
+  baseUrl: string;
+  apiVersion: string;
+}
+
 export function createSessionServices(
   authAdapter: LinkedInAuthAdapter,
-  baseUrl: string,
-  apiVersion: string,
+  config: LinkedInSessionConfig,
   logger: Logger,
   rateLimiter: RateLimiter
 ): SessionServices {
-  const httpClient = new LinkedInHttpClient(authAdapter, baseUrl, apiVersion, logger);
+  const httpClient = new LinkedInHttpClient(authAdapter, config.baseUrl, config.apiVersion, logger);
   const linkedInService = new LinkedInService(rateLimiter, httpClient);
   const linkedInReportingService = new LinkedInReportingService(rateLimiter, httpClient);
   return {

@@ -1,30 +1,23 @@
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
-import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
+import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
+import type { RequestContext, RetryConfig } from "@cesteral/shared";
+import { withDV360ApiSpan } from "../../utils/telemetry/tracing.js";
 
-/**
- * Retry configuration for transient errors (429 / 5xx).
- */
-const MAX_RETRIES = 3;
-const INITIAL_BACKOFF_MS = 1_000;
-const MAX_BACKOFF_MS = 10_000;
-
-/**
- * HTTP status codes that are eligible for retry.
- */
-function isRetryableStatus(status: number): boolean {
-  return status === 429 || status >= 500;
-}
+const DV360_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  initialBackoffMs: 1_000,
+  maxBackoffMs: 10_000,
+  timeoutMs: 10_000,
+  platformName: "DV360",
+};
 
 /**
  * Shared HTTP client for DV360 API requests.
  *
  * Delegates authentication to the injected GoogleAuthAdapter (which handles
  * token caching, refresh, and mutex internally). Provides retry logic with
- * exponential backoff and consistent error handling.
+ * exponential backoff and consistent error handling via shared executeWithRetry.
  */
 export class DV360HttpClient {
   constructor(
@@ -72,7 +65,20 @@ export class DV360HttpClient {
     return withDV360ApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      return this.executeWithRetry(url, 10_000, context, options);
+      return executeWithRetry(DV360_RETRY_CONFIG, {
+        url,
+        fetchOptions: options,
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          };
+        },
+      });
     });
   }
 
@@ -107,106 +113,5 @@ export class DV360HttpClient {
       span.setAttribute("http.response.status_code", response.status);
       return response;
     });
-  }
-
-  // ==========================================================================
-  // Retry logic
-  // ==========================================================================
-
-  /**
-   * Execute a fetch request with exponential-backoff retry for transient errors.
-   */
-  private async executeWithRetry(
-    url: string,
-    timeoutMs: number,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    let lastError: McpError | undefined;
-
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      const accessToken = await this.authAdapter.getAccessToken();
-
-      const response = await fetchWithTimeout(url, timeoutMs, context, {
-        ...options,
-        headers: {
-          ...options?.headers,
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (response.ok) {
-        setSpanAttribute("http.response.status_code", response.status);
-        if (response.status === 204) {
-          return {};
-        }
-        return response.json();
-      }
-
-      const errorBody = await response.text().catch(() => "");
-      const mcpError = new McpError(
-        response.status >= 500
-          ? JsonRpcErrorCode.ServiceUnavailable
-          : response.status === 429
-            ? JsonRpcErrorCode.RateLimited
-            : JsonRpcErrorCode.InvalidRequest,
-        `DV360 API request failed: ${response.status} ${response.statusText}`,
-        {
-          requestId: context?.requestId,
-          httpStatus: response.status,
-          url,
-          method: options?.method ?? "GET",
-          errorBody: errorBody.substring(0, 500),
-          attempt,
-        }
-      );
-
-      if (!isRetryableStatus(response.status) || attempt >= MAX_RETRIES) {
-        throw mcpError;
-      }
-
-      lastError = mcpError;
-
-      let delayMs = Math.min(
-        INITIAL_BACKOFF_MS * Math.pow(2, attempt),
-        MAX_BACKOFF_MS
-      );
-
-      if (response.status === 429) {
-        const retryAfter = response.headers.get("Retry-After");
-        if (retryAfter) {
-          const retryAfterSeconds = parseInt(retryAfter, 10);
-          if (!isNaN(retryAfterSeconds)) {
-            delayMs = Math.min(retryAfterSeconds * 1000, MAX_BACKOFF_MS);
-          }
-        }
-      }
-
-      this.logger.warn(
-        {
-          url,
-          method: options?.method ?? "GET",
-          status: response.status,
-          attempt: attempt + 1,
-          maxRetries: MAX_RETRIES,
-          delayMs,
-          requestId: context?.requestId,
-        },
-        "Retrying DV360 API request after transient error"
-      );
-
-      await this.sleep(delayMs);
-    }
-
-    throw (
-      lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
-        requestId: context?.requestId,
-      })
-    );
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

@@ -6,6 +6,10 @@ export { SessionServiceStore } from "@cesteral/shared";
 import { GAdsHttpClient } from "./gads/gads-http-client.js";
 import { GAdsService } from "./gads/gads-service.js";
 
+export interface GAdsSessionConfig {
+  baseUrl: string;
+}
+
 export interface SessionServices {
   httpClient: GAdsHttpClient;
   gadsService: GAdsService;
@@ -13,11 +17,11 @@ export interface SessionServices {
 
 export function createSessionServices(
   authAdapter: GAdsAuthAdapter,
-  baseUrl: string,
+  config: GAdsSessionConfig,
   logger: Logger,
   rateLimiter: RateLimiter
 ): SessionServices {
-  const httpClient = new GAdsHttpClient(authAdapter, baseUrl, logger);
+  const httpClient = new GAdsHttpClient(authAdapter, config.baseUrl, logger);
   const gadsService = new GAdsService(logger, rateLimiter, httpClient);
   return {
     httpClient,

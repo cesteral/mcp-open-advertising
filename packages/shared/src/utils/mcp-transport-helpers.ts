@@ -260,7 +260,8 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
     if (this.sweepTimer) clearInterval(this.sweepTimer);
     this.sweepTimer = setInterval(() => {
       const now = Date.now();
-      for (const [sessionId] of this.sessionCreatedAt) {
+      const sessionIds = Array.from(this.sessionCreatedAt.keys());
+      for (const sessionId of sessionIds) {
         const lastActivity = this.sessionLastActivity.get(sessionId) ?? 0;
         const idleMs = now - lastActivity;
         if (idleMs > timeoutMs) {

@@ -13,20 +13,21 @@ export interface SessionServices {
 }
 
 export interface SnapchatSessionConfig {
+  baseUrl: string;
   reportPollIntervalMs: number;
   reportMaxPollAttempts: number;
 }
 
 export function createSessionServices(
   authAdapter: SnapchatAuthAdapter,
-  baseUrl: string,
+  config: SnapchatSessionConfig,
   logger: Logger,
-  rateLimiter: RateLimiter,
-  sessionConfig: SnapchatSessionConfig
+  rateLimiter: RateLimiter
 ): SessionServices {
   const httpClient = new SnapchatHttpClient(
     authAdapter,
-    baseUrl
+    config.baseUrl,
+    logger
   );
   const snapchatService = new SnapchatService(
     httpClient,
@@ -38,8 +39,8 @@ export function createSessionServices(
     httpClient,
     authAdapter.adAccountId,
     logger,
-    sessionConfig.reportPollIntervalMs,
-    sessionConfig.reportMaxPollAttempts
+    config.reportPollIntervalMs,
+    config.reportMaxPollAttempts
   );
 
   return {

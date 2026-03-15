@@ -73,7 +73,9 @@ export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTe
 export const deleteEntityTool = {
   name: TOOL_NAME,
   title: "Delete Entity",
-  description: "Delete a DV360 entity",
+  description:
+    "Delete a DV360 entity. Supported types: advertiser, campaign, insertionOrder, lineItem, adGroup, creative, customBiddingAlgorithm, inventorySource, inventorySourceGroup, locationList. " +
+    "Most entities are hard-deleted via the API. To archive instead (reversible), use dv360_update_entity to set entityStatus to ENTITY_STATUS_ARCHIVED.",
   inputSchema: DeleteEntityInputSchema,
   outputSchema: DeleteEntityOutputSchema,
   inputExamples: [

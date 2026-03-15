@@ -19,6 +19,7 @@ export class RateLimiter {
 
   constructor() {
     this.cleanupInterval = setInterval(() => this.cleanup(), 300000);
+    this.cleanupInterval.unref();
   }
 
   /**

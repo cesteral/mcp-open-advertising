@@ -59,10 +59,9 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          cfg.tiktokApiBaseUrl,
+          { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts },
           log,
-          rateLimiter,
-          { reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts }
+          rateLimiter
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -82,7 +81,7 @@ function buildPlatformConfig(
             cfg.tiktokApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, cfg.tiktokApiBaseUrl, log, rateLimiter, { reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts });
+          const services = createSessionServices(envAdapter, { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts }, log, rateLimiter);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -100,10 +99,9 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            cfgFallback.tiktokApiBaseUrl,
+            { baseUrl: cfgFallback.tiktokApiBaseUrl, reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts },
             log,
-            rateLimiter,
-            { reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts }
+            rateLimiter
           );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };

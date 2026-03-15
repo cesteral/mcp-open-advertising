@@ -56,7 +56,7 @@ function buildPlatformConfig(
         await adapter.validate();
         const services = createSessionServices(
           adapter,
-          (appConfig as AppConfig).dv360ApiBaseUrl,
+          { baseUrl: (appConfig as AppConfig).dv360ApiBaseUrl },
           log,
           rateLimiter
         );

@@ -13,29 +13,30 @@ export interface SessionServices {
 }
 
 export interface AmazonDspSessionConfig {
+  baseUrl: string;
   reportPollIntervalMs: number;
   reportMaxPollAttempts: number;
 }
 
 export function createSessionServices(
   authAdapter: AmazonDspAuthAdapter,
-  baseUrl: string,
+  config: AmazonDspSessionConfig,
   logger: Logger,
-  rateLimiter: RateLimiter,
-  sessionConfig: AmazonDspSessionConfig
+  rateLimiter: RateLimiter
 ): SessionServices {
   const httpClient = new AmazonDspHttpClient(
     authAdapter,
     authAdapter.profileId,
-    baseUrl
+    config.baseUrl,
+    logger
   );
   const amazonDspService = new AmazonDspService(httpClient);
   const amazonDspReportingService = new AmazonDspReportingService(
     rateLimiter,
     httpClient,
     logger,
-    sessionConfig.reportPollIntervalMs,
-    sessionConfig.reportMaxPollAttempts
+    config.reportPollIntervalMs,
+    config.reportMaxPollAttempts
   );
 
   return {

@@ -57,8 +57,7 @@ function buildPlatformConfig(
       if (adapter) {
         const services = createSessionServices(
           adapter,
-          (appConfig as AppConfig).linkedinApiBaseUrl,
-          (appConfig as AppConfig).linkedinApiVersion,
+          { baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl, apiVersion: (appConfig as AppConfig).linkedinApiVersion },
           log,
           rateLimiter
         );
@@ -79,7 +78,7 @@ function buildPlatformConfig(
             cfg.linkedinApiVersion
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, cfg.linkedinApiBaseUrl, cfg.linkedinApiVersion, log, rateLimiter);
+          const services = createSessionServices(envAdapter, { baseUrl: cfg.linkedinApiBaseUrl, apiVersion: cfg.linkedinApiVersion }, log, rateLimiter);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -96,8 +95,7 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            (appConfig as AppConfig).linkedinApiBaseUrl,
-            (appConfig as AppConfig).linkedinApiVersion,
+            { baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl, apiVersion: (appConfig as AppConfig).linkedinApiVersion },
             log,
             rateLimiter
           );

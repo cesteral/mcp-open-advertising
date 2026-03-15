@@ -1,8 +1,7 @@
 import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withAmazonDspApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
+import { withAmazonDspApiSpan } from "../../utils/telemetry/tracing.js";
 
 const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -11,29 +10,6 @@ const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   timeoutMs: 30_000,
   platformName: "AmazonDsp",
 };
-
-/** Amazon DSP error codes that indicate rate limiting */
-const RATE_LIMIT_HTTP_STATUS = 429;
-
-function isRetryableAmazonDspError(httpStatus: number): boolean {
-  return httpStatus === RATE_LIMIT_HTTP_STATUS || httpStatus >= 500;
-}
-
-function mapAmazonDspErrorToJsonRpc(httpStatus: number): JsonRpcErrorCode {
-  if (httpStatus === 401) {
-    return JsonRpcErrorCode.Unauthorized;
-  }
-  if (httpStatus === RATE_LIMIT_HTTP_STATUS) {
-    return JsonRpcErrorCode.RateLimited;
-  }
-  if (httpStatus === 403) {
-    return JsonRpcErrorCode.Forbidden;
-  }
-  if (httpStatus >= 500) {
-    return JsonRpcErrorCode.ServiceUnavailable;
-  }
-  return JsonRpcErrorCode.InvalidRequest;
-}
 
 /**
  * HTTP client for Amazon DSP Advertising API requests.
@@ -53,6 +29,7 @@ export class AmazonDspHttpClient {
     private readonly authAdapter: AmazonDspAuthAdapter,
     private readonly profileId: string,
     private readonly baseUrl: string,
+    private readonly logger: import("pino").Logger,
     private readonly clientId?: string
   ) {}
 
@@ -122,21 +99,6 @@ export class AmazonDspHttpClient {
     return url.toString();
   }
 
-  private buildAmazonHeaders(accessToken: string, extraHeaders?: Record<string, string>): Record<string, string> {
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      "Amazon-Advertising-API-Scope": this.profileId,
-      ...extraHeaders,
-    };
-
-    if (this.clientId) {
-      headers["Amazon-Advertising-API-ClientId"] = this.clientId;
-    }
-
-    return headers;
-  }
-
   private async executeRequest(
     url: string,
     context?: RequestContext,
@@ -147,99 +109,25 @@ export class AmazonDspHttpClient {
     return withAmazonDspApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      return this.executeRequestInner(url, context, options);
-    });
-  }
-
-  private async executeRequestInner(
-    url: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    const maxRetries = AMAZON_DSP_RETRY_CONFIG.maxRetries ?? 3;
-    const timeoutMs = AMAZON_DSP_RETRY_CONFIG.timeoutMs ?? 30_000;
-
-    let lastError: McpError | undefined;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const accessToken = await this.authAdapter.getAccessToken();
-
-      const extraHeaders = (options?.headers as Record<string, string>) ?? {};
-      const { "Content-Type": _ct, ...otherHeaders } = extraHeaders;
-      const mergedHeaders = this.buildAmazonHeaders(accessToken, otherHeaders);
-      if (_ct) {
-        mergedHeaders["Content-Type"] = _ct;
-      }
-
-      const response = await fetchWithTimeout(
+      return executeWithRetry(AMAZON_DSP_RETRY_CONFIG, {
         url,
-        timeoutMs,
+        fetchOptions: options,
         context,
-        {
-          ...options,
-          headers: mergedHeaders,
-        }
-      );
-
-      if (!response.ok) {
-        // HTTP-level error
-        const errorBody = await response.text().catch(() => "");
-        const mcpError = new McpError(
-          mapAmazonDspErrorToJsonRpc(response.status),
-          `Amazon DSP API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          {
-            requestId: context?.requestId,
-            httpStatus: response.status,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            "Amazon-Advertising-API-Scope": this.profileId,
+          };
+          if (this.clientId) {
+            headers["Amazon-Advertising-API-ClientId"] = this.clientId;
           }
-        );
-
-        if (!isRetryableAmazonDspError(response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
-      }
-
-      // Parse raw Amazon DSP JSON response (no envelope)
-      setSpanAttribute("http.response.status_code", response.status);
-      const json = await response.json();
-      return json;
-    }
-
-    throw (
-      lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
-        requestId: context?.requestId,
-      })
-    );
-  }
-
-  private calculateBackoff(attempt: number, response: Response): number {
-    const initialBackoffMs = AMAZON_DSP_RETRY_CONFIG.initialBackoffMs ?? 2_000;
-    const maxBackoffMs = AMAZON_DSP_RETRY_CONFIG.maxBackoffMs ?? 30_000;
-
-    let delayMs = Math.min(
-      initialBackoffMs * Math.pow(2, attempt),
-      maxBackoffMs
-    );
-
-    const retryAfter = response.headers.get("Retry-After");
-    if (retryAfter) {
-      const retryAfterSeconds = parseInt(retryAfter, 10);
-      if (!isNaN(retryAfterSeconds)) {
-        delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
-      }
-    }
-
-    return delayMs;
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+          return headers;
+        },
+      });
+    });
   }
 }

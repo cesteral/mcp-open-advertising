@@ -48,7 +48,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   const services = createSessionServices(
     authAdapter,
-    mcpConfig.gadsApiBaseUrl,
+    { baseUrl: mcpConfig.gadsApiBaseUrl },
     logger,
     rateLimiter
   );

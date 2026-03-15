@@ -121,7 +121,7 @@ describe("PinterestHttpClient", () => {
       mockHttpErrorResponse(401, "Unauthorized", "Invalid access token");
 
       await expect(client.get("/ad_accounts/549755813599/campaigns")).rejects.toThrow(
-        /Pinterest API error 401/
+        "401"
       );
     });
 
@@ -129,7 +129,7 @@ describe("PinterestHttpClient", () => {
       mockHttpErrorResponse(400, "Bad Request", "Invalid parameters");
 
       await expect(client.get("/ad_accounts/549755813599/campaigns")).rejects.toThrow(
-        /Pinterest API error 400/
+        "400"
       );
     });
   });

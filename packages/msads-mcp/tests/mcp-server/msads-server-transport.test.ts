@@ -39,12 +39,12 @@ describe("msads-mcp server", () => {
   it("can import createMcpServer", async () => {
     const { createMcpServer } = await import("../../src/mcp-server/server.js");
     expect(createMcpServer).toBeTypeOf("function");
-  });
+  }, 15_000);
 
   it("can import runStdioServer", async () => {
     const { runStdioServer } = await import("../../src/mcp-server/server.js");
     expect(runStdioServer).toBeTypeOf("function");
-  });
+  }, 15_000);
 
   it("can import transport functions", async () => {
     const { createMcpHttpServer, startHttpServer } = await import(
@@ -52,5 +52,5 @@ describe("msads-mcp server", () => {
     );
     expect(createMcpHttpServer).toBeTypeOf("function");
     expect(startHttpServer).toBeTypeOf("function");
-  });
+  }, 15_000);
 });

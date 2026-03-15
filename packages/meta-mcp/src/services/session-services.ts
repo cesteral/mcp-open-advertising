@@ -8,6 +8,10 @@ import { MetaService } from "./meta/meta-service.js";
 import { MetaInsightsService } from "./meta/meta-insights-service.js";
 import { MetaTargetingService } from "./meta/meta-targeting-service.js";
 
+export interface MetaSessionConfig {
+  baseUrl: string;
+}
+
 export interface SessionServices {
   metaService: MetaService;
   metaInsightsService: MetaInsightsService;
@@ -16,11 +20,11 @@ export interface SessionServices {
 
 export function createSessionServices(
   authAdapter: MetaAuthAdapter,
-  baseUrl: string,
+  config: MetaSessionConfig,
   logger: Logger,
   rateLimiter: RateLimiter
 ): SessionServices {
-  const httpClient = new MetaGraphApiClient(authAdapter, baseUrl, logger);
+  const httpClient = new MetaGraphApiClient(authAdapter, config.baseUrl, logger);
   const metaService = new MetaService(rateLimiter, httpClient, logger);
   const metaInsightsService = new MetaInsightsService(rateLimiter, httpClient, logger);
   const metaTargetingService = new MetaTargetingService(rateLimiter, httpClient, logger);

@@ -59,10 +59,9 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          cfg.snapchatApiBaseUrl,
+          { baseUrl: cfg.snapchatApiBaseUrl, reportPollIntervalMs: cfg.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts },
           log,
-          rateLimiter,
-          { reportPollIntervalMs: cfg.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts }
+          rateLimiter
         );
         sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
         return { services };
@@ -83,7 +82,7 @@ function buildPlatformConfig(
             cfg.snapchatOrgId ?? ""
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, cfg.snapchatApiBaseUrl, log, rateLimiter, { reportPollIntervalMs: cfg.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts });
+          const services = createSessionServices(envAdapter, { baseUrl: cfg.snapchatApiBaseUrl, reportPollIntervalMs: cfg.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts }, log, rateLimiter);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -102,10 +101,9 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            cfgFallback.snapchatApiBaseUrl,
+            { baseUrl: cfgFallback.snapchatApiBaseUrl, reportPollIntervalMs: cfgFallback.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.snapchatReportMaxPollAttempts },
             log,
-            rateLimiter,
-            { reportPollIntervalMs: cfgFallback.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.snapchatReportMaxPollAttempts }
+            rateLimiter
           );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };

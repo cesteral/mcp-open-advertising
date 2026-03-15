@@ -1,9 +1,9 @@
 import type { Logger } from "pino";
 import type { PinterestAuthAdapter } from "../../auth/pinterest-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
+import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withPinterestApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
+import { withPinterestApiSpan } from "../../utils/telemetry/tracing.js";
 
 const PINTEREST_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -12,29 +12,6 @@ const PINTEREST_RETRY_CONFIG: RetryConfig = {
   timeoutMs: 30_000,
   platformName: "Pinterest",
 };
-
-/** HTTP status codes that indicate rate limiting */
-const RATE_LIMIT_HTTP_STATUSES = new Set([429]);
-
-function isRetryablePinterestError(httpStatus: number): boolean {
-  return httpStatus === 429 || httpStatus >= 500;
-}
-
-function mapHttpStatusToJsonRpc(httpStatus: number): JsonRpcErrorCode {
-  if (httpStatus === 401) {
-    return JsonRpcErrorCode.Unauthorized;
-  }
-  if (RATE_LIMIT_HTTP_STATUSES.has(httpStatus)) {
-    return JsonRpcErrorCode.RateLimited;
-  }
-  if (httpStatus === 403) {
-    return JsonRpcErrorCode.Forbidden;
-  }
-  if (httpStatus >= 500) {
-    return JsonRpcErrorCode.ServiceUnavailable;
-  }
-  return JsonRpcErrorCode.InvalidRequest;
-}
 
 /**
  * HTTP client for Pinterest Marketing API v5 requests.
@@ -174,7 +151,15 @@ export class PinterestHttpClient {
         body,
       });
       span.setAttribute("http.response.status_code", response.status);
-      return this.parseResponse(response, url, context);
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new McpError(
+          response.status >= 500 ? JsonRpcErrorCode.ServiceUnavailable : response.status === 429 ? JsonRpcErrorCode.RateLimited : JsonRpcErrorCode.InvalidRequest,
+          `Pinterest API error ${response.status} ${response.statusText}: ${errorBody.substring(0, 500)}`,
+          { requestId: context?.requestId, httpStatus: response.status, url }
+        );
+      }
+      return response.json() as Promise<unknown>;
     });
   }
 
@@ -200,128 +185,20 @@ export class PinterestHttpClient {
     return withPinterestApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      return this.executeRequestInner(url, context, options);
-    });
-  }
-
-  private async executeRequestInner(
-    url: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    const maxRetries = PINTEREST_RETRY_CONFIG.maxRetries ?? 3;
-    const timeoutMs = PINTEREST_RETRY_CONFIG.timeoutMs ?? 30_000;
-
-    let lastError: McpError | undefined;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const accessToken = await this.authAdapter.getAccessToken();
-
-      const response = await fetchWithTimeout(
+      return executeWithRetry(PINTEREST_RETRY_CONFIG, {
         url,
-        timeoutMs,
+        fetchOptions: options,
         context,
-        {
-          ...options,
-          headers: {
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
             Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
-            ...options?.headers,
-          },
-        }
-      );
-
-      setSpanAttribute("http.response.status_code", response.status);
-
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        const mcpError = new McpError(
-          mapHttpStatusToJsonRpc(response.status),
-          `Pinterest API error ${response.status} ${response.statusText}: ${errorBody.substring(0, 500)}`,
-          {
-            requestId: context?.requestId,
-            httpStatus: response.status,
-            url,
-            method: options?.method ?? "GET",
-            attempt,
-          }
-        );
-
-        if (!isRetryablePinterestError(response.status) || attempt >= maxRetries) {
-          throw mcpError;
-        }
-
-        lastError = mcpError;
-
-        this.logger.warn(
-          {
-            url,
-            method: options?.method ?? "GET",
-            httpStatus: response.status,
-            attempt: attempt + 1,
-            maxRetries,
-            requestId: context?.requestId,
-          },
-          "Retrying Pinterest API request after transient error"
-        );
-
-        await this.sleep(this.calculateBackoff(attempt, response));
-        continue;
-      }
-
-      // Pinterest v5: return the raw JSON body — no envelope to unwrap
-      return response.json() as Promise<unknown>;
-    }
-
-    throw (
-      lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
-        requestId: context?.requestId,
-      })
-    );
-  }
-
-  /**
-   * Parse a Pinterest v5 API response.
-   * Pinterest returns plain JSON with standard HTTP status codes — no { code, data } envelope.
-   */
-  private async parseResponse<T>(
-    response: Response,
-    url: string,
-    context?: RequestContext
-  ): Promise<T> {
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        mapHttpStatusToJsonRpc(response.status),
-        `Pinterest API error ${response.status} ${response.statusText}: ${errorBody.substring(0, 500)}`,
-        { requestId: context?.requestId, httpStatus: response.status, url }
-      );
-    }
-    return response.json() as Promise<T>;
-  }
-
-  private calculateBackoff(attempt: number, response: Response): number {
-    const initialBackoffMs = PINTEREST_RETRY_CONFIG.initialBackoffMs ?? 2_000;
-    const maxBackoffMs = PINTEREST_RETRY_CONFIG.maxBackoffMs ?? 30_000;
-
-    let delayMs = Math.min(
-      initialBackoffMs * Math.pow(2, attempt),
-      maxBackoffMs
-    );
-
-    const retryAfter = response.headers.get("Retry-After");
-    if (retryAfter) {
-      const retryAfterSeconds = parseInt(retryAfter, 10);
-      if (!isNaN(retryAfterSeconds)) {
-        delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
-      }
-    }
-
-    return delayMs;
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+          };
+        },
+      });
+    });
   }
 }

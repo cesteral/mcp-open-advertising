@@ -18,6 +18,10 @@ const mockAdapter: SnapchatAuthAdapter = {
   adAccountId: "acct_123",
 };
 
+const mockLogger: any = {
+  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+};
+mockLogger.child.mockReturnValue(mockLogger);
 
 describe("SnapchatHttpClient", () => {
   let client: SnapchatHttpClient;
@@ -26,7 +30,8 @@ describe("SnapchatHttpClient", () => {
     vi.clearAllMocks();
     client = new SnapchatHttpClient(
       mockAdapter as SnapchatAuthAdapter,
-      "https://adsapi.snapchat.com"
+      "https://adsapi.snapchat.com",
+      mockLogger
     );
   });
 

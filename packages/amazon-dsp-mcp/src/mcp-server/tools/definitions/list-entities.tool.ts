@@ -52,7 +52,7 @@ export const ListEntitiesOutputSchema = z
     startIndex: z.number().describe("Current start index"),
     pageSize: z.number().describe("Number of results per page"),
     totalResults: z.number().describe("Total number of entities"),
-    hasMore: z.boolean().describe("Whether more pages are available"),
+    has_more: z.boolean().describe("Whether more pages are available"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -82,14 +82,14 @@ export async function listEntitiesLogic(
     startIndex: pageInfo.startIndex,
     pageSize: pageInfo.count,
     totalResults: pageInfo.totalResults,
-    hasMore: pageInfo.startIndex + pageInfo.count < pageInfo.totalResults,
+    has_more: pageInfo.startIndex + pageInfo.count < pageInfo.totalResults,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
   const summary = `Found ${result.entities.length} entities (startIndex ${result.startIndex}, total ${result.totalResults})`;
-  const pagination = result.hasMore
+  const pagination = result.has_more
     ? `\n\nMore results available. Use startIndex: ${result.startIndex + result.pageSize}`
     : "";
   const entities =

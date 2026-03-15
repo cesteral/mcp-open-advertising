@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TtdService } from "../../src/services/ttd/ttd-service.js";
+import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
 
 function createMockLogger() {
   return {
@@ -77,7 +78,9 @@ describe("TtdService advanced methods", () => {
     });
 
     it("returns valid=false and error message when API call fails", async () => {
-      httpClient.fetch.mockRejectedValueOnce(new Error("Invalid payload"));
+      httpClient.fetch.mockRejectedValueOnce(
+        new McpError(JsonRpcErrorCode.InvalidRequest, "Invalid payload")
+      );
 
       const result = await service.testCreateOrUpdate(
         "campaign",
