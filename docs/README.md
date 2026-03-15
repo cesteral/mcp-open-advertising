@@ -29,7 +29,7 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 | [`CROSS_SERVER_CONTRACT.md`](CROSS_SERVER_CONTRACT.md)                                   | Standards all management MCP servers must follow      |
 | [`guides/ENV-VARIABLES-GUIDE.md`](guides/ENV-VARIABLES-GUIDE.md)                         | Environment configuration reference for all servers   |
 | [`guides/platform-mapping.md`](guides/platform-mapping.md)                               | Platform-to-package mapping and naming rules          |
-| [`guides/package-template.md`](guides/package-template.md)                               | Scaffold template for adding a new MCP server package |
+| [`guides/adding-a-new-server.md`](guides/adding-a-new-server.md)                         | Step-by-step guide for adding a new MCP server        |
 | [`architecture/mcp-microservice-topology.md`](architecture/mcp-microservice-topology.md) | Service topology and inter-server access patterns     |
 
 ### Contributors & Feature Design

@@ -11,7 +11,7 @@ This directory defines governance standards for MCP workflows and telemetry acro
 ## Governance Documents
 
 - `docs/governance/telemetry-governance.md` — telemetry contract (partially implemented)
-- `docs/guides/package-template.md`
+- `docs/guides/adding-a-new-server.md`
 - `docs/guides/platform-mapping.md`
 
 ## Operating Model
