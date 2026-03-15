@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 /**
  * Entity Fields Resource
  * Provides flat list of all field paths for a DV360 entity type

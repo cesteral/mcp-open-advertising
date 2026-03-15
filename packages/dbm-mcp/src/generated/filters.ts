@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 // AUTO-GENERATED - DO NOT EDIT
 // Generated from data/bid-manager-reference.json
 // Run 'pnpm run generate' to regenerate

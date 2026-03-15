@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 /**
  * sa360_validate_conversion — Client-side validation for SA360 conversion payloads.
  *

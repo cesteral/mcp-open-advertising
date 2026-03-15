@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 /**
  * ttd_validate_entity — Client-side schema validation for TTD entities.
  *

@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 import type { Logger } from "pino";
 import type { AmazonDspAuthAdapter } from "../auth/amazon-dsp-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";

@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 /**
  * Entity ID extraction utilities
  * Removes duplicate ID extraction logic across tool definitions

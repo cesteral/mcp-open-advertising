@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 import type { SdkContext } from "../../../types-global/mcp.js";
 

@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 export { entityHierarchyResource } from "./entity-hierarchy.resource.js";
 export { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas.resource.js";
 export { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";

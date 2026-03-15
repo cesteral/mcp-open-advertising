@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 /**
  * Auto-generated Zod schemas from OpenAPI specification
  * Generated at: 2025-12-18T14:51:40.257Z

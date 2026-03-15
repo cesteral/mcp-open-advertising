@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 /**
  * Bid Manager API specific types
  * Based on Bid Manager API v2 (DV360 reporting)

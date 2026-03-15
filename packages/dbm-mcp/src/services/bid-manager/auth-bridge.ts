@@ -1,3 +1,6 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 /**
  * Auth Bridge — adapts a shared GoogleAuthAdapter to the googleapis OAuth2Client shape.
  *
