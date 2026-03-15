@@ -1,0 +1,44 @@
+{
+  "name": "@cesteral/gads-mcp",
+  "display_name": "Google Ads MCP Server",
+  "description": "Google Ads campaign management and reporting — GAQL queries, CRUD, bulk mutate, and insights",
+  "version": "1.0.0",
+  "protocol_version": "2024-11-05",
+  "transports": ["streamable-http", "stdio"],
+  "tools": [
+    "gads_gaql_search",
+    "gads_list_accounts",
+    "gads_get_entity",
+    "gads_list_entities",
+    "gads_get_insights",
+    "gads_create_entity",
+    "gads_update_entity",
+    "gads_remove_entity",
+    "gads_bulk_mutate",
+    "gads_bulk_create_entities",
+    "gads_bulk_update_status",
+    "gads_validate_entity",
+    "gads_adjust_bids",
+    "gads_get_ad_preview"
+  ],
+  "resources": [],
+  "prompts": [
+    "campaign_setup_workflow",
+    "tool_schema_exploration",
+    "troubleshoot_entity",
+    "gaql_reporting_workflow",
+    "cross_platform_performance",
+    "bulk_operations_workflow",
+    "cross_platform_campaign_setup",
+    "entity_update_workflow",
+    "entity_duplication_workflow",
+    "targeting_discovery_workflow",
+    "gads_creative_setup_workflow"
+  ],
+  "auth": {
+    "modes": ["google-headers", "jwt", "none"]
+  },
+  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
+  "license": "Apache-2.0",
+  "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search"]
+}

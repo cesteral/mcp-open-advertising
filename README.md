@@ -814,6 +814,12 @@ curl -X POST http://localhost:3001/mcp \
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
+- **Issue templates**: Use our [issue templates](https://github.com/cesteral/cesteral-mcp-servers/issues/new/choose) for bug reports, feature requests, and new tool proposals
+- **Good first issues**: Look for issues labeled [`good first issue`](https://github.com/cesteral/cesteral-mcp-servers/labels/good%20first%20issue)
+- **Code of Conduct**: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- **Security**: [SECURITY.md](SECURITY.md)
+- **Roadmap**: [ROADMAP.md](ROADMAP.md)
+
 ### Development Workflow
 
 1. Fork the repository

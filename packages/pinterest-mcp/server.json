@@ -1,0 +1,50 @@
+{
+  "name": "@cesteral/pinterest-mcp",
+  "display_name": "Pinterest Ads MCP Server",
+  "description": "Pinterest Ads campaign management and reporting — CRUD, async reports, targeting, and audience estimates",
+  "version": "1.0.0",
+  "protocol_version": "2024-11-05",
+  "transports": ["streamable-http", "stdio"],
+  "tools": [
+    "pinterest_list_entities",
+    "pinterest_get_entity",
+    "pinterest_create_entity",
+    "pinterest_update_entity",
+    "pinterest_delete_entity",
+    "pinterest_list_ad_accounts",
+    "pinterest_get_report",
+    "pinterest_get_report_breakdowns",
+    "pinterest_submit_report",
+    "pinterest_check_report_status",
+    "pinterest_download_report",
+    "pinterest_bulk_update_status",
+    "pinterest_bulk_create_entities",
+    "pinterest_bulk_update_entities",
+    "pinterest_search_targeting",
+    "pinterest_get_targeting_options",
+    "pinterest_duplicate_entity",
+    "pinterest_get_delivery_estimate",
+    "pinterest_get_ad_preview",
+    "pinterest_validate_entity"
+  ],
+  "resources": [],
+  "prompts": [
+    "campaign_setup_workflow",
+    "report_generation_workflow",
+    "troubleshoot_entity",
+    "tool_schema_exploration",
+    "cross_platform_performance",
+    "bulk_operations_workflow",
+    "cross_platform_campaign_setup",
+    "entity_update_workflow",
+    "entity_duplication_workflow",
+    "targeting_discovery_workflow",
+    "pinterest_creative_setup_workflow"
+  ],
+  "auth": {
+    "modes": ["pinterest-bearer", "jwt", "none"]
+  },
+  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
+  "license": "Apache-2.0",
+  "tags": ["advertising", "pinterest", "campaign-management", "social", "visual"]
+}

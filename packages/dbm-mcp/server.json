@@ -1,0 +1,30 @@
+{
+  "name": "@cesteral/dbm-mcp",
+  "display_name": "Bid Manager MCP Server",
+  "description": "Bid Manager reporting and query workflows for DV360 campaign performance analysis",
+  "version": "1.0.0",
+  "protocol_version": "2024-11-05",
+  "transports": ["streamable-http", "stdio"],
+  "tools": [
+    "dbm_get_campaign_delivery",
+    "dbm_get_performance_metrics",
+    "dbm_get_historical_metrics",
+    "dbm_get_pacing_status",
+    "dbm_run_custom_query"
+  ],
+  "resources": [],
+  "prompts": [
+    "customQueryWorkflow",
+    "troubleshootReport",
+    "toolSchemaExploration",
+    "pacingPerformanceAnalysis",
+    "crossPlatformPerformance",
+    "crossPlatformCampaignSetup"
+  ],
+  "auth": {
+    "modes": ["google-headers", "jwt", "none"]
+  },
+  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
+  "license": "Apache-2.0",
+  "tags": ["advertising", "reporting", "dv360", "bid-manager", "google"]
+}

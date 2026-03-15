@@ -1,0 +1,40 @@
+{
+  "name": "@cesteral/sa360-mcp",
+  "display_name": "Search Ads 360 MCP Server",
+  "description": "Search Ads 360 reporting and conversion management — query language, insights, and offline conversions",
+  "version": "1.0.0",
+  "protocol_version": "2024-11-05",
+  "transports": ["streamable-http", "stdio"],
+  "tools": [
+    "sa360_search",
+    "sa360_list_accounts",
+    "sa360_get_entity",
+    "sa360_list_entities",
+    "sa360_get_insights",
+    "sa360_get_insights_breakdowns",
+    "sa360_list_custom_columns",
+    "sa360_search_fields",
+    "sa360_insert_conversions",
+    "sa360_update_conversions",
+    "sa360_validate_conversion"
+  ],
+  "resources": [],
+  "prompts": [
+    "campaign_setup_workflow",
+    "tool_schema_exploration",
+    "troubleshoot_entity",
+    "cross_platform_performance",
+    "bulk_operations_workflow",
+    "cross_platform_campaign_setup",
+    "entity_update_workflow",
+    "entity_duplication_workflow",
+    "targeting_discovery_workflow",
+    "sa360_creative_setup_workflow"
+  ],
+  "auth": {
+    "modes": ["sa360-headers", "jwt", "none"]
+  },
+  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
+  "license": "Apache-2.0",
+  "tags": ["advertising", "sa360", "google", "search", "conversions", "reporting"]
+}
