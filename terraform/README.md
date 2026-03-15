@@ -44,8 +44,8 @@ Creates observability infrastructure:
 
 | Environment | Project ID | State Bucket | Key Differences |
 |---|---|---|---|
-| **dev** | `cesteral-dev` | `cesteral-dev-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
-| **prod** | `cesteral-prod` | `cesteral-prod-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory |
+| **dev** | `open-agentic-advertising-dev` | `open-agentic-advertising-dev-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
+| **prod** | `open-agentic-advertising-prod` | `open-agentic-advertising-prod-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory |
 
 ## Common Operations
 
@@ -53,7 +53,7 @@ Creates observability infrastructure:
 
 ```bash
 # 1. Create the state bucket (once per environment)
-gsutil mb -l europe-west2 gs://cesteral-dev-terraform-state
+gsutil mb -l europe-west2 gs://open-agentic-advertising-dev-terraform-state
 
 # 2. Initialize terraform with backend config
 cd terraform

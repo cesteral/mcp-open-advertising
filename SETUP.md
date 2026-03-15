@@ -67,7 +67,7 @@ cloudbuild.yaml execution:
    **Production Trigger** (main branch):
    ```bash
    gcloud builds triggers create github \
-     --name="cesteral-prod-deploy" \
+     --name="open-agentic-advertising-prod-deploy" \
      --repo-name="cesteral" \
      --repo-owner="YOUR_GITHUB_ORG" \
      --branch-pattern="^main$" \
@@ -78,7 +78,7 @@ cloudbuild.yaml execution:
    **Development Trigger** (dev branch):
    ```bash
    gcloud builds triggers create github \
-     --name="cesteral-dev-deploy" \
+     --name="open-agentic-advertising-dev-deploy" \
      --repo-name="cesteral" \
      --repo-owner="YOUR_GITHUB_ORG" \
      --branch-pattern="^dev$" \
@@ -206,4 +206,4 @@ terraform force-unlock LOCK_ID
 3. Set up Cloud Build triggers
 4. Create Terraform backend configs (`terraform/backend-*.conf`)
 5. Create Terraform variable files (`terraform/*.tfvars`)
-6. Test deployment to the `cesteral-dev` environment
+6. Test deployment to the `open-agentic-advertising-dev` environment

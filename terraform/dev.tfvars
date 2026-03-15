@@ -1,24 +1,24 @@
 # Development environment configuration
 
 # Project configuration
-project_id  = "cesteral-dev"
+project_id  = "open-agentic-advertising-dev"
 region      = "europe-west2"
 environment = "dev"
 
 # Container images (update after first build)
-dbm_mcp_image        = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/dbm-mcp:latest"
-dv360_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/dv360-mcp:latest"
-ttd_mcp_image        = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/ttd-mcp:latest"
-gads_mcp_image       = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/gads-mcp:latest"
-meta_mcp_image       = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/meta-mcp:latest"
-linkedin_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/linkedin-mcp:latest"
-tiktok_mcp_image     = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/tiktok-mcp:latest"
-cm360_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/cm360-mcp:latest"
-sa360_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/sa360-mcp:latest"
-pinterest_mcp_image  = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/pinterest-mcp:latest"
-snapchat_mcp_image   = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/snapchat-mcp:latest"
-amazon_dsp_mcp_image = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/amazon-dsp-mcp:latest"
-msads_mcp_image      = "europe-west2-docker.pkg.dev/cesteral-dev/cesteral/msads-mcp:latest"
+dbm_mcp_image        = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/dbm-mcp:latest"
+dv360_mcp_image      = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/dv360-mcp:latest"
+ttd_mcp_image        = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/ttd-mcp:latest"
+gads_mcp_image       = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/gads-mcp:latest"
+meta_mcp_image       = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/meta-mcp:latest"
+linkedin_mcp_image   = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/linkedin-mcp:latest"
+tiktok_mcp_image     = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/tiktok-mcp:latest"
+cm360_mcp_image      = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/cm360-mcp:latest"
+sa360_mcp_image      = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/sa360-mcp:latest"
+pinterest_mcp_image  = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/pinterest-mcp:latest"
+snapchat_mcp_image   = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/snapchat-mcp:latest"
+amazon_dsp_mcp_image = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/amazon-dsp-mcp:latest"
+msads_mcp_image      = "europe-west2-docker.pkg.dev/open-agentic-advertising-dev/cesteral/msads-mcp:latest"
 
 # Networking
 create_vpc             = true
@@ -50,7 +50,7 @@ mcp_session_mode       = "stateless"
 mcp_auth_mode          = "jwt"
 log_level              = "debug" # More verbose logging in dev
 enable_gcs_persistence = false
-gcs_bucket_name        = "cesteral-dev-mcp-persistence" # Enable when ready
+gcs_bucket_name        = "open-agentic-advertising-dev-mcp-persistence" # Enable when ready
 
 # Artifact Registry
 artifact_registry_repo_name = "cesteral"

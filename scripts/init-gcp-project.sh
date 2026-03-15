@@ -18,8 +18,8 @@ fi
 
 ENVIRONMENT=$1
 case "$ENVIRONMENT" in
-  dev) PROJECT_ID="cesteral-dev" ;;
-  prod) PROJECT_ID="cesteral-prod" ;;
+  dev) PROJECT_ID="open-agentic-advertising-dev" ;;
+  prod) PROJECT_ID="open-agentic-advertising-prod" ;;
   *)
     print_error "Invalid environment: $ENVIRONMENT"
     exit 1

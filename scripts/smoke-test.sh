@@ -15,8 +15,8 @@ ENVIRONMENT=${1:-dev}
 REGION="europe-west2"
 
 case "$ENVIRONMENT" in
-  dev) PROJECT_ID="cesteral-dev" ;;
-  prod) PROJECT_ID="cesteral-prod" ;;
+  dev) PROJECT_ID="open-agentic-advertising-dev" ;;
+  prod) PROJECT_ID="open-agentic-advertising-prod" ;;
   *)
     echo "Usage: $0 <dev|prod>"
     exit 1

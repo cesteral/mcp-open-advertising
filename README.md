@@ -39,7 +39,7 @@ These MCP servers are open source under [Apache License 2.0](LICENSE.md) and ful
 
 At launch, the commercial product uses **Cesteral-hosted MCP servers only**. Supporting customer-hosted MCP servers inside Intelligence is a possible future mode, but it is not part of the initial product surface.
 
-→ [Learn more](https://cesteral.com) · [Book a demo](mailto:sales@cesteral.com?subject=Book%20a%20Cesteral%20demo)
+→ [Learn more](https://cesteral.com) · [Book a demo](mailto:contact@cesteral.com?subject=Book%20a%20Cesteral%20demo)
 
 See [docs/architecture/oss-vs-intelligence-boundary.md](docs/architecture/oss-vs-intelligence-boundary.md) for the canonical OSS vs. hosted-product boundary.
 

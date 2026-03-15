@@ -1,4 +1,4 @@
-# `cesteral-dev` Secret Collection Sheet
+# `open-agentic-advertising-dev` Secret Collection Sheet
 
 Use this sheet to gather the values required by `./scripts/create-secrets.sh dev`.
 
