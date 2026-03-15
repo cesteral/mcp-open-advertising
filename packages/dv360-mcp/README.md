@@ -394,6 +394,18 @@ OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=https://your-collector/v1/metrics
 
 See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system details, and monorepo conventions. See the [root README](../../README.md) for full architecture context.
 
+---
+
+## Get Started
+
+**Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
+
+**Managed hosting**: [Request access](https://cesteral.com/integrations/dv360?utm_source=github&utm_medium=package-readme&utm_campaign=dv360-mcp) -- credentials, governance, and multi-tenant access included.
+
+**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20DV360%20MCP) with your own ad accounts.
+
+**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=dv360-mcp)
+
 ## License
 
 Apache License 2.0 — see [LICENSE](../../LICENSE.md) for details. This package is part of Cesteral's open-source connector layer; managed hosting and higher-level governance features live outside this repository.

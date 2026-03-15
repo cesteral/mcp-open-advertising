@@ -407,6 +407,18 @@ pnpm run lint
 
 ---
 
+---
+
+## Get Started
+
+**Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
+
+**Managed hosting**: [Request access](https://cesteral.com/integrations/campaign-manager-360?utm_source=github&utm_medium=package-readme&utm_campaign=cm360-mcp) -- credentials, governance, and multi-tenant access included.
+
+**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Campaign%20Manager%20360%20MCP) with your own ad accounts.
+
+**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=cm360-mcp)
+
 ## License
 
 [Apache License 2.0](../../LICENSE.md)

@@ -425,6 +425,18 @@ pnpm run dev:http
 
 ---
 
+---
+
+## Get Started
+
+**Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
+
+**Managed hosting**: [Request access](https://cesteral.com/integrations/search-ads-360?utm_source=github&utm_medium=package-readme&utm_campaign=sa360-mcp) -- credentials, governance, and multi-tenant access included.
+
+**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Search%20Ads%20360%20MCP) with your own ad accounts.
+
+**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=sa360-mcp)
+
 ## License
 
 [Apache License 2.0](../../LICENSE.md)
