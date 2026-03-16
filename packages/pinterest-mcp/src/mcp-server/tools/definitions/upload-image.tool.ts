@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
+import type { PinterestMediaUploadResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "pinterest_upload_image";
 const TOOL_TITLE = "Upload Image to Pinterest Ads";
@@ -35,11 +36,6 @@ export const UploadImageOutputSchema = z.object({
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
-
-interface PinterestMediaUploadResponse {
-  media_id?: string;
-  media_type?: string;
-}
 
 export async function uploadImageLogic(
   input: UploadImageInput,

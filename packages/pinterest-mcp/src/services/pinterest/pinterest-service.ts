@@ -186,9 +186,12 @@ export class PinterestService {
 
   // ─── Ad Accounts ──────────────────────────────────────────────────
 
-  async listAdAccounts(context?: RequestContext): Promise<unknown> {
+  async listAdAccounts(context?: RequestContext): Promise<{ entities: unknown[]; nextCursor?: string }> {
     await this.rateLimiter.consume("pinterest:default");
-    return this.httpClient.get("/v5/ad_accounts", {}, context);
+    const response = await this.httpClient.get("/v5/ad_accounts", {}, context) as Record<string, unknown>;
+    const entities = Array.isArray(response.items) ? response.items : [];
+    const nextCursor = typeof response.bookmark === "string" ? response.bookmark : undefined;
+    return { entities, nextCursor };
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────

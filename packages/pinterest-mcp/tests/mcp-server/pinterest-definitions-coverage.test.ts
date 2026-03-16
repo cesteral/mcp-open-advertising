@@ -21,7 +21,7 @@ const pinterestService = {
   createEntity: vi.fn(async () => ({ id: "new", name: "New Campaign" })),
   updateEntity: vi.fn(async () => ({ id: "123" })),
   deleteEntity: vi.fn(async () => ({})),
-  listAdAccounts: vi.fn(async () => ({ items: [{ id: "123" }], bookmark: null })),
+  listAdAccounts: vi.fn(async () => ({ entities: [{ id: "123" }], nextCursor: undefined })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, _filters: unknown, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),

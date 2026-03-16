@@ -7,6 +7,7 @@ import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { mcpConfig } from "../../../config/index.js";
+import type { PinterestMediaUploadResponse, PinterestMediaStatusResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "pinterest_upload_video";
 const TOOL_TITLE = "Upload Video to Pinterest Ads";
@@ -37,19 +38,6 @@ export const UploadVideoOutputSchema = z.object({
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
-
-interface PinterestMediaUploadResponse {
-  media_id?: string;
-  media_type?: string;
-}
-
-interface PinterestMediaStatusResponse {
-  media_id?: string;
-  media_processing_record?: {
-    status?: string;
-  };
-  media_type?: string;
-}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

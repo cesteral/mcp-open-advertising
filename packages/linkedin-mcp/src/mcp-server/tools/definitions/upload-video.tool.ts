@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
+import type { LinkedInRegisterUploadResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "linkedin_upload_video";
 const TOOL_TITLE = "Upload Video to LinkedIn Ads";
@@ -34,18 +35,6 @@ export const UploadVideoOutputSchema = z.object({
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
-
-interface LinkedInRegisterUploadResponse {
-  value?: {
-    uploadMechanism?: {
-      "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"?: {
-        uploadUrl?: string;
-        headers?: Record<string, string>;
-      };
-    };
-    asset?: string;
-  };
-}
 
 export async function uploadVideoLogic(
   input: UploadVideoInput,
