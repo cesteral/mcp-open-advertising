@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MsAdsService } from "../../src/services/msads/msads-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
+import type { RateLimiter } from "@cesteral/shared";
 import pino from "pino";
 
 const logger = pino({ level: "silent" });
@@ -12,14 +13,20 @@ function createMockHttpClient(): MsAdsHttpClient {
   } as unknown as MsAdsHttpClient;
 }
 
+function createMockRateLimiter(): RateLimiter {
+  return { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter;
+}
+
 describe("MsAdsService", () => {
   let service: MsAdsService;
   let httpClient: MsAdsHttpClient;
+  let rateLimiter: RateLimiter;
 
   beforeEach(() => {
     vi.clearAllMocks();
     httpClient = createMockHttpClient();
-    service = new MsAdsService(httpClient, logger);
+    rateLimiter = createMockRateLimiter();
+    service = new MsAdsService(rateLimiter, httpClient, logger);
   });
 
   describe("listEntities", () => {
@@ -162,10 +169,20 @@ describe("MsAdsService", () => {
     });
   });
 
+  describe("executeReadOperation", () => {
+    it("consumes msads:read with cost 1", async () => {
+      const data = { Query: "New York", MaxResults: 25 };
+      await service.executeReadOperation("/LocationTarget/Search", data);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("msads:read");
+      expect(httpClient.post).toHaveBeenCalledWith("/LocationTarget/Search", data, undefined);
+    });
+  });
+
   describe("executeOperation", () => {
-    it("executes a custom operation", async () => {
+    it("consumes msads:write with cost 3", async () => {
       const data = { AdExtensionIds: [1, 2] };
       await service.executeOperation("/AdExtensions/GetByIds", data);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("msads:write", 3);
       expect(httpClient.post).toHaveBeenCalledWith("/AdExtensions/GetByIds", data, undefined);
     });
   });

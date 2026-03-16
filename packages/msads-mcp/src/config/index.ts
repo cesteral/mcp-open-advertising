@@ -33,10 +33,6 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://clientcenter.api.bingads.microsoft.com/CustomerManagement/v13"),
-  msadsBulkApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://bulk.api.bingads.microsoft.com/Bulk/v13"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via MSADS_RATE_LIMIT_PER_MINUTE for different scaling profiles.
@@ -69,7 +65,6 @@ export function parseConfig(): AppConfig {
     msadsCampaignApiBaseUrl: process.env.MSADS_CAMPAIGN_API_BASE_URL,
     msadsReportingApiBaseUrl: process.env.MSADS_REPORTING_API_BASE_URL,
     msadsCustomerApiBaseUrl: process.env.MSADS_CUSTOMER_API_BASE_URL,
-    msadsBulkApiBaseUrl: process.env.MSADS_BULK_API_BASE_URL,
     msadsRateLimitPerMinute: process.env.MSADS_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.MSADS_RATE_LIMIT_PER_MINUTE)
       : undefined,

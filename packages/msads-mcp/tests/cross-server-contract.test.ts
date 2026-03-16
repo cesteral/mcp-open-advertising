@@ -21,8 +21,8 @@ describe("msads-mcp cross-server contract", () => {
     }
   });
 
-  it("exports 19 tools", () => {
-    expect(productionTools).toHaveLength(19);
+  it("exports 20 tools", () => {
+    expect(productionTools).toHaveLength(20);
   });
 
   it("exports at least 5 prompts", () => {
@@ -51,6 +51,7 @@ describe("msads-mcp cross-server contract", () => {
       "msads_get_ad_preview",
       "msads_validate_entity",
       "msads_import_from_google",
+      "msads_search_targeting",
     ];
 
     for (const name of expectedTools) {

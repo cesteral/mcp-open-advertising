@@ -51,6 +51,15 @@ describe("MsAds Entity Mapping", () => {
     expect(typeof tuple[0]).toBe("string");
   });
 
+  it("all entities have a valid idsField", () => {
+    const types = getSupportedEntityTypes();
+    for (const type of types) {
+      const config = getEntityConfig(type);
+      expect(config.idsField).toBeDefined();
+      expect(config.idsField).toMatch(/^[A-Z][a-zA-Z]+Ids$/);
+    }
+  });
+
   it("throws for unknown entity type", () => {
     expect(() => getEntityConfig("unknown" as MsAdsEntityType)).toThrow("Unknown");
   });

@@ -27,13 +27,14 @@ export function createSessionServices(
   authAdapter: MsAdsAuthAdapter,
   config: MsAdsSessionConfig,
   logger: Logger,
-  _rateLimiter: RateLimiter
+  rateLimiter: RateLimiter
 ): SessionServices {
   const campaignClient = new MsAdsHttpClient(authAdapter, config.campaignApiBaseUrl, logger);
   const reportingClient = new MsAdsHttpClient(authAdapter, config.reportingApiBaseUrl, logger);
 
-  const msadsService = new MsAdsService(campaignClient, logger);
+  const msadsService = new MsAdsService(rateLimiter, campaignClient, logger);
   const msadsReportingService = new MsAdsReportingService(
+    rateLimiter,
     reportingClient,
     logger,
     config.reportPollIntervalMs,

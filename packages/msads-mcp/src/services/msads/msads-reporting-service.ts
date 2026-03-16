@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { Logger } from "pino";
+import type { RateLimiter } from "@cesteral/shared";
 import type { MsAdsHttpClient } from "./msads-http-client.js";
 import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
@@ -40,6 +41,7 @@ export interface ReportConfig {
 
 export class MsAdsReportingService {
   constructor(
+    private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MsAdsHttpClient,
     private readonly logger: Logger,
     private readonly pollIntervalMs: number = 3_000,
@@ -53,6 +55,7 @@ export class MsAdsReportingService {
     config: ReportConfig,
     context?: RequestContext
   ): Promise<string> {
+    await this.rateLimiter.consume("msads:write", 3);
     const body = this.buildReportRequest(config);
     this.logger.info({ reportType: config.reportType }, "Submitting report");
 
@@ -108,6 +111,7 @@ export class MsAdsReportingService {
     reportRequestId: string,
     context?: RequestContext
   ): Promise<{ status: string; downloadUrl?: string }> {
+    await this.rateLimiter.consume("msads:read");
     const response = (await this.httpClient.post(
       "/Reports/Poll",
       { ReportRequestId: reportRequestId },

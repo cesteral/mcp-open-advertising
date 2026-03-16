@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MsAdsReportingService, type ReportConfig } from "../../src/services/msads/msads-reporting-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
+import type { RateLimiter } from "@cesteral/shared";
 import pino from "pino";
 
 vi.mock("@cesteral/shared", async () => {
@@ -23,6 +24,10 @@ function createMockHttpClient(): MsAdsHttpClient {
   } as unknown as MsAdsHttpClient;
 }
 
+function createMockRateLimiter(): RateLimiter {
+  return { consume: vi.fn().mockResolvedValue(undefined) } as unknown as RateLimiter;
+}
+
 const sampleConfig: ReportConfig = {
   reportType: "CampaignPerformanceReportRequest",
   accountId: "12345",
@@ -33,12 +38,14 @@ const sampleConfig: ReportConfig = {
 describe("MsAdsReportingService", () => {
   let service: MsAdsReportingService;
   let httpClient: MsAdsHttpClient;
+  let rateLimiter: RateLimiter;
 
   beforeEach(() => {
     vi.clearAllMocks();
     httpClient = createMockHttpClient();
+    rateLimiter = createMockRateLimiter();
     // Use short poll interval for tests
-    service = new MsAdsReportingService(httpClient, logger, 10, 5);
+    service = new MsAdsReportingService(rateLimiter, httpClient, logger, 10, 5);
   });
 
   describe("submitReport", () => {

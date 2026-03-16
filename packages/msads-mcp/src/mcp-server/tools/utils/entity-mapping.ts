@@ -32,6 +32,8 @@ export interface MsAdsEntityConfig {
   pluralName: string;
   /** Singular display name */
   displayName: string;
+  /** Request body key for entity ID arrays (e.g., "CampaignIds") */
+  idsField: string;
   /** Batch limit for add/update operations */
   batchLimit: number;
 }
@@ -46,6 +48,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     idField: "Id",
     pluralName: "Campaigns",
     displayName: "Campaign",
+    idsField: "CampaignIds",
     batchLimit: 100,
   },
   adGroup: {
@@ -58,6 +61,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     parentIdField: "CampaignId",
     pluralName: "AdGroups",
     displayName: "Ad Group",
+    idsField: "AdGroupIds",
     batchLimit: 1000,
   },
   ad: {
@@ -70,6 +74,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     parentIdField: "AdGroupId",
     pluralName: "Ads",
     displayName: "Ad",
+    idsField: "AdIds",
     batchLimit: 50,
   },
   keyword: {
@@ -82,6 +87,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     parentIdField: "AdGroupId",
     pluralName: "Keywords",
     displayName: "Keyword",
+    idsField: "KeywordIds",
     batchLimit: 1000,
   },
   budget: {
@@ -92,6 +98,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     idField: "Id",
     pluralName: "Budgets",
     displayName: "Budget",
+    idsField: "BudgetIds",
     batchLimit: 100,
   },
   adExtension: {
@@ -102,6 +109,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     idField: "Id",
     pluralName: "AdExtensions",
     displayName: "Ad Extension",
+    idsField: "AdExtensionIds",
     batchLimit: 100,
   },
   audience: {
@@ -112,6 +120,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     idField: "Id",
     pluralName: "Audiences",
     displayName: "Audience",
+    idsField: "AudienceIds",
     batchLimit: 100,
   },
   label: {
@@ -122,6 +131,7 @@ const ENTITY_CONFIGS: Record<MsAdsEntityType, MsAdsEntityConfig> = {
     idField: "Id",
     pluralName: "Labels",
     displayName: "Label",
+    idsField: "LabelIds",
     batchLimit: 100,
   },
 };

@@ -11,7 +11,6 @@ vi.mock("../../src/config/index.js", () => ({
     msadsCampaignApiBaseUrl: "https://campaign.api.bingads.microsoft.com/CampaignManagement/v13",
     msadsReportingApiBaseUrl: "https://reporting.api.bingads.microsoft.com/Reporting/v13",
     msadsCustomerApiBaseUrl: "https://clientcenter.api.bingads.microsoft.com/CustomerManagement/v13",
-    msadsBulkApiBaseUrl: "https://bulk.api.bingads.microsoft.com/Bulk/v13",
     msadsRateLimitPerMinute: 100,
     msadsReportPollIntervalMs: 3000,
     msadsReportMaxPollAttempts: 30,

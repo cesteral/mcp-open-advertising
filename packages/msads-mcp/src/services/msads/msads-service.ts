@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { Logger } from "pino";
+import type { RateLimiter } from "@cesteral/shared";
 import type { MsAdsHttpClient } from "./msads-http-client.js";
 import {
   getEntityConfig,
@@ -17,6 +18,7 @@ import type { RequestContext } from "@cesteral/shared";
  */
 export class MsAdsService {
   constructor(
+    private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MsAdsHttpClient,
     private readonly logger: Logger
   ) {}
@@ -36,6 +38,8 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume("msads:read");
 
     if (params.parentId && config.getByParentOperation && config.parentIdField) {
       const body: Record<string, unknown> = {
@@ -68,17 +72,13 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume("msads:read");
+
     const body: Record<string, unknown> = {
-      [`${config.pluralName.slice(0, -1)}Ids`]: entityIds.map(Number),
+      [config.idsField]: entityIds.map(Number),
       ...params,
     };
-
-    // Some endpoints use different key patterns
-    if (entityType === "adExtension") {
-      body.AdExtensionIds = entityIds.map(Number);
-      delete body.AdExtensionIds; // Reset
-      body.AdExtensionIds = entityIds.map(Number);
-    }
 
     this.logger.debug({ entityType, entityIds }, "Getting entities by IDs");
     return this.httpClient.post(config.getByIdsOperation, body, context);
@@ -93,6 +93,7 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
+    await this.rateLimiter.consume("msads:write", 3);
     this.logger.info({ entityType }, "Creating entity");
     return this.httpClient.post(config.addOperation, data, context);
   }
@@ -106,6 +107,7 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
+    await this.rateLimiter.consume("msads:write", 3);
     this.logger.info({ entityType }, "Updating entity");
     return this.httpClient.post(config.updateOperation, data, context);
   }
@@ -120,8 +122,9 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
+    await this.rateLimiter.consume("msads:write", 3);
     const body: Record<string, unknown> = {
-      [`${config.pluralName.slice(0, -1)}Ids`]: entityIds.map(Number),
+      [config.idsField]: entityIds.map(Number),
       ...params,
     };
     this.logger.info({ entityType, entityIds }, "Deleting entities");
@@ -141,6 +144,7 @@ export class MsAdsService {
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
+      await this.rateLimiter.consume("msads:write", 3);
       const body = { [config.pluralName]: batch };
       this.logger.info({ entityType, batchSize: batch.length, batchIndex: i }, "Bulk creating entities");
       const result = await this.httpClient.post(config.addOperation, body, context);
@@ -163,6 +167,7 @@ export class MsAdsService {
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
+      await this.rateLimiter.consume("msads:write", 3);
       const body = { [config.pluralName]: batch };
       this.logger.info({ entityType, batchSize: batch.length }, "Bulk updating entities");
       const result = await this.httpClient.post(config.updateOperation, body, context);
@@ -186,6 +191,7 @@ export class MsAdsService {
       Id: Number(id),
       Status: status,
     }));
+    await this.rateLimiter.consume("msads:write", 3);
     const body = { [config.pluralName]: items };
     this.logger.info({ entityType, count: entityIds.length, status }, "Bulk updating status");
     return this.httpClient.post(config.updateOperation, body, context);
@@ -222,19 +228,34 @@ export class MsAdsService {
       };
     });
 
+    await this.rateLimiter.consume("msads:write", 3);
     const body = { [config.pluralName]: updatedEntities };
     this.logger.info({ entityType, count: adjustments.length }, "Adjusting bids");
     return this.httpClient.post(config.updateOperation, body, context);
   }
 
   /**
-   * Generic POST for operations not covered by CRUD (ad extensions, criterions, etc.)
+   * Generic POST for read operations not covered by standard CRUD.
+   */
+  async executeReadOperation(
+    path: string,
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume("msads:read");
+    this.logger.debug({ path }, "Executing custom read operation");
+    return this.httpClient.post(path, data, context);
+  }
+
+  /**
+   * Generic POST for write operations not covered by CRUD (ad extensions, criterions, etc.)
    */
   async executeOperation(
     path: string,
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
+    await this.rateLimiter.consume("msads:write", 3);
     this.logger.debug({ path }, "Executing custom operation");
     return this.httpClient.post(path, data, context);
   }

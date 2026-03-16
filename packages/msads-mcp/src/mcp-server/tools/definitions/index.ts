@@ -20,6 +20,7 @@ import { manageCriterionsTool } from "./manage-criterions.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { importFromGoogleTool } from "./import-from-google.tool.js";
+import { searchTargetingTool } from "./search-targeting.tool.js";
 
 export const productionTools = [
   listEntitiesTool,
@@ -41,4 +42,5 @@ export const productionTools = [
   getAdPreviewTool,
   validateEntityTool,
   importFromGoogleTool,
+  searchTargetingTool,
 ];

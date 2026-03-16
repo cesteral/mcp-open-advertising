@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { productionTools } from "../../src/mcp-server/tools/definitions/index.js";
 
 describe("msads-mcp tool definitions coverage", () => {
-  it("exports 19 production tools", () => {
-    expect(productionTools).toHaveLength(19);
+  it("exports 20 production tools", () => {
+    expect(productionTools).toHaveLength(20);
   });
 
   it("all tools have required fields", () => {
@@ -50,6 +50,7 @@ describe("msads-mcp tool definitions coverage", () => {
       "msads_download_report",
       "msads_get_ad_preview",
       "msads_validate_entity",
+      "msads_search_targeting",
     ];
 
     for (const name of readOnlyTools) {
