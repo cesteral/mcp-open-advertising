@@ -179,7 +179,11 @@ export class PinterestReportingService {
       );
     }
 
-    const csvText = await response.text();
+    let csvText = await response.text();
+    // Strip BOM if present
+    if (csvText.charCodeAt(0) === 0xFEFF) {
+      csvText = csvText.slice(1);
+    }
     const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
 
     if (lines.length === 0) {

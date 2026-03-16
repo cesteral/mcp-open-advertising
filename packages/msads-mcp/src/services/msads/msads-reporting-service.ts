@@ -195,6 +195,10 @@ export class MsAdsReportingService {
   }
 
   private parseCsv(text: string, maxRows?: number): { headers: string[]; rows: string[][] } {
+    // Strip BOM if present
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
     // Microsoft Ads CSV reports may have metadata lines before the header
     const lines = text.split("\n").filter((line) => line.trim().length > 0);
 

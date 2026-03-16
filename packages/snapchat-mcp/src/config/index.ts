@@ -46,6 +46,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Reporting poll configuration
   snapchatReportPollIntervalMs: z.number().default(2_000),
   snapchatReportMaxPollAttempts: z.number().default(30),
+
+  // Video upload poll configuration
+  snapchatVideoUploadPollIntervalMs: z.number().default(20_000),
+  snapchatVideoUploadMaxPollAttempts: z.number().default(30),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -84,6 +88,14 @@ export function parseConfig(): AppConfig {
       : undefined,
     snapchatReportMaxPollAttempts: process.env.SNAPCHAT_REPORT_MAX_POLL_ATTEMPTS
       ? Number(process.env.SNAPCHAT_REPORT_MAX_POLL_ATTEMPTS)
+      : undefined,
+
+    // Video upload poll configuration
+    snapchatVideoUploadPollIntervalMs: process.env.SNAPCHAT_VIDEO_UPLOAD_POLL_INTERVAL_MS
+      ? Number(process.env.SNAPCHAT_VIDEO_UPLOAD_POLL_INTERVAL_MS)
+      : undefined,
+    snapchatVideoUploadMaxPollAttempts: process.env.SNAPCHAT_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS
+      ? Number(process.env.SNAPCHAT_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS)
       : undefined,
   };
 

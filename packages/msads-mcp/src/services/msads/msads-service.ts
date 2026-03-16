@@ -178,23 +178,33 @@ export class MsAdsService {
   }
 
   /**
-   * Bulk update entity status — updates Status field on each entity.
+   * Bulk update entity status — per-entity calls for granular success/failure reporting.
    */
   async bulkUpdateStatus(
     entityType: MsAdsEntityType,
     entityIds: string[],
     status: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const config = getEntityConfig(entityType);
-    const items = entityIds.map((id) => ({
-      Id: Number(id),
-      Status: status,
-    }));
-    await this.rateLimiter.consume("msads:write", 3);
-    const body = { [config.pluralName]: items };
+
     this.logger.info({ entityType, count: entityIds.length, status }, "Bulk updating status");
-    return this.httpClient.post(config.updateOperation, body, context);
+
+    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+      await this.rateLimiter.consume("msads:write", 3);
+      const body = {
+        [config.pluralName]: [{ Id: Number(entityId), Status: status }],
+      };
+      return this.httpClient.post(config.updateOperation, body, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: entityIds[i],
+        success: r.success,
+        error: r.error,
+      })),
+    };
   }
 
   /**
@@ -258,5 +268,36 @@ export class MsAdsService {
     await this.rateLimiter.consume("msads:write", 3);
     this.logger.debug({ path }, "Executing custom operation");
     return this.httpClient.post(path, data, context);
+  }
+
+  // ─── Internal Helpers ───────────────────────────────────────────
+
+  private async executeBulk<T>(
+    items: T[],
+    operation: (item: T) => Promise<unknown>
+  ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
+    const CONCURRENCY = 5;
+    const results: Array<{ success: boolean; entity?: unknown; error?: string }> = new Array(items.length);
+
+    for (let i = 0; i < items.length; i += CONCURRENCY) {
+      const batch = items.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.allSettled(
+        batch.map((item) => operation(item))
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        if (result.status === "fulfilled") {
+          results[i + j] = { success: true, entity: result.value };
+        } else {
+          results[i + j] = {
+            success: false,
+            error: result.reason?.message ?? String(result.reason),
+          };
+        }
+      }
+    }
+
+    return results;
   }
 }

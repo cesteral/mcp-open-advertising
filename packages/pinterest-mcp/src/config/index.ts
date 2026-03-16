@@ -45,6 +45,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Reporting poll configuration
   pinterestReportPollIntervalMs: z.number().default(2_000),
   pinterestReportMaxPollAttempts: z.number().default(30),
+
+  // Video upload poll configuration
+  pinterestVideoUploadPollIntervalMs: z.number().default(20_000),
+  pinterestVideoUploadMaxPollAttempts: z.number().default(30),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -82,6 +86,14 @@ export function parseConfig(): AppConfig {
       : undefined,
     pinterestReportMaxPollAttempts: process.env.PINTEREST_REPORT_MAX_POLL_ATTEMPTS
       ? Number(process.env.PINTEREST_REPORT_MAX_POLL_ATTEMPTS)
+      : undefined,
+
+    // Video upload poll configuration
+    pinterestVideoUploadPollIntervalMs: process.env.PINTEREST_VIDEO_UPLOAD_POLL_INTERVAL_MS
+      ? Number(process.env.PINTEREST_VIDEO_UPLOAD_POLL_INTERVAL_MS)
+      : undefined,
+    pinterestVideoUploadMaxPollAttempts: process.env.PINTEREST_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS
+      ? Number(process.env.PINTEREST_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS)
       : undefined,
   };
 

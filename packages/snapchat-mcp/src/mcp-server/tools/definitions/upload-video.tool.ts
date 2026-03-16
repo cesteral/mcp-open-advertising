@@ -7,6 +7,7 @@ import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import type { SnapchatMediaUploadResponse, SnapchatMediaGetResponse } from "../utils/media-types.js";
+import { mcpConfig } from "../../../config/index.js";
 
 const TOOL_NAME = "snapchat_upload_video";
 const TOOL_TITLE = "Upload Video to Snapchat Ads";
@@ -77,9 +78,9 @@ export async function uploadVideoLogic(
     throw new Error("Snapchat video upload failed: no media id returned");
   }
 
-  // Poll for READY status (max 10 min, 20s intervals)
-  const maxAttempts = 30;
-  const pollIntervalMs = 20_000;
+  // Poll for READY status
+  const maxAttempts = mcpConfig.snapchatVideoUploadMaxPollAttempts;
+  const pollIntervalMs = mcpConfig.snapchatVideoUploadPollIntervalMs;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);

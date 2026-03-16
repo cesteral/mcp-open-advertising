@@ -133,18 +133,42 @@ describe("MsAdsService", () => {
   });
 
   describe("bulkUpdateStatus", () => {
-    it("updates status for multiple entities", async () => {
-      await service.bulkUpdateStatus("campaign", ["1", "2"], "Paused");
+    it("updates status for multiple entities with per-entity calls", async () => {
+      const result = await service.bulkUpdateStatus("campaign", ["1", "2"], "Paused");
+
+      // Should make one call per entity
+      expect(httpClient.post).toHaveBeenCalledTimes(2);
       expect(httpClient.post).toHaveBeenCalledWith(
         "/Campaigns/Update",
-        {
-          Campaigns: [
-            { Id: 1, Status: "Paused" },
-            { Id: 2, Status: "Paused" },
-          ],
-        },
+        { Campaigns: [{ Id: 1, Status: "Paused" }] },
         undefined
       );
+      expect(httpClient.post).toHaveBeenCalledWith(
+        "/Campaigns/Update",
+        { Campaigns: [{ Id: 2, Status: "Paused" }] },
+        undefined
+      );
+
+      // Should return per-entity results
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0]).toEqual({ entityId: "1", success: true });
+      expect(result.results[1]).toEqual({ entityId: "2", success: true });
+    });
+
+    it("reports per-entity failures without failing the entire batch", async () => {
+      (httpClient.post as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({}) // entity "1" succeeds
+        .mockRejectedValueOnce(new Error("Entity 2 not found")); // entity "2" fails
+
+      const result = await service.bulkUpdateStatus("campaign", ["1", "2"], "Paused");
+
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0]).toEqual({ entityId: "1", success: true });
+      expect(result.results[1]).toEqual({
+        entityId: "2",
+        success: false,
+        error: "Entity 2 not found",
+      });
     });
   });
 

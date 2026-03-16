@@ -29,13 +29,20 @@ export const BulkUpdateStatusInputSchema = z
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
-    result: z.record(z.any()),
+    results: z.array(
+      z.object({
+        entityId: z.string(),
+        success: z.boolean(),
+        error: z.string().optional(),
+      })
+    ),
     entityType: z.string(),
-    count: z.number(),
+    successCount: z.number(),
+    failureCount: z.number(),
     status: z.string(),
     timestamp: z.string().datetime(),
   })
-  .describe("Bulk status update result");
+  .describe("Bulk status update result with per-entity outcomes");
 
 type BulkUpdateStatusInput = z.infer<typeof BulkUpdateStatusInputSchema>;
 type BulkUpdateStatusOutput = z.infer<typeof BulkUpdateStatusOutputSchema>;
@@ -47,27 +54,37 @@ export async function bulkUpdateStatusLogic(
 ): Promise<BulkUpdateStatusOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
 
-  const result = (await msadsService.bulkUpdateStatus(
+  const { results } = await msadsService.bulkUpdateStatus(
     input.entityType as MsAdsEntityType,
     input.entityIds,
     input.status,
     context
-  )) as Record<string, unknown>;
+  );
+
+  const successCount = results.filter((r) => r.success).length;
+  const failureCount = results.length - successCount;
 
   return {
-    result,
+    results,
     entityType: input.entityType,
-    count: input.entityIds.length,
+    successCount,
+    failureCount,
     status: input.status,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+  const summary = `Bulk status update: ${result.successCount} succeeded, ${result.failureCount} failed (target status: ${result.status})`;
+
+  const details = result.results
+    .map((r) => `  ${r.entityId}: ${r.success ? "OK" : `FAILED — ${r.error}`}`)
+    .join("\n");
+
   return [
     {
       type: "text" as const,
-      text: `Updated ${result.count} ${result.entityType} entities to status: ${result.status}\n\nResult:\n${JSON.stringify(result.result, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}\n\nEntity type: ${result.entityType}\n\nResults:\n${details}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

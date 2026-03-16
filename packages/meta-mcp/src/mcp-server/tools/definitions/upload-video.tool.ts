@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
+import { mcpConfig } from "../../../config/index.js";
 
 const TOOL_NAME = "meta_upload_video";
 const TOOL_TITLE = "Upload Video to Meta Ads";
@@ -88,9 +89,9 @@ export async function uploadVideoLogic(
     throw new Error("Meta video upload failed: no video ID returned");
   }
 
-  // Poll for processing completion (max 5 min, 15s intervals)
-  const maxAttempts = 20;
-  const pollIntervalMs = 15_000;
+  // Poll for processing completion
+  const maxAttempts = mcpConfig.metaVideoUploadMaxPollAttempts;
+  const pollIntervalMs = mcpConfig.metaVideoUploadPollIntervalMs;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);

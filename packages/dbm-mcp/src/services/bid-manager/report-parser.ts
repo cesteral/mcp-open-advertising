@@ -76,6 +76,10 @@ export function csvToJson(
   delimiter: string = ",",
   nullableFields: string[] = []
 ): Record<string, string>[] {
+  // Strip BOM if present
+  if (csv.charCodeAt(0) === 0xFEFF) {
+    csv = csv.slice(1);
+  }
   const lines = csv.replace(/\r\n/g, "\n").split("\n").filter((line) => line.trim() !== "");
   if (lines.length === 0) return [];
 

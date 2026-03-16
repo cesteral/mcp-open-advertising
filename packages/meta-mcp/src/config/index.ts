@@ -36,6 +36,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Stdio fallback: Meta access token from env vars
   metaAccessToken: z.string().optional(),
 
+  // Video upload poll configuration
+  metaVideoUploadPollIntervalMs: z.number().default(15_000),
+  metaVideoUploadMaxPollAttempts: z.number().default(20),
+
   // Optional: for token debug endpoint
   metaAppId: z.string().optional(),
   metaAppSecret: z.string().optional(),
@@ -59,6 +63,14 @@ export function parseConfig(): AppConfig {
     metaApiVersion: process.env.META_API_VERSION,
     metaRateLimitPerMinute: process.env.META_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.META_RATE_LIMIT_PER_MINUTE)
+      : undefined,
+
+    // Video upload poll configuration
+    metaVideoUploadPollIntervalMs: process.env.META_VIDEO_UPLOAD_POLL_INTERVAL_MS
+      ? Number(process.env.META_VIDEO_UPLOAD_POLL_INTERVAL_MS)
+      : undefined,
+    metaVideoUploadMaxPollAttempts: process.env.META_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS
+      ? Number(process.env.META_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS)
       : undefined,
 
     // Stdio fallback credentials
