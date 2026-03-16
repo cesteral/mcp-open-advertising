@@ -36,92 +36,107 @@ export interface TikTokEntityConfig {
   supportsDuplicate?: boolean;
 }
 
-const ENTITY_CONFIGS: Record<TikTokEntityType, TikTokEntityConfig> = {
-  campaign: {
-    listPath: "/open_api/v1.3/campaign/get/",
-    createPath: "/open_api/v1.3/campaign/create/",
-    updatePath: "/open_api/v1.3/campaign/update/",
-    statusUpdatePath: "/open_api/v1.3/campaign/status/update/",
-    deletePath: "/open_api/v1.3/campaign/delete/",
-    idField: "campaign_id",
-    idsField: "campaign_ids",
-    displayName: "Campaign",
-    defaultFields: [
-      "campaign_id",
-      "campaign_name",
-      "status",
-      "objective_type",
-      "budget",
-      "budget_mode",
-      "created_time",
-      "modify_time",
-    ],
-    supportsDuplicate: true,
-  },
-  adGroup: {
-    listPath: "/open_api/v1.3/adgroup/get/",
-    createPath: "/open_api/v1.3/adgroup/create/",
-    updatePath: "/open_api/v1.3/adgroup/update/",
-    statusUpdatePath: "/open_api/v1.3/adgroup/status/update/",
-    deletePath: "/open_api/v1.3/adgroup/delete/",
-    idField: "adgroup_id",
-    idsField: "adgroup_ids",
-    displayName: "Ad Group",
-    defaultFields: [
-      "adgroup_id",
-      "adgroup_name",
-      "campaign_id",
-      "status",
-      "budget",
-      "budget_mode",
-      "schedule_type",
-      "created_time",
-    ],
-    supportsDuplicate: true,
-  },
-  ad: {
-    listPath: "/open_api/v1.3/ad/get/",
-    createPath: "/open_api/v1.3/ad/create/",
-    updatePath: "/open_api/v1.3/ad/update/",
-    statusUpdatePath: "/open_api/v1.3/ad/status/update/",
-    deletePath: "/open_api/v1.3/ad/delete/",
-    idField: "ad_id",
-    idsField: "ad_ids",
-    displayName: "Ad",
-    defaultFields: [
-      "ad_id",
-      "adgroup_id",
-      "ad_name",
-      "status",
-      "creative_type",
-      "image_ids",
-      "video_id",
-      "created_time",
-    ],
-    supportsDuplicate: true,
-  },
-  creative: {
-    listPath: "/open_api/v1.3/creative/adcreative/get/",
-    createPath: "/open_api/v1.3/creative/adcreative/create/",
-    updatePath: "/open_api/v1.3/creative/adcreative/update/",
-    statusUpdatePath: "/open_api/v1.3/creative/adcreative/update/",
-    deletePath: "/open_api/v1.3/creative/adcreative/delete/",
-    idField: "creative_id",
-    idsField: "creative_ids",
-    displayName: "Creative",
-    defaultFields: [
-      "creative_id",
-      "advertiser_id",
-      "display_name",
-      "image_ids",
-      "video_id",
-      "created_time",
-    ],
-  },
-};
+/** Module-level API version used for building entity config paths. */
+let apiVersion = "v1.3";
+
+/** Set the API version used for entity config paths. Call before first tool invocation. */
+export function setApiVersion(version: string): void {
+  apiVersion = version;
+}
+
+function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
+  const v = apiVersion;
+  return {
+    campaign: {
+      listPath: `/open_api/${v}/campaign/get/`,
+      createPath: `/open_api/${v}/campaign/create/`,
+      updatePath: `/open_api/${v}/campaign/update/`,
+      statusUpdatePath: `/open_api/${v}/campaign/status/update/`,
+      deletePath: `/open_api/${v}/campaign/delete/`,
+      idField: "campaign_id",
+      idsField: "campaign_ids",
+      displayName: "Campaign",
+      defaultFields: [
+        "campaign_id",
+        "campaign_name",
+        "status",
+        "objective_type",
+        "budget",
+        "budget_mode",
+        "created_time",
+        "modify_time",
+      ],
+      supportsDuplicate: true,
+    },
+    adGroup: {
+      listPath: `/open_api/${v}/adgroup/get/`,
+      createPath: `/open_api/${v}/adgroup/create/`,
+      updatePath: `/open_api/${v}/adgroup/update/`,
+      statusUpdatePath: `/open_api/${v}/adgroup/status/update/`,
+      deletePath: `/open_api/${v}/adgroup/delete/`,
+      idField: "adgroup_id",
+      idsField: "adgroup_ids",
+      displayName: "Ad Group",
+      defaultFields: [
+        "adgroup_id",
+        "adgroup_name",
+        "campaign_id",
+        "status",
+        "budget",
+        "budget_mode",
+        "schedule_type",
+        "created_time",
+      ],
+      supportsDuplicate: true,
+    },
+    ad: {
+      listPath: `/open_api/${v}/ad/get/`,
+      createPath: `/open_api/${v}/ad/create/`,
+      updatePath: `/open_api/${v}/ad/update/`,
+      statusUpdatePath: `/open_api/${v}/ad/status/update/`,
+      deletePath: `/open_api/${v}/ad/delete/`,
+      idField: "ad_id",
+      idsField: "ad_ids",
+      displayName: "Ad",
+      defaultFields: [
+        "ad_id",
+        "adgroup_id",
+        "ad_name",
+        "status",
+        "creative_type",
+        "image_ids",
+        "video_id",
+        "created_time",
+      ],
+      supportsDuplicate: true,
+    },
+    creative: {
+      listPath: `/open_api/${v}/creative/adcreative/get/`,
+      createPath: `/open_api/${v}/creative/adcreative/create/`,
+      updatePath: `/open_api/${v}/creative/adcreative/update/`,
+      statusUpdatePath: `/open_api/${v}/creative/adcreative/update/`,
+      deletePath: `/open_api/${v}/creative/adcreative/delete/`,
+      idField: "creative_id",
+      idsField: "creative_ids",
+      displayName: "Creative",
+      defaultFields: [
+        "creative_id",
+        "advertiser_id",
+        "display_name",
+        "image_ids",
+        "video_id",
+        "created_time",
+      ],
+    },
+  };
+}
+
+/** Supported entity type keys (stable — not version-dependent). */
+const ENTITY_TYPE_KEYS: TikTokEntityType[] = ["campaign", "adGroup", "ad", "creative"];
 
 export function getEntityConfig(entityType: TikTokEntityType): TikTokEntityConfig {
-  const config = ENTITY_CONFIGS[entityType];
+  const configs = buildEntityConfigs();
+  const config = configs[entityType];
   if (!config) {
     throw new Error(`Unknown TikTok entity type: ${entityType}`);
   }
@@ -129,7 +144,7 @@ export function getEntityConfig(entityType: TikTokEntityType): TikTokEntityConfi
 }
 
 export function getSupportedEntityTypes(): TikTokEntityType[] {
-  return Object.keys(ENTITY_CONFIGS) as TikTokEntityType[];
+  return ENTITY_TYPE_KEYS;
 }
 
 export function getEntityTypeEnum(): [string, ...string[]] {
@@ -138,7 +153,8 @@ export function getEntityTypeEnum(): [string, ...string[]] {
 }
 
 export function getDuplicateSupportedEntityTypes(): TikTokEntityType[] {
-  return (Object.entries(ENTITY_CONFIGS) as [TikTokEntityType, TikTokEntityConfig][])
+  const configs = buildEntityConfigs();
+  return (Object.entries(configs) as [TikTokEntityType, TikTokEntityConfig][])
     .filter(([, config]) => config.supportsDuplicate)
     .map(([type]) => type);
 }

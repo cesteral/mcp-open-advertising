@@ -89,8 +89,17 @@ export class TikTokHttpClient {
     private readonly authAdapter: TikTokAuthAdapter,
     private readonly advertiserId: string,
     private readonly baseUrl: string,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly apiVersion: string = "v1.3"
   ) {}
+
+  /**
+   * Build a versioned API path: `/open_api/{version}/{suffix}`.
+   * Use this instead of hardcoding the version in tool handlers.
+   */
+  versionedPath(suffix: string): string {
+    return `/open_api/${this.apiVersion}/${suffix}`;
+  }
 
   /**
    * Make an authenticated GET request.

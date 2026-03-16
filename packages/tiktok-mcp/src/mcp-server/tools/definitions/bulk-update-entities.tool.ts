@@ -27,7 +27,7 @@ export const BulkUpdateEntitiesInputSchema = z
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID"),
+      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
     items: z
       .array(
         z.object({

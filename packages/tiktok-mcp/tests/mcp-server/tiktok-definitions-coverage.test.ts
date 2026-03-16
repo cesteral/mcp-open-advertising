@@ -40,6 +40,7 @@ const tiktokService = {
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
   client: {
+    versionedPath: (suffix: string) => `/open_api/v1.3/${suffix}`,
     postMultipart: vi.fn(async (path: string) => {
       if (path.includes("image")) {
         return { image_id: "img-test-123", image_url: "https://example.com/img.jpg", size: 1000 };

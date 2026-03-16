@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
+import { mcpConfig } from "../../../config/index.js"; // poll config only
 
 const TOOL_NAME = "tiktok_upload_video";
 const TOOL_TITLE = "Upload Video to TikTok Ads";
@@ -23,7 +24,7 @@ Polls until binding is complete (up to 10 minutes).
 **Usage:** The returned videoId is used in ad creative payloads.`;
 
 export const UploadVideoInputSchema = z.object({
-  advertiserId: z.string().describe("TikTok Advertiser ID"),
+  advertiserId: z.string().describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
   mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
   videoName: z.string().optional().describe("Optional name for the video in the library"),
 }).describe("Parameters for uploading a video to TikTok");
@@ -75,7 +76,7 @@ export async function uploadVideoLogic(
   if (input.videoName) fields.video_name = input.videoName;
 
   const uploadResult = await tiktokService.client.postMultipart(
-    "/open_api/v1.3/file/video/ad/upload/",
+    tiktokService.client.versionedPath("file/video/ad/upload/"),
     fields,
     "video_file",
     buffer,
@@ -90,14 +91,14 @@ export async function uploadVideoLogic(
   }
 
   // Poll for bind_success status (max 10 min, 20s intervals)
-  const maxAttempts = 30;
-  const pollIntervalMs = 20_000;
+  const maxAttempts = mcpConfig.tiktokVideoUploadMaxPollAttempts;
+  const pollIntervalMs = mcpConfig.tiktokVideoUploadPollIntervalMs;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);
 
     const statusResult = await tiktokService.client.post(
-      "/open_api/v1.3/file/video/ad/info/",
+      tiktokService.client.versionedPath("file/video/ad/info/"),
       { video_ids: [videoId] },
       context
     ) as TikTokVideoInfoResponse;

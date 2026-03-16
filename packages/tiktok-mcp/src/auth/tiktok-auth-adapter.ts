@@ -10,7 +10,7 @@
  *    auto-refresh access tokens (24h expiry). Same caching + mutex pattern
  *    as TTD's TtdApiTokenAuthAdapter.
  *
- * Validates tokens by calling GET /open_api/v1.3/user/info/.
+ * Validates tokens by calling GET /open_api/{version}/user/info/.
  * Token is passed via Authorization: Bearer <token> header.
  */
 
@@ -41,7 +41,7 @@ export interface TikTokAuthAdapter {
 
 /**
  * Simple access token adapter — holds a pre-generated TikTok access token.
- * Validates the token on first use by calling GET /open_api/v1.3/user/info/.
+ * Validates the token on first use by calling GET /open_api/{version}/user/info/.
  */
 export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
   private validated = false;
@@ -50,7 +50,8 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
   constructor(
     private readonly accessToken: string,
     private readonly _advertiserId: string,
-    private readonly baseUrl: string = "https://business-api.tiktok.com"
+    private readonly baseUrl: string = "https://business-api.tiktok.com",
+    private readonly apiVersion: string = "v1.3"
   ) {}
 
   get userId(): string {
@@ -66,7 +67,7 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
   }
 
   /**
-   * Validate the access token by calling GET /open_api/v1.3/user/info/.
+   * Validate the access token by calling GET /open_api/{version}/user/info/.
    * Must be called before the adapter is used.
    */
   async validate(): Promise<void> {
@@ -75,7 +76,7 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
     }
 
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/user/info/`,
+      `${this.baseUrl}/open_api/${this.apiVersion}/user/info/`,
       10_000,
       undefined,
       {
@@ -149,7 +150,8 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
   constructor(
     private readonly credentials: TikTokRefreshCredentials,
     private readonly _advertiserId: string,
-    private readonly baseUrl: string = "https://business-api.tiktok.com"
+    private readonly baseUrl: string = "https://business-api.tiktok.com",
+    private readonly apiVersion: string = "v1.3"
   ) {
     this.currentRefreshToken = credentials.refreshToken;
   }
@@ -168,7 +170,7 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
 
     // Validate the token against user info endpoint
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/user/info/`,
+      `${this.baseUrl}/open_api/${this.apiVersion}/user/info/`,
       10_000,
       undefined,
       {
@@ -216,7 +218,7 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
 
   private async refreshAccessToken(): Promise<string> {
     const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/v1.3/oauth2/access_token/`,
+      `${this.baseUrl}/open_api/${this.apiVersion}/oauth2/access_token/`,
       10_000,
       undefined,
       {

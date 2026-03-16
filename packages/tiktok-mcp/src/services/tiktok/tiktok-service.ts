@@ -39,7 +39,8 @@ export class TikTokService {
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: TikTokHttpClient,
-    private readonly logger: Logger
+    private readonly logger: Logger,
+    private readonly apiVersion: string = "v1.3"
   ) {}
 
   /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
@@ -170,7 +171,7 @@ export class TikTokService {
   async listAdvertisers(context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`tiktok:default`);
 
-    return this.httpClient.get("/open_api/v1.3/advertiser/info/", {}, context);
+    return this.httpClient.get(`/open_api/${this.apiVersion}/advertiser/info/`, {}, context);
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────
@@ -274,21 +275,18 @@ export class TikTokService {
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     this.logger.debug({ entityType, count: entityIds.length, operationStatus }, "Bulk status update");
-    try {
-      await this.updateEntityStatus(entityType, entityIds, operationStatus, context);
-      return {
-        results: entityIds.map((entityId) => ({ entityId, success: true })),
-      };
-    } catch (error) {
-      this.logger.debug({ entityType, error }, "Bulk status update failed for all entities");
-      return {
-        results: entityIds.map((entityId) => ({
-          entityId,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        })),
-      };
-    }
+
+    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+      return this.updateEntityStatus(entityType, [entityId], operationStatus, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: entityIds[i],
+        success: r.success,
+        error: r.error,
+      })),
+    };
   }
 
   // ─── Targeting ───────────────────────────────────────────────────
@@ -310,7 +308,7 @@ export class TikTokService {
       params.keyword = query;
     }
 
-    return this.httpClient.get("/open_api/v1.3/search/targeting/", params, context);
+    return this.httpClient.get(`/open_api/${this.apiVersion}/search/targeting/`, params, context);
   }
 
   async getTargetingOptions(
@@ -324,7 +322,7 @@ export class TikTokService {
       params.objective_type = targetingType;
     }
 
-    return this.httpClient.get("/open_api/v1.3/targeting/list/", params, context);
+    return this.httpClient.get(`/open_api/${this.apiVersion}/targeting/list/`, params, context);
   }
 
   // ─── Audience Estimate ──────────────────────────────────────────
@@ -335,7 +333,7 @@ export class TikTokService {
   ): Promise<unknown> {
     await this.rateLimiter.consume(`tiktok:default`);
 
-    return this.httpClient.post("/open_api/v1.3/audience/estimate/", targetingConfig, context);
+    return this.httpClient.post(`/open_api/${this.apiVersion}/audience/estimate/`, targetingConfig, context);
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────
@@ -355,7 +353,7 @@ export class TikTokService {
       params.ad_format = adFormat;
     }
 
-    return this.httpClient.get("/open_api/v1.3/ad/preview/", params, context);
+    return this.httpClient.get(`/open_api/${this.apiVersion}/ad/preview/`, params, context);
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────

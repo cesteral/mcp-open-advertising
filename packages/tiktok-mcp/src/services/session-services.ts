@@ -9,6 +9,7 @@ export { SessionServiceStore } from "@cesteral/shared";
 import { TikTokHttpClient } from "./tiktok/tiktok-http-client.js";
 import { TikTokService } from "./tiktok/tiktok-service.js";
 import { TikTokReportingService } from "./tiktok/tiktok-reporting-service.js";
+import { setApiVersion } from "../mcp-server/tools/utils/entity-mapping.js";
 
 export interface SessionServices {
   tiktokService: TikTokService;
@@ -19,6 +20,7 @@ export interface TikTokSessionConfig {
   baseUrl: string;
   reportPollIntervalMs: number;
   reportMaxPollAttempts: number;
+  apiVersion: string;
 }
 
 export function createSessionServices(
@@ -27,19 +29,24 @@ export function createSessionServices(
   logger: Logger,
   rateLimiter: RateLimiter
 ): SessionServices {
+  // Ensure entity-mapping paths use the configured API version
+  setApiVersion(config.apiVersion);
+
   const httpClient = new TikTokHttpClient(
     authAdapter,
     authAdapter.advertiserId,
     config.baseUrl,
-    logger
+    logger,
+    config.apiVersion
   );
-  const tiktokService = new TikTokService(rateLimiter, httpClient, logger);
+  const tiktokService = new TikTokService(rateLimiter, httpClient, logger, config.apiVersion);
   const tiktokReportingService = new TikTokReportingService(
     rateLimiter,
     httpClient,
     logger,
     config.reportPollIntervalMs,
-    config.reportMaxPollAttempts
+    config.reportMaxPollAttempts,
+    config.apiVersion
   );
 
   return {

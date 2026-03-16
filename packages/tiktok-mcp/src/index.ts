@@ -39,7 +39,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   const authAdapter = new TikTokAccessTokenAdapter(
     accessToken,
     advertiserId,
-    mcpConfig.tiktokApiBaseUrl
+    mcpConfig.tiktokApiBaseUrl,
+    mcpConfig.tiktokApiVersion
   );
 
   // Validate token at startup to fail fast on invalid credentials
@@ -51,6 +52,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
       baseUrl: mcpConfig.tiktokApiBaseUrl,
       reportPollIntervalMs: mcpConfig.tiktokReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.tiktokReportMaxPollAttempts,
+      apiVersion: mcpConfig.tiktokApiVersion,
     },
     logger,
     rateLimiter

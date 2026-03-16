@@ -105,6 +105,23 @@ Use \`tiktok_get_report\` or \`tiktok_get_report_breakdowns\` — these tools ha
 | shares | Shares of ads |
 | engaged_view | Engaged views (6s+ or interaction) |
 
+## Report Type Details
+
+| Report Type | Required Dimensions | Valid Metrics | Notes |
+|-------------|-------------------|---------------|-------|
+| BASIC | Any entity + time dims | All delivery, video, conversion, engagement | Default; most flexible |
+| AUDIENCE | Must include audience dim (age, gender, country_code, etc.) | Delivery + basic engagement | Cannot combine with video completion metrics |
+| PLAYABLE_MATERIAL | Must include ad_id | Playable-specific + delivery | Only for playable ad formats |
+
+## Dimension/Metric Compatibility
+
+- **Time dimensions** (stat_time_day, stat_time_hour) are compatible with all metric types
+- **Entity dimensions** (campaign_id, adgroup_id, ad_id) are compatible with all metric types
+- **Audience dimensions** (gender, age, country_code, etc.) require report_type = "AUDIENCE"
+- **Playable dimensions** require report_type = "PLAYABLE_MATERIAL"
+- Mixing audience dimensions with non-audience report type returns an error
+- Maximum 3 dimensions per report (TikTok API limit)
+
 ## Example Report Configurations
 
 ### Campaign Daily Delivery Report

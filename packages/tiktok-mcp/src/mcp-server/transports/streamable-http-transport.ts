@@ -34,7 +34,7 @@ function buildPlatformConfig(
   return {
     authStrategy:
       config.mcpAuthMode === "tiktok-bearer"
-        ? new TikTokBearerAuthStrategy(config.tiktokApiBaseUrl, logger)
+        ? new TikTokBearerAuthStrategy(config.tiktokApiBaseUrl, logger, config.tiktokApiVersion)
         : createAuthStrategy(config.mcpAuthMode as AuthMode, {
             jwtSecret: config.mcpAuthSecretKey,
             logger,
@@ -62,7 +62,7 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts },
+          { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts, apiVersion: cfg.tiktokApiVersion },
           log,
           rateLimiter
         );
@@ -81,10 +81,11 @@ function buildPlatformConfig(
           const envAdapter = new TikTokRefreshTokenAdapter(
             { appId: cfg.tiktokAppId, appSecret: cfg.tiktokAppSecret, refreshToken: cfg.tiktokRefreshToken },
             tiktokAdvertiserId,
-            cfg.tiktokApiBaseUrl
+            cfg.tiktokApiBaseUrl,
+            cfg.tiktokApiVersion
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts }, log, rateLimiter);
+          const services = createSessionServices(envAdapter, { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts, apiVersion: cfg.tiktokApiVersion }, log, rateLimiter);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -96,13 +97,14 @@ function buildPlatformConfig(
           const envAdapter = new TikTokAccessTokenAdapter(
             tiktokToken,
             tiktokAdvertiserId,
-            cfg.tiktokApiBaseUrl
+            cfg.tiktokApiBaseUrl,
+            cfg.tiktokApiVersion
           );
           await envAdapter.validate();
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            { baseUrl: cfgFallback.tiktokApiBaseUrl, reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts },
+            { baseUrl: cfgFallback.tiktokApiBaseUrl, reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts, apiVersion: cfgFallback.tiktokApiVersion },
             log,
             rateLimiter
           );

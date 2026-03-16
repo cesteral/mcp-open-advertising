@@ -24,7 +24,7 @@ export const SubmitReportInputSchema = z
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID"),
+      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
     reportType: z
       .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
       .optional()

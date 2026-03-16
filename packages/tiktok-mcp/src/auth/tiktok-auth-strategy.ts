@@ -33,7 +33,8 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
 
   constructor(
     private readonly baseUrl: string,
-    logger?: Logger
+    logger?: Logger,
+    private readonly apiVersion: string = "v1.3"
   ) {
     super(logger);
   }
@@ -45,7 +46,7 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
     if (!refreshCreds) return null;
 
     const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
-    const adapter = new TikTokRefreshTokenAdapter(refreshCreds, advertiserId, this.baseUrl);
+    const adapter = new TikTokRefreshTokenAdapter(refreshCreds, advertiserId, this.baseUrl, this.apiVersion);
     await adapter.validate();
 
     return {
@@ -63,7 +64,7 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
   ): Promise<BearerAdapterResult> {
     const token = parseTikTokTokenFromHeaders(headers);
     const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
-    const adapter = new TikTokAccessTokenAdapter(token, advertiserId, this.baseUrl);
+    const adapter = new TikTokAccessTokenAdapter(token, advertiserId, this.baseUrl, this.apiVersion);
     await adapter.validate();
 
     return {

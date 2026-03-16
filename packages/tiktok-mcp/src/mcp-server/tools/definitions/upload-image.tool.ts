@@ -22,7 +22,7 @@ Returns the imageId for use in ad creatives.
 **Usage:** The returned imageId is used in ad creative payloads.`;
 
 export const UploadImageInputSchema = z.object({
-  advertiserId: z.string().describe("TikTok Advertiser ID"),
+  advertiserId: z.string().describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
   mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
   filename: z.string().optional().describe("Override filename (otherwise derived from URL)"),
 }).describe("Parameters for uploading an image to TikTok");
@@ -59,7 +59,7 @@ export async function uploadImageLogic(
   const effectiveFilename = input.filename ?? filename;
 
   const result = await tiktokService.client.postMultipart(
-    "/open_api/v1.3/file/image/ad/upload/",
+    tiktokService.client.versionedPath("file/image/ad/upload/"),
     {},
     "image_file",
     buffer,

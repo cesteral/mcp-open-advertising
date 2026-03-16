@@ -45,6 +45,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Reporting poll configuration
   tiktokReportPollIntervalMs: z.number().default(2_000),
   tiktokReportMaxPollAttempts: z.number().default(30),
+
+  // Video upload poll configuration
+  tiktokVideoUploadPollIntervalMs: z.number().default(20_000),
+  tiktokVideoUploadMaxPollAttempts: z.number().default(30),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
@@ -82,6 +86,14 @@ export function parseConfig(): AppConfig {
       : undefined,
     tiktokReportMaxPollAttempts: process.env.TIKTOK_REPORT_MAX_POLL_ATTEMPTS
       ? Number(process.env.TIKTOK_REPORT_MAX_POLL_ATTEMPTS)
+      : undefined,
+
+    // Video upload poll configuration
+    tiktokVideoUploadPollIntervalMs: process.env.TIKTOK_VIDEO_UPLOAD_POLL_INTERVAL_MS
+      ? Number(process.env.TIKTOK_VIDEO_UPLOAD_POLL_INTERVAL_MS)
+      : undefined,
+    tiktokVideoUploadMaxPollAttempts: process.env.TIKTOK_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS
+      ? Number(process.env.TIKTOK_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS)
       : undefined,
   };
 

@@ -47,7 +47,8 @@ export class TikTokReportingService {
     private readonly httpClient: TikTokHttpClient,
     private readonly logger: Logger,
     private readonly pollIntervalMs: number = 2_000,
-    private readonly maxPollAttempts: number = 30
+    private readonly maxPollAttempts: number = 30,
+    private readonly apiVersion: string = "v1.3"
   ) {}
 
   /**
@@ -61,7 +62,7 @@ export class TikTokReportingService {
     await this.rateLimiter.consume(`tiktok:reporting`);
 
     const result = (await this.httpClient.post(
-      "/open_api/v1.3/report/task/create/",
+      `/open_api/${this.apiVersion}/report/task/create/`,
       {
         report_type: reportConfig.report_type ?? "BASIC",
         dimensions: reportConfig.dimensions,
@@ -93,7 +94,7 @@ export class TikTokReportingService {
       await this.rateLimiter.consume(`tiktok:reporting`);
 
       const result = (await this.httpClient.get(
-        "/open_api/v1.3/report/task/check/",
+        `/open_api/${this.apiVersion}/report/task/check/`,
         { task_id: taskId },
         context
       )) as ReportTaskCheckData;
@@ -134,7 +135,7 @@ export class TikTokReportingService {
     await this.rateLimiter.consume(`tiktok:reporting`);
 
     const result = (await this.httpClient.get(
-      "/open_api/v1.3/report/task/check/",
+      `/open_api/${this.apiVersion}/report/task/check/`,
       { task_id: taskId },
       context
     )) as ReportTaskCheckData;
@@ -162,7 +163,11 @@ export class TikTokReportingService {
       );
     }
 
-    const csvText = await response.text();
+    let csvText = await response.text();
+    // Strip BOM if present
+    if (csvText.charCodeAt(0) === 0xFEFF) {
+      csvText = csvText.slice(1);
+    }
     const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
 
     if (lines.length === 0) {
