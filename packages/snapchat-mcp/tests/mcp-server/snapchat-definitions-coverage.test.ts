@@ -21,7 +21,7 @@ const snapchatService = {
   createEntity: vi.fn(async () => ({ campaign_id: "new" })),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
-  listAdAccounts: vi.fn(async () => ({ list: [{ ad_account_id: "123" }] })),
+  listAdAccounts: vi.fn(async () => ({ entities: [{ ad_account_id: "123" }], nextCursor: undefined })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),

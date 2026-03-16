@@ -35,11 +35,8 @@ export async function listAdAccountsLogic(
 ): Promise<ListAdvertisersOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
-  const result = (await snapchatService.listAdAccounts(context)) as {
-    list?: unknown[];
-  };
-
-  const advertisers = (result?.list ?? []) as Record<string, unknown>[];
+  const result = await snapchatService.listAdAccounts(context);
+  const advertisers = result.entities as Record<string, unknown>[];
 
   return {
     advertisers,

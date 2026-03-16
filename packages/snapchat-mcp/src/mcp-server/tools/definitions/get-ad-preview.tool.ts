@@ -51,6 +51,7 @@ export async function getAdPreviewLogic(
   const { snapchatService } = resolveSessionServices(sdkContext);
 
   const preview = await snapchatService.getAdPreviews(
+    input.adAccountId,
     input.adId,
     input.adFormat,
     context

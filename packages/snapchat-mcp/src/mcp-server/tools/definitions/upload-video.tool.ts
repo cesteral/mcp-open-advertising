@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SnapchatMediaUploadResponse, SnapchatMediaGetResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "snapchat_upload_video";
 const TOOL_TITLE = "Upload Video to Snapchat Ads";
@@ -36,27 +37,6 @@ export const UploadVideoOutputSchema = z.object({
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
-
-interface SnapchatMediaItem {
-  id?: string;
-  media_status?: string;
-}
-
-interface SnapchatMediaUploadResponse {
-  request_status?: string;
-  media?: Array<{
-    sub_request_status?: string;
-    media?: SnapchatMediaItem;
-  }>;
-}
-
-interface SnapchatMediaGetResponse {
-  request_status?: string;
-  media?: Array<{
-    sub_request_status?: string;
-    media?: SnapchatMediaItem;
-  }>;
-}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

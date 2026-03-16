@@ -2,7 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
-import { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
@@ -34,6 +34,36 @@ function unwrapSingleEntity(responseKey: string, entityKey: string, response: un
   return entities[0];
 }
 
+/**
+ * Unwrap bulk response preserving positional alignment with input items.
+ * Unlike unwrapEntities(), failed subrequests are NOT dropped — they produce
+ * { success: false, error } at the same index, keeping 1:1 mapping with inputs.
+ */
+function unwrapBulkResults(
+  responseKey: string,
+  entityKey: string,
+  response: unknown
+): Array<{ success: boolean; entity?: unknown; error?: string }> {
+  const envelope = response as Record<string, unknown>;
+  const items = envelope[responseKey];
+  if (!Array.isArray(items)) return [];
+  return items.map((item: any) => {
+    if (item.sub_request_status === "SUCCESS" || item.sub_request_status === undefined) {
+      return { success: true, entity: item[entityKey] ?? item };
+    }
+    const errorMsg = item.sub_request_error_message ?? item.sub_request_status ?? "Unknown error";
+    return { success: false, error: String(errorMsg) };
+  });
+}
+
+/**
+ * Derive collection path from entity-specific path by stripping the /{entityId} suffix.
+ * e.g. "/v1/campaigns/{entityId}" → "/v1/campaigns"
+ */
+function getCollectionPath(updatePath: string): string {
+  return updatePath.replace(/\/\{entityId\}$/, "");
+}
+
 function extractNextCursor(response: unknown): string | undefined {
   const envelope = response as Record<string, unknown>;
   const paging = envelope["paging"] as SnapchatPaging | undefined;
@@ -58,9 +88,10 @@ export class SnapchatService {
   constructor(
     private readonly httpClient: SnapchatHttpClient,
     private readonly orgId: string,
-    private readonly adAccountId: string
+    private readonly adAccountId: string,
+    rateLimiter: RateLimiter
   ) {
-    this.rateLimiter = new RateLimiter();
+    this.rateLimiter = rateLimiter;
   }
 
   /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
@@ -193,10 +224,14 @@ export class SnapchatService {
 
   // ─── Advertiser Account ──────────────────────────────────────────
 
-  async listAdAccounts(context?: RequestContext): Promise<unknown> {
+  async listAdAccounts(context?: RequestContext): Promise<{ entities: unknown[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    return this.httpClient.get(`/v1/organizations/${this.orgId}/adaccounts`, {}, context);
+    const response = await this.httpClient.get(`/v1/organizations/${this.orgId}/adaccounts`, {}, context);
+    const entities = unwrapEntities("adaccounts", "adaccount", response);
+    const nextCursor = extractNextCursor(response);
+
+    return { entities, nextCursor };
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────
@@ -268,10 +303,26 @@ export class SnapchatService {
     items: Record<string, unknown>[],
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await this.executeBulk(items, async (data) => {
-      return this.createEntity(entityType, filters, data, context);
-    });
-    return { results };
+    const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume(`snapchat:default`, 3);
+
+    const pathParams: Record<string, string> = {
+      adAccountId: filters.adAccountId ?? this.adAccountId,
+      ...(filters.campaignId ? { campaignId: filters.campaignId } : {}),
+      ...(filters.adSquadId ? { adSquadId: filters.adSquadId } : {}),
+    };
+    const interpolatedPath = interpolatePath(config.createPath, pathParams);
+
+    const body = { [config.responseKey]: items };
+    const response = await this.httpClient.post(interpolatedPath, body, context);
+    const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
+
+    return {
+      results: items.map((_, i) =>
+        bulkResults[i] ?? { success: false, error: `No result returned for item ${i}` }
+      ),
+    };
   }
 
   async bulkUpdateEntities(
@@ -279,16 +330,26 @@ export class SnapchatService {
     items: Array<{ entityId: string; data: Record<string, unknown> }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await this.executeBulk(items, async (item) => {
-      return this.updateEntity(entityType, item.entityId, {}, item.data, context);
-    });
+    const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume(`snapchat:default`, 3);
+
+    const collectionPath = getCollectionPath(config.updatePath);
+    const body = {
+      [config.responseKey]: items.map((item) => ({ id: item.entityId, ...item.data })),
+    };
+    const response = await this.httpClient.put(collectionPath, body, context);
+    const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
 
     return {
-      results: bulkResults.map((r, i) => ({
-        entityId: items[i].entityId,
-        success: r.success,
-        error: r.error,
-      })),
+      results: items.map((item, i) => {
+        const r = bulkResults[i];
+        return {
+          entityId: item.entityId,
+          success: r?.success ?? false,
+          error: r?.success ? undefined : (r?.error ?? `No result returned for ${item.entityId}`),
+        };
+      }),
     };
   }
 
@@ -298,16 +359,26 @@ export class SnapchatService {
     status: "ACTIVE" | "PAUSED" | "ARCHIVED",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
-      return this.updateEntityStatus(entityType, entityId, status, context);
-    });
+    const config = getEntityConfig(entityType);
+
+    await this.rateLimiter.consume(`snapchat:default`, 3);
+
+    const collectionPath = getCollectionPath(config.updatePath);
+    const body = {
+      [config.responseKey]: entityIds.map((id) => ({ id, status })),
+    };
+    const response = await this.httpClient.put(collectionPath, body, context);
+    const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
 
     return {
-      results: bulkResults.map((r, i) => ({
-        entityId: entityIds[i],
-        success: r.success,
-        error: r.error,
-      })),
+      results: entityIds.map((entityId, i) => {
+        const r = bulkResults[i];
+        return {
+          entityId,
+          success: r?.success ?? false,
+          error: r?.success ? undefined : (r?.error ?? `No result returned for ${entityId}`),
+        };
+      }),
     };
   }
 
@@ -361,43 +432,23 @@ export class SnapchatService {
   // ─── Ad Previews ────────────────────────────────────────────────
 
   async getAdPreviews(
+    adAccountId: string,
     adId: string,
-    _adFormat?: string,
+    adFormat?: string,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    return this.httpClient.get(`/v1/ads/${adId}`, undefined, context);
-  }
-
-  // ─── Internal Helpers ───────────────────────────────────────────
-
-  private async executeBulk<T>(
-    items: T[],
-    operation: (item: T) => Promise<unknown>
-  ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
-    const CONCURRENCY = 5;
-    const results: Array<{ success: boolean; entity?: unknown; error?: string }> = new Array(items.length);
-
-    for (let i = 0; i < items.length; i += CONCURRENCY) {
-      const batch = items.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.allSettled(
-        batch.map((item) => operation(item))
-      );
-
-      for (let j = 0; j < batchResults.length; j++) {
-        const result = batchResults[j];
-        if (result.status === "fulfilled") {
-          results[i + j] = { success: true, entity: result.value };
-        } else {
-          results[i + j] = {
-            success: false,
-            error: result.reason?.message ?? String(result.reason),
-          };
-        }
-      }
+    const params: Record<string, string> = {};
+    if (adFormat) {
+      params.ad_format = adFormat;
     }
 
-    return results;
+    return this.httpClient.get(
+      `/v1/adaccounts/${adAccountId}/ads/${adId}/previews`,
+      Object.keys(params).length > 0 ? params : undefined,
+      context
+    );
   }
+
 }

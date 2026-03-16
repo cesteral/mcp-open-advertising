@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SnapchatMediaUploadResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "snapchat_upload_image";
 const TOOL_TITLE = "Upload Image to Snapchat Ads";
@@ -35,19 +36,6 @@ export const UploadImageOutputSchema = z.object({
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
-
-interface SnapchatMediaItem {
-  id?: string;
-  media_status?: string;
-}
-
-interface SnapchatMediaUploadResponse {
-  request_status?: string;
-  media?: Array<{
-    sub_request_status?: string;
-    media?: SnapchatMediaItem;
-  }>;
-}
 
 export async function uploadImageLogic(
   input: UploadImageInput,

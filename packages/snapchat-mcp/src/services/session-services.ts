@@ -35,7 +35,8 @@ export function createSessionServices(
   const snapchatService = new SnapchatService(
     httpClient,
     authAdapter.orgId,
-    authAdapter.adAccountId
+    authAdapter.adAccountId,
+    rateLimiter
   );
   const snapchatReportingService = new SnapchatReportingService(
     rateLimiter,
