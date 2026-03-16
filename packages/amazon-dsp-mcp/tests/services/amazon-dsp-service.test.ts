@@ -8,12 +8,16 @@ const mockHttpClient = {
   delete: vi.fn(),
 };
 
+const mockRateLimiter = {
+  consume: vi.fn().mockResolvedValue(undefined),
+};
+
 describe("AmazonDspService", () => {
   let service: AmazonDspService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new AmazonDspService(mockHttpClient as any);
+    service = new AmazonDspService(mockRateLimiter as any, mockHttpClient as any);
   });
 
   describe("listEntities", () => {

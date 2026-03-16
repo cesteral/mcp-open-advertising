@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { AmazonDspHttpClient } from "./amazon-dsp-http-client.js";
+import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
@@ -34,6 +35,7 @@ interface AmazonDspListResponse {
  */
 export class AmazonDspService {
   constructor(
+    private readonly rateLimiter: RateLimiter,
     private readonly httpClient: AmazonDspHttpClient
   ) {}
 
@@ -67,6 +69,7 @@ export class AmazonDspService {
       }
     }
 
+    await this.rateLimiter.consume("amazon_dsp:read");
     const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspListResponse;
 
     const entities = (result?.[config.responseKey] as unknown[]) ?? [];
@@ -89,6 +92,7 @@ export class AmazonDspService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.getPath, { entityId });
+    await this.rateLimiter.consume("amazon_dsp:read");
     return this.httpClient.get(path, undefined, context);
   }
 
@@ -98,6 +102,7 @@ export class AmazonDspService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
+    await this.rateLimiter.consume("amazon_dsp:write", 3);
     // Amazon DSP create wraps data in { [responseKey]: [data] } body
     const body = { [config.responseKey]: [data] };
     return this.httpClient.post(config.createPath, body, context);
@@ -111,6 +116,7 @@ export class AmazonDspService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
+    await this.rateLimiter.consume("amazon_dsp:write", 3);
     return this.httpClient.put(path, data, context);
   }
 
@@ -125,6 +131,7 @@ export class AmazonDspService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
+    await this.rateLimiter.consume("amazon_dsp:write", 3);
     return this.httpClient.put(path, { status: "ARCHIVED" }, context);
   }
 
@@ -136,6 +143,7 @@ export class AmazonDspService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
+    await this.rateLimiter.consume("amazon_dsp:write", 3);
     return this.httpClient.put(path, { status }, context);
   }
 
@@ -150,6 +158,7 @@ export class AmazonDspService {
       startIndex: String(startIndex),
       count: String(pageSize),
     };
+    await this.rateLimiter.consume("amazon_dsp:read");
     return this.httpClient.get("/dsp/advertisers", params, context);
   }
 
@@ -168,6 +177,7 @@ export class AmazonDspService {
     if (query) {
       params.query = query;
     }
+    await this.rateLimiter.consume("amazon_dsp:read");
     return this.httpClient.get("/dsp/targeting/search", params, context);
   }
 
@@ -179,6 +189,7 @@ export class AmazonDspService {
     if (targetingType) {
       params.targetingType = targetingType;
     }
+    await this.rateLimiter.consume("amazon_dsp:read");
     return this.httpClient.get("/dsp/targeting/options", params, context);
   }
 
@@ -188,6 +199,7 @@ export class AmazonDspService {
     targetingConfig: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
+    await this.rateLimiter.consume("amazon_dsp:read");
     return this.httpClient.post("/dsp/audience/estimate", targetingConfig, context);
   }
 
@@ -202,6 +214,7 @@ export class AmazonDspService {
     if (adFormat) {
       params.adFormat = adFormat;
     }
+    await this.rateLimiter.consume("amazon_dsp:read");
     return this.httpClient.get("/dsp/ads/preview", params, context);
   }
 
@@ -215,6 +228,7 @@ export class AmazonDspService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
+    await this.rateLimiter.consume("amazon_dsp:write", 3);
     return this.httpClient.post(path + "/copy", { ...options }, context);
   }
 
