@@ -186,34 +186,24 @@ export class TikTokHttpClient {
       span.setAttribute("http.url", url);
       const allFields = { advertiser_id: this.advertiserId, ...fields };
       const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
-      const timeoutMs = TIKTOK_RETRY_CONFIG.timeoutMs ?? 30_000;
-      const accessToken = await this.authAdapter.getAccessToken();
-      const response = await fetchWithTimeout(url, timeoutMs, context, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": contentType,
+
+      const result = await executeWithRetry(TIKTOK_RETRY_CONFIG, {
+        url,
+        fetchOptions: { method: "POST", body },
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": contentType,
+          };
         },
-        body,
+        validateResponseBody: validateTikTokEnvelope,
       });
-      span.setAttribute("http.response.status_code", response.status);
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        throw new McpError(
-          mapTikTokErrorToJsonRpc(0, response.status),
-          `TikTok API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          { requestId: context?.requestId, httpStatus: response.status, url }
-        );
-      }
-      const json = (await response.json()) as TikTokApiResponse;
-      if (json.code !== 0) {
-        throw new McpError(
-          mapTikTokErrorToJsonRpc(json.code, response.status),
-          json.message || `TikTok API error: code=${json.code}`,
-          { requestId: context?.requestId, tiktokCode: json.code, url }
-        );
-      }
-      return json.data;
+      span.setAttribute("http.response.status_code", 200);
+      return result;
     });
   }
 
@@ -247,10 +237,14 @@ export class TikTokHttpClient {
         fetchFn: fetchWithTimeout,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
-          return {
+          const headers: Record<string, string> = {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           };
+          // Only include Content-Type for requests with a body (POST/DELETE)
+          if (options?.body) {
+            headers["Content-Type"] = "application/json";
+          }
+          return headers;
         },
         validateResponseBody: validateTikTokEnvelope,
       });

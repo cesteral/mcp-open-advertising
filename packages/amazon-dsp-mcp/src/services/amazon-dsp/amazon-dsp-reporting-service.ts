@@ -165,6 +165,15 @@ export class AmazonDspReportingService {
       );
     }
 
+    // Guard against excessively large reports exhausting process memory (50MB limit)
+    const MAX_REPORT_SIZE_BYTES = 50 * 1024 * 1024;
+    const contentLength = response.headers?.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > MAX_REPORT_SIZE_BYTES) {
+      throw new Error(
+        `Amazon DSP report too large (${contentLength} bytes, limit ${MAX_REPORT_SIZE_BYTES}). Use more restrictive filters or date ranges.`
+      );
+    }
+
     const csvText = await response.text();
     const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
 

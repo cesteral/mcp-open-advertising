@@ -163,6 +163,15 @@ export class TikTokReportingService {
       );
     }
 
+    // Guard against excessively large reports exhausting process memory (50MB limit)
+    const MAX_REPORT_SIZE_BYTES = 50 * 1024 * 1024;
+    const contentLength = response.headers?.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > MAX_REPORT_SIZE_BYTES) {
+      throw new Error(
+        `TikTok report too large (${contentLength} bytes, limit ${MAX_REPORT_SIZE_BYTES}). Use more restrictive filters or date ranges.`
+      );
+    }
+
     let csvText = await response.text();
     // Strip BOM if present
     if (csvText.charCodeAt(0) === 0xFEFF) {

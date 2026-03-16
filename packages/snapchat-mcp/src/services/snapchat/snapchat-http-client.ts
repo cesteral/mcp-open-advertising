@@ -25,14 +25,6 @@ interface SnapchatEnvelope {
   [key: string]: unknown;
 }
 
-function mapHttpStatusToJsonRpc(httpStatus: number): JsonRpcErrorCode {
-  if (httpStatus === 401) return JsonRpcErrorCode.Unauthorized;
-  if (httpStatus === 403) return JsonRpcErrorCode.Forbidden;
-  if (httpStatus === 429) return JsonRpcErrorCode.RateLimited;
-  if (httpStatus >= 500) return JsonRpcErrorCode.ServiceUnavailable;
-  return JsonRpcErrorCode.InvalidRequest;
-}
-
 /**
  * Validate the Snapchat response envelope.
  * Returns the full envelope on success, throws McpError on FAILED status.
@@ -135,37 +127,24 @@ export class SnapchatHttpClient {
       span.setAttribute("http.request.method", "POST");
       span.setAttribute("http.url", url);
       const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
-      const timeoutMs = SNAPCHAT_RETRY_CONFIG.timeoutMs ?? 30_000;
-      const accessToken = await this.authAdapter.getAccessToken();
-      const response = await fetchWithTimeout(url, timeoutMs, context, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": contentType,
+
+      const result = await executeWithRetry(SNAPCHAT_RETRY_CONFIG, {
+        url,
+        fetchOptions: { method: "POST", body },
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": contentType,
+          };
         },
-        body,
+        validateResponseBody: validateSnapchatEnvelope,
       });
-      span.setAttribute("http.response.status_code", response.status);
-
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        throw new McpError(
-          mapHttpStatusToJsonRpc(response.status),
-          `Snapchat API HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`,
-          { requestId: context?.requestId, httpStatus: response.status, url }
-        );
-      }
-
-      const json = (await response.json()) as SnapchatEnvelope;
-      if (json.request_status === "FAILED") {
-        throw new McpError(
-          JsonRpcErrorCode.InvalidRequest,
-          json.display_message ?? `Snapchat API error: request_status=FAILED`,
-          { requestId: context?.requestId, errorCode: json.error_code, url }
-        );
-      }
-
-      return json;
+      span.setAttribute("http.response.status_code", 200);
+      return result;
     });
   }
 
@@ -199,10 +178,14 @@ export class SnapchatHttpClient {
         fetchFn: fetchWithTimeout,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
-          return {
+          const headers: Record<string, string> = {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           };
+          // Only include Content-Type for requests with a body (POST/PUT)
+          if (options?.body) {
+            headers["Content-Type"] = "application/json";
+          }
+          return headers;
         },
         validateResponseBody: validateSnapchatEnvelope,
       });

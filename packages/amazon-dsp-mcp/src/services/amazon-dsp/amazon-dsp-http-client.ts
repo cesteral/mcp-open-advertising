@@ -123,9 +123,12 @@ export class AmazonDspHttpClient {
           const accessToken = await this.authAdapter.getAccessToken();
           const headers: Record<string, string> = {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
             "Amazon-Advertising-API-Scope": this.profileId,
           };
+          // Only include Content-Type for requests with a body (POST/PUT)
+          if (options?.body) {
+            headers["Content-Type"] = "application/json";
+          }
           if (this.clientId) {
             headers["Amazon-Advertising-API-ClientId"] = this.clientId;
           }
