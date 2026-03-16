@@ -60,6 +60,34 @@ describe("PinterestReportingService", () => {
     expect(result.url).toContain("report.csv");
   });
 
+  it("pollReport returns immediately on DOES_NOT_EXIST status", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({
+      report_status: "DOES_NOT_EXIST",
+      token: "invalid-token",
+    });
+
+    const result = await service.pollReport("invalid-token");
+    expect(result.report_status).toBe("DOES_NOT_EXIST");
+    // Should not poll again — only one GET call
+    expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
+  });
+
+  it("getReport throws on DOES_NOT_EXIST status from pollReport", async () => {
+    mockHttpClient.post.mockResolvedValueOnce({ token: "bad-token" });
+    mockHttpClient.get.mockResolvedValueOnce({
+      report_status: "DOES_NOT_EXIST",
+      token: "bad-token",
+    });
+
+    await expect(
+      service.getReport({
+        columns: ["IMPRESSION_1"],
+        start_date: "2026-03-01",
+        end_date: "2026-03-04",
+      })
+    ).rejects.toThrow("DOES_NOT_EXIST");
+  });
+
   it("downloadReport parses CSV", async () => {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
@@ -71,6 +99,31 @@ describe("PinterestReportingService", () => {
     expect(result.headers).toEqual(["date", "impressions"]);
     expect(result.rows).toHaveLength(2);
     expect(result.totalRows).toBe(2);
+  });
+
+  it("downloadReport throws when Content-Length exceeds 50MB limit", async () => {
+    const oversizeBytes = String(51 * 1024 * 1024); // 51MB
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ "content-length": oversizeBytes }),
+      text: async () => "should not be read",
+    } as unknown as Response);
+
+    await expect(
+      service.downloadReport("https://example.com/huge-report.csv")
+    ).rejects.toThrow("too large");
+  });
+
+  it("downloadReport succeeds when Content-Length is under 50MB", async () => {
+    const normalBytes = String(1024); // 1KB
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ "content-length": normalBytes }),
+      text: async () => "date,impressions\n2026-03-01,50",
+    } as unknown as Response);
+
+    const result = await service.downloadReport("https://example.com/small-report.csv");
+    expect(result.rows).toHaveLength(1);
   });
 
   it("getReport runs submit -> poll -> download flow", async () => {

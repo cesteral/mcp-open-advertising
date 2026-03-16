@@ -46,7 +46,7 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
   constructor(
     private readonly accessToken: string,
     private readonly _adAccountId: string,
-    private readonly baseUrl: string = "https://business-api.pinterest.com"
+    private readonly baseUrl: string = "https://api.pinterest.com"
   ) {}
 
   get userId(): string {
@@ -137,7 +137,7 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
   constructor(
     private readonly credentials: PinterestRefreshCredentials,
     private readonly _adAccountId: string,
-    private readonly baseUrl: string = "https://business-api.pinterest.com"
+    private readonly baseUrl: string = "https://api.pinterest.com"
   ) {
     this.currentRefreshToken = credentials.refreshToken;
   }

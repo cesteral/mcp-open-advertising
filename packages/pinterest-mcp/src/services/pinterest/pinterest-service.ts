@@ -79,43 +79,44 @@ export class PinterestService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    // For entities with an {entityId} in the path (e.g. pins), interpolate both
-    const path = interpolatePath(config.listPath, {
-      adAccountId: filters.adAccountId,
-      entityId,
-    });
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
 
-    // If path has no {entityId} token (was replaced), fetch single item via list + filter
-    // Otherwise the interpolated path IS the single-entity path
-    if (path.includes("{")) {
-      // Fallback: get by listing and filtering
-      const data = await this.httpClient.get(path, { [config.idField]: entityId, page_size: "1" }, context) as PinterestListResponse;
-      const list = data?.items ?? [];
-      if (list.length === 0) {
+    // If entity config has an explicit getPath, use direct fetch
+    if (config.getPath) {
+      const path = interpolatePath(config.getPath, {
+        adAccountId: filters.adAccountId,
+        entityId,
+      });
+
+      const result = await this.httpClient.get(path, {}, context) as PinterestListResponse | Record<string, unknown>;
+
+      // If single-entity response (e.g. GET /v5/pins/{id}), return as-is
+      if (!("items" in (result as object))) {
+        return result;
+      }
+
+      // Otherwise it's a list; find by id
+      const list = (result as PinterestListResponse).items ?? [];
+      const entity = list.find(
+        (e) => (e as Record<string, unknown>)[config.idField] === entityId
+      );
+      if (!entity) {
         throw new Error(`${config.displayName} with ID ${entityId} not found`);
       }
-      return list[0];
+      return entity;
     }
 
-    // Path was fully interpolated — call directly
-    const result = await this.httpClient.get(path, {}, context) as PinterestListResponse | Record<string, unknown>;
-
-    // If single-entity response (e.g. GET /v5/pins/{id}), return as-is
-    if (!("items" in (result as object))) {
-      return result;
-    }
-
-    // Otherwise it's a list; find by id
-    const list = (result as PinterestListResponse).items ?? [];
-    const entity = list.find(
-      (e) => (e as Record<string, unknown>)[config.idField] === entityId
-    );
-    if (!entity) {
+    // Fallback: list entities and filter by ID
+    const listPath = interpolatePath(config.listPath, {
+      adAccountId: filters.adAccountId,
+    });
+    const data = await this.httpClient.get(listPath, { [config.idField]: entityId, page_size: "1" }, context) as PinterestListResponse;
+    const list = data?.items ?? [];
+    if (list.length === 0) {
       throw new Error(`${config.displayName} with ID ${entityId} not found`);
     }
-    return entity;
+    return list[0];
   }
 
   async createEntity(
@@ -293,21 +294,18 @@ export class PinterestService {
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     this.logger.debug({ entityType, count: entityIds.length, status }, "Bulk status update");
-    try {
-      await this.updateEntityStatus(entityType, filters, entityIds, status, context);
-      return {
-        results: entityIds.map((entityId) => ({ entityId, success: true })),
-      };
-    } catch (error) {
-      this.logger.debug({ entityType, error }, "Bulk status update failed for all entities");
-      return {
-        results: entityIds.map((entityId) => ({
-          entityId,
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        })),
-      };
-    }
+
+    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+      return this.updateEntity(entityType, filters, entityId, { status }, context);
+    });
+
+    return {
+      results: bulkResults.map((r, i) => ({
+        entityId: entityIds[i],
+        success: r.success,
+        error: r.error,
+      })),
+    };
   }
 
   // ─── Targeting ───────────────────────────────────────────────────

@@ -102,7 +102,8 @@ export class PinterestReportingService {
       if (
         result.report_status === "FINISHED" ||
         result.report_status === "FAILED" ||
-        result.report_status === "EXPIRED"
+        result.report_status === "EXPIRED" ||
+        result.report_status === "DOES_NOT_EXIST"
       ) {
         this.logger.debug({ taskId, status: result.report_status, attempt }, "Report poll complete");
         return result;
@@ -169,6 +170,15 @@ export class PinterestReportingService {
       );
     }
 
+    // Guard against excessively large reports exhausting process memory (50MB limit)
+    const MAX_REPORT_SIZE_BYTES = 50 * 1024 * 1024;
+    const contentLength = response.headers?.get("content-length");
+    if (contentLength && parseInt(contentLength, 10) > MAX_REPORT_SIZE_BYTES) {
+      throw new Error(
+        `Pinterest report too large (${contentLength} bytes, limit ${MAX_REPORT_SIZE_BYTES}). Use more restrictive filters or date ranges.`
+      );
+    }
+
     const csvText = await response.text();
     const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
 
@@ -198,7 +208,7 @@ export class PinterestReportingService {
     const { task_id } = await this.submitReport(reportConfig, context);
     const taskResult = await this.pollReport(task_id, context);
 
-    if (taskResult.report_status === "FAILED" || taskResult.report_status === "EXPIRED") {
+    if (taskResult.report_status === "FAILED" || taskResult.report_status === "EXPIRED" || taskResult.report_status === "DOES_NOT_EXIST") {
       throw new Error(`Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`);
     }
 
@@ -238,6 +248,8 @@ export class PinterestReportingService {
 
 /**
  * Parse a single CSV line, handling quoted fields with commas.
+ * Limitation: does not handle newlines within quoted fields, BOM characters,
+ * or mixed quoting. Sufficient for Pinterest's machine-generated report output.
  */
 function parseCsvLine(line: string): string[] {
   const result: string[] = [];

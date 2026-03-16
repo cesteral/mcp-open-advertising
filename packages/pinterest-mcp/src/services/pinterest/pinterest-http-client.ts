@@ -3,7 +3,6 @@
 
 import type { Logger } from "pino";
 import type { PinterestAuthAdapter } from "../../auth/pinterest-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withPinterestApiSpan } from "../../utils/telemetry/tracing.js";
@@ -144,26 +143,26 @@ export class PinterestHttpClient {
       span.setAttribute("http.request.method", "POST");
       span.setAttribute("http.url", url);
       const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
-      const timeoutMs = PINTEREST_RETRY_CONFIG.timeoutMs ?? 30_000;
-      const accessToken = await this.authAdapter.getAccessToken();
-      const response = await fetchWithTimeout(url, timeoutMs, context, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": contentType,
+
+      const result = await executeWithRetry(PINTEREST_RETRY_CONFIG, {
+        url,
+        fetchOptions: {
+          method: "POST",
+          body,
         },
-        body,
+        context,
+        logger: this.logger,
+        fetchFn: fetchWithTimeout,
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": contentType,
+          };
+        },
       });
-      span.setAttribute("http.response.status_code", response.status);
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => "");
-        throw new McpError(
-          response.status >= 500 ? JsonRpcErrorCode.ServiceUnavailable : response.status === 429 ? JsonRpcErrorCode.RateLimited : JsonRpcErrorCode.InvalidRequest,
-          `Pinterest API error ${response.status} ${response.statusText}: ${errorBody.substring(0, 500)}`,
-          { requestId: context?.requestId, httpStatus: response.status, url }
-        );
-      }
-      return response.json() as Promise<unknown>;
+      span.setAttribute("http.response.status_code", 200);
+      return result;
     });
   }
 
@@ -197,10 +196,14 @@ export class PinterestHttpClient {
         fetchFn: fetchWithTimeout,
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
-          return {
+          const headers: Record<string, string> = {
             Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json",
           };
+          // Only include Content-Type for requests with a body (POST/PATCH)
+          if (options?.body) {
+            headers["Content-Type"] = "application/json";
+          }
+          return headers;
         },
       });
     });

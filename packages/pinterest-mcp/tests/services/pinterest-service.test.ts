@@ -256,5 +256,27 @@ describe("PinterestService", () => {
       expect(result.results[0].success).toBe(false);
       expect(result.results[0].error).toContain("API error");
     });
+
+    it("handles partial failures — succeeds for some entities and fails for others", async () => {
+      // First entity succeeds, second fails, third succeeds
+      mockPatch
+        .mockResolvedValueOnce({ items: [{ id: "111" }] })
+        .mockRejectedValueOnce(new Error("Entity 222 not found"))
+        .mockResolvedValueOnce({ items: [{ id: "333" }] });
+
+      const result = await service.bulkUpdateStatus(
+        "campaign",
+        filters,
+        ["111", "222", "333"],
+        "PAUSED"
+      );
+
+      expect(result.results).toHaveLength(3);
+      expect(result.results[0]).toEqual({ entityId: "111", success: true, error: undefined });
+      expect(result.results[1].entityId).toBe("222");
+      expect(result.results[1].success).toBe(false);
+      expect(result.results[1].error).toContain("Entity 222 not found");
+      expect(result.results[2]).toEqual({ entityId: "333", success: true, error: undefined });
+    });
   });
 });

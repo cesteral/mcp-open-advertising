@@ -235,6 +235,97 @@ describe("PinterestHttpClient", () => {
     });
   });
 
+  describe("Content-Type header behavior", () => {
+    it("does NOT include Content-Type on GET requests (no body)", async () => {
+      mockPinterestSuccessResponse({ items: [] });
+
+      await client.get("/ad_accounts/549755813599/campaigns");
+
+      const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
+      expect((options.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+    });
+
+    it("does NOT include Content-Type on DELETE requests (no body)", async () => {
+      mockPinterestSuccessResponse({});
+
+      await client.delete("/ad_accounts/549755813599/campaigns", { campaign_ids: "111" });
+
+      const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
+      expect((options.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+    });
+
+    it("includes Content-Type: application/json on POST requests (has body)", async () => {
+      mockPinterestSuccessResponse({ items: [] });
+
+      await client.post("/ad_accounts/549755813599/campaigns", { name: "Test" });
+
+      const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
+      expect((options.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
+    });
+
+    it("includes Content-Type: application/json on PATCH requests (has body)", async () => {
+      mockPinterestSuccessResponse({ items: [] });
+
+      await client.patch("/ad_accounts/549755813599/campaigns", [{ id: "111", name: "Updated" }]);
+
+      const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
+      expect((options.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
+    });
+  });
+
+  describe("postMultipart retry behavior", () => {
+    it("retries on HTTP 500 during multipart upload", async () => {
+      mockHttpErrorResponse(500, "Internal Server Error");
+      mockPinterestSuccessResponse({ id: "media-123" });
+
+      const result = await client.postMultipart(
+        "/v5/media",
+        { media_type: "image" },
+        "file",
+        Buffer.from("fake-image-data"),
+        "test.png",
+        "image/png"
+      );
+
+      expect(result).toEqual({ id: "media-123" });
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+
+    it("retries on HTTP 429 during multipart upload", async () => {
+      mockHttpErrorResponse(429, "Too Many Requests");
+      mockPinterestSuccessResponse({ id: "media-456" });
+
+      const result = await client.postMultipart(
+        "/v5/media",
+        { media_type: "image" },
+        "file",
+        Buffer.from("fake-image-data"),
+        "test.png",
+        "image/png"
+      );
+
+      expect(result).toEqual({ id: "media-456" });
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
+    });
+
+    it("does NOT retry on HTTP 400 during multipart upload", async () => {
+      mockHttpErrorResponse(400, "Bad Request", "Invalid media format");
+
+      await expect(
+        client.postMultipart(
+          "/v5/media",
+          { media_type: "image" },
+          "file",
+          Buffer.from("fake-image-data"),
+          "test.png",
+          "image/png"
+        )
+      ).rejects.toThrow();
+
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("error mapping based on HTTP status codes (no code field)", () => {
     it("throws error with HTTP status in message on 401", async () => {
       mockHttpErrorResponse(401, "Unauthorized", "Invalid access token");

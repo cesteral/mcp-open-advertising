@@ -14,6 +14,12 @@ export type PinterestEntityType = "campaign" | "adGroup" | "ad" | "creative";
 export interface PinterestEntityConfig {
   /** Path template for list/get. {adAccountId} is substituted at runtime. */
   listPath: string;
+  /**
+   * Path template for fetching a single entity by ID.
+   * If provided, used for direct GET by entity ID (e.g., "/v5/pins/{entityId}").
+   * If undefined, getEntity falls back to listing and filtering by ID.
+   */
+  getPath?: string;
   /** Path template for create (POST). */
   createPath: string;
   /** Path template for PATCH update (bulk). {adAccountId} substituted. */
@@ -97,6 +103,7 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
   },
   creative: {
     listPath: "/v5/pins/{entityId}",
+    getPath: "/v5/pins/{entityId}",
     createPath: "/v5/pins",
     updatePath: "/v5/pins/{entityId}",
     statusUpdatePath: "/v5/pins/{entityId}",
