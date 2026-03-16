@@ -10,6 +10,7 @@ import {
   getInsightsNameField,
   type SA360InsightsEntityType,
 } from "../utils/entity-mapping.js";
+import { addComputedMetrics } from "../utils/computed-metrics.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -19,7 +20,13 @@ const TOOL_DESCRIPTION = `Get SA360 performance metrics with dimensional breakdo
 
 Adds segment dimensions to the query to break down metrics by device, date, network, and more. Each segment becomes a column in the result rows.
 
-**Supported breakdowns:** segments.date, segments.device, segments.ad_network_type, segments.conversion_action, segments.day_of_week, segments.month, segments.quarter, segments.week, segments.year`;
+**Supported entity types:** ${getInsightsEntityTypeEnum().join(", ")}
+
+**Supported breakdowns:** segments.date, segments.device, segments.ad_network_type, segments.conversion_action, segments.day_of_week, segments.month, segments.quarter, segments.week, segments.year
+
+**Date ranges:** Preset (TODAY, YESTERDAY, LAST_7_DAYS, etc.) OR custom (startDate + endDate)
+
+**Computed metrics:** Set includeComputedMetrics=true for derived CPA, ROAS, CPM`;
 
 const METRIC_NAME_PATTERN = /^(metrics\.)?[a-z_][a-z0-9_]*$/;
 const SEGMENT_NAME_PATTERN = /^(segments\.)?[a-z_][a-z0-9_.]*$/;
@@ -33,6 +40,8 @@ const DATE_RANGE_ENUM = [
   "LAST_MONTH",
   "LAST_90_DAYS",
 ] as const;
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const DEFAULT_METRICS = [
   "metrics.impressions",
@@ -57,7 +66,18 @@ export const GetInsightsBreakdownsInputSchema = z
       .describe("Filter to a specific entity ID"),
     dateRange: z
       .enum(DATE_RANGE_ENUM)
-      .describe("Date range for metrics"),
+      .optional()
+      .describe("Preset date range for metrics (use this OR startDate+endDate)"),
+    startDate: z
+      .string()
+      .regex(DATE_PATTERN, "startDate must be YYYY-MM-DD")
+      .optional()
+      .describe("Custom start date (YYYY-MM-DD) — requires endDate"),
+    endDate: z
+      .string()
+      .regex(DATE_PATTERN, "endDate must be YYYY-MM-DD")
+      .optional()
+      .describe("Custom end date (YYYY-MM-DD) — requires startDate"),
     breakdowns: z
       .array(
         z.string().regex(SEGMENT_NAME_PATTERN, "breakdowns must be segment names like 'date' or 'segments.device'")
@@ -70,6 +90,11 @@ export const GetInsightsBreakdownsInputSchema = z
       )
       .optional()
       .describe("Metrics to include (defaults to impressions, clicks, cost_micros, conversions)"),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM derived from raw metrics"),
     limit: z
       .number()
       .min(1)
@@ -82,6 +107,20 @@ export const GetInsightsBreakdownsInputSchema = z
       .optional()
       .describe("Page token for pagination (from previous response)"),
   })
+  .refine(
+    (data) => {
+      const hasPreset = !!data.dateRange;
+      const hasCustomStart = !!data.startDate;
+      const hasCustomEnd = !!data.endDate;
+      if (hasPreset && (hasCustomStart || hasCustomEnd)) return false;
+      if (!hasPreset && !hasCustomStart && !hasCustomEnd) return false;
+      if (hasCustomStart !== hasCustomEnd) return false;
+      return true;
+    },
+    {
+      message: "Provide either dateRange OR both startDate and endDate (not both, not neither)",
+    }
+  )
   .describe("Parameters for getting SA360 insights with breakdowns");
 
 export const GetInsightsBreakdownsOutputSchema = z
@@ -89,6 +128,8 @@ export const GetInsightsBreakdownsOutputSchema = z
     results: z.array(z.record(z.any())).describe("Insight result rows with breakdown dimensions"),
     totalResults: z.number().describe("Number of results returned"),
     dateRange: z.string().describe("Date range used"),
+    startDate: z.string().optional().describe("Custom start date (when used)"),
+    endDate: z.string().optional().describe("Custom end date (when used)"),
     breakdowns: z.array(z.string()).describe("Breakdown dimensions used"),
     nextPageToken: z.string().optional().describe("Token to fetch the next page of results"),
     has_more: z.boolean().describe("Whether more results are available via pagination"),
@@ -116,9 +157,13 @@ function buildBreakdownQuery(input: GetInsightsBreakdownsInput): string {
 
   const selectFields = [idField, nameField, ...segmentFields, ...metricFields].join(", ");
 
-  const whereClauses: string[] = [
-    `segments.date DURING ${input.dateRange}`,
-  ];
+  const whereClauses: string[] = [];
+
+  if (input.dateRange) {
+    whereClauses.push(`segments.date DURING ${input.dateRange}`);
+  } else if (input.startDate && input.endDate) {
+    whereClauses.push(`segments.date BETWEEN '${input.startDate}' AND '${input.endDate}'`);
+  }
 
   if (input.entityId) {
     whereClauses.push(`${idField} = ${input.entityId}`);
@@ -144,10 +189,20 @@ export async function getInsightsBreakdownsLogic(
     context
   );
 
+  let results = result.results as Record<string, any>[];
+
+  if (input.includeComputedMetrics) {
+    results = results.map(addComputedMetrics);
+  }
+
+  const dateRangeLabel = input.dateRange || `${input.startDate} to ${input.endDate}`;
+
   return {
-    results: result.results as Record<string, any>[],
-    totalResults: result.results.length,
-    dateRange: input.dateRange,
+    results,
+    totalResults: results.length,
+    dateRange: dateRangeLabel,
+    ...(input.startDate && { startDate: input.startDate }),
+    ...(input.endDate && { endDate: input.endDate }),
     breakdowns: input.breakdowns,
     nextPageToken: result.nextPageToken,
     has_more: !!result.nextPageToken,
@@ -190,14 +245,16 @@ export const getInsightsBreakdownsTool = {
       },
     },
     {
-      label: "Daily campaign performance",
+      label: "Daily campaign performance with custom dates",
       input: {
         customerId: "1234567890",
         entityType: "campaign",
         entityId: "9876543210",
-        dateRange: "LAST_7_DAYS",
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
         breakdowns: ["segments.date"],
         metrics: ["impressions", "clicks", "cost_micros", "conversions"],
+        includeComputedMetrics: true,
       },
     },
   ],

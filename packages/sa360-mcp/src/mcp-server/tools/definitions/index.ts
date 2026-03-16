@@ -4,11 +4,14 @@
 /**
  * Tool definitions barrel export
  *
- * 11 tools total:
+ * 16 tools total:
  *   8 read:  sa360 search, list accounts, get entity, list entities, get insights,
  *            get insights breakdowns, list custom columns, search fields
+ *   3 async reporting: submit report, check report status, download report (v2 API)
  *   2 write: insert conversions, update conversions (v2 API)
  *   1 validation: validate conversion
+ *   1 audit: get change history
+ *   1 reserved: get change history
  */
 
 export { sa360SearchTool } from "./sa360-search.tool.js";
@@ -22,6 +25,10 @@ export { searchFieldsTool } from "./search-fields.tool.js";
 export { insertConversionsTool } from "./insert-conversions.tool.js";
 export { updateConversionsTool } from "./update-conversions.tool.js";
 export { validateConversionTool } from "./validate-conversion.tool.js";
+export { submitReportTool } from "./submit-report.tool.js";
+export { checkReportStatusTool } from "./check-report-status.tool.js";
+export { downloadReportTool } from "./download-report.tool.js";
+export { getChangeHistoryTool } from "./get-change-history.tool.js";
 
 import { sa360SearchTool } from "./sa360-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
@@ -34,6 +41,10 @@ import { searchFieldsTool } from "./search-fields.tool.js";
 import { insertConversionsTool } from "./insert-conversions.tool.js";
 import { updateConversionsTool } from "./update-conversions.tool.js";
 import { validateConversionTool } from "./validate-conversion.tool.js";
+import { submitReportTool } from "./submit-report.tool.js";
+import { checkReportStatusTool } from "./check-report-status.tool.js";
+import { downloadReportTool } from "./download-report.tool.js";
+import { getChangeHistoryTool } from "./get-change-history.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -46,11 +57,17 @@ const productionTools: ToolDefinitionForFactory[] = [
   getInsightsBreakdownsTool,
   listCustomColumnsTool,
   searchFieldsTool,
+  // ── Async Reporting (v2 API) ──
+  submitReportTool,
+  checkReportStatusTool,
+  downloadReportTool,
   // ── Write Tools (v2 API) ──
   insertConversionsTool,
   updateConversionsTool,
   // ── Validation Tools ──
   validateConversionTool,
+  // ── Audit Tools ──
+  getChangeHistoryTool,
 ];
 
 /**

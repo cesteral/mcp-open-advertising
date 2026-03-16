@@ -101,13 +101,15 @@ export function getEntityTypeEnum(): [string, ...string[]] {
 // ---------------------------------------------------------------------------
 
 /** Entity types that support metrics queries (have associated metrics in SA360). */
-export type SA360InsightsEntityType = "campaign" | "adGroup" | "adGroupAd" | "adGroupCriterion";
+export type SA360InsightsEntityType = "customer" | "campaign" | "adGroup" | "adGroupAd" | "adGroupCriterion" | "campaignCriterion";
 
 const INSIGHTS_ENTITY_CONFIGS: Record<SA360InsightsEntityType, { queryResource: string; idField: string; nameField: string }> = {
+  customer: { queryResource: "customer", idField: "customer.id", nameField: "customer.descriptive_name" },
   campaign: { queryResource: "campaign", idField: "campaign.id", nameField: "campaign.name" },
   adGroup: { queryResource: "ad_group", idField: "ad_group.id", nameField: "ad_group.name" },
   adGroupAd: { queryResource: "ad_group_ad", idField: "ad_group_ad.ad.id", nameField: "ad_group_ad.ad.name" },
   adGroupCriterion: { queryResource: "ad_group_criterion", idField: "ad_group_criterion.criterion_id", nameField: "ad_group_criterion.keyword.text" },
+  campaignCriterion: { queryResource: "campaign_criterion", idField: "campaign_criterion.criterion_id", nameField: "campaign_criterion.type" },
 };
 
 export function getInsightsQueryResource(entityType: SA360InsightsEntityType): string {

@@ -3,6 +3,10 @@ import {
   getEntityConfig,
   getSupportedEntityTypes,
   getEntityTypeEnum,
+  getInsightsEntityTypeEnum,
+  getInsightsQueryResource,
+  getInsightsIdField,
+  getInsightsNameField,
   type SA360EntityType,
 } from "../src/mcp-server/tools/utils/entity-mapping.js";
 
@@ -63,5 +67,53 @@ describe("SA360 Entity Mapping", () => {
     expect(config.idField).toBe("customer.id");
     expect(config.nameField).toBe("customer.descriptive_name");
     expect(config.statusField).toBeUndefined();
+  });
+});
+
+describe("SA360 Insights Entity Mapping", () => {
+  it("should return 6 insights entity types", () => {
+    const types = getInsightsEntityTypeEnum();
+    expect(types).toHaveLength(6);
+  });
+
+  it("should include customer in insights entity types", () => {
+    const types = getInsightsEntityTypeEnum();
+    expect(types).toContain("customer");
+  });
+
+  it("should include campaignCriterion in insights entity types", () => {
+    const types = getInsightsEntityTypeEnum();
+    expect(types).toContain("campaignCriterion");
+  });
+
+  it("should return correct query resource for customer", () => {
+    expect(getInsightsQueryResource("customer")).toBe("customer");
+  });
+
+  it("should return correct id field for customer", () => {
+    expect(getInsightsIdField("customer")).toBe("customer.id");
+  });
+
+  it("should return correct name field for customer", () => {
+    expect(getInsightsNameField("customer")).toBe("customer.descriptive_name");
+  });
+
+  it("should return correct query resource for campaignCriterion", () => {
+    expect(getInsightsQueryResource("campaignCriterion")).toBe("campaign_criterion");
+  });
+
+  it("should return correct id field for campaignCriterion", () => {
+    expect(getInsightsIdField("campaignCriterion")).toBe("campaign_criterion.criterion_id");
+  });
+
+  it("should return correct name field for campaignCriterion", () => {
+    expect(getInsightsNameField("campaignCriterion")).toBe("campaign_criterion.type");
+  });
+
+  it("should return correct config for all original insights types", () => {
+    expect(getInsightsQueryResource("campaign")).toBe("campaign");
+    expect(getInsightsQueryResource("adGroup")).toBe("ad_group");
+    expect(getInsightsQueryResource("adGroupAd")).toBe("ad_group_ad");
+    expect(getInsightsQueryResource("adGroupCriterion")).toBe("ad_group_criterion");
   });
 });

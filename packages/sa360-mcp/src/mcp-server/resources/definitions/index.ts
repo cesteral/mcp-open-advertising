@@ -10,12 +10,14 @@ export { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas
 export { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 export { queryReferenceResource } from "./query-reference.resource.js";
 export { conversionReferenceResource } from "./conversion-reference.resource.js";
+export { insightsReferenceResource } from "./insights-reference.resource.js";
 
 import { entityHierarchyResource } from "./entity-hierarchy.resource.js";
 import { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas.resource.js";
 import { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 import { queryReferenceResource } from "./query-reference.resource.js";
 import { conversionReferenceResource } from "./conversion-reference.resource.js";
+import { insightsReferenceResource } from "./insights-reference.resource.js";
 import type { Resource } from "../types.js";
 
 /**
@@ -29,4 +31,5 @@ export const definitionResources: Resource[] = [
   ...entityExampleResources,
   queryReferenceResource,
   conversionReferenceResource,
+  insightsReferenceResource,
 ];

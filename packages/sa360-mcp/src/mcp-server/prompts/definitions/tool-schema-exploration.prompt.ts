@@ -51,6 +51,7 @@ Fetch these resources for detailed schema information:
 | \`entity-examples://{type}\` | Query examples for specific type |
 | \`query-reference://all\` | SA360 query language syntax and operators |
 | \`conversion-reference://all\` | Conversion upload payload structure and validation |
+| \`insights-reference://all\` | Available metrics, segments, entity types, and date range options |
 
 ## Tool Categories
 
@@ -64,8 +65,13 @@ Fetch these resources for detailed schema information:
 - \`sa360_search_fields\` — Search available SA360 query fields
 
 ### Insights
-- \`sa360_get_insights\` — Performance insights with preset params
+- \`sa360_get_insights\` — Performance insights with preset or custom date ranges
 - \`sa360_get_insights_breakdowns\` — Metrics with segment breakdowns
+
+### Async Reporting (v2 API)
+- \`sa360_submit_report\` — Submit async report request (returns report ID)
+- \`sa360_check_report_status\` — Poll report status until ready
+- \`sa360_download_report\` — Download completed report as parsed CSV
 
 ### Custom Columns
 - \`sa360_list_custom_columns\` — List custom columns for an account
@@ -76,6 +82,9 @@ Fetch these resources for detailed schema information:
 
 ### Validation
 - \`sa360_validate_conversion\` — Validate conversion payload (no API call)
+
+### Audit
+- \`sa360_get_change_history\` — Get change history for SA360 entities
 
 ## Workflow Prompts
 

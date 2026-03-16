@@ -10,19 +10,23 @@
 
 ## Overview
 
-SA360 (Search Ads 360) sits above Google Ads, Microsoft Ads, Yahoo Japan, and Baidu, providing cross-engine unified reporting and automated bidding. This MCP server exposes SA360's capabilities through 10 tools:
+SA360 (Search Ads 360) sits above Google Ads, Microsoft Ads, Yahoo Japan, and Baidu, providing cross-engine unified reporting and automated bidding. This MCP server exposes SA360's capabilities through 16 tools:
 
 - **8 read-only tools** for cross-engine reporting, entity browsing, field discovery, and custom columns
+- **3 async reporting tools** for the submit → poll → download report workflow via the v2 API
 - **2 write tools** for offline conversion upload and modification via the legacy v2 API
+- **1 validation tool** for pre-flight conversion payload checks
+- **1 audit tool** for entity change history tracking
+- **1 query tool** for flexible cross-engine search
 
-The SA360 API is **read-only for campaign entities** — there are no mutate/CRUD operations for campaigns, ad groups, or ads. The only write capability is offline conversion management.
+The SA360 API is **read-only for campaign entities** — there are no mutate/CRUD operations for campaigns, ad groups, or ads. Write capabilities are limited to offline conversion management and async reporting.
 
 ### APIs Used
 
 | API | Base URL | Capabilities |
 |-----|----------|-------------|
 | SA360 Reporting API v0 | `https://searchads360.googleapis.com/v0` | Read-only queries (SQL-like, mirrors GAQL syntax) |
-| SA360 v2 (DoubleClick Search) | `https://www.googleapis.com/doubleclicksearch/v2` | Conversion insert/update only |
+| SA360 v2 (DoubleClick Search) | `https://www.googleapis.com/doubleclicksearch/v2` | Conversion insert/update, async reporting |
 
 ---
 
@@ -179,16 +183,21 @@ Get a single entity by type and ID.
 | `entityId` | string | Yes | Entity ID to retrieve |
 
 #### `sa360_get_insights`
-Performance metrics with date range presets. Convenience wrapper that builds queries from simple parameters.
+Performance metrics with preset or custom date ranges. Convenience wrapper that builds queries from simple parameters.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `customerId` | string | Yes | SA360 customer ID |
-| `entityType` | enum | Yes | campaign, adGroup, adGroupAd, or adGroupCriterion |
+| `entityType` | enum | Yes | customer, campaign, adGroup, adGroupAd, adGroupCriterion, or campaignCriterion |
 | `entityId` | string | No | Filter to specific entity |
-| `dateRange` | enum | Yes | TODAY, YESTERDAY, LAST_7_DAYS, LAST_30_DAYS, THIS_MONTH, LAST_MONTH, LAST_90_DAYS |
+| `dateRange` | enum | No* | TODAY, YESTERDAY, LAST_7_DAYS, LAST_30_DAYS, THIS_MONTH, LAST_MONTH, LAST_90_DAYS |
+| `startDate` | string | No* | Custom start date (YYYY-MM-DD) |
+| `endDate` | string | No* | Custom end date (YYYY-MM-DD) |
 | `metrics` | string[] | No | Custom metrics (defaults: impressions, clicks, cost_micros, conversions, ctr, average_cpc) |
+| `includeComputedMetrics` | boolean | No | Add derived CPA, ROAS, CPM (default false) |
 | `limit` | number | No | Max results (default 50) |
+
+*Provide either `dateRange` OR both `startDate` + `endDate`.
 
 #### `sa360_get_insights_breakdowns`
 Performance metrics with dimensional breakdowns (device, date, network, etc.).
@@ -196,12 +205,17 @@ Performance metrics with dimensional breakdowns (device, date, network, etc.).
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `customerId` | string | Yes | SA360 customer ID |
-| `entityType` | enum | Yes | campaign, adGroup, adGroupAd, or adGroupCriterion |
+| `entityType` | enum | Yes | customer, campaign, adGroup, adGroupAd, adGroupCriterion, or campaignCriterion |
 | `entityId` | string | No | Filter to specific entity |
-| `dateRange` | enum | Yes | Date range preset |
+| `dateRange` | enum | No* | Date range preset |
+| `startDate` | string | No* | Custom start date (YYYY-MM-DD) |
+| `endDate` | string | No* | Custom end date (YYYY-MM-DD) |
 | `breakdowns` | string[] | Yes | Segment dimensions (e.g., `segments.date`, `segments.device`) |
 | `metrics` | string[] | No | Custom metrics |
+| `includeComputedMetrics` | boolean | No | Add derived CPA, ROAS, CPM (default false) |
 | `limit` | number | No | Max results (default 100) |
+
+*Provide either `dateRange` OR both `startDate` + `endDate`.
 
 **Supported breakdowns:** `segments.date`, `segments.device`, `segments.ad_network_type`, `segments.conversion_action`, `segments.day_of_week`, `segments.month`, `segments.quarter`, `segments.week`, `segments.year`
 
@@ -225,6 +239,48 @@ Discover available fields, resources, and metrics in the SA360 API schema.
   "query": "SELECT name, category, data_type, selectable, filterable, sortable FROM searchAds360Fields WHERE name LIKE 'campaign.%'"
 }
 ```
+
+#### `sa360_get_change_history`
+Get change history for SA360 entities using the `change_event` resource.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `customerId` | string | Yes | SA360 customer ID |
+| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
+| `endDate` | string | Yes | End date (YYYY-MM-DD) |
+| `resourceType` | enum | No | Filter: CAMPAIGN, AD_GROUP, AD, KEYWORD, CRITERION |
+| `limit` | number | No | Max results (default 100) |
+
+### Async Reporting Tools (v2 API)
+
+#### `sa360_submit_report`
+Submit an asynchronous report request. Returns a report ID for polling.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `agencyId` | string | Yes | SA360 agency ID |
+| `advertiserId` | string | No | SA360 advertiser ID |
+| `reportType` | enum | Yes | campaign, adGroup, keyword, ad, advertiser, etc. |
+| `columns` | array | Yes | Columns to include (min 1) |
+| `startDate` | string | Yes | Report start date (YYYY-MM-DD) |
+| `endDate` | string | Yes | Report end date (YYYY-MM-DD) |
+| `filters` | array | No | Filter conditions |
+| `includeRemovedEntities` | boolean | No | Include deleted entities |
+
+#### `sa360_check_report_status`
+Poll a submitted report until ready.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `reportId` | string | Yes | Report ID from submit_report |
+
+#### `sa360_download_report`
+Download a completed report file as parsed CSV.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `downloadUrl` | string | Yes | File URL from check_report_status |
+| `maxRows` | number | No | Max rows to return (default 1000, max 10000) |
 
 ### Conversion API v2 Tools (Write)
 
@@ -254,6 +310,31 @@ Each conversion row:
 Update existing conversions via the legacy v2 API.
 
 Same parameters as `sa360_insert_conversions`, but each conversion row **must** include `conversionId` (returned from the original insert). Set `state: "REMOVED"` to delete a conversion.
+
+### Validation
+
+#### `sa360_validate_conversion`
+Validate a conversion payload before uploading (no API call).
+
+---
+
+## Key Gotchas
+
+| Issue | Details |
+|-------|---------|
+| **SA360 is read-only for entities** | No create/update/delete for campaigns, ad groups, or ads. Only conversions and reports are writable. |
+| **cost_micros convention** | All monetary values are in micros (1,000,000 = 1 currency unit). Divide by 1M for display. |
+| **Dual API** | Reporting API v0 for reads, legacy v2 API for conversions and async reports. Different auth headers. |
+| **login-customer-id** | Required for MCC (manager) accounts to access sub-accounts. Set via `SA360_LOGIN_CUSTOMER_ID`. |
+| **No developer token** | Unlike Google Ads, SA360 does not require a developer token — just OAuth2 credentials. |
+| **90-day conversion window** | Conversions older than 90 days are rejected by the v2 API. |
+
+## Rate Limiting
+
+- Default: 100 requests/minute per customer ID
+- Separate rate limit pools for reporting API v0 and v2 API
+- Automatic exponential backoff on 429/5xx responses (max 3 retries)
+- Configurable via `SA360_RATE_LIMIT_PER_MINUTE` environment variable
 
 ---
 
@@ -288,6 +369,18 @@ AI Agent:
 2. sa360_get_insights → campaign performance with LAST_MONTH date range
 3. sa360_get_insights_breakdowns → break down by segments.ad_network_type
 4. Synthesize cross-engine comparison report
+```
+
+### Async Report for Large Datasets
+
+```
+User: "Pull keyword-level performance for Q1 across all advertisers"
+
+AI Agent:
+1. sa360_submit_report → submit async keyword report with Q1 date range
+2. sa360_check_report_status → poll until isReportReady is true
+3. sa360_download_report → download and parse CSV results
+4. Analyze keyword performance across engines
 ```
 
 ### Offline Conversion Upload
@@ -356,12 +449,13 @@ packages/sa360-mcp/
 │   │   │   └── sa360-service.ts          # Query, entity, field operations
 │   │   └── sa360-v2/
 │   │       ├── sa360-v2-http-client.ts   # Legacy v2 HTTP client
-│   │       └── conversion-service.ts     # Conversion insert/update
+│   │       ├── conversion-service.ts     # Conversion insert/update
+│   │       └── reporting-service.ts      # Async report submit/poll/download
 │   ├── mcp-server/
 │   │   ├── server.ts                     # MCP server setup
 │   │   ├── tools/
 │   │   │   ├── index.ts
-│   │   │   ├── definitions/              # 10 tool files
+│   │   │   ├── definitions/              # 16 tool files
 │   │   │   │   ├── sa360-search.tool.ts
 │   │   │   │   ├── list-accounts.tool.ts
 │   │   │   │   ├── list-entities.tool.ts
@@ -370,12 +464,18 @@ packages/sa360-mcp/
 │   │   │   │   ├── get-insights-breakdowns.tool.ts
 │   │   │   │   ├── list-custom-columns.tool.ts
 │   │   │   │   ├── search-fields.tool.ts
+│   │   │   │   ├── submit-report.tool.ts
+│   │   │   │   ├── check-report-status.tool.ts
+│   │   │   │   ├── download-report.tool.ts
 │   │   │   │   ├── insert-conversions.tool.ts
 │   │   │   │   ├── update-conversions.tool.ts
+│   │   │   │   ├── validate-conversion.tool.ts
+│   │   │   │   ├── get-change-history.tool.ts
 │   │   │   │   └── index.ts
 │   │   │   └── utils/
 │   │   │       ├── entity-mapping.ts     # 8 entity type configs
 │   │   │       ├── query-helpers.ts      # Query builder functions
+│   │   │       ├── computed-metrics.ts   # Derived CPA/ROAS/CPM
 │   │   │       └── resolve-session.ts    # Session service resolver
 │   │   ├── resources/
 │   │   │   ├── types.ts
@@ -392,10 +492,7 @@ packages/sa360-mcp/
 │       │   └── index.ts
 │       └── security/
 │           └── rate-limiter.ts
-└── tests/
-    ├── entity-mapping.test.ts
-    ├── query-helpers.test.ts
-    └── auth-adapter.test.ts
+└── tests/                                # 30 test files, 459 tests
 ```
 
 ### Key Design Decisions
@@ -403,7 +500,7 @@ packages/sa360-mcp/
 - **Dual HTTP clients**: Separate clients for Reporting API v0 and legacy v2, since they have different base URLs, error formats, and auth requirements
 - **No mutate operations**: SA360 is read-only for entities — the server intentionally omits create/update/delete entity tools
 - **GAQL-compatible query language**: SA360 uses the same query syntax as Google Ads (GAQL), making it familiar for users of gads-mcp
-- **Session services pattern**: Per-session `SessionServices` with 4 service instances (httpClient, v2HttpClient, sa360Service, conversionService)
+- **Session services pattern**: Per-session `SessionServices` with 5 service instances (httpClient, v2HttpClient, sa360Service, conversionService, reportingService)
 
 ---
 
@@ -416,7 +513,7 @@ cd packages/sa360-mcp && pnpm run build
 # Type check
 pnpm run typecheck
 
-# Run tests (25 tests)
+# Run tests (459 tests)
 pnpm run test
 
 # Dev mode with hot reload

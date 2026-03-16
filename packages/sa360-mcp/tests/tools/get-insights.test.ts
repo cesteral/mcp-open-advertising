@@ -2,13 +2,80 @@ import { describe, it, expect } from "vitest";
 import { GetInsightsInputSchema } from "../../src/mcp-server/tools/definitions/get-insights.tool.js";
 
 describe("GetInsightsInputSchema", () => {
-  it("accepts valid insights input", () => {
+  it("accepts valid insights input with preset dateRange", () => {
     const result = GetInsightsInputSchema.safeParse({
       customerId: "1234567890",
       entityType: "campaign",
       dateRange: "LAST_30_DAYS",
     });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts valid insights input with custom dates", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects both dateRange and custom dates", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      dateRange: "LAST_30_DAYS",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects neither dateRange nor custom dates", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects startDate without endDate", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      startDate: "2026-01-01",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects endDate without startDate", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      endDate: "2026-01-31",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid startDate format", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      startDate: "01-01-2026",
+      endDate: "2026-01-31",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid endDate format", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      startDate: "2026-01-01",
+      endDate: "Jan 31",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("defaults limit to 50", () => {
@@ -38,8 +105,8 @@ describe("GetInsightsInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts all supported insights entity types", () => {
-    const entityTypes = ["campaign", "adGroup", "adGroupAd", "adGroupCriterion"];
+  it("accepts all 6 supported insights entity types", () => {
+    const entityTypes = ["customer", "campaign", "adGroup", "adGroupAd", "adGroupCriterion", "campaignCriterion"];
 
     for (const entityType of entityTypes) {
       const result = GetInsightsInputSchema.safeParse({
@@ -52,7 +119,7 @@ describe("GetInsightsInputSchema", () => {
   });
 
   it("rejects entity types not supported for insights", () => {
-    const unsupportedTypes = ["customer", "biddingStrategy", "conversionAction", "campaignCriterion"];
+    const unsupportedTypes = ["biddingStrategy", "conversionAction"];
 
     for (const entityType of unsupportedTypes) {
       const result = GetInsightsInputSchema.safeParse({
@@ -164,12 +231,23 @@ describe("GetInsightsInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("requires dateRange", () => {
+  it("accepts includeComputedMetrics flag", () => {
     const result = GetInsightsInputSchema.safeParse({
       customerId: "1234567890",
       entityType: "campaign",
+      dateRange: "LAST_30_DAYS",
+      includeComputedMetrics: true,
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+  });
+
+  it("defaults includeComputedMetrics to false", () => {
+    const result = GetInsightsInputSchema.parse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      dateRange: "LAST_30_DAYS",
+    });
+    expect(result.includeComputedMetrics).toBe(false);
   });
 
   it("requires entityType", () => {
