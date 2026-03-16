@@ -24,6 +24,76 @@ describe("gads_get_insights", () => {
     });
   });
 
+  // ── Date range validation ──
+
+  it("accepts preset dateRange", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      dateRange: "LAST_30_DAYS",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts custom startDate + endDate", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects both dateRange and custom dates", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      dateRange: "LAST_30_DAYS",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects neither dateRange nor custom dates", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects startDate without endDate", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      startDate: "2026-01-01",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects endDate without startDate", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      endDate: "2026-01-31",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid date format", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      startDate: "01/01/2026",
+      endDate: "01/31/2026",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  // ── Entity ID validation ──
+
   it("accepts numeric entityId", () => {
     const result = GetInsightsInputSchema.safeParse({
       customerId: "1234567890",
@@ -74,6 +144,8 @@ describe("gads_get_insights", () => {
     }
   });
 
+  // ── Metrics validation ──
+
   it("accepts safe metrics names at schema level", () => {
     const result = GetInsightsInputSchema.safeParse({
       customerId: "1234567890",
@@ -114,5 +186,94 @@ describe("gads_get_insights", () => {
         { sessionId: "test-session" } as any
       )
     ).rejects.toThrow("Invalid metric name: metrics.clicks FROM campaign");
+  });
+
+  // ── Computed metrics ──
+
+  it("accepts includeComputedMetrics flag", () => {
+    const result = GetInsightsInputSchema.safeParse({
+      customerId: "1234567890",
+      entityType: "campaign",
+      dateRange: "LAST_30_DAYS",
+      includeComputedMetrics: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("adds computedMetrics to results when includeComputedMetrics=true", async () => {
+    mockGaqlSearch.mockResolvedValue({
+      results: [
+        {
+          campaign: { id: "1", name: "Test" },
+          metrics: {
+            cost_micros: "5000000",
+            conversions: "10",
+            conversions_value: "100",
+            impressions: "1000",
+          },
+        },
+      ],
+    });
+
+    const output = await getInsightsLogic(
+      {
+        customerId: "1234567890",
+        entityType: "campaign",
+        dateRange: "LAST_30_DAYS",
+        includeComputedMetrics: true,
+        limit: 50,
+      } as any,
+      {} as any,
+      { sessionId: "test-session" } as any
+    );
+
+    expect(output.results[0]).toHaveProperty("computedMetrics");
+    expect(output.results[0].computedMetrics.cpa).toBe(0.5);
+    expect(output.results[0].computedMetrics.roas).toBe(20);
+    expect(output.results[0].computedMetrics.cpm).toBe(5);
+  });
+
+  it("does not add computedMetrics when includeComputedMetrics=false", async () => {
+    mockGaqlSearch.mockResolvedValue({
+      results: [
+        {
+          campaign: { id: "1", name: "Test" },
+          metrics: { cost_micros: "5000000" },
+        },
+      ],
+    });
+
+    const output = await getInsightsLogic(
+      {
+        customerId: "1234567890",
+        entityType: "campaign",
+        dateRange: "LAST_30_DAYS",
+        includeComputedMetrics: false,
+        limit: 50,
+      } as any,
+      {} as any,
+      { sessionId: "test-session" } as any
+    );
+
+    expect(output.results[0]).not.toHaveProperty("computedMetrics");
+  });
+
+  it("uses BETWEEN clause for custom date range", async () => {
+    mockGaqlSearch.mockResolvedValue({ results: [] });
+
+    await getInsightsLogic(
+      {
+        customerId: "1234567890",
+        entityType: "campaign",
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+        limit: 50,
+      } as any,
+      {} as any,
+      { sessionId: "test-session" } as any
+    );
+
+    const calledQuery = mockGaqlSearch.mock.calls[0][1] as string;
+    expect(calledQuery).toContain("BETWEEN '2026-01-01' AND '2026-01-31'");
   });
 });

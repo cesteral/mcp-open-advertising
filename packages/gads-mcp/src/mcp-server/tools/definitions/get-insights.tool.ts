@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { addComputedMetrics } from "../utils/computed-metrics.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 
@@ -16,7 +17,9 @@ Convenience wrapper around GAQL that constructs queries from simple inputs. For 
 
 **Default metrics:** impressions, clicks, cost_micros, conversions, ctr, average_cpc
 
-**Date ranges:** TODAY, YESTERDAY, LAST_7_DAYS, LAST_30_DAYS, THIS_MONTH, LAST_MONTH, LAST_90_DAYS`;
+**Date ranges:** Preset (TODAY, YESTERDAY, LAST_7_DAYS, etc.) OR custom (startDate + endDate)
+
+**Computed metrics:** Set includeComputedMetrics=true for derived CPA, ROAS, CPM`;
 
 const ENTITY_TYPE_ENUM = ["campaign", "adGroup", "ad", "keyword"] as const;
 const METRIC_NAME_PATTERN = /^(metrics\.)?[a-z_][a-z0-9_]*$/;
@@ -30,6 +33,8 @@ const DATE_RANGE_ENUM = [
   "LAST_MONTH",
   "LAST_90_DAYS",
 ] as const;
+
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 const DEFAULT_METRICS = [
   "metrics.impressions",
@@ -77,7 +82,18 @@ export const GetInsightsInputSchema = z
       .describe("Filter to a specific entity ID"),
     dateRange: z
       .enum(DATE_RANGE_ENUM)
-      .describe("Date range for metrics"),
+      .optional()
+      .describe("Preset date range for metrics (use this OR startDate+endDate)"),
+    startDate: z
+      .string()
+      .regex(DATE_PATTERN, "startDate must be YYYY-MM-DD")
+      .optional()
+      .describe("Custom start date (YYYY-MM-DD) — requires endDate"),
+    endDate: z
+      .string()
+      .regex(DATE_PATTERN, "endDate must be YYYY-MM-DD")
+      .optional()
+      .describe("Custom end date (YYYY-MM-DD) — requires startDate"),
     metrics: z
       .array(
         z
@@ -91,6 +107,11 @@ export const GetInsightsInputSchema = z
       .describe(
         "Metrics to include (defaults to impressions, clicks, cost_micros, conversions, ctr, average_cpc)"
       ),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM derived from raw metrics"),
     limit: z
       .number()
       .min(1)
@@ -99,6 +120,21 @@ export const GetInsightsInputSchema = z
       .default(50)
       .describe("Max results to return (default 50)"),
   })
+  .refine(
+    (data) => {
+      const hasPreset = !!data.dateRange;
+      const hasCustomStart = !!data.startDate;
+      const hasCustomEnd = !!data.endDate;
+      // Must have preset OR both custom dates (not both, not neither)
+      if (hasPreset && (hasCustomStart || hasCustomEnd)) return false;
+      if (!hasPreset && !hasCustomStart && !hasCustomEnd) return false;
+      if (hasCustomStart !== hasCustomEnd) return false;
+      return true;
+    },
+    {
+      message: "Provide either dateRange OR both startDate and endDate (not both, not neither)",
+    }
+  )
   .describe("Parameters for getting Google Ads performance insights");
 
 export const GetInsightsOutputSchema = z
@@ -106,6 +142,8 @@ export const GetInsightsOutputSchema = z
     results: z.array(z.record(z.any())).describe("Insight result rows"),
     totalResults: z.number().describe("Number of results returned"),
     dateRange: z.string().describe("Date range used"),
+    startDate: z.string().optional().describe("Custom start date (when used)"),
+    endDate: z.string().optional().describe("Custom end date (when used)"),
     timestamp: z.string().datetime(),
   })
   .describe("Google Ads performance insights");
@@ -130,9 +168,13 @@ function buildGaqlQuery(input: GetInsightsInput): string {
 
   const selectFields = [idField, nameField, ...metricFields].join(", ");
 
-  const whereClauses: string[] = [
-    `segments.date DURING ${input.dateRange}`,
-  ];
+  const whereClauses: string[] = [];
+
+  if (input.dateRange) {
+    whereClauses.push(`segments.date DURING ${input.dateRange}`);
+  } else if (input.startDate && input.endDate) {
+    whereClauses.push(`segments.date BETWEEN '${input.startDate}' AND '${input.endDate}'`);
+  }
 
   if (input.entityId) {
     if (!/^\d+$/.test(input.entityId)) {
@@ -163,10 +205,20 @@ export async function getInsightsLogic(
     context
   );
 
+  let results = result.results as Record<string, any>[];
+
+  if (input.includeComputedMetrics) {
+    results = results.map(addComputedMetrics);
+  }
+
+  const dateRangeLabel = input.dateRange || `${input.startDate} to ${input.endDate}`;
+
   return {
-    results: result.results as Record<string, any>[],
-    totalResults: result.results.length,
-    dateRange: input.dateRange,
+    results,
+    totalResults: results.length,
+    dateRange: dateRangeLabel,
+    ...(input.startDate && { startDate: input.startDate }),
+    ...(input.endDate && { endDate: input.endDate }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -208,6 +260,16 @@ export const getInsightsTool = {
         entityType: "adGroup",
         dateRange: "LAST_7_DAYS",
         limit: 100,
+      },
+    },
+    {
+      label: "Custom date range with computed metrics",
+      input: {
+        customerId: "1234567890",
+        entityType: "campaign",
+        startDate: "2026-01-01",
+        endDate: "2026-01-31",
+        includeComputedMetrics: true,
       },
     },
   ],

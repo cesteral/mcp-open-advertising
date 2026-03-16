@@ -73,6 +73,7 @@ Prefer specific resources over aggregate ones:
 | Ad group examples | \`entity-examples://adGroup\` (not \`://all\`) |
 | Keyword examples | \`entity-examples://keyword\` |
 | GAQL syntax | \`gaql-reference://syntax\` |
+| Available metrics & date ranges | \`insights-reference://gads\` |
 
 Only use \`://all\` resources when you need a cross-entity view.
 
