@@ -80,4 +80,7 @@ bootstrapMcpServer({
   runStdio: runStdioServer,
   startHttp: startHttpServer,
   onShutdown: () => rateLimiter.destroy(),
+}).catch((err) => {
+  logger.fatal({ err }, "Failed to start cm360-mcp");
+  process.exit(1);
 });

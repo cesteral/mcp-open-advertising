@@ -48,7 +48,14 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
     return false;
   }
 
-  const credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
+  let credentials: ServiceAccountCredentials;
+  try {
+    credentials = JSON.parse(credentialsJson) as ServiceAccountCredentials;
+  } catch {
+    throw new Error(
+      "Failed to parse DV360 service account credentials — ensure the JSON in DV360_SERVICE_ACCOUNT_JSON (base64) or DV360_SERVICE_ACCOUNT_FILE is valid"
+    );
+  }
   const authAdapter = createGoogleAuthAdapter(credentials, [
     "https://www.googleapis.com/auth/display-video",
   ]);
@@ -79,4 +86,7 @@ bootstrapMcpServer({
   runStdio: runStdioServer,
   startHttp: startHttpServer,
   onShutdown: () => rateLimiter.destroy(),
+}).catch((err) => {
+  logger.fatal({ err }, "Failed to start dv360-mcp");
+  process.exit(1);
 });

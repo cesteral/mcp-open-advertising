@@ -167,12 +167,13 @@ export async function adjustLineItemBidsLogic(
       const currentLineItem = (await dv360Service.getEntity("lineItem", entityIds, context)) as any;
 
       // Extract current bid (handle different bid strategy types)
+      // DV360 API returns int64 fields as strings — convert to number
       let previousBidMicros = 0;
       if (currentLineItem.bidStrategy?.fixedBid?.bidAmountMicros) {
-        previousBidMicros = currentLineItem.bidStrategy.fixedBid.bidAmountMicros;
+        previousBidMicros = Number(currentLineItem.bidStrategy.fixedBid.bidAmountMicros);
       } else if (currentLineItem.bidStrategy?.maximizeSpendAutoBid?.maxAverageCpmBidAmountMicros) {
         previousBidMicros =
-          currentLineItem.bidStrategy.maximizeSpendAutoBid.maxAverageCpmBidAmountMicros;
+          Number(currentLineItem.bidStrategy.maximizeSpendAutoBid.maxAverageCpmBidAmountMicros);
       }
 
       // Update bid — DV360 API expects int64 as string for bidAmountMicros

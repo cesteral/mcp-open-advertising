@@ -142,8 +142,8 @@ export async function manageCustomBiddingRulesLogic(
 
       result.rules = {
         customBiddingAlgorithmRulesId: rules.customBiddingAlgorithmRulesId,
-        createTime: rules.createTime,
-        active: rules.active,
+        createTime: rules.createTime ?? "",
+        active: rules.active ?? false,
         state: rules.state,
         error: rules.error
           ? {
@@ -165,8 +165,8 @@ export async function manageCustomBiddingRulesLogic(
 
       result.rulesList = rules.map((r) => ({
         customBiddingAlgorithmRulesId: r.customBiddingAlgorithmRulesId,
-        createTime: r.createTime,
-        active: r.active,
+        createTime: r.createTime ?? "",
+        active: r.active ?? false,
         state: r.state,
       }));
       break;
@@ -186,8 +186,8 @@ export async function manageCustomBiddingRulesLogic(
 
       result.rules = {
         customBiddingAlgorithmRulesId: rules.customBiddingAlgorithmRulesId,
-        createTime: rules.createTime,
-        active: rules.active,
+        createTime: rules.createTime ?? "",
+        active: rules.active ?? false,
         state: rules.state,
         error: rules.error
           ? {
@@ -212,8 +212,8 @@ export async function manageCustomBiddingRulesLogic(
       if (activeRules) {
         result.rules = {
           customBiddingAlgorithmRulesId: activeRules.customBiddingAlgorithmRulesId,
-          createTime: activeRules.createTime,
-          active: activeRules.active,
+          createTime: activeRules.createTime ?? "",
+          active: activeRules.active ?? false,
           state: activeRules.state,
           error: activeRules.error
             ? {

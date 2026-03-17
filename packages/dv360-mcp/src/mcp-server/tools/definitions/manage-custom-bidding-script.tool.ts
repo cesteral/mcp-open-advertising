@@ -144,8 +144,8 @@ export async function manageCustomBiddingScriptLogic(
 
       result.script = {
         customBiddingScriptId: script.customBiddingScriptId,
-        createTime: script.createTime,
-        active: script.active,
+        createTime: script.createTime ?? "",
+        active: script.active ?? false,
         state: script.state,
         errors: script.errors?.map((e) => ({
           errorCode: e.errorCode,
@@ -167,8 +167,8 @@ export async function manageCustomBiddingScriptLogic(
 
       result.scripts = scripts.map((s) => ({
         customBiddingScriptId: s.customBiddingScriptId,
-        createTime: s.createTime,
-        active: s.active,
+        createTime: s.createTime ?? "",
+        active: s.active ?? false,
         state: s.state,
       }));
       break;
@@ -188,8 +188,8 @@ export async function manageCustomBiddingScriptLogic(
 
       result.script = {
         customBiddingScriptId: script.customBiddingScriptId,
-        createTime: script.createTime,
-        active: script.active,
+        createTime: script.createTime ?? "",
+        active: script.active ?? false,
         state: script.state,
         errors: script.errors?.map((e) => ({
           errorCode: e.errorCode,
@@ -214,8 +214,8 @@ export async function manageCustomBiddingScriptLogic(
       if (activeScript) {
         result.script = {
           customBiddingScriptId: activeScript.customBiddingScriptId,
-          createTime: activeScript.createTime,
-          active: activeScript.active,
+          createTime: activeScript.createTime ?? "",
+          active: activeScript.active ?? false,
           state: activeScript.state,
           errors: activeScript.errors?.map((e) => ({
             errorCode: e.errorCode,

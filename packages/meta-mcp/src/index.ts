@@ -66,4 +66,7 @@ bootstrapMcpServer({
   runStdio: runStdioServer,
   startHttp: startHttpServer,
   onShutdown: () => rateLimiter.destroy(),
+}).catch((err) => {
+  logger.fatal({ err }, "Failed to start meta-mcp");
+  process.exit(1);
 });

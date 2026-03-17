@@ -1,6 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { z } from "zod";
 import type { Logger } from "pino";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { RateLimiter } from "../../utils/security/rate-limiter.js";
@@ -8,6 +9,7 @@ import {
   getEntityConfigDynamic,
   getEntitySchemaForOperation,
 } from "../domain/entity-mapping.js";
+import { extractEntitiesFromListResponse } from "./entity-response-parser.js";
 import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
 import type { RequestContext } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360-http-client.js";
@@ -63,55 +65,41 @@ function deepMerge<T extends Record<string, unknown>>(
 // Custom Bidding Types
 // ============================================================================
 
-/**
- * Script error returned when a script is rejected
- */
-export interface ScriptError {
-  errorCode: "SYNTAX_ERROR" | "DEPRECATED_SYNTAX" | "INTERNAL_ERROR";
-  line: string;
-  column: string;
-  errorMessage: string;
-}
+const ScriptErrorSchema = z.object({
+  errorCode: z.enum(["SYNTAX_ERROR", "DEPRECATED_SYNTAX", "INTERNAL_ERROR"]),
+  line: z.string(),
+  column: z.string(),
+  errorMessage: z.string(),
+});
 
-/**
- * Custom bidding script resource
- */
-export interface CustomBiddingScript {
-  name: string;
-  customBiddingAlgorithmId: string;
-  customBiddingScriptId: string;
-  createTime: string;
-  active: boolean;
-  state: "PENDING" | "ACCEPTED" | "REJECTED";
-  errors?: ScriptError[];
-  script?: {
-    resourceName: string;
-  };
-}
+const CustomBiddingScriptSchema = z.object({
+  name: z.string(),
+  customBiddingAlgorithmId: z.string(),
+  customBiddingScriptId: z.string(),
+  createTime: z.string().optional(),
+  active: z.boolean().optional(),
+  state: z.enum(["PENDING", "ACCEPTED", "REJECTED"]),
+  errors: z.array(ScriptErrorSchema).optional(),
+  script: z.object({ resourceName: z.string() }).optional(),
+}).passthrough();
 
-/**
- * Rules error returned when rules are rejected
- */
-export interface RulesError {
-  errorCode: "SYNTAX_ERROR" | "CONSTRAINT_VIOLATION" | "INTERNAL_ERROR";
-  errorMessage: string;
-}
+const CustomBiddingAlgorithmRulesSchema = z.object({
+  name: z.string(),
+  customBiddingAlgorithmId: z.string(),
+  customBiddingAlgorithmRulesId: z.string(),
+  createTime: z.string().optional(),
+  active: z.boolean().optional(),
+  state: z.enum(["ACCEPTED", "REJECTED"]),
+  error: z.object({
+    errorCode: z.enum(["SYNTAX_ERROR", "CONSTRAINT_VIOLATION", "INTERNAL_ERROR"]),
+    errorMessage: z.string(),
+  }).optional(),
+  rules: z.object({ resourceName: z.string() }).optional(),
+}).passthrough();
 
-/**
- * Custom bidding algorithm rules resource
- */
-export interface CustomBiddingAlgorithmRules {
-  name: string;
-  customBiddingAlgorithmId: string;
-  customBiddingAlgorithmRulesId: string;
-  createTime: string;
-  active: boolean;
-  state: "ACCEPTED" | "REJECTED";
-  error?: RulesError;
-  rules?: {
-    resourceName: string;
-  };
-}
+export type ScriptError = z.infer<typeof ScriptErrorSchema>;
+export type CustomBiddingScript = z.infer<typeof CustomBiddingScriptSchema>;
+export type CustomBiddingAlgorithmRules = z.infer<typeof CustomBiddingAlgorithmRulesSchema>;
 
 /**
  * Service for interacting with DV360 API
@@ -201,13 +189,10 @@ export class DV360Service {
       const schema = getEntitySchemaForOperation(entityType, "list");
       const validated = schema.parse(response);
 
-      const entities = (validated as any)[`${entityType}s`] || [];
-      setSpanAttribute("dv360.resultCount", entities.length);
+      const extracted = extractEntitiesFromListResponse(validated, entityType);
+      setSpanAttribute("dv360.resultCount", extracted.entities.length);
 
-      return {
-        entities,
-        nextPageToken: (validated as any).nextPageToken,
-      };
+      return extracted;
     });
   }
 
@@ -537,7 +522,7 @@ export class DV360Service {
         }),
       });
 
-      return response as CustomBiddingScript;
+      return CustomBiddingScriptSchema.parse(response);
     });
   }
 
@@ -596,7 +581,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts/${customBiddingScriptId}`;
 
-      return (await this.httpClient.fetch(path, context)) as CustomBiddingScript;
+      return CustomBiddingScriptSchema.parse(await this.httpClient.fetch(path, context));
     });
   }
 
@@ -679,7 +664,7 @@ export class DV360Service {
         }),
       });
 
-      return response as CustomBiddingAlgorithmRules;
+      return CustomBiddingAlgorithmRulesSchema.parse(response);
     });
   }
 
@@ -744,6 +729,16 @@ export class DV360Service {
       setSpanAttribute("dv360.filename", filename);
       setSpanAttribute("dv360.contentType", contentType);
       setSpanAttribute("dv360.fileSize", fileBuffer.length);
+
+      // DV360 rejects uploads over 200 MB — fail fast before buffering the multipart body
+      const MAX_UPLOAD_BYTES = 200 * 1024 * 1024;
+      if (fileBuffer.length > MAX_UPLOAD_BYTES) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `File size ${(fileBuffer.length / 1024 / 1024).toFixed(1)} MB exceeds the 200 MB upload limit`,
+          { advertiserId, filename, fileSize: fileBuffer.length }
+        );
+      }
 
       await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
 
@@ -1003,7 +998,7 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules/${customBiddingAlgorithmRulesId}`;
 
-      return (await this.httpClient.fetch(path, context)) as CustomBiddingAlgorithmRules;
+      return CustomBiddingAlgorithmRulesSchema.parse(await this.httpClient.fetch(path, context));
     });
   }
 }
