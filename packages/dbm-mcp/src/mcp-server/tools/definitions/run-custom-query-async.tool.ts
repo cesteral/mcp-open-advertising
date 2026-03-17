@@ -141,7 +141,7 @@ export function registerRunCustomQueryAsyncTool(
               isError: true,
             });
           }
-        })();
+        })().catch((err) => logger.error({ err }, "Unhandled error in async query task"));
 
         return { task };
       },

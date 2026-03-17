@@ -41,6 +41,7 @@ import type {
   ExponentialBackoffConfig,
 } from "./types.js";
 import { safeDivide, round } from "../../utils/math.js";
+import { daysBetween } from "../../utils/date.js";
 import { withBidManagerApiSpan } from "../../utils/telemetry/tracing.js";
 
 /**
@@ -56,16 +57,6 @@ function sleep(ms: number): Promise<void> {
 function parseDateString(dateStr: string): DateObject {
   const [year, month, day] = dateStr.split("-").map(Number);
   return { year, month, day };
-}
-
-/**
- * Calculate days between two dates
- */
-function daysBetween(startDate: string, endDate: string): number {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffTime = Math.abs(end.getTime() - start.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 /**

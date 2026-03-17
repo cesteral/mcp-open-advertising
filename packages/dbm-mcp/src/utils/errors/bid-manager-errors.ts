@@ -146,26 +146,26 @@ export class ReportGenerationError extends BidManagerError {
 export class ReportTimeoutError extends BidManagerError {
   public readonly queryId: string;
   public readonly reportId: string;
-  public readonly timeoutMs: number;
+  public readonly maxRetries: number;
   public readonly lastStatus?: string;
 
   constructor(
     queryId: string,
     reportId: string,
-    timeoutMs: number,
+    maxRetries: number,
     lastStatus?: string
   ) {
     super(
-      `Report ${reportId} did not complete within ${timeoutMs}ms. Last status: ${lastStatus || "unknown"}`,
+      `Report ${reportId} did not complete after ${maxRetries} poll attempts. Last status: ${lastStatus || "unknown"}`,
       {
         code: JsonRpcErrorCode.Timeout,
-        data: { queryId, reportId, timeoutMs, lastStatus },
+        data: { queryId, reportId, maxRetries, lastStatus },
       }
     );
     this.name = "ReportTimeoutError";
     this.queryId = queryId;
     this.reportId = reportId;
-    this.timeoutMs = timeoutMs;
+    this.maxRetries = maxRetries;
     this.lastStatus = lastStatus;
   }
 }

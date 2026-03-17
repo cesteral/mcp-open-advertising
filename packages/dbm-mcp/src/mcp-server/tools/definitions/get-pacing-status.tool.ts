@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import { daysBetween } from "../../../utils/date.js";
 
 const TOOL_NAME = "dbm_get_pacing_status";
 const TOOL_TITLE = "Get Pacing Status";
@@ -64,16 +65,6 @@ export const GetPacingStatusOutputSchema = z
 
 export type GetPacingStatusInput = z.infer<typeof GetPacingStatusInputSchema>;
 export type GetPacingStatusOutput = z.infer<typeof GetPacingStatusOutputSchema>;
-
-/**
- * Calculate days between two dates
- */
-function daysBetween(startDate: string, endDate: string): number {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffTime = Math.abs(end.getTime() - start.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
 
 /**
  * Tool logic
