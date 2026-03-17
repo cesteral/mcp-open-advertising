@@ -25,6 +25,12 @@ get_port() {
     meta-mcp)  echo 3005 ;;
     linkedin-mcp) echo 3006 ;;
     tiktok-mcp) echo 3007 ;;
+    cm360-mcp) echo 3008 ;;
+    snapchat-mcp) echo 3009 ;;
+    sa360-mcp) echo 3010 ;;
+    pinterest-mcp) echo 3011 ;;
+    amazon-dsp-mcp) echo 3012 ;;
+    msads-mcp) echo 3013 ;;
     *) echo "Unknown server: $1" >&2; exit 1 ;;
   esac
 }
@@ -56,7 +62,7 @@ done
 if [ -n "$TARGET_SERVER" ] && [ "$TARGET_SERVER" != "--ci" ]; then
   SERVERS=("$TARGET_SERVER")
 else
-  SERVERS=("dbm-mcp" "dv360-mcp" "ttd-mcp" "gads-mcp" "meta-mcp" "linkedin-mcp" "tiktok-mcp")
+  SERVERS=("dbm-mcp" "dv360-mcp" "ttd-mcp" "gads-mcp" "meta-mcp" "linkedin-mcp" "tiktok-mcp" "cm360-mcp" "snapchat-mcp" "sa360-mcp" "pinterest-mcp" "amazon-dsp-mcp" "msads-mcp")
 fi
 
 # Clean results
@@ -75,7 +81,12 @@ for SERVER in "${SERVERS[@]}"; do
 
   # Start server in background with no auth
   cd "$ROOT_DIR"
-  MCP_AUTH_MODE=none MCP_TRANSPORT_MODE=http PORT="$PORT" LINKEDIN_MCP_PORT="$PORT" TIKTOK_MCP_PORT="$PORT" node "packages/$SERVER/dist/index.js" &
+  MCP_AUTH_MODE=none MCP_TRANSPORT_MODE=http PORT="$PORT" \
+    LINKEDIN_MCP_PORT="$PORT" TIKTOK_MCP_PORT="$PORT" \
+    CM360_MCP_PORT="$PORT" SNAPCHAT_MCP_PORT="$PORT" \
+    SA360_MCP_PORT="$PORT" PINTEREST_MCP_PORT="$PORT" \
+    AMAZON_DSP_MCP_PORT="$PORT" MSADS_MCP_PORT="$PORT" \
+    node "packages/$SERVER/dist/index.js" &
   SERVER_PID=$!
 
   # Wait for server to be ready
