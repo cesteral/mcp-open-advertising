@@ -23,6 +23,13 @@ export interface LinkedInEntityConfig {
   displayName: string;
   /** Default fields to request when listing/getting */
   defaultFields: string[];
+  /**
+   * Query parameter name used to scope a list request to an ad account URN.
+   * - `"accounts[0]"` — used by /v2/adCampaigns and /v2/adCreatives
+   * - `"account"` — used by /v2/adCampaignGroups and /v2/conversions
+   * - `undefined` — entity is not account-scoped (e.g., adAccount itself)
+   */
+  listScopingParam?: "accounts[0]" | "account";
 }
 
 const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
@@ -30,6 +37,7 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
     apiPath: "/v2/adAccounts",
     displayName: "Ad Account",
     defaultFields: ["id", "name", "status", "currency", "type", "reference"],
+    // no listScopingParam — adAccounts are not scoped by account
   },
   campaignGroup: {
     apiPath: "/v2/adCampaignGroups",
@@ -37,6 +45,7 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
     defaultFields: [
       "id", "name", "status", "account", "totalBudget", "runSchedule",
     ],
+    listScopingParam: "account", // /v2/adCampaignGroups?q=search&account=<urn>
   },
   campaign: {
     apiPath: "/v2/adCampaigns",
@@ -45,16 +54,19 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
       "id", "name", "status", "campaignGroup", "type", "objectiveType",
       "dailyBudget", "totalBudget", "bidType", "unitCost", "runSchedule",
     ],
+    listScopingParam: "accounts[0]", // /v2/adCampaigns?q=search&accounts[0]=<urn>
   },
   creative: {
     apiPath: "/v2/adCreatives",
     displayName: "Creative",
     defaultFields: ["id", "status", "campaign", "reference", "review"],
+    listScopingParam: "accounts[0]", // /v2/adCreatives?q=search&accounts[0]=<urn>
   },
   conversionRule: {
     apiPath: "/v2/conversions",
     displayName: "Conversion Rule",
     defaultFields: ["id", "name", "type", "account", "status", "urlRules"],
+    listScopingParam: "account", // /v2/conversions?q=search&account=<urn>
   },
 };
 

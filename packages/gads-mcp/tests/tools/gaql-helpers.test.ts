@@ -77,4 +77,25 @@ describe("buildGetByIdQuery", () => {
     expect(query).toContain("FROM ad_group_criterion");
     expect(query).toContain("WHERE ad_group_criterion.criterion_id = 67890");
   });
+
+  it("accepts numeric-only ID for ad entity type", () => {
+    const query = buildGetByIdQuery("ad", "987654321");
+    expect(query).toContain("FROM ad_group_ad");
+    expect(query).toContain("ad_group_ad.ad.id = 987654321");
+    expect(query).toContain("LIMIT 1");
+  });
+
+  it("rejects composite adGroupId~adId format for ad entity type", () => {
+    expect(() => buildGetByIdQuery("ad", "222~111")).toThrow("Entity IDs must be numeric");
+  });
+
+  it("rejects non-numeric IDs for all entity types", () => {
+    const invalidIds = ["abc", "1 OR 1=1", "123~456", ""];
+    for (const id of invalidIds) {
+      expect(
+        () => buildGetByIdQuery("campaign", id),
+        `expected "${id}" to throw`
+      ).toThrow("Entity IDs must be numeric");
+    }
+  });
 });

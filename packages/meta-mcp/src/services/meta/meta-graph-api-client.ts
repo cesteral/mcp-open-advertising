@@ -179,18 +179,15 @@ export class MetaGraphApiClient {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const accessToken = await this.authAdapter.getAccessToken();
 
-      // Add access_token as query parameter (Meta standard pattern)
-      const urlWithAuth = new URL(url);
-      urlWithAuth.searchParams.set("access_token", accessToken);
-
       const response = await fetchWithTimeout(
-        urlWithAuth.toString(),
+        url,
         timeoutMs,
         context,
         {
           ...options,
           headers: {
             ...options?.headers,
+            Authorization: `Bearer ${accessToken}`,
           },
         },
         (u) => u.replace(/access_token=[^&]+/, "access_token=***")
@@ -322,6 +319,10 @@ export class MetaGraphApiClient {
   private parseUsagePercent(headerValue: string): number {
     try {
       const parsed = JSON.parse(headerValue);
+      // x-ad-account-usage format: { "percent_used": 83 }
+      if (parsed.percent_used !== undefined) {
+        return parsed.percent_used as number;
+      }
       // x-app-usage format: { call_count, total_cputime, total_time }
       if (parsed.call_count !== undefined) {
         return Math.max(

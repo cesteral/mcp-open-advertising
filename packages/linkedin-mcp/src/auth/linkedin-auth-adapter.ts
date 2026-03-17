@@ -36,7 +36,7 @@ export class LinkedInAccessTokenAdapter implements LinkedInAuthAdapter {
   constructor(
     private readonly accessToken: string,
     private readonly baseUrl: string = "https://api.linkedin.com",
-    private readonly apiVersion: string = "202501"
+    private readonly apiVersion: string = "202409"
   ) {}
 
   get personId(): string {
@@ -122,7 +122,7 @@ export class LinkedInRefreshTokenAdapter implements LinkedInAuthAdapter {
   constructor(
     private readonly credentials: LinkedInRefreshCredentials,
     private readonly baseUrl: string = "https://api.linkedin.com",
-    private readonly apiVersion: string = "202501"
+    private readonly apiVersion: string = "202409"
   ) {
     this.currentRefreshToken = credentials.refreshToken;
   }

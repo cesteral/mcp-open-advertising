@@ -42,7 +42,7 @@ All LinkedIn entity IDs are URNs (Uniform Resource Names):
 - Conversion Rule: \`urn:li:conversion:777888999\`
 
 URNs must be URL-encoded when used in API paths:
-\`urn:li:sponsoredAccount:123\` → \`urn%3Ali%3AsponssoredAccount%3A123\`
+\`urn:li:sponsoredAccount:123\` → \`urn%3Ali%3AsponsoredAccount%3A123\`
 
 ### Core Hierarchy: Account → Campaign Group → Campaign → Creative
 - A campaign group organizes campaigns (like Facebook campaign)
@@ -70,16 +70,20 @@ Body: \`{ "patch": { "$set": { ...fields } } }\`
 
 ### Delete: DELETE /v2/{entityPath}/{encodedUrn}
 
-### List: GET /v2/{entityPath}?q=search&accounts[0]={urn}&start={n}&count={n}
+### List: GET /v2/{entityPath}?q=search&{scopingParam}={accountUrn}&start={n}&count={n}
 Offset-based pagination via \`start\` and \`count\` parameters.
 Response contains \`elements\` array and \`paging\` object.
+
+The account scoping parameter varies by entity type:
+- \`accounts[0]\` — campaigns (\`/v2/adCampaigns\`) and creatives (\`/v2/adCreatives\`)
+- \`account\` — campaign groups (\`/v2/adCampaignGroups\`) and conversion rules (\`/v2/conversions\`)
 
 ## Required Headers (All Requests)
 
 | Header | Value |
 |--------|-------|
 | Authorization | Bearer {access_token} |
-| LinkedIn-Version | 202409 |
+| LinkedIn-Version | 202409 (configurable via LINKEDIN_API_VERSION) |
 | X-Restli-Protocol-Version | 2.0.0 |
 
 ## Available Tools Summary

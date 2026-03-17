@@ -332,4 +332,84 @@ describe("GAdsService", () => {
       expect(httpClient.fetch).toHaveBeenCalledTimes(1);
     });
   });
+
+  // ==========================================================================
+  // adjustBids
+  // ==========================================================================
+
+  describe("adjustBids", () => {
+    it("reads current bids via GAQL then writes new bid via mutate", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({
+          results: [{ adGroup: { id: "111", name: "Test Group", cpcBidMicros: "1000000" } }],
+        })
+        .mockResolvedValueOnce({});
+
+      const { results } = await service.adjustBids("123", [
+        { adGroupId: "111", cpcBidMicros: "1500000" },
+      ]);
+
+      expect(results).toHaveLength(1);
+      expect(results[0].success).toBe(true);
+      expect(results[0].previousCpcBidMicros).toBe("1000000");
+      expect(results[0].newCpcBidMicros).toBe("1500000");
+      expect(results[0].adGroupName).toBe("Test Group");
+    });
+
+    it("builds updateMask with cpcBidMicros only for CPC-only adjustment", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({
+          results: [{ adGroup: { id: "111", cpcBidMicros: "1000000" } }],
+        })
+        .mockResolvedValueOnce({});
+
+      await service.adjustBids("123", [{ adGroupId: "111", cpcBidMicros: "1500000" }]);
+
+      const mutateBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
+      expect(mutateBody.operations[0].updateMask).toBe("cpcBidMicros");
+      expect(mutateBody.operations[0].update.cpcBidMicros).toBe("1500000");
+      expect(mutateBody.operations[0].update.cpmBidMicros).toBeUndefined();
+    });
+
+    it("builds updateMask with both fields when adjusting CPC and CPM", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({
+          results: [{ adGroup: { id: "222", cpcBidMicros: "1000000", cpmBidMicros: "2000000" } }],
+        })
+        .mockResolvedValueOnce({});
+
+      await service.adjustBids("123", [
+        { adGroupId: "222", cpcBidMicros: "1500000", cpmBidMicros: "3000000" },
+      ]);
+
+      const mutateBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
+      expect(mutateBody.operations[0].updateMask).toBe("cpcBidMicros,cpmBidMicros");
+      expect(mutateBody.operations[0].update.resourceName).toBe("customers/123/adGroups/222");
+    });
+
+    it("returns error and skips mutate when ad group not found", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ results: [] });
+
+      const { results } = await service.adjustBids("123", [
+        { adGroupId: "999", cpcBidMicros: "1000000" },
+      ]);
+
+      expect(results[0].success).toBe(false);
+      expect(results[0].error).toContain("999");
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1); // only the GAQL read
+    });
+
+    it("consumes rate limiter twice per ad group — once for read, once for write", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({
+          results: [{ adGroup: { id: "111", cpcBidMicros: "1000000" } }],
+        })
+        .mockResolvedValueOnce({});
+
+      await service.adjustBids("123", [{ adGroupId: "111", cpcBidMicros: "1500000" }]);
+
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(2);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("gads:123");
+    });
+  });
 });

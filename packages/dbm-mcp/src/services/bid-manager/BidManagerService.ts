@@ -446,7 +446,6 @@ export class BidManagerService {
     this.logger.info({ gcsPath: gcsPath.substring(0, 100) + "..." }, "Fetching report data");
 
     try {
-      await this.rateLimiter?.consume("bidmanager:global");
       const response = await fetch(gcsPath);
 
       if (!response.ok) {
@@ -796,12 +795,13 @@ export class BidManagerService {
 
     // Parse results based on output format
     if (params.outputFormat === "csv") {
-      // Return raw CSV
-      const lines = csvData.replace(/\r\n/g, "\n").trim().split("\n");
-      const columns = lines[0]?.split(",").map((c) => c.trim()) || [];
+      // Return raw CSV — use csvToJson to extract column names safely (handles quoted fields)
+      const csvRecords = csvToJson(csvData);
+      const columns = csvRecords.length > 0 ? Object.keys(csvRecords[0]) : [];
+      const rowCount = csvRecords.length;
 
       this.logger.info(
-        { rowCount: lines.length - 1, columnsCount: columns.length },
+        { rowCount, columnsCount: columns.length },
         "Custom query completed (CSV format)"
       );
 
@@ -809,7 +809,7 @@ export class BidManagerService {
         queryId: queryResult.queryId,
         reportId: queryResult.reportId,
         status: "DONE",
-        rowCount: lines.length - 1,
+        rowCount,
         columns,
         data: csvData,
       };

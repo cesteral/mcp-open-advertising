@@ -50,9 +50,9 @@ export class LinkedInService {
       count: String(Math.min(count ?? 25, 100)),
     };
 
-    if (adAccountUrn && entityType !== "adAccount") {
-      // Scope by account using encoded URN
-      params["accounts[0]"] = adAccountUrn;
+    if (adAccountUrn && config.listScopingParam) {
+      // Each entity type declares its own scoping parameter name
+      params[config.listScopingParam] = adAccountUrn;
     }
 
     const result = (await this.httpClient.get(

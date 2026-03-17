@@ -27,7 +27,7 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://api.linkedin.com"),
-  linkedinApiVersion: z.string().default("202501"),
+  linkedinApiVersion: z.string().default("202409"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via LINKEDIN_RATE_LIMIT_PER_MINUTE for different scaling profiles.

@@ -131,9 +131,11 @@ Each server has its own `MCP_AUTH_MODE` options:
 ## Common Development Patterns
 
 ```typescript
-// Error handling — use formatErrorForMcp from shared
-import { formatErrorForMcp } from "@cesteral/shared";
-return formatErrorForMcp(error);
+// Error handling — use McpError or ErrorHandler from shared
+import { McpError, ErrorHandler, JsonRpcErrorCode } from "@cesteral/shared";
+// Generic: throw McpError.fromError(error)
+// Domain-specific: throw new SomeError(message, { code: JsonRpcErrorCode.InternalError })
+// In catch blocks: throw SomeDomainError.fromApiError(error)
 
 // Logging — structured via Pino
 import { createLogger } from "@cesteral/shared";
