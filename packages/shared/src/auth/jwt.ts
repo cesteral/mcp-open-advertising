@@ -17,7 +17,7 @@ export interface JwtPayload {
 
 /** RFC 8707: prefer MCP_RESOURCE_URI as audience (the server's resource indicator) */
 function getJwtAudience(): string {
-  return process.env.MCP_RESOURCE_URI || process.env.JWT_AUDIENCE || "cesteral-services";
+  return process.env.MCP_RESOURCE_URI || "cesteral-services";
 }
 
 function getJwtIssuer(): string {

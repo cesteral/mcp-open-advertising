@@ -216,13 +216,7 @@ export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
               { const: "value3", title: "Third Option" },
             ],
           },
-          // 3. Legacy titled (deprecated enumNames)
-          legacyTitled: {
-            type: "string",
-            enum: ["opt1", "opt2", "opt3"],
-            enumNames: ["Option One", "Option Two", "Option Three"],
-          },
-          // 4. Untitled multi-select
+          // 3. Untitled multi-select
           untitledMulti: {
             type: "array",
             items: {
@@ -230,7 +224,7 @@ export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
               enum: ["option1", "option2", "option3"],
             },
           },
-          // 5. Titled multi-select
+          // 4. Titled multi-select
           titledMulti: {
             type: "array",
             items: {
@@ -245,7 +239,6 @@ export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
         required: [
           "untitledSingle",
           "titledSingle",
-          "legacyTitled",
           "untitledMulti",
           "titledMulti",
         ],

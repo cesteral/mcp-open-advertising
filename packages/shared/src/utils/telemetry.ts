@@ -116,7 +116,7 @@ export function initializeOpenTelemetry(
     const kService = process.env.K_SERVICE;
     const kRevision = process.env.K_REVISION;
     const kConfiguration = process.env.K_CONFIGURATION;
-    const gcpProjectId = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT_ID;
+    const gcpProjectId = process.env.GCP_PROJECT_ID;
 
     if (kService) {
       resourceAttrs["cloud.provider"] = "gcp";

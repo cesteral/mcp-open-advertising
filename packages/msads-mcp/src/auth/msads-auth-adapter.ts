@@ -37,23 +37,11 @@ export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
 
   constructor(
     private readonly accessToken: string,
-    private readonly _developerToken: string,
-    private readonly _customerId: string,
-    private readonly _accountId: string,
+    public readonly developerToken: string,
+    public readonly customerId: string,
+    public readonly accountId: string,
     private readonly customerApiBaseUrl: string = "https://clientcenter.api.bingads.microsoft.com/CustomerManagement/v13"
   ) {}
-
-  get developerToken(): string {
-    return this._developerToken;
-  }
-
-  get customerId(): string {
-    return this._customerId;
-  }
-
-  get accountId(): string {
-    return this._accountId;
-  }
 
   get userId(): string {
     return this._userId;
@@ -74,7 +62,7 @@ export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
         method: "POST",
         headers: {
           AuthenticationToken: this.accessToken,
-          DeveloperToken: this._developerToken,
+          DeveloperToken: this.developerToken,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ UserId: null }),

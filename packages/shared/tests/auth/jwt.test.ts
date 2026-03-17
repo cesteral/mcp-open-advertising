@@ -10,12 +10,12 @@ const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
   process.env.JWT_ISSUER = "test-issuer";
-  process.env.JWT_AUDIENCE = "test-audience";
+  process.env.MCP_RESOURCE_URI = "test-audience";
 });
 
 afterEach(() => {
   process.env.JWT_ISSUER = ORIGINAL_ENV.JWT_ISSUER;
-  process.env.JWT_AUDIENCE = ORIGINAL_ENV.JWT_AUDIENCE;
+  process.env.MCP_RESOURCE_URI = ORIGINAL_ENV.MCP_RESOURCE_URI;
 });
 
 // ---------------------------------------------------------------------------

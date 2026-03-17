@@ -18,12 +18,12 @@ const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
   process.env.JWT_ISSUER = ISSUER;
-  process.env.JWT_AUDIENCE = AUDIENCE;
+  process.env.MCP_RESOURCE_URI = AUDIENCE;
 });
 
 afterEach(() => {
   // Restore or delete env vars — assignment of undefined sets the string "undefined"
-  for (const key of ["JWT_ISSUER", "JWT_AUDIENCE", "MCP_RESOURCE_URI"]) {
+  for (const key of ["JWT_ISSUER", "MCP_RESOURCE_URI"]) {
     if (ORIGINAL_ENV[key] !== undefined) {
       process.env[key] = ORIGINAL_ENV[key];
     } else {

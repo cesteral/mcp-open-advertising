@@ -54,7 +54,7 @@ describe("fetchWithTimeout", () => {
     }
   });
 
-  it("shows raw URL in timeout error when no sanitizer provided (backward compat)", async () => {
+  it("shows raw URL in timeout error when no sanitizer provided", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation((_url, init) => {
       return new Promise((_resolve, reject) => {
         const signal = init?.signal;
