@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_graphql_cancel_bulk_job";
 const TOOL_TITLE = "TTD GraphQL Cancel Bulk Job";

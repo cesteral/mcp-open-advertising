@@ -12,7 +12,7 @@ import {
 } from "../utils/entity-mapping.js";
 import { addComputedMetrics } from "../utils/computed-metrics.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "sa360_get_insights";
 const TOOL_TITLE = "SA360 Performance Insights";

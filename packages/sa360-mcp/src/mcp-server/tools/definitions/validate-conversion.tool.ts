@@ -10,7 +10,7 @@
 
 import { z } from "zod";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "sa360_validate_conversion";
 const TOOL_TITLE = "Validate SA360 Conversion Payload";

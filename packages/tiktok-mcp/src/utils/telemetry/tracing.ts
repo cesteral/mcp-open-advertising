@@ -1,13 +1,6 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-/**
- * Telemetry utilities for tiktok-mcp
- *
- * Re-exports core OTEL + tracing from @cesteral/shared,
- * plus TikTok API-specific span helpers.
- */
-
 export {
   initializeOpenTelemetry,
   shutdownOpenTelemetry,
@@ -19,24 +12,10 @@ export {
   withToolSpan,
   setSpanAttribute,
   recordSpanError,
+  createPlatformSpanHelper,
   type Span,
 } from "@cesteral/shared";
 
-import { withSpan } from "@cesteral/shared";
-import type { Span } from "@cesteral/shared";
+import { createPlatformSpanHelper } from "@cesteral/shared";
 
-/**
- * Create a span for TikTok API calls
- */
-export async function withTikTokApiSpan<T>(
-  operation: string,
-  entityType: string,
-  fn: (span: Span) => Promise<T>
-): Promise<T> {
-  const attributes = {
-    "tiktok.operation": operation,
-    "tiktok.entityType": entityType,
-  };
-
-  return withSpan(`tiktok.${operation}`, fn, attributes);
-}
+export const withTikTokApiSpan = createPlatformSpanHelper("tiktok");

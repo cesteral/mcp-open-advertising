@@ -10,7 +10,7 @@ import {
   getFieldSchemaByPath,
 } from "../utils/schema-introspection.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_validate_entity";
 const TOOL_TITLE = "Validate DV360 Entity (Client-Side)";

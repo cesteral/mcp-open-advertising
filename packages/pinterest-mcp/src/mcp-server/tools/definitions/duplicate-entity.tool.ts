@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDuplicateEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "pinterest_duplicate_entity";
 const TOOL_TITLE = "Duplicate Pinterest Ads Entity";

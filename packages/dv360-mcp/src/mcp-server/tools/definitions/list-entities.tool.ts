@@ -9,7 +9,7 @@ import {
 } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_list_entities";
 const TOOL_TITLE = "List DV360 Entities";

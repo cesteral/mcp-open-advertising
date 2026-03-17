@@ -8,7 +8,7 @@ import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_bulk_create_entities";
 const TOOL_TITLE = "Bulk Create DV360 Entities";

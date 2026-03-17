@@ -7,7 +7,7 @@ import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update Entity Status";

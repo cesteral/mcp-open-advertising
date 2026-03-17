@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 
 const TOOL_NAME = "dbm_get_historical_metrics";
 const TOOL_TITLE = "Get Historical Metrics";

@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 

@@ -1,19 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { getObjectShape } from "@cesteral/shared";
 import { allTools } from "../src/mcp-server/tools/definitions/index.js";
-
-function getObjectShape(
-  schema: any
-): Record<string, unknown> | null {
-  if (!schema?._def) return null;
-  const shapeFactory = schema._def.shape;
-  if (typeof shapeFactory === "function") {
-    return shapeFactory();
-  }
-  if (shapeFactory && typeof shapeFactory === "object") {
-    return shapeFactory as Record<string, unknown>;
-  }
-  return null;
-}
 
 describe("Cross-server contract compliance", () => {
   const toolNames = allTools.map((t) => t.name);

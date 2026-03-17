@@ -7,7 +7,7 @@
 
 import { resolveSessionServicesFromStore } from "@cesteral/shared";
 import { sessionServiceStore, type SessionServices } from "../../../services/session-services.js";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 /**
  * Look up the SessionServices for the current request.

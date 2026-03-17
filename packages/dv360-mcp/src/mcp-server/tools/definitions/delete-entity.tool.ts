@@ -9,7 +9,7 @@ import {
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_delete_entity";
 

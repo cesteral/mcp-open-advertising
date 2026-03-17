@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_bulk_create_entities";
 const TOOL_TITLE = "Bulk Create LinkedIn Ads Entities";

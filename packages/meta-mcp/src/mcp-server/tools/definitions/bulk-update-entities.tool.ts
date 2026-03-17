@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_bulk_update_entities";
 const TOOL_TITLE = "Bulk Update Meta Ads Entities";

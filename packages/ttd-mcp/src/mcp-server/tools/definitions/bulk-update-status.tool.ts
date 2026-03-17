@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_bulk_update_status";
 const TOOL_TITLE = "Bulk Update TTD Entity Status";

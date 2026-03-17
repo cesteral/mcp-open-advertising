@@ -2,7 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 interface EnsureFieldValueOptions {
   fieldName: string;

@@ -15,7 +15,7 @@ import {
 } from '../utils/targeting-metadata.js';
 import { getTargetingRequiredIdInputShape } from '../utils/targeting-input-shape.js';
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from '../../../types-global/mcp.js';
+import type { SdkContext } from '@cesteral/shared';
 
 const TOOL_NAME = 'dv360_delete_assigned_targeting';
 const TOOL_TITLE = 'Delete DV360 Assigned Targeting Option';

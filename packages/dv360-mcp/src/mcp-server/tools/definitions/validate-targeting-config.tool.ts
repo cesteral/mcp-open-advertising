@@ -12,7 +12,7 @@ import {
 } from '../utils/targeting-input-shape.js';
 import { getSupportedTargetingParentTypes } from '../utils/targeting-metadata.js';
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from '../../../types-global/mcp.js';
+import type { SdkContext } from '@cesteral/shared';
 
 const TOOL_NAME = 'dv360_validate_targeting_config';
 const TOOL_TITLE = 'Validate DV360 Targeting Configuration';

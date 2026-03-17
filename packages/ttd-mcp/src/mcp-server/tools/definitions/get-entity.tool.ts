@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_get_entity";
 const TOOL_TITLE = "Get TTD Entity";

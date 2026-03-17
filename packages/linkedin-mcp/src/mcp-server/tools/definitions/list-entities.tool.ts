@@ -9,7 +9,7 @@ import {
   type LinkedInEntityType,
 } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "linkedin_list_entities";
 const TOOL_TITLE = "List LinkedIn Ads Entities";

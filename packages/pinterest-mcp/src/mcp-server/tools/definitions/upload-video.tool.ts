@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js";
 import type { PinterestMediaUploadResponse, PinterestMediaStatusResponse } from "../utils/media-types.js";
 

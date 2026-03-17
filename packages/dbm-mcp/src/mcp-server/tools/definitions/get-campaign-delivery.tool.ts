@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext, ToolDefinition } from "../../../types-global/mcp.js";
+import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { calculateCTR, calculateCPM, formatMetricValue } from "../../../utils/metrics.js";
 
 const TOOL_NAME = "dbm_get_campaign_delivery";

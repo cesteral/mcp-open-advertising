@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
 
 const TOOL_NAME = "dv360_adjust_line_item_bids";

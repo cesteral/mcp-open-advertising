@@ -1,13 +1,6 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-/**
- * Telemetry utilities for ttd-mcp
- *
- * Re-exports core OTEL + tracing from @cesteral/shared,
- * plus TTD API-specific span helpers.
- */
-
 export {
   initializeOpenTelemetry,
   shutdownOpenTelemetry,
@@ -19,24 +12,10 @@ export {
   withToolSpan,
   setSpanAttribute,
   recordSpanError,
+  createPlatformSpanHelper,
   type Span,
 } from "@cesteral/shared";
 
-import { withSpan } from "@cesteral/shared";
-import type { Span } from "@cesteral/shared";
+import { createPlatformSpanHelper } from "@cesteral/shared";
 
-/**
- * Create a span for TTD API calls
- */
-export async function withTtdApiSpan<T>(
-  operation: string,
-  entityType: string,
-  fn: (span: Span) => Promise<T>
-): Promise<T> {
-  const attributes = {
-    "ttd.operation": operation,
-    "ttd.entityType": entityType,
-  };
-
-  return withSpan(`ttd.${operation}`, fn, attributes);
-}
+export const withTtdApiSpan = createPlatformSpanHelper("ttd");

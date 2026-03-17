@@ -336,6 +336,27 @@ export function recordSpanError(error: unknown): void {
   }
 }
 
+/**
+ * Factory to create a platform-specific span helper.
+ * Each server calls this once with its platform prefix (e.g., "meta", "ttd")
+ * to get a typed span wrapper that sets platform-scoped attributes.
+ */
+export function createPlatformSpanHelper(prefix: string) {
+  return async function <T>(
+    operation: string,
+    entityType: string | undefined,
+    fn: (span: Span) => Promise<T>
+  ): Promise<T> {
+    const attributes: Record<string, string> = {
+      [`${prefix}.operation`]: operation,
+    };
+    if (entityType !== undefined) {
+      attributes[`${prefix}.entityType`] = entityType;
+    }
+    return withSpan(`${prefix}.${operation}`, fn, attributes);
+  };
+}
+
 // Re-export relevant OTEL API types for consumers
 export {
   type Span,

@@ -9,7 +9,7 @@ import {
   mergeParentIdsIntoData,
 } from "../utils/parent-id-validation.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "../../../types-global/mcp.js";
+import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_update_entity";
 const TOOL_TITLE = "Update TTD Entity";
