@@ -22,6 +22,10 @@ import {
  * - X-MSAds-Developer-Token: <developer_token>
  * - X-MSAds-Customer-Id: <customer_id>
  * - X-MSAds-Account-Id: <account_id>
+ *
+ * Note: Intentionally implements AuthStrategy directly rather than extending BearerAuthStrategyBase.
+ * MS Ads uses static access tokens (no OAuth2 refresh flow), so the token lifecycle management
+ * in BearerAuthStrategyBase does not apply here. The adapter holds the token for the session lifetime.
  */
 export class MsAdsBearerAuthStrategy implements AuthStrategy {
   constructor(

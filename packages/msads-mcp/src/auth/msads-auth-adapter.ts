@@ -2,7 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 /**
  * Contract for Microsoft Advertising authentication adapters.
@@ -71,8 +71,10 @@ export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `Microsoft Ads token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        `Microsoft Ads token validation failed: ${response.status} ${response.statusText}`,
+        { body: errorBody.substring(0, 200) }
       );
     }
 

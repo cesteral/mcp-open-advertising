@@ -16,11 +16,12 @@ const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
 **Key requirements by entity type:**
 - **order**: requires \`name\`, \`advertiserId\`, \`budget\`, \`startDate\`, \`endDate\`
 - **lineItem**: requires \`name\`, \`orderId\`, \`budget\`
-- **creative**: requires \`name\`, \`advertiserId\`, \`creativeType\` (IMAGE, VIDEO, RICH_MEDIA)
+- **creative**: requires \`name\`, \`advertiserId\`, \`creativeType\` (STANDARD_DISPLAY, VIDEO, RICH_MEDIA)
 
 **Gotchas:**
 - Budget values are in the advertiser's account currency
-- Status values: DELIVERING, PAUSED, ARCHIVED
+- State values: RUNNING, PAUSED, ARCHIVED
+- Line item budget must be a nested object: \`{ budgetType: "DAILY" | "LIFETIME", budget: number }\`
 - Amazon-Advertising-API-Scope header is automatically injected from the session profile ID`;
 
 export const CreateEntityInputSchema = z
@@ -113,8 +114,8 @@ export const createEntityTool = {
         data: {
           name: "US Display — Retargeting",
           orderId: "ord_123456789",
-          budget: 2000,
-          bidding: { bidPrice: 2.5 },
+          budget: { budgetType: "DAILY", budget: 2000 },
+          bidding: { bidOptimization: { bidAmount: 2.5 } },
         },
       },
     },

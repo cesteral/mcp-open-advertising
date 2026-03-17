@@ -8,29 +8,23 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_get_ad_preview";
 const TOOL_TITLE = "Get AmazonDsp Ad Preview";
-const TOOL_DESCRIPTION = `Get a preview of how a AmazonDsp ad will appear to users.
+const TOOL_DESCRIPTION = `Get a preview of how an Amazon DSP creative will appear to users.
 
-Returns preview data including image/video URLs and ad text as they will
-be displayed on AmazonDsp's platform.
-
-**Common ad formats:** FEED, STORY, SPARK_ADS`;
+Returns preview data for the creative as served via the Amazon DSP platform.
+Uses the \`GET /dsp/creatives/{creativeId}/preview\` endpoint.`;
 
 export const GetAdPreviewInputSchema = z
   .object({
     profileId: z
       .string()
       .min(1)
-      .describe("AmazonDsp Advertiser ID"),
+      .describe("Amazon DSP Advertiser ID"),
     adId: z
       .string()
       .min(1)
-      .describe("The ad ID to preview"),
-    adFormat: z
-      .string()
-      .optional()
-      .describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
+      .describe("The creative ID to preview"),
   })
-  .describe("Parameters for getting AmazonDsp ad preview");
+  .describe("Parameters for getting an Amazon DSP creative preview");
 
 export const GetAdPreviewOutputSchema = z
   .object({
@@ -52,7 +46,6 @@ export async function getAdPreviewLogic(
 
   const preview = await amazonDspService.getAdPreviews(
     input.adId,
-    input.adFormat,
     context
   );
 
@@ -86,18 +79,10 @@ export const getAdPreviewTool = {
   },
   inputExamples: [
     {
-      label: "Preview a AmazonDsp feed ad",
+      label: "Preview an Amazon DSP creative",
       input: {
         profileId: "1234567890",
-        adId: "1600123456789",
-        adFormat: "FEED",
-      },
-    },
-    {
-      label: "Preview an ad without specifying format",
-      input: {
-        profileId: "1234567890",
-        adId: "1600123456789",
+        adId: "cre_123456789",
       },
     },
   ],

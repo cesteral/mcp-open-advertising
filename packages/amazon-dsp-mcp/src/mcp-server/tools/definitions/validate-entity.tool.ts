@@ -51,12 +51,12 @@ const REQUIRED_FIELDS_CREATE: Record<AmazonDspEntityType, FieldRule[]> = {
   lineItem: [
     { field: "name", expectedType: "string" },
     { field: "orderId", expectedType: "string", hint: "Parent order ID" },
-    { field: "budget", expectedType: "number" },
+    { field: "budget", expectedType: "object", hint: '{ budgetType: "DAILY" | "LIFETIME", budget: number }' },
   ],
   creative: [
     { field: "name", expectedType: "string" },
     { field: "advertiserId", expectedType: "string" },
-    { field: "creativeType", expectedType: "string", hint: "IMAGE, VIDEO, or RICH_MEDIA" },
+    { field: "creativeType", expectedType: "string", hint: "STANDARD_DISPLAY, VIDEO, or RICH_MEDIA" },
   ],
 };
 
@@ -145,11 +145,24 @@ export async function validateEntityLogic(
     );
   }
 
-  // Budget warnings (both modes)
+  // Budget validation (both modes)
   const budgetValue = data.budget;
-  if (budgetValue !== undefined && typeof budgetValue === "number") {
-    if (budgetValue <= 0) {
-      errors.push('Field "budget" must be a positive number');
+  if (budgetValue !== undefined) {
+    if (typeof budgetValue === "number") {
+      // Flat number is only valid for orders
+      if (entityType === "lineItem") {
+        errors.push('Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }');
+      } else if (budgetValue <= 0) {
+        errors.push('Field "budget" must be a positive number');
+      }
+    } else if (typeof budgetValue === "object" && budgetValue !== null) {
+      const budgetObj = budgetValue as Record<string, unknown>;
+      if (typeof budgetObj.budget !== "number" || (budgetObj.budget as number) <= 0) {
+        errors.push('Field "budget.budget" must be a positive number');
+      }
+      if (!budgetObj.budgetType) {
+        errors.push('Field "budget.budgetType" is required ("DAILY" or "LIFETIME")');
+      }
     }
   }
 

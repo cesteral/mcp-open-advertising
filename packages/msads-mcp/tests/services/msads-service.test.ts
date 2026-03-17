@@ -35,10 +35,10 @@ describe("MsAdsService", () => {
         Campaigns: [{ Id: 1, Name: "Test Campaign" }],
       });
 
-      const result = await service.listEntities("campaign", { accountId: "acct-123" });
+      const result = await service.listEntities("campaign", { accountId: "123" });
       expect(httpClient.post).toHaveBeenCalledWith(
         "/Campaigns/GetByAccountId",
-        { AccountId: "acct-123" },
+        { AccountId: 123 },
         undefined
       );
       expect(result).toEqual({ Campaigns: [{ Id: 1, Name: "Test Campaign" }] });
@@ -49,19 +49,19 @@ describe("MsAdsService", () => {
         AdGroups: [{ Id: 2 }],
       });
 
-      await service.listEntities("adGroup", { parentId: "camp-456" });
+      await service.listEntities("adGroup", { parentId: "456" });
       expect(httpClient.post).toHaveBeenCalledWith(
         "/AdGroups/GetByCampaignId",
-        { CampaignId: "camp-456" },
+        { CampaignId: 456 },
         undefined
       );
     });
 
     it("lists keywords by parent ad group ID", async () => {
-      await service.listEntities("keyword", { parentId: "ag-789" });
+      await service.listEntities("keyword", { parentId: "789" });
       expect(httpClient.post).toHaveBeenCalledWith(
         "/Keywords/GetByAdGroupId",
-        { AdGroupId: "ag-789" },
+        { AdGroupId: 789 },
         undefined
       );
     });
@@ -69,7 +69,7 @@ describe("MsAdsService", () => {
     it("throws for entity types without list support", async () => {
       await expect(
         service.listEntities("budget", {})
-      ).rejects.toThrow("does not support listing");
+      ).rejects.toThrow("Use getEntity with specific BudgetIds");
     });
   });
 
@@ -94,7 +94,7 @@ describe("MsAdsService", () => {
         CampaignIds: [111],
       });
 
-      const data = { Campaigns: [{ Name: "New Campaign" }] };
+      const data = { AccountId: 123, Campaigns: [{ Name: "New Campaign" }] };
       await service.createEntity("campaign", data);
       expect(httpClient.post).toHaveBeenCalledWith("/Campaigns/Add", data, undefined);
     });

@@ -75,7 +75,7 @@ export class MsAdsHttpClient {
     context?: RequestContext,
     options?: RequestInit
   ): Promise<unknown> {
-    return withMsAdsApiSpan(`api.${method}`, url, async (span) => {
+    return withMsAdsApiSpan(`api.${method}`, undefined, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
       return executeWithRetry(MSADS_RETRY_CONFIG, {

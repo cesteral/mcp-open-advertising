@@ -14,7 +14,7 @@ const TOOL_DESCRIPTION = `Batch update the status of Amazon DSP entities.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Status values:**
-- **DELIVERING** — Activate/resume entities
+- **RUNNING** — Activate/resume entities
 - **PAUSED** — Pause entities
 - **ARCHIVED** — Archive entities (equivalent to soft delete)
 
@@ -35,8 +35,8 @@ export const BulkUpdateStatusInputSchema = z
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
     operationStatus: z
-      .enum(["DELIVERING", "PAUSED", "ARCHIVED"])
-      .describe("Target status to apply (DELIVERING=active, PAUSED=paused, ARCHIVED=soft delete)"),
+      .enum(["RUNNING", "PAUSED", "ARCHIVED"])
+      .describe("Target status to apply (RUNNING=active, PAUSED=paused, ARCHIVED=soft delete)"),
   })
   .describe("Parameters for bulk status update of AmazonDsp Ads entities");
 
@@ -131,7 +131,7 @@ export const bulkUpdateStatusTool = {
         entityType: "lineItem",
         profileId: "1234567890",
         entityIds: ["li_111111"],
-        operationStatus: "DELIVERING",
+        operationStatus: "RUNNING",
       },
     },
   ],

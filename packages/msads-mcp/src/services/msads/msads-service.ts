@@ -3,12 +3,14 @@
 
 import type { Logger } from "pino";
 import type { RateLimiter } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { MsAdsHttpClient } from "./msads-http-client.js";
 import {
   getEntityConfig,
   type MsAdsEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
+import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
 
 /**
  * Microsoft Ads entity service — generic CRUD wrapping MsAdsHttpClient.
@@ -39,11 +41,11 @@ export class MsAdsService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume("msads:read");
+    await this.rateLimiter.consume(MSADS_READ_KEY);
 
     if (params.parentId && config.getByParentOperation && config.parentIdField) {
       const body: Record<string, unknown> = {
-        [config.parentIdField]: params.parentId,
+        [config.parentIdField]: Number(params.parentId),
         ...params.filters,
       };
       this.logger.debug({ entityType, parentId: params.parentId }, "Listing entities by parent");
@@ -52,14 +54,20 @@ export class MsAdsService {
 
     if (config.getByAccountOperation) {
       const body: Record<string, unknown> = {
-        AccountId: params.accountId,
+        AccountId: Number(params.accountId),
         ...params.filters,
       };
       this.logger.debug({ entityType, accountId: params.accountId }, "Listing entities by account");
       return this.httpClient.post(config.getByAccountOperation, body, context);
     }
 
-    throw new Error(`Entity type '${entityType}' does not support listing. Use getEntity with specific IDs.`);
+    throw new Error(
+      entityType === "audience"
+        ? "Use getEntity with specific AudienceIds. Audiences cannot be listed by account in the MS Ads REST API v13."
+        : entityType === "budget"
+          ? "Use getEntity with specific BudgetIds. Budgets cannot be listed by account in the MS Ads REST API v13."
+          : `Entity type '${entityType}' does not support listing. Use getEntity with specific IDs.`
+    );
   }
 
   /**
@@ -73,7 +81,7 @@ export class MsAdsService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
 
-    await this.rateLimiter.consume("msads:read");
+    await this.rateLimiter.consume(MSADS_READ_KEY);
 
     const body: Record<string, unknown> = {
       [config.idsField]: entityIds.map(Number),
@@ -93,7 +101,13 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    await this.rateLimiter.consume("msads:write", 3);
+    if (entityType === "campaign" && data["AccountId"] === undefined) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        "Campaign create requires AccountId in the request data"
+      );
+    }
+    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     this.logger.info({ entityType }, "Creating entity");
     return this.httpClient.post(config.addOperation, data, context);
   }
@@ -107,7 +121,7 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    await this.rateLimiter.consume("msads:write", 3);
+    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     this.logger.info({ entityType }, "Updating entity");
     return this.httpClient.post(config.updateOperation, data, context);
   }
@@ -122,7 +136,7 @@ export class MsAdsService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    await this.rateLimiter.consume("msads:write", 3);
+    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     const body: Record<string, unknown> = {
       [config.idsField]: entityIds.map(Number),
       ...params,
@@ -144,7 +158,7 @@ export class MsAdsService {
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
-      await this.rateLimiter.consume("msads:write", 3);
+      await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
       const body = { [config.pluralName]: batch };
       this.logger.info({ entityType, batchSize: batch.length, batchIndex: i }, "Bulk creating entities");
       const result = await this.httpClient.post(config.addOperation, body, context);
@@ -167,7 +181,7 @@ export class MsAdsService {
 
     for (let i = 0; i < items.length; i += config.batchLimit) {
       const batch = items.slice(i, i + config.batchLimit);
-      await this.rateLimiter.consume("msads:write", 3);
+      await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
       const body = { [config.pluralName]: batch };
       this.logger.info({ entityType, batchSize: batch.length }, "Bulk updating entities");
       const result = await this.httpClient.post(config.updateOperation, body, context);
@@ -191,7 +205,8 @@ export class MsAdsService {
     this.logger.info({ entityType, count: entityIds.length, status }, "Bulk updating status");
 
     const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
-      await this.rateLimiter.consume("msads:write", 3);
+      // Cost 1 (not 3) — status-only updates are minimal single-field payloads
+      await this.rateLimiter.consume(MSADS_WRITE_KEY, 1);
       const body = {
         [config.pluralName]: [{ Id: Number(entityId), Status: status }],
       };
@@ -244,7 +259,7 @@ export class MsAdsService {
       throw new Error("No entities found for bid adjustment — all entity IDs were invalid or deleted");
     }
 
-    await this.rateLimiter.consume("msads:write", 3);
+    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     const body = { [config.pluralName]: updatedEntities };
     this.logger.info({ entityType, count: adjustments.length }, "Adjusting bids");
     return this.httpClient.post(config.updateOperation, body, context);
@@ -258,7 +273,7 @@ export class MsAdsService {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume("msads:read");
+    await this.rateLimiter.consume(MSADS_READ_KEY);
     this.logger.debug({ path }, "Executing custom read operation");
     return this.httpClient.post(path, data, context);
   }
@@ -271,7 +286,7 @@ export class MsAdsService {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    await this.rateLimiter.consume("msads:write", 3);
+    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     this.logger.debug({ path }, "Executing custom operation");
     return this.httpClient.post(path, data, context);
   }

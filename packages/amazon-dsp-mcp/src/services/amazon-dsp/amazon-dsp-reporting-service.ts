@@ -8,7 +8,7 @@ import { fetchWithTimeout } from "@cesteral/shared";
 import type { Logger } from "pino";
 
 /** Amazon DSP report task status values */
-export type ReportTaskStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILURE";
+export type ReportTaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETE" | "FAILED";
 
 /** Amazon DSP report task check response */
 interface ReportTaskCheckData {
@@ -59,7 +59,7 @@ export class AmazonDspReportingService {
   async submitReport(
     reportConfig: AmazonDspReportConfig,
     context?: RequestContext
-  ): Promise<{ task_id: string }> {
+  ): Promise<{ taskId: string }> {
     await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
     const result = (await this.httpClient.post(
@@ -80,7 +80,7 @@ export class AmazonDspReportingService {
       context
     )) as { reportId: string; status: string };
 
-    return { task_id: result.reportId };
+    return { taskId: result.reportId };
   }
 
   /**
@@ -101,7 +101,7 @@ export class AmazonDspReportingService {
         context
       )) as ReportTaskCheckData;
 
-      if (result.status === "COMPLETED" || result.status === "FAILURE") {
+      if (result.status === "COMPLETE" || result.status === "FAILED") {
         this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
         return result;
       }
@@ -174,23 +174,38 @@ export class AmazonDspReportingService {
       );
     }
 
-    const csvText = await response.text();
-    const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
+    const text = await response.text();
 
+    // Amazon DSP reports default to JSON format — detect and parse accordingly
+    const contentType = response.headers?.get("content-type") ?? "";
+    const looksLikeJson =
+      contentType.includes("application/json") ||
+      text.trimStart().startsWith("[") ||
+      text.trimStart().startsWith("{");
+
+    if (looksLikeJson) {
+      const parsed = JSON.parse(text) as Record<string, unknown>[];
+      const data = Array.isArray(parsed) ? parsed : [parsed];
+      if (data.length === 0) {
+        return { rows: [], headers: [], totalRows: 0 };
+      }
+      const headers = Object.keys(data[0]);
+      const totalRows = data.length;
+      const limitedData = data.slice(0, maxRows);
+      const rows = limitedData.map((row) => headers.map((h) => String(row[h] ?? "")));
+      return { rows, headers, totalRows };
+    }
+
+    // CSV/TSV fallback
+    const lines = text.replace(/\r\n/g, "\n").trim().split("\n");
     if (lines.length === 0) {
       return { rows: [], headers: [], totalRows: 0 };
     }
-
     const headers = parseCsvLine(lines[0]);
     const dataLines = lines.slice(1);
     const limitedLines = dataLines.slice(0, maxRows);
     const rows = limitedLines.map(parseCsvLine);
-
-    return {
-      rows,
-      headers,
-      totalRows: dataLines.length,
-    };
+    return { rows, headers, totalRows: dataLines.length };
   }
 
   /**
@@ -200,22 +215,22 @@ export class AmazonDspReportingService {
     reportConfig: AmazonDspReportConfig,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const { task_id } = await this.submitReport(reportConfig, context);
-    const taskResult = await this.pollReport(task_id, context);
+    const { taskId } = await this.submitReport(reportConfig, context);
+    const taskResult = await this.pollReport(taskId, context);
 
-    if (taskResult.status === "FAILURE") {
-      throw new Error(`Amazon DSP report task ${task_id} failed`);
+    if (taskResult.status === "FAILED") {
+      throw new Error(`Amazon DSP report task ${taskId} failed`);
     }
 
     if (!taskResult.url) {
-      throw new Error(`Amazon DSP report task ${task_id} completed but has no download URL`);
+      throw new Error(`Amazon DSP report task ${taskId} completed but has no download URL`);
     }
 
     const reportData = await this.downloadReport(taskResult.url, 10_000, context);
 
     return {
       ...reportData,
-      taskId: task_id,
+      taskId,
     };
   }
 

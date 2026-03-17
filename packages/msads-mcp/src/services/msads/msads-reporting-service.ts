@@ -4,8 +4,9 @@
 import type { Logger } from "pino";
 import type { RateLimiter } from "@cesteral/shared";
 import type { MsAdsHttpClient } from "./msads-http-client.js";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
+import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
 
 /**
  * Microsoft Ads Reporting Service.
@@ -55,7 +56,7 @@ export class MsAdsReportingService {
     config: ReportConfig,
     context?: RequestContext
   ): Promise<string> {
-    await this.rateLimiter.consume("msads:write", 3);
+    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     const body = this.buildReportRequest(config);
     this.logger.info({ reportType: config.reportType }, "Submitting report");
 
@@ -111,7 +112,7 @@ export class MsAdsReportingService {
     reportRequestId: string,
     context?: RequestContext
   ): Promise<{ status: string; downloadUrl?: string }> {
-    await this.rateLimiter.consume("msads:read");
+    await this.rateLimiter.consume(MSADS_READ_KEY);
     const response = (await this.httpClient.post(
       "/Reports/Poll",
       { ReportRequestId: reportRequestId },
@@ -190,6 +191,12 @@ export class MsAdsReportingService {
   }
 
   private parseDate(dateStr: string): { Year: number; Month: number; Day: number } {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Invalid date format: "${dateStr}". Expected YYYY-MM-DD.`
+      );
+    }
     const [year, month, day] = dateStr.split("-").map(Number);
     return { Year: year!, Month: month!, Day: day! };
   }
