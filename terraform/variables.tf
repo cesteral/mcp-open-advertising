@@ -228,12 +228,6 @@ variable "mcp_session_mode" {
   default     = "stateless"
 }
 
-variable "mcp_auth_mode" {
-  description = "MCP auth mode"
-  type        = string
-  default     = "jwt"
-}
-
 variable "service_auth_mode_overrides" {
   description = "Per-service MCP auth mode overrides keyed by service name"
   type        = map(string)

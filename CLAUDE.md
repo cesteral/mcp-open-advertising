@@ -106,6 +106,28 @@ On-demand workflow guidance for complex multi-step operations. Located in `src/m
 
 Available: `full_campaign_setup_workflow` (dv360-mcp), `msads_import_from_google` (msads-mcp)
 
+## Auth Mode Configuration
+
+Each server has its own `MCP_AUTH_MODE` options:
+
+| Server | Auth Modes | Default |
+|--------|-----------|---------|
+| `dbm-mcp`, `dv360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
+| `gads-mcp` | `gads-headers`, `jwt`, `none` | `gads-headers` |
+| `cm360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
+| `ttd-mcp` | `ttd-headers`, `jwt`, `none` | `ttd-headers` |
+| `meta-mcp` | `meta-bearer`, `jwt`, `none` | `meta-bearer` |
+| `linkedin-mcp` | `linkedin-bearer`, `jwt`, `none` | `linkedin-bearer` |
+| `tiktok-mcp` | `tiktok-bearer`, `jwt`, `none` | `tiktok-bearer` |
+| `sa360-mcp` | `sa360-headers`, `jwt`, `none` | `sa360-headers` |
+| `pinterest-mcp` | `pinterest-bearer`, `jwt`, `none` | `pinterest-bearer` |
+| `snapchat-mcp` | `snapchat-bearer`, `jwt`, `none` | `snapchat-bearer` |
+| `amazon-dsp-mcp` | `amazon-dsp-bearer`, `jwt`, `none` | `amazon-dsp-bearer` |
+| `msads-mcp` | `msads-bearer`, `jwt`, `none` | `msads-bearer` |
+
+- `MCP_AUTH_SECRET_KEY`: required for `jwt` mode
+- RFC 9728 endpoint at `/.well-known/oauth-protected-resource` returns metadata in `jwt` mode
+
 ## Common Development Patterns
 
 ```typescript

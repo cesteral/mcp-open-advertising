@@ -10,5 +10,6 @@ output "alert_policy_ids" {
     { for k, v in google_monitoring_alert_policy.latency_p99 : "${k}-latency-p99" => v.name },
     { for k, v in google_monitoring_alert_policy.instance_count : "${k}-instance-count" => v.name },
     { for k, v in google_monitoring_alert_policy.uptime_failure : "${k}-uptime-failure" => v.name },
+    { "audit-access-denied" = google_monitoring_alert_policy.audit_access_denied.name },
   )
 }
