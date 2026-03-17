@@ -361,7 +361,7 @@ describe("LinkedInRefreshTokenAdapter", () => {
       expect(meCall[0]).toContain("/v2/me");
       const meOptions = meCall[3] as { headers: Record<string, string> };
       expect(meOptions.headers["Authorization"]).toBe("Bearer li-new-token");
-      expect(meOptions.headers["LinkedIn-Version"]).toBe("202501");
+      expect(meOptions.headers["LinkedIn-Version"]).toBe("202409");
       expect(meOptions.headers["X-Restli-Protocol-Version"]).toBe("2.0.0");
     });
   });

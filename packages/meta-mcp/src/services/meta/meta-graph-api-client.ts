@@ -219,7 +219,7 @@ export class MetaGraphApiClient {
         errorMessage += "\n\nAction required: Meta access token expired. Generate a new token in Meta Business Suite or use a System User token.";
       }
 
-      const redactedUrl = urlWithAuth.toString().replace(/access_token=[^&]+/, "access_token=***");
+      const redactedUrl = url.replace(/access_token=[^&]+/, "access_token=***");
       const mcpError = new McpError(
         jsonRpcCode,
         errorMessage,

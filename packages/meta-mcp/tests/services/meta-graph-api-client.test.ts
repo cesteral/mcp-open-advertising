@@ -65,16 +65,17 @@ describe("MetaGraphApiClient", () => {
   }
 
   describe("GET requests", () => {
-    it("makes correct GET request with access_token appended", async () => {
+    it("makes correct GET request with Bearer auth header", async () => {
       mockOkResponse({ id: "123" });
 
       const result = await client.get("/me", { fields: "id,name" });
       expect(result).toEqual({ id: "123" });
 
-      const calledUrl = mockFetchWithTimeout.mock.calls[0][0];
-      expect(calledUrl).toContain("access_token=test-access-token");
+      const [calledUrl, , , options] = mockFetchWithTimeout.mock.calls[0];
       expect(calledUrl).toContain("/me");
       expect(calledUrl).toContain("fields=id%2Cname");
+      expect(calledUrl).not.toContain("access_token=");
+      expect((options?.headers as Record<string, string>)["Authorization"]).toBe("Bearer test-access-token");
     });
   });
 
@@ -85,11 +86,12 @@ describe("MetaGraphApiClient", () => {
       await client.post("/act_123/campaigns", { name: "Test Campaign" });
 
       const [url, , , options] = mockFetchWithTimeout.mock.calls[0];
-      expect(url).toContain("access_token=test-access-token");
+      expect(url).not.toContain("access_token=");
       expect(options?.method).toBe("POST");
       expect((options?.headers as Record<string, string>)["Content-Type"]).toBe(
         "application/x-www-form-urlencoded"
       );
+      expect((options?.headers as Record<string, string>)["Authorization"]).toBe("Bearer test-access-token");
     });
   });
 

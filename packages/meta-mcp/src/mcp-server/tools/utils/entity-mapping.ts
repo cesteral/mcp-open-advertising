@@ -64,9 +64,9 @@ const ENTITY_CONFIGS: Record<MetaEntityType, MetaEntityConfig> = {
     edge: "adcreatives",
     displayName: "Ad Creative",
     defaultFields: [
-      "id", "name", "status", "body", "title",
+      "id", "name", "body", "title",
       "image_url", "thumbnail_url", "object_story_spec",
-      "created_time",
+      "effective_object_story_id", "created_time",
     ],
   },
   customAudience: {
