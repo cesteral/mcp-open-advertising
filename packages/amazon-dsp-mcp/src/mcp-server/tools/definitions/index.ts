@@ -20,7 +20,7 @@ export { getEntityTool } from "./get-entity.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { deleteEntityTool } from "./delete-entity.tool.js";
-export { listProfilesTool } from "./list-advertisers.tool.js";
+export { listAdvertisersTool } from "./list-advertisers.tool.js";
 export { getReportTool } from "./get-report.tool.js";
 export { getReportBreakdownsTool } from "./get-report-breakdowns.tool.js";
 export { submitReportTool } from "./submit-report.tool.js";
@@ -41,7 +41,7 @@ import { getEntityTool } from "./get-entity.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
-import { listProfilesTool } from "./list-advertisers.tool.js";
+import { listAdvertisersTool } from "./list-advertisers.tool.js";
 import { getReportTool } from "./get-report.tool.js";
 import { getReportBreakdownsTool } from "./get-report-breakdowns.tool.js";
 import { submitReportTool } from "./submit-report.tool.js";
@@ -66,7 +66,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   updateEntityTool,
   deleteEntityTool,
   // ── Account ──
-  listProfilesTool,
+  listAdvertisersTool,
   // ── Reporting ──
   getReportTool,
   getReportBreakdownsTool,

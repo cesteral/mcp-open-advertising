@@ -28,7 +28,7 @@ const amazonDspWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   amazon_dsp_list_entities: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_get_entity: "mcp.execute.amazon_dsp_entity_read",
-  amazon_dsp_list_profiles: "mcp.execute.amazon_dsp_entity_read",
+  amazon_dsp_list_advertisers: "mcp.execute.amazon_dsp_entity_read",
   // Write operations
   amazon_dsp_create_entity: "mcp.execute.amazon_dsp_entity_update",
   amazon_dsp_update_entity: "mcp.execute.amazon_dsp_entity_update",
@@ -36,6 +36,9 @@ const amazonDspWorkflowIdByToolName: Record<string, string> = {
   // Reporting
   amazon_dsp_get_report: "mcp.execute.amazon_dsp_reporting",
   amazon_dsp_get_report_breakdowns: "mcp.execute.amazon_dsp_reporting",
+  amazon_dsp_submit_report: "mcp.execute.amazon_dsp_reporting",
+  amazon_dsp_check_report_status: "mcp.execute.amazon_dsp_reporting",
+  amazon_dsp_download_report: "mcp.execute.amazon_dsp_reporting",
   // Bulk operations
   amazon_dsp_bulk_update_status: "mcp.execute.amazon_dsp_bulk_operations",
   amazon_dsp_bulk_create_entities: "mcp.execute.amazon_dsp_bulk_operations",
@@ -45,6 +48,7 @@ const amazonDspWorkflowIdByToolName: Record<string, string> = {
   amazon_dsp_search_targeting: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_get_targeting_options: "mcp.execute.amazon_dsp_entity_read",
   // Specialized
+  amazon_dsp_duplicate_entity: "mcp.execute.amazon_dsp_entity_update",
   amazon_dsp_get_audience_estimate: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_get_ad_preview: "mcp.execute.amazon_dsp_entity_read",
   amazon_dsp_validate_entity: "mcp.execute.amazon_dsp_entity_read",
@@ -70,7 +74,7 @@ export async function createMcpServer(
       },
       instructions:
         "Amazon DSP campaign management and reporting server. Supports campaign, ad group, creative, audience, async reporting, targeting, and bulk operations via the Amazon Advertising API. " +
-        "Use amazon_dsp_list_profiles to discover accounts, amazon_dsp_list_entities to browse entities. " +
+        "Use amazon_dsp_list_advertisers to discover accounts, amazon_dsp_list_entities to browse entities. " +
         "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
     }
   );

@@ -48,6 +48,8 @@ const linkedInWorkflowIdByToolName: Record<string, string> = {
   linkedin_duplicate_entity: "mcp.execute.linkedin_entity_update",
   linkedin_get_delivery_forecast: "mcp.execute.linkedin_entity_read",
   linkedin_get_ad_preview: "mcp.execute.linkedin_entity_read",
+  linkedin_upload_image: "mcp.execute.linkedin_entity_update",
+  linkedin_upload_video: "mcp.execute.linkedin_entity_update",
   linkedin_validate_entity: "mcp.execute.linkedin_entity_read",
 };
 

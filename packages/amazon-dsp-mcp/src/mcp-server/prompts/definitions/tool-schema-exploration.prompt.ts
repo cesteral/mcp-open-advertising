@@ -50,7 +50,7 @@ Fetch these resources for detailed schema information:
 ## Tool Categories
 
 ### Read Operations
-- \`amazon_dsp_list_profiles\` — List accessible advertiser accounts
+- \`amazon_dsp_list_advertisers\` — List accessible advertiser accounts
 - \`amazon_dsp_list_entities\` — List entities with page pagination
 - \`amazon_dsp_get_entity\` — Get single entity by ID
 
@@ -95,7 +95,7 @@ Fetch these resources for detailed schema information:
 
 ## Recommended Exploration Order
 
-1. Start with \`amazon_dsp_list_profiles\` to find your account
+1. Start with \`amazon_dsp_list_advertisers\` to find your account
 2. Fetch \`entity-hierarchy://amazonDsp/all\` for API patterns
 3. Fetch \`entity-schema://amazonDsp/{type}\` for field details
 4. Fetch \`entity-examples://amazonDsp/{type}\` for payload templates

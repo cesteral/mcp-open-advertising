@@ -26,7 +26,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "generate": "tsx scripts/generate-types.ts",
+    "generate": "node --import tsx ./scripts/generate-types.ts",
     "prebuild": "pnpm run generate",
     "build": "tsc --build",
     "clean": "rm -rf dist *.tsbuildinfo src/generated",

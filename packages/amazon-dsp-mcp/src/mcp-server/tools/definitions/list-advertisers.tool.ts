@@ -28,7 +28,7 @@ export const ListAdvertisersOutputSchema = z
 type ListAdvertisersInput = z.infer<typeof ListAdvertisersInputSchema>;
 type ListAdvertisersOutput = z.infer<typeof ListAdvertisersOutputSchema>;
 
-export async function listProfilesLogic(
+export async function listAdvertisersLogic(
   _input: ListAdvertisersInput,
   context: RequestContext,
   sdkContext?: SdkContext
@@ -46,7 +46,7 @@ export async function listProfilesLogic(
   };
 }
 
-export function listProfilesResponseFormatter(result: ListAdvertisersOutput): McpTextContent[] {
+export function listAdvertisersResponseFormatter(result: ListAdvertisersOutput): McpTextContent[] {
   return [
     {
       type: "text" as const,
@@ -55,7 +55,7 @@ export function listProfilesResponseFormatter(result: ListAdvertisersOutput): Mc
   ];
 }
 
-export const listProfilesTool = {
+export const listAdvertisersTool = {
   name: TOOL_NAME,
   title: TOOL_TITLE,
   description: TOOL_DESCRIPTION,
@@ -73,6 +73,6 @@ export const listProfilesTool = {
       input: {},
     },
   ],
-  logic: listProfilesLogic,
-  responseFormatter: listProfilesResponseFormatter,
+  logic: listAdvertisersLogic,
+  responseFormatter: listAdvertisersResponseFormatter,
 };

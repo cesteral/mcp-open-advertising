@@ -34,6 +34,8 @@ const dv360WorkflowIdByToolName: Record<string, string> = {
   dv360_delete_entity: "mcp.execute.dv360_entity_update",
   // Delivery troubleshooting
   dv360_adjust_line_item_bids: "mcp.troubleshoot.delivery",
+  dv360_bulk_create_entities: "mcp.execute.dv360_bulk",
+  dv360_bulk_update_entities: "mcp.execute.dv360_bulk",
   dv360_bulk_update_status: "mcp.troubleshoot.delivery",
   // Custom bidding
   dv360_create_custom_bidding_algorithm: "mcp.execute.dv360_entity_update",
@@ -46,8 +48,15 @@ const dv360WorkflowIdByToolName: Record<string, string> = {
   dv360_create_assigned_targeting: "mcp.execute.dv360_targeting",
   dv360_delete_assigned_targeting: "mcp.execute.dv360_targeting",
   dv360_validate_targeting_config: "mcp.execute.dv360_targeting",
+  dv360_validate_entity: "mcp.execute.dv360_entity_read",
   // Preview
   dv360_get_ad_preview: "mcp.execute.dv360_entity_read",
+  // Media uploads
+  dv360_upload_image: "mcp.execute.dv360_entity_update",
+  dv360_upload_video: "mcp.execute.dv360_entity_update",
+  // Specialized
+  dv360_duplicate_entity: "mcp.execute.dv360_entity_update",
+  dv360_get_delivery_estimate: "mcp.execute.dv360_entity_read",
 };
 
 /**
