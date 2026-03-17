@@ -74,6 +74,7 @@ import {
   withToolSpan,
   setSpanAttribute,
   recordSpanError,
+  createPlatformSpanHelper,
 } from "../../src/utils/telemetry.js";
 
 const mockSpan = __mockSpan as any;
@@ -191,6 +192,50 @@ describe("telemetry utilities", () => {
         code: 2,
         message: "test error",
       });
+    });
+  });
+
+  describe("createPlatformSpanHelper", () => {
+    it("creates a span named {prefix}.{operation} with operation attribute", async () => {
+      const withMetaSpan = createPlatformSpanHelper("meta");
+      const result = await withMetaSpan("list_entities", undefined, async () => "ok");
+
+      expect(mockTracer.startSpan).toHaveBeenCalledWith("meta.list_entities");
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("meta.operation", "list_entities");
+      expect(result).toBe("ok");
+    });
+
+    it("sets entityType attribute when provided", async () => {
+      const withTtdSpan = createPlatformSpanHelper("ttd");
+      await withTtdSpan("get_entity", "campaign", async () => "ok");
+
+      expect(mockTracer.startSpan).toHaveBeenCalledWith("ttd.get_entity");
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("ttd.operation", "get_entity");
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("ttd.entityType", "campaign");
+    });
+
+    it("omits entityType attribute when undefined", async () => {
+      const withDv360Span = createPlatformSpanHelper("dv360");
+      await withDv360Span("list_accounts", undefined, async () => "ok");
+
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("dv360.operation", "list_accounts");
+      expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(
+        "dv360.entityType",
+        expect.anything()
+      );
+    });
+
+    it("propagates errors from the wrapped function", async () => {
+      const withMetaSpan = createPlatformSpanHelper("meta");
+      const error = new Error("api failure");
+
+      await expect(
+        withMetaSpan("create_entity", "adSet", async () => {
+          throw error;
+        })
+      ).rejects.toThrow("api failure");
+
+      expect(mockSpan.recordException).toHaveBeenCalledWith(error);
     });
   });
 
