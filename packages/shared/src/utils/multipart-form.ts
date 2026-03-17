@@ -57,9 +57,10 @@ export function buildMultipartFormData(
   }
 
   // Add file part
+  const safeFilename = filename.replace(/[\r\n"]/g, "_");
   const filePart =
     `${dashesBoundary}${CRLF}` +
-    `Content-Disposition: form-data; name="${fileField}"; filename="${filename}"${CRLF}` +
+    `Content-Disposition: form-data; name="${fileField}"; filename="${safeFilename}"${CRLF}` +
     `Content-Type: ${fileContentType}${CRLF}` +
     CRLF;
 

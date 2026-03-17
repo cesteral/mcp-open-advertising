@@ -147,6 +147,10 @@ export class ServiceAccountAuthAdapter implements GoogleAuthAdapter {
       expires_in: number;
     };
 
+    if (!data.access_token || typeof data.expires_in !== "number") {
+      throw new Error("Invalid OAuth2 token response: missing access_token or expires_in");
+    }
+
     this.accessToken = data.access_token;
     this.tokenExpiry = new Date(Date.now() + data.expires_in * 1000);
   }
@@ -221,6 +225,10 @@ export class OAuth2RefreshTokenAuthAdapter implements GoogleAuthAdapter {
       access_token: string;
       expires_in: number;
     };
+
+    if (!data.access_token || typeof data.expires_in !== "number") {
+      throw new Error("Invalid OAuth2 token response: missing access_token or expires_in");
+    }
 
     this.accessToken = data.access_token;
     this.tokenExpiry = new Date(Date.now() + data.expires_in * 1000);

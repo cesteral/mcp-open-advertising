@@ -222,12 +222,13 @@ export class InteractionLogger {
     if (!this.gcsBucket || this.buffer.length === 0 || this.flushing) return;
     this.flushing = true;
     try {
-      const lines = this.buffer.splice(0);
+      const lines = this.buffer.slice(0);
       const payload = lines.join("");
       const today = new Date().toISOString().slice(0, 10);
       // Instance-unique path prevents read-modify-write races between Cloud Run instances
       const filePath = `interactions/${this.serverName}-${this.instanceId}-${today}.jsonl`;
       await this.appendToGcs(filePath, payload);
+      this.buffer.splice(0, lines.length);
     } catch (error) {
       this.logger.warn({ error }, "InteractionLogger: failed to flush buffer to GCS");
     } finally {

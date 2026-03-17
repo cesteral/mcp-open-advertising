@@ -105,7 +105,7 @@ export function extractBearerToken(authHeader?: string): string {
   }
 
   const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0] !== "Bearer") {
+  if (parts.length !== 2 || parts[0] !== "Bearer" || !parts[1]) {
     throw new McpError(JsonRpcErrorCode.Unauthorized,"Invalid Authorization header format. Expected: Bearer <token>");
   }
 
