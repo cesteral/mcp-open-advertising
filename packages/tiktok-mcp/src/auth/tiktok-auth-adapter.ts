@@ -83,7 +83,6 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
         method: "GET",
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
         },
       }
     );
@@ -177,7 +176,6 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
       }
     );
@@ -306,9 +304,7 @@ export function parseTikTokTokenFromHeaders(
 export function getTikTokAdvertiserIdFromHeaders(
   headers: Record<string, string | string[] | undefined>
 ): string {
-  const advertiserId =
-    extractHeader(headers, "x-tiktok-advertiser-id") ??
-    extractHeader(headers, "X-TikTok-Advertiser-Id");
+  const advertiserId = extractHeader(headers, "x-tiktok-advertiser-id");
 
   if (!advertiserId) {
     throw new Error("Missing required X-TikTok-Advertiser-Id header");

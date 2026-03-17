@@ -3,7 +3,9 @@
 
 import type { Logger } from "pino";
 import type { SA360V2HttpClient } from "./sa360-v2-http-client.js";
+import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import { fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 
 /**
@@ -54,7 +56,8 @@ export class SA360ReportingService {
   constructor(
     private readonly logger: Logger,
     private readonly rateLimiter: RateLimiter,
-    private readonly httpClient: SA360V2HttpClient
+    private readonly httpClient: SA360V2HttpClient,
+    private readonly authAdapter: SA360AuthAdapter
   ) {}
 
   /**
@@ -137,20 +140,17 @@ export class SA360ReportingService {
 
     this.logger.debug({ downloadUrl }, "Downloading SA360 report");
 
-    // The download URL is a full URL, so we pass it as-is.
-    // The httpClient.fetch expects a path relative to baseUrl,
-    // but download URLs are absolute Google storage URLs.
-    // We need to make a direct fetch with auth headers.
-    const result = await this.httpClient.fetch(downloadUrl, context);
+    // Download URLs are absolute Google storage URLs — bypass httpClient
+    // to avoid baseUrl prepending and JSON parsing of CSV responses.
+    const accessToken = await this.authAdapter.getAccessToken();
+    const response = await fetchWithTimeout(downloadUrl, 60_000, context, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
 
-    // The v2 HTTP client returns parsed JSON, but for report downloads
-    // the API returns CSV. The executeWithRetry in the HTTP client
-    // will handle the response. If it's a string, return as-is.
-    if (typeof result === "string") {
-      return result;
+    if (!response.ok) {
+      throw new Error(`Failed to download SA360 report: ${response.status} ${response.statusText}`);
     }
 
-    // If parsed as JSON (shouldn't happen for CSV), stringify it
-    return JSON.stringify(result);
+    return response.text();
   }
 }

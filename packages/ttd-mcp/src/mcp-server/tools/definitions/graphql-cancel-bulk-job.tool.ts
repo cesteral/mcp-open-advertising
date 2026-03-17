@@ -53,7 +53,17 @@ export async function graphqlCancelBulkJobLogic(
     context
   )) as Record<string, any>;
 
-  const job = result.data?.cancelBulkJob ?? result.cancelBulkJob ?? {};
+  // Check for GraphQL errors before extracting data
+  const errors = result.errors ?? result.data?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
+    throw new Error(`GraphQL error: ${messages}`);
+  }
+
+  const job = result.data?.cancelBulkJob ?? result.cancelBulkJob;
+  if (!job) {
+    throw new Error("GraphQL response contained no cancelBulkJob data");
+  }
 
   return {
     jobId: (job.jobId as string) ?? input.jobId,

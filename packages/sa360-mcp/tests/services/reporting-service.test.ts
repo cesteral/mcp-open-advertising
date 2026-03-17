@@ -2,6 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SA360ReportingService } from "../../src/services/sa360-v2/reporting-service.js";
 
 // ---------------------------------------------------------------------------
+// Mock fetchWithTimeout at module level
+// ---------------------------------------------------------------------------
+
+const { mockFetchWithTimeout } = vi.hoisted(() => ({
+  mockFetchWithTimeout: vi.fn(),
+}));
+
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return { ...actual, fetchWithTimeout: mockFetchWithTimeout };
+});
+
+// ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
@@ -30,6 +43,12 @@ function createMockRateLimiter() {
   } as any;
 }
 
+function createMockAuthAdapter() {
+  return {
+    getAccessToken: vi.fn().mockResolvedValue("mock-token"),
+  } as any;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -39,12 +58,15 @@ describe("SA360ReportingService", () => {
   let logger: ReturnType<typeof createMockLogger>;
   let httpClient: ReturnType<typeof createMockV2HttpClient>;
   let rateLimiter: ReturnType<typeof createMockRateLimiter>;
+  let authAdapter: ReturnType<typeof createMockAuthAdapter>;
 
   beforeEach(() => {
     logger = createMockLogger();
     httpClient = createMockV2HttpClient();
     rateLimiter = createMockRateLimiter();
-    service = new SA360ReportingService(logger, rateLimiter, httpClient);
+    authAdapter = createMockAuthAdapter();
+    mockFetchWithTimeout.mockReset();
+    service = new SA360ReportingService(logger, rateLimiter, httpClient, authAdapter);
   });
 
   // ==========================================================================
@@ -191,37 +213,54 @@ describe("SA360ReportingService", () => {
   // ==========================================================================
 
   describe("downloadReport", () => {
-    it("fetches download URL and returns string data", async () => {
-      httpClient.fetch.mockResolvedValueOnce("header1,header2\nval1,val2\n");
+    it("fetches download URL directly with auth header and returns CSV text", async () => {
+      const csvData = "header1,header2\nval1,val2\n";
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        text: vi.fn().mockResolvedValue(csvData),
+      });
 
       const result = await service.downloadReport("https://example.com/file0");
 
-      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
-      expect(result).toBe("header1,header2\nval1,val2\n");
+      expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
+      expect(mockFetchWithTimeout).toHaveBeenCalledWith(
+        "https://example.com/file0",
+        60_000,
+        undefined,
+        { headers: { Authorization: "Bearer mock-token" } }
+      );
+      expect(result).toBe(csvData);
     });
 
-    it("returns JSON-stringified response if not a string", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ data: [1, 2, 3] });
+    it("throws on non-ok response", async () => {
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+      });
 
-      const result = await service.downloadReport("https://example.com/file0");
-
-      expect(result).toBe(JSON.stringify({ data: [1, 2, 3] }));
+      await expect(
+        service.downloadReport("https://example.com/file0")
+      ).rejects.toThrow("Failed to download SA360 report: 404 Not Found");
     });
 
     it("consumes rate limiter", async () => {
-      httpClient.fetch.mockResolvedValueOnce("");
+      mockFetchWithTimeout.mockResolvedValueOnce({
+        ok: true,
+        text: vi.fn().mockResolvedValue(""),
+      });
 
       await service.downloadReport("https://example.com/file0");
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("sa360v2:reports");
     });
 
-    it("propagates errors from httpClient", async () => {
-      httpClient.fetch.mockRejectedValueOnce(new Error("Download failed"));
+    it("propagates fetch errors", async () => {
+      mockFetchWithTimeout.mockRejectedValueOnce(new Error("Network error"));
 
       await expect(
         service.downloadReport("https://example.com/bad")
-      ).rejects.toThrow("Download failed");
+      ).rejects.toThrow("Network error");
     });
   });
 });

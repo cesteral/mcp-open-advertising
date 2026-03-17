@@ -63,13 +63,20 @@ function parseCsv(csvText: string): { headers: string[]; rows: Record<string, st
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Simple CSV parse (handles quoted fields with commas)
+    // RFC 4180 CSV parse (handles quoted fields with commas and escaped quotes)
     const values: string[] = [];
     let current = "";
     let inQuotes = false;
-    for (const ch of line) {
+    for (let ci = 0; ci < line.length; ci++) {
+      const ch = line[ci];
       if (ch === '"') {
-        inQuotes = !inQuotes;
+        if (inQuotes && line[ci + 1] === '"') {
+          // Escaped quote ("") → literal quote
+          current += '"';
+          ci++;
+        } else {
+          inQuotes = !inQuotes;
+        }
       } else if (ch === "," && !inQuotes) {
         values.push(current.trim());
         current = "";

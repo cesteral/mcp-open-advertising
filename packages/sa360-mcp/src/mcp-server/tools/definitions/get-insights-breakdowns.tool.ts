@@ -146,11 +146,20 @@ function buildBreakdownQuery(input: GetInsightsBreakdownsInput): string {
   const idField = getInsightsIdField(entityType);
   const nameField = getInsightsNameField(entityType);
 
-  const metricFields =
-    input.metrics && input.metrics.length > 0
-      ? input.metrics.map((m) => (m.startsWith("metrics.") ? m : `metrics.${m}`))
-      : DEFAULT_METRICS;
+  const rawMetrics =
+    input.metrics && input.metrics.length > 0 ? input.metrics : DEFAULT_METRICS;
+  for (const m of rawMetrics) {
+    if (!METRIC_NAME_PATTERN.test(m)) {
+      throw new Error(`Invalid metric name: ${m}`);
+    }
+  }
+  const metricFields = rawMetrics.map((m) => (m.startsWith("metrics.") ? m : `metrics.${m}`));
 
+  for (const b of input.breakdowns) {
+    if (!SEGMENT_NAME_PATTERN.test(b)) {
+      throw new Error(`Invalid segment name: ${b}`);
+    }
+  }
   const segmentFields = input.breakdowns.map((b) =>
     b.startsWith("segments.") ? b : `segments.${b}`
   );

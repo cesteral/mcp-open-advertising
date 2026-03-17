@@ -76,7 +76,7 @@ export const ListEntitiesOutputSchema = z
     entities: z.array(z.record(z.any())).describe("List of entities"),
     nextPageToken: z.string().optional().describe("Token for next page"),
     has_more: z.boolean().describe("Whether more results are available via pagination"),
-    totalCount: z.number().describe("Number of entities in this page"),
+    pageCount: z.number().describe("Number of entities in this page"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -86,7 +86,7 @@ type ListEntitiesOutput = z.infer<typeof ListEntitiesOutputSchema>;
 
 export async function listEntitiesLogic(
   input: ListEntitiesInput,
-  _context: RequestContext,
+  context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListEntitiesOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
@@ -107,25 +107,25 @@ export async function listEntitiesLogic(
     filters,
     input.pageToken,
     input.pageSize,
-    _context
+    context
   );
 
   return {
     entities: result.entities as Record<string, any>[],
     nextPageToken: result.nextPageToken,
     has_more: !!result.nextPageToken,
-    totalCount: (result.entities as unknown[]).length,
+    pageCount: (result.entities as unknown[]).length,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.totalCount} entities`;
+  const summary = `Found ${result.pageCount} entities`;
   const pagination = result.nextPageToken
     ? `\n\nMore results available. Use pageToken: ${result.nextPageToken}`
     : "";
   const entities =
-    result.totalCount > 0
+    result.pageCount > 0
       ? `\n\nEntities:\n${JSON.stringify(result.entities, null, 2)}`
       : "\n\nNo entities found";
 

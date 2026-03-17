@@ -76,7 +76,17 @@ export async function graphqlBulkJobLogic(
     context
   )) as Record<string, any>;
 
-  const job = result.data?.bulkJob ?? result.bulkJob ?? {};
+  // Check for GraphQL errors before extracting data
+  const errors = result.errors ?? result.data?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
+    throw new Error(`GraphQL error: ${messages}`);
+  }
+
+  const job = result.data?.bulkJob ?? result.bulkJob;
+  if (!job) {
+    throw new Error("GraphQL response contained no bulkJob data");
+  }
 
   return {
     jobId: (job.jobId as string) ?? input.jobId,

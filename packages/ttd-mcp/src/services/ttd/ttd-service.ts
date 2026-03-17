@@ -343,10 +343,12 @@ export class TtdService {
   ): Promise<{ results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> }> {
     const partnerId = this.httpClient.partnerId;
 
+    const adGroupConfig = getEntityConfig("adGroup");
+
     // Phase 1: Fetch all current ad group entities in parallel (concurrency=5)
     const getResults = await this.executeBulk(adjustments, async (adj) => {
       await this.rateLimiter.consume(`ttd:${partnerId}`);
-      return this.httpClient.fetch(`/adgroup/${adj.adGroupId}`, context, { method: "GET" });
+      return this.httpClient.fetch(`${adGroupConfig.apiPath}/${adj.adGroupId}`, context, { method: "GET" });
     });
 
     // Separate successful GETs from failed ones; build PUT inputs for successes
@@ -386,7 +388,7 @@ export class TtdService {
 
         // TTD PUT endpoints take no ID in URL; full entity with ID in body
         await this.rateLimiter.consume(`ttd:${partnerId}`);
-        return this.httpClient.fetch("/adgroup", context, {
+        return this.httpClient.fetch(adGroupConfig.apiPath, context, {
           method: "PUT",
           body: JSON.stringify({ ...current, RTBAttributes: rtb }),
         });

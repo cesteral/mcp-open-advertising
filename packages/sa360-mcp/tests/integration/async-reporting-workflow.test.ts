@@ -2,6 +2,19 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SA360ReportingService } from "../../src/services/sa360-v2/reporting-service.js";
 
 // ---------------------------------------------------------------------------
+// Mock fetchWithTimeout at module level
+// ---------------------------------------------------------------------------
+
+const { mockFetchWithTimeout } = vi.hoisted(() => ({
+  mockFetchWithTimeout: vi.fn(),
+}));
+
+vi.mock("@cesteral/shared", async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return { ...actual, fetchWithTimeout: mockFetchWithTimeout };
+});
+
+// ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
@@ -30,6 +43,12 @@ function createMockRateLimiter() {
   } as any;
 }
 
+function createMockAuthAdapter() {
+  return {
+    getAccessToken: vi.fn().mockResolvedValue("mock-token"),
+  } as any;
+}
+
 // ---------------------------------------------------------------------------
 // Integration: submit → check → download
 // ---------------------------------------------------------------------------
@@ -42,7 +61,9 @@ describe("Async Reporting Workflow", () => {
     const logger = createMockLogger();
     httpClient = createMockV2HttpClient();
     const rateLimiter = createMockRateLimiter();
-    service = new SA360ReportingService(logger, rateLimiter, httpClient);
+    const authAdapter = createMockAuthAdapter();
+    mockFetchWithTimeout.mockReset();
+    service = new SA360ReportingService(logger, rateLimiter, httpClient, authAdapter);
   });
 
   it("completes full submit → check → download workflow", async () => {
@@ -80,15 +101,19 @@ describe("Async Reporting Workflow", () => {
     expect(readyStatus.files).toHaveLength(1);
     expect(readyStatus.rowCount).toBe(3);
 
-    // Step 4: Download report
+    // Step 4: Download report (uses fetchWithTimeout directly, not httpClient)
     const csvData = "campaign,impressions,clicks\nCampaign A,1000,50\nCampaign B,2000,100\nCampaign C,500,25\n";
-    httpClient.fetch.mockResolvedValueOnce(csvData);
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      text: vi.fn().mockResolvedValue(csvData),
+    });
 
     const downloadResult = await service.downloadReport(readyStatus.files![0].url);
     expect(downloadResult).toBe(csvData);
 
-    // Verify total API calls: submit (1) + check (2) + download (1) = 4
-    expect(httpClient.fetch).toHaveBeenCalledTimes(4);
+    // Verify httpClient calls: submit (1) + check (2) = 3 (download bypasses httpClient)
+    expect(httpClient.fetch).toHaveBeenCalledTimes(3);
+    expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
   });
 
   it("handles report that fails on status check", async () => {

@@ -120,11 +120,9 @@ export async function uploadVideoLogic(
     }
   }
 
-  return {
-    videoId,
-    videoName: uploadResult.video_name ?? input.videoName,
-    uploadedAt: new Date().toISOString(),
-  };
+  throw new Error(
+    `Video ${videoId} upload timed out: binding did not complete after ${maxAttempts} polling attempts (${(maxAttempts * pollIntervalMs) / 1000}s). The video may still be processing — check status manually.`
+  );
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {

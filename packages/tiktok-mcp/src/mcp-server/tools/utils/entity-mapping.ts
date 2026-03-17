@@ -34,6 +34,8 @@ export interface TikTokEntityConfig {
   defaultFields: string[];
   /** Whether the entity supports duplication */
   supportsDuplicate?: boolean;
+  /** Whether the entity supports dedicated status update endpoint */
+  supportsStatusUpdate?: boolean;
 }
 
 /** Module-level API version used for building entity config paths. */
@@ -67,6 +69,7 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
         "modify_time",
       ],
       supportsDuplicate: true,
+      supportsStatusUpdate: true,
     },
     adGroup: {
       listPath: `/open_api/${v}/adgroup/get/`,
@@ -88,6 +91,7 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
         "created_time",
       ],
       supportsDuplicate: true,
+      supportsStatusUpdate: true,
     },
     ad: {
       listPath: `/open_api/${v}/ad/get/`,
@@ -109,12 +113,14 @@ function buildEntityConfigs(): Record<TikTokEntityType, TikTokEntityConfig> {
         "created_time",
       ],
       supportsDuplicate: true,
+      supportsStatusUpdate: true,
     },
     creative: {
       listPath: `/open_api/${v}/creative/adcreative/get/`,
       createPath: `/open_api/${v}/creative/adcreative/create/`,
       updatePath: `/open_api/${v}/creative/adcreative/update/`,
-      statusUpdatePath: `/open_api/${v}/creative/adcreative/update/`,
+      // Creative has no dedicated /status/update/ endpoint — use regular update
+      statusUpdatePath: "",
       deletePath: `/open_api/${v}/creative/adcreative/delete/`,
       idField: "creative_id",
       idsField: "creative_ids",

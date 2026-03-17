@@ -75,8 +75,8 @@ function buildChangeHistoryQuery(input: GetChangeHistoryInput): string {
   ].join(", ");
 
   const whereClauses: string[] = [
-    `change_event.change_date_time >= '${input.startDate}'`,
-    `change_event.change_date_time <= '${input.endDate}'`,
+    `change_event.change_date_time >= '${input.startDate} 00:00:00'`,
+    `change_event.change_date_time <= '${input.endDate} 23:59:59'`,
   ];
 
   if (input.resourceType) {

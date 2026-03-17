@@ -141,7 +141,7 @@ export function parseTtdCredentialsFromHeaders(
  */
 export function getTtdCredentialFingerprint(credentials: TtdCredentials): string {
   return createHash("sha256")
-    .update(credentials.partnerId)
+    .update(`${credentials.partnerId}:${credentials.apiSecret}`)
     .digest("hex")
     .substring(0, 32);
 }

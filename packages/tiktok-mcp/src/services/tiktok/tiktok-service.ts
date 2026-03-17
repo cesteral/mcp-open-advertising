@@ -158,6 +158,10 @@ export class TikTokService {
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
 
+    if (!config.supportsStatusUpdate) {
+      throw new Error(`Entity type '${entityType}' does not support status updates. Use the regular update endpoint instead.`);
+    }
+
     await this.rateLimiter.consume(`tiktok:default`, 3);
 
     return this.httpClient.post(config.statusUpdatePath, {
@@ -276,17 +280,24 @@ export class TikTokService {
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     this.logger.debug({ entityType, count: entityIds.length, operationStatus }, "Bulk status update");
 
-    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
-      return this.updateEntityStatus(entityType, [entityId], operationStatus, context);
-    });
-
-    return {
-      results: bulkResults.map((r, i) => ({
-        entityId: entityIds[i],
-        success: r.success,
-        error: r.error,
-      })),
-    };
+    try {
+      await this.updateEntityStatus(entityType, entityIds, operationStatus, context);
+      return {
+        results: entityIds.map((entityId) => ({
+          entityId,
+          success: true,
+        })),
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        results: entityIds.map((entityId) => ({
+          entityId,
+          success: false,
+          error: errorMessage,
+        })),
+      };
+    }
   }
 
   // ─── Targeting ───────────────────────────────────────────────────

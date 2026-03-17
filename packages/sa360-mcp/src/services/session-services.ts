@@ -35,7 +35,7 @@ export function createSessionServices(
   const v2HttpClient = new SA360V2HttpClient(authAdapter, config.v2BaseUrl, logger);
   const sa360Service = new SA360Service(logger, rateLimiter, httpClient);
   const conversionService = new ConversionService(logger, rateLimiter, v2HttpClient);
-  const reportingService = new SA360ReportingService(logger, rateLimiter, v2HttpClient);
+  const reportingService = new SA360ReportingService(logger, rateLimiter, v2HttpClient, authAdapter);
   return {
     httpClient,
     v2HttpClient,

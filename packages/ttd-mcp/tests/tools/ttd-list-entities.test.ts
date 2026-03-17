@@ -73,7 +73,7 @@ describe("listEntitiesLogic", () => {
     expect(result.entities).toHaveLength(2);
     expect(result.entities[0]).toEqual({ CampaignId: "c1", CampaignName: "Campaign 1" });
     expect(result.entities[1]).toEqual({ CampaignId: "c2", CampaignName: "Campaign 2" });
-    expect(result.totalCount).toBe(2);
+    expect(result.pageCount).toBe(2);
     expect(result.timestamp).toBeDefined();
     expect(result.nextPageToken).toBeUndefined();
   });
@@ -166,7 +166,7 @@ describe("listEntitiesResponseFormatter", () => {
         { CampaignId: "c1" },
         { CampaignId: "c2" },
       ],
-      totalCount: 2,
+      pageCount: 2,
       timestamp: new Date().toISOString(),
     };
 
@@ -181,7 +181,7 @@ describe("listEntitiesResponseFormatter", () => {
     const result = {
       entities: [{ CampaignId: "c1" }],
       nextPageToken: "25",
-      totalCount: 1,
+      pageCount: 1,
       timestamp: new Date().toISOString(),
     };
 
@@ -194,7 +194,7 @@ describe("listEntitiesResponseFormatter", () => {
   it("does not show pagination info when no nextPageToken", () => {
     const result = {
       entities: [{ CampaignId: "c1" }],
-      totalCount: 1,
+      pageCount: 1,
       timestamp: new Date().toISOString(),
     };
 
@@ -204,10 +204,10 @@ describe("listEntitiesResponseFormatter", () => {
     expect(content[0].text).not.toContain("pageToken");
   });
 
-  it("shows 'No entities found' when totalCount is 0", () => {
+  it("shows 'No entities found' when pageCount is 0", () => {
     const result = {
       entities: [],
-      totalCount: 0,
+      pageCount: 0,
       timestamp: new Date().toISOString(),
     };
 
