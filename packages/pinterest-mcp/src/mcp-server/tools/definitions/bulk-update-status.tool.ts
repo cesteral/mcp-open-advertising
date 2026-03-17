@@ -14,9 +14,9 @@ const TOOL_DESCRIPTION = `Batch update the status of Pinterest Ads entities.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Operation status values:**
-- **ENABLE** — Activate entities
-- **DISABLE** — Pause entities
-- **DELETE** — Delete entities (irreversible)
+- **ACTIVE** — Activate entities
+- **PAUSED** — Pause entities
+- **ARCHIVED** — Archive entities (soft-delete)
 
 Pinterest's status update API accepts an array of IDs in a single request.`;
 
@@ -35,7 +35,7 @@ export const BulkUpdateStatusInputSchema = z
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
     operationStatus: z
-      .enum(["ENABLE", "DISABLE", "DELETE"])
+      .enum(["ACTIVE", "PAUSED", "ARCHIVED"])
       .describe("Target status to apply"),
   })
   .describe("Parameters for bulk status update of Pinterest Ads entities");
@@ -123,7 +123,7 @@ export const bulkUpdateStatusTool = {
         entityType: "campaign",
         adAccountId: "1234567890",
         entityIds: ["1800111111111", "1800222222222"],
-        operationStatus: "DISABLE",
+        operationStatus: "PAUSED",
       },
     },
     {
@@ -132,7 +132,7 @@ export const bulkUpdateStatusTool = {
         entityType: "adGroup",
         adAccountId: "1234567890",
         entityIds: ["1700111111111"],
-        operationStatus: "ENABLE",
+        operationStatus: "ACTIVE",
       },
     },
   ],

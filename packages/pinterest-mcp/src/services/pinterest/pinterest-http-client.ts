@@ -80,9 +80,6 @@ export class PinterestHttpClient {
 
     return this.executeRequest(url, context, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body,
     });
   }
@@ -101,9 +98,6 @@ export class PinterestHttpClient {
 
     return this.executeRequest(url, context, {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body,
     });
   }

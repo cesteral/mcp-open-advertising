@@ -102,7 +102,7 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
     supportsDuplicate: false,
   },
   creative: {
-    listPath: "/v5/pins/{entityId}",
+    listPath: "/v5/pins",
     getPath: "/v5/pins/{entityId}",
     createPath: "/v5/pins",
     updatePath: "/v5/pins/{entityId}",

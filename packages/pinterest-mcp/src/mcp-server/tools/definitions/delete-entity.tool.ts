@@ -14,7 +14,7 @@ const TOOL_DESCRIPTION = `Delete one or more Pinterest Ads entities.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 Pinterest delete uses a POST to the /delete/ endpoint with an array of entity IDs.
-Deleted entities cannot be recovered. Consider using \`pinterest_bulk_update_status\` with DISABLE first.`;
+Deleted entities cannot be recovered. Consider using \`pinterest_bulk_update_status\` with PAUSED first.`;
 
 export const DeleteEntityInputSchema = z
   .object({

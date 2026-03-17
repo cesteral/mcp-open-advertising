@@ -75,9 +75,9 @@ pinterest_get_entity({
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
-| No delivery | Entity DISABLED | Use \`pinterest_bulk_update_status\` with operationStatus: "ENABLE" |
-| No delivery, ENABLE | Parent disabled | Enable parent campaign or ad group |
-| No delivery, all ENABLE | Budget exhausted | Increase budget |
+| No delivery | Entity PAUSED | Use \`pinterest_bulk_update_status\` with operationStatus: "ACTIVE" |
+| No delivery, ACTIVE | Parent paused | Enable parent campaign or ad group |
+| No delivery, all ACTIVE | Budget exhausted | Increase budget |
 | No delivery, budget OK | Targeting too narrow | Check audience estimate |
 | Ad under review | Pinterest ad review in progress | Allow 24-48h for review |
 | Ad rejected | Policy violation | Review Pinterest creative guidelines |
@@ -112,7 +112,7 @@ pinterest_bulk_update_status({
   "entityType": "${entityType}",
   "adAccountId": "${adAccountId}",
   "entityIds": ["${entityId}"],
-  "operationStatus": "ENABLE"
+  "operationStatus": "ACTIVE"
 })
 \`\`\`
 `;

@@ -4,11 +4,12 @@
 /**
  * Tool definitions barrel export
  *
- * 20 tools total:
+ * 21 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
+ *   1 bids: adjust bids
  *   2 targeting: search targeting, get targeting options
  *   3 specialized: duplicate entity, get delivery estimate, get ad preview
  *   1 validation: validate entity (client-side)
@@ -34,6 +35,7 @@ export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getDeliveryEstimateTool } from "./get-audience-estimate.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
+export { adjustBidsTool } from "./adjust-bids.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -55,6 +57,7 @@ import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryEstimateTool } from "./get-audience-estimate.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
+import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -76,6 +79,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   bulkUpdateStatusTool,
   bulkCreateEntitiesTool,
   bulkUpdateEntitiesTool,
+  // ── Bids ──
+  adjustBidsTool,
   // ── Targeting ──
   searchTargetingTool,
   getTargetingOptionsTool,

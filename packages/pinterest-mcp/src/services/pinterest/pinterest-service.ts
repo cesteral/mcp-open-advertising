@@ -146,6 +146,13 @@ export class PinterestService {
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
 
+    // Single-entity endpoints (e.g. /v5/pins/{entityId}) expect a flat body
+    const isSingleEntity = config.updatePath.includes("{entityId}");
+    if (isSingleEntity) {
+      return this.httpClient.patch(path, updates, context);
+    }
+
+    // Bulk endpoints expect an array body and return { items: [...] }
     const data = await this.httpClient.patch(
       path,
       [{ id: entityId, ...(updates as object) }],
@@ -161,10 +168,22 @@ export class PinterestService {
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
-    const path = interpolatePath(config.deletePath, { adAccountId: filters.adAccountId });
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
 
+    // Single-entity delete endpoints (e.g. /v5/pins/{entityId}) — delete each individually
+    if (config.deletePath.includes("{entityId}")) {
+      const results = await Promise.all(
+        entityIds.map((id) => {
+          const path = interpolatePath(config.deletePath, { adAccountId: filters.adAccountId, entityId: id });
+          return this.httpClient.delete(path, {}, context);
+        })
+      );
+      return results.length === 1 ? results[0] : results;
+    }
+
+    // Bulk delete via query params (e.g. ?campaign_ids=id1,id2)
+    const path = interpolatePath(config.deletePath, { adAccountId: filters.adAccountId });
     return this.httpClient.delete(
       path,
       { [config.deleteIdsParam]: entityIds.join(",") },

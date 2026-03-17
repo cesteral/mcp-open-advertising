@@ -150,7 +150,7 @@ Use \`pinterest_bulk_update_status\` for all status changes:
 }
 \`\`\`
 
-Valid status values: \`"ACTIVE"\`, \`"PAUSED"\`, \`"DELETE"\`
+Valid status values: \`"ACTIVE"\`, \`"PAUSED"\`, \`"ARCHIVED"\`
 
 ---
 
