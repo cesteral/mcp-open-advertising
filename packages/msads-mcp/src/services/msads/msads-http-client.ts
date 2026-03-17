@@ -53,7 +53,6 @@ export class MsAdsHttpClient {
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     return this.executeRequest(url, "POST", context, {
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   }

@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { getEntityTypeEnum, getEntityConfig, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_list_entities";
@@ -65,8 +65,9 @@ export async function listEntitiesLogic(
     context
   )) as Record<string, unknown>;
 
-  // Extract entities array from response (keyed by plural name)
-  const entities = Object.values(result).find(Array.isArray) as Record<string, unknown>[] ?? [];
+  // Extract entities array from response using the entity config's pluralName
+  const config = getEntityConfig(input.entityType as MsAdsEntityType);
+  const entities = (result[config.pluralName] as Record<string, unknown>[]) ?? [];
 
   return {
     entities,

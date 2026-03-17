@@ -45,7 +45,6 @@ describe("msads-mcp tool definitions coverage", () => {
       "msads_get_entity",
       "msads_list_accounts",
       "msads_get_report",
-      "msads_submit_report",
       "msads_check_report_status",
       "msads_download_report",
       "msads_get_ad_preview",

@@ -38,7 +38,7 @@ export async function listAccountsLogic(
 ): Promise<ListAccountsOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
 
-  const result = (await msadsService.executeOperation(
+  const result = (await msadsService.executeReadOperation(
     "/Accounts/Search",
     {
       Predicates: input.filters ? [input.filters] : [],

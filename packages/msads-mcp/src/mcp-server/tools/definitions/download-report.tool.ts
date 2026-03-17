@@ -52,7 +52,7 @@ export async function downloadReportLogic(
   return {
     headers: result.headers,
     rows: result.rows,
-    totalRows: result.rows.length,
+    totalRows: result.totalRows,
     timestamp: new Date().toISOString(),
   };
 }
@@ -60,13 +60,13 @@ export async function downloadReportLogic(
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
   const preview = result.rows.slice(0, 10);
   const previewText = preview.length > 0
-    ? `\n\nHeaders: ${result.headers.join(", ")}\n\nData (${result.totalRows} rows${result.totalRows > 10 ? ", showing first 10" : ""}):\n${JSON.stringify(preview, null, 2)}`
+    ? `\n\nHeaders: ${result.headers.join(", ")}\n\nData (${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${result.rows.length > 10 ? ", showing first 10" : ""}):\n${JSON.stringify(preview, null, 2)}`
     : "\n\nNo data rows in report";
 
   return [
     {
       type: "text" as const,
-      text: `Downloaded report with ${result.totalRows} rows${previewText}\n\nTimestamp: ${result.timestamp}`,
+      text: `Downloaded report with ${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${previewText}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

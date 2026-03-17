@@ -131,7 +131,7 @@ export class MsAdsReportingService {
     downloadUrl: string,
     maxRows?: number,
     context?: RequestContext
-  ): Promise<{ headers: string[]; rows: string[][] }> {
+  ): Promise<{ headers: string[]; rows: string[][]; totalRows: number }> {
     this.logger.info({ downloadUrl: downloadUrl.substring(0, 80) }, "Downloading report");
 
     const response = await fetchWithTimeout(downloadUrl, 60_000, context);
@@ -153,7 +153,7 @@ export class MsAdsReportingService {
     config: ReportConfig,
     maxRows?: number,
     context?: RequestContext
-  ): Promise<{ headers: string[]; rows: string[][]; reportRequestId: string }> {
+  ): Promise<{ headers: string[]; rows: string[][]; totalRows: number; reportRequestId: string }> {
     const reportRequestId = await this.submitReport(config, context);
     const downloadUrl = await this.pollReport(reportRequestId, context);
     const data = await this.downloadReport(downloadUrl, maxRows, context);
@@ -194,7 +194,7 @@ export class MsAdsReportingService {
     return { Year: year!, Month: month!, Day: day! };
   }
 
-  private parseCsv(text: string, maxRows?: number): { headers: string[]; rows: string[][] } {
+  private parseCsv(text: string, maxRows?: number): { headers: string[]; rows: string[][]; totalRows: number } {
     // Strip BOM if present
     if (text.charCodeAt(0) === 0xFEFF) {
       text = text.slice(1);
@@ -213,7 +213,7 @@ export class MsAdsReportingService {
     }
 
     if (lines.length <= headerIndex) {
-      return { headers: [], rows: [] };
+      return { headers: [], rows: [], totalRows: 0 };
     }
 
     const headers = this.parseCsvLine(lines[headerIndex]!);
@@ -224,9 +224,10 @@ export class MsAdsReportingService {
       .filter((line) => !line.startsWith("©") && !line.startsWith('"©'))
       .map((line) => this.parseCsvLine(line));
 
+    const totalRows = dataRows.length;
     const limitedRows = maxRows ? dataRows.slice(0, maxRows) : dataRows;
 
-    return { headers, rows: limitedRows };
+    return { headers, rows: limitedRows, totalRows };
   }
 
   private parseCsvLine(line: string): string[] {

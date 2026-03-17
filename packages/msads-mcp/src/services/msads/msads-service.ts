@@ -226,17 +226,23 @@ export class MsAdsService {
     const currentData = (await this.getEntity(entityType, entityIds, undefined, context)) as Record<string, unknown>;
     const currentEntities = (currentData[config.pluralName] as Record<string, unknown>[]) ?? [];
 
-    // Apply bid changes
-    const updatedEntities = adjustments.map((adj) => {
-      const current = currentEntities.find(
-        (e) => String((e as Record<string, unknown>)[config.idField]) === adj.entityId
-      );
-      return {
-        ...(current ?? {}),
-        Id: Number(adj.entityId),
-        [adj.bidField]: adj.newBid,
-      };
-    });
+    // Apply bid changes — skip missing entities to prevent data loss
+    const updatedEntities = adjustments
+      .map((adj) => {
+        const current = currentEntities.find(
+          (e) => String((e as Record<string, unknown>)[config.idField]) === adj.entityId
+        );
+        if (!current) {
+          this.logger.warn({ entityId: adj.entityId }, "Entity not found during bid adjustment — skipping to prevent data loss");
+          return null;
+        }
+        return { ...current, [adj.bidField]: adj.newBid };
+      })
+      .filter((e): e is Record<string, unknown> => e !== null);
+
+    if (updatedEntities.length === 0) {
+      throw new Error("No entities found for bid adjustment — all entity IDs were invalid or deleted");
+    }
 
     await this.rateLimiter.consume("msads:write", 3);
     const body = { [config.pluralName]: updatedEntities };
