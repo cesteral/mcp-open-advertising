@@ -19,6 +19,9 @@ import {
   validateEntityResponseFormatter as sharedValidateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import {
+  mergeParentIdsIntoData,
+} from "../utils/parent-id-validation.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -40,7 +43,7 @@ reasons (e.g., invalid pacing mode / budget combinations).`;
 
 const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
   advertiser: [
-    { field: "PartnerID", expectedType: "string" },
+    { field: "PartnerId", expectedType: "string" },
     { field: "AdvertiserName", expectedType: "string" },
     { field: "CurrencyCode", expectedType: "string", hint: "e.g., USD, EUR, GBP" },
   ],
@@ -86,8 +89,6 @@ const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
 
 /** Fields that are always read-only and cannot be set via the API. */
 const READ_ONLY_FIELDS = [
-  "CampaignId", "AdGroupId", "AdId", "CreativeId",
-  "SiteListId", "DealId", "TrackingTagId", "BidListId",
   "CreatedAtUtc", "LastUpdatedAtUtc",
 ];
 
@@ -110,6 +111,18 @@ export const ValidateEntityInputSchema = z
       .string()
       .optional()
       .describe("Entity ID (recommended for update mode)"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("Advertiser ID (merged into data before validation, mirrors create/update tools)"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID (merged into data before validation)"),
+    adGroupId: z
+      .string()
+      .optional()
+      .describe("Ad group ID (merged into data before validation)"),
     data: z
       .record(z.any())
       .describe("Entity payload to validate"),
@@ -143,7 +156,9 @@ export async function validateEntityLogic(
   _context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<ValidateEntityOutput> {
-  const { entityType, mode, data } = input;
+  const { entityType, mode } = input;
+  // Merge top-level parent IDs into data — mirrors the create/update tool behaviour
+  const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
   const errors: string[] = [];
   const warnings: string[] = [];
 

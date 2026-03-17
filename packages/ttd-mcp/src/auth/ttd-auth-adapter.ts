@@ -36,9 +36,8 @@ export interface TtdAuthAdapter {
  * TTD API token response shape.
  */
 interface TokenResponse {
-  access_token: string;
-  expires_in: number;
-  token_type: string;
+  Token: string;
+  ExpirationDateUTCString: string;
 }
 
 /**
@@ -107,9 +106,10 @@ export class TtdApiTokenAuthAdapter implements TtdAuthAdapter {
 
     const data = (await response.json()) as TokenResponse;
 
-    this.cachedToken = data.access_token;
-    this.tokenExpiresAt =
-      Date.now() + data.expires_in * 1000 - TtdApiTokenAuthAdapter.EXPIRY_BUFFER_MS;
+    this.cachedToken = data.Token;
+    const expiresAt = Date.parse(data.ExpirationDateUTCString);
+    this.tokenExpiresAt = (!isNaN(expiresAt) ? expiresAt : Date.now() + 3_600_000)
+      - TtdApiTokenAuthAdapter.EXPIRY_BUFFER_MS;
 
     return this.cachedToken;
   }

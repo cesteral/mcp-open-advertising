@@ -124,7 +124,7 @@ export class TtdService {
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
     // TTD PUT endpoints take no ID in URL; ID must be in the request body
-    const payload = { [config.idField]: entityId, ...data };
+    const payload = { ...data, [config.idField]: entityId };
 
     return this.httpClient.fetch(
       config.apiPath,
@@ -177,7 +177,7 @@ export class TtdService {
     try {
       if (mode === "update" && entityId) {
         // TTD PUT endpoints take no ID in URL; ID must be in the request body
-        const payload = { [config.idField]: entityId, ...data };
+        const payload = { ...data, [config.idField]: entityId };
         await this.httpClient.fetch(
           config.apiPath,
           context,

@@ -14,14 +14,17 @@ const TOOL_DESCRIPTION = `Create a new Snapchat Ads entity.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Key requirements by entity type:**
-- **campaign**: requires \`campaign_name\`, \`objective_type\` (e.g., TRAFFIC, APP_INSTALLS), \`budget_mode\` (BUDGET_MODE_DAY or BUDGET_MODE_TOTAL), \`budget\`
-- **adGroup**: requires \`campaign_id\`, \`adgroup_name\`, \`placement_type\`, \`budget_mode\`, \`budget\`, \`schedule_type\`, \`optimize_goal\`
-- **ad**: requires \`adgroup_id\`, \`ad_name\`, \`creative_type\`, creative fields (image_ids or video_id)
-- **creative**: requires \`display_name\`, creative content (image_ids or video_id)
+- **campaign**: requires \`name\`, \`objective\` (e.g., TRAFFIC, APP_INSTALLS), \`daily_budget_micro\` (budget in micro-currency, e.g., 10000000 = $10)
+- **adGroup**: requires \`campaignId\` tool param + \`name\`, \`placement\`, \`daily_budget_micro\`, \`optimization_goal\` in data
+- **ad**: requires \`adSquadId\` tool param + \`name\`, \`creative_id\` in data
+- **creative**: requires \`name\`, \`type\`, \`brand_name\`, \`headline\`, \`call_to_action\` and creative content
+
+**Parent entity IDs (passed as top-level params, not in data):**
+- Creating \`adGroup\`: supply \`campaignId\` (routes to /v1/campaigns/{id}/adsquads)
+- Creating \`ad\`: supply \`adSquadId\` (routes to /v1/adsquads/{id}/ads)
 
 **Gotchas:**
-- Budget values are in the advertiser's account currency
-- All status values use prefix format (e.g., CAMPAIGN_STATUS_ENABLE)
+- Budget values are in micro-currency (multiply by 1,000,000 — e.g., $10 = 10000000)
 - ad_account_id is automatically injected`;
 
 export const CreateEntityInputSchema = z
@@ -33,6 +36,14 @@ export const CreateEntityInputSchema = z
       .string()
       .min(1)
       .describe("Snapchat Advertiser ID"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID — required when entityType is 'adGroup'"),
+    adSquadId: z
+      .string()
+      .optional()
+      .describe("Ad Squad ID — required when entityType is 'ad'"),
     data: z
       .record(z.any())
       .describe("Entity fields as key-value pairs"),
@@ -57,9 +68,13 @@ export async function createEntityLogic(
 ): Promise<CreateEntityOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
+  const filters: Record<string, string> = { adAccountId: input.adAccountId };
+  if (input.campaignId) filters.campaignId = input.campaignId;
+  if (input.adSquadId) filters.adSquadId = input.adSquadId;
+
   const entity = await snapchatService.createEntity(
     input.entityType as SnapchatEntityType,
-    { adAccountId: input.adAccountId },
+    filters,
     input.data,
     context
   );
@@ -99,10 +114,10 @@ export const createEntityTool = {
         entityType: "campaign",
         adAccountId: "1234567890",
         data: {
-          campaign_name: "Summer Sale 2026",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Summer Sale 2026",
+          objective: "TRAFFIC",
+          daily_budget_micro: 10000000,
+          status: "ACTIVE",
         },
       },
     },
@@ -111,16 +126,15 @@ export const createEntityTool = {
       input: {
         entityType: "adGroup",
         adAccountId: "1234567890",
+        campaignId: "1800123456789",
         data: {
-          campaign_id: "1800123456789",
-          adgroup_name: "US 25-44 Interest Targeting",
-          placement_type: "PLACEMENT_TYPE_NORMAL",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 50,
-          schedule_type: "SCHEDULE_START_END",
-          schedule_start_time: "2026-01-01 00:00:00",
-          schedule_end_time: "2026-12-31 23:59:59",
-          optimize_goal: "CLICK",
+          name: "US 25-44 Interest Targeting",
+          placement: "SNAP_ADS",
+          daily_budget_micro: 5000000,
+          optimization_goal: "IMPRESSIONS",
+          bid_micro: 1000000,
+          start_time: "2026-01-01T00:00:00Z",
+          end_time: "2026-12-31T23:59:59Z",
         },
       },
     },

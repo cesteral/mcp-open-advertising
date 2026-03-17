@@ -14,7 +14,7 @@ Returns a \`taskId\` immediately. Use \`amazon_dsp_check_report_status\` to poll
 
 **Non-blocking workflow:**
 1. \`amazon_dsp_submit_report\` → get \`taskId\`
-2. \`amazon_dsp_check_report_status\` (repeat every 10s) → wait for "COMPLETED"
+2. \`amazon_dsp_check_report_status\` (repeat every 10s) → wait for "COMPLETE"
 3. \`amazon_dsp_download_report\` with the \`downloadUrl\` → get parsed data
 
 Use \`amazon_dsp_get_report\` instead for a blocking convenience shortcut.`;
@@ -96,7 +96,7 @@ export async function submitReportLogic(
   );
 
   return {
-    taskId: result.task_id,
+    taskId: result.taskId,
     timestamp: new Date().toISOString(),
   };
 }

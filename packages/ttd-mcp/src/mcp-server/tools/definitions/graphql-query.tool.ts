@@ -101,7 +101,7 @@ export const graphqlQueryTool = {
     {
       label: "Query advertiser details",
       input: {
-        query: "query GetAdvertiser($id: String!) { advertiser(id: $id) { id name status } }",
+        query: "query GetAdvertiser($id: ID!) { advertiser(id: $id) { id name status } }",
         variables: { id: "adv123abc" },
       },
     },

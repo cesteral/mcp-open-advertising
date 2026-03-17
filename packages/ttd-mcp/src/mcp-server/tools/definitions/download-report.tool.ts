@@ -96,6 +96,17 @@ function parseCsv(csvText: string): { headers: string[]; rows: Record<string, st
   return { headers, rows };
 }
 
+const ALLOWED_REPORT_HOSTNAME_PATTERN = /(?:^|\.)(?:thetradedesk\.com|amazonaws\.com)$/;
+
+function isAllowedReportUrl(rawUrl: string): boolean {
+  try {
+    const { hostname } = new URL(rawUrl);
+    return ALLOWED_REPORT_HOSTNAME_PATTERN.test(hostname);
+  } catch {
+    return false;
+  }
+}
+
 export async function downloadReportLogic(
   input: DownloadInput,
   _context: RequestContext,
@@ -103,6 +114,12 @@ export async function downloadReportLogic(
 ): Promise<DownloadOutput> {
   // Resolve session to ensure the user is authenticated
   resolveSessionServices(sdkContext);
+
+  if (!isAllowedReportUrl(input.downloadUrl)) {
+    throw new Error(
+      `Report download URL must be from *.thetradedesk.com or *.amazonaws.com. Got: ${new URL(input.downloadUrl).hostname}`
+    );
+  }
 
   const response = await fetchWithTimeout(input.downloadUrl, 60_000);
   if (!response.ok) {

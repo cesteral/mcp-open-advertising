@@ -44,14 +44,15 @@ function buildPlatformConfig(
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
-      "X-Snapchat-Ad-Account-Id",
+      "X-Snapchat-Advertiser-Id",
+      "X-Snapchat-Org-Id",
       "X-Snapchat-App-Id",
       "X-Snapchat-App-Secret",
       "X-Snapchat-Refresh-Token",
     ],
     authErrorHint:
       config.mcpAuthMode === "snapchat-bearer"
-        ? "Provide a Snapchat access token via Authorization: Bearer <token> header and ad account ID via X-Snapchat-Ad-Account-Id header."
+        ? "Provide a Snapchat access token via Authorization: Bearer <token> header and ad account ID via X-Snapchat-Advertiser-Id header."
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,

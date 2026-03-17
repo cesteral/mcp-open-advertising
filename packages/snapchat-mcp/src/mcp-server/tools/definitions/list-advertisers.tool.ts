@@ -11,7 +11,10 @@ const TOOL_TITLE = "List Snapchat Advertisers";
 const TOOL_DESCRIPTION = `List Snapchat advertiser accounts accessible to the authenticated user.
 
 Returns advertiser IDs, names, and account status information.
-Use the ad_account_id from results with other snapchat_* tools.`;
+Use the ad_account_id from results with other snapchat_* tools.
+
+**Requires:** \`X-Snapchat-Org-Id\` header at session connect (or \`SNAPCHAT_ORG_ID\` env var for stdio mode).
+The organization ID scopes which ad accounts are returned.`;
 
 export const ListAdvertisersInputSchema = z
   .object({})

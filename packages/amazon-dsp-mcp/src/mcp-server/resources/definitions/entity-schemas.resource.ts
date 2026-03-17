@@ -19,7 +19,7 @@ const ENTITY_SCHEMA_CONTENT: Record<AmazonDspEntityType, string> = {
     "budget": { "type": "number", "description": "Total budget in USD dollars" },
     "startDate": { "type": "string", "format": "date-time", "description": "ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ" },
     "endDate": { "type": "string", "format": "date-time" },
-    "status": { "type": "string", "enum": ["DELIVERING", "PAUSED", "ARCHIVED"] }
+    "state": { "type": "string", "enum": ["RUNNING", "PAUSED", "ARCHIVED"] }
   }
 }
 \`\`\`
@@ -27,7 +27,8 @@ const ENTITY_SCHEMA_CONTENT: Record<AmazonDspEntityType, string> = {
 ## Notes
 - Budget is in USD dollars (e.g., 50000.00 = $50,000)
 - Dates must use ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ
-- Amazon DSP has no DELETE endpoint — use status: "ARCHIVED" to remove
+- Amazon DSP has no DELETE endpoint — use state: "ARCHIVED" to remove
+- Active state is "RUNNING" (not "DELIVERING")
 
 ## Read-Only Fields
 orderId, creationDate, lastUpdatedDate
@@ -41,13 +42,25 @@ orderId, creationDate, lastUpdatedDate
   "properties": {
     "name": { "type": "string" },
     "orderId": { "type": "string" },
-    "budget": { "type": "number", "description": "Budget in USD dollars" },
-    "status": { "type": "string", "enum": ["DELIVERING", "PAUSED", "ARCHIVED"] },
+    "budget": {
+      "type": "object",
+      "description": "Budget configuration",
+      "properties": {
+        "budgetType": { "type": "string", "enum": ["DAILY", "LIFETIME"] },
+        "budget": { "type": "number", "description": "Budget amount in USD dollars" }
+      },
+      "required": ["budgetType", "budget"]
+    },
+    "state": { "type": "string", "enum": ["RUNNING", "PAUSED", "ARCHIVED"] },
     "bidding": {
       "type": "object",
       "properties": {
-        "bidOptimization": { "type": "string", "enum": ["AUTO", "MANUAL"] },
-        "bidAmount": { "type": "number" }
+        "bidOptimization": {
+          "type": "object",
+          "properties": {
+            "bidAmount": { "type": "number", "description": "Bid amount in USD" }
+          }
+        }
       }
     },
     "targetingCriteria": { "type": "object", "description": "Targeting configuration" }
@@ -73,14 +86,14 @@ lineItemId, orderId (inherited), creationDate, lastUpdatedDate
     "name": { "type": "string" },
     "advertiserId": { "type": "string" },
     "clickThroughUrl": { "type": "string", "format": "uri" },
-    "creativeType": { "type": "string", "enum": ["DISPLAY", "VIDEO"] },
-    "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "ARCHIVED"] }
+    "creativeType": { "type": "string", "enum": ["STANDARD_DISPLAY", "VIDEO", "RICH_MEDIA"] },
+    "state": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "ARCHIVED"] }
   }
 }
 \`\`\`
 
 ## Notes
-- creativeType: DISPLAY for banner ads, VIDEO for video ads
+- creativeType: STANDARD_DISPLAY for banner ads, VIDEO for video ads, RICH_MEDIA for interactive ads
 - clickThroughUrl is the landing page destination
 - Creatives are linked to line items separately after creation
 

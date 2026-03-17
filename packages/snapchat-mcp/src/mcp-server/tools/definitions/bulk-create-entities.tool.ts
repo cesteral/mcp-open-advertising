@@ -28,6 +28,14 @@ export const BulkCreateEntitiesInputSchema = z
       .string()
       .min(1)
       .describe("Snapchat Advertiser ID"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID — required when entityType is 'adGroup'"),
+    adSquadId: z
+      .string()
+      .optional()
+      .describe("Ad Squad ID — required when entityType is 'ad'"),
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -60,9 +68,13 @@ export async function bulkCreateEntitiesLogic(
 ): Promise<BulkCreateEntitiesOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
+  const filters: Record<string, string> = { adAccountId: input.adAccountId };
+  if (input.campaignId) filters.campaignId = input.campaignId;
+  if (input.adSquadId) filters.adSquadId = input.adSquadId;
+
   const bulkResult = await snapchatService.bulkCreateEntities(
     input.entityType as SnapchatEntityType,
-    { adAccountId: input.adAccountId },
+    filters,
     input.items,
     context
   );
@@ -124,16 +136,16 @@ export const bulkCreateEntitiesTool = {
         adAccountId: "1234567890",
         items: [
           {
-            campaign_name: "Campaign A",
-            objective_type: "TRAFFIC",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 100,
+            name: "Campaign A",
+            objective: "TRAFFIC",
+            daily_budget_micro: 10000000,
+            status: "ACTIVE",
           },
           {
-            campaign_name: "Campaign B",
-            objective_type: "APP_INSTALLS",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 200,
+            name: "Campaign B",
+            objective: "APP_INSTALLS",
+            daily_budget_micro: 20000000,
+            status: "ACTIVE",
           },
         ],
       },

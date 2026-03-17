@@ -310,9 +310,7 @@ export function parseSnapchatTokenFromHeaders(
 export function getSnapchatAdvertiserIdFromHeaders(
   headers: Record<string, string | string[] | undefined>
 ): string {
-  const adAccountId =
-    extractHeader(headers, "x-snapchat-advertiser-id") ??
-    extractHeader(headers, "X-Snapchat-Advertiser-Id");
+  const adAccountId = extractHeader(headers, "x-snapchat-advertiser-id");
 
   if (!adAccountId) {
     throw new Error("Missing required X-Snapchat-Advertiser-Id header");

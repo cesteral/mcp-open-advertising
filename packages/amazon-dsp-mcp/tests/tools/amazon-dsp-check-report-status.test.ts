@@ -40,10 +40,10 @@ const baseContext = { requestId: "test-req" } as any;
 const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("checkReportStatusLogic", () => {
-  it("returns complete status with downloadUrl when COMPLETED", async () => {
+  it("returns complete status with downloadUrl when COMPLETE", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "rpt-1",
-      status: "COMPLETED",
+      status: "COMPLETE",
       downloadUrl: "https://example.com/report.json",
     });
 
@@ -54,7 +54,7 @@ describe("checkReportStatusLogic", () => {
     );
 
     expect(result.taskId).toBe("rpt-1");
-    expect(result.status).toBe("COMPLETED");
+    expect(result.status).toBe("COMPLETE");
     expect(result.isComplete).toBe(true);
     expect(result.downloadUrl).toBe("https://example.com/report.json");
   });
@@ -62,7 +62,7 @@ describe("checkReportStatusLogic", () => {
   it("returns pending status with isComplete false", async () => {
     mockCheckReportStatus.mockResolvedValueOnce({
       taskId: "rpt-2",
-      status: "PROCESSING",
+      status: "IN_PROGRESS",
     });
 
     const result = await checkReportStatusLogic(
@@ -71,7 +71,7 @@ describe("checkReportStatusLogic", () => {
       baseSdkContext
     );
 
-    expect(result.status).toBe("PROCESSING");
+    expect(result.status).toBe("IN_PROGRESS");
     expect(result.isComplete).toBe(false);
     expect(result.downloadUrl).toBeUndefined();
   });
@@ -93,10 +93,10 @@ describe("checkReportStatusLogic", () => {
 });
 
 describe("checkReportStatusResponseFormatter", () => {
-  it("shows download guidance when COMPLETED with URL", () => {
+  it("shows download guidance when COMPLETE with URL", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "rpt-1",
-      status: "COMPLETED",
+      status: "COMPLETE",
       isComplete: true,
       downloadUrl: "https://example.com/report.json",
       timestamp: new Date().toISOString(),
@@ -109,7 +109,7 @@ describe("checkReportStatusResponseFormatter", () => {
   it("shows retry guidance when in progress", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "rpt-2",
-      status: "PROCESSING",
+      status: "IN_PROGRESS",
       isComplete: false,
       timestamp: new Date().toISOString(),
     });
@@ -119,10 +119,10 @@ describe("checkReportStatusResponseFormatter", () => {
     expect(content[0].text).toContain("10 seconds");
   });
 
-  it("shows failure message when FAILURE", () => {
+  it("shows failure message when FAILED", () => {
     const content = checkReportStatusResponseFormatter({
       taskId: "rpt-3",
-      status: "FAILURE",
+      status: "FAILED",
       isComplete: false,
       timestamp: new Date().toISOString(),
     });

@@ -30,6 +30,7 @@ export interface SnapchatReportConfig {
   granularity?: "DAY" | "HOUR" | "LIFETIME";
   start_time: string;
   end_time: string;
+  dimension_type?: "CAMPAIGN" | "AD_SQUAD" | "AD";
   filters?: SnapchatReportFilter[];
 }
 
@@ -70,6 +71,7 @@ export class SnapchatReportingService {
         granularity: reportConfig.granularity ?? "DAY",
         start_time: reportConfig.start_time,
         end_time: reportConfig.end_time,
+        ...(reportConfig.dimension_type ? { dimension_type: reportConfig.dimension_type } : {}),
         ...(reportConfig.filters ? { filters: reportConfig.filters } : {}),
       },
       context

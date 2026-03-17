@@ -38,6 +38,10 @@ export const GetReportInputSchema = z
       .optional()
       .default("DAY")
       .describe("Time granularity (default: DAY)"),
+    dimensionType: z
+      .enum(["CAMPAIGN", "AD_SQUAD", "AD"])
+      .optional()
+      .describe("Entity level for stats breakdown (default: account-level aggregate)"),
     filters: z
       .array(z.object({
         field: z.string().describe("Filter field (e.g. campaign_id)"),
@@ -75,6 +79,7 @@ export async function getReportLogic(
       granularity: input.granularity,
       start_time: input.startTime,
       end_time: input.endTime,
+      ...(input.dimensionType ? { dimension_type: input.dimensionType } : {}),
       ...(input.filters ? { filters: input.filters } : {}),
     },
     context

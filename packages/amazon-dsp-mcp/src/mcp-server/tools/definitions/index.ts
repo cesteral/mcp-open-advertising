@@ -4,14 +4,15 @@
 /**
  * Tool definitions barrel export
  *
- * 20 tools total:
+ * 18 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
- *   2 targeting: search targeting, get targeting options
- *   2 specialized: get audience estimate, get ad preview
+ *   1 targeting: search targeting (audience segments via /dsp/audienceSegments)
+ *   1 specialized: get ad preview
+ *   1 duplication: duplicate entity (manual read-strip-create)
  *   1 validation: validate entity (client-side)
  */
 
@@ -31,9 +32,8 @@ export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { searchTargetingTool } from "./search-targeting.tool.js";
-export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
-export { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
+export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
@@ -52,9 +52,8 @@ import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { searchTargetingTool } from "./search-targeting.tool.js";
-import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
-import { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
+import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
@@ -79,18 +78,17 @@ const productionTools: ToolDefinitionForFactory[] = [
   bulkUpdateEntitiesTool,
   // ── Bids ──
   adjustBidsTool,
-  // ── Targeting ──
+  // ── Targeting / Audience ──
   searchTargetingTool,
-  getTargetingOptionsTool,
   // ── Specialized ──
-  getAudienceEstimateTool,
   getAdPreviewTool,
+  duplicateEntityTool,
   // ── Validation ──
   validateEntityTool,
 ];
 
 /**
- * All tool definitions for the AmazonDsp Ads MCP server.
+ * All tool definitions for the Amazon DSP MCP server.
  * Conformance tools are only included when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
  */
 export const allTools: ToolDefinitionForFactory[] = [

@@ -34,10 +34,8 @@ const amazonDspService = {
   adjustBids: vi.fn(async (adjustments: Array<{ lineItemId: string }>) => ({
     results: adjustments.map((a) => ({ lineItemId: a.lineItemId, success: true, newBid: 1 })),
   })),
-  searchTargeting: vi.fn(async () => ({ list: [{ id: "targeting-1" }] })),
-  getTargetingOptions: vi.fn(async () => ({ list: [{ id: "targeting-option-1" }] })),
-  duplicateEntity: vi.fn(async () => ({ id: "copy" })),
-  getAudienceEstimate: vi.fn(async () => ({ audienceSize: 1000 })),
+  searchAudienceSegments: vi.fn(async () => ({ audienceSegments: [{ id: "seg-1", name: "Gamers" }] })),
+  duplicateEntity: vi.fn(async () => ({ orderId: "ord_copy" })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
   client: {
     postMultipart: vi.fn(async (path: string) => {
@@ -65,7 +63,7 @@ const amazonDspReportingService = {
     totalRows: 1,
     taskId: "task-456",
   })),
-  submitReport: vi.fn(async () => ({ task_id: "task-submit-1" })),
+  submitReport: vi.fn(async () => ({ taskId: "task-submit-1" })),
   checkReportStatus: vi.fn(async () => ({
     taskId: "task-check-1",
     status: "DONE",
@@ -98,7 +96,7 @@ describe("Amazon DSP MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 26 : 20); // 20 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 25 : 19); // 19 business + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

@@ -64,12 +64,12 @@ describe("AmazonDspService", () => {
   });
 
   describe("createEntity", () => {
-    it("sends POST with body wrapped in responseKey array", async () => {
-      mockHttpClient.post.mockResolvedValueOnce({ orders: [{ orderId: "new_order" }], totalResults: 1 });
+    it("sends POST with data directly as the body (no array wrapping)", async () => {
+      mockHttpClient.post.mockResolvedValueOnce({ orderId: "new_order" });
       await service.createEntity("order", { name: "New", advertiserId: "adv_1" });
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         "/dsp/orders",
-        { orders: [{ name: "New", advertiserId: "adv_1" }] },
+        { name: "New", advertiserId: "adv_1" },
         undefined
       );
     });
@@ -84,12 +84,12 @@ describe("AmazonDspService", () => {
   });
 
   describe("deleteEntity (archive)", () => {
-    it("archives via PUT with status ARCHIVED (no DELETE endpoint)", async () => {
-      mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", status: "ARCHIVED" });
+    it("archives via PUT with state ARCHIVED (no DELETE endpoint)", async () => {
+      mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", state: "ARCHIVED" });
       await service.deleteEntity("order", "o1");
       expect(mockHttpClient.put).toHaveBeenCalledWith(
         "/dsp/orders/o1",
-        { status: "ARCHIVED" },
+        { state: "ARCHIVED" },
         undefined
       );
       expect(mockHttpClient.delete).not.toHaveBeenCalled();
@@ -97,10 +97,10 @@ describe("AmazonDspService", () => {
   });
 
   describe("updateEntityStatus", () => {
-    it("sends PUT with status to entity path", async () => {
-      mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", status: "PAUSED" });
+    it("sends PUT with state to entity path", async () => {
+      mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", state: "PAUSED" });
       await service.updateEntityStatus("order", "o1", "PAUSED");
-      expect(mockHttpClient.put).toHaveBeenCalledWith("/dsp/orders/o1", { status: "PAUSED" }, undefined);
+      expect(mockHttpClient.put).toHaveBeenCalledWith("/dsp/orders/o1", { state: "PAUSED" }, undefined);
     });
   });
 });

@@ -14,8 +14,8 @@ Reads current bid prices, applies new values, and reports previous/new amounts.
 Bid prices are in the advertiser's account currency.
 
 **Gotchas:**
-- Only applies to line items with manual bidding (bidding.bidPrice field).
-- Line items using automated bidding strategies may ignore bid price.
+- Only applies to line items with manual bidding (bidding.bidOptimization.bidAmount field).
+- Line items using automated bidding strategies may ignore the bid amount.
 - Each read + write pair consumes API quota.
 - Max 50 adjustments per call.`;
 
@@ -32,10 +32,10 @@ export const AdjustBidsInputSchema = z
             .string()
             .min(1)
             .describe("The line item ID to adjust"),
-          bidPrice: z
+          bidAmount: z
             .number()
             .positive()
-            .describe("New bid price in the advertiser's currency"),
+            .describe("New bid amount in the advertiser's currency"),
         })
       )
       .min(1)
@@ -80,7 +80,7 @@ export async function adjustBidsLogic(
   const result = await amazonDspService.adjustBids(
     input.adjustments.map((a) => ({
       lineItemId: a.lineItemId,
-      bidPrice: a.bidPrice,
+      bidAmount: a.bidAmount,
     })),
     context
   );
@@ -130,7 +130,7 @@ export const adjustBidsTool = {
   outputSchema: AdjustBidsOutputSchema,
   annotations: {
     readOnlyHint: false,
-    openWorldHint: true,
+    openWorldHint: false,
     idempotentHint: true,
     destructiveHint: true,
   },
@@ -139,7 +139,7 @@ export const adjustBidsTool = {
       label: "Single bid adjustment",
       input: {
         profileId: "1234567890",
-        adjustments: [{ lineItemId: "1700123456789", bidPrice: 1.5 }],
+        adjustments: [{ lineItemId: "1700123456789", bidAmount: 1.5 }],
       },
     },
     {
@@ -147,8 +147,8 @@ export const adjustBidsTool = {
       input: {
         profileId: "1234567890",
         adjustments: [
-          { lineItemId: "1700111111111", bidPrice: 2.0 },
-          { lineItemId: "1700222222222", bidPrice: 1.2 },
+          { lineItemId: "1700111111111", bidAmount: 2.0 },
+          { lineItemId: "1700222222222", bidAmount: 1.2 },
         ],
         reason: "Increase bids to improve delivery pacing",
       },

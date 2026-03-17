@@ -41,7 +41,7 @@ const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("submitReportLogic", () => {
   it("returns taskId and timestamp", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-new-1" });
+    mockSubmitReport.mockResolvedValueOnce({ taskId: "rpt-new-1" });
 
     const result = await submitReportLogic(
       {
@@ -61,7 +61,7 @@ describe("submitReportLogic", () => {
   });
 
   it("passes report config to submitReport", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-cfg" });
+    mockSubmitReport.mockResolvedValueOnce({ taskId: "rpt-cfg" });
 
     await submitReportLogic(
       {
@@ -96,7 +96,7 @@ describe("submitReportLogic", () => {
   });
 
   it("calls submitReport, not getReport", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-sub" });
+    mockSubmitReport.mockResolvedValueOnce({ taskId: "rpt-sub" });
 
     await submitReportLogic(
       {
