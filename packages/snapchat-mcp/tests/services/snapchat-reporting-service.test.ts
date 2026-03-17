@@ -85,6 +85,28 @@ describe("SnapchatReportingService", () => {
     expect(result.totalRows).toBe(2);
   });
 
+  it("downloadReport returns empty dataset for empty body", async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      text: async () => "",
+    } as unknown as Response);
+
+    const result = await service.downloadReport("https://example.com/report.csv");
+
+    expect(result).toEqual({ headers: [], rows: [], totalRows: 0 });
+  });
+
+  it("downloadReport returns empty dataset for BOM-only or whitespace-only body", async () => {
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      text: async () => "\uFEFF \n\t",
+    } as unknown as Response);
+
+    const result = await service.downloadReport("https://example.com/report.csv");
+
+    expect(result).toEqual({ headers: [], rows: [], totalRows: 0 });
+  });
+
   it("getReport runs submit -> poll -> download flow", async () => {
     mockHttpClient.post.mockResolvedValueOnce({
       request_status: "SUCCESS",

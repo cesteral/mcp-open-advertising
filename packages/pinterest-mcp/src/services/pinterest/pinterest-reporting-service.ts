@@ -184,7 +184,13 @@ export class PinterestReportingService {
     if (csvText.charCodeAt(0) === 0xFEFF) {
       csvText = csvText.slice(1);
     }
-    const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
+    const normalizedCsvText = csvText.replace(/\r\n/g, "\n").trim();
+
+    if (normalizedCsvText.length === 0) {
+      return { rows: [], headers: [], totalRows: 0 };
+    }
+
+    const lines = normalizedCsvText.split("\n");
 
     if (lines.length === 0) {
       return { rows: [], headers: [], totalRows: 0 };
