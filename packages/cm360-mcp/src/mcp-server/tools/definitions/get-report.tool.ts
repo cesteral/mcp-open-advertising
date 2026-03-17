@@ -61,11 +61,13 @@ export async function getReportLogic(
 ): Promise<GetReportOutput> {
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
+  // Spread additionalConfig first so explicit params (name, type, criteria) take precedence
+  const { name: _n, type: _t, criteria: _c, ...safeAdditionalConfig } = input.additionalConfig ?? {};
   const reportConfig = {
+    ...safeAdditionalConfig,
     name: input.name,
     type: input.type,
     ...(input.criteria && { criteria: input.criteria }),
-    ...input.additionalConfig,
   };
 
   const result = (await cm360ReportingService.runReport(

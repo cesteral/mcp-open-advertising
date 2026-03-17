@@ -11,7 +11,7 @@ const TOOL_NAME = "cm360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update CM360 Entity Status";
 const TOOL_DESCRIPTION = `Batch update the status of multiple CM360 entities.
 
-Loops individual update calls with rate limiting. At ~1 QPS, 50 items takes ~50 seconds.
+Each entity is fetched first then updated (CM360 uses PUT/replace semantics). Loops individual GET+PUT calls with rate limiting. At ~1 QPS, 50 items takes ~100 seconds.
 
 Common status values: ACTIVE, ARCHIVED (campaigns), ACTIVE/PAUSED (placements, ads).`;
 
@@ -67,10 +67,18 @@ export async function bulkUpdateStatusLogic(
 
   for (const entityId of input.entityIds) {
     try {
+      // CM360 uses PUT (full replacement) — fetch current entity first to avoid data loss
+      const current = (await cm360Service.getEntity(
+        input.entityType as CM360EntityType,
+        input.profileId,
+        entityId,
+        context
+      )) as Record<string, unknown>;
+
       await cm360Service.updateEntity(
         input.entityType as CM360EntityType,
         input.profileId,
-        { id: entityId, status: input.status },
+        { ...current, status: input.status },
         context
       );
       results.push({ entityId, success: true });

@@ -202,8 +202,10 @@ export class CM360ReportingService {
   }
 
   private computeBackoff(attempt: number): number {
+    // Use linear backoff capped at MAX_BACKOFF_MS to spread polls more evenly
+    // and avoid wasting rate-limit tokens on aggressive early polls
     return Math.min(
-      this.pollIntervalMs * Math.pow(2, attempt),
+      this.pollIntervalMs * (attempt + 1),
       CM360ReportingService.MAX_BACKOFF_MS
     );
   }

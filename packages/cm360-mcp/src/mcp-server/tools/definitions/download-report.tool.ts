@@ -32,7 +32,8 @@ export const DownloadReportOutputSchema = z
   .object({
     headers: z.array(z.string()).describe("Column headers"),
     rows: z.array(z.array(z.string())).describe("Data rows"),
-    totalRows: z.number().describe("Total rows returned"),
+    totalRows: z.number().describe("Total rows in the report (before truncation)"),
+    returnedRows: z.number().describe("Number of rows actually returned"),
     truncated: z.boolean().describe("Whether results were truncated by maxRows"),
     timestamp: z.string().datetime(),
   })
@@ -55,7 +56,9 @@ export async function downloadReportLogic(
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to download report: ${response.status} ${response.statusText}`);
+    const errorBody = await response.text().catch(() => "");
+    const detail = errorBody ? ` — ${errorBody.substring(0, 500)}` : "";
+    throw new Error(`Failed to download report: ${response.status} ${response.statusText}${detail}`);
   }
 
   const csvText = await response.text();
@@ -66,6 +69,7 @@ export async function downloadReportLogic(
       headers: [],
       rows: [],
       totalRows: 0,
+      returnedRows: 0,
       truncated: false,
       timestamp: new Date().toISOString(),
     };
@@ -80,7 +84,8 @@ export async function downloadReportLogic(
   return {
     headers,
     rows,
-    totalRows: rows.length,
+    totalRows: dataLines.length,
+    returnedRows: rows.length,
     truncated,
     timestamp: new Date().toISOString(),
   };
@@ -119,10 +124,10 @@ function parseCSVLine(line: string): string[] {
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
   const truncatedNote = result.truncated
-    ? `\n\nResults truncated to ${result.totalRows} rows.`
+    ? `\n\nResults truncated to ${result.returnedRows} of ${result.totalRows} rows.`
     : "";
 
-  if (result.totalRows === 0) {
+  if (result.returnedRows === 0) {
     return [
       {
         type: "text" as const,
@@ -137,7 +142,7 @@ export function downloadReportResponseFormatter(result: DownloadReportOutput): M
   return [
     {
       type: "text" as const,
-      text: `Report data (${result.totalRows} rows):\n\n${tableText}${truncatedNote}\n\nTimestamp: ${result.timestamp}`,
+      text: `Report data (${result.returnedRows} rows):\n\n${tableText}${truncatedNote}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

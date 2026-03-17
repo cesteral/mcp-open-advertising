@@ -47,7 +47,14 @@ export class CM360Service {
     const path = `/userprofiles/${profileId}/${config.apiCollection}${queryString ? `?${queryString}` : ""}`;
 
     const result = (await this.httpClient.fetch(path, context)) as Record<string, unknown>;
-    const entities = (result[config.apiCollection] as unknown[]) || [];
+    const rawEntities = result[config.apiCollection];
+    if (rawEntities === undefined) {
+      this.logger.warn(
+        { entityType, collection: config.apiCollection, responseKeys: Object.keys(result), requestId: context?.requestId },
+        `CM360 API response missing expected collection key "${config.apiCollection}" — returning empty results`
+      );
+    }
+    const entities = (rawEntities as unknown[]) || [];
     const nextPageToken = result.nextPageToken as string | undefined;
 
     return { entities, nextPageToken };
@@ -122,7 +129,14 @@ export class CM360Service {
     const path = `/userprofiles/${profileId}/${targetingType}${queryString ? `?${queryString}` : ""}`;
 
     const result = (await this.httpClient.fetch(path, context)) as Record<string, unknown>;
-    const options = (result[targetingType] as unknown[]) || [];
+    const rawOptions = result[targetingType];
+    if (rawOptions === undefined) {
+      this.logger.warn(
+        { targetingType, responseKeys: Object.keys(result), requestId: context?.requestId },
+        `CM360 API response missing expected key "${targetingType}" — returning empty results`
+      );
+    }
+    const options = (rawOptions as unknown[]) || [];
     const nextPageToken = result.nextPageToken as string | undefined;
 
     return { options, nextPageToken };

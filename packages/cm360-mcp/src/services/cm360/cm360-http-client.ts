@@ -58,20 +58,41 @@ export class CM360HttpClient {
     options?: RequestInit
   ): Promise<Response> {
     const method = options?.method || "GET";
+    const maxRetries = 3;
 
     return withCM360ApiSpan(`api.raw.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      const accessToken = await this.authAdapter.getAccessToken();
-      const response = await fetchWithTimeout(url, timeoutMs, context, {
-        ...options,
-        headers: {
-          ...options?.headers,
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      span.setAttribute("http.response.status_code", response.status);
-      return response;
+
+      let lastResponse: Response | undefined;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const accessToken = await this.authAdapter.getAccessToken();
+        const response = await fetchWithTimeout(url, timeoutMs, context, {
+          ...options,
+          headers: {
+            ...options?.headers,
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.ok || (response.status < 500 && response.status !== 429)) {
+          span.setAttribute("http.response.status_code", response.status);
+          return response;
+        }
+
+        lastResponse = response;
+        if (attempt < maxRetries) {
+          const delayMs = Math.min(1_000 * Math.pow(2, attempt), 10_000);
+          this.logger.warn(
+            { url, method, status: response.status, attempt: attempt + 1, maxRetries, requestId: context?.requestId },
+            "Retrying CM360 raw fetch after transient error"
+          );
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+      }
+
+      span.setAttribute("http.response.status_code", lastResponse!.status);
+      return lastResponse!;
     });
   }
 }
