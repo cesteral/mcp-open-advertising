@@ -7,7 +7,7 @@ import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js";
-import type { PinterestMediaUploadResponse, PinterestMediaStatusResponse } from "../utils/media-types.js";
+import type { PinterestMediaRegisterResponse, PinterestMediaStatusResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "pinterest_upload_video";
 const TOOL_TITLE = "Upload Video to Pinterest Ads";
@@ -50,28 +50,33 @@ export async function uploadVideoLogic(
 ): Promise<UploadVideoOutput> {
   const { pinterestService } = resolveSessionServices(sdkContext);
 
-  const adAccountId = pinterestService.client.accountId;
-
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,
     600_000, // 10 min for large videos
     context
   );
 
-  const uploadResult = await pinterestService.client.postMultipart(
-    `/v5/ad_accounts/${adAccountId}/media`,
-    {},
-    "file",
+  // Step 1: Register the upload with Pinterest to get a pre-signed S3 URL
+  const registration = await pinterestService.client.post(
+    "/v5/media",
+    { media_type: "video" },
+    context
+  ) as PinterestMediaRegisterResponse;
+
+  const mediaId = registration.media_id;
+  if (!mediaId || !registration.upload_url) {
+    throw new Error("Pinterest video upload registration failed: missing media_id or upload_url");
+  }
+
+  // Step 2: Upload the file to S3 using the pre-signed URL and parameters
+  await pinterestService.client.uploadToS3(
+    registration.upload_url,
+    registration.upload_parameters ?? {},
     buffer,
     input.videoName ?? filename,
     contentType,
     context
-  ) as PinterestMediaUploadResponse;
-
-  const mediaId = uploadResult.media_id;
-  if (!mediaId) {
-    throw new Error("Pinterest video upload failed: no media_id returned");
-  }
+  );
 
   // Poll for processing status
   const maxAttempts = mcpConfig.pinterestVideoUploadMaxPollAttempts;
@@ -81,7 +86,7 @@ export async function uploadVideoLogic(
     await sleep(pollIntervalMs);
 
     const statusResult = await pinterestService.client.get(
-      `/v5/ad_accounts/${adAccountId}/media/${mediaId}`,
+      `/v5/media/${mediaId}`,
       undefined,
       context
     ) as PinterestMediaStatusResponse;

@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import type { PinterestMediaUploadResponse } from "../utils/media-types.js";
+import type { PinterestMediaRegisterResponse } from "../utils/media-types.js";
 
 const TOOL_NAME = "pinterest_upload_image";
 const TOOL_TITLE = "Upload Image to Pinterest Ads";
@@ -44,8 +44,6 @@ export async function uploadImageLogic(
 ): Promise<UploadImageOutput> {
   const { pinterestService } = resolveSessionServices(sdkContext);
 
-  const adAccountId = pinterestService.client.accountId;
-
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,
     120_000,
@@ -54,24 +52,31 @@ export async function uploadImageLogic(
 
   const effectiveFilename = input.filename ?? filename;
 
-  const result = await pinterestService.client.postMultipart(
-    `/v5/ad_accounts/${adAccountId}/media`,
-    {},
-    "file",
+  // Step 1: Register the upload with Pinterest to get a pre-signed S3 URL
+  const registration = await pinterestService.client.post(
+    "/v5/media",
+    { media_type: "image" },
+    context
+  ) as PinterestMediaRegisterResponse;
+
+  const mediaId = registration.media_id;
+  if (!mediaId || !registration.upload_url) {
+    throw new Error("Pinterest image upload registration failed: missing media_id or upload_url");
+  }
+
+  // Step 2: Upload the file to S3 using the pre-signed URL and parameters
+  await pinterestService.client.uploadToS3(
+    registration.upload_url,
+    registration.upload_parameters ?? {},
     buffer,
     effectiveFilename,
     contentType,
     context
-  ) as PinterestMediaUploadResponse;
-
-  const mediaId = result.media_id;
-  if (!mediaId) {
-    throw new Error("Pinterest image upload failed: no media_id returned");
-  }
+  );
 
   return {
     mediaId,
-    mediaType: result.media_type,
+    mediaType: registration.media_type,
     uploadedAt: new Date().toISOString(),
   };
 }

@@ -229,12 +229,24 @@ export class PinterestService {
       throw new Error(`Entity type ${entityType} does not support duplication`);
     }
 
-    const basePath = interpolatePath(config.createPath, { adAccountId: filters.adAccountId });
-    const copyPath = basePath.replace(/\/([^/]+)$/, "/$1/copy");
+    // Pinterest v5 has no native copy/duplicate endpoint — implement as client-side read+create.
+    // Read source entity, strip system-managed fields, then create a new one.
+    const source = (await this.getEntity(entityType, filters, entityId, context)) as Record<string, unknown>;
 
-    await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
+    const SYSTEM_FIELDS = ["id", "created_time", "updated_time", "ad_account_id", "pin_count", "view_tags"] as const;
+    const body: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(source)) {
+      if (!(SYSTEM_FIELDS as readonly string[]).includes(key)) {
+        body[key] = val;
+      }
+    }
 
-    return this.httpClient.post(copyPath, { id: entityId, ...options }, context);
+    // Caller may override name or other fields
+    if (options?.name) body.name = options.name;
+    if (options?.campaign_name) body.campaign_name = options.campaign_name;
+    Object.assign(body, options);
+
+    return this.createEntity(entityType, filters, body, context);
   }
 
   // ─── Bid Adjustment ─────────────────────────────────────────────
@@ -341,7 +353,6 @@ export class PinterestService {
     await this.rateLimiter.consume("pinterest:default");
 
     const params: Record<string, string> = {
-      targeting_type: targetingType,
       count: String(limit),
     };
 
@@ -349,7 +360,7 @@ export class PinterestService {
       params.keyword = query;
     }
 
-    return this.httpClient.get("/v5/targeting_options", params, context);
+    return this.httpClient.get(`/v5/targeting_options/${targetingType}`, params, context);
   }
 
   async getTargetingOptions(
@@ -358,12 +369,12 @@ export class PinterestService {
   ): Promise<unknown> {
     await this.rateLimiter.consume("pinterest:default");
 
-    const params: Record<string, string> = {};
-    if (targetingType) {
-      params.targeting_type = targetingType;
+    // If no type specified, return the list of supported targeting types
+    if (!targetingType) {
+      return { targeting_types: ["APPTYPE", "GENDER", "LOCALE", "AGE_BUCKET", "LOCATION", "GEO", "INTEREST", "KEYWORD", "AUDIENCE_INCLUDE", "AUDIENCE_EXCLUDE"] };
     }
 
-    return this.httpClient.get("/v5/targeting_options", params, context);
+    return this.httpClient.get(`/v5/targeting_options/${targetingType}`, {}, context);
   }
 
   // ─── Audience Estimate ──────────────────────────────────────────
@@ -375,8 +386,12 @@ export class PinterestService {
   ): Promise<unknown> {
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
 
-    const path = `/v5/ad_accounts/${filters.adAccountId}/delivery_metrics/audience_sizing`;
-    return this.httpClient.post(path, targetingConfig, context);
+    // Pinterest v5 audience sizing uses GET with targeting spec serialized as a JSON query param
+    const path = `/v5/ad_accounts/${filters.adAccountId}/audience_sizing`;
+    const params: Record<string, string> = {
+      targeting_spec: JSON.stringify(targetingConfig),
+    };
+    return this.httpClient.get(path, params, context);
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────

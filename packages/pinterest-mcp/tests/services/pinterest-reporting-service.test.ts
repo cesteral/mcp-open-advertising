@@ -183,8 +183,8 @@ describe("PinterestReportingService", () => {
     expect(result.downloadUrl).toBeUndefined();
     expect(mockHttpClient.get).toHaveBeenCalledTimes(1);
     expect(mockHttpClient.get).toHaveBeenCalledWith(
-      "/v5/ad_accounts/ad-acct-123/reports/token-456",
-      undefined,
+      "/v5/ad_accounts/ad-acct-123/reports",
+      { token: "token-456" },
       undefined
     );
   });

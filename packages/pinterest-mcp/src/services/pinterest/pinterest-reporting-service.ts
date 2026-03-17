@@ -94,8 +94,8 @@ export class PinterestReportingService {
       await this.rateLimiter.consume(`pinterest:reporting`);
 
       const result = (await this.httpClient.get(
-        `/v5/ad_accounts/${adAccountId}/reports/${taskId}`,
-        undefined,
+        `/v5/ad_accounts/${adAccountId}/reports`,
+        { token: taskId },
         context
       )) as ReportTaskCheckData;
 
@@ -142,8 +142,8 @@ export class PinterestReportingService {
     const adAccountId = this.httpClient.accountId;
 
     const result = (await this.httpClient.get(
-      `/v5/ad_accounts/${adAccountId}/reports/${taskId}`,
-      undefined,
+      `/v5/ad_accounts/${adAccountId}/reports`,
+      { token: taskId },
       context
     )) as ReportTaskCheckData;
 

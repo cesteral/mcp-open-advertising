@@ -160,6 +160,45 @@ export class PinterestHttpClient {
     });
   }
 
+  /**
+   * Upload a file to an S3 pre-signed URL using the form parameters returned by POST /v5/media.
+   * This is step 2 of Pinterest's two-step media upload — no Bearer token is used.
+   */
+  async uploadToS3(
+    uploadUrl: string,
+    uploadParameters: Record<string, string>,
+    fileBuffer: Buffer,
+    filename: string,
+    fileContentType: string,
+    context?: RequestContext
+  ): Promise<void> {
+    return withPinterestApiSpan("api.s3.upload", uploadUrl, async (span) => {
+      span.setAttribute("http.request.method", "POST");
+      span.setAttribute("http.url", uploadUrl);
+
+      const { body, contentType } = buildMultipartFormData(
+        uploadParameters,
+        "file",
+        fileBuffer,
+        filename,
+        fileContentType
+      );
+
+      const response = await fetchWithTimeout(uploadUrl, 120_000, context, {
+        method: "POST",
+        headers: { "Content-Type": contentType },
+        body,
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        throw new Error(
+          `Pinterest S3 upload failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+        );
+      }
+    });
+  }
+
   private buildUrl(path: string, params?: Record<string, string>): string {
     const url = new URL(`${this.baseUrl}${path}`);
     if (params) {
