@@ -16,7 +16,7 @@ import {
   type FieldRule,
   validateRequiredFields,
   checkReadOnlyFields,
-  validateEntityResponseFormatter as sharedValidateEntityResponseFormatter,
+  validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import {
@@ -234,8 +234,6 @@ export async function validateEntityLogic(
 // ---------------------------------------------------------------------------
 // Tool definition (exported for allTools array)
 // ---------------------------------------------------------------------------
-
-export const validateEntityResponseFormatter = sharedValidateEntityResponseFormatter;
 
 export const validateEntityTool = {
   name: TOOL_NAME,

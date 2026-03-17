@@ -23,5 +23,3 @@ export interface PinterestMediaStatusResponse {
   media_type?: string;
 }
 
-/** @deprecated Use PinterestMediaRegisterResponse */
-export type PinterestMediaUploadResponse = PinterestMediaRegisterResponse;

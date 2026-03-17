@@ -81,8 +81,8 @@ import {
 } from "../../src/mcp-server/tools/definitions/graphql-query.tool.js";
 import {
   validateEntityLogic,
-  validateEntityResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
+import { validateEntityResponseFormatter } from "@cesteral/shared";
 import {
   downloadReportLogic,
   downloadReportResponseFormatter,
