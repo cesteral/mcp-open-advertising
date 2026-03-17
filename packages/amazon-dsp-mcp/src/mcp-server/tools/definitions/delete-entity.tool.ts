@@ -35,9 +35,17 @@ export const DeleteEntityInputSchema = z
 
 export const DeleteEntityOutputSchema = z
   .object({
-    deleted: z.boolean(),
     entityType: z.string(),
-    entityIds: z.array(z.string()),
+    totalRequested: z.number(),
+    totalSucceeded: z.number(),
+    totalFailed: z.number(),
+    results: z.array(
+      z.object({
+        entityId: z.string(),
+        success: z.boolean(),
+        error: z.string().optional(),
+      })
+    ),
     timestamp: z.string().datetime(),
   })
   .describe("Entity delete result");
@@ -52,30 +60,55 @@ export async function deleteEntityLogic(
 ): Promise<DeleteEntityOutput> {
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
+  const results: Array<{ entityId: string; success: boolean; error?: string }> = [];
+
   // Archive each entity individually (Amazon DSP has no bulk delete endpoint)
   for (const entityId of input.entityIds) {
-    await amazonDspService.deleteEntity(
-      input.entityType as AmazonDspEntityType,
-      entityId,
-      context
-    );
+    try {
+      await amazonDspService.deleteEntity(
+        input.entityType as AmazonDspEntityType,
+        entityId,
+        context
+      );
+      results.push({ entityId, success: true });
+    } catch (error) {
+      results.push({
+        entityId,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
+  const totalSucceeded = results.filter((r) => r.success).length;
+
   return {
-    deleted: true,
     entityType: input.entityType,
-    entityIds: input.entityIds,
+    totalRequested: input.entityIds.length,
+    totalSucceeded,
+    totalFailed: input.entityIds.length - totalSucceeded,
+    results,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
-  return [
-    {
-      type: "text" as const,
-      text: `${result.entityType} entities deleted: ${result.entityIds.join(", ")}\n\nTimestamp: ${result.timestamp}`,
-    },
+  const lines: string[] = [
+    `${result.entityType} deletions: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
+    "",
   ];
+
+  for (const r of result.results) {
+    if (r.success) {
+      lines.push(`  ${r.entityId}: archived`);
+    } else {
+      lines.push(`  ${r.entityId}: FAILED - ${r.error}`);
+    }
+  }
+
+  lines.push("", `Timestamp: ${result.timestamp}`);
+
+  return [{ type: "text" as const, text: lines.join("\n") }];
 }
 
 export const deleteEntityTool = {

@@ -35,11 +35,9 @@ export async function listProfilesLogic(
 ): Promise<ListAdvertisersOutput> {
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
-  const result = (await amazonDspService.listAdvertisers(0, 100, context)) as {
-    advertisers?: unknown[];
-  };
+  const result = await amazonDspService.listAdvertisers(0, 100, context);
 
-  const advertisers = (result?.advertisers ?? []) as Record<string, unknown>[];
+  const advertisers = result.entities as Record<string, unknown>[];
 
   return {
     advertisers,

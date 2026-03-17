@@ -153,13 +153,25 @@ export class AmazonDspService {
     startIndex = 0,
     pageSize = 25,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ entities: unknown[]; pageInfo: AmazonDspPageInfo }> {
     const params: Record<string, string> = {
       startIndex: String(startIndex),
       count: String(pageSize),
     };
     await this.rateLimiter.consume("amazon_dsp:read");
-    return this.httpClient.get("/dsp/advertisers", params, context);
+    const result = (await this.httpClient.get("/dsp/advertisers", params, context)) as AmazonDspListResponse;
+
+    const entities = (result?.advertisers as unknown[]) ?? [];
+    const totalResults = result?.totalResults ?? 0;
+
+    return {
+      entities,
+      pageInfo: {
+        startIndex,
+        count: pageSize,
+        totalResults,
+      },
+    };
   }
 
   // ─── Targeting ───────────────────────────────────────────────────

@@ -39,7 +39,8 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   const authAdapter = new AmazonDspAccessTokenAdapter(
     accessToken,
     profileId,
-    mcpConfig.amazonDspApiBaseUrl
+    mcpConfig.amazonDspApiBaseUrl,
+    mcpConfig.amazonDspClientId
   );
 
   // Validate token at startup to fail fast on invalid credentials
@@ -51,6 +52,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
       baseUrl: mcpConfig.amazonDspApiBaseUrl,
       reportPollIntervalMs: mcpConfig.amazonDspReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.amazonDspReportMaxPollAttempts,
+      clientId: mcpConfig.amazonDspClientId,
     },
     logger,
     rateLimiter
@@ -72,4 +74,7 @@ bootstrapMcpServer({
   runStdio: runStdioServer,
   startHttp: startHttpServer,
   onShutdown: () => rateLimiter.destroy(),
+}).catch((err) => {
+  logger.fatal({ err }, "Failed to start amazon-dsp-mcp");
+  process.exit(1);
 });

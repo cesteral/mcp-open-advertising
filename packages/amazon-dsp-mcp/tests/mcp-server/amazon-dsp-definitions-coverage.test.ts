@@ -21,7 +21,7 @@ const amazonDspService = {
   createEntity: vi.fn(async () => ({ orders: [{ orderId: "ord_new" }] })),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
-  listAdvertisers: vi.fn(async () => ({ advertisers: [{ advertiserId: "adv_123", name: "Test Advertiser" }] })),
+  listAdvertisers: vi.fn(async () => ({ entities: [{ advertiserId: "adv_123", name: "Test Advertiser" }], pageInfo: { startIndex: 0, count: 25, totalResults: 1 } })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),

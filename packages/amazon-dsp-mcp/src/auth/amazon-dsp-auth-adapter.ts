@@ -34,6 +34,7 @@ export interface AmazonDspAuthAdapter {
   validate(): Promise<void>;
   readonly userId: string;
   readonly profileId: string;
+  readonly clientId: string;
 }
 
 /**
@@ -48,7 +49,7 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
     private readonly accessToken: string,
     private readonly _profileId: string,
     private readonly baseUrl: string = "https://advertising-api.amazon.com",
-    private readonly clientId: string = ""
+    private readonly _clientId: string = ""
   ) {}
 
   get userId(): string {
@@ -57,6 +58,10 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
 
   get profileId(): string {
     return this._profileId;
+  }
+
+  get clientId(): string {
+    return this._clientId;
   }
 
   async getAccessToken(): Promise<string> {
@@ -81,7 +86,7 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
           "Content-Type": "application/json",
-          ...(this.clientId && { "Amazon-Advertising-API-ClientId": this.clientId }),
+          ...(this._clientId && { "Amazon-Advertising-API-ClientId": this._clientId }),
           "Amazon-Advertising-API-Scope": this._profileId,
         },
       }
@@ -150,6 +155,10 @@ export class AmazonDspRefreshTokenAdapter implements AmazonDspAuthAdapter {
 
   get profileId(): string {
     return this._profileId;
+  }
+
+  get clientId(): string {
+    return this.credentials.appId;
   }
 
   async validate(): Promise<void> {
@@ -254,9 +263,9 @@ export class AmazonDspRefreshTokenAdapter implements AmazonDspAuthAdapter {
 export function parseAmazonDspRefreshCredentialsFromHeaders(
   headers: Record<string, string | string[] | undefined>
 ): AmazonDspRefreshCredentials | undefined {
-  const appId = extractHeader(headers, "x-amazon-dsp-app-id");
-  const appSecret = extractHeader(headers, "x-amazon-dsp-app-secret");
-  const refreshToken = extractHeader(headers, "x-amazon-dsp-refresh-token");
+  const appId = extractHeader(headers, "x-amazondsp-app-id");
+  const appSecret = extractHeader(headers, "x-amazondsp-app-secret");
+  const refreshToken = extractHeader(headers, "x-amazondsp-refresh-token");
 
   if (!appId || !appSecret || !refreshToken) {
     return undefined;

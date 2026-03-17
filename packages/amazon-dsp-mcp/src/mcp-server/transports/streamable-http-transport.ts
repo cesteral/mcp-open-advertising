@@ -63,7 +63,7 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts },
+          { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts, clientId: adapter.clientId || cfg.amazonDspClientId },
           log,
           rateLimiter
         );
@@ -85,7 +85,7 @@ function buildPlatformConfig(
             cfg.amazonDspApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts }, log, rateLimiter);
+          const services = createSessionServices(envAdapter, { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts, clientId: cfg.amazonDspClientId }, log, rateLimiter);
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -103,7 +103,7 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            { baseUrl: cfgFallback.amazonDspApiBaseUrl, reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts },
+            { baseUrl: cfgFallback.amazonDspApiBaseUrl, reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts, clientId: cfgFallback.amazonDspClientId },
             log,
             rateLimiter
           );

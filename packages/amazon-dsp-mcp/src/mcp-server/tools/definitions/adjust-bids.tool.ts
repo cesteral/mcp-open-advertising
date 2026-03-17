@@ -53,6 +53,7 @@ export const AdjustBidsOutputSchema = z
     totalRequested: z.number(),
     totalSucceeded: z.number(),
     totalFailed: z.number(),
+    reason: z.string().optional(),
     results: z.array(
       z.object({
         lineItemId: z.string(),
@@ -90,6 +91,7 @@ export async function adjustBidsLogic(
     totalRequested: input.adjustments.length,
     totalSucceeded,
     totalFailed: input.adjustments.length - totalSucceeded,
+    reason: input.reason,
     results: result.results,
     timestamp: new Date().toISOString(),
   };
@@ -98,8 +100,13 @@ export async function adjustBidsLogic(
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
   const lines: string[] = [
     `Bid adjustments: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
-    "",
   ];
+
+  if (result.reason) {
+    lines.push(`Reason: ${result.reason}`);
+  }
+
+  lines.push("");
 
   for (const r of result.results) {
     if (r.success) {

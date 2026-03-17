@@ -10,12 +10,14 @@ vi.mock("../../src/auth/amazon-dsp-auth-adapter.js", async (importOriginal) => {
       validate: mockValidate,
       userId: "test-advertiser",
       profileId: "profile_123",
+      clientId: "",
       getAccessToken: vi.fn().mockResolvedValue("token123"),
     })),
     AmazonDspRefreshTokenAdapter: vi.fn().mockImplementation(() => ({
       validate: mockValidate,
       userId: "refresh-advertiser",
       profileId: "profile_456",
+      clientId: "app123",
       getAccessToken: vi.fn().mockResolvedValue("refreshed_token"),
     })),
   };
@@ -41,9 +43,9 @@ describe("AmazonDspBearerAuthStrategy", () => {
   it("sets authType to amazon-dsp-bearer on refresh token branch", async () => {
     const strategy = new AmazonDspBearerAuthStrategy(baseUrl);
     const result = await strategy.verify({
-      "x-amazon-dsp-app-id": "app123",
-      "x-amazon-dsp-app-secret": "secret456",
-      "x-amazon-dsp-refresh-token": "refresh789",
+      "x-amazondsp-app-id": "app123",
+      "x-amazondsp-app-secret": "secret456",
+      "x-amazondsp-refresh-token": "refresh789",
       "amazon-advertising-api-scope": "profile_456",
     });
     expect(result.authInfo.authType).toBe("amazon-dsp-bearer");

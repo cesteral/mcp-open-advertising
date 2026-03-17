@@ -18,6 +18,7 @@
 
 import type { Logger } from "pino";
 import { BearerAuthStrategyBase, type BearerAdapterResult } from "@cesteral/shared";
+import { extractHeader } from "@cesteral/shared";
 import {
   AmazonDspAccessTokenAdapter,
   AmazonDspRefreshTokenAdapter,
@@ -38,6 +39,12 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
     super(logger);
   }
 
+  private getClientIdFromHeaders(
+    headers: Record<string, string | string[] | undefined>
+  ): string | undefined {
+    return extractHeader(headers, "amazon-advertising-api-clientid");
+  }
+
   protected async resolveRefreshBranch(
     headers: Record<string, string | string[] | undefined>
   ): Promise<BearerAdapterResult | null> {
@@ -45,6 +52,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
     if (!refreshCreds) return null;
 
     const profileId = getAmazonDspProfileIdFromHeaders(headers);
+    const clientId = this.getClientIdFromHeaders(headers) ?? refreshCreds.appId;
     const adapter = new AmazonDspRefreshTokenAdapter(refreshCreds, profileId, this.baseUrl);
     await adapter.validate();
 
@@ -54,7 +62,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getAmazonDspCredentialFingerprint(refreshCreds.appId, profileId),
       userId: adapter.userId,
       authFlow: "refresh-token",
-      logContext: { profileId },
+      logContext: { profileId, clientId },
     };
   }
 
@@ -63,7 +71,8 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
   ): Promise<BearerAdapterResult> {
     const token = parseAmazonDspTokenFromHeaders(headers);
     const profileId = getAmazonDspProfileIdFromHeaders(headers);
-    const adapter = new AmazonDspAccessTokenAdapter(token, profileId, this.baseUrl);
+    const clientId = this.getClientIdFromHeaders(headers);
+    const adapter = new AmazonDspAccessTokenAdapter(token, profileId, this.baseUrl, clientId);
     await adapter.validate();
 
     return {
@@ -71,7 +80,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
       fingerprint: getAmazonDspCredentialFingerprint(token, profileId),
       userId: adapter.userId,
       authFlow: "static-token",
-      logContext: { profileId },
+      logContext: { profileId, clientId },
     };
   }
 
