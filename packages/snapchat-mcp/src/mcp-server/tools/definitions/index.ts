@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 21 tools total:
+ * 23 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
@@ -13,6 +13,7 @@
  *   2 targeting: search targeting, get targeting options
  *   3 specialized: duplicate entity, get audience estimate, get ad preview
  *   1 validation: validate entity (client-side)
+ *   2 media: upload image, upload video
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -36,6 +37,8 @@ export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
+export { uploadImageTool } from "./upload-image.tool.js";
+export { uploadVideoTool } from "./upload-video.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -58,6 +61,8 @@ import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
+import { uploadImageTool } from "./upload-image.tool.js";
+import { uploadVideoTool } from "./upload-video.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -90,6 +95,9 @@ const productionTools: ToolDefinitionForFactory[] = [
   getAdPreviewTool,
   // ── Validation ──
   validateEntityTool,
+  // ── Media ──
+  uploadImageTool,
+  uploadVideoTool,
 ];
 
 /**

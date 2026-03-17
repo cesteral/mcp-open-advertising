@@ -40,14 +40,11 @@ const snapchatService = {
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
   client: {
-    postMultipart: vi.fn(async (path: string) => {
-      if (path.includes("image")) {
-        return { image_id: "img-test-123", image_url: "https://example.com/img.jpg", size: 1000 };
-      }
-      return { video_id: "vid-test-123", video_name: "Test Video" };
-    }),
-    post: vi.fn(async () => ({
-      list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
+    postMultipart: vi.fn(async () => ({
+      media: [{ media: { id: "media-test-123", media_status: "PENDING" } }],
+    })),
+    get: vi.fn(async () => ({
+      media: [{ media: { id: "media-test-123", media_status: "READY" } }],
     })),
   },
 };
@@ -98,7 +95,7 @@ describe("Snapchat MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 27 : 21); // 21 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 29 : 23); // 23 business + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

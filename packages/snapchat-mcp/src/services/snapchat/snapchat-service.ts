@@ -252,8 +252,10 @@ export class SnapchatService {
 
     // Snapchat copy body: { <responseKey>: [{ id: entityId, ...options }] }
     const body = { [config.responseKey]: [{ id: entityId, ...options }] };
-    // Derive copy path from createPath by replacing /campaigns with /campaigns/copy (example)
-    const copyPath = config.createPath.replace(new RegExp(`/${config.responseKey}$`), `/${config.responseKey}/copy`);
+    // Interpolate path params then derive copy path
+    const pathParams: Record<string, string> = { adAccountId: this.adAccountId };
+    const interpolatedCreatePath = interpolatePath(config.createPath, pathParams);
+    const copyPath = interpolatedCreatePath.replace(new RegExp(`/${config.responseKey}$`), `/${config.responseKey}/copy`);
 
     return this.httpClient.post(copyPath, body, context);
   }
@@ -270,11 +272,12 @@ export class SnapchatService {
       try {
         // Read current ad group state
         const entity = (await this.getEntity("adGroup", adjustment.adGroupId, context)) as Record<string, unknown>;
-        const previousBid = entity.bid_micro != null ? Number(entity.bid_micro) : undefined;
+        const previousBid = entity.bid_micro != null ? Number(entity.bid_micro) / 1_000_000 : undefined;
 
-        // Update bid
+        // Update bid — convert currency to micros (Snapchat stores bids in micro-currency)
+        const bidMicro = Math.round(adjustment.bidPrice * 1_000_000);
         await this.updateEntity("adGroup", adjustment.adGroupId, {}, {
-          bid_micro: adjustment.bidPrice,
+          bid_micro: bidMicro,
         }, context);
 
         results.push({
@@ -422,11 +425,13 @@ export class SnapchatService {
 
   async getAudienceEstimate(
     targetingConfig: Record<string, unknown>,
+    adAccountId?: string,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    return this.httpClient.post(`/v1/adaccounts/${this.adAccountId}/audience_size`, targetingConfig, context);
+    const effectiveAdAccountId = adAccountId ?? this.adAccountId;
+    return this.httpClient.post(`/v1/adaccounts/${effectiveAdAccountId}/audience_size`, targetingConfig, context);
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────

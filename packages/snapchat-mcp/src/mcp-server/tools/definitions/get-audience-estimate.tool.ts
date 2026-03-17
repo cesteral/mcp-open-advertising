@@ -54,6 +54,7 @@ export async function getAudienceEstimateLogic(
 
   const estimate = await snapchatService.getAudienceEstimate(
     input.targetingConfig,
+    input.adAccountId,
     context
   );
 

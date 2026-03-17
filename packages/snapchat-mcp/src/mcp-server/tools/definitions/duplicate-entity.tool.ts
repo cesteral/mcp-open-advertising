@@ -101,13 +101,13 @@ export const duplicateEntityTool = {
       },
     },
     {
-      label: "Duplicate an ad group with new name",
+      label: "Duplicate a campaign with new name",
       input: {
-        entityType: "adGroup",
+        entityType: "campaign",
         adAccountId: "1234567890",
         entityId: "1700123456789",
         options: {
-          adgroup_name: "Copy of Ad Group A",
+          name: "Copy of Campaign A",
         },
       },
     },
