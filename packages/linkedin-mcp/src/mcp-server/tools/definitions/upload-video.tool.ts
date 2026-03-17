@@ -79,6 +79,13 @@ export async function uploadVideoLogic(
     context
   );
 
+  const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
+  if (buffer.length > MAX_VIDEO_SIZE) {
+    throw new Error(
+      `Video file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds LinkedIn's 200MB limit`
+    );
+  }
+
   await linkedInService.client.putBinary(uploadUrl, buffer, contentType, context);
 
   return {

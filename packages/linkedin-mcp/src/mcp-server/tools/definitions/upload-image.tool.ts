@@ -80,6 +80,13 @@ export async function uploadImageLogic(
     context
   );
 
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+  if (buffer.length > MAX_IMAGE_SIZE) {
+    throw new Error(
+      `Image file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds LinkedIn's 5MB limit`
+    );
+  }
+
   await linkedInService.client.putBinary(uploadUrl, buffer, contentType, context);
 
   return {

@@ -4,6 +4,7 @@
 import { LinkedInHttpClient } from "./linkedin-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import {
   getEntityConfig,
   type LinkedInEntityType,
@@ -236,6 +237,23 @@ export class LinkedInService {
         );
         results.push({ campaignUrn: adjustment.campaignUrn, success: true });
       } catch (error) {
+        // Break early on rate limit errors to avoid noisy redundant failures
+        if (error instanceof McpError && error.code === JsonRpcErrorCode.RateLimited) {
+          results.push({
+            campaignUrn: adjustment.campaignUrn,
+            success: false,
+            error: error.message,
+          });
+          // Mark remaining adjustments as skipped
+          for (const remaining of adjustments.slice(adjustments.indexOf(adjustment) + 1)) {
+            results.push({
+              campaignUrn: remaining.campaignUrn,
+              success: false,
+              error: "Skipped due to rate limit",
+            });
+          }
+          break;
+        }
         results.push({
           campaignUrn: adjustment.campaignUrn,
           success: false,
@@ -316,6 +334,10 @@ export class LinkedInService {
     delete copyData.changeAuditStamps;
     delete copyData.created;
     delete copyData.lastModified;
+    delete copyData.review;
+    delete copyData.servingStatuses;
+    delete copyData.version;
+    delete copyData.associatedEntity;
 
     if (options?.newName) {
       copyData.name = options.newName;

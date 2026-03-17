@@ -84,38 +84,25 @@ export async function adjustBidsLogic(
 ): Promise<AdjustBidsOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  const results: AdjustBidsResult[] = [];
+  // Pass all adjustments to the service in one call
+  const serviceResult = await linkedInService.adjustBids(
+    input.adjustments.map((a) => ({
+      campaignUrn: a.campaignUrn,
+      bidAmount: {
+        amount: a.amount,
+        currencyCode: a.currencyCode,
+      },
+    })),
+    context
+  );
 
-  // Process adjustments sequentially to respect rate limits
-  for (const adjustment of input.adjustments) {
-    try {
-      await linkedInService.adjustBids(
-        [
-          {
-            campaignUrn: adjustment.campaignUrn,
-            bidAmount: {
-              amount: adjustment.amount,
-              currencyCode: adjustment.currencyCode,
-            },
-          },
-        ],
-        context
-      );
-
-      results.push({
-        campaignUrn: adjustment.campaignUrn,
-        success: true,
-        newAmount: adjustment.amount,
-        currencyCode: adjustment.currencyCode,
-      });
-    } catch (error) {
-      results.push({
-        campaignUrn: adjustment.campaignUrn,
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
+  const results: AdjustBidsResult[] = serviceResult.results.map((r, i) => ({
+    campaignUrn: r.campaignUrn,
+    success: r.success,
+    newAmount: r.success ? input.adjustments[i].amount : undefined,
+    currencyCode: r.success ? input.adjustments[i].currencyCode : undefined,
+    error: r.error,
+  }));
 
   const totalSucceeded = results.filter((r) => r.success).length;
 

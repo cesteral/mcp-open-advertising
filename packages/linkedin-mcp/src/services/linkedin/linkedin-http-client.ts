@@ -185,7 +185,7 @@ export class LinkedInHttpClient {
 
   /**
    * Encode a URN for use in a URL path segment.
-   * e.g., "urn:li:sponsoredAccount:123" -> "%3Aurn%3Ali%3AsponssoredAccount%3A123"
+   * e.g., "urn:li:sponsoredAccount:123" -> "urn%3Ali%3AsponsoredAccount%3A123"
    */
   static encodeUrn(urn: string): string {
     return encodeURIComponent(urn);
