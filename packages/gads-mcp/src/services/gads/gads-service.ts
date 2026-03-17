@@ -418,10 +418,10 @@ export class GAdsService {
         }
 
         const adGroupRow = rows[0] as Record<string, any>;
-        const adGroup = adGroupRow.adGroup || adGroupRow.ad_group || {};
+        const adGroup = adGroupRow.adGroup || {};
         const adGroupName = adGroup.name as string | undefined;
-        const previousCpcBidMicros = adGroup.cpcBidMicros?.toString() ?? adGroup.cpc_bid_micros?.toString();
-        const previousCpmBidMicros = adGroup.cpmBidMicros?.toString() ?? adGroup.cpm_bid_micros?.toString();
+        const previousCpcBidMicros = adGroup.cpcBidMicros?.toString();
+        const previousCpmBidMicros = adGroup.cpmBidMicros?.toString();
 
         // 2. Modify — build update payload with only the bid fields being changed
         const updateData: Record<string, unknown> = {};
@@ -481,6 +481,42 @@ export class GAdsService {
     return { results };
   }
 
+  // ─── Helpers ─────────────────────────────────────────────────────
+
+  /**
+   * Parse per-operation error messages from a Google Ads partial failure response.
+   * Returns a Map from operation index to error message string.
+   */
+  private parsePartialFailureErrors(
+    result: Record<string, unknown>
+  ): Map<number, string> {
+    const errorsByIndex = new Map<number, string>();
+    const partialErrors = (result.partialFailureError as Record<string, unknown>) ?? null;
+    if (!partialErrors) return errorsByIndex;
+
+    const errorDetails = (partialErrors.details ?? []) as Array<Record<string, unknown>>;
+    for (const detail of errorDetails) {
+      const errors = (detail?.errors ?? []) as Array<Record<string, unknown>>;
+      for (const err of errors) {
+        const location = err?.location as Record<string, unknown> | undefined;
+        const fieldPathElements = (location?.fieldPathElements ?? []) as Array<
+          Record<string, unknown>
+        >;
+        const opElement = fieldPathElements.find(
+          (el) => el.fieldName === "operations" && el.index != null
+        );
+        const opIndex = opElement ? Number(opElement.index) : -1;
+        const message =
+          (err?.message as string) ??
+          (err?.errorCode ? JSON.stringify(err.errorCode) : "Unknown error");
+        if (opIndex >= 0) {
+          errorsByIndex.set(opIndex, message);
+        }
+      }
+    }
+    return errorsByIndex;
+  }
+
   // ─── Bulk Operations ──────────────────────────────────────────────
 
   /**
@@ -531,17 +567,22 @@ export class GAdsService {
           body: JSON.stringify({ operations, partialFailure: true }),
         })) as Record<string, unknown>;
 
-        // Parse partial failure results (same pattern as ENABLED/PAUSED branch)
+        // Parse per-operation errors from partial failure details
+        const errorsByIndex = this.parsePartialFailureErrors(result);
         const mutateResults = (result.results as Array<Record<string, unknown>>) || [];
 
         return {
           results: entityIds.map((entityId, idx) => {
+            const error = errorsByIndex.get(idx);
+            if (error) {
+              return { entityId, success: false, error };
+            }
             const resultEntry = mutateResults[idx];
             const hasResult = resultEntry && Object.keys(resultEntry).length > 0;
             return {
               entityId,
               success: hasResult,
-              error: !hasResult ? "Partial failure — check error details" : undefined,
+              error: !hasResult ? "Operation produced no result" : undefined,
             };
           }),
         };
@@ -572,17 +613,22 @@ export class GAdsService {
         body: JSON.stringify({ operations, partialFailure: true }),
       })) as Record<string, unknown>;
 
-      // Parse partial failure results
+      // Parse per-operation errors from partial failure details
+      const errorsByIndex = this.parsePartialFailureErrors(result);
       const mutateResults = (result.results as Array<Record<string, unknown>>) || [];
 
       return {
         results: entityIds.map((entityId, idx) => {
+          const error = errorsByIndex.get(idx);
+          if (error) {
+            return { entityId, success: false, error };
+          }
           const resultEntry = mutateResults[idx];
           const hasResult = resultEntry && Object.keys(resultEntry).length > 0;
           return {
             entityId,
             success: hasResult,
-            error: !hasResult ? "Partial failure — check error details" : undefined,
+            error: !hasResult ? "Operation produced no result" : undefined,
           };
         }),
       };

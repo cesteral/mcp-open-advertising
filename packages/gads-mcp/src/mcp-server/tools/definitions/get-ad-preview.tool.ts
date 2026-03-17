@@ -41,11 +41,13 @@ type GetAdPreviewInput = z.infer<typeof GetAdPreviewInputSchema>;
 type GetAdPreviewOutput = z.infer<typeof GetAdPreviewOutputSchema>;
 
 interface GAdsAdRow {
-  ad?: {
-    id?: string;
-    type?: string;
-    finalUrls?: string[];
-    resourceName?: string;
+  adGroupAd?: {
+    ad?: {
+      id?: string;
+      type?: string;
+      finalUrls?: string[];
+      resourceName?: string;
+    };
   };
 }
 
@@ -64,7 +66,7 @@ export async function getAdPreviewLogic(
     context
   )) as GAdsAdRow;
 
-  const ad = row?.ad;
+  const ad = row?.adGroupAd?.ad;
   const resourceName = ad?.resourceName ?? `customers/${input.customerId}/ads/${input.adId}`;
 
   return {

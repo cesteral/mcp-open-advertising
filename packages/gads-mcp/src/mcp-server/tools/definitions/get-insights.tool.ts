@@ -135,6 +135,17 @@ export const GetInsightsInputSchema = z
       message: "Provide either dateRange OR both startDate and endDate (not both, not neither)",
     }
   )
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return data.startDate <= data.endDate;
+      }
+      return true;
+    },
+    {
+      message: "startDate must be on or before endDate",
+    }
+  )
   .describe("Parameters for getting Google Ads performance insights");
 
 export const GetInsightsOutputSchema = z

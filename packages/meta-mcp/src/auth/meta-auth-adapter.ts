@@ -36,7 +36,7 @@ export class MetaAccessTokenAdapter implements MetaAuthAdapter {
 
   constructor(
     private readonly accessToken: string,
-    private readonly baseUrl: string = "https://graph.facebook.com/v21.0"
+    private readonly baseUrl: string = "https://graph.facebook.com/v22.0"
   ) {}
 
   get userId(): string {
@@ -126,7 +126,7 @@ export class MetaRefreshTokenAdapter implements MetaAuthAdapter {
   constructor(
     private readonly initialToken: string,
     private readonly appCredentials: MetaAppCredentials,
-    private readonly baseUrl: string = "https://graph.facebook.com/v21.0"
+    private readonly baseUrl: string = "https://graph.facebook.com/v22.0"
   ) {}
 
   get userId(): string {
@@ -196,7 +196,6 @@ export class MetaRefreshTokenAdapter implements MetaAuthAdapter {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
-          Authorization: `Bearer ${tokenToExchange}`,
         },
         body: params.toString(),
       }

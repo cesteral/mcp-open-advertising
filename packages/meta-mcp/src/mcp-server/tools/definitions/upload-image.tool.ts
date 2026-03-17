@@ -61,12 +61,13 @@ export async function uploadImageLogic(
     context
   );
 
+  const actId = input.adAccountId.startsWith("act_") ? input.adAccountId : `act_${input.adAccountId}`;
   const effectiveName = input.name ?? filename;
   const fields: Record<string, string> = {};
   if (input.name) fields.name = input.name;
 
   const result = await metaService.graphApiClient.postMultipart(
-    `/${input.adAccountId}/adimages`,
+    `/${actId}/adimages`,
     fields,
     "bytes",
     buffer,

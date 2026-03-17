@@ -86,7 +86,7 @@ export function buildListQuery(
   if (filters) {
     for (const [field, value] of Object.entries(filters)) {
       // Support operator in the value: "= ENABLED", "> 1000", "IN ('ENABLED', 'PAUSED')"
-      if (value.match(/^(=|!=|>|<|>=|<=|IN|LIKE|CONTAINS|NOT|BETWEEN|DURING|IS)\s/i)) {
+      if (value.match(/^(=|!=|>=|<=|>|<|(?:IN|LIKE|CONTAINS|NOT|BETWEEN|DURING|IS)\b)\s/)) {
         conditions.push(`${field} ${value}`);
       } else {
         // Escape single quotes in filter values for GAQL safety

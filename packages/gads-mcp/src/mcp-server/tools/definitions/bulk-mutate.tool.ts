@@ -127,7 +127,7 @@ export const bulkMutateTool = {
         entityType: "campaign",
         customerId: "1234567890",
         operations: [
-          { update: { resourceName: "customers/1234567890/campaigns/111", name: "Updated Campaign Name", updateMask: "name" } },
+          { update: { resourceName: "customers/1234567890/campaigns/111", name: "Updated Campaign Name" }, updateMask: "name" },
           { remove: "customers/1234567890/campaigns/222" },
         ],
         partialFailure: true,

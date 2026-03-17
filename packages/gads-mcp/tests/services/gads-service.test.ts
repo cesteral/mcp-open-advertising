@@ -285,7 +285,7 @@ describe("GAdsService", () => {
 
       expect(result.results[0].success).toBe(true);
       expect(result.results[1].success).toBe(false);
-      expect(result.results[1].error).toContain("Partial failure");
+      expect(result.results[1].error).toContain("Operation produced no result");
     });
 
     it("reports all success when REMOVE has no partial failures", async () => {

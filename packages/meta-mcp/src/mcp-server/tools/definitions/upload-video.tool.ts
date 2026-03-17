@@ -3,10 +3,12 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import { downloadFileToBuffer, createLogger } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "../../../types-global/mcp.js";
 import { mcpConfig } from "../../../config/index.js";
+
+const logger = createLogger("meta-upload-video");
 
 const TOOL_NAME = "meta_upload_video";
 const TOOL_TITLE = "Upload Video to Meta Ads";
@@ -70,12 +72,13 @@ export async function uploadVideoLogic(
     context
   );
 
+  const actId = input.adAccountId.startsWith("act_") ? input.adAccountId : `act_${input.adAccountId}`;
   const fields: Record<string, string> = {};
   if (input.title) fields.title = input.title;
   if (input.description) fields.description = input.description;
 
   const uploadResult = await metaService.graphApiClient.postMultipart(
-    `/${input.adAccountId}/advideos`,
+    `/${actId}/advideos`,
     fields,
     "source",
     buffer,
@@ -96,26 +99,34 @@ export async function uploadVideoLogic(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);
 
-    const statusResult = await metaService.graphApiClient.get(
-      `/${videoId}`,
-      { fields: "status" },
-      context
-    ) as MetaVideoStatusResponse;
+    try {
+      const statusResult = await metaService.graphApiClient.get(
+        `/${videoId}`,
+        { fields: "status" },
+        context
+      ) as MetaVideoStatusResponse;
 
-    const progress = statusResult.status?.processing_progress ?? 0;
-    const videoStatus = statusResult.status?.video_status ?? "processing";
+      const progress = statusResult.status?.processing_progress ?? 0;
+      const videoStatus = statusResult.status?.video_status ?? "processing";
 
-    if (progress >= 100 || videoStatus === "ready") {
-      return {
-        videoId,
-        title: input.title ?? uploadResult.title,
-        status: "ready",
-        uploadedAt: new Date().toISOString(),
-      };
-    }
+      if (progress >= 100 || videoStatus === "ready") {
+        return {
+          videoId,
+          title: input.title ?? uploadResult.title,
+          status: "ready",
+          uploadedAt: new Date().toISOString(),
+        };
+      }
 
-    if (videoStatus === "error") {
-      throw new Error(`Meta video processing failed: status=${videoStatus}`);
+      if (videoStatus === "error") {
+        throw new Error(`Meta video processing failed: status=${videoStatus}`);
+      }
+    } catch (error) {
+      // Re-throw processing errors (user-facing), but swallow transient poll failures
+      if (error instanceof Error && error.message.startsWith("Meta video processing failed")) {
+        throw error;
+      }
+      logger.warn({ err: error, videoId, attempt }, "Transient error polling video status, will retry");
     }
   }
 
