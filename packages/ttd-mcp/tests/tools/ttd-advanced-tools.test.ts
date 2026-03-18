@@ -294,7 +294,7 @@ describe("ttd advanced tools", () => {
 
     const result = await downloadReportLogic(
       {
-        downloadUrl: "https://example.com/report.csv",
+        downloadUrl: "https://reports.thetradedesk.com/report.csv",
         maxRows: 1,
       },
       createMockContext(),
@@ -319,7 +319,7 @@ describe("ttd advanced tools", () => {
 
     await expect(
       downloadReportLogic(
-        { downloadUrl: "https://example.com/report.csv" },
+        { downloadUrl: "https://reports.thetradedesk.com/report.csv" },
         createMockContext(),
         createMockSdkContext()
       )

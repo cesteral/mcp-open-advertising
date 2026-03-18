@@ -86,7 +86,7 @@ export const manageAdExtensionsTool = {
     readOnlyHint: false,
     openWorldHint: false,
     idempotentHint: false,
-    destructiveHint: false,
+    destructiveHint: true,
   },
   inputExamples: [
     {

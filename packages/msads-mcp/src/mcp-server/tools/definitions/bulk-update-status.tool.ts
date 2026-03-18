@@ -99,7 +99,7 @@ export const bulkUpdateStatusTool = {
     readOnlyHint: false,
     openWorldHint: false,
     idempotentHint: true,
-    destructiveHint: false,
+    destructiveHint: true,
   },
   inputExamples: [
     {

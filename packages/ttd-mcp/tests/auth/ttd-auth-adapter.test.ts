@@ -25,9 +25,8 @@ const mockFetchWithTimeout = vi.mocked(fetchWithTimeout);
 const MOCK_CREDENTIALS = { partnerId: "test-partner", apiSecret: "test-secret" };
 
 const MOCK_TOKEN_RESPONSE = {
-  access_token: "ttd-test-token",
-  expires_in: 3600,
-  token_type: "Bearer",
+  Token: "ttd-test-token",
+  ExpirationDateUTCString: new Date(Date.now() + 3_600_000).toISOString(),
 };
 
 describe("TtdApiTokenAuthAdapter", () => {
@@ -89,9 +88,8 @@ describe("TtdApiTokenAuthAdapter", () => {
       vi.advanceTimersByTime(3541 * 1000);
 
       mockSuccessResponse({
-        access_token: "ttd-new-token",
-        expires_in: 3600,
-        token_type: "Bearer",
+        Token: "ttd-new-token",
+        ExpirationDateUTCString: new Date(Date.now() + 3_600_000).toISOString(),
       });
 
       const second = await adapter.getAccessToken();
@@ -227,7 +225,7 @@ describe("TtdApiTokenAuthAdapter", () => {
       vi.useFakeTimers();
 
       const adapter = new TtdApiTokenAuthAdapter(MOCK_CREDENTIALS);
-      mockSuccessResponse({ access_token: "token-1", expires_in: 3600, token_type: "Bearer" });
+      mockSuccessResponse({ Token: "token-1", ExpirationDateUTCString: new Date(Date.now() + 3_600_000).toISOString() });
 
       await adapter.getAccessToken();
 
@@ -239,7 +237,7 @@ describe("TtdApiTokenAuthAdapter", () => {
 
       // At 3540s+, the token should be expired
       vi.advanceTimersByTime(2 * 1000);
-      mockSuccessResponse({ access_token: "token-2", expires_in: 3600, token_type: "Bearer" });
+      mockSuccessResponse({ Token: "token-2", ExpirationDateUTCString: new Date(Date.now() + 3_600_000).toISOString() });
       const refreshed = await adapter.getAccessToken();
       expect(refreshed).toBe("token-2");
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
