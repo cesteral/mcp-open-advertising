@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { CM360HttpClient } from "./cm360-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import type { CM360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { getEntityConfig } from "../../mcp-server/tools/utils/entity-mapping.js";
 
@@ -151,7 +151,7 @@ export class CM360Service {
     await this.rateLimiter.consume("cm360");
     const config = getEntityConfig(entityType);
     if (!config.supportsDelete) {
-      throw new Error(`Delete is not supported for entity type: ${entityType}`);
+      throw new McpError(JsonRpcErrorCode.InvalidParams, `Delete is not supported for entity type: ${entityType}`);
     }
     const path = `/userprofiles/${profileId}/${config.apiCollection}/${entityId}`;
     return this.httpClient.fetch(path, context, { method: "DELETE" });

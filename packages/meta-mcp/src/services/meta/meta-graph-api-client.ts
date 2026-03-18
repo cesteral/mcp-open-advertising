@@ -22,6 +22,9 @@ interface MetaApiError {
 /** Rate limit error codes from Meta */
 const RATE_LIMIT_CODES = new Set([4, 17, 32]);
 
+/** Warn when any rate-limit usage header reaches this percentage. */
+const RATE_LIMIT_WARNING_PERCENT = 80;
+
 const META_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialBackoffMs: 2_000,
@@ -300,14 +303,13 @@ export class MetaGraphApiClient {
         "Meta API rate limit headers"
       );
 
-      // Warn at 80% usage
       const maxUsage = Math.max(
         businessUsage ? this.parseUsagePercent(businessUsage) : 0,
         appUsage ? this.parseUsagePercent(appUsage) : 0,
         adAccountUsage ? this.parseUsagePercent(adAccountUsage) : 0
       );
 
-      if (maxUsage >= 80) {
+      if (maxUsage >= RATE_LIMIT_WARNING_PERCENT) {
         this.logger.warn(
           { maxUsage, requestId: context?.requestId },
           "Meta API rate limit usage approaching threshold"

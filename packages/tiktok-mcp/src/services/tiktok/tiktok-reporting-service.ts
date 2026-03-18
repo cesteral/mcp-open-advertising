@@ -4,7 +4,17 @@
 import type { TikTokHttpClient } from "./tiktok-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
-import { fetchWithTimeout } from "@cesteral/shared";
+import {
+  fetchWithTimeout,
+  DEFAULT_REPORT_MAX_BACKOFF_MS,
+  DEFAULT_REPORT_POLL_INTERVAL_MS,
+  DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
+  DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+  DEFAULT_REPORT_MAX_SIZE_BYTES,
+  DEFAULT_REPORT_MAX_ROWS,
+  REPORT_POLL_WARNING_THRESHOLD,
+  delay,
+} from "@cesteral/shared";
 import type { Logger } from "pino";
 
 /** TikTok report task status values */
@@ -40,14 +50,14 @@ export interface TikTokReportConfig {
  * 3. GET download URL to retrieve CSV report data
  */
 export class TikTokReportingService {
-  private static readonly MAX_BACKOFF_MS = 10_000;
+  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
 
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: TikTokHttpClient,
     private readonly logger: Logger,
-    private readonly pollIntervalMs: number = 2_000,
-    private readonly maxPollAttempts: number = 30,
+    private readonly pollIntervalMs: number = DEFAULT_REPORT_POLL_INTERVAL_MS,
+    private readonly maxPollAttempts: number = DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
     private readonly apiVersion: string = "v1.3"
   ) {}
 
@@ -105,7 +115,7 @@ export class TikTokReportingService {
       }
 
       const attemptsRemaining = this.maxPollAttempts - attempt - 1;
-      if (attemptsRemaining <= 3) {
+      if (attemptsRemaining <= REPORT_POLL_WARNING_THRESHOLD) {
         this.logger.warn({ taskId, attemptsRemaining, status: result.status }, "Report poll nearing attempt limit");
       } else {
         this.logger.debug({ taskId, attempt, status: result.status }, "Report still pending, waiting");
@@ -152,10 +162,10 @@ export class TikTokReportingService {
    */
   async downloadReport(
     downloadUrl: string,
-    maxRows = 10_000,
+    maxRows = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number }> {
-    const response = await fetchWithTimeout(downloadUrl, 60_000, context);
+    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
       throw new Error(
@@ -163,12 +173,10 @@ export class TikTokReportingService {
       );
     }
 
-    // Guard against excessively large reports exhausting process memory (50MB limit)
-    const MAX_REPORT_SIZE_BYTES = 50 * 1024 * 1024;
     const contentLength = response.headers?.get("content-length");
-    if (contentLength && parseInt(contentLength, 10) > MAX_REPORT_SIZE_BYTES) {
+    if (contentLength && parseInt(contentLength, 10) > DEFAULT_REPORT_MAX_SIZE_BYTES) {
       throw new Error(
-        `TikTok report too large (${contentLength} bytes, limit ${MAX_REPORT_SIZE_BYTES}). Use more restrictive filters or date ranges.`
+        `TikTok report too large (${contentLength} bytes, limit ${DEFAULT_REPORT_MAX_SIZE_BYTES}). Use more restrictive filters or date ranges.`
       );
     }
 
@@ -219,7 +227,7 @@ export class TikTokReportingService {
       throw new Error(`TikTok report task ${task_id} completed but has no download URL`);
     }
 
-    const reportData = await this.downloadReport(taskResult.download_url, 10_000, context);
+    const reportData = await this.downloadReport(taskResult.download_url, DEFAULT_REPORT_MAX_ROWS, context);
 
     return {
       ...reportData,
@@ -245,7 +253,7 @@ export class TikTokReportingService {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return delay(ms);
   }
 }
 

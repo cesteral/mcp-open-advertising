@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
-import { JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withLinkedInApiSpan } from "../../utils/telemetry/tracing.js";
@@ -166,7 +166,7 @@ export class LinkedInHttpClient {
       span.setAttribute("http.response.status_code", response.status);
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
-        throw new Error(`LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
+        throw new McpError(mapLinkedInErrorToJsonRpc(response.status), `LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
       }
     });
   }

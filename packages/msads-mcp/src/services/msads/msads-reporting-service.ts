@@ -87,7 +87,8 @@ export class MsAdsReportingService {
       }
 
       if (status.status === "Error") {
-        throw new Error(
+        throw new McpError(
+          JsonRpcErrorCode.InternalError,
           `Microsoft Ads report failed: reportRequestId=${reportRequestId}`
         );
       }
@@ -100,7 +101,8 @@ export class MsAdsReportingService {
       await this.sleep(this.pollIntervalMs);
     }
 
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.Timeout,
       `Microsoft Ads report timed out after ${this.maxPollAttempts} attempts: reportRequestId=${reportRequestId}`
     );
   }
@@ -138,7 +140,8 @@ export class MsAdsReportingService {
     const response = await fetchWithTimeout(downloadUrl, 60_000, context);
 
     if (!response.ok) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.ServiceUnavailable,
         `Failed to download report: ${response.status} ${response.statusText}`
       );
     }

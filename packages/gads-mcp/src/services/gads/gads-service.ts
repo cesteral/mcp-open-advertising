@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { GAdsHttpClient } from "./gads-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import {
   getEntityConfig,
   buildMutateUrl,
@@ -113,7 +113,7 @@ export class GAdsService {
     const { results } = await this.gaqlSearch(customerId, query, 1, undefined, context);
 
     if (results.length === 0) {
-      throw new Error(`${entityType} with ID ${entityId} not found in customer ${customerId}`);
+      throw new McpError(JsonRpcErrorCode.NotFound, `${entityType} with ID ${entityId} not found in customer ${customerId}`);
     }
 
     return results[0];

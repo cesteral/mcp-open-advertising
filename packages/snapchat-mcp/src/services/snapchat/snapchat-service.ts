@@ -3,7 +3,7 @@
 
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
+import { type RequestContext, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   getEntityConfig,
   interpolatePath,
@@ -145,7 +145,7 @@ export class SnapchatService {
 
     const entity = unwrapSingleEntity(config.responseKey, config.entityKey, response);
     if (!entity) {
-      throw new Error(`${config.displayName} with ID ${entityId} not found`);
+      throw new McpError(JsonRpcErrorCode.NotFound, `${config.displayName} with ID ${entityId} not found`);
     }
 
     return entity;
@@ -245,7 +245,7 @@ export class SnapchatService {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsDuplicate) {
-      throw new Error(`Entity type ${entityType} does not support duplication`);
+      throw new McpError(JsonRpcErrorCode.InvalidParams, `Entity type ${entityType} does not support duplication`);
     }
 
     await this.rateLimiter.consume(`snapchat:default`, 3);

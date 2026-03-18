@@ -3,7 +3,8 @@
 
 import { z } from "zod";
 import { getEntityTypeEnum, getEntityConfig, type MsAdsEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import type { RequestContext, SdkContext } from "@cesteral/shared";
+import { validateEntityResponseFormatter } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_validate_entity";
 const TOOL_TITLE = "Validate Microsoft Ads Entity";
@@ -82,25 +83,6 @@ export async function validateEntityLogic(
     warnings,
     timestamp: new Date().toISOString(),
   };
-}
-
-export function validateEntityResponseFormatter(result: ValidateEntityOutput): McpTextContent[] {
-  const status = result.valid ? "VALID" : "INVALID";
-  let text = `Validation ${status} for ${result.entityType} (${result.mode} mode)`;
-
-  if (result.errors.length > 0) {
-    text += `\n\nErrors:\n${result.errors.map((e) => `  - ${e}`).join("\n")}`;
-  }
-  if (result.warnings.length > 0) {
-    text += `\n\nWarnings:\n${result.warnings.map((w) => `  - ${w}`).join("\n")}`;
-  }
-
-  return [
-    {
-      type: "text" as const,
-      text: `${text}\n\nTimestamp: ${result.timestamp}`,
-    },
-  ];
 }
 
 export const validateEntityTool = {

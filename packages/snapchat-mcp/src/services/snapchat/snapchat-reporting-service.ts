@@ -3,8 +3,18 @@
 
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { type RequestContext, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  fetchWithTimeout,
+  DEFAULT_REPORT_MAX_BACKOFF_MS,
+  DEFAULT_REPORT_POLL_INTERVAL_MS,
+  DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
+  DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+  DEFAULT_REPORT_MAX_SIZE_BYTES,
+  DEFAULT_REPORT_MAX_ROWS,
+  REPORT_POLL_WARNING_THRESHOLD,
+  delay,
+} from "@cesteral/shared";
 import type { Logger } from "pino";
 
 /** Snapchat report task status values */
@@ -43,15 +53,15 @@ export interface SnapchatReportConfig {
  * 3. GET download URL to retrieve CSV report data
  */
 export class SnapchatReportingService {
-  private static readonly MAX_BACKOFF_MS = 10_000;
+  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
 
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: SnapchatHttpClient,
     private readonly adAccountId: string,
     private readonly logger: Logger,
-    private readonly pollIntervalMs: number = 2_000,
-    private readonly maxPollAttempts: number = 30
+    private readonly pollIntervalMs: number = DEFAULT_REPORT_POLL_INTERVAL_MS,
+    private readonly maxPollAttempts: number = DEFAULT_REPORT_MAX_POLL_ATTEMPTS
   ) {}
 
   /**
@@ -79,7 +89,7 @@ export class SnapchatReportingService {
 
     const reportId = result.async_stats_reports?.[0]?.id;
     if (!reportId) {
-      throw new Error("Snapchat async reporting: no report id returned from submit");
+      throw new McpError(JsonRpcErrorCode.InternalError, "Snapchat async reporting: no report id returned from submit");
     }
 
     return { task_id: reportId };
@@ -105,7 +115,7 @@ export class SnapchatReportingService {
 
       const report = envelope.async_stats_report;
       if (!report) {
-        throw new Error(`Snapchat report poll: unexpected response shape for task ${taskId}`);
+        throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report poll: unexpected response shape for task ${taskId}`);
       }
 
       const result: ReportTaskCheckData = {
@@ -120,7 +130,7 @@ export class SnapchatReportingService {
       }
 
       const attemptsRemaining = this.maxPollAttempts - attempt - 1;
-      if (attemptsRemaining <= 3) {
+      if (attemptsRemaining <= REPORT_POLL_WARNING_THRESHOLD) {
         this.logger.warn({ taskId, attemptsRemaining, status: result.status }, "Report poll nearing attempt limit");
       } else {
         this.logger.debug({ taskId, attempt, status: result.status }, "Report still pending, waiting");
@@ -130,7 +140,8 @@ export class SnapchatReportingService {
       await this.sleep(this.computeBackoff(attempt));
     }
 
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.Timeout,
       `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
     );
   }
@@ -157,7 +168,7 @@ export class SnapchatReportingService {
 
     const report = envelope.async_stats_report;
     if (!report) {
-      throw new Error(`Snapchat report status: unexpected response shape for task ${taskId}`);
+      throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report status: unexpected response shape for task ${taskId}`);
     }
 
     return {
@@ -172,23 +183,23 @@ export class SnapchatReportingService {
    */
   async downloadReport(
     downloadUrl: string,
-    maxRows = 10_000,
+    maxRows = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number }> {
-    const response = await fetchWithTimeout(downloadUrl, 60_000, context);
+    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.ServiceUnavailable,
         `Failed to download Snapchat report: ${response.status} ${response.statusText}`
       );
     }
 
-    // Guard against excessively large reports exhausting process memory (50MB limit)
-    const MAX_REPORT_SIZE_BYTES = 50 * 1024 * 1024;
     const contentLength = response.headers?.get("content-length");
-    if (contentLength && parseInt(contentLength, 10) > MAX_REPORT_SIZE_BYTES) {
-      throw new Error(
-        `Snapchat report too large (${contentLength} bytes, limit ${MAX_REPORT_SIZE_BYTES}). Use more restrictive filters or date ranges.`
+    if (contentLength && parseInt(contentLength, 10) > DEFAULT_REPORT_MAX_SIZE_BYTES) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `Snapchat report too large (${contentLength} bytes, limit ${DEFAULT_REPORT_MAX_SIZE_BYTES}). Use more restrictive filters or date ranges.`
       );
     }
 
@@ -232,14 +243,14 @@ export class SnapchatReportingService {
     const taskResult = await this.pollReport(task_id, context);
 
     if (taskResult.status === "FAILED") {
-      throw new Error(`Snapchat report task ${task_id} failed`);
+      throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report task ${task_id} failed`);
     }
 
     if (!taskResult.download_url) {
-      throw new Error(`Snapchat report task ${task_id} completed but has no download URL`);
+      throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report task ${task_id} completed but has no download URL`);
     }
 
-    const reportData = await this.downloadReport(taskResult.download_url, 10_000, context);
+    const reportData = await this.downloadReport(taskResult.download_url, DEFAULT_REPORT_MAX_ROWS, context);
 
     return {
       ...reportData,
@@ -265,7 +276,7 @@ export class SnapchatReportingService {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    return delay(ms);
   }
 }
 

@@ -4,6 +4,7 @@
 import type { LinkedInHttpClient } from "./linkedin-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 
 /**
  * LinkedIn Reporting Service — Queries the adAnalytics API for performance data.
@@ -116,7 +117,8 @@ export class LinkedInReportingService {
 
   private parseDateParts(dateStr: string): { year: number; month: number; day: number } {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
         `Invalid date format: "${dateStr}". Expected YYYY-MM-DD.`
       );
     }
@@ -127,7 +129,8 @@ export class LinkedInReportingService {
     const day = parseInt(dayStr, 10);
 
     if (isNaN(year) || isNaN(month) || isNaN(day)) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
         `Invalid date format: "${dateStr}". Expected YYYY-MM-DD.`
       );
     }
@@ -139,7 +142,8 @@ export class LinkedInReportingService {
       testDate.getMonth() !== month - 1 ||
       testDate.getDate() !== day
     ) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
         `Invalid date: "${dateStr}" does not represent a real calendar date.`
       );
     }

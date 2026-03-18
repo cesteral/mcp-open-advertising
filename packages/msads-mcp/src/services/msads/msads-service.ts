@@ -61,7 +61,8 @@ export class MsAdsService {
       return this.httpClient.post(config.getByAccountOperation, body, context);
     }
 
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
       entityType === "audience"
         ? "Use getEntity with specific AudienceIds. Audiences cannot be listed by account in the MS Ads REST API v13."
         : entityType === "budget"
@@ -256,7 +257,7 @@ export class MsAdsService {
       .filter((e): e is Record<string, unknown> => e !== null);
 
     if (updatedEntities.length === 0) {
-      throw new Error("No entities found for bid adjustment — all entity IDs were invalid or deleted");
+      throw new McpError(JsonRpcErrorCode.InvalidParams, "No entities found for bid adjustment — all entity IDs were invalid or deleted");
     }
 
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);

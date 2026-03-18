@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 
 /**
  * Report configuration for TTD MyReports API.
@@ -210,7 +210,8 @@ export class TtdReportingService {
         }
 
         if (state === "Failed") {
-          throw new Error(
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
             `Report execution failed: ${JSON.stringify(execution)}`
           );
         }
@@ -224,7 +225,8 @@ export class TtdReportingService {
       await this.sleep(this.computeBackoff(attempt));
     }
 
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.Timeout,
       `Report polling timed out after ${this.maxPollAttempts} attempts`
     );
   }

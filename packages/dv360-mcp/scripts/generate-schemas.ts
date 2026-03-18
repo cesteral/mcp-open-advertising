@@ -28,8 +28,7 @@ import { generateZodSchemas as generateZodSchemasFromSpec } from './lib/generate
 import { ExtractionError } from './lib/types.js';
 
 // Get __dirname equivalent in ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, '..');
 
 /**

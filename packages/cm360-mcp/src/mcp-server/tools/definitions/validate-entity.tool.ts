@@ -3,7 +3,8 @@
 
 import { z } from "zod";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import type { RequestContext } from "@cesteral/shared";
+import { validateEntityResponseFormatter } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_validate_entity";
 const TOOL_TITLE = "Validate CM360 Entity";
@@ -28,6 +29,8 @@ export const ValidateEntityInputSchema = z
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the entity data is valid"),
+    entityType: z.string(),
+    mode: z.string(),
     errors: z.array(z.string()).describe("Validation error messages"),
     warnings: z.array(z.string()).describe("Validation warnings"),
     timestamp: z.string().datetime(),
@@ -85,27 +88,12 @@ export async function validateEntityLogic(
 
   return {
     valid: errors.length === 0,
+    entityType: input.entityType,
+    mode: input.mode,
     errors,
     warnings,
     timestamp: new Date().toISOString(),
   };
-}
-
-export function validateEntityResponseFormatter(result: ValidateEntityOutput): McpTextContent[] {
-  const status = result.valid ? "VALID" : "INVALID";
-  const errorList = result.errors.length > 0
-    ? `\n\nErrors:\n${result.errors.map((e) => `  - ${e}`).join("\n")}`
-    : "";
-  const warningList = result.warnings.length > 0
-    ? `\n\nWarnings:\n${result.warnings.map((w) => `  - ${w}`).join("\n")}`
-    : "";
-
-  return [
-    {
-      type: "text" as const,
-      text: `Validation result: ${status}${errorList}${warningList}\n\nTimestamp: ${result.timestamp}`,
-    },
-  ];
 }
 
 export const validateEntityTool = {

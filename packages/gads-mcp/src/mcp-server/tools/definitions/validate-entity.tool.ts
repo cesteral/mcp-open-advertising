@@ -4,8 +4,9 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { validateEntityResponseFormatter } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_validate_entity";
 const TOOL_TITLE = "Google Ads Entity Validation (Dry Run)";
@@ -109,26 +110,6 @@ export async function validateEntityLogic(
     errors: result.errors,
     timestamp: new Date().toISOString(),
   };
-}
-
-export function validateEntityResponseFormatter(
-  result: ValidateEntityOutput
-): McpTextContent[] {
-  if (result.valid) {
-    return [
-      {
-        type: "text" as const,
-        text: `Validation passed for ${result.entityType} (${result.mode})\n\nTimestamp: ${result.timestamp}`,
-      },
-    ];
-  }
-
-  return [
-    {
-      type: "text" as const,
-      text: `Validation failed for ${result.entityType} (${result.mode})\n\nErrors:\n${result.errors?.map((e) => `  - ${e}`).join("\n") ?? "Unknown error"}\n\nTimestamp: ${result.timestamp}`,
-    },
-  ];
 }
 
 export const validateEntityTool = {

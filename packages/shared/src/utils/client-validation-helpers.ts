@@ -25,8 +25,8 @@ export interface ValidateEntityResult {
   valid: boolean;
   entityType: string;
   mode: string;
-  errors: string[];
-  warnings: string[];
+  errors?: string[];
+  warnings?: string[];
   timestamp: string;
 }
 
@@ -106,13 +106,15 @@ export function checkReadOnlyFields(
 }
 
 /**
- * Format a client-side validation result as an MCP text content block.
- * Identical across Meta, LinkedIn, and TikTok.
+ * Format a validation result as an MCP text content block.
+ * Shared across all servers with validate-entity tools.
  */
 export function validateEntityResponseFormatter(
   result: ValidateEntityResult
 ): McpTextContent[] {
   const lines: string[] = [];
+  const errors = result.errors ?? [];
+  const warnings = result.warnings ?? [];
 
   if (result.valid) {
     lines.push(`Validation passed for ${result.entityType} (${result.mode})`);
@@ -120,15 +122,15 @@ export function validateEntityResponseFormatter(
     lines.push(
       `Validation failed for ${result.entityType} (${result.mode}):`
     );
-    for (const err of result.errors) {
+    for (const err of errors) {
       lines.push(`  - ${err}`);
     }
   }
 
-  if (result.warnings.length > 0) {
+  if (warnings.length > 0) {
     lines.push("");
     lines.push("Warnings:");
-    for (const warn of result.warnings) {
+    for (const warn of warnings) {
       lines.push(`  - ${warn}`);
     }
   }

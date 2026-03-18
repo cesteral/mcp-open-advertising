@@ -9,8 +9,9 @@ import {
   getEntitySchemaByType,
   getFieldSchemaByPath,
 } from "../utils/schema-introspection.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { validateEntityResponseFormatter } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_validate_entity";
 const TOOL_TITLE = "Validate DV360 Entity (Client-Side)";
@@ -168,38 +169,6 @@ export async function validateEntityLogic(
     warnings: warnings.length > 0 ? warnings : undefined,
     timestamp: new Date().toISOString(),
   };
-}
-
-export function validateEntityResponseFormatter(
-  result: ValidateEntityOutput
-): McpTextContent[] {
-  const parts: string[] = [];
-
-  if (result.valid) {
-    parts.push(
-      `Validation passed for ${result.entityType} (${result.mode})`
-    );
-  } else {
-    parts.push(
-      `Validation failed for ${result.entityType} (${result.mode})`
-    );
-    if (result.errors) {
-      parts.push(`\nErrors:\n${result.errors.map((e) => `  - ${e}`).join("\n")}`);
-    }
-  }
-
-  if (result.warnings && result.warnings.length > 0) {
-    parts.push(`\nWarnings:\n${result.warnings.map((w) => `  - ${w}`).join("\n")}`);
-  }
-
-  parts.push(`\nTimestamp: ${result.timestamp}`);
-
-  return [
-    {
-      type: "text" as const,
-      text: parts.join("\n"),
-    },
-  ];
 }
 
 export const validateEntityTool = {
