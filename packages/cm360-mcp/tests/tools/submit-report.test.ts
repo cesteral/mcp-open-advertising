@@ -1,5 +1,46 @@
-import { describe, it, expect } from "vitest";
-import { SubmitReportInputSchema } from "../../src/mcp-server/tools/definitions/submit-report.tool.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const mockState = vi.hoisted(() => ({
+  cm360Service: {
+    getEntity: vi.fn(),
+    createEntity: vi.fn(),
+    updateEntity: vi.fn(),
+    deleteEntity: vi.fn(),
+    listEntities: vi.fn(),
+    listUserProfiles: vi.fn(),
+    listTargetingOptions: vi.fn(),
+  },
+  cm360ReportingService: {
+    runReport: vi.fn(),
+    createReport: vi.fn(),
+    checkReportFile: vi.fn(),
+    downloadReportFile: vi.fn(),
+  },
+}));
+
+vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: vi.fn(() => mockState),
+}));
+
+vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
+  getEntityTypeEnum: () => [
+    "campaign", "placement", "ad", "creative", "site",
+    "advertiser", "floodlightActivity", "floodlightConfiguration",
+  ],
+  getDeletableEntityTypeEnum: () => ["floodlightActivity"],
+}));
+
+import {
+  SubmitReportInputSchema,
+  submitReportLogic,
+  submitReportResponseFormatter,
+} from "../../src/mcp-server/tools/definitions/submit-report.tool.js";
+
+const mockContext = { requestId: "test-req" } as any;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("SubmitReportInputSchema", () => {
   it("accepts valid input with required fields", () => {
@@ -137,5 +178,120 @@ describe("SubmitReportInputSchema", () => {
       criteria,
     });
     expect(result.criteria).toEqual(criteria);
+  });
+});
+
+describe("submitReportLogic", () => {
+  it("calls cm360ReportingService.createReport with merged config", async () => {
+    mockState.cm360ReportingService.createReport.mockResolvedValue({
+      reportId: "rpt-1",
+      fileId: "file-1",
+    });
+
+    const input = {
+      profileId: "123",
+      name: "My Report",
+      type: "STANDARD" as const,
+      criteria: { dateRange: { relativeDateRange: "LAST_7_DAYS" } },
+      additionalConfig: { format: "CSV" },
+    };
+    await submitReportLogic(input, mockContext);
+
+    expect(mockState.cm360ReportingService.createReport).toHaveBeenCalledWith(
+      "123",
+      {
+        format: "CSV",
+        name: "My Report",
+        type: "STANDARD",
+        criteria: { dateRange: { relativeDateRange: "LAST_7_DAYS" } },
+      },
+      mockContext
+    );
+  });
+
+  it("strips name/type/criteria from additionalConfig", async () => {
+    mockState.cm360ReportingService.createReport.mockResolvedValue({
+      reportId: "rpt-1",
+      fileId: "file-1",
+    });
+
+    const input = {
+      profileId: "123",
+      name: "Correct Name",
+      type: "STANDARD" as const,
+      additionalConfig: { name: "Wrong Name", type: "WRONG", criteria: {}, format: "CSV" },
+    };
+    await submitReportLogic(input, mockContext);
+
+    const calledConfig = mockState.cm360ReportingService.createReport.mock.calls[0][1];
+    expect(calledConfig.name).toBe("Correct Name");
+    expect(calledConfig.type).toBe("STANDARD");
+    expect(calledConfig.format).toBe("CSV");
+    // criteria should not be present since input.criteria is undefined
+    expect(calledConfig.criteria).toBeUndefined();
+  });
+
+  it("returns reportId and fileId", async () => {
+    mockState.cm360ReportingService.createReport.mockResolvedValue({
+      reportId: "rpt-42",
+      fileId: "file-99",
+    });
+
+    const result = await submitReportLogic(
+      { profileId: "123", name: "Test", type: "STANDARD" as const },
+      mockContext
+    );
+
+    expect(result.reportId).toBe("rpt-42");
+    expect(result.fileId).toBe("file-99");
+    expect(result.timestamp).toBeDefined();
+  });
+
+  it("handles missing criteria (not included in config)", async () => {
+    mockState.cm360ReportingService.createReport.mockResolvedValue({
+      reportId: "rpt-1",
+      fileId: "file-1",
+    });
+
+    await submitReportLogic(
+      { profileId: "123", name: "Test", type: "STANDARD" as const },
+      mockContext
+    );
+
+    const calledConfig = mockState.cm360ReportingService.createReport.mock.calls[0][1];
+    expect(calledConfig.criteria).toBeUndefined();
+  });
+
+  it("propagates service errors", async () => {
+    mockState.cm360ReportingService.createReport.mockRejectedValue(new Error("Quota exceeded"));
+
+    await expect(
+      submitReportLogic(
+        { profileId: "123", name: "Test", type: "STANDARD" as const },
+        mockContext
+      )
+    ).rejects.toThrow("Quota exceeded");
+  });
+});
+
+describe("submitReportResponseFormatter", () => {
+  it("includes reportId and fileId", () => {
+    const result = submitReportResponseFormatter({
+      reportId: "rpt-42",
+      fileId: "file-99",
+      timestamp: "2026-01-01T00:00:00.000Z",
+    });
+    expect(result[0].text).toContain("rpt-42");
+    expect(result[0].text).toContain("file-99");
+  });
+
+  it("includes usage instructions for next steps", () => {
+    const result = submitReportResponseFormatter({
+      reportId: "rpt-1",
+      fileId: "file-1",
+      timestamp: "2026-01-01T00:00:00.000Z",
+    });
+    expect(result[0].text).toContain("cm360_check_report_status");
+    expect(result[0].text).toContain("cm360_download_report");
   });
 });

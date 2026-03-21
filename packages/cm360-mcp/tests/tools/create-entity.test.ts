@@ -1,5 +1,46 @@
-import { describe, it, expect } from "vitest";
-import { CreateEntityInputSchema } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const mockState = vi.hoisted(() => ({
+  cm360Service: {
+    getEntity: vi.fn(),
+    createEntity: vi.fn(),
+    updateEntity: vi.fn(),
+    deleteEntity: vi.fn(),
+    listEntities: vi.fn(),
+    listUserProfiles: vi.fn(),
+    listTargetingOptions: vi.fn(),
+  },
+  cm360ReportingService: {
+    runReport: vi.fn(),
+    createReport: vi.fn(),
+    checkReportFile: vi.fn(),
+    downloadReportFile: vi.fn(),
+  },
+}));
+
+vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: vi.fn(() => mockState),
+}));
+
+vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
+  getEntityTypeEnum: () => [
+    "campaign", "placement", "ad", "creative", "site",
+    "advertiser", "floodlightActivity", "floodlightConfiguration",
+  ],
+  getDeletableEntityTypeEnum: () => ["floodlightActivity"],
+}));
+
+import {
+  CreateEntityInputSchema,
+  createEntityLogic,
+  createEntityResponseFormatter,
+} from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
+
+const mockContext = { requestId: "test-req" } as any;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("CreateEntityInputSchema", () => {
   it("accepts valid input with all required fields", () => {
@@ -108,5 +149,72 @@ describe("CreateEntityInputSchema", () => {
       data,
     });
     expect(result.data).toEqual(data);
+  });
+});
+
+describe("createEntityLogic", () => {
+  it("calls cm360Service.createEntity with correct args", async () => {
+    const mockEntity = { id: "999", name: "New Campaign" };
+    mockState.cm360Service.createEntity.mockResolvedValue(mockEntity);
+
+    const input = { profileId: "123", entityType: "campaign" as const, data: { name: "New Campaign" } };
+    const result = await createEntityLogic(input, mockContext);
+
+    expect(mockState.cm360Service.createEntity).toHaveBeenCalledWith(
+      "campaign", "123", { name: "New Campaign" }, mockContext
+    );
+    expect(result.entity).toEqual(mockEntity);
+  });
+
+  it("returns entity and timestamp", async () => {
+    mockState.cm360Service.createEntity.mockResolvedValue({ id: "1" });
+
+    const result = await createEntityLogic(
+      { profileId: "123", entityType: "campaign" as const, data: {} },
+      mockContext
+    );
+
+    expect(result.entity).toEqual({ id: "1" });
+    expect(result.timestamp).toBeDefined();
+    expect(() => new Date(result.timestamp)).not.toThrow();
+  });
+
+  it("propagates service errors", async () => {
+    mockState.cm360Service.createEntity.mockRejectedValue(new Error("API error"));
+
+    await expect(
+      createEntityLogic(
+        { profileId: "123", entityType: "campaign" as const, data: {} },
+        mockContext
+      )
+    ).rejects.toThrow("API error");
+  });
+});
+
+describe("createEntityResponseFormatter", () => {
+  it("includes 'Entity created successfully' in text", () => {
+    const result = createEntityResponseFormatter({
+      entity: { id: "1" },
+      timestamp: "2026-01-01T00:00:00.000Z",
+    });
+    expect(result[0].text).toContain("Entity created successfully");
+  });
+
+  it("includes entity JSON", () => {
+    const entity = { id: "42", name: "Test" };
+    const result = createEntityResponseFormatter({
+      entity,
+      timestamp: "2026-01-01T00:00:00.000Z",
+    });
+    expect(result[0].text).toContain(JSON.stringify(entity, null, 2));
+  });
+
+  it("includes timestamp", () => {
+    const ts = "2026-03-15T12:00:00.000Z";
+    const result = createEntityResponseFormatter({
+      entity: {},
+      timestamp: ts,
+    });
+    expect(result[0].text).toContain(ts);
   });
 });
