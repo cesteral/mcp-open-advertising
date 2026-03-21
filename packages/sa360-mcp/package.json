@@ -1,5 +1,6 @@
 {
   "name": "@cesteral/sa360-mcp",
+  "mcpName": "io.github.cesteral/sa360-mcp",
   "version": "1.0.0",
   "description": "Search Ads 360 MCP Server - Reporting and conversion upload via SA360 Reporting API v0 and legacy v2 API",
   "license": "Apache-2.0",

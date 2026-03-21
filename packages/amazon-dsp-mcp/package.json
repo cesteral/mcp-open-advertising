@@ -1,5 +1,6 @@
 {
   "name": "@cesteral/amazon-dsp-mcp",
+  "mcpName": "io.github.cesteral/amazon-dsp-mcp",
   "version": "1.0.0",
   "description": "Amazon DSP Ads MCP Server - Campaign entity management and reporting via Amazon DSP Marketing API v1.3",
   "license": "Apache-2.0",

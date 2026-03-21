@@ -1,5 +1,6 @@
 {
   "name": "@cesteral/cm360-mcp",
+  "mcpName": "io.github.cesteral/cm360-mcp",
   "version": "1.0.0",
   "description": "CM360 MCP Server - Campaign Manager 360 ad serving and trafficking management",
   "license": "Apache-2.0",

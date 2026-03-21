@@ -1,5 +1,6 @@
 {
   "name": "@cesteral/snapchat-mcp",
+  "mcpName": "io.github.cesteral/snapchat-mcp",
   "version": "1.0.0",
   "description": "Snapchat Ads MCP Server - Campaign entity management and reporting via Snapchat Marketing API v1.3",
   "license": "Apache-2.0",

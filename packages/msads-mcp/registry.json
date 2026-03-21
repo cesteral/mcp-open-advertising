@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/msads-mcp",
+  "title": "Microsoft Advertising MCP Server",
+  "description": "Microsoft Advertising campaign management and reporting — CRUD, Google Ads import, ad extensions, and async reports",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/msads-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "remotes": [
+    {
+      "transportType": "streamable-http",
+      "url": "https://msads-mcp-PLACEHOLDER.run.app/mcp"
+    }
+  ]
+}

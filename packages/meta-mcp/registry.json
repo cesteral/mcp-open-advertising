@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/meta-mcp",
+  "title": "Meta Ads MCP Server",
+  "description": "Meta Ads campaign management — CRUD, insights, targeting, delivery estimates, and media upload",
+  "version": "1.0.0",
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/meta-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "remotes": [
+    {
+      "transportType": "streamable-http",
+      "url": "https://meta-mcp-PLACEHOLDER.run.app/mcp"
+    }
+  ]
+}

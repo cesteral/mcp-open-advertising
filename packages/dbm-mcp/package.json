@@ -1,5 +1,6 @@
 {
   "name": "@cesteral/dbm-mcp",
+  "mcpName": "io.github.cesteral/dbm-mcp",
   "version": "1.0.0",
   "description": "DBM MCP Server - Generic cross-platform reporting and metrics",
   "license": "Apache-2.0",

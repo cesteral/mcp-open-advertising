@@ -1,5 +1,6 @@
 {
   "name": "@cesteral/pinterest-mcp",
+  "mcpName": "io.github.cesteral/pinterest-mcp",
   "version": "1.0.0",
   "description": "Pinterest Ads MCP Server - Campaign entity management and reporting via Pinterest Ads API v5",
   "license": "Apache-2.0",
