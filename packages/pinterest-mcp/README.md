@@ -1,6 +1,6 @@
 # @cesteral/pinterest-mcp
 
-Pinterest Ads MCP Server - Campaign management and reporting via Pinterest Marketing API v1.3.
+Pinterest Ads MCP Server - Campaign management and reporting via Pinterest Ads API v5.
 
 ## Purpose
 
@@ -261,7 +261,7 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 21 tools are fully implemented using Pinterest Marketing API v1.3 with Bearer token authentication, async reporting, and targeting discovery.
+All 21 tools are fully implemented using Pinterest Ads API v5 with Bearer token authentication, async reporting, and targeting discovery.
 
 ## Development
 
@@ -298,7 +298,7 @@ pnpm run typecheck
 
 ### Key Components
 
-- **`PinterestHttpClient`** - HTTP client for Pinterest Marketing API v1.3
+- **`PinterestHttpClient`** - HTTP client for Pinterest Ads API v5
 - **`PinterestService`** - CRUD, bulk ops, duplication, targeting, audience estimates, ad previews
 - **`PinterestReportingService`** - Async report submission, polling, and download
 - **`PinterestBearerAuthStrategy`** - Bearer token + advertiser ID auth

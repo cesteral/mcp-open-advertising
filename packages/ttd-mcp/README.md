@@ -15,7 +15,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 - **MCP protocol** with Streamable HTTP transport (Hono)
 - **Structured output** with `outputSchema` on all tools
 
-## MCP Tools (20 tools)
+## MCP Tools (21 tools)
 
 ### Core CRUD
 
@@ -57,6 +57,12 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 | `ttd_graphql_bulk_job`        | Submit a GraphQL bulk job                              |
 | `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job                      |
 
+### Preview
+
+| Tool                 | Description                                       |
+| -------------------- | ------------------------------------------------- |
+| `ttd_get_ad_preview` | Get preview URL and metadata for a TTD creative   |
+
 ## Supported Entity Types
 
 | Entity Type         | API Path               | ID Field        |
@@ -77,7 +83,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 **Phase: Production-Ready**
 
-All 20 tools are fully implemented using TTD API v3. Entity CRUD and reporting are operational via partner token authentication.
+All 21 tools are fully implemented using TTD API v3. Entity CRUD, reporting, bulk operations, GraphQL passthrough, and creative preview are operational via partner token authentication.
 
 ## Development
 

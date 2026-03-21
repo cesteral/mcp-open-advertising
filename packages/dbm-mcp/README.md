@@ -70,6 +70,12 @@ Compose and execute a custom Bid Manager report with specified metrics, dimensio
 - `filters` (object[], optional): Filter conditions
 - `advertiserId` (string): DV360 Advertiser ID
 
+### 6. `dbm_run_custom_query_async`
+
+Submit a custom Bid Manager report without waiting for completion (non-blocking). Uses the MCP experimental Tasks API to return a task handle immediately; clients poll via `tasks/getTask` and retrieve results via `tasks/getTaskResult`.
+
+**Parameters:** Same as `dbm_run_custom_query`.
+
 ## Authentication Modes
 
 | Mode                       | Header                        | Description                                     |
@@ -89,6 +95,14 @@ Set via `MCP_AUTH_MODE` environment variable.
 - Full catalogs remain available at `metric-types://all` and `filter-types://all`.
 
 ## Architecture
+
+### Key Components
+
+- **`BidManagerService`** - Core service for Bid Manager API v2: query creation, execution, polling, and CSV report parsing
+- **`BidManagerClient`** - googleapis-based client for the Bid Manager API v2
+- **`auth-bridge.ts`** - Adapts shared `GoogleAuthAdapter` to the googleapis `OAuth2Client` shape
+- **`SessionServiceStore`** - Per-session service instances keyed by session ID
+- **`report-parser.ts`** - CSV-to-JSON parser for Bid Manager report results
 
 ### Transport
 
@@ -111,7 +125,7 @@ Set via `MCP_AUTH_MODE` environment variable.
 
 **Phase: Production-Ready**
 
-All tools are fully implemented using Bid Manager API v2 for DV360 reporting. Entity retrieval is handled by the separate `@cesteral/dv360-mcp` server.
+All 6 tools are fully implemented using Bid Manager API v2 for DV360 reporting. 5 standard tools plus 1 async task-based tool. Entity retrieval is handled by the separate `@cesteral/dv360-mcp` server.
 
 ## Development
 

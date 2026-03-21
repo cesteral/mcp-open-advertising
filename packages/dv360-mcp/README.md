@@ -41,14 +41,14 @@ See [CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md) for detailed setup
 The server is built with production-grade architecture and complete functionality:
 
 - ✅ Streamable HTTP transport with session management
-- ✅ 19 MCP tools, all connected to DV360 API
+- ✅ 23 MCP tools, all connected to DV360 API
 - ✅ OAuth2 service account authentication
 - ✅ Rate limiting and error handling
 - ✅ OpenTelemetry observability
 - ✅ Dynamic entity system supporting 11 entity types
 - ⚠️ Requires DV360 service account credentials (see Setup below)
 
-## MCP Tools (19 tools)
+## MCP Tools (23 tools)
 
 ### Entity Management (CRUD)
 
@@ -303,9 +303,9 @@ Comprehensive documentation available in `docs/`:
 - **[CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md)** - Claude Desktop integration guide ⭐
 - **[SERVICE_ACCOUNT_SETUP.md](./docs/SERVICE_ACCOUNT_SETUP.md)** - GCP service account setup
 - **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Detailed architecture overview
-- **[DYNAMIC_ENTITY_SYSTEM.md](./docs/DYNAMIC_ENTITY_SYSTEM.md)** - Entity mapping system
-- **[ENTITY-EXAMPLES-INTEGRATION.md](./docs/ENTITY-EXAMPLES-INTEGRATION.md)** - Usage patterns
-- **[OPENTELEMETRY-IMPLEMENTATION.md](./docs/OPENTELEMETRY-IMPLEMENTATION.md)** - Observability setup
+- **[DYNAMIC_ENTITY_SYSTEM.md](./docs/internal/DYNAMIC_ENTITY_SYSTEM.md)** - Entity mapping system
+- **[ENTITY-EXAMPLES-INTEGRATION.md](./docs/internal/ENTITY-EXAMPLES-INTEGRATION.md)** - Usage patterns
+- **[OPENTELEMETRY-IMPLEMENTATION.md](./docs/internal/OPENTELEMETRY-IMPLEMENTATION.md)** - Observability setup
 
 ## Troubleshooting
 

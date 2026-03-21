@@ -1,10 +1,10 @@
 # @cesteral/amazon-dsp-mcp
 
-Amazon DSP Ads MCP Server - Campaign management and reporting via Amazon DSP Marketing API v1.3.
+Amazon DSP Ads MCP Server - Campaign management and reporting via Amazon DSP API.
 
 ## Purpose
 
-Management server for Amazon DSP Ads. Provides 21 tools across 4 entity types for full CRUD operations, async reporting, targeting discovery, bulk operations, and specialized features like entity duplication and audience estimation. Designed for AI agents to manage Amazon DSP Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for Amazon DSP Ads. Provides 19 tools across 4 entity types for full CRUD operations, async reporting, targeting discovery, bulk operations, and specialized features like entity duplication and audience estimation. Designed for AI agents to manage Amazon DSP Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
 
 ## Features
 
@@ -261,7 +261,7 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 21 tools are fully implemented using Amazon DSP Marketing API v1.3 with Bearer token authentication, async reporting, and targeting discovery.
+All 19 tools are fully implemented using Amazon DSP API with Bearer token authentication, async reporting, and targeting discovery.
 
 ## Development
 
@@ -298,7 +298,7 @@ pnpm run typecheck
 
 ### Key Components
 
-- **`Amazon DSPHttpClient`** - HTTP client for Amazon DSP Marketing API v1.3
+- **`Amazon DSPHttpClient`** - HTTP client for Amazon DSP API
 - **`Amazon DSPService`** - CRUD, bulk ops, duplication, targeting, audience estimates, ad previews
 - **`Amazon DSPReportingService`** - Async report submission, polling, and download
 - **`Amazon DSPBearerAuthStrategy`** - Bearer token + advertiser ID auth

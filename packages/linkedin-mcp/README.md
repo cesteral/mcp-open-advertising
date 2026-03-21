@@ -4,7 +4,7 @@ LinkedIn Ads MCP Server - Campaign management via LinkedIn Marketing API v2.
 
 ## Purpose
 
-Management server for LinkedIn Ads. Provides 18 tools across 5 entity types for full CRUD operations, analytics reporting, targeting discovery, bulk operations, and specialized features like entity duplication and delivery forecasts. Designed for AI agents to manage LinkedIn Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for LinkedIn Ads. Provides 20 tools across 5 entity types for full CRUD operations, analytics reporting, targeting discovery, bulk operations, and specialized features like entity duplication and delivery forecasts. Designed for AI agents to manage LinkedIn Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
 
 ## Features
 
@@ -223,7 +223,7 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 18 tools are fully implemented using LinkedIn Marketing API v2 with Bearer token authentication, analytics reporting, and targeting discovery.
+All 20 tools are fully implemented using LinkedIn Marketing API v2 with Bearer token authentication, analytics reporting, and targeting discovery.
 
 ## Development
 

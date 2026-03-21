@@ -2,6 +2,15 @@
 
 Thank you for your interest in contributing to Cesteral's MCP server connectors.
 
+## First Time Here?
+
+Read in this order:
+
+1. [README.md](README.md) (2 min) — what this project is and how it's structured
+2. This file (5 min) — how to contribute, code standards, PR process
+3. [CLAUDE.md](CLAUDE.md) sections "Essential Commands" + "MCP Server Architecture Pattern" (10 min) — how the code works
+4. Your target package's README (e.g. `packages/gads-mcp/README.md`) — server-specific tools, auth, and setup
+
 ## License
 
 This project is licensed under the [Apache License 2.0](LICENSE.md). Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in this repository is licensed under Apache 2.0.
@@ -123,6 +132,7 @@ pnpm run typecheck
 ./scripts/dev-server.sh ttd-mcp    # port 3003
 ./scripts/dev-server.sh gads-mcp   # port 3004
 ./scripts/dev-server.sh meta-mcp   # port 3005
+# ... plus 8 more — see the fleet table in README.md for all servers and ports
 ```
 
 When modifying `@cesteral/shared`, rebuild everything from the root:

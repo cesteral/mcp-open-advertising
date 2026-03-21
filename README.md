@@ -33,13 +33,13 @@ Full CRUD on campaigns, ad groups, ads, keywords, and budgets. GAQL query execut
 
 [Package docs](packages/gads-mcp) | [Try managed](https://cesteral.com/integrations/google-ads?utm_source=github&utm_medium=readme&utm_campaign=gads-mcp)
 
-### <img src="docs/logos/meta.svg" width="20" height="20" alt="Meta"> Meta Ads MCP -- 18 tools
+### <img src="docs/logos/meta.svg" width="20" height="20" alt="Meta"> Meta Ads MCP -- 20 tools
 
-Campaign, ad set, ad, and creative management with insights breakdowns, targeting search, delivery estimates, entity duplication, bulk operations, and ad previews via Meta Marketing API v21.0.
+Campaign, ad set, ad, and creative management with insights breakdowns, targeting search, delivery estimates, entity duplication, bulk operations, and ad previews via Meta Marketing API v22.0.
 
 [Package docs](packages/meta-mcp) | [Try managed](https://cesteral.com/integrations/meta-ads?utm_source=github&utm_medium=readme&utm_campaign=meta-mcp)
 
-### <img src="docs/logos/dv360.svg" width="20" height="20" alt="DV360"> DV360 MCP -- 19 tools
+### <img src="docs/logos/dv360.svg" width="20" height="20" alt="DV360"> DV360 MCP -- 23 tools
 
 Campaign entity management across 11 entity types, custom bidding algorithms, targeting configuration, bulk operations, and schema-driven validation via DV360 API v4.
 
@@ -64,18 +64,18 @@ Campaign entity management across 11 entity types, custom bidding algorithms, ta
 | Server | Platform | Tools | Auth |
 |--------|----------|-------|------|
 | [gads-mcp](packages/gads-mcp) | Google Ads REST API v23 | 14 | OAuth2 refresh token |
-| [meta-mcp](packages/meta-mcp) | Meta Marketing API v21.0 | 18 | Bearer token |
-| [dv360-mcp](packages/dv360-mcp) | DV360 API v4 | 19 | Google OAuth2 / service account |
-| [ttd-mcp](packages/ttd-mcp) | The Trade Desk REST API | 20 | Partner ID + API secret |
-| [linkedin-mcp](packages/linkedin-mcp) | LinkedIn Marketing API v2 | 18 | Bearer token |
-| [tiktok-mcp](packages/tiktok-mcp) | TikTok Marketing API v1.3 | 21 | Bearer token + advertiser ID |
+| [meta-mcp](packages/meta-mcp) | Meta Marketing API v22.0 | 20 | Bearer token |
+| [dv360-mcp](packages/dv360-mcp) | DV360 API v4 | 23 | Google OAuth2 / service account |
+| [ttd-mcp](packages/ttd-mcp) | The Trade Desk REST API | 21 | Partner ID + API secret |
+| [linkedin-mcp](packages/linkedin-mcp) | LinkedIn Marketing API v2 | 20 | Bearer token |
+| [tiktok-mcp](packages/tiktok-mcp) | TikTok Marketing API v1.3 | 23 | Bearer token + advertiser ID |
 | [cm360-mcp](packages/cm360-mcp) | CM360 API v5 | 16 | Google OAuth2 |
-| [sa360-mcp](packages/sa360-mcp) | SA360 Reporting API v0 + v2 | 10 | OAuth2 refresh token |
+| [sa360-mcp](packages/sa360-mcp) | SA360 Reporting API v0 + v2 | 15 | OAuth2 refresh token |
 | [pinterest-mcp](packages/pinterest-mcp) | Pinterest Ads API v5 | 21 | Bearer token |
-| [snapchat-mcp](packages/snapchat-mcp) | Snapchat Ads API v1 | 21 | Bearer token |
-| [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API | 21 | Bearer token |
-| [msads-mcp](packages/msads-mcp) | Microsoft Advertising API v13 | 19 | Access token + developer token |
-| [dbm-mcp](packages/dbm-mcp) | Bid Manager API v2 | 5 | Google OAuth2 |
+| [snapchat-mcp](packages/snapchat-mcp) | Snapchat Ads API v1 | 23 | Bearer token |
+| [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API | 19 | Bearer token |
+| [msads-mcp](packages/msads-mcp) | Microsoft Advertising API v13 | 20 | Access token + developer token |
+| [dbm-mcp](packages/dbm-mcp) | Bid Manager API v2 | 6 | Google OAuth2 |
 
 ---
 

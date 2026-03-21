@@ -4,7 +4,7 @@ TikTok Ads MCP Server - Campaign management and reporting via TikTok Marketing A
 
 ## Purpose
 
-Management server for TikTok Ads. Provides 21 tools across 4 entity types for full CRUD operations, async reporting, targeting discovery, bulk operations, and specialized features like entity duplication and audience estimation. Designed for AI agents to manage TikTok Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for TikTok Ads. Provides 23 tools across 4 entity types for full CRUD operations, async reporting, targeting discovery, bulk operations, and specialized features like entity duplication and audience estimation. Designed for AI agents to manage TikTok Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
 
 ## Features
 
@@ -261,7 +261,7 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 21 tools are fully implemented using TikTok Marketing API v1.3 with Bearer token authentication, async reporting, and targeting discovery.
+All 23 tools are fully implemented using TikTok Marketing API v1.3 with Bearer token authentication, async reporting, and targeting discovery.
 
 ## Development
 

@@ -10,7 +10,7 @@
 
 ## Overview
 
-SA360 (Search Ads 360) sits above Google Ads, Microsoft Ads, Yahoo Japan, and Baidu, providing cross-engine unified reporting and automated bidding. This MCP server exposes SA360's capabilities through 16 tools:
+SA360 (Search Ads 360) sits above Google Ads, Microsoft Ads, Yahoo Japan, and Baidu, providing cross-engine unified reporting and automated bidding. This MCP server exposes SA360's capabilities through 15 tools:
 
 - **8 read-only tools** for cross-engine reporting, entity browsing, field discovery, and custom columns
 - **3 async reporting tools** for the submit → poll → download report workflow via the v2 API

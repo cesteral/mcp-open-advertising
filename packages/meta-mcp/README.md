@@ -1,10 +1,10 @@
 # @cesteral/meta-mcp
 
-Meta Ads MCP Server - Campaign management via Meta Marketing API v21.0.
+Meta Ads MCP Server - Campaign management via Meta Marketing API v22.0.
 
 ## Purpose
 
-Management server for Meta Ads. Provides 18 tools across 5 entity types for full CRUD operations, performance insights, targeting discovery, bulk operations, and specialized features like entity duplication and delivery estimates. Designed for AI agents to manage Meta Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for Meta Ads. Provides 20 tools across 5 entity types for full CRUD operations, performance insights, targeting discovery, bulk operations, and specialized features like entity duplication and delivery estimates. Designed for AI agents to manage Meta Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
 
 ## Features
 
@@ -239,7 +239,7 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 18 tools are fully implemented using Meta Marketing API v21.0 with Bearer token authentication, insights reporting, and targeting discovery.
+All 20 tools are fully implemented using Meta Marketing API v22.0 with Bearer token authentication, insights reporting, and targeting discovery.
 
 ## Development
 
@@ -266,8 +266,8 @@ pnpm run typecheck
 - `META_MCP_HOST`: Server host (default: 127.0.0.1)
 - `MCP_AUTH_MODE`: Authentication mode - `meta-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
-- `META_API_BASE_URL`: Graph API base URL (default: `https://graph.facebook.com/v21.0`)
-- `META_API_VERSION`: API version (default: `v21.0`)
+- `META_API_BASE_URL`: Graph API base URL (default: `https://graph.facebook.com/v22.0`)
+- `META_API_VERSION`: API version (default: `v22.0`)
 - `META_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 200)
 - `META_ACCESS_TOKEN`: Access token for stdio mode
 
@@ -275,7 +275,7 @@ pnpm run typecheck
 
 ### Key Components
 
-- **`MetaGraphApiClient`** - HTTP client for Graph API v21.0 with form-encoded POST for writes
+- **`MetaGraphApiClient`** - HTTP client for Graph API v22.0 with form-encoded POST for writes
 - **`MetaService`** - CRUD, bulk ops, duplication, delivery estimates, ad previews
 - **`MetaInsightsService`** - Insights queries with breakdowns, attribution windows, and time series
 - **`MetaTargetingService`** - Targeting search and category browsing

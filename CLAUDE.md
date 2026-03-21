@@ -13,18 +13,18 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | # | Server | Port | API | Entity Types | Tools |
 |---|--------|------|-----|-------------|-------|
 | 1 | `dbm-mcp` | 3001 | Bid Manager API v2 | _(reporting only)_ | 6 |
-| 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 24 |
+| 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 23 |
 | 3 | `ttd-mcp` | 3003 | TTD REST API | advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList | 21 |
 | 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 14 |
 | 5 | `meta-mcp` | 3005 | Meta Marketing API v22.0 | campaign, adSet, ad, adCreative, customAudience | 20 |
 | 6 | `linkedin-mcp` | 3006 | LinkedIn Marketing API v2 | adAccount, campaignGroup, campaign, creative, conversionRule | 20 |
 | 7 | `tiktok-mcp` | 3007 | TikTok Marketing API v1.3 | campaign, adGroup, ad, creative | 23 |
 | 8 | `cm360-mcp` | 3008 | CM360 API v5 | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 16 |
-| 9 | `snapchat-mcp` | 3009 | Snapchat Ads API v1 | campaign, adGroup, ad, creative | 21 |
-| 10 | `sa360-mcp` | 3010 | SA360 Reporting API v0 + DS v2 | _(reporting + conversions)_ | 11 |
-| 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 20 |
-| 12 | `amazon-dsp-mcp` | 3012 | Amazon DSP API | order, lineItem, creative | 20 |
-| 13 | `msads-mcp` | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label | 19 |
+| 9 | `snapchat-mcp` | 3009 | Snapchat Ads API v1 | campaign, adGroup, ad, creative | 23 |
+| 10 | `sa360-mcp` | 3010 | SA360 Reporting API v0 + DS v2 | _(reporting + conversions)_ | 15 |
+| 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 21 |
+| 12 | `amazon-dsp-mcp` | 3012 | Amazon DSP API | order, lineItem, creative | 19 |
+| 13 | `msads-mcp` | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label | 20 |
 
 ## Essential Commands
 
@@ -170,9 +170,9 @@ Most servers (linkedin, tiktok, cm360, pinterest, snapchat, amazon-dsp) follow t
 | `dbm_get_historical_metrics` | Time-series data for trends | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
 | `dbm_get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
 | `dbm_run_custom_query` | Execute custom Bid Manager reports (blocking) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
-| `dbm_run_custom_query_async` | Submit custom query (non-blocking) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
+| `dbm_run_custom_query_async` | Submit custom query (non-blocking, task-based) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
-### dv360-mcp — 24 Tools (Unique Tools Beyond Standard Pattern)
+### dv360-mcp — 23 Tools (Unique Tools Beyond Standard Pattern)
 
 Standard CRUD/bulk/targeting/validation/preview tools plus:
 
@@ -229,7 +229,7 @@ Standard CRUD/bulk/targeting/media tools plus:
 | `meta_duplicate_entity` | Copy campaigns/adSets/ads | `entityId`, `options` |
 | `meta_get_delivery_estimate` | Audience size estimation | `adAccountId`, `targetingSpec` |
 
-### sa360-mcp — 11 Tools (Reporting + Conversions)
+### sa360-mcp — 15 Tools (Reporting + Conversions)
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -243,9 +243,13 @@ Standard CRUD/bulk/targeting/media tools plus:
 | `sa360_search_fields` | Search available query fields | `query?`, `resourceType?` |
 | `sa360_insert_conversions` | Insert offline conversions (v2 API) | `agencyId`, `advertiserId`, `conversions[]` |
 | `sa360_update_conversions` | Update existing conversions (v2 API) | `agencyId`, `advertiserId`, `conversions[]` |
+| `sa360_submit_report` | Submit async report (v2 API) | `agencyId`, `advertiserId`, `reportType` |
+| `sa360_check_report_status` | Check report generation status | `reportId` |
+| `sa360_download_report` | Download completed report results | `reportId` |
 | `sa360_validate_conversion` | Validate conversion payload | `mode`, `conversion` |
+| `sa360_get_change_history` | Get change history for entities | `customerId`, `entityType?`, `dateRange?` |
 
-### msads-mcp — 19 Tools (Unique: Google Import, Ad Extensions)
+### msads-mcp — 20 Tools (Unique: Google Import, Ad Extensions)
 
 Standard CRUD/bulk/reporting tools plus:
 
