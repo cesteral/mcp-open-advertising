@@ -1,51 +1,33 @@
 {
-  "name": "@cesteral/ttd-mcp",
-  "display_name": "The Trade Desk MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/ttd-mcp",
+  "title": "The Trade Desk MCP Server",
   "description": "The Trade Desk campaign management and reporting — CRUD, GraphQL, bulk ops, and async reports",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "ttd_list_entities",
-    "ttd_get_entity",
-    "ttd_create_entity",
-    "ttd_update_entity",
-    "ttd_delete_entity",
-    "ttd_get_report",
-    "ttd_bulk_create_entities",
-    "ttd_bulk_update_entities",
-    "ttd_archive_entities",
-    "ttd_graphql_query",
-    "ttd_bulk_update_status",
-    "ttd_adjust_bids",
-    "ttd_validate_entity",
-    "ttd_download_report",
-    "ttd_submit_report",
-    "ttd_check_report_status",
-    "ttd_graphql_query_bulk",
-    "ttd_graphql_mutation_bulk",
-    "ttd_graphql_bulk_job",
-    "ttd_graphql_cancel_bulk_job",
-    "ttd_get_ad_preview"
-  ],
-  "resources": [],
-  "prompts": [
-    "campaign_setup_workflow",
-    "report_generation_workflow",
-    "troubleshoot_entity",
-    "tool_schema_exploration",
-    "cross_platform_performance",
-    "bulk_operations_workflow",
-    "cross_platform_campaign_setup",
-    "ttd_entity_update_workflow",
-    "ttd_entity_duplication_workflow",
-    "ttd_targeting_discovery_workflow",
-    "ttd_creative_setup_workflow"
-  ],
-  "auth": {
-    "modes": ["ttd-headers", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "thetradedesk", "ttd", "campaign-management", "programmatic", "graphql"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/ttd-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

@@ -1,50 +1,33 @@
 {
-  "name": "@cesteral/meta-mcp",
-  "display_name": "Meta Ads MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/meta-mcp",
+  "title": "Meta Ads MCP Server",
   "description": "Meta Ads campaign management — CRUD, insights, targeting, delivery estimates, and media upload",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "meta_list_entities",
-    "meta_get_entity",
-    "meta_create_entity",
-    "meta_update_entity",
-    "meta_delete_entity",
-    "meta_list_ad_accounts",
-    "meta_get_insights",
-    "meta_get_insights_breakdowns",
-    "meta_bulk_update_status",
-    "meta_bulk_create_entities",
-    "meta_search_targeting",
-    "meta_get_targeting_options",
-    "meta_duplicate_entity",
-    "meta_get_delivery_estimate",
-    "meta_get_ad_preview",
-    "meta_validate_entity",
-    "meta_adjust_bids",
-    "meta_bulk_update_entities",
-    "meta_upload_image",
-    "meta_upload_video"
-  ],
-  "resources": [],
-  "prompts": [
-    "campaign_setup_workflow",
-    "insights_reporting_workflow",
-    "troubleshoot_entity",
-    "tool_schema_exploration",
-    "entity_update_workflow",
-    "bulk_operations_workflow",
-    "cross_platform_performance",
-    "cross_platform_campaign_setup",
-    "targeting_discovery_workflow",
-    "entity_duplication_workflow",
-    "creative_upload_workflow"
-  ],
-  "auth": {
-    "modes": ["meta-bearer", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "meta", "facebook", "instagram", "campaign-management", "social"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/meta-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

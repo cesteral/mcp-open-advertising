@@ -1,43 +1,33 @@
 {
-  "name": "@cesteral/msads-mcp",
-  "display_name": "Microsoft Advertising MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/msads-mcp",
+  "title": "Microsoft Advertising MCP Server",
   "description": "Microsoft Advertising campaign management and reporting — CRUD, Google Ads import, ad extensions, and async reports",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "msads_list_entities",
-    "msads_get_entity",
-    "msads_create_entity",
-    "msads_update_entity",
-    "msads_delete_entity",
-    "msads_list_accounts",
-    "msads_get_report",
-    "msads_submit_report",
-    "msads_check_report_status",
-    "msads_download_report",
-    "msads_bulk_create_entities",
-    "msads_bulk_update_entities",
-    "msads_bulk_update_status",
-    "msads_adjust_bids",
-    "msads_manage_ad_extensions",
-    "msads_manage_criterions",
-    "msads_get_ad_preview",
-    "msads_validate_entity",
-    "msads_import_from_google"
-  ],
-  "resources": [],
-  "prompts": [
-    "campaign_setup_workflow",
-    "msads_reporting_workflow",
-    "google_import_workflow",
-    "msads_bulk_operations_workflow",
-    "msads_troubleshoot_entity"
-  ],
-  "auth": {
-    "modes": ["msads-bearer", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "microsoft", "bing", "campaign-management", "search", "import"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/msads-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

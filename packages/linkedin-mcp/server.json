@@ -1,49 +1,33 @@
 {
-  "name": "@cesteral/linkedin-mcp",
-  "display_name": "LinkedIn Ads MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/linkedin-mcp",
+  "title": "LinkedIn Ads MCP Server",
   "description": "LinkedIn Ads campaign management and analytics — CRUD, targeting, delivery forecasts, and media upload",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "linkedin_list_entities",
-    "linkedin_get_entity",
-    "linkedin_create_entity",
-    "linkedin_update_entity",
-    "linkedin_delete_entity",
-    "linkedin_list_ad_accounts",
-    "linkedin_get_analytics",
-    "linkedin_get_analytics_breakdowns",
-    "linkedin_bulk_update_status",
-    "linkedin_bulk_create_entities",
-    "linkedin_bulk_update_entities",
-    "linkedin_adjust_bids",
-    "linkedin_search_targeting",
-    "linkedin_get_targeting_options",
-    "linkedin_duplicate_entity",
-    "linkedin_get_delivery_forecast",
-    "linkedin_get_ad_preview",
-    "linkedin_validate_entity",
-    "linkedin_upload_image",
-    "linkedin_upload_video"
-  ],
-  "resources": [],
-  "prompts": [
-    "campaign_setup_workflow",
-    "tool_schema_exploration",
-    "troubleshoot_entity",
-    "cross_platform_performance",
-    "bulk_operations_workflow",
-    "cross_platform_campaign_setup",
-    "entity_update_workflow",
-    "entity_duplication_workflow",
-    "targeting_discovery_workflow",
-    "linkedin_creative_setup_workflow"
-  ],
-  "auth": {
-    "modes": ["linkedin-bearer", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "linkedin", "campaign-management", "social", "b2b"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/linkedin-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

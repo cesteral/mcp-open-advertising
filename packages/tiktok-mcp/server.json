@@ -1,53 +1,33 @@
 {
-  "name": "@cesteral/tiktok-mcp",
-  "display_name": "TikTok Ads MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/tiktok-mcp",
+  "title": "TikTok Ads MCP Server",
   "description": "TikTok Ads campaign management and reporting — CRUD, async reports, targeting, and media upload",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "tiktok_list_entities",
-    "tiktok_get_entity",
-    "tiktok_create_entity",
-    "tiktok_update_entity",
-    "tiktok_delete_entity",
-    "tiktok_list_advertisers",
-    "tiktok_get_report",
-    "tiktok_get_report_breakdowns",
-    "tiktok_submit_report",
-    "tiktok_check_report_status",
-    "tiktok_download_report",
-    "tiktok_bulk_update_status",
-    "tiktok_bulk_create_entities",
-    "tiktok_bulk_update_entities",
-    "tiktok_adjust_bids",
-    "tiktok_search_targeting",
-    "tiktok_get_targeting_options",
-    "tiktok_duplicate_entity",
-    "tiktok_get_audience_estimate",
-    "tiktok_get_ad_preview",
-    "tiktok_validate_entity",
-    "tiktok_upload_image",
-    "tiktok_upload_video"
-  ],
-  "resources": [],
-  "prompts": [
-    "campaign_setup_workflow",
-    "report_generation_workflow",
-    "troubleshoot_entity",
-    "tool_schema_exploration",
-    "cross_platform_performance",
-    "bulk_operations_workflow",
-    "cross_platform_campaign_setup",
-    "entity_update_workflow",
-    "entity_duplication_workflow",
-    "targeting_discovery_workflow",
-    "tiktok_creative_setup_workflow"
-  ],
-  "auth": {
-    "modes": ["tiktok-bearer", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "tiktok", "campaign-management", "social", "video"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/tiktok-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

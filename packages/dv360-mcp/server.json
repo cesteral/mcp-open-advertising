@@ -1,63 +1,33 @@
 {
-  "name": "@cesteral/dv360-mcp",
-  "display_name": "DV360 MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/dv360-mcp",
+  "title": "DV360 MCP Server",
   "description": "DV360 campaign entity management — CRUD, targeting, bulk ops, custom bidding, and media upload",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "dv360_list_entities",
-    "dv360_get_entity",
-    "dv360_create_entity",
-    "dv360_update_entity",
-    "dv360_delete_entity",
-    "dv360_adjust_line_item_bids",
-    "dv360_bulk_update_status",
-    "dv360_bulk_create_entities",
-    "dv360_bulk_update_entities",
-    "dv360_create_custom_bidding_algorithm",
-    "dv360_manage_custom_bidding_script",
-    "dv360_manage_custom_bidding_rules",
-    "dv360_list_custom_bidding_algorithms",
-    "dv360_list_assigned_targeting",
-    "dv360_get_assigned_targeting",
-    "dv360_create_assigned_targeting",
-    "dv360_delete_assigned_targeting",
-    "dv360_validate_targeting_config",
-    "dv360_validate_entity",
-    "dv360_get_ad_preview",
-    "dv360_upload_image",
-    "dv360_upload_video",
-    "dv360_duplicate_entity",
-    "dv360_get_delivery_estimate"
-  ],
-  "resources": [
-    "entity-schema://{type}",
-    "entity-fields://{type}",
-    "entity-examples://{type}",
-    "targeting-types://",
-    "targeting-schema://",
-    "server-capabilities://dv360-mcp/overview"
-  ],
-  "prompts": [
-    "full_campaign_setup_workflow",
-    "troubleshoot_underdelivery",
-    "budget_reallocation",
-    "entity_update_execution",
-    "tool_schema_exploration",
-    "targeting_management",
-    "bulk_operations",
-    "cross_platform_performance",
-    "entity_activation",
-    "cross_platform_campaign_setup",
-    "custom_bidding_workflow",
-    "entity_duplication_workflow",
-    "dv360_creative_setup_workflow"
-  ],
-  "auth": {
-    "modes": ["google-headers", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "dv360", "google", "campaign-management", "programmatic"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/dv360-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

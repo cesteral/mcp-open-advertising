@@ -1,42 +1,63 @@
 # MCP Registry Publishing
 
-Guide for validating and publishing Cesteral MCP servers to the MCP Registry.
+Guide for validating and publishing Cesteral MCP servers to the [MCP Registry](https://modelcontextprotocol.io/registry/quickstart).
 
-## server.json Manifests
+## Architecture
 
-Each server has a `server.json` file in its package directory (`packages/{server-name}/server.json`) containing metadata for the MCP Registry.
+Server metadata lives in two places with a clear ownership boundary:
 
-### Fields
+| File | Role | Committed |
+|------|------|-----------|
+| `registry.json` | Canonical source of rich metadata (tools, resources, prompts, auth, tags) for all 13 servers | Yes |
+| `packages/*/server.json` | Official MCP Registry manifest (generated from `registry.json` + `package.json`) | Yes |
+| `packages/*/package.json` | Contains `mcpName` for registry ownership verification | Yes |
 
-| Field | Description |
-|-------|-------------|
-| `name` | npm-style scoped package name (e.g., `@cesteral/dv360-mcp`) |
-| `display_name` | Human-readable server name |
-| `description` | Brief description of capabilities |
-| `version` | Semantic version |
-| `protocol_version` | MCP protocol version supported |
-| `transports` | Array of supported transports (`streamable-http`, `stdio`) |
-| `tools` | Array of tool names (must match `allTools` in code) |
-| `resources` | Array of resource URIs |
-| `prompts` | Array of prompt names |
-| `auth` | Object with `modes` array listing supported auth modes |
-| `repository` | GitHub repository URL |
-| `license` | SPDX license identifier |
-| `tags` | Array of discovery tags |
+`server.json` files are **generated artifacts** — never edit them by hand.
+
+### Generated server.json Fields
+
+| Field | Source |
+|-------|--------|
+| `$schema` | Hard-coded MCP Registry schema URL |
+| `name` | `mcpName` from `package.json` |
+| `title` | `title` from `registry.json` server entry |
+| `description` | `description` from `registry.json` server entry |
+| `repository` | `repository` from `registry.json` (top-level) |
+| `version` | `version` from `package.json` |
+| `remotes` | Streamable HTTP transport with `{host}` template variable, URL from `remoteUrlTemplate` in `registry.json` |
+| `packages` | npm package with stdio transport, identifier from `package.json` `name` |
+
+## Workflow
+
+### Adding or renaming tools
+
+1. Create/modify tool files in `src/mcp-server/tools/definitions/`
+2. Register in `src/mcp-server/tools/index.ts`
+3. Update the `tools` array for the server in `registry.json`
+4. No changes needed to `server.json` — tool lists are in `registry.json`, not in the generated manifests
+
+### Bumping a version
+
+1. Update `version` in the server's `package.json`
+2. Regenerate: `pnpm run generate:registry`
+3. Commit both `package.json` and `server.json`
+
+### Regenerating manifests
+
+```bash
+pnpm run generate:registry    # Regenerate all server.json files
+pnpm run check:registry       # Verify committed files match generator output (CI)
+```
 
 ## Validation
 
-### Verify tool names match code
-
-Cross-reference `server.json` tool names with the actual `allTools` array in each server's `src/mcp-server/tools/index.ts`:
+### Check manifests are up to date
 
 ```bash
-# For a specific server, compare tool names
-cd packages/dv360-mcp
-grep -o '"dv360_[a-z_]*"' server.json | sort > /tmp/json-tools.txt
-grep 'name:' src/mcp-server/tools/definitions/*.tool.ts | grep -o '"dv360_[a-z_]*"' | sort > /tmp/code-tools.txt
-diff /tmp/json-tools.txt /tmp/code-tools.txt
+pnpm run check:registry
 ```
+
+This compares each committed `server.json` against what the generator would produce. Non-zero exit if any file is stale or missing — safe for CI gates.
 
 ### Validate JSON syntax
 
@@ -47,41 +68,50 @@ for f in packages/*/server.json; do
 done
 ```
 
-### Check required fields
+## Publishing
 
-Every `server.json` must have: `name`, `display_name`, `description`, `version`, `protocol_version`, `transports`, `tools`, `auth`, `repository`, `license`.
+Install the `mcp-publisher` CLI:
 
-## Submitting to the Registry
+```bash
+brew install mcp-publisher
+# or: curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
+```
 
-1. Validate all `server.json` files (see above)
-2. Ensure the repository is public and accessible
-3. Follow the MCP Registry submission process at [modelcontextprotocol.io](https://modelcontextprotocol.io)
-4. Submit each server individually with its `server.json` metadata
+Authenticate and publish each server:
 
-## Updating After Adding Tools
+```bash
+mcp-publisher login github
 
-When adding a new tool to a server:
+# Publish a single server
+cd packages/dv360-mcp && mcp-publisher publish
 
-1. Create the tool file in `src/mcp-server/tools/definitions/`
-2. Register it in `src/mcp-server/tools/index.ts`
-3. Add the tool name to `server.json` in the `tools` array
-4. Bump the `version` field if publishing an update
-5. Re-validate the manifest
+# Or publish all
+for dir in packages/*-mcp; do
+  echo "Publishing $(basename $dir)..."
+  (cd "$dir" && mcp-publisher publish)
+done
+```
 
-## Current Server Manifests
+### Prerequisites
 
-| Server | Tools | Status |
-|--------|-------|--------|
-| `dbm-mcp` | 5 | Validated |
-| `dv360-mcp` | 23 | Validated |
-| `ttd-mcp` | 21 | Validated |
-| `gads-mcp` | 14 | Validated |
-| `meta-mcp` | 20 | Validated |
-| `linkedin-mcp` | 20 | Validated |
-| `tiktok-mcp` | 23 | Validated |
-| `cm360-mcp` | 16 | Validated |
-| `sa360-mcp` | 11 | Validated |
-| `pinterest-mcp` | 20 | Validated |
-| `snapchat-mcp` | 21 | Validated |
-| `amazon-dsp-mcp` | 20 | Validated |
-| `msads-mcp` | 19 | Validated |
+- npm packages must be published first (`npm publish --access public`)
+- Each `package.json` must have `mcpName` matching `name` in `server.json`
+- GitHub auth requires `mcpName` starting with `io.github.cesteral/`
+
+## Current Servers
+
+| Server | mcpName | Tools |
+|--------|---------|-------|
+| `dbm-mcp` | `io.github.cesteral/dbm-mcp` | 5 |
+| `dv360-mcp` | `io.github.cesteral/dv360-mcp` | 24 |
+| `ttd-mcp` | `io.github.cesteral/ttd-mcp` | 21 |
+| `gads-mcp` | `io.github.cesteral/gads-mcp` | 14 |
+| `meta-mcp` | `io.github.cesteral/meta-mcp` | 20 |
+| `linkedin-mcp` | `io.github.cesteral/linkedin-mcp` | 20 |
+| `tiktok-mcp` | `io.github.cesteral/tiktok-mcp` | 23 |
+| `cm360-mcp` | `io.github.cesteral/cm360-mcp` | 16 |
+| `sa360-mcp` | `io.github.cesteral/sa360-mcp` | 11 |
+| `pinterest-mcp` | `io.github.cesteral/pinterest-mcp` | 20 |
+| `snapchat-mcp` | `io.github.cesteral/snapchat-mcp` | 21 |
+| `amazon-dsp-mcp` | `io.github.cesteral/amazon-dsp-mcp` | 20 |
+| `msads-mcp` | `io.github.cesteral/msads-mcp` | 19 |

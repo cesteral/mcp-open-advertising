@@ -20,7 +20,9 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "clean": "turbo run clean && rm -rf node_modules",
     "test:conformance": "./scripts/conformance-test.sh",
-    "test:conformance:ci": "./scripts/conformance-test.sh --ci"
+    "test:conformance:ci": "./scripts/conformance-test.sh --ci",
+    "generate:registry": "node scripts/generate-server-json.mjs",
+    "check:registry": "node scripts/generate-server-json.mjs --check"
   },
   "devDependencies": {
     "@modelcontextprotocol/conformance": "^0.1.15",

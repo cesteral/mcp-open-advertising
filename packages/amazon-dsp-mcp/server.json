@@ -1,50 +1,33 @@
 {
-  "name": "@cesteral/amazon-dsp-mcp",
-  "display_name": "Amazon DSP MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/amazon-dsp-mcp",
+  "title": "Amazon DSP MCP Server",
   "description": "Amazon DSP campaign management and reporting — CRUD, async reports, targeting, and audience management",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "amazon_dsp_list_entities",
-    "amazon_dsp_get_entity",
-    "amazon_dsp_create_entity",
-    "amazon_dsp_update_entity",
-    "amazon_dsp_delete_entity",
-    "amazon_dsp_list_advertisers",
-    "amazon_dsp_get_report",
-    "amazon_dsp_get_report_breakdowns",
-    "amazon_dsp_submit_report",
-    "amazon_dsp_check_report_status",
-    "amazon_dsp_download_report",
-    "amazon_dsp_bulk_update_status",
-    "amazon_dsp_bulk_create_entities",
-    "amazon_dsp_bulk_update_entities",
-    "amazon_dsp_adjust_bids",
-    "amazon_dsp_search_targeting",
-    "amazon_dsp_get_targeting_options",
-    "amazon_dsp_get_audience_estimate",
-    "amazon_dsp_get_ad_preview",
-    "amazon_dsp_validate_entity"
-  ],
-  "resources": [],
-  "prompts": [
-    "campaign_setup_workflow",
-    "report_generation_workflow",
-    "troubleshoot_entity",
-    "tool_schema_exploration",
-    "cross_platform_performance",
-    "bulk_operations_workflow",
-    "cross_platform_campaign_setup",
-    "entity_update_workflow",
-    "entity_duplication_workflow",
-    "targeting_discovery_workflow",
-    "amazon_dsp_creative_setup_workflow"
-  ],
-  "auth": {
-    "modes": ["amazon-dsp-bearer", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "amazon", "dsp", "campaign-management", "programmatic", "ecommerce"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/amazon-dsp-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

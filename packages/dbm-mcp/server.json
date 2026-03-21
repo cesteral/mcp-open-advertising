@@ -1,30 +1,33 @@
 {
-  "name": "@cesteral/dbm-mcp",
-  "display_name": "Bid Manager MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/dbm-mcp",
+  "title": "Bid Manager MCP Server",
   "description": "Bid Manager reporting and query workflows for DV360 campaign performance analysis",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "dbm_get_campaign_delivery",
-    "dbm_get_performance_metrics",
-    "dbm_get_historical_metrics",
-    "dbm_get_pacing_status",
-    "dbm_run_custom_query"
-  ],
-  "resources": [],
-  "prompts": [
-    "customQueryWorkflow",
-    "troubleshootReport",
-    "toolSchemaExploration",
-    "pacingPerformanceAnalysis",
-    "crossPlatformPerformance",
-    "crossPlatformCampaignSetup"
-  ],
-  "auth": {
-    "modes": ["google-headers", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "reporting", "dv360", "bid-manager", "google"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/dbm-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }

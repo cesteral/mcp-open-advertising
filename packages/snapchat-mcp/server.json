@@ -1,51 +1,33 @@
 {
-  "name": "@cesteral/snapchat-mcp",
-  "display_name": "Snapchat Ads MCP Server",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.cesteral/snapchat-mcp",
+  "title": "Snapchat Ads MCP Server",
   "description": "Snapchat Ads campaign management and reporting — CRUD, async reports, targeting, and audience estimates",
-  "version": "1.0.0",
-  "protocol_version": "2024-11-05",
-  "transports": ["streamable-http", "stdio"],
-  "tools": [
-    "snapchat_list_entities",
-    "snapchat_get_entity",
-    "snapchat_create_entity",
-    "snapchat_update_entity",
-    "snapchat_delete_entity",
-    "snapchat_list_ad_accounts",
-    "snapchat_get_report",
-    "snapchat_get_report_breakdowns",
-    "snapchat_submit_report",
-    "snapchat_check_report_status",
-    "snapchat_download_report",
-    "snapchat_bulk_update_status",
-    "snapchat_bulk_create_entities",
-    "snapchat_bulk_update_entities",
-    "snapchat_adjust_bids",
-    "snapchat_search_targeting",
-    "snapchat_get_targeting_options",
-    "snapchat_duplicate_entity",
-    "snapchat_get_audience_estimate",
-    "snapchat_get_ad_preview",
-    "snapchat_validate_entity"
-  ],
-  "resources": [],
-  "prompts": [
-    "campaign_setup_workflow",
-    "report_generation_workflow",
-    "troubleshoot_entity",
-    "tool_schema_exploration",
-    "cross_platform_performance",
-    "bulk_operations_workflow",
-    "cross_platform_campaign_setup",
-    "entity_update_workflow",
-    "entity_duplication_workflow",
-    "targeting_discovery_workflow",
-    "snapchat_creative_setup_workflow"
-  ],
-  "auth": {
-    "modes": ["snapchat-bearer", "jwt", "none"]
+  "repository": {
+    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "source": "github"
   },
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
-  "license": "Apache-2.0",
-  "tags": ["advertising", "snapchat", "campaign-management", "social", "video"]
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://{host}/mcp",
+      "variables": {
+        "host": {
+          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "isRequired": true
+        }
+      }
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@cesteral/snapchat-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
 }
