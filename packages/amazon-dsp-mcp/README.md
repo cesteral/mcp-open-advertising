@@ -289,7 +289,7 @@ pnpm run typecheck
 
 ## Environment Variables
 
-- `AMAZON_DSP_MCP_PORT`: Server port (default: 3007)
+- `AMAZON_DSP_MCP_PORT`: Server port (default: 3012)
 - `AMAZON_DSP_MCP_HOST`: Server host (default: `127.0.0.1` in development, `0.0.0.0` in production)
 - `MCP_AUTH_MODE`: Authentication mode - `amazonDsp-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`

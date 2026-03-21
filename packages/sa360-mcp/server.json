@@ -14,7 +14,7 @@
       "url": "https://{host}/mcp",
       "variables": {
         "host": {
-          "description": "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+          "description": "Hostname of your deployed server instance (e.g., my-sa360-mcp-abc123.run.app)",
           "isRequired": true
         }
       }

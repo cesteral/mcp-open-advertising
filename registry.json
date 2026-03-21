@@ -14,7 +14,8 @@
         "dbm_get_performance_metrics",
         "dbm_get_historical_metrics",
         "dbm_get_pacing_status",
-        "dbm_run_custom_query"
+        "dbm_run_custom_query",
+        "dbm_run_custom_query_async"
       ],
       "resources": [],
       "prompts": [
@@ -376,7 +377,9 @@
         "snapchat_duplicate_entity",
         "snapchat_get_audience_estimate",
         "snapchat_get_ad_preview",
-        "snapchat_validate_entity"
+        "snapchat_validate_entity",
+        "snapchat_upload_image",
+        "snapchat_upload_video"
       ],
       "resources": [],
       "prompts": [
@@ -412,7 +415,11 @@
         "sa360_search_fields",
         "sa360_insert_conversions",
         "sa360_update_conversions",
-        "sa360_validate_conversion"
+        "sa360_validate_conversion",
+        "sa360_submit_report",
+        "sa360_check_report_status",
+        "sa360_download_report",
+        "sa360_get_change_history"
       ],
       "resources": [],
       "prompts": [
@@ -454,9 +461,12 @@
         "pinterest_search_targeting",
         "pinterest_get_targeting_options",
         "pinterest_duplicate_entity",
+        "pinterest_adjust_bids",
         "pinterest_get_delivery_estimate",
         "pinterest_get_ad_preview",
-        "pinterest_validate_entity"
+        "pinterest_validate_entity",
+        "pinterest_upload_image",
+        "pinterest_upload_video"
       ],
       "resources": [],
       "prompts": [
@@ -498,8 +508,7 @@
         "amazon_dsp_bulk_update_entities",
         "amazon_dsp_adjust_bids",
         "amazon_dsp_search_targeting",
-        "amazon_dsp_get_targeting_options",
-        "amazon_dsp_get_audience_estimate",
+        "amazon_dsp_duplicate_entity",
         "amazon_dsp_get_ad_preview",
         "amazon_dsp_validate_entity"
       ],
@@ -545,7 +554,8 @@
         "msads_manage_criterions",
         "msads_get_ad_preview",
         "msads_validate_entity",
-        "msads_import_from_google"
+        "msads_import_from_google",
+        "msads_search_targeting"
       ],
       "resources": [],
       "prompts": [

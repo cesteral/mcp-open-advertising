@@ -50,7 +50,7 @@ function buildServerJson(serverEntry, packageJson, registry) {
         url: registry.remoteUrlTemplate,
         variables: {
           host: {
-            description: "Hostname of your deployed server instance (e.g., my-dv360-mcp-abc123.run.app)",
+            description: `Hostname of your deployed server instance (e.g., my-${serverEntry.package}-abc123.run.app)`,
             isRequired: true,
           },
         },
