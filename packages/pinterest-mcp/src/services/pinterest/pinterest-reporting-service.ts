@@ -3,9 +3,10 @@
 
 import type { PinterestHttpClient } from "./pinterest-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
 import {
   fetchWithTimeout,
+  McpError,
+  JsonRpcErrorCode,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
   DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
@@ -14,6 +15,9 @@ import {
   DEFAULT_REPORT_MAX_ROWS,
   REPORT_POLL_WARNING_THRESHOLD,
   delay,
+  parseCsvLine,
+  computeExponentialBackoff,
+  type RequestContext,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
@@ -127,16 +131,13 @@ export class PinterestReportingService {
       }
 
       // Wait before next poll (exponential backoff)
-      await this.sleep(this.computeBackoff(attempt));
+      await delay(computeExponentialBackoff(attempt, this.pollIntervalMs, PinterestReportingService.MAX_BACKOFF_MS));
     }
 
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.Timeout,
       `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
     );
-  }
-
-  private computeBackoff(attempt: number): number {
-    return Math.min(this.pollIntervalMs * Math.pow(2, attempt), PinterestReportingService.MAX_BACKOFF_MS);
   }
 
   /**
@@ -175,14 +176,16 @@ export class PinterestReportingService {
     const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
         `Failed to download Pinterest report: ${response.status} ${response.statusText}`
       );
     }
 
     const contentLength = response.headers?.get("content-length");
     if (contentLength && parseInt(contentLength, 10) > DEFAULT_REPORT_MAX_SIZE_BYTES) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
         `Pinterest report too large (${contentLength} bytes, limit ${DEFAULT_REPORT_MAX_SIZE_BYTES}). Use more restrictive filters or date ranges.`
       );
     }
@@ -227,11 +230,11 @@ export class PinterestReportingService {
     const taskResult = await this.pollReport(task_id, context);
 
     if (taskResult.report_status === "FAILED" || taskResult.report_status === "EXPIRED" || taskResult.report_status === "DOES_NOT_EXIST") {
-      throw new Error(`Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`);
+      throw new McpError(JsonRpcErrorCode.InternalError, `Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`);
     }
 
     if (!taskResult.url) {
-      throw new Error(`Pinterest report task ${task_id} completed but has no download URL`);
+      throw new McpError(JsonRpcErrorCode.InternalError, `Pinterest report task ${task_id} completed but has no download URL`);
     }
 
     const reportData = await this.downloadReport(taskResult.url, DEFAULT_REPORT_MAX_ROWS, context);
@@ -259,39 +262,4 @@ export class PinterestReportingService {
     return this.getReport(configWithBreakdowns, context);
   }
 
-  private sleep(ms: number): Promise<void> {
-    return delay(ms);
-  }
-}
-
-/**
- * Parse a single CSV line, handling quoted fields with commas.
- * Limitation: does not handle newlines within quoted fields, BOM characters,
- * or mixed quoting. Sufficient for Pinterest's machine-generated report output.
- */
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  result.push(current.trim());
-  return result;
 }

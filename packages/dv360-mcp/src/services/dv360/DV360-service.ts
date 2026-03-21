@@ -11,7 +11,7 @@ import {
 } from "../domain/entity-mapping.js";
 import { extractEntitiesFromListResponse } from "./entity-response-parser.js";
 import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
-import type { RequestContext } from "@cesteral/shared";
+import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360-http-client.js";
 
 // ============================================================================
@@ -351,7 +351,7 @@ export class DV360Service {
 
   /**
    * Bulk create entities in parallel with concurrency=5.
-   * Mirrors the TTD executeBulk pattern — runs items in batches of 5 via
+   * Uses shared executeBulkConcurrent — runs items in batches of 5 via
    * Promise.allSettled so failed items never block remaining creates.
    *
    * @param entityType - DV360 entity type (e.g. "lineItem", "campaign")
@@ -367,32 +367,11 @@ export class DV360Service {
     }>,
     context?: RequestContext
   ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
-    const CONCURRENCY = 5;
-    const results: Array<{ success: boolean; entity?: unknown; error?: string }> =
-      new Array(items.length);
-
-    for (let i = 0; i < items.length; i += CONCURRENCY) {
-      const batch = items.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.allSettled(
-        batch.map((item) =>
-          this.createEntity(entityType, item.entityIds, item.mergedData, context)
-        )
-      );
-
-      for (let j = 0; j < batchResults.length; j++) {
-        const result = batchResults[j];
-        if (result.status === "fulfilled") {
-          results[i + j] = { success: true, entity: result.value };
-        } else {
-          results[i + j] = {
-            success: false,
-            error: result.reason?.message ?? String(result.reason),
-          };
-        }
-      }
-    }
-
-    return results;
+    return executeBulkConcurrent(
+      items,
+      (item) => this.createEntity(entityType, item.entityIds, item.mergedData, context),
+      { logger: this.logger }
+    );
   }
 
   /**

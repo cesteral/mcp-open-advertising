@@ -3,7 +3,7 @@
 
 import { LinkedInHttpClient } from "./linkedin-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
+import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import {
   getEntityConfig,
@@ -166,7 +166,7 @@ export class LinkedInService {
     status: string,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityUrn: string; success: boolean; error?: string }> }> {
-    const bulkResults = await this.executeBulk(entityUrns, async (entityUrn) => {
+    const bulkResults = await executeBulkConcurrent(entityUrns, async (entityUrn) => {
       return this.updateEntity(entityType, entityUrn, { status }, context);
     });
 
@@ -188,7 +188,7 @@ export class LinkedInService {
     items: Record<string, unknown>[],
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await this.executeBulk(items, async (data) => {
+    const results = await executeBulkConcurrent(items, async (data) => {
       return this.createEntity(entityType, data, context);
     });
     return { results };
@@ -203,7 +203,7 @@ export class LinkedInService {
     items: Array<{ entityUrn: string; data: Record<string, unknown> }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityUrn: string; success: boolean; error?: string }> }> {
-    const bulkResults = await this.executeBulk(items, async (item) => {
+    const bulkResults = await executeBulkConcurrent(items, async (item) => {
       return this.updateEntity(entityType, item.entityUrn, item.data, context);
     });
 
@@ -400,32 +400,4 @@ export class LinkedInService {
 
   // ─── Internal Helpers ────────────────────────────────────────────
 
-  private async executeBulk<T>(
-    items: T[],
-    operation: (item: T) => Promise<unknown>
-  ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
-    const CONCURRENCY = 5;
-    const results: Array<{ success: boolean; entity?: unknown; error?: string }> = new Array(items.length);
-
-    for (let i = 0; i < items.length; i += CONCURRENCY) {
-      const batch = items.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.allSettled(
-        batch.map((item) => operation(item))
-      );
-
-      for (let j = 0; j < batchResults.length; j++) {
-        const result = batchResults[j];
-        if (result.status === "fulfilled") {
-          results[i + j] = { success: true, entity: result.value };
-        } else {
-          results[i + j] = {
-            success: false,
-            error: result.reason?.message ?? String(result.reason),
-          };
-        }
-      }
-    }
-
-    return results;
-  }
 }

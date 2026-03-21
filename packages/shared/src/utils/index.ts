@@ -30,3 +30,6 @@ export * from "./bulk-operation-schemas.js";
 export * from "./conformance-fixtures.js";
 export * from "./conformance-test-helpers.js";
 export * from "./delay.js";
+export * from "./csv-parser.js";
+export * from "./backoff.js";
+export * from "./bulk-executor.js";

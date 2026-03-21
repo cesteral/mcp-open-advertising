@@ -5,7 +5,7 @@ import type { Logger } from "pino";
 import type { SA360V2HttpClient } from "./sa360-v2-http-client.js";
 import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 
 /**
@@ -143,7 +143,7 @@ export class SA360ReportingService {
     // Download URLs are absolute Google storage URLs — bypass httpClient
     // to avoid baseUrl prepending and JSON parsing of CSV responses.
     const accessToken = await this.authAdapter.getAccessToken();
-    const response = await fetchWithTimeout(downloadUrl, 60_000, context, {
+    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 

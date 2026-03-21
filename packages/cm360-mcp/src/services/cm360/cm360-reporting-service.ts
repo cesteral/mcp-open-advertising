@@ -4,7 +4,13 @@
 import type { Logger } from "pino";
 import type { CM360HttpClient } from "./cm360-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
+import {
+  delay,
+  computeLinearBackoff,
+  DEFAULT_REPORT_MAX_BACKOFF_MS,
+  DEFAULT_REPORT_POLL_INTERVAL_MS,
+  type RequestContext,
+} from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 
 export interface CM360ReportConfig {
@@ -17,13 +23,13 @@ export interface CM360ReportConfig {
 }
 
 export class CM360ReportingService {
-  private static readonly MAX_BACKOFF_MS = 10_000;
+  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
 
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: CM360HttpClient,
     private readonly logger: Logger,
-    private readonly pollIntervalMs: number = 2_000,
+    private readonly pollIntervalMs: number = DEFAULT_REPORT_POLL_INTERVAL_MS,
     private readonly maxPollAttempts: number = 60
   ) {}
 
@@ -181,7 +187,7 @@ export class CM360ReportingService {
         "CM360 report still processing"
       );
 
-      await this.sleep(this.computeBackoff(attempt));
+      await delay(computeLinearBackoff(attempt, this.pollIntervalMs, CM360ReportingService.MAX_BACKOFF_MS));
     }
 
     throw new McpError(
@@ -201,16 +207,4 @@ export class CM360ReportingService {
     });
   }
 
-  private computeBackoff(attempt: number): number {
-    // Use linear backoff capped at MAX_BACKOFF_MS to spread polls more evenly
-    // and avoid wasting rate-limit tokens on aggressive early polls
-    return Math.min(
-      this.pollIntervalMs * (attempt + 1),
-      CM360ReportingService.MAX_BACKOFF_MS
-    );
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }

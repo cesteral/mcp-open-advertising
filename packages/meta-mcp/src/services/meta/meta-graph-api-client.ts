@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
+import { fetchWithTimeout, buildMultipartFormData, delay } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withMetaApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
 
@@ -276,7 +276,7 @@ export class MetaGraphApiClient {
         "Retrying Meta API request after transient error"
       );
 
-      await this.sleep(delayMs);
+      await delay(delayMs);
     }
 
     throw (
@@ -346,7 +346,4 @@ export class MetaGraphApiClient {
     return 0;
   }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }

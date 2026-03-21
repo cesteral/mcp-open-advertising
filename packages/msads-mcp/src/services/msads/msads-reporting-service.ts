@@ -4,8 +4,15 @@
 import type { Logger } from "pino";
 import type { RateLimiter } from "@cesteral/shared";
 import type { MsAdsHttpClient } from "./msads-http-client.js";
-import { fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import {
+  fetchWithTimeout,
+  McpError,
+  JsonRpcErrorCode,
+  delay,
+  parseCsvLine,
+  DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+  type RequestContext,
+} from "@cesteral/shared";
 import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
 
 /**
@@ -98,7 +105,7 @@ export class MsAdsReportingService {
         "Report not ready, polling"
       );
 
-      await this.sleep(this.pollIntervalMs);
+      await delay(this.pollIntervalMs);
     }
 
     throw new McpError(
@@ -137,7 +144,7 @@ export class MsAdsReportingService {
   ): Promise<{ headers: string[]; rows: string[][]; totalRows: number }> {
     this.logger.info({ downloadUrl: downloadUrl.substring(0, 80) }, "Downloading report");
 
-    const response = await fetchWithTimeout(downloadUrl, 60_000, context);
+    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
       throw new McpError(
@@ -226,13 +233,13 @@ export class MsAdsReportingService {
       return { headers: [], rows: [], totalRows: 0 };
     }
 
-    const headers = this.parseCsvLine(lines[headerIndex]!);
+    const headers = parseCsvLine(lines[headerIndex]!);
     const dataLines = lines.slice(headerIndex + 1);
 
     // Filter out summary/footer lines
     const dataRows = dataLines
       .filter((line) => !line.startsWith("©") && !line.startsWith('"©'))
-      .map((line) => this.parseCsvLine(line));
+      .map((line) => parseCsvLine(line));
 
     const totalRows = dataRows.length;
     const limitedRows = maxRows ? dataRows.slice(0, maxRows) : dataRows;
@@ -240,42 +247,4 @@ export class MsAdsReportingService {
     return { headers, rows: limitedRows, totalRows };
   }
 
-  private parseCsvLine(line: string): string[] {
-    const fields: string[] = [];
-    let current = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i]!;
-
-      if (inQuotes) {
-        if (char === '"') {
-          if (i + 1 < line.length && line[i + 1] === '"') {
-            current += '"';
-            i++;
-          } else {
-            inQuotes = false;
-          }
-        } else {
-          current += char;
-        }
-      } else {
-        if (char === '"') {
-          inQuotes = true;
-        } else if (char === ",") {
-          fields.push(current.trim());
-          current = "";
-        } else {
-          current += char;
-        }
-      }
-    }
-
-    fields.push(current.trim());
-    return fields;
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
 }

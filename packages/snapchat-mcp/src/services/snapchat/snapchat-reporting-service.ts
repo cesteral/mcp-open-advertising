@@ -14,6 +14,8 @@ import {
   DEFAULT_REPORT_MAX_ROWS,
   REPORT_POLL_WARNING_THRESHOLD,
   delay,
+  parseCsvLine,
+  computeExponentialBackoff,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
@@ -137,17 +139,13 @@ export class SnapchatReportingService {
       }
 
       // Wait before next poll (exponential backoff)
-      await this.sleep(this.computeBackoff(attempt));
+      await delay(computeExponentialBackoff(attempt, this.pollIntervalMs, SnapchatReportingService.MAX_BACKOFF_MS));
     }
 
     throw new McpError(
       JsonRpcErrorCode.Timeout,
       `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
     );
-  }
-
-  private computeBackoff(attempt: number): number {
-    return Math.min(this.pollIntervalMs * Math.pow(2, attempt), SnapchatReportingService.MAX_BACKOFF_MS);
   }
 
   /**
@@ -275,37 +273,4 @@ export class SnapchatReportingService {
     return this.getReport(configWithBreakdowns, context);
   }
 
-  private sleep(ms: number): Promise<void> {
-    return delay(ms);
-  }
-}
-
-/**
- * Parse a single CSV line, handling quoted fields with commas.
- */
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  result.push(current.trim());
-  return result;
 }

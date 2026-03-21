@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import type { RequestContext } from "@cesteral/shared";
+import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { getEntityConfig, type TtdEntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 
@@ -219,9 +219,9 @@ export class TtdService {
     items: Record<string, unknown>[],
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await this.executeBulk(items, async (data) => {
+    const results = await executeBulkConcurrent(items, async (data) => {
       return this.createEntity(entityType, data, context);
-    });
+    }, { logger: this.logger });
     return { results };
   }
 
@@ -234,9 +234,9 @@ export class TtdService {
     items: Array<{ entityId: string; data: Record<string, unknown> }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await this.executeBulk(items, async (item) => {
+    const results = await executeBulkConcurrent(items, async (item) => {
       return this.updateEntity(entityType, item.entityId, item.data, context);
-    });
+    }, { logger: this.logger });
     return { results };
   }
 
@@ -251,9 +251,9 @@ export class TtdService {
     entityIds: string[],
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+    const bulkResults = await executeBulkConcurrent(entityIds, async (entityId) => {
       return this.updateAvailability(entityType, entityId, "Archived", context);
-    });
+    }, { logger: this.logger });
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -276,9 +276,9 @@ export class TtdService {
     status: "Available" | "Paused" | "Archived",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await this.executeBulk(entityIds, async (entityId) => {
+    const bulkResults = await executeBulkConcurrent(entityIds, async (entityId) => {
       return this.updateAvailability(entityType, entityId, status, context);
-    });
+    }, { logger: this.logger });
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -346,10 +346,10 @@ export class TtdService {
     const adGroupConfig = getEntityConfig("adGroup");
 
     // Phase 1: Fetch all current ad group entities in parallel (concurrency=5)
-    const getResults = await this.executeBulk(adjustments, async (adj) => {
+    const getResults = await executeBulkConcurrent(adjustments, async (adj) => {
       await this.rateLimiter.consume(`ttd:${partnerId}`);
       return this.httpClient.fetch(`${adGroupConfig.apiPath}/${adj.adGroupId}`, context, { method: "GET" });
-    });
+    }, { logger: this.logger });
 
     // Separate successful GETs from failed ones; build PUT inputs for successes
     type PutItem = {
@@ -375,7 +375,7 @@ export class TtdService {
 
     // Phase 2: Apply bid adjustments and PUT all entities in parallel (concurrency=5)
     if (putItems.length > 0) {
-      const putResults = await this.executeBulk(putItems, async ({ adj, current }) => {
+      const putResults = await executeBulkConcurrent(putItems, async ({ adj, current }) => {
         const rtb = (current.RTBAttributes as Record<string, unknown>) || {};
         const cc = adj.currencyCode || "USD";
 
@@ -392,7 +392,7 @@ export class TtdService {
           method: "PUT",
           body: JSON.stringify({ ...current, RTBAttributes: rtb }),
         });
-      });
+      }, { logger: this.logger });
 
       // Map PUT results back to the original adjustments index, preserving adGroupId
       for (let k = 0; k < putResults.length; k++) {
@@ -435,32 +435,4 @@ export class TtdService {
 
   // ─── Internal Helpers ─────────────────────────────────────────────
 
-  private async executeBulk<T>(
-    items: T[],
-    operation: (item: T) => Promise<unknown>
-  ): Promise<Array<{ success: boolean; entity?: unknown; error?: string }>> {
-    const CONCURRENCY = 5;
-    const results: Array<{ success: boolean; entity?: unknown; error?: string }> = new Array(items.length);
-
-    for (let i = 0; i < items.length; i += CONCURRENCY) {
-      const batch = items.slice(i, i + CONCURRENCY);
-      const batchResults = await Promise.allSettled(
-        batch.map((item) => operation(item))
-      );
-
-      for (let j = 0; j < batchResults.length; j++) {
-        const result = batchResults[j];
-        if (result.status === "fulfilled") {
-          results[i + j] = { success: true, entity: result.value };
-        } else {
-          results[i + j] = {
-            success: false,
-            error: result.reason?.message ?? String(result.reason),
-          };
-        }
-      }
-    }
-
-    return results;
-  }
 }

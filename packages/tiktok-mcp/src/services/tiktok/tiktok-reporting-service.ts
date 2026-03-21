@@ -6,6 +6,8 @@ import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
   fetchWithTimeout,
+  McpError,
+  JsonRpcErrorCode,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
   DEFAULT_REPORT_MAX_POLL_ATTEMPTS,
@@ -14,6 +16,8 @@ import {
   DEFAULT_REPORT_MAX_ROWS,
   REPORT_POLL_WARNING_THRESHOLD,
   delay,
+  parseCsvLine,
+  computeExponentialBackoff,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
@@ -122,16 +126,13 @@ export class TikTokReportingService {
       }
 
       // Wait before next poll (exponential backoff)
-      await this.sleep(this.computeBackoff(attempt));
+      await delay(computeExponentialBackoff(attempt, this.pollIntervalMs, TikTokReportingService.MAX_BACKOFF_MS));
     }
 
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.Timeout,
       `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
     );
-  }
-
-  private computeBackoff(attempt: number): number {
-    return Math.min(this.pollIntervalMs * Math.pow(2, attempt), TikTokReportingService.MAX_BACKOFF_MS);
   }
 
   /**
@@ -168,14 +169,16 @@ export class TikTokReportingService {
     const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
         `Failed to download TikTok report: ${response.status} ${response.statusText}`
       );
     }
 
     const contentLength = response.headers?.get("content-length");
     if (contentLength && parseInt(contentLength, 10) > DEFAULT_REPORT_MAX_SIZE_BYTES) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
         `TikTok report too large (${contentLength} bytes, limit ${DEFAULT_REPORT_MAX_SIZE_BYTES}). Use more restrictive filters or date ranges.`
       );
     }
@@ -220,11 +223,11 @@ export class TikTokReportingService {
     const taskResult = await this.pollReport(task_id, context);
 
     if (taskResult.status === "FAILED") {
-      throw new Error(`TikTok report task ${task_id} failed`);
+      throw new McpError(JsonRpcErrorCode.InternalError, `TikTok report task ${task_id} failed`);
     }
 
     if (!taskResult.download_url) {
-      throw new Error(`TikTok report task ${task_id} completed but has no download URL`);
+      throw new McpError(JsonRpcErrorCode.InternalError, `TikTok report task ${task_id} completed but has no download URL`);
     }
 
     const reportData = await this.downloadReport(taskResult.download_url, DEFAULT_REPORT_MAX_ROWS, context);
@@ -252,37 +255,4 @@ export class TikTokReportingService {
     return this.getReport(configWithBreakdowns, context);
   }
 
-  private sleep(ms: number): Promise<void> {
-    return delay(ms);
-  }
-}
-
-/**
- * Parse a single CSV line, handling quoted fields with commas.
- */
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  result.push(current.trim());
-  return result;
 }
