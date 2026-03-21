@@ -17,14 +17,24 @@
         "dbm_run_custom_query",
         "dbm_run_custom_query_async"
       ],
-      "resources": [],
+      "resources": [
+        "metric-types://all",
+        "metric-types://category/{category}",
+        "filter-types://all",
+        "filter-types://category/{category}",
+        "compatibility-rules://all",
+        "report-types://all",
+        "query-examples://all",
+        "tool-examples://dbm-mcp/all",
+        "server-capabilities://dbm-mcp/overview"
+      ],
       "prompts": [
-        "customQueryWorkflow",
-        "troubleshootReport",
-        "toolSchemaExploration",
-        "pacingPerformanceAnalysis",
-        "crossPlatformPerformance",
-        "crossPlatformCampaignSetup"
+        "custom_query_workflow",
+        "troubleshoot_report",
+        "tool_schema_exploration_workflow",
+        "pacing_performance_analysis_workflow",
+        "cross_platform_performance_comparison",
+        "cross_platform_campaign_setup"
       ],
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
@@ -66,23 +76,23 @@
         "entity-fields://{type}",
         "entity-examples://{type}",
         "targeting-types://",
-        "targeting-schema://",
+        "targeting-schema://{targetingType}",
         "server-capabilities://dv360-mcp/overview"
       ],
       "prompts": [
         "full_campaign_setup_workflow",
         "troubleshoot_underdelivery",
-        "budget_reallocation",
-        "entity_update_execution",
-        "tool_schema_exploration",
-        "targeting_management",
-        "bulk_operations",
-        "cross_platform_performance",
-        "entity_activation",
+        "budget_reallocation_workflow",
+        "entity_update_execution_workflow",
+        "dv360_tool_schema_exploration",
+        "targeting_management_workflow",
+        "bulk_operations_workflow",
+        "cross_platform_performance_comparison",
+        "entity_activation_workflow",
         "cross_platform_campaign_setup",
         "custom_bidding_workflow",
         "entity_duplication_workflow",
-        "dv360_creative_setup_workflow"
+        "creative_setup_workflow"
       ],
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
@@ -116,19 +126,28 @@
         "ttd_graphql_cancel_bulk_job",
         "ttd_get_ad_preview"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://all",
+        "entity-schema://{entityType}",
+        "entity-examples://all",
+        "entity-examples://{entityType}",
+        "report-reference://all",
+        "tool-examples://ttd-mcp/all",
+        "server-capabilities://ttd-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "report_generation_workflow",
-        "troubleshoot_entity",
-        "tool_schema_exploration",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "ttd_campaign_setup_workflow",
+        "ttd_report_generation_workflow",
+        "ttd_troubleshoot_entity",
+        "ttd_tool_schema_exploration",
+        "cross_platform_performance_comparison",
+        "ttd_bulk_operations_workflow",
         "cross_platform_campaign_setup",
         "ttd_entity_update_workflow",
         "ttd_entity_duplication_workflow",
         "ttd_targeting_discovery_workflow",
-        "ttd_creative_setup_workflow"
+        "creative_setup_workflow"
       ],
       "auth": {
         "modes": ["ttd-headers", "jwt", "none"]
@@ -155,19 +174,29 @@
         "gads_adjust_bids",
         "gads_get_ad_preview"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://gads",
+        "entity-schema://all",
+        "entity-schema://{entityType}",
+        "entity-examples://all",
+        "entity-examples://{entityType}",
+        "gaql-reference://syntax",
+        "insights-reference://gads",
+        "tool-examples://gads-mcp/all",
+        "server-capabilities://gads-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "tool_schema_exploration",
-        "troubleshoot_entity",
+        "gads_campaign_setup_workflow",
+        "gads_tool_schema_exploration",
+        "gads_troubleshoot_entity",
         "gaql_reporting_workflow",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "cross_platform_performance_comparison",
+        "gads_bulk_operations_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "gads_creative_setup_workflow"
+        "gads_entity_update_workflow",
+        "gads_entity_duplication_workflow",
+        "gads_targeting_discovery_workflow",
+        "creative_setup_workflow"
       ],
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
@@ -200,18 +229,28 @@
         "meta_upload_image",
         "meta_upload_video"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://all",
+        "entity-schema://{entityType}",
+        "entity-examples://all",
+        "entity-examples://{entityType}",
+        "insights-reference://all",
+        "targeting-reference://all",
+        "tool-examples://meta-mcp/all",
+        "server-capabilities://meta-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "insights_reporting_workflow",
-        "troubleshoot_entity",
-        "tool_schema_exploration",
-        "entity_update_workflow",
-        "bulk_operations_workflow",
-        "cross_platform_performance",
+        "meta_campaign_setup_workflow",
+        "meta_insights_reporting_workflow",
+        "meta_troubleshoot_entity",
+        "meta_tool_schema_exploration",
+        "meta_entity_update_workflow",
+        "meta_bulk_operations_workflow",
+        "cross_platform_performance_comparison",
         "cross_platform_campaign_setup",
-        "targeting_discovery_workflow",
-        "entity_duplication_workflow",
+        "meta_targeting_discovery_workflow",
+        "meta_entity_duplication_workflow",
         "creative_upload_workflow"
       ],
       "auth": {
@@ -245,18 +284,29 @@
         "linkedin_upload_image",
         "linkedin_upload_video"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://linkedin/all",
+        "entity-schema://linkedin/all",
+        "entity-schema://linkedin/{entityType}",
+        "entity-examples://linkedin/all",
+        "entity-examples://linkedin/{entityType}",
+        "analytics-reference://linkedin",
+        "targeting-reference://linkedin",
+        "tool-examples://linkedin-mcp/all",
+        "server-capabilities://linkedin-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "tool_schema_exploration",
-        "troubleshoot_entity",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "linkedin_campaign_setup_workflow",
+        "linkedin_tool_schema_exploration",
+        "linkedin_troubleshoot_entity",
+        "linkedin_analytics_reporting_workflow",
+        "cross_platform_performance_comparison",
+        "linkedin_bulk_operations_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "linkedin_creative_setup_workflow"
+        "linkedin_entity_update_workflow",
+        "linkedin_entity_duplication_workflow",
+        "linkedin_targeting_discovery_workflow",
+        "creative_upload_workflow"
       ],
       "auth": {
         "modes": ["linkedin-bearer", "jwt", "none"]
@@ -292,19 +342,29 @@
         "tiktok_upload_image",
         "tiktok_upload_video"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://tiktok/all",
+        "entity-schema://tiktok/all",
+        "entity-schema://tiktok/{entityType}",
+        "entity-examples://tiktok/all",
+        "entity-examples://tiktok/{entityType}",
+        "reporting-reference://tiktok",
+        "targeting-reference://tiktok",
+        "tool-examples://tiktok-mcp/all",
+        "server-capabilities://tiktok-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "report_generation_workflow",
-        "troubleshoot_entity",
-        "tool_schema_exploration",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "tiktok_campaign_setup_workflow",
+        "tiktok_reporting_workflow",
+        "tiktok_troubleshoot_entity",
+        "tiktok_tool_schema_exploration",
+        "cross_platform_performance_comparison",
+        "tiktok_bulk_operations_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "tiktok_creative_setup_workflow"
+        "tiktok_entity_update_workflow",
+        "tiktok_entity_duplication_workflow",
+        "tiktok_targeting_discovery_workflow",
+        "creative_upload_workflow"
       ],
       "auth": {
         "modes": ["tiktok-bearer", "jwt", "none"]
@@ -333,19 +393,28 @@
         "cm360_get_ad_preview",
         "cm360_list_targeting_options"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://all",
+        "entity-schema://{entityType}",
+        "entity-examples://all",
+        "entity-examples://{entityType}",
+        "reporting-reference://all",
+        "targeting-reference://all",
+        "tool-examples://cm360-mcp/all",
+        "server-capabilities://cm360-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "report_generation_workflow",
-        "troubleshoot_entity",
-        "tool_schema_exploration",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "cm360_campaign_setup_workflow",
+        "cm360_reporting_workflow",
+        "cm360_troubleshoot_entity",
+        "cm360_tool_schema_exploration",
+        "cross_platform_performance_comparison",
+        "cm360_bulk_operations_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "cm360_creative_setup_workflow"
+        "cm360_entity_update_workflow",
+        "cm360_targeting_discovery_workflow",
+        "cm360_floodlight_workflow"
       ],
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
@@ -381,19 +450,28 @@
         "snapchat_upload_image",
         "snapchat_upload_video"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://snapchat/all",
+        "entity-schema://snapchat/all",
+        "entity-schema://snapchat/{entityType}",
+        "entity-examples://snapchat/all",
+        "entity-examples://snapchat/{entityType}",
+        "reporting-reference://snapchat",
+        "tool-examples://snapchat-mcp/all",
+        "server-capabilities://snapchat-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "report_generation_workflow",
-        "troubleshoot_entity",
-        "tool_schema_exploration",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "snapchat_campaign_setup_workflow",
+        "snapchat_reporting_workflow",
+        "snapchat_troubleshoot_entity",
+        "snapchat_tool_schema_exploration",
+        "cross_platform_performance_comparison",
+        "snapchat_bulk_operations_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "snapchat_creative_setup_workflow"
+        "snapchat_entity_update_workflow",
+        "snapchat_entity_duplication_workflow",
+        "snapchat_targeting_discovery_workflow",
+        "creative_upload_workflow"
       ],
       "auth": {
         "modes": ["snapchat-bearer", "jwt", "none"]
@@ -421,18 +499,26 @@
         "sa360_download_report",
         "sa360_get_change_history"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://all",
+        "entity-schema://all",
+        "entity-schema://{entityType}",
+        "entity-examples://all",
+        "entity-examples://{entityType}",
+        "query-reference://all",
+        "conversion-reference://all",
+        "insights-reference://all",
+        "tool-examples://sa360-mcp/all",
+        "server-capabilities://sa360-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "tool_schema_exploration",
-        "troubleshoot_entity",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "sa360_tool_schema_exploration",
+        "sa360_query_language_workflow",
+        "sa360_troubleshoot_entity",
+        "cross_platform_performance_comparison",
+        "sa360_cross_engine_reporting_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "sa360_creative_setup_workflow"
+        "sa360_conversion_upload_workflow"
       ],
       "auth": {
         "modes": ["sa360-headers", "jwt", "none"]
@@ -468,19 +554,28 @@
         "pinterest_upload_image",
         "pinterest_upload_video"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://pinterest/all",
+        "entity-schema://pinterest/all",
+        "entity-schema://pinterest/{entityType}",
+        "entity-examples://pinterest/all",
+        "entity-examples://pinterest/{entityType}",
+        "reporting-reference://pinterest",
+        "tool-examples://pinterest-mcp/all",
+        "server-capabilities://pinterest-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "report_generation_workflow",
-        "troubleshoot_entity",
-        "tool_schema_exploration",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "pinterest_campaign_setup_workflow",
+        "pinterest_reporting_workflow",
+        "pinterest_troubleshoot_entity",
+        "pinterest_tool_schema_exploration",
+        "cross_platform_performance_comparison",
+        "pinterest_bulk_operations_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "pinterest_creative_setup_workflow"
+        "pinterest_entity_update_workflow",
+        "pinterest_entity_duplication_workflow",
+        "pinterest_targeting_discovery_workflow",
+        "creative_upload_workflow"
       ],
       "auth": {
         "modes": ["pinterest-bearer", "jwt", "none"]
@@ -512,19 +607,28 @@
         "amazon_dsp_get_ad_preview",
         "amazon_dsp_validate_entity"
       ],
-      "resources": [],
+      "resources": [
+        "entity-hierarchy://amazonDsp/all",
+        "entity-schema://amazonDsp/all",
+        "entity-schema://amazonDsp/{entityType}",
+        "entity-examples://amazonDsp/all",
+        "entity-examples://amazonDsp/{entityType}",
+        "reporting-reference://amazonDsp",
+        "tool-examples://amazon-dsp-mcp/all",
+        "server-capabilities://amazon-dsp-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
-        "report_generation_workflow",
-        "troubleshoot_entity",
-        "tool_schema_exploration",
-        "cross_platform_performance",
-        "bulk_operations_workflow",
+        "amazon_dsp_campaign_setup_workflow",
+        "amazon_dsp_reporting_workflow",
+        "amazon_dsp_troubleshoot_entity",
+        "amazon_dsp_tool_schema_exploration",
+        "cross_platform_performance_comparison",
+        "amazon_dsp_bulk_operations_workflow",
         "cross_platform_campaign_setup",
-        "entity_update_workflow",
-        "entity_duplication_workflow",
-        "targeting_discovery_workflow",
-        "amazon_dsp_creative_setup_workflow"
+        "amazon_dsp_entity_update_workflow",
+        "amazon_dsp_entity_duplication_workflow",
+        "amazon_dsp_targeting_discovery_workflow",
+        "amazon_dsp_creative_upload_workflow"
       ],
       "auth": {
         "modes": ["amazon-dsp-bearer", "jwt", "none"]
@@ -557,11 +661,19 @@
         "msads_import_from_google",
         "msads_search_targeting"
       ],
-      "resources": [],
+      "resources": [
+        "msads://entity-hierarchy",
+        "msads://entity-schemas",
+        "msads://entity-schema/{entityType}",
+        "msads://entity-examples",
+        "msads://reporting-reference",
+        "tool-examples://msads-mcp/all",
+        "server-capabilities://msads-mcp/overview"
+      ],
       "prompts": [
-        "campaign_setup_workflow",
+        "msads_campaign_setup_workflow",
         "msads_reporting_workflow",
-        "google_import_workflow",
+        "msads_google_import_workflow",
         "msads_bulk_operations_workflow",
         "msads_troubleshoot_entity"
       ],

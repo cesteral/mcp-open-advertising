@@ -13,7 +13,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | # | Server | Port | API | Entity Types | Tools |
 |---|--------|------|-----|-------------|-------|
 | 1 | `dbm-mcp` | 3001 | Bid Manager API v2 | _(reporting only)_ | 6 |
-| 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 23 |
+| 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 24 |
 | 3 | `ttd-mcp` | 3003 | TTD REST API | advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList | 21 |
 | 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 14 |
 | 5 | `meta-mcp` | 3005 | Meta Marketing API v22.0 | campaign, adSet, ad, adCreative, customAudience | 20 |
@@ -22,7 +22,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 8 | `cm360-mcp` | 3008 | CM360 API v5 | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 16 |
 | 9 | `snapchat-mcp` | 3009 | Snapchat Ads API v1 | campaign, adGroup, ad, creative | 23 |
 | 10 | `sa360-mcp` | 3010 | SA360 Reporting API v0 + DS v2 | _(reporting + conversions)_ | 15 |
-| 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 21 |
+| 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 23 |
 | 12 | `amazon-dsp-mcp` | 3012 | Amazon DSP API | order, lineItem, creative | 19 |
 | 13 | `msads-mcp` | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label | 20 |
 
@@ -172,7 +172,7 @@ Most servers (linkedin, tiktok, cm360, pinterest, snapchat, amazon-dsp) follow t
 | `dbm_run_custom_query` | Execute custom Bid Manager reports (blocking) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 | `dbm_run_custom_query_async` | Submit custom query (non-blocking, task-based) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
 
-### dv360-mcp — 23 Tools (Unique Tools Beyond Standard Pattern)
+### dv360-mcp — 24 Tools (Unique Tools Beyond Standard Pattern)
 
 Standard CRUD/bulk/targeting/validation/preview tools plus:
 
@@ -264,9 +264,9 @@ Standard CRUD/bulk/reporting tools plus:
 - **linkedin-mcp** (20 tools): URN-based entity IDs, `LinkedIn-Version: 202409` header, analytics via `/v2/adAnalytics` with pivot breakdowns
 - **tiktok-mcp** (23 tools): `X-TikTok-Advertiser-Id` header in HTTP mode, image/video upload
 - **cm360-mcp** (16 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting
-- **pinterest-mcp** (20 tools): cursor-based pagination via `bookmark` tokens
-- **snapchat-mcp** (21 tools): Ad Squads (adGroups), cursor-based pagination
-- **amazon-dsp-mcp** (20 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status)
+- **pinterest-mcp** (23 tools): cursor-based pagination via `bookmark` tokens
+- **snapchat-mcp** (23 tools): Ad Squads (adGroups), cursor-based pagination
+- **amazon-dsp-mcp** (19 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status)
 
 ### How the Servers Work Together
 
