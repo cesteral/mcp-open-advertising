@@ -75,6 +75,22 @@ export interface RetryableRequestOptions {
    *   if the envelope error is transient and should be retried.
    */
   validateResponseBody?: (body: unknown) => unknown;
+  /**
+   * Override the default retryability check (429 + 5xx).
+   * Return true if the request should be retried for this status/body combo.
+   * Useful for platforms with body-level error codes (e.g., Meta rate limit codes).
+   */
+  isRetryable?: (status: number, errorBody: string) => boolean;
+  /**
+   * Called after every fetch response (success or error) for observability.
+   * Use for logging rate-limit headers, usage metrics, etc.
+   */
+  onResponse?: (response: Response, context?: RequestContext) => void;
+  /**
+   * Return extra keys to merge into McpError.data on error responses.
+   * Useful for platform-specific error metadata (e.g., Meta error codes).
+   */
+  buildErrorData?: (status: number, errorBody: string) => Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -114,7 +130,8 @@ function calculateBackoff(
     maxBackoffMs
   );
 
-  if (response.status === 429) {
+  // Respect Retry-After header on any retryable response (429, 5xx, or custom)
+  {
     const retryAfter = response.headers.get("Retry-After");
     if (retryAfter) {
       const retryAfterSeconds = parseInt(retryAfter, 10);
@@ -153,6 +170,7 @@ export async function executeWithRetry(
   const {
     url, fetchOptions, context, logger, getHeaders,
     mapStatusCode, parseErrorBody, validateResponseBody,
+    isRetryable, onResponse, buildErrorData,
   } = options;
   const doFetch = options.fetchFn ?? fetchWithTimeout;
 
@@ -168,6 +186,8 @@ export async function executeWithRetry(
         ...fetchOptions?.headers,
       },
     });
+
+    onResponse?.(response, context);
 
     if (response.ok) {
       setSpanAttribute("http.response.status_code", response.status);
@@ -235,10 +255,15 @@ export async function executeWithRetry(
         ...(response.status === 401 && config.tokenExpiryHint
           ? { tokenExpiryHint: config.tokenExpiryHint }
           : {}),
+        ...buildErrorData?.(response.status, errorBody),
       }
     );
 
-    if (!isRetryableStatus(response.status) || attempt >= maxRetries) {
+    const retryable = isRetryable
+      ? isRetryable(response.status, errorBody)
+      : isRetryableStatus(response.status);
+
+    if (!retryable || attempt >= maxRetries) {
       throw mcpError;
     }
 

@@ -3,10 +3,10 @@
 
 import type { Logger } from "pino";
 import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { fetchWithTimeout, buildMultipartFormData, delay } from "@cesteral/shared";
+import { JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withMetaApiSpan, setSpanAttribute } from "../../utils/telemetry/tracing.js";
+import { withMetaApiSpan } from "../../utils/telemetry/tracing.js";
 
 /** Meta error response shape */
 interface MetaApiError {
@@ -31,7 +31,17 @@ const META_RETRY_CONFIG: RetryConfig = {
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "Meta",
+  tokenExpiryHint:
+    "Meta access token expired. Generate a new token in Meta Business Suite or use a System User token.",
 };
+
+function parseMetaCode(body: string): number {
+  try {
+    return (JSON.parse(body) as MetaApiError).error?.code ?? 0;
+  } catch {
+    return 0;
+  }
+}
 
 function isRetryableMetaError(code: number, httpStatus: number): boolean {
   return httpStatus === 429 || httpStatus >= 500 || RATE_LIMIT_CODES.has(code);
@@ -75,7 +85,7 @@ export class MetaGraphApiClient {
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path, params);
-    return this.executeWithRetry(url, context, { method: "GET" });
+    return this.request(url, context, { method: "GET" });
   }
 
   /**
@@ -90,7 +100,7 @@ export class MetaGraphApiClient {
     const url = this.buildUrl(path);
     const formBody = this.buildFormBody(data);
 
-    return this.executeWithRetry(url, context, {
+    return this.request(url, context, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -107,7 +117,7 @@ export class MetaGraphApiClient {
     context?: RequestContext
   ): Promise<unknown> {
     const url = this.buildUrl(path);
-    return this.executeWithRetry(url, context, { method: "DELETE" });
+    return this.request(url, context, { method: "DELETE" });
   }
 
   /**
@@ -125,7 +135,7 @@ export class MetaGraphApiClient {
   ): Promise<unknown> {
     const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
     const url = this.buildUrl(path);
-    return this.executeWithRetry(url, context, {
+    return this.request(url, context, {
       method: "POST",
       headers: { "Content-Type": contentType },
       body,
@@ -156,7 +166,7 @@ export class MetaGraphApiClient {
     return params.toString();
   }
 
-  private async executeWithRetry(
+  private async request(
     url: string,
     context?: RequestContext,
     options?: RequestInit
@@ -166,125 +176,48 @@ export class MetaGraphApiClient {
     return withMetaApiSpan(`api.${method}`, url, async (span) => {
       span.setAttribute("http.request.method", method);
       span.setAttribute("http.url", url);
-      return this.executeWithRetryInner(url, context, options);
-    });
-  }
-
-  private async executeWithRetryInner(
-    url: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
-    const { maxRetries, initialBackoffMs, maxBackoffMs, timeoutMs } = META_RETRY_CONFIG as Required<typeof META_RETRY_CONFIG>;
-
-    let lastError: McpError | undefined;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const accessToken = await this.authAdapter.getAccessToken();
-
-      const response = await fetchWithTimeout(
+      return executeWithRetry(META_RETRY_CONFIG, {
         url,
-        timeoutMs,
+        fetchOptions: options,
         context,
-        {
-          ...options,
-          headers: {
-            ...options?.headers,
-            Authorization: `Bearer ${accessToken}`,
-          },
+        logger: this.logger,
+        fetchFn: (u, timeout, ctx, opts) =>
+          fetchWithTimeout(u, timeout, ctx, opts, (s) =>
+            s.replace(/access_token=[^&]+/, "access_token=***")
+          ),
+        getHeaders: async () => {
+          const accessToken = await this.authAdapter.getAccessToken();
+          return { Authorization: `Bearer ${accessToken}` };
         },
-        (u) => u.replace(/access_token=[^&]+/, "access_token=***")
-      );
-
-      // Log rate limit headers for observability
-      this.logRateLimitHeaders(response, context);
-
-      if (response.ok) {
-        setSpanAttribute("http.response.status_code", response.status);
-        if (response.status === 204) {
-          return {};
-        }
-        return response.json();
-      }
-
-      const errorBody = await response.text().catch(() => "");
-      let metaError: MetaApiError | undefined;
-      try {
-        metaError = JSON.parse(errorBody) as MetaApiError;
-      } catch {
-        // Not JSON — use raw error body
-      }
-
-      const metaCode = metaError?.error?.code ?? 0;
-      const jsonRpcCode = mapMetaErrorToJsonRpc(metaCode, response.status);
-      let errorMessage = metaError?.error?.message ?? `Meta API request failed: ${response.status}`;
-      if (metaCode === 190 || response.status === 401) {
-        errorMessage += "\n\nAction required: Meta access token expired. Generate a new token in Meta Business Suite or use a System User token.";
-      }
-
-      const redactedUrl = url.replace(/access_token=[^&]+/, "access_token=***");
-      const mcpError = new McpError(
-        jsonRpcCode,
-        errorMessage,
-        {
-          requestId: context?.requestId,
-          httpStatus: response.status,
-          url: redactedUrl,
-          method: options?.method ?? "GET",
-          metaCode,
-          metaSubcode: metaError?.error?.error_subcode,
-          metaType: metaError?.error?.type,
-          fbtraceId: metaError?.error?.fbtrace_id,
-          attempt,
-          ...(metaCode === 190 || response.status === 401
-            ? { tokenExpiryHint: "Meta access token expired. Generate a new token in Meta Business Suite or use a System User token." }
-            : {}),
-        }
-      );
-
-      if (!isRetryableMetaError(metaCode, response.status) || attempt >= maxRetries) {
-        throw mcpError;
-      }
-
-      lastError = mcpError;
-
-      let delayMs = Math.min(
-        initialBackoffMs * Math.pow(2, attempt),
-        maxBackoffMs
-      );
-
-      // Respect Retry-After header
-      const retryAfter = response.headers.get("Retry-After");
-      if (retryAfter) {
-        const retryAfterSeconds = parseInt(retryAfter, 10);
-        if (!isNaN(retryAfterSeconds)) {
-          delayMs = Math.min(retryAfterSeconds * 1000, maxBackoffMs);
-        }
-      }
-
-      this.logger.warn(
-        {
-          url: redactedUrl,
-          method: options?.method ?? "GET",
-          status: response.status,
-          metaCode,
-          attempt: attempt + 1,
-          maxRetries,
-          delayMs,
-          requestId: context?.requestId,
+        mapStatusCode: (status: number, body: string) =>
+          mapMetaErrorToJsonRpc(parseMetaCode(body), status),
+        parseErrorBody: (body: string) => {
+          try {
+            return (JSON.parse(body) as MetaApiError).error?.message ?? body.substring(0, 500);
+          } catch {
+            return body.substring(0, 500);
+          }
         },
-        "Retrying Meta API request after transient error"
-      );
-
-      await delay(delayMs);
-    }
-
-    throw (
-      lastError ??
-      new McpError(JsonRpcErrorCode.InternalError, "Unexpected retry loop exit", {
-        requestId: context?.requestId,
-      })
-    );
+        isRetryable: (status: number, body: string) =>
+          isRetryableMetaError(parseMetaCode(body), status),
+        onResponse: (response: Response, ctx?: RequestContext) => {
+          this.logRateLimitHeaders(response, ctx);
+        },
+        buildErrorData: (_status: number, body: string) => {
+          try {
+            const parsed = JSON.parse(body) as MetaApiError;
+            return {
+              metaCode: parsed.error?.code,
+              metaSubcode: parsed.error?.error_subcode,
+              metaType: parsed.error?.type,
+              fbtraceId: parsed.error?.fbtrace_id,
+            };
+          } catch {
+            return {};
+          }
+        },
+      });
+    });
   }
 
   private logRateLimitHeaders(response: Response, context?: RequestContext): void {
