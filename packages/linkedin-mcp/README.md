@@ -4,7 +4,11 @@ LinkedIn Ads MCP Server - Campaign management via LinkedIn Marketing API v2.
 
 ## Purpose
 
-Management server for LinkedIn Ads. Provides 20 tools across 5 entity types for full CRUD operations, analytics reporting, targeting discovery, bulk operations, and specialized features like entity duplication and delivery forecasts. Designed for AI agents to manage LinkedIn Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for LinkedIn Ads. Provides full CRUD operations, analytics
+reporting, targeting discovery, bulk operations, and specialized features like
+entity duplication and delivery forecasts. Designed for AI agents to manage
+LinkedIn Ads campaigns programmatically through the Model Context Protocol with
+per-session Bearer token authentication.
 
 ## Features
 
@@ -223,7 +227,8 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 20 tools are fully implemented using LinkedIn Marketing API v2 with Bearer token authentication, analytics reporting, and targeting discovery.
+All listed tools are fully implemented using LinkedIn Marketing API v2 with
+Bearer token authentication, analytics reporting, and targeting discovery.
 
 ## Development
 
@@ -288,11 +293,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/linkedin-ads?utm_source=github&utm_medium=package-readme&utm_campaign=linkedin-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/linkedin-ads?utm_source=github&utm_medium=package-readme&utm_campaign=linkedin-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20LinkedIn%20Ads%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20LinkedIn%20Ads%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=linkedin-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=linkedin-mcp)
 
 ## License
 

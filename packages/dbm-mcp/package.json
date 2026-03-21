@@ -26,6 +26,12 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "dbm-mcp": "./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "generate": "node --import tsx ./scripts/generate-types.ts",
     "prebuild": "pnpm run generate",

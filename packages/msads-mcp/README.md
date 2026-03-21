@@ -4,7 +4,12 @@ Microsoft Advertising MCP Server - Campaign management and reporting via Microso
 
 ## Purpose
 
-Management and reporting server for Microsoft Advertising (Bing Ads). Provides 20 tools for full CRUD operations on campaigns, ad groups, ads, keywords, budgets, ad extensions, audiences, and labels. Includes async reporting with configurable aggregation, Google Ads import via ImportJobs API, and ad extension management. Designed for AI agents to manage Microsoft Ads campaigns programmatically through the Model Context Protocol.
+Management and reporting server for Microsoft Advertising (Bing Ads). Provides
+full CRUD operations on campaigns, ad groups, ads, keywords, budgets, ad
+extensions, audiences, and labels. Includes async reporting with configurable
+aggregation, Google Ads import via ImportJobs API, and ad extension management.
+Designed for AI agents to manage Microsoft Ads campaigns programmatically
+through the Model Context Protocol.
 
 ## Features
 
@@ -15,7 +20,7 @@ Management and reporting server for Microsoft Advertising (Bing Ads). Provides 2
 - **Structured logging** via Pino
 - **Google Ads import** via ImportJobs API
 
-## MCP Tools (20 tools)
+## MCP Tools
 
 ### Core CRUD
 
@@ -76,7 +81,7 @@ Management and reporting server for Microsoft Advertising (Bing Ads). Provides 2
 
 **Phase: Production-Ready**
 
-All 20 tools are fully implemented using Microsoft Advertising REST API v13.
+All listed tools are fully implemented using Microsoft Advertising REST API v13.
 
 ## Development
 
@@ -160,11 +165,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/microsoft-ads?utm_source=github&utm_medium=package-readme&utm_campaign=msads-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/microsoft-ads?utm_source=github&utm_medium=package-readme&utm_campaign=msads-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Microsoft%20Ads%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Microsoft%20Ads%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=msads-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=msads-mcp)
 
 ## License
 

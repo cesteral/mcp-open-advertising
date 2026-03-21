@@ -10,7 +10,9 @@
 
 ## Overview
 
-SA360 (Search Ads 360) sits above Google Ads, Microsoft Ads, Yahoo Japan, and Baidu, providing cross-engine unified reporting and automated bidding. This MCP server exposes SA360's capabilities through 15 tools:
+SA360 (Search Ads 360) sits above Google Ads, Microsoft Ads, Yahoo Japan, and
+Baidu, providing cross-engine unified reporting and automated bidding. This MCP
+server exposes SA360 reporting, conversion upload, audit, and query workflows:
 
 - **8 read-only tools** for cross-engine reporting, entity browsing, field discovery, and custom columns
 - **3 async reporting tools** for the submit → poll → download report workflow via the v2 API
@@ -528,11 +530,11 @@ pnpm run dev:http
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/search-ads-360?utm_source=github&utm_medium=package-readme&utm_campaign=sa360-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/search-ads-360?utm_source=github&utm_medium=package-readme&utm_campaign=sa360-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Search%20Ads%20360%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Search%20Ads%20360%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=sa360-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=sa360-mcp)
 
 ## License
 

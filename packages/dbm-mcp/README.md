@@ -125,7 +125,9 @@ Set via `MCP_AUTH_MODE` environment variable.
 
 **Phase: Production-Ready**
 
-All 6 tools are fully implemented using Bid Manager API v2 for DV360 reporting. 5 standard tools plus 1 async task-based tool. Entity retrieval is handled by the separate `@cesteral/dv360-mcp` server.
+The reporting and query tools are fully implemented using Bid Manager API v2 for
+DV360 reporting. Entity retrieval is handled by the separate
+`@cesteral/dv360-mcp` server.
 
 ## Development
 
@@ -183,11 +185,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/bid-manager?utm_source=github&utm_medium=package-readme&utm_campaign=dbm-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/bid-manager?utm_source=github&utm_medium=package-readme&utm_campaign=dbm-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Bid%20Manager%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Bid%20Manager%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=dbm-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=dbm-mcp)
 
 ## License
 

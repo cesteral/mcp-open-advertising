@@ -6,6 +6,15 @@ DV360 MCP Server - Campaign entity management and configuration for Google Displ
 
 Management server for DV360 campaign entities. Provides CRUD operations for campaigns, insertion orders, line items, creatives, and other DV360 entities via the Display & Video 360 API v4.
 
+## Choose Your Path
+
+- **Self-host this connector** when you want direct control of credentials,
+  infrastructure, and DV360 API access.
+- **Use Cesteral Intelligence** when the workflow needs approvals before spend
+  commits, credential brokering, auditability, and cross-platform execution.
+
+[Self-host quickstart](../../docs/guides/quickstart.md) | [Compare OSS vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=dv360-mcp) | [Book a workflow demo](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20DV360%20MCP)
+
 ## Features
 
 - **Schema-Driven Architecture**: Auto-generated TypeScript types and Zod schemas from DV360 OpenAPI specification
@@ -41,14 +50,14 @@ See [CLAUDE_DESKTOP_SETUP.md](./docs/CLAUDE_DESKTOP_SETUP.md) for detailed setup
 The server is built with production-grade architecture and complete functionality:
 
 - ✅ Streamable HTTP transport with session management
-- ✅ 23 MCP tools, all connected to DV360 API
+- ✅ Entity management, targeting, preview, upload, duplication, and validation tools connected to DV360 API
 - ✅ OAuth2 service account authentication
 - ✅ Rate limiting and error handling
 - ✅ OpenTelemetry observability
 - ✅ Dynamic entity system supporting 11 entity types
 - ⚠️ Requires DV360 service account credentials (see Setup below)
 
-## MCP Tools (23 tools)
+## MCP Tools
 
 ### Entity Management (CRUD)
 
@@ -400,11 +409,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/dv360?utm_source=github&utm_medium=package-readme&utm_campaign=dv360-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/dv360?utm_source=github&utm_medium=package-readme&utm_campaign=dv360-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20DV360%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20DV360%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=dv360-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=dv360-mcp)
 
 ## License
 

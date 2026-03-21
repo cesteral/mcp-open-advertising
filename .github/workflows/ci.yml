@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Check registry manifests
+        run: pnpm run check:registry
+
       - name: Build
         run: pnpm run build
 

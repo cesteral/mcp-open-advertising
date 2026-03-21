@@ -1,6 +1,11 @@
-# Quickstart: Try a Cesteral MCP Server in 10 Minutes
+# Quickstart: Self-Host a Flagship Connector in 10 Minutes
 
 Get a flagship MCP server running locally and connected to your AI tool.
+
+Use this guide when you want direct platform access and infrastructure you
+control. If you already know the workflow needs approvals, credential brokering,
+auditability, or cross-platform coordination, skip to **Cesteral Intelligence**
+instead of self-hosting first.
 
 ## Prerequisites
 
@@ -109,12 +114,14 @@ Replace the port with `3005` (Meta) or `3002` (DV360) as needed.
 
 ---
 
-## Skip the setup?
+## Need Governed Team Execution Instead?
 
-[Use managed hosting](https://cesteral.com?utm_source=github&utm_medium=quickstart&utm_campaign=skip-setup) -- credentials, governance, and multi-tenant access included. No infrastructure to manage.
+[Compare OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=quickstart&utm_campaign=skip-setup) -- see when self-hosting is enough and when a governed control plane is the better fit.
+
+[Book a workflow demo](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Cesteral%20MCP%20Servers) if you want to walk through a real ad-platform workflow with your own team context.
 
 ## Next steps
 
 - [Full deployment guide](deployment-instructions.md) for production self-hosting
 - [Environment variables reference](ENV-VARIABLES-GUIDE.md) for all configuration options
-- [Compare self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=quickstart&utm_campaign=next-steps)
+- [Compare OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=quickstart&utm_campaign=next-steps)

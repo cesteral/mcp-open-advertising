@@ -33,7 +33,7 @@
     {
       "package": "dv360-mcp",
       "title": "DV360 MCP Server",
-      "description": "DV360 campaign entity management — CRUD, targeting, bulk ops, custom bidding, and media upload",
+      "description": "Self-hostable DV360 MCP connector for campaign writes, targeting, custom bidding, previews, and media operations",
       "tools": [
         "dv360_list_entities",
         "dv360_get_entity",
@@ -86,7 +86,7 @@
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
       },
-      "tags": ["advertising", "dv360", "google", "campaign-management", "programmatic"]
+      "tags": ["advertising", "dv360", "google", "campaign-management", "programmatic", "self-hosted"]
     },
     {
       "package": "ttd-mcp",
@@ -137,7 +137,7 @@
     {
       "package": "gads-mcp",
       "title": "Google Ads MCP Server",
-      "description": "Google Ads campaign management and reporting — GAQL queries, CRUD, bulk mutate, and insights",
+      "description": "Self-hostable Google Ads MCP connector for campaign writes, GAQL reporting, bulk mutate, validation, and previews",
       "tools": [
         "gads_gaql_search",
         "gads_list_accounts",
@@ -171,12 +171,12 @@
       "auth": {
         "modes": ["google-headers", "jwt", "none"]
       },
-      "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search"]
+      "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search", "self-hosted"]
     },
     {
       "package": "meta-mcp",
       "title": "Meta Ads MCP Server",
-      "description": "Meta Ads campaign management — CRUD, insights, targeting, delivery estimates, and media upload",
+      "description": "Self-hostable Meta Ads MCP connector for campaign writes, insights, targeting, delivery estimates, previews, and media operations",
       "tools": [
         "meta_list_entities",
         "meta_get_entity",
@@ -216,7 +216,7 @@
       "auth": {
         "modes": ["meta-bearer", "jwt", "none"]
       },
-      "tags": ["advertising", "meta", "facebook", "instagram", "campaign-management", "social"]
+      "tags": ["advertising", "meta", "facebook", "instagram", "campaign-management", "social", "self-hosted"]
     },
     {
       "package": "linkedin-mcp",

@@ -6,6 +6,15 @@ Google Ads MCP Server - Campaign entity management and reporting via Google Ads 
 
 Management and reporting server for Google Ads. Provides full CRUD operations on Google Ads campaign entities (campaigns, ad groups, ads, keywords, assets, budgets) and arbitrary GAQL query execution. Designed for AI agents to manage Google Ads campaigns programmatically through the Model Context Protocol.
 
+## Choose Your Path
+
+- **Self-host this connector** when you want direct control of credentials,
+  infrastructure, and Google Ads API access.
+- **Use Cesteral Intelligence** when the workflow needs approvals before spend
+  commits, credential brokering, auditability, and cross-platform execution.
+
+[Self-host quickstart](../../docs/guides/quickstart.md) | [Compare OSS vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=gads-mcp) | [Book a workflow demo](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Google%20Ads%20MCP)
+
 ## Features
 
 - **Per-session authentication** via `SessionServiceStore` pattern
@@ -240,11 +249,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/google-ads?utm_source=github&utm_medium=package-readme&utm_campaign=gads-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/google-ads?utm_source=github&utm_medium=package-readme&utm_campaign=gads-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Google%20Ads%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Google%20Ads%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=gads-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=gads-mcp)
 
 ## License
 

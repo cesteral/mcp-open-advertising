@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.cesteral/gads-mcp",
   "title": "Google Ads MCP Server",
-  "description": "Google Ads campaign management and reporting — GAQL queries, CRUD, bulk mutate, and insights",
+  "description": "Self-hostable Google Ads MCP connector for campaign writes, GAQL reporting, bulk mutate, validation, and previews",
   "repository": {
     "url": "https://github.com/cesteral/cesteral-mcp-servers",
     "source": "github"

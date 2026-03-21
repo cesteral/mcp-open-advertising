@@ -97,7 +97,7 @@ Three auth modes, configured via `MCP_AUTH_MODE`:
 | Mode | Header | Use Case |
 |------|--------|----------|
 | `google-headers` | `X-Google-Auth-Type` + credential headers | Production (per-session Google creds) |
-| `jwt` | `Authorization: Bearer <jwt>` | Managed hosting |
+| `jwt` | `Authorization: Bearer <jwt>` | Centralized or governed deployments |
 | `none` | _(no auth)_ | Local development |
 
 **Google Headers mode** -- clients pass Google OAuth2 credentials via HTTP headers on each session:
@@ -413,11 +413,11 @@ pnpm run lint
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/campaign-manager-360?utm_source=github&utm_medium=package-readme&utm_campaign=cm360-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/campaign-manager-360?utm_source=github&utm_medium=package-readme&utm_campaign=cm360-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Campaign%20Manager%20360%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Campaign%20Manager%20360%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=cm360-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=cm360-mcp)
 
 ## License
 

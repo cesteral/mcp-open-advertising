@@ -15,7 +15,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 - **MCP protocol** with Streamable HTTP transport (Hono)
 - **Structured output** with `outputSchema` on all tools
 
-## MCP Tools (21 tools)
+## MCP Tools
 
 ### Core CRUD
 
@@ -83,7 +83,9 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 **Phase: Production-Ready**
 
-All 21 tools are fully implemented using TTD API v3. Entity CRUD, reporting, bulk operations, GraphQL passthrough, and creative preview are operational via partner token authentication.
+All listed tools are fully implemented using TTD API v3. Entity CRUD,
+reporting, bulk operations, GraphQL passthrough, and creative preview are
+operational via partner token authentication.
 
 ## Development
 
@@ -148,11 +150,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/the-trade-desk?utm_source=github&utm_medium=package-readme&utm_campaign=ttd-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/the-trade-desk?utm_source=github&utm_medium=package-readme&utm_campaign=ttd-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20The%20Trade%20Desk%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20The%20Trade%20Desk%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=ttd-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=ttd-mcp)
 
 ## License
 

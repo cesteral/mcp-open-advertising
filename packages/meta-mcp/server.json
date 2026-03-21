@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.cesteral/meta-mcp",
   "title": "Meta Ads MCP Server",
-  "description": "Meta Ads campaign management — CRUD, insights, targeting, delivery estimates, and media upload",
+  "description": "Self-hostable Meta Ads MCP connector for campaign writes, insights, targeting, delivery estimates, previews, and media operations",
   "repository": {
     "url": "https://github.com/cesteral/cesteral-mcp-servers",
     "source": "github"

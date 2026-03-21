@@ -4,7 +4,11 @@ Snapchat Ads MCP Server - Campaign management and reporting via Snapchat Ads API
 
 ## Purpose
 
-Management server for Snapchat Ads. Provides 23 tools across 4 entity types for full CRUD operations, async reporting, targeting discovery, bulk operations, and specialized features like entity duplication and audience estimation. Designed for AI agents to manage Snapchat Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for Snapchat Ads. Provides full CRUD operations, async
+reporting, targeting discovery, bulk operations, and specialized features like
+entity duplication and audience estimation. Designed for AI agents to manage
+Snapchat Ads campaigns programmatically through the Model Context Protocol with
+per-session Bearer token authentication.
 
 ## Features
 
@@ -261,7 +265,8 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 23 tools are fully implemented using Snapchat Ads API v1 with Bearer token authentication, async reporting, and targeting discovery.
+All listed tools are fully implemented using Snapchat Ads API v1 with Bearer
+token authentication, async reporting, and targeting discovery.
 
 ## Development
 
@@ -327,11 +332,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/snapchat-ads?utm_source=github&utm_medium=package-readme&utm_campaign=snapchat-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/snapchat-ads?utm_source=github&utm_medium=package-readme&utm_campaign=snapchat-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Snapchat%20Ads%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Snapchat%20Ads%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=snapchat-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=snapchat-mcp)
 
 ## License
 

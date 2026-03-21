@@ -4,7 +4,20 @@ Meta Ads MCP Server - Campaign management via Meta Marketing API v22.0.
 
 ## Purpose
 
-Management server for Meta Ads. Provides 20 tools across 5 entity types for full CRUD operations, performance insights, targeting discovery, bulk operations, and specialized features like entity duplication and delivery estimates. Designed for AI agents to manage Meta Ads campaigns programmatically through the Model Context Protocol with per-session Bearer token authentication.
+Management server for Meta Ads. Provides full CRUD operations, performance
+insights, targeting discovery, bulk operations, and specialized features like
+entity duplication and delivery estimates. Designed for AI agents to manage Meta
+Ads campaigns programmatically through the Model Context Protocol with
+per-session Bearer token authentication.
+
+## Choose Your Path
+
+- **Self-host this connector** when you want direct control of credentials,
+  infrastructure, and Meta Ads API access.
+- **Use Cesteral Intelligence** when the workflow needs approvals before spend
+  commits, credential brokering, auditability, and cross-platform execution.
+
+[Self-host quickstart](../../docs/guides/quickstart.md) | [Compare OSS vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=meta-mcp) | [Book a workflow demo](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Meta%20Ads%20MCP)
 
 ## Features
 
@@ -239,7 +252,8 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All 20 tools are fully implemented using Meta Marketing API v22.0 with Bearer token authentication, insights reporting, and targeting discovery.
+All listed tools are fully implemented using Meta Marketing API v22.0 with
+Bearer token authentication, insights reporting, and targeting discovery.
 
 ## Development
 
@@ -306,11 +320,11 @@ See root [CLAUDE.md](../../CLAUDE.md) for development guidelines, build system d
 
 **Self-host**: Follow the [deployment guide](../../docs/guides/deployment-instructions.md) to run this server on your own infrastructure.
 
-**Managed hosting**: [Request access](https://cesteral.com/integrations/meta-ads?utm_source=github&utm_medium=package-readme&utm_campaign=meta-mcp) -- credentials, governance, and multi-tenant access included.
+**Cesteral Intelligence**: [Request access](https://cesteral.com/integrations/meta-ads?utm_source=github&utm_medium=package-readme&utm_campaign=meta-mcp) -- governed execution with credential brokering, approvals, audit, and multi-tenant access.
 
-**Book a demo**: [See it in action](mailto:sales@cesteral.com?subject=Demo%20request%20-%20Meta%20Ads%20MCP) with your own ad accounts.
+**Book a workflow demo**: [See it in action](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Meta%20Ads%20MCP) with your own ad accounts.
 
-**Compare options**: [Self-hosted vs managed](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=meta-mcp)
+**Compare options**: [OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=package-readme&utm_campaign=meta-mcp)
 
 ## License
 
