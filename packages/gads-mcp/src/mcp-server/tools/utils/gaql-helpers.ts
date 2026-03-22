@@ -107,6 +107,9 @@ export function buildListQuery(
   // body parameters in gaqlSearch(). Adding LIMIT here would cap total results and
   // prevent multi-page iteration.
 
+  // Reduce payload size by omitting resource names for fields not in SELECT
+  query += " PARAMETERS omit_unselected_resource_names=true";
+
   return query;
 }
 
@@ -124,5 +127,5 @@ export function buildGetByIdQuery(
   const config = getEntityConfig(entityType);
   const fields = DEFAULT_SELECT_FIELDS[entityType] || [config.idField];
 
-  return `SELECT ${fields.join(", ")} FROM ${config.gaqlResource} WHERE ${config.idField} = ${entityId} LIMIT 1`;
+  return `SELECT ${fields.join(", ")} FROM ${config.gaqlResource} WHERE ${config.idField} = ${entityId} LIMIT 1 PARAMETERS omit_unselected_resource_names=true`;
 }

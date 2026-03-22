@@ -196,7 +196,7 @@ function buildGaqlQuery(input: GetInsightsInput): string {
 
   const whereClause = whereClauses.join(" AND ");
 
-  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClause} ORDER BY metrics.impressions DESC LIMIT ${input.limit}`;
+  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClause} ORDER BY metrics.impressions DESC LIMIT ${input.limit} PARAMETERS omit_unselected_resource_names=true`;
 }
 
 export async function getInsightsLogic(
