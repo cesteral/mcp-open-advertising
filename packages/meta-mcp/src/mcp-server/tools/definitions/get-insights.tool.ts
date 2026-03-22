@@ -12,7 +12,7 @@ const TOOL_DESCRIPTION = `Get performance insights for a Meta Ads entity (accoun
 
 Uses GET /{entityId}/insights with date presets or custom date ranges.
 
-**Common date presets:** today, yesterday, this_month, last_month, last_7d, last_14d, last_28d, last_30d, last_90d, maximum
+**Common date presets:** today, yesterday, this_month, last_month, this_quarter, last_quarter, this_year, last_year, last_3d, last_7d, last_14d, last_28d, last_30d, last_90d, last_week_mon_sun, last_week_sun_sat, this_week_mon_today, this_week_sun_today, maximum, data_maximum
 
 **Common metrics (fields):** impressions, clicks, spend, cpc, cpm, ctr, reach, frequency, actions, action_values, conversions, cost_per_action_type
 

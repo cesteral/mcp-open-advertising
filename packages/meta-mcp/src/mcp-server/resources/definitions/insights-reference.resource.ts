@@ -46,13 +46,21 @@ export const insightsReferenceResource: Resource = {
 | this_month | Current month |
 | last_month | Previous month |
 | this_quarter | Current quarter |
+| last_quarter | Previous quarter |
+| this_year | Current year |
+| last_year | Previous year |
 | last_3d | Last 3 days |
 | last_7d | Last 7 days |
 | last_14d | Last 14 days |
 | last_28d | Last 28 days |
 | last_30d | Last 30 days |
 | last_90d | Last 90 days |
+| this_week_mon_today | This week (Monday to today) |
+| this_week_sun_today | This week (Sunday to today) |
+| last_week_mon_sun | Last week (Monday to Sunday) |
+| last_week_sun_sat | Last week (Sunday to Saturday) |
 | maximum | Maximum available range (up to 37 months) |
+| data_maximum | Maximum range with available data |
 
 ## Custom Date Range
 

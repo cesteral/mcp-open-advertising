@@ -570,15 +570,28 @@ describe("MetaService", () => {
   // ==========================================================================
 
   describe("getDeliveryEstimate", () => {
-    it("calls httpClient.get with correct path and targeting_spec", async () => {
+    it("tries reachestimate first", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
       const targetingSpec = { geo_locations: { countries: ["US"] } };
       await service.getDeliveryEstimate("act_123", targetingSpec);
 
       const [path, params] = httpClient.get.mock.calls[0];
-      expect(path).toBe("/act_123/delivery_estimate");
+      expect(path).toBe("/act_123/reachestimate");
       expect(params.targeting_spec).toBe(JSON.stringify(targetingSpec));
+    });
+
+    it("falls back to delivery_estimate on reachestimate failure", async () => {
+      httpClient.get
+        .mockRejectedValueOnce(new Error("reachestimate unavailable"))
+        .mockResolvedValueOnce({ data: [] });
+
+      await service.getDeliveryEstimate("act_123", {}, "LINK_CLICKS");
+
+      expect(httpClient.get).toHaveBeenCalledTimes(2);
+      const [fallbackPath, fallbackParams] = httpClient.get.mock.calls[1];
+      expect(fallbackPath).toBe("/act_123/delivery_estimate");
+      expect(fallbackParams.optimization_goal).toBe("LINK_CLICKS");
     });
 
     it("normalizes account ID", async () => {
@@ -587,16 +600,7 @@ describe("MetaService", () => {
       await service.getDeliveryEstimate("123456", {});
 
       const [path] = httpClient.get.mock.calls[0];
-      expect(path).toBe("/act_123456/delivery_estimate");
-    });
-
-    it("passes optimization_goal when provided", async () => {
-      httpClient.get.mockResolvedValueOnce({ data: [] });
-
-      await service.getDeliveryEstimate("act_123", {}, "LINK_CLICKS");
-
-      const [, params] = httpClient.get.mock.calls[0];
-      expect(params.optimization_goal).toBe("LINK_CLICKS");
+      expect(path).toBe("/act_123456/reachestimate");
     });
 
     it("calls rateLimiter.consume with account key", async () => {

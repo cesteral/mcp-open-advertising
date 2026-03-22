@@ -227,7 +227,8 @@
         "meta_adjust_bids",
         "meta_bulk_update_entities",
         "meta_upload_image",
-        "meta_upload_video"
+        "meta_upload_video",
+        "meta_manage_budget_schedule"
       ],
       "resources": [
         "entity-hierarchy://all",

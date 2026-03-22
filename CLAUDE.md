@@ -16,7 +16,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 24 |
 | 3 | `ttd-mcp` | 3003 | TTD REST API | advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList | 21 |
 | 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 14 |
-| 5 | `meta-mcp` | 3005 | Meta Marketing API v22.0 | campaign, adSet, ad, adCreative, customAudience | 20 |
+| 5 | `meta-mcp` | 3005 | Meta Marketing API v24.0 | campaign, adSet, ad, adCreative, customAudience | 21 |
 | 6 | `linkedin-mcp` | 3006 | LinkedIn Marketing API v2 | adAccount, campaignGroup, campaign, creative, conversionRule | 20 |
 | 7 | `tiktok-mcp` | 3007 | TikTok Marketing API v1.3 | campaign, adGroup, ad, creative | 23 |
 | 8 | `cm360-mcp` | 3008 | CM360 API v5 | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 16 |
@@ -217,7 +217,7 @@ Standard CRUD/bulk/reporting/preview/validate tools plus:
 
 Plus standard CRUD (`get_entity`, `list_entities`, `create_entity`, `update_entity`, `remove_entity`), `bulk_create_entities`, `bulk_update_status`, `adjust_bids`, `validate_entity`, `get_ad_preview`.
 
-### meta-mcp — 20 Tools (Unique: Insights, Delivery)
+### meta-mcp — 21 Tools (Unique: Insights, Delivery, Budget Schedules)
 
 Standard CRUD/bulk/targeting/media tools plus:
 
@@ -227,7 +227,8 @@ Standard CRUD/bulk/targeting/media tools plus:
 | `meta_get_insights` | Performance metrics for an entity | `entityId`, `fields`, `datePreset`, `timeRange` |
 | `meta_get_insights_breakdowns` | Metrics with dimensional breakdowns | `entityId`, `breakdowns`, `fields`, `datePreset` |
 | `meta_duplicate_entity` | Copy campaigns/adSets/ads | `entityId`, `options` |
-| `meta_get_delivery_estimate` | Audience size estimation | `adAccountId`, `targetingSpec` |
+| `meta_get_delivery_estimate` | Audience size estimation (reachestimate with delivery_estimate fallback) | `adAccountId`, `targetingSpec` |
+| `meta_manage_budget_schedule` | Create/list budget schedules for high-demand periods | `operation`, `campaignId`, `data` |
 
 ### sa360-mcp — 15 Tools (Reporting + Conversions)
 

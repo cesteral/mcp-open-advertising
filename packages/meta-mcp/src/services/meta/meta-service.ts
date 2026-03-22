@@ -266,6 +266,11 @@ export class MetaService {
 
   // ─── Delivery Estimate ─────────────────────────────────────────
 
+  /**
+   * Get audience size / delivery estimate.
+   * Tries /reachestimate first (returns estimated_audience_size),
+   * falls back to /delivery_estimate on error (more fields but requires optimization_goal).
+   */
   async getDeliveryEstimate(
     adAccountId: string,
     targetingSpec: Record<string, unknown>,
@@ -275,6 +280,19 @@ export class MetaService {
     await this.rateLimiter.consume(`meta:${adAccountId}`);
 
     const actId = this.normalizeAccountId(adAccountId);
+
+    // Try reachestimate first — lighter endpoint, no optimization_goal needed
+    try {
+      const reachParams: Record<string, string> = {
+        targeting_spec: JSON.stringify(targetingSpec),
+      };
+      const result = await this.httpClient.get(`/${actId}/reachestimate`, reachParams, context);
+      return result;
+    } catch (err) {
+      this.logger.debug({ err }, "reachestimate failed, falling back to delivery_estimate");
+    }
+
+    // Fallback to delivery_estimate
     const params: Record<string, string> = {
       targeting_spec: JSON.stringify(targetingSpec),
     };
@@ -284,6 +302,27 @@ export class MetaService {
     }
 
     return this.httpClient.get(`/${actId}/delivery_estimate`, params, context);
+  }
+
+  // ─── Budget Schedules ─────────────────────────────────────────
+
+  async createBudgetSchedule(
+    campaignId: string,
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume(`meta:default`, 3);
+
+    return this.httpClient.post(`/${campaignId}/budget_schedules`, data, context);
+  }
+
+  async listBudgetSchedules(
+    campaignId: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    await this.rateLimiter.consume(`meta:default`);
+
+    return this.httpClient.get(`/${campaignId}/budget_schedules`, {}, context);
   }
 
   // ─── Ad Previews ───────────────────────────────────────────────

@@ -14,6 +14,7 @@ const TOOL_DESCRIPTION = `Search for targeting options (interests, behaviors, de
 - \`adinterest\` — Search interests by keyword
 - \`adinterestsuggestion\` — Get suggestions based on existing interests
 - \`adinterestvalid\` — Validate interest IDs
+- \`adbehavior\` — Search behavioral targeting options
 - \`adTargetingCategory\` — Browse targeting categories
 - \`adgeolocation\` — Search geographic locations
 - \`adlocale\` — Search locales/languages

@@ -4,13 +4,13 @@
 /**
  * Tool definitions barrel export
  *
- * 20 tools total:
+ * 21 tools total:
  *   6 core: list entities, get entity, create entity, update entity, delete entity, list ad accounts
  *   2 insights: get insights, get insights breakdowns
  *   2 targeting: search targeting, get targeting options
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
- *   5 specialized: duplicate entity, get delivery estimate, get ad preview, upload image, upload video
+ *   6 specialized: duplicate entity, get delivery estimate, get ad preview, upload image, upload video, manage budget schedule
  *   1 validation: validate entity (client-side)
  */
 
@@ -34,6 +34,7 @@ export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 export { uploadImageTool } from "./upload-image.tool.js";
 export { uploadVideoTool } from "./upload-video.tool.js";
+export { manageBudgetScheduleTool } from "./manage-budget-schedule.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -55,6 +56,7 @@ import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
+import { manageBudgetScheduleTool } from "./manage-budget-schedule.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -83,6 +85,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   adjustBidsTool,
   uploadImageTool,
   uploadVideoTool,
+  manageBudgetScheduleTool,
   // ── Validation ──
   validateEntityTool,
 ];
