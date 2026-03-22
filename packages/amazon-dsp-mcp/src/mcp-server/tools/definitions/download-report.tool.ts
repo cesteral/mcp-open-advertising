@@ -10,11 +10,11 @@ const TOOL_NAME = "amazon_dsp_download_report";
 const TOOL_TITLE = "Download AmazonDsp Report";
 const TOOL_DESCRIPTION = `Download and parse a AmazonDsp report from a download URL.
 
-After a report task is DONE (via \`amazon_dsp_check_report_status\`), use the \`downloadUrl\` to fetch and parse the CSV data.
+After a report task is COMPLETED (via \`amazon_dsp_check_report_status\`), use the \`downloadUrl\` to fetch and parse the report data.
 
 **Workflow:**
 1. \`amazon_dsp_submit_report\` → get \`taskId\`
-2. \`amazon_dsp_check_report_status\` → get \`downloadUrl\` when DONE
+2. \`amazon_dsp_check_report_status\` → get \`downloadUrl\` when COMPLETED
 3. \`amazon_dsp_download_report\` with that URL → get parsed data
 
 **Options:**

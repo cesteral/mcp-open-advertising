@@ -21,8 +21,8 @@ import {
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
-/** Amazon DSP report task status values */
-export type ReportTaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETE" | "FAILED";
+/** Amazon DSP report task status values (per Reporting v3 OpenAPI spec) */
+export type ReportTaskStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
 /** Amazon DSP report task check response */
 interface ReportTaskCheckData {
@@ -32,18 +32,21 @@ interface ReportTaskCheckData {
   fileSize?: number;
 }
 
-/** Amazon DSP report configuration */
+/** Amazon DSP report configuration (per Reporting v3 OpenAPI spec) */
 export interface AmazonDspReportConfig {
   name?: string;
+  /** Start date in YYYY-MM-DD format */
   startDate: string;
+  /** End date in YYYY-MM-DD format */
   endDate: string;
   configuration: {
+    /** Ad product (e.g. DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS) */
     adProduct?: string;
     groupBy: string[];
     columns: string[];
     reportTypeId: string;
     timeUnit?: "DAILY" | "SUMMARY";
-    format?: "JSON" | "GZIP_JSON";
+    format?: "GZIP_JSON";
   };
 }
 
@@ -83,15 +86,16 @@ export class AmazonDspReportingService {
         startDate: reportConfig.startDate,
         endDate: reportConfig.endDate,
         configuration: {
-          adProduct: reportConfig.configuration.adProduct ?? "DSP",
+          adProduct: reportConfig.configuration.adProduct ?? "DEMAND_SIDE_PLATFORM",
           groupBy: reportConfig.configuration.groupBy,
           columns: reportConfig.configuration.columns,
           reportTypeId: reportConfig.configuration.reportTypeId,
           timeUnit: reportConfig.configuration.timeUnit ?? "DAILY",
-          format: reportConfig.configuration.format ?? "JSON",
+          format: reportConfig.configuration.format ?? "GZIP_JSON",
         },
       },
-      context
+      context,
+      "application/vnd.createasyncreportrequest.v3+json"
     )) as { reportId: string; status: string };
 
     return { taskId: result.reportId };
@@ -115,7 +119,7 @@ export class AmazonDspReportingService {
         context
       )) as ReportTaskCheckData;
 
-      if (result.status === "COMPLETE" || result.status === "FAILED") {
+      if (result.status === "COMPLETED" || result.status === "FAILED") {
         this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
         return result;
       }

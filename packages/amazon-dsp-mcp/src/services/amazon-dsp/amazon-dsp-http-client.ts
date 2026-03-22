@@ -52,11 +52,13 @@ export class AmazonDspHttpClient {
 
   /**
    * Make an authenticated POST request with JSON body.
+   * @param contentType - Override Content-Type (e.g. for Reporting v3 API vendor media types)
    */
   async post(
     path: string,
     data?: Record<string, unknown>,
-    context?: RequestContext
+    context?: RequestContext,
+    contentType?: string
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     const body = JSON.stringify(data ?? {});
@@ -64,7 +66,7 @@ export class AmazonDspHttpClient {
     return this.executeRequest(url, context, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": contentType ?? "application/json",
       },
       body,
     });

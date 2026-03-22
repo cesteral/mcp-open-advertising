@@ -29,12 +29,12 @@ export const GetReportInputSchema = z
       .describe("Report name (optional)"),
     startDate: z
       .string()
-      .regex(/^\d{8}$/)
-      .describe("Start date (YYYYMMDD format, e.g. 20240101)"),
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .describe("Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback."),
     endDate: z
       .string()
-      .regex(/^\d{8}$/)
-      .describe("End date (YYYYMMDD format, e.g. 20240131)"),
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .describe("End date (YYYY-MM-DD format, e.g. 2024-01-31)"),
     reportTypeId: z
       .string()
       .min(1)
@@ -55,8 +55,8 @@ export const GetReportInputSchema = z
     adProduct: z
       .string()
       .optional()
-      .default("DSP")
-      .describe("Ad product type (default: DSP)"),
+      .default("DEMAND_SIDE_PLATFORM")
+      .describe("Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"),
   })
   .describe("Parameters for generating an Amazon DSP report");
 
@@ -148,8 +148,8 @@ export const getReportTool = {
       label: "Line item delivery report for last 7 days",
       input: {
         profileId: "1234567890",
-        startDate: "20260224",
-        endDate: "20260304",
+        startDate: "2026-02-24",
+        endDate: "2026-03-04",
         reportTypeId: "dspLineItem",
         groupBy: ["order", "lineItem"],
         columns: ["impressions", "clickThroughs", "totalCost"],
@@ -160,8 +160,8 @@ export const getReportTool = {
       label: "Order performance report",
       input: {
         profileId: "1234567890",
-        startDate: "20260301",
-        endDate: "20260304",
+        startDate: "2026-03-01",
+        endDate: "2026-03-04",
         reportTypeId: "dspOrder",
         groupBy: ["order"],
         columns: ["impressions", "clickThroughs", "totalCost", "dpv14d", "purchases14d"],

@@ -20,7 +20,7 @@ const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
 
 **Gotchas:**
 - Budget values are in the advertiser's account currency
-- State values: RUNNING, PAUSED, ARCHIVED
+- State values: ENABLED, PAUSED, ARCHIVED
 - Line item budget must be a nested object: \`{ budgetType: "DAILY" | "LIFETIME", budget: number }\`
 - Amazon-Advertising-API-Scope header is automatically injected from the session profile ID`;
 

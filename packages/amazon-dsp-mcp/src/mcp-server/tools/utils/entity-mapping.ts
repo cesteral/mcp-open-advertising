@@ -10,7 +10,7 @@
  * - "Creatives" = Creatives/Ads
  *
  * Key Amazon DSP patterns:
- * - No DELETE endpoint — archive via PUT with { status: "ARCHIVED" }
+ * - No DELETE endpoint — archive via PUT with { state: "ARCHIVED" }
  * - Offset pagination: startIndex + count query params
  * - Response includes totalResults
  * - Required headers: Amazon-Advertising-API-ClientId + Amazon-Advertising-API-Scope
@@ -49,7 +49,7 @@ const ENTITY_CONFIGS: Record<AmazonDspEntityType, AmazonDspEntityConfig> = {
     responseKey: "orders",
     listFilterParam: "advertiserId",
     displayName: "Order (Campaign)",
-    defaultFields: ["orderId", "name", "advertiserId", "budget", "startDate", "endDate", "status"],
+    defaultFields: ["orderId", "name", "advertiserId", "budget", "startDate", "endDate", "state"],
   },
   lineItem: {
     listPath: "/dsp/lineItems",
@@ -60,7 +60,7 @@ const ENTITY_CONFIGS: Record<AmazonDspEntityType, AmazonDspEntityConfig> = {
     responseKey: "lineItems",
     listFilterParam: "orderId",
     displayName: "Line Item (Ad Group)",
-    defaultFields: ["lineItemId", "name", "orderId", "budget", "bidding", "status", "targetingCriteria"],
+    defaultFields: ["lineItemId", "name", "orderId", "budget", "bidding", "state", "targetingCriteria"],
   },
   creative: {
     listPath: "/dsp/creatives",

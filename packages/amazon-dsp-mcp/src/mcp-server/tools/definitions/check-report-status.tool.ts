@@ -12,8 +12,8 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted Amazon DSP 
 
 Makes a single API call to check task status. Does not poll or wait.
 
-**Statuses:** PENDING, IN_PROGRESS, COMPLETE, FAILED
-- If COMPLETE with a \`downloadUrl\`, use \`amazon_dsp_download_report\` to fetch results.
+**Statuses:** PENDING, PROCESSING, COMPLETED, FAILED
+- If COMPLETED with a \`downloadUrl\`, use \`amazon_dsp_download_report\` to fetch results.
 - If not done, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
@@ -33,7 +33,7 @@ export const CheckReportStatusOutputSchema = z
   .object({
     taskId: z.string().describe("Report task ID"),
     status: z.string().describe("Current task status"),
-    isComplete: z.boolean().describe("Whether the report is complete (COMPLETE)"),
+    isComplete: z.boolean().describe("Whether the report is complete (COMPLETED)"),
     downloadUrl: z.string().optional().describe("Download URL when COMPLETED"),
     timestamp: z.string().datetime(),
   })
@@ -57,7 +57,7 @@ export async function checkReportStatusLogic(
   return {
     taskId: result.taskId,
     status: result.status,
-    isComplete: result.status === "COMPLETE",
+    isComplete: result.status === "COMPLETED",
     downloadUrl: result.downloadUrl,
     timestamp: new Date().toISOString(),
   };

@@ -19,7 +19,7 @@ const ENTITY_SCHEMA_CONTENT: Record<AmazonDspEntityType, string> = {
     "budget": { "type": "number", "description": "Total budget in USD dollars" },
     "startDate": { "type": "string", "format": "date-time", "description": "ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ" },
     "endDate": { "type": "string", "format": "date-time" },
-    "state": { "type": "string", "enum": ["RUNNING", "PAUSED", "ARCHIVED"] }
+    "state": { "type": "string", "enum": ["ENABLED", "PAUSED", "ARCHIVED"] }
   }
 }
 \`\`\`
@@ -28,7 +28,7 @@ const ENTITY_SCHEMA_CONTENT: Record<AmazonDspEntityType, string> = {
 - Budget is in USD dollars (e.g., 50000.00 = $50,000)
 - Dates must use ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ
 - Amazon DSP has no DELETE endpoint — use state: "ARCHIVED" to remove
-- Active state is "RUNNING" (not "DELIVERING")
+- Active state is "ENABLED" (not "DELIVERING" or "RUNNING")
 
 ## Read-Only Fields
 orderId, creationDate, lastUpdatedDate
@@ -51,7 +51,7 @@ orderId, creationDate, lastUpdatedDate
       },
       "required": ["budgetType", "budget"]
     },
-    "state": { "type": "string", "enum": ["RUNNING", "PAUSED", "ARCHIVED"] },
+    "state": { "type": "string", "enum": ["ENABLED", "PAUSED", "ARCHIVED"] },
     "bidding": {
       "type": "object",
       "properties": {
