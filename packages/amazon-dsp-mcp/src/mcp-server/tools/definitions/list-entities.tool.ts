@@ -81,7 +81,7 @@ export async function listEntitiesLogic(
   const { pageInfo } = result;
 
   return {
-    entities: result.entities as Record<string, unknown>[],
+    entities: result.entities as unknown as Record<string, unknown>[],
     startIndex: pageInfo.startIndex,
     pageSize: pageInfo.count,
     totalResults: pageInfo.totalResults,

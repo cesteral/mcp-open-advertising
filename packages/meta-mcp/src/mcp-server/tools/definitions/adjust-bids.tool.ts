@@ -107,17 +107,17 @@ export async function adjustBidsLogic(
   for (const adjustment of input.adjustments) {
     try {
       // Step 1: Read current ad set state
-      const entity = (await metaService.getEntity(
+      const entity = await metaService.getEntity(
         "adSet",
         adjustment.adSetId,
         ["id", "name", "bid_amount", "bid_strategy"],
         context
-      )) as Record<string, unknown>;
+      );
 
-      const adSetName = entity.name as string | undefined;
+      const adSetName = entity.name;
       const previousBidAmount =
-        entity.bid_amount != null ? Number(entity.bid_amount) : undefined;
-      const bidStrategy = entity.bid_strategy as string | undefined;
+        entity.bid_amount != null ? entity.bid_amount : undefined;
+      const bidStrategy = entity.bid_strategy;
 
       // Step 2: Check for auto-bidding strategies
       let warning: string | undefined;

@@ -39,7 +39,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "generate": "tsx scripts/generate-types.ts"
   },
   "dependencies": {
     "@cesteral/shared": "workspace:*",
@@ -49,6 +50,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.17.6",
+    "openapi-typescript": "^7.10.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^1.6.0"

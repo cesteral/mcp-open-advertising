@@ -60,7 +60,7 @@ export async function listAdAccountsLogic(
   );
 
   return {
-    accounts: result.accounts as Record<string, unknown>[],
+    accounts: result.accounts as unknown as Record<string, unknown>[],
     totalCount: (result.accounts as unknown[]).length,
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,

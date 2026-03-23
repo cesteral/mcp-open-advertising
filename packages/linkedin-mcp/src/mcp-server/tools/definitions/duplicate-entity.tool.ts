@@ -69,7 +69,7 @@ export async function duplicateEntityLogic(
 
   return {
     sourceUrn: input.entityUrn,
-    newEntity: newEntity as Record<string, unknown>,
+    newEntity: newEntity as unknown as Record<string, unknown>,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
   };

@@ -11,6 +11,38 @@ import {
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
+import type {
+  MsAdsCampaign,
+  MsAdsAdGroup,
+  MsAdsAd,
+  MsAdsKeyword,
+  MsAdsBudget,
+  MsAdsAdExtension,
+  MsAdsAudience,
+  MsAdsLabel,
+} from "./types.js";
+
+export type {
+  MsAdsCampaign,
+  MsAdsAdGroup,
+  MsAdsAd,
+  MsAdsKeyword,
+  MsAdsBudget,
+  MsAdsAdExtension,
+  MsAdsAudience,
+  MsAdsLabel,
+};
+
+interface MsAdsEntityMap {
+  campaign: MsAdsCampaign;
+  adGroup: MsAdsAdGroup;
+  ad: MsAdsAd;
+  keyword: MsAdsKeyword;
+  budget: MsAdsBudget;
+  adExtension: MsAdsAdExtension;
+  audience: MsAdsAudience;
+  label: MsAdsLabel;
+}
 
 /**
  * Microsoft Ads entity service — generic CRUD wrapping MsAdsHttpClient.
@@ -30,18 +62,20 @@ export class MsAdsService {
    * - Top-level entities (campaign, budget, label): uses getByAccountOperation with AccountId
    * - Child entities (adGroup, ad, keyword): uses getByParentOperation with parentId
    */
-  async listEntities(
-    entityType: MsAdsEntityType,
+  async listEntities<T extends MsAdsEntityType>(
+    entityType: T,
     params: {
       accountId?: string;
       parentId?: string;
       filters?: Record<string, unknown>;
     },
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ entities: MsAdsEntityMap[T][] }> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(MSADS_READ_KEY);
+
+    let raw: unknown;
 
     if (params.parentId && config.getByParentOperation && config.parentIdField) {
       const body: Record<string, unknown> = {
@@ -49,37 +83,39 @@ export class MsAdsService {
         ...params.filters,
       };
       this.logger.debug({ entityType, parentId: params.parentId }, "Listing entities by parent");
-      return this.httpClient.post(config.getByParentOperation, body, context);
-    }
-
-    if (config.getByAccountOperation) {
+      raw = await this.httpClient.post(config.getByParentOperation, body, context);
+    } else if (config.getByAccountOperation) {
       const body: Record<string, unknown> = {
         AccountId: Number(params.accountId),
         ...params.filters,
       };
       this.logger.debug({ entityType, accountId: params.accountId }, "Listing entities by account");
-      return this.httpClient.post(config.getByAccountOperation, body, context);
+      raw = await this.httpClient.post(config.getByAccountOperation, body, context);
+    } else {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        entityType === "audience"
+          ? "Use getEntity with specific AudienceIds. Audiences cannot be listed by account in the MS Ads REST API v13."
+          : entityType === "budget"
+            ? "Use getEntity with specific BudgetIds. Budgets cannot be listed by account in the MS Ads REST API v13."
+            : `Entity type '${entityType}' does not support listing. Use getEntity with specific IDs.`
+      );
     }
 
-    throw new McpError(
-      JsonRpcErrorCode.InvalidParams,
-      entityType === "audience"
-        ? "Use getEntity with specific AudienceIds. Audiences cannot be listed by account in the MS Ads REST API v13."
-        : entityType === "budget"
-          ? "Use getEntity with specific BudgetIds. Budgets cannot be listed by account in the MS Ads REST API v13."
-          : `Entity type '${entityType}' does not support listing. Use getEntity with specific IDs.`
-    );
+    const result = raw as Record<string, unknown>;
+    const entities = ((result[config.pluralName] as unknown[]) ?? []) as MsAdsEntityMap[T][];
+    return { entities };
   }
 
   /**
    * Get entity by ID(s). Uses getByIdsOperation.
    */
-  async getEntity(
-    entityType: MsAdsEntityType,
+  async getEntity<T extends MsAdsEntityType>(
+    entityType: T,
     entityIds: string[],
     params?: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ entities: MsAdsEntityMap[T][] }> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(MSADS_READ_KEY);
@@ -90,7 +126,10 @@ export class MsAdsService {
     };
 
     this.logger.debug({ entityType, entityIds }, "Getting entities by IDs");
-    return this.httpClient.post(config.getByIdsOperation, body, context);
+    const raw = await this.httpClient.post(config.getByIdsOperation, body, context);
+    const result = raw as Record<string, unknown>;
+    const entities = ((result[config.pluralName] as unknown[]) ?? []) as MsAdsEntityMap[T][];
+    return { entities };
   }
 
   /**
@@ -239,20 +278,19 @@ export class MsAdsService {
 
     // Read current entities
     const entityIds = adjustments.map((a) => a.entityId);
-    const currentData = (await this.getEntity(entityType, entityIds, undefined, context)) as Record<string, unknown>;
-    const currentEntities = (currentData[config.pluralName] as Record<string, unknown>[]) ?? [];
+    const { entities: currentEntities } = await this.getEntity(entityType, entityIds, undefined, context);
 
     // Apply bid changes — skip missing entities to prevent data loss
     const updatedEntities = adjustments
       .map((adj) => {
         const current = currentEntities.find(
-          (e) => String((e as Record<string, unknown>)[config.idField]) === adj.entityId
+          (e) => String((e as unknown as Record<string, unknown>)[config.idField]) === adj.entityId
         );
         if (!current) {
           this.logger.warn({ entityId: adj.entityId }, "Entity not found during bid adjustment — skipping to prevent data loss");
           return null;
         }
-        return { ...current, [adj.bidField]: adj.newBid };
+        return { ...(current as unknown as Record<string, unknown>), [adj.bidField]: adj.newBid };
       })
       .filter((e): e is Record<string, unknown> => e !== null);
 

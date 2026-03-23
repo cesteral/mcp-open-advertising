@@ -113,7 +113,7 @@ describe("tiktok_list_entities tool", () => {
         {
           entityType: "adGroup",
           advertiserId: "1234567890",
-          filters: { status: "ACTIVE" },
+          filters: { status: "ADGROUP_STATUS_ENABLE" },
           page: 2,
           pageSize: 5,
         },
@@ -123,7 +123,7 @@ describe("tiktok_list_entities tool", () => {
 
       expect(mockListEntities).toHaveBeenCalledWith(
         "adGroup",
-        { status: "ACTIVE" },
+        { status: "ADGROUP_STATUS_ENABLE" },
         2,
         5,
         baseContext

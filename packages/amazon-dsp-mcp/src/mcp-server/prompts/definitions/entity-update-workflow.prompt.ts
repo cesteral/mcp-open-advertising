@@ -80,7 +80,7 @@ Use \`amazon_dsp_update_entity\` for **field changes** (name, budget, bidding):
   "tool": "amazon_dsp_update_entity",
   "params": {
     "entityType": "order",
-    "advertiserId": "${profileId}",
+    "profileId": "${profileId}",
     "entityId": "${entityId}",
     "data": {
       "name": "Updated Order Name",
@@ -97,13 +97,14 @@ Use \`amazon_dsp_update_entity\` for **field changes** (name, budget, bidding):
   "tool": "amazon_dsp_update_entity",
   "params": {
     "entityType": "lineItem",
-    "advertiserId": "${profileId}",
+    "profileId": "${profileId}",
     "entityId": "${entityId}",
     "data": {
       "name": "Updated Line Item",
-      "budget": 1000,
+      "budget": { "budgetType": "DAILY", "budget": 1000 },
       "bidding": {
-        "base": 2.50
+        "bidOptimization": "MANUAL",
+        "bidAmount": 2.50
       }
     }
   }
@@ -117,11 +118,11 @@ Use \`amazon_dsp_update_entity\` for **field changes** (name, budget, bidding):
   "tool": "amazon_dsp_update_entity",
   "params": {
     "entityType": "creative",
-    "advertiserId": "${profileId}",
+    "profileId": "${profileId}",
     "entityId": "${entityId}",
     "data": {
       "name": "Updated Creative Name",
-      "clickUrl": "https://example.com/new-landing-page"
+      "clickThroughUrl": "https://example.com/new-landing-page"
     }
   }
 }
@@ -138,14 +139,14 @@ Use \`amazon_dsp_update_entity\` for **field changes** (name, budget, bidding):
   "tool": "amazon_dsp_bulk_update_status",
   "params": {
     "entityType": "${entityType}",
-    "advertiserId": "${profileId}",
+    "profileId": "${profileId}",
     "entityIds": ["${entityId}"],
-    "state": "delivering"
+    "operationStatus": "ENABLED"
   }
 }
 \`\`\`
 
-Valid state values: \`"delivering"\`, \`"paused"\`, \`"archived"\`
+Valid operationStatus values: \`"ENABLED"\`, \`"PAUSED"\`, \`"ARCHIVED"\`
 
 ---
 
@@ -168,7 +169,7 @@ After the update call succeeds, verify the changes:
 
 ## Gotchas
 
-- **Archive is permanent**: Setting \`state: "archived"\` via \`amazon_dsp_delete_entity\` cannot be undone — there is no DELETE endpoint, only soft-archive.
+- **Archive is permanent**: Setting \`state: "ARCHIVED"\` via \`amazon_dsp_delete_entity\` cannot be undone — there is no DELETE endpoint, only soft-archive.
 - **Budget values are in USD**: \`budget: 1000\` means $1000.00 (not cents, not micros).
 - **Line item budget cannot exceed order budget**: Validate parent order budget before updating.
 - **Creative updates may trigger re-review**: Updating creative assets or click URLs may restart review cycles.

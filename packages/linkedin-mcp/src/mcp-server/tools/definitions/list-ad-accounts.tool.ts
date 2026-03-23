@@ -65,7 +65,7 @@ export async function listAdAccountsLogic(
     : pageSize >= requestedCount;
 
   return {
-    accounts: result.accounts as Record<string, unknown>[],
+    accounts: result.accounts as unknown as Record<string, unknown>[],
     total,
     hasMore,
     timestamp: new Date().toISOString(),

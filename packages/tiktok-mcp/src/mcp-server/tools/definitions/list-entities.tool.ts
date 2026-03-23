@@ -29,7 +29,7 @@ export const ListEntitiesInputSchema = z
     filters: z
       .record(z.unknown())
       .optional()
-      .describe("Optional filter criteria (e.g., { status: 'ACTIVE' })"),
+      .describe("Optional filter criteria (e.g., { status: 'CAMPAIGN_STATUS_ENABLE' })"),
     page: z
       .number()
       .int()
@@ -81,7 +81,7 @@ export async function listEntitiesLogic(
   const { pageInfo } = result;
 
   return {
-    entities: result.entities as Record<string, unknown>[],
+    entities: result.entities as unknown as Record<string, unknown>[],
     page: pageInfo.page,
     pageSize: pageInfo.page_size,
     totalNumber: pageInfo.total_number,

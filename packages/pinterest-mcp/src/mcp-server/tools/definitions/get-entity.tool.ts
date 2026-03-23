@@ -54,7 +54,7 @@ export async function getEntityLogic(
   );
 
   return {
-    entity: entity as Record<string, unknown>,
+    entity: entity as unknown as Record<string, unknown>,
     timestamp: new Date().toISOString(),
   };
 }

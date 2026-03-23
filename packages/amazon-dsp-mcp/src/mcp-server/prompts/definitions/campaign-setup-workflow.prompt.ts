@@ -33,7 +33,7 @@ export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): 
 
 ⚠️ **GOTCHA: Amazon-Advertising-API-Scope header must contain your DSP entity ID (profile ID).**
 ⚠️ **GOTCHA: Budget amounts are in USD dollars (not micro-currency). $50 → budget: 50.00**
-⚠️ **GOTCHA: Amazon DSP has no DELETE endpoint. Use status: "ARCHIVED" to remove entities.**
+⚠️ **GOTCHA: Amazon DSP has no DELETE endpoint. Use state: "ARCHIVED" to remove entities.**
 
 ## Step 1: Create Order (Campaign)
 
@@ -49,7 +49,7 @@ amazon_dsp_create_entity({
     "budget": 50000.00,
     "startDate": "2026-01-01T00:00:00Z",
     "endDate": "2026-03-31T23:59:59Z",
-    "status": "DELIVERING"
+    "state": "ENABLED"
   }
 })
 \`\`\`
@@ -67,8 +67,8 @@ amazon_dsp_create_entity({
   "data": {
     "name": "Prospecting - Desktop Display",
     "orderId": "ORDER_ID_FROM_STEP_1",
-    "budget": 10000.00,
-    "status": "DELIVERING",
+    "budget": { "budgetType": "DAILY", "budget": 10000.00 },
+    "state": "ENABLED",
     "bidding": {
       "bidOptimization": "${objective === "REACH" ? "AUTO" : "MANUAL"}",
       "bidAmount": 2.50
@@ -94,18 +94,18 @@ amazon_dsp_create_entity({
     "name": "300x250 Banner - Brand",
     "advertiserId": "ADVERTISER_ID",
     "clickThroughUrl": "https://example.com/landing",
-    "creativeType": "DISPLAY",
-    "status": "ACTIVE"
+    "creativeType": "STANDARD_DISPLAY",
+    "state": "ACTIVE"
   }
 })
 \`\`\`
 
-**Creative Types:** DISPLAY, VIDEO
+**Creative Types:** STANDARD_DISPLAY, VIDEO, RICH_MEDIA
 
 ## Step 4: Verify & Activate
 
 1. Review entities: \`amazon_dsp_get_entity\` for each created entity
-2. Activate if paused: \`amazon_dsp_bulk_update_status\` with status: "DELIVERING"
+2. Activate if paused: \`amazon_dsp_bulk_update_status\` with operationStatus: "ENABLED"
 
 ## Common Errors
 
@@ -121,6 +121,6 @@ amazon_dsp_create_entity({
 - [ ] Order created with correct budget and date range
 - [ ] Line Item linked to Order via orderId
 - [ ] Creative linked to correct advertiserId
-- [ ] All entities in DELIVERING status
+- [ ] All entities in ENABLED state
 `;
 }

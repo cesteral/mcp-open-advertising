@@ -29,7 +29,7 @@ describe("AmazonDspService", () => {
         expect.objectContaining({ advertiserId: "adv_123", startIndex: "0", count: "25" }),
         undefined
       );
-      expect(result.entities[0]).toEqual({ orderId: "o1" });
+      expect(result.entities[0]?.orderId).toBe("o1");
       expect(result.pageInfo.totalResults).toBe(1);
     });
 
@@ -59,19 +59,20 @@ describe("AmazonDspService", () => {
       mockHttpClient.get.mockResolvedValueOnce({ orderId: "o1", name: "Test" });
       const result = await service.getEntity("order", "o1");
       expect(mockHttpClient.get).toHaveBeenCalledWith("/dsp/orders/o1", undefined, undefined);
-      expect((result as any).orderId).toBe("o1");
+      expect(result.orderId).toBe("o1");
     });
   });
 
   describe("createEntity", () => {
     it("sends POST with data directly as the body (no array wrapping)", async () => {
       mockHttpClient.post.mockResolvedValueOnce({ orderId: "new_order" });
-      await service.createEntity("order", { name: "New", advertiserId: "adv_1" });
+      const result = await service.createEntity("order", { name: "New", advertiserId: "adv_1" });
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         "/dsp/orders",
         { name: "New", advertiserId: "adv_1" },
         undefined
       );
+      expect(result.orderId).toBe("new_order");
     });
   });
 
@@ -101,6 +102,40 @@ describe("AmazonDspService", () => {
       mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", state: "PAUSED" });
       await service.updateEntityStatus("order", "o1", "PAUSED");
       expect(mockHttpClient.put).toHaveBeenCalledWith("/dsp/orders/o1", { state: "PAUSED" }, undefined);
+    });
+  });
+
+  describe("adjustBids", () => {
+    it("reads the current line item bid amount and updates the flat bidding payload", async () => {
+      mockHttpClient.get.mockResolvedValueOnce({
+        lineItemId: "li1",
+        orderId: "o1",
+        advertiserId: "adv_1",
+        bidding: {
+          bidOptimization: "MANUAL",
+          bidAmount: 1.25,
+        },
+      });
+      mockHttpClient.put.mockResolvedValueOnce({ lineItemId: "li1" });
+
+      const result = await service.adjustBids([{ lineItemId: "li1", bidAmount: 2.5 }]);
+
+      expect(mockHttpClient.put).toHaveBeenCalledWith(
+        "/dsp/lineItems/li1",
+        {
+          bidding: {
+            bidOptimization: "MANUAL",
+            bidAmount: 2.5,
+          },
+        },
+        undefined
+      );
+      expect(result.results[0]).toEqual({
+        lineItemId: "li1",
+        success: true,
+        previousBid: 1.25,
+        newBid: 2.5,
+      });
     });
   });
 });

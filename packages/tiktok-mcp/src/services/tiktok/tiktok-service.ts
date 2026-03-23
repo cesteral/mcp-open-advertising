@@ -9,19 +9,56 @@ import {
   type TikTokEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type { Logger } from "pino";
+import type {
+  CreateTikTokAdGroupRequest,
+  CreateTikTokAdRequest,
+  CreateTikTokCampaignRequest,
+  TikTokAd,
+  TikTokAdAccount,
+  TikTokAdGroup,
+  TikTokCampaign,
+  TikTokCreative,
+  TikTokPageInfoShape,
+} from "./types.js";
 
-/** TikTok page_info response shape */
-interface TikTokPageInfo {
-  page: number;
-  page_size: number;
-  total_number: number;
-  total_page: number;
+export type {
+  CreateTikTokAdGroupRequest,
+  CreateTikTokAdRequest,
+  CreateTikTokCampaignRequest,
+  TikTokAd,
+  TikTokAdAccount,
+  TikTokAdGroup,
+  TikTokCampaign,
+  TikTokCreative,
+  TikTokPageInfoShape,
+};
+
+interface TikTokEntityMap {
+  campaign: TikTokCampaign;
+  adGroup: TikTokAdGroup;
+  ad: TikTokAd;
+  creative: TikTokCreative;
 }
 
+type TikTokCreateEntityInputMap = {
+  campaign: CreateTikTokCampaignRequest;
+  adGroup: CreateTikTokAdGroupRequest;
+  ad: CreateTikTokAdRequest;
+  creative: Record<string, unknown>;
+};
+
+type TikTokUpdateEntityInputMap = {
+  [K in TikTokEntityType]: Partial<TikTokEntityMap[K]> & Record<string, unknown>;
+};
+
 /** TikTok list response data shape */
-interface TikTokListData {
-  list: unknown[];
-  page_info: TikTokPageInfo;
+interface TikTokListData<T> {
+  list: T[];
+  page_info: TikTokPageInfoShape;
+}
+
+interface TikTokAdvertiserListData {
+  list?: TikTokAdAccount[];
 }
 
 /**
@@ -50,13 +87,13 @@ export class TikTokService {
 
   // ─── Standard CRUD ──────────────────────────────────────────────
 
-  async listEntities(
-    entityType: TikTokEntityType,
+  async listEntities<T extends TikTokEntityType>(
+    entityType: T,
     filters?: Record<string, unknown>,
     page = 1,
     pageSize = 10,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; pageInfo: TikTokPageInfo }> {
+  ): Promise<{ entities: TikTokEntityMap[T][]; pageInfo: TikTokPageInfoShape }> {
     await this.rateLimiter.consume(`tiktok:default`);
 
     const config = getEntityConfig(entityType);
@@ -70,7 +107,11 @@ export class TikTokService {
       params.filtering = JSON.stringify(filters);
     }
 
-    const result = (await this.httpClient.get(config.listPath, params, context)) as TikTokListData;
+    const result = (await this.httpClient.get(
+      config.listPath,
+      params,
+      context
+    )) as TikTokListData<TikTokEntityMap[T]>;
 
     return {
       entities: result?.list ?? [],
@@ -83,11 +124,11 @@ export class TikTokService {
     };
   }
 
-  async getEntity(
-    entityType: TikTokEntityType,
+  async getEntity<T extends TikTokEntityType>(
+    entityType: T,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<TikTokEntityMap[T]> {
     await this.rateLimiter.consume(`tiktok:default`);
 
     const config = getEntityConfig(entityType);
@@ -97,7 +138,11 @@ export class TikTokService {
       fields: JSON.stringify(config.defaultFields),
     };
 
-    const result = (await this.httpClient.get(config.listPath, params, context)) as TikTokListData;
+    const result = (await this.httpClient.get(
+      config.listPath,
+      params,
+      context
+    )) as TikTokListData<TikTokEntityMap[T]>;
 
     const list = result?.list ?? [];
     if (list.length === 0) {
@@ -107,33 +152,41 @@ export class TikTokService {
     return list[0];
   }
 
-  async createEntity(
-    entityType: TikTokEntityType,
-    data: Record<string, unknown>,
+  async createEntity<T extends TikTokEntityType>(
+    entityType: T,
+    data: TikTokCreateEntityInputMap[T],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`tiktok:default`, 3);
 
-    return this.httpClient.post(config.createPath, data, context);
+    return this.httpClient.post(
+      config.createPath,
+      data as unknown as Record<string, unknown>,
+      context
+    ) as Promise<TikTokEntityMap[T]>;
   }
 
-  async updateEntity(
-    entityType: TikTokEntityType,
+  async updateEntity<T extends TikTokEntityType>(
+    entityType: T,
     entityId: string,
-    data: Record<string, unknown>,
+    data: TikTokUpdateEntityInputMap[T],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`tiktok:default`, 3);
 
     // TikTok uses POST for updates, with entity ID in body
-    return this.httpClient.post(config.updatePath, {
-      [config.idField]: entityId,
-      ...data,
-    }, context);
+    return this.httpClient.post(
+      config.updatePath,
+      {
+        [config.idField]: entityId,
+        ...data,
+      },
+      context
+    ) as Promise<TikTokEntityMap[T]>;
   }
 
   async deleteEntity(
@@ -172,20 +225,24 @@ export class TikTokService {
 
   // ─── Advertiser Account ──────────────────────────────────────────
 
-  async listAdvertisers(context?: RequestContext): Promise<unknown> {
+  async listAdvertisers(context?: RequestContext): Promise<TikTokAdvertiserListData> {
     await this.rateLimiter.consume(`tiktok:default`);
 
-    return this.httpClient.get(`/open_api/${this.apiVersion}/advertiser/info/`, {}, context);
+    return this.httpClient.get(
+      `/open_api/${this.apiVersion}/advertiser/info/`,
+      {},
+      context
+    ) as Promise<TikTokAdvertiserListData>;
   }
 
   // ─── Duplicate ──────────────────────────────────────────────────
 
-  async duplicateEntity(
-    entityType: TikTokEntityType,
+  async duplicateEntity<T extends TikTokEntityType>(
+    entityType: T,
     entityId: string,
     options?: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<TikTokEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsDuplicate) {
@@ -198,10 +255,14 @@ export class TikTokService {
     // TikTok copy endpoints follow pattern /{entity}/copy/
     const copyPath = config.createPath.replace("/create/", "/copy/");
 
-    return this.httpClient.post(copyPath, {
-      [config.idField]: entityId,
-      ...options,
-    }, context);
+    return this.httpClient.post(
+      copyPath,
+      {
+        [config.idField]: entityId,
+        ...options,
+      },
+      context
+    ) as Promise<TikTokEntityMap[T]>;
   }
 
   // ─── Bid Adjustment ─────────────────────────────────────────────
@@ -215,8 +276,8 @@ export class TikTokService {
     for (const adjustment of adjustments) {
       try {
         // Read current ad group state
-        const entity = (await this.getEntity("adGroup", adjustment.adGroupId, context)) as Record<string, unknown>;
-        const previousBid = entity.bid_price != null ? Number(entity.bid_price) : undefined;
+        const entity = await this.getEntity("adGroup", adjustment.adGroupId, context);
+        const previousBid = entity.bid_price;
 
         // Update bid
         await this.updateEntity("adGroup", adjustment.adGroupId, {
@@ -243,20 +304,20 @@ export class TikTokService {
 
   // ─── Bulk Operations ────────────────────────────────────────────
 
-  async bulkCreateEntities(
-    entityType: TikTokEntityType,
-    items: Record<string, unknown>[],
+  async bulkCreateEntities<T extends TikTokEntityType>(
+    entityType: T,
+    items: TikTokCreateEntityInputMap[T][],
     context?: RequestContext
-  ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
+  ): Promise<{ results: Array<{ success: boolean; entity?: TikTokEntityMap[T]; error?: string }> }> {
     const results = await executeBulkConcurrent(items, async (data) => {
       return this.createEntity(entityType, data, context);
     }, { logger: this.logger });
     return { results };
   }
 
-  async bulkUpdateEntities(
-    entityType: TikTokEntityType,
-    items: Array<{ entityId: string; data: Record<string, unknown> }>,
+  async bulkUpdateEntities<T extends TikTokEntityType>(
+    entityType: T,
+    items: Array<{ entityId: string; data: TikTokUpdateEntityInputMap[T] }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const bulkResults = await executeBulkConcurrent(items, async (item) => {

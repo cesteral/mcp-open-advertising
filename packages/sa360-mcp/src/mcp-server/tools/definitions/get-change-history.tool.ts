@@ -106,7 +106,7 @@ export async function getChangeHistoryLogic(
   );
 
   return {
-    changes: result.results as Record<string, any>[],
+    changes: result.results as unknown as Record<string, any>[],
     totalChanges: result.results.length,
     timestamp: new Date().toISOString(),
   };

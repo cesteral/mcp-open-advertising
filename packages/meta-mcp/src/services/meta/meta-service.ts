@@ -9,6 +9,31 @@ import {
   type MetaEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type { Logger } from "pino";
+import type {
+  MetaCampaign,
+  MetaAdSet,
+  MetaAd,
+  MetaAdCreative,
+  MetaCustomAudience,
+  MetaAdAccount,
+} from "./types.js";
+
+export type {
+  MetaCampaign,
+  MetaAdSet,
+  MetaAd,
+  MetaAdCreative,
+  MetaCustomAudience,
+  MetaAdAccount,
+};
+
+interface MetaEntityMap {
+  campaign: MetaCampaign;
+  adSet: MetaAdSet;
+  ad: MetaAd;
+  adCreative: MetaAdCreative;
+  customAudience: MetaCustomAudience;
+}
 
 /**
  * Meta Service — Generic CRUD operations for Meta Ads entities,
@@ -31,15 +56,15 @@ export class MetaService {
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
-  async listEntities(
-    entityType: MetaEntityType,
+  async listEntities<T extends MetaEntityType>(
+    entityType: T,
     adAccountId: string,
     fields?: string[],
     filtering?: Record<string, unknown>[],
     limit?: number,
     after?: string,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; nextCursor?: string }> {
+  ): Promise<{ entities: MetaEntityMap[T][]; nextCursor?: string }> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`meta:${adAccountId}`);
@@ -74,7 +99,7 @@ export class MetaService {
     if (result.data !== undefined && !Array.isArray(result.data)) {
       this.logger.warn({ dataType: typeof result.data, entityType }, "Meta API returned unexpected non-array data field");
     }
-    const entities = Array.isArray(result.data) ? result.data : [];
+    const entities = (Array.isArray(result.data) ? result.data : []) as MetaEntityMap[T][];
     const paging = result.paging as Record<string, unknown> | undefined;
     const cursors = paging?.cursors as Record<string, string> | undefined;
 
@@ -84,12 +109,12 @@ export class MetaService {
     };
   }
 
-  async getEntity(
-    entityType: MetaEntityType,
+  async getEntity<T extends MetaEntityType>(
+    entityType: T,
     entityId: string,
     fields?: string[],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<MetaEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`meta:default`);
@@ -102,15 +127,15 @@ export class MetaService {
       params.fields = config.defaultFields.join(",");
     }
 
-    return this.httpClient.get(`/${entityId}`, params, context);
+    return this.httpClient.get(`/${entityId}`, params, context) as Promise<MetaEntityMap[T]>;
   }
 
-  async createEntity(
-    entityType: MetaEntityType,
+  async createEntity<T extends MetaEntityType>(
+    entityType: T,
     adAccountId: string,
     data: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<MetaEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     // Writes consume 3x rate limit tokens
@@ -118,7 +143,7 @@ export class MetaService {
 
     const actId = this.normalizeAccountId(adAccountId);
 
-    return this.httpClient.post(`/${actId}/${config.edge}`, data, context);
+    return this.httpClient.post(`/${actId}/${config.edge}`, data, context) as Promise<MetaEntityMap[T]>;
   }
 
   async updateEntity(
@@ -229,7 +254,7 @@ export class MetaService {
     limit?: number,
     after?: string,
     context?: RequestContext
-  ): Promise<{ accounts: unknown[]; nextCursor?: string }> {
+  ): Promise<{ accounts: MetaAdAccount[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
@@ -254,7 +279,7 @@ export class MetaService {
     if (result.data !== undefined && !Array.isArray(result.data)) {
       this.logger.warn({ dataType: typeof result.data }, "Meta API returned unexpected non-array data field for ad accounts");
     }
-    const accounts = Array.isArray(result.data) ? result.data : [];
+    const accounts = (Array.isArray(result.data) ? result.data : []) as MetaAdAccount[];
     const paging = result.paging as Record<string, unknown> | undefined;
     const cursors = paging?.cursors as Record<string, string> | undefined;
 

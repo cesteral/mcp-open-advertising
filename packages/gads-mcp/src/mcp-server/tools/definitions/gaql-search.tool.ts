@@ -63,7 +63,7 @@ export async function gaqlSearchLogic(
   );
 
   return {
-    results: result.results as Record<string, any>[],
+    results: result.results as unknown as Record<string, any>[],
     totalResultsCount: result.totalResultsCount,
     nextPageToken: result.nextPageToken,
     has_more: !!result.nextPageToken,

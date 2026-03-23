@@ -82,9 +82,9 @@ describe("AmazonDspHttpClient", () => {
     mockFetch.mockResolvedValueOnce({
       ok: true, status: 200,
       headers: { get: () => null },
-      json: async () => ({ orderId: "o1", status: "PAUSED" }),
+      json: async () => ({ orderId: "o1", state: "PAUSED" }),
     });
-    await client.put("/dsp/orders/o1", { status: "PAUSED" });
+    await client.put("/dsp/orders/o1", { state: "PAUSED" });
     expect(mockFetch).toHaveBeenCalledWith(
       expect.stringContaining("/dsp/orders/o1"),
       expect.any(Number),

@@ -1,6 +1,10 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+// Generated TypeScript types for the Pinterest Marketing API v5 are available at
+// src/generated/types.ts — run `pnpm run generate` to produce this file from the
+// official Pinterest OpenAPI spec (https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.json).
+
 import type { PinterestHttpClient } from "./pinterest-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
@@ -10,6 +14,26 @@ import {
   type PinterestEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type { Logger } from "pino";
+import type { components } from "../../generated/types.js";
+
+type PinterestCampaign = components["schemas"]["CampaignResponse"];
+type PinterestAdGroup = components["schemas"]["AdGroupResponse"];
+type PinterestAd = components["schemas"]["AdResponse"];
+type PinterestPin = components["schemas"]["Pin"];
+
+interface PinterestEntityMap {
+  campaign: PinterestCampaign;
+  adGroup: PinterestAdGroup;
+  ad: PinterestAd;
+  creative: PinterestPin;
+}
+
+export type {
+  PinterestCampaign,
+  PinterestAdGroup,
+  PinterestAd,
+  PinterestPin,
+};
 
 /** Pinterest v5 list response shape — cursor-based pagination */
 interface PinterestListResponse {
@@ -48,13 +72,13 @@ export class PinterestService {
 
   // ─── Standard CRUD ──────────────────────────────────────────────
 
-  async listEntities(
-    entityType: PinterestEntityType,
+  async listEntities<T extends PinterestEntityType>(
+    entityType: T,
     filters: { adAccountId: string; campaignId?: string; adGroupId?: string },
     bookmark?: string,
     pageSize = 25,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; pageInfo: PinterestPageInfo }> {
+  ): Promise<{ entities: PinterestEntityMap[T][]; pageInfo: PinterestPageInfo }> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.listPath, { adAccountId: filters.adAccountId });
     const params: Record<string, string> = { page_size: String(pageSize) };
@@ -67,17 +91,17 @@ export class PinterestService {
     const data = await this.httpClient.get(path, params, context) as PinterestListResponse;
 
     return {
-      entities: data?.items ?? [],
+      entities: (data?.items ?? []) as PinterestEntityMap[T][],
       pageInfo: { bookmark: data?.bookmark ?? null },
     };
   }
 
-  async getEntity(
-    entityType: PinterestEntityType,
+  async getEntity<T extends PinterestEntityType>(
+    entityType: T,
     filters: { adAccountId: string },
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<PinterestEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
@@ -93,7 +117,7 @@ export class PinterestService {
 
       // If single-entity response (e.g. GET /v5/pins/{id}), return as-is
       if (!("items" in (result as object))) {
-        return result;
+        return result as PinterestEntityMap[T];
       }
 
       // Otherwise it's a list; find by id
@@ -104,7 +128,7 @@ export class PinterestService {
       if (!entity) {
         throw new Error(`${config.displayName} with ID ${entityId} not found`);
       }
-      return entity;
+      return entity as PinterestEntityMap[T];
     }
 
     // Fallback: list entities and filter by ID
@@ -116,31 +140,31 @@ export class PinterestService {
     if (list.length === 0) {
       throw new Error(`${config.displayName} with ID ${entityId} not found`);
     }
-    return list[0];
+    return list[0] as PinterestEntityMap[T];
   }
 
-  async createEntity(
-    entityType: PinterestEntityType,
+  async createEntity<T extends PinterestEntityType>(
+    entityType: T,
     filters: { adAccountId: string },
     body: unknown,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<PinterestEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.createPath, { adAccountId: filters.adAccountId });
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
 
     const data = await this.httpClient.post(path, [body], context) as { items?: unknown[] };
-    return (data?.items ?? [])[0];
+    return (data?.items ?? [])[0] as PinterestEntityMap[T];
   }
 
-  async updateEntity(
-    entityType: PinterestEntityType,
+  async updateEntity<T extends PinterestEntityType>(
+    entityType: T,
     filters: { adAccountId: string },
     entityId: string,
     updates: unknown,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<PinterestEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { adAccountId: filters.adAccountId, entityId });
 
@@ -149,7 +173,7 @@ export class PinterestService {
     // Single-entity endpoints (e.g. /v5/pins/{entityId}) expect a flat body
     const isSingleEntity = config.updatePath.includes("{entityId}");
     if (isSingleEntity) {
-      return this.httpClient.patch(path, updates, context);
+      return this.httpClient.patch(path, updates, context) as Promise<PinterestEntityMap[T]>;
     }
 
     // Bulk endpoints expect an array body and return { items: [...] }
@@ -158,7 +182,7 @@ export class PinterestService {
       [{ id: entityId, ...(updates as object) }],
       context
     ) as { items?: unknown[] };
-    return (data?.items ?? [])[0];
+    return (data?.items ?? [])[0] as PinterestEntityMap[T];
   }
 
   async deleteEntity(
@@ -231,7 +255,7 @@ export class PinterestService {
 
     // Pinterest v5 has no native copy/duplicate endpoint — implement as client-side read+create.
     // Read source entity, strip system-managed fields, then create a new one.
-    const source = (await this.getEntity(entityType, filters, entityId, context)) as Record<string, unknown>;
+    const source = await this.getEntity(entityType, filters, entityId, context) as unknown as Record<string, unknown>;
 
     const SYSTEM_FIELDS = ["id", "created_time", "updated_time", "ad_account_id", "pin_count", "view_tags"] as const;
     const body: Record<string, unknown> = {};
@@ -261,7 +285,7 @@ export class PinterestService {
     for (const adjustment of adjustments) {
       try {
         // Read current ad group state
-        const entity = (await this.getEntity("adGroup", filters, adjustment.adGroupId, context)) as Record<string, unknown>;
+        const entity = await this.getEntity("adGroup", filters, adjustment.adGroupId, context);
         const previousBid = entity.bid_in_micro_currency != null ? Number(entity.bid_in_micro_currency) : undefined;
 
         // Update bid

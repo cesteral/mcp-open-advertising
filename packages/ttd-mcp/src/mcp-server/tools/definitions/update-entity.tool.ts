@@ -80,7 +80,7 @@ export async function updateEntityLogic(
   );
 
   return {
-    entity: entity as Record<string, any>,
+    entity: entity as unknown as Record<string, any>,
     timestamp: new Date().toISOString(),
   };
 }

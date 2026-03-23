@@ -85,7 +85,7 @@ export async function listEntitiesLogic(
     : pageSize >= requestedCount;
 
   return {
-    entities: result.entities as Record<string, unknown>[],
+    entities: result.entities as unknown as Record<string, unknown>[],
     total,
     start: currentStart,
     has_more,

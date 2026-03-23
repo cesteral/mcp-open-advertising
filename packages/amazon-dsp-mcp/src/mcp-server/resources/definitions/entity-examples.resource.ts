@@ -21,7 +21,7 @@ const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
     "budget": 50000.00,
     "startDate": "2024-01-01T00:00:00Z",
     "endDate": "2024-03-31T23:59:59Z",
-    "status": "DELIVERING"
+    "state": "ENABLED"
   }
 }
 \`\`\`
@@ -45,7 +45,7 @@ const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
   "profileId": "1234567890",
   "entityId": "ORDER123",
   "data": {
-    "status": "ARCHIVED"
+    "state": "ARCHIVED"
   }
 }
 \`\`\`
@@ -61,8 +61,8 @@ const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
   "data": {
     "name": "Prospecting - Desktop Display",
     "orderId": "ORDER123",
-    "budget": 10000.00,
-    "status": "DELIVERING",
+    "budget": { "budgetType": "DAILY", "budget": 10000.00 },
+    "state": "ENABLED",
     "bidding": {
       "bidOptimization": "AUTO"
     },
@@ -81,8 +81,8 @@ const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
   "data": {
     "name": "Remarketing - Website Visitors",
     "orderId": "ORDER123",
-    "budget": 5000.00,
-    "status": "DELIVERING",
+    "budget": { "budgetType": "DAILY", "budget": 5000.00 },
+    "state": "ENABLED",
     "bidding": {
       "bidOptimization": "MANUAL",
       "bidAmount": 3.50
@@ -106,8 +106,8 @@ const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
     "name": "300x250 Banner - Brand",
     "advertiserId": "ADVERTISER123",
     "clickThroughUrl": "https://example.com/landing",
-    "creativeType": "DISPLAY",
-    "status": "ACTIVE"
+    "creativeType": "STANDARD_DISPLAY",
+    "state": "ACTIVE"
   }
 }
 \`\`\`
@@ -122,7 +122,7 @@ const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
     "advertiserId": "ADVERTISER123",
     "clickThroughUrl": "https://example.com/landing",
     "creativeType": "VIDEO",
-    "status": "ACTIVE"
+    "state": "ACTIVE"
   }
 }
 \`\`\`

@@ -13,7 +13,7 @@ const TOOL_DESCRIPTION = `Update a AmazonDsp Ads entity.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-AmazonDsp uses POST for updates with entity ID in the body. Only provided fields are modified.
+AmazonDsp uses PUT to the entity-specific resource. Only provided fields are modified.
 
 **Gotchas:**
 - Use \`amazon_dsp_bulk_update_status\` for status-only changes (more efficient)
@@ -113,7 +113,7 @@ export const updateEntityTool = {
         profileId: "1234567890",
         entityId: "li_123456789",
         data: {
-          bidding: { bidPrice: 2.0 },
+          bidding: { bidOptimization: "MANUAL", bidAmount: 2.0 },
         },
       },
     },

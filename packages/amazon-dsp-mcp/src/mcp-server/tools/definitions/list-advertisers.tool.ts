@@ -37,7 +37,7 @@ export async function listAdvertisersLogic(
 
   const result = await amazonDspService.listAdvertisers(0, 100, context);
 
-  const advertisers = result.entities as Record<string, unknown>[];
+  const advertisers = result.entities as unknown as Record<string, unknown>[];
 
   return {
     advertisers,

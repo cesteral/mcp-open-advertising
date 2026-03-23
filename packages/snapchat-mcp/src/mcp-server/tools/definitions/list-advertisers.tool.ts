@@ -39,7 +39,7 @@ export async function listAdAccountsLogic(
   const { snapchatService } = resolveSessionServices(sdkContext);
 
   const result = await snapchatService.listAdAccounts(context);
-  const advertisers = result.entities as Record<string, unknown>[];
+  const advertisers = result.entities as unknown as Record<string, unknown>[];
 
   return {
     advertisers,

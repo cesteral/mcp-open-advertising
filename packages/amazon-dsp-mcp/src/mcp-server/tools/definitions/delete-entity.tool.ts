@@ -13,7 +13,7 @@ const TOOL_DESCRIPTION = `Archive one or more Amazon DSP entities (equivalent to
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Amazon DSP has no DELETE endpoint. Archiving sets status to ARCHIVED via PUT.
+Amazon DSP has no DELETE endpoint. Archiving sets state to ARCHIVED via PUT.
 Archived entities cannot be recovered. Consider using \`amazon_dsp_bulk_update_status\` with PAUSED first.`;
 
 export const DeleteEntityInputSchema = z

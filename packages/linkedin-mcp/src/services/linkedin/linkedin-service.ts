@@ -9,6 +9,48 @@ import {
   getEntityConfig,
   type LinkedInEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import type {
+  LinkedInAdAccount,
+  LinkedInCampaignGroup,
+  LinkedInCampaign,
+  LinkedInCreative,
+  LinkedInConversionRule,
+  LinkedInElementsResponse,
+  CreateLinkedInCampaignGroupRequest,
+  CreateLinkedInCampaignRequest,
+  CreateLinkedInCreativeRequest,
+} from "./types.js";
+
+export type {
+  LinkedInAdAccount,
+  LinkedInCampaignGroup,
+  LinkedInCampaign,
+  LinkedInCreative,
+  LinkedInConversionRule,
+  CreateLinkedInCampaignGroupRequest,
+  CreateLinkedInCampaignRequest,
+  CreateLinkedInCreativeRequest,
+};
+
+interface LinkedInEntityMap {
+  adAccount: LinkedInAdAccount;
+  campaignGroup: LinkedInCampaignGroup;
+  campaign: LinkedInCampaign;
+  creative: LinkedInCreative;
+  conversionRule: LinkedInConversionRule;
+}
+
+type LinkedInCreateEntityInputMap = {
+  adAccount: Record<string, unknown>; // not typically created via API
+  campaignGroup: CreateLinkedInCampaignGroupRequest;
+  campaign: CreateLinkedInCampaignRequest;
+  creative: CreateLinkedInCreativeRequest;
+  conversionRule: Record<string, unknown>;
+};
+
+type LinkedInUpdateEntityInputMap = {
+  [K in LinkedInEntityType]: Partial<LinkedInEntityMap[K]> & Record<string, unknown>;
+};
 
 /**
  * LinkedIn Service — Generic CRUD operations for LinkedIn Ads entities,
@@ -33,13 +75,13 @@ export class LinkedInService {
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
-  async listEntities(
-    entityType: LinkedInEntityType,
+  async listEntities<T extends LinkedInEntityType>(
+    entityType: T,
     adAccountUrn?: string,
     start?: number,
     count?: number,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; total?: number; start?: number }> {
+  ): Promise<{ entities: LinkedInEntityMap[T][]; total?: number; start?: number }> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`linkedin:${adAccountUrn ?? "default"}`);
@@ -59,57 +101,54 @@ export class LinkedInService {
       config.apiPath,
       params,
       context
-    )) as Record<string, unknown>;
-
-    const entities = (result.elements as unknown[]) || [];
-    const paging = result.paging as Record<string, unknown> | undefined;
+    )) as LinkedInElementsResponse<LinkedInEntityMap[T]>;
 
     return {
-      entities,
-      total: paging?.total as number | undefined,
-      start: paging?.start as number | undefined,
+      entities: result.elements ?? [],
+      total: result.paging?.total,
+      start: result.paging?.start,
     };
   }
 
-  async getEntity(
-    entityType: LinkedInEntityType,
+  async getEntity<T extends LinkedInEntityType>(
+    entityType: T,
     entityUrn: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<LinkedInEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`linkedin:default`);
 
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    return this.httpClient.get(`${config.apiPath}/${encodedUrn}`, undefined, context);
+    return this.httpClient.get(`${config.apiPath}/${encodedUrn}`, undefined, context) as Promise<LinkedInEntityMap[T]>;
   }
 
-  async createEntity(
-    entityType: LinkedInEntityType,
-    data: Record<string, unknown>,
+  async createEntity<T extends LinkedInEntityType>(
+    entityType: T,
+    data: LinkedInCreateEntityInputMap[T],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<LinkedInEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     // Writes consume 3x rate limit tokens
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
-    return this.httpClient.post(config.apiPath, data, context);
+    return this.httpClient.post(config.apiPath, data as unknown as Record<string, unknown>, context) as Promise<LinkedInEntityMap[T]>;
   }
 
-  async updateEntity(
-    entityType: LinkedInEntityType,
+  async updateEntity<T extends LinkedInEntityType>(
+    entityType: T,
     entityUrn: string,
-    data: Record<string, unknown>,
+    data: LinkedInUpdateEntityInputMap[T],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<LinkedInEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     // Writes consume 3x rate limit tokens
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    return this.httpClient.patch(`${config.apiPath}/${encodedUrn}`, data, context);
+    return this.httpClient.patch(`${config.apiPath}/${encodedUrn}`, data as unknown as Record<string, unknown>, context) as Promise<LinkedInEntityMap[T]>;
   }
 
   async deleteEntity(
@@ -134,7 +173,7 @@ export class LinkedInService {
     start?: number,
     count?: number,
     context?: RequestContext
-  ): Promise<{ accounts: unknown[]; total?: number }> {
+  ): Promise<{ accounts: LinkedInAdAccount[]; total?: number }> {
     await this.rateLimiter.consume(`linkedin:default`);
 
     const params: Record<string, string> = {
@@ -143,14 +182,11 @@ export class LinkedInService {
       count: String(Math.min(count ?? 25, 100)),
     };
 
-    const result = (await this.httpClient.get("/v2/adAccounts", params, context)) as Record<string, unknown>;
-
-    const accounts = (result.elements as unknown[]) || [];
-    const paging = result.paging as Record<string, unknown> | undefined;
+    const result = (await this.httpClient.get("/v2/adAccounts", params, context)) as LinkedInElementsResponse<LinkedInAdAccount>;
 
     return {
-      accounts,
-      total: paging?.total as number | undefined,
+      accounts: result.elements ?? [],
+      total: result.paging?.total,
     };
   }
 
@@ -183,11 +219,11 @@ export class LinkedInService {
    * Bulk create entities of the same type.
    * Sends individual create calls with concurrency limit.
    */
-  async bulkCreateEntities(
-    entityType: LinkedInEntityType,
-    items: Record<string, unknown>[],
+  async bulkCreateEntities<T extends LinkedInEntityType>(
+    entityType: T,
+    items: LinkedInCreateEntityInputMap[T][],
     context?: RequestContext
-  ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
+  ): Promise<{ results: Array<{ success: boolean; entity?: LinkedInEntityMap[T]; error?: string }> }> {
     const results = await executeBulkConcurrent(items, async (data) => {
       return this.createEntity(entityType, data, context);
     });
@@ -198,9 +234,9 @@ export class LinkedInService {
    * Bulk update entities with arbitrary data.
    * Each item is updated individually with concurrency limit.
    */
-  async bulkUpdateEntities(
-    entityType: LinkedInEntityType,
-    items: Array<{ entityUrn: string; data: Record<string, unknown> }>,
+  async bulkUpdateEntities<T extends LinkedInEntityType>(
+    entityType: T,
+    items: Array<{ entityUrn: string; data: LinkedInUpdateEntityInputMap[T] }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityUrn: string; success: boolean; error?: string }> }> {
     const bulkResults = await executeBulkConcurrent(items, async (item) => {
@@ -232,7 +268,7 @@ export class LinkedInService {
         await this.updateEntity(
           "campaign",
           adjustment.campaignUrn,
-          { unitCost: adjustment.bidAmount },
+          { unitCost: adjustment.bidAmount } as unknown as LinkedInUpdateEntityInputMap["campaign"],
           context
         );
         results.push({ campaignUrn: adjustment.campaignUrn, success: true });
@@ -319,17 +355,17 @@ export class LinkedInService {
    * Duplicate an entity by reading it and creating a copy.
    * LinkedIn does not have a native copy endpoint, so this is a manual copy.
    */
-  async duplicateEntity(
-    entityType: LinkedInEntityType,
+  async duplicateEntity<T extends LinkedInEntityType>(
+    entityType: T,
     entityUrn: string,
     options?: { newName?: string },
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<LinkedInEntityMap[T]> {
     // Read source entity
-    const source = (await this.getEntity(entityType, entityUrn, context)) as Record<string, unknown>;
+    const source = await this.getEntity(entityType, entityUrn, context);
 
     // Build copy payload — strip read-only fields
-    const copyData: Record<string, unknown> = { ...source };
+    const copyData: Record<string, unknown> = { ...(source as unknown as Record<string, unknown>) };
     delete copyData.id;
     delete copyData.changeAuditStamps;
     delete copyData.created;
@@ -348,7 +384,7 @@ export class LinkedInService {
     // Set to draft/paused status
     copyData.status = "DRAFT";
 
-    return this.createEntity(entityType, copyData, context);
+    return this.createEntity(entityType, copyData as LinkedInCreateEntityInputMap[T], context);
   }
 
   // ─── Delivery Forecast ────────────────────────────────────────────

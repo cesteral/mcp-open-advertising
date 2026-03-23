@@ -74,7 +74,7 @@ export async function bulkUpdateEntitiesLogic(
         data,
         context
       );
-      results.push({ entityId: item.entityId, success: true, entity: entity as Record<string, any> });
+      results.push({ entityId: item.entityId, success: true, entity: entity as unknown as Record<string, any> });
       updated++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

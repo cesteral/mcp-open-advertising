@@ -81,7 +81,7 @@ export async function listEntitiesLogic(
   );
 
   return {
-    entities: result.entities as Record<string, unknown>[],
+    entities: result.entities as unknown as Record<string, unknown>[],
     bookmark: result.pageInfo.bookmark,
     has_more: result.pageInfo.bookmark != null,
     timestamp: new Date().toISOString(),

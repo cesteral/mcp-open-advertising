@@ -12,6 +12,9 @@ import {
   buildListQuery,
   buildGetByIdQuery,
 } from "../../mcp-server/tools/utils/query-helpers.js";
+import type { components } from "../../generated/types.js";
+
+export type SA360SearchRow = components["schemas"]["GoogleAdsSearchads360V0Services__SearchAds360Row"];
 
 /**
  * SA360 Service — SA360 query language queries, account listing, and entity reads
@@ -39,7 +42,7 @@ export class SA360Service {
     pageSize?: number,
     pageToken?: string,
     context?: RequestContext
-  ): Promise<{ results: unknown[]; nextPageToken?: string; totalResultsCount?: number }> {
+  ): Promise<{ results: SA360SearchRow[]; nextPageToken?: string; totalResultsCount?: number }> {
     await this.rateLimiter.consume(`sa360:${customerId}`);
 
     this.logger.debug({ customerId, query: query.substring(0, 200) }, "Executing SA360 search");
@@ -66,7 +69,7 @@ export class SA360Service {
     )) as Record<string, unknown>;
 
     return {
-      results: (result.results as unknown[]) || [],
+      results: ((result.results as unknown[]) || []) as SA360SearchRow[],
       nextPageToken: result.nextPageToken as string | undefined,
       totalResultsCount: result.totalResultsCount as number | undefined,
     };
@@ -104,7 +107,7 @@ export class SA360Service {
     customerId: string,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<SA360SearchRow> {
     const query = buildGetByIdQuery(entityType, entityId);
     const { results } = await this.sa360Search(customerId, query, 1, undefined, context);
 
@@ -126,7 +129,7 @@ export class SA360Service {
     pageToken?: string,
     orderBy?: string,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; nextPageToken?: string; totalResultsCount?: number }> {
+  ): Promise<{ entities: SA360SearchRow[]; nextPageToken?: string; totalResultsCount?: number }> {
     const query = buildListQuery(entityType, filters, orderBy);
     const result = await this.sa360Search(customerId, query, pageSize, pageToken, context);
 

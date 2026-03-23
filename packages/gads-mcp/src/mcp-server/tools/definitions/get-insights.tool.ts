@@ -216,7 +216,7 @@ export async function getInsightsLogic(
     context
   );
 
-  let results = result.results as Record<string, any>[];
+  let results = result.results as unknown as Record<string, any>[];
 
   if (input.includeComputedMetrics) {
     results = results.map(addComputedMetrics);

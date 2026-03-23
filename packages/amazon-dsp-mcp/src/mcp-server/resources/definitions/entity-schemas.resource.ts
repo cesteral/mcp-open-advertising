@@ -55,12 +55,8 @@ orderId, creationDate, lastUpdatedDate
     "bidding": {
       "type": "object",
       "properties": {
-        "bidOptimization": {
-          "type": "object",
-          "properties": {
-            "bidAmount": { "type": "number", "description": "Bid amount in USD" }
-          }
-        }
+        "bidOptimization": { "type": "string", "enum": ["AUTO", "MANUAL", "NONE", "CONVERSIONS", "VCPM_VIEWABLE", "REACH"] },
+        "bidAmount": { "type": "number", "description": "Bid amount in USD (used when bidOptimization is MANUAL)" }
       }
     },
     "targetingCriteria": { "type": "object", "description": "Targeting configuration" }
@@ -70,7 +66,7 @@ orderId, creationDate, lastUpdatedDate
 
 ## Notes
 - orderId links this line item to its parent Order
-- bidding.bidOptimization: AUTO lets Amazon optimize bids automatically
+- bidding.bidOptimization: "AUTO" lets Amazon optimize bids automatically; "MANUAL" requires a bidAmount
 - targetingCriteria supports audience, contextual, geographic, and device targeting
 
 ## Read-Only Fields

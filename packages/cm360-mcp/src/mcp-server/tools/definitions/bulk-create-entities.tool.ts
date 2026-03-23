@@ -68,7 +68,7 @@ export async function bulkCreateEntitiesLogic(
         input.items[i],
         context
       );
-      results.push({ index: i, success: true, entity: entity as Record<string, any> });
+      results.push({ index: i, success: true, entity: entity as unknown as Record<string, any> });
       created++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

@@ -9,16 +9,68 @@ import {
   interpolatePath,
   type AmazonDspEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import type {
+  AmazonDspOrder,
+  AmazonDspLineItem,
+  AmazonDspCreative,
+  AmazonDspAdvertiser,
+  AmazonDspBidding,
+  AmazonDspLineItemBudget,
+  AmazonDspTargetingClause,
+  AmazonDspPageInfo,
+  AmazonDspListResponse,
+  AmazonDspApiError,
+  AmazonDspOrderStatus,
+  AmazonDspLineItemStatus,
+  AmazonDspCreativeStatus,
+  AmazonDspBudgetType,
+  AmazonDspLineItemType,
+  AmazonDspCreativeType,
+  AmazonDspBidOptimization,
+  CreateAmazonDspOrderRequest,
+  CreateAmazonDspLineItemRequest,
+} from "./types.js";
 
-/** Amazon DSP offset pagination response shape */
-interface AmazonDspPageInfo {
-  startIndex: number;
-  count: number;
-  totalResults: number;
+export type {
+  AmazonDspOrder,
+  AmazonDspLineItem,
+  AmazonDspCreative,
+  AmazonDspAdvertiser,
+  AmazonDspBidding,
+  AmazonDspLineItemBudget,
+  AmazonDspTargetingClause,
+  AmazonDspPageInfo,
+  AmazonDspListResponse,
+  AmazonDspApiError,
+  AmazonDspOrderStatus,
+  AmazonDspLineItemStatus,
+  AmazonDspCreativeStatus,
+  AmazonDspBudgetType,
+  AmazonDspLineItemType,
+  AmazonDspCreativeType,
+  AmazonDspBidOptimization,
+  CreateAmazonDspOrderRequest,
+  CreateAmazonDspLineItemRequest,
+};
+
+interface AmazonDspEntityMap {
+  order: AmazonDspOrder;
+  lineItem: AmazonDspLineItem;
+  creative: AmazonDspCreative;
 }
 
+type AmazonDspCreateEntityInputMap = {
+  order: CreateAmazonDspOrderRequest;
+  lineItem: CreateAmazonDspLineItemRequest;
+  creative: Record<string, unknown>;
+};
+
+type AmazonDspUpdateEntityInputMap = {
+  [K in AmazonDspEntityType]: Partial<AmazonDspEntityMap[K]> & Record<string, unknown>;
+};
+
 /** Amazon DSP list response shape (raw from API) */
-interface AmazonDspListResponse {
+interface AmazonDspRawListResponse {
   [key: string]: unknown;
   totalResults?: number;
 }
@@ -46,13 +98,13 @@ export class AmazonDspService {
 
   // ─── Standard CRUD ──────────────────────────────────────────────
 
-  async listEntities(
-    entityType: AmazonDspEntityType,
+  async listEntities<T extends AmazonDspEntityType>(
+    entityType: T,
     filters?: Record<string, string>,
     startIndex = 0,
     pageSize = 25,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; pageInfo: AmazonDspPageInfo }> {
+  ): Promise<{ entities: AmazonDspEntityMap[T][]; pageInfo: AmazonDspPageInfo }> {
     const config = getEntityConfig(entityType);
 
     const params: Record<string, string> = {
@@ -70,9 +122,9 @@ export class AmazonDspService {
     }
 
     await this.rateLimiter.consume("amazon_dsp:read");
-    const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspListResponse;
+    const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspRawListResponse;
 
-    const entities = (result?.[config.responseKey] as unknown[]) ?? [];
+    const entities = (result?.[config.responseKey] as AmazonDspEntityMap[T][]) ?? [];
     const totalResults = result?.totalResults ?? 0;
 
     return {
@@ -85,65 +137,69 @@ export class AmazonDspService {
     };
   }
 
-  async getEntity(
-    entityType: AmazonDspEntityType,
+  async getEntity<T extends AmazonDspEntityType>(
+    entityType: T,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<AmazonDspEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.getPath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:read");
-    return this.httpClient.get(path, undefined, context);
+    return this.httpClient.get(path, undefined, context) as Promise<AmazonDspEntityMap[T]>;
   }
 
-  async createEntity(
-    entityType: AmazonDspEntityType,
-    data: Record<string, unknown>,
+  async createEntity<T extends AmazonDspEntityType>(
+    entityType: T,
+    data: AmazonDspCreateEntityInputMap[T],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<AmazonDspEntityMap[T]> {
     const config = getEntityConfig(entityType);
     await this.rateLimiter.consume("amazon_dsp:write", 3);
     // Amazon DSP create expects a single object body
-    return this.httpClient.post(config.createPath, data, context);
+    return this.httpClient.post(
+      config.createPath,
+      data as unknown as Record<string, unknown>,
+      context
+    ) as Promise<AmazonDspEntityMap[T]>;
   }
 
-  async updateEntity(
-    entityType: AmazonDspEntityType,
+  async updateEntity<T extends AmazonDspEntityType>(
+    entityType: T,
     entityId: string,
-    data: Record<string, unknown>,
+    data: AmazonDspUpdateEntityInputMap[T],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<AmazonDspEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    return this.httpClient.put(path, data, context);
+    return this.httpClient.put(path, data, context) as Promise<AmazonDspEntityMap[T]>;
   }
 
   /**
    * Archive an entity via PUT with { state: "ARCHIVED" }.
    * Amazon DSP has no DELETE endpoint — archiving is the equivalent of deletion.
    */
-  async deleteEntity(
-    entityType: AmazonDspEntityType,
+  async deleteEntity<T extends AmazonDspEntityType>(
+    entityType: T,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<AmazonDspEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    return this.httpClient.put(path, { state: "ARCHIVED" }, context);
+    return this.httpClient.put(path, { state: "ARCHIVED" }, context) as Promise<AmazonDspEntityMap[T]>;
   }
 
-  async updateEntityStatus(
-    entityType: AmazonDspEntityType,
+  async updateEntityStatus<T extends AmazonDspEntityType>(
+    entityType: T,
     entityId: string,
     state: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<AmazonDspEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    return this.httpClient.put(path, { state }, context);
+    return this.httpClient.put(path, { state }, context) as Promise<AmazonDspEntityMap[T]>;
   }
 
   // ─── Advertiser Account ──────────────────────────────────────────
@@ -152,15 +208,15 @@ export class AmazonDspService {
     startIndex = 0,
     pageSize = 25,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; pageInfo: AmazonDspPageInfo }> {
+  ): Promise<{ entities: AmazonDspAdvertiser[]; pageInfo: AmazonDspPageInfo }> {
     const params: Record<string, string> = {
       startIndex: String(startIndex),
       count: String(pageSize),
     };
     await this.rateLimiter.consume("amazon_dsp:read");
-    const result = (await this.httpClient.get("/dsp/advertisers", params, context)) as AmazonDspListResponse;
+    const result = (await this.httpClient.get("/dsp/advertisers", params, context)) as AmazonDspRawListResponse;
 
-    const entities = (result?.advertisers as unknown[]) ?? [];
+    const entities = (result?.advertisers as AmazonDspAdvertiser[]) ?? [];
     const totalResults = result?.totalResults ?? 0;
 
     return {
@@ -207,12 +263,12 @@ export class AmazonDspService {
    * Strips system-managed fields (entity ID, timestamps) then POSTs as a new entity.
    * The duplicate is created in PAUSED state.
    */
-  async duplicateEntity(
-    entityType: AmazonDspEntityType,
+  async duplicateEntity<T extends AmazonDspEntityType>(
+    entityType: T,
     entityId: string,
     options?: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<AmazonDspEntityMap[T]> {
     // Map entity type to its own primary-key field (foreign keys are kept)
     const ENTITY_ID_FIELD: Record<AmazonDspEntityType, string> = {
       order: "orderId",
@@ -228,7 +284,11 @@ export class AmazonDspService {
     ];
 
     // Read source entity
-    const source = (await this.getEntity(entityType, entityId, context)) as Record<string, unknown>;
+    const source = (await this.getEntity(
+      entityType,
+      entityId,
+      context
+    )) as unknown as Record<string, unknown>;
 
     // Strip read-only system fields
     const data: Record<string, unknown> = {};
@@ -245,7 +305,11 @@ export class AmazonDspService {
       ...options,
     };
 
-    return this.createEntity(entityType, newEntity, context);
+    return this.createEntity(
+      entityType,
+      newEntity as unknown as AmazonDspCreateEntityInputMap[T],
+      context
+    );
   }
 
   // ─── Bid Adjustment ─────────────────────────────────────────────
@@ -259,15 +323,15 @@ export class AmazonDspService {
     for (const adjustment of adjustments) {
       try {
         // Read current line item state
-        const entity = (await this.getEntity("lineItem", adjustment.lineItemId, context)) as Record<string, unknown>;
-        const biddingOpt = entity.bidding != null
-          ? ((entity.bidding as Record<string, unknown>).bidOptimization as Record<string, unknown> | undefined)
-          : undefined;
-        const previousBid = biddingOpt?.bidAmount as number | undefined;
+        const entity = await this.getEntity("lineItem", adjustment.lineItemId, context);
+        const previousBid = entity.bidding?.bidAmount;
 
-        // Update bid using Amazon DSP bidding.bidOptimization.bidAmount structure
+        // Preserve the current bidding mode while updating the bid amount.
         await this.updateEntity("lineItem", adjustment.lineItemId, {
-          bidding: { bidOptimization: { bidAmount: adjustment.bidAmount } },
+          bidding: {
+            ...(entity.bidding ?? {}),
+            bidAmount: adjustment.bidAmount,
+          },
         }, context);
 
         results.push({
@@ -290,20 +354,20 @@ export class AmazonDspService {
 
   // ─── Bulk Operations ────────────────────────────────────────────
 
-  async bulkCreateEntities(
-    entityType: AmazonDspEntityType,
-    items: Record<string, unknown>[],
+  async bulkCreateEntities<T extends AmazonDspEntityType>(
+    entityType: T,
+    items: AmazonDspCreateEntityInputMap[T][],
     context?: RequestContext
-  ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
+  ): Promise<{ results: Array<{ success: boolean; entity?: AmazonDspEntityMap[T]; error?: string }> }> {
     const results = await executeBulkConcurrent(items, async (data) => {
       return this.createEntity(entityType, data, context);
     });
     return { results };
   }
 
-  async bulkUpdateEntities(
-    entityType: AmazonDspEntityType,
-    items: Array<{ entityId: string; data: Record<string, unknown> }>,
+  async bulkUpdateEntities<T extends AmazonDspEntityType>(
+    entityType: T,
+    items: Array<{ entityId: string; data: AmazonDspUpdateEntityInputMap[T] }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     const bulkResults = await executeBulkConcurrent(items, async (item) => {

@@ -46,6 +46,7 @@ describe("TikTokService", () => {
         undefined
       );
       expect(result.entities).toHaveLength(1);
+      expect(result.entities[0]?.campaign_id).toBe("123");
       expect(result.pageInfo.total_number).toBe(1);
     });
 
@@ -85,13 +86,14 @@ describe("TikTokService", () => {
       mockPost.mockResolvedValueOnce({ campaign_id: "1800000001" });
 
       const data = { campaign_name: "Test", objective_type: "TRAFFIC" };
-      await service.createEntity("campaign", data);
+      const result = await service.createEntity("campaign", data as any);
 
       expect(mockPost).toHaveBeenCalledWith(
         "/open_api/v1.3/campaign/create/",
         data,
         undefined
       );
+      expect(result.campaign_id).toBe("1800000001");
     });
 
     it("calls correct POST path for ads", async () => {
@@ -180,6 +182,7 @@ describe("TikTokService", () => {
 
       const result = await service.getEntity("campaign", "1800000001");
       expect(result).toEqual(mockEntity);
+      expect(result.campaign_name).toBe("Test");
     });
 
     it("throws when entity not found", async () => {
@@ -220,6 +223,44 @@ describe("TikTokService", () => {
 
       expect(result.results[0].success).toBe(false);
       expect(result.results[0].error).toContain("API error");
+    });
+  });
+
+  describe("adjustBids()", () => {
+    it("reads the current ad group bid before updating it", async () => {
+      mockGet.mockResolvedValueOnce({
+        list: [
+          {
+            adgroup_id: "1700000001",
+            adgroup_name: "AG 1",
+            campaign_id: "1800000001",
+            advertiser_id: "1900000001",
+            status: "ENABLE",
+            bid_price: 1.5,
+          },
+        ],
+        page_info: { page: 1, page_size: 1, total_number: 1, total_page: 1 },
+      });
+      mockPost.mockResolvedValueOnce({});
+
+      const result = await service.adjustBids([
+        { adGroupId: "1700000001", bidPrice: 2.25 },
+      ]);
+
+      expect(mockPost).toHaveBeenCalledWith(
+        "/open_api/v1.3/adgroup/update/",
+        expect.objectContaining({
+          adgroup_id: "1700000001",
+          bid_price: 2.25,
+        }),
+        undefined
+      );
+      expect(result.results[0]).toEqual({
+        adGroupId: "1700000001",
+        success: true,
+        previousBid: 1.5,
+        newBid: 2.25,
+      });
     });
   });
 });

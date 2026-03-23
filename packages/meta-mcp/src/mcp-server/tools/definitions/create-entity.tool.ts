@@ -67,7 +67,7 @@ export async function createEntityLogic(
   );
 
   return {
-    entity: entity as Record<string, unknown>,
+    entity: entity as unknown as Record<string, unknown>,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
   };

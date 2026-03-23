@@ -45,8 +45,8 @@ describe("amazonDsp_list_entities tool", () => {
   describe("listEntitiesLogic()", () => {
     it("returns formatted entity list with pagination info", async () => {
       const mockEntities = [
-        { orderId: "ord_001", name: "Order A", status: "DELIVERING" },
-        { orderId: "ord_002", name: "Order B", status: "PAUSED" },
+        { orderId: "ord_001", name: "Order A", state: "ENABLED" },
+        { orderId: "ord_002", name: "Order B", state: "PAUSED" },
       ];
 
       mockListEntities.mockResolvedValueOnce({

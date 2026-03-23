@@ -7,6 +7,38 @@ import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import type { CM360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { getEntityConfig } from "../../mcp-server/tools/utils/entity-mapping.js";
+import type { components } from "../../generated/types.js";
+
+type CM360Campaign = components["schemas"]["Campaign"];
+type CM360Placement = components["schemas"]["Placement"];
+type CM360Ad = components["schemas"]["Ad"];
+type CM360Creative = components["schemas"]["Creative"];
+type CM360Site = components["schemas"]["Site"];
+type CM360Advertiser = components["schemas"]["Advertiser"];
+type CM360FloodlightActivity = components["schemas"]["FloodlightActivity"];
+type CM360FloodlightConfiguration = components["schemas"]["FloodlightConfiguration"];
+
+interface CM360EntityMap {
+  campaign: CM360Campaign;
+  placement: CM360Placement;
+  ad: CM360Ad;
+  creative: CM360Creative;
+  site: CM360Site;
+  advertiser: CM360Advertiser;
+  floodlightActivity: CM360FloodlightActivity;
+  floodlightConfiguration: CM360FloodlightConfiguration;
+}
+
+export type {
+  CM360Campaign,
+  CM360Placement,
+  CM360Ad,
+  CM360Creative,
+  CM360Site,
+  CM360Advertiser,
+  CM360FloodlightActivity,
+  CM360FloodlightConfiguration,
+};
 
 export class CM360Service {
   constructor(
@@ -21,14 +53,14 @@ export class CM360Service {
     return this.httpClient.fetch("/userprofiles", context);
   }
 
-  async listEntities(
-    entityType: CM360EntityType,
+  async listEntities<T extends CM360EntityType>(
+    entityType: T,
     profileId: string,
     filters?: Record<string, unknown>,
     pageToken?: string,
     maxResults?: number,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; nextPageToken?: string }> {
+  ): Promise<{ entities: CM360EntityMap[T][]; nextPageToken?: string }> {
     await this.rateLimiter.consume("cm360");
     const config = getEntityConfig(entityType);
 
@@ -54,30 +86,30 @@ export class CM360Service {
         `CM360 API response missing expected collection key "${config.apiCollection}" — returning empty results`
       );
     }
-    const entities = (rawEntities as unknown[]) || [];
+    const entities = ((rawEntities as unknown[]) || []) as CM360EntityMap[T][];
     const nextPageToken = result.nextPageToken as string | undefined;
 
     return { entities, nextPageToken };
   }
 
-  async getEntity(
-    entityType: CM360EntityType,
+  async getEntity<T extends CM360EntityType>(
+    entityType: T,
     profileId: string,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<CM360EntityMap[T]> {
     await this.rateLimiter.consume("cm360");
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}/${entityId}`;
-    return this.httpClient.fetch(path, context);
+    return this.httpClient.fetch(path, context) as Promise<CM360EntityMap[T]>;
   }
 
-  async createEntity(
-    entityType: CM360EntityType,
+  async createEntity<T extends CM360EntityType>(
+    entityType: T,
     profileId: string,
     data: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<CM360EntityMap[T]> {
     await this.rateLimiter.consume("cm360");
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
@@ -85,15 +117,15 @@ export class CM360Service {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    });
+    }) as Promise<CM360EntityMap[T]>;
   }
 
-  async updateEntity(
-    entityType: CM360EntityType,
+  async updateEntity<T extends CM360EntityType>(
+    entityType: T,
     profileId: string,
     data: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<CM360EntityMap[T]> {
     await this.rateLimiter.consume("cm360");
     const config = getEntityConfig(entityType);
     const path = `/userprofiles/${profileId}/${config.apiCollection}`;
@@ -101,7 +133,7 @@ export class CM360Service {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
-    });
+    }) as Promise<CM360EntityMap[T]>;
   }
 
   async listTargetingOptions(

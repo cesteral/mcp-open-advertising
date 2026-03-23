@@ -7,6 +7,41 @@ import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { getEntityConfig, type TtdEntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
+import type {
+  TtdAdvertiser,
+  TtdCampaign,
+  TtdAdGroup,
+  TtdAd,
+  TtdCreative,
+  TtdSiteList,
+  TtdDeal,
+  TtdConversionTracker,
+  TtdBidList,
+} from "./types.js";
+
+export type {
+  TtdAdvertiser,
+  TtdCampaign,
+  TtdAdGroup,
+  TtdAd,
+  TtdCreative,
+  TtdSiteList,
+  TtdDeal,
+  TtdConversionTracker,
+  TtdBidList,
+};
+
+interface TtdEntityMap {
+  advertiser: TtdAdvertiser;
+  campaign: TtdCampaign;
+  adGroup: TtdAdGroup;
+  ad: TtdAd;
+  creative: TtdCreative;
+  siteList: TtdSiteList;
+  deal: TtdDeal;
+  conversionTracker: TtdConversionTracker;
+  bidList: TtdBidList;
+}
 
 /**
  * TTD Service — Generic CRUD operations for TTD entities,
@@ -25,13 +60,13 @@ export class TtdService {
 
   // ─── Standard CRUD ─────────────────────────────────────────────────
 
-  async listEntities(
-    entityType: TtdEntityType,
+  async listEntities<T extends TtdEntityType>(
+    entityType: T,
     filters: Record<string, unknown>,
     pageToken?: string,
     pageSize?: number,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; nextPageToken?: string }> {
+  ): Promise<{ entities: TtdEntityMap[T][]; nextPageToken?: string }> {
     const config = getEntityConfig(entityType);
     const partnerId = this.httpClient.partnerId;
 
@@ -63,7 +98,7 @@ export class TtdService {
     )) as Record<string, unknown>;
 
     // TTD returns { Result: [...], TotalCount, ResultCount }
-    const entities = (result.Result as unknown[]) || [];
+    const entities = ((result.Result as unknown[]) || []) as TtdEntityMap[T][];
     const totalCount = (result.TotalCount as number) || 0;
     const resultCount = (result.ResultCount as number) || 0;
     const startIndex = pageToken ? parseInt(pageToken, 10) || 0 : 0;
@@ -75,11 +110,11 @@ export class TtdService {
     };
   }
 
-  async getEntity(
-    entityType: TtdEntityType,
+  async getEntity<T extends TtdEntityType>(
+    entityType: T,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const partnerId = this.httpClient.partnerId;
 
@@ -89,14 +124,14 @@ export class TtdService {
       `${config.apiPath}/${entityId}`,
       context,
       { method: "GET" }
-    );
+    ) as Promise<TtdEntityMap[T]>;
   }
 
-  async createEntity(
-    entityType: TtdEntityType,
+  async createEntity<T extends TtdEntityType>(
+    entityType: T,
     data: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const partnerId = this.httpClient.partnerId;
 
@@ -109,15 +144,15 @@ export class TtdService {
         method: "POST",
         body: JSON.stringify(data),
       }
-    );
+    ) as Promise<TtdEntityMap[T]>;
   }
 
-  async updateEntity(
-    entityType: TtdEntityType,
+  async updateEntity<T extends TtdEntityType>(
+    entityType: T,
     entityId: string,
     data: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const partnerId = this.httpClient.partnerId;
 
@@ -133,7 +168,7 @@ export class TtdService {
         method: "PUT",
         body: JSON.stringify(payload),
       }
-    );
+    ) as Promise<TtdEntityMap[T]>;
   }
 
   async deleteEntity(

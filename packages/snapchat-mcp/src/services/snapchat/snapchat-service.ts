@@ -9,6 +9,28 @@ import {
   interpolatePath,
   type SnapchatEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
+import type {
+  SnapchatCampaign,
+  SnapchatAdSquad,
+  SnapchatAd,
+  SnapchatCreative,
+  SnapchatAdAccount,
+} from "./types.js";
+
+export type {
+  SnapchatCampaign,
+  SnapchatAdSquad,
+  SnapchatAd,
+  SnapchatCreative,
+  SnapchatAdAccount,
+};
+
+interface SnapchatEntityMap {
+  campaign: SnapchatCampaign;
+  adGroup: SnapchatAdSquad;
+  ad: SnapchatAd;
+  creative: SnapchatCreative;
+}
 
 /** Snapchat pagination response (cursor-based) */
 interface SnapchatPaging {
@@ -25,8 +47,8 @@ function unwrapEntities(responseKey: string, entityKey: string, response: unknow
   const items = envelope[responseKey];
   if (!Array.isArray(items)) return [];
   return items
-    .filter((item: any) => item.sub_request_status === "SUCCESS" || item.sub_request_status === undefined)
-    .map((item: any) => item[entityKey] ?? item);
+    .filter((item: Record<string, unknown>) => item["sub_request_status"] === "SUCCESS" || item["sub_request_status"] === undefined)
+    .map((item: Record<string, unknown>) => item[entityKey] ?? item);
 }
 
 function unwrapSingleEntity(responseKey: string, entityKey: string, response: unknown): unknown {
@@ -47,11 +69,11 @@ function unwrapBulkResults(
   const envelope = response as Record<string, unknown>;
   const items = envelope[responseKey];
   if (!Array.isArray(items)) return [];
-  return items.map((item: any) => {
-    if (item.sub_request_status === "SUCCESS" || item.sub_request_status === undefined) {
+  return items.map((item: Record<string, unknown>) => {
+    if (item["sub_request_status"] === "SUCCESS" || item["sub_request_status"] === undefined) {
       return { success: true, entity: item[entityKey] ?? item };
     }
-    const errorMsg = item.sub_request_error_message ?? item.sub_request_status ?? "Unknown error";
+    const errorMsg = item["sub_request_error_message"] ?? item["sub_request_status"] ?? "Unknown error";
     return { success: false, error: String(errorMsg) };
   });
 }
@@ -101,12 +123,12 @@ export class SnapchatService {
 
   // ─── Standard CRUD ──────────────────────────────────────────────
 
-  async listEntities(
-    entityType: SnapchatEntityType,
+  async listEntities<T extends SnapchatEntityType>(
+    entityType: T,
     filters?: Record<string, string>,
     cursor?: string,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; nextCursor?: string }> {
+  ): Promise<{ entities: SnapchatEntityMap[T][]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const config = getEntityConfig(entityType);
@@ -125,17 +147,17 @@ export class SnapchatService {
     }
 
     const response = await this.httpClient.get(interpolatedPath, queryParams, context);
-    const entities = unwrapEntities(config.responseKey, config.entityKey, response);
+    const entities = unwrapEntities(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T][];
     const nextCursor = extractNextCursor(response);
 
     return { entities, nextCursor };
   }
 
-  async getEntity(
-    entityType: SnapchatEntityType,
+  async getEntity<T extends SnapchatEntityType>(
+    entityType: T,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<SnapchatEntityMap[T]> {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const config = getEntityConfig(entityType);
@@ -148,15 +170,15 @@ export class SnapchatService {
       throw new McpError(JsonRpcErrorCode.NotFound, `${config.displayName} with ID ${entityId} not found`);
     }
 
-    return entity;
+    return entity as SnapchatEntityMap[T];
   }
 
-  async createEntity(
-    entityType: SnapchatEntityType,
+  async createEntity<T extends SnapchatEntityType>(
+    entityType: T,
     filters: Record<string, string>,
     data: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<SnapchatEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
@@ -171,16 +193,16 @@ export class SnapchatService {
     const body = { [config.responseKey]: [data] };
     const response = await this.httpClient.post(interpolatedPath, body, context);
 
-    return unwrapSingleEntity(config.responseKey, config.entityKey, response);
+    return unwrapSingleEntity(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T];
   }
 
-  async updateEntity(
-    entityType: SnapchatEntityType,
+  async updateEntity<T extends SnapchatEntityType>(
+    entityType: T,
     entityId: string,
     _filters: Record<string, string>,
     data: Record<string, unknown>,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<SnapchatEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
@@ -189,7 +211,7 @@ export class SnapchatService {
     const body = { [config.responseKey]: [{ id: entityId, ...data }] };
     const response = await this.httpClient.put(interpolatedPath, body, context);
 
-    return unwrapSingleEntity(config.responseKey, config.entityKey, response);
+    return unwrapSingleEntity(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T];
   }
 
   async deleteEntity(
@@ -205,12 +227,12 @@ export class SnapchatService {
     return this.httpClient.delete(interpolatedPath, undefined, context);
   }
 
-  async updateEntityStatus(
-    entityType: SnapchatEntityType,
+  async updateEntityStatus<T extends SnapchatEntityType>(
+    entityType: T,
     entityId: string,
     status: "ACTIVE" | "PAUSED" | "ARCHIVED",
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<SnapchatEntityMap[T]> {
     const config = getEntityConfig(entityType);
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
@@ -219,16 +241,16 @@ export class SnapchatService {
     const body = { [config.responseKey]: [{ id: entityId, status }] };
     const response = await this.httpClient.put(interpolatedPath, body, context);
 
-    return unwrapSingleEntity(config.responseKey, config.entityKey, response);
+    return unwrapSingleEntity(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T];
   }
 
   // ─── Advertiser Account ──────────────────────────────────────────
 
-  async listAdAccounts(context?: RequestContext): Promise<{ entities: unknown[]; nextCursor?: string }> {
+  async listAdAccounts(context?: RequestContext): Promise<{ entities: SnapchatAdAccount[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const response = await this.httpClient.get(`/v1/organizations/${this.orgId}/adaccounts`, {}, context);
-    const entities = unwrapEntities("adaccounts", "adaccount", response);
+    const entities = unwrapEntities("adaccounts", "adaccount", response) as SnapchatAdAccount[];
     const nextCursor = extractNextCursor(response);
 
     return { entities, nextCursor };
@@ -271,8 +293,8 @@ export class SnapchatService {
     for (const adjustment of adjustments) {
       try {
         // Read current ad group state
-        const entity = (await this.getEntity("adGroup", adjustment.adGroupId, context)) as Record<string, unknown>;
-        const previousBid = entity.bid_micro != null ? Number(entity.bid_micro) / 1_000_000 : undefined;
+        const entity = await this.getEntity("adGroup", adjustment.adGroupId, context);
+        const previousBid = entity.bid_micro != null ? entity.bid_micro / 1_000_000 : undefined;
 
         // Update bid — convert currency to micros (Snapchat stores bids in micro-currency)
         const bidMicro = Math.round(adjustment.bidPrice * 1_000_000);

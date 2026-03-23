@@ -72,7 +72,7 @@ export async function listEntitiesLogic(
   );
 
   return {
-    entities: result.entities as Record<string, unknown>[],
+    entities: result.entities as unknown as Record<string, unknown>[],
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,
     timestamp: new Date().toISOString(),

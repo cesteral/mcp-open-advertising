@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getEntityTypeEnum, getEntityConfig, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_list_entities";
@@ -55,7 +55,7 @@ export async function listEntitiesLogic(
 ): Promise<ListEntitiesOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
 
-  const result = (await msadsService.listEntities(
+  const { entities: rawEntities } = await msadsService.listEntities(
     input.entityType as MsAdsEntityType,
     {
       accountId: input.accountId,
@@ -63,11 +63,9 @@ export async function listEntitiesLogic(
       filters: input.filters,
     },
     context
-  )) as Record<string, unknown>;
+  );
 
-  // Extract entities array from response using the entity config's pluralName
-  const config = getEntityConfig(input.entityType as MsAdsEntityType);
-  const entities = (result[config.pluralName] as Record<string, unknown>[]) ?? [];
+  const entities = rawEntities as unknown as Record<string, unknown>[];
 
   return {
     entities,

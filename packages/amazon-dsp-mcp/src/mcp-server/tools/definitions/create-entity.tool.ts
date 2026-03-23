@@ -64,7 +64,7 @@ export async function createEntityLogic(
   );
 
   return {
-    entity: entity as Record<string, unknown>,
+    entity: entity as unknown as Record<string, unknown>,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
   };
@@ -115,7 +115,7 @@ export const createEntityTool = {
           name: "US Display — Retargeting",
           orderId: "ord_123456789",
           budget: { budgetType: "DAILY", budget: 2000 },
-          bidding: { bidOptimization: { bidAmount: 2.5 } },
+          bidding: { bidOptimization: "MANUAL", bidAmount: 2.5 },
         },
       },
     },

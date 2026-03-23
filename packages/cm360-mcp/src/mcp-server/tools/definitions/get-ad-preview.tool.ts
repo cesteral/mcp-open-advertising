@@ -50,7 +50,7 @@ export async function getAdPreviewLogic(
     input.profileId,
     input.adId,
     context
-  )) as Record<string, unknown>;
+  )) as unknown as Record<string, unknown>;
 
   // CM360 ads don't have a native preview URL endpoint.
   // Extract click-through URL if available for reference.

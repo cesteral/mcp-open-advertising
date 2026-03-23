@@ -15,6 +15,9 @@ import {
   buildListQuery,
   buildGetByIdQuery,
 } from "../../mcp-server/tools/utils/gaql-helpers.js";
+import type { GoogleAdsQueryRow } from "./types.js";
+
+export type { GoogleAdsQueryRow };
 
 /**
  * Google Ads Service — GAQL queries, account listing, and generic CRUD
@@ -42,7 +45,7 @@ export class GAdsService {
     pageSize?: number,
     pageToken?: string,
     context?: RequestContext
-  ): Promise<{ results: unknown[]; nextPageToken?: string; totalResultsCount?: number }> {
+  ): Promise<{ results: GoogleAdsQueryRow[]; nextPageToken?: string; totalResultsCount?: number }> {
     await this.rateLimiter.consume(`gads:${customerId}`);
 
     this.logger.debug({ customerId, query: query.substring(0, 200) }, "Executing GAQL search");
@@ -69,7 +72,7 @@ export class GAdsService {
     )) as Record<string, unknown>;
 
     return {
-      results: (result.results as unknown[]) || [],
+      results: ((result.results as unknown[]) || []) as GoogleAdsQueryRow[],
       nextPageToken: result.nextPageToken as string | undefined,
       totalResultsCount: result.totalResultsCount as number | undefined,
     };
@@ -108,7 +111,7 @@ export class GAdsService {
     customerId: string,
     entityId: string,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<GoogleAdsQueryRow> {
     const query = buildGetByIdQuery(entityType, entityId);
     const { results } = await this.gaqlSearch(customerId, query, 1, undefined, context);
 
@@ -130,7 +133,7 @@ export class GAdsService {
     pageToken?: string,
     orderBy?: string,
     context?: RequestContext
-  ): Promise<{ entities: unknown[]; nextPageToken?: string; totalResultsCount?: number }> {
+  ): Promise<{ entities: GoogleAdsQueryRow[]; nextPageToken?: string; totalResultsCount?: number }> {
     const query = buildListQuery(entityType, filters, orderBy);
     const result = await this.gaqlSearch(customerId, query, pageSize, pageToken, context);
 
