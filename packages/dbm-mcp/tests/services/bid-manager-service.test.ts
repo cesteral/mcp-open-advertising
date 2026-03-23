@@ -134,6 +134,18 @@ function createQuerySpec() {
 }
 
 /**
+ * Run an async operation that involves polling sleeps with fake timers.
+ * Starts the promise, then advances timers until it resolves or rejects.
+ */
+async function withAdvancedTimers<T>(fn: () => Promise<T>): Promise<T> {
+  const promise = fn();
+  for (let i = 0; i < 40; i++) {
+    await vi.advanceTimersByTimeAsync(500);
+  }
+  return promise;
+}
+
+/**
  * Set up the full query lifecycle mocks for end-to-end tests
  * (create -> run -> poll DONE -> fetch CSV)
  */
@@ -332,7 +344,9 @@ describe("BidManagerService", () => {
         },
       });
 
-      const result = await service.pollForCompletion("q-123", "r-456");
+      const result = await withAdvancedTimers(() =>
+        service.pollForCompletion("q-123", "r-456")
+      );
 
       expect(result.status.state).toBe("DONE");
       expect(result.googleCloudStoragePath).toBe("gs://bucket/report.csv");
@@ -348,9 +362,13 @@ describe("BidManagerService", () => {
         },
       });
 
-      await expect(
-        service.pollForCompletion("q-123", "r-456")
-      ).rejects.toThrow(ReportGenerationError);
+      const promise = service.pollForCompletion("q-123", "r-456");
+      // Register the rejection handler BEFORE advancing timers
+      const assertion = expect(promise).rejects.toThrow(ReportGenerationError);
+      for (let i = 0; i < 10; i++) {
+        await vi.advanceTimersByTimeAsync(500);
+      }
+      await assertion;
     });
 
     it("throws ReportTimeoutError after maxRetries", async () => {
@@ -551,16 +569,18 @@ describe("BidManagerService", () => {
         },
       });
 
-      const result = await service.executeQueryWithRetry(createQuerySpec(), {
-        maxRetries: 2,
-        retryCooldownMs: 100,
-        backoffConfig: {
-          maxRetries: 3,
-          initialDelayMs: 100,
-          maxDelayMs: 1000,
-          backoffMultiplier: 2,
-        },
-      });
+      const result = await withAdvancedTimers(() =>
+        service.executeQueryWithRetry(createQuerySpec(), {
+          maxRetries: 2,
+          retryCooldownMs: 100,
+          backoffConfig: {
+            maxRetries: 3,
+            initialDelayMs: 100,
+            maxDelayMs: 1000,
+            backoffMultiplier: 2,
+          },
+        })
+      );
 
       expect(result).toEqual({
         gcsPath: "gs://bucket/report.csv",
@@ -757,12 +777,14 @@ describe("BidManagerService", () => {
     it("builds correct query spec, executes, and returns parsed metrics", async () => {
       setupFullLifecycleMocks(mockClient);
 
-      const result = await service.getDeliveryMetrics({
-        advertiserId: "adv-123",
-        campaignId: "camp-456",
-        startDate: "2024-01-01",
-        endDate: "2024-01-31",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.getDeliveryMetrics({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          startDate: "2024-01-01",
+          endDate: "2024-01-31",
+        })
+      );
 
       // parseCSVToDeliveryMetrics is mocked to return the standard delivery metrics
       expect(result).toEqual({
@@ -816,13 +838,15 @@ describe("BidManagerService", () => {
         revenue: 1000,
       });
 
-      const result = await service.getPacingStatus({
-        advertiserId: "adv-123",
-        campaignId: "camp-456",
-        budgetTotal: 1000,
-        flightStartDate: "2024-01-01",
-        flightEndDate: "2024-01-31",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.getPacingStatus({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          budgetTotal: 1000,
+          flightStartDate: "2024-01-01",
+          flightEndDate: "2024-01-31",
+        })
+      );
 
       expect(result.advertiserId).toBe("adv-123");
       expect(result.campaignId).toBe("camp-456");
@@ -850,13 +874,15 @@ describe("BidManagerService", () => {
         revenue: 1000,
       });
 
-      const result = await service.getPacingStatus({
-        advertiserId: "adv-123",
-        campaignId: "camp-456",
-        budgetTotal: 1000,
-        flightStartDate: "2024-01-01",
-        flightEndDate: "2024-01-31",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.getPacingStatus({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          budgetTotal: 1000,
+          flightStartDate: "2024-01-01",
+          flightEndDate: "2024-01-31",
+        })
+      );
 
       expect(result.status).toBe("AHEAD");
     });
@@ -880,13 +906,15 @@ describe("BidManagerService", () => {
         revenue: 1000,
       });
 
-      const result = await service.getPacingStatus({
-        advertiserId: "adv-123",
-        campaignId: "camp-456",
-        budgetTotal: 1000,
-        flightStartDate: "2024-01-01",
-        flightEndDate: "2024-01-31",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.getPacingStatus({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          budgetTotal: 1000,
+          flightStartDate: "2024-01-01",
+          flightEndDate: "2024-01-31",
+        })
+      );
 
       expect(result.status).toBe("BEHIND");
     });
@@ -910,13 +938,15 @@ describe("BidManagerService", () => {
         revenue: 1000,
       });
 
-      const result = await service.getPacingStatus({
-        advertiserId: "adv-123",
-        campaignId: "camp-456",
-        budgetTotal: 1000,
-        flightStartDate: "2024-01-01",
-        flightEndDate: "2024-01-31",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.getPacingStatus({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          budgetTotal: 1000,
+          flightStartDate: "2024-01-01",
+          flightEndDate: "2024-01-31",
+        })
+      );
 
       expect(result.status).toBe("SEVERELY_BEHIND");
     });
@@ -930,12 +960,14 @@ describe("BidManagerService", () => {
     it("delegates to getDeliveryMetrics and calculatePerformanceMetrics", async () => {
       setupFullLifecycleMocks(mockClient);
 
-      const result = await service.getPerformanceMetrics({
-        advertiserId: "adv-123",
-        campaignId: "camp-456",
-        startDate: "2024-01-01",
-        endDate: "2024-01-31",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.getPerformanceMetrics({
+          advertiserId: "adv-123",
+          campaignId: "camp-456",
+          startDate: "2024-01-01",
+          endDate: "2024-01-31",
+        })
+      );
 
       expect(result).toEqual({
         impressions: 10000,
@@ -985,12 +1017,14 @@ describe("BidManagerService", () => {
         })
       );
 
-      const result = await service.executeCustomQuery({
-        reportType: "STANDARD",
-        groupBys: ["FILTER_DATE"],
-        metrics: ["METRIC_IMPRESSIONS", "METRIC_CLICKS"],
-        dateRange: { preset: "LAST_7_DAYS" },
-      });
+      const result = await withAdvancedTimers(() =>
+        service.executeCustomQuery({
+          reportType: "STANDARD",
+          groupBys: ["FILTER_DATE"],
+          metrics: ["METRIC_IMPRESSIONS", "METRIC_CLICKS"],
+          dateRange: { preset: "LAST_7_DAYS" },
+        })
+      );
 
       expect(result.status).toBe("DONE");
 
@@ -1013,12 +1047,14 @@ describe("BidManagerService", () => {
         })
       );
 
-      const result = await service.executeCustomQuery({
-        reportType: "STANDARD",
-        groupBys: ["FILTER_DATE"],
-        metrics: ["METRIC_IMPRESSIONS"],
-        dateRange: { startDate: "2024-03-01", endDate: "2024-03-31" },
-      });
+      const result = await withAdvancedTimers(() =>
+        service.executeCustomQuery({
+          reportType: "STANDARD",
+          groupBys: ["FILTER_DATE"],
+          metrics: ["METRIC_IMPRESSIONS"],
+          dateRange: { startDate: "2024-03-01", endDate: "2024-03-31" },
+        })
+      );
 
       expect(result.status).toBe("DONE");
 
@@ -1056,13 +1092,15 @@ describe("BidManagerService", () => {
         })
       );
 
-      const result = await service.executeCustomQuery({
-        reportType: "STANDARD",
-        groupBys: ["FILTER_DATE"],
-        metrics: ["METRIC_IMPRESSIONS"],
-        dateRange: { preset: "LAST_7_DAYS" },
-        outputFormat: "csv",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.executeCustomQuery({
+          reportType: "STANDARD",
+          groupBys: ["FILTER_DATE"],
+          metrics: ["METRIC_IMPRESSIONS"],
+          dateRange: { preset: "LAST_7_DAYS" },
+          outputFormat: "csv",
+        })
+      );
 
       expect(result.status).toBe("DONE");
       expect(result.data).toBe(csvContent);
@@ -1080,13 +1118,15 @@ describe("BidManagerService", () => {
         })
       );
 
-      const result = await service.executeCustomQuery({
-        reportType: "STANDARD",
-        groupBys: ["FILTER_DATE"],
-        metrics: ["METRIC_IMPRESSIONS"],
-        dateRange: { preset: "LAST_7_DAYS" },
-        outputFormat: "structured",
-      });
+      const result = await withAdvancedTimers(() =>
+        service.executeCustomQuery({
+          reportType: "STANDARD",
+          groupBys: ["FILTER_DATE"],
+          metrics: ["METRIC_IMPRESSIONS"],
+          dateRange: { preset: "LAST_7_DAYS" },
+          outputFormat: "structured",
+        })
+      );
 
       expect(result.status).toBe("DONE");
       expect(Array.isArray(result.data)).toBe(true);

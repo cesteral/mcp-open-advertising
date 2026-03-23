@@ -41,10 +41,10 @@ const ConfigSchema = BaseConfigSchema.extend({
 
   // Report Settings (Bid Manager async reports with exponential backoff)
   reportCacheTtlMs: z.number().default(300000), // 5 minute cache
-  reportPollMaxRetries: z.number().default(10), // Max polling attempts
-  reportPollInitialDelayMs: z.number().default(2000), // Initial backoff delay (2s)
-  reportPollMaxDelayMs: z.number().default(60000), // Max backoff delay (60s)
-  reportQueryRetries: z.number().default(3), // High-level query retries
+  reportPollMaxRetries: z.number().default(30), // Max polling attempts
+  reportPollInitialDelayMs: z.number().default(5000), // Initial backoff delay (5s)
+  reportPollMaxDelayMs: z.number().default(30000), // Max backoff delay (30s)
+  reportQueryRetries: z.number().default(5), // High-level query retries
   reportRetryCooldownMs: z.number().default(60000), // Delay before retry (60s)
 });
 

@@ -219,6 +219,9 @@ export class BidManagerService {
     for (let attempt = 0; attempt < config.maxRetries; attempt++) {
       const currentDelay = this.calculateBackoffDelay(attempt, config);
 
+      // Sleep before polling — a report is never ready immediately after submission
+      await sleep(currentDelay);
+
       this.logger.debug(
         { queryId, reportId, attempt: attempt + 1, maxRetries: config.maxRetries, delayMs: currentDelay },
         "Poll attempt"
@@ -239,11 +242,6 @@ export class BidManagerService {
         if (report.status.state === "FAILED") {
           throw new ReportGenerationError(queryId, reportId, report.status.format);
         }
-
-        // Wait before next attempt (skip wait on last attempt)
-        if (attempt < config.maxRetries - 1) {
-          await sleep(currentDelay);
-        }
       } catch (error) {
         // Re-throw terminal errors
         if (error instanceof ReportGenerationError) {
@@ -254,11 +252,6 @@ export class BidManagerService {
           { error: error instanceof Error ? error.message : String(error), queryId, reportId, attempt: attempt + 1 },
           "Poll attempt failed, will retry"
         );
-
-        // Wait before retry (skip wait on last attempt)
-        if (attempt < config.maxRetries - 1) {
-          await sleep(currentDelay);
-        }
       }
     }
 
