@@ -91,6 +91,12 @@ export interface TargetingParentConfig {
  * - Input schema ID fields (via `getTargetingRequiredIdFields()`)
  */
 export const TARGETING_PARENT_TYPES = {
+  advertiser: {
+    apiPathTemplate:
+      '/advertisers/{advertiserId}/targetingTypes/{targetingType}/assignedTargetingOptions',
+    requiredIds: ['advertiserId'] as const,
+    entityIdField: 'advertiserId',
+  },
   campaign: {
     apiPathTemplate:
       '/advertisers/{advertiserId}/campaigns/{campaignId}/targetingTypes/{targetingType}/assignedTargetingOptions',
