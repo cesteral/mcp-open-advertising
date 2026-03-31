@@ -177,6 +177,72 @@ export class TtdReportingService {
     return { reportScheduleId, state, execution, downloadUrl };
   }
 
+  /**
+   * List report schedules matching an optional query.
+   */
+  async listReportSchedules(
+    query: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch("/myreports/reportschedule/query", context, {
+      method: "POST",
+      body: JSON.stringify(query),
+    });
+  }
+
+  /**
+   * Get a single report schedule by ID.
+   */
+  async getReportSchedule(
+    scheduleId: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch(
+      `/myreports/reportschedule/${scheduleId}`,
+      context,
+      { method: "GET" }
+    );
+  }
+
+  /**
+   * Delete a report schedule by ID.
+   */
+  async deleteReportSchedule(
+    scheduleId: string,
+    context?: RequestContext
+  ): Promise<void> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    await this.httpClient.fetch(
+      `/myreports/reportschedule/${scheduleId}`,
+      context,
+      { method: "DELETE" }
+    );
+  }
+
+  /**
+   * List report template headers (read-only — templates are created in the TTD UI).
+   */
+  async listReportTemplates(
+    query: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch(
+      "/myreports/reporttemplateheader/query",
+      context,
+      {
+        method: "POST",
+        body: JSON.stringify(query),
+      }
+    );
+  }
+
   private async pollReportExecution(
     reportScheduleId: string,
     context?: RequestContext

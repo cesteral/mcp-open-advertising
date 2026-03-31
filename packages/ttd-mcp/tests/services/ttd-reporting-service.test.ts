@@ -254,6 +254,110 @@ describe("TtdReportingService", () => {
   });
 
   // ==========================================================================
+  // listReportSchedules
+  // ==========================================================================
+
+  describe("listReportSchedules", () => {
+    it("calls POST /myreports/reportschedule/query", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalFilteredCount: 0 });
+      const result = await service.listReportSchedules({});
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/myreports/reportschedule/query");
+      expect(options.method).toBe("POST");
+      expect(JSON.parse(options.body)).toEqual({});
+      expect(result).toEqual({ Result: [], TotalFilteredCount: 0 });
+    });
+
+    it("passes query body through", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalFilteredCount: 0 });
+      const query = { PageSize: 10, PageStartIndex: 5 };
+      await service.listReportSchedules(query);
+      const [, , options] = httpClient.fetch.mock.calls[0];
+      expect(JSON.parse(options.body)).toEqual(query);
+    });
+
+    it("consumes rate limiter once", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: [] });
+      await service.listReportSchedules({});
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+  });
+
+  // ==========================================================================
+  // getReportSchedule
+  // ==========================================================================
+
+  describe("getReportSchedule", () => {
+    it("calls GET /myreports/reportschedule/{id}", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "abc123" });
+      const result = await service.getReportSchedule("abc123");
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/myreports/reportschedule/abc123");
+      expect(options.method).toBe("GET");
+      expect(result).toEqual({ ReportScheduleId: "abc123" });
+    });
+
+    it("consumes rate limiter once", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "x" });
+      await service.getReportSchedule("x");
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+  });
+
+  // ==========================================================================
+  // deleteReportSchedule
+  // ==========================================================================
+
+  describe("deleteReportSchedule", () => {
+    it("calls DELETE /myreports/reportschedule/{id}", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
+      await service.deleteReportSchedule("abc123");
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/myreports/reportschedule/abc123");
+      expect(options.method).toBe("DELETE");
+    });
+
+    it("consumes rate limiter once", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
+      await service.deleteReportSchedule("x");
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+  });
+
+  // ==========================================================================
+  // listReportTemplates
+  // ==========================================================================
+
+  describe("listReportTemplates", () => {
+    it("calls POST /myreports/reporttemplateheader/query", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalFilteredCount: 0 });
+      const result = await service.listReportTemplates({});
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/myreports/reporttemplateheader/query");
+      expect(options.method).toBe("POST");
+      expect(result).toEqual({ Result: [], TotalFilteredCount: 0 });
+    });
+
+    it("passes query body through", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: [] });
+      const query = { PageSize: 20 };
+      await service.listReportTemplates(query);
+      const [, , options] = httpClient.fetch.mock.calls[0];
+      expect(JSON.parse(options.body)).toEqual(query);
+    });
+
+    it("consumes rate limiter once", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ Result: [] });
+      await service.listReportTemplates({});
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+  });
+
+  // ==========================================================================
   // checkReportExecution
   // ==========================================================================
 
