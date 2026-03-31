@@ -14,7 +14,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 |---|--------|------|-----|-------------|-------|
 | 1 | `dbm-mcp` | 3001 | Bid Manager API v2 | _(reporting only)_ | 6 |
 | 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 24 |
-| 3 | `ttd-mcp` | 3003 | TTD REST API | advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList | 21 |
+| 3 | `ttd-mcp` | 3003 | TTD REST API | advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList | 28 |
 | 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 14 |
 | 5 | `meta-mcp` | 3005 | Meta Marketing API v24.0 | campaign, adSet, ad, adCreative, customAudience | 21 |
 | 6 | `linkedin-mcp` | 3006 | LinkedIn Marketing API v2 | adAccount, campaignGroup, campaign, creative, conversionRule | 20 |
@@ -193,7 +193,7 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `dv360_upload_image` | Upload image from URL | `advertiserId`, `mediaUrl`, `name?` |
 | `dv360_upload_video` | Upload video from URL | `advertiserId`, `mediaUrl`, `title?` |
 
-### ttd-mcp — 21 Tools (Unique: GraphQL)
+### ttd-mcp — 28 Tools (Unique: GraphQL)
 
 Standard CRUD/bulk/reporting/preview/validate tools plus:
 
@@ -201,10 +201,17 @@ Standard CRUD/bulk/reporting/preview/validate tools plus:
 |------|-------------|----------------|
 | `ttd_archive_entities` | Batch archive (soft-delete) | `entityType`, `entityIds[]` |
 | `ttd_graphql_query` | Execute GraphQL query/mutation | `query`, `variables` |
-| `ttd_graphql_query_bulk` | Bulk GraphQL queries | `queries[]` |
-| `ttd_graphql_mutation_bulk` | Bulk GraphQL mutations | `mutations[]` |
-| `ttd_graphql_bulk_job` | Async bulk GraphQL job | `operation`, `variables` |
-| `ttd_graphql_cancel_bulk_job` | Cancel bulk GraphQL job | `jobId` |
+| `ttd_graphql_query_bulk` | Bulk GraphQL queries | `query`, `variables[]` |
+| `ttd_graphql_mutation_bulk` | Bulk GraphQL mutations | `mutation`, `inputs[]` |
+| `ttd_graphql_bulk_job` | Check async bulk GraphQL job status | `jobId` |
+| `ttd_graphql_cancel_bulk_job` | Cancel bulk GraphQL query job | `jobId` |
+| `ttd_execute_entity_report` | Execute immediate entity report via GraphQL (no polling) | `entityType`, `entityId`, `reportType` |
+| `ttd_get_entity_report_types` | Discover available report types for an entity | `entityType`, `entityId`, `tile` |
+| `ttd_create_report_schedule` | Create named recurring report schedule | `reportName`, `scheduleType`, `dateRange` |
+| `ttd_delete_report_schedule` | Delete a report schedule | `scheduleId` |
+| `ttd_list_report_schedules` | List report schedules with optional advertiser filter | `advertiserIds?`, `pageSize?` |
+| `ttd_get_report_schedule` | Get a specific report schedule by ID | `scheduleId` |
+| `ttd_list_report_templates` | List read-only report templates created in TTD UI | `pageSize?` |
 
 ### gads-mcp — 14 Tools (Unique: GAQL)
 
