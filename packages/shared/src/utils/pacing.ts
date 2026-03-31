@@ -52,11 +52,26 @@ export interface PacingResult {
 export function calculatePacingStatus(input: PacingInput): PacingResult {
   const { spendToDate, budgetTotal, flightStartDate, flightEndDate } = input;
 
-  const today = new Date().toISOString().split("T")[0];
-  // Use today or flight end, whichever is earlier
-  const effectiveEndDate = today < flightEndDate ? today : flightEndDate;
+  const today = new Date().toISOString().split("T")[0]!;
 
   const totalDays = daysBetween(flightStartDate, flightEndDate) + 1;
+
+  // Pre-flight: flight hasn't started yet
+  if (today < flightStartDate) {
+    return {
+      expectedSpendPercent: 0,
+      actualSpendPercent: roundN(safeDivide(spendToDate, budgetTotal, 0) * 100, 2),
+      pacingRatio: 0,
+      status: "BEHIND",
+      projectedEndSpend: 0,
+      daysElapsed: 0,
+      daysRemaining: totalDays,
+      totalDays,
+    };
+  }
+
+  // Use today or flight end, whichever is earlier
+  const effectiveEndDate = today < flightEndDate ? today : flightEndDate;
   const daysPassed = daysBetween(flightStartDate, effectiveEndDate) + 1;
   const daysRemaining = Math.max(0, totalDays - daysPassed);
 

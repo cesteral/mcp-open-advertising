@@ -116,8 +116,15 @@ export async function getAnalyticsLogic(
       const cost = Number((row as Record<string, unknown>).costInUsd || 0);
       const impressions = Number((row as Record<string, unknown>).impressions || 0);
       const clicks = Number((row as Record<string, unknown>).clicks || 0);
-      const conversions = Number((row as Record<string, unknown>).conversions || 0);
-      const computedMetrics = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
+      const conversions = Number(
+        (row as Record<string, unknown>).externalWebsiteConversions ||
+        (row as Record<string, unknown>).conversions ||
+        0
+      );
+      const conversionValue = Number(
+        (row as Record<string, unknown>).conversionValueInLocalCurrency || 0
+      );
+      const computedMetrics = computeMetrics({ cost, impressions, clicks, conversions, conversionValue });
       return { ...row, computedMetrics };
     });
   }

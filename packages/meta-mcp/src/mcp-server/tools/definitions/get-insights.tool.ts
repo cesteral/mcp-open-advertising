@@ -112,11 +112,22 @@ export async function getInsightsLogic(
       const cost = Number(row.spend || 0);
       const impressions = Number(row.impressions || 0);
       const clicks = Number(row.clicks || 0);
+      // Filter to true conversion action types; the actions array also contains
+      // engagement/click actions that must not be counted as conversions.
+      const isConversionAction = (actionType: string) =>
+        actionType.startsWith("offsite_conversion") ||
+        actionType === "purchase" ||
+        actionType === "complete_registration" ||
+        actionType === "lead";
       const conversions = Array.isArray(row.actions)
-        ? (row.actions as Array<{ value?: unknown }>).reduce((sum, a) => sum + Number(a.value || 0), 0)
+        ? (row.actions as Array<{ action_type?: string; value?: unknown }>)
+            .filter((a) => isConversionAction(a.action_type ?? ""))
+            .reduce((sum, a) => sum + Number(a.value || 0), 0)
         : 0;
       const conversionValue = Array.isArray(row.action_values)
-        ? (row.action_values as Array<{ value?: unknown }>).reduce((sum, a) => sum + Number(a.value || 0), 0)
+        ? (row.action_values as Array<{ action_type?: string; value?: unknown }>)
+            .filter((a) => isConversionAction(a.action_type ?? ""))
+            .reduce((sum, a) => sum + Number(a.value || 0), 0)
         : 0;
       return { ...row, computedMetrics: computeMetrics({ cost, impressions, clicks, conversions, conversionValue }) };
     });
