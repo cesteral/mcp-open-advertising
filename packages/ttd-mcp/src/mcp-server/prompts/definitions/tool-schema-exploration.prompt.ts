@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (21 tools)
+## Available Tools Summary (28 tools)
 
 ### Core CRUD
 | Tool | Purpose | Read/Write |
@@ -138,6 +138,21 @@ Inspect the output, then iterate with more specific calls.
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
 | \`ttd_get_ad_preview\` | Get preview URL for a creative | Read |
+
+### Report Schedule Management
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_create_report_schedule\` | Create a recurring or one-time report schedule | Write |
+| \`ttd_list_report_schedules\` | List existing report schedules | Read |
+| \`ttd_get_report_schedule\` | Get a specific report schedule | Read |
+| \`ttd_delete_report_schedule\` | Delete a report schedule | Write |
+| \`ttd_list_report_templates\` | List MyReports template headers | Read |
+
+### GQL Entity Reports
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_execute_entity_report\` | Execute immediate entity-level report via GraphQL | Write |
+| \`ttd_get_entity_report_types\` | Discover available report types for an entity | Read |
 
 ### Supported Entity Types (9)
 \`advertiser\`, \`campaign\`, \`adGroup\`, \`ad\`, \`creative\`, \`siteList\`, \`deal\`, \`conversionTracker\`, \`bidList\`

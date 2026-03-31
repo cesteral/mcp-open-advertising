@@ -4,11 +4,13 @@
 /**
  * Tool definitions barrel export
  *
- * 21 tools total:
+ * 28 tools total:
  *   6 original: list, get, create, update, delete, report
  *   10 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report, submit report, check report status
  *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
  *   1 preview: get ad preview
+ *   5 report schedule management: create, list, get, delete schedule + list templates
+ *   2 GQL entity reports: execute entity report, get entity report types
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -32,6 +34,13 @@ export { graphqlMutationBulkTool } from "./graphql-mutation-bulk.tool.js";
 export { graphqlBulkJobTool } from "./graphql-bulk-job.tool.js";
 export { graphqlCancelBulkJobTool } from "./graphql-cancel-bulk-job.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
+export { createReportScheduleTool } from "./create-report-schedule.tool.js";
+export { listReportSchedulesTool } from "./list-report-schedules.tool.js";
+export { getReportScheduleTool } from "./get-report-schedule.tool.js";
+export { deleteReportScheduleTool } from "./delete-report-schedule.tool.js";
+export { listReportTemplatesTool } from "./list-report-templates.tool.js";
+export { executeEntityReportTool } from "./execute-entity-report.tool.js";
+export { getEntityReportTypesTool } from "./get-entity-report-types.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -54,6 +63,13 @@ import { graphqlMutationBulkTool } from "./graphql-mutation-bulk.tool.js";
 import { graphqlBulkJobTool } from "./graphql-bulk-job.tool.js";
 import { graphqlCancelBulkJobTool } from "./graphql-cancel-bulk-job.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
+import { createReportScheduleTool } from "./create-report-schedule.tool.js";
+import { listReportSchedulesTool } from "./list-report-schedules.tool.js";
+import { getReportScheduleTool } from "./get-report-schedule.tool.js";
+import { deleteReportScheduleTool } from "./delete-report-schedule.tool.js";
+import { listReportTemplatesTool } from "./list-report-templates.tool.js";
+import { executeEntityReportTool } from "./execute-entity-report.tool.js";
+import { getEntityReportTypesTool } from "./get-entity-report-types.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -84,6 +100,15 @@ const productionTools: ToolDefinitionForFactory[] = [
   graphqlCancelBulkJobTool,
   // ── Preview ──
   getAdPreviewTool,
+  // ── Report Schedule Management ──
+  createReportScheduleTool,
+  listReportSchedulesTool,
+  getReportScheduleTool,
+  deleteReportScheduleTool,
+  listReportTemplatesTool,
+  // ── GQL Entity Reports ──
+  executeEntityReportTool,
+  getEntityReportTypesTool,
 ];
 
 /**
