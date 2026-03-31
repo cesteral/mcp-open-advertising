@@ -21,6 +21,7 @@ function createMockLogger() {
 function createMockHttpClient() {
   return {
     fetch: vi.fn().mockResolvedValue({}),
+    fetchDirect: vi.fn().mockResolvedValue({}),
     partnerId: "test-partner",
   } as any;
 }
@@ -284,6 +285,103 @@ describe("TtdService", () => {
 
       await service.updateEntity("campaign", "c1", { CampaignName: "Updated" });
 
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+  });
+
+  // ==========================================================================
+  // executeEntityReport
+  // ==========================================================================
+
+  describe("executeEntityReport", () => {
+    it("calls adGroupReportExecute mutation for adGroup", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({
+        data: { adGroupReportExecute: { data: { id: "r1", url: "https://ttd.com/report.csv", hasSampleData: false } } },
+      });
+
+      await service.executeEntityReport("adGroup", "ag123", "AD_GROUP");
+
+      expect(httpClient.fetchDirect).toHaveBeenCalledTimes(1);
+      const [url, , options] = httpClient.fetchDirect.mock.calls[0];
+      expect(url).toBe("https://desk.thetradedesk.com/graphql");
+      expect(options.method).toBe("POST");
+      const body = JSON.parse(options.body);
+      expect(body.query).toContain("adGroupReportExecute");
+      expect(body.query).toContain("AdGroupReportType");
+      expect(body.variables.entityId).toBe("ag123");
+      expect(body.variables.reportType).toBe("AD_GROUP");
+    });
+
+    it("calls campaignReportExecute mutation for campaign", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({
+        data: { campaignReportExecute: { data: { url: "https://ttd.com/r.csv" } } },
+      });
+
+      await service.executeEntityReport("campaign", "c123", "CAMPAIGN");
+
+      const body = JSON.parse(httpClient.fetchDirect.mock.calls[0][2].body);
+      expect(body.query).toContain("campaignReportExecute");
+      expect(body.query).toContain("CampaignReportType");
+    });
+
+    it("calls advertiserReportExecute mutation for advertiser", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({
+        data: { advertiserReportExecute: { data: { url: "https://ttd.com/r.csv" } } },
+      });
+
+      await service.executeEntityReport("advertiser", "adv1", "ADVERTISER");
+
+      const body = JSON.parse(httpClient.fetchDirect.mock.calls[0][2].body);
+      expect(body.query).toContain("advertiserReportExecute");
+      expect(body.query).toContain("AdvertiserReportType");
+    });
+
+    it("consumes rate limiter once", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({ data: {} });
+      await service.executeEntityReport("adGroup", "ag1", "AD_GROUP");
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+  });
+
+  // ==========================================================================
+  // getEntityReportMetadata
+  // ==========================================================================
+
+  describe("getEntityReportMetadata", () => {
+    it("calls programmaticTileReportMetadata query with adGroupId for adGroup", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({
+        data: { programmaticTileReportMetadata: { data: [] } },
+      });
+
+      await service.getEntityReportMetadata("adGroup", "ag123", "Ag");
+
+      const body = JSON.parse(httpClient.fetchDirect.mock.calls[0][2].body);
+      expect(body.query).toContain("programmaticTileReportMetadata");
+      expect(body.variables.adGroupId).toBe("ag123");
+      expect(body.variables.tile).toBe("Ag");
+      expect(body.variables.campaignId).toBeUndefined();
+    });
+
+    it("sets campaignId for campaign entityType", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({ data: {} });
+      await service.getEntityReportMetadata("campaign", "c1", "Ca");
+      const body = JSON.parse(httpClient.fetchDirect.mock.calls[0][2].body);
+      expect(body.variables.campaignId).toBe("c1");
+      expect(body.variables.adGroupId).toBeUndefined();
+    });
+
+    it("sets advertiserId for advertiser entityType", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({ data: {} });
+      await service.getEntityReportMetadata("advertiser", "adv1", "Af");
+      const body = JSON.parse(httpClient.fetchDirect.mock.calls[0][2].body);
+      expect(body.variables.advertiserId).toBe("adv1");
+    });
+
+    it("consumes rate limiter once", async () => {
+      httpClient.fetchDirect.mockResolvedValueOnce({ data: {} });
+      await service.getEntityReportMetadata("adGroup", "ag1", "Ag");
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
       expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
     });
   });

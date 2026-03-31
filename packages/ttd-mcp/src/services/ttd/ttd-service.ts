@@ -468,6 +468,77 @@ export class TtdService {
     );
   }
 
+  /**
+   * Execute an immediate dimension-specific entity report via GraphQL.
+   * Returns a download URL directly — no polling required.
+   */
+  async executeEntityReport(
+    entityType: "adGroup" | "campaign" | "advertiser",
+    entityId: string,
+    reportType: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    const mutationMap = {
+      adGroup: { name: "adGroupReportExecute", typeEnum: "AdGroupReportType" },
+      campaign: { name: "campaignReportExecute", typeEnum: "CampaignReportType" },
+      advertiser: { name: "advertiserReportExecute", typeEnum: "AdvertiserReportType" },
+    } as const;
+    const { name, typeEnum } = mutationMap[entityType];
+
+    const query = `
+      mutation($entityId: ID!, $reportType: ${typeEnum}!) {
+        ${name}(input: { id: $entityId, report: $reportType }) {
+          data { id url hasSampleData }
+          userErrors { field message }
+        }
+      }
+    `;
+    return this.httpClient.fetchDirect(this.graphqlUrl, context, {
+      method: "POST",
+      body: JSON.stringify({ query, variables: { entityId, reportType } }),
+    });
+  }
+
+  /**
+   * Query available report types for an entity via GraphQL.
+   * The `tile` parameter is the Kokai tile abbreviation from the TTD UI (e.g. Ag, Ca, Af).
+   */
+  async getEntityReportMetadata(
+    entityType: "adGroup" | "campaign" | "advertiser",
+    entityId: string,
+    tile: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    const variables: Record<string, string> = { tile };
+    if (entityType === "adGroup") variables.adGroupId = entityId;
+    else if (entityType === "campaign") variables.campaignId = entityId;
+    else variables.advertiserId = entityId;
+
+    const query = `
+      query($adGroupId: ID, $campaignId: ID, $advertiserId: ID, $tile: ID!) {
+        programmaticTileReportMetadata(input: {
+          adGroupId: $adGroupId
+          campaignId: $campaignId
+          advertiserId: $advertiserId
+          tile: $tile
+        }) {
+          data { available schedule type }
+          userErrors { field message }
+        }
+      }
+    `;
+    return this.httpClient.fetchDirect(this.graphqlUrl, context, {
+      method: "POST",
+      body: JSON.stringify({ query, variables }),
+    });
+  }
+
   // ─── Internal Helpers ─────────────────────────────────────────────
 
 }
