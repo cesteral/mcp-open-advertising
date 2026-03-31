@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { computeMetrics } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_get_insights";
 const TOOL_TITLE = "Get Meta Ads Insights";
@@ -62,6 +63,11 @@ export const GetInsightsInputSchema = z
       .string()
       .optional()
       .describe("Cursor for next page"),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
   .describe("Parameters for getting Meta Ads insights");
 
@@ -100,12 +106,28 @@ export async function getInsightsLogic(
     context
   );
 
+  let rows = result.data as Record<string, unknown>[];
+  if (input.includeComputedMetrics) {
+    rows = rows.map((row) => {
+      const cost = Number(row.spend || 0);
+      const impressions = Number(row.impressions || 0);
+      const clicks = Number(row.clicks || 0);
+      const conversions = Array.isArray(row.actions)
+        ? (row.actions as Array<{ value?: unknown }>).reduce((sum, a) => sum + Number(a.value || 0), 0)
+        : 0;
+      const conversionValue = Array.isArray(row.action_values)
+        ? (row.action_values as Array<{ value?: unknown }>).reduce((sum, a) => sum + Number(a.value || 0), 0)
+        : 0;
+      return { ...row, computedMetrics: computeMetrics({ cost, impressions, clicks, conversions, conversionValue }) };
+    });
+  }
+
   return {
-    data: result.data as Record<string, unknown>[],
+    data: rows,
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,
     summary: result.summary as Record<string, unknown> | undefined,
-    totalCount: (result.data as unknown[]).length,
+    totalCount: rows.length,
     timestamp: new Date().toISOString(),
   };
 }

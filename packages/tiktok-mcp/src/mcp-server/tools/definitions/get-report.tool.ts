@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { computeMetrics, resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -37,14 +38,20 @@ export const GetReportInputSchema = z
       .array(z.string())
       .min(1)
       .describe("Metrics to include (e.g., ['impressions', 'clicks', 'spend'])"),
+    datePreset: z
+      .enum(DATE_PRESET_VALUES)
+      .optional()
+      .describe("Preset date range. Use this OR startDate+endDate (not both)"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Start date (YYYY-MM-DD)"),
+      .optional()
+      .describe("Start date (YYYY-MM-DD, required if datePreset not provided)"),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("End date (YYYY-MM-DD)"),
+      .optional()
+      .describe("End date (YYYY-MM-DD, required if datePreset not provided)"),
     orderField: z
       .string()
       .optional()
@@ -53,7 +60,16 @@ export const GetReportInputSchema = z
       .enum(["ASC", "DESC"])
       .optional()
       .describe("Sort order"),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
+  .refine(
+    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    { message: "Provide either datePreset or both startDate and endDate" }
+  )
   .describe("Parameters for generating a TikTok Ads report");
 
 export const GetReportOutputSchema = z
@@ -69,6 +85,34 @@ export const GetReportOutputSchema = z
 type GetReportInput = z.infer<typeof GetReportInputSchema>;
 type GetReportOutput = z.infer<typeof GetReportOutputSchema>;
 
+function appendComputedMetricsToRows(
+  headers: string[],
+  rows: string[][],
+): { headers: string[]; rows: string[][] } {
+  const idx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+  const spendIdx = idx('spend');
+  const impIdx = idx('impressions');
+  const clickIdx = idx('clicks');
+  const convIdx = idx('conversions');
+
+  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
+  const newRows = rows.map(row => {
+    const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
+    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
+    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
+    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
+    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
+    return [...row,
+      m.cpa !== null ? String(m.cpa) : '',
+      m.roas !== null ? String(m.roas) : '',
+      m.cpm !== null ? String(m.cpm) : '',
+      m.ctr !== null ? String(m.ctr) : '',
+      m.cpc !== null ? String(m.cpc) : '',
+    ];
+  });
+  return { headers: newHeaders, rows: newRows };
+}
+
 export async function getReportLogic(
   input: GetReportInput,
   context: RequestContext,
@@ -76,23 +120,38 @@ export async function getReportLogic(
 ): Promise<GetReportOutput> {
   const { tiktokReportingService } = resolveSessionServices(sdkContext);
 
+  let resolvedStartDate = input.startDate;
+  let resolvedEndDate = input.endDate;
+  if (input.datePreset) {
+    const resolved = resolveDatePreset(input.datePreset);
+    resolvedStartDate = resolved.startDate;
+    resolvedEndDate = resolved.endDate;
+  }
+
   const result = await tiktokReportingService.getReport(
     {
       report_type: input.reportType,
       dimensions: input.dimensions,
       metrics: input.metrics,
-      start_date: input.startDate,
-      end_date: input.endDate,
+      start_date: resolvedStartDate!,
+      end_date: resolvedEndDate!,
       ...(input.orderField ? { order_field: input.orderField } : {}),
       ...(input.orderType ? { order_type: input.orderType } : {}),
     },
     context
   );
 
+  let headers = result.headers;
+  let rows = result.rows;
+
+  if (input.includeComputedMetrics) {
+    ({ headers, rows } = appendComputedMetricsToRows(headers, rows));
+  }
+
   return {
     taskId: result.taskId,
-    headers: result.headers,
-    rows: result.rows,
+    headers,
+    rows,
     totalRows: result.totalRows,
     timestamp: new Date().toISOString(),
   };
@@ -143,8 +202,7 @@ export const getReportTool = {
         advertiserId: "1234567890",
         dimensions: ["campaign_id", "stat_time_day"],
         metrics: ["impressions", "clicks", "spend", "ctr", "cpc"],
-        startDate: "2026-02-24",
-        endDate: "2026-03-04",
+        datePreset: "LAST_7_DAYS",
       },
     },
     {

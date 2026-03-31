@@ -37,7 +37,6 @@ export function createSessionServices(
     rateLimiter,
     reportingClient,
     logger,
-    config.reportPollIntervalMs,
     config.reportMaxPollAttempts
   );
 

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { computeMetrics } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -25,6 +26,11 @@ export const DownloadReportInputSchema = z
       .optional()
       .default(1000)
       .describe("Maximum number of rows to return (default: 1000)"),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM, CTR, CPC"),
   })
   .describe("Parameters for downloading a CM360 report");
 
@@ -81,14 +87,49 @@ export async function downloadReportLogic(
   const truncated = dataLines.length > maxRows;
   const rows = dataLines.slice(0, maxRows).map(parseCSVLine);
 
+  let finalHeaders = headers;
+  let finalRows = rows;
+
+  if (input.includeComputedMetrics) {
+    ({ headers: finalHeaders, rows: finalRows } = appendComputedMetricsToRows(headers, rows));
+  }
+
   return {
-    headers,
-    rows,
+    headers: finalHeaders,
+    rows: finalRows,
     totalRows: dataLines.length,
-    returnedRows: rows.length,
+    returnedRows: finalRows.length,
     truncated,
     timestamp: new Date().toISOString(),
   };
+}
+
+function appendComputedMetricsToRows(
+  headers: string[],
+  rows: string[][],
+): { headers: string[]; rows: string[][] } {
+  const idx = (name: string) => headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
+  const spendIdx = idx('mediaCost');
+  const impIdx = idx('impressions');
+  const clickIdx = idx('clicks');
+  const convIdx = idx('totalConversions');
+
+  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
+  const newRows = rows.map(row => {
+    const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
+    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
+    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
+    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
+    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
+    return [...row,
+      m.cpa !== null ? String(m.cpa) : '',
+      m.roas !== null ? String(m.roas) : '',
+      m.cpm !== null ? String(m.cpm) : '',
+      m.ctr !== null ? String(m.ctr) : '',
+      m.cpc !== null ? String(m.cpc) : '',
+    ];
+  });
+  return { headers: newHeaders, rows: newRows };
 }
 
 function parseCSVLine(line: string): string[] {

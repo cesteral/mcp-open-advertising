@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -29,12 +30,18 @@ export const SubmitReportInputSchema = z
       .array(z.string())
       .min(1)
       .describe("Metric fields to include (e.g. ['impressions', 'swipes', 'spend'])"),
+    datePreset: z
+      .enum(DATE_PRESET_VALUES)
+      .optional()
+      .describe("Preset date range. Use this OR startTime+endTime (not both). Converted to ISO 8601 timestamps automatically"),
     startTime: z
       .string()
-      .describe("Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z)"),
+      .optional()
+      .describe("Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z, required if datePreset not provided)"),
     endTime: z
       .string()
-      .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z)"),
+      .optional()
+      .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"),
     granularity: z
       .enum(["DAY", "HOUR", "LIFETIME"])
       .optional()
@@ -53,6 +60,10 @@ export const SubmitReportInputSchema = z
       .optional()
       .describe("Optional filters for the report"),
   })
+  .refine(
+    (data) => data.datePreset !== undefined || (data.startTime !== undefined && data.endTime !== undefined),
+    { message: "Provide either datePreset or both startTime and endTime" }
+  )
   .describe("Parameters for submitting a Snapchat Ads report");
 
 export const SubmitReportOutputSchema = z
@@ -72,12 +83,20 @@ export async function submitReportLogic(
 ): Promise<SubmitReportOutput> {
   const { snapchatReportingService } = resolveSessionServices(sdkContext);
 
+  let resolvedStartTime = input.startTime;
+  let resolvedEndTime = input.endTime;
+  if (input.datePreset) {
+    const { startDate, endDate } = resolveDatePreset(input.datePreset);
+    resolvedStartTime = `${startDate}T00:00:00Z`;
+    resolvedEndTime = `${endDate}T23:59:59Z`;
+  }
+
   const result = await snapchatReportingService.submitReport(
     {
       fields: input.fields,
       granularity: input.granularity,
-      start_time: input.startTime,
-      end_time: input.endTime,
+      start_time: resolvedStartTime!,
+      end_time: resolvedEndTime!,
       ...(input.dimensionType ? { dimension_type: input.dimensionType } : {}),
       ...(input.filters ? { filters: input.filters } : {}),
     },
@@ -117,8 +136,7 @@ export const submitReportTool = {
       input: {
         adAccountId: "1234567890",
         fields: ["impressions", "swipes", "spend", "cpm"],
-        startTime: "2026-02-24T00:00:00Z",
-        endTime: "2026-03-04T23:59:59Z",
+        datePreset: "LAST_7_DAYS",
         granularity: "DAY",
       },
     },

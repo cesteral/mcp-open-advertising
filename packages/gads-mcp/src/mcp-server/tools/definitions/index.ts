@@ -25,6 +25,7 @@ export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
+export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 
 import { gaqlSearchTool } from "./gaql-search.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
@@ -40,6 +41,7 @@ import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
+import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -61,6 +63,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   validateEntityTool,
   // ── Preview ──
   getAdPreviewTool,
+  // ── Pacing ──
+  getPacingStatusTool,
 ];
 
 /**

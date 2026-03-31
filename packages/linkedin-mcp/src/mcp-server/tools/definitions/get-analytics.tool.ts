@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { computeMetrics, resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -29,14 +30,20 @@ export const GetAnalyticsInputSchema = z
       .string()
       .min(1)
       .describe("The ad account URN (e.g., urn:li:sponsoredAccount:123)"),
+    datePreset: z
+      .enum(DATE_PRESET_VALUES)
+      .optional()
+      .describe("Preset date range. Use this OR startDate+endDate (not both)"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
-      .describe("Start date in YYYY-MM-DD format"),
+      .optional()
+      .describe("Start date in YYYY-MM-DD format (required if datePreset not provided)"),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
-      .describe("End date in YYYY-MM-DD format"),
+      .optional()
+      .describe("End date in YYYY-MM-DD format (required if datePreset not provided)"),
     metrics: z
       .array(z.string())
       .optional()
@@ -49,7 +56,16 @@ export const GetAnalyticsInputSchema = z
       .enum(["DAILY", "MONTHLY", "YEARLY", "ALL"])
       .optional()
       .describe("Time granularity (default: DAILY)"),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
+  .refine(
+    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    { message: "Provide either datePreset or both startDate and endDate" }
+  )
   .describe("Parameters for getting LinkedIn Ads analytics");
 
 export const GetAnalyticsOutputSchema = z
@@ -76,21 +92,42 @@ export async function getAnalyticsLogic(
 ): Promise<GetAnalyticsOutput> {
   const { linkedInReportingService } = resolveSessionServices(sdkContext);
 
+  let resolvedStartDate = input.startDate;
+  let resolvedEndDate = input.endDate;
+  if (input.datePreset) {
+    const resolved = resolveDatePreset(input.datePreset);
+    resolvedStartDate = resolved.startDate;
+    resolvedEndDate = resolved.endDate;
+  }
+
   const result = await linkedInReportingService.getAnalytics(
     input.adAccountUrn,
-    { start: input.startDate, end: input.endDate },
+    { start: resolvedStartDate!, end: resolvedEndDate! },
     input.metrics,
     input.pivot,
     input.timeGranularity,
     context
   );
 
+  let elements = result.elements as Record<string, unknown>[];
+
+  if (input.includeComputedMetrics) {
+    elements = elements.map((row) => {
+      const cost = Number((row as Record<string, unknown>).costInUsd || 0);
+      const impressions = Number((row as Record<string, unknown>).impressions || 0);
+      const clicks = Number((row as Record<string, unknown>).clicks || 0);
+      const conversions = Number((row as Record<string, unknown>).conversions || 0);
+      const computedMetrics = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
+      return { ...row, computedMetrics };
+    });
+  }
+
   return {
-    elements: result.elements as Record<string, unknown>[],
+    elements,
     pivot: input.pivot ?? "CAMPAIGN",
     timeGranularity: input.timeGranularity ?? "DAILY",
-    dateRange: { start: input.startDate, end: input.endDate },
-    count: result.elements.length,
+    dateRange: { start: resolvedStartDate!, end: resolvedEndDate! },
+    count: elements.length,
     timestamp: new Date().toISOString(),
   };
 }
@@ -121,8 +158,7 @@ export const getAnalyticsTool = {
       label: "Get last 30 days campaign impressions and clicks",
       input: {
         adAccountUrn: "urn:li:sponsoredAccount:123456789",
-        startDate: "2026-02-01",
-        endDate: "2026-03-01",
+        datePreset: "LAST_30_DAYS",
         metrics: ["impressions", "clicks", "costInUsd"],
         pivot: "CAMPAIGN",
         timeGranularity: "DAILY",

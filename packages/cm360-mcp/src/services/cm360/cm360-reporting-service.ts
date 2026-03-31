@@ -207,4 +207,93 @@ export class CM360ReportingService {
     });
   }
 
+  // ── Scheduling ────────────────────────────────────────────────────────────
+
+  /**
+   * Create a report with an embedded schedule (recurring or one-off with schedule).
+   * CM360 schedules are stored as properties on the report resource itself.
+   * Returns the reportId which serves as the schedule handle.
+   */
+  async createReportSchedule(
+    profileId: string,
+    config: CM360ReportConfig & { schedule: Record<string, unknown> },
+    context?: RequestContext
+  ): Promise<{ reportId: string; reportName: string; schedule: Record<string, unknown> }> {
+    await this.rateLimiter.consume("cm360");
+
+    const report = (await this.httpClient.fetch(
+      `/userprofiles/${profileId}/reports`,
+      context,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      }
+    )) as Record<string, unknown>;
+
+    this.logger.info(
+      { reportId: report.id, requestId: context?.requestId },
+      "CM360 scheduled report created"
+    );
+
+    return {
+      reportId: report.id as string,
+      reportName: report.name as string,
+      schedule: (report.schedule as Record<string, unknown>) ?? config.schedule,
+    };
+  }
+
+  /**
+   * List CM360 reports that have an active schedule.
+   */
+  async listReportSchedules(
+    profileId: string,
+    options: { maxResults?: number; pageToken?: string } = {},
+    context?: RequestContext
+  ): Promise<{ reports: Record<string, unknown>[]; nextPageToken?: string }> {
+    await this.rateLimiter.consume("cm360");
+
+    const params = new URLSearchParams({ scope: "ALL" });
+    if (options.maxResults) params.set("maxResults", String(options.maxResults));
+    if (options.pageToken) params.set("pageToken", options.pageToken);
+
+    const result = (await this.httpClient.fetch(
+      `/userprofiles/${profileId}/reports?${params}`,
+      context
+    )) as Record<string, unknown>;
+
+    const items = (result.items as Record<string, unknown>[]) ?? [];
+    // Return only reports that have a schedule object
+    const scheduled = items.filter(
+      (r) => r.schedule && (r.schedule as Record<string, unknown>).active !== false
+    );
+
+    return {
+      reports: scheduled,
+      nextPageToken: result.nextPageToken as string | undefined,
+    };
+  }
+
+  /**
+   * Delete a CM360 report (and its schedule).
+   */
+  async deleteReportSchedule(
+    profileId: string,
+    reportId: string,
+    context?: RequestContext
+  ): Promise<void> {
+    await this.rateLimiter.consume("cm360");
+
+    await this.httpClient.fetch(
+      `/userprofiles/${profileId}/reports/${reportId}`,
+      context,
+      { method: "DELETE" }
+    );
+
+    this.logger.info(
+      { reportId, requestId: context?.requestId },
+      "CM360 scheduled report deleted"
+    );
+  }
+
 }

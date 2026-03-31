@@ -9,6 +9,7 @@ vi.mock("@cesteral/shared", async () => {
   return {
     ...actual,
     fetchWithTimeout: vi.fn(),
+    delay: vi.fn().mockResolvedValue(undefined),
   };
 });
 
@@ -44,8 +45,8 @@ describe("MsAdsReportingService", () => {
     vi.clearAllMocks();
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
-    // Use short poll interval for tests
-    service = new MsAdsReportingService(rateLimiter, httpClient, logger, 10, 5);
+    // Use low maxPollAttempts for tests (delay is mocked to no-op)
+    service = new MsAdsReportingService(rateLimiter, httpClient, logger, 5);
   });
 
   describe("submitReport", () => {

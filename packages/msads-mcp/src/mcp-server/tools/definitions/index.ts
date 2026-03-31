@@ -8,6 +8,7 @@ import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
 import { listAccountsTool } from "./list-accounts.tool.js";
 import { getReportTool } from "./get-report.tool.js";
+import { getReportBreakdownsTool } from "./get-report-breakdowns.tool.js";
 import { submitReportTool } from "./submit-report.tool.js";
 import { checkReportStatusTool } from "./check-report-status.tool.js";
 import { downloadReportTool } from "./download-report.tool.js";
@@ -21,6 +22,9 @@ import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { importFromGoogleTool } from "./import-from-google.tool.js";
 import { searchTargetingTool } from "./search-targeting.tool.js";
+import { createReportScheduleTool } from "./create-report-schedule.tool.js";
+import { listReportSchedulesTool } from "./list-report-schedules.tool.js";
+import { deleteReportScheduleTool } from "./delete-report-schedule.tool.js";
 
 export const productionTools = [
   listEntitiesTool,
@@ -30,6 +34,7 @@ export const productionTools = [
   deleteEntityTool,
   listAccountsTool,
   getReportTool,
+  getReportBreakdownsTool,
   submitReportTool,
   checkReportStatusTool,
   downloadReportTool,
@@ -43,4 +48,7 @@ export const productionTools = [
   validateEntityTool,
   importFromGoogleTool,
   searchTargetingTool,
+  createReportScheduleTool,
+  listReportSchedulesTool,
+  deleteReportScheduleTool,
 ];

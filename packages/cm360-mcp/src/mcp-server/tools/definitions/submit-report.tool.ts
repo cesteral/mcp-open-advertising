@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -29,6 +30,10 @@ export const SubmitReportInputSchema = z
     type: z
       .enum(["STANDARD", "REACH", "PATH_TO_CONVERSION", "CROSS_DIMENSION_REACH", "FLOODLIGHT"])
       .describe("Report type"),
+    datePreset: z
+      .enum(DATE_PRESET_VALUES)
+      .optional()
+      .describe("Preset date range. Injected into criteria.dateRange if criteria.dateRange is not set. Use this OR set dateRange inside criteria (not both)"),
     criteria: z
       .record(z.any())
       .optional()
@@ -58,13 +63,20 @@ export async function submitReportLogic(
 ): Promise<SubmitReportOutput> {
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
+  // Resolve datePreset into criteria.dateRange if no dateRange already in criteria
+  let mergedCriteria = input.criteria;
+  if (input.datePreset && !input.criteria?.dateRange) {
+    const { startDate, endDate } = resolveDatePreset(input.datePreset);
+    mergedCriteria = { ...(input.criteria ?? {}), dateRange: { startDate, endDate } };
+  }
+
   // Spread additionalConfig first so explicit params (name, type, criteria) take precedence
   const { name: _n, type: _t, criteria: _c, ...safeAdditionalConfig } = input.additionalConfig ?? {};
   const reportConfig = {
     ...safeAdditionalConfig,
     name: input.name,
     type: input.type,
-    ...(input.criteria && { criteria: input.criteria }),
+    ...(mergedCriteria && { criteria: mergedCriteria }),
   };
 
   const result = await cm360ReportingService.createReport(
@@ -103,13 +115,13 @@ export const submitReportTool = {
   },
   inputExamples: [
     {
-      label: "Submit a standard report (non-blocking)",
+      label: "Submit a standard report using datePreset (non-blocking)",
       input: {
         profileId: "123456",
         name: "Campaign Performance Report",
         type: "STANDARD",
+        datePreset: "LAST_30_DAYS",
         criteria: {
-          dateRange: { relativeDateRange: "LAST_30_DAYS" },
           dimensions: [{ name: "campaign" }],
           metricNames: ["impressions", "clicks", "mediaCost"],
         },

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -17,7 +18,9 @@ Returns a \`taskId\` immediately. Use \`amazon_dsp_check_report_status\` to poll
 2. \`amazon_dsp_check_report_status\` (repeat every 10s) → wait for "COMPLETED"
 3. \`amazon_dsp_download_report\` with the \`downloadUrl\` → get parsed data
 
-Use \`amazon_dsp_get_report\` instead for a blocking convenience shortcut.`;
+Use \`amazon_dsp_get_report\` instead for a blocking convenience shortcut.
+
+Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is the longest supported preset.`;
 
 export const SubmitReportInputSchema = z
   .object({
@@ -29,14 +32,20 @@ export const SubmitReportInputSchema = z
       .string()
       .optional()
       .describe("Report name (optional)"),
+    datePreset: z
+      .enum(DATE_PRESET_VALUES)
+      .optional()
+      .describe("Preset date range. Use this OR startDate+endDate (not both). Max 95-day lookback — LAST_90_DAYS is the longest supported preset"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback."),
+      .optional()
+      .describe("Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("End date (YYYY-MM-DD format, e.g. 2024-01-31)"),
+      .optional()
+      .describe("End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."),
     reportTypeId: z
       .string()
       .min(1)
@@ -60,6 +69,10 @@ export const SubmitReportInputSchema = z
       .default("DEMAND_SIDE_PLATFORM")
       .describe("Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"),
   })
+  .refine(
+    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    { message: "Provide either datePreset or both startDate and endDate" }
+  )
   .describe("Parameters for submitting an Amazon DSP report");
 
 export const SubmitReportOutputSchema = z
@@ -79,11 +92,19 @@ export async function submitReportLogic(
 ): Promise<SubmitReportOutput> {
   const { amazonDspReportingService } = resolveSessionServices(sdkContext);
 
+  let resolvedStartDate = input.startDate;
+  let resolvedEndDate = input.endDate;
+  if (input.datePreset) {
+    const resolved = resolveDatePreset(input.datePreset);
+    resolvedStartDate = resolved.startDate;
+    resolvedEndDate = resolved.endDate;
+  }
+
   const result = await amazonDspReportingService.submitReport(
     {
       name: input.name,
-      startDate: input.startDate,
-      endDate: input.endDate,
+      startDate: resolvedStartDate!,
+      endDate: resolvedEndDate!,
       configuration: {
         adProduct: input.adProduct,
         groupBy: input.groupBy,
@@ -127,8 +148,7 @@ export const submitReportTool = {
       label: "Submit line item performance report",
       input: {
         profileId: "1234567890",
-        startDate: "2026-02-24",
-        endDate: "2026-03-04",
+        datePreset: "LAST_7_DAYS",
         reportTypeId: "dspLineItem",
         groupBy: ["order", "lineItem"],
         columns: ["impressions", "clickThroughs", "totalCost"],

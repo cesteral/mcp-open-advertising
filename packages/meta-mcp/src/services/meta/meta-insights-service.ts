@@ -98,6 +98,113 @@ export class MetaInsightsService {
   }
 
   /**
+   * Submit an async insights report job.
+   * Returns a reportRunId that can be polled via checkReportStatus.
+   */
+  async submitInsightsReport(
+    entityId: string,
+    options: {
+      fields?: string[];
+      datePreset?: string;
+      timeRange?: { since: string; until: string };
+      timeIncrement?: string;
+      level?: string;
+      breakdowns?: string[];
+    },
+    context?: RequestContext
+  ): Promise<{ reportRunId: string }> {
+    await this.rateLimiter.consume(`meta:default`);
+
+    const defaultFields = [
+      "impressions", "clicks", "spend", "cpc", "cpm", "ctr",
+      "reach", "frequency", "actions", "action_values",
+      "conversions", "cost_per_action_type",
+    ];
+
+    const data: Record<string, unknown> = {
+      fields: options.fields?.join(",") || defaultFields.join(","),
+      async: 1,
+    };
+
+    if (options.datePreset) {
+      data.date_preset = options.datePreset;
+    }
+
+    if (options.timeRange) {
+      data.time_range = JSON.stringify(options.timeRange);
+    }
+
+    if (options.timeIncrement) {
+      data.time_increment = options.timeIncrement;
+    }
+
+    if (options.level) {
+      data.level = options.level;
+    }
+
+    if (options.breakdowns?.length) {
+      data.breakdowns = options.breakdowns.join(",");
+    }
+
+    const result = (await this.httpClient.post(
+      `/${entityId}/insights`,
+      data,
+      context
+    )) as Record<string, unknown>;
+
+    return { reportRunId: String(result.id) };
+  }
+
+  /**
+   * Check the status of an async insights report job.
+   */
+  async checkReportStatus(
+    reportRunId: string,
+    context?: RequestContext
+  ): Promise<{ reportRunId: string; status: string; asyncPercentCompletion?: number }> {
+    await this.rateLimiter.consume(`meta:default`);
+
+    const result = (await this.httpClient.get(
+      `/${reportRunId}`,
+      { fields: "id,async_status,async_percent_completion" },
+      context
+    )) as Record<string, unknown>;
+
+    return {
+      reportRunId: String(result.id ?? reportRunId),
+      status: String(result.async_status ?? "Unknown"),
+      asyncPercentCompletion: result.async_percent_completion != null
+        ? Number(result.async_percent_completion)
+        : undefined,
+    };
+  }
+
+  /**
+   * Download results from a completed async insights report.
+   */
+  async getReportResults(
+    reportRunId: string,
+    options: { limit?: number },
+    context?: RequestContext
+  ): Promise<{ data: unknown[] }> {
+    await this.rateLimiter.consume(`meta:default`);
+
+    const params: Record<string, string> = {};
+    if (options.limit) {
+      params.limit = String(options.limit);
+    }
+
+    const result = (await this.httpClient.get(
+      `/${reportRunId}/insights`,
+      params,
+      context
+    )) as Record<string, unknown>;
+
+    const data = (result.data as unknown[]) || [];
+    return { data };
+  }
+
+  /**
    * Get insights with breakdowns for an entity.
    */
   async getInsightsBreakdowns(

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -34,14 +35,20 @@ export const SubmitReportInputSchema = z
       .array(z.string())
       .min(1)
       .describe("Columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"),
+    datePreset: z
+      .enum(DATE_PRESET_VALUES)
+      .optional()
+      .describe("Preset date range. Use this OR startDate+endDate (not both)"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Start date (YYYY-MM-DD)"),
+      .optional()
+      .describe("Start date (YYYY-MM-DD, required if datePreset not provided)"),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("End date (YYYY-MM-DD)"),
+      .optional()
+      .describe("End date (YYYY-MM-DD, required if datePreset not provided)"),
     granularity: z
       .enum(["TOTAL", "DAY", "HOUR", "WEEK", "MONTH"])
       .optional()
@@ -60,6 +67,10 @@ export const SubmitReportInputSchema = z
       .optional()
       .describe("Filter by ad IDs"),
   })
+  .refine(
+    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    { message: "Provide either datePreset or both startDate and endDate" }
+  )
   .describe("Parameters for submitting a Pinterest Ads report");
 
 export const SubmitReportOutputSchema = z
@@ -79,12 +90,20 @@ export async function submitReportLogic(
 ): Promise<SubmitReportOutput> {
   const { pinterestReportingService } = resolveSessionServices(sdkContext);
 
+  let resolvedStartDate = input.startDate;
+  let resolvedEndDate = input.endDate;
+  if (input.datePreset) {
+    const resolved = resolveDatePreset(input.datePreset);
+    resolvedStartDate = resolved.startDate;
+    resolvedEndDate = resolved.endDate;
+  }
+
   const result = await pinterestReportingService.submitReport(
     {
       type: input.type,
       columns: input.columns,
-      start_date: input.startDate,
-      end_date: input.endDate,
+      start_date: resolvedStartDate!,
+      end_date: resolvedEndDate!,
       granularity: input.granularity,
       ...(input.campaignIds ? { campaign_ids: input.campaignIds } : {}),
       ...(input.adGroupIds ? { ad_group_ids: input.adGroupIds } : {}),
@@ -127,8 +146,7 @@ export const submitReportTool = {
         adAccountId: "1234567890",
         type: "CAMPAIGN",
         columns: ["IMPRESSION_1", "CLICKTHROUGH_1", "SPEND_IN_DOLLAR", "CTR", "CPM"],
-        startDate: "2026-02-24",
-        endDate: "2026-03-04",
+        datePreset: "LAST_7_DAYS",
         granularity: "DAY",
       },
     },

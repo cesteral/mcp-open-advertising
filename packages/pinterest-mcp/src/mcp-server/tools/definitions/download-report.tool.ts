@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { computeMetrics } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -32,6 +33,11 @@ export const DownloadReportInputSchema = z
       .max(10000)
       .optional()
       .describe("Maximum rows to return (default: 1000)"),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM, CTR, CPC"),
   })
   .describe("Parameters for downloading a Pinterest report");
 
@@ -64,14 +70,49 @@ export async function downloadReportLogic(
 
   const truncated = result.totalRows > result.rows.length;
 
+  let headers = result.headers;
+  let rows = result.rows;
+
+  if (input.includeComputedMetrics) {
+    ({ headers, rows } = appendComputedMetricsToRows(headers, rows));
+  }
+
   return {
     totalRows: result.totalRows,
-    returnedRows: result.rows.length,
+    returnedRows: rows.length,
     truncated,
-    headers: result.headers,
-    rows: result.rows,
+    headers,
+    rows,
     timestamp: new Date().toISOString(),
   };
+}
+
+function appendComputedMetricsToRows(
+  headers: string[],
+  rows: string[][],
+): { headers: string[]; rows: string[][] } {
+  const idx = (name: string) => headers.findIndex(h => h.toUpperCase() === name.toUpperCase());
+  const spendIdx = idx('SPEND_IN_DOLLAR');
+  const impIdx = idx('IMPRESSION_1');
+  const clickIdx = idx('CLICKTHROUGH_1');
+  const convIdx = idx('TOTAL_CONVERSIONS');
+
+  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
+  const newRows = rows.map(row => {
+    const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
+    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
+    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
+    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
+    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
+    return [...row,
+      m.cpa !== null ? String(m.cpa) : '',
+      m.roas !== null ? String(m.roas) : '',
+      m.cpm !== null ? String(m.cpm) : '',
+      m.ctr !== null ? String(m.ctr) : '',
+      m.cpc !== null ? String(m.cpc) : '',
+    ];
+  });
+  return { headers: newHeaders, rows: newRows };
 }
 
 export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {

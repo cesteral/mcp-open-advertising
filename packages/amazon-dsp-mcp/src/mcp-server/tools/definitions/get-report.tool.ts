@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { computeMetrics, resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -15,7 +16,9 @@ This may take 30s–5 minutes depending on the data volume.
 
 **Report type IDs:** dspLineItem, dspOrder, dspCreative, dspAudience
 **Common columns:** impressions, clickThroughs, totalCost, dpv14d, purchases14d
-**Common groupBy:** order, lineItem, creative, audience, date`;
+**Common groupBy:** order, lineItem, creative, audience, date
+
+Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is supported; avoid custom ranges beyond 95 days.`;
 
 export const GetReportInputSchema = z
   .object({
@@ -27,14 +30,20 @@ export const GetReportInputSchema = z
       .string()
       .optional()
       .describe("Report name (optional)"),
+    datePreset: z
+      .enum(DATE_PRESET_VALUES)
+      .optional()
+      .describe("Preset date range. Use this OR startDate+endDate (not both). Max 95-day lookback — LAST_90_DAYS is the longest supported preset"),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback."),
+      .optional()
+      .describe("Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .describe("End date (YYYY-MM-DD format, e.g. 2024-01-31)"),
+      .optional()
+      .describe("End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."),
     reportTypeId: z
       .string()
       .min(1)
@@ -57,7 +66,16 @@ export const GetReportInputSchema = z
       .optional()
       .default("DEMAND_SIDE_PLATFORM")
       .describe("Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"),
+    includeComputedMetrics: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe("Include computed CPA, ROAS, CPM, CTR, CPC"),
   })
+  .refine(
+    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    { message: "Provide either datePreset or both startDate and endDate" }
+  )
   .describe("Parameters for generating an Amazon DSP report");
 
 export const GetReportOutputSchema = z
@@ -80,11 +98,19 @@ export async function getReportLogic(
 ): Promise<GetReportOutput> {
   const { amazonDspReportingService } = resolveSessionServices(sdkContext);
 
+  let resolvedStartDate = input.startDate;
+  let resolvedEndDate = input.endDate;
+  if (input.datePreset) {
+    const resolved = resolveDatePreset(input.datePreset);
+    resolvedStartDate = resolved.startDate;
+    resolvedEndDate = resolved.endDate;
+  }
+
   const result = await amazonDspReportingService.getReport(
     {
       name: input.name,
-      startDate: input.startDate,
-      endDate: input.endDate,
+      startDate: resolvedStartDate!,
+      endDate: resolvedEndDate!,
       configuration: {
         adProduct: input.adProduct,
         groupBy: input.groupBy,
@@ -96,13 +122,48 @@ export async function getReportLogic(
     context
   );
 
+  let headers = result.headers;
+  let rows = result.rows;
+
+  if (input.includeComputedMetrics) {
+    ({ headers, rows } = appendComputedMetricsToRows(headers, rows));
+  }
+
   return {
     taskId: result.taskId,
-    headers: result.headers,
-    rows: result.rows,
+    headers,
+    rows,
     totalRows: result.totalRows,
     timestamp: new Date().toISOString(),
   };
+}
+
+function appendComputedMetricsToRows(
+  headers: string[],
+  rows: string[][],
+): { headers: string[]; rows: string[][] } {
+  const idx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+  const costIdx = idx('totalCost');
+  const impIdx = idx('impressions');
+  const clickIdx = idx('clickThroughs');
+  const convIdx = idx('purchases14d');
+
+  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
+  const newRows = rows.map(row => {
+    const cost = costIdx >= 0 ? Number(row[costIdx] || 0) : 0;
+    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
+    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
+    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
+    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
+    return [...row,
+      m.cpa !== null ? String(m.cpa) : '',
+      m.roas !== null ? String(m.roas) : '',
+      m.cpm !== null ? String(m.cpm) : '',
+      m.ctr !== null ? String(m.ctr) : '',
+      m.cpc !== null ? String(m.cpc) : '',
+    ];
+  });
+  return { headers: newHeaders, rows: newRows };
 }
 
 export function getReportResponseFormatter(result: GetReportOutput): McpTextContent[] {
@@ -148,8 +209,7 @@ export const getReportTool = {
       label: "Line item delivery report for last 7 days",
       input: {
         profileId: "1234567890",
-        startDate: "2026-02-24",
-        endDate: "2026-03-04",
+        datePreset: "LAST_7_DAYS",
         reportTypeId: "dspLineItem",
         groupBy: ["order", "lineItem"],
         columns: ["impressions", "clickThroughs", "totalCost"],

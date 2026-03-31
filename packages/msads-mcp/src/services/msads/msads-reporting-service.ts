@@ -11,6 +11,7 @@ import {
   delay,
   parseCsvLine,
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+  computeExponentialBackoff,
   type RequestContext,
 } from "@cesteral/shared";
 import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
@@ -47,13 +48,16 @@ export interface ReportConfig {
   filters?: Record<string, unknown>[];
 }
 
+const POLL_BASE_MS = 3_000;
+const POLL_MAX_MS = 30_000;
+const DEFAULT_MAX_POLL_ATTEMPTS = 60;
+
 export class MsAdsReportingService {
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MsAdsHttpClient,
     private readonly logger: Logger,
-    private readonly pollIntervalMs: number = 3_000,
-    private readonly maxPollAttempts: number = 30
+    private readonly maxPollAttempts: number = DEFAULT_MAX_POLL_ATTEMPTS
   ) {}
 
   /**
@@ -105,7 +109,7 @@ export class MsAdsReportingService {
         "Report not ready, polling"
       );
 
-      await delay(this.pollIntervalMs);
+      await delay(computeExponentialBackoff(attempt, POLL_BASE_MS, POLL_MAX_MS));
     }
 
     throw new McpError(
@@ -169,6 +173,72 @@ export class MsAdsReportingService {
     const downloadUrl = await this.pollReport(reportRequestId, context);
     const data = await this.downloadReport(downloadUrl, maxRows, context);
     return { ...data, reportRequestId };
+  }
+
+  // ── Scheduling ──────────────────────────────────────────────────────────
+
+  /**
+   * Create a scheduled report request via SubmitGenerateReport with a ScheduledReportRequest body.
+   * Returns the schedule ID (same as the ReportRequestId for the first run).
+   */
+  async createReportSchedule(
+    config: ReportConfig & { scheduleName: string; schedule: Record<string, unknown> },
+    context?: RequestContext
+  ): Promise<{ scheduleId: string; scheduleName: string }> {
+    await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
+
+    const body = {
+      ...this.buildReportRequest(config),
+      ReportName: config.scheduleName,
+      Schedule: config.schedule,
+    };
+
+    this.logger.info({ scheduleName: config.scheduleName }, "Creating MS Ads report schedule");
+
+    const response = (await this.httpClient.post(
+      "/Reports/Submit",
+      body,
+      context
+    )) as SubmitReportResponse;
+
+    this.logger.info(
+      { scheduleId: response.ReportRequestId, scheduleName: config.scheduleName },
+      "MS Ads report schedule created"
+    );
+
+    return { scheduleId: response.ReportRequestId, scheduleName: config.scheduleName };
+  }
+
+  /**
+   * List scheduled reports. MS Ads does not have a native schedule list endpoint,
+   * so we use PollReports to list active scheduled report IDs known by the session.
+   * Returns an informational message directing users to use the UI or check known scheduleIds.
+   */
+  async listReportSchedules(
+    context?: RequestContext
+  ): Promise<{ note: string }> {
+    void context;
+    return {
+      note: "Microsoft Advertising does not provide an API to list all report schedules. Use the Microsoft Advertising UI (app.ads.microsoft.com) to view existing scheduled reports, or track scheduleIds returned by msads_create_report_schedule.",
+    };
+  }
+
+  /**
+   * Delete a scheduled report by cancelling the report request.
+   * MS Ads does not have a dedicated schedule-delete endpoint; the schedule is cancelled
+   * by stopping the associated report request via the UI. This method logs the intent.
+   */
+  async deleteReportSchedule(
+    scheduleId: string,
+    context?: RequestContext
+  ): Promise<void> {
+    void context;
+    this.logger.info(
+      { scheduleId },
+      "MS Ads report schedule deletion requested — cancel via Microsoft Advertising UI"
+    );
+    // MS Ads REST API v13 does not expose a delete/cancel endpoint for scheduled reports.
+    // Deletion must be performed via the Microsoft Advertising web UI.
   }
 
   private buildReportRequest(config: ReportConfig): Record<string, unknown> {

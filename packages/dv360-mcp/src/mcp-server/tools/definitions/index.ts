@@ -44,6 +44,7 @@ export { uploadVideoTool } from "./upload-video.tool.js";
 // Tier 5: Specialized
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
+export { getPacingStatusTool } from "./get-pacing-status.tool.js";
 
 // Export all tools as an array for easy registration
 import { listEntitiesTool } from "./list-entities.tool.js";
@@ -70,6 +71,7 @@ import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
+import { getPacingStatusTool } from "./get-pacing-status.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -105,6 +107,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // Tier 5: Specialized
   duplicateEntityTool,
   getDeliveryEstimateTool,
+  getPacingStatusTool,
 ];
 
 /**
