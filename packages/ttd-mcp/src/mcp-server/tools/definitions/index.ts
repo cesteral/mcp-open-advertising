@@ -4,7 +4,8 @@
 /**
  * Tool definitions barrel export
  *
- * 36 tools total:
+ * 37 tools total:
+ *   1 context: get context (cold-start partner discovery)
  *   6 original: list, get, create, update, delete, report
  *   10 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report, submit report, check report status
  *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
@@ -15,6 +16,7 @@
  *   1 template schedule: create template schedule
  */
 
+export { getContextTool } from "./get-context.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
@@ -52,6 +54,7 @@ export { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
 export { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
 export { getReportExecutionsTool } from "./get-report-executions.tool.js";
 
+import { getContextTool } from "./get-context.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
@@ -91,6 +94,8 @@ import { getReportExecutionsTool } from "./get-report-executions.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
+  // ── Context ──
+  getContextTool,
   // ── Core CRUD ──
   listEntitiesTool,
   getEntityTool,

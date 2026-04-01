@@ -654,21 +654,15 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               data: `Tool ${tool.name} failed: ${(error as Error).message}`,
             }).catch(() => { /* ignore if no client connected */ });
 
-            const isProduction = process.env.NODE_ENV === "production";
             const sanitizedData = ErrorHandler.sanitizeErrorData(mcpError.data);
 
-            // Both production and non-production return the same JSON shape so
-            // AI agents can parse tool error responses consistently regardless of
-            // environment. Non-production additionally includes a `stack` field
-            // for easier debugging.
+            // Stack traces are written to server-side logs only (see ErrorHandler.handleError).
+            // Never send them to the client — they leak local filesystem paths and internals.
             const errorPayload: Record<string, unknown> = {
               error: mcpError.message,
               code: mcpError.code,
               data: sanitizedData ?? null,
             };
-            if (!isProduction && (error as Error)?.stack) {
-              errorPayload.stack = (error as Error).stack;
-            }
 
             return {
               content: [

@@ -9,11 +9,13 @@ export { entityHierarchyResource } from "./entity-hierarchy.resource.js";
 export { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas.resource.js";
 export { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 export { reportReferenceResource } from "./report-reference.resource.js";
+export { graphqlReferenceResource } from "./graphql-reference.resource.js";
 
 import { entityHierarchyResource } from "./entity-hierarchy.resource.js";
 import { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas.resource.js";
 import { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 import { reportReferenceResource } from "./report-reference.resource.js";
+import { graphqlReferenceResource } from "./graphql-reference.resource.js";
 import { allTools } from "../../tools/definitions/index.js";
 import {
   createToolExamplesResource,
@@ -32,7 +34,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     validation: ["ttd_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "performance_reporting", "bulk_status_update"],
-  startHere: "ttd_list_entities",
+  startHere: "ttd_get_context",
 });
 
 /**
@@ -45,6 +47,7 @@ export const allResources: Resource[] = [
   entityExampleAllResource,
   ...entityExampleResources,
   reportReferenceResource,
+  graphqlReferenceResource,
   ...(toolExamplesResource ? [toolExamplesResource as unknown as Resource] : []),
   serverCapabilitiesResource as unknown as Resource,
 ];

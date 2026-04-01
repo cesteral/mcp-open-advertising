@@ -26,6 +26,7 @@ const TTD_PLATFORM = "ttd";
 
 const ttdWorkflowIdByToolName: Record<string, string> = {
   // Read operations
+  ttd_get_context: "mcp.execute.ttd_entity_read",
   ttd_list_entities: "mcp.execute.ttd_entity_read",
   ttd_get_entity: "mcp.execute.ttd_entity_read",
   // Write operations

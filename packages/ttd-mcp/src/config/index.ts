@@ -31,10 +31,11 @@ const ConfigSchema = BaseConfigSchema.extend({
     .string()
     .url()
     .default("https://desk.thetradedesk.com/graphql"),
-  // Conservative default: platform_quota / max_instances (10).
-  // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
-  // Override via TTD_RATE_LIMIT_PER_MINUTE for different scaling profiles.
-  ttdRateLimitPerMinute: z.number().default(10),
+  // Default: 60 req/min (1 req/s) — covers agentic discovery chains (partners →
+  // advertisers → campaigns → ad groups) without hitting platform quotas.
+  // In-memory rate limiting is per-process; multi-instance deployments should set
+  // TTD_RATE_LIMIT_PER_MINUTE = platform_quota / instance_count.
+  ttdRateLimitPerMinute: z.number().default(60),
 
   // Provide a pre-existing TTD-Auth token directly
   ttdApiToken: z.string().optional(),
