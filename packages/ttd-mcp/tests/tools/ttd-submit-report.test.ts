@@ -57,7 +57,7 @@ describe("submitReportLogic", () => {
     );
 
     const [config] = mockTtdReportingService.createReportSchedule.mock.calls[0];
-    expect(config.ReportName).toBe("Test Report");
+    expect(config.ReportScheduleName).toBe("Test Report");
     expect(config.ReportScheduleType).toBe("Once");
     expect(config.ReportDateRange).toBe("Last30Days");
     expect(config.ReportDimensions).toEqual(["CampaignId"]);

@@ -18,9 +18,11 @@ import {
  * Report configuration for TTD MyReports API.
  */
 export interface TtdReportConfig {
-  ReportName: string;
+  ReportScheduleName: string;
   ReportScheduleType: "Once" | "Daily" | "Weekly" | "Monthly";
   ReportDateRange: string;
+  ReportTemplateId?: number;
+  ReportNumericFormat?: string;
   ReportFilters?: Array<{
     Type: string;
     Value: string;

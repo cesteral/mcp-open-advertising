@@ -34,7 +34,7 @@ function createMockRateLimiter() {
 /** Standard report config for tests. */
 function sampleReportConfig(): TtdReportConfig {
   return {
-    ReportName: "Test Report",
+    ReportScheduleName: "Test Report",
     ReportScheduleType: "Once",
     ReportDateRange: "Last7Days",
     ReportDimensions: ["AdvertiserId"],

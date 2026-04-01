@@ -82,7 +82,7 @@ describe("getReportLogic", () => {
 
     expect(mockTtdReportingService.runReport).toHaveBeenCalledOnce();
     const [reportConfig] = mockTtdReportingService.runReport.mock.calls[0];
-    expect(reportConfig.ReportName).toBe("Daily Report");
+    expect(reportConfig.ReportScheduleName).toBe("Daily Report");
     expect(reportConfig.ReportScheduleType).toBe("Once");
     expect(reportConfig.ReportDateRange).toBe("Yesterday");
   });
