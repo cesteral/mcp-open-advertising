@@ -34,7 +34,7 @@ function createMockRateLimiter() {
 /** Standard report config for tests. */
 function sampleReportConfig(): TtdReportConfig {
   return {
-    ReportName: "Test Report",
+    ReportScheduleName: "Test Report",
     ReportScheduleType: "Once",
     ReportDateRange: "Last7Days",
     ReportDimensions: ["AdvertiserId"],
@@ -91,7 +91,7 @@ describe("TtdReportingService", () => {
       expect(JSON.parse(options.body)).toEqual(config);
     });
 
-    it("polls for execution via POST to /myreports/reportexecution/query", async () => {
+    it("polls for execution via POST to /myreports/reportexecution/query/reportschedule", async () => {
       httpClient.fetch.mockResolvedValueOnce({ ReportScheduleId: "sched-1" });
       httpClient.fetch.mockResolvedValueOnce({
         Result: [{ ReportExecutionState: "Complete" }],
@@ -103,7 +103,7 @@ describe("TtdReportingService", () => {
 
       // Second call is the poll
       const [path, , options] = httpClient.fetch.mock.calls[1];
-      expect(path).toBe("/myreports/reportexecution/query");
+      expect(path).toBe("/myreports/reportexecution/query/reportschedule");
       expect(options.method).toBe("POST");
       const body = JSON.parse(options.body);
       expect(body.ReportScheduleIds).toEqual(["sched-1"]);

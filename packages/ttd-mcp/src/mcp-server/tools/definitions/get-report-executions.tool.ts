@@ -84,7 +84,7 @@ const SINGLE_QUERY = `query GetReportSchedule($id: ID!) {
   }
 }`;
 
-const LIST_QUERY = `query GetReportSchedules($where: MyReportsReportScheduleWhereInput, $first: Int, $after: String) {
+const LIST_QUERY = `query GetReportSchedules($where: MyReportsReportScheduleFilterInput, $first: Int, $after: String) {
   myReportsReportSchedules(where: $where, first: $first, after: $after) {
     nodes {
       name

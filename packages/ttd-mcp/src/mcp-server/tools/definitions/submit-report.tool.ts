@@ -49,6 +49,12 @@ export const SubmitReportInputSchema = z
       .array(z.string())
       .optional()
       .describe("Filter by advertiser IDs"),
+    reportTemplateId: z
+      .number()
+      .optional()
+      .describe(
+        "TTD report template ID. Find IDs via ttd_list_report_templates or the TTD UI. Required by the TTD API for report schedule creation."
+      ),
     additionalConfig: z
       .record(z.any())
       .optional()
@@ -74,7 +80,7 @@ export async function submitReportLogic(
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
   const reportConfig = {
-    ReportName: input.reportName,
+    ReportScheduleName: input.reportName,
     ReportScheduleType: "Once" as const,
     ReportDateRange: input.dateRange,
     ReportFrequency: "Once" as const,
@@ -82,6 +88,7 @@ export async function submitReportLogic(
     ReportDateFormat: "Sortable",
     ReportNumericFormat: "US",
     ReportFileFormat: "CSV",
+    ...(input.reportTemplateId && { ReportTemplateId: input.reportTemplateId }),
     ...(input.dimensions && { ReportDimensions: input.dimensions }),
     ...(input.metrics && { ReportMetrics: input.metrics }),
     ...(input.advertiserIds && { AdvertiserFilters: input.advertiserIds }),

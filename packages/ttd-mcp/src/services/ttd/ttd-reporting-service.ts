@@ -18,9 +18,11 @@ import {
  * Report configuration for TTD MyReports API.
  */
 export interface TtdReportConfig {
-  ReportName: string;
+  ReportScheduleName: string;
   ReportScheduleType: "Once" | "Daily" | "Weekly" | "Monthly";
   ReportDateRange: string;
+  ReportTemplateId?: number;
+  ReportNumericFormat?: string;
   ReportFilters?: Array<{
     Type: string;
     Value: string;
@@ -147,7 +149,7 @@ export class TtdReportingService {
     };
 
     const result = (await this.httpClient.fetch(
-      "/myreports/reportexecution/query",
+      "/myreports/reportexecution/query/reportschedule",
       context,
       {
         method: "POST",
@@ -262,7 +264,7 @@ export class TtdReportingService {
       };
 
       const result = (await this.httpClient.fetch(
-        "/myreports/reportexecution/query",
+        "/myreports/reportexecution/query/reportschedule",
         context,
         {
           method: "POST",

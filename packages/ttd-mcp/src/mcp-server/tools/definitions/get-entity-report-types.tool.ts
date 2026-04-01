@@ -86,7 +86,7 @@ export async function getEntityReportTypesLogic(
     reportTypes: reportTypes.map((r) => ({
       type: r.type as string,
       available: r.available as boolean,
-      schedule: r.schedule as boolean,
+      schedule: r.schedule as boolean | string,
     })),
     userErrors: userErrors?.length ? userErrors : undefined,
     timestamp: new Date().toISOString(),
