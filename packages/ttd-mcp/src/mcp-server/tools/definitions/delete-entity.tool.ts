@@ -36,7 +36,7 @@ export const DeleteEntityInputSchema = z
     adGroupId: z
       .string()
       .optional()
-      .describe("Ad Group ID (required for ad)"),
+      .describe("Ad Group ID (not currently required for any entity type)"),
     reason: z
       .string()
       .optional()
@@ -106,16 +106,6 @@ export const deleteEntityTool = {
     idempotentHint: false,
   },
   inputExamples: [
-    {
-      label: "Delete an ad",
-      input: {
-        entityType: "ad",
-        entityId: "ad111xyz",
-        advertiserId: "adv123abc",
-        adGroupId: "adg111aaa",
-        reason: "Replaced by updated creative version",
-      },
-    },
     {
       label: "Delete a creative",
       input: {

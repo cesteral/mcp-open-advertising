@@ -49,59 +49,59 @@ function formatEntityHierarchyMarkdown(): string {
 Partner (your TTD seat)
   └── Advertiser
         ├── Campaign
-        │     └── Ad Group
-        │           ├── Ad
-        │           └── (references: Creatives, Bid Lists, Deals)
-        ├── Creative (reusable across ads)
-        ├── Site List (include/exclude inventory)
-        ├── Deal (PMP/PG contracts)
-        ├── Conversion Tracker (tracking tags)
-        └── Bid List (dimensional bid adjustments)
+        │     └── Ad Group (contains CreativeIds + targeting/bidding)
+        ├── Creative (reusable across ad groups)
+        └── Conversion Tracker (tracking tags)
 \`\`\`
 
-## Entity Types (9 total)
+## REST Entity Types (5 total)
 
 | Entity Type | Required Parent IDs | ID Field | API Path | Query Path | Supports Bulk | Supports Archive |
 |-------------|--------------------:|----------|----------|------------|:---:|:---:|
 ${buildEntityRows()}
 
+## GraphQL-Only Entities
+
+The following entities have **no REST query endpoints** and must be managed via \`ttd_graphql_query\`:
+
+- **Ads** — TTD has no standalone Ad entity. Ads are the combination of an Ad Group + Creative associations (\`CreativeIds\` on the ad group).
+- **Publisher Lists (Site Lists)** — Managed via GraphQL \`bidListCreate\` mutation with \`PUBLISHER_LIST\` type.
+- **Deals** — Managed via GraphQL \`targetableCommitments\` / \`targetableEndeavors\` on partner or advertiser objects.
+- **Bid Lists** — Managed via GraphQL \`bidList\` query, \`bidListCreate\`/\`bidListUpdate\`/\`bidListDelete\` mutations.
+
 ## Key Relationships
 
-### Core Hierarchy: Advertiser → Campaign → Ad Group → Ad
+### Core Hierarchy: Advertiser → Campaign → Ad Group
 - A campaign belongs to exactly one advertiser (inherits currency).
 - An ad group belongs to exactly one campaign (inherits flight dates).
-- An ad belongs to exactly one ad group (inherits targeting/bidding).
+- Ad groups contain \`CreativeIds\` to associate creatives (what other platforms call "ads").
 
-### Ancillary Entities (all belong to an Advertiser)
-- **Creatives** are reusable — referenced by ads via \`CreativeIds\`.
-- **Site Lists** are referenced by ad groups via \`SiteTargeting\`.
-- **Deals** are referenced by ad groups via \`ContractTargeting\`.
+### Ancillary Entities
+- **Creatives** are reusable — referenced by ad groups via \`CreativeIds\` in \`RTBAttributes\`.
 - **Conversion Trackers** feed into campaign/ad group ROI optimization.
-- **Bid Lists** are associated with ad groups via \`AssociatedBidLists\`.
+- **Bid Lists** (GraphQL) are associated with ad groups via \`AssociatedBidLists\`.
+- **Deals** (GraphQL) are referenced by ad groups via \`ContractTargeting\`.
 
 ## Creation Order
 
 Full campaign structure (top-down):
 
 1. **Advertiser** — usually pre-exists; verify with \`ttd_get_entity\`
-2. **Creative(s)** — create before ads that reference them
+2. **Creative(s)** — create before ad groups that reference them
 3. **Conversion Tracker(s)** — create if using CPA/ROAS goals
-4. **Site List(s)** — create if using inventory targeting
-5. **Deal(s)** — create if using PMP/PG inventory
-6. **Bid List(s)** — create if using dimensional bid adjustments
-7. **Campaign** — requires \`AdvertiserId\`
-8. **Ad Group(s)** — requires \`CampaignId\` + configure targeting/bidding
-9. **Ad(s)** — requires \`AdGroupId\` + \`CreativeIds\`
+4. **Bid List(s)** — create via \`ttd_graphql_query\` if using dimensional bid adjustments
+5. **Deal(s)** — manage via \`ttd_graphql_query\` if using PMP/PG inventory
+6. **Campaign** — requires \`AdvertiserId\`
+7. **Ad Group(s)** — requires \`CampaignId\` + configure targeting/bidding + \`CreativeIds\`
 
 ## Deletion / Archive Order
 
 Delete bottom-up to avoid orphan references:
 
-1. **Ads** first
-2. **Ad Groups** (use \`ttd_archive_entities\` for batch soft-delete)
-3. **Campaigns** (use \`ttd_archive_entities\` for batch soft-delete)
-4. Ancillary entities (creatives, site lists, deals, trackers, bid lists)
-5. _(Advertisers are rarely deleted)_
+1. **Ad Groups** (use \`ttd_archive_entities\` for batch soft-delete)
+2. **Campaigns** (use \`ttd_archive_entities\` for batch soft-delete)
+3. Ancillary entities (creatives, trackers; bid lists/deals via GraphQL)
+4. _(Advertisers are rarely deleted)_
 
 ## Query Patterns
 
@@ -112,12 +112,8 @@ List queries use POST to scoped query endpoints. Each endpoint is scoped to a pa
 | Advertisers for partner | \`/advertiser/query/partner\` | \`PartnerId\` | \`{ "PartnerId": "partner123" }\` |
 | Campaigns for advertiser | \`/campaign/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
 | Ad Groups for campaign | \`/adgroup/query/campaign\` | \`CampaignId\` | \`{ "CampaignId": "camp456" }\` |
-| Ads for ad group | \`/ad/query/adgroup\` | \`AdGroupId\` | \`{ "AdGroupId": "ag789" }\` |
 | Creatives for advertiser | \`/creative/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
-| Site lists for advertiser | \`/sitelist/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
-| Deals for advertiser | \`/deal/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
-| Trackers for advertiser | \`/tracking/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
-| Bid lists for advertiser | \`/bidlist/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
+| Trackers for advertiser | \`/trackingtag/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
 
 ## Available Tools Summary
 

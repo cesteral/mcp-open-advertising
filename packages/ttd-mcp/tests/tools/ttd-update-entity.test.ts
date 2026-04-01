@@ -85,20 +85,6 @@ describe("UpdateEntityInputSchema", () => {
     }
   });
 
-  it("requires adGroupId for ad updates", () => {
-    const parsed = UpdateEntityInputSchema.safeParse({
-      entityType: "ad",
-      entityId: "ad-001",
-      advertiserId: "adv-123",
-      data: { Name: "Updated Ad" },
-    });
-    expect(parsed.success).toBe(false);
-    if (!parsed.success) {
-      expect(parsed.error.issues[0]?.message).toContain(
-        'Missing required parent identifier(s) for entity type "ad"'
-      );
-    }
-  });
 });
 
 describe("updateEntityResponseFormatter", () => {

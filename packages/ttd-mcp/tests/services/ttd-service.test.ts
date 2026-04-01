@@ -82,15 +82,6 @@ describe("TtdService", () => {
       expect(path).toBe("/adgroup/query/campaign");
     });
 
-    it("calls httpClient.fetch with correct scoped query path for ads", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
-
-      await service.listEntities("ad", { AdvertiserId: "adv1" });
-
-      const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/ad/query/adgroup");
-    });
-
     it("uses POST method with filters in body", async () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
 
@@ -410,7 +401,7 @@ describe("TtdService", () => {
     it("calls rateLimiter.consume", async () => {
       httpClient.fetch.mockResolvedValueOnce({});
 
-      await service.deleteEntity("ad", "a1");
+      await service.deleteEntity("creative", "cr1");
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
     });

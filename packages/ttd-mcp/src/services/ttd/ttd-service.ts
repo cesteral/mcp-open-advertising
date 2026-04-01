@@ -11,36 +11,24 @@ import type {
   TtdAdvertiser,
   TtdCampaign,
   TtdAdGroup,
-  TtdAd,
   TtdCreative,
-  TtdSiteList,
-  TtdDeal,
   TtdConversionTracker,
-  TtdBidList,
 } from "./types.js";
 
 export type {
   TtdAdvertiser,
   TtdCampaign,
   TtdAdGroup,
-  TtdAd,
   TtdCreative,
-  TtdSiteList,
-  TtdDeal,
   TtdConversionTracker,
-  TtdBidList,
 };
 
 interface TtdEntityMap {
   advertiser: TtdAdvertiser;
   campaign: TtdCampaign;
   adGroup: TtdAdGroup;
-  ad: TtdAd;
   creative: TtdCreative;
-  siteList: TtdSiteList;
-  deal: TtdDeal;
   conversionTracker: TtdConversionTracker;
-  bidList: TtdBidList;
 }
 
 /**

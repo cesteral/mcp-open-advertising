@@ -13,7 +13,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 }));
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
-  getEntityTypeEnum: vi.fn().mockReturnValue(["advertiser", "campaign", "adGroup", "ad"]),
+  getEntityTypeEnum: vi.fn().mockReturnValue(["advertiser", "campaign", "adGroup", "creative", "conversionTracker"]),
 }));
 
 import {
@@ -112,18 +112,6 @@ describe("listEntitiesLogic", () => {
     expect(mockTtdService.listEntities).toHaveBeenCalledOnce();
     const [_entityType, filters] = mockTtdService.listEntities.mock.calls[0];
     expect(filters.CampaignId).toBe("camp-001");
-  });
-
-  it("includes adGroupId in filters when provided", async () => {
-    await listEntitiesLogic(
-      { entityType: "ad" as any, advertiserId: "adv-001", adGroupId: "ag-001" },
-      createMockContext(),
-      createMockSdkContext()
-    );
-
-    expect(mockTtdService.listEntities).toHaveBeenCalledOnce();
-    const [_entityType, filters] = mockTtdService.listEntities.mock.calls[0];
-    expect(filters.AdGroupId).toBe("ag-001");
   });
 
   it("merges additional filter fields", async () => {
@@ -251,17 +239,6 @@ describe("ListEntitiesInputSchema validation", () => {
     }
   });
 
-  it("requires adGroupId for ad entities", () => {
-    const result = ListEntitiesInputSchema.safeParse({
-      entityType: "ad",
-      advertiserId: "adv-001",
-    });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((i) => i.path.includes("adGroupId"))).toBe(true);
-    }
-  });
-
   it("allows advertiser without any parent IDs", () => {
     const result = ListEntitiesInputSchema.safeParse({
       entityType: "advertiser",
@@ -296,12 +273,4 @@ describe("ListEntitiesInputSchema validation", () => {
     expect(result.success).toBe(true);
   });
 
-  it("passes for ad with advertiserId and adGroupId", () => {
-    const result = ListEntitiesInputSchema.safeParse({
-      entityType: "ad",
-      advertiserId: "adv-001",
-      adGroupId: "ag-001",
-    });
-    expect(result.success).toBe(true);
-  });
 });

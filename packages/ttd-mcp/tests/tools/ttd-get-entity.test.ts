@@ -80,19 +80,6 @@ describe("GetEntityInputSchema", () => {
     }
   });
 
-  it("requires adGroupId for ad lookups", () => {
-    const parsed = GetEntityInputSchema.safeParse({
-      entityType: "ad",
-      entityId: "ad-001",
-      advertiserId: "adv-123",
-    });
-    expect(parsed.success).toBe(false);
-    if (!parsed.success) {
-      expect(parsed.error.issues[0]?.message).toContain(
-        'Missing required parent identifier(s) for entity type "ad"'
-      );
-    }
-  });
 });
 
 describe("getEntityResponseFormatter", () => {

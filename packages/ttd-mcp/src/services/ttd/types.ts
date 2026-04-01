@@ -125,16 +125,6 @@ export interface TtdAdGroup {
   AutomaticAdGroupPacing?: boolean;
 }
 
-export interface TtdAd {
-  AdId: string;
-  AdGroupId: string;
-  AdName: string;
-  Description?: string;
-  CreativeId?: string;
-  ClickthroughUrl?: string;
-  IsActive: boolean;
-}
-
 export interface TtdCreative {
   CreativeId: string;
   AdvertiserId: string;
@@ -144,29 +134,6 @@ export interface TtdCreative {
   Height?: number;
   CreativeType: TtdCreativeType;
   Url?: string;
-  IsActive: boolean;
-}
-
-export interface TtdSiteList {
-  SiteListId: string;
-  AdvertiserId: string;
-  SiteListName: string;
-  Description?: string;
-  Sites?: string[];
-  IsActive: boolean;
-}
-
-export interface TtdDeal {
-  DealId: string;
-  PartnerDealId?: string;
-  DealName: string;
-  Description?: string;
-  PublisherId?: string;
-  CurrencyCode: string;
-  Price: number;
-  PriceType: "CPM" | "Fixed" | "Unlimited";
-  StartDateUtc?: string;
-  EndDateUtc?: string;
   IsActive: boolean;
 }
 
@@ -181,22 +148,6 @@ export interface TtdConversionTracker {
   ClickDedupWindowInSeconds?: number;
   ConversionDedupWindowInSeconds?: number;
   IsActive: boolean;
-}
-
-export interface TtdBidListAdjustment {
-  DimensionType: string;
-  Keys: string[];
-  Adjustment: number;
-}
-
-export interface TtdBidList {
-  BidListId: string;
-  AdvertiserId: string;
-  BidListName: string;
-  Description?: string;
-  BidListType: "Targeting" | "Inventory";
-  IsActive: boolean;
-  Adjustments?: TtdBidListAdjustment[];
 }
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
@@ -264,15 +215,6 @@ export function isTtdAdGroup(value: unknown): value is TtdAdGroup {
     value !== null &&
     typeof (value as Record<string, unknown>).AdGroupId === "string" &&
     typeof (value as Record<string, unknown>).CampaignId === "string"
-  );
-}
-
-export function isTtdAd(value: unknown): value is TtdAd {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Record<string, unknown>).AdId === "string" &&
-    typeof (value as Record<string, unknown>).AdGroupId === "string"
   );
 }
 

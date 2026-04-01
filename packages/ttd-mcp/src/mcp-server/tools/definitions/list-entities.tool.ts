@@ -9,7 +9,9 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_list_entities";
 const TOOL_TITLE = "List TTD Entities";
-const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination. Required scope IDs: advertiser (partnerId), campaign/creative/siteList/deal/conversionTracker/bidList (advertiserId), adGroup (advertiserId+campaignId), ad (advertiserId+adGroupId). See entity-hierarchy://ttd resource for details.`;
+const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination. Required scope IDs: advertiser (partnerId), campaign/creative/conversionTracker (advertiserId), adGroup (advertiserId+campaignId). See entity-hierarchy://ttd resource for details.
+
+**Note:** Ads (ad group + creative associations), deals, bid lists, and publisher lists (site lists) have no REST query endpoints in TTD. Use the ttd_graphql_query tool for these entities.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -55,7 +57,7 @@ export const ListEntitiesInputSchema = z
         path: ["partnerId"],
       });
     }
-    const needsAdvertiser = ["campaign", "adGroup", "ad", "creative", "siteList", "deal", "conversionTracker", "bidList"];
+    const needsAdvertiser = ["campaign", "adGroup", "creative", "conversionTracker"];
     if (needsAdvertiser.includes(data.entityType) && !data.advertiserId) {
       ctx.addIssue({
         code: "custom",
@@ -69,14 +71,6 @@ export const ListEntitiesInputSchema = z
         code: "custom",
         message: "campaignId is required when listing adGroup entities (query is scoped to campaign)",
         path: ["campaignId"],
-      });
-    }
-    // ad queries use /ad/query/adgroup — adGroupId is required
-    if (data.entityType === "ad" && !data.adGroupId) {
-      ctx.addIssue({
-        code: "custom",
-        message: "adGroupId is required when listing ad entities (query is scoped to ad group)",
-        path: ["adGroupId"],
       });
     }
   })

@@ -92,7 +92,12 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (36 tools)
+## Available Tools Summary (37 tools)
+
+### Context
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_get_context\` | Get partner IDs accessible with current credentials (cold-start) | Read |
 
 ### Core CRUD
 | Tool | Purpose | Read/Write |
@@ -162,8 +167,10 @@ Inspect the output, then iterate with more specific calls.
 | \`ttd_execute_entity_report\` | Execute immediate entity-level report via GraphQL | Write |
 | \`ttd_get_entity_report_types\` | Discover available report types for an entity | Read |
 
-### Supported Entity Types (9)
-\`advertiser\`, \`campaign\`, \`adGroup\`, \`ad\`, \`creative\`, \`siteList\`, \`deal\`, \`conversionTracker\`, \`bidList\`
+### Supported REST Entity Types (5)
+\`advertiser\`, \`campaign\`, \`adGroup\`, \`creative\`, \`conversionTracker\`
+
+**GraphQL-only entities:** Ads (adGroup + creative), deals, bid lists, and publisher lists (site lists) must be managed via \`ttd_graphql_query\`.
 
 ---
 

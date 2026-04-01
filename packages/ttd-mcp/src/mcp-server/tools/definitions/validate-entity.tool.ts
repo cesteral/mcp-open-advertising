@@ -60,30 +60,13 @@ const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
     { field: "AdGroupName", expectedType: "string" },
     { field: "RTBAttributes", expectedType: "object", hint: "must contain BudgetSettings and BaseBidCPM" },
   ],
-  ad: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "AdGroupId", expectedType: "string" },
-    { field: "CreativeIds", expectedType: "array", hint: "array of creative IDs to associate" },
-  ],
   creative: [
     { field: "AdvertiserId", expectedType: "string" },
     { field: "CreativeName", expectedType: "string" },
   ],
-  siteList: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "SiteListName", expectedType: "string" },
-  ],
-  deal: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "DealName", expectedType: "string" },
-  ],
   conversionTracker: [
     { field: "AdvertiserId", expectedType: "string" },
     { field: "TrackingTagName", expectedType: "string" },
-  ],
-  bidList: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "BidListName", expectedType: "string" },
   ],
 };
 

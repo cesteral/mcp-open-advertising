@@ -15,12 +15,8 @@ export type TtdEntityType =
   | "advertiser"
   | "campaign"
   | "adGroup"
-  | "ad"
   | "creative"
-  | "siteList"
-  | "deal"
-  | "conversionTracker"
-  | "bidList";
+  | "conversionTracker";
 
 /** Subset that supports bulk create/update via the Workflows Service. */
 export type BulkSupportedEntityType = "campaign" | "adGroup";
@@ -62,41 +58,17 @@ const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
     supportsBulk: true,
     supportsArchive: true,
   },
-  ad: {
-    apiPath: "/ad",
-    queryPath: "/ad/query/adgroup",
-    parentIds: ["advertiserId", "adGroupId"],
-    idField: "AdId",
-  },
   creative: {
     apiPath: "/creative",
     queryPath: "/creative/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "CreativeId",
   },
-  siteList: {
-    apiPath: "/sitelist",
-    queryPath: "/sitelist/query/advertiser",
-    parentIds: ["advertiserId"],
-    idField: "SiteListId",
-  },
-  deal: {
-    apiPath: "/deal",
-    queryPath: "/deal/query/advertiser",
-    parentIds: ["advertiserId"],
-    idField: "DealId",
-  },
   conversionTracker: {
     apiPath: "/trackingtag",
     queryPath: "/trackingtag/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "TrackingTagId",
-  },
-  bidList: {
-    apiPath: "/bidlist",
-    queryPath: "/bidlist/query/advertiser",
-    parentIds: ["advertiserId"],
-    idField: "BidListId",
   },
 };
 

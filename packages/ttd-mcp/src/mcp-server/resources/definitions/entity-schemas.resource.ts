@@ -5,7 +5,7 @@
  * TTD Entity Schema Resources
  *
  * Per-entity field reference for TTD API v3 entities.
- * 10 resources: 9 individual entity types + 1 aggregate.
+ * 6 resources: 5 individual entity types + 1 aggregate.
  */
 import type { Resource } from "../types.js";
 
@@ -219,37 +219,6 @@ function adGroupSchemaMarkdown(): string {
 `;
 }
 
-function adSchemaMarkdown(): string {
-  return `# TTD Ad Schema
-
-## Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| \`AdId\` | string | Read-only | Unique ad ID (assigned by TTD) |
-| \`AdGroupId\` | string | **Yes** | Parent ad group |
-| \`AdvertiserId\` | string | **Yes** | Parent advertiser |
-| \`AdName\` | string | **Yes** | Display name |
-| \`CreativeIds\` | string[] | **Yes** | Associated creative IDs (at least one) |
-| \`IsEnabled\` | boolean | No | Whether ad is active (default: \`true\`) |
-| \`Availability\` | string | No | \`Available\`, \`Paused\`, \`Archived\` |
-| \`LandingPageUrl\` | string | No | Click-through URL |
-| \`AdFormat\` | string | No | \`Banner\`, \`Video\`, \`Native\`, \`Audio\` |
-| \`Frequency\` | object | No | Ad-level frequency cap |
-| \`ClickUrl\` | string | No | Click tracking URL |
-| \`ImpressionTrackingUrls\` | string[] | No | Third-party impression trackers |
-| \`IsClickTrackerAd\` | boolean | No | Whether this is a click tracker ad |
-| \`Description\` | string | No | Ad description |
-
-## Notes
-- \`AdId\` is auto-assigned; do not include in create payloads.
-- \`CreativeIds\` must reference existing creatives (use \`ttd_create_entity\` with \`entityType: "creative"\` first).
-- Ads inherit targeting from their parent ad group.
-- Multiple creatives per ad enables A/B testing (TTD auto-optimizes).
-- Set \`IsEnabled: false\` to pause a specific ad without affecting the ad group.
-`;
-}
-
 function creativeSchemaMarkdown(): string {
   return `# TTD Creative Schema
 
@@ -290,55 +259,6 @@ function creativeSchemaMarkdown(): string {
 `;
 }
 
-function siteListSchemaMarkdown(): string {
-  return `# TTD Site List Schema
-
-## Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| \`SiteListId\` | string | Read-only | Unique site list ID (assigned by TTD) |
-| \`AdvertiserId\` | string | **Yes** | Parent advertiser |
-| \`SiteListName\` | string | **Yes** | Display name |
-| \`SiteListType\` | string | **Yes** | \`Whitelist\` (include) or \`Blacklist\` (exclude) |
-| \`Sites\` | string[] | No | Array of domain/app names |
-| \`Description\` | string | No | Site list description |
-| \`Availability\` | string | No | \`Available\` or \`Archived\` |
-
-## Notes
-- Site lists are used in ad group \`SiteTargeting\` to include or exclude inventory.
-- Can contain domains (e.g., \`example.com\`) or app bundle IDs.
-- Whitelist = only bid on these sites; Blacklist = never bid on these sites.
-- Changes to site lists take effect within minutes.
-`;
-}
-
-function dealSchemaMarkdown(): string {
-  return `# TTD Deal Schema
-
-## Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| \`DealId\` | string | Read-only | Unique deal ID (assigned by TTD) |
-| \`AdvertiserId\` | string | **Yes** | Parent advertiser |
-| \`DealName\` | string | **Yes** | Display name |
-| \`DealType\` | string | **Yes** | \`PMP\` (private marketplace) or \`PG\` (programmatic guaranteed) |
-| \`ExternalDealId\` | string | **Yes** | SSP-assigned deal ID |
-| \`SupplyVendorId\` | string | **Yes** | Exchange/SSP vendor ID |
-| \`DealPriceFloor\` | object | No | \`{ Amount, CurrencyCode }\` — minimum bid floor |
-| \`StartDate\` | string | No | Deal start date (ISO 8601) |
-| \`EndDate\` | string | No | Deal end date (ISO 8601) |
-| \`Availability\` | string | No | \`Available\` or \`Archived\` |
-| \`Description\` | string | No | Deal description |
-
-## Notes
-- Deals are set up between advertiser and publisher, then referenced in ad group \`ContractTargeting\`.
-- \`ExternalDealId\` is the deal ID provided by the SSP/exchange.
-- PMP deals use auction-based pricing; PG deals have fixed pricing.
-`;
-}
-
 function conversionTrackerSchemaMarkdown(): string {
   return `# TTD Conversion Tracker Schema
 
@@ -366,49 +286,14 @@ function conversionTrackerSchemaMarkdown(): string {
 `;
 }
 
-function bidListSchemaMarkdown(): string {
-  return `# TTD Bid List Schema
-
-## Fields
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| \`BidListId\` | string | Read-only | Unique bid list ID (assigned by TTD) |
-| \`AdvertiserId\` | string | **Yes** | Parent advertiser |
-| \`BidListName\` | string | **Yes** | Display name |
-| \`BidListDimension\` | string | **Yes** | Dimension for bid adjustments (e.g., \`GeoRegion\`, \`DeviceType\`, \`TimeOfDay\`, \`Browser\`, \`OS\`) |
-| \`BidListAdjustmentType\` | string | **Yes** | \`PercentageAdjustment\` or \`AbsoluteBid\` |
-| \`BidListEntries\` | object[] | No | Individual bid adjustments per dimension value |
-| \`Availability\` | string | No | \`Available\` or \`Archived\` |
-| \`Description\` | string | No | Bid list description |
-
-## BidListEntries Object
-
-| Field | Type | Description |
-|-------|------|-------------|
-| \`DimensionValue\` | string | Specific value to adjust (e.g., \`US-CA\`, \`Desktop\`) |
-| \`AdjustmentValue\` | number | Percentage (+/- from base) or absolute CPM |
-| \`IsEnabled\` | boolean | Whether this entry is active |
-
-## Notes
-- Bid lists allow fine-grained bid modifiers by dimension (geo, device, time, etc.).
-- Associate bid lists with ad groups via the \`AssociatedBidLists\` field.
-- Percentage adjustments: +50 means bid 50% higher; -30 means bid 30% lower.
-`;
-}
-
 // ─── Schema content lookup ───
 
 const SCHEMA_GENERATORS: Record<string, () => string> = {
   advertiser: advertiserSchemaMarkdown,
   campaign: campaignSchemaMarkdown,
   adgroup: adGroupSchemaMarkdown,
-  ad: adSchemaMarkdown,
   creative: creativeSchemaMarkdown,
-  sitelist: siteListSchemaMarkdown,
-  deal: dealSchemaMarkdown,
   conversiontracker: conversionTrackerSchemaMarkdown,
-  bidlist: bidListSchemaMarkdown,
 };
 
 function getSchemaContent(entityType: string): string {
@@ -434,12 +319,8 @@ const ENTITY_TYPES = [
   "advertiser",
   "campaign",
   "adGroup",
-  "ad",
   "creative",
-  "siteList",
-  "deal",
   "conversionTracker",
-  "bidList",
 ] as const;
 
 export const entitySchemaResources: Resource[] = ENTITY_TYPES.map((entityType) => ({

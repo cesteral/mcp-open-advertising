@@ -12,7 +12,9 @@ const TOOL_DESCRIPTION = `List report template headers from TTD MyReports via Gr
 
 This is the docs-aligned way to discover template IDs before retrieving structure with \`ttd_get_report_template\` or scheduling runs with \`ttd_create_template_schedule\`.
 
-For backward compatibility, the legacy \`pageSize\` / \`pageStartIndex\` inputs remain available. GraphQL cursor pagination is preferred.`;
+For backward compatibility, the legacy \`pageSize\` / \`pageStartIndex\` inputs remain available. GraphQL cursor pagination is preferred.
+
+**Note:** If you receive an \`UNAUTHORIZED_FIELD_OR_TYPE\` error, your TTD account does not have MyReports API access enabled. Contact your TTD Account Manager or Technical Account Manager (TAM) to request this entitlement. Use \`GET /v3/myreports/reporttemplate/facets\` or \`POST /v3/myreports/reporttemplateheader/query\` once enabled.`;
 
 export const ListReportTemplatesInputSchema = z
   .object({

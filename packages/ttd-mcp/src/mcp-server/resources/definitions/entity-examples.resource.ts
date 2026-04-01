@@ -5,7 +5,7 @@
  * TTD Entity Example Resources
  *
  * CRUD example payloads for each TTD entity type.
- * 5 resources: 4 individual entity types + 1 aggregate.
+ * 6 resources: 5 individual entity types + 1 aggregate.
  */
 import type { Resource } from "../types.js";
 
@@ -271,95 +271,6 @@ function adGroupExamplesMarkdown(): string {
 `;
 }
 
-function adExamplesMarkdown(): string {
-  return `# TTD Ad Examples
-
-## Create Ad (Single Creative)
-
-\`\`\`json
-{
-  "entityType": "ad",
-  "advertiserId": "abc123",
-  "data": {
-    "AdName": "Banner 300x250 - Version A",
-    "AdGroupId": "ag789",
-    "AdvertiserId": "abc123",
-    "CreativeIds": ["cr001"],
-    "LandingPageUrl": "https://www.acme.com/promo",
-    "AdFormat": "Banner"
-  }
-}
-\`\`\`
-
-## Create Ad (Multiple Creatives for A/B Test)
-
-\`\`\`json
-{
-  "entityType": "ad",
-  "advertiserId": "abc123",
-  "data": {
-    "AdName": "Video Pre-roll - A/B Test",
-    "AdGroupId": "ag789",
-    "AdvertiserId": "abc123",
-    "CreativeIds": ["cr002", "cr003", "cr004"],
-    "LandingPageUrl": "https://www.acme.com/video-landing",
-    "AdFormat": "Video",
-    "ImpressionTrackingUrls": [
-      "https://tracker.example.com/imp?campaign=q1"
-    ]
-  }
-}
-\`\`\`
-
-## List Ads for Ad Group
-
-\`\`\`json
-{
-  "entityType": "ad",
-  "filters": {
-    "AdGroupId": "ag789"
-  }
-}
-\`\`\`
-
-## Update Ad (Change Creative)
-
-\`\`\`json
-{
-  "entityType": "ad",
-  "entityId": "ad101",
-  "data": {
-    "CreativeIds": ["cr005"],
-    "LandingPageUrl": "https://www.acme.com/new-landing"
-  }
-}
-\`\`\`
-
-## Update Ad (Disable)
-
-\`\`\`json
-{
-  "entityType": "ad",
-  "entityId": "ad101",
-  "data": {
-    "IsEnabled": false
-  }
-}
-\`\`\`
-
-## Delete Ad
-
-\`\`\`json
-{
-  "entityType": "ad",
-  "entityId": "ad101"
-}
-\`\`\`
-`;
-}
-
-// ─── New entity examples ───
-
 function creativeExamplesMarkdown(): string {
   return `# TTD Creative Examples
 
@@ -398,66 +309,6 @@ function creativeExamplesMarkdown(): string {
       "IsSkippable": true,
       "SkipOffsetInSeconds": 5
     }
-  }
-}
-\`\`\`
-`;
-}
-
-function siteListExamplesMarkdown(): string {
-  return `# TTD Site List Examples
-
-## Create Whitelist (Include Only)
-
-\`\`\`json
-{
-  "entityType": "siteList",
-  "advertiserId": "abc123",
-  "data": {
-    "SiteListName": "Premium Publishers - Q1",
-    "AdvertiserId": "abc123",
-    "SiteListType": "Whitelist",
-    "Sites": ["nytimes.com", "washingtonpost.com", "cnn.com", "bbc.com"],
-    "Description": "Premium news publishers for brand safety"
-  }
-}
-\`\`\`
-
-## Create Blacklist (Exclude)
-
-\`\`\`json
-{
-  "entityType": "siteList",
-  "advertiserId": "abc123",
-  "data": {
-    "SiteListName": "Brand Safety Exclusions",
-    "AdvertiserId": "abc123",
-    "SiteListType": "Blacklist",
-    "Sites": ["clickbait-site.com", "low-quality-news.com"]
-  }
-}
-\`\`\`
-`;
-}
-
-function dealExamplesMarkdown(): string {
-  return `# TTD Deal Examples
-
-## Create PMP Deal
-
-\`\`\`json
-{
-  "entityType": "deal",
-  "advertiserId": "abc123",
-  "data": {
-    "DealName": "NYT Premium Inventory - Q1",
-    "AdvertiserId": "abc123",
-    "DealType": "PMP",
-    "ExternalDealId": "nyt-pmp-2025-q1",
-    "SupplyVendorId": "google-adx",
-    "DealPriceFloor": { "Amount": 8.00, "CurrencyCode": "USD" },
-    "StartDate": "2025-01-01T00:00:00",
-    "EndDate": "2025-03-31T23:59:59"
   }
 }
 \`\`\`
@@ -505,63 +356,14 @@ function conversionTrackerExamplesMarkdown(): string {
 `;
 }
 
-function bidListExamplesMarkdown(): string {
-  return `# TTD Bid List Examples
-
-## Create Geo Bid Adjustments
-
-\`\`\`json
-{
-  "entityType": "bidList",
-  "advertiserId": "abc123",
-  "data": {
-    "BidListName": "US State Bid Modifiers",
-    "AdvertiserId": "abc123",
-    "BidListDimension": "GeoRegion",
-    "BidListAdjustmentType": "PercentageAdjustment",
-    "BidListEntries": [
-      { "DimensionValue": "US-CA", "AdjustmentValue": 50, "IsEnabled": true },
-      { "DimensionValue": "US-NY", "AdjustmentValue": 30, "IsEnabled": true },
-      { "DimensionValue": "US-TX", "AdjustmentValue": -20, "IsEnabled": true }
-    ]
-  }
-}
-\`\`\`
-
-## Create Device Bid Adjustments
-
-\`\`\`json
-{
-  "entityType": "bidList",
-  "advertiserId": "abc123",
-  "data": {
-    "BidListName": "Device Type Modifiers",
-    "AdvertiserId": "abc123",
-    "BidListDimension": "DeviceType",
-    "BidListAdjustmentType": "PercentageAdjustment",
-    "BidListEntries": [
-      { "DimensionValue": "Desktop", "AdjustmentValue": 20, "IsEnabled": true },
-      { "DimensionValue": "Mobile", "AdjustmentValue": -10, "IsEnabled": true },
-      { "DimensionValue": "CTV", "AdjustmentValue": 40, "IsEnabled": true }
-    ]
-  }
-}
-\`\`\`
-`;
-}
-
 // ─── Resource definitions ───
 
 const EXAMPLE_GENERATORS: Record<string, () => string> = {
   advertiser: advertiserExamplesMarkdown,
   campaign: campaignExamplesMarkdown,
   adgroup: adGroupExamplesMarkdown,
-  ad: adExamplesMarkdown,
   creative: creativeExamplesMarkdown,
-  sitelist: siteListExamplesMarkdown,
-  deal: dealExamplesMarkdown,
   conversiontracker: conversionTrackerExamplesMarkdown,
-  bidlist: bidListExamplesMarkdown,
 };
 
 function getExampleContent(entityType: string): string {
@@ -587,12 +389,8 @@ const ENTITY_TYPES = [
   "advertiser",
   "campaign",
   "adGroup",
-  "ad",
   "creative",
-  "siteList",
-  "deal",
   "conversionTracker",
-  "bidList",
 ] as const;
 
 export const entityExampleResources: Resource[] = ENTITY_TYPES.map((entityType) => ({
