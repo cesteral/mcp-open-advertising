@@ -24,6 +24,10 @@ export const CreateEntityInputSchema = z
     entityType: z
       .enum(getEntityTypeEnum())
       .describe("Type of entity to create"),
+    partnerId: z
+      .string()
+      .optional()
+      .describe("Partner ID (required when creating advertiser entities)"),
     advertiserId: z
       .string()
       .optional()
@@ -41,6 +45,20 @@ export const CreateEntityInputSchema = z
       .describe("Entity data to create (fields vary by entity type)"),
   })
   .superRefine((input, ctx) => {
+    const topLevelPartnerId = typeof input.partnerId === "string"
+      ? input.partnerId.trim()
+      : undefined;
+    const payloadPartnerId = typeof input.data?.PartnerId === "string"
+      ? input.data.PartnerId.trim()
+      : undefined;
+
+    if (input.entityType === "advertiser" && !topLevelPartnerId && !payloadPartnerId) {
+      ctx.addIssue({
+        code: "custom",
+        message: "partnerId is required when creating advertiser entities",
+        path: ["partnerId"],
+      });
+    }
     addParentValidationIssue(
       ctx,
       input.entityType as TtdEntityType,
@@ -103,6 +121,17 @@ export const createEntityTool = {
     idempotentHint: false,
   },
   inputExamples: [
+    {
+      label: "Create an advertiser",
+      input: {
+        entityType: "advertiser",
+        partnerId: "partner123",
+        data: {
+          AdvertiserName: "Acme Corp",
+          CurrencyCode: "USD",
+        },
+      },
+    },
     {
       label: "Create a campaign",
       input: {

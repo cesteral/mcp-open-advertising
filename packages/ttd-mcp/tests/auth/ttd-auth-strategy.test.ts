@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { TtdHeadersAuthStrategy } from "../../src/auth/ttd-auth-strategy.js";
+import { TtdTokenAuthStrategy } from "../../src/auth/ttd-auth-strategy.js";
 
 vi.mock("../../src/auth/ttd-auth-adapter.js", () => ({
-  TtdApiTokenAuthAdapter: vi.fn(),
-  parseTtdCredentialsFromHeaders: vi.fn(),
-  getTtdCredentialFingerprint: vi.fn(),
+  TtdDirectTokenAuthAdapter: vi.fn(),
+  parseTtdDirectTokenFromHeaders: vi.fn(),
+  getTtdDirectTokenFingerprint: vi.fn(),
 }));
 
 import {
-  TtdApiTokenAuthAdapter,
-  parseTtdCredentialsFromHeaders,
-  getTtdCredentialFingerprint,
+  TtdDirectTokenAuthAdapter,
+  parseTtdDirectTokenFromHeaders,
+  getTtdDirectTokenFingerprint,
 } from "../../src/auth/ttd-auth-adapter.js";
 
 function createMockLogger() {
@@ -26,31 +26,28 @@ function createMockLogger() {
   } as any;
 }
 
-const MOCK_AUTH_URL = "https://auth.thetradedesk.com/oauth2/token";
-const MOCK_CREDENTIALS = { partnerId: "test-partner", apiSecret: "test-secret" };
-
-describe("TtdHeadersAuthStrategy", () => {
+describe("TtdTokenAuthStrategy", () => {
   let mockLogger: ReturnType<typeof createMockLogger>;
-  let mockAdapterInstance: { getAccessToken: ReturnType<typeof vi.fn>; partnerId: string };
+  let mockAdapterInstance: { validate: ReturnType<typeof vi.fn>; partnerId: string };
 
   beforeEach(() => {
     mockLogger = createMockLogger();
 
     mockAdapterInstance = {
-      getAccessToken: vi.fn().mockResolvedValue("ttd-test-token"),
-      partnerId: "test-partner",
+      validate: vi.fn().mockResolvedValue(undefined),
+      partnerId: "direct-token",
     };
 
-    (TtdApiTokenAuthAdapter as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+    (TtdDirectTokenAuthAdapter as unknown as ReturnType<typeof vi.fn>).mockImplementation(
       () => mockAdapterInstance
     );
 
-    (parseTtdCredentialsFromHeaders as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
-      MOCK_CREDENTIALS
+    (parseTtdDirectTokenFromHeaders as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      { token: "direct-token-123" }
     );
 
-    (getTtdCredentialFingerprint as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
-      "abcdef0123456789"
+    (getTtdDirectTokenFingerprint as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
+      "1234567890abcdef"
     );
   });
 
@@ -58,118 +55,52 @@ describe("TtdHeadersAuthStrategy", () => {
     vi.restoreAllMocks();
   });
 
-  describe("verify", () => {
-    it("parses TTD credentials from headers", async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-      const headers = { "x-ttd-partner-id": "test-partner", "x-ttd-api-secret": "test-secret" };
+  it("parses TTD-Auth from request headers", async () => {
+    const strategy = new TtdTokenAuthStrategy(mockLogger);
+    const headers = { "ttd-auth": "direct-token-123" };
 
-      await strategy.verify(headers);
+    await strategy.verify(headers);
 
-      expect(parseTtdCredentialsFromHeaders).toHaveBeenCalledWith(headers);
+    expect(parseTtdDirectTokenFromHeaders).toHaveBeenCalledWith(headers);
+  });
+
+  it("creates a direct-token adapter and validates it", async () => {
+    const strategy = new TtdTokenAuthStrategy(mockLogger);
+
+    const result = await strategy.verify({ "ttd-auth": "direct-token-123" });
+
+    expect(TtdDirectTokenAuthAdapter).toHaveBeenCalledWith("direct-token-123");
+    expect(mockAdapterInstance.validate).toHaveBeenCalledTimes(1);
+    expect(result.authInfo).toMatchObject({
+      clientId: "ttd-direct-token",
+      authType: "ttd-token",
+    });
+    expect(result.platformAuthAdapter).toBe(mockAdapterInstance);
+    expect(result.credentialFingerprint).toBe("1234567890abcdef");
+  });
+
+  it("returns the direct-token fingerprint for session reuse checks", async () => {
+    const strategy = new TtdTokenAuthStrategy(mockLogger);
+
+    const fingerprint = await strategy.getCredentialFingerprint({
+      "ttd-auth": "direct-token-123",
     });
 
-    it("creates TtdApiTokenAuthAdapter with parsed credentials", async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      await strategy.verify({ "x-ttd-partner-id": "test-partner", "x-ttd-api-secret": "test-secret" });
-
-      expect(TtdApiTokenAuthAdapter).toHaveBeenCalledWith(MOCK_CREDENTIALS, MOCK_AUTH_URL);
+    expect(fingerprint).toBe("1234567890abcdef");
+    expect(getTtdDirectTokenFingerprint).toHaveBeenCalledWith({
+      token: "direct-token-123",
     });
+  });
 
-    it("validates credentials by calling getAccessToken", async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
+  it("throws when TTD-Auth is missing", async () => {
+    (parseTtdDirectTokenFromHeaders as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      () => {
+        throw new Error("Missing required header: TTD-Auth");
+      }
+    );
 
-      await strategy.verify({ "x-ttd-partner-id": "test-partner", "x-ttd-api-secret": "test-secret" });
+    const strategy = new TtdTokenAuthStrategy(mockLogger);
 
-      expect(mockAdapterInstance.getAccessToken).toHaveBeenCalledTimes(1);
-    });
-
-    it("returns authInfo with clientId = partnerId", async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      const result = await strategy.verify({
-        "x-ttd-partner-id": "test-partner",
-        "x-ttd-api-secret": "test-secret",
-      });
-
-      expect(result.authInfo.clientId).toBe("test-partner");
-    });
-
-    it('returns authType "ttd-headers"', async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      const result = await strategy.verify({
-        "x-ttd-partner-id": "test-partner",
-        "x-ttd-api-secret": "test-secret",
-      });
-
-      expect(result.authInfo.authType).toBe("ttd-headers");
-    });
-
-    it("returns platformAuthAdapter (the adapter instance)", async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      const result = await strategy.verify({
-        "x-ttd-partner-id": "test-partner",
-        "x-ttd-api-secret": "test-secret",
-      });
-
-      expect(result.platformAuthAdapter).toBe(mockAdapterInstance);
-    });
-
-    it("returns credentialFingerprint", async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      const result = await strategy.verify({
-        "x-ttd-partner-id": "test-partner",
-        "x-ttd-api-secret": "test-secret",
-      });
-
-      expect(result.credentialFingerprint).toBe("abcdef0123456789");
-      expect(getTtdCredentialFingerprint).toHaveBeenCalledWith(MOCK_CREDENTIALS);
-    });
-
-    it("throws when headers are missing (propagates parseTtdCredentialsFromHeaders error)", async () => {
-      (parseTtdCredentialsFromHeaders as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-        () => {
-          throw new Error("Missing required header: X-TTD-Partner-Id");
-        }
-      );
-
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      await expect(strategy.verify({})).rejects.toThrow(
-        "Missing required header: X-TTD-Partner-Id"
-      );
-    });
-
-    it("throws when token exchange fails", async () => {
-      mockAdapterInstance.getAccessToken.mockRejectedValue(
-        new Error("TTD token exchange failed: 401 Unauthorized.")
-      );
-
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      await expect(
-        strategy.verify({
-          "x-ttd-partner-id": "test-partner",
-          "x-ttd-api-secret": "test-secret",
-        })
-      ).rejects.toThrow("TTD token exchange failed: 401 Unauthorized.");
-    });
-
-    it("logs debug message on success", async () => {
-      const strategy = new TtdHeadersAuthStrategy(MOCK_AUTH_URL, mockLogger);
-
-      await strategy.verify({
-        "x-ttd-partner-id": "test-partner",
-        "x-ttd-api-secret": "test-secret",
-      });
-
-      expect(mockLogger.debug).toHaveBeenCalledWith(
-        { partnerId: "test-partner" },
-        "TTD credentials validated"
-      );
-    });
+    await expect(strategy.verify({})).rejects.toThrow("Missing required header: TTD-Auth");
   });
 });

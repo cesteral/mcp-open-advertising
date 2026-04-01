@@ -9,13 +9,17 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_list_entities";
 const TOOL_TITLE = "List TTD Entities";
-const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination. Required parent IDs: advertiser (none), campaign/creative/siteList/deal/conversionTracker/bidList (advertiserId), adGroup (advertiserId+campaignId), ad (advertiserId+adGroupId). See entity-hierarchy://ttd resource for details.`;
+const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination. Required scope IDs: advertiser (partnerId), campaign/creative/siteList/deal/conversionTracker/bidList (advertiserId), adGroup (advertiserId+campaignId), ad (advertiserId+adGroupId). See entity-hierarchy://ttd resource for details.`;
 
 export const ListEntitiesInputSchema = z
   .object({
     entityType: z
       .enum(getEntityTypeEnum())
       .describe("Type of entities to list"),
+    partnerId: z
+      .string()
+      .optional()
+      .describe("Partner ID (required when listing advertiser entities)"),
     advertiserId: z
       .string()
       .optional()
@@ -44,6 +48,13 @@ export const ListEntitiesInputSchema = z
       .describe("Number of entities to return per page"),
   })
   .superRefine((data, ctx) => {
+    if (data.entityType === "advertiser" && !data.partnerId) {
+      ctx.addIssue({
+        code: "custom",
+        message: "partnerId is required when listing advertiser entities",
+        path: ["partnerId"],
+      });
+    }
     const needsAdvertiser = ["campaign", "adGroup", "ad", "creative", "siteList", "deal", "conversionTracker", "bidList"];
     if (needsAdvertiser.includes(data.entityType) && !data.advertiserId) {
       ctx.addIssue({
@@ -92,6 +103,9 @@ export async function listEntitiesLogic(
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const filters: Record<string, unknown> = { ...input.filter };
+  if (input.partnerId) {
+    filters.PartnerId = input.partnerId;
+  }
   if (input.advertiserId) {
     filters.AdvertiserId = input.advertiserId;
   }
@@ -171,6 +185,7 @@ export const listEntitiesTool = {
       label: "List advertisers with pagination",
       input: {
         entityType: "advertiser",
+        partnerId: "partner123",
         pageSize: 20,
         pageToken: "100",
       },

@@ -8,7 +8,7 @@
  * 1. LinkedInAccessTokenAdapter — holds a pre-generated static access token.
  * 2. LinkedInRefreshTokenAdapter — uses client credentials + refresh token to
  *    auto-refresh access tokens (60-day expiry). Same caching + mutex pattern
- *    as TTD's TtdApiTokenAuthAdapter.
+ *    as TTD's TtdCredentialExchangeAuthAdapter.
  *
  * Validates tokens by hitting GET /v2/me?projection=(id,vanityName) on the API.
  */
@@ -108,7 +108,7 @@ interface LinkedInTokenResponse {
  *
  * LinkedIn access tokens expire after 60 days. This adapter caches them
  * with a 60-second expiry buffer and uses a mutex to prevent concurrent
- * token requests (same pattern as TTD's TtdApiTokenAuthAdapter).
+ * token requests (same pattern as TTD's TtdCredentialExchangeAuthAdapter).
  */
 export class LinkedInRefreshTokenAdapter implements LinkedInAuthAdapter {
   private cachedToken: string | null = null;

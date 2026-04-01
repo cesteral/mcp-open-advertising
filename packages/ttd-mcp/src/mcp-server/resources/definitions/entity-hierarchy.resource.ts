@@ -19,11 +19,12 @@ const parentFieldLabels: Record<ParentIdKey, string> = {
   advertiserId: "AdvertiserId",
   campaignId: "CampaignId",
   adGroupId: "AdGroupId",
+  partnerId: "PartnerId",
 };
 
 function formatParentIds(parentIds: ParentIdKey[]): string {
   if (parentIds.length === 0) {
-    return "_(none - scoped to Partner)_";
+    return "_(none - partner-scoped)_";
   }
   return parentIds.map((id) => `\`${parentFieldLabels[id]}\``).join(", ");
 }
@@ -108,7 +109,7 @@ List queries use POST to scoped query endpoints. Each endpoint is scoped to a pa
 
 | Query | Endpoint | Required Filter | Example |
 |-------|----------|----------------|---------|
-| Advertisers for partner | \`/advertiser/query/partner\` | \`PartnerId\` (auto-set) | _automatic_ |
+| Advertisers for partner | \`/advertiser/query/partner\` | \`PartnerId\` | \`{ "PartnerId": "partner123" }\` |
 | Campaigns for advertiser | \`/campaign/query/advertiser\` | \`AdvertiserId\` | \`{ "AdvertiserId": "abc123" }\` |
 | Ad Groups for campaign | \`/adgroup/query/campaign\` | \`CampaignId\` | \`{ "CampaignId": "camp456" }\` |
 | Ads for ad group | \`/ad/query/adgroup\` | \`AdGroupId\` | \`{ "AdGroupId": "ag789" }\` |

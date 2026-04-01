@@ -1633,7 +1633,7 @@ Create files in this order (each step depends only on previous steps):
 | gads-mcp | `google-headers` | `GoogleAuthAdapter` (shared) | Google OAuth2 headers |
 | cm360-mcp | `google-headers` | `GoogleAuthAdapter` (shared) | Google OAuth2 headers |
 | sa360-mcp | `sa360-headers` | OAuth2 refresh token | `Authorization`, `X-SA360-Client-Id`, etc. |
-| ttd-mcp | `ttd-headers` | `TtdApiTokenAuthAdapter` | `X-TTD-Partner-Id`, `X-TTD-Api-Secret` |
+| ttd-mcp | `ttd-token` (default) | `TtdDirectTokenAuthAdapter` | `TTD-Auth` |
 | meta-mcp | `meta-bearer` | `MetaAccessTokenAdapter` | `Authorization: Bearer` |
 | linkedin-mcp | `linkedin-bearer` | `LinkedInAccessTokenAdapter` | `Authorization: Bearer` |
 | tiktok-mcp | `tiktok-bearer` | `TikTokAccessTokenAdapter` | `Authorization: Bearer`, `X-TikTok-Advertiser-Id` |

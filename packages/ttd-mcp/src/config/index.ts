@@ -20,17 +20,13 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("ttd-mcp"),
 
   // Auth — TTD-specific modes
-  mcpAuthMode: z.enum(["ttd-headers", "jwt", "none"]).default("ttd-headers"),
+  mcpAuthMode: z.enum(["ttd-token", "jwt", "none"]).default("ttd-token"),
 
   // TTD API Configuration
   ttdApiBaseUrl: z
     .string()
     .url()
     .default("https://api.thetradedesk.com/v3"),
-  ttdAuthUrl: z
-    .string()
-    .url()
-    .default("https://api.thetradedesk.com/v3/authentication"),
   ttdGraphqlUrl: z
     .string()
     .url()
@@ -40,10 +36,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Override via TTD_RATE_LIMIT_PER_MINUTE for different scaling profiles.
   ttdRateLimitPerMinute: z.number().default(10),
 
-  // Stdio fallback: TTD credentials from env vars
-  ttdPartnerId: z.string().optional(),
-  ttdApiSecret: z.string().optional(),
-  // Alternative: provide a pre-existing TTD-Auth token directly
+  // Provide a pre-existing TTD-Auth token directly
   ttdApiToken: z.string().optional(),
 
   // Report polling configuration
@@ -66,15 +59,12 @@ export function parseConfig(): AppConfig {
 
     // TTD API
     ttdApiBaseUrl: process.env.TTD_API_BASE_URL,
-    ttdAuthUrl: process.env.TTD_AUTH_URL,
     ttdGraphqlUrl: process.env.TTD_GRAPHQL_URL,
     ttdRateLimitPerMinute: process.env.TTD_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.TTD_RATE_LIMIT_PER_MINUTE)
       : undefined,
 
     // Stdio fallback credentials
-    ttdPartnerId: process.env.TTD_PARTNER_ID,
-    ttdApiSecret: process.env.TTD_API_SECRET,
     ttdApiToken: process.env.TTD_API_TOKEN,
 
     // Report polling

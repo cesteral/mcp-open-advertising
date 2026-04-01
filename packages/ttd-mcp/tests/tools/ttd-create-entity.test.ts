@@ -84,6 +84,18 @@ describe("createEntityLogic", () => {
 });
 
 describe("CreateEntityInputSchema", () => {
+  it("rejects advertiser creation when top-level partnerId is blank", () => {
+    const parsed = CreateEntityInputSchema.safeParse({
+      entityType: "advertiser",
+      partnerId: "   ",
+      data: { AdvertiserName: "Test Advertiser" },
+    });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(parsed.error.issues.some((issue) => issue.path.includes("partnerId"))).toBe(true);
+    }
+  });
+
   it("requires advertiserId for campaign", () => {
     const parsed = CreateEntityInputSchema.safeParse({
       entityType: "campaign",
@@ -120,6 +132,15 @@ describe("CreateEntityInputSchema", () => {
     });
 
     expect(parsed.entityType).toBe("adGroup");
+  });
+
+  it("accepts advertiser creation when payload PartnerId is non-blank", () => {
+    const parsed = CreateEntityInputSchema.safeParse({
+      entityType: "advertiser",
+      partnerId: "   ",
+      data: { AdvertiserName: "Test Advertiser", PartnerId: "partner-123" },
+    });
+    expect(parsed.success).toBe(true);
   });
 });
 

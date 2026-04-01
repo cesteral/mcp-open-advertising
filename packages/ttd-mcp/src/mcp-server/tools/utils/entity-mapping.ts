@@ -37,7 +37,7 @@ export interface TtdEntityConfig {
   supportsArchive?: boolean;
 }
 
-export type ParentIdKey = "advertiserId" | "campaignId" | "adGroupId";
+export type ParentIdKey = "advertiserId" | "campaignId" | "adGroupId" | "partnerId";
 
 const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
   advertiser: {

@@ -28,6 +28,10 @@ export const UpdateEntityInputSchema = z
       .string()
       .min(1)
       .describe("The entity ID to update"),
+    partnerId: z
+      .string()
+      .optional()
+      .describe("Partner ID (optional for advertiser updates; injected as PartnerId in the request body)"),
     advertiserId: z
       .string()
       .optional()

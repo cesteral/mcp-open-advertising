@@ -115,7 +115,7 @@ Each server has its own `MCP_AUTH_MODE` options:
 | `dbm-mcp`, `dv360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
 | `gads-mcp` | `gads-headers`, `jwt`, `none` | `gads-headers` |
 | `cm360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
-| `ttd-mcp` | `ttd-headers`, `jwt`, `none` | `ttd-headers` |
+| `ttd-mcp` | `ttd-token`, `ttd-headers`, `jwt`, `none` | `ttd-token` |
 | `meta-mcp` | `meta-bearer`, `jwt`, `none` | `meta-bearer` |
 | `linkedin-mcp` | `linkedin-bearer`, `jwt`, `none` | `linkedin-bearer` |
 | `tiktok-mcp` | `tiktok-bearer`, `jwt`, `none` | `tiktok-bearer` |

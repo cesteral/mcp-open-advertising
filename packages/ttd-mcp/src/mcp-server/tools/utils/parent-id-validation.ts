@@ -14,6 +14,7 @@ const parentPayloadFieldMap: Record<ParentIdKey, string> = {
   advertiserId: "AdvertiserId",
   campaignId: "CampaignId",
   adGroupId: "AdGroupId",
+  partnerId: "PartnerId",
 };
 
 function normalizeString(value: unknown): string | undefined {

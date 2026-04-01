@@ -28,15 +28,15 @@ vi.mock("@cesteral/shared", async () => {
 
 vi.mock("../../src/auth/ttd-auth-strategy.js", () => {
   return {
-    TtdHeadersAuthStrategy: class {
-      constructor(_authUrl: string, _logger?: unknown) {}
+    TtdTokenAuthStrategy: class {
+      constructor(_logger?: unknown) {}
 
       async verify(headers: Record<string, string | string[] | undefined>) {
         const fp = typeof headers["x-test-fingerprint"] === "string"
           ? headers["x-test-fingerprint"]
           : "fp-test";
         return {
-          authInfo: { clientId: "partner-test", authType: "ttd-headers" },
+          authInfo: { clientId: "ttd-direct-token", authType: "ttd-token" },
           platformAuthAdapter: { validate: vi.fn() } as any,
           credentialFingerprint: fp,
         };
@@ -128,7 +128,7 @@ const config: any = {
   nodeEnv: "test",
   mcpSessionMode: "stateful",
   mcpStatefulSessionTimeoutMs: 60_000,
-  mcpAuthMode: "ttd-headers",
+  mcpAuthMode: "ttd-token",
   mcpAuthSecretKey: undefined,
   mcpAllowedOrigins: "*",
   logLevel: "debug",
@@ -138,10 +138,8 @@ const config: any = {
   otelExporterOtlpTracesEndpoint: undefined,
   otelExporterOtlpMetricsEndpoint: undefined,
   ttdApiBaseUrl: "https://api.example.test/v3",
-  ttdAuthUrl: "https://auth.example.test/oauth2/token",
   ttdRateLimitPerMinute: 100,
-  ttdPartnerId: "partner-1",
-  ttdApiSecret: "secret-1",
+  ttdApiToken: "direct-token",
 };
 
 function buildPayload(method: string, id: number) {
@@ -184,8 +182,7 @@ async function postMcp(
     "content-type": "application/json",
     accept: "application/json, text/event-stream",
     "mcp-protocol-version": "2025-03-26",
-    "x-ttd-partner-id": "partner",
-    "x-ttd-api-secret": "secret",
+    "ttd-auth": "direct-token",
   };
   if (sessionId) {
     headers["mcp-session-id"] = sessionId;

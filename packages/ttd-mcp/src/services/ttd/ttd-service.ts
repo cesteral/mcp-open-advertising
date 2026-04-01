@@ -81,7 +81,12 @@ export class TtdService {
     };
 
     if (entityType === "advertiser") {
-      body.PartnerId = partnerId;
+      if (typeof body.PartnerId !== "string" || body.PartnerId.trim().length === 0) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          "partnerId is required when listing advertiser entities"
+        );
+      }
     }
 
     if (pageToken) {

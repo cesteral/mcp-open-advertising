@@ -53,7 +53,7 @@ File: `src/mcp-server/transports/streamable-http-transport.ts`
 
 - Hosts `/mcp`, `/health`, and `/.well-known/oauth-protected-resource`.
 - Enforces CORS + DNS rebinding protections.
-- Negotiates auth strategy (`ttd-headers`, `jwt`, `none`).
+- Negotiates auth strategy (`ttd-token`, `jwt`, `none`).
 - Creates and tracks MCP sessions and per-session MCP server instances.
 - Stores session-scoped services in `sessionServiceStore`.
 
@@ -145,7 +145,7 @@ Validation helper behavior:
 - CORS allowlist via `MCP_ALLOWED_ORIGINS`.
 - DNS rebinding checks on `/mcp`.
 - Auth modes:
-  - `ttd-headers` (preferred for per-session credentials)
+  - `ttd-token` (preferred for per-session direct API tokens)
   - `jwt`
   - `none` (dev/testing)
 - Stateful session timeout sweep.

@@ -65,7 +65,7 @@ describe("listEntitiesLogic", () => {
 
   it("returns entity list with correct structure", async () => {
     const result = await listEntitiesLogic(
-      { entityType: "campaign" as any },
+      { entityType: "campaign" as any, advertiserId: "adv-001" },
       createMockContext(),
       createMockSdkContext()
     );
@@ -88,6 +88,18 @@ describe("listEntitiesLogic", () => {
     expect(mockTtdService.listEntities).toHaveBeenCalledOnce();
     const [_entityType, filters] = mockTtdService.listEntities.mock.calls[0];
     expect(filters.AdvertiserId).toBe("adv-001");
+  });
+
+  it("includes partnerId in filters when provided", async () => {
+    await listEntitiesLogic(
+      { entityType: "advertiser" as any, partnerId: "partner-001" },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    expect(mockTtdService.listEntities).toHaveBeenCalledOnce();
+    const [_entityType, filters] = mockTtdService.listEntities.mock.calls[0];
+    expect(filters.PartnerId).toBe("partner-001");
   });
 
   it("includes campaignId in filters when provided", async () => {
@@ -138,7 +150,7 @@ describe("listEntitiesLogic", () => {
 
     await expect(
       listEntitiesLogic(
-        { entityType: "campaign" as any },
+        { entityType: "campaign" as any, advertiserId: "adv-001" },
         createMockContext(),
         undefined
       )
@@ -147,7 +159,7 @@ describe("listEntitiesLogic", () => {
 
   it("passes pageToken and pageSize to service", async () => {
     await listEntitiesLogic(
-      { entityType: "campaign" as any, pageToken: "25", pageSize: 50 },
+      { entityType: "campaign" as any, advertiserId: "adv-001", pageToken: "25", pageSize: 50 },
       createMockContext(),
       createMockSdkContext()
     );
@@ -253,6 +265,24 @@ describe("ListEntitiesInputSchema validation", () => {
   it("allows advertiser without any parent IDs", () => {
     const result = ListEntitiesInputSchema.safeParse({
       entityType: "advertiser",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("requires partnerId for advertiser entities", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "advertiser",
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((i) => i.path.includes("partnerId"))).toBe(true);
+    }
+  });
+
+  it("passes for advertiser with partnerId", () => {
+    const result = ListEntitiesInputSchema.safeParse({
+      entityType: "advertiser",
+      partnerId: "partner-001",
     });
     expect(result.success).toBe(true);
   });

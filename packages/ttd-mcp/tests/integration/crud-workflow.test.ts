@@ -14,10 +14,12 @@ vi.mock("../../src/auth/ttd-auth-adapter.js", async () => {
   const actual = await vi.importActual<any>("../../src/auth/ttd-auth-adapter.js");
   return {
     ...actual,
-    TtdApiTokenAuthAdapter: class {
+    TtdDirectTokenAuthAdapter: class {
       partnerId: string;
-      constructor(creds: { partnerId: string }) { this.partnerId = creds.partnerId; }
-      async getAccessToken() { return "mock-token"; }
+      constructor(_token: string, partnerId = "direct-token") {
+        this.partnerId = partnerId;
+      }
+      async getAccessToken() { return "mock-direct-token"; }
       async validate() {}
     },
   };
@@ -99,10 +101,8 @@ const config: any = {
   otelExporterOtlpTracesEndpoint: undefined,
   otelExporterOtlpMetricsEndpoint: undefined,
   ttdApiBaseUrl: "https://api.example.test/v3",
-  ttdAuthUrl: "https://auth.example.test/oauth2/token",
   ttdRateLimitPerMinute: 100,
-  ttdPartnerId: "partner-1",
-  ttdApiSecret: "secret-1",
+  ttdApiToken: "env-direct-token",
 };
 
 async function postMcp(app: any, payload: unknown, sessionId?: string) {

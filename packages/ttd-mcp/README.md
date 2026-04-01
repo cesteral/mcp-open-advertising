@@ -9,7 +9,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 ## Features
 
 - **Per-session authentication** via `SessionServiceStore` pattern
-- **Partner token auth** using `X-TTD-Partner-Id` and `X-TTD-Api-Secret` headers
+- **Direct API token auth** using the `TTD-Auth` header
 - **OpenTelemetry** instrumentation for traces and metrics
 - **Rate limiting** via shared `RateLimiter` class
 - **MCP protocol** with Streamable HTTP transport (Hono)
@@ -103,7 +103,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 All listed tools are implemented using TTD API v3 and GraphQL. Entity CRUD,
 bulk operations, GraphQL passthrough, MyReports templates/schedules, and
-creative preview are available via partner token authentication.
+creative preview are available via TTD API token authentication.
 
 ## Development
 
@@ -130,9 +130,8 @@ pnpm run lint
 ## Environment Variables
 
 - `TTD_MCP_PORT`: Server port (default: 3003)
-- `TTD_PARTNER_ID`: TTD Partner ID (required for stdio mode)
-- `TTD_API_SECRET`: TTD API Secret (required for stdio mode)
-- `MCP_AUTH_MODE`: Authentication mode - `ttd-headers` (default), `jwt`, or `none`
+- `TTD_API_TOKEN`: Preferred direct TTD API token for stdio mode or env-based HTTP sessions
+- `MCP_AUTH_MODE`: Authentication mode - `ttd-token` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
 
 ## Architecture
@@ -142,7 +141,7 @@ pnpm run lint
 - **`TtdHttpClient`** - HTTP client for TTD API v3, accepts `TtdAuthAdapter`
 - **`TtdEntityService`** - CRUD operations for all supported entity types
 - **`TtdReportingService`** - Report generation via MyReports API
-- **`TtdHeadersAuthStrategy`** - Reads partner credentials from request headers
+- **`TtdTokenAuthStrategy`** - Reads direct API tokens from the `TTD-Auth` header
 - **`SessionServiceStore`** - Per-session service instances keyed by session ID
 
 ### Key Gotchas
@@ -152,7 +151,7 @@ pnpm run lint
 - Report generation is async: submit → poll → download CSV
 - MyReports templates and schedules are separate concepts; GraphQL is the primary path for template-driven reporting
 - Archive is a soft-delete; archived entities cannot be reactivated
-- GraphQL API is separate from REST and uses different auth flow
+- Direct `TTD-Auth` API tokens can be used for both REST and GraphQL requests
 
 ### Transport
 

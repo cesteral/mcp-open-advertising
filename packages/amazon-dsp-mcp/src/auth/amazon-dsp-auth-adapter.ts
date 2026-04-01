@@ -8,7 +8,7 @@
  * 1. AmazonDspAccessTokenAdapter — holds a pre-generated static access token.
  * 2. AmazonDspRefreshTokenAdapter — uses app credentials + refresh token to
  *    auto-refresh access tokens via Amazon LwA endpoint. Same caching + mutex
- *    pattern as TTD's TtdApiTokenAuthAdapter.
+ *    pattern as TTD's TtdCredentialExchangeAuthAdapter.
  *
  * Validates tokens by calling GET /dsp/advertisers?startIndex=0&count=1.
  * Token refresh uses POST https://api.amazon.com/auth/o2/token (form-encoded).
@@ -130,7 +130,7 @@ interface AmazonDspTokenResponse {
  *
  * Amazon access tokens expire after 1 hour. This adapter caches them
  * with a 60-second expiry buffer and uses a mutex to prevent concurrent
- * token requests (same pattern as TTD's TtdApiTokenAuthAdapter).
+ * token requests (same pattern as TTD's TtdCredentialExchangeAuthAdapter).
  */
 export class AmazonDspRefreshTokenAdapter implements AmazonDspAuthAdapter {
   private cachedToken: string | null = null;

@@ -8,7 +8,7 @@
  * 1. SnapchatAccessTokenAdapter — holds a pre-generated static access token.
  * 2. SnapchatRefreshTokenAdapter — uses app credentials + refresh token to
  *    auto-refresh access tokens. Same caching + mutex pattern as TTD's
- *    TtdApiTokenAuthAdapter.
+ *    TtdCredentialExchangeAuthAdapter.
  *
  * Validates tokens by calling GET /v1/me on the Snapchat Ads API.
  * Token refresh uses POST https://accounts.snapchat.com/login/oauth2/access_token
@@ -136,7 +136,7 @@ interface SnapchatTokenResponse {
  *
  * Snapchat access tokens expire. This adapter caches them with a 60-second
  * expiry buffer and uses a mutex to prevent concurrent token requests (same
- * pattern as TTD's TtdApiTokenAuthAdapter).
+ * pattern as TTD's TtdCredentialExchangeAuthAdapter).
  */
 export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
   private cachedToken: string | null = null;

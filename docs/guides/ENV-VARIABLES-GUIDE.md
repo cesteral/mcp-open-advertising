@@ -120,7 +120,7 @@ GCP_REGION=us-central1
 
 # Authentication
 JWT_SECRET=your-jwt-secret-here
-MCP_AUTH_MODE=none                              # none | jwt | google-headers | gads-headers | ttd-headers | meta-bearer
+MCP_AUTH_MODE=none                              # none | jwt | google-headers | gads-headers | ttd-token | meta-bearer
 MCP_AUTH_SECRET_KEY=
 
 # MCP Session Management
@@ -169,10 +169,8 @@ TTD_MCP_PORT=3003
 TTD_MCP_HOST=0.0.0.0
 
 # TTD API Configuration
-TTD_PARTNER_ID=your-partner-id
-TTD_API_SECRET=your-api-secret
+TTD_API_TOKEN=your-ttd-api-token
 TTD_API_BASE_URL=https://api.thetradedesk.com/v3
-TTD_AUTH_URL=https://id.thetradedesk.com/v3/auth/token
 TTD_RATE_LIMIT_PER_MINUTE=60
 
 # ---------- gads-mcp (Google Ads Server) ----------
@@ -476,7 +474,7 @@ DV360_MCP_HOST=0.0.0.0
 NODE_ENV=development
 
 # MCP Authentication
-MCP_AUTH_MODE=none                           # none | jwt | google-headers | ttd-headers
+MCP_AUTH_MODE=none                           # none | jwt | google-headers | ttd-token
 MCP_AUTH_SECRET_KEY=                         # Required if MCP_AUTH_MODE=jwt (32+ chars)
 
 # MCP Session Management

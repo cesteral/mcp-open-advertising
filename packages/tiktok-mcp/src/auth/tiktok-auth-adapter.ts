@@ -8,7 +8,7 @@
  * 1. TikTokAccessTokenAdapter — holds a pre-generated static access token.
  * 2. TikTokRefreshTokenAdapter — uses app credentials + refresh token to
  *    auto-refresh access tokens (24h expiry). Same caching + mutex pattern
- *    as TTD's TtdApiTokenAuthAdapter.
+ *    as TTD's TtdCredentialExchangeAuthAdapter.
  *
  * Validates tokens by calling GET /open_api/{version}/user/info/.
  * Token is passed via Authorization: Bearer <token> header.
@@ -135,7 +135,7 @@ interface TikTokTokenResponse {
  *
  * TikTok access tokens expire after 24 hours. This adapter caches them
  * with a 60-second expiry buffer and uses a mutex to prevent concurrent
- * token requests (same pattern as TTD's TtdApiTokenAuthAdapter).
+ * token requests (same pattern as TTD's TtdCredentialExchangeAuthAdapter).
  */
 export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
   private cachedToken: string | null = null;

@@ -5,8 +5,6 @@
  * Mocks only fetchWithTimeout at the network boundary.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-
-const AUTH_URL = "https://auth.example.test/v3/authentication";
 const API_BASE = "https://api.example.test/v3";
 
 vi.mock("@cesteral/shared", async (importOriginal) => {
@@ -23,13 +21,6 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     ...actual,
     extractHeader,
     fetchWithTimeout: vi.fn(async (url: string) => {
-      // Auth token exchange — valid credentials
-      if (url.includes(AUTH_URL)) {
-        return new Response(
-          JSON.stringify({ access_token: "mock-ttd-token", expires_in: 3600, token_type: "Bearer" }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
       // API calls — generic success
       if (url.startsWith(API_BASE)) {
         return new Response(
@@ -42,10 +33,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-import { fetchWithTimeout } from "@cesteral/shared";
 import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-http-transport.js";
-
-const mockFetch = vi.mocked(fetchWithTimeout);
 
 const logger: any = {
   info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
@@ -59,7 +47,7 @@ const config: any = {
   nodeEnv: "test",
   mcpSessionMode: "stateful",
   mcpStatefulSessionTimeoutMs: 60_000,
-  mcpAuthMode: "ttd-headers",
+  mcpAuthMode: "ttd-token",
   mcpAuthSecretKey: undefined,
   mcpAllowedOrigins: "*",
   logLevel: "debug",
@@ -69,11 +57,9 @@ const config: any = {
   otelExporterOtlpTracesEndpoint: undefined,
   otelExporterOtlpMetricsEndpoint: undefined,
   ttdApiBaseUrl: API_BASE,
-  ttdAuthUrl: AUTH_URL,
   ttdGraphqlUrl: "https://graphql.example.test/graphql",
   ttdRateLimitPerMinute: 100,
-  ttdPartnerId: undefined,
-  ttdApiSecret: undefined,
+  ttdApiToken: undefined,
 };
 
 function makeRequest(app: any, headers: Record<string, string>) {
@@ -111,61 +97,28 @@ describe("ttd-mcp auth e2e", () => {
     await shutdown();
   });
 
-  it("valid TTD headers → 200", async () => {
+  it("valid TTD-Auth header → 200", async () => {
     const response = await makeRequest(app, {
-      "x-ttd-partner-id": "test-partner",
-      "x-ttd-api-secret": "test-secret",
+      "ttd-auth": "direct-token-123",
     });
     expect(response.status).toBe(200);
   });
 
-  it("missing X-TTD-Partner-Id → 401", async () => {
-    const response = await makeRequest(app, {
-      "x-ttd-api-secret": "test-secret",
-    });
+  it("missing TTD-Auth → 401", async () => {
+    const response = await makeRequest(app, {});
     expect(response.status).toBe(401);
     const body = await response.json();
-    expect(body.error).toContain("X-TTD-Partner-Id");
-  });
-
-  it("missing X-TTD-Api-Secret → 401", async () => {
-    const response = await makeRequest(app, {
-      "x-ttd-partner-id": "test-partner",
-    });
-    expect(response.status).toBe(401);
-    const body = await response.json();
-    expect(body.error).toContain("X-TTD-Api-Secret");
-  });
-
-  it("invalid credentials (mock returns 401) → 401", async () => {
-    mockFetch.mockImplementationOnce(async (url: string) => {
-      if (url.includes(AUTH_URL)) {
-        return new Response(
-          JSON.stringify({ error: "Invalid credentials" }),
-          { status: 401, statusText: "Unauthorized", headers: { "Content-Type": "application/json" } }
-        );
-      }
-      return new Response(JSON.stringify({}), { status: 200 });
-    });
-
-    const response = await makeRequest(app, {
-      "x-ttd-partner-id": "bad-partner",
-      "x-ttd-api-secret": "bad-secret",
-    });
-    expect(response.status).toBe(401);
+    expect(body.error).toContain("TTD-Auth");
   });
 
   it("fingerprint mismatch on session reuse → 401", async () => {
-    // First request with partner-A creates a session
     const first = await makeRequest(app, {
-      "x-ttd-partner-id": "partner-A",
-      "x-ttd-api-secret": "secret-A",
+      "ttd-auth": "direct-token-A",
     });
     expect(first.status).toBe(200);
     const sessionId = first.headers.get("mcp-session-id");
     expect(sessionId).toBeDefined();
 
-    // Second request with different partner-id but same session → mismatch
     const second = await app.request("http://localhost/mcp", {
       method: "POST",
       headers: {
@@ -173,8 +126,7 @@ describe("ttd-mcp auth e2e", () => {
         accept: "application/json, text/event-stream",
         "mcp-protocol-version": "2025-03-26",
         "mcp-session-id": sessionId!,
-        "x-ttd-partner-id": "partner-B",
-        "x-ttd-api-secret": "secret-B",
+        "ttd-auth": "direct-token-B",
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -192,20 +144,16 @@ describe("ttd-mcp auth e2e", () => {
   });
 
   it("DELETE with wrong credentials → 401", async () => {
-    // Create a session with partner-A
     const create = await makeRequest(app, {
-      "x-ttd-partner-id": "partner-delete-A",
-      "x-ttd-api-secret": "secret-delete-A",
+      "ttd-auth": "delete-token-A",
     });
     const sessionId = create.headers.get("mcp-session-id");
 
-    // Try to delete with different credentials
     const del = await app.request("http://localhost/mcp", {
       method: "DELETE",
       headers: {
         "mcp-session-id": sessionId!,
-        "x-ttd-partner-id": "partner-delete-B",
-        "x-ttd-api-secret": "secret-delete-B",
+        "ttd-auth": "delete-token-B",
       },
     });
     expect(del.status).toBe(401);

@@ -19,8 +19,9 @@ import {
   type McpHttpServer,
   type TransportFactoryConfig,
 } from "@cesteral/shared";
-import { TtdHeadersAuthStrategy } from "../../auth/ttd-auth-strategy.js";
+import { TtdTokenAuthStrategy } from "../../auth/ttd-auth-strategy.js";
 import type { TtdAuthAdapter } from "../../auth/ttd-auth-adapter.js";
+import { TtdDirectTokenAuthAdapter } from "../../auth/ttd-auth-adapter.js";
 import {
   createSessionServices,
   sessionServiceStore,
@@ -31,8 +32,8 @@ function buildPlatformConfig(
   config: AppConfig,
   logger: Logger
 ): TransportFactoryConfig {
-  const authStrategy = config.mcpAuthMode === "ttd-headers"
-    ? new TtdHeadersAuthStrategy(config.ttdAuthUrl, logger)
+  const authStrategy = config.mcpAuthMode === "ttd-token"
+    ? new TtdTokenAuthStrategy(logger)
     : createAuthStrategy(config.mcpAuthMode as AuthMode, {
         jwtSecret: config.mcpAuthSecretKey,
         logger,
@@ -45,19 +46,18 @@ function buildPlatformConfig(
       "Authorization",
       "Mcp-Session-Id",
       "MCP-Protocol-Version",
-      "X-TTD-Partner-Id",
-      "X-TTD-Api-Secret",
+      "TTD-Auth",
     ],
     authErrorHint:
-      config.mcpAuthMode === "ttd-headers"
-        ? "Provide TTD credentials via X-TTD-Partner-Id and X-TTD-Api-Secret headers."
+      config.mcpAuthMode === "ttd-token"
+        ? "Provide a TTD API token via the TTD-Auth header."
         : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
     async createSessionForAuth(authResult, sessionId, appConfig, log) {
       const ttdConfig = appConfig as AppConfig;
 
-      // Case 1: Platform adapter available (ttd-headers mode)
+      // Case 1: Platform adapter available (ttd-token mode)
       const adapter = authResult.platformAuthAdapter as TtdAuthAdapter | undefined;
       if (adapter) {
         await adapter.validate();
@@ -79,14 +79,9 @@ function buildPlatformConfig(
       // Case 2: none/jwt mode with env var credentials
       if (
         (ttdConfig.mcpAuthMode === "none" || ttdConfig.mcpAuthMode === "jwt") &&
-        ttdConfig.ttdPartnerId &&
-        ttdConfig.ttdApiSecret
+        ttdConfig.ttdApiToken
       ) {
-        const { TtdApiTokenAuthAdapter } = await import("../../auth/ttd-auth-adapter.js");
-        const envAdapter = new TtdApiTokenAuthAdapter(
-          { partnerId: ttdConfig.ttdPartnerId, apiSecret: ttdConfig.ttdApiSecret },
-          ttdConfig.ttdAuthUrl
-        );
+        const envAdapter = new TtdDirectTokenAuthAdapter(ttdConfig.ttdApiToken, "env-direct-token");
         await envAdapter.validate();
         const services = createSessionServices(
           envAdapter,
@@ -113,7 +108,7 @@ function buildPlatformConfig(
         services: null,
         error: {
           message:
-            "TTD credentials required. Set TTD_PARTNER_ID and TTD_API_SECRET env vars, or use MCP_AUTH_MODE=ttd-headers.",
+            "TTD credentials required. Set TTD_API_TOKEN env var, or use MCP_AUTH_MODE=ttd-token.",
           status: 400 as const,
         },
       };

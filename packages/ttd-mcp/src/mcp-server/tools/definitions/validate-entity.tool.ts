@@ -111,6 +111,10 @@ export const ValidateEntityInputSchema = z
       .string()
       .optional()
       .describe("Entity ID (recommended for update mode)"),
+    partnerId: z
+      .string()
+      .optional()
+      .describe("Partner ID (merged into data as PartnerId before validation, mirrors create tool)"),
     advertiserId: z
       .string()
       .optional()

@@ -11,7 +11,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 // Mock fetchWithTimeout — the single network boundary
 // ---------------------------------------------------------------------------
-const AUTH_URL = "https://auth.example.test/v3/authentication";
 const API_BASE = "https://api.example.test/v3";
 
 vi.mock("@cesteral/shared", async (importOriginal) => {
@@ -29,14 +28,6 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     extractHeader,
     fetchWithTimeout: vi.fn(async (url: string, _timeout: number, _ctx: unknown, options?: RequestInit) => {
       const method = options?.method ?? "GET";
-
-      // Auth token exchange
-      if (url.includes(AUTH_URL)) {
-        return new Response(
-          JSON.stringify({ access_token: "mock-ttd-token", expires_in: 3600, token_type: "Bearer" }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
 
       // GET — single entity read
       if (url.startsWith(API_BASE) && method === "GET") {
@@ -80,7 +71,7 @@ const logger: any = {
 logger.child.mockReturnValue(logger);
 
 // ---------------------------------------------------------------------------
-// Config — uses real ttd-headers auth, not "none"
+// Config — uses real ttd-token auth, not "none"
 // ---------------------------------------------------------------------------
 const config: any = {
   serviceName: "ttd-mcp-test",
@@ -89,7 +80,7 @@ const config: any = {
   nodeEnv: "test",
   mcpSessionMode: "stateful",
   mcpStatefulSessionTimeoutMs: 60_000,
-  mcpAuthMode: "ttd-headers",
+  mcpAuthMode: "ttd-token",
   mcpAuthSecretKey: undefined,
   mcpAllowedOrigins: "*",
   logLevel: "debug",
@@ -99,11 +90,9 @@ const config: any = {
   otelExporterOtlpTracesEndpoint: undefined,
   otelExporterOtlpMetricsEndpoint: undefined,
   ttdApiBaseUrl: API_BASE,
-  ttdAuthUrl: AUTH_URL,
   ttdGraphqlUrl: "https://graphql.example.test/graphql",
   ttdRateLimitPerMinute: 100,
-  ttdPartnerId: undefined,
-  ttdApiSecret: undefined,
+  ttdApiToken: undefined,
 };
 
 // ---------------------------------------------------------------------------
@@ -114,8 +103,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     "content-type": "application/json",
     accept: "application/json, text/event-stream",
     "mcp-protocol-version": "2025-03-26",
-    "x-ttd-partner-id": "test-partner",
-    "x-ttd-api-secret": "test-secret",
+    "ttd-auth": "test-direct-token",
   };
   if (sessionId) {
     headers["mcp-session-id"] = sessionId;

@@ -67,7 +67,7 @@ describe("TtdService", () => {
     it("calls httpClient.fetch with correct scoped query path for advertisers", async () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
 
-      await service.listEntities("advertiser", {});
+      await service.listEntities("advertiser", { PartnerId: "partner-123" });
 
       const [path] = httpClient.fetch.mock.calls[0];
       expect(path).toBe("/advertiser/query/partner");
@@ -124,14 +124,20 @@ describe("TtdService", () => {
       expect(body.PageSize).toBe(50);
     });
 
-    it("adds PartnerId for advertiser entity type", async () => {
+    it("uses caller-supplied PartnerId for advertiser entity type", async () => {
       httpClient.fetch.mockResolvedValueOnce({ Result: [], TotalCount: 0, ResultCount: 0 });
 
-      await service.listEntities("advertiser", {});
+      await service.listEntities("advertiser", { PartnerId: "partner-123" });
 
       const [, , options] = httpClient.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
-      expect(body.PartnerId).toBe("test-partner");
+      expect(body.PartnerId).toBe("partner-123");
+    });
+
+    it("throws when advertiser query is missing PartnerId", async () => {
+      await expect(service.listEntities("advertiser", {})).rejects.toThrow(
+        "partnerId is required when listing advertiser entities"
+      );
     });
 
     it("does NOT add PartnerId for non-advertiser entity types", async () => {

@@ -195,7 +195,7 @@ Cesteral uses a 3-tier credential model that keeps MCP servers stateless:
 └─────────────────────────────────────────────┘
 ```
 
-Each server has a platform-specific auth strategy (e.g., `MetaBearerAuthStrategy`, `TtdHeadersAuthStrategy`) that extracts credentials from the request and creates a per-session API client. Servers never write credentials to disk or database.
+Each server has a platform-specific auth strategy (e.g., `MetaBearerAuthStrategy`, `TtdTokenAuthStrategy`) that extracts credentials from the request and creates a per-session API client. Servers never write credentials to disk or database.
 
 For more on the boundary between OSS servers and Intelligence, see [`docs/architecture/oss-vs-intelligence-boundary.md`](../architecture/oss-vs-intelligence-boundary.md).
 

@@ -13,7 +13,7 @@
  *  2. Developer token (static 22-char string, per company)
  *  3. Login customer ID (optional, for manager account access)
  *
- * Same caching pattern as TtdApiTokenAuthAdapter: tokens are cached with a 60s
+ * Same caching pattern as TtdCredentialExchangeAuthAdapter: tokens are cached with a 60s
  * expiry buffer, and a pending-auth mutex prevents concurrent token requests.
  */
 

@@ -1,58 +1,40 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-/**
- * TTD Headers Auth Strategy
- *
- * Implements the shared AuthStrategy interface for The Trade Desk.
- * Parses X-TTD-Partner-Id and X-TTD-Api-Secret from HTTP headers,
- * creates a TtdApiTokenAuthAdapter, and validates by exchanging for a token.
- */
-
 import type { AuthStrategy, AuthResult } from "@cesteral/shared";
 import type { Logger } from "pino";
 import {
-  TtdApiTokenAuthAdapter,
-  parseTtdCredentialsFromHeaders,
-  getTtdCredentialFingerprint,
+  TtdDirectTokenAuthAdapter,
+  parseTtdDirectTokenFromHeaders,
+  getTtdDirectTokenFingerprint,
 } from "./ttd-auth-adapter.js";
 
-export class TtdHeadersAuthStrategy implements AuthStrategy {
-  constructor(
-    private readonly authUrl: string,
-    private readonly logger?: Logger
-  ) {}
+export class TtdTokenAuthStrategy implements AuthStrategy {
+  constructor(private readonly logger?: Logger) {}
 
   async verify(
     headers: Record<string, string | string[] | undefined>
   ): Promise<AuthResult> {
-    const credentials = parseTtdCredentialsFromHeaders(headers);
-    const adapter = new TtdApiTokenAuthAdapter(credentials, this.authUrl);
+    const credentials = parseTtdDirectTokenFromHeaders(headers);
+    const adapter = new TtdDirectTokenAuthAdapter(credentials.token);
+    await adapter.validate();
 
-    // Validate by attempting to get an access token
-    await adapter.getAccessToken();
-
-    this.logger?.debug(
-      { partnerId: credentials.partnerId },
-      "TTD credentials validated"
-    );
-
-    const fingerprint = getTtdCredentialFingerprint(credentials);
+    this.logger?.debug("TTD direct API token accepted");
 
     return {
       authInfo: {
-        clientId: credentials.partnerId,
-        authType: "ttd-headers",
+        clientId: "ttd-direct-token",
+        authType: "ttd-token",
       },
       platformAuthAdapter: adapter,
-      credentialFingerprint: fingerprint,
+      credentialFingerprint: getTtdDirectTokenFingerprint(credentials),
     };
   }
 
   async getCredentialFingerprint(
     headers: Record<string, string | string[] | undefined>
   ): Promise<string | undefined> {
-    const credentials = parseTtdCredentialsFromHeaders(headers);
-    return getTtdCredentialFingerprint(credentials);
+    const credentials = parseTtdDirectTokenFromHeaders(headers);
+    return getTtdDirectTokenFingerprint(credentials);
   }
 }

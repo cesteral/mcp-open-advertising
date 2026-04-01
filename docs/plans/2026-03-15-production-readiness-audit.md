@@ -376,7 +376,7 @@ All infrastructure targets `europe-west2` (`terraform/variables.tf:11`, `cloudbu
 |---|--------|------|-----------|------------|------------|
 | 1 | dbm-mcp | 3001 | google-headers, jwt, none | 100/min | 15 |
 | 2 | dv360-mcp | 3002 | google-headers, jwt, none | 60/min | 29 |
-| 3 | ttd-mcp | 3003 | ttd-headers, jwt, none | 100/min | 26 |
+| 3 | ttd-mcp | 3003 | ttd-token, jwt, none | 100/min | 26 |
 | 4 | gads-mcp | 3004 | google-headers, jwt, none | 100/min | 23 |
 | 5 | meta-mcp | 3005 | meta-bearer, jwt, none | 200/min | 24 |
 | 6 | linkedin-mcp | 3006 | linkedin-bearer, jwt, none | 100/min | 10 |
