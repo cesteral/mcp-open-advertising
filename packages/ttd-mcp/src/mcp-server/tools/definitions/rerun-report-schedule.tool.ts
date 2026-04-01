@@ -49,7 +49,11 @@ type RerunReportScheduleOutput = z.infer<typeof RerunReportScheduleOutputSchema>
 
 const RERUN_REPORT_SCHEDULE_MUTATION = `mutation RerunReportSchedule($input: MyReportsReportScheduleCreateInput!) {
   myReportsReportScheduleCreate(input: $input) {
-    data
+    data {
+      id
+      name
+      status
+    }
     errors {
       __typename
       ... on MutationError {
@@ -88,7 +92,7 @@ export async function rerunReportScheduleLogic(
 
   return {
     scheduleId: input.scheduleId,
-    newExecutionData: mutationResult.data as unknown,
+    newExecutionData: mutationResult.data as Record<string, unknown> | undefined,
     errors: errors?.length ? errors : undefined,
     rawResponse: raw as Record<string, unknown>,
     timestamp: new Date().toISOString(),
