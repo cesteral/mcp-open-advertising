@@ -89,7 +89,7 @@ export async function executeEntityReportLogic(
     entityType: input.entityType,
     entityId: input.entityId,
     reportType: input.reportType,
-    reportId: reportData.id as string | undefined,
+    reportId: (reportData.id as string | null) ?? null,
     downloadUrl: reportData.url as string | undefined,
     hasSampleData: reportData.hasSampleData as boolean | undefined,
     userErrors: userErrors?.length ? userErrors : undefined,

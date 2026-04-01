@@ -39,8 +39,13 @@ interface TTDCreativeResponse {
   CreativeId?: string;
   CreativeName?: string;
   PreviewUrl?: string;
+  ShareLink?: string;
   ClickUrl?: string;
   CreativeType?: string;
+  TradeDeskHostedVideoAttributes?: {
+    ClickthroughUrl?: string;
+    LandingPageUrl?: string;
+  };
 }
 
 export async function getAdPreviewLogic(
@@ -57,9 +62,11 @@ export async function getAdPreviewLogic(
   )) as TTDCreativeResponse;
 
   return {
-    previewUrl: creative.PreviewUrl,
+    previewUrl: creative.PreviewUrl || creative.ShareLink,
     creativeName: creative.CreativeName,
-    clickUrl: creative.ClickUrl,
+    clickUrl: creative.ClickUrl
+      || creative.TradeDeskHostedVideoAttributes?.ClickthroughUrl
+      || creative.TradeDeskHostedVideoAttributes?.LandingPageUrl,
     adFormat: creative.CreativeType,
     creativeId: input.creativeId,
   };
