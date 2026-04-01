@@ -4,13 +4,15 @@
 /**
  * Tool definitions barrel export
  *
- * 28 tools total:
+ * 36 tools total:
  *   6 original: list, get, create, update, delete, report
  *   10 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report, submit report, check report status
  *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
  *   1 preview: get ad preview
- *   5 report schedule management: create, list, get, delete schedule + list templates
+ *   9 report schedule management: create, update, list, get, delete schedule + list templates + cancel execution + rerun schedule + get executions
  *   2 GQL entity reports: execute entity report, get entity report types
+ *   3 report template management: create, update, get template
+ *   1 template schedule: create template schedule
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -41,6 +43,14 @@ export { deleteReportScheduleTool } from "./delete-report-schedule.tool.js";
 export { listReportTemplatesTool } from "./list-report-templates.tool.js";
 export { executeEntityReportTool } from "./execute-entity-report.tool.js";
 export { getEntityReportTypesTool } from "./get-entity-report-types.tool.js";
+export { createReportTemplateTool } from "./create-report-template.tool.js";
+export { updateReportTemplateTool } from "./update-report-template.tool.js";
+export { getReportTemplateTool } from "./get-report-template.tool.js";
+export { createTemplateScheduleTool } from "./create-template-schedule.tool.js";
+export { updateReportScheduleTool } from "./update-report-schedule.tool.js";
+export { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
+export { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
+export { getReportExecutionsTool } from "./get-report-executions.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -70,6 +80,14 @@ import { deleteReportScheduleTool } from "./delete-report-schedule.tool.js";
 import { listReportTemplatesTool } from "./list-report-templates.tool.js";
 import { executeEntityReportTool } from "./execute-entity-report.tool.js";
 import { getEntityReportTypesTool } from "./get-entity-report-types.tool.js";
+import { createReportTemplateTool } from "./create-report-template.tool.js";
+import { updateReportTemplateTool } from "./update-report-template.tool.js";
+import { getReportTemplateTool } from "./get-report-template.tool.js";
+import { createTemplateScheduleTool } from "./create-template-schedule.tool.js";
+import { updateReportScheduleTool } from "./update-report-schedule.tool.js";
+import { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
+import { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
+import { getReportExecutionsTool } from "./get-report-executions.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -102,13 +120,22 @@ const productionTools: ToolDefinitionForFactory[] = [
   getAdPreviewTool,
   // ── Report Schedule Management ──
   createReportScheduleTool,
+  updateReportScheduleTool,
   listReportSchedulesTool,
   getReportScheduleTool,
   deleteReportScheduleTool,
   listReportTemplatesTool,
+  createTemplateScheduleTool,
+  cancelReportExecutionTool,
+  rerunReportScheduleTool,
+  getReportExecutionsTool,
   // ── GQL Entity Reports ──
   executeEntityReportTool,
   getEntityReportTypesTool,
+  // ── Report Template Management ──
+  createReportTemplateTool,
+  updateReportTemplateTool,
+  getReportTemplateTool,
 ];
 
 /**

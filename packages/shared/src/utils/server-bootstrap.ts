@@ -195,7 +195,7 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
       process.on("SIGINT", () => handleHttpShutdown("SIGINT"));
     }
   } catch (error) {
-    logger.error({ error }, "Failed to start server");
+    logger.error({ err: error }, "Failed to start server");
     process.exit(1);
   }
 }

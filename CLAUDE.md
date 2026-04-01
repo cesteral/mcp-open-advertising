@@ -14,7 +14,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 |---|--------|------|-----|-------------|-------|
 | 1 | `dbm-mcp` | 3001 | Bid Manager API v2 | _(reporting only)_ | 6 |
 | 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 25 |
-| 3 | `ttd-mcp` | 3003 | TTD REST API | advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList | 28 |
+| 3 | `ttd-mcp` | 3003 | TTD REST API | advertiser, campaign, adGroup, ad, creative, siteList, deal, conversionTracker, bidList | 36 |
 | 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 15 |
 | 5 | `meta-mcp` | 3005 | Meta Marketing API v24.0 | campaign, adSet, ad, adCreative, customAudience | 25 |
 | 6 | `linkedin-mcp` | 3006 | LinkedIn Marketing API v2 | adAccount, campaignGroup, campaign, creative, conversionRule | 20 |
@@ -212,6 +212,14 @@ Standard CRUD/bulk/reporting/preview/validate tools plus:
 | `ttd_list_report_schedules` | List report schedules with optional advertiser filter | `advertiserIds?`, `pageSize?` |
 | `ttd_get_report_schedule` | Get a specific report schedule by ID | `scheduleId` |
 | `ttd_list_report_templates` | List read-only report templates created in TTD UI | `pageSize?` |
+| `ttd_create_report_template` | Create a user-defined report template via GraphQL | `name`, `format`, `resultSets[]` |
+| `ttd_update_report_template` | Update (fully replace) a report template via GraphQL | `id`, `name`, `resultSets[]` |
+| `ttd_get_report_template` | Get full structure of a report template via GraphQL | `id` |
+| `ttd_create_template_schedule` | Create a report schedule from a template ID via GraphQL | `templateId`, `reportName`, `frequency`, `dateRange` |
+| `ttd_update_report_schedule` | Enable or disable a report schedule via GraphQL | `scheduleId`, `status` |
+| `ttd_cancel_report_execution` | Cancel an in-progress report execution via GraphQL | `executionId` |
+| `ttd_rerun_report_schedule` | Immediately rerun an existing schedule via GraphQL | `scheduleId` |
+| `ttd_get_report_executions` | Get schedule execution status + download links via GraphQL | `scheduleId?`, `lastStatusChangeAfter?`, `first?` |
 
 ### gads-mcp — 15 Tools (Unique: GAQL)
 

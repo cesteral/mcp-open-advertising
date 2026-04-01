@@ -43,6 +43,8 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Stdio fallback: TTD credentials from env vars
   ttdPartnerId: z.string().optional(),
   ttdApiSecret: z.string().optional(),
+  // Alternative: provide a pre-existing TTD-Auth token directly
+  ttdApiToken: z.string().optional(),
 
   // Report polling configuration
   ttdReportPollIntervalMs: z.number().int().min(1000).default(2000),
@@ -73,6 +75,7 @@ export function parseConfig(): AppConfig {
     // Stdio fallback credentials
     ttdPartnerId: process.env.TTD_PARTNER_ID,
     ttdApiSecret: process.env.TTD_API_SECRET,
+    ttdApiToken: process.env.TTD_API_TOKEN,
 
     // Report polling
     ttdReportPollIntervalMs: process.env.TTD_REPORT_POLL_INTERVAL_MS

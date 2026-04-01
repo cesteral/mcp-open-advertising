@@ -10,9 +10,13 @@ const TOOL_TITLE = "List TTD Report Templates";
 const TOOL_DESCRIPTION = `List report template headers from TTD MyReports.
 
 Report templates define the structure of a report (dimensions, metrics, filters).
-They are created in the TTD UI at desk.thetradedesk.com/MyReports and are read-only via API.
+Templates can be created in the TTD UI or via the API using \`ttd_create_report_template\`.
 
-Template IDs can be used when creating report schedules via \`additionalConfig.ReportTemplateId\`.
+Template IDs returned here can be used with:
+- \`ttd_create_template_schedule\` — create a recurring or one-time report schedule from a template (GraphQL)
+- \`additionalConfig.ReportTemplateId\` — legacy REST schedule creation via \`ttd_create_report_schedule\`
+
+Use \`ttd_get_report_template\` to retrieve the full structure (fields, metrics, tabs) of a specific template.
 
 **Note:** This returns template *headers* (metadata), not full template definitions.`;
 

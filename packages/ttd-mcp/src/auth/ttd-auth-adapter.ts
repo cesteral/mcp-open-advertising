@@ -116,6 +116,30 @@ export class TtdApiTokenAuthAdapter implements TtdAuthAdapter {
 }
 
 /**
+ * Direct token adapter — accepts a pre-existing TTD bearer token and returns
+ * it as-is without performing a token exchange. Use when you already have a
+ * valid TTD-Auth token (e.g. set via TTD_API_TOKEN env var).
+ */
+export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
+  constructor(
+    private readonly token: string,
+    private readonly _partnerId: string = "direct-token"
+  ) {}
+
+  get partnerId(): string {
+    return this._partnerId;
+  }
+
+  async getAccessToken(): Promise<string> {
+    return this.token;
+  }
+
+  async validate(): Promise<void> {
+    // Token is provided directly — no exchange needed.
+  }
+}
+
+/**
  * Parse TTD credentials from HTTP headers.
  * Expects X-TTD-Partner-Id and X-TTD-Api-Secret headers.
  */
