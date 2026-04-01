@@ -62,7 +62,7 @@ export const GetReportExecutionsOutputSchema = z
 type GetReportExecutionsInput = z.infer<typeof GetReportExecutionsInputSchema>;
 type GetReportExecutionsOutput = z.infer<typeof GetReportExecutionsOutputSchema>;
 
-const SINGLE_QUERY = `query GetReportSchedule($id: String!) {
+const SINGLE_QUERY = `query GetReportSchedule($id: ID!) {
   myReportsReportSchedule(id: $id) {
     status
     filters {

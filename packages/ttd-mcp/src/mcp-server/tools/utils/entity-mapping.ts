@@ -87,8 +87,8 @@ const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
     idField: "DealId",
   },
   conversionTracker: {
-    apiPath: "/tracking",
-    queryPath: "/tracking/query/advertiser",
+    apiPath: "/trackingtag",
+    queryPath: "/trackingtag/query/advertiser",
     parentIds: ["advertiserId"],
     idField: "TrackingTagId",
   },

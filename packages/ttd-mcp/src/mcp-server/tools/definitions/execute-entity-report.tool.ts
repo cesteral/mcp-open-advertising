@@ -42,7 +42,7 @@ export const ExecuteEntityReportOutputSchema = z
     entityType: z.string(),
     entityId: z.string(),
     reportType: z.string(),
-    reportId: z.string().optional().describe("Report ID if returned"),
+    reportId: z.string().nullable().optional().describe("Report ID if returned"),
     downloadUrl: z.string().optional().describe("Direct download URL for the report CSV"),
     hasSampleData: z.boolean().optional().describe("Whether the report contains sample data"),
     userErrors: z

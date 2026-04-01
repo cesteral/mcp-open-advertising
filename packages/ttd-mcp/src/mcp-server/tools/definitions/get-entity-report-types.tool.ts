@@ -46,7 +46,7 @@ export const GetEntityReportTypesOutputSchema = z
         z.object({
           type: z.string().describe("Report type value to pass to ttd_execute_entity_report"),
           available: z.boolean().describe("Whether report can be downloaded immediately"),
-          schedule: z.boolean().describe("Whether report requires scheduling/email delivery"),
+          schedule: z.union([z.boolean(), z.string()]).describe("Whether report requires scheduling/email delivery"),
         })
       )
       .describe("Available report types for this entity"),
