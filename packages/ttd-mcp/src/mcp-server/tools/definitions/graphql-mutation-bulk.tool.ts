@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "ttd_graphql_mutation_bulk";
 const TOOL_TITLE = "TTD GraphQL Mutation Bulk";
@@ -82,6 +83,31 @@ export const GraphqlMutationBulkOutputSchema = z
 type GraphqlMutationBulkInput = z.infer<typeof GraphqlMutationBulkInputSchema>;
 type GraphqlMutationBulkOutput = z.infer<typeof GraphqlMutationBulkOutputSchema>;
 
+function extractGraphqlMutationJobOrThrow(
+  result: Record<string, any>
+): Record<string, unknown> {
+  const errors = result.errors ?? result.data?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      `TTD GraphQL bulk mutation failed: ${messages}`,
+      { errors }
+    );
+  }
+
+  const job = result.data?.createMutationBulk ?? result.createMutationBulk;
+  if (!job?.jobId || !job?.status) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "TTD GraphQL bulk mutation response did not include createMutationBulk.jobId/status",
+      { result }
+    );
+  }
+
+  return job as Record<string, unknown>;
+}
+
 export async function graphqlMutationBulkLogic(
   input: GraphqlMutationBulkInput,
   context: RequestContext,
@@ -103,7 +129,7 @@ export async function graphqlMutationBulkLogic(
     context
   )) as Record<string, any>;
 
-  const job = result.data?.createMutationBulk ?? result.createMutationBulk ?? {};
+  const job = extractGraphqlMutationJobOrThrow(result);
 
   return {
     jobId: job.jobId as string,

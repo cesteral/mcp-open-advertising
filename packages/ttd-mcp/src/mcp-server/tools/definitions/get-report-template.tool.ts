@@ -21,6 +21,7 @@ export const GetReportTemplateInputSchema = z
   .describe("Parameters for retrieving a TTD report template structure");
 
 const TemplateColumnOutputSchema = z.object({
+  columnId: z.string().optional(),
   columnType: z.string().optional(),
   name: z.string().optional(),
   columnOrder: z.number().optional(),
@@ -29,6 +30,8 @@ const TemplateColumnOutputSchema = z.object({
 });
 
 const TemplateResultSetOutputSchema = z.object({
+  name: z.string().optional(),
+  reportTypeId: z.string().optional(),
   reportTypeName: z.string().optional(),
   filters: z.array(z.object({ name: z.string().optional() })).optional(),
   fields: z.array(TemplateColumnOutputSchema).optional(),
@@ -63,13 +66,16 @@ const GET_REPORT_TEMPLATE_QUERY = `query GetReportTemplate($id: String!) {
       name
       reportFormatType
       resultSets {
+        name
         reportType {
+          id
           name
         }
         filters {
           name
         }
         fields {
+          columnId
           columnType
           name
           columnOrder
@@ -77,6 +83,7 @@ const GET_REPORT_TEMPLATE_QUERY = `query GetReportTemplate($id: String!) {
           isOverlapColumn
         }
         metrics {
+          columnId
           columnType
           name
           columnOrder
@@ -84,6 +91,7 @@ const GET_REPORT_TEMPLATE_QUERY = `query GetReportTemplate($id: String!) {
           isOverlapColumn
         }
         conversionMetrics {
+          columnId
           columnType
           name
           columnOrder
@@ -114,7 +122,8 @@ export async function getReportTemplateLogic(
 
   const resultSets = templateData.resultSets as
     | Array<{
-        reportType?: { name?: string };
+        name?: string;
+        reportType?: { id?: string; name?: string };
         filters?: Array<{ name?: string }>;
         fields?: Array<Record<string, unknown>>;
         metrics?: Array<Record<string, unknown>>;
@@ -128,6 +137,8 @@ export async function getReportTemplateLogic(
     name: templateData.name as string | undefined,
     reportFormatType: templateData.reportFormatType as string | undefined,
     resultSets: resultSets?.map((rs) => ({
+      name: rs.name,
+      reportTypeId: rs.reportType?.id,
       reportTypeName: rs.reportType?.name,
       filters: rs.filters as TemplateResultSetItem["filters"],
       fields: rs.fields as TemplateResultSetItem["fields"],
@@ -164,18 +175,33 @@ export function getReportTemplateResponseFormatter(
   if (result.resultSets?.length) {
     lines.push(`Tabs (${result.resultSets.length}):`);
     result.resultSets.forEach((rs, i) => {
-      lines.push(`\n  Tab ${i + 1}: ${rs.reportTypeName ?? "unknown report type"}`);
+      lines.push(
+        `\n  Tab ${i + 1}: ${rs.name ?? rs.reportTypeName ?? "unknown report type"}`
+      );
+      if (rs.reportTypeId || rs.reportTypeName) {
+        lines.push(
+          `    Report Type: ${rs.reportTypeName ?? "unknown"} (${rs.reportTypeId ?? "unknown id"})`
+        );
+      }
       if (rs.fields?.length) {
-        lines.push(`    Fields (${rs.fields.length}): ${rs.fields.map((f) => f.name).join(", ")}`);
+        lines.push(
+          `    Fields (${rs.fields.length}): ${rs.fields
+            .map((f) => `${f.name ?? "unknown"} [${f.columnId ?? "unknown"}]`)
+            .join(", ")}`
+        );
       }
       if (rs.metrics?.length) {
         lines.push(
-          `    Metrics (${rs.metrics.length}): ${rs.metrics.map((m) => m.name).join(", ")}`
+          `    Metrics (${rs.metrics.length}): ${rs.metrics
+            .map((m) => `${m.name ?? "unknown"} [${m.columnId ?? "unknown"}]`)
+            .join(", ")}`
         );
       }
       if (rs.conversionMetrics?.length) {
         lines.push(
-          `    Conversion Metrics (${rs.conversionMetrics.length}): ${rs.conversionMetrics.map((m) => m.name).join(", ")}`
+          `    Conversion Metrics (${rs.conversionMetrics.length}): ${rs.conversionMetrics
+            .map((m) => `${m.name ?? "unknown"} [${m.columnId ?? "unknown"}]`)
+            .join(", ")}`
         );
       }
     });

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "ttd_graphql_query_bulk";
 const TOOL_TITLE = "TTD GraphQL Query Bulk";
@@ -62,6 +63,32 @@ export const GraphqlQueryBulkOutputSchema = z
 type GraphqlQueryBulkInput = z.infer<typeof GraphqlQueryBulkInputSchema>;
 type GraphqlQueryBulkOutput = z.infer<typeof GraphqlQueryBulkOutputSchema>;
 
+function extractGraphqlJobOrThrow(
+  result: Record<string, any>,
+  jobPath: string
+): Record<string, unknown> {
+  const errors = result.errors ?? result.data?.errors;
+  if (Array.isArray(errors) && errors.length > 0) {
+    const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      `TTD GraphQL bulk request failed: ${messages}`,
+      { errors }
+    );
+  }
+
+  const job = result.data?.[jobPath] ?? result[jobPath];
+  if (!job?.jobId || !job?.status) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `TTD GraphQL bulk response did not include ${jobPath}.jobId/status`,
+      { result }
+    );
+  }
+
+  return job as Record<string, unknown>;
+}
+
 export async function graphqlQueryBulkLogic(
   input: GraphqlQueryBulkInput,
   context: RequestContext,
@@ -83,7 +110,7 @@ export async function graphqlQueryBulkLogic(
     context
   )) as Record<string, any>;
 
-  const job = result.data?.createQueryBulk ?? result.createQueryBulk ?? {};
+  const job = extractGraphqlJobOrThrow(result, "createQueryBulk");
 
   return {
     jobId: job.jobId as string,

@@ -9,7 +9,18 @@ const TOOL_NAME = "ttd_create_report_schedule";
 const TOOL_TITLE = "Create TTD Report Schedule";
 const TOOL_DESCRIPTION = `Create a named report schedule (Once, Daily, Weekly, or Monthly).
 
-Use this to save reusable recurring reports — the API equivalent of a "report template".
+This is a legacy-friendly REST wrapper for the MyReports schedule endpoint.
+Use this when you already know the REST payload shape or need compatibility with older callers.
+
+Report templates and report schedules are distinct in TTD:
+- A **template** defines report structure
+- A **schedule** controls when a template runs
+
+For the docs-aligned GraphQL workflow, prefer:
+- \`ttd_create_report_template\`
+- \`ttd_create_template_schedule\`
+- \`ttd_get_report_executions\`
+
 For a one-off blocking report use \`ttd_get_report\`.
 For a one-off non-blocking report use \`ttd_submit_report\`.
 

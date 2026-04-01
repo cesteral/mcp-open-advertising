@@ -96,6 +96,23 @@ describe("ttd graphql bulk tools", () => {
 
       expect(result.success).toBe(false);
     });
+
+    it("throws when TTD returns top-level GraphQL errors", async () => {
+      mockTtdService.graphqlQuery.mockResolvedValueOnce({
+        errors: [{ message: "RESOURCE_LIMIT_EXCEEDED" }],
+      });
+
+      await expect(
+        graphqlQueryBulkLogic(
+          {
+            query: "query Adv($id: ID!) { advertiser(id: $id) { name } }",
+            variables: [{ id: "adv1" }],
+          },
+          createMockContext(),
+          createMockSdkContext()
+        )
+      ).rejects.toThrow("TTD GraphQL bulk request failed");
+    });
   });
 
   // ── createMutationBulk ──
@@ -172,6 +189,23 @@ describe("ttd graphql bulk tools", () => {
 
       expect(text).toContain("NON-CANCELABLE");
       expect(text).toContain("job-m1");
+    });
+
+    it("throws when TTD returns top-level GraphQL errors", async () => {
+      mockTtdService.graphqlQuery.mockResolvedValueOnce({
+        errors: [{ message: "VALIDATION_FAILURE" }],
+      });
+
+      await expect(
+        graphqlMutationBulkLogic(
+          {
+            mutation: "mutation Update($input: UpdateInput!) { update(input: $input) { id } }",
+            inputs: [{ id: "c1", name: "New" }],
+          },
+          createMockContext(),
+          createMockSdkContext()
+        )
+      ).rejects.toThrow("TTD GraphQL bulk mutation failed");
     });
   });
 

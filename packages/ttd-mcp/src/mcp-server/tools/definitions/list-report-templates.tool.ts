@@ -6,37 +6,40 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_list_report_templates";
-const TOOL_TITLE = "List TTD Report Templates";
-const TOOL_DESCRIPTION = `List report template headers from TTD MyReports.
+const TOOL_TITLE = "List TTD Report Templates (GraphQL)";
+const TOOL_DESCRIPTION = `List report template headers from TTD MyReports via GraphQL (\`myReportsReportTemplates\`).
 
-Report templates define the structure of a report (dimensions, metrics, filters).
-Templates can be created in the TTD UI or via the API using \`ttd_create_report_template\`.
+This is the docs-aligned way to discover template IDs before retrieving structure with \`ttd_get_report_template\` or scheduling runs with \`ttd_create_template_schedule\`.
 
-Template IDs returned here can be used with:
-- \`ttd_create_template_schedule\` — create a recurring or one-time report schedule from a template (GraphQL)
-- \`additionalConfig.ReportTemplateId\` — legacy REST schedule creation via \`ttd_create_report_schedule\`
-
-Use \`ttd_get_report_template\` to retrieve the full structure (fields, metrics, tabs) of a specific template.
-
-**Note:** This returns template *headers* (metadata), not full template definitions.`;
+For backward compatibility, the legacy \`pageSize\` / \`pageStartIndex\` inputs remain available. GraphQL cursor pagination is preferred.`;
 
 export const ListReportTemplatesInputSchema = z
   .object({
-    pageSize: z
+    first: z
       .number()
       .int()
       .min(1)
       .max(100)
       .optional()
       .default(50)
-      .describe("Number of results per page (default 50, max 100)"),
+      .describe("GraphQL page size (default 50, max 100)"),
+    after: z
+      .string()
+      .optional()
+      .describe("GraphQL end cursor from a previous call"),
+    pageSize: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .optional()
+      .describe("Deprecated alias for first"),
     pageStartIndex: z
       .number()
       .int()
       .min(0)
       .optional()
-      .default(0)
-      .describe("Zero-based start index for pagination"),
+      .describe("Deprecated REST-style offset. Only use when matching older callers."),
   })
   .describe("Parameters for listing TTD report templates");
 
@@ -45,7 +48,9 @@ export const ListReportTemplatesOutputSchema = z
     templates: z.array(z.record(z.unknown())).describe("List of report template header objects"),
     totalCount: z.number().optional(),
     pageSize: z.number(),
-    pageStartIndex: z.number(),
+    pageStartIndex: z.number().optional(),
+    hasNextPage: z.boolean().optional(),
+    endCursor: z.string().optional(),
     timestamp: z.string().datetime(),
   })
   .describe("List of report template headers");
@@ -53,34 +58,75 @@ export const ListReportTemplatesOutputSchema = z
 type ListReportTemplatesInput = z.infer<typeof ListReportTemplatesInputSchema>;
 type ListReportTemplatesOutput = z.infer<typeof ListReportTemplatesOutputSchema>;
 
+const LIST_REPORT_TEMPLATES_QUERY = `query GetReportTemplates($first: Int, $after: String) {
+  myReportsReportTemplates(first: $first, after: $after) {
+    pageInfo {
+      startCursor
+      hasNextPage
+      endCursor
+    }
+    totalCount
+    nodes {
+      id
+      name
+      userGenerated
+      createdBy
+      format
+    }
+  }
+}`;
+
 export async function listReportTemplatesLogic(
   input: ListReportTemplatesInput,
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListReportTemplatesOutput> {
-  const { ttdReportingService } = resolveSessionServices(sdkContext);
+  const { ttdReportingService, ttdService } = resolveSessionServices(sdkContext);
 
-  const pageSize = input.pageSize ?? 50;
-  const pageStartIndex = input.pageStartIndex ?? 0;
+  const pageSize = input.first ?? input.pageSize ?? 50;
+  const pageStartIndex = input.pageStartIndex;
 
-  const query = {
-    PageSize: pageSize,
-    PageStartIndex: pageStartIndex,
-  };
+  if (pageStartIndex !== undefined && pageStartIndex > 0 && !input.after) {
+    const query = {
+      PageSize: pageSize,
+      PageStartIndex: pageStartIndex,
+    };
 
-  const result = (await ttdReportingService.listReportTemplates(query, context)) as Record<
-    string,
-    unknown
-  >;
+    const result = (await ttdReportingService.listReportTemplates(query, context)) as Record<
+      string,
+      unknown
+    >;
 
-  const templates = (result.Result as Array<Record<string, unknown>>) ?? [];
-  const totalCount = result.TotalFilteredCount as number | undefined;
+    const templates = (result.Result as Array<Record<string, unknown>>) ?? [];
+    const totalCount = result.TotalFilteredCount as number | undefined;
+
+    return {
+      templates,
+      totalCount,
+      pageSize,
+      pageStartIndex,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  const raw = (await ttdService.graphqlQuery(
+    LIST_REPORT_TEMPLATES_QUERY,
+    { first: pageSize, after: input.after },
+    context
+  )) as Record<string, unknown>;
+
+  const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
+  const connection =
+    (gqlData.myReportsReportTemplates as Record<string, unknown> | undefined) ?? {};
+  const pageInfo = (connection.pageInfo as Record<string, unknown> | undefined) ?? {};
 
   return {
-    templates,
-    totalCount,
+    templates: (connection.nodes as Array<Record<string, unknown>>) ?? [],
+    totalCount: connection.totalCount as number | undefined,
     pageSize,
     pageStartIndex,
+    hasNextPage: pageInfo.hasNextPage as boolean | undefined,
+    endCursor: pageInfo.endCursor as string | undefined,
     timestamp: new Date().toISOString(),
   };
 }
@@ -92,10 +138,15 @@ export function listReportTemplatesResponseFormatter(
     return [
       {
         type: "text" as const,
-        text: `No report templates found.\n\nTemplates must be created in the TTD UI at desk.thetradedesk.com/MyReports.\n\nTimestamp: ${result.timestamp}`,
+        text: `No report templates found.\n\nUse \`ttd_create_report_template\` to create one or verify access to existing MyReports templates.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }
+
+  const cursorNotice =
+    result.hasNextPage === true
+      ? `\nNext page cursor: ${result.endCursor ?? "(missing endCursor)"}`
+      : "";
 
   return [
     {
@@ -103,7 +154,7 @@ export function listReportTemplatesResponseFormatter(
       text:
         `Found ${result.templates.length} report template(s)` +
         (result.totalCount !== undefined ? ` (${result.totalCount} total)` : "") +
-        `:\n\n${JSON.stringify(result.templates, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+        `:\n\n${JSON.stringify(result.templates, null, 2)}${cursorNotice}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -123,13 +174,13 @@ export const listReportTemplatesTool = {
   inputExamples: [
     {
       label: "List all templates",
-      input: {},
+      input: { first: 25 },
     },
     {
-      label: "Paginate templates",
+      label: "Continue from a cursor",
       input: {
-        pageSize: 10,
-        pageStartIndex: 10,
+        first: 10,
+        after: "opaque-cursor-placeholder",
       },
     },
   ],

@@ -35,6 +35,8 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_validate_entity: "mcp.execute.ttd_entity_update",
   // Reporting
   ttd_get_report: "mcp.execute.ttd_reporting",
+  ttd_submit_report: "mcp.execute.ttd_reporting",
+  ttd_check_report_status: "mcp.execute.ttd_reporting",
   ttd_download_report: "mcp.execute.ttd_reporting",
   // Bulk operations
   ttd_bulk_create_entities: "mcp.execute.ttd_bulk_operations",
@@ -48,6 +50,22 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_graphql_mutation_bulk: "mcp.execute.ttd_graphql",
   ttd_graphql_bulk_job: "mcp.execute.ttd_graphql",
   ttd_graphql_cancel_bulk_job: "mcp.execute.ttd_graphql",
+  // MyReports templates and schedules
+  ttd_create_report_template: "mcp.execute.ttd_reporting",
+  ttd_update_report_template: "mcp.execute.ttd_reporting",
+  ttd_get_report_template: "mcp.execute.ttd_reporting",
+  ttd_list_report_templates: "mcp.execute.ttd_reporting",
+  ttd_create_template_schedule: "mcp.execute.ttd_reporting",
+  ttd_create_report_schedule: "mcp.execute.ttd_reporting",
+  ttd_update_report_schedule: "mcp.execute.ttd_reporting",
+  ttd_list_report_schedules: "mcp.execute.ttd_reporting",
+  ttd_get_report_schedule: "mcp.execute.ttd_reporting",
+  ttd_delete_report_schedule: "mcp.execute.ttd_reporting",
+  ttd_cancel_report_execution: "mcp.execute.ttd_reporting",
+  ttd_rerun_report_schedule: "mcp.execute.ttd_reporting",
+  ttd_get_report_executions: "mcp.execute.ttd_reporting",
+  ttd_execute_entity_report: "mcp.execute.ttd_reporting",
+  ttd_get_entity_report_types: "mcp.execute.ttd_reporting",
   // Preview
   ttd_get_ad_preview: "mcp.execute.ttd_entity_read",
 };

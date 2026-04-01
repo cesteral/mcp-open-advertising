@@ -57,6 +57,24 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 | `ttd_graphql_bulk_job`        | Submit a GraphQL bulk job                              |
 | `ttd_graphql_cancel_bulk_job` | Cancel a running GraphQL bulk job                      |
 
+### MyReports Templates and Schedules
+
+| Tool                           | Description                                                    |
+| ------------------------------ | -------------------------------------------------------------- |
+| `ttd_create_report_template`   | Create a MyReports template via GraphQL                        |
+| `ttd_update_report_template`   | Replace an existing MyReports template via GraphQL             |
+| `ttd_get_report_template`      | Retrieve template structure, including result-set column IDs   |
+| `ttd_list_report_templates`    | List template headers via GraphQL cursor pagination            |
+| `ttd_create_template_schedule` | Create a one-time or recurring template schedule via GraphQL   |
+| `ttd_update_report_schedule`   | Enable or disable an existing report schedule via GraphQL      |
+| `ttd_cancel_report_execution`  | Cancel an in-progress report execution via GraphQL             |
+| `ttd_rerun_report_schedule`    | Trigger a fresh execution from an existing schedule            |
+| `ttd_get_report_executions`    | Retrieve execution history, statuses, and download links       |
+| `ttd_create_report_schedule`   | Legacy-compatible REST wrapper for schedule creation           |
+| `ttd_list_report_schedules`    | List existing report schedules                                 |
+| `ttd_get_report_schedule`      | Get a specific report schedule                                 |
+| `ttd_delete_report_schedule`   | Delete a report schedule                                       |
+
 ### Preview
 
 | Tool                 | Description                                       |
@@ -83,9 +101,9 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 **Phase: Production-Ready**
 
-All listed tools are fully implemented using TTD API v3. Entity CRUD,
-reporting, bulk operations, GraphQL passthrough, and creative preview are
-operational via partner token authentication.
+All listed tools are implemented using TTD API v3 and GraphQL. Entity CRUD,
+bulk operations, GraphQL passthrough, MyReports templates/schedules, and
+creative preview are available via partner token authentication.
 
 ## Development
 
@@ -132,6 +150,7 @@ pnpm run lint
 - TTD uses PUT for updates (full entity replacement, not PATCH)
 - `AdvertiserId` is required in most entity payloads
 - Report generation is async: submit → poll → download CSV
+- MyReports templates and schedules are separate concepts; GraphQL is the primary path for template-driven reporting
 - Archive is a soft-delete; archived entities cannot be reactivated
 - GraphQL API is separate from REST and uses different auth flow
 

@@ -26,6 +26,7 @@ Use \`ttd_list_report_schedules\` to see existing schedules and \`ttd_list_repor
 const ReportFilterSchema = z.object({
   reportType: z.string().describe("Report type ID to filter on"),
   partnerIds: z.array(z.string()).optional().describe("Limit report to these partner IDs"),
+  advertiserIds: z.array(z.string()).optional().describe("Limit report to these advertiser IDs"),
 });
 
 export const CreateTemplateScheduleInputSchema = z

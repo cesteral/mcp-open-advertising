@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (28 tools)
+## Available Tools Summary (36 tools)
 
 ### Core CRUD
 | Tool | Purpose | Read/Write |
@@ -131,7 +131,7 @@ Inspect the output, then iterate with more specific calls.
 |------|---------|-----------|
 | \`ttd_graphql_query_bulk\` | Execute bulk GraphQL queries | Read |
 | \`ttd_graphql_mutation_bulk\` | Execute bulk GraphQL mutations | Write |
-| \`ttd_graphql_bulk_job\` | Submit async bulk GraphQL job | Write |
+| \`ttd_graphql_bulk_job\` | Check async bulk GraphQL job status | Read |
 | \`ttd_graphql_cancel_bulk_job\` | Cancel running bulk job | Write |
 
 ### Ad Previews (1 tool)
@@ -142,10 +142,18 @@ Inspect the output, then iterate with more specific calls.
 ### Report Schedule Management
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
-| \`ttd_create_report_schedule\` | Create a recurring or one-time report schedule | Write |
+| \`ttd_create_report_template\` | Create a MyReports template via GraphQL | Write |
+| \`ttd_update_report_template\` | Replace an existing MyReports template via GraphQL | Write |
+| \`ttd_get_report_template\` | Retrieve full MyReports template structure | Read |
+| \`ttd_create_template_schedule\` | Schedule a MyReports template via GraphQL | Write |
+| \`ttd_create_report_schedule\` | Create a recurring or one-time report schedule (legacy REST wrapper) | Write |
+| \`ttd_update_report_schedule\` | Enable or disable a report schedule via GraphQL | Write |
 | \`ttd_list_report_schedules\` | List existing report schedules | Read |
 | \`ttd_get_report_schedule\` | Get a specific report schedule | Read |
 | \`ttd_delete_report_schedule\` | Delete a report schedule | Write |
+| \`ttd_cancel_report_execution\` | Cancel an in-progress report execution via GraphQL | Write |
+| \`ttd_rerun_report_schedule\` | Trigger a fresh execution from an existing schedule | Write |
+| \`ttd_get_report_executions\` | Retrieve execution history and download links | Read |
 | \`ttd_list_report_templates\` | List MyReports template headers | Read |
 
 ### GQL Entity Reports
