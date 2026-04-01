@@ -17,6 +17,7 @@
 
 import { createWriteStream, existsSync, mkdirSync, statSync, type WriteStream } from "node:fs";
 import { join, dirname } from "node:path";
+import { homedir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
 import type { Logger } from "pino";
 
@@ -142,7 +143,7 @@ export class InteractionLogger {
   private bucketPromise: Promise<any> | null = null;
 
   constructor(options: InteractionLoggerOptions) {
-    this.dataDir = options.dataDir ?? join(process.cwd(), "data", "interactions");
+    this.dataDir = options.dataDir ?? join(homedir(), ".cesteral", "interactions");
     this.serverName = options.serverName;
     this.maxFileSizeBytes = options.maxFileSizeBytes ?? 10 * 1024 * 1024; // 10 MB
     this.logger = options.logger;

@@ -69,11 +69,9 @@ type CreateReportTemplateOutput = z.infer<typeof CreateReportTemplateOutputSchem
 
 const CREATE_REPORT_TEMPLATE_MUTATION = `mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
   myReportsTemplateCreate(input: $input) {
-    data
+    data { id }
     errors {
-      __typename
-      ... on MutationError {
-        field
+      ... on MyReportsTemplateCreateValidationError {
         message
       }
     }

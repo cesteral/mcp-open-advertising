@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "ttd_list_report_templates";
 const TOOL_TITLE = "List TTD Report Templates (GraphQL)";
@@ -114,6 +115,23 @@ export async function listReportTemplatesLogic(
     { first: pageSize, after: input.after },
     context
   )) as Record<string, unknown>;
+
+  const gqlErrors = raw.errors as Array<{ message: string; extensions?: { code?: string } }> | undefined;
+  if (gqlErrors && gqlErrors.length > 0) {
+    const unauthorized = gqlErrors.find(e => e.extensions?.code === "UNAUTHORIZED_FIELD_OR_TYPE");
+    if (unauthorized) {
+      throw new McpError(
+        JsonRpcErrorCode.Forbidden,
+        "TTD account does not have access to MyReports report templates (UNAUTHORIZED_FIELD_OR_TYPE). " +
+        "This feature requires the MyReports permission in The Trade Desk. " +
+        "Contact your TTD account manager or use ttd_graphql_query to verify your account's capabilities."
+      );
+    }
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `GraphQL error listing report templates: ${gqlErrors.map(e => e.message).join("; ")}`
+    );
+  }
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const connection =

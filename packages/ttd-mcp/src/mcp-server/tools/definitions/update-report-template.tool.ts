@@ -62,11 +62,9 @@ type UpdateReportTemplateOutput = z.infer<typeof UpdateReportTemplateOutputSchem
 
 const UPDATE_REPORT_TEMPLATE_MUTATION = `mutation UpdateReportTemplate($input: MyReportsTemplateUpdateInput!) {
   myReportsTemplateUpdate(input: $input) {
-    data
+    data { id }
     errors {
-      __typename
-      ... on MutationError {
-        field
+      ... on MyReportsTemplateUpdateValidationError {
         message
       }
     }

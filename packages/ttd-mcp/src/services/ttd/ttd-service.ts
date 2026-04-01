@@ -89,9 +89,7 @@ export class TtdService {
       }
     }
 
-    if (pageToken) {
-      body.PageStartIndex = parseInt(pageToken, 10) || 0;
-    }
+    body.PageStartIndex = pageToken ? (parseInt(pageToken, 10) || 0) : 0;
 
     const result = (await this.httpClient.fetch(
       config.queryPath,
