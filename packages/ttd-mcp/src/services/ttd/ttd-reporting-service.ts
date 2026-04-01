@@ -149,7 +149,7 @@ export class TtdReportingService {
     };
 
     const result = (await this.httpClient.fetch(
-      "/myreports/reportexecution/query",
+      "/myreports/reportexecution/query/reportschedule",
       context,
       {
         method: "POST",
@@ -264,7 +264,7 @@ export class TtdReportingService {
       };
 
       const result = (await this.httpClient.fetch(
-        "/myreports/reportexecution/query",
+        "/myreports/reportexecution/query/reportschedule",
         context,
         {
           method: "POST",
