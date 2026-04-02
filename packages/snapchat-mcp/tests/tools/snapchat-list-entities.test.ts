@@ -43,7 +43,7 @@ describe("snapchat_list_entities tool", () => {
   const baseSdkContext = { sessionId: "test-session" } as any;
 
   describe("listEntitiesLogic()", () => {
-    it("returns formatted entity list with cursor-based pagination", async () => {
+    it("returns formatted entity list with next-link pagination", async () => {
       const mockEntities = [
         { id: "c1", name: "Campaign A", status: "ACTIVE" },
         { id: "c2", name: "Campaign B", status: "PAUSED" },
@@ -140,7 +140,7 @@ describe("snapchat_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows cursor hint when has_more is true", () => {
+    it("shows next page hint when has_more is true", () => {
       const result = {
         entities: [{ id: "c1" }],
         has_more: true,
@@ -151,6 +151,7 @@ describe("snapchat_list_entities tool", () => {
       const formatted = listEntitiesResponseFormatter(result);
       expect((formatted[0] as any).text).toContain("More results available");
       expect((formatted[0] as any).text).toContain("next_cursor_xyz");
+      expect((formatted[0] as any).text).toContain("next page link");
     });
   });
 
@@ -179,7 +180,7 @@ describe("snapchat_list_entities tool", () => {
       expect(result.success).toBe(false);
     });
 
-    it("accepts cursor parameter for pagination", () => {
+    it("accepts next page link parameter for pagination", () => {
       const result = ListEntitiesInputSchema.safeParse({
         entityType: "campaign",
         adAccountId: "acct_123456",

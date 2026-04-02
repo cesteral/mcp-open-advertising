@@ -7,35 +7,25 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "snapchat_get_ad_preview";
-const TOOL_TITLE = "Get Snapchat Ad Preview";
-const TOOL_DESCRIPTION = `Get a preview of how a Snapchat ad will appear to users.
+const TOOL_TITLE = "Get Snapchat Creative Preview";
+const TOOL_DESCRIPTION = `Get a preview of how a Snapchat creative will appear to users.
 
-Returns preview data including image/video URLs and ad text as they will
-be displayed on Snapchat's platform.
-
-**Common ad formats:** FEED, STORY, SPARK_ADS`;
+Returns the documented creative preview payload from Snapchat's
+\`/v1/creatives/{creative_id}/creative_preview\` endpoint.`;
 
 export const GetAdPreviewInputSchema = z
   .object({
-    adAccountId: z
+    creativeId: z
       .string()
       .min(1)
-      .describe("Snapchat Advertiser ID"),
-    adId: z
-      .string()
-      .min(1)
-      .describe("The ad ID to preview"),
-    adFormat: z
-      .string()
-      .optional()
-      .describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
+      .describe("The creative ID to preview"),
   })
-  .describe("Parameters for getting Snapchat ad preview");
+  .describe("Parameters for getting a Snapchat creative preview");
 
 export const GetAdPreviewOutputSchema = z
   .object({
     preview: z.record(z.any()).describe("Ad preview data from Snapchat"),
-    adId: z.string(),
+    creativeId: z.string(),
     timestamp: z.string().datetime(),
   })
   .describe("Ad preview result");
@@ -50,16 +40,11 @@ export async function getAdPreviewLogic(
 ): Promise<GetAdPreviewOutput> {
   const { snapchatService } = resolveSessionServices(sdkContext);
 
-  const preview = await snapchatService.getAdPreviews(
-    input.adAccountId,
-    input.adId,
-    input.adFormat,
-    context
-  );
+  const preview = await snapchatService.getCreativePreview(input.creativeId, context);
 
   return {
     preview: preview as Record<string, unknown>,
-    adId: input.adId,
+    creativeId: input.creativeId,
     timestamp: new Date().toISOString(),
   };
 }
@@ -68,7 +53,7 @@ export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `Ad preview for ${result.adId}:\n${JSON.stringify(result.preview, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Creative preview for ${result.creativeId}:\n${JSON.stringify(result.preview, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -87,18 +72,9 @@ export const getAdPreviewTool = {
   },
   inputExamples: [
     {
-      label: "Preview a Snapchat feed ad",
+      label: "Preview a Snapchat creative",
       input: {
-        adAccountId: "1234567890",
-        adId: "1600123456789",
-        adFormat: "FEED",
-      },
-    },
-    {
-      label: "Preview an ad without specifying format",
-      input: {
-        adAccountId: "1234567890",
-        adId: "1600123456789",
+        creativeId: "1600123456789",
       },
     },
   ],

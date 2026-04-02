@@ -14,10 +14,10 @@ const TOOL_DESCRIPTION = `Create a new Snapchat Ads entity.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Key requirements by entity type:**
-- **campaign**: requires \`name\`, \`objective\` (e.g., TRAFFIC, APP_INSTALLS), \`daily_budget_micro\` (budget in micro-currency, e.g., 10000000 = $10)
-- **adGroup**: requires \`campaignId\` tool param + \`name\`, \`placement\`, \`daily_budget_micro\`, \`optimization_goal\` in data
-- **ad**: requires \`adSquadId\` tool param + \`name\`, \`creative_id\` in data
-- **creative**: requires \`name\`, \`type\`, \`brand_name\`, \`headline\`, \`call_to_action\` and creative content
+- **campaign**: requires \`name\`, \`status\`, and either \`daily_budget_micro\` or \`lifetime_spend_cap_micro\`
+- **adGroup**: requires \`campaignId\` + \`name\`, \`status\`, \`type\`, \`placement\`, \`targeting\`, \`optimization_goal\`, and a supported budget field
+- **ad**: requires \`adSquadId\` + \`name\`, \`creative_id\`, \`type\`, \`status\`
+- **creative**: requires fields matching the chosen creative type, such as \`name\`, \`type\`, \`brand_name\`, \`headline\`, \`call_to_action\`, and media or destination properties
 
 **Parent entity IDs (passed as top-level params, not in data):**
 - Creating \`adGroup\`: supply \`campaignId\` (routes to /v1/campaigns/{id}/adsquads)
@@ -115,7 +115,7 @@ export const createEntityTool = {
         adAccountId: "1234567890",
         data: {
           name: "Summer Sale 2026",
-          objective: "TRAFFIC",
+          objective: "WEB_CONVERSION",
           daily_budget_micro: 10000000,
           status: "ACTIVE",
         },
@@ -130,9 +130,14 @@ export const createEntityTool = {
         data: {
           name: "US 25-44 Interest Targeting",
           placement: "SNAP_ADS",
+          type: "SNAP_ADS",
           daily_budget_micro: 5000000,
           optimization_goal: "IMPRESSIONS",
           bid_micro: 1000000,
+          status: "ACTIVE",
+          targeting: {
+            geos: [{ country_code: "us" }],
+          },
           start_time: "2026-01-01T00:00:00Z",
           end_time: "2026-12-31T23:59:59Z",
         },

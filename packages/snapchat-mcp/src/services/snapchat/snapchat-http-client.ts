@@ -19,6 +19,7 @@ const SNAPCHAT_RETRY_CONFIG: RetryConfig = {
 /** Snapchat response envelope shape */
 interface SnapchatEnvelope {
   request_status: string;
+  status?: string;
   request_id?: string;
   display_message?: string;
   error_code?: number;
@@ -31,7 +32,14 @@ interface SnapchatEnvelope {
  */
 function validateSnapchatEnvelope(body: unknown): unknown {
   const json = body as SnapchatEnvelope;
-  if (json.request_status !== "FAILED") {
+  const requestStatus =
+    typeof json.request_status === "string"
+      ? json.request_status.toUpperCase()
+      : typeof json.status === "string"
+        ? json.status.toUpperCase()
+        : undefined;
+
+  if (requestStatus !== "FAILED") {
     return json;
   }
 
@@ -149,7 +157,9 @@ export class SnapchatHttpClient {
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {
-    const url = new URL(`${this.baseUrl}${path}`);
+    const url = path.startsWith("http://") || path.startsWith("https://")
+      ? new URL(path)
+      : new URL(`${this.baseUrl}${path}`);
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== null) {

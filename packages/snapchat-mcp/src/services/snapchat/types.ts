@@ -9,17 +9,19 @@
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
-export type SnapchatCampaignStatus = "ACTIVE" | "PAUSED" | "DELETED";
+export type SnapchatCampaignStatus = "ACTIVE" | "PAUSED";
 
 export type SnapchatObjective =
-  | "AWARENESS"
-  | "APP_INSTALLS"
-  | "DRIVE_TRAFFIC"
-  | "ENGAGEMENT"
-  | "VIDEO_VIEWS"
-  | "APP_PURCHASES"
+  | "BRAND_AWARENESS"
+  | "APP_INSTALL"
+  | "APP_CONVERSION"
   | "CATALOG_SALES"
-  | "LEAD_GENERATION";
+  | "ENGAGEMENT"
+  | "LEAD_GENERATION"
+  | "PROMOTE_PLACES"
+  | "PROMOTE_STORIES"
+  | "VIDEO_VIEW"
+  | "WEB_CONVERSION";
 
 export type SnapchatAdSquadOptimizationGoal =
   | "IMPRESSIONS"
@@ -34,15 +36,24 @@ export type SnapchatAdSquadOptimizationGoal =
 
 export type SnapchatBillingEvent = "IMPRESSION" | "SWIPE";
 
-export type SnapchatAdStatus = "ACTIVE" | "PAUSED" | "DELETED";
+export type SnapchatAdStatus = "ACTIVE" | "PAUSED";
 
 export type SnapchatCreativeType =
   | "SNAP_AD"
+  | "APP_INSTALL"
+  | "WEB_VIEW"
+  | "DEEP_LINK"
+  | "AD_TO_LENS"
+  | "AD_TO_CALL"
+  | "AD_TO_MESSAGE"
+  | "PREVIEW"
+  | "COMPOSITE"
   | "COLLECTION"
-  | "STORY"
-  | "LONGFORM_VIDEO"
-  | "FILTER"
-  | "LENS";
+  | "LEAD_GENERATION"
+  | "LENS"
+  | "LENS_WEB_VIEW"
+  | "LENS_APP_INSTALL"
+  | "LENS_DEEP_LINK";
 
 // ─── Targeting ──────────────────────────────────────────────────────────────
 

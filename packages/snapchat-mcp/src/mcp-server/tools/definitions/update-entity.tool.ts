@@ -13,11 +13,13 @@ const TOOL_DESCRIPTION = `Update a Snapchat Ads entity.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Snapchat uses POST for updates with entity ID in the body. Only provided fields are modified.
+Snapchat requires full-object PUT updates on the parent-scoped collection route.
+This tool fetches the current entity, merges your changes, and sends the full payload.
 
 **Gotchas:**
-- Use \`snapchat_bulk_update_status\` for status-only changes (more efficient)
-- ad_account_id is automatically injected`;
+- Use \`snapchat_bulk_update_status\` for status-only changes
+- \`campaignId\` is required for adGroup updates
+- \`adSquadId\` is required for ad updates`;
 
 export const UpdateEntityInputSchema = z
   .object({
@@ -28,6 +30,14 @@ export const UpdateEntityInputSchema = z
       .string()
       .min(1)
       .describe("Snapchat Advertiser ID"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID required when entityType is 'adGroup'"),
+    adSquadId: z
+      .string()
+      .optional()
+      .describe("Ad Squad ID required when entityType is 'ad'"),
     entityId: z
       .string()
       .min(1)
@@ -35,6 +45,14 @@ export const UpdateEntityInputSchema = z
     data: z
       .record(z.any())
       .describe("Fields to update as key-value pairs"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.entityType === "adGroup" && !data.campaignId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["campaignId"], message: "campaignId is required for adGroup updates" });
+    }
+    if (data.entityType === "ad" && !data.adSquadId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["adSquadId"], message: "adSquadId is required for ad updates" });
+    }
   })
   .describe("Parameters for updating a Snapchat Ads entity");
 
@@ -60,7 +78,11 @@ export async function updateEntityLogic(
   await snapchatService.updateEntity(
     input.entityType as SnapchatEntityType,
     input.entityId,
-    { adAccountId: input.adAccountId },
+    {
+      adAccountId: input.adAccountId,
+      ...(input.campaignId ? { campaignId: input.campaignId } : {}),
+      ...(input.adSquadId ? { adSquadId: input.adSquadId } : {}),
+    },
     input.data,
     context
   );
@@ -102,8 +124,8 @@ export const updateEntityTool = {
         adAccountId: "1234567890",
         entityId: "1800123456789",
         data: {
-          campaign_name: "Updated Campaign Name",
-          budget: 200,
+          name: "Updated Campaign Name",
+          daily_budget_micro: 200000000,
         },
       },
     },
@@ -112,9 +134,11 @@ export const updateEntityTool = {
       input: {
         entityType: "adGroup",
         adAccountId: "1234567890",
+        campaignId: "1800123400000",
         entityId: "1700123456789",
         data: {
-          bid_price: 1.5,
+          bid_micro: 1500000,
+          status: "PAUSED",
         },
       },
     },

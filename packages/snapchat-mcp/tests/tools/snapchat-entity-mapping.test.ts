@@ -13,8 +13,11 @@ describe("Snapchat entity mapping", () => {
     it("createPath uses /v1/adaccounts/{adAccountId}/campaigns", () => {
       expect(getEntityConfig("campaign").createPath).toBe("/v1/adaccounts/{adAccountId}/campaigns");
     });
-    it("updatePath uses /v1/campaigns/{entityId}", () => {
-      expect(getEntityConfig("campaign").updatePath).toBe("/v1/campaigns/{entityId}");
+    it("getPath uses /v1/campaigns/{entityId}", () => {
+      expect(getEntityConfig("campaign").getPath).toBe("/v1/campaigns/{entityId}");
+    });
+    it("updatePath uses /v1/adaccounts/{adAccountId}/campaigns", () => {
+      expect(getEntityConfig("campaign").updatePath).toBe("/v1/adaccounts/{adAccountId}/campaigns");
     });
     it("deletePath uses /v1/campaigns/{entityId}", () => {
       expect(getEntityConfig("campaign").deletePath).toBe("/v1/campaigns/{entityId}");
@@ -37,8 +40,11 @@ describe("Snapchat entity mapping", () => {
     it("createPath uses /v1/campaigns/{campaignId}/adsquads", () => {
       expect(getEntityConfig("adGroup").createPath).toBe("/v1/campaigns/{campaignId}/adsquads");
     });
-    it("updatePath uses /v1/adsquads/{entityId}", () => {
-      expect(getEntityConfig("adGroup").updatePath).toBe("/v1/adsquads/{entityId}");
+    it("getPath uses /v1/adsquads/{entityId}", () => {
+      expect(getEntityConfig("adGroup").getPath).toBe("/v1/adsquads/{entityId}");
+    });
+    it("updatePath uses /v1/campaigns/{campaignId}/adsquads", () => {
+      expect(getEntityConfig("adGroup").updatePath).toBe("/v1/campaigns/{campaignId}/adsquads");
     });
     it("responseKey is 'adsquads'", () => {
       expect(getEntityConfig("adGroup").responseKey).toBe("adsquads");
@@ -55,8 +61,11 @@ describe("Snapchat entity mapping", () => {
     it("createPath uses /v1/adsquads/{adSquadId}/ads", () => {
       expect(getEntityConfig("ad").createPath).toBe("/v1/adsquads/{adSquadId}/ads");
     });
-    it("updatePath uses /v1/ads/{entityId}", () => {
-      expect(getEntityConfig("ad").updatePath).toBe("/v1/ads/{entityId}");
+    it("getPath uses /v1/ads/{entityId}", () => {
+      expect(getEntityConfig("ad").getPath).toBe("/v1/ads/{entityId}");
+    });
+    it("updatePath uses /v1/adsquads/{adSquadId}/ads", () => {
+      expect(getEntityConfig("ad").updatePath).toBe("/v1/adsquads/{adSquadId}/ads");
     });
     it("responseKey is 'ads'", () => {
       expect(getEntityConfig("ad").responseKey).toBe("ads");
@@ -70,8 +79,11 @@ describe("Snapchat entity mapping", () => {
     it("listPath uses /v1/adaccounts/{adAccountId}/creatives", () => {
       expect(getEntityConfig("creative").listPath).toBe("/v1/adaccounts/{adAccountId}/creatives");
     });
-    it("updatePath uses /v1/creatives/{entityId}", () => {
-      expect(getEntityConfig("creative").updatePath).toBe("/v1/creatives/{entityId}");
+    it("getPath uses /v1/creatives/{entityId}", () => {
+      expect(getEntityConfig("creative").getPath).toBe("/v1/creatives/{entityId}");
+    });
+    it("updatePath uses /v1/adaccounts/{adAccountId}/creatives", () => {
+      expect(getEntityConfig("creative").updatePath).toBe("/v1/adaccounts/{adAccountId}/creatives");
     });
     it("responseKey is 'creatives'", () => {
       expect(getEntityConfig("creative").responseKey).toBe("creatives");

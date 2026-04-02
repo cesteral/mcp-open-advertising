@@ -8,29 +8,38 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "snapchat_get_targeting_options";
 const TOOL_TITLE = "Get Snapchat Targeting Options";
-const TOOL_DESCRIPTION = `Browse available Snapchat ad targeting options and categories.
+const TOOL_DESCRIPTION = `Browse available Snapchat targeting options from documented targeting endpoints.
 
-Returns a structured list of targeting options available for a given objective type.
-Use this to discover valid targeting values before creating or updating ad groups.
+Use this to discover valid country support, geo, and interest values before creating or updating ad groups.
 
-**Common objective types:** TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS`;
+**Supported targeting types:** country_support, geo_country, geo_region, geo_metro, geo_postal_code, interests_slc, interests_vac, interests_shp`;
 
 export const GetTargetingOptionsInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
     targetingType: z
+      .enum(["country_support", "geo_country", "geo_region", "geo_metro", "geo_postal_code", "interests_slc", "interests_vac", "interests_shp"])
+      .optional()
+      .default("country_support")
+      .describe("Documented Snapchat targeting endpoint to query"),
+    countryCode: z
       .string()
       .optional()
-      .describe("Optional objective type to filter targeting options (e.g., TRAFFIC, APP_INSTALLS)"),
+      .describe("ISO alpha-2 country code required for country-specific targeting types"),
+    limit: z
+      .number()
+      .int()
+      .min(1)
+      .max(10000)
+      .optional()
+      .default(50)
+      .describe("Maximum number of options to request where Snapchat supports limits"),
   })
   .describe("Parameters for browsing Snapchat targeting options");
 
 export const GetTargetingOptionsOutputSchema = z
   .object({
     options: z.record(z.any()).describe("Available targeting options"),
+    nextCursor: z.string().optional().describe("Next page URL when Snapchat pagination is available"),
     timestamp: z.string().datetime(),
   })
   .describe("Targeting options result");
@@ -47,11 +56,14 @@ export async function getTargetingOptionsLogic(
 
   const options = (await snapchatService.getTargetingOptions(
     input.targetingType,
+    input.countryCode,
+    input.limit,
     context
-  )) as Record<string, unknown>;
+  )) as { results: Record<string, unknown>[]; nextCursor?: string };
 
   return {
-    options,
+    options: { results: options.results },
+    nextCursor: options.nextCursor,
     timestamp: new Date().toISOString(),
   };
 }
@@ -60,7 +72,7 @@ export function getTargetingOptionsResponseFormatter(result: GetTargetingOptions
   return [
     {
       type: "text" as const,
-      text: `Snapchat targeting options:\n${JSON.stringify(result.options, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Snapchat targeting options:\n${JSON.stringify(result.options, null, 2)}${result.nextCursor ? `\n\nNext page: ${result.nextCursor}` : ""}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -81,14 +93,16 @@ export const getTargetingOptionsTool = {
     {
       label: "Get all targeting options",
       input: {
-        adAccountId: "1234567890",
+        targetingType: "country_support",
+        countryCode: "us",
       },
     },
     {
-      label: "Get targeting options for traffic objective",
+      label: "Get US Snap Lifestyle Categories",
       input: {
-        adAccountId: "1234567890",
-        targetingType: "TRAFFIC",
+        targetingType: "interests_slc",
+        countryCode: "us",
+        limit: 100,
       },
     },
   ],

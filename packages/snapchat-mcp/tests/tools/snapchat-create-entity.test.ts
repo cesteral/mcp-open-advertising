@@ -44,8 +44,8 @@ describe("snapchat_create_entity tool", () => {
   describe("createEntityLogic()", () => {
     it("creates a campaign successfully", async () => {
       const mockEntity = {
-        campaign_id: "1800999888777",
-        campaign_name: "Test Campaign",
+        id: "1800999888777",
+        name: "Test Campaign",
       };
       mockCreateEntity.mockResolvedValueOnce(mockEntity);
 
@@ -54,10 +54,10 @@ describe("snapchat_create_entity tool", () => {
           entityType: "campaign",
           adAccountId: "1234567890",
           data: {
-            campaign_name: "Test Campaign",
-            objective_type: "TRAFFIC",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 100,
+            name: "Test Campaign",
+            objective: "WEB_CONVERSION",
+            status: "ACTIVE",
+            daily_budget_micro: 100000000,
           },
         },
         baseContext,
@@ -71,31 +71,32 @@ describe("snapchat_create_entity tool", () => {
         "campaign",
         { adAccountId: "1234567890" },
         {
-          campaign_name: "Test Campaign",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Test Campaign",
+          objective: "WEB_CONVERSION",
+          status: "ACTIVE",
+          daily_budget_micro: 100000000,
         },
         baseContext
       );
     });
 
     it("creates an ad group successfully", async () => {
-      const mockEntity = { adgroup_id: "1700999888777" };
+      const mockEntity = { id: "1700999888777" };
       mockCreateEntity.mockResolvedValueOnce(mockEntity);
 
       const result = await createEntityLogic(
-        {
-          entityType: "adGroup",
-          adAccountId: "1234567890",
-          data: {
-            campaign_id: "1800123456789",
-            adgroup_name: "Test Ad Group",
-            placement_type: "PLACEMENT_TYPE_NORMAL",
-            budget_mode: "BUDGET_MODE_DAY",
-            budget: 50,
-            schedule_type: "SCHEDULE_ALWAYS",
-            optimize_goal: "CLICK",
+          {
+            entityType: "adGroup",
+            adAccountId: "1234567890",
+            campaignId: "1800123456789",
+            data: {
+            name: "Test Ad Group",
+            type: "SNAP_ADS",
+            placement: "CONTENT",
+            daily_budget_micro: 50000000,
+            status: "ACTIVE",
+            optimization_goal: "IMPRESSIONS",
+            targeting: { geos: [{ country_code: "us" }] },
           },
         },
         baseContext,
@@ -114,7 +115,7 @@ describe("snapchat_create_entity tool", () => {
           {
             entityType: "campaign",
             adAccountId: "1234567890",
-            data: { campaign_name: "Bad Campaign", objective_type: "TRAFFIC" },
+            data: { name: "Bad Campaign", status: "ACTIVE" },
           },
           baseContext,
           baseSdkContext
@@ -126,7 +127,7 @@ describe("snapchat_create_entity tool", () => {
   describe("createEntityResponseFormatter()", () => {
     it("formats create result with entity type", () => {
       const result = {
-        entity: { campaign_id: "1800999888777", campaign_name: "Test" },
+        entity: { id: "1800999888777", name: "Test" },
         entityType: "campaign",
         timestamp: "2026-03-04T00:00:00.000Z",
       };
@@ -145,10 +146,9 @@ describe("snapchat_create_entity tool", () => {
         entityType: "campaign",
         adAccountId: "1234567890",
         data: {
-          campaign_name: "Test",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Test",
+          status: "ACTIVE",
+          daily_budget_micro: 100000000,
         },
       });
       expect(result.success).toBe(true);

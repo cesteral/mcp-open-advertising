@@ -13,12 +13,9 @@ const TOOL_DESCRIPTION = `Batch update the status of Snapchat Ads entities.
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-**Status values:**
-- **ACTIVE** — Activate entities
-- **PAUSED** — Pause entities
-- **ARCHIVED** — Archive entities (soft delete)
+**Status values:** ACTIVE, PAUSED
 
-Snapchat status updates use PUT on each entity's path.`;
+Snapchat status updates are sent as full-object PUTs to the parent collection route.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
@@ -29,14 +26,30 @@ export const BulkUpdateStatusInputSchema = z
       .string()
       .min(1)
       .describe("Snapchat Advertiser ID"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID required when entityType is 'adGroup'"),
+    adSquadId: z
+      .string()
+      .optional()
+      .describe("Ad Squad ID required when entityType is 'ad'"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
     operationStatus: z
-      .enum(["ACTIVE", "PAUSED", "ARCHIVED"])
+      .enum(["ACTIVE", "PAUSED"])
       .describe("Target status to apply"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.entityType === "adGroup" && !data.campaignId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["campaignId"], message: "campaignId is required for adGroup status updates" });
+    }
+    if (data.entityType === "ad" && !data.adSquadId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["adSquadId"], message: "adSquadId is required for ad status updates" });
+    }
   })
   .describe("Parameters for bulk status update of Snapchat Ads entities");
 
@@ -68,8 +81,13 @@ export async function bulkUpdateStatusLogic(
 
   const result = await snapchatService.bulkUpdateStatus(
     input.entityType as SnapchatEntityType,
+    {
+      adAccountId: input.adAccountId,
+      ...(input.campaignId ? { campaignId: input.campaignId } : {}),
+      ...(input.adSquadId ? { adSquadId: input.adSquadId } : {}),
+    },
     input.entityIds,
-    input.operationStatus as "ACTIVE" | "PAUSED" | "ARCHIVED",
+    input.operationStatus as "ACTIVE" | "PAUSED",
     context
   );
 
@@ -130,6 +148,7 @@ export const bulkUpdateStatusTool = {
       input: {
         entityType: "adGroup",
         adAccountId: "1234567890",
+        campaignId: "1800111111111",
         entityIds: ["1700111111111"],
         operationStatus: "ACTIVE",
       },

@@ -22,23 +22,23 @@ const snapchatService = {
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
   listAdAccounts: vi.fn(async () => ({ entities: [{ ad_account_id: "123" }], nextCursor: undefined })),
-  bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
+  bulkUpdateStatus: vi.fn(async (_entityType: string, _filters: unknown, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),
   bulkCreateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: unknown[]) => ({
     results: items.map(() => ({ success: true, entity: { id: "new" } })),
   })),
-  bulkUpdateEntities: vi.fn(async (_entityType: string, items: Array<{ entityId: string }>) => ({
+  bulkUpdateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: Array<{ entityId: string }>) => ({
     results: items.map((item) => ({ entityId: item.entityId, success: true })),
   })),
   adjustBids: vi.fn(async (adjustments: Array<{ adGroupId: string }>) => ({
     results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
   })),
-  searchTargeting: vi.fn(async () => ({ list: [{ id: "targeting-1" }] })),
-  getTargetingOptions: vi.fn(async () => ({ list: [{ id: "targeting-option-1" }] })),
+  searchTargeting: vi.fn(async () => ({ results: [{ id: "targeting-1" }] })),
+  getTargetingOptions: vi.fn(async () => ({ results: [{ id: "targeting-option-1" }] })),
   duplicateEntity: vi.fn(async () => ({ id: "copy" })),
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
-  getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
+  getCreativePreview: vi.fn(async () => ({ creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=123" })),
   client: {
     postMultipart: vi.fn(async () => ({
       media: [{ media: { id: "media-test-123", media_status: "PENDING" } }],
@@ -65,7 +65,7 @@ const snapchatReportingService = {
   submitReport: vi.fn(async () => ({ task_id: "task-submit-1" })),
   checkReportStatus: vi.fn(async () => ({
     taskId: "task-check-1",
-    status: "DONE",
+    status: "COMPLETE",
     downloadUrl: "https://example.com/report.csv",
   })),
   downloadReport: vi.fn(async () => ({

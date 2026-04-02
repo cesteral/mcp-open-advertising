@@ -15,7 +15,7 @@ Follows the async polling pattern: submit task → poll until COMPLETE → downl
 This may take 30s–5 minutes depending on the data volume.
 
 **Common fields:** impressions, swipes, spend, video_views, conversion_purchases, reach, frequency, cpm, cpsu
-**Granularity:** DAY (default), HOUR, LIFETIME
+**Granularity:** TOTAL, DAY (default), HOUR, LIFETIME
 **start_time/end_time:** ISO 8601 format (e.g. 2024-01-01T00:00:00Z)`;
 
 export const GetReportInputSchema = z
@@ -41,7 +41,7 @@ export const GetReportInputSchema = z
       .optional()
       .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"),
     granularity: z
-      .enum(["DAY", "HOUR", "LIFETIME"])
+      .enum(["TOTAL", "DAY", "HOUR", "LIFETIME"])
       .optional()
       .default("DAY")
       .describe("Time granularity (default: DAY)"),
@@ -49,14 +49,6 @@ export const GetReportInputSchema = z
       .enum(["CAMPAIGN", "AD_SQUAD", "AD"])
       .optional()
       .describe("Entity level for stats breakdown (default: account-level aggregate)"),
-    filters: z
-      .array(z.object({
-        field: z.string().describe("Filter field (e.g. campaign_id)"),
-        operator: z.string().describe("Filter operator (e.g. IN)"),
-        values: z.array(z.string()).describe("Filter values"),
-      }))
-      .optional()
-      .describe("Optional filters for the report"),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -132,7 +124,6 @@ export async function getReportLogic(
       start_time: resolvedStartTime!,
       end_time: resolvedEndTime!,
       ...(input.dimensionType ? { dimension_type: input.dimensionType } : {}),
-      ...(input.filters ? { filters: input.filters } : {}),
     },
     context
   );
@@ -196,10 +187,10 @@ export const getReportTool = {
       label: "Campaign delivery report for last 7 days",
       input: {
         adAccountId: "1234567890",
-        fields: ["impressions", "swipes", "spend", "cpm"],
+        fields: ["impressions", "swipes", "spend"],
         datePreset: "LAST_7_DAYS",
         granularity: "DAY",
-        filters: [{ field: "campaign_id", operator: "IN", values: ["camp_123"] }],
+        dimensionType: "CAMPAIGN",
       },
     },
     {

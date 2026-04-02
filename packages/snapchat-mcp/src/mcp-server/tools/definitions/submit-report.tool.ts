@@ -11,7 +11,8 @@ const TOOL_NAME = "snapchat_submit_report";
 const TOOL_TITLE = "Submit Snapchat Report";
 const TOOL_DESCRIPTION = `Submit a Snapchat Ads report task without waiting for completion.
 
-Returns a \`taskId\` immediately. Use \`snapchat_check_report_status\` to poll for completion, then \`snapchat_download_report\` to fetch results.
+Returns a \`taskId\` immediately. This is Snapchat's \`report_run_id\`.
+Use \`snapchat_check_report_status\` to poll for completion, then \`snapchat_download_report\` to fetch results.
 
 **Non-blocking workflow:**
 1. \`snapchat_submit_report\` → get \`taskId\`
@@ -43,7 +44,7 @@ export const SubmitReportInputSchema = z
       .optional()
       .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"),
     granularity: z
-      .enum(["DAY", "HOUR", "LIFETIME"])
+      .enum(["TOTAL", "DAY", "HOUR", "LIFETIME"])
       .optional()
       .default("DAY")
       .describe("Time granularity (default: DAY)"),
@@ -51,14 +52,6 @@ export const SubmitReportInputSchema = z
       .enum(["CAMPAIGN", "AD_SQUAD", "AD"])
       .optional()
       .describe("Entity level for stats breakdown (default: account-level aggregate)"),
-    filters: z
-      .array(z.object({
-        field: z.string().describe("Filter field (e.g. campaign_id)"),
-        operator: z.string().describe("Filter operator (e.g. IN)"),
-        values: z.array(z.string()).describe("Filter values"),
-      }))
-      .optional()
-      .describe("Optional filters for the report"),
   })
   .refine(
     (data) => data.datePreset !== undefined || (data.startTime !== undefined && data.endTime !== undefined),
@@ -98,7 +91,6 @@ export async function submitReportLogic(
       start_time: resolvedStartTime!,
       end_time: resolvedEndTime!,
       ...(input.dimensionType ? { dimension_type: input.dimensionType } : {}),
-      ...(input.filters ? { filters: input.filters } : {}),
     },
     context
   );
@@ -135,9 +127,10 @@ export const submitReportTool = {
       label: "Submit campaign performance report",
       input: {
         adAccountId: "1234567890",
-        fields: ["impressions", "swipes", "spend", "cpm"],
+        fields: ["impressions", "swipes", "spend"],
         datePreset: "LAST_7_DAYS",
         granularity: "DAY",
+        dimensionType: "CAMPAIGN",
       },
     },
   ],

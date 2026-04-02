@@ -9,13 +9,13 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "snapchat_list_entities";
 const TOOL_TITLE = "List Snapchat Ads Entities";
-const TOOL_DESCRIPTION = `List Snapchat Ads entities with optional filtering and cursor-based pagination.
+const TOOL_DESCRIPTION = `List Snapchat Ads entities with optional filtering and Snapchat next-link pagination.
 
 **Entity Hierarchy:** Advertiser > Campaign > Ad Group > Ad (+ Creatives)
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-All entities are scoped to an advertiser account. Pagination uses cursor-based paging.`;
+All entities are scoped to an advertiser account. Pagination uses Snapchat's returned next page link.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -37,14 +37,14 @@ export const ListEntitiesInputSchema = z
     cursor: z
       .string()
       .optional()
-      .describe("Pagination cursor from previous response"),
+      .describe("Next page link from a previous response"),
   })
   .describe("Parameters for listing Snapchat Ads entities");
 
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    nextCursor: z.string().optional().describe("Cursor for next page (undefined if no more results)"),
+    nextCursor: z.string().optional().describe("Next page link (undefined if no more results)"),
     has_more: z.boolean().describe("Whether more pages are available"),
     timestamp: z.string().datetime(),
   })
@@ -82,7 +82,7 @@ export async function listEntitiesLogic(
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
   const summary = `Found ${result.entities.length} entities`;
   const pagination = result.has_more
-    ? `\n\nMore results available. Use cursor: ${result.nextCursor}`
+    ? `\n\nMore results available. Use next page link: ${result.nextCursor}`
     : "";
   const entities =
     result.entities.length > 0

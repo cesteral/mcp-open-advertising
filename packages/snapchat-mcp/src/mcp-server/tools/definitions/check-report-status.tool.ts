@@ -25,7 +25,7 @@ export const CheckReportStatusInputSchema = z
     taskId: z
       .string()
       .min(1)
-      .describe("Report task ID from snapchat_submit_report"),
+      .describe("Report run ID from snapchat_submit_report"),
   })
   .describe("Parameters for checking Snapchat report status");
 
@@ -68,7 +68,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
     return [
       {
         type: "text" as const,
-        text: `Report complete: ${result.taskId}\n\nDownload URL: ${result.downloadUrl}\n\nUse \`snapchat_download_report\` with this URL to fetch and parse the report data.\n\nTimestamp: ${result.timestamp}`,
+      text: `Report complete: ${result.taskId}\n\nDownload URL: ${result.downloadUrl}\n\nUse \`snapchat_download_report\` with this URL to fetch and parse the report data.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }

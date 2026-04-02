@@ -44,7 +44,7 @@ export const GetReportBreakdownsInputSchema = z
       .optional()
       .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"),
     granularity: z
-      .enum(["DAY", "HOUR", "LIFETIME"])
+      .enum(["TOTAL", "DAY", "HOUR", "LIFETIME"])
       .optional()
       .default("DAY")
       .describe("Time granularity (default: DAY)"),
@@ -52,14 +52,6 @@ export const GetReportBreakdownsInputSchema = z
       .enum(["CAMPAIGN", "AD_SQUAD", "AD"])
       .optional()
       .describe("Entity level for stats breakdown (default: account-level aggregate)"),
-    filters: z
-      .array(z.object({
-        field: z.string().describe("Filter field (e.g. campaign_id)"),
-        operator: z.string().describe("Filter operator (e.g. IN)"),
-        values: z.array(z.string()).describe("Filter values"),
-      }))
-      .optional()
-      .describe("Optional filters for the report"),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -136,7 +128,6 @@ export async function getReportBreakdownsLogic(
       start_time: resolvedStartTime!,
       end_time: resolvedEndTime!,
       ...(input.dimensionType ? { dimension_type: input.dimensionType } : {}),
-      ...(input.filters ? { filters: input.filters } : {}),
     },
     input.breakdowns,
     context

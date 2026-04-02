@@ -11,15 +11,23 @@ const TOOL_TITLE = "Snapchat Audience Size Estimate";
 const TOOL_DESCRIPTION = `Get an estimated audience size for a Snapchat targeting configuration.
 
 Use this to validate and tune targeting before creating ad groups.
-Returns estimated reach and audience size ranges.
+Backed by Snapchat's documented \`audience_size_v2\` endpoint.
 
-**Example targeting config:**
+**Example ad squad spec:**
 \`\`\`json
 {
-  "age": ["AGE_18_24", "AGE_25_34"],
-  "gender": ["GENDER_FEMALE"],
-  "location_ids": ["JP"],
-  "interest_category_ids": ["123456789"]
+  "name": "App Install Prospecting",
+  "status": "ACTIVE",
+  "type": "SNAP_ADS",
+  "targeting": {
+    "geos": [{ "country_code": "us" }]
+  },
+  "placement": "CONTENT",
+  "bid_micro": 6000000,
+  "auto_bid": false,
+  "daily_budget_micro": 50000000,
+  "delivery_constraint": "DAILY_BUDGET",
+  "optimization_goal": "APP_INSTALLS"
 }
 \`\`\``;
 
@@ -31,7 +39,7 @@ export const GetAudienceEstimateInputSchema = z
       .describe("Snapchat Advertiser ID"),
     targetingConfig: z
       .record(z.any())
-      .describe("Targeting specification object with demographic and interest criteria"),
+      .describe("Ad squad spec or targeting spec accepted by Snapchat audience_size_v2"),
   })
   .describe("Parameters for getting a Snapchat audience size estimate");
 
@@ -91,9 +99,13 @@ export const getAudienceEstimateTool = {
       input: {
         adAccountId: "1234567890",
         targetingConfig: {
-          age: ["AGE_18_24", "AGE_25_34"],
-          gender: ["GENDER_FEMALE"],
-          location_ids: ["US"],
+          name: "US Prospecting",
+          status: "ACTIVE",
+          type: "SNAP_ADS",
+          targeting: { geos: [{ country_code: "us" }] },
+          placement: "CONTENT",
+          optimization_goal: "APP_INSTALLS",
+          daily_budget_micro: 50000000,
         },
       },
     },
@@ -102,9 +114,16 @@ export const getAudienceEstimateTool = {
       input: {
         adAccountId: "1234567890",
         targetingConfig: {
-          age: ["AGE_25_34"],
-          location_ids: ["GB"],
-          interest_category_ids: ["123456789", "987654321"],
+          name: "UK Interest Prospecting",
+          status: "ACTIVE",
+          type: "SNAP_ADS",
+          targeting: {
+            geos: [{ country_code: "gb" }],
+            interests: [{ category_id: ["SLC_1"], operation: "INCLUDE" }],
+          },
+          placement: "CONTENT",
+          optimization_goal: "IMPRESSIONS",
+          daily_budget_micro: 25000000,
         },
       },
     },

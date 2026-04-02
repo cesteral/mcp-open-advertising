@@ -19,7 +19,7 @@ import {
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
-/** Snapchat report task status values */
+/** Snapchat report task status values exposed through MCP */
 export type ReportTaskStatus = "PENDING" | "RUNNING" | "COMPLETE" | "FAILED";
 
 /** Snapchat async stats report check response */
@@ -39,19 +39,18 @@ export interface SnapchatReportFilter {
 /** Snapchat report configuration */
 export interface SnapchatReportConfig {
   fields: string[];
-  granularity?: "DAY" | "HOUR" | "LIFETIME";
+  granularity?: "TOTAL" | "DAY" | "HOUR" | "LIFETIME";
   start_time: string;
   end_time: string;
   dimension_type?: "CAMPAIGN" | "AD_SQUAD" | "AD";
-  filters?: SnapchatReportFilter[];
 }
 
 /**
  * Snapchat Reporting Service — Handles async reporting via Snapchat Ads API v1.
  *
  * Snapchat reporting uses an async polling pattern:
- * 1. POST /v1/adaccounts/{adAccountId}/stats/async_reporting → get report id
- * 2. GET /v1/adaccounts/{adAccountId}/stats/async_reports/{id} → poll until COMPLETE
+ * 1. GET /v1/adaccounts/{adAccountId}/stats?async=true → get report_run_id
+ * 2. GET /v1/adaccounts/{adAccountId}/stats_report?report_run_id=... → poll until complete
  * 3. GET download URL to retrieve CSV report data
  */
 export class SnapchatReportingService {
@@ -76,20 +75,28 @@ export class SnapchatReportingService {
   ): Promise<{ task_id: string }> {
     await this.rateLimiter.consume(`snapchat:reporting`);
 
-    const result = (await this.httpClient.post(
-      `/v1/adaccounts/${this.adAccountId}/stats/async_reporting`,
-      {
-        fields: reportConfig.fields,
-        granularity: reportConfig.granularity ?? "DAY",
-        start_time: reportConfig.start_time,
-        end_time: reportConfig.end_time,
-        ...(reportConfig.dimension_type ? { dimension_type: reportConfig.dimension_type } : {}),
-        ...(reportConfig.filters ? { filters: reportConfig.filters } : {}),
-      },
-      context
-    )) as { request_status: string; async_stats_reports?: Array<{ id: string; status: string; download_url: string | null }> };
+    const queryParams: Record<string, string> = {
+      async: "true",
+      async_format: "csv",
+      fields: reportConfig.fields.join(","),
+      granularity: reportConfig.granularity ?? "DAY",
+      start_time: reportConfig.start_time,
+      end_time: reportConfig.end_time,
+      ...(reportConfig.dimension_type ? { breakdown: this.mapDimensionType(reportConfig.dimension_type) } : {}),
+    };
 
-    const reportId = result.async_stats_reports?.[0]?.id;
+    const result = (await this.httpClient.get(
+      `/v1/adaccounts/${this.adAccountId}/stats`,
+      queryParams,
+      context
+    )) as {
+      request_status: string;
+      async_stats_reports?: Array<{
+        async_stats_report?: { report_run_id?: string; async_status?: string };
+      }>;
+    };
+
+    const reportId = result.async_stats_reports?.[0]?.async_stats_report?.report_run_id;
     if (!reportId) {
       throw new McpError(JsonRpcErrorCode.InternalError, "Snapchat async reporting: no report id returned from submit");
     }
@@ -110,20 +117,25 @@ export class SnapchatReportingService {
       await this.rateLimiter.consume(`snapchat:reporting`);
 
       const envelope = (await this.httpClient.get(
-        `/v1/adaccounts/${this.adAccountId}/stats/async_reports/${taskId}`,
-        undefined,
+        `/v1/adaccounts/${this.adAccountId}/stats_report`,
+        { report_run_id: taskId },
         context
-      )) as { request_status: string; async_stats_report?: { id: string; status: string; download_url?: string } };
+      )) as {
+        request_status: string;
+        async_stats_reports?: Array<{
+          async_stats_report?: { report_run_id?: string; async_status?: string; result?: string };
+        }>;
+      };
 
-      const report = envelope.async_stats_report;
+      const report = envelope.async_stats_reports?.[0]?.async_stats_report;
       if (!report) {
         throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report poll: unexpected response shape for task ${taskId}`);
       }
 
       const result: ReportTaskCheckData = {
-        id: report.id,
-        status: report.status as ReportTaskStatus,
-        download_url: report.download_url,
+        id: report.report_run_id ?? taskId,
+        status: this.normalizeReportStatus(report.async_status),
+        download_url: report.result,
       };
 
       if (result.status === "COMPLETE" || result.status === "FAILED") {
@@ -159,20 +171,25 @@ export class SnapchatReportingService {
     await this.rateLimiter.consume(`snapchat:reporting`);
 
     const envelope = (await this.httpClient.get(
-      `/v1/adaccounts/${this.adAccountId}/stats/async_reports/${taskId}`,
-      undefined,
+      `/v1/adaccounts/${this.adAccountId}/stats_report`,
+      { report_run_id: taskId },
       context
-    )) as { request_status: string; async_stats_report?: { id: string; status: string; download_url?: string } };
+    )) as {
+      request_status: string;
+      async_stats_reports?: Array<{
+        async_stats_report?: { report_run_id?: string; async_status?: string; result?: string };
+      }>;
+    };
 
-    const report = envelope.async_stats_report;
+    const report = envelope.async_stats_reports?.[0]?.async_stats_report;
     if (!report) {
       throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report status: unexpected response shape for task ${taskId}`);
     }
 
     return {
-      taskId: report.id,
-      status: report.status as ReportTaskStatus,
-      downloadUrl: report.download_url,
+      taskId: report.report_run_id ?? taskId,
+      status: this.normalizeReportStatus(report.async_status),
+      downloadUrl: report.result,
     };
   }
 
@@ -271,6 +288,33 @@ export class SnapchatReportingService {
     };
 
     return this.getReport(configWithBreakdowns, context);
+  }
+
+  private normalizeReportStatus(status: string | undefined): ReportTaskStatus {
+    switch (status?.toUpperCase()) {
+      case "STARTED":
+      case "RUNNING":
+        return "RUNNING";
+      case "COMPLETED":
+        return "COMPLETE";
+      case "FAILED":
+        return "FAILED";
+      default:
+        return "PENDING";
+    }
+  }
+
+  private mapDimensionType(dimensionType: SnapchatReportConfig["dimension_type"]): string {
+    switch (dimensionType) {
+      case "CAMPAIGN":
+        return "campaign";
+      case "AD_SQUAD":
+        return "adsquad";
+      case "AD":
+        return "ad";
+      default:
+        throw new McpError(JsonRpcErrorCode.InvalidParams, `Unsupported Snapchat report dimension type: ${dimensionType}`);
+    }
   }
 
 }

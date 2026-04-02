@@ -20,10 +20,10 @@ export interface SnapchatEntityConfig {
   listPath: string;
   /** Path template for POST create (usually adAccountId-based) */
   createPath: string;
-  /** Path template for PUT update (entity-specific: /v1/{entity}s/{entityId}) */
+  /** Path template for GET by id (entity-specific) */
+  getPath: string;
+  /** Path template for PUT update collection (parent scoped) */
   updatePath: string;
-  /** Path template for status update — same as updatePath for Snapchat */
-  statusUpdatePath: string;
   /** Path template for DELETE (entity-specific: /v1/{entity}s/{entityId}) */
   deletePath: string;
   /** Primary ID field in the response object */
@@ -43,8 +43,8 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
   campaign: {
     listPath: "/v1/adaccounts/{adAccountId}/campaigns",
     createPath: "/v1/adaccounts/{adAccountId}/campaigns",
-    updatePath: "/v1/campaigns/{entityId}",
-    statusUpdatePath: "/v1/campaigns/{entityId}",
+    getPath: "/v1/campaigns/{entityId}",
+    updatePath: "/v1/adaccounts/{adAccountId}/campaigns",
     deletePath: "/v1/campaigns/{entityId}",
     idField: "id",
     responseKey: "campaigns",
@@ -66,8 +66,8 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
   adGroup: {
     listPath: "/v1/campaigns/{campaignId}/adsquads",
     createPath: "/v1/campaigns/{campaignId}/adsquads",
-    updatePath: "/v1/adsquads/{entityId}",
-    statusUpdatePath: "/v1/adsquads/{entityId}",
+    getPath: "/v1/adsquads/{entityId}",
+    updatePath: "/v1/campaigns/{campaignId}/adsquads",
     deletePath: "/v1/adsquads/{entityId}",
     idField: "id",
     responseKey: "adsquads",
@@ -88,8 +88,8 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
   ad: {
     listPath: "/v1/adsquads/{adSquadId}/ads",
     createPath: "/v1/adsquads/{adSquadId}/ads",
-    updatePath: "/v1/ads/{entityId}",
-    statusUpdatePath: "/v1/ads/{entityId}",
+    getPath: "/v1/ads/{entityId}",
+    updatePath: "/v1/adsquads/{adSquadId}/ads",
     deletePath: "/v1/ads/{entityId}",
     idField: "id",
     responseKey: "ads",
@@ -101,8 +101,8 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
   creative: {
     listPath: "/v1/adaccounts/{adAccountId}/creatives",
     createPath: "/v1/adaccounts/{adAccountId}/creatives",
-    updatePath: "/v1/creatives/{entityId}",
-    statusUpdatePath: "/v1/creatives/{entityId}",
+    getPath: "/v1/creatives/{entityId}",
+    updatePath: "/v1/adaccounts/{adAccountId}/creatives",
     deletePath: "/v1/creatives/{entityId}",
     idField: "id",
     responseKey: "creatives",

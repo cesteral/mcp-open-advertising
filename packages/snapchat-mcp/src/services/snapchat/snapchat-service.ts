@@ -32,9 +32,38 @@ interface SnapchatEntityMap {
   creative: SnapchatCreative;
 }
 
-/** Snapchat pagination response (cursor-based) */
+/** Snapchat pagination response */
 interface SnapchatPaging {
-  cursor?: string;
+  next_link?: string;
+}
+
+interface SnapchatSubrequest {
+  sub_request_status?: string;
+  status?: string;
+  sub_request_error_message?: string;
+  [key: string]: unknown;
+}
+
+interface SnapchatTargetingEndpointConfig {
+  path: string;
+  responseKey?: string;
+  requiresCountryCode?: boolean;
+}
+
+const TARGETING_ENDPOINTS: Record<string, SnapchatTargetingEndpointConfig> = {
+  country_support: { path: "/v1/targeting/v1/options" },
+  geo_country: { path: "/v1/targeting/geo/country", responseKey: "country" },
+  geo_region: { path: "/v1/targeting/geo/{countryCode}/region", responseKey: "region", requiresCountryCode: true },
+  geo_metro: { path: "/v1/targeting/geo/{countryCode}/metro", responseKey: "metro", requiresCountryCode: true },
+  geo_postal_code: { path: "/v1/targeting/geo/{countryCode}/postal_code", responseKey: "postal_code", requiresCountryCode: true },
+  interests_slc: { path: "/v1/targeting/v1/interests/scls", responseKey: "scls" },
+  interests_vac: { path: "/v1/targeting/v1/interests/vac", responseKey: "vac" },
+  interests_shp: { path: "/v1/targeting/v1/interests/shp", responseKey: "shp" },
+};
+
+function getSubrequestStatus(item: SnapchatSubrequest): string | undefined {
+  const statusValue = item["sub_request_status"] ?? item["status"];
+  return typeof statusValue === "string" ? statusValue.toUpperCase() : undefined;
 }
 
 /**
@@ -47,7 +76,11 @@ function unwrapEntities(responseKey: string, entityKey: string, response: unknow
   const items = envelope[responseKey];
   if (!Array.isArray(items)) return [];
   return items
-    .filter((item: Record<string, unknown>) => item["sub_request_status"] === "SUCCESS" || item["sub_request_status"] === undefined)
+    .filter((rawItem) => {
+      const item = rawItem as SnapchatSubrequest;
+      const status = getSubrequestStatus(item);
+      return status === undefined || status === "SUCCESS";
+    })
     .map((item: Record<string, unknown>) => item[entityKey] ?? item);
 }
 
@@ -69,8 +102,10 @@ function unwrapBulkResults(
   const envelope = response as Record<string, unknown>;
   const items = envelope[responseKey];
   if (!Array.isArray(items)) return [];
-  return items.map((item: Record<string, unknown>) => {
-    if (item["sub_request_status"] === "SUCCESS" || item["sub_request_status"] === undefined) {
+  return items.map((rawItem) => {
+    const item = rawItem as SnapchatSubrequest;
+    const status = getSubrequestStatus(item);
+    if (status === undefined || status === "SUCCESS") {
       return { success: true, entity: item[entityKey] ?? item };
     }
     const errorMsg = item["sub_request_error_message"] ?? item["sub_request_status"] ?? "Unknown error";
@@ -78,18 +113,30 @@ function unwrapBulkResults(
   });
 }
 
-/**
- * Derive collection path from entity-specific path by stripping the /{entityId} suffix.
- * e.g. "/v1/campaigns/{entityId}" → "/v1/campaigns"
- */
-function getCollectionPath(updatePath: string): string {
-  return updatePath.replace(/\/\{entityId\}$/, "");
-}
-
 function extractNextCursor(response: unknown): string | undefined {
   const envelope = response as Record<string, unknown>;
   const paging = envelope["paging"] as SnapchatPaging | undefined;
-  return paging?.cursor;
+  return paging?.next_link;
+}
+
+function extractTargetingDimensions(response: unknown, responseKey?: string): Record<string, unknown>[] {
+  const envelope = response as Record<string, unknown>;
+  const items = envelope["targeting_dimensions"];
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .filter((rawItem) => {
+      const item = rawItem as SnapchatSubrequest;
+      const status = getSubrequestStatus(item);
+      return status === undefined || status === "SUCCESS";
+    })
+    .map((rawItem) => {
+      const item = rawItem as Record<string, unknown>;
+      if (responseKey && item[responseKey] && typeof item[responseKey] === "object") {
+        return item[responseKey] as Record<string, unknown>;
+      }
+      return item;
+    });
 }
 
 /**
@@ -98,9 +145,9 @@ function extractNextCursor(response: unknown): string | undefined {
  * Key Snapchat API patterns:
  * - ad_account_id is in URL paths (not query params or body)
  * - List paths use adAccountId or parent entity ID (e.g., campaignId for adGroups)
- * - Updates use PUT on entity-specific paths (/v1/campaigns/{entityId})
+ * - Updates use collection-level PUT scoped by the parent resource
  * - Deletes use DELETE on entity-specific paths
- * - Pagination is cursor-based (pass `cursor` in query params)
+ * - Pagination returns paging.next_link for the next page
  * - Create/update body wraps entity in: { <responseKey>: [{ ...data }] }
  * - Response envelope: { request_status, <responseKey>: [{ sub_request_status, <entityKey>: {...} }] }
  */
@@ -114,6 +161,39 @@ export class SnapchatService {
     rateLimiter: RateLimiter
   ) {
     this.rateLimiter = rateLimiter;
+  }
+
+  private resolveUpdatePathParams<T extends SnapchatEntityType>(
+    entityType: T,
+    entity: SnapchatEntityMap[T],
+    filters: Record<string, string>
+  ): Record<string, string> {
+    switch (entityType) {
+      case "campaign":
+      case "creative":
+        return { adAccountId: filters.adAccountId ?? String((entity as { ad_account_id?: string }).ad_account_id ?? this.adAccountId) };
+      case "adGroup":
+        return { campaignId: filters.campaignId ?? String((entity as { campaign_id?: string }).campaign_id) };
+      case "ad":
+        return { adSquadId: filters.adSquadId ?? String((entity as { ad_squad_id?: string }).ad_squad_id) };
+      default:
+        return {};
+    }
+  }
+
+  private async buildMergedUpdateItem<T extends SnapchatEntityType>(
+    entityType: T,
+    entityId: string,
+    data: Record<string, unknown>,
+    filters: Record<string, string>,
+    context?: RequestContext
+  ): Promise<{ mergedItem: Record<string, unknown>; pathParams: Record<string, string> }> {
+    const currentEntity = await this.getEntity(entityType, entityId, context);
+    const pathParams = this.resolveUpdatePathParams(entityType, currentEntity, filters);
+    return {
+      mergedItem: { ...((currentEntity as unknown) as Record<string, unknown>), ...data, id: entityId },
+      pathParams,
+    };
   }
 
   /** Expose the underlying HTTP client for direct use (e.g., media uploads). */
@@ -141,12 +221,9 @@ export class SnapchatService {
 
     const interpolatedPath = interpolatePath(config.listPath, pathParams);
 
-    const queryParams: Record<string, string> = {};
-    if (cursor) {
-      queryParams.cursor = cursor;
-    }
-
-    const response = await this.httpClient.get(interpolatedPath, queryParams, context);
+    const response = cursor?.startsWith("http")
+      ? await this.httpClient.get(cursor, {}, context)
+      : await this.httpClient.get(interpolatedPath, cursor ? { cursor } : {}, context);
     const entities = unwrapEntities(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T][];
     const nextCursor = extractNextCursor(response);
 
@@ -161,7 +238,7 @@ export class SnapchatService {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const config = getEntityConfig(entityType);
-    const interpolatedPath = interpolatePath(config.updatePath, { entityId });
+    const interpolatedPath = interpolatePath(config.getPath, { entityId });
 
     const response = await this.httpClient.get(interpolatedPath, undefined, context);
 
@@ -199,7 +276,7 @@ export class SnapchatService {
   async updateEntity<T extends SnapchatEntityType>(
     entityType: T,
     entityId: string,
-    _filters: Record<string, string>,
+    filters: Record<string, string>,
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<SnapchatEntityMap[T]> {
@@ -207,8 +284,9 @@ export class SnapchatService {
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    const interpolatedPath = interpolatePath(config.updatePath, { entityId });
-    const body = { [config.responseKey]: [{ id: entityId, ...data }] };
+    const { mergedItem, pathParams } = await this.buildMergedUpdateItem(entityType, entityId, data, filters, context);
+    const interpolatedPath = interpolatePath(config.updatePath, pathParams);
+    const body = { [config.responseKey]: [mergedItem] };
     const response = await this.httpClient.put(interpolatedPath, body, context);
 
     return unwrapSingleEntity(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T];
@@ -230,18 +308,11 @@ export class SnapchatService {
   async updateEntityStatus<T extends SnapchatEntityType>(
     entityType: T,
     entityId: string,
-    status: "ACTIVE" | "PAUSED" | "ARCHIVED",
+    status: "ACTIVE" | "PAUSED",
+    filters: Record<string, string> = {},
     context?: RequestContext
   ): Promise<SnapchatEntityMap[T]> {
-    const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`snapchat:default`, 3);
-
-    const interpolatedPath = interpolatePath(config.statusUpdatePath, { entityId });
-    const body = { [config.responseKey]: [{ id: entityId, status }] };
-    const response = await this.httpClient.put(interpolatedPath, body, context);
-
-    return unwrapSingleEntity(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T];
+    return this.updateEntity(entityType, entityId, filters, { status }, context);
   }
 
   // ─── Advertiser Account ──────────────────────────────────────────
@@ -352,6 +423,7 @@ export class SnapchatService {
 
   async bulkUpdateEntities(
     entityType: SnapchatEntityType,
+    filters: Record<string, string>,
     items: Array<{ entityId: string; data: Record<string, unknown> }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
@@ -359,9 +431,22 @@ export class SnapchatService {
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    const collectionPath = getCollectionPath(config.updatePath);
+    const mergedItems = await Promise.all(
+      items.map(async (item) => {
+        const { mergedItem, pathParams } = await this.buildMergedUpdateItem(
+          entityType,
+          item.entityId,
+          item.data,
+          filters,
+          context
+        );
+        return { mergedItem, pathParams };
+      })
+    );
+
+    const collectionPath = interpolatePath(config.updatePath, mergedItems[0]?.pathParams ?? filters);
     const body = {
-      [config.responseKey]: items.map((item) => ({ id: item.entityId, ...item.data })),
+      [config.responseKey]: mergedItems.map((item) => item.mergedItem),
     };
     const response = await this.httpClient.put(collectionPath, body, context);
     const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
@@ -380,67 +465,82 @@ export class SnapchatService {
 
   async bulkUpdateStatus(
     entityType: SnapchatEntityType,
+    filters: Record<string, string>,
     entityIds: string[],
-    status: "ACTIVE" | "PAUSED" | "ARCHIVED",
+    status: "ACTIVE" | "PAUSED",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const config = getEntityConfig(entityType);
-
-    await this.rateLimiter.consume(`snapchat:default`, 3);
-
-    const collectionPath = getCollectionPath(config.updatePath);
-    const body = {
-      [config.responseKey]: entityIds.map((id) => ({ id, status })),
-    };
-    const response = await this.httpClient.put(collectionPath, body, context);
-    const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
-
-    return {
-      results: entityIds.map((entityId, i) => {
-        const r = bulkResults[i];
-        return {
-          entityId,
-          success: r?.success ?? false,
-          error: r?.success ? undefined : (r?.error ?? `No result returned for ${entityId}`),
-        };
-      }),
-    };
+    return this.bulkUpdateEntities(
+      entityType,
+      filters,
+      entityIds.map((entityId) => ({ entityId, data: { status } })),
+      context
+    );
   }
 
   // ─── Targeting ───────────────────────────────────────────────────
 
   async searchTargeting(
     targetingType: string,
+    countryCode: string | undefined,
     query?: string,
     limit = 20,
     context?: RequestContext
-  ): Promise<unknown> {
-    await this.rateLimiter.consume(`snapchat:default`);
+  ): Promise<{ results: Record<string, unknown>[]; nextCursor?: string }> {
+    const response = await this.getTargetingOptions(targetingType, countryCode, limit, context);
+    const normalizedQuery = query?.trim().toLowerCase();
+    const filteredResults = normalizedQuery
+      ? response.results.filter((item) => JSON.stringify(item).toLowerCase().includes(normalizedQuery))
+      : response.results;
 
-    const params: Record<string, string> = {
-      targeting_type: targetingType,
-      count: String(limit),
+    return {
+      results: filteredResults.slice(0, limit),
+      nextCursor: response.nextCursor,
     };
-
-    if (query) {
-      params.keyword = query;
-    }
-
-    return this.httpClient.get(`/v1/adaccounts/${this.adAccountId}/targeting`, params, context);
   }
 
   async getTargetingOptions(
-    targetingType?: string,
+    targetingType = "country_support",
+    countryCode?: string,
+    limit = 50,
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<{ results: Record<string, unknown>[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    const params: Record<string, string> = {};
-    if (targetingType) {
-      params.targeting_type = targetingType;
+    const config = TARGETING_ENDPOINTS[targetingType];
+    if (!config) {
+      throw new McpError(JsonRpcErrorCode.InvalidParams, `Unsupported Snapchat targeting type: ${targetingType}`);
+    }
+    if (config.requiresCountryCode && !countryCode) {
+      throw new McpError(JsonRpcErrorCode.InvalidParams, `Targeting type ${targetingType} requires countryCode`);
     }
 
-    return this.httpClient.get(`/v1/adaccounts/${this.adAccountId}/targeting`, params, context);
+    const path = interpolatePath(config.path, {
+      countryCode: countryCode?.toLowerCase() ?? "",
+    });
+    const params: Record<string, string> = {};
+    if (countryCode) {
+      params.country_code = countryCode.toLowerCase();
+    }
+    if (targetingType.startsWith("interests_")) {
+      params.limit = String(Math.max(50, Math.min(limit, 1000)));
+    } else if (targetingType === "geo_postal_code") {
+      params.limit = String(Math.max(10, Math.min(limit, 10000)));
+    }
+
+    const response = await this.httpClient.get(path, params, context);
+
+    if (targetingType === "country_support") {
+      return {
+        results: [response as Record<string, unknown>],
+        nextCursor: extractNextCursor(response),
+      };
+    }
+
+    return {
+      results: extractTargetingDimensions(response, config.responseKey),
+      nextCursor: extractNextCursor(response),
+    };
   }
 
   // ─── Audience Estimate ──────────────────────────────────────────
@@ -453,29 +553,17 @@ export class SnapchatService {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const effectiveAdAccountId = adAccountId ?? this.adAccountId;
-    return this.httpClient.post(`/v1/adaccounts/${effectiveAdAccountId}/audience_size`, targetingConfig, context);
+    return this.httpClient.post(`/v1/adaccounts/${effectiveAdAccountId}/audience_size_v2`, targetingConfig, context);
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────
 
-  async getAdPreviews(
-    adAccountId: string,
-    adId: string,
-    adFormat?: string,
+  async getCreativePreview(
+    creativeId: string,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`snapchat:default`);
-
-    const params: Record<string, string> = {};
-    if (adFormat) {
-      params.ad_format = adFormat;
-    }
-
-    return this.httpClient.get(
-      `/v1/adaccounts/${adAccountId}/ads/${adId}/previews`,
-      Object.keys(params).length > 0 ? params : undefined,
-      context
-    );
+    return this.httpClient.get(`/v1/creatives/${creativeId}/creative_preview`, undefined, context);
   }
 
 }

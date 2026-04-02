@@ -41,7 +41,7 @@ const baseSdkContext = { sessionId: "test-session" } as any;
 
 describe("submitReportLogic", () => {
   it("returns taskId and timestamp", async () => {
-    mockSubmitReport.mockResolvedValueOnce({ task_id: "rpt-new-1" });
+    mockSubmitReport.mockResolvedValueOnce({ task_id: "ASYNC_STATS:acct:1" });
 
     const result = await submitReportLogic(
       {
@@ -54,7 +54,7 @@ describe("submitReportLogic", () => {
       baseSdkContext
     );
 
-    expect(result.taskId).toBe("rpt-new-1");
+    expect(result.taskId).toBe("ASYNC_STATS:acct:1");
     expect(result.timestamp).toBeDefined();
   });
 
@@ -68,7 +68,7 @@ describe("submitReportLogic", () => {
         startTime: "2026-03-01T00:00:00Z",
         endTime: "2026-03-04T23:59:59Z",
         granularity: "DAY",
-        filters: [{ field: "campaign_id", operator: "IN", values: ["camp_123"] }],
+        dimensionType: "CAMPAIGN",
       },
       baseContext,
       baseSdkContext
@@ -80,7 +80,7 @@ describe("submitReportLogic", () => {
         start_time: "2026-03-01T00:00:00Z",
         end_time: "2026-03-04T23:59:59Z",
         granularity: "DAY",
-        filters: [{ field: "campaign_id", operator: "IN", values: ["camp_123"] }],
+        dimension_type: "CAMPAIGN",
       }),
       baseContext
     );

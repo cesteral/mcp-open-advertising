@@ -15,7 +15,7 @@ const TOOL_DESCRIPTION = `Batch update multiple Snapchat Ads entities of the sam
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 Each item must include an \`entityId\` and a \`data\` object with fields to update.
-Updates are applied concurrently (max concurrency 5). ad_account_id is automatically injected.
+The server fetches the current entities first so it can send the full payload Snapchat requires.
 
 Max 50 items per call.`;
 
@@ -28,6 +28,14 @@ export const BulkUpdateEntitiesInputSchema = z
       .string()
       .min(1)
       .describe("Snapchat Advertiser ID"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID required when entityType is 'adGroup'"),
+    adSquadId: z
+      .string()
+      .optional()
+      .describe("Ad Squad ID required when entityType is 'ad'"),
     items: z
       .array(
         z.object({
@@ -38,6 +46,14 @@ export const BulkUpdateEntitiesInputSchema = z
       .min(1)
       .max(50)
       .describe("Array of update operations (max 50)"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.entityType === "adGroup" && !data.campaignId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["campaignId"], message: "campaignId is required for adGroup updates" });
+    }
+    if (data.entityType === "ad" && !data.adSquadId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["adSquadId"], message: "adSquadId is required for ad updates" });
+    }
   })
   .describe("Parameters for bulk entity updates");
 
@@ -67,6 +83,11 @@ export async function bulkUpdateEntitiesLogic(
 
   const bulkResult = await snapchatService.bulkUpdateEntities(
     input.entityType as SnapchatEntityType,
+    {
+      adAccountId: input.adAccountId,
+      ...(input.campaignId ? { campaignId: input.campaignId } : {}),
+      ...(input.adSquadId ? { adSquadId: input.adSquadId } : {}),
+    },
     input.items,
     context
   );
@@ -120,8 +141,8 @@ export const bulkUpdateEntitiesTool = {
         entityType: "campaign",
         adAccountId: "1234567890",
         items: [
-          { entityId: "1800111111111", data: { budget: 150 } },
-          { entityId: "1800222222222", data: { budget: 250 } },
+          { entityId: "1800111111111", data: { daily_budget_micro: 150000000 } },
+          { entityId: "1800222222222", data: { daily_budget_micro: 250000000 } },
         ],
       },
     },

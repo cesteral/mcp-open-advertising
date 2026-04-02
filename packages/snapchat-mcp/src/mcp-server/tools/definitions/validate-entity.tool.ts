@@ -42,34 +42,34 @@ reasons (e.g., invalid objective/placement combinations).`;
 
 const REQUIRED_FIELDS_CREATE: Record<SnapchatEntityType, FieldRule[]> = {
   campaign: [
-    { field: "campaign_name", expectedType: "string" },
-    { field: "objective_type", expectedType: "string", hint: "e.g., TRAFFIC, APP_INSTALLS, CONVERSIONS" },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
-    { field: "budget", expectedType: "number", hint: "budget amount in account currency" },
+    { field: "name", expectedType: "string" },
+    { field: "status", expectedType: "string", hint: "ACTIVE or PAUSED" },
   ],
   adGroup: [
     { field: "campaign_id", expectedType: "string" },
-    { field: "adgroup_name", expectedType: "string" },
-    { field: "placement_type", expectedType: "string", hint: "e.g., PLACEMENT_TYPE_NORMAL, PLACEMENT_TYPE_SEARCH" },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
-    { field: "budget", expectedType: "number" },
-    { field: "schedule_type", expectedType: "string", hint: "SCHEDULE_START_END or SCHEDULE_ALWAYS" },
-    { field: "optimize_goal", expectedType: "string", hint: "e.g., CLICK, CONVERT, SHOW, REACH" },
+    { field: "name", expectedType: "string" },
+    { field: "status", expectedType: "string", hint: "ACTIVE or PAUSED" },
+    { field: "type", expectedType: "string", hint: "e.g. SNAP_ADS" },
+    { field: "placement", expectedType: "string", hint: "e.g. SNAP_ADS or CONTENT" },
+    { field: "optimization_goal", expectedType: "string" },
+    { field: "targeting", expectedType: "object" },
   ],
   ad: [
-    { field: "adgroup_id", expectedType: "string" },
-    { field: "ad_name", expectedType: "string" },
-    { field: "creative_type", expectedType: "string", hint: "e.g., SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL" },
+    { field: "ad_squad_id", expectedType: "string" },
+    { field: "name", expectedType: "string" },
+    { field: "creative_id", expectedType: "string" },
+    { field: "type", expectedType: "string", hint: "e.g. SNAP_AD" },
+    { field: "status", expectedType: "string", hint: "ACTIVE or PAUSED" },
   ],
   creative: [
-    { field: "display_name", expectedType: "string" },
+    { field: "name", expectedType: "string" },
+    { field: "type", expectedType: "string" },
   ],
 };
 
 /** Fields that are always read-only and cannot be set via the API. */
 const READ_ONLY_FIELDS = [
-  "campaign_id", "adgroup_id", "ad_id", "creative_id",
-  "created_time", "modify_time",
+  "created_at", "updated_at", "review_status", "delivery_status",
 ];
 
 // ---------------------------------------------------------------------------
@@ -91,6 +91,14 @@ export const ValidateEntityInputSchema = z
       .string()
       .optional()
       .describe("Advertiser ID (recommended for create mode)"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID required for adGroup updates"),
+    adSquadId: z
+      .string()
+      .optional()
+      .describe("Ad Squad ID required for ad updates"),
   })
   .describe("Parameters for validating a Snapchat Ads entity payload");
 
@@ -129,17 +137,23 @@ export async function validateEntityLogic(
     const rules = REQUIRED_FIELDS_CREATE[entityType as SnapchatEntityType] ?? [];
     errors.push(...validateRequiredFields(data, rules));
 
-    // Ad-specific: creative requires at least one of image_ids or video_id
-    if (entityType === "ad") {
-      if (!data.image_ids && !data.video_id) {
-        warnings.push('Ad creative requires either "image_ids" (array) or "video_id" (string)');
-      }
+    if (entityType === "campaign" && data.daily_budget_micro === undefined && data.lifetime_spend_cap_micro === undefined) {
+      errors.push('Campaign create requires either "daily_budget_micro" or "lifetime_spend_cap_micro"');
+    }
+    if (entityType === "adGroup" && data.daily_budget_micro === undefined && data.lifetime_budget_micro === undefined) {
+      errors.push('Ad group create requires either "daily_budget_micro" or "lifetime_budget_micro"');
     }
   }
 
   if (mode === "update") {
     if (Object.keys(data).length === 0) {
       errors.push("Update payload must contain at least one field to update");
+    }
+    if (entityType === "adGroup" && !input.campaignId) {
+      errors.push("campaignId is required to route adGroup updates");
+    }
+    if (entityType === "ad" && !input.adSquadId) {
+      errors.push("adSquadId is required to route ad updates");
     }
 
     warnings.push(
@@ -152,10 +166,10 @@ export async function validateEntityLogic(
   }
 
   // Budget warnings (both modes)
-  const budgetValue = data.budget;
-  if (budgetValue !== undefined && typeof budgetValue === "number") {
-    if (budgetValue <= 0) {
-      errors.push('Field "budget" must be a positive number');
+  for (const budgetField of ["daily_budget_micro", "lifetime_budget_micro", "lifetime_spend_cap_micro", "bid_micro"]) {
+    const budgetValue = data[budgetField];
+    if (budgetValue !== undefined && typeof budgetValue === "number" && budgetValue <= 0) {
+      errors.push(`Field "${budgetField}" must be a positive number`);
     }
   }
 
@@ -193,10 +207,10 @@ export const validateEntityTool = {
         mode: "create",
         adAccountId: "1234567890",
         data: {
-          campaign_name: "Summer Sale 2026",
-          objective_type: "TRAFFIC",
-          budget_mode: "BUDGET_MODE_DAY",
-          budget: 100,
+          name: "Summer Sale 2026",
+          objective: "WEB_CONVERSION",
+          status: "ACTIVE",
+          daily_budget_micro: 100000000,
         },
       },
     },
@@ -207,7 +221,7 @@ export const validateEntityTool = {
         mode: "create",
         adAccountId: "1234567890",
         data: {
-          adgroup_name: "Test Ad Group",
+          name: "Test Ad Group",
         },
       },
     },

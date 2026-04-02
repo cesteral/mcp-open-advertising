@@ -8,26 +8,28 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "snapchat_search_targeting";
 const TOOL_TITLE = "Snapchat Search Targeting Options";
-const TOOL_DESCRIPTION = `Search Snapchat targeting options by keyword or browse by type.
+const TOOL_DESCRIPTION = `Search documented Snapchat targeting options by keyword.
 
 **Common targeting types:**
-- INTEREST_CATEGORY — Interest and hobby categories
-- BEHAVIOR — User behavior segments
-- HASHTAG — Snapchat hashtag interests
-- LOCATION — Geographic locations
-- LANGUAGE — Language targeting
+- geo_country
+- geo_region
+- geo_metro
+- geo_postal_code
+- interests_slc
+- interests_vac
+- interests_shp
 
-Use results to populate ad group targeting configurations.`;
+This tool fetches a documented targeting endpoint and filters the results client-side.`;
 
 export const SearchTargetingInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
     targetingType: z
+      .enum(["geo_country", "geo_region", "geo_metro", "geo_postal_code", "interests_slc", "interests_vac", "interests_shp"])
+      .describe("Documented targeting endpoint to query and filter"),
+    countryCode: z
       .string()
-      .describe("Type of targeting to search (e.g., INTEREST_CATEGORY, BEHAVIOR, HASHTAG)"),
+      .optional()
+      .describe("ISO alpha-2 country code required for country-specific targeting types"),
     query: z
       .string()
       .optional()
@@ -64,18 +66,15 @@ export async function searchTargetingLogic(
 
   const results = (await snapchatService.searchTargeting(
     input.targetingType,
+    input.countryCode,
     input.query,
     input.limit,
     context
-  )) as Record<string, unknown>[] | { list?: Record<string, unknown>[] };
-
-  const list = Array.isArray(results)
-    ? results
-    : ((results as { list?: Record<string, unknown>[] }).list ?? []);
+  )) as { results: Record<string, unknown>[] };
 
   return {
-    results: list,
-    count: list.length,
+    results: results.results,
+    count: results.results.length,
     targetingType: input.targetingType,
     timestamp: new Date().toISOString(),
   };
@@ -106,17 +105,17 @@ export const searchTargetingTool = {
     {
       label: "Search interest categories",
       input: {
-        adAccountId: "1234567890",
-        targetingType: "INTEREST_CATEGORY",
+        targetingType: "interests_slc",
+        countryCode: "us",
         query: "gaming",
         limit: 20,
       },
     },
     {
-      label: "Browse behavior segments",
+      label: "Browse UK metro targeting",
       input: {
-        adAccountId: "1234567890",
-        targetingType: "BEHAVIOR",
+        targetingType: "geo_metro",
+        countryCode: "gb",
         limit: 30,
       },
     },
