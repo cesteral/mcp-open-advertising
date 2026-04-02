@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getEntityConfig, getSupportedEntityTypes, interpolatePath } from "../../src/mcp-server/tools/utils/entity-mapping.js";
+import {
+  getCanonicalEntityType,
+  getEntityConfig,
+  getSupportedEntityTypes,
+  interpolatePath,
+} from "../../src/mcp-server/tools/utils/entity-mapping.js";
 
 describe("Amazon DSP entity mapping", () => {
   describe("order (campaign) paths", () => {
@@ -56,12 +61,36 @@ describe("Amazon DSP entity mapping", () => {
     });
   });
 
+  describe("target and creative association paths", () => {
+    it("target listPath is /dsp/targets", () => {
+      expect(getEntityConfig("target").listPath).toBe("/dsp/targets");
+    });
+
+    it("creativeAssociation listPath is /dsp/creativeAssociations", () => {
+      expect(getEntityConfig("creativeAssociation").listPath).toBe("/dsp/creativeAssociations");
+    });
+  });
+
   describe("getSupportedEntityTypes", () => {
-    it("includes order, lineItem, creative", () => {
+    it("includes canonical types and compatibility aliases", () => {
       const types = getSupportedEntityTypes();
       expect(types).toContain("order");
+      expect(types).toContain("campaign");
       expect(types).toContain("lineItem");
+      expect(types).toContain("adGroup");
       expect(types).toContain("creative");
+      expect(types).toContain("target");
+      expect(types).toContain("creativeAssociation");
+    });
+  });
+
+  describe("getCanonicalEntityType", () => {
+    it("normalizes campaign to order", () => {
+      expect(getCanonicalEntityType("campaign")).toBe("order");
+    });
+
+    it("normalizes adGroup to lineItem", () => {
+      expect(getCanonicalEntityType("adGroup")).toBe("lineItem");
     });
   });
 

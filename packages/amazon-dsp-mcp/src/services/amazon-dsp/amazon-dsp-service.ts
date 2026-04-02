@@ -6,6 +6,7 @@ import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import {
   getEntityConfig,
+  getCanonicalEntityType,
   interpolatePath,
   type AmazonDspEntityType,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
@@ -13,6 +14,8 @@ import type {
   AmazonDspOrder,
   AmazonDspLineItem,
   AmazonDspCreative,
+  AmazonDspTarget,
+  AmazonDspCreativeAssociation,
   AmazonDspAdvertiser,
   AmazonDspBidding,
   AmazonDspLineItemBudget,
@@ -29,12 +32,16 @@ import type {
   AmazonDspBidOptimization,
   CreateAmazonDspOrderRequest,
   CreateAmazonDspLineItemRequest,
+  CreateAmazonDspTargetRequest,
+  CreateAmazonDspCreativeAssociationRequest,
 } from "./types.js";
 
 export type {
   AmazonDspOrder,
   AmazonDspLineItem,
   AmazonDspCreative,
+  AmazonDspTarget,
+  AmazonDspCreativeAssociation,
   AmazonDspAdvertiser,
   AmazonDspBidding,
   AmazonDspLineItemBudget,
@@ -51,18 +58,28 @@ export type {
   AmazonDspBidOptimization,
   CreateAmazonDspOrderRequest,
   CreateAmazonDspLineItemRequest,
+  CreateAmazonDspTargetRequest,
+  CreateAmazonDspCreativeAssociationRequest,
 };
 
 interface AmazonDspEntityMap {
   order: AmazonDspOrder;
+  campaign: AmazonDspOrder;
   lineItem: AmazonDspLineItem;
+  adGroup: AmazonDspLineItem;
   creative: AmazonDspCreative;
+  target: AmazonDspTarget;
+  creativeAssociation: AmazonDspCreativeAssociation;
 }
 
 type AmazonDspCreateEntityInputMap = {
   order: CreateAmazonDspOrderRequest;
+  campaign: CreateAmazonDspOrderRequest;
   lineItem: CreateAmazonDspLineItemRequest;
+  adGroup: CreateAmazonDspLineItemRequest;
   creative: Record<string, unknown>;
+  target: CreateAmazonDspTargetRequest;
+  creativeAssociation: CreateAmazonDspCreativeAssociationRequest;
 };
 
 type AmazonDspUpdateEntityInputMap = {
@@ -105,6 +122,7 @@ export class AmazonDspService {
     pageSize = 25,
     context?: RequestContext
   ): Promise<{ entities: AmazonDspEntityMap[T][]; pageInfo: AmazonDspPageInfo }> {
+    const canonicalType = getCanonicalEntityType(entityType);
     const config = getEntityConfig(entityType);
 
     const params: Record<string, string> = {
@@ -124,7 +142,7 @@ export class AmazonDspService {
     await this.rateLimiter.consume("amazon_dsp:read");
     const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspRawListResponse;
 
-    const entities = (result?.[config.responseKey] as AmazonDspEntityMap[T][]) ?? [];
+    const entities = ((result?.[config.responseKey] as AmazonDspEntityMap[typeof canonicalType][]) ?? []) as AmazonDspEntityMap[T][];
     const totalResults = result?.totalResults ?? 0;
 
     return {
@@ -272,8 +290,12 @@ export class AmazonDspService {
     // Map entity type to its own primary-key field (foreign keys are kept)
     const ENTITY_ID_FIELD: Record<AmazonDspEntityType, string> = {
       order: "orderId",
+      campaign: "orderId",
       lineItem: "lineItemId",
+      adGroup: "lineItemId",
       creative: "creativeId",
+      target: "targetId",
+      creativeAssociation: "creativeAssociationId",
     };
     const SYSTEM_FIELDS = [
       ENTITY_ID_FIELD[entityType],

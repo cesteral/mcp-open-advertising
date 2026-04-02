@@ -239,7 +239,7 @@ Key steps:
 3. Create Creative and attach to Line Item
 4. Activate Order
 
-⚠️ **Amazon DSP budget values are in dollars** ($100.00 = 100.00)
+⚠️ **Amazon DSP budget values are numeric amounts**. Confirm the advertiser account currency before comparing with other platforms.
 
 Best for: Retail/commerce intent, first-party Amazon audience data, programmatic display
 
@@ -252,11 +252,11 @@ Critical — each platform uses different units:
 | Platform | Unit | $100.00 Budget | $5.00 Bid | Best For |
 |----------|------|---------------|-----------|----------|
 | **DV360** | Micros | 100000000 | 5000000 | Programmatic display/video |
-| **TTD** | Dollars | 100.00 | 5.00 | Programmatic DSP |
+| **TTD** | Advertiser currency | 100.00 | 5.00 | Programmatic DSP |
 | **Google Ads** | Micros | 100000000 | 5000000 | Search intent |
 | **Meta** | Cents | 10000 | 500 | Social retargeting |
-| **LinkedIn** | Dollars | 100.00 | 5.00 | B2B professional audiences |
-| **TikTok** | Dollars | 100.00 | 5.00 | Short-form video, Gen Z |
+| **LinkedIn** | Account currency | 100.00 | 5.00 | B2B professional audiences |
+| **TikTok** | Account currency | 100.00 | 5.00 | Short-form video, Gen Z |
 | **Pinterest** | Micro-currency | 100000000 | 5000000 | Visual discovery, shopping |
 | **Snapchat** | Micro-currency | 100000000 | 5000000 | Gen Z, AR/video |
 | **Amazon DSP** | Dollars | 100.00 | 5.00 | Retail/commerce intent |

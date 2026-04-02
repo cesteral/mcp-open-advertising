@@ -51,30 +51,28 @@ describe("amazonDsp_create_entity tool", () => {
 
       const result = await createEntityLogic(
         {
-          entityType: "order",
+          entityType: "campaign",
           profileId: "1234567890",
           data: {
             name: "Test Order",
             advertiserId: "adv_123",
-            budget: 10000,
-            startDate: "2026-07-01",
-            endDate: "2026-07-31",
+            startDateTime: "2026-07-01T00:00:00Z",
+            endDateTime: "2026-07-31T23:59:59Z",
           },
         },
         baseContext,
         baseSdkContext
       );
 
-      expect(result.entityType).toBe("order");
+      expect(result.entityType).toBe("campaign");
       expect(result.timestamp).toBeDefined();
       expect(mockCreateEntity).toHaveBeenCalledWith(
-        "order",
+        "campaign",
         {
           name: "Test Order",
           advertiserId: "adv_123",
-          budget: 10000,
-          startDate: "2026-07-01",
-          endDate: "2026-07-31",
+          startDateTime: "2026-07-01T00:00:00Z",
+          endDateTime: "2026-07-31T23:59:59Z",
         },
         baseContext
       );
@@ -86,19 +84,20 @@ describe("amazonDsp_create_entity tool", () => {
 
       const result = await createEntityLogic(
         {
-          entityType: "lineItem",
+          entityType: "adGroup",
           profileId: "1234567890",
           data: {
             name: "Test Line Item",
             orderId: "ord_123456789",
-            budget: 2000,
+            advertiserId: "adv_123",
+            budget: { budgetType: "DAILY", budget: 2000 },
           },
         },
         baseContext,
         baseSdkContext
       );
 
-      expect(result.entityType).toBe("lineItem");
+      expect(result.entityType).toBe("adGroup");
     });
 
     it("propagates errors from the service", async () => {
@@ -136,14 +135,13 @@ describe("amazonDsp_create_entity tool", () => {
   describe("input schema validation", () => {
     it("accepts valid order creation payload", () => {
       const result = CreateEntityInputSchema.safeParse({
-        entityType: "order",
+        entityType: "campaign",
         profileId: "1234567890",
         data: {
           name: "Test",
           advertiserId: "adv_123",
-          budget: 1000,
-          startDate: "2026-07-01",
-          endDate: "2026-07-31",
+          startDateTime: "2026-07-01T00:00:00Z",
+          endDateTime: "2026-07-31T23:59:59Z",
         },
       });
       expect(result.success).toBe(true);

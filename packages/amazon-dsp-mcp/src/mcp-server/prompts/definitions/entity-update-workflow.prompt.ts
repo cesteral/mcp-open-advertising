@@ -170,7 +170,7 @@ After the update call succeeds, verify the changes:
 ## Gotchas
 
 - **Archive is permanent**: Setting \`state: "ARCHIVED"\` via \`amazon_dsp_delete_entity\` cannot be undone — there is no DELETE endpoint, only soft-archive.
-- **Budget values are in USD**: \`budget: 1000\` means $1000.00 (not cents, not micros).
+- **Budget values are numeric, not micros**: confirm the advertiser account currency before assuming USD semantics.
 - **Line item budget cannot exceed order budget**: Validate parent order budget before updating.
 - **Creative updates may trigger re-review**: Updating creative assets or click URLs may restart review cycles.
 

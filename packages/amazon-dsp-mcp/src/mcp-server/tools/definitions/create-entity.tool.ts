@@ -14,12 +14,13 @@ const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Key requirements by entity type:**
-- **order**: requires \`name\`, \`advertiserId\`, \`budget\`, \`startDate\`, \`endDate\`
-- **lineItem**: requires \`name\`, \`orderId\`, \`budget\`
+- **campaign** / **order**: requires \`name\`, \`advertiserId\`, \`startDateTime\`, \`endDateTime\`
+- **adGroup** / **lineItem**: requires \`name\`, \`orderId\`, \`advertiserId\`, \`budget\`
 - **creative**: requires \`name\`, \`advertiserId\`, \`creativeType\` (STANDARD_DISPLAY, VIDEO, RICH_MEDIA)
+- **target**: typically requires \`lineItemId\` plus tactic-specific targeting fields
+- **creativeAssociation**: requires \`creativeId\` and \`lineItemId\`
 
 **Gotchas:**
-- Budget values are in the advertiser's account currency
 - State values: ENABLED, PAUSED, ARCHIVED
 - Line item budget must be a nested object: \`{ budgetType: "DAILY" | "LIFETIME", budget: number }\`
 - Amazon-Advertising-API-Scope header is automatically injected from the session profile ID`;
@@ -95,25 +96,25 @@ export const createEntityTool = {
     {
       label: "Create an order (campaign)",
       input: {
-        entityType: "order",
+        entityType: "campaign",
         profileId: "1234567890",
         data: {
           name: "Summer Sale 2026",
           advertiserId: "adv_123",
-          budget: 10000,
-          startDate: "2026-07-01",
-          endDate: "2026-07-31",
+          startDateTime: "2026-07-01T00:00:00Z",
+          endDateTime: "2026-07-31T23:59:59Z",
         },
       },
     },
     {
       label: "Create a line item (ad group)",
       input: {
-        entityType: "lineItem",
+        entityType: "adGroup",
         profileId: "1234567890",
         data: {
           name: "US Display — Retargeting",
           orderId: "ord_123456789",
+          advertiserId: "adv_123",
           budget: { budgetType: "DAILY", budget: 2000 },
           bidding: { bidOptimization: "MANUAL", bidAmount: 2.5 },
         },

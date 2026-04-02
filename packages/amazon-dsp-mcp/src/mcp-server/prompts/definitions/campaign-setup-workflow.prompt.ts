@@ -29,10 +29,10 @@ export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): 
 ## Prerequisites
 - DSP Entity ID (Profile ID): \`${profileId}\`
 - Ensure \`Amazon-Advertising-API-Scope\` header is set to your DSP entity ID
-- Verify advertiser access: \`amazon_dsp_list_entities\` with entityType: "advertiser"
+- Verify advertiser access: \`amazon_dsp_list_advertisers\`
 
 ⚠️ **GOTCHA: Amazon-Advertising-API-Scope header must contain your DSP entity ID (profile ID).**
-⚠️ **GOTCHA: Budget amounts are in USD dollars (not micro-currency). $50 → budget: 50.00**
+⚠️ **GOTCHA: Budget amounts are numeric values, not micro-currency. Keep them aligned with the advertiser account currency returned by Amazon.**
 ⚠️ **GOTCHA: Amazon DSP has no DELETE endpoint. Use state: "ARCHIVED" to remove entities.**
 
 ## Step 1: Create Order (Campaign)
@@ -47,8 +47,8 @@ amazon_dsp_create_entity({
     "name": "Q1 Brand Awareness Campaign",
     "advertiserId": "ADVERTISER_ID",
     "budget": 50000.00,
-    "startDate": "2026-01-01T00:00:00Z",
-    "endDate": "2026-03-31T23:59:59Z",
+    "startDateTime": "2026-01-01T00:00:00Z",
+    "endDateTime": "2026-03-31T23:59:59Z",
     "state": "ENABLED"
   }
 })

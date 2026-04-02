@@ -92,4 +92,23 @@ describe("AmazonDspHttpClient", () => {
       expect.objectContaining({ method: "PUT" })
     );
   });
+
+  it("preserves vendor content type for reporting v3 POST requests", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ reportId: "rpt-1", status: "PENDING" }),
+    });
+
+    await client.post(
+      "/reporting/reports",
+      { name: "Test Report" },
+      undefined,
+      "application/vnd.createasyncreportrequest.v3+json"
+    );
+
+    const headers = mockFetch.mock.calls[0][3].headers;
+    expect(headers["Content-Type"]).toBe("application/vnd.createasyncreportrequest.v3+json");
+  });
 });

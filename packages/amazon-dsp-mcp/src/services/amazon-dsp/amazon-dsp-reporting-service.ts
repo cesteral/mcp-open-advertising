@@ -20,9 +20,10 @@ import {
   type RequestContext,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
+import { AMAZON_DSP_REPORTING_CONTRACT } from "./amazon-dsp-api-contract.js";
 
 /** Amazon DSP report task status values (per Reporting v3 OpenAPI spec) */
-export type ReportTaskStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+export type ReportTaskStatus = (typeof AMAZON_DSP_REPORTING_CONTRACT.statuses)[number];
 
 /** Amazon DSP report task check response */
 interface ReportTaskCheckData {
@@ -86,16 +87,16 @@ export class AmazonDspReportingService {
         startDate: reportConfig.startDate,
         endDate: reportConfig.endDate,
         configuration: {
-          adProduct: reportConfig.configuration.adProduct ?? "DEMAND_SIDE_PLATFORM",
+          adProduct: reportConfig.configuration.adProduct ?? AMAZON_DSP_REPORTING_CONTRACT.defaultAdProduct,
           groupBy: reportConfig.configuration.groupBy,
           columns: reportConfig.configuration.columns,
           reportTypeId: reportConfig.configuration.reportTypeId,
-          timeUnit: reportConfig.configuration.timeUnit ?? "DAILY",
-          format: reportConfig.configuration.format ?? "GZIP_JSON",
+          timeUnit: reportConfig.configuration.timeUnit ?? AMAZON_DSP_REPORTING_CONTRACT.defaultTimeUnit,
+          format: reportConfig.configuration.format ?? AMAZON_DSP_REPORTING_CONTRACT.defaultFormat,
         },
       },
       context,
-      "application/vnd.createasyncreportrequest.v3+json"
+      AMAZON_DSP_REPORTING_CONTRACT.mediaType
     )) as { reportId: string; status: string };
 
     return { taskId: result.reportId };

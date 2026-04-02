@@ -117,7 +117,7 @@ amazon_dsp_get_report({
 |--------|-------------|
 | \`impressions\` | Total impressions |
 | \`clickThroughs\` | Total clicks |
-| \`totalCost\` | Total spend (USD) |
+| \`totalCost\` | Total spend in the report currency |
 | \`viewableImpressions\` | Viewable impressions |
 | \`videoCompletions\` | 100% video completions |
 | \`detailPageViews\` | Amazon product detail page views |
@@ -130,6 +130,6 @@ amazon_dsp_get_report({
 
 - Reports may take **30 seconds to several minutes** depending on date range and data volume
 - Amazon shopping metrics (\`detailPageViews\`, \`purchases\`, \`sales14d\`) require Amazon attribution setup
-- Budget and spend values are in **USD**
+- Confirm the report currency before comparing spend across advertisers or platforms
 `;
 }

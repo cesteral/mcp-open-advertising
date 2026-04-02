@@ -89,6 +89,27 @@ export interface AmazonDspCreative {
   lastUpdatedDate?: string;
 }
 
+export interface AmazonDspTarget {
+  targetId: string;
+  lineItemId: string;
+  advertiserId?: string;
+  state?: string;
+  expressionType?: string;
+  expression?: unknown;
+  creationDate?: string;
+  lastUpdatedDate?: string;
+}
+
+export interface AmazonDspCreativeAssociation {
+  creativeAssociationId: string;
+  creativeId: string;
+  lineItemId: string;
+  advertiserId?: string;
+  state?: string;
+  creationDate?: string;
+  lastUpdatedDate?: string;
+}
+
 export interface AmazonDspAdvertiser {
   advertiserId: string;
   name: string;
@@ -135,6 +156,19 @@ export interface CreateAmazonDspLineItemRequest {
   /** Nested budget object — use { budgetType, budget } (not flat fields). */
   budget?: AmazonDspLineItemBudget;
   bidding?: AmazonDspBidding;
+}
+
+export interface CreateAmazonDspTargetRequest {
+  lineItemId: string;
+  advertiserId?: string;
+  [key: string]: unknown;
+}
+
+export interface CreateAmazonDspCreativeAssociationRequest {
+  creativeId: string;
+  lineItemId: string;
+  advertiserId?: string;
+  [key: string]: unknown;
 }
 
 // ─── Error Type ──────────────────────────────────────────────────────────────

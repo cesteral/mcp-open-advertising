@@ -5,124 +5,104 @@
  * Amazon DSP Entity Example Resources
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, type AmazonDspEntityType } from "../../tools/utils/entity-mapping.js";
+import { AMAZON_DSP_CANONICAL_ENTITY_TYPES } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
-const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
-  order: `# Amazon DSP Order (Campaign) Examples
+const ENTITY_EXAMPLES: Record<string, string> = {
+  order: `# Amazon DSP Campaign / Order Examples
 
-## Create a Brand Awareness Order
+## Create a Campaign
 \`\`\`json
 {
-  "entityType": "order",
+  "entityType": "campaign",
   "profileId": "1234567890",
   "data": {
-    "name": "Q1 Brand Awareness Campaign",
-    "advertiserId": "ADVERTISER123",
-    "budget": 50000.00,
-    "startDate": "2024-01-01T00:00:00Z",
-    "endDate": "2024-03-31T23:59:59Z",
-    "state": "ENABLED"
+    "name": "Q3 Brand Campaign",
+    "advertiserId": "ADV123",
+    "startDateTime": "2026-07-01T00:00:00Z",
+    "endDateTime": "2026-09-30T23:59:59Z",
+    "state": "PAUSED"
   }
 }
 \`\`\`
 
-## Update Order Budget
+## Enable Performance+ Automation On The Order Object
 \`\`\`json
 {
   "entityType": "order",
   "profileId": "1234567890",
-  "entityId": "ORDER123",
+  "entityId": "ord_123",
   "data": {
-    "budget": 75000.00
-  }
-}
-\`\`\`
-
-## Archive an Order (no DELETE endpoint)
-\`\`\`json
-{
-  "entityType": "order",
-  "profileId": "1234567890",
-  "entityId": "ORDER123",
-  "data": {
-    "state": "ARCHIVED"
-  }
-}
-\`\`\`
-`,
-
-  lineItem: `# Amazon DSP Line Item (Ad Group) Examples
-
-## Create a Prospecting Line Item with Auto Bidding
-\`\`\`json
-{
-  "entityType": "lineItem",
-  "profileId": "1234567890",
-  "data": {
-    "name": "Prospecting - Desktop Display",
-    "orderId": "ORDER123",
-    "budget": { "budgetType": "DAILY", "budget": 10000.00 },
-    "state": "ENABLED",
-    "bidding": {
-      "bidOptimization": "AUTO"
-    },
-    "targetingCriteria": {
-      "audience": { "include": [{ "type": "BEHAVIORAL", "value": ["in-market-auto"] }] }
+    "automatedAdGroupCreation": {
+      "enabled": true
     }
   }
 }
 \`\`\`
+`,
+  lineItem: `# Amazon DSP Ad Group / Line Item Examples
 
-## Create a Remarketing Line Item with Manual Bid
+## Create an Ad Group
 \`\`\`json
 {
-  "entityType": "lineItem",
+  "entityType": "adGroup",
   "profileId": "1234567890",
   "data": {
-    "name": "Remarketing - Website Visitors",
-    "orderId": "ORDER123",
-    "budget": { "budgetType": "DAILY", "budget": 5000.00 },
-    "state": "ENABLED",
+    "name": "Display Retargeting",
+    "orderId": "ord_123",
+    "advertiserId": "ADV123",
+    "budget": { "budgetType": "DAILY", "budget": 2500 },
     "bidding": {
       "bidOptimization": "MANUAL",
-      "bidAmount": 3.50
+      "bidAmount": 1.75
     },
-    "targetingCriteria": {
-      "audience": { "include": [{ "type": "REMARKETING", "value": ["site-visitors"] }] }
+    "state": "PAUSED"
+  }
+}
+\`\`\`
+`,
+  creative: `# Amazon DSP Creative Examples
+
+## Create a Creative Asset
+\`\`\`json
+{
+  "entityType": "creative",
+  "profileId": "1234567890",
+  "data": {
+    "name": "300x250 Banner",
+    "advertiserId": "ADV123",
+    "creativeType": "STANDARD_DISPLAY",
+    "clickThroughUrl": "https://example.com/landing"
+  }
+}
+\`\`\`
+`,
+  target: `# Amazon DSP Target Examples
+
+## Create a Target
+\`\`\`json
+{
+  "entityType": "target",
+  "profileId": "1234567890",
+  "data": {
+    "lineItemId": "li_123",
+    "expressionType": "AUDIENCE",
+    "expression": {
+      "audienceIds": ["aud_1", "aud_2"]
     }
   }
 }
 \`\`\`
 `,
+  creativeAssociation: `# Amazon DSP Creative Association Examples
 
-  creative: `# Amazon DSP Creative Examples
-
-## Create a Display Creative
+## Associate a Creative to an Ad Group
 \`\`\`json
 {
-  "entityType": "creative",
+  "entityType": "creativeAssociation",
   "profileId": "1234567890",
   "data": {
-    "name": "300x250 Banner - Brand",
-    "advertiserId": "ADVERTISER123",
-    "clickThroughUrl": "https://example.com/landing",
-    "creativeType": "STANDARD_DISPLAY",
-    "state": "ACTIVE"
-  }
-}
-\`\`\`
-
-## Create a Video Creative
-\`\`\`json
-{
-  "entityType": "creative",
-  "profileId": "1234567890",
-  "data": {
-    "name": "15s Brand Video",
-    "advertiserId": "ADVERTISER123",
-    "clickThroughUrl": "https://example.com/landing",
-    "creativeType": "VIDEO",
-    "state": "ACTIVE"
+    "lineItemId": "li_123",
+    "creativeId": "cr_456"
   }
 }
 \`\`\`
@@ -130,17 +110,17 @@ const ENTITY_EXAMPLE_CONTENT: Record<AmazonDspEntityType, string> = {
 };
 
 function buildAllExamplesMarkdown(): string {
-  return getSupportedEntityTypes()
-    .map((t) => ENTITY_EXAMPLE_CONTENT[t])
-    .join("\n\n---\n\n");
+  return AMAZON_DSP_CANONICAL_ENTITY_TYPES.map((entityType) => ENTITY_EXAMPLES[entityType]).join(
+    "\n\n---\n\n"
+  );
 }
 
-export const entityExampleResources: Resource[] = getSupportedEntityTypes().map((entityType) => ({
+export const entityExampleResources: Resource[] = AMAZON_DSP_CANONICAL_ENTITY_TYPES.map((entityType) => ({
   uri: `entity-examples://amazonDsp/${entityType}`,
   name: `Amazon DSP ${entityType} Examples`,
   description: `Example payloads for creating and updating Amazon DSP ${entityType} entities`,
   mimeType: "text/markdown",
-  getContent: () => ENTITY_EXAMPLE_CONTENT[entityType] ?? `# Amazon DSP ${entityType} Examples\n\nNo examples available.\n`,
+  getContent: () => ENTITY_EXAMPLES[entityType] ?? `# Amazon DSP ${entityType} Examples\n\nNo examples available.\n`,
 }));
 
 export const entityExampleAllResource: Resource = {

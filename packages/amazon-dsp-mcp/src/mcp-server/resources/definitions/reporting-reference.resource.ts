@@ -5,128 +5,46 @@
  * Amazon DSP Reporting Reference Resource
  */
 import type { Resource } from "../types.js";
+import { AMAZON_DSP_REPORTING_CONTRACT } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
 let cachedContent: string | undefined;
 
 function formatReportingReferenceMarkdown(): string {
   return `# Amazon DSP Reporting Reference
 
-## Report Types
+## Reporting v3 Contract
+- Submit endpoint: \`POST ${AMAZON_DSP_REPORTING_CONTRACT.endpoint}\`
+- Status endpoint: \`GET ${AMAZON_DSP_REPORTING_CONTRACT.endpoint}/{reportId}\`
+- Required media type: \`${AMAZON_DSP_REPORTING_CONTRACT.mediaType}\`
+- Status values: ${AMAZON_DSP_REPORTING_CONTRACT.statuses.join(", ")}
+- Default format: \`${AMAZON_DSP_REPORTING_CONTRACT.defaultFormat}\`
 
-| Report Type | Description |
-|-------------|-------------|
-| CAMPAIGN | Order-level delivery and performance metrics |
-| LINE_ITEM | Line item-level metrics breakdown |
-| CREATIVE | Creative-level engagement and delivery metrics |
+## Common Report Type IDs
+${AMAZON_DSP_REPORTING_CONTRACT.commonReportTypeIds.map((id) => `- \`${id}\``).join("\n")}
 
-## Async Reporting Flow
+## Common groupBy Values
+${AMAZON_DSP_REPORTING_CONTRACT.commonGroupBy.map((value) => `- \`${value}\``).join("\n")}
 
-Amazon DSP reporting is **async**:
+## Common Columns
+${AMAZON_DSP_REPORTING_CONTRACT.commonColumns.map((value) => `- \`${value}\``).join("\n")}
 
-1. **Submit**: POST report request → get \`reportId\`
-2. **Poll**: GET \`/dsp/reports/{reportId}\` → check \`status\`
-3. **Download**: GET the \`location\` URL when status = "SUCCESS"
+## Notes
+${AMAZON_DSP_REPORTING_CONTRACT.notes.map((note) => `- ${note}`).join("\n")}
 
-Status values: PENDING → IN_PROGRESS → SUCCESS | FAILURE
-
-Use \`amazon_dsp_get_report\` or \`amazon_dsp_get_report_breakdowns\` — these tools handle the full flow automatically.
-
-## Common Dimensions
-
-### Entity Dimensions
-| Dimension | Description |
-|-----------|-------------|
-| \`advertiserId\` | Advertiser ID |
-| \`orderId\` | Order ID |
-| \`lineItemId\` | Line Item ID |
-| \`creativeId\` | Creative ID |
-| \`date\` | Daily breakdown (YYYY-MM-DD) |
-
-## Common Metrics
-
-### Delivery Metrics
-| Metric | Description |
-|--------|-------------|
-| \`impressions\` | Total impressions served |
-| \`clickThroughs\` | Total clicks on ads |
-| \`totalCost\` | Total amount spent (USD) |
-
-### Viewability Metrics
-| Metric | Description |
-|--------|-------------|
-| \`viewableImpressions\` | Impressions meeting viewability standards |
-| \`measurableImpressions\` | Impressions eligible for viewability measurement |
-
-### Video Metrics
-| Metric | Description |
-|--------|-------------|
-| \`videoCompletions\` | 100% video completions |
-| \`videoFirstQuartile\` | 25% video completion count |
-| \`videoMidpoint\` | 50% video completion count |
-| \`videoThirdQuartile\` | 75% video completion count |
-
-### Amazon Shopping Performance Metrics
-| Metric | Description |
-|--------|-------------|
-| \`detailPageViews\` | Amazon product detail page views (DPVR) |
-| \`brandedSearches\` | Branded keyword searches attributable to ads |
-| \`newToBrandPurchases\` | Purchases from customers new to the brand |
-| \`purchases\` | Total purchase events |
-| \`sales14d\` | Total sales within 14-day attribution window (USD) |
-
-## Example Report Configurations
-
-### Order Daily Delivery Report
+## Example Request
 \`\`\`json
 {
-  "advertiserId": "1234567890",
-  "reportType": "CAMPAIGN",
-  "dimensions": ["orderId", "date"],
-  "metrics": ["impressions", "clickThroughs", "totalCost"],
+  "name": "DSP line item report",
   "startDate": "2026-03-01",
-  "endDate": "2026-03-07"
-}
-\`\`\`
-
-### Line Item Performance with Video Metrics
-\`\`\`json
-{
-  "advertiserId": "1234567890",
-  "reportType": "LINE_ITEM",
-  "dimensions": ["lineItemId"],
-  "metrics": [
-    "impressions", "totalCost", "videoCompletions",
-    "videoFirstQuartile", "videoMidpoint", "videoThirdQuartile"
-  ],
-  "startDate": "2026-03-01",
-  "endDate": "2026-03-07"
-}
-\`\`\`
-
-### Creative Shopping Attribution Report
-\`\`\`json
-{
-  "advertiserId": "1234567890",
-  "reportType": "CREATIVE",
-  "dimensions": ["creativeId", "date"],
-  "metrics": [
-    "impressions", "clickThroughs", "totalCost",
-    "detailPageViews", "purchases", "sales14d", "newToBrandPurchases"
-  ],
-  "startDate": "2026-03-01",
-  "endDate": "2026-03-07"
-}
-\`\`\`
-
-### Branded Search Impact Report
-\`\`\`json
-{
-  "advertiserId": "1234567890",
-  "reportType": "LINE_ITEM",
-  "dimensions": ["lineItemId", "date"],
-  "metrics": ["impressions", "totalCost", "brandedSearches", "detailPageViews"],
-  "startDate": "2026-03-01",
-  "endDate": "2026-03-07"
+  "endDate": "2026-03-04",
+  "configuration": {
+    "adProduct": "${AMAZON_DSP_REPORTING_CONTRACT.defaultAdProduct}",
+    "groupBy": ["order", "lineItem"],
+    "columns": ["impressions", "clickThroughs", "totalCost", "date"],
+    "reportTypeId": "dspLineItem",
+    "timeUnit": "DAILY",
+    "format": "${AMAZON_DSP_REPORTING_CONTRACT.defaultFormat}"
+  }
 }
 \`\`\`
 `;

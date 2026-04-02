@@ -66,7 +66,7 @@ const amazonDspReportingService = {
   submitReport: vi.fn(async () => ({ taskId: "task-submit-1" })),
   checkReportStatus: vi.fn(async () => ({
     taskId: "task-check-1",
-    status: "DONE",
+    status: "PROCESSING",
     downloadUrl: "https://example.com/report.csv",
   })),
   downloadReport: vi.fn(async () => ({
@@ -101,6 +101,18 @@ describe("Amazon DSP MCP definitions coverage", () => {
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);
     expect(getPromptDefinition("amazon_dsp_campaign_setup_workflow")).toBeDefined();
+  });
+
+  it("publishes contract-backed resources for new DSP entities and reporting v3", () => {
+    const schemaResources = allResources.filter((resource) => resource.uri.startsWith("entity-schema://amazonDsp/"));
+    const hierarchyResource = allResources.find((resource) => resource.uri === "entity-hierarchy://amazonDsp/all");
+    const reportingResource = allResources.find((resource) => resource.uri === "reporting-reference://amazonDsp");
+
+    expect(schemaResources.some((resource) => resource.uri.endsWith("/target"))).toBe(true);
+    expect(schemaResources.some((resource) => resource.uri.endsWith("/creativeAssociation"))).toBe(true);
+    expect(hierarchyResource?.getContent()).toContain("Creative Association");
+    expect(reportingResource?.getContent()).toContain("POST /reporting/reports");
+    expect(reportingResource?.getContent()).toContain("PROCESSING");
   });
 
   it("executes every tool logic and formatter using example inputs", async () => {

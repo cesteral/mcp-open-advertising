@@ -16,7 +16,7 @@ const TOOL_DESCRIPTION = `List Amazon DSP entities with optional filtering and o
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 All entities are scoped to an advertiser account. Pagination uses \`startIndex\` (offset) and \`pageSize\`.
-Use the entity-specific filter param: orders filter by \`advertiserId\`, lineItems filter by \`orderId\`.`;
+Use the entity-specific filter param: campaigns / orders filter by \`advertiserId\`, ad groups / line items filter by \`orderId\`, targets by \`lineItemId\`, and creative associations by \`lineItemId\`.`;
 
 export const ListEntitiesInputSchema = z
   .object({
@@ -124,7 +124,7 @@ export const listEntitiesTool = {
     {
       label: "List active orders (campaigns)",
       input: {
-        entityType: "order",
+        entityType: "campaign",
         profileId: "1234567890",
         filters: { advertiserId: "adv_123" },
         startIndex: 0,
@@ -134,7 +134,7 @@ export const listEntitiesTool = {
     {
       label: "List line items for an order",
       input: {
-        entityType: "lineItem",
+        entityType: "adGroup",
         profileId: "1234567890",
         filters: { orderId: "ord_456" },
       },

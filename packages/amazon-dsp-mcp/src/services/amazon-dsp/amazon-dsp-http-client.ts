@@ -25,7 +25,7 @@ const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
  * - ALL requests require Amazon-Advertising-API-Scope: {profileId} header
  * - ALL requests require Amazon-Advertising-API-ClientId: {clientId} header (when available)
  * - Response is raw JSON (no TikTok-style { code: 0, data: ... } envelope)
- * - No DELETE endpoint — archive via PUT with { status: "ARCHIVED" }
+ * - No DELETE endpoint — archive via PUT with { state: "ARCHIVED" }
  * - Offset pagination: startIndex + count query params
  */
 export class AmazonDspHttpClient {
@@ -124,11 +124,11 @@ export class AmazonDspHttpClient {
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           const headers: Record<string, string> = {
+            ...normalizeHeaders(options?.headers),
             Authorization: `Bearer ${accessToken}`,
             "Amazon-Advertising-API-Scope": this.profileId,
           };
-          // Only include Content-Type for requests with a body (POST/PUT)
-          if (options?.body) {
+          if (options?.body && !headers["Content-Type"]) {
             headers["Content-Type"] = "application/json";
           }
           if (this.clientId) {
@@ -139,4 +139,24 @@ export class AmazonDspHttpClient {
       });
     });
   }
+}
+
+function normalizeHeaders(headers?: RequestInit["headers"]): Record<string, string> {
+  if (!headers) {
+    return {};
+  }
+
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries());
+  }
+
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers);
+  }
+
+  const normalized: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    normalized[key] = Array.isArray(value) ? value.join(", ") : String(value);
+  }
+  return normalized;
 }

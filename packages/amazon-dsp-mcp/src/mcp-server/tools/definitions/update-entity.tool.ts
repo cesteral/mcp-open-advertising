@@ -97,7 +97,7 @@ export const updateEntityTool = {
     {
       label: "Update order (campaign) name and budget",
       input: {
-        entityType: "order",
+        entityType: "campaign",
         profileId: "1234567890",
         entityId: "ord_123456789",
         data: {
@@ -109,7 +109,7 @@ export const updateEntityTool = {
     {
       label: "Update line item bid",
       input: {
-        entityType: "lineItem",
+        entityType: "adGroup",
         profileId: "1234567890",
         entityId: "li_123456789",
         data: {

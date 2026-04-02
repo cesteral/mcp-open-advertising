@@ -5,110 +5,51 @@
  * Amazon DSP Entity Schema Resources
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, type AmazonDspEntityType } from "../../tools/utils/entity-mapping.js";
+import {
+  AMAZON_DSP_CANONICAL_ENTITY_TYPES,
+  AMAZON_DSP_ENTITY_CONTRACT,
+  type AmazonDspCanonicalEntityType,
+} from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
-const ENTITY_SCHEMA_CONTENT: Record<AmazonDspEntityType, string> = {
-  order: `# Amazon DSP Order (Campaign) Schema
+function buildEntitySchemaMarkdown(entityType: AmazonDspCanonicalEntityType): string {
+  const contract = AMAZON_DSP_ENTITY_CONTRACT[entityType];
+  const requiredFields = contract.requiredOnCreate
+    .map((rule) => `- \`${rule.field}\` (${rule.expectedType})${rule.hint ? ` — ${rule.hint}` : ""}`)
+    .join("\n");
+  const aliases = contract.aliases.length > 0 ? contract.aliases.join(", ") : "None";
+  const notes = contract.notes.map((note) => `- ${note}`).join("\n");
 
-\`\`\`json
-{
-  "required": ["name", "advertiserId", "budget", "startDate", "endDate"],
-  "properties": {
-    "name": { "type": "string" },
-    "advertiserId": { "type": "string" },
-    "budget": { "type": "number", "description": "Total budget in USD dollars" },
-    "startDate": { "type": "string", "format": "date-time", "description": "ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ" },
-    "endDate": { "type": "string", "format": "date-time" },
-    "state": { "type": "string", "enum": ["ENABLED", "PAUSED", "ARCHIVED"] }
-  }
-}
-\`\`\`
+  return `# Amazon DSP ${contract.displayName} Schema
 
-## Notes
-- Budget is in USD dollars (e.g., 50000.00 = $50,000)
-- Dates must use ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ
-- Amazon DSP has no DELETE endpoint — use state: "ARCHIVED" to remove
-- Active state is "ENABLED" (not "DELIVERING" or "RUNNING")
+## Entity Names
+- Canonical MCP type: \`${contract.canonicalType}\`
+- Accepted aliases: ${aliases}
 
-## Read-Only Fields
-orderId, creationDate, lastUpdatedDate
-`,
+## Endpoint Contract
+- List: \`GET ${contract.listPath}\`
+- Get: \`GET ${contract.getPath}\`
+- Create: \`POST ${contract.createPath}\`
+- Update: \`PUT ${contract.updatePath}\`
+- List filter: \`${contract.listFilterParam}\`
+- Primary ID field: \`${contract.idField}\`
+- List response key: \`${contract.responseKey}\`
 
-  lineItem: `# Amazon DSP Line Item (Ad Group) Schema
-
-\`\`\`json
-{
-  "required": ["name", "orderId", "budget"],
-  "properties": {
-    "name": { "type": "string" },
-    "orderId": { "type": "string" },
-    "budget": {
-      "type": "object",
-      "description": "Budget configuration",
-      "properties": {
-        "budgetType": { "type": "string", "enum": ["DAILY", "LIFETIME"] },
-        "budget": { "type": "number", "description": "Budget amount in USD dollars" }
-      },
-      "required": ["budgetType", "budget"]
-    },
-    "state": { "type": "string", "enum": ["ENABLED", "PAUSED", "ARCHIVED"] },
-    "bidding": {
-      "type": "object",
-      "properties": {
-        "bidOptimization": { "type": "string", "enum": ["AUTO", "MANUAL", "NONE", "CONVERSIONS", "VCPM_VIEWABLE", "REACH"] },
-        "bidAmount": { "type": "number", "description": "Bid amount in USD (used when bidOptimization is MANUAL)" }
-      }
-    },
-    "targetingCriteria": { "type": "object", "description": "Targeting configuration" }
-  }
-}
-\`\`\`
-
-## Notes
-- orderId links this line item to its parent Order
-- bidding.bidOptimization: "AUTO" lets Amazon optimize bids automatically; "MANUAL" requires a bidAmount
-- targetingCriteria supports audience, contextual, geographic, and device targeting
+## Required Fields For Create
+${requiredFields}
 
 ## Read-Only Fields
-lineItemId, orderId (inherited), creationDate, lastUpdatedDate
-`,
-
-  creative: `# Amazon DSP Creative Schema
-
-\`\`\`json
-{
-  "required": ["name", "advertiserId", "clickThroughUrl", "creativeType"],
-  "properties": {
-    "name": { "type": "string" },
-    "advertiserId": { "type": "string" },
-    "clickThroughUrl": { "type": "string", "format": "uri" },
-    "creativeType": { "type": "string", "enum": ["STANDARD_DISPLAY", "VIDEO", "RICH_MEDIA"] },
-    "state": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "ARCHIVED"] }
-  }
-}
-\`\`\`
+${contract.readOnlyFields.map((field) => `- \`${field}\``).join("\n")}
 
 ## Notes
-- creativeType: STANDARD_DISPLAY for banner ads, VIDEO for video ads, RICH_MEDIA for interactive ads
-- clickThroughUrl is the landing page destination
-- Creatives are linked to line items separately after creation
-
-## Read-Only Fields
-creativeId, creationDate, lastUpdatedDate
-`,
-};
-
-function buildEntitySchemaMarkdown(entityType: AmazonDspEntityType): string {
-  return ENTITY_SCHEMA_CONTENT[entityType] ?? `# Amazon DSP ${entityType}\n\nNo schema information available.\n`;
+${notes}
+`;
 }
 
 function buildAllSchemasMarkdown(): string {
-  return getSupportedEntityTypes()
-    .map((t) => ENTITY_SCHEMA_CONTENT[t])
-    .join("\n\n---\n\n");
+  return AMAZON_DSP_CANONICAL_ENTITY_TYPES.map(buildEntitySchemaMarkdown).join("\n\n---\n\n");
 }
 
-export const entitySchemaResources: Resource[] = getSupportedEntityTypes().map((entityType) => ({
+export const entitySchemaResources: Resource[] = AMAZON_DSP_CANONICAL_ENTITY_TYPES.map((entityType) => ({
   uri: `entity-schema://amazonDsp/${entityType}`,
   name: `Amazon DSP ${entityType} Schema`,
   description: `Field reference for Amazon DSP ${entityType} entity including required fields, optional fields, and read-only fields`,

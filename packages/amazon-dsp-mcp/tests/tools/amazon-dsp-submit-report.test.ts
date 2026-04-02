@@ -46,8 +46,8 @@ describe("submitReportLogic", () => {
     const result = await submitReportLogic(
       {
         profileId: "1234567890",
-        startDate: "20260301",
-        endDate: "20260304",
+        startDate: "2026-03-01",
+        endDate: "2026-03-04",
         reportTypeId: "dspLineItem",
         groupBy: ["order", "lineItem"],
         columns: ["impressions", "clickThroughs", "totalCost"],
@@ -67,13 +67,13 @@ describe("submitReportLogic", () => {
       {
         profileId: "1234567890",
         name: "My Test Report",
-        startDate: "20260301",
-        endDate: "20260304",
+        startDate: "2026-03-01",
+        endDate: "2026-03-04",
         reportTypeId: "dspOrder",
         groupBy: ["order"],
         columns: ["impressions", "clickThroughs"],
         timeUnit: "SUMMARY",
-        adProduct: "DSP",
+        adProduct: "DEMAND_SIDE_PLATFORM",
       },
       baseContext,
       baseSdkContext
@@ -82,8 +82,8 @@ describe("submitReportLogic", () => {
     expect(mockSubmitReport).toHaveBeenCalledWith(
       expect.objectContaining({
         name: "My Test Report",
-        startDate: "20260301",
-        endDate: "20260304",
+        startDate: "2026-03-01",
+        endDate: "2026-03-04",
         configuration: expect.objectContaining({
           reportTypeId: "dspOrder",
           groupBy: ["order"],
@@ -101,8 +101,8 @@ describe("submitReportLogic", () => {
     await submitReportLogic(
       {
         profileId: "1234567890",
-        startDate: "20260301",
-        endDate: "20260304",
+        startDate: "2026-03-01",
+        endDate: "2026-03-04",
         reportTypeId: "dspLineItem",
         groupBy: ["lineItem"],
         columns: ["impressions"],

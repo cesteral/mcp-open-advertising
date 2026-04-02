@@ -1,22 +1,25 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import {
+  AMAZON_DSP_CANONICAL_ENTITY_TYPES,
+  AMAZON_DSP_ENTITY_CONTRACT,
+  AMAZON_DSP_PUBLIC_ENTITY_TYPES,
+  getAmazonDspEntityContract,
+  normalizeAmazonDspEntityType,
+  type AmazonDspCanonicalEntityType,
+  type AmazonDspPublicEntityType,
+} from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
+
 /**
  * Amazon DSP Entity Mapping
  *
- * Amazon DSP entity terminology differs from TikTok:
- * - "Orders" = Campaigns
- * - "Line Items" = Ad Groups
- * - "Creatives" = Creatives/Ads
- *
- * Key Amazon DSP patterns:
- * - No DELETE endpoint — archive via PUT with { state: "ARCHIVED" }
- * - Offset pagination: startIndex + count query params
- * - Response includes totalResults
- * - Required headers: Amazon-Advertising-API-ClientId + Amazon-Advertising-API-Scope
+ * MCP keeps backward-compatible support for the original `order` / `lineItem`
+ * names while also accepting the Amazon-style `campaign` / `adGroup` aliases.
  */
 
-export type AmazonDspEntityType = "order" | "lineItem" | "creative";
+export type AmazonDspEntityType = AmazonDspPublicEntityType;
+export type CanonicalAmazonDspEntityType = AmazonDspCanonicalEntityType;
 
 export interface AmazonDspEntityConfig {
   /** API path for list (GET with query params) */
@@ -39,56 +42,49 @@ export interface AmazonDspEntityConfig {
   defaultFields: string[];
 }
 
-const ENTITY_CONFIGS: Record<AmazonDspEntityType, AmazonDspEntityConfig> = {
-  order: {
-    listPath: "/dsp/orders",
-    getPath: "/dsp/orders/{entityId}",
-    createPath: "/dsp/orders",
-    updatePath: "/dsp/orders/{entityId}",
-    idField: "orderId",
-    responseKey: "orders",
-    listFilterParam: "advertiserId",
-    displayName: "Order (Campaign)",
-    defaultFields: ["orderId", "name", "advertiserId", "budget", "startDate", "endDate", "state"],
-  },
-  lineItem: {
-    listPath: "/dsp/lineItems",
-    getPath: "/dsp/lineItems/{entityId}",
-    createPath: "/dsp/lineItems",
-    updatePath: "/dsp/lineItems/{entityId}",
-    idField: "lineItemId",
-    responseKey: "lineItems",
-    listFilterParam: "orderId",
-    displayName: "Line Item (Ad Group)",
-    defaultFields: ["lineItemId", "name", "orderId", "budget", "bidding", "state", "targetingCriteria"],
-  },
-  creative: {
-    listPath: "/dsp/creatives",
-    getPath: "/dsp/creatives/{entityId}",
-    createPath: "/dsp/creatives",
-    updatePath: "/dsp/creatives/{entityId}",
-    idField: "creativeId",
-    responseKey: "creatives",
-    listFilterParam: "advertiserId",
-    displayName: "Creative",
-    defaultFields: ["creativeId", "name", "advertiserId", "creativeType", "clickThroughUrl"],
-  },
-};
+const ENTITY_CONFIGS: Record<AmazonDspCanonicalEntityType, AmazonDspEntityConfig> =
+  Object.fromEntries(
+    AMAZON_DSP_CANONICAL_ENTITY_TYPES.map((entityType) => {
+      const contract = AMAZON_DSP_ENTITY_CONTRACT[entityType];
+      return [
+        entityType,
+        {
+          listPath: contract.listPath,
+          getPath: contract.getPath,
+          createPath: contract.createPath,
+          updatePath: contract.updatePath,
+          idField: contract.idField,
+          responseKey: contract.responseKey,
+          listFilterParam: contract.listFilterParam,
+          displayName: contract.displayName,
+          defaultFields: [contract.idField, contract.listFilterParam, "name", "state"],
+        } satisfies AmazonDspEntityConfig,
+      ];
+    })
+  ) as Record<AmazonDspCanonicalEntityType, AmazonDspEntityConfig>;
 
 export function getEntityConfig(entityType: AmazonDspEntityType): AmazonDspEntityConfig {
-  const config = ENTITY_CONFIGS[entityType];
-  if (!config) {
-    throw new Error(`Unknown Amazon DSP entity type: ${entityType}`);
-  }
-  return config;
+  return ENTITY_CONFIGS[normalizeAmazonDspEntityType(entityType)];
 }
 
 export function getSupportedEntityTypes(): AmazonDspEntityType[] {
-  return Object.keys(ENTITY_CONFIGS) as AmazonDspEntityType[];
+  return [...AMAZON_DSP_PUBLIC_ENTITY_TYPES];
+}
+
+export function getCanonicalEntityTypes(): AmazonDspCanonicalEntityType[] {
+  return [...AMAZON_DSP_CANONICAL_ENTITY_TYPES];
 }
 
 export function getEntityTypeEnum(): [string, ...string[]] {
   return getSupportedEntityTypes() as [string, ...string[]];
+}
+
+export function getCanonicalEntityType(entityType: AmazonDspEntityType): AmazonDspCanonicalEntityType {
+  return normalizeAmazonDspEntityType(entityType);
+}
+
+export function getEntityContract(entityType: AmazonDspEntityType) {
+  return getAmazonDspEntityContract(entityType);
 }
 
 /**

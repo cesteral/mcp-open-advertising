@@ -141,7 +141,7 @@ Use the returned entity ID to modify the copy:
 }
 \`\`\`
 
-⚠️ **GOTCHA**: Budget values are in **USD** — \`budget: 1000\` means $1000.00.
+⚠️ **GOTCHA**: Budget values are numeric amounts, not micros. Confirm the advertiser account currency before assuming USD.
 
 ---
 
