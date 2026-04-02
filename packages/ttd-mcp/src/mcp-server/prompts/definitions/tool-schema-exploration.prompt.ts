@@ -92,12 +92,21 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (37 tools)
+## Available Tools Summary (50 tools)
 
 ### Context
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
 | \`ttd_get_context\` | Get partner IDs accessible with current credentials (cold-start) | Read |
+
+### Workflows Utility
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_rest_request\` | Execute generic Workflows REST requests | Read/Write |
+| \`ttd_get_job_status\` | Check a standard Workflows job status | Read |
+| \`ttd_get_first_party_data_job\` | Submit advertiser first-party data jobs | Write |
+| \`ttd_get_third_party_data_job\` | Submit partner third-party data jobs | Write |
+| \`ttd_get_campaign_version\` | Fetch a campaign's workflow version payload | Read |
 
 ### Core CRUD
 | Tool | Purpose | Read/Write |
@@ -108,6 +117,18 @@ Inspect the output, then iterate with more specific calls.
 | \`ttd_update_entity\` | Update an entity (PUT) | Write |
 | \`ttd_delete_entity\` | Delete an entity | Write |
 | \`ttd_validate_entity\` | Dry-run entity validation | Read/Write |
+
+### Workflow Entity Operations
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_create_campaign_workflow\` | Create campaigns with workflow-oriented payloads | Write |
+| \`ttd_update_campaign_workflow\` | PATCH campaigns with workflow-oriented payloads | Write |
+| \`ttd_create_campaigns_job\` | Submit async bulk campaign create jobs | Write |
+| \`ttd_update_campaigns_job\` | Submit async bulk campaign update jobs | Write |
+| \`ttd_create_ad_group_workflow\` | Create ad groups with workflow-oriented payloads | Write |
+| \`ttd_update_ad_group_workflow\` | PATCH ad groups with workflow-oriented payloads | Write |
+| \`ttd_create_ad_groups_job\` | Submit async bulk ad group create jobs | Write |
+| \`ttd_update_ad_groups_job\` | Submit async bulk ad group update jobs | Write |
 
 ### Reporting
 | Tool | Purpose | Read/Write |

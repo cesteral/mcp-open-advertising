@@ -152,30 +152,30 @@ query GetExecutions($scheduleId: String, $lastStatusChangeAfter: DateTime, $firs
 
 ### Enable/disable schedule
 \`\`\`graphql
-mutation UpdateSchedule($input: MyReportsScheduleUpdateInput!) {
-  myReportsScheduleUpdate(input: $input) {
-    data { id status }
-    errors { ... on MyReportsScheduleUpdateValidationError { message } }
+mutation UpdateSchedule($input: MyReportsReportScheduleUpdateInput!) {
+  myReportsReportScheduleUpdate(input: $input) {
+    data { status }
+    errors { ... on MutationError { field message } }
   }
 }
 \`\`\`
 
 ### Cancel execution
 \`\`\`graphql
-mutation CancelExecution($executionId: String!) {
-  myReportsReportExecutionCancel(input: { id: $executionId }) {
-    data { id status }
-    errors { ... on MyReportsReportExecutionCancelValidationError { message } }
+mutation CancelExecution($input: MyReportsReportExecutionCancelInput!) {
+  myReportsReportExecutionCancel(input: $input) {
+    data { isCancelled }
+    errors { ... on MutationError { field message } }
   }
 }
 \`\`\`
 
 ### Rerun schedule
 \`\`\`graphql
-mutation RerunSchedule($scheduleId: String!) {
-  myReportsScheduleRerun(input: { id: $scheduleId }) {
-    data { id }
-    errors { ... on MyReportsScheduleRerunValidationError { message } }
+mutation RerunSchedule($input: MyReportsReportScheduleCreateInput!) {
+  myReportsReportScheduleCreate(input: $input) {
+    data { id name status }
+    errors { ... on MutationError { field message } }
   }
 }
 \`\`\`

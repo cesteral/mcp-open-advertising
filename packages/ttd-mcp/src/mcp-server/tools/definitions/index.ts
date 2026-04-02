@@ -4,9 +4,11 @@
 /**
  * Tool definitions barrel export
  *
- * 37 tools total:
+ * 50 tools total:
  *   1 context: get context (cold-start partner discovery)
  *   6 original: list, get, create, update, delete, report
+ *   5 workflows utility: REST passthrough, standard job status, first-party data job, third-party data job, campaign version
+ *   8 workflow entities/jobs: create/update campaign workflow, create/update ad group workflow, bulk create/update campaign jobs, bulk create/update ad group jobs
  *   10 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report, submit report, check report status
  *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
  *   1 preview: get ad preview
@@ -17,11 +19,24 @@
  */
 
 export { getContextTool } from "./get-context.tool.js";
+export { restRequestTool } from "./rest-request.tool.js";
+export { getJobStatusTool } from "./get-job-status.tool.js";
+export { getFirstPartyDataJobTool } from "./get-first-party-data-job.tool.js";
+export { getThirdPartyDataJobTool } from "./get-third-party-data-job.tool.js";
+export { getCampaignVersionTool } from "./get-campaign-version.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { deleteEntityTool } from "./delete-entity.tool.js";
+export { createCampaignWorkflowTool } from "./create-campaign-workflow.tool.js";
+export { updateCampaignWorkflowTool } from "./update-campaign-workflow.tool.js";
+export { createCampaignsJobTool } from "./create-campaigns-job.tool.js";
+export { updateCampaignsJobTool } from "./update-campaigns-job.tool.js";
+export { createAdGroupWorkflowTool } from "./create-ad-group-workflow.tool.js";
+export { updateAdGroupWorkflowTool } from "./update-ad-group-workflow.tool.js";
+export { createAdGroupsJobTool } from "./create-ad-groups-job.tool.js";
+export { updateAdGroupsJobTool } from "./update-ad-groups-job.tool.js";
 export { getReportTool } from "./get-report.tool.js";
 export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -55,11 +70,24 @@ export { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
 export { getReportExecutionsTool } from "./get-report-executions.tool.js";
 
 import { getContextTool } from "./get-context.tool.js";
+import { restRequestTool } from "./rest-request.tool.js";
+import { getJobStatusTool } from "./get-job-status.tool.js";
+import { getFirstPartyDataJobTool } from "./get-first-party-data-job.tool.js";
+import { getThirdPartyDataJobTool } from "./get-third-party-data-job.tool.js";
+import { getCampaignVersionTool } from "./get-campaign-version.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
+import { createCampaignWorkflowTool } from "./create-campaign-workflow.tool.js";
+import { updateCampaignWorkflowTool } from "./update-campaign-workflow.tool.js";
+import { createCampaignsJobTool } from "./create-campaigns-job.tool.js";
+import { updateCampaignsJobTool } from "./update-campaigns-job.tool.js";
+import { createAdGroupWorkflowTool } from "./create-ad-group-workflow.tool.js";
+import { updateAdGroupWorkflowTool } from "./update-ad-group-workflow.tool.js";
+import { createAdGroupsJobTool } from "./create-ad-groups-job.tool.js";
+import { updateAdGroupsJobTool } from "./update-ad-groups-job.tool.js";
 import { getReportTool } from "./get-report.tool.js";
 import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -96,12 +124,26 @@ import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/share
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Context ──
   getContextTool,
+  restRequestTool,
+  getJobStatusTool,
+  getFirstPartyDataJobTool,
+  getThirdPartyDataJobTool,
+  getCampaignVersionTool,
   // ── Core CRUD ──
   listEntitiesTool,
   getEntityTool,
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,
+  // ── Workflow Entity Operations ──
+  createCampaignWorkflowTool,
+  updateCampaignWorkflowTool,
+  createCampaignsJobTool,
+  updateCampaignsJobTool,
+  createAdGroupWorkflowTool,
+  updateAdGroupWorkflowTool,
+  createAdGroupsJobTool,
+  updateAdGroupsJobTool,
   // ── Reporting ──
   getReportTool,
   downloadReportTool,

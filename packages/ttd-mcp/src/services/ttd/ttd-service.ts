@@ -23,6 +23,34 @@ export type {
   TtdConversionTracker,
 };
 
+export interface WorkflowCallbackInput {
+  callbackUrl: string;
+  callbackHeaders?: Record<string, string> | null;
+}
+
+export interface RestRequestInput {
+  methodType: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  endpoint: string | null;
+  dataBody?: string | null;
+}
+
+export interface FirstPartyDataJobInput {
+  advertiserId: string;
+  nameFilter?: string | null;
+  queryShape?: string | null;
+  callbackInput?: WorkflowCallbackInput | null;
+}
+
+export interface ThirdPartyDataJobInput {
+  partnerId: string;
+  queryShape?: string | null;
+  callbackInput?: WorkflowCallbackInput | null;
+}
+
+interface GraphqlQueryOptions {
+  betaFeatures?: string;
+}
+
 interface TtdEntityMap {
   advertiser: TtdAdvertiser;
   campaign: TtdCampaign;
@@ -443,7 +471,8 @@ export class TtdService {
   async graphqlQuery(
     query: string,
     variables?: Record<string, unknown>,
-    context?: RequestContext
+    context?: RequestContext,
+    options?: GraphqlQueryOptions
   ): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
@@ -454,9 +483,146 @@ export class TtdService {
       context,
       {
         method: "POST",
+        headers: options?.betaFeatures
+          ? { "TTD-GQL-Beta": options.betaFeatures }
+          : undefined,
         body: JSON.stringify({ query, variables }),
       }
     );
+  }
+
+  // ─── Workflows / Standard Jobs ───────────────────────────────────
+
+  async restRequest(
+    input: RestRequestInput,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch("/restrequest", context, {
+      method: "POST",
+      body: JSON.stringify({
+        methodType: input.methodType,
+        endpoint: input.endpoint,
+        ...(input.dataBody !== undefined ? { dataBody: input.dataBody } : {}),
+      }),
+    });
+  }
+
+  async getJobStatus(
+    jobId: number,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch(`/standardjob/${jobId}/status`, context, {
+      method: "GET",
+    });
+  }
+
+  async getFirstPartyDataJob(
+    input: FirstPartyDataJobInput,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch("/standardjob/firstpartydata", context, {
+      method: "POST",
+      body: JSON.stringify({
+        advertiserId: input.advertiserId,
+        ...(input.nameFilter !== undefined ? { nameFilter: input.nameFilter } : {}),
+        ...(input.queryShape !== undefined ? { queryShape: input.queryShape } : {}),
+        ...(input.callbackInput ? { callbackInput: input.callbackInput } : {}),
+      }),
+    });
+  }
+
+  async getThirdPartyDataJob(
+    input: ThirdPartyDataJobInput,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch("/standardjob/thirdpartydata", context, {
+      method: "POST",
+      body: JSON.stringify({
+        partnerId: input.partnerId,
+        ...(input.queryShape !== undefined ? { queryShape: input.queryShape } : {}),
+        ...(input.callbackInput ? { callbackInput: input.callbackInput } : {}),
+      }),
+    });
+  }
+
+  async getCampaignVersion(
+    campaignId: string,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch(`/campaign/${campaignId}/version`, context, {
+      method: "GET",
+    });
+  }
+
+  async createCampaignWorkflow(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.postWorkflow("/campaign", input, context);
+  }
+
+  async updateCampaignWorkflow(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.patchWorkflow("/campaign", input, context);
+  }
+
+  async createCampaignsJob(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.postWorkflow("/standardjob/campaign/bulk", input, context);
+  }
+
+  async updateCampaignsJob(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.patchWorkflow("/standardjob/campaign/bulk", input, context);
+  }
+
+  async createAdGroupWorkflow(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.postWorkflow("/adgroup", input, context);
+  }
+
+  async updateAdGroupWorkflow(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.patchWorkflow("/adgroup", input, context);
+  }
+
+  async createAdGroupsJob(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.postWorkflow("/standardjob/adgroup/bulk", input, context);
+  }
+
+  async updateAdGroupsJob(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    return this.patchWorkflow("/standardjob/adgroup/bulk", input, context);
   }
 
   /**
@@ -478,10 +644,16 @@ export class TtdService {
       advertiser: { name: "advertiserReportExecute", typeEnum: "AdvertiserReportType" },
     } as const;
     const { name, typeEnum } = mutationMap[entityType];
+    if (!/^[A-Z][A-Z0-9_]*$/.test(reportType)) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `reportType must be a valid ${typeEnum} enum value. Use ttd_get_entity_report_types to discover supported values for this entity.`
+      );
+    }
 
     const query = `
-      mutation($entityId: ID!, $reportType: ${typeEnum}!) {
-        ${name}(input: { id: $entityId, report: $reportType }) {
+      mutation($entityId: ID!) {
+        ${name}(input: { id: $entityId, report: ${reportType} }) {
           data { id url hasSampleData }
           userErrors { field message }
         }
@@ -489,7 +661,7 @@ export class TtdService {
     `;
     return this.httpClient.fetchDirect(this.graphqlUrl, context, {
       method: "POST",
-      body: JSON.stringify({ query, variables: { entityId, reportType } }),
+      body: JSON.stringify({ query, variables: { entityId } }),
     });
   }
 
@@ -531,5 +703,33 @@ export class TtdService {
   }
 
   // ─── Internal Helpers ─────────────────────────────────────────────
+
+  private async postWorkflow(
+    path: string,
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch(path, context, {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  private async patchWorkflow(
+    path: string,
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+
+    return this.httpClient.fetch(path, context, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
 
 }

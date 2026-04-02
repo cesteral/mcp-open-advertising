@@ -27,6 +27,11 @@ const TTD_PLATFORM = "ttd";
 const ttdWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   ttd_get_context: "mcp.execute.ttd_entity_read",
+  ttd_rest_request: "mcp.execute.ttd_entity_read",
+  ttd_get_job_status: "mcp.execute.ttd_entity_read",
+  ttd_get_first_party_data_job: "mcp.execute.ttd_entity_read",
+  ttd_get_third_party_data_job: "mcp.execute.ttd_entity_read",
+  ttd_get_campaign_version: "mcp.execute.ttd_entity_read",
   ttd_list_entities: "mcp.execute.ttd_entity_read",
   ttd_get_entity: "mcp.execute.ttd_entity_read",
   // Write operations
@@ -34,6 +39,14 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_update_entity: "mcp.execute.ttd_entity_update",
   ttd_delete_entity: "mcp.execute.ttd_entity_update",
   ttd_validate_entity: "mcp.execute.ttd_entity_update",
+  ttd_create_campaign_workflow: "mcp.execute.ttd_entity_update",
+  ttd_update_campaign_workflow: "mcp.execute.ttd_entity_update",
+  ttd_create_campaigns_job: "mcp.execute.ttd_entity_update",
+  ttd_update_campaigns_job: "mcp.execute.ttd_entity_update",
+  ttd_create_ad_group_workflow: "mcp.execute.ttd_entity_update",
+  ttd_update_ad_group_workflow: "mcp.execute.ttd_entity_update",
+  ttd_create_ad_groups_job: "mcp.execute.ttd_entity_update",
+  ttd_update_ad_groups_job: "mcp.execute.ttd_entity_update",
   // Reporting
   ttd_get_report: "mcp.execute.ttd_reporting",
   ttd_submit_report: "mcp.execute.ttd_reporting",
@@ -83,16 +96,16 @@ export async function createMcpServer(
     {
       name: "ttd-mcp",
       version: packageJson.version,
-      description: "The Trade Desk campaign management, reporting, and optimization via TTD API v3 + GraphQL. Supports 5 entity types (advertiser, campaign, adGroup, creative, conversionTracker), bulk operations, bid adjustments, GraphQL passthrough, and async report generation with download/parse.",
+      description: "The Trade Desk campaign management, Workflows jobs, reporting, and optimization via TTD API v3 + GraphQL. Supports first-class CRUD entities, workflow-oriented campaign/ad group operations, standard job APIs, GraphQL passthrough, and async report generation.",
     },
     {
       capabilities: {
         logging: {},
       },
       instructions:
-        "The Trade Desk campaign management and reporting server. Supports 5 entity types via TTD REST API v3 and GraphQL. " +
-        "Use ttd_list_entities to discover entities, ttd_get_report for async reporting. " +
-        "See MCP Resources for entity schemas, hierarchy docs, and report field references.",
+        "The Trade Desk campaign management, workflows, and reporting server. Supports first-class CRUD entities, workflow-oriented campaign/ad group operations, standard jobs, REST/GraphQL passthrough, and MyReports reporting. " +
+        "Use ttd_list_entities for core entity discovery, workflow tools for richer campaign/ad group operations, and ttd_get_report or report schedule tools for reporting. " +
+        "See MCP Resources for hierarchy docs and report field references.",
     }
   );
 

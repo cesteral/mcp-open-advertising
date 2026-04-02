@@ -73,7 +73,9 @@ export async function rerunReportScheduleLogic(
 
   const variables = {
     input: {
-      singleRunFromExistingScheduleInput: input.scheduleId,
+      singleRunFromExistingScheduleInput: {
+        id: input.scheduleId,
+      },
     },
   };
 

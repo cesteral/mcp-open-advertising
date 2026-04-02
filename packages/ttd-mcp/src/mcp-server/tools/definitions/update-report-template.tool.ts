@@ -4,6 +4,10 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import {
+  MYREPORTS_TEMPLATE_ACCESS_ERROR,
+  throwIfGraphqlErrors,
+} from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_update_report_template";
 const TOOL_TITLE = "Update TTD Report Template (GraphQL)";
@@ -91,6 +95,10 @@ export async function updateReportTemplateLogic(
     variables,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error updating report template", {
+    unauthorizedMessage: MYREPORTS_TEMPLATE_ACCESS_ERROR,
+  });
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =

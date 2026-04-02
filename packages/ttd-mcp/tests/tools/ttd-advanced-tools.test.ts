@@ -283,9 +283,11 @@ describe("ttd advanced tools", () => {
       "c1,100",
       "c2,200",
     ].join("\n");
+    const csvBytes = new TextEncoder().encode(csv);
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
-      text: vi.fn().mockResolvedValue(csv),
+      arrayBuffer: vi.fn().mockResolvedValue(csvBytes.buffer),
+      headers: new Headers({ "content-type": "text/csv" }),
     } as unknown as Response);
 
     const result = await downloadReportLogic(
@@ -320,6 +322,27 @@ describe("ttd advanced tools", () => {
         createMockSdkContext()
       )
     ).rejects.toThrow("Failed to download report: 500 Server Error");
+  });
+
+  it("downloadReportLogic rejects XLSX/ExcelPivot downloads with a clear error", async () => {
+    mockResolveSessionServices.mockReturnValueOnce({});
+    const zipBytes = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]);
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: vi.fn().mockResolvedValue(zipBytes.buffer),
+      headers: new Headers({
+        "content-type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+    } as unknown as Response);
+
+    await expect(
+      downloadReportLogic(
+        { downloadUrl: "https://reports.thetradedesk.com/report.xlsx" },
+        createMockContext(),
+        createMockSdkContext()
+      )
+    ).rejects.toThrow("XLSX/ExcelPivot report");
   });
 
   it("downloadReportResponseFormatter includes column summary", () => {

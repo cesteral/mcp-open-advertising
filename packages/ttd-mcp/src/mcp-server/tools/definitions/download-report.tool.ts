@@ -107,6 +107,37 @@ function isAllowedReportUrl(rawUrl: string): boolean {
   }
 }
 
+function detectBinarySpreadsheet(
+  bytes: Uint8Array,
+  contentType: string | null,
+  downloadUrl: string
+): string | null {
+  const normalizedType = contentType?.toLowerCase() ?? "";
+  const lowerUrl = downloadUrl.toLowerCase();
+
+  const isZipSignature =
+    bytes.length >= 4
+    && bytes[0] === 0x50
+    && bytes[1] === 0x4b
+    && bytes[2] === 0x03
+    && bytes[3] === 0x04;
+
+  const looksLikeSpreadsheet =
+    normalizedType.includes("spreadsheetml")
+    || normalizedType.includes("application/zip")
+    || normalizedType.includes("application/octet-stream")
+    || lowerUrl.includes(".xlsx")
+    || isZipSignature;
+
+  if (!looksLikeSpreadsheet) return null;
+
+  return (
+    "This download appears to be an XLSX/ExcelPivot report, not CSV. " +
+    "ttd_download_report currently supports CSV parsing only. " +
+    "Regenerate the report in CSV format or use a CSV-based report workflow before calling this tool."
+  );
+}
+
 export async function downloadReportLogic(
   input: DownloadInput,
   _context: RequestContext,
@@ -128,7 +159,18 @@ export async function downloadReportLogic(
     );
   }
 
-  const csvText = await response.text();
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const contentType = response.headers.get("content-type");
+  const binarySpreadsheetError = detectBinarySpreadsheet(
+    bytes,
+    contentType,
+    input.downloadUrl
+  );
+  if (binarySpreadsheetError) {
+    throw new Error(binarySpreadsheetError);
+  }
+
+  const csvText = new TextDecoder("utf-8").decode(bytes);
   const { headers, rows: allRows } = parseCsv(csvText);
 
   const maxRows = input.maxRows ?? 1000;

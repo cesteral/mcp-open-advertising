@@ -304,9 +304,9 @@ describe("TtdService", () => {
       expect(options.method).toBe("POST");
       const body = JSON.parse(options.body);
       expect(body.query).toContain("adGroupReportExecute");
-      expect(body.query).toContain("AdGroupReportType");
+      expect(body.query).toContain("report: AD_GROUP");
       expect(body.variables.entityId).toBe("ag123");
-      expect(body.variables.reportType).toBe("AD_GROUP");
+      expect(body.variables.reportType).toBeUndefined();
     });
 
     it("calls campaignReportExecute mutation for campaign", async () => {
@@ -318,7 +318,7 @@ describe("TtdService", () => {
 
       const body = JSON.parse(httpClient.fetchDirect.mock.calls[0][2].body);
       expect(body.query).toContain("campaignReportExecute");
-      expect(body.query).toContain("CampaignReportType");
+      expect(body.query).toContain("report: CAMPAIGN");
     });
 
     it("calls advertiserReportExecute mutation for advertiser", async () => {
@@ -330,7 +330,7 @@ describe("TtdService", () => {
 
       const body = JSON.parse(httpClient.fetchDirect.mock.calls[0][2].body);
       expect(body.query).toContain("advertiserReportExecute");
-      expect(body.query).toContain("AdvertiserReportType");
+      expect(body.query).toContain("report: ADVERTISER");
     });
 
     it("consumes rate limiter once", async () => {
@@ -338,6 +338,14 @@ describe("TtdService", () => {
       await service.executeEntityReport("adGroup", "ag1", "AD_GROUP");
       expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
       expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
+    });
+
+    it("rejects invalid enum-like reportType values before sending the request", async () => {
+      await expect(
+        service.executeEntityReport("campaign", "c1", "bad-value")
+      ).rejects.toThrow("reportType must be a valid CampaignReportType enum value");
+
+      expect(httpClient.fetchDirect).not.toHaveBeenCalled();
     });
   });
 

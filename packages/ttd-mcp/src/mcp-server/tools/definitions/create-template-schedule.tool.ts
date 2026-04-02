@@ -4,6 +4,19 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import {
+  MYREPORTS_TEMPLATE_ACCESS_ERROR,
+  throwIfGraphqlErrors,
+} from "../utils/graphql-errors.js";
+
+const SUPPORTED_REPORT_FREQUENCIES = ["SINGLE_RUN", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"] as const;
+const SUPPORTED_REPORT_FORMATS = ["EXCEL"] as const;
+const SUPPORTED_REPORT_DATE_FORMATS = ["International"] as const;
+const SUPPORTED_REPORT_NUMERIC_FORMATS = ["US"] as const;
+const ianaTimeZones =
+  typeof Intl.supportedValuesOf === "function"
+    ? new Set(Intl.supportedValuesOf("timeZone"))
+    : undefined;
 
 const TOOL_NAME = "ttd_create_template_schedule";
 const TOOL_TITLE = "Create TTD Template Report Schedule (GraphQL)";
@@ -29,6 +42,21 @@ const ReportFilterSchema = z.object({
   advertiserIds: z.array(z.string()).optional().describe("Limit report to these advertiser IDs"),
 });
 
+const TailAggregationSchema = z.object({
+  columnId: z.string().describe("Column ID for the tail aggregation"),
+  tailAggregation: z
+    .string()
+    .describe("Tail aggregation type, e.g. NO_IMPRESSIONS"),
+});
+
+const TimezoneSchema = z
+  .string()
+  .default("UTC")
+  .refine(
+    (value) => value === "UTC" || ianaTimeZones?.has(value) === true,
+    "Timezone must be a valid IANA/Olson timezone, e.g. UTC or America/New_York"
+  );
+
 export const CreateTemplateScheduleInputSchema = z
   .object({
     templateId: z.string().min(1).describe("ID of the report template to schedule"),
@@ -37,16 +65,16 @@ export const CreateTemplateScheduleInputSchema = z
       .string()
       .describe("ISO 8601 datetime for the first run, e.g. 2025-10-10T00:00:00Z"),
     frequency: z
-      .enum(["SINGLE_RUN", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"])
+      .enum(SUPPORTED_REPORT_FREQUENCIES)
       .describe("How often the report runs"),
     dateRange: z
       .string()
       .describe(
         "Date range for the report data, e.g. LAST7_DAYS, LAST14_DAYS, LAST30_DAYS, YESTERDAY, CUSTOM"
       ),
-    timezone: z.string().default("UTC").describe("Timezone for report execution (default: UTC)"),
+    timezone: TimezoneSchema.describe("Timezone for report execution (default: UTC)"),
     format: z
-      .enum(["EXCEL"])
+      .enum(SUPPORTED_REPORT_FORMATS)
       .default("EXCEL")
       .describe("Report output format (currently only EXCEL is supported)"),
     includeHeaders: z
@@ -66,13 +94,13 @@ export const CreateTemplateScheduleInputSchema = z
       .optional()
       .describe("Suppress rows where all metrics are zero"),
     dateFormat: z
-      .string()
+      .enum(SUPPORTED_REPORT_DATE_FORMATS)
       .optional()
-      .describe("Date format for the report output, e.g. International"),
+      .describe("Date format for the report output. Supported value: International"),
     numericFormat: z
-      .string()
+      .enum(SUPPORTED_REPORT_NUMERIC_FORMATS)
       .optional()
-      .describe("Numeric format for the report output, e.g. US"),
+      .describe("Numeric format for the report output. Supported value: US"),
     conversionMetricOrdering: z
       .string()
       .optional()
@@ -80,12 +108,7 @@ export const CreateTemplateScheduleInputSchema = z
         "How conversion metrics are ordered in the report, e.g. ALPHABETICALLY_BY_COLUMN_NAMES"
       ),
     tailAggregations: z
-      .object({
-        columnId: z.string().describe("Column ID for the tail aggregation"),
-        tailAggregation: z
-          .string()
-          .describe("Tail aggregation type, e.g. NO_IMPRESSIONS"),
-      })
+      .union([TailAggregationSchema, z.array(TailAggregationSchema).min(1)])
       .optional()
       .describe("Tail aggregation configuration for the report"),
   })
@@ -148,7 +171,11 @@ export async function createTemplateScheduleLogic(
       ...(input.conversionMetricOrdering !== undefined && {
         conversionMetricOrdering: input.conversionMetricOrdering,
       }),
-      ...(input.tailAggregations !== undefined && { tailAggregations: input.tailAggregations }),
+      ...(input.tailAggregations !== undefined && {
+        tailAggregations: Array.isArray(input.tailAggregations)
+          ? input.tailAggregations
+          : [input.tailAggregations],
+      }),
     },
   };
 
@@ -157,6 +184,10 @@ export async function createTemplateScheduleLogic(
     variables,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error creating template schedule", {
+    unauthorizedMessage: MYREPORTS_TEMPLATE_ACCESS_ERROR,
+  });
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =

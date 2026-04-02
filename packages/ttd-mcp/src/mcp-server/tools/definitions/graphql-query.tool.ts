@@ -38,6 +38,10 @@ export const GraphqlQueryInputSchema = z
       .record(z.any())
       .optional()
       .describe("GraphQL variables (key-value object)"),
+    betaFeatures: z
+      .string()
+      .optional()
+      .describe("Optional TTD-GQL-Beta header value to enable beta GraphQL features"),
   })
   .describe("Parameters for executing a TTD GraphQL query");
 
@@ -62,7 +66,8 @@ export async function graphqlQueryLogic(
   const result = (await ttdService.graphqlQuery(
     input.query,
     input.variables,
-    context
+    context,
+    { betaFeatures: input.betaFeatures }
   )) as Record<string, unknown>;
 
   return {
@@ -103,6 +108,7 @@ export const graphqlQueryTool = {
       input: {
         query: "query GetAdvertiser($id: ID!) { advertiser(id: $id) { id name status } }",
         variables: { id: "adv123abc" },
+        betaFeatures: "my-beta-flag",
       },
     },
     {

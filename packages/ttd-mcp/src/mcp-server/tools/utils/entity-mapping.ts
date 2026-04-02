@@ -7,8 +7,12 @@
  * Static configuration for TTD entity types.
  * TTD API is more regular than DV360 — no dynamic introspection needed.
  *
- * Covers the core campaign hierarchy (advertiser → campaign → adGroup → ad)
- * plus ancillary entities: creative, siteList, deal, conversionTracker, bidList.
+ * Covers the entity types currently exposed as first-class MCP CRUD tools:
+ * advertiser, campaign, adGroup, creative, and conversionTracker.
+ *
+ * Other TTD objects such as ads, deals, bid lists, and site lists are not
+ * exposed here as CRUD entities. Use GraphQL or the Workflows REST passthrough
+ * for endpoints that are outside this first-class entity set.
  */
 
 export type TtdEntityType =

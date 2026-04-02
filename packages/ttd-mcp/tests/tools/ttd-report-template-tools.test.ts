@@ -70,6 +70,36 @@ describe("ttd report template tools", () => {
     expect(result.success).toBe(true);
   });
 
+  it("validates documented schedule enum-like inputs", () => {
+    const result = CreateTemplateScheduleInputSchema.safeParse({
+      templateId: "tpl-123",
+      reportName: "Validated report",
+      startDate: "2025-10-10T00:00:00Z",
+      frequency: "SINGLE_RUN",
+      dateRange: "LAST14_DAYS",
+      timezone: "America/New_York",
+      format: "EXCEL",
+      dateFormat: "International",
+      numericFormat: "US",
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects invalid timezone and format literals", () => {
+    const result = CreateTemplateScheduleInputSchema.safeParse({
+      templateId: "tpl-123",
+      reportName: "Invalid report",
+      startDate: "2025-10-10T00:00:00Z",
+      frequency: "SINGLE_RUN",
+      dateRange: "LAST14_DAYS",
+      timezone: "Mars/Olympus_Mons",
+      format: "CSV",
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("passes advertiserIds through to the GraphQL mutation", async () => {
     mockTtdService.graphqlQuery.mockResolvedValueOnce({
       data: {

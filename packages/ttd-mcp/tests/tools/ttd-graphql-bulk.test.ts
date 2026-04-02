@@ -80,11 +80,12 @@ describe("ttd graphql bulk tools", () => {
         expect.stringContaining("createQueryBulk"),
         {
           input: {
-            query: expect.any(String),
+            query: "query Adv($id: ID!) { advertiser(id: $id) { name } }",
             variables: [{ id: "adv1" }, { id: "adv2" }],
           },
         },
-        expect.any(Object)
+        expect.any(Object),
+        { betaFeatures: undefined }
       );
     });
 

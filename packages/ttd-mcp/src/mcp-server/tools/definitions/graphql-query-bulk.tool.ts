@@ -49,6 +49,10 @@ export const GraphqlQueryBulkInputSchema = z
       .string()
       .optional()
       .describe("GraphQL operation name (if query contains multiple operations)"),
+    betaFeatures: z
+      .string()
+      .optional()
+      .describe("Optional TTD-GQL-Beta header value to enable beta GraphQL features"),
   })
   .describe("Parameters for submitting a bulk GraphQL query job");
 
@@ -107,7 +111,8 @@ export async function graphqlQueryBulkLogic(
   const result = (await ttdService.graphqlQuery(
     CREATE_QUERY_BULK_MUTATION,
     variables,
-    context
+    context,
+    { betaFeatures: input.betaFeatures }
   )) as Record<string, any>;
 
   const job = extractGraphqlJobOrThrow(result, "createQueryBulk");
@@ -151,6 +156,7 @@ export const graphqlQueryBulkTool = {
           { id: "adv789ghi" },
         ],
         operationName: "GetAdvertiser",
+        betaFeatures: "my-beta-flag",
       },
     },
     {

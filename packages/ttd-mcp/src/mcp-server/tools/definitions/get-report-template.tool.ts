@@ -4,6 +4,10 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import {
+  MYREPORTS_TEMPLATE_ACCESS_ERROR,
+  throwIfGraphqlErrors,
+} from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_get_report_template";
 const TOOL_TITLE = "Get TTD Report Template Structure (GraphQL)";
@@ -115,6 +119,10 @@ export async function getReportTemplateLogic(
     { id: input.id },
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error retrieving report template", {
+    unauthorizedMessage: MYREPORTS_TEMPLATE_ACCESS_ERROR,
+  });
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const templateData =
