@@ -39,7 +39,7 @@ export async function getAdPreviewLogic(
   const { msadsService } = resolveSessionServices(sdkContext);
 
   const result = (await msadsService.executeReadOperation(
-    "/Ads/GetByIds",
+    "/Ads/QueryByIds",
     {
       AdIds: input.adIds.map(Number),
       AdGroupId: Number(input.adGroupId),

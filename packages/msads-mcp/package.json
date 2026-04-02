@@ -2,7 +2,7 @@
   "name": "@cesteral/msads-mcp",
   "mcpName": "io.github.cesteral/msads-mcp",
   "version": "1.0.0",
-  "description": "Microsoft Advertising MCP Server - Campaign management and reporting via Microsoft Advertising REST API v13",
+  "description": "Microsoft Advertising MCP Server - campaign management and reporting via Microsoft Advertising API v13 JSON endpoints",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

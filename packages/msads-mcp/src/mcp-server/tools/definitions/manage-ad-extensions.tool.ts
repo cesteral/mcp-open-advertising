@@ -10,14 +10,14 @@ const TOOL_TITLE = "Manage Microsoft Ads Ad Extensions";
 const TOOL_DESCRIPTION = `Manage ad extensions in Microsoft Advertising — associate/disassociate extensions with campaigns or ad groups.
 
 Operations:
-- associate: Link ad extensions to a campaign or ad group
-- disassociate: Remove ad extension associations
-- getByAccount: List all ad extensions for an account`;
+- setAssociations: Link ad extensions to campaigns or ad groups
+- deleteAssociations: Remove ad extension associations
+- getAssociations: Query ad extension associations for campaigns or ad groups`;
 
 export const ManageAdExtensionsInputSchema = z
   .object({
     operation: z
-      .enum(["associate", "disassociate", "getByAccount"])
+      .enum(["setAssociations", "deleteAssociations", "getAssociations"])
       .describe("Operation to perform"),
     data: z
       .record(z.unknown())
@@ -37,9 +37,9 @@ type ManageAdExtensionsInput = z.infer<typeof ManageAdExtensionsInputSchema>;
 type ManageAdExtensionsOutput = z.infer<typeof ManageAdExtensionsOutputSchema>;
 
 const OPERATION_PATHS: Record<string, string> = {
-  associate: "/AdExtensions/Associate",
-  disassociate: "/AdExtensions/Disassociate",
-  getByAccount: "/AdExtensions/GetByAccountId",
+  setAssociations: "/AdExtensionsAssociations",
+  deleteAssociations: "/AdExtensionsAssociations",
+  getAssociations: "/AdExtensionsAssociations/Query",
 };
 
 export async function manageAdExtensionsLogic(
@@ -92,7 +92,7 @@ export const manageAdExtensionsTool = {
     {
       label: "Associate sitelink extensions with a campaign",
       input: {
-        operation: "associate",
+        operation: "setAssociations",
         data: {
           AccountId: 123456,
           AdExtensionIdToEntityIdAssociations: [

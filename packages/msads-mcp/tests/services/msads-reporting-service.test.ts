@@ -58,7 +58,7 @@ describe("MsAdsReportingService", () => {
       const id = await service.submitReport(sampleConfig);
       expect(id).toBe("req-abc-123");
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Reports/Submit",
+        "/GenerateReport/Submit",
         expect.objectContaining({
           ReportRequest: expect.objectContaining({
             Type: "CampaignPerformanceReportRequest",
@@ -82,6 +82,11 @@ describe("MsAdsReportingService", () => {
       const result = await service.checkReportStatus("req-123");
       expect(result.status).toBe("Success");
       expect(result.downloadUrl).toBe("https://download.example.com/report.csv");
+      expect(httpClient.post).toHaveBeenCalledWith(
+        "/GenerateReport/Poll",
+        { ReportRequestId: "req-123" },
+        undefined
+      );
     });
 
     it("returns pending status without URL", async () => {

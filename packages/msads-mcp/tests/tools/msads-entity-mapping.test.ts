@@ -22,26 +22,27 @@ describe("MsAds Entity Mapping", () => {
 
   it("campaign config has correct operations", () => {
     const config = getEntityConfig("campaign");
-    expect(config.addOperation).toBe("/Campaigns/Add");
-    expect(config.getByAccountOperation).toBe("/Campaigns/GetByAccountId");
-    expect(config.getByIdsOperation).toBe("/Campaigns/GetByIds");
-    expect(config.updateOperation).toBe("/Campaigns/Update");
-    expect(config.deleteOperation).toBe("/Campaigns/Delete");
+    expect(config.addOperation).toBe("/Campaigns");
+    expect(config.getByAccountOperation).toBe("/Campaigns/QueryByAccountId");
+    expect(config.getByIdsOperation).toBe("/Campaigns/QueryByIds");
+    expect(config.updateOperation).toBe("/Campaigns");
+    expect(config.deleteOperation).toBe("/Campaigns");
     expect(config.idField).toBe("Id");
     expect(config.pluralName).toBe("Campaigns");
+    expect(config.requiredGetByIdsFields).toEqual(["AccountId"]);
   });
 
   it("adGroup config has correct operations", () => {
     const config = getEntityConfig("adGroup");
-    expect(config.addOperation).toBe("/AdGroups/Add");
-    expect(config.getByParentOperation).toBe("/AdGroups/GetByCampaignId");
+    expect(config.addOperation).toBe("/AdGroups");
+    expect(config.getByParentOperation).toBe("/AdGroups/QueryByCampaignId");
     expect(config.parentIdField).toBe("CampaignId");
   });
 
   it("keyword config has correct operations", () => {
     const config = getEntityConfig("keyword");
-    expect(config.addOperation).toBe("/Keywords/Add");
-    expect(config.getByParentOperation).toBe("/Keywords/GetByAdGroupId");
+    expect(config.addOperation).toBe("/Keywords");
+    expect(config.getByParentOperation).toBe("/Keywords/QueryByAdGroupId");
     expect(config.parentIdField).toBe("AdGroupId");
   });
 

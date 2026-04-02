@@ -39,7 +39,7 @@ describe("MsAdsAccessTokenAdapter", () => {
     expect(adapter.accountId).toBe("test-account-id");
   });
 
-  it("validates token via GetUser endpoint", async () => {
+  it("validates token via the user query endpoint", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ UserId: 12345, UserName: "testuser" }),
@@ -49,8 +49,9 @@ describe("MsAdsAccessTokenAdapter", () => {
     expect(adapter.userId).toBe("12345");
 
     expect(mockFetch).toHaveBeenCalledOnce();
-    const [url] = mockFetch.mock.calls[0]!;
-    expect(url).toContain("GetUser");
+    const [url, , , options] = mockFetch.mock.calls[0]!;
+    expect(url).toContain("/User/Query");
+    expect((options?.headers as Record<string, string>).Authorization).toBe("Bearer test-access-token");
   });
 
   it("throws on validation failure", async () => {

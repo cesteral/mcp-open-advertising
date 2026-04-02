@@ -15,7 +15,7 @@ import {
  * Microsoft Ads Bearer auth strategy.
  *
  * Extracts OAuth2 access token, developer token, customer ID, and account ID
- * from HTTP headers. Validates by calling GetUser via the adapter.
+ * from HTTP headers. Validates by calling the Customer Management user query via the adapter.
  *
  * Headers:
  * - Authorization: Bearer <access_token>

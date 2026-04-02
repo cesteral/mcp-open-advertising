@@ -18,7 +18,7 @@ function createMockServices(): SessionServices {
   return {
     msadsService: {
       listEntities: vi.fn().mockResolvedValue({
-        Campaigns: [
+        entities: [
           { Id: 1, Name: "Campaign A" },
           { Id: 2, Name: "Campaign B" },
         ],
@@ -64,7 +64,7 @@ describe("msads_list_entities", () => {
 
   it("lists adGroups by parent ID", async () => {
     (mockServices.msadsService.listEntities as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      AdGroups: [{ Id: 10 }],
+      entities: [{ Id: 10 }],
     });
 
     const result = await listEntitiesLogic(
@@ -77,7 +77,9 @@ describe("msads_list_entities", () => {
   });
 
   it("returns empty when no entities", async () => {
-    (mockServices.msadsService.listEntities as ReturnType<typeof vi.fn>).mockResolvedValueOnce({});
+    (mockServices.msadsService.listEntities as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      entities: [],
+    });
 
     const result = await listEntitiesLogic(
       { entityType: "budget", accountId: "123" },

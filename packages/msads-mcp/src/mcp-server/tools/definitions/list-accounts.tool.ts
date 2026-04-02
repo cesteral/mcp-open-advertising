@@ -9,15 +9,33 @@ const TOOL_NAME = "msads_list_accounts";
 const TOOL_TITLE = "List Microsoft Ads Accounts";
 const TOOL_DESCRIPTION = `List accessible Microsoft Advertising accounts for the authenticated user.
 
-Uses the Customer Management API to retrieve account information.`;
+Uses the Customer Management API SearchAccounts operation.
+
+Microsoft Advertising requires at least one predicate for SearchAccounts.`;
+
+const PredicateSchema = z.object({
+  Field: z.string().min(1).describe("SearchAccounts field name, e.g. UserId or AccountLifeCycleStatus"),
+  Operator: z.string().min(1).describe("Predicate operator, e.g. Equals"),
+  Value: z.string().min(1).describe("Predicate value"),
+});
 
 export const ListAccountsInputSchema = z
   .object({
-    filters: z
-      .record(z.unknown())
-      .optional()
-      .describe("Optional filters for account search"),
+    predicates: z
+      .array(PredicateSchema)
+      .min(1)
+      .max(2)
+      .describe("One SearchAccounts predicate, or two when filtering by AccountLifeCycleStatus plus another field such as UserId"),
   })
+  .refine(
+    ({ predicates }) =>
+      predicates.length === 1 ||
+      predicates.some((predicate) => predicate.Field === "AccountLifeCycleStatus"),
+    {
+      message: "A second predicate is only valid when one predicate uses Field='AccountLifeCycleStatus'",
+      path: ["predicates"],
+    }
+  )
   .describe("Parameters for listing Microsoft Ads accounts");
 
 export const ListAccountsOutputSchema = z
@@ -41,7 +59,7 @@ export async function listAccountsLogic(
   const result = (await msadsService.executeReadOperation(
     "/Accounts/Search",
     {
-      Predicates: input.filters ? [input.filters] : [],
+      Predicates: input.predicates,
       Ordering: null,
       PageInfo: { Index: 0, Size: 100 },
     },
@@ -86,8 +104,10 @@ export const listAccountsTool = {
   },
   inputExamples: [
     {
-      label: "List all accounts",
-      input: {},
+      label: "List accounts for a user",
+      input: {
+        predicates: [{ Field: "UserId", Operator: "Equals", Value: "123456" }],
+      },
     },
   ],
   logic: listAccountsLogic,

@@ -12,8 +12,8 @@ export const reportingReferenceResource: Resource = {
 
 ## Async Reporting Flow
 
-1. **Submit**: POST \`/Reports/Submit\` → returns \`ReportRequestId\`
-2. **Poll**: POST \`/Reports/Poll\` → returns \`Status\` + \`ReportDownloadUrl\`
+1. **Submit**: POST \`/GenerateReport/Submit\` → returns \`ReportRequestId\`
+2. **Poll**: POST \`/GenerateReport/Poll\` → returns \`Status\` + \`ReportDownloadUrl\`
 3. **Download**: GET download URL → CSV/TSV data
 
 Statuses: \`Pending\` → \`InProgress\` → \`Success\` | \`Error\`

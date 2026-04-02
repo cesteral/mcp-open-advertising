@@ -16,17 +16,17 @@ const MSADS_RETRY_CONFIG: RetryConfig = {
 };
 
 /**
- * HTTP client for Microsoft Advertising REST API v13.
+ * HTTP client for Microsoft Advertising API v13 JSON endpoints.
  *
  * All requests include 4 auth headers:
- * - AuthenticationToken: OAuth2 access token
+ * - Authorization: OAuth2 access token with Bearer prefix
  * - DeveloperToken: per-app developer token
  * - CustomerId: manager account ID
  * - CustomerAccountId: ad account ID
  *
- * Microsoft Ads REST API patterns:
- * - Most operations use POST (even reads like GetCampaignsByAccountId)
- * - GET is used for some simple lookups
+ * Microsoft Ads JSON API patterns:
+ * - Mutations and deletes post to the collection path, e.g. /Campaigns
+ * - Reads post to query paths, e.g. /Campaigns/QueryByAccountId
  * - Response is plain JSON (no wrapper envelope)
  * - Errors: { TrackingId, Type, Message, ErrorCode }
  */
@@ -87,7 +87,7 @@ export class MsAdsHttpClient {
         getHeaders: async () => {
           const accessToken = await this.authAdapter.getAccessToken();
           return {
-            AuthenticationToken: accessToken,
+            Authorization: `Bearer ${accessToken}`,
             DeveloperToken: this.authAdapter.developerToken,
             CustomerId: this.authAdapter.customerId,
             CustomerAccountId: this.authAdapter.accountId,

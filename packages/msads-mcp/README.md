@@ -1,6 +1,6 @@
 # @cesteral/msads-mcp
 
-Microsoft Advertising MCP Server - Campaign management and reporting via Microsoft Advertising REST API v13.
+Microsoft Advertising MCP Server - campaign management and reporting via Microsoft Advertising API v13 JSON endpoints.
 
 ## Purpose
 
@@ -81,7 +81,7 @@ through the Model Context Protocol.
 
 **Phase: Production-Ready**
 
-All listed tools are fully implemented using Microsoft Advertising REST API v13.
+All listed tools are implemented against the Microsoft Advertising API v13 JSON endpoints.
 
 ## Development
 
@@ -135,19 +135,19 @@ When running in stdio transport mode (e.g., Claude Desktop), set these environme
 
 ### Key Components
 
-- **`MsAdsHttpClient`** (`src/services/msads/msads-http-client.ts`) — HTTP client for Microsoft Advertising REST API v13 with retry on 429/5xx, timeout handling, and OpenTelemetry tracing
-- **`MsAdsService`** (`src/services/msads/msads-service.ts`) — Generic entity CRUD wrapping `MsAdsHttpClient`; routes operations to verb-based endpoints via entity mapping
+- **`MsAdsHttpClient`** (`src/services/msads/msads-http-client.ts`) — HTTP client for Microsoft Advertising API v13 JSON endpoints with retry on 429/5xx, timeout handling, and OpenTelemetry tracing
+- **`MsAdsService`** (`src/services/msads/msads-service.ts`) — Generic entity CRUD wrapping `MsAdsHttpClient`; routes operations to collection and query endpoints via entity mapping
 - **`MsAdsReportingService`** (`src/services/msads/msads-reporting-service.ts`) — Async reporting flow: SubmitGenerateReport, PollGenerateReport, download CSV/TSV
 - **`MsAdsBearerAuthStrategy`** (`src/auth/msads-auth-strategy.ts`) — Extracts OAuth2 token + 3 additional credentials from HTTP headers; validates via Customer Management API
-- **`MsAdsAccessTokenAdapter`** (`src/auth/msads-auth-adapter.ts`) — Holds pre-generated OAuth2 token plus developer token and account identifiers; validates via `GetUser` API call
+- **`MsAdsAccessTokenAdapter`** (`src/auth/msads-auth-adapter.ts`) — Holds pre-generated OAuth2 token plus developer token and account identifiers; validates via the Customer Management user query endpoint
 - **`SessionServiceStore`** — Per-session service instances keyed by session ID (created on connect, cleaned up on close/timeout)
 
 ### Key Gotchas
 
-- **All operations use POST** — Microsoft Ads REST API v13 uses POST for all operations, including reads (e.g., `GetCampaignsByAccountId`). This differs from most REST APIs.
-- **4 auth headers required per request** — Every API call must include `AuthenticationToken` (OAuth2 token), `DeveloperToken` (per-app), `CustomerId` (manager account), and `CustomerAccountId` (ad account).
+- **All operations use POST** — Microsoft Advertising JSON endpoints use POST for both mutations and queries.
+- **4 auth headers required per request** — Every JSON API call must include `Authorization: Bearer <token>`, `DeveloperToken`, `CustomerId`, and `CustomerAccountId`.
 - **No hard delete for most entities** — Use status change (e.g., set status to `Deleted` or `Paused`) rather than expecting a true DELETE operation. The `delete_entity` tool wraps the platform's delete endpoint, but behavior varies by entity type.
-- **Verb-based endpoint routing** — Entity operations map to paths like `/Campaigns/Add`, `/Campaigns/GetByAccountId`, `/Campaigns/Update`, `/Campaigns/Delete` (all POST).
+- **Collection + query routing** — Mutations use collection endpoints such as `/Campaigns`, while reads use query endpoints such as `/Campaigns/QueryByAccountId` and `/Campaigns/QueryByIds`.
 - **Batch limits vary by entity type** — Ads have a limit of 50 per batch, while keywords and ad groups allow up to 1000.
 
 ### Transport

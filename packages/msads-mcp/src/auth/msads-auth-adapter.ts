@@ -7,7 +7,7 @@ import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@ce
 /**
  * Contract for Microsoft Advertising authentication adapters.
  * Microsoft Ads requires 4 credentials per request:
- * - AuthenticationToken (OAuth2 access token)
+ * - Authorization: Bearer <OAuth2 access token>
  * - DeveloperToken (per-app, not per-user)
  * - CustomerId (manager account ID)
  * - CustomerAccountId (ad account ID)
@@ -29,7 +29,7 @@ interface GetUserResponse {
 /**
  * Simple access token adapter — holds a pre-generated Microsoft Ads OAuth2 token
  * plus developer token and account identifiers.
- * Validates via Customer Management API GetUser call.
+ * Validates via the Customer Management user query JSON endpoint.
  */
 export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
   private validated = false;
@@ -55,13 +55,13 @@ export class MsAdsAccessTokenAdapter implements MsAdsAuthAdapter {
     if (this.validated) return;
 
     const response = await fetchWithTimeout(
-      `${this.customerApiBaseUrl}/User/GetUser`,
+      `${this.customerApiBaseUrl}/User/Query`,
       10_000,
       undefined,
       {
         method: "POST",
         headers: {
-          AuthenticationToken: this.accessToken,
+          Authorization: `Bearer ${this.accessToken}`,
           DeveloperToken: this.developerToken,
           "Content-Type": "application/json",
         },

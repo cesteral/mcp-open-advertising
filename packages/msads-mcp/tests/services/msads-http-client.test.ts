@@ -51,11 +51,11 @@ describe("MsAdsHttpClient", () => {
       json: async () => ({ CampaignIds: [111] }),
     } as Response);
 
-    await client.post("/Campaigns/Add", { Campaigns: [{ Name: "Test" }] });
+    await client.post("/Campaigns", { Campaigns: [{ Name: "Test" }] });
 
     const [, , , opts] = mockFetch.mock.calls[0]!;
     const headers = opts?.headers as Record<string, string>;
-    expect(headers.AuthenticationToken).toBe("test-token");
+    expect(headers.Authorization).toBe("Bearer test-token");
     expect(headers.DeveloperToken).toBe("dev-token");
     expect(headers.CustomerId).toBe("cust-123");
     expect(headers.CustomerAccountId).toBe("acct-456");
@@ -67,7 +67,7 @@ describe("MsAdsHttpClient", () => {
       json: async () => ({ Campaigns: [] }),
     } as Response);
 
-    await client.get("/Campaigns/GetByAccountId", { AccountId: "acct-456" });
+    await client.get("/Campaigns/QueryByAccountId", { AccountId: "acct-456" });
 
     const [url] = mockFetch.mock.calls[0]!;
     expect(url).toContain("AccountId=acct-456");
@@ -87,7 +87,7 @@ describe("MsAdsHttpClient", () => {
         json: async () => ({ result: "ok" }),
       } as Response);
 
-    const result = await client.post("/Campaigns/Add", {});
+    const result = await client.post("/Campaigns", {});
     expect(result).toEqual({ result: "ok" });
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
@@ -101,6 +101,6 @@ describe("MsAdsHttpClient", () => {
       headers: new Headers(),
     } as unknown as Response);
 
-    await expect(client.post("/Campaigns/Add", {})).rejects.toThrow("Microsoft Ads API");
+    await expect(client.post("/Campaigns", {})).rejects.toThrow("Microsoft Ads API");
   });
 });

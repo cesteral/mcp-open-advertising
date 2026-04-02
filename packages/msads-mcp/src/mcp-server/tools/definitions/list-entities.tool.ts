@@ -34,6 +34,23 @@ export const ListEntitiesInputSchema = z
       .optional()
       .describe("Additional filters to pass to the API"),
   })
+  .superRefine((data, ctx) => {
+    if (data.entityType === "campaign" && !data.accountId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["accountId"],
+        message: "accountId is required for campaign queries",
+      });
+    }
+
+    if (["adGroup", "ad", "keyword"].includes(data.entityType) && !data.parentId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["parentId"],
+        message: "parentId is required for adGroup, ad, and keyword queries",
+      });
+    }
+  })
   .describe("Parameters for listing Microsoft Ads entities");
 
 export const ListEntitiesOutputSchema = z

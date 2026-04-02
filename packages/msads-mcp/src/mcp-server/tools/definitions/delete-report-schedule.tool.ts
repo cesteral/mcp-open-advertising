@@ -9,7 +9,7 @@ const TOOL_NAME = "msads_delete_report_schedule";
 const TOOL_TITLE = "Delete Microsoft Ads Report Schedule";
 const TOOL_DESCRIPTION = `Delete (cancel) a Microsoft Advertising report schedule.
 
-Note: The Microsoft Advertising REST API v13 does not provide a programmatic endpoint to cancel or delete scheduled reports. Deletion must be performed via the Microsoft Advertising UI at app.ads.microsoft.com → Reports → Scheduled Reports.
+Note: The Microsoft Advertising API v13 JSON endpoints do not provide a programmatic endpoint to cancel or delete scheduled reports. Deletion must be performed via the Microsoft Advertising UI at app.ads.microsoft.com → Reports → Scheduled Reports.
 
 This tool logs the deletion request and returns instructions for manual removal.`;
 

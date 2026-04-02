@@ -39,9 +39,9 @@ type ImportFromGoogleInput = z.infer<typeof ImportFromGoogleInputSchema>;
 type ImportFromGoogleOutput = z.infer<typeof ImportFromGoogleOutputSchema>;
 
 const OPERATION_PATHS: Record<string, string> = {
-  create: "/ImportJobs/Add",
-  getStatus: "/ImportJobs/GetByIds",
-  getResults: "/ImportJobs/GetResults",
+  create: "/ImportJobs",
+  getStatus: "/ImportJobs/QueryByIds",
+  getResults: "/ImportResults/QueryByIds",
 };
 
 export async function importFromGoogleLogic(

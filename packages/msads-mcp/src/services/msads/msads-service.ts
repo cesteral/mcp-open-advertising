@@ -47,8 +47,8 @@ interface MsAdsEntityMap {
 /**
  * Microsoft Ads entity service — generic CRUD wrapping MsAdsHttpClient.
  *
- * Uses entity mapping to route operations to the correct verb-based endpoints.
- * Microsoft Ads REST API uses POST for all operations (even reads).
+ * Uses entity mapping to route operations to the documented collection and query endpoints.
+ * Microsoft Ads JSON endpoints use POST for all operations.
  */
 export class MsAdsService {
   constructor(
@@ -85,19 +85,30 @@ export class MsAdsService {
       this.logger.debug({ entityType, parentId: params.parentId }, "Listing entities by parent");
       raw = await this.httpClient.post(config.getByParentOperation, body, context);
     } else if (config.getByAccountOperation) {
+      if (!params.accountId) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Listing '${entityType}' requires accountId`
+        );
+      }
       const body: Record<string, unknown> = {
         AccountId: Number(params.accountId),
         ...params.filters,
       };
       this.logger.debug({ entityType, accountId: params.accountId }, "Listing entities by account");
       raw = await this.httpClient.post(config.getByAccountOperation, body, context);
+    } else if (config.getByParentOperation) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Listing '${entityType}' requires parentId`
+      );
     } else {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
         entityType === "audience"
-          ? "Use getEntity with specific AudienceIds. Audiences cannot be listed by account in the MS Ads REST API v13."
+          ? "Use getEntity with specific AudienceIds. Audiences cannot be listed by account in the Microsoft Advertising v13 JSON API."
           : entityType === "budget"
-            ? "Use getEntity with specific BudgetIds. Budgets cannot be listed by account in the MS Ads REST API v13."
+            ? "Use getEntity with specific BudgetIds. Budgets cannot be listed by account in the Microsoft Advertising v13 JSON API."
             : `Entity type '${entityType}' does not support listing. Use getEntity with specific IDs.`
       );
     }
@@ -124,6 +135,7 @@ export class MsAdsService {
       [config.idsField]: entityIds.map(Number),
       ...params,
     };
+    this.assertRequiredFields(config.requiredGetByIdsFields, body, entityType, "getEntity");
 
     this.logger.debug({ entityType, entityIds }, "Getting entities by IDs");
     const raw = await this.httpClient.post(config.getByIdsOperation, body, context);
@@ -272,13 +284,14 @@ export class MsAdsService {
       bidField: string;
       newBid: number;
     }>,
+    queryParams: Record<string, unknown> | undefined,
     context?: RequestContext
   ): Promise<unknown> {
     const config = getEntityConfig(entityType);
 
     // Read current entities
     const entityIds = adjustments.map((a) => a.entityId);
-    const { entities: currentEntities } = await this.getEntity(entityType, entityIds, undefined, context);
+    const { entities: currentEntities } = await this.getEntity(entityType, entityIds, queryParams, context);
 
     // Apply bid changes — skip missing entities to prevent data loss
     const updatedEntities = adjustments
@@ -331,5 +344,28 @@ export class MsAdsService {
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────
+
+  private assertRequiredFields(
+    requiredFields: string[] | undefined,
+    body: Record<string, unknown>,
+    entityType: MsAdsEntityType,
+    operation: string
+  ): void {
+    if (!requiredFields || requiredFields.length === 0) {
+      return;
+    }
+
+    const missingFields = requiredFields.filter((field) => {
+      const value = body[field];
+      return value === undefined || value === null || value === "";
+    });
+
+    if (missingFields.length > 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${operation} for '${entityType}' requires ${missingFields.join(", ")} in the request body`
+      );
+    }
+  }
 
 }

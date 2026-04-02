@@ -6,7 +6,7 @@ import type { Resource } from "../types.js";
 export const entityHierarchyResource: Resource = {
   uri: "msads://entity-hierarchy",
   name: "Microsoft Ads Entity Hierarchy",
-  description: "Entity relationships and API operation patterns for Microsoft Advertising REST API v13",
+  description: "Entity relationships and API operation patterns for Microsoft Advertising API v13 JSON endpoints",
   mimeType: "text/markdown",
   getContent: () => `# Microsoft Advertising Entity Hierarchy
 
@@ -25,24 +25,24 @@ Account
 └── Label (organizational tagging)
 \`\`\`
 
-## API Pattern: Verb-Based REST Endpoints
+## API Pattern: JSON Collection And Query Endpoints
 
-Microsoft Ads REST API v13 uses POST for all operations with verb-based paths:
+Microsoft Ads JSON API v13 uses POST for all operations:
 
 | Operation | Pattern | Example |
 |-----------|---------|---------|
-| Create | \`/{Entity}/Add\` | \`/Campaigns/Add\` |
-| Read (by account) | \`/{Entity}/GetByAccountId\` | \`/Campaigns/GetByAccountId\` |
-| Read (by parent) | \`/{Entity}/GetBy{Parent}Id\` | \`/AdGroups/GetByCampaignId\` |
-| Read (by IDs) | \`/{Entity}/GetByIds\` | \`/Campaigns/GetByIds\` |
-| Update | \`/{Entity}/Update\` | \`/Campaigns/Update\` |
-| Delete | \`/{Entity}/Delete\` | \`/Campaigns/Delete\` |
+| Create | \`/{Entity}\` | \`/Campaigns\` |
+| Read (by account) | \`/{Entity}/QueryByAccountId\` | \`/Campaigns/QueryByAccountId\` |
+| Read (by parent) | \`/{Entity}/QueryBy{Parent}Id\` | \`/AdGroups/QueryByCampaignId\` |
+| Read (by IDs) | \`/{Entity}/QueryByIds\` | \`/Campaigns/QueryByIds\` |
+| Update | \`/{Entity}\` | \`/Campaigns\` |
+| Delete | \`/{Entity}\` | \`/Campaigns\` |
 
 ## Auth Headers (all requests)
 
 | Header | Description |
 |--------|-------------|
-| \`AuthenticationToken\` | OAuth2 access token |
+| \`Authorization\` | OAuth2 access token prefixed with \`Bearer \` |
 | \`DeveloperToken\` | Per-app developer token |
 | \`CustomerId\` | Manager account ID |
 | \`CustomerAccountId\` | Ad account ID |

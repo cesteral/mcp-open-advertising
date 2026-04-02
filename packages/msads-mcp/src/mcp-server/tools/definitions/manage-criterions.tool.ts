@@ -45,11 +45,11 @@ type ManageCriterionsOutput = z.infer<typeof ManageCriterionsOutputSchema>;
 function getOperationPath(operation: string, entityLevel: string): string {
   const level = entityLevel === "campaign" ? "Campaign" : "AdGroup";
   const paths: Record<string, string> = {
-    add: `/${level}Criterions/Add`,
-    update: `/${level}Criterions/Update`,
-    delete: `/${level}Criterions/Delete`,
-    getByCampaign: "/CampaignCriterions/GetByCampaignId",
-    getByAdGroup: "/AdGroupCriterions/GetByAdGroupId",
+    add: `/${level}Criterions`,
+    update: `/${level}Criterions`,
+    delete: `/${level}Criterions`,
+    getByCampaign: "/CampaignCriterions/QueryByIds",
+    getByAdGroup: "/AdGroupCriterions/QueryByIds",
   };
   const path = paths[operation];
   if (!path) {

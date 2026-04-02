@@ -37,11 +37,11 @@ describe("MsAdsService", () => {
 
       const result = await service.listEntities("campaign", { accountId: "123" });
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Campaigns/GetByAccountId",
+        "/Campaigns/QueryByAccountId",
         { AccountId: 123 },
         undefined
       );
-      expect(result).toEqual({ Campaigns: [{ Id: 1, Name: "Test Campaign" }] });
+      expect(result).toEqual({ entities: [{ Id: 1, Name: "Test Campaign" }] });
     });
 
     it("lists adGroups by parent campaign ID", async () => {
@@ -51,7 +51,7 @@ describe("MsAdsService", () => {
 
       await service.listEntities("adGroup", { parentId: "456" });
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/AdGroups/GetByCampaignId",
+        "/AdGroups/QueryByCampaignId",
         { CampaignId: 456 },
         undefined
       );
@@ -60,10 +60,14 @@ describe("MsAdsService", () => {
     it("lists keywords by parent ad group ID", async () => {
       await service.listEntities("keyword", { parentId: "789" });
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Keywords/GetByAdGroupId",
+        "/Keywords/QueryByAdGroupId",
         { AdGroupId: 789 },
         undefined
       );
+    });
+
+    it("throws when campaign list is missing accountId", async () => {
+      await expect(service.listEntities("campaign", {})).rejects.toThrow("requires accountId");
     });
 
     it("throws for entity types without list support", async () => {
@@ -79,12 +83,16 @@ describe("MsAdsService", () => {
         Campaigns: [{ Id: 1 }],
       });
 
-      await service.getEntity("campaign", ["1", "2"]);
+      await service.getEntity("campaign", ["1", "2"], { AccountId: 123 });
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Campaigns/GetByIds",
-        expect.objectContaining({ CampaignIds: [1, 2] }),
+        "/Campaigns/QueryByIds",
+        expect.objectContaining({ CampaignIds: [1, 2], AccountId: 123 }),
         undefined
       );
+    });
+
+    it("throws when required query context is missing", async () => {
+      await expect(service.getEntity("campaign", ["1"])).rejects.toThrow("requires AccountId");
     });
   });
 
@@ -96,7 +104,7 @@ describe("MsAdsService", () => {
 
       const data = { AccountId: 123, Campaigns: [{ Name: "New Campaign" }] };
       await service.createEntity("campaign", data);
-      expect(httpClient.post).toHaveBeenCalledWith("/Campaigns/Add", data, undefined);
+      expect(httpClient.post).toHaveBeenCalledWith("/Campaigns", data, undefined);
     });
   });
 
@@ -104,16 +112,16 @@ describe("MsAdsService", () => {
     it("updates an entity via Update operation", async () => {
       const data = { Campaigns: [{ Id: 1, Name: "Updated" }] };
       await service.updateEntity("campaign", data);
-      expect(httpClient.post).toHaveBeenCalledWith("/Campaigns/Update", data, undefined);
+      expect(httpClient.post).toHaveBeenCalledWith("/Campaigns", data, undefined);
     });
   });
 
   describe("deleteEntity", () => {
     it("deletes entities by IDs", async () => {
-      await service.deleteEntity("campaign", ["1", "2"]);
+      await service.deleteEntity("campaign", ["1", "2"], { AccountId: 123 });
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Campaigns/Delete",
-        expect.objectContaining({ CampaignIds: [1, 2] }),
+        "/Campaigns",
+        expect.objectContaining({ CampaignIds: [1, 2], AccountId: 123 }),
         undefined
       );
     });
@@ -125,7 +133,7 @@ describe("MsAdsService", () => {
       await service.bulkCreateEntities("campaign", items);
       expect(httpClient.post).toHaveBeenCalledOnce();
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Campaigns/Add",
+        "/Campaigns",
         { Campaigns: items },
         undefined
       );
@@ -139,12 +147,12 @@ describe("MsAdsService", () => {
       // Should make one call per entity
       expect(httpClient.post).toHaveBeenCalledTimes(2);
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Campaigns/Update",
+        "/Campaigns",
         { Campaigns: [{ Id: 1, Status: "Paused" }] },
         undefined
       );
       expect(httpClient.post).toHaveBeenCalledWith(
-        "/Campaigns/Update",
+        "/Campaigns",
         { Campaigns: [{ Id: 2, Status: "Paused" }] },
         undefined
       );
@@ -181,14 +189,22 @@ describe("MsAdsService", () => {
         })
         .mockResolvedValueOnce({ PartialErrors: null });
 
-      await service.adjustBids("keyword", [
-        { entityId: "1", bidField: "Bid", newBid: 2.0 },
-      ]);
+      await service.adjustBids(
+        "keyword",
+        [{ entityId: "1", bidField: "Bid", newBid: 2.0 }],
+        { AdGroupId: 123 }
+      );
 
       // First call: getByIds, second call: update
       expect(httpClient.post).toHaveBeenCalledTimes(2);
+      expect(httpClient.post).toHaveBeenNthCalledWith(
+        1,
+        "/Keywords/QueryByIds",
+        expect.objectContaining({ KeywordIds: [1], AdGroupId: 123 }),
+        undefined
+      );
       const updateCall = (httpClient.post as ReturnType<typeof vi.fn>).mock.calls[1]!;
-      expect(updateCall[0]).toBe("/Keywords/Update");
+      expect(updateCall[0]).toBe("/Keywords");
       expect(updateCall[1].Keywords[0].Bid).toBe(2.0);
     });
   });
@@ -205,9 +221,9 @@ describe("MsAdsService", () => {
   describe("executeOperation", () => {
     it("consumes msads:write with cost 3", async () => {
       const data = { AdExtensionIds: [1, 2] };
-      await service.executeOperation("/AdExtensions/GetByIds", data);
+      await service.executeOperation("/AdExtensions/QueryByIds", data);
       expect(rateLimiter.consume).toHaveBeenCalledWith("msads:write", 3);
-      expect(httpClient.post).toHaveBeenCalledWith("/AdExtensions/GetByIds", data, undefined);
+      expect(httpClient.post).toHaveBeenCalledWith("/AdExtensions/QueryByIds", data, undefined);
     });
   });
 });

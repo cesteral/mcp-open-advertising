@@ -17,6 +17,13 @@ export const AdjustBidsInputSchema = z
     entityType: z
       .enum(getEntityTypeEnum())
       .describe("Entity type (typically 'keyword' or 'adGroup')"),
+    scope: z
+      .object({
+        campaignId: z.string().optional().describe("CampaignId required when adjusting ad group bids"),
+        adGroupId: z.string().optional().describe("AdGroupId required when adjusting keyword bids"),
+      })
+      .optional()
+      .describe("Additional query context required by Microsoft Advertising read-before-write operations"),
     adjustments: z
       .array(
         z.object({
@@ -48,10 +55,19 @@ export async function adjustBidsLogic(
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
+  const queryParams: Record<string, unknown> = {};
+
+  if (input.scope?.campaignId) {
+    queryParams.CampaignId = Number(input.scope.campaignId);
+  }
+  if (input.scope?.adGroupId) {
+    queryParams.AdGroupId = Number(input.scope.adGroupId);
+  }
 
   const result = (await msadsService.adjustBids(
     input.entityType as MsAdsEntityType,
     input.adjustments,
+    queryParams,
     context
   )) as Record<string, unknown>;
 
@@ -89,6 +105,7 @@ export const adjustBidsTool = {
       label: "Adjust keyword bids",
       input: {
         entityType: "keyword",
+        scope: { adGroupId: "333" },
         adjustments: [
           { entityId: "111", bidField: "Bid", newBid: 1.50 },
           { entityId: "222", bidField: "Bid", newBid: 2.00 },

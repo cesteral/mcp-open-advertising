@@ -61,14 +61,14 @@ export async function createMcpServer(
     {
       name: "msads-mcp",
       version: packageJson.version,
-      description: "Microsoft Advertising (Bing Ads) campaign management and reporting via REST API v13. Supports campaigns, ad groups, ads, keywords, budgets, ad extensions, audiences, labels, and Google Ads import.",
+      description: "Microsoft Advertising (Bing Ads) campaign management and reporting via Microsoft Advertising API v13 JSON endpoints. Supports campaigns, ad groups, ads, keywords, budgets, ad extensions, audiences, labels, and Google Ads import.",
     },
     {
       capabilities: {
         logging: {},
       },
       instructions:
-        "Microsoft Advertising campaign management and reporting server. Supports Search, Shopping, Audience, and Performance Max campaigns with async reporting, targeting criterions, bid adjustments, ad extensions, and Google Ads import via REST API v13. " +
+        "Microsoft Advertising campaign management and reporting server. Supports Search, Shopping, Audience, and Performance Max campaigns with async reporting, targeting criterions, bid adjustments, ad extensions, and Google Ads import via Microsoft Advertising API v13 JSON endpoints. " +
         "Use msads_list_accounts to discover accounts, msads_list_entities to browse entities. " +
         "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
     }

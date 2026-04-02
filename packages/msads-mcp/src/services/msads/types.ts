@@ -2,12 +2,12 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Microsoft Advertising REST API v13 entity type definitions
+ * Microsoft Advertising API v13 JSON entity type definitions
  * Hand-crafted from Microsoft Advertising API v13 reference
  * Source: https://learn.microsoft.com/en-us/advertising/bingads-13/campaign-management-service/
  *
- * Note: Microsoft Advertising API uses verb-based POST endpoints:
- * e.g., POST /CampaignManagement/v13/Campaigns/GetCampaignsByAccountId
+ * Note: Microsoft Advertising JSON endpoints use collection paths for writes and query paths for reads:
+ * e.g., POST /CampaignManagement/v13/Campaigns/QueryByAccountId
  */
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -232,8 +232,8 @@ export interface MsAdsLabel {
 // ─── API Response wrappers ────────────────────────────────────────────────────
 
 /**
- * MS Ads uses verb-based responses like:
- * { GetCampaignsByAccountIdResponse: { Campaigns: Campaign[] } }
+ * MS Ads JSON responses are top-level objects such as:
+ * { Campaigns: Campaign[] }
  */
 export interface MsAdsServiceResponse<T> {
   [key: string]: T | string | undefined;

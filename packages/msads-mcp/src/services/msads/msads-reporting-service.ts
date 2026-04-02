@@ -72,7 +72,7 @@ export class MsAdsReportingService {
     this.logger.info({ reportType: config.reportType }, "Submitting report");
 
     const response = (await this.httpClient.post(
-      "/Reports/Submit",
+      "/GenerateReport/Submit",
       body,
       context
     )) as SubmitReportResponse;
@@ -127,7 +127,7 @@ export class MsAdsReportingService {
   ): Promise<{ status: string; downloadUrl?: string }> {
     await this.rateLimiter.consume(MSADS_READ_KEY);
     const response = (await this.httpClient.post(
-      "/Reports/Poll",
+      "/GenerateReport/Poll",
       { ReportRequestId: reportRequestId },
       context
     )) as PollReportResponse;
@@ -187,16 +187,19 @@ export class MsAdsReportingService {
   ): Promise<{ scheduleId: string; scheduleName: string }> {
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
 
+    const baseRequest = this.buildReportRequest(config).ReportRequest as Record<string, unknown>;
     const body = {
-      ...this.buildReportRequest(config),
-      ReportName: config.scheduleName,
-      Schedule: config.schedule,
+      ReportRequest: {
+        ...baseRequest,
+        ReportName: config.scheduleName,
+        Schedule: config.schedule,
+      },
     };
 
     this.logger.info({ scheduleName: config.scheduleName }, "Creating MS Ads report schedule");
 
     const response = (await this.httpClient.post(
-      "/Reports/Submit",
+      "/GenerateReport/Submit",
       body,
       context
     )) as SubmitReportResponse;
@@ -237,7 +240,7 @@ export class MsAdsReportingService {
       { scheduleId },
       "MS Ads report schedule deletion requested — cancel via Microsoft Advertising UI"
     );
-    // MS Ads REST API v13 does not expose a delete/cancel endpoint for scheduled reports.
+    // The Microsoft Advertising v13 JSON API does not expose a delete/cancel endpoint for scheduled reports.
     // Deletion must be performed via the Microsoft Advertising web UI.
   }
 
