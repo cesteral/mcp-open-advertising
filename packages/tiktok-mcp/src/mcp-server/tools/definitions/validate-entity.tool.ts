@@ -43,23 +43,16 @@ reasons (e.g., invalid objective/placement combinations).`;
 const REQUIRED_FIELDS_CREATE: Record<TikTokEntityType, FieldRule[]> = {
   campaign: [
     { field: "campaign_name", expectedType: "string" },
-    { field: "objective_type", expectedType: "string", hint: "e.g., TRAFFIC, APP_INSTALLS, CONVERSIONS" },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
-    { field: "budget", expectedType: "number", hint: "budget amount in account currency" },
+    { field: "objective_type", expectedType: "string", hint: "e.g., TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS" },
   ],
   adGroup: [
     { field: "campaign_id", expectedType: "string" },
     { field: "adgroup_name", expectedType: "string" },
-    { field: "placement_type", expectedType: "string", hint: "e.g., PLACEMENT_TYPE_NORMAL, PLACEMENT_TYPE_SEARCH" },
-    { field: "budget_mode", expectedType: "string", hint: "BUDGET_MODE_DAY or BUDGET_MODE_TOTAL" },
-    { field: "budget", expectedType: "number" },
-    { field: "schedule_type", expectedType: "string", hint: "SCHEDULE_START_END or SCHEDULE_ALWAYS" },
-    { field: "optimize_goal", expectedType: "string", hint: "e.g., CLICK, CONVERT, SHOW, REACH" },
+    { field: "placements", expectedType: "array", hint: "e.g., ['PLACEMENT_TIKTOK'] when TikTok requires placement context" },
   ],
   ad: [
     { field: "adgroup_id", expectedType: "string" },
-    { field: "ad_name", expectedType: "string" },
-    { field: "creative_type", expectedType: "string", hint: "e.g., SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL" },
+    { field: "creatives", expectedType: "array", hint: "TikTok AdCreateBody requires creatives[]" },
   ],
   creative: [
     { field: "display_name", expectedType: "string" },
@@ -69,7 +62,7 @@ const REQUIRED_FIELDS_CREATE: Record<TikTokEntityType, FieldRule[]> = {
 /** Fields that are always read-only and cannot be set via the API. */
 const READ_ONLY_FIELDS = [
   "campaign_id", "adgroup_id", "ad_id", "creative_id",
-  "created_time", "modify_time",
+  "create_time", "modify_time",
 ];
 
 // ---------------------------------------------------------------------------
@@ -131,8 +124,8 @@ export async function validateEntityLogic(
 
     // Ad-specific: creative requires at least one of image_ids or video_id
     if (entityType === "ad") {
-      if (!data.image_ids && !data.video_id) {
-        warnings.push('Ad creative requires either "image_ids" (array) or "video_id" (string)');
+      if (!Array.isArray(data.creatives) || data.creatives.length === 0) {
+        errors.push('Field "creatives" must be a non-empty array for ad creation');
       }
     }
   }

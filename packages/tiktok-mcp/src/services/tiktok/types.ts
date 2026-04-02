@@ -21,13 +21,13 @@ export type TikTokCampaignStatus =
 export type TikTokObjectiveType =
   | "REACH"
   | "TRAFFIC"
-  | "APP_INSTALLS"
+  | "APP_PROMOTION"
   | "VIDEO_VIEWS"
   | "LEAD_GENERATION"
-  | "CONVERSIONS"
-  | "CATALOG_SALES"
-  | "COMMUNITY_INTERACTION"
-  | "PRODUCT_SALES";
+  | "ENGAGEMENT"
+  | "WEB_CONVERSIONS"
+  | "PRODUCT_SALES"
+  | "RF_REACH";
 
 export type TikTokBudgetMode =
   | "BUDGET_MODE_DAY"
@@ -187,7 +187,8 @@ export interface CreateTikTokCampaignRequest {
   objective_type: TikTokObjectiveType;
   budget?: number;
   budget_mode?: TikTokBudgetMode;
-  status?: TikTokCampaignStatus;
+  app_promotion_type?: string;
+  operation_status?: "ENABLE" | "DISABLE";
 }
 
 export interface UpdateTikTokCampaignRequest {
@@ -195,15 +196,21 @@ export interface UpdateTikTokCampaignRequest {
   advertiser_id: string;
   campaign_name?: string;
   budget?: number;
-  status?: TikTokCampaignStatus;
+  po_number?: string;
+  special_industries?: string[];
 }
 
 export interface CreateTikTokAdGroupRequest {
   adgroup_name: string;
   campaign_id: string;
   advertiser_id: string;
-  optimization_goal: TikTokOptimizationGoal;
-  billing_event: TikTokBillingEvent;
+  placement_type?: string;
+  placements?: string[];
+  schedule_type?: string;
+  pacing?: string;
+  optimization_goal?: TikTokOptimizationGoal;
+  billing_event?: TikTokBillingEvent;
+  operation_status?: "ENABLE" | "DISABLE";
   bid_price?: number;
   budget?: number;
   budget_mode?: TikTokBudgetMode;

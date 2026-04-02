@@ -14,20 +14,20 @@ const ENTITY_SCHEMA_CONTENT: Record<TikTokEntityType, string> = {
 | Field | Type | Description |
 |-------|------|-------------|
 | campaign_name | string | Campaign display name (max 512 chars) |
-| objective_type | string | Campaign objective: TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS, LEAD_GENERATION, CATALOG_SALES, COMMUNITY_INTERACTION |
-| budget_mode | string | BUDGET_MODE_DAY (daily) or BUDGET_MODE_TOTAL (lifetime) |
-| budget | number | Budget in account currency |
+| objective_type | string | Campaign objective such as TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS, VIDEO_VIEWS, LEAD_GENERATION |
 
 ## Optional Fields
 | Field | Type | Description |
 |-------|------|-------------|
-| status | string | CAMPAIGN_STATUS_ENABLE or CAMPAIGN_STATUS_DISABLE (default: CAMPAIGN_STATUS_ENABLE) |
+| operation_status | string | ENABLE or DISABLE |
+| budget_mode | string | BUDGET_MODE_DAY (daily) or BUDGET_MODE_TOTAL (lifetime) |
+| budget | number | Budget in account currency |
 | roas_bid | number | Target ROAS (for ROAS optimization) |
 | is_smart_performance_campaign | boolean | Enable smart performance campaign |
-| app_promotion_type | string | DOWNLOAD_FROM_MARKET or OPEN_URL (for app objectives) |
+| app_promotion_type | string | App-promotion mode for APP_PROMOTION campaigns |
 
 ## Read-Only Fields
-campaign_id, created_time, modify_time, advertiser_id
+campaign_id, create_time, modify_time, advertiser_id
 `,
 
   adGroup: `# TikTok Ad Group Fields
@@ -37,19 +37,20 @@ campaign_id, created_time, modify_time, advertiser_id
 |-------|------|-------------|
 | campaign_id | string | Parent campaign ID |
 | adgroup_name | string | Ad group display name |
-| placement_type | string | PLACEMENT_TYPE_NORMAL (auto-placement) or PLACEMENT_TYPE_SEARCH |
-| budget_mode | string | BUDGET_MODE_DAY or BUDGET_MODE_TOTAL |
-| budget | number | Budget in account currency |
-| schedule_type | string | SCHEDULE_START_END or SCHEDULE_ALWAYS |
-| optimize_goal | string | CLICK, CONVERT, SHOW, REACH, VIDEO_VIEW, LEAD, APP_INSTALL |
+| placements | array | Placement enums such as PLACEMENT_TIKTOK |
+| schedule_type | string | Schedule mode when required by TikTok |
+| pacing | string | Pacing mode when required by TikTok |
 
 ## Optional Fields
 | Field | Type | Description |
 |-------|------|-------------|
+| budget_mode | string | BUDGET_MODE_DAY or BUDGET_MODE_TOTAL |
+| budget | number | Budget in account currency |
 | schedule_start_time | string | Start time (YYYY-MM-DD HH:mm:ss) — required if schedule_type=SCHEDULE_START_END |
 | schedule_end_time | string | End time (YYYY-MM-DD HH:mm:ss) |
 | bid_price | number | Bid price in account currency |
-| bid_type | string | BID_TYPE_NO_BID, BID_TYPE_CUSTOM, BID_TYPE_MAX_CONVERSION |
+| optimization_goal | string | Optimization goal such as CLICK or APP_INSTALL |
+| billing_event | string | Billing event such as CPC, CPM, OCPM |
 | age | array | Age ranges: AGE_13_17, AGE_18_24, AGE_25_34, AGE_35_44, AGE_45_54, AGE_55_100 |
 | gender | array | GENDER_UNLIMITED, GENDER_MALE, GENDER_FEMALE |
 | location_ids | array | Array of location IDs (country codes or region IDs) |
@@ -60,7 +61,7 @@ campaign_id, created_time, modify_time, advertiser_id
 | operating_systems | array | IOS or ANDROID |
 
 ## Read-Only Fields
-adgroup_id, campaign_id (inherited), created_time, modify_time
+ adgroup_id, campaign_id (inherited), create_time, modify_time
 `,
 
   ad: `# TikTok Ad Fields
@@ -69,14 +70,14 @@ adgroup_id, campaign_id (inherited), created_time, modify_time
 | Field | Type | Description |
 |-------|------|-------------|
 | adgroup_id | string | Parent ad group ID |
-| ad_name | string | Ad display name |
-| creative_type | string | SINGLE_VIDEO, SINGLE_IMAGE, CAROUSEL |
+| creatives | array | TikTok creatives array payload required by AdCreateBody |
 
-## Creative Fields (one required)
+## Common Creative Fields
 | Field | Type | Description |
 |-------|------|-------------|
-| video_id | string | Video ID from TikTok Creative Library |
-| image_ids | array | Array of image IDs (for image/carousel ads) |
+| creatives[].ad_name | string | Ad display name |
+| creatives[].video_id | string | Video ID from TikTok Creative Library |
+| creatives[].image_ids | array | Array of image IDs (for image-based ads) |
 
 ## Optional Creative Fields
 | Field | Type | Description |
@@ -87,10 +88,10 @@ adgroup_id, campaign_id (inherited), created_time, modify_time
 | display_name | string | Display brand name |
 | profile_image_url | string | Brand profile image URL |
 | call_to_action | string | CTA text: LEARN_MORE, SHOP_NOW, DOWNLOAD, SIGN_UP, etc. |
-| status | string | AD_STATUS_ENABLE or AD_STATUS_DISABLE |
+| patch_update | boolean | Optional partial-update behavior on update |
 
 ## Read-Only Fields
-ad_id, adgroup_id (inherited), created_time, modify_time
+ad_id, adgroup_id (inherited), create_time, modify_time
 `,
 
   creative: `# TikTok Creative Fields

@@ -29,7 +29,7 @@ export const ListEntitiesInputSchema = z
     filters: z
       .record(z.unknown())
       .optional()
-      .describe("Optional filter criteria (e.g., { status: 'CAMPAIGN_STATUS_ENABLE' })"),
+      .describe("Optional TikTok filtering object (for example { primary_status: 'STATUS_ALL' } or { campaign_ids: ['123'] })"),
     page: z
       .number()
       .int()
@@ -127,7 +127,7 @@ export const listEntitiesTool = {
       input: {
         entityType: "campaign",
         advertiserId: "1234567890",
-        filters: { status: "CAMPAIGN_STATUS_ENABLE" },
+        filters: { primary_status: "STATUS_ALL" },
         page: 1,
         pageSize: 10,
       },

@@ -49,7 +49,7 @@ Fetch these resources for detailed schema information:
 | \`insights-reference://all\` | Metrics, breakdowns, date presets |
 | \`targeting-reference://all\` | Targeting spec structure |
 
-## Tool Categories
+## Tool Categories (25 tools)
 
 ### Read Operations
 - \`meta_list_ad_accounts\` — Discover accessible accounts
@@ -64,6 +64,9 @@ Fetch these resources for detailed schema information:
 ### Insights
 - \`meta_get_insights\` — Performance metrics
 - \`meta_get_insights_breakdowns\` — Metrics with dimensional breakdowns
+- \`meta_submit_report\` — Submit async insights report job
+- \`meta_check_report_status\` — Poll async report job status
+- \`meta_download_report\` — Download async report results
 
 ### Bulk Operations
 - \`meta_bulk_update_status\` — Batch status updates
@@ -80,6 +83,7 @@ Fetch these resources for detailed schema information:
 - \`meta_get_delivery_estimate\` — Audience size estimation (reachestimate with delivery_estimate fallback)
 - \`meta_get_ad_preview\` — Ad preview HTML
 - \`meta_manage_budget_schedule\` — Create/list budget schedules for high-demand periods
+- \`meta_get_pacing_status\` — Calculate campaign pacing from spend, budget, and flight dates
 
 ### Media Uploads
 - \`meta_upload_image\` — Upload image from URL to ad images library (returns imageHash)

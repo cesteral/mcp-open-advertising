@@ -17,6 +17,8 @@
 import { createHash } from "crypto";
 import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
 
+const DEFAULT_META_GRAPH_API_BASE_URL = "https://graph.facebook.com/v24.0";
+
 /**
  * Contract for Meta authentication adapters.
  */
@@ -36,7 +38,7 @@ export class MetaAccessTokenAdapter implements MetaAuthAdapter {
 
   constructor(
     private readonly accessToken: string,
-    private readonly baseUrl: string = "https://graph.facebook.com/v22.0"
+    private readonly baseUrl: string = DEFAULT_META_GRAPH_API_BASE_URL
   ) {}
 
   get userId(): string {
@@ -126,7 +128,7 @@ export class MetaRefreshTokenAdapter implements MetaAuthAdapter {
   constructor(
     private readonly initialToken: string,
     private readonly appCredentials: MetaAppCredentials,
-    private readonly baseUrl: string = "https://graph.facebook.com/v22.0"
+    private readonly baseUrl: string = DEFAULT_META_GRAPH_API_BASE_URL
   ) {}
 
   get userId(): string {

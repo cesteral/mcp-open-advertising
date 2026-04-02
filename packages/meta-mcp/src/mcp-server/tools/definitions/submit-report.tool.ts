@@ -55,6 +55,15 @@ export const SubmitReportInputSchema = z
       .optional()
       .describe("Breakdown dimensions (e.g., ['age', 'gender', 'country'])"),
   })
+  .superRefine((val, ctx) => {
+    if (val.datePreset && val.timeRange) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["timeRange"],
+        message: "Cannot specify both datePreset and timeRange",
+      });
+    }
+  })
   .describe("Parameters for submitting a Meta Ads async insights report");
 
 export const SubmitReportOutputSchema = z

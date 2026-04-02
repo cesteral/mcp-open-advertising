@@ -74,7 +74,7 @@ describe("getReportLogic", () => {
     );
   });
 
-  it("strips name/type/criteria from additionalConfig (explicit params take precedence)", async () => {
+  it("uses reachCriteria for REACH reports", async () => {
     mockState.cm360ReportingService.runReport.mockResolvedValue({
       reportId: "r1",
       fileId: "f1",
@@ -84,12 +84,13 @@ describe("getReportLogic", () => {
     await getReportLogic(
       {
         profileId: "123",
-        name: "My Report",
+        name: "Reach Report",
         type: "REACH",
+        reachCriteria: { metricNames: ["impressions"] },
         additionalConfig: {
           name: "Should Be Stripped",
           type: "Should Be Stripped",
-          criteria: { should: "be stripped" },
+          reachCriteria: { should: "be stripped" },
           format: "CSV",
         },
       },
@@ -97,10 +98,37 @@ describe("getReportLogic", () => {
     );
 
     const calledConfig = mockState.cm360ReportingService.runReport.mock.calls[0][1];
-    expect(calledConfig.name).toBe("My Report");
+    expect(calledConfig.name).toBe("Reach Report");
     expect(calledConfig.type).toBe("REACH");
     expect(calledConfig.criteria).toBeUndefined();
+    expect(calledConfig.reachCriteria).toEqual({ metricNames: ["impressions"] });
     expect(calledConfig.format).toBe("CSV");
+  });
+
+  it("injects datePreset into the matching criteria field", async () => {
+    mockState.cm360ReportingService.runReport.mockResolvedValue({
+      reportId: "r1",
+      fileId: "f1",
+      file: {},
+    });
+
+    await getReportLogic(
+      {
+        profileId: "123",
+        name: "Floodlight Report",
+        type: "FLOODLIGHT",
+        datePreset: "LAST_7_DAYS",
+        floodlightCriteria: { metricNames: ["floodlightRevenue"] },
+      },
+      mockContext
+    );
+
+    const calledConfig = mockState.cm360ReportingService.runReport.mock.calls[0][1];
+    expect(calledConfig.floodlightCriteria.metricNames).toEqual(["floodlightRevenue"]);
+    expect(calledConfig.floodlightCriteria.dateRange).toEqual({
+      startDate: expect.any(String),
+      endDate: expect.any(String),
+    });
   });
 
   it("returns reportId, fileId, file, downloadUrl", async () => {
@@ -162,7 +190,13 @@ describe("getReportLogic", () => {
     });
 
     await getReportLogic(
-      { profileId: "123", name: "Test", type: "FLOODLIGHT", additionalConfig: {} },
+      {
+        profileId: "123",
+        name: "Test",
+        type: "FLOODLIGHT",
+        floodlightCriteria: { metricNames: ["floodlightRevenue"] },
+        additionalConfig: {},
+      },
       mockContext
     );
 
@@ -226,7 +260,7 @@ describe("getReportResponseFormatter", () => {
 
 describe("GetReportInputSchema", () => {
   it("accepts all report types", () => {
-    const types = ["STANDARD", "REACH", "PATH_TO_CONVERSION", "CROSS_DIMENSION_REACH", "FLOODLIGHT"];
+    const types = ["STANDARD", "REACH", "PATH_TO_CONVERSION", "CROSS_MEDIA_REACH", "FLOODLIGHT"];
 
     for (const type of types) {
       const result = GetReportInputSchema.safeParse({
@@ -263,9 +297,28 @@ describe("GetReportInputSchema", () => {
       type: "STANDARD",
     });
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.criteria).toBeUndefined();
-      expect(result.data.additionalConfig).toBeUndefined();
-    }
+  });
+
+  it("rejects criteria on non-standard report types", () => {
+    const result = GetReportInputSchema.safeParse({
+      profileId: "123",
+      name: "Test",
+      type: "FLOODLIGHT",
+      criteria: { metricNames: ["floodlightRevenue"] },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts crossMediaReachCriteria for CROSS_MEDIA_REACH", () => {
+    const result = GetReportInputSchema.safeParse({
+      profileId: "123",
+      name: "Test",
+      type: "CROSS_MEDIA_REACH",
+      crossMediaReachCriteria: {
+        dimensions: [{ name: "campaign" }],
+        metricNames: ["uniqueReach"],
+      },
+    });
+    expect(result.success).toBe(true);
   });
 });

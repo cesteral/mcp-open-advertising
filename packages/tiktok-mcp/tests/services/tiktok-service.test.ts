@@ -183,6 +183,13 @@ describe("TikTokService", () => {
       const result = await service.getEntity("campaign", "1800000001");
       expect(result).toEqual(mockEntity);
       expect(result.campaign_name).toBe("Test");
+      expect(mockGet).toHaveBeenCalledWith(
+        "/open_api/v1.3/campaign/get/",
+        expect.objectContaining({
+          filtering: JSON.stringify({ campaign_ids: ["1800000001"] }),
+        }),
+        undefined
+      );
     });
 
     it("throws when entity not found", async () => {
@@ -261,6 +268,62 @@ describe("TikTokService", () => {
         previousBid: 1.5,
         newBid: 2.25,
       });
+    });
+  });
+
+  describe("targeting tools", () => {
+    it("uses official tool targeting search endpoint", async () => {
+      mockPost.mockResolvedValueOnce({ list: [{ geo_id: "1", name: "Stockholm" }] });
+
+      const result = await service.searchTargeting({
+        keyword: "stockholm",
+        scene: "GEO",
+        placements: ["PLACEMENT_TIKTOK"],
+        objective_type: "TRAFFIC",
+      });
+
+      expect(mockPost).toHaveBeenCalledWith(
+        "/open_api/v1.3/tool/targeting/search/",
+        {
+          keyword: "stockholm",
+          scene: "GEO",
+          placements: ["PLACEMENT_TIKTOK"],
+          objective_type: "TRAFFIC",
+        },
+        undefined
+      );
+      expect(result).toEqual({ list: [{ geo_id: "1", name: "Stockholm" }] });
+    });
+
+    it("dispatches language options to the official language endpoint", async () => {
+      mockGet.mockResolvedValueOnce({ list: [{ code: "en", name: "English" }] });
+
+      const result = await service.getTargetingOptions("LANGUAGE", {});
+
+      expect(mockGet).toHaveBeenCalledWith(
+        "/open_api/v1.3/tool/language/",
+        {},
+        undefined
+      );
+      expect(result).toEqual({ list: [{ code: "en", name: "English" }] });
+    });
+
+    it("dispatches location options to the official region endpoint", async () => {
+      mockGet.mockResolvedValueOnce({ list: [{ location_id: "6252001", name: "United States" }] });
+
+      await service.getTargetingOptions("LOCATION", {
+        placements: ["PLACEMENT_TIKTOK"],
+        objective_type: "TRAFFIC",
+      });
+
+      expect(mockGet).toHaveBeenCalledWith(
+        "/open_api/v1.3/tool/region/",
+        {
+          placements: JSON.stringify(["PLACEMENT_TIKTOK"]),
+          objective_type: "TRAFFIC",
+        },
+        undefined
+      );
     });
   });
 });

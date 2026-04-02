@@ -133,9 +133,11 @@ export class TikTokService {
 
     const config = getEntityConfig(entityType);
     const params: Record<string, string> = {
-      [config.idsField]: JSON.stringify([entityId]),
       page_size: "1",
       fields: JSON.stringify(config.defaultFields),
+      filtering: JSON.stringify({
+        [config.idsField]: [entityId],
+      }),
     };
 
     const result = (await this.httpClient.get(
@@ -364,37 +366,41 @@ export class TikTokService {
   // ─── Targeting ───────────────────────────────────────────────────
 
   async searchTargeting(
-    targetingType: string,
-    query?: string,
-    limit = 20,
+    criteria: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`tiktok:default`);
 
-    const params: Record<string, string> = {
-      targeting_type: targetingType,
-      count: String(limit),
-    };
-
-    if (query) {
-      params.keyword = query;
-    }
-
-    return this.httpClient.get(`/open_api/${this.apiVersion}/search/targeting/`, params, context);
+    return this.httpClient.post(`/open_api/${this.apiVersion}/tool/targeting/search/`, criteria, context);
   }
 
   async getTargetingOptions(
-    targetingType?: string,
+    optionType: string,
+    params: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
     await this.rateLimiter.consume(`tiktok:default`);
 
-    const params: Record<string, string> = {};
-    if (targetingType) {
-      params.objective_type = targetingType;
+    switch (optionType) {
+      case "ACTION_CATEGORY":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/action_category/`, this.stringifyParams(params), context);
+      case "CARRIER":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/carrier/`, this.stringifyParams(params), context);
+      case "DEVICE_MODEL":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/device_model/`, this.stringifyParams(params), context);
+      case "INTEREST_CATEGORY":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/interest_category/`, this.stringifyParams(params), context);
+      case "INTEREST_KEYWORD":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/interest_keyword/recommend/`, this.stringifyParams(params), context);
+      case "LANGUAGE":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/language/`, this.stringifyParams(params), context);
+      case "LOCATION":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/region/`, this.stringifyParams(params), context);
+      case "ISP":
+        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/targeting/list/`, this.stringifyParams(params), context);
+      default:
+        throw new Error(`Unsupported targeting option type: ${optionType}`);
     }
-
-    return this.httpClient.get(`/open_api/${this.apiVersion}/targeting/list/`, params, context);
   }
 
   // ─── Audience Estimate ──────────────────────────────────────────
@@ -429,5 +435,13 @@ export class TikTokService {
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────
+
+  private stringifyParams(params: Record<string, unknown>): Record<string, string> {
+    return Object.fromEntries(
+      Object.entries(params)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)])
+    );
+  }
 
 }

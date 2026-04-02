@@ -31,9 +31,10 @@ const ENTITY_EXAMPLE_CONTENT: Record<TikTokEntityType, string> = {
   "advertiserId": "1234567890",
   "data": {
     "campaign_name": "App Install Q1 2026",
-    "objective_type": "APP_INSTALLS",
+    "objective_type": "APP_PROMOTION",
     "budget_mode": "BUDGET_MODE_TOTAL",
-    "budget": 5000
+    "budget": 5000,
+    "app_promotion_type": "APP_INSTALL"
   }
 }
 \`\`\`
@@ -61,14 +62,14 @@ const ENTITY_EXAMPLE_CONTENT: Record<TikTokEntityType, string> = {
   "data": {
     "campaign_id": "1800123456789",
     "adgroup_name": "US Gaming 18-34",
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
+    "placements": ["PLACEMENT_TIKTOK"],
     "budget_mode": "BUDGET_MODE_DAY",
     "budget": 50,
     "schedule_type": "SCHEDULE_START_END",
+    "pacing": "PACING_MODE_SMOOTH",
     "schedule_start_time": "2026-03-01 00:00:00",
     "schedule_end_time": "2026-03-31 23:59:59",
-    "optimize_goal": "CLICK",
-    "bid_type": "BID_TYPE_CUSTOM",
+    "optimization_goal": "CLICK",
     "bid_price": 0.5,
     "age": ["AGE_18_24", "AGE_25_34"],
     "gender": ["GENDER_UNLIMITED"],
@@ -86,11 +87,11 @@ const ENTITY_EXAMPLE_CONTENT: Record<TikTokEntityType, string> = {
   "data": {
     "campaign_id": "1800123456789",
     "adgroup_name": "Retargeting - Website Visitors",
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
+    "placements": ["PLACEMENT_TIKTOK"],
     "budget_mode": "BUDGET_MODE_DAY",
     "budget": 30,
     "schedule_type": "SCHEDULE_ALWAYS",
-    "optimize_goal": "CONVERT"
+    "optimization_goal": "CLICK"
   }
 }
 \`\`\`
@@ -105,12 +106,14 @@ const ENTITY_EXAMPLE_CONTENT: Record<TikTokEntityType, string> = {
   "advertiserId": "1234567890",
   "data": {
     "adgroup_id": "1700123456789",
-    "ad_name": "Summer Sale Video Ad",
-    "creative_type": "SINGLE_VIDEO",
-    "video_id": "v0200fg10000cekdqpbc77ue1tvq1ns0",
-    "ad_text": "Shop our Summer Sale — up to 50% off!",
-    "call_to_action": "SHOP_NOW",
-    "landing_page_url": "https://example.com/summer-sale"
+    "creatives": [
+      {
+        "ad_name": "Summer Sale Video Ad",
+        "video_id": "v0200fg10000cekdqpbc77ue1tvq1ns0",
+        "call_to_action": "SHOP_NOW",
+        "landing_page_url": "https://example.com/summer-sale"
+      }
+    ]
   }
 }
 \`\`\`
@@ -122,12 +125,14 @@ const ENTITY_EXAMPLE_CONTENT: Record<TikTokEntityType, string> = {
   "advertiserId": "1234567890",
   "data": {
     "adgroup_id": "1700123456789",
-    "ad_name": "Product Banner Ad",
-    "creative_type": "SINGLE_IMAGE",
-    "image_ids": ["imt0000100000011abc123"],
-    "ad_text": "Discover our new collection",
-    "call_to_action": "LEARN_MORE",
-    "landing_page_url": "https://example.com/new-arrivals"
+    "creatives": [
+      {
+        "ad_name": "Product Banner Ad",
+        "image_ids": ["imt0000100000011abc123"],
+        "call_to_action": "LEARN_MORE",
+        "landing_page_url": "https://example.com/new-arrivals"
+      }
+    ]
   }
 }
 \`\`\`

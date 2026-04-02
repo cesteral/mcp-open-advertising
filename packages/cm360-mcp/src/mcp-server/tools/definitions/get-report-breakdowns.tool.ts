@@ -3,9 +3,18 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import {
+  buildTypedReportConfig,
+  CM360DatePresetSchema,
+  CM360ReportTypeSchema,
+  ensureReportSupportsBreakdowns,
+  genericCriteriaSchema,
+  getReportCriteriaFromConfig,
+  validateTypedCriteriaUsage,
+} from "../utils/report-config.js";
+import type { CM360ReportConfig } from "../../../services/cm360/cm360-reporting-service.js";
 
 const TOOL_NAME = "cm360_get_report_breakdowns";
 const TOOL_TITLE = "Get CM360 Report with Breakdowns";
@@ -30,27 +39,42 @@ export const GetReportBreakdownsInputSchema = z
     name: z
       .string()
       .describe("Name for the report"),
-    type: z
-      .enum(["STANDARD", "REACH", "PATH_TO_CONVERSION", "CROSS_DIMENSION_REACH", "FLOODLIGHT"])
-      .describe("Report type"),
+    type: CM360ReportTypeSchema.describe("Report type"),
     breakdownDimensions: z
       .array(z.string().min(1))
       .min(1)
       .describe(
         "Dimension names to break down by (e.g., ['date', 'device', 'country']). These are merged into criteria.dimensions."
       ),
-    datePreset: z
-      .enum(DATE_PRESET_VALUES)
+    datePreset: CM360DatePresetSchema
       .optional()
-      .describe("Preset date range. Injected into criteria.dateRange if criteria.dateRange is not set. Use this OR set dateRange inside criteria (not both)"),
-    criteria: z
-      .record(z.any())
+      .describe("Preset date range. Injected into the correct report criteria dateRange when not already set"),
+    criteria: genericCriteriaSchema
       .optional()
-      .describe("Base report criteria (dateRange, metricNames, dimensionFilters). Dimensions from breakdownDimensions are appended automatically."),
+      .describe("Criteria for STANDARD reports"),
+    reachCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for REACH reports"),
+    floodlightCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for FLOODLIGHT reports"),
+    crossMediaReachCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for CROSS_MEDIA_REACH reports"),
     additionalConfig: z
       .record(z.any())
       .optional()
       .describe("Additional report configuration fields (schedule, delivery, etc.)"),
+  })
+  .superRefine((input, ctx) => {
+    validateTypedCriteriaUsage(input as Parameters<typeof validateTypedCriteriaUsage>[0], ctx);
+    if (input.type === "PATH_TO_CONVERSION") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["type"],
+        message: "cm360_get_report_breakdowns does not support PATH_TO_CONVERSION",
+      });
+    }
   })
   .describe("Parameters for generating a CM360 report with breakdown dimensions");
 
@@ -75,14 +99,8 @@ export async function getReportBreakdownsLogic(
 ): Promise<GetReportBreakdownsOutput> {
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
-  // Resolve datePreset into criteria.dateRange if no dateRange already in criteria
-  let baseCriteria = input.criteria;
-  if (input.datePreset && !input.criteria?.dateRange) {
-    const { startDate, endDate } = resolveDatePreset(input.datePreset);
-    baseCriteria = { ...(input.criteria ?? {}), dateRange: { startDate, endDate } };
-  }
-
-  // Merge breakdownDimensions into criteria.dimensions
+  const criteriaField = ensureReportSupportsBreakdowns(input.type);
+  const baseCriteria = (getReportCriteriaFromConfig(input, input.type) ?? {}) as Record<string, unknown>;
   const existingDimensions: { name: string }[] =
     (baseCriteria?.dimensions as { name: string }[] | undefined) ?? [];
   const existingDimensionNames = new Set(existingDimensions.map((d) => d.name));
@@ -95,17 +113,14 @@ export async function getReportBreakdownsLogic(
   const mergedDimensions = [...existingDimensions, ...breakdownDimensionObjects];
 
   const mergedCriteria = {
-    ...(baseCriteria ?? {}),
+    ...baseCriteria,
     dimensions: mergedDimensions,
   };
 
-  const { name: _n, type: _t, criteria: _c, ...safeAdditionalConfig } = input.additionalConfig ?? {};
-  const reportConfig = {
-    ...safeAdditionalConfig,
-    name: input.name,
-    type: input.type,
-    criteria: mergedCriteria,
-  };
+  const reportConfig = buildTypedReportConfig({
+    ...input,
+    [criteriaField]: mergedCriteria,
+  }) as CM360ReportConfig;
 
   const result = (await cm360ReportingService.runReport(
     input.profileId,
@@ -169,7 +184,7 @@ export const getReportBreakdownsTool = {
         name: "Floodlight by Country - MTD",
         type: "FLOODLIGHT",
         breakdownDimensions: ["country", "creative"],
-        criteria: {
+        floodlightCriteria: {
           dateRange: { relativeDateRange: "MONTH_TO_DATE" },
           metricNames: ["floodlightImpressions", "floodlightClicks", "floodlightRevenue"],
         },

@@ -14,7 +14,7 @@ export const campaignSetupWorkflowPrompt: Prompt = {
     },
     {
       name: "objective",
-      description: "Campaign objective (e.g., TRAFFIC, APP_INSTALLS, CONVERSIONS)",
+      description: "Campaign objective (e.g., TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS)",
       required: false,
     },
   ],
@@ -45,7 +45,7 @@ tiktok_create_entity({
 })
 \`\`\`
 
-**Campaign Objectives:** TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS, LEAD_GENERATION, CATALOG_SALES, COMMUNITY_INTERACTION
+**Campaign Objectives:** TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS, ENGAGEMENT, VIDEO_VIEWS, LEAD_GENERATION, PRODUCT_SALES
 
 ## Step 2: Create Ad Group
 
@@ -56,14 +56,14 @@ tiktok_create_entity({
   "data": {
     "campaign_id": "CAMPAIGN_ID_FROM_STEP_1",
     "adgroup_name": "Your Ad Group Name",
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
+    "placements": ["PLACEMENT_TIKTOK"],
     "budget_mode": "BUDGET_MODE_DAY",
     "budget": 50,
     "schedule_type": "SCHEDULE_START_END",
+    "pacing": "PACING_MODE_SMOOTH",
     "schedule_start_time": "2026-03-01 00:00:00",
     "schedule_end_time": "2026-12-31 23:59:59",
-    "optimize_goal": "CLICK",
-    "bid_type": "BID_TYPE_CUSTOM",
+    "optimization_goal": "CLICK",
     "bid_price": 0.5,
     "age": ["AGE_18_24", "AGE_25_34"],
     "gender": ["GENDER_UNLIMITED"],
@@ -80,12 +80,14 @@ tiktok_create_entity({
   "advertiserId": "${advertiserId}",
   "data": {
     "adgroup_id": "ADGROUP_ID_FROM_STEP_2",
-    "ad_name": "Your Ad Name",
-    "creative_type": "SINGLE_VIDEO",
-    "video_id": "YOUR_VIDEO_ID",
-    "ad_text": "Your ad copy text (max 100 chars)",
-    "call_to_action": "LEARN_MORE",
-    "landing_page_url": "https://example.com"
+    "creatives": [
+      {
+        "ad_name": "Your Ad Name",
+        "video_id": "YOUR_VIDEO_ID",
+        "call_to_action": "LEARN_MORE",
+        "landing_page_url": "https://example.com"
+      }
+    ]
   }
 })
 \`\`\`

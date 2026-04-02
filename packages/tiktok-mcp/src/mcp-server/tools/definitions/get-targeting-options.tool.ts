@@ -8,12 +8,14 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_get_targeting_options";
 const TOOL_TITLE = "Get TikTok Targeting Options";
-const TOOL_DESCRIPTION = `Browse available TikTok ad targeting options and categories.
+const TOOL_DESCRIPTION = `Browse available TikTok targeting metadata using official \`/tool/*\` endpoints.
 
-Returns a structured list of targeting options available for a given objective type.
 Use this to discover valid targeting values before creating or updating ad groups.
+This tool dispatches to the documented TikTok list endpoints instead of the older
+generic targeting routes.
 
-**Common objective types:** TRAFFIC, APP_INSTALLS, CONVERSIONS, AWARENESS, VIDEO_VIEWS`;
+**Supported option types:** ACTION_CATEGORY, CARRIER, DEVICE_MODEL, INTEREST_CATEGORY,
+INTEREST_KEYWORD, ISP, LANGUAGE, LOCATION`;
 
 export const GetTargetingOptionsInputSchema = z
   .object({
@@ -21,10 +23,50 @@ export const GetTargetingOptionsInputSchema = z
       .string()
       .min(1)
       .describe("TikTok Advertiser ID"),
-    targetingType: z
+    optionType: z
+      .enum([
+        "ACTION_CATEGORY",
+        "CARRIER",
+        "DEVICE_MODEL",
+        "INTEREST_CATEGORY",
+        "INTEREST_KEYWORD",
+        "ISP",
+        "LANGUAGE",
+        "LOCATION",
+      ])
+      .describe("Which official TikTok targeting endpoint to query"),
+    keyword: z
       .string()
       .optional()
-      .describe("Optional objective type to filter targeting options (e.g., TRAFFIC, APP_INSTALLS)"),
+      .describe("Keyword for INTEREST_KEYWORD lookups"),
+    placements: z
+      .array(z.string())
+      .optional()
+      .describe("Placements required by LOCATION lookups, e.g. ['PLACEMENT_TIKTOK']"),
+    objectiveType: z
+      .string()
+      .optional()
+      .describe("Objective type used by LOCATION lookups, e.g. TRAFFIC or APP_PROMOTION"),
+    promotionType: z
+      .string()
+      .optional()
+      .describe("Promotion type used by LOCATION or ISP lookups when required"),
+    operatingSystem: z
+      .enum(["ANDROID", "IOS"])
+      .optional()
+      .describe("Optional OS filter used by LOCATION lookups"),
+    locationIds: z
+      .array(z.string())
+      .optional()
+      .describe("Location IDs used by ISP lookups"),
+    scene: z
+      .enum(["ISP"])
+      .optional()
+      .describe("Scene used by tool_targeting_list. Currently only ISP is supported here."),
+    specialIndustries: z
+      .array(z.string())
+      .optional()
+      .describe("Special industries used by ACTION_CATEGORY lookups"),
   })
   .describe("Parameters for browsing TikTok targeting options");
 
@@ -46,7 +88,17 @@ export async function getTargetingOptionsLogic(
   const { tiktokService } = resolveSessionServices(sdkContext);
 
   const options = (await tiktokService.getTargetingOptions(
-    input.targetingType,
+    input.optionType,
+    {
+      ...(input.keyword ? { keyword: input.keyword } : {}),
+      ...(input.placements ? { placements: input.placements } : {}),
+      ...(input.objectiveType ? { objective_type: input.objectiveType } : {}),
+      ...(input.promotionType ? { promotion_type: input.promotionType } : {}),
+      ...(input.operatingSystem ? { operating_system: input.operatingSystem } : {}),
+      ...(input.locationIds ? { location_ids: input.locationIds } : {}),
+      ...(input.scene ? { scene: input.scene } : {}),
+      ...(input.specialIndustries ? { special_industries: input.specialIndustries } : {}),
+    },
     context
   )) as Record<string, unknown>;
 
@@ -79,16 +131,19 @@ export const getTargetingOptionsTool = {
   },
   inputExamples: [
     {
-      label: "Get all targeting options",
+      label: "Get languages",
       input: {
         advertiserId: "1234567890",
+        optionType: "LANGUAGE",
       },
     },
     {
-      label: "Get targeting options for traffic objective",
+      label: "Get locations for a traffic campaign",
       input: {
         advertiserId: "1234567890",
-        targetingType: "TRAFFIC",
+        optionType: "LOCATION",
+        placements: ["PLACEMENT_TIKTOK"],
+        objectiveType: "TRAFFIC",
       },
     },
   ],

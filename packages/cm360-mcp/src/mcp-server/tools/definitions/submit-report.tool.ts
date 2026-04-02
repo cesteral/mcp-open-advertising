@@ -3,9 +3,16 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import {
+  buildTypedReportConfig,
+  CM360DatePresetSchema,
+  CM360ReportTypeSchema,
+  genericCriteriaSchema,
+  validateTypedCriteriaUsage,
+} from "../utils/report-config.js";
+import type { CM360ReportConfig } from "../../../services/cm360/cm360-reporting-service.js";
 
 const TOOL_NAME = "cm360_submit_report";
 const TOOL_TITLE = "Submit CM360 Report";
@@ -27,22 +34,31 @@ export const SubmitReportInputSchema = z
     name: z
       .string()
       .describe("Name for the report"),
-    type: z
-      .enum(["STANDARD", "REACH", "PATH_TO_CONVERSION", "CROSS_DIMENSION_REACH", "FLOODLIGHT"])
-      .describe("Report type"),
-    datePreset: z
-      .enum(DATE_PRESET_VALUES)
+    type: CM360ReportTypeSchema.describe("Report type"),
+    datePreset: CM360DatePresetSchema
       .optional()
-      .describe("Preset date range. Injected into criteria.dateRange if criteria.dateRange is not set. Use this OR set dateRange inside criteria (not both)"),
-    criteria: z
-      .record(z.any())
+      .describe("Preset date range. Injected into the correct report criteria dateRange when not already set"),
+    criteria: genericCriteriaSchema
       .optional()
-      .describe("Report criteria including dateRange, dimensions, metricNames"),
+      .describe("Criteria for STANDARD reports"),
+    reachCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for REACH reports"),
+    pathToConversionCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for PATH_TO_CONVERSION reports"),
+    floodlightCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for FLOODLIGHT reports"),
+    crossMediaReachCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for CROSS_MEDIA_REACH reports"),
     additionalConfig: z
       .record(z.any())
       .optional()
       .describe("Additional report configuration fields"),
   })
+  .superRefine(validateTypedCriteriaUsage)
   .describe("Parameters for submitting a CM360 report");
 
 export const SubmitReportOutputSchema = z
@@ -63,21 +79,7 @@ export async function submitReportLogic(
 ): Promise<SubmitReportOutput> {
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
-  // Resolve datePreset into criteria.dateRange if no dateRange already in criteria
-  let mergedCriteria = input.criteria;
-  if (input.datePreset && !input.criteria?.dateRange) {
-    const { startDate, endDate } = resolveDatePreset(input.datePreset);
-    mergedCriteria = { ...(input.criteria ?? {}), dateRange: { startDate, endDate } };
-  }
-
-  // Spread additionalConfig first so explicit params (name, type, criteria) take precedence
-  const { name: _n, type: _t, criteria: _c, ...safeAdditionalConfig } = input.additionalConfig ?? {};
-  const reportConfig = {
-    ...safeAdditionalConfig,
-    name: input.name,
-    type: input.type,
-    ...(mergedCriteria && { criteria: mergedCriteria }),
-  };
+  const reportConfig = buildTypedReportConfig(input) as CM360ReportConfig;
 
   const result = await cm360ReportingService.createReport(
     input.profileId,
@@ -124,6 +126,20 @@ export const submitReportTool = {
         criteria: {
           dimensions: [{ name: "campaign" }],
           metricNames: ["impressions", "clicks", "mediaCost"],
+        },
+      },
+    },
+    {
+      label: "Submit a cross-media reach report",
+      input: {
+        profileId: "123456",
+        name: "Cross Media Reach",
+        type: "CROSS_MEDIA_REACH",
+        crossMediaReachCriteria: {
+          dateRange: { relativeDateRange: "LAST_30_DAYS" },
+          dimensions: [{ name: "campaign" }],
+          metricNames: ["uniqueReach"],
+          dimensionFilters: [],
         },
       },
     },

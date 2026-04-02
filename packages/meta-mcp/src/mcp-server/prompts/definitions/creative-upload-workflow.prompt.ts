@@ -50,7 +50,8 @@ meta_upload_video({
 
 **Video requirements:**
 - Formats: MP4, MOV (H.264 recommended)
-- Max: 4GB, min resolution 120x120px
+- Buffered proxy upload limit applies; use moderate-size assets and chunked workflows for very large videos
+- Min resolution 120x120px
 - Feed ads: up to 240 min duration
 ` : `
 \`\`\`json

@@ -90,7 +90,7 @@ describe("SubmitReportInputSchema", () => {
       "STANDARD",
       "REACH",
       "PATH_TO_CONVERSION",
-      "CROSS_DIMENSION_REACH",
+      "CROSS_MEDIA_REACH",
       "FLOODLIGHT",
     ];
 
@@ -113,7 +113,7 @@ describe("SubmitReportInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("accepts optional criteria", () => {
+  it("accepts optional criteria for STANDARD reports", () => {
     const result = SubmitReportInputSchema.safeParse({
       profileId: "123456",
       name: "Test Report",
@@ -149,12 +149,12 @@ describe("SubmitReportInputSchema", () => {
     }
   });
 
-  it("accepts full input with all optional fields", () => {
+  it("accepts full input with reachCriteria for REACH reports", () => {
     const result = SubmitReportInputSchema.safeParse({
       profileId: "123456",
       name: "Full Report",
       type: "REACH",
-      criteria: {
+      reachCriteria: {
         dateRange: { startDate: "2026-01-01", endDate: "2026-01-31" },
         dimensions: [{ name: "campaign" }, { name: "advertiser" }],
         metricNames: ["impressions", "clicks", "mediaCost"],
@@ -178,6 +178,18 @@ describe("SubmitReportInputSchema", () => {
       criteria,
     });
     expect(result.criteria).toEqual(criteria);
+  });
+
+  it("rejects criteria on non-standard report types", () => {
+    const result = SubmitReportInputSchema.safeParse({
+      profileId: "123456",
+      name: "Test Report",
+      type: "FLOODLIGHT",
+      criteria: {
+        metricNames: ["floodlightRevenue"],
+      },
+    });
+    expect(result.success).toBe(false);
   });
 });
 
@@ -209,7 +221,7 @@ describe("submitReportLogic", () => {
     );
   });
 
-  it("strips name/type/criteria from additionalConfig", async () => {
+  it("uses type-specific criteria fields and strips conflicting additional config", async () => {
     mockState.cm360ReportingService.createReport.mockResolvedValue({
       reportId: "rpt-1",
       fileId: "file-1",
@@ -218,17 +230,18 @@ describe("submitReportLogic", () => {
     const input = {
       profileId: "123",
       name: "Correct Name",
-      type: "STANDARD" as const,
-      additionalConfig: { name: "Wrong Name", type: "WRONG", criteria: {}, format: "CSV" },
+      type: "REACH" as const,
+      reachCriteria: { metricNames: ["impressions"] },
+      additionalConfig: { name: "Wrong Name", type: "WRONG", reachCriteria: {}, format: "CSV" },
     };
     await submitReportLogic(input, mockContext);
 
     const calledConfig = mockState.cm360ReportingService.createReport.mock.calls[0][1];
     expect(calledConfig.name).toBe("Correct Name");
-    expect(calledConfig.type).toBe("STANDARD");
+    expect(calledConfig.type).toBe("REACH");
     expect(calledConfig.format).toBe("CSV");
-    // criteria should not be present since input.criteria is undefined
     expect(calledConfig.criteria).toBeUndefined();
+    expect(calledConfig.reachCriteria).toEqual({ metricNames: ["impressions"] });
   });
 
   it("returns reportId and fileId", async () => {
@@ -260,6 +273,34 @@ describe("submitReportLogic", () => {
 
     const calledConfig = mockState.cm360ReportingService.createReport.mock.calls[0][1];
     expect(calledConfig.criteria).toBeUndefined();
+  });
+
+  it("injects datePreset into the matching criteria field", async () => {
+    mockState.cm360ReportingService.createReport.mockResolvedValue({
+      reportId: "rpt-1",
+      fileId: "file-1",
+    });
+
+    await submitReportLogic(
+      {
+        profileId: "123",
+        name: "Cross Media Reach",
+        type: "CROSS_MEDIA_REACH" as const,
+        datePreset: "LAST_7_DAYS",
+        crossMediaReachCriteria: {
+          dimensions: [{ name: "campaign" }],
+          metricNames: ["uniqueReach"],
+          dimensionFilters: [],
+        },
+      },
+      mockContext
+    );
+
+    const calledConfig = mockState.cm360ReportingService.createReport.mock.calls[0][1];
+    expect(calledConfig.crossMediaReachCriteria.dateRange).toEqual({
+      startDate: expect.any(String),
+      endDate: expect.any(String),
+    });
   });
 
   it("propagates service errors", async () => {

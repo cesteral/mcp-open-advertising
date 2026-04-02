@@ -38,12 +38,21 @@ import {
 
 const mockContext = { requestId: "test-req" } as any;
 
-function mockResponse(body: string, ok = true, status = 200, statusText = "OK"): Response {
+function mockResponse(
+  body: string,
+  ok = true,
+  status = 200,
+  statusText = "OK",
+  contentType = "text/csv"
+): Response {
   return {
     ok,
     status,
     statusText,
     text: vi.fn().mockResolvedValue(body),
+    headers: {
+      get: vi.fn((name: string) => (name.toLowerCase() === "content-type" ? contentType : null)),
+    },
   } as unknown as Response;
 }
 
@@ -128,6 +137,44 @@ describe("downloadReportLogic", () => {
     );
 
     expect(result.rows[0]).toEqual(["field with, comma", 'field with "quotes"', "simple"]);
+  });
+
+  it("parses quoted multiline CSV fields correctly", async () => {
+    const csv = 'H1,H2\n"line 1\nline 2",value';
+    mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv", maxRows: 1000 },
+      mockContext
+    );
+
+    expect(result.rows[0]).toEqual(["line 1\nline 2", "value"]);
+  });
+
+  it("rejects Excel downloads", async () => {
+    mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(
+      mockResponse("binary", true, 200, "OK", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    );
+
+    await expect(
+      downloadReportLogic(
+        { downloadUrl: "https://example.com/report.xlsx", maxRows: 1000 },
+        mockContext
+      )
+    ).rejects.toThrow("Unsupported CM360 report format: EXCEL");
+  });
+
+  it("omits computed columns when required inputs are unavailable", async () => {
+    const csv = "Name\nCampaign A";
+    mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv", maxRows: 1000, includeComputedMetrics: true },
+      mockContext
+    );
+
+    expect(result.headers).toEqual(["Name"]);
+    expect(result.rows).toEqual([["Campaign A"]]);
   });
 
   it("throws on non-OK response", async () => {

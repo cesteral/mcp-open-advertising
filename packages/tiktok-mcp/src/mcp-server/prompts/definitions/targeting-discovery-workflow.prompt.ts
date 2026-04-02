@@ -12,7 +12,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const tiktokTargetingDiscoveryWorkflowPrompt: Prompt = {
   name: "tiktok_targeting_discovery_workflow",
   description:
-    "Step-by-step guide for researching TikTok audiences: search interest categories, browse behaviors, build targeting configs, and estimate audience size before ad group creation.",
+    "Step-by-step guide for researching TikTok audiences: search geo and ISP targeting tags, browse official targeting metadata, build targeting configs, and estimate audience size before ad group creation.",
   arguments: [
     {
       name: "advertiserId",
@@ -55,15 +55,17 @@ Before creating ad groups, you need to build a **targeting configuration** — t
 
 ## Step 1: Search Targeting Options
 
-Search for interest categories by keyword:
+Search for geo targeting tags by keyword:
 
 \`\`\`json
 {
   "tool": "tiktok_search_targeting",
   "params": {
     "advertiserId": "${advertiserId}",
-    "targetingType": "INTEREST_KEYWORD",
-    "query": "fitness"
+    "query": "stockholm",
+    "scene": "GEO",
+    "placements": ["PLACEMENT_TIKTOK"],
+    "objectiveType": "TRAFFIC"
   }
 }
 \`\`\`
@@ -76,9 +78,8 @@ Each result includes:
 
 | Targeting Type | What It Searches | Example |
 |----------------|-----------------|---------|
-| \`INTEREST_KEYWORD\` | Interest categories | "fitness", "gaming" |
-| \`BEHAVIOR\` | Behavioral segments | App engagement behaviors |
-| \`HASHTAG\` | Hashtag interest groups | "DIY", "travel" |
+| \`GEO\` | Geo tags such as regions, postal codes, cities | "stockholm", "new york" |
+| \`ISP\` | Internet service provider targeting tags | "telia", "verizon" |
 
 ---
 
@@ -90,7 +91,8 @@ To explore all available targeting options for your account:
 {
   "tool": "tiktok_get_targeting_options",
   "params": {
-    "advertiserId": "${advertiserId}"
+    "advertiserId": "${advertiserId}",
+    "optionType": "LANGUAGE"
   }
 }
 \`\`\`
@@ -102,7 +104,9 @@ Filter by type:
   "tool": "tiktok_get_targeting_options",
   "params": {
     "advertiserId": "${advertiserId}",
-    "targetingType": "INTEREST"
+    "optionType": "LOCATION",
+    "placements": ["PLACEMENT_TIKTOK"],
+    "objectiveType": "TRAFFIC"
   }
 }
 \`\`\`
@@ -120,10 +124,9 @@ Combine your research into an ad group payload:
   "location_ids": ["US", "GB"],
   "interest_keyword_ids": ["123456", "789012"],
   "operating_systems": ["IOS", "ANDROID"],
-  "placement_type": "PLACEMENT_TYPE_NORMAL",
-  "bid_type": "BID_TYPE_CUSTOM",
+  "placements": ["PLACEMENT_TIKTOK"],
   "bid_price": 0.5,
-  "optimize_goal": "CLICK"
+  "optimization_goal": "CLICK"
 }
 \`\`\`
 
@@ -136,7 +139,7 @@ Combine your research into an ad group payload:
 | \`location_ids\` | Array | Country codes or location IDs |
 | \`interest_keyword_ids\` | Array | Interest keyword IDs from search |
 | \`operating_systems\` | Array | IOS, ANDROID |
-| \`placement_type\` | String | PLACEMENT_TYPE_NORMAL (auto), PLACEMENT_TYPE_SEARCH |
+| \`placements\` | Array | Placement enums such as PLACEMENT_TIKTOK |
 | \`bid_price\` | Number | Bid in account currency |
 
 ⚠️ **GOTCHA**: Age group values are enum strings — use exact values like \`AGE_18_24\`, not ranges like \`18-24\`.
@@ -184,14 +187,13 @@ Use the targeting when creating or updating an ad group:
     "data": {
       "campaign_id": "{campaignId}",
       "adgroup_name": "US Fitness Enthusiasts 18-34",
-      "placement_type": "PLACEMENT_TYPE_NORMAL",
+      "placements": ["PLACEMENT_TIKTOK"],
       "budget_mode": "BUDGET_MODE_DAY",
       "budget": 50,
       "schedule_type": "SCHEDULE_START_END",
       "schedule_start_time": "2026-03-10 00:00:00",
       "schedule_end_time": "2026-12-31 23:59:59",
-      "optimize_goal": "CLICK",
-      "bid_type": "BID_TYPE_CUSTOM",
+      "optimization_goal": "CLICK",
       "bid_price": 0.5,
       "age": ["AGE_18_24", "AGE_25_34"],
       "gender": ["GENDER_UNLIMITED"],

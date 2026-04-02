@@ -86,7 +86,7 @@ Use these values with \`tiktok_search_targeting\`:
     "interest_category_ids": ["100001"],
     "interest_keyword_ids": ["200001"],
     "operating_systems": ["ANDROID", "IOS"],
-    "placement_type": "PLACEMENT_TYPE_NORMAL",
+    "placements": ["PLACEMENT_TIKTOK"],
     "placements": ["PLACEMENT_TIKTOK"]
   }
 }

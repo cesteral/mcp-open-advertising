@@ -35,6 +35,8 @@ export const DownloadReportOutputSchema = z
     reportRunId: z.string(),
     results: z.array(z.record(z.any())).describe("Insights data rows"),
     totalResults: z.number(),
+    fetchedAllRows: z.boolean().describe("Whether all available report rows were fetched"),
+    nextCursor: z.string().optional().describe("Cursor for additional rows when maxRows capped the result set"),
     timestamp: z.string().datetime(),
   })
   .describe("Downloaded report results");
@@ -59,12 +61,17 @@ export async function downloadReportLogic(
     reportRunId: input.reportRunId,
     results: result.data as Record<string, unknown>[],
     totalResults: (result.data as unknown[]).length,
+    fetchedAllRows: result.fetchedAllRows,
+    nextCursor: result.nextCursor,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
   const summary = `Downloaded ${result.totalResults} row(s) from report ${result.reportRunId}`;
+  const truncationNote = result.fetchedAllRows
+    ? ""
+    : `\n\nResults were capped before the full report was exhausted.${result.nextCursor ? ` Continue from cursor: ${result.nextCursor}` : ""}`;
   const data = result.totalResults > 0
     ? `\n\n${JSON.stringify(result.results, null, 2)}`
     : "\n\nNo data available in the report";
@@ -72,7 +79,7 @@ export function downloadReportResponseFormatter(result: DownloadReportOutput): M
   return [
     {
       type: "text" as const,
-      text: `${summary}${data}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${data}${truncationNote}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

@@ -47,8 +47,8 @@ Full campaign structure (top-down):
 1. **Advertiser** — pre-exists; discover with \`tiktok_list_advertisers\`
 2. **Creative(s)** — optional; can upload via Creative Library or reference video/image IDs
 3. **Campaign** — requires \`campaign_name\`, \`objective_type\`, \`budget_mode\`, \`budget\`
-4. **Ad Group(s)** — requires \`campaign_id\`, \`adgroup_name\`, \`placement_type\`, \`budget\`
-5. **Ad(s)** — requires \`adgroup_id\`, \`ad_name\`, \`creative_type\`, creative assets
+4. **Ad Group(s)** — requires \`campaign_id\`, \`adgroup_name\`, plus objective-dependent delivery fields
+5. **Ad(s)** — requires \`adgroup_id\` and \`creatives\`
 
 ## TikTok API Patterns
 
@@ -135,13 +135,12 @@ TikTok uses page-based pagination (NOT cursor-based):
 | Objective | Use Case |
 |-----------|----------|
 | TRAFFIC | Drive website/app traffic |
-| APP_INSTALLS | Drive app downloads |
-| CONVERSIONS | Optimize for conversion events |
-| AWARENESS | Brand awareness / reach |
+| APP_PROMOTION | Drive app installs or re-engagement |
+| WEB_CONVERSIONS | Optimize for website conversion events |
+| ENGAGEMENT | Community and engagement-focused delivery |
 | VIDEO_VIEWS | Maximize video plays |
 | LEAD_GENERATION | In-app lead forms |
-| CATALOG_SALES | Dynamic product ads |
-| COMMUNITY_INTERACTION | Profile visits, follows |
+| PRODUCT_SALES | Dynamic product ads |
 `;
 }
 

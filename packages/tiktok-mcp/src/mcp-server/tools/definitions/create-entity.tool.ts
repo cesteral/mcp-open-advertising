@@ -14,14 +14,14 @@ const TOOL_DESCRIPTION = `Create a new TikTok Ads entity.
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
 **Key requirements by entity type:**
-- **campaign**: requires \`campaign_name\`, \`objective_type\` (e.g., TRAFFIC, APP_INSTALLS), \`budget_mode\` (BUDGET_MODE_DAY or BUDGET_MODE_TOTAL), \`budget\`
-- **adGroup**: requires \`campaign_id\`, \`adgroup_name\`, \`placement_type\`, \`budget_mode\`, \`budget\`, \`schedule_type\`, \`optimize_goal\`
-- **ad**: requires \`adgroup_id\`, \`ad_name\`, \`creative_type\`, creative fields (image_ids or video_id)
-- **creative**: requires \`display_name\`, creative content (image_ids or video_id)
+- **campaign**: requires \`campaign_name\`, \`objective_type\` (for example \`TRAFFIC\` or \`APP_PROMOTION\`); \`budget_mode\` and \`budget\` are used for budgeted campaigns
+- **adGroup**: requires \`campaign_id\`, \`adgroup_name\`; TikTok commonly also requires scheduling, pacing, and optimization fields depending on objective and promotion type
+- **ad**: requires \`adgroup_id\` and \`creatives\` per TikTok's \`AdCreateBody\`
+- **creative**: this server's creative endpoints are custom mappings and should be checked against account-level creative support before use
 
 **Gotchas:**
 - Budget values are in the advertiser's account currency
-- All status values use prefix format (e.g., CAMPAIGN_STATUS_ENABLE)
+- Creation status fields use \`operation_status\` where supported
 - advertiser_id is automatically injected`;
 
 export const CreateEntityInputSchema = z
@@ -113,13 +113,14 @@ export const createEntityTool = {
         data: {
           campaign_id: "1800123456789",
           adgroup_name: "US 25-44 Interest Targeting",
-          placement_type: "PLACEMENT_TYPE_NORMAL",
+          placements: ["PLACEMENT_TIKTOK"],
           budget_mode: "BUDGET_MODE_DAY",
           budget: 50,
           schedule_type: "SCHEDULE_START_END",
+          pacing: "PACING_MODE_SMOOTH",
           schedule_start_time: "2026-01-01 00:00:00",
           schedule_end_time: "2026-12-31 23:59:59",
-          optimize_goal: "CLICK",
+          optimization_goal: "CLICK",
         },
       },
     },

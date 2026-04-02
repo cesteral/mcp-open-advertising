@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { computeMetrics } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "cm360_download_report";
 const TOOL_TITLE = "Download CM360 Report";
@@ -67,10 +68,18 @@ export async function downloadReportLogic(
     throw new Error(`Failed to download report: ${response.status} ${response.statusText}${detail}`);
   }
 
-  const csvText = await response.text();
-  const lines = csvText.split(/\r?\n/).filter((line: string) => line.trim().length > 0);
+  const format = inferReportFormat(input.downloadUrl, response);
+  if (format !== "CSV") {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Unsupported CM360 report format: ${format}. cm360_download_report only supports CSV downloads.`
+    );
+  }
 
-  if (lines.length === 0) {
+  const csvText = await response.text();
+  const rows = parseCSV(csvText);
+
+  if (rows.length === 0) {
     return {
       headers: [],
       rows: [],
@@ -81,23 +90,23 @@ export async function downloadReportLogic(
     };
   }
 
-  const headers = parseCSVLine(lines[0]);
+  const headers = rows[0];
   const maxRows = input.maxRows ?? 1000;
-  const dataLines = lines.slice(1);
-  const truncated = dataLines.length > maxRows;
-  const rows = dataLines.slice(0, maxRows).map(parseCSVLine);
+  const dataRows = rows.slice(1);
+  const truncated = dataRows.length > maxRows;
+  const limitedRows = dataRows.slice(0, maxRows);
 
   let finalHeaders = headers;
-  let finalRows = rows;
+  let finalRows = limitedRows;
 
   if (input.includeComputedMetrics) {
-    ({ headers: finalHeaders, rows: finalRows } = appendComputedMetricsToRows(headers, rows));
+    ({ headers: finalHeaders, rows: finalRows } = appendComputedMetricsToRows(headers, limitedRows));
   }
 
   return {
     headers: finalHeaders,
     rows: finalRows,
-    totalRows: dataLines.length,
+    totalRows: dataRows.length,
     returnedRows: finalRows.length,
     truncated,
     timestamp: new Date().toISOString(),
@@ -108,39 +117,66 @@ function appendComputedMetricsToRows(
   headers: string[],
   rows: string[][],
 ): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()));
-  const spendIdx = idx('mediaCost');
-  const impIdx = idx('impressions');
-  const clickIdx = idx('clicks');
-  const convIdx = idx('totalConversions');
+  const idx = (...names: string[]) =>
+    headers.findIndex((header) => names.some((name) => header.toLowerCase().includes(name.toLowerCase())));
 
-  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
+  const spendIdx = idx("mediaCost", "cost");
+  const impIdx = idx("impressions");
+  const clickIdx = idx("clicks");
+  const convIdx = idx("totalConversions", "conversions");
+  const revenueIdx = idx("floodlightRevenue", "revenue", "totalRevenue");
+
+  const computedColumns = [
+    { name: "computed_cpa", enabled: spendIdx >= 0 && convIdx >= 0 },
+    { name: "computed_roas", enabled: spendIdx >= 0 && revenueIdx >= 0 },
+    { name: "computed_cpm", enabled: spendIdx >= 0 && impIdx >= 0 },
+    { name: "computed_ctr", enabled: clickIdx >= 0 && impIdx >= 0 },
+    { name: "computed_cpc", enabled: spendIdx >= 0 && clickIdx >= 0 },
+  ].filter((column) => column.enabled);
+
+  if (computedColumns.length === 0) {
+    return { headers, rows };
+  }
+
+  const newHeaders = [...headers, ...computedColumns.map((column) => column.name)];
   const newRows = rows.map(row => {
     const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
     const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
     const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
     const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
-    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [...row,
-      m.cpa !== null ? String(m.cpa) : '',
-      m.roas !== null ? String(m.roas) : '',
-      m.cpm !== null ? String(m.cpm) : '',
-      m.ctr !== null ? String(m.ctr) : '',
-      m.cpc !== null ? String(m.cpc) : '',
-    ];
+    const conversionValue = revenueIdx >= 0 ? Number(row[revenueIdx] || 0) : 0;
+    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue });
+    const computedValues = computedColumns.map((column) => {
+      switch (column.name) {
+        case "computed_cpa":
+          return m.cpa !== null ? String(m.cpa) : "";
+        case "computed_roas":
+          return m.roas !== null ? String(m.roas) : "";
+        case "computed_cpm":
+          return m.cpm !== null ? String(m.cpm) : "";
+        case "computed_ctr":
+          return m.ctr !== null ? String(m.ctr) : "";
+        case "computed_cpc":
+          return m.cpc !== null ? String(m.cpc) : "";
+        default:
+          return "";
+      }
+    });
+    return [...row, ...computedValues];
   });
   return { headers: newHeaders, rows: newRows };
 }
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
   let current = "";
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
     if (inQuotes) {
-      if (char === '"' && line[i + 1] === '"') {
+      if (char === '"' && text[i + 1] === '"') {
         current += '"';
         i++;
       } else if (char === '"') {
@@ -152,15 +188,56 @@ function parseCSVLine(line: string): string[] {
       if (char === '"') {
         inQuotes = true;
       } else if (char === ",") {
-        result.push(current.trim());
+        currentRow.push(current.trim());
         current = "";
+      } else if (char === "\n") {
+        currentRow.push(current.trim());
+        if (currentRow.some((value) => value.length > 0)) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+        current = "";
+      } else if (char === "\r") {
+        continue;
       } else {
         current += char;
       }
     }
   }
-  result.push(current.trim());
-  return result;
+  if (current.length > 0 || currentRow.length > 0) {
+    currentRow.push(current.trim());
+    if (currentRow.some((value) => value.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+  return rows;
+}
+
+function inferReportFormat(downloadUrl: string, response: Response): "CSV" | "EXCEL" | "UNKNOWN" {
+  const contentType = response.headers?.get?.("content-type")?.toLowerCase() ?? "";
+  if (
+    contentType.includes("spreadsheetml") ||
+    contentType.includes("application/vnd.ms-excel")
+  ) {
+    return "EXCEL";
+  }
+  if (
+    contentType.includes("text/csv") ||
+    contentType.includes("application/csv") ||
+    contentType.includes("text/plain")
+  ) {
+    return "CSV";
+  }
+
+  const normalizedUrl = downloadUrl.toLowerCase();
+  if (normalizedUrl.includes(".csv") || normalizedUrl.includes("format=csv")) {
+    return "CSV";
+  }
+  if (normalizedUrl.includes(".xls") || normalizedUrl.includes(".xlsx") || normalizedUrl.includes("format=excel")) {
+    return "EXCEL";
+  }
+
+  return "UNKNOWN";
 }
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {

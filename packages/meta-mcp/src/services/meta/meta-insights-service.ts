@@ -20,6 +20,23 @@ export class MetaInsightsService {
     private readonly logger: Logger
   ) {}
 
+  private validateDateRangeInputs(
+    entityId: string,
+    options: { datePreset?: string; timeRange?: { since: string; until: string } },
+    operation: "insights" | "async insights report" | "insights breakdowns"
+  ): void {
+    if (options.datePreset && options.timeRange) {
+      this.logger.debug(
+        { entityId, datePreset: options.datePreset, operation },
+        `Rejecting ${operation} request: datePreset and timeRange are mutually exclusive`
+      );
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
+      );
+    }
+  }
+
   /**
    * Get insights for an entity (account, campaign, ad set, or ad).
    */
@@ -36,13 +53,7 @@ export class MetaInsightsService {
     },
     context?: RequestContext
   ): Promise<{ data: unknown[]; nextCursor?: string; summary?: unknown }> {
-    if (options.datePreset && options.timeRange) {
-      this.logger.debug({ entityId, datePreset: options.datePreset }, "Rejecting insights request: datePreset and timeRange are mutually exclusive");
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
-      );
-    }
+    this.validateDateRangeInputs(entityId, options, "insights");
 
     await this.rateLimiter.consume(`meta:default`);
 
@@ -113,6 +124,8 @@ export class MetaInsightsService {
     },
     context?: RequestContext
   ): Promise<{ reportRunId: string }> {
+    this.validateDateRangeInputs(entityId, options, "async insights report");
+
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
@@ -186,22 +199,55 @@ export class MetaInsightsService {
     reportRunId: string,
     options: { limit?: number },
     context?: RequestContext
-  ): Promise<{ data: unknown[] }> {
+  ): Promise<{ data: unknown[]; fetchedAllRows: boolean; nextCursor?: string }> {
     await this.rateLimiter.consume(`meta:default`);
 
-    const params: Record<string, string> = {};
-    if (options.limit) {
-      params.limit = String(options.limit);
-    }
+    const data: unknown[] = [];
+    let after: string | undefined;
+    let fetchedAllRows = true;
 
-    const result = (await this.httpClient.get(
-      `/${reportRunId}/insights`,
-      params,
-      context
-    )) as Record<string, unknown>;
+    do {
+      const remainingRows = options.limit ? options.limit - data.length : undefined;
+      if (remainingRows !== undefined && remainingRows <= 0) {
+        fetchedAllRows = false;
+        break;
+      }
 
-    const data = (result.data as unknown[]) || [];
-    return { data };
+      const params: Record<string, string> = {};
+      if (remainingRows !== undefined) {
+        params.limit = String(remainingRows);
+      }
+      if (after) {
+        params.after = after;
+      }
+
+      const result = (await this.httpClient.get(
+        `/${reportRunId}/insights`,
+        params,
+        context
+      )) as Record<string, unknown>;
+
+      const pageData = Array.isArray(result.data) ? result.data : [];
+      data.push(...pageData);
+
+      const paging = result.paging as Record<string, unknown> | undefined;
+      const cursors = paging?.cursors as Record<string, string> | undefined;
+      after = cursors?.after;
+
+      if (!after) {
+        break;
+      }
+      if (remainingRows !== undefined && data.length >= options.limit!) {
+        fetchedAllRows = false;
+        break;
+      }
+    } while (after);
+
+    return {
+      data,
+      fetchedAllRows,
+      nextCursor: after,
+    };
   }
 
   /**
@@ -222,13 +268,7 @@ export class MetaInsightsService {
     },
     context?: RequestContext
   ): Promise<{ data: unknown[]; nextCursor?: string }> {
-    if (options.datePreset && options.timeRange) {
-      this.logger.debug({ entityId, datePreset: options.datePreset }, "Rejecting insights breakdowns request: datePreset and timeRange are mutually exclusive");
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        "Cannot specify both datePreset and timeRange — they are mutually exclusive. Use one or the other."
-      );
-    }
+    this.validateDateRangeInputs(entityId, options, "insights breakdowns");
 
     await this.rateLimiter.consume(`meta:default`);
 

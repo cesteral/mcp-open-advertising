@@ -50,6 +50,15 @@ describe("MetaInsightsService", () => {
   // ==========================================================================
 
   describe("getInsights", () => {
+    it("rejects when both datePreset and timeRange are provided", async () => {
+      await expect(
+        service.getInsights("campaign-123", {
+          datePreset: "last_30d",
+          timeRange: { since: "2025-01-01", until: "2025-01-31" },
+        })
+      ).rejects.toThrow("Cannot specify both datePreset and timeRange");
+    });
+
     it("calls httpClient.get with /{entityId}/insights path", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
@@ -225,6 +234,16 @@ describe("MetaInsightsService", () => {
   // ==========================================================================
 
   describe("getInsightsBreakdowns", () => {
+    it("rejects when both datePreset and timeRange are provided", async () => {
+      await expect(
+        service.getInsightsBreakdowns("campaign-123", {
+          breakdowns: ["age"],
+          datePreset: "last_7d",
+          timeRange: { since: "2025-01-01", until: "2025-01-31" },
+        })
+      ).rejects.toThrow("Cannot specify both datePreset and timeRange");
+    });
+
     it("calls httpClient.get with /{entityId}/insights path", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
@@ -425,6 +444,100 @@ describe("MetaInsightsService", () => {
       });
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("meta:default");
+    });
+  });
+
+  describe("submitInsightsReport", () => {
+    it("rejects when both datePreset and timeRange are provided", async () => {
+      await expect(
+        service.submitInsightsReport("campaign-123", {
+          datePreset: "last_30d",
+          timeRange: { since: "2025-01-01", until: "2025-01-31" },
+        })
+      ).rejects.toThrow("Cannot specify both datePreset and timeRange");
+    });
+
+    it("submits async insights requests with async=1", async () => {
+      httpClient.post.mockResolvedValueOnce({ id: "report-123" });
+
+      const result = await service.submitInsightsReport("campaign-123", {
+        fields: ["impressions", "clicks"],
+        datePreset: "last_30d",
+      });
+
+      expect(result).toEqual({ reportRunId: "report-123" });
+      expect(httpClient.post).toHaveBeenCalledWith(
+        "/campaign-123/insights",
+        {
+          fields: "impressions,clicks",
+          async: 1,
+          date_preset: "last_30d",
+        },
+        undefined
+      );
+    });
+  });
+
+  describe("getReportResults", () => {
+    it("returns a single page and marks all rows fetched when no next cursor exists", async () => {
+      httpClient.get.mockResolvedValueOnce({
+        data: [{ id: "1" }, { id: "2" }],
+      });
+
+      const result = await service.getReportResults("report-123", { limit: 10 });
+
+      expect(result).toEqual({
+        data: [{ id: "1" }, { id: "2" }],
+        fetchedAllRows: true,
+        nextCursor: undefined,
+      });
+    });
+
+    it("follows paging cursors until all rows are fetched", async () => {
+      httpClient.get
+        .mockResolvedValueOnce({
+          data: [{ id: "1" }, { id: "2" }],
+          paging: { cursors: { after: "cursor-2" } },
+        })
+        .mockResolvedValueOnce({
+          data: [{ id: "3" }],
+        });
+
+      const result = await service.getReportResults("report-123", { limit: 10 });
+
+      expect(result).toEqual({
+        data: [{ id: "1" }, { id: "2" }, { id: "3" }],
+        fetchedAllRows: true,
+        nextCursor: undefined,
+      });
+      expect(httpClient.get).toHaveBeenNthCalledWith(
+        1,
+        "/report-123/insights",
+        { limit: "10" },
+        undefined
+      );
+      expect(httpClient.get).toHaveBeenNthCalledWith(
+        2,
+        "/report-123/insights",
+        { limit: "8", after: "cursor-2" },
+        undefined
+      );
+    });
+
+    it("stops at the requested row limit and returns the continuation cursor", async () => {
+      httpClient.get.mockResolvedValueOnce({
+        data: [{ id: "1" }, { id: "2" }],
+        paging: { cursors: { after: "cursor-2" } },
+      });
+
+      const result = await service.getReportResults("report-123", { limit: 2 });
+
+      expect(result).toEqual({
+        data: [{ id: "1" }, { id: "2" }],
+        fetchedAllRows: false,
+        nextCursor: "cursor-2",
+      });
+      expect(httpClient.get).toHaveBeenCalledTimes(1);
     });
   });
 });

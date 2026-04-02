@@ -8,16 +8,15 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_search_targeting";
 const TOOL_TITLE = "TikTok Search Targeting Options";
-const TOOL_DESCRIPTION = `Search TikTok targeting options by keyword or browse by type.
+const TOOL_DESCRIPTION = `Search TikTok location-style targeting tags using TikTok's official \`/tool/targeting/search/\` endpoint.
 
-**Common targeting types:**
-- INTEREST_CATEGORY — Interest and hobby categories
-- BEHAVIOR — User behavior segments
-- HASHTAG — TikTok hashtag interests
-- LOCATION — Geographic locations
-- LANGUAGE — Language targeting
+This endpoint is for targeting-tag discovery, not general interest/language browsing.
+Use \`tiktok_get_targeting_options\` for official list endpoints such as languages, carriers,
+interest categories, device models, and geographic options.
 
-Use results to populate ad group targeting configurations.`;
+**Common scenes:**
+- \`GEO\` — Geo targeting tags such as regions, zip codes, or postal codes
+- \`ISP\` — Internet service provider targeting tags`;
 
 export const SearchTargetingInputSchema = z
   .object({
@@ -25,21 +24,39 @@ export const SearchTargetingInputSchema = z
       .string()
       .min(1)
       .describe("TikTok Advertiser ID"),
-    targetingType: z
-      .string()
-      .describe("Type of targeting to search (e.g., INTEREST_CATEGORY, BEHAVIOR, HASHTAG)"),
     query: z
       .string()
+      .min(1)
+      .describe("Search keyword passed to TikTok targeting search"),
+    scene: z
+      .enum(["GEO", "ISP"])
       .optional()
-      .describe("Search keyword (optional — returns top options if omitted)"),
+      .default("GEO")
+      .describe("Targeting tag scene to search"),
+    placements: z
+      .array(z.string())
+      .optional()
+      .describe("Placements required by TikTok for GEO searches, e.g. ['PLACEMENT_TIKTOK']"),
+    objectiveType: z
+      .string()
+      .optional()
+      .describe("Objective type required by TikTok for GEO searches, e.g. TRAFFIC or APP_PROMOTION"),
+    promotionType: z
+      .string()
+      .optional()
+      .describe("Promotion type used for GEO searches when required by the selected objective"),
+    operatingSystem: z
+      .enum(["ANDROID", "IOS"])
+      .optional()
+      .describe("Optional OS filter for GEO searches"),
     limit: z
       .number()
       .int()
       .min(1)
-      .max(100)
+      .max(1000)
       .optional()
       .default(20)
-      .describe("Maximum number of results (default 20)"),
+      .describe("Maximum number of results to request from TikTok"),
   })
   .describe("Parameters for searching TikTok targeting options");
 
@@ -63,9 +80,15 @@ export async function searchTargetingLogic(
   const { tiktokService } = resolveSessionServices(sdkContext);
 
   const results = (await tiktokService.searchTargeting(
-    input.targetingType,
-    input.query,
-    input.limit,
+    {
+      keyword: input.query,
+      scene: input.scene,
+      ...(input.placements ? { placements: input.placements } : {}),
+      ...(input.objectiveType ? { objective_type: input.objectiveType } : {}),
+      ...(input.promotionType ? { promotion_type: input.promotionType } : {}),
+      ...(input.operatingSystem ? { operating_system: input.operatingSystem } : {}),
+      page_size: input.limit,
+    },
     context
   )) as Record<string, unknown>[] | { list?: Record<string, unknown>[] };
 
@@ -76,7 +99,7 @@ export async function searchTargetingLogic(
   return {
     results: list,
     count: list.length,
-    targetingType: input.targetingType,
+    targetingType: input.scene,
     timestamp: new Date().toISOString(),
   };
 }
@@ -104,19 +127,22 @@ export const searchTargetingTool = {
   },
   inputExamples: [
     {
-      label: "Search interest categories",
+      label: "Search geo targeting tags",
       input: {
         advertiserId: "1234567890",
-        targetingType: "INTEREST_CATEGORY",
-        query: "gaming",
+        query: "stockholm",
+        scene: "GEO",
+        placements: ["PLACEMENT_TIKTOK"],
+        objectiveType: "TRAFFIC",
         limit: 20,
       },
     },
     {
-      label: "Browse behavior segments",
+      label: "Search ISP targeting tags",
       input: {
         advertiserId: "1234567890",
-        targetingType: "BEHAVIOR",
+        query: "telia",
+        scene: "ISP",
         limit: 30,
       },
     },

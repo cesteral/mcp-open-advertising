@@ -39,6 +39,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Video upload poll configuration
   metaVideoUploadPollIntervalMs: z.number().default(15_000),
   metaVideoUploadMaxPollAttempts: z.number().default(20),
+  metaVideoUploadMaxBufferedBytes: z.number().int().positive().default(256 * 1024 * 1024),
 
   // Optional: for token debug endpoint
   metaAppId: z.string().optional(),
@@ -71,6 +72,9 @@ export function parseConfig(): AppConfig {
       : undefined,
     metaVideoUploadMaxPollAttempts: process.env.META_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS
       ? Number(process.env.META_VIDEO_UPLOAD_MAX_POLL_ATTEMPTS)
+      : undefined,
+    metaVideoUploadMaxBufferedBytes: process.env.META_VIDEO_UPLOAD_MAX_BUFFERED_BYTES
+      ? Number(process.env.META_VIDEO_UPLOAD_MAX_BUFFERED_BYTES)
       : undefined,
 
     // Stdio fallback credentials

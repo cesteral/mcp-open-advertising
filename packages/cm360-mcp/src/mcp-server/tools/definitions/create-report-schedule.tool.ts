@@ -4,6 +4,15 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import {
+  buildTypedReportConfig,
+  CM360ReportTypeSchema,
+  CM360ScheduleSchema,
+  genericCriteriaSchema,
+  getReportCriteriaFromConfig,
+  validateScheduleCompatibility,
+  validateTypedCriteriaUsage,
+} from "../utils/report-config.js";
 
 const TOOL_NAME = "cm360_create_report_schedule";
 const TOOL_TITLE = "Create CM360 Report Schedule";
@@ -19,7 +28,7 @@ CM360 schedules are embedded in the report resource itself. The returned reportI
   "active": true,
   "every": 1,
   "repeats": "WEEKLY",
-  "runsOnDayOfWeek": "MONDAY",
+  "repeatsOnWeekDays": ["MONDAY"],
   "startDate": "2026-04-01",
   "expirationDate": "2026-12-31"
 }
@@ -35,29 +44,23 @@ export const CreateReportScheduleInputSchema = z
       .string()
       .min(1)
       .describe("Name for the scheduled report"),
-    type: z
-      .enum(["STANDARD", "REACH", "PATH_TO_CONVERSION", "CROSS_DIMENSION_REACH", "FLOODLIGHT"])
-      .describe("Report type"),
-    schedule: z
-      .object({
-        active: z.boolean().default(true).describe("Whether the schedule is active"),
-        every: z.number().int().min(1).default(1).describe("Frequency multiplier (e.g. 1 = every period)"),
-        repeats: z
-          .enum(["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "YEARLY"])
-          .describe("Repeat frequency"),
-        startDate: z.string().describe("Schedule start date (YYYY-MM-DD)"),
-        expirationDate: z.string().optional().describe("Schedule end date (YYYY-MM-DD)"),
-        runsOnDayOfWeek: z
-          .enum(["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"])
-          .optional()
-          .describe("Day of week for WEEKLY schedules"),
-        runsOnDay: z.number().int().min(1).max(31).optional().describe("Day of month for MONTHLY schedules"),
-      })
-      .describe("Schedule configuration"),
-    criteria: z
-      .record(z.any())
+    type: CM360ReportTypeSchema.describe("Report type"),
+    schedule: CM360ScheduleSchema.describe("Schedule configuration"),
+    criteria: genericCriteriaSchema
       .optional()
-      .describe("Report criteria (dateRange, metricNames, dimensions, dimensionFilters)"),
+      .describe("Criteria for STANDARD reports"),
+    reachCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for REACH reports"),
+    pathToConversionCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for PATH_TO_CONVERSION reports"),
+    floodlightCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for FLOODLIGHT reports"),
+    crossMediaReachCriteria: genericCriteriaSchema
+      .optional()
+      .describe("Criteria for CROSS_MEDIA_REACH reports"),
     delivery: z
       .record(z.any())
       .optional()
@@ -66,6 +69,14 @@ export const CreateReportScheduleInputSchema = z
       .record(z.any())
       .optional()
       .describe("Additional report configuration fields"),
+  })
+  .superRefine((input, ctx) => {
+    validateTypedCriteriaUsage(input as Parameters<typeof validateTypedCriteriaUsage>[0], ctx);
+    validateScheduleCompatibility(
+      input.type,
+      getReportCriteriaFromConfig(input, input.type),
+      ctx
+    );
   })
   .describe("Parameters for creating a scheduled CM360 report");
 
@@ -88,15 +99,9 @@ export async function createReportScheduleLogic(
 ): Promise<CreateReportScheduleOutput> {
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
-  const { name: _n, type: _t, schedule: _s, criteria: _c, delivery: _d, additionalConfig: _a, ...rest } = input;
-  void rest;
-
   const reportConfig = {
-    ...(input.additionalConfig ?? {}),
-    name: input.name,
-    type: input.type,
+    ...buildTypedReportConfig(input),
     schedule: input.schedule as Record<string, unknown>,
-    ...(input.criteria ? { criteria: input.criteria } : {}),
     ...(input.delivery ? { delivery: input.delivery } : {}),
   };
 
@@ -146,7 +151,7 @@ export const createReportScheduleTool = {
           active: true,
           every: 1,
           repeats: "WEEKLY",
-          runsOnDayOfWeek: "MONDAY",
+          repeatsOnWeekDays: ["MONDAY"],
           startDate: "2026-04-07",
           expirationDate: "2026-12-31",
         },
@@ -166,10 +171,10 @@ export const createReportScheduleTool = {
           active: true,
           every: 1,
           repeats: "MONTHLY",
-          runsOnDay: 1,
+          runsOnDayOfMonth: "DAY_OF_MONTH",
           startDate: "2026-04-01",
         },
-        criteria: {
+        floodlightCriteria: {
           dateRange: { relativeDateRange: "LAST_MONTH" },
           metricNames: ["floodlightImpressions", "floodlightRevenue"],
         },

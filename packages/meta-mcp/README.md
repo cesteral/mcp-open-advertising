@@ -1,6 +1,6 @@
 # @cesteral/meta-mcp
 
-Meta Ads MCP Server - Campaign management via Meta Marketing API v22.0.
+Meta Ads MCP Server - Campaign management via the configured Meta Graph API (default: v24.0).
 
 ## Purpose
 
@@ -252,7 +252,7 @@ Client-side validation of entity payloads without making API calls.
 
 **Phase: Production-Ready**
 
-All listed tools are fully implemented using Meta Marketing API v22.0 with
+All listed tools are fully implemented using the configured Meta Graph API with
 Bearer token authentication, insights reporting, and targeting discovery.
 
 ## Development
@@ -280,16 +280,17 @@ pnpm run typecheck
 - `META_MCP_HOST`: Server host (default: 127.0.0.1)
 - `MCP_AUTH_MODE`: Authentication mode - `meta-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
-- `META_API_BASE_URL`: Graph API base URL (default: `https://graph.facebook.com/v22.0`)
-- `META_API_VERSION`: API version (default: `v22.0`)
+- `META_API_BASE_URL`: Graph API base URL (default: `https://graph.facebook.com/v24.0`)
+- `META_API_VERSION`: API version (default: `v24.0`)
 - `META_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 200)
 - `META_ACCESS_TOKEN`: Access token for stdio mode
+- `META_VIDEO_UPLOAD_MAX_BUFFERED_BYTES`: Max buffered video upload size in bytes (default: `268435456`)
 
 ## Architecture
 
 ### Key Components
 
-- **`MetaGraphApiClient`** - HTTP client for Graph API v22.0 with form-encoded POST for writes
+- **`MetaGraphApiClient`** - HTTP client for the configured Graph API version with form-encoded POST for writes
 - **`MetaService`** - CRUD, bulk ops, duplication, delivery estimates, ad previews
 - **`MetaInsightsService`** - Insights queries with breakdowns, attribution windows, and time series
 - **`MetaTargetingService`** - Targeting search and category browsing
@@ -305,6 +306,7 @@ pnpm run typecheck
 - `targeting` on ad sets replaces entirely on update (no merge semantics)
 - `ARCHIVED` status is permanent and cannot be reversed
 - Insights data may lag up to 48 hours for recent activity
+- Video uploads use a buffered proxy path and are intentionally capped below Meta's largest native upload limits
 
 ### Transport
 

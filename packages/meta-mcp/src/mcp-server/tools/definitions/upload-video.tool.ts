@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer, createLogger } from "@cesteral/shared";
+import { downloadFileToBuffer, createLogger, fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js";
@@ -15,11 +15,12 @@ const TOOL_TITLE = "Upload Video to Meta Ads";
 const TOOL_DESCRIPTION = `Upload a video to Meta Ads Library from a URL.
 
 The server downloads the video and uploads it to Meta's ad video library.
+This tool uses a buffered proxy upload path, so it is intended for moderate-size assets rather than Meta's largest supported uploads.
 Polls until processing is complete (up to 5 minutes).
 
 **Video requirements:**
 - Formats: MP4, MOV (H.264 codec recommended)
-- Max file size: 4GB
+- Server safety limit: ${Math.round(mcpConfig.metaVideoUploadMaxBufferedBytes / (1024 * 1024))}MB buffered upload size
 - Min resolution: 120x120px
 - Recommended: 1080x1080px (square) or 1920x1080px (landscape)
 - Duration: 1 second to 240 minutes
@@ -55,6 +56,26 @@ interface MetaVideoStatusResponse {
   };
 }
 
+async function getRemoteContentLength(
+  url: string,
+  context?: RequestContext
+): Promise<number | undefined> {
+  try {
+    const response = await fetchWithTimeout(url, 30_000, context, { method: "HEAD" });
+    if (!response.ok) {
+      return undefined;
+    }
+    const contentLength = response.headers.get("content-length");
+    if (!contentLength) {
+      return undefined;
+    }
+    const parsedLength = Number(contentLength);
+    return Number.isFinite(parsedLength) && parsedLength >= 0 ? parsedLength : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -65,12 +86,26 @@ export async function uploadVideoLogic(
   sdkContext?: SdkContext
 ): Promise<UploadVideoOutput> {
   const { metaService } = resolveSessionServices(sdkContext);
+  const maxBufferedBytes = mcpConfig.metaVideoUploadMaxBufferedBytes;
+  const remoteContentLength = await getRemoteContentLength(input.mediaUrl, context);
+
+  if (remoteContentLength !== undefined && remoteContentLength > maxBufferedBytes) {
+    throw new Error(
+      `Meta video upload aborted before download: remote file is ${remoteContentLength} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`
+    );
+  }
 
   const { buffer, contentType, filename } = await downloadFileToBuffer(
     input.mediaUrl,
     300_000, // 5 min for large videos
     context
   );
+
+  if (buffer.length > maxBufferedBytes) {
+    throw new Error(
+      `Meta video upload aborted after download: buffered file is ${buffer.length} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`
+    );
+  }
 
   const actId = input.adAccountId.startsWith("act_") ? input.adAccountId : `act_${input.adAccountId}`;
   const fields: Record<string, string> = {};

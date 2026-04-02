@@ -44,7 +44,7 @@ beforeEach(() => {
 
 describe("bulkUpdateStatusLogic", () => {
   it("calls getEntity then updateEntity for each entityId", async () => {
-    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Camp", status: "ACTIVE" });
+    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Camp", archived: false });
     mockState.cm360Service.updateEntity.mockResolvedValue({});
 
     await bulkUpdateStatusLogic(
@@ -68,7 +68,41 @@ describe("bulkUpdateStatusLogic", () => {
     expect(mockState.cm360Service.updateEntity).toHaveBeenCalledWith(
       "campaign",
       "p1",
-      { id: "1", name: "Test", budget: 100, status: "ARCHIVED" },
+      { id: "1", name: "Test", budget: 100, archived: true },
+      mockContext
+    );
+  });
+
+  it("maps ad ACTIVE to active=true and archived=false", async () => {
+    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Ad", active: false, archived: true });
+    mockState.cm360Service.updateEntity.mockResolvedValue({});
+
+    await bulkUpdateStatusLogic(
+      { profileId: "p1", entityType: "ad", entityIds: ["1"], status: "ACTIVE" },
+      mockContext
+    );
+
+    expect(mockState.cm360Service.updateEntity).toHaveBeenCalledWith(
+      "ad",
+      "p1",
+      { id: "1", name: "Ad", active: true, archived: false },
+      mockContext
+    );
+  });
+
+  it("maps placement INACTIVE to activeStatus", async () => {
+    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Placement" });
+    mockState.cm360Service.updateEntity.mockResolvedValue({});
+
+    await bulkUpdateStatusLogic(
+      { profileId: "p1", entityType: "placement", entityIds: ["1"], status: "INACTIVE" },
+      mockContext
+    );
+
+    expect(mockState.cm360Service.updateEntity).toHaveBeenCalledWith(
+      "placement",
+      "p1",
+      { id: "1", name: "Placement", activeStatus: "PLACEMENT_STATUS_INACTIVE" },
       mockContext
     );
   });
@@ -90,7 +124,7 @@ describe("bulkUpdateStatusLogic", () => {
   });
 
   it("handles PUT failure for one entity while others succeed", async () => {
-    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Camp" });
+    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Camp", archived: false });
     mockState.cm360Service.updateEntity
       .mockRejectedValueOnce(new Error("Permission denied"))
       .mockResolvedValueOnce({});
@@ -106,7 +140,7 @@ describe("bulkUpdateStatusLogic", () => {
   });
 
   it("all succeed: updated equals entityIds.length, failed is 0", async () => {
-    mockState.cm360Service.getEntity.mockResolvedValue({ id: "x" });
+    mockState.cm360Service.getEntity.mockResolvedValue({ id: "x", archived: false });
     mockState.cm360Service.updateEntity.mockResolvedValue({});
 
     const result = await bulkUpdateStatusLogic(
@@ -128,6 +162,19 @@ describe("bulkUpdateStatusLogic", () => {
 
     expect(result.updated).toBe(0);
     expect(result.failed).toBe(2);
+  });
+
+  it("fails fast per entity for unsupported entity types", async () => {
+    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Site" });
+
+    const result = await bulkUpdateStatusLogic(
+      { profileId: "p1", entityType: "site", entityIds: ["1"], status: "ARCHIVED" },
+      mockContext
+    );
+
+    expect(result.updated).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(result.results[0].error).toContain("not supported");
   });
 });
 

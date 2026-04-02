@@ -64,9 +64,15 @@ Fetch these resources for detailed schema information:
 
 ### Reporting (Async)
 - \`cm360_get_report\` — Submit report and wait for results (blocking)
+- \`cm360_get_report_breakdowns\` — Submit report with breakdown dimensions and wait for results
 - \`cm360_submit_report\` — Submit report without waiting (non-blocking)
 - \`cm360_check_report_status\` — Check report execution status
 - \`cm360_download_report\` — Download and parse report CSV
+
+### Reporting Schedules
+- \`cm360_create_report_schedule\` — Create a scheduled report
+- \`cm360_list_report_schedules\` — List reports with schedules
+- \`cm360_delete_report_schedule\` — Delete a scheduled report
 
 ### Bulk Operations
 - \`cm360_bulk_update_status\` — Batch status updates

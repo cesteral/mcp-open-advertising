@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
 const TOOL_NAME = "cm360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update CM360 Entity Status";
@@ -13,7 +14,10 @@ const TOOL_DESCRIPTION = `Batch update the status of multiple CM360 entities.
 
 Each entity is fetched first then updated (CM360 uses PUT/replace semantics). Loops individual GET+PUT calls with rate limiting. At ~1 QPS, 50 items takes ~100 seconds.
 
-Common status values: ACTIVE, ARCHIVED (campaigns), ACTIVE/PAUSED (placements, ads).`;
+Supported mappings:
+- campaign: ACTIVE, ARCHIVED
+- ad, creative: ACTIVE, ARCHIVED
+- placement: ACTIVE, INACTIVE, ARCHIVED, PERMANENTLY_ARCHIVED`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
@@ -78,7 +82,7 @@ export async function bulkUpdateStatusLogic(
       await cm360Service.updateEntity(
         input.entityType as CM360EntityType,
         input.profileId,
-        { ...current, status: input.status },
+        applyStatusUpdate(input.entityType as CM360EntityType, current, input.status),
         context
       );
       results.push({ entityId, success: true });
@@ -96,6 +100,46 @@ export async function bulkUpdateStatusLogic(
     results,
     timestamp: new Date().toISOString(),
   };
+}
+
+function applyStatusUpdate(
+  entityType: CM360EntityType,
+  current: Record<string, unknown>,
+  requestedStatus: string
+): Record<string, unknown> {
+  const normalizedStatus = requestedStatus.toUpperCase();
+
+  switch (entityType) {
+    case "campaign":
+      if (normalizedStatus === "ACTIVE") return { ...current, archived: false };
+      if (normalizedStatus === "ARCHIVED") return { ...current, archived: true };
+      break;
+    case "ad":
+    case "creative":
+      if (normalizedStatus === "ACTIVE") return { ...current, active: true, archived: false };
+      if (normalizedStatus === "ARCHIVED") return { ...current, active: false, archived: true };
+      break;
+    case "placement":
+      if (normalizedStatus === "ACTIVE") return { ...current, activeStatus: "PLACEMENT_STATUS_ACTIVE" };
+      if (normalizedStatus === "INACTIVE" || normalizedStatus === "PAUSED") {
+        return { ...current, activeStatus: "PLACEMENT_STATUS_INACTIVE" };
+      }
+      if (normalizedStatus === "ARCHIVED") return { ...current, activeStatus: "PLACEMENT_STATUS_ARCHIVED" };
+      if (normalizedStatus === "PERMANENTLY_ARCHIVED") {
+        return { ...current, activeStatus: "PLACEMENT_STATUS_PERMANENTLY_ARCHIVED" };
+      }
+      break;
+    default:
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Status updates are not supported for entity type: ${entityType}`
+      );
+  }
+
+  throw new McpError(
+    JsonRpcErrorCode.InvalidParams,
+    `Unsupported status "${requestedStatus}" for entity type ${entityType}`
+  );
 }
 
 export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
@@ -134,6 +178,15 @@ export const bulkUpdateStatusTool = {
         entityType: "campaign",
         entityIds: ["111", "222", "333"],
         status: "ARCHIVED",
+      },
+    },
+    {
+      label: "Set placements inactive",
+      input: {
+        profileId: "123456",
+        entityType: "placement",
+        entityIds: ["444", "555"],
+        status: "INACTIVE",
       },
     },
   ],
