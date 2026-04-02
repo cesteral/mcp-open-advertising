@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_execute_entity_report";
 const TOOL_TITLE = "Execute TTD Entity Report (GraphQL)";
@@ -76,6 +77,8 @@ export async function executeEntityReportLogic(
     input.reportType,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error executing entity report");
 
   const mutationKey = MUTATION_KEYS[input.entityType];
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};

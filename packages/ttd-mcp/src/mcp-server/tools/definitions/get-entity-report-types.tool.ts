@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_get_entity_report_types";
 const TOOL_TITLE = "Get TTD Entity Report Types (GraphQL)";
@@ -73,6 +74,8 @@ export async function getEntityReportTypesLogic(
     input.tile,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error retrieving entity report types");
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const metadata = (gqlData.programmaticTileReportMetadata as Record<string, unknown> | undefined) ?? {};
