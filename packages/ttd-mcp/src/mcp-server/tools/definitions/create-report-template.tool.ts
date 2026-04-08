@@ -16,8 +16,8 @@ const TOOL_DESCRIPTION = `Create a user-defined report template via TTD GraphQL 
 A report template defines the structure of a My Reports report — which report types to use and which columns/metrics to include. Templates can have up to 29 tabs (resultSets).
 
 **Workflow:**
-1. Use \`ttd_graphql_query\` with \`reportTypes\` to discover available report type IDs
-2. Use \`ttd_graphql_query\` with \`reportType\` to get column/metric IDs for a report type
+1. Use \`ttd_list_report_types\` to discover available report type IDs
+2. Use \`ttd_get_report_type_schema\` to get field and metric IDs for a report type
 3. Call this tool to create the template
 4. Use the returned template ID to schedule reports (\`ttd_create_template_schedule\`)
 
@@ -135,6 +135,20 @@ export function createReportTemplateResponseFormatter(
             .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
             .join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
+
+  if (!result.templateData) {
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Report template creation returned no template data. The mutation may not have executed.\n\n` +
+          `This usually means the API token lacks MyReports write access. ` +
+          `Check the raw response for details:\n\n` +
+          `${JSON.stringify(result.rawResponse, null, 2)}\n\n` +
+          `Timestamp: ${result.timestamp}`,
       },
     ];
   }

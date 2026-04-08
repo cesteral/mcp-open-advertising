@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 50 tools total:
+ * 52 tools total:
  *   1 context: get context (cold-start partner discovery)
  *   6 original: list, get, create, update, delete, report
  *   5 workflows utility: REST passthrough, standard job status, first-party data job, third-party data job, campaign version
@@ -15,6 +15,7 @@
  *   9 report schedule management: create, update, list, get, delete schedule + list templates + cancel execution + rerun schedule + get executions
  *   2 GQL entity reports: execute entity report, get entity report types
  *   3 report template management: create, update, get template
+ *   2 report type discovery: list report types, get report type schema
  *   1 template schedule: create template schedule
  */
 
@@ -63,6 +64,8 @@ export { getEntityReportTypesTool } from "./get-entity-report-types.tool.js";
 export { createReportTemplateTool } from "./create-report-template.tool.js";
 export { updateReportTemplateTool } from "./update-report-template.tool.js";
 export { getReportTemplateTool } from "./get-report-template.tool.js";
+export { listReportTypesTool } from "./list-report-types.tool.js";
+export { getReportTypeSchemaTool } from "./get-report-type-schema.tool.js";
 export { createTemplateScheduleTool } from "./create-template-schedule.tool.js";
 export { updateReportScheduleTool } from "./update-report-schedule.tool.js";
 export { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
@@ -114,6 +117,8 @@ import { getEntityReportTypesTool } from "./get-entity-report-types.tool.js";
 import { createReportTemplateTool } from "./create-report-template.tool.js";
 import { updateReportTemplateTool } from "./update-report-template.tool.js";
 import { getReportTemplateTool } from "./get-report-template.tool.js";
+import { listReportTypesTool } from "./list-report-types.tool.js";
+import { getReportTypeSchemaTool } from "./get-report-type-schema.tool.js";
 import { createTemplateScheduleTool } from "./create-template-schedule.tool.js";
 import { updateReportScheduleTool } from "./update-report-schedule.tool.js";
 import { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
@@ -179,6 +184,9 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── GQL Entity Reports ──
   executeEntityReportTool,
   getEntityReportTypesTool,
+  // ── Report Type Discovery ──
+  listReportTypesTool,
+  getReportTypeSchemaTool,
   // ── Report Template Management ──
   createReportTemplateTool,
   updateReportTemplateTool,

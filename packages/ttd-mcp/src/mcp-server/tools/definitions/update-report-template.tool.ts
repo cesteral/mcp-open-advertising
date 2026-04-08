@@ -16,7 +16,8 @@ const TOOL_DESCRIPTION = `Update an existing report template via TTD GraphQL (\`
 **IMPORTANT:** The updated structure **completely replaces** the existing template. You must re-include all fields and metrics you want to keep — any omitted columns will be removed.
 
 Use \`ttd_get_report_template\` first to retrieve the current template structure before updating.
-Use \`ttd_list_report_templates\` to find the template ID.`;
+Use \`ttd_list_report_templates\` to find the template ID.
+Use \`ttd_list_report_types\` and \`ttd_get_report_type_schema\` to discover available fields and metrics.`;
 
 const ReportTemplateColumnSchema = z.object({
   columnId: z.string().describe("Column or metric ID"),
@@ -128,6 +129,20 @@ export function updateReportTemplateResponseFormatter(
             .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
             .join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
+
+  if (!result.templateData) {
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Report template update returned no template data. The mutation may not have executed.\n\n` +
+          `This usually means the API token lacks MyReports write access. ` +
+          `Check the raw response for details:\n\n` +
+          `${JSON.stringify(result.rawResponse, null, 2)}\n\n` +
+          `Timestamp: ${result.timestamp}`,
       },
     ];
   }
