@@ -94,6 +94,103 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 | -------------------- | ------------------------------------------------- |
 | `ttd_get_ad_preview` | Get preview URL and metadata for a TTD creative   |
 
+## GraphQL API Reference
+
+TTD exposes a GraphQL API alongside its REST API. All GraphQL calls go to:
+
+```
+POST https://desk.thetradedesk.com/graphql
+TTD-Auth: <api_token>
+Content-Type: application/json
+```
+
+> **Introspection is disabled.** `__type` queries return `null`. The full query reference is available as an MCP resource at `graphql-reference://ttd` — call `resources/read` on that URI for working patterns and known field constraints.
+
+### Authentication
+
+Same `TTD-Auth` token as the REST API. Set via session headers (HTTP mode) or `TTD_API_TOKEN` env var (stdio mode).
+
+### Cold Start
+
+```graphql
+{ partners { nodes { id name } } }
+```
+
+Returns all accessible partner IDs. Use with `ttd_list_entities` (entityType: `"advertiser"`) or the `ttd_get_context` tool.
+
+### Pagination
+
+TTD uses two styles depending on the endpoint:
+
+| Style | Used for |
+|-------|---------|
+| `edges { node { ... } } pageInfo { hasNextPage endCursor }` | campaigns, adGroups, and most entity queries |
+| `nodes { ... } pageInfo { hasNextPage endCursor }` | partners, report templates |
+
+Add `first: N` and `after: "cursor"` for forward pagination.
+
+### Mutation Pattern
+
+All mutations return `data` + `errors` (or `userErrors` on entity report mutations):
+
+```graphql
+mutation ExampleMutation($input: ExampleInput!) {
+  exampleMutation(input: $input) {
+    data { id }
+    errors {
+      __typename
+      ... on MutationError { field message }
+    }
+  }
+}
+```
+
+Enum values are UPPERCASE in JSON variables (`"format": "EXCEL"`, `"dateFormat": "INTERNATIONAL"`).
+
+### Seed / Audience Management
+
+| Operation | Mutation / Query |
+|-----------|-----------------|
+| Create seed | `seedCreate(input: { advertiserId, name, ... })` |
+| Update seed | `seedUpdate(input: { id, ... })` |
+| Get seed | `query { seed(id: $id) { id name status quality activeSeedIdCount } }` |
+| Set advertiser default seed | `advertiserSetDefaultSeed(input: { advertiserId, seedId })` |
+| Attach seed to campaign | `campaignUpdateSeed(input: { campaignId, seedId })` |
+
+Use `ttd_manage_seed` to execute these without writing GraphQL manually.
+
+### Bulk GraphQL Jobs
+
+Run the same query or mutation across many variable sets in parallel:
+
+```graphql
+mutation CreateQueryBulk($input: CreateQueryBulkInput!) {
+  createQueryBulk(input: $input) {
+    data { id status }
+    errors { __typename }
+  }
+}
+```
+
+Variables: `{ "input": { "query": "...", "queryVariables": "[{...},{...}]" } }` (variables JSON-encoded as a string).
+
+Poll with `{ bulkJob(id: $id) { status url } }` — results expire after **1 hour**. Use `ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job`, and `ttd_graphql_cancel_bulk_job` to avoid managing this flow manually.
+
+### Error Codes
+
+All GraphQL errors return HTTP 200. Check `errors[].extensions.code`:
+
+| Code | Meaning |
+|------|---------|
+| `AUTHENTICATION_FAILURE` | Invalid or expired token |
+| `VALIDATION_FAILURE` | Input failed server-side validation |
+| `GRAPHQL_VALIDATION_FAILED` | Query syntax / field error |
+| `RESOURCE_LIMIT_EXCEEDED` | Rate or complexity limit hit — reduce page size or retry |
+| `NOT_FOUND` | Entity does not exist |
+| `UNAUTHORIZED_FIELD_OR_TYPE` | Feature not enabled on account (e.g. MyReports) |
+
+---
+
 ## Supported Entity Types
 
 | Entity Type         | API Path               | ID Field        |
