@@ -103,6 +103,10 @@ export function getBaseEnvConfig(defaultHost: string): Record<string, unknown> {
 
     // Host
     host: defaultHost,
+
+    // Generic HTTP port — Cloud Run sets MCP_HTTP_PORT on every service.
+    // Each server can still override via its own `<NAME>_MCP_PORT` env var.
+    port: process.env.MCP_HTTP_PORT ? Number(process.env.MCP_HTTP_PORT) : undefined,
   };
 }
 

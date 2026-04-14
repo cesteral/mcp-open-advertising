@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 24 tools total:
+ * 25 tools total:
  *   6 core: list entities, get entity, create entity, update entity, delete entity, list ad accounts
  *   2 insights: get insights, get insights breakdowns
  *   3 async reporting: submit report, check report status, download report
@@ -13,6 +13,7 @@
  *   1 bids: adjust bids
  *   6 specialized: duplicate entity, get delivery estimate, get ad preview, upload image, upload video, manage budget schedule
  *   1 validation: validate entity (client-side)
+ *   1 pacing: get pacing status
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";

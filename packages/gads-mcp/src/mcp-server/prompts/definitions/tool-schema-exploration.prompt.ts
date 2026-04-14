@@ -94,7 +94,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (14 tools)
+## Available Tools Summary (15 tools)
 
 ### Read Tools
 | Tool | Purpose | Notes |
@@ -117,6 +117,7 @@ Inspect the output, then iterate with more specific calls.
 | \`gads_adjust_bids\` | Batch adjust ad group bids | Safe read-modify-write |
 | \`gads_validate_entity\` | Dry-run validate entity payload | Returns validation errors |
 | \`gads_get_ad_preview\` | Get ad preview HTML/URL | Returns preview for an ad |
+| \`gads_get_pacing_status\` | Real-time pacing calc for a campaign | Reads spend + budget |
 
 ### Supported Entity Types (6)
 \`campaign\`, \`adGroup\`, \`ad\`, \`keyword\`, \`campaignBudget\`, \`asset\`

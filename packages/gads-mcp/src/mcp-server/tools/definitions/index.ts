@@ -4,11 +4,12 @@
 /**
  * Tool definitions barrel export
  *
- * 14 tools total:
+ * 15 tools total:
  *   5 read:  gaql search, list accounts, get entity, list entities, get insights
  *   7 write: create entity, update entity, remove entity, bulk mutate, bulk create entities, bulk update status, adjust bids
  *   1 validate: validate entity (dry-run via validateOnly)
  *   1 preview: get ad preview
+ *   1 pacing:  get pacing status
  */
 
 export { gaqlSearchTool } from "./gaql-search.tool.js";

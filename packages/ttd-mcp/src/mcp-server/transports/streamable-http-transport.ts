@@ -32,7 +32,9 @@ function buildPlatformConfig(
   config: AppConfig,
   logger: Logger
 ): TransportFactoryConfig {
-  const authStrategy = config.mcpAuthMode === "ttd-token"
+  const isHeaderTokenMode =
+    config.mcpAuthMode === "ttd-token" || config.mcpAuthMode === "ttd-headers";
+  const authStrategy = isHeaderTokenMode
     ? new TtdTokenAuthStrategy(logger)
     : createAuthStrategy(config.mcpAuthMode as AuthMode, {
         jwtSecret: config.mcpAuthSecretKey,
@@ -48,10 +50,9 @@ function buildPlatformConfig(
       "MCP-Protocol-Version",
       "TTD-Auth",
     ],
-    authErrorHint:
-      config.mcpAuthMode === "ttd-token"
-        ? "Provide a TTD API token via the TTD-Auth header."
-        : "Provide a valid Bearer token in the Authorization header.",
+    authErrorHint: isHeaderTokenMode
+      ? "Provide a TTD API token via the TTD-Auth header."
+      : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
     rateLimiter,
     async createSessionForAuth(authResult, sessionId, appConfig, log) {

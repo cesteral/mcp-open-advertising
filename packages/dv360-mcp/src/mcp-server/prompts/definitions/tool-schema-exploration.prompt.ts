@@ -95,7 +95,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (24 tools)
+## Available Tools Summary (25 tools)
 
 ### Entity CRUD (9 tools)
 | Tool | Purpose | Notes |
@@ -143,11 +143,12 @@ Inspect the output, then iterate with more specific calls.
 | \`dv360_upload_image\` | Upload image asset from URL | Returns assetId for creatives |
 | \`dv360_upload_video\` | Upload video asset from URL | Returns assetId for video creatives |
 
-### Specialized (2 tools)
+### Specialized (3 tools)
 | Tool | Purpose | Notes |
 |------|---------|-------|
 | \`dv360_duplicate_entity\` | Duplicate an IO or line item | Copy-on-read with optional rename |
 | \`dv360_get_delivery_estimate\` | Get delivery/targeting info | Line item config or defaults |
+| \`dv360_get_pacing_status\` | Real-time pacing calc for a line item | Reads delivery + budget |
 
 ---
 

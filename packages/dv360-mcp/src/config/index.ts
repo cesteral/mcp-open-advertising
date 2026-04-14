@@ -58,7 +58,7 @@ export function parseConfig(): AppConfig {
 
     // Server-specific overrides
     serviceName: process.env.SERVICE_NAME,
-    port: process.env.DV360_MCP_PORT ? Number(process.env.DV360_MCP_PORT) : undefined,
+    ...(process.env.DV360_MCP_PORT ? { port: Number(process.env.DV360_MCP_PORT) } : {}),
     host: process.env.DV360_MCP_HOST || defaultHost,
 
     // DV360 API

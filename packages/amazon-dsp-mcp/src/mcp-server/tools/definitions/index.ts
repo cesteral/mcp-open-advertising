@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 18 tools total:
+ * 19 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
@@ -13,6 +13,7 @@
  *   1 targeting: search targeting (audience segments via /dsp/audienceSegments)
  *   1 specialized: get ad preview
  *   1 duplication: duplicate entity (manual read-strip-create)
+ *   1 validation: validate entity (client-side)
  *   1 validation: validate entity (client-side)
  */
 

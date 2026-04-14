@@ -53,7 +53,7 @@ export function parseConfig(): AppConfig {
 
     // Server-specific overrides
     serviceName: process.env.SERVICE_NAME,
-    port: process.env.SA360_MCP_PORT ? Number(process.env.SA360_MCP_PORT) : undefined,
+    ...(process.env.SA360_MCP_PORT ? { port: Number(process.env.SA360_MCP_PORT) } : {}),
     host: process.env.SA360_MCP_HOST || defaultHost,
 
     // SA360 API

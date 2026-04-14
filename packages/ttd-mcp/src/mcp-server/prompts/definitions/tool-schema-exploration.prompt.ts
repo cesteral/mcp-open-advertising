@@ -92,7 +92,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (50 tools)
+## Available Tools Summary (55 tools)
 
 ### Context
 | Tool | Purpose | Read/Write |
@@ -187,6 +187,15 @@ Inspect the output, then iterate with more specific calls.
 |------|---------|-----------|
 | \`ttd_execute_entity_report\` | Execute immediate entity-level report via GraphQL | Write |
 | \`ttd_get_entity_report_types\` | Discover available report types for an entity | Read |
+| \`ttd_list_report_types\` | List all catalog report types | Read |
+| \`ttd_get_report_type_schema\` | Get columns/dimensions for a report type | Read |
+
+### Bid Lists & Seeds
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_manage_bid_list\` | Create/get/update a single bid list | Read/Write |
+| \`ttd_bulk_manage_bid_lists\` | Batch get/update bid lists (up to 50) | Read/Write |
+| \`ttd_manage_seed\` | Manage audience seeds via GraphQL | Read/Write |
 
 ### Supported REST Entity Types (5)
 \`advertiser\`, \`campaign\`, \`adGroup\`, \`creative\`, \`conversionTracker\`

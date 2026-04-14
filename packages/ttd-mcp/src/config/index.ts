@@ -20,7 +20,11 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("ttd-mcp"),
 
   // Auth — TTD-specific modes
-  mcpAuthMode: z.enum(["ttd-token", "jwt", "none"]).default("ttd-token"),
+  // `ttd-token` and `ttd-headers` are aliases — both expect the TTD API token
+  // via the `TTD-Auth` request header. Two names exist because prior Terraform
+  // defaults and CLAUDE.md settled on different labels; keeping both avoids
+  // breaking either call site.
+  mcpAuthMode: z.enum(["ttd-token", "ttd-headers", "jwt", "none"]).default("ttd-token"),
 
   // TTD API Configuration
   ttdApiBaseUrl: z
@@ -55,7 +59,7 @@ export function parseConfig(): AppConfig {
 
     // Server-specific overrides
     serviceName: process.env.SERVICE_NAME,
-    port: process.env.TTD_MCP_PORT ? Number(process.env.TTD_MCP_PORT) : undefined,
+    ...(process.env.TTD_MCP_PORT ? { port: Number(process.env.TTD_MCP_PORT) } : {}),
     host: process.env.TTD_MCP_HOST || defaultHost,
 
     // TTD API

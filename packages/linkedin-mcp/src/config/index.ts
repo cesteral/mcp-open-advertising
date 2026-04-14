@@ -52,7 +52,7 @@ export function parseConfig(): AppConfig {
 
     // Server-specific overrides
     serviceName: process.env.SERVICE_NAME,
-    port: process.env.LINKEDIN_MCP_PORT ? Number(process.env.LINKEDIN_MCP_PORT) : undefined,
+    ...(process.env.LINKEDIN_MCP_PORT ? { port: Number(process.env.LINKEDIN_MCP_PORT) } : {}),
     host: process.env.LINKEDIN_MCP_HOST || defaultHost,
 
     // LinkedIn API

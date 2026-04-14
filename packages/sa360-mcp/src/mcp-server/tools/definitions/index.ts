@@ -4,14 +4,13 @@
 /**
  * Tool definitions barrel export
  *
- * 16 tools total:
+ * 15 tools total:
  *   8 read:  sa360 search, list accounts, get entity, list entities, get insights,
  *            get insights breakdowns, list custom columns, search fields
  *   3 async reporting: submit report, check report status, download report (v2 API)
  *   2 write: insert conversions, update conversions (v2 API)
  *   1 validation: validate conversion
  *   1 audit: get change history
- *   1 reserved: get change history
  */
 
 export { sa360SearchTool } from "./sa360-search.tool.js";

@@ -62,7 +62,7 @@ export function parseConfig(): AppConfig {
 
     // Server-specific overrides
     serviceName: process.env.SERVICE_NAME,
-    port: process.env.SNAPCHAT_MCP_PORT ? Number(process.env.SNAPCHAT_MCP_PORT) : undefined,
+    ...(process.env.SNAPCHAT_MCP_PORT ? { port: Number(process.env.SNAPCHAT_MCP_PORT) } : {}),
     host: process.env.SNAPCHAT_MCP_HOST || defaultHost,
 
     // Snapchat API

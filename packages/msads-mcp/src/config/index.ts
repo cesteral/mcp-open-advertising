@@ -58,7 +58,7 @@ export function parseConfig(): AppConfig {
     ...getBaseEnvConfig(defaultHost),
 
     serviceName: process.env.SERVICE_NAME,
-    port: process.env.MSADS_MCP_PORT ? Number(process.env.MSADS_MCP_PORT) : undefined,
+    ...(process.env.MSADS_MCP_PORT ? { port: Number(process.env.MSADS_MCP_PORT) } : {}),
     host: process.env.MSADS_MCP_HOST || defaultHost,
 
     // Microsoft Ads API

@@ -46,8 +46,22 @@ const pinterestService = {
       }
       return { video_id: "vid-test-123", video_name: "Test Video" };
     }),
-    post: vi.fn(async () => ({
-      list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
+    post: vi.fn(async (path: string) => {
+      if (path === "/v5/media") {
+        return {
+          media_id: "media-test-123",
+          media_type: "image",
+          upload_url: "https://s3.example.com/upload",
+          upload_parameters: { key: "value" },
+        };
+      }
+      return {
+        list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
+      };
+    }),
+    uploadToS3: vi.fn(async () => undefined),
+    get: vi.fn(async () => ({
+      media_processing_record: { status: "succeeded" },
     })),
   },
 };
@@ -98,7 +112,7 @@ describe("Pinterest MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 27 : 21); // 21 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 28 : 22); // 22 business + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

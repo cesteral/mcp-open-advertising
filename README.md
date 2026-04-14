@@ -100,7 +100,7 @@ validation via DV360 API v4.
 | [tiktok-mcp](packages/tiktok-mcp) | TikTok Marketing API v1.3 | 23 | Bearer token + advertiser ID |
 | [cm360-mcp](packages/cm360-mcp) | CM360 API v5 | 20 | Google OAuth2 |
 | [sa360-mcp](packages/sa360-mcp) | SA360 Reporting API v0 + DS v2 | 15 | OAuth2 refresh token |
-| [pinterest-mcp](packages/pinterest-mcp) | Pinterest Ads API v5 | 23 | Bearer token |
+| [pinterest-mcp](packages/pinterest-mcp) | Pinterest Ads API v5 | 22 | Bearer token |
 | [snapchat-mcp](packages/snapchat-mcp) | Snapchat Ads API v1 | 23 | Bearer token |
 | [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API | 19 | Bearer token |
 | [msads-mcp](packages/msads-mcp) | Microsoft Advertising API v13 | 24 | Access token + developer token |

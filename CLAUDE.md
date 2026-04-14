@@ -22,7 +22,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 8 | `cm360-mcp` | 3008 | CM360 API v5 | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 20 |
 | 9 | `snapchat-mcp` | 3009 | Snapchat Ads API v1 | campaign, adGroup, ad, creative | 23 |
 | 10 | `sa360-mcp` | 3010 | SA360 Reporting API v0 + DS v2 | _(reporting + conversions)_ | 15 |
-| 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 23 |
+| 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 22 |
 | 12 | `amazon-dsp-mcp` | 3012 | Amazon DSP API | order, lineItem, creative | 19 |
 | 13 | `msads-mcp` | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label | 24 |
 
@@ -115,7 +115,7 @@ Each server has its own `MCP_AUTH_MODE` options:
 | `dbm-mcp`, `dv360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
 | `gads-mcp` | `gads-headers`, `jwt`, `none` | `gads-headers` |
 | `cm360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
-| `ttd-mcp` | `ttd-token`, `ttd-headers`, `jwt`, `none` | `ttd-token` |
+| `ttd-mcp` | `ttd-token`, `ttd-headers` (alias of `ttd-token`), `jwt`, `none` | `ttd-token` |
 | `meta-mcp` | `meta-bearer`, `jwt`, `none` | `meta-bearer` |
 | `linkedin-mcp` | `linkedin-bearer`, `jwt`, `none` | `linkedin-bearer` |
 | `tiktok-mcp` | `tiktok-bearer`, `jwt`, `none` | `tiktok-bearer` |
@@ -287,7 +287,7 @@ Standard CRUD/bulk/reporting tools plus:
 - **linkedin-mcp** (20 tools): URN-based entity IDs, `LinkedIn-Version: 202409` header, analytics via `/v2/adAnalytics` with pivot breakdowns
 - **tiktok-mcp** (23 tools): `X-TikTok-Advertiser-Id` header in HTTP mode, image/video upload
 - **cm360-mcp** (20 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting; scheduling via `create/list/delete_report_schedule`
-- **pinterest-mcp** (23 tools): cursor-based pagination via `bookmark` tokens
+- **pinterest-mcp** (22 tools): cursor-based pagination via `bookmark` tokens. Video upload via `/v5/media`; image creatives reference URLs directly (Pinterest's `/v5/media` endpoint only supports `media_type="video"`)
 - **snapchat-mcp** (23 tools): Ad Squads (adGroups), cursor-based pagination
 - **amazon-dsp-mcp** (19 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status)
 

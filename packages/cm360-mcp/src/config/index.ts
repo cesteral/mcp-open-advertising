@@ -36,7 +36,7 @@ export function parseConfig(): AppConfig {
   const rawConfig: Record<string, unknown> = {
     ...getBaseEnvConfig(defaultHost),
     serviceName: process.env.SERVICE_NAME,
-    port: process.env.CM360_MCP_PORT ? Number(process.env.CM360_MCP_PORT) : undefined,
+    ...(process.env.CM360_MCP_PORT ? { port: Number(process.env.CM360_MCP_PORT) } : {}),
     host: process.env.CM360_MCP_HOST || defaultHost,
     cm360ApiBaseUrl: process.env.CM360_API_BASE_URL,
     cm360RateLimitPerMinute: process.env.CM360_RATE_LIMIT_PER_MINUTE
