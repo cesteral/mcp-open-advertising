@@ -39,13 +39,26 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Bulk Operations
 
-| Tool                       | Description                                             |
-| -------------------------- | ------------------------------------------------------- |
-| `ttd_bulk_create_entities` | Batch create campaigns/ad groups (up to 50)             |
-| `ttd_bulk_update_entities` | Batch update campaigns/ad groups (up to 50)             |
-| `ttd_bulk_update_status`   | Batch pause/resume/archive entities                     |
-| `ttd_archive_entities`     | Batch archive (soft-delete) entities                    |
-| `ttd_adjust_bids`          | Batch adjust ad group bid CPMs (safe read-modify-write) |
+| Tool                          | Description                                             |
+| ----------------------------- | ------------------------------------------------------- |
+| `ttd_bulk_create_entities`    | Batch create campaigns/ad groups (up to 50)             |
+| `ttd_bulk_update_entities`    | Batch update campaigns/ad groups (up to 50)             |
+| `ttd_bulk_update_status`      | Batch pause/resume/archive entities                     |
+| `ttd_archive_entities`        | Batch archive (soft-delete) entities                    |
+| `ttd_adjust_bids`             | Batch adjust ad group bid CPMs (safe read-modify-write) |
+| `ttd_bulk_manage_bid_lists`   | Batch get/update bid lists (up to 50)                   |
+
+### Bid Lists
+
+| Tool                    | Description                                                       |
+| ----------------------- | ----------------------------------------------------------------- |
+| `ttd_manage_bid_list`   | Create, get, or update a single bid list (`create`/`get`/`update`) |
+
+### Audience / Seeds
+
+| Tool               | Description                                                                                                     |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `ttd_manage_seed`  | Manage audience seeds via GraphQL (`create`, `update`, `get`, `set_default_advertiser`, `attach_to_campaign`) |
 
 ### Advanced (GraphQL)
 

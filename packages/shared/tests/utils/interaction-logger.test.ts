@@ -121,6 +121,110 @@ describe("InteractionLogger", () => {
     expect(lines[0].id).not.toBe(lines[1].id);
   });
 
+  it("logFailure emits a tool_failure record with upstream trail", async () => {
+    const dataDir = createTempDir();
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+      level: "debug",
+    } as any;
+
+    const interactionLogger = new InteractionLogger({
+      dataDir,
+      serverName: "test-server",
+      logger,
+    });
+
+    interactionLogger.logFailure({
+      ts: "2026-02-19T21:00:00.000Z",
+      sessionId: "session-1",
+      tool: "ttd_update_entity",
+      params: { advertiserId: "adv-1" },
+      durationMs: 12,
+      errorCode: -32001,
+      errorMessage: "400 Bad Request",
+      upstream: [
+        {
+          method: "POST",
+          url: "https://api.thetradedesk.com/v3/campaign",
+          status: 400,
+          durationMs: 11,
+          attempt: 0,
+          responseBodyRedacted: '{"Message":"Invalid advertiser id"}',
+        },
+      ],
+    });
+    await interactionLogger.close();
+
+    const files = readdirSync(dataDir);
+    expect(files.length).toBe(1);
+    const entry = JSON.parse(readFileSync(join(dataDir, files[0]), "utf-8").trim()) as {
+      type: string;
+      success: boolean;
+      upstream: Array<{ status: number }>;
+      errorCode: number;
+    };
+
+    expect(entry.type).toBe("tool_failure");
+    expect(entry.success).toBe(false);
+    expect(entry.upstream[0].status).toBe(400);
+    expect(entry.errorCode).toBe(-32001);
+  });
+
+  it("stdout mode emits entries via the injected logger instead of writing files", () => {
+    const dataDir = createTempDir();
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+      level: "debug",
+    } as any;
+
+    const interactionLogger = new InteractionLogger({
+      dataDir,
+      serverName: "test-server",
+      logger,
+      mode: "stdout",
+    });
+
+    interactionLogger.append({
+      type: "tool_call",
+      ts: "2026-02-19T21:00:00.000Z",
+      sessionId: "session-1",
+      tool: "ttd_list_entities",
+      params: {},
+      success: true,
+      durationMs: 3,
+    });
+    interactionLogger.logFailure({
+      ts: "2026-02-19T21:00:01.000Z",
+      sessionId: "session-1",
+      tool: "ttd_update_entity",
+      params: {},
+      durationMs: 4,
+      errorMessage: "boom",
+    });
+
+    expect(readdirSync(dataDir)).toHaveLength(0);
+    expect(logger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "mcp.interaction" }),
+      expect.stringContaining("tool_call"),
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ event: "mcp.interaction" }),
+      expect.stringContaining("tool_failure"),
+    );
+  });
+
   it("buffers and flushes entries when gcsBucket is provided", async () => {
     const logger = {
       info: vi.fn(),

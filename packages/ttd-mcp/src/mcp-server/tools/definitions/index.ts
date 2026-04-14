@@ -4,7 +4,7 @@
 /**
  * Tool definitions barrel export
  *
- * 52 tools total:
+ * 55 tools total:
  *   1 context: get context (cold-start partner discovery)
  *   6 original: list, get, create, update, delete, report
  *   5 workflows utility: REST passthrough, standard job status, first-party data job, third-party data job, campaign version
@@ -71,6 +71,9 @@ export { updateReportScheduleTool } from "./update-report-schedule.tool.js";
 export { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
 export { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
 export { getReportExecutionsTool } from "./get-report-executions.tool.js";
+export { manageBidListTool } from "./bid-list.tool.js";
+export { bulkManageBidListsTool } from "./bid-list-bulk.tool.js";
+export { manageSeedTool } from "./seed.tool.js";
 
 import { getContextTool } from "./get-context.tool.js";
 import { restRequestTool } from "./rest-request.tool.js";
@@ -124,6 +127,9 @@ import { updateReportScheduleTool } from "./update-report-schedule.tool.js";
 import { cancelReportExecutionTool } from "./cancel-report-execution.tool.js";
 import { rerunReportScheduleTool } from "./rerun-report-schedule.tool.js";
 import { getReportExecutionsTool } from "./get-report-executions.tool.js";
+import { manageBidListTool } from "./bid-list.tool.js";
+import { bulkManageBidListsTool } from "./bid-list-bulk.tool.js";
+import { manageSeedTool } from "./seed.tool.js";
 import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
@@ -160,6 +166,11 @@ const productionTools: ToolDefinitionForFactory[] = [
   bulkUpdateStatusTool,
   archiveEntitiesTool,
   adjustBidsTool,
+  // ── Bid Lists ──
+  manageBidListTool,
+  bulkManageBidListsTool,
+  // ── Audience / Seeds ──
+  manageSeedTool,
   // ── Advanced ──
   graphqlQueryTool,
   validateEntityTool,

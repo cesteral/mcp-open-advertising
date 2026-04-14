@@ -746,3 +746,114 @@ describe("registerToolsFromDefinitions - response truncation", () => {
     expect(result.content[1].text).toContain("--- Response truncated");
   });
 });
+
+describe("registerToolsFromDefinitions — upstream failure capture (stdio)", () => {
+  it("captures upstream HTTP records even when no outer ALS context is installed", async () => {
+    const { recordUpstreamRequest } = await import("../../src/utils/http-request-recorder.js");
+    const { InteractionLogger } = await import("../../src/utils/interaction-logger.js");
+
+    const logger = createMockLogger();
+    const server = createMockServer();
+
+    const captured: Array<Record<string, unknown>> = [];
+    // Minimal InteractionLogger stub — capture entries without touching FS/GCS.
+    const fakeInteractionLogger = {
+      append: (entry: Record<string, unknown>) => captured.push(entry),
+      logFailure: (entry: Record<string, unknown>) =>
+        captured.push({ ...entry, type: "tool_failure", success: false }),
+    } as unknown as InstanceType<typeof InteractionLogger>;
+
+    const tools: ToolDefinitionForFactory[] = [
+      {
+        name: "failing_tool",
+        description: "Tool that makes an upstream call and then throws",
+        inputSchema: z.object({ id: z.string() }),
+        logic: async () => {
+          // Simulate a platform HTTP client recording its request before
+          // throwing. In real code this happens inside executeWithRetry.
+          recordUpstreamRequest({
+            method: "POST",
+            url: "https://api.example.com/x",
+            status: 400,
+            durationMs: 12,
+            attempt: 0,
+            responseBodyRedacted: '{"Message":"bad advertiser id"}',
+          });
+          throw new Error("upstream rejected");
+        },
+      },
+    ];
+
+    registerToolsFromDefinitions({
+      server,
+      tools,
+      logger,
+      sessionId: "stdio",
+      transformSchema: (schema) => schema,
+      createRequestContext,
+      interactionLogger: fakeInteractionLogger,
+    });
+
+    // Invoke from a context with NO outer runWithRequestContext — simulates
+    // stdio transport.
+    const handler = server.getHandler("failing_tool")!;
+    const result = (await handler({ id: "adv-1" })) as { isError?: boolean };
+    expect(result.isError).toBe(true);
+
+    const failureEntry = captured.find((e) => e.type === "tool_failure") as
+      | { upstream?: Array<{ status: number; responseBodyRedacted: string }> }
+      | undefined;
+    expect(failureEntry).toBeDefined();
+    expect(failureEntry!.upstream).toBeDefined();
+    expect(failureEntry!.upstream).toHaveLength(1);
+    expect(failureEntry!.upstream![0].status).toBe(400);
+    expect(failureEntry!.upstream![0].responseBodyRedacted).toContain("bad advertiser id");
+  });
+
+  it("isolates recorder state between successive tool invocations", async () => {
+    const { recordUpstreamRequest } = await import("../../src/utils/http-request-recorder.js");
+
+    const logger = createMockLogger();
+    const server = createMockServer();
+    const captured: Array<Record<string, unknown>> = [];
+    const fakeInteractionLogger = {
+      append: (e: Record<string, unknown>) => captured.push(e),
+      logFailure: (e: Record<string, unknown>) =>
+        captured.push({ ...e, type: "tool_failure", success: false }),
+    } as any;
+
+    const tools: ToolDefinitionForFactory[] = [
+      {
+        name: "tool_x",
+        description: "x",
+        inputSchema: z.object({}),
+        logic: async () => {
+          recordUpstreamRequest({ method: "GET", url: "https://a", status: 500, durationMs: 1, attempt: 0 });
+          throw new Error("first call failure");
+        },
+      },
+    ];
+
+    registerToolsFromDefinitions({
+      server,
+      tools,
+      logger,
+      sessionId: "stdio",
+      transformSchema: (schema) => schema,
+      createRequestContext,
+      interactionLogger: fakeInteractionLogger,
+    });
+
+    const handler = server.getHandler("tool_x")!;
+    await handler({});
+    await handler({});
+
+    const failures = captured.filter((e) => e.type === "tool_failure") as Array<{
+      upstream?: Array<unknown>;
+    }>;
+    expect(failures).toHaveLength(2);
+    // Each invocation sees only its own attempt — not an accumulated 2-entry array.
+    expect(failures[0].upstream).toHaveLength(1);
+    expect(failures[1].upstream).toHaveLength(1);
+  });
+});

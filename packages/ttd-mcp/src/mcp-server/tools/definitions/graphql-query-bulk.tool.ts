@@ -30,8 +30,13 @@ With variables: \`[{ "id": "adv1" }, { "id": "adv2" }, { "id": "adv3" }]\``;
 
 const CREATE_QUERY_BULK_MUTATION = `mutation CreateQueryBulk($input: CreateQueryBulkInput!) {
   createQueryBulk(input: $input) {
-    jobId
-    status
+    data {
+      id
+      status
+    }
+    errors {
+      __typename
+    }
   }
 }`;
 
@@ -45,10 +50,6 @@ export const GraphqlQueryBulkInputSchema = z
       .array(z.record(z.any()))
       .min(1)
       .describe("Array of variable objects — one per entity"),
-    operationName: z
-      .string()
-      .optional()
-      .describe("GraphQL operation name (if query contains multiple operations)"),
     betaFeatures: z
       .string()
       .optional()
@@ -59,7 +60,7 @@ export const GraphqlQueryBulkInputSchema = z
 export const GraphqlQueryBulkOutputSchema = z
   .object({
     jobId: z.string().describe("Bulk job ID for polling status"),
-    status: z.string().describe("Job status (Queued, Running, Complete, Failed, Cancelled)"),
+    status: z.string().describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk query job submission result");
@@ -67,10 +68,10 @@ export const GraphqlQueryBulkOutputSchema = z
 type GraphqlQueryBulkInput = z.infer<typeof GraphqlQueryBulkInputSchema>;
 type GraphqlQueryBulkOutput = z.infer<typeof GraphqlQueryBulkOutputSchema>;
 
-function extractGraphqlJobOrThrow(
+function extractBulkJobOrThrow(
   result: Record<string, any>,
-  jobPath: string
-): Record<string, unknown> {
+  mutationName: string
+): { id: string; status: string } {
   const errors = result.errors ?? result.data?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
@@ -81,16 +82,29 @@ function extractGraphqlJobOrThrow(
     );
   }
 
-  const job = result.data?.[jobPath] ?? result[jobPath];
-  if (!job?.jobId || !job?.status) {
+  const payload = result.data?.[mutationName] ?? result[mutationName];
+  const payloadErrors = payload?.errors;
+  if (Array.isArray(payloadErrors) && payloadErrors.length > 0) {
+    const messages = payloadErrors
+      .map((e: any) => e.message ?? e.__typename ?? JSON.stringify(e))
+      .join("; ");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      `TTD GraphQL bulk request failed: ${messages}`,
+      { errors: payloadErrors }
+    );
+  }
+
+  const job = payload?.data;
+  if (!job?.id || !job?.status) {
     throw new McpError(
       JsonRpcErrorCode.InternalError,
-      `TTD GraphQL bulk response did not include ${jobPath}.jobId/status`,
+      `TTD GraphQL bulk response did not include ${mutationName}.data.id/status`,
       { result }
     );
   }
 
-  return job as Record<string, unknown>;
+  return { id: job.id as string, status: job.status as string };
 }
 
 export async function graphqlQueryBulkLogic(
@@ -103,8 +117,7 @@ export async function graphqlQueryBulkLogic(
   const variables = {
     input: {
       query: input.query,
-      variables: input.variables,
-      ...(input.operationName && { operationName: input.operationName }),
+      queryVariables: JSON.stringify(input.variables),
     },
   };
 
@@ -115,11 +128,11 @@ export async function graphqlQueryBulkLogic(
     { betaFeatures: input.betaFeatures }
   )) as Record<string, any>;
 
-  const job = extractGraphqlJobOrThrow(result, "createQueryBulk");
+  const job = extractBulkJobOrThrow(result, "createQueryBulk");
 
   return {
-    jobId: job.jobId as string,
-    status: job.status as string,
+    jobId: job.id,
+    status: job.status,
     timestamp: new Date().toISOString(),
   };
 }
@@ -155,7 +168,6 @@ export const graphqlQueryBulkTool = {
           { id: "adv456def" },
           { id: "adv789ghi" },
         ],
-        operationName: "GetAdvertiser",
         betaFeatures: "my-beta-flag",
       },
     },

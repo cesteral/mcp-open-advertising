@@ -10,7 +10,6 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 import {
   graphqlQueryBulkLogic,
-  graphqlQueryBulkResponseFormatter,
   GraphqlQueryBulkInputSchema,
 } from "../../src/mcp-server/tools/definitions/graphql-query-bulk.tool.js";
 import {
@@ -57,10 +56,10 @@ describe("ttd graphql bulk tools", () => {
   // ── createQueryBulk ──
 
   describe("graphqlQueryBulkLogic", () => {
-    it("passes query + variables and returns jobId + status", async () => {
+    it("passes query + JSON-encoded queryVariables and returns jobId + status", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
-          createQueryBulk: { jobId: "job-q1", status: "Queued" },
+          createQueryBulk: { data: { id: "2989826", status: "QUEUED" }, errors: [] },
         },
       });
 
@@ -73,15 +72,15 @@ describe("ttd graphql bulk tools", () => {
         createMockSdkContext()
       );
 
-      expect(result.jobId).toBe("job-q1");
-      expect(result.status).toBe("Queued");
+      expect(result.jobId).toBe("2989826");
+      expect(result.status).toBe("QUEUED");
       expect(result.timestamp).toBeDefined();
       expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
         expect.stringContaining("createQueryBulk"),
         {
           input: {
             query: "query Adv($id: ID!) { advertiser(id: $id) { name } }",
-            variables: [{ id: "adv1" }, { id: "adv2" }],
+            queryVariables: JSON.stringify([{ id: "adv1" }, { id: "adv2" }]),
           },
         },
         expect.any(Object),
@@ -119,10 +118,10 @@ describe("ttd graphql bulk tools", () => {
   // ── createMutationBulk ──
 
   describe("graphqlMutationBulkLogic", () => {
-    it("passes mutation + inputs and returns jobId + status", async () => {
+    it("passes mutation + mutationVariables as array of JSON strings and returns jobId + status", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
-          createMutationBulk: { jobId: "job-m1", status: "Queued" },
+          createMutationBulk: { data: { id: "2989900", status: "QUEUED" }, errors: [] },
         },
       });
 
@@ -135,14 +134,14 @@ describe("ttd graphql bulk tools", () => {
         createMockSdkContext()
       );
 
-      expect(result.jobId).toBe("job-m1");
-      expect(result.status).toBe("Queued");
+      expect(result.jobId).toBe("2989900");
+      expect(result.status).toBe("QUEUED");
       expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
         expect.stringContaining("createMutationBulk"),
         {
           input: {
             mutation: expect.any(String),
-            inputs: [{ id: "c1", name: "New" }],
+            mutationVariables: [JSON.stringify({ id: "c1", name: "New" })],
           },
         },
         expect.any(Object)
@@ -183,13 +182,13 @@ describe("ttd graphql bulk tools", () => {
 
     it("response formatter includes non-cancelable warning", () => {
       const text = graphqlMutationBulkResponseFormatter({
-        jobId: "job-m1",
-        status: "Queued",
+        jobId: "2989900",
+        status: "QUEUED",
         timestamp: new Date().toISOString(),
       })[0].text;
 
       expect(text).toContain("NON-CANCELABLE");
-      expect(text).toContain("job-m1");
+      expect(text).toContain("2989900");
     });
 
     it("throws when TTD returns top-level GraphQL errors", async () => {
@@ -213,109 +212,106 @@ describe("ttd graphql bulk tools", () => {
   // ── bulkJob ──
 
   describe("graphqlBulkJobLogic", () => {
-    it("returns full job status with progress and resultUrl", async () => {
+    it("queries by id and returns full job status with url", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
           bulkJob: {
-            jobId: "job-q1",
-            status: "Complete",
-            resultUrl: "https://results.ttd.com/job-q1.csv",
-            resultExpiresAt: new Date(Date.now() + 30 * 60_000).toISOString(),
-            progress: { completed: 100, total: 100 },
+            __typename: "BulkQueryJob",
+            id: "2989826",
+            status: "SUCCESS",
+            createdAt: "2026-04-14T10:49:55.64Z",
+            completedAt: "2026-04-14T10:49:56.266Z",
+            url: "https://results.ttd.com/job.csv",
           },
         },
       });
 
       const result = await graphqlBulkJobLogic(
-        { jobId: "job-q1" },
+        { jobId: "2989826" },
         createMockContext(),
         createMockSdkContext()
       );
 
-      expect(result.jobId).toBe("job-q1");
-      expect(result.status).toBe("Complete");
-      expect(result.resultUrl).toBe("https://results.ttd.com/job-q1.csv");
-      expect(result.progress).toEqual({ completed: 100, total: 100 });
+      expect(result.jobId).toBe("2989826");
+      expect(result.status).toBe("SUCCESS");
+      expect(result.jobType).toBe("BulkQueryJob");
+      expect(result.resultUrl).toBe("https://results.ttd.com/job.csv");
+      expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
+        expect.stringContaining("bulkJob"),
+        { id: "2989826" },
+        expect.any(Object)
+      );
     });
 
-    it("handles job without resultUrl (still running)", async () => {
+    it("handles job still running (no url)", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
           bulkJob: {
-            jobId: "job-q2",
-            status: "Running",
-            progress: { completed: 45, total: 100 },
+            __typename: "BulkQueryJob",
+            id: "2989827",
+            status: "RUNNING",
           },
         },
       });
 
       const result = await graphqlBulkJobLogic(
-        { jobId: "job-q2" },
+        { jobId: "2989827" },
         createMockContext(),
         createMockSdkContext()
       );
 
-      expect(result.status).toBe("Running");
+      expect(result.status).toBe("RUNNING");
       expect(result.resultUrl).toBeUndefined();
-      expect(result.progress).toEqual({ completed: 45, total: 100 });
-    });
-
-    it("response formatter shows progress percentage", () => {
-      const text = graphqlBulkJobResponseFormatter({
-        jobId: "job-q2",
-        status: "Running",
-        progress: { completed: 450, total: 1000 },
-        timestamp: new Date().toISOString(),
-      })[0].text;
-
-      expect(text).toContain("450/1000 (45%)");
     });
 
     it("response formatter shows expiry warning when resultUrl present", () => {
-      const expiresAt = new Date(Date.now() + 25 * 60_000).toISOString();
       const text = graphqlBulkJobResponseFormatter({
-        jobId: "job-q1",
-        status: "Complete",
-        resultUrl: "https://results.ttd.com/job-q1.csv",
-        resultExpiresAt: expiresAt,
+        jobId: "2989826",
+        status: "SUCCESS",
+        jobType: "BulkQueryJob",
+        resultUrl: "https://results.ttd.com/job.csv",
         timestamp: new Date().toISOString(),
       })[0].text;
 
       expect(text).toContain("Result URL");
-      expect(text).toContain("expires in ~");
-      expect(text).toContain("ttd_download_report");
+      expect(text).toContain("expires");
     });
   });
 
   // ── cancelBulkJob ──
 
   describe("graphqlCancelBulkJobLogic", () => {
-    it("passes jobId and returns cancelled status", async () => {
+    it("wraps jobId in CancelBulkJobInput and returns cancelled status", async () => {
       mockTtdService.graphqlQuery.mockResolvedValueOnce({
         data: {
-          cancelBulkJob: { jobId: "job-q1", status: "Cancelled" },
+          cancelBulkJob: { data: { id: "2989826", status: "CANCELLED" }, errors: [] },
         },
       });
 
       const result = await graphqlCancelBulkJobLogic(
-        { jobId: "job-q1" },
+        { jobId: "2989826" },
         createMockContext(),
         createMockSdkContext()
       );
 
-      expect(result.jobId).toBe("job-q1");
-      expect(result.status).toBe("Cancelled");
+      expect(result.jobId).toBe("2989826");
+      expect(result.status).toBe("CANCELLED");
       expect(mockTtdService.graphqlQuery).toHaveBeenCalledWith(
         expect.stringContaining("cancelBulkJob"),
-        { jobId: "job-q1" },
+        { input: { jobId: "2989826" } },
         expect.any(Object)
       );
     });
 
-    it("propagates error when job is non-cancelable (mutation job)", async () => {
-      mockTtdService.graphqlQuery.mockRejectedValueOnce(
-        new Error("Cannot cancel mutation bulk job")
-      );
+    it("throws when payload.errors is populated (non-cancelable mutation job)", async () => {
+      mockTtdService.graphqlQuery.mockResolvedValueOnce({
+        data: {
+          cancelBulkJob: {
+            data: null,
+            errors: [{ __typename: "BulkJobNotCancelableError" }],
+          },
+        },
+      });
 
       await expect(
         graphqlCancelBulkJobLogic(
@@ -323,18 +319,18 @@ describe("ttd graphql bulk tools", () => {
           createMockContext(),
           createMockSdkContext()
         )
-      ).rejects.toThrow("Cannot cancel mutation bulk job");
+      ).rejects.toThrow("Cannot cancel bulk job");
     });
 
     it("response formatter shows cancellation info", () => {
       const text = graphqlCancelBulkJobResponseFormatter({
-        jobId: "job-q1",
-        status: "Cancelled",
+        jobId: "2989826",
+        status: "CANCELLED",
         timestamp: new Date().toISOString(),
       })[0].text;
 
       expect(text).toContain("cancelled");
-      expect(text).toContain("job-q1");
+      expect(text).toContain("2989826");
     });
   });
 

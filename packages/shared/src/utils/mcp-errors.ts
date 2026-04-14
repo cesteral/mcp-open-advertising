@@ -260,6 +260,11 @@ export class ErrorHandler {
         sanitized[key] = "[REDACTED]";
       } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         sanitized[key] = this.sanitizeErrorData(value as Record<string, unknown>);
+      } else if (typeof value === "string") {
+        // String values (e.g. `errorBody` copied from an upstream response)
+        // can still embed bearer-token or access_token substrings even when
+        // the key itself looks benign. Strip the common patterns.
+        sanitized[key] = redactSecretsInString(value);
       } else {
         sanitized[key] = value;
       }
@@ -267,4 +272,18 @@ export class ErrorHandler {
 
     return sanitized;
   }
+}
+
+const STRING_SECRET_PATTERNS: Array<[RegExp, string]> = [
+  [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
+  [/("(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"\s*:\s*")[^"]*(")/gi,
+    '$1[REDACTED]$2'],
+];
+
+function redactSecretsInString(text: string): string {
+  let out = text;
+  for (const [pattern, replacement] of STRING_SECRET_PATTERNS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out;
 }

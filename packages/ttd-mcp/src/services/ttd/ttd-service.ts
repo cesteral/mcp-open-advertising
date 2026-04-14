@@ -702,6 +702,52 @@ export class TtdService {
     });
   }
 
+  // ─── Bid List CRUD ────────────────────────────────────────────────
+
+  async createBidList(data: Record<string, unknown>, context?: RequestContext): Promise<Record<string, unknown>> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch("/bidlist", context, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }) as Promise<Record<string, unknown>>;
+  }
+
+  async getBidList(bidListId: string, context?: RequestContext): Promise<Record<string, unknown>> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch(`/bidlist/${bidListId}`, context, {
+      method: "GET",
+    }) as Promise<Record<string, unknown>>;
+  }
+
+  async updateBidList(data: Record<string, unknown>, context?: RequestContext): Promise<Record<string, unknown>> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch("/bidlist", context, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }) as Promise<Record<string, unknown>>;
+  }
+
+  async batchGetBidLists(bidListIds: string[], context?: RequestContext): Promise<Record<string, unknown>[]> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch("/bidlist/batch/get", context, {
+      method: "POST",
+      body: JSON.stringify({ BidListIds: bidListIds }),
+    }) as Promise<Record<string, unknown>[]>;
+  }
+
+  async batchUpdateBidLists(items: Record<string, unknown>[], context?: RequestContext): Promise<Record<string, unknown>[]> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetch("/bidlist/batch", context, {
+      method: "PUT",
+      body: JSON.stringify(items),
+    }) as Promise<Record<string, unknown>[]>;
+  }
+
   // ─── Internal Helpers ─────────────────────────────────────────────
 
   private async postWorkflow(

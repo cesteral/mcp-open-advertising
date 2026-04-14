@@ -13,10 +13,15 @@ const TOOL_DESCRIPTION = `Cancel a running bulk GraphQL **query** job.
 ### ⚠️ Mutation jobs are NON-CANCELABLE
 This tool only works for bulk query jobs submitted via \`ttd_graphql_query_bulk\`. Bulk mutation jobs submitted via \`ttd_graphql_mutation_bulk\` cannot be cancelled — the API will return an error if you attempt to cancel one.`;
 
-const CANCEL_BULK_JOB_MUTATION = `mutation CancelBulkJob($jobId: ID!) {
-  cancelBulkJob(jobId: $jobId) {
-    jobId
-    status
+const CANCEL_BULK_JOB_MUTATION = `mutation CancelBulkJob($input: CancelBulkJobInput!) {
+  cancelBulkJob(input: $input) {
+    data {
+      id
+      status
+    }
+    errors {
+      __typename
+    }
   }
 }`;
 
@@ -32,7 +37,7 @@ export const GraphqlCancelBulkJobInputSchema = z
 export const GraphqlCancelBulkJobOutputSchema = z
   .object({
     jobId: z.string().describe("Cancelled bulk job ID"),
-    status: z.string().describe("Job status after cancellation (expected: Cancelled)"),
+    status: z.string().describe("Job status after cancellation (expected: CANCELLED)"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk job cancellation result");
@@ -49,24 +54,36 @@ export async function graphqlCancelBulkJobLogic(
 
   const result = (await ttdService.graphqlQuery(
     CANCEL_BULK_JOB_MUTATION,
-    { jobId: input.jobId },
+    { input: { jobId: input.jobId } },
     context
   )) as Record<string, any>;
 
-  // Check for GraphQL errors before extracting data
   const errors = result.errors ?? result.data?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
     throw new Error(`GraphQL error: ${messages}`);
   }
 
-  const job = result.data?.cancelBulkJob ?? result.cancelBulkJob;
-  if (!job) {
+  const payload = result.data?.cancelBulkJob ?? result.cancelBulkJob;
+  if (!payload) {
     throw new Error("GraphQL response contained no cancelBulkJob data");
   }
 
+  const payloadErrors = payload.errors;
+  if (Array.isArray(payloadErrors) && payloadErrors.length > 0) {
+    const messages = payloadErrors
+      .map((e: any) => e.message ?? e.__typename ?? JSON.stringify(e))
+      .join("; ");
+    throw new Error(`Cannot cancel bulk job: ${messages}`);
+  }
+
+  const job = payload.data;
+  if (!job) {
+    throw new Error("cancelBulkJob returned no data");
+  }
+
   return {
-    jobId: (job.jobId as string) ?? input.jobId,
+    jobId: (job.id as string) ?? input.jobId,
     status: job.status as string,
     timestamp: new Date().toISOString(),
   };
@@ -97,13 +114,13 @@ export const graphqlCancelBulkJobTool = {
     {
       label: "Cancel a running bulk query job",
       input: {
-        jobId: "bulkjob-abc123def456",
+        jobId: "2989826",
       },
     },
     {
       label: "Cancel a queued bulk query job before it starts",
       input: {
-        jobId: "bulkjob-xyz789uvw012",
+        jobId: "2989827",
       },
     },
   ],

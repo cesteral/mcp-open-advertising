@@ -37,8 +37,13 @@ const MAX_MUTATION_CHARS = 60_000; // ~15,000 lexical tokens (chars/4 as conserv
 
 const CREATE_MUTATION_BULK_MUTATION = `mutation CreateMutationBulk($input: CreateMutationBulkInput!) {
   createMutationBulk(input: $input) {
-    jobId
-    status
+    data {
+      id
+      status
+    }
+    errors {
+      __typename
+    }
   }
 }`;
 
@@ -53,10 +58,6 @@ export const GraphqlMutationBulkInputSchema = z
       .min(1)
       .max(1000)
       .describe("Array of input objects — one per entity (max 1000)"),
-    operationName: z
-      .string()
-      .optional()
-      .describe("GraphQL operation name (if mutation contains multiple operations)"),
   })
   .superRefine((data, ctx) => {
     if (data.mutation.length > MAX_MUTATION_CHARS) {
@@ -75,7 +76,7 @@ export const GraphqlMutationBulkInputSchema = z
 export const GraphqlMutationBulkOutputSchema = z
   .object({
     jobId: z.string().describe("Bulk job ID for polling status"),
-    status: z.string().describe("Job status (Queued, Running, Complete, Failed, Cancelled)"),
+    status: z.string().describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk mutation job submission result");
@@ -83,9 +84,9 @@ export const GraphqlMutationBulkOutputSchema = z
 type GraphqlMutationBulkInput = z.infer<typeof GraphqlMutationBulkInputSchema>;
 type GraphqlMutationBulkOutput = z.infer<typeof GraphqlMutationBulkOutputSchema>;
 
-function extractGraphqlMutationJobOrThrow(
+function extractMutationBulkJobOrThrow(
   result: Record<string, any>
-): Record<string, unknown> {
+): { id: string; status: string } {
   const errors = result.errors ?? result.data?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
@@ -96,16 +97,29 @@ function extractGraphqlMutationJobOrThrow(
     );
   }
 
-  const job = result.data?.createMutationBulk ?? result.createMutationBulk;
-  if (!job?.jobId || !job?.status) {
+  const payload = result.data?.createMutationBulk ?? result.createMutationBulk;
+  const payloadErrors = payload?.errors;
+  if (Array.isArray(payloadErrors) && payloadErrors.length > 0) {
+    const messages = payloadErrors
+      .map((e: any) => e.message ?? e.__typename ?? JSON.stringify(e))
+      .join("; ");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      `TTD GraphQL bulk mutation failed: ${messages}`,
+      { errors: payloadErrors }
+    );
+  }
+
+  const job = payload?.data;
+  if (!job?.id || !job?.status) {
     throw new McpError(
       JsonRpcErrorCode.InternalError,
-      "TTD GraphQL bulk mutation response did not include createMutationBulk.jobId/status",
+      "TTD GraphQL bulk mutation response did not include createMutationBulk.data.id/status",
       { result }
     );
   }
 
-  return job as Record<string, unknown>;
+  return { id: job.id as string, status: job.status as string };
 }
 
 export async function graphqlMutationBulkLogic(
@@ -118,8 +132,7 @@ export async function graphqlMutationBulkLogic(
   const variables = {
     input: {
       mutation: input.mutation,
-      inputs: input.inputs,
-      ...(input.operationName && { operationName: input.operationName }),
+      mutationVariables: input.inputs.map((v) => JSON.stringify(v)),
     },
   };
 
@@ -129,11 +142,11 @@ export async function graphqlMutationBulkLogic(
     context
   )) as Record<string, any>;
 
-  const job = extractGraphqlMutationJobOrThrow(result);
+  const job = extractMutationBulkJobOrThrow(result);
 
   return {
-    jobId: job.jobId as string,
-    status: job.status as string,
+    jobId: job.id,
+    status: job.status,
     timestamp: new Date().toISOString(),
   };
 }
@@ -169,7 +182,6 @@ export const graphqlMutationBulkTool = {
           { campaignId: "camp789ghi", name: "Q1 2025 Retargeting - Updated" },
           { campaignId: "camp012jkl", name: "Q1 2025 Prospecting - Updated" },
         ],
-        operationName: "UpdateCampaign",
       },
     },
     {

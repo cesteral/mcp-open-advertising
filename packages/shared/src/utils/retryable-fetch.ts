@@ -14,6 +14,11 @@ import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
 import { fetchWithTimeout } from "./fetch-with-timeout.js";
 import type { RequestContext } from "./request-context.js";
 import { setSpanAttribute } from "./telemetry.js";
+import {
+  recordUpstreamRequest,
+  redactHeaders,
+  truncateBody,
+} from "./http-request-recorder.js";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -176,22 +181,52 @@ export async function executeWithRetry(
 
   let lastError: McpError | undefined;
 
+  const method = fetchOptions?.method ?? "GET";
+  const requestBodyRedacted = truncateBody(fetchOptions?.body as unknown);
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const headers = await getHeaders();
+    const requestHeadersRedacted = redactHeaders({ ...headers, ...(fetchOptions?.headers as Record<string, string> | undefined) });
 
-    const response = await doFetch(url, timeoutMs, context, {
-      ...fetchOptions,
-      headers: {
-        ...headers,
-        ...fetchOptions?.headers,
-      },
-    });
+    const attemptStart = Date.now();
+    let response: Response;
+    try {
+      response = await doFetch(url, timeoutMs, context, {
+        ...fetchOptions,
+        headers: {
+          ...headers,
+          ...fetchOptions?.headers,
+        },
+      });
+    } catch (networkError) {
+      // Network error / timeout — record and rethrow; callers already handle this.
+      recordUpstreamRequest({
+        method,
+        url,
+        durationMs: Date.now() - attemptStart,
+        attempt,
+        requestBodyRedacted,
+        requestHeadersRedacted,
+        networkError: (networkError as Error)?.message ?? String(networkError),
+      });
+      throw networkError;
+    }
 
     onResponse?.(response, context);
 
     if (response.ok) {
       setSpanAttribute("http.response.status_code", response.status);
       if (response.status === 204) {
+        recordUpstreamRequest({
+          method,
+          url,
+          status: 204,
+          durationMs: Date.now() - attemptStart,
+          attempt,
+            requestBodyRedacted,
+          requestHeadersRedacted,
+          responseHeadersRedacted: redactHeaders(response.headers),
+        });
         return {};
       }
 
@@ -199,8 +234,36 @@ export async function executeWithRetry(
 
       if (validateResponseBody) {
         try {
-          return validateResponseBody(body);
+          const validated = validateResponseBody(body);
+          // Success: compact record with no response body to bound log size.
+          recordUpstreamRequest({
+            method,
+            url,
+            status: response.status,
+            durationMs: Date.now() - attemptStart,
+            attempt,
+            requestBodyRedacted,
+            requestHeadersRedacted,
+            responseHeadersRedacted: redactHeaders(response.headers),
+          });
+          return validated;
         } catch (envelopeError: unknown) {
+          // Envelope failure (e.g. TikTok `code !== 0`, Snapchat
+          // `request_status=FAILED`): HTTP is 2xx but the platform signaled
+          // an error in the payload. Capture the parsed body so the failure
+          // trail contains the actual platform error message.
+          recordUpstreamRequest({
+            method,
+            url,
+            status: response.status,
+            durationMs: Date.now() - attemptStart,
+            attempt,
+            requestBodyRedacted,
+            requestHeadersRedacted,
+            responseHeadersRedacted: redactHeaders(response.headers),
+            responseBodyRedacted: truncateBody(body),
+          });
+
           if (
             envelopeError instanceof McpError &&
             (envelopeError.data as Record<string, unknown>)?.retryable === true &&
@@ -226,10 +289,36 @@ export async function executeWithRetry(
         }
       }
 
+      // No envelope validator — record compact success and return.
+      recordUpstreamRequest({
+        method,
+        url,
+        status: response.status,
+        durationMs: Date.now() - attemptStart,
+        attempt,
+        requestBodyRedacted,
+        requestHeadersRedacted,
+        responseHeadersRedacted: redactHeaders(response.headers),
+      });
       return body;
     }
 
     const errorBody = await response.text().catch(() => "");
+
+    // Capture the upstream failure so downstream analysis has the platform's
+    // response body — the main gap we're closing.
+    recordUpstreamRequest({
+      method,
+      url,
+      status: response.status,
+      durationMs: Date.now() - attemptStart,
+      attempt,
+      requestBodyRedacted,
+      requestHeadersRedacted,
+      responseHeadersRedacted: redactHeaders(response.headers),
+      responseBodyRedacted: truncateBody(errorBody),
+    });
+
     const errorCode = mapStatusCode
       ? mapStatusCode(response.status, errorBody)
       : defaultMapStatusCode(response.status);

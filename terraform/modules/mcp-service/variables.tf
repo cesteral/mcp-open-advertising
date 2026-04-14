@@ -160,3 +160,13 @@ variable "gcs_bucket_name" {
     error_message = "gcs_bucket_name must be set when enable_gcs_persistence is true."
   }
 }
+
+variable "interaction_log_mode" {
+  description = "Destination for InteractionLogger entries: file | gcs | stdout. When unset, the server defaults to gcs if enable_gcs_persistence is true, else file."
+  type        = string
+  default     = ""
+  validation {
+    condition     = contains(["", "file", "gcs", "stdout"], var.interaction_log_mode)
+    error_message = "interaction_log_mode must be one of: file, gcs, stdout (or empty for default)."
+  }
+}

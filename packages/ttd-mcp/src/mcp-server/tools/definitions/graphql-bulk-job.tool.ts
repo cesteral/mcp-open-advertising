@@ -13,22 +13,24 @@ const TOOL_DESCRIPTION = `Check the status of a bulk GraphQL job and retrieve it
 Returns job progress, status, and a download URL when the job finishes. Result URLs expire after **1 hour** — use \`ttd_download_report\` to download promptly.
 
 ### Status Values
-- **Queued** — waiting to start
-- **Running** — in progress
-- **Complete** — finished; resultUrl available
-- **Failed** — job failed; check errorMessage
-- **Cancelled** — job was cancelled`;
+- **QUEUED** — waiting to start
+- **RUNNING** — in progress
+- **SUCCESS** — finished; url available
+- **FAILURE** — job failed
+- **CANCELLED** — job was cancelled`;
 
-const BULK_JOB_QUERY = `query BulkJob($jobId: ID!) {
-  bulkJob(jobId: $jobId) {
-    jobId
+const BULK_JOB_QUERY = `query BulkJob($id: ID!) {
+  bulkJob(id: $id) {
+    __typename
+    id
     status
-    resultUrl
-    resultExpiresAt
-    errorMessage
-    progress {
-      completed
-      total
+    createdAt
+    completedAt
+    ... on BulkQueryJob {
+      url
+    }
+    ... on BulkMutationJob {
+      url
     }
   }
 }`;
@@ -45,17 +47,11 @@ export const GraphqlBulkJobInputSchema = z
 export const GraphqlBulkJobOutputSchema = z
   .object({
     jobId: z.string().describe("Bulk job ID"),
-    status: z.string().describe("Job status (Queued, Running, Complete, Failed, Cancelled)"),
-    resultUrl: z.string().optional().describe("URL to download results (available when Complete)"),
-    resultExpiresAt: z.string().optional().describe("ISO datetime when resultUrl expires"),
-    errorMessage: z.string().optional().describe("Error message if job failed"),
-    progress: z
-      .object({
-        completed: z.number(),
-        total: z.number(),
-      })
-      .optional()
-      .describe("Job progress (completed/total)"),
+    status: z.string().describe("Job status (QUEUED, RUNNING, SUCCESS, FAILURE, CANCELLED)"),
+    jobType: z.string().optional().describe("Concrete job type (BulkQueryJob or BulkMutationJob)"),
+    resultUrl: z.string().optional().describe("URL to download results (available on SUCCESS)"),
+    createdAt: z.string().optional().describe("ISO datetime when the job was created"),
+    completedAt: z.string().optional().describe("ISO datetime when the job completed"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk job status result");
@@ -72,11 +68,10 @@ export async function graphqlBulkJobLogic(
 
   const result = (await ttdService.graphqlQuery(
     BULK_JOB_QUERY,
-    { jobId: input.jobId },
+    { id: input.jobId },
     context
   )) as Record<string, any>;
 
-  // Check for GraphQL errors before extracting data
   const errors = result.errors ?? result.data?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
@@ -89,17 +84,12 @@ export async function graphqlBulkJobLogic(
   }
 
   return {
-    jobId: (job.jobId as string) ?? input.jobId,
+    jobId: (job.id as string) ?? input.jobId,
     status: job.status as string,
-    ...(job.resultUrl && { resultUrl: job.resultUrl as string }),
-    ...(job.resultExpiresAt && { resultExpiresAt: job.resultExpiresAt as string }),
-    ...(job.errorMessage && { errorMessage: job.errorMessage as string }),
-    ...(job.progress && {
-      progress: {
-        completed: job.progress.completed as number,
-        total: job.progress.total as number,
-      },
-    }),
+    ...(job.__typename && { jobType: job.__typename as string }),
+    ...(job.url && { resultUrl: job.url as string }),
+    ...(job.createdAt && { createdAt: job.createdAt as string }),
+    ...(job.completedAt && { completedAt: job.completedAt as string }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -110,24 +100,21 @@ export function graphqlBulkJobResponseFormatter(result: GraphqlBulkJobOutput): M
     `Status: ${result.status}`,
   ];
 
-  if (result.progress) {
-    const pct = result.progress.total > 0
-      ? Math.round((result.progress.completed / result.progress.total) * 100)
-      : 0;
-    lines.push(`Progress: ${result.progress.completed}/${result.progress.total} (${pct}%)`);
+  if (result.jobType) {
+    lines.push(`Type: ${result.jobType}`);
+  }
+
+  if (result.createdAt) {
+    lines.push(`Created: ${result.createdAt}`);
+  }
+
+  if (result.completedAt) {
+    lines.push(`Completed: ${result.completedAt}`);
   }
 
   if (result.resultUrl) {
     lines.push(`\nResult URL: ${result.resultUrl}`);
-    if (result.resultExpiresAt) {
-      const expiresAt = new Date(result.resultExpiresAt);
-      const minutesLeft = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / 60_000));
-      lines.push(`⚠️ Result URL expires in ~${minutesLeft} minutes. Download promptly using \`ttd_download_report\`.`);
-    }
-  }
-
-  if (result.errorMessage) {
-    lines.push(`\nError: ${result.errorMessage}`);
+    lines.push(`⚠️ Result URL expires ~1 hour after the job completes. Download promptly.`);
   }
 
   lines.push(`\nTimestamp: ${result.timestamp}`);
@@ -156,13 +143,13 @@ export const graphqlBulkJobTool = {
     {
       label: "Check status of a bulk query job",
       input: {
-        jobId: "bulkjob-abc123def456",
+        jobId: "2989826",
       },
     },
     {
       label: "Poll a bulk mutation job for completion",
       input: {
-        jobId: "bulkjob-xyz789uvw012",
+        jobId: "2989827",
       },
     },
   ],

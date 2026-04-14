@@ -20,6 +20,8 @@ import { withToolSpan, setSpanAttribute, recordSpanError } from "./telemetry.js"
 import { ErrorHandler, McpError } from "./mcp-errors.js";
 import { recordToolExecution } from "./metrics.js";
 import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
+import { getRecordedUpstreamRequests } from "./http-request-recorder.js";
+import { runWithRequestContext, getRequestContext, type RequestContext } from "./request-context.js";
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
 
 /**
@@ -407,6 +409,31 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
           let resolvedAuthContext: SessionAuthContext | undefined;
           let auditedIdentifiers: Record<string, string | string[]> = {};
 
+          // ALS ownership boundary:
+          //   - Transport layer MAY install a request-scoped context
+          //     (HTTP transport does; stdio transport does not).
+          //   - Tool handler OWNS the per-invocation context used by the
+          //     upstream recorder. We always install one here so:
+          //       1. stdio tool calls have a store (otherwise
+          //          `recordUpstreamRequest()` no-ops and the failure trail
+          //          is always empty).
+          //       2. Successive tool invocations within the same HTTP
+          //          request don't share recorder state across calls.
+          //   Do not "simplify" this to rely solely on transport ALS —
+          //   stdio has no transport ALS at all.
+          const parent = getRequestContext();
+          const toolAlsContext: RequestContext = {
+            requestId: parent?.requestId ?? `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+            timestamp: new Date().toISOString(),
+            sessionId: sessionId ?? parent?.sessionId,
+            operation: `tool:${tool.name}`,
+            ...(parent ?? {}),
+            // Always start with an empty recorder array so this tool call
+            // sees only its own upstream attempts.
+            upstreamRequests: [],
+          };
+
+          return runWithRequestContext(toolAlsContext, async () => {
           try {
             const context = createRequestContext({
               operation: `HandleToolRequest:${tool.name}`,
@@ -506,6 +533,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             // ── Interaction logging (fire-and-forget) ────────────────────
             if (interactionLogger) {
               const logEntry: InteractionLogEntry = {
+                type: "tool_call",
                 ts: new Date().toISOString(),
                 sessionId: sessionId ?? "unknown",
                 tool: tool.name,
@@ -624,28 +652,33 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               );
             }
 
-            // Log failed interactions
-            if (interactionLogger) {
-              const errorLogEntry: InteractionLogEntry = {
-                ts: new Date().toISOString(),
-                sessionId: sessionId ?? "unknown",
-                tool: tool.name,
-                params: sanitizeParams(args) as Record<string, unknown>,
-                success: false,
-                durationMs: Date.now() - startTime,
-                workflowId: workflowIdByToolName[tool.name],
-                platform,
-                packageName,
-                requestId,
-              };
-              interactionLogger.append(errorLogEntry);
-            }
-
             const mcpError = ErrorHandler.handleError(
               error,
               { operation: `tool:${tool.name}`, input: args },
               logger
             );
+
+            // Log structured failure: params + error + captured upstream
+            // HTTP trail so analysts can diagnose why the platform rejected
+            // the call without replaying it.
+            if (interactionLogger) {
+              const upstream = getRecordedUpstreamRequests();
+              interactionLogger.logFailure({
+                ts: new Date().toISOString(),
+                sessionId: sessionId ?? "unknown",
+                tool: tool.name,
+                params: sanitizeParams(args) as Record<string, unknown>,
+                durationMs: Date.now() - startTime,
+                workflowId: workflowIdByToolName[tool.name],
+                platform,
+                packageName,
+                requestId,
+                errorCode: mcpError.code,
+                errorMessage: mcpError.message,
+                errorData: ErrorHandler.sanitizeErrorData(mcpError.data),
+                upstream: upstream.length > 0 ? upstream : undefined,
+              });
+            }
 
             // Send MCP logging notification for tool failure
             server.sendLoggingMessage({
@@ -674,6 +707,7 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               isError: true,
             };
           }
+          }); // end runWithRequestContext(toolAlsContext)
         });
       }
     );

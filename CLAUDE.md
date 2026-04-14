@@ -14,7 +14,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 |---|--------|------|-----|-------------|-------|
 | 1 | `dbm-mcp` | 3001 | Bid Manager API v2 | _(reporting only)_ | 6 |
 | 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 25 |
-| 3 | `ttd-mcp` | 3003 | TTD REST + GraphQL API | advertiser, campaign, adGroup, creative, conversionTracker | 36 |
+| 3 | `ttd-mcp` | 3003 | TTD REST + GraphQL API | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed | 55 |
 | 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 15 |
 | 5 | `meta-mcp` | 3005 | Meta Marketing API v24.0 | campaign, adSet, ad, adCreative, customAudience | 25 |
 | 6 | `linkedin-mcp` | 3006 | LinkedIn Marketing API v2 | adAccount, campaignGroup, campaign, creative, conversionRule | 20 |
@@ -193,7 +193,7 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `dv360_upload_image` | Upload image from URL | `advertiserId`, `mediaUrl`, `name?` |
 | `dv360_upload_video` | Upload video from URL | `advertiserId`, `mediaUrl`, `title?` |
 
-### ttd-mcp — 28 Tools (Unique: GraphQL)
+### ttd-mcp — 31 Tools (Unique: GraphQL, Bid Lists, Seeds)
 
 Standard CRUD/bulk/reporting/preview/validate tools plus:
 
@@ -220,6 +220,9 @@ Standard CRUD/bulk/reporting/preview/validate tools plus:
 | `ttd_cancel_report_execution` | Cancel an in-progress report execution via GraphQL | `executionId` |
 | `ttd_rerun_report_schedule` | Immediately rerun an existing schedule via GraphQL | `scheduleId` |
 | `ttd_get_report_executions` | Get schedule execution status + download links via GraphQL | `scheduleId?`, `lastStatusChangeAfter?`, `first?` |
+| `ttd_manage_bid_list` | Create, get, or update a single bid list | `operation`, `bidListId?`, `data?` |
+| `ttd_bulk_manage_bid_lists` | Batch get or update bid lists (up to 50) | `operation`, `bidListIds?`, `items?` |
+| `ttd_manage_seed` | Manage audience seeds via GraphQL | `operation`, `seedId?`, `advertiserId?`, `campaignId?`, `data?` |
 
 ### gads-mcp — 15 Tools (Unique: GAQL)
 
@@ -318,7 +321,45 @@ gcloud run services logs tail <server-name> --region=europe-west2
 1. **Separation of Concerns**: One server per ad platform
 2. **Stateless**: No persistent state between requests
 3. **Type Safety**: Zod for runtime, TypeScript for compile-time
-4. **Observability**: OTEL traces + metrics, Pino structured logs, InteractionLogger for local debugging
+4. **Observability**: OTEL traces + metrics, Pino structured logs, InteractionLogger for tool-call + tool-failure persistence
+
+## Tool Failure Logging
+
+Every tool invocation is captured by `InteractionLogger` (`packages/shared/src/utils/interaction-logger.ts`). On failure, the entry includes the captured upstream HTTP trail (method, URL, status, redacted request/response bodies, per-attempt durations) recorded by `executeWithRetry` via `http-request-recorder.ts`.
+
+Record shape (JSONL):
+
+```
+{ "type": "tool_failure", "ts", "sessionId", "requestId", "tool", "platform",
+  "params" (redacted), "errorCode", "errorMessage", "errorData",
+  "upstream": [ { "method", "url", "status", "attempt", "durationMs",
+                  "requestBodyRedacted", "responseBodyRedacted",
+                  "requestHeadersRedacted", "responseHeadersRedacted" } ] }
+```
+
+Destination is chosen by `INTERACTION_LOG_MODE`:
+
+| Mode | When | Storage |
+|------|------|---------|
+| `gcs` | Hosted Cloud Run (default when `GCS_BUCKET_NAME` is set) | Instance-unique JSONL in GCS, flushed every 5s |
+| `file` | Self-host default | Rotating JSONL at `~/.cesteral/interactions/` |
+| `stdout` | Self-host with external log pipeline | Pino `info`/`error` line per entry — ship via any stdout log agent |
+
+Query hosted data in BigQuery via an external table:
+
+```sql
+CREATE EXTERNAL TABLE mcp_interactions
+OPTIONS (format='JSON',
+         uris=['gs://<bucket>/<server-name>/interactions/*.jsonl']);
+
+-- Top failing tools by platform in the last 7 days
+SELECT tool, platform, JSON_VALUE(upstream[OFFSET(0)].status) AS status, COUNT(*) AS n
+FROM mcp_interactions
+WHERE type = 'tool_failure' AND ts > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
+GROUP BY 1,2,3 ORDER BY n DESC LIMIT 50;
+```
+
+Redaction lives in `http-request-recorder.ts` (headers: Authorization, TTD-Auth, DeveloperToken, etc.; body: bearer tokens, `access_token`/`refresh_token`/`client_secret`/`password` JSON fields). Response bodies are truncated at 8 KB.
 
 ## TypeScript Build Issues
 

@@ -20,12 +20,18 @@ import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { createHash, randomBytes } from "node:crypto";
 import type { Logger } from "pino";
+import type { UpstreamHttpRecord } from "./http-request-recorder.js";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface InteractionLogEntry {
+  /**
+   * Record type discriminator. Omitted for legacy writers (treated as
+   * "tool_call" by consumers).
+   */
+  type?: "tool_call" | "tool_failure";
   id?: string;
   ts: string;
   sessionId: string;
@@ -37,7 +43,25 @@ export interface InteractionLogEntry {
   platform?: string;
   packageName?: string;
   requestId?: string;
+  /**
+   * Failure-only fields. Populated by `logFailure()`.
+   */
+  errorCode?: number | string;
+  errorMessage?: string;
+  errorData?: unknown;
+  upstream?: UpstreamHttpRecord[];
 }
+
+/**
+ * Destination mode for interaction entries.
+ *
+ * - `file`: JSONL on the local filesystem (default when no GCS bucket set).
+ * - `gcs`:  buffered flush to a GCS bucket (hosted default on Cloud Run).
+ * - `stdout`: emit each entry as a single structured Pino log line at
+ *            `info` (success) or `error` (failure). Intended for self-hosters
+ *            who want to ship logs through their own stdout pipeline.
+ */
+export type InteractionLogMode = "file" | "gcs" | "stdout";
 
 export interface InteractionLoggerOptions {
   /** Directory for log files. Defaults to `data/interactions` relative to cwd. */
@@ -54,6 +78,11 @@ export interface InteractionLoggerOptions {
   gcsPrefix?: string;
   /** Flush interval in ms for GCS mode. Default: 5000 (5s). */
   flushIntervalMs?: number;
+  /**
+   * Destination mode. Defaults to `gcs` when `gcsBucket` is set, otherwise
+   * `file`. Set to `stdout` to emit entries as Pino log lines instead.
+   */
+  mode?: InteractionLogMode;
 }
 
 export interface GenerateEntryIdInput {
@@ -128,6 +157,7 @@ export class InteractionLogger {
   private readonly logger: Logger;
   private readonly gcsBucket?: string;
   private readonly gcsPrefix: string;
+  private readonly mode: InteractionLogMode;
 
   // Local FS mode
   private currentDate: string = "";
@@ -150,8 +180,18 @@ export class InteractionLogger {
     this.gcsBucket = options.gcsBucket;
     this.gcsPrefix = options.gcsPrefix ?? options.serverName;
     this.instanceId = randomBytes(4).toString("hex");
+    // Precedence: explicit `mode` option > INTERACTION_LOG_MODE env var >
+    // implicit (gcs if bucket is set, else file). This keeps self-hosters one
+    // env var away from stdout routing without touching per-server construction.
+    const envMode = process.env.INTERACTION_LOG_MODE as InteractionLogMode | undefined;
+    const validEnvMode = envMode === "file" || envMode === "gcs" || envMode === "stdout" ? envMode : undefined;
+    this.mode = options.mode ?? validEnvMode ?? (this.gcsBucket ? "gcs" : "file");
 
-    if (this.gcsBucket) {
+    if (this.mode === "gcs" && !this.gcsBucket) {
+      throw new Error("InteractionLogger: mode=gcs requires gcsBucket");
+    }
+
+    if (this.mode === "gcs") {
       const interval = options.flushIntervalMs ?? 5000;
       this.flushTimer = setInterval(() => {
         this.flushBuffer().catch((err) => {
@@ -178,9 +218,19 @@ export class InteractionLogger {
           nonce: this.entryNonce++,
         });
       }
+
+      if (this.mode === "stdout") {
+        const level = entry.type === "tool_failure" || entry.success === false ? "error" : "info";
+        this.logger[level](
+          { event: "mcp.interaction", interaction: entry },
+          `mcp.interaction ${entry.type ?? "tool_call"} ${entry.tool}`,
+        );
+        return;
+      }
+
       const line = JSON.stringify(entry) + "\n";
 
-      if (this.gcsBucket) {
+      if (this.mode === "gcs") {
         this.buffer.push(line);
       } else {
         const stream = this.getStream();
@@ -192,6 +242,23 @@ export class InteractionLogger {
   }
 
   /**
+   * Convenience for emitting a `tool_failure` record. Fire-and-forget.
+   *
+   * Keeps the full tool-call context (params, sessionId, requestId) plus
+   * the structured error and the captured upstream HTTP trail so downstream
+   * analysis (BigQuery, log queries) can correlate failures to platform
+   * responses without replaying the call.
+   */
+  logFailure(entry: Omit<InteractionLogEntry, "type" | "success"> & {
+    errorCode?: number | string;
+    errorMessage?: string;
+    errorData?: unknown;
+    upstream?: UpstreamHttpRecord[];
+  }): void {
+    this.append({ ...entry, type: "tool_failure", success: false });
+  }
+
+  /**
    * Flush and close the underlying write stream or GCS buffer.
    */
   async close(): Promise<void> {
@@ -200,12 +267,14 @@ export class InteractionLogger {
       this.flushTimer = null;
     }
 
-    if (this.gcsBucket) {
+    if (this.mode === "gcs") {
       // Wait for any in-progress flush to complete before final drain
       while (this.flushing) {
         await new Promise((r) => setTimeout(r, 50));
       }
       await this.flushBuffer();
+    } else if (this.mode === "stdout") {
+      // Nothing to drain — Pino transport handles its own flushing.
     } else {
       if (this.stream) {
         const stream = this.stream;
@@ -220,7 +289,7 @@ export class InteractionLogger {
   // ── Private ──────────────────────────────────────────────────────────────
 
   private async flushBuffer(): Promise<void> {
-    if (!this.gcsBucket || this.buffer.length === 0 || this.flushing) return;
+    if (this.mode !== "gcs" || !this.gcsBucket || this.buffer.length === 0 || this.flushing) return;
     this.flushing = true;
     try {
       const lines = this.buffer.slice(0);

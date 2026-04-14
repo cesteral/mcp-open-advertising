@@ -230,6 +230,16 @@ resource "google_cloud_run_v2_service" "mcp_server" {
           value = var.gcs_bucket_name
         }
       }
+
+      # InteractionLogger destination override (optional).
+      # file | gcs | stdout — see packages/shared/src/utils/interaction-logger.ts
+      dynamic "env" {
+        for_each = length(var.interaction_log_mode) > 0 ? [1] : []
+        content {
+          name  = "INTERACTION_LOG_MODE"
+          value = var.interaction_log_mode
+        }
+      }
     }
   }
 

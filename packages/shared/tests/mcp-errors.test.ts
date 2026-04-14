@@ -214,5 +214,17 @@ describe("ErrorHandler", () => {
       const result = ErrorHandler.sanitizeErrorData(data);
       expect(result).toEqual({ items: [1, 2, 3] });
     });
+
+    it("redacts bearer tokens and access_token fields inside string values", () => {
+      // Simulates errorBody copied verbatim from an upstream response.
+      const data = {
+        errorBody:
+          'Authorization: Bearer abc.def.ghi failed; echo: "access_token":"leak-me","ok":true',
+      };
+      const result = ErrorHandler.sanitizeErrorData(data) as { errorBody: string };
+      expect(result.errorBody).toContain("[REDACTED]");
+      expect(result.errorBody).not.toContain("abc.def.ghi");
+      expect(result.errorBody).not.toContain("leak-me");
+    });
   });
 });
