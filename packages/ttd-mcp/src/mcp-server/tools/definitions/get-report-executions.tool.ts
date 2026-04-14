@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_get_report_executions";
 const TOOL_TITLE = "Get TTD Report Schedule Executions (GraphQL)";
@@ -128,6 +129,8 @@ export async function getReportExecutionsLogic(
       context
     )) as Record<string, unknown>;
 
+    throwIfGraphqlErrors(raw, "GraphQL error fetching report schedule");
+
     const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
     const schedule =
       (gqlData.myReportsReportSchedule as Record<string, unknown> | undefined) ?? {};
@@ -158,6 +161,8 @@ export async function getReportExecutionsLogic(
     { where, first: input.first ?? 10, after: input.after },
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error listing report schedules");
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const listResult =

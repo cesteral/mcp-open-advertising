@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_update_report_schedule";
 const TOOL_TITLE = "Update TTD Report Schedule Status (GraphQL)";
@@ -83,6 +84,8 @@ export async function updateReportScheduleLogic(
     variables,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error updating report schedule");
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =

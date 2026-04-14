@@ -10,6 +10,24 @@ export interface TtdGraphqlError {
   };
 }
 
+/**
+ * TTD GraphQL error codes from the API docs.
+ * All errors return HTTP 200 — the code lives in `errors[].extensions.code`.
+ */
+const AUTH_ERROR_CODES = new Set([
+  "AUTHENTICATION_FAILURE",
+  "UNAUTHORIZED_FIELD_OR_TYPE",
+]);
+
+const RATE_LIMIT_ERROR_CODES = new Set([
+  "RESOURCE_LIMIT_EXCEEDED",
+]);
+
+const VALIDATION_ERROR_CODES = new Set([
+  "VALIDATION_FAILURE",
+  "GRAPHQL_VALIDATION_FAILED",
+]);
+
 export const MYREPORTS_TEMPLATE_ACCESS_ERROR =
   "TTD account does not have access to MyReports template APIs. " +
   "This feature requires the MyReports entitlement in The Trade Desk. " +
@@ -21,12 +39,16 @@ export function extractGraphqlErrors(raw: Record<string, unknown>): TtdGraphqlEr
   return Array.isArray(gqlErrors) ? (gqlErrors as TtdGraphqlError[]) : [];
 }
 
-function isUnauthorizedFieldError(error: TtdGraphqlError): boolean {
-  return error.extensions?.code === "UNAUTHORIZED_FIELD_OR_TYPE";
-}
-
 function formatGraphqlErrorMessages(errors: TtdGraphqlError[]): string {
   return errors.map((error) => error.message ?? "Unknown GraphQL error").join("; ");
+}
+
+function classifyErrorCode(code: string | undefined): "auth" | "rate_limit" | "validation" | "unknown" {
+  if (!code) return "unknown";
+  if (AUTH_ERROR_CODES.has(code)) return "auth";
+  if (RATE_LIMIT_ERROR_CODES.has(code)) return "rate_limit";
+  if (VALIDATION_ERROR_CODES.has(code)) return "validation";
+  return "unknown";
 }
 
 export function throwIfGraphqlErrors(
@@ -40,22 +62,37 @@ export function throwIfGraphqlErrors(
   const errors = extractGraphqlErrors(raw);
   if (errors.length === 0) return;
 
-  const unauthorizedCodes = new Set(options?.unauthorizedCodes ?? []);
-  const unauthorizedError = errors.find(
-    (error) =>
-      isUnauthorizedFieldError(error)
-      || (error.extensions?.code !== undefined && unauthorizedCodes.has(error.extensions.code))
-  );
+  const extraAuthCodes = new Set(options?.unauthorizedCodes ?? []);
+  const messages = formatGraphqlErrorMessages(errors);
 
-  if (unauthorizedError) {
-    throw new McpError(
-      JsonRpcErrorCode.Forbidden,
-      options?.unauthorizedMessage ?? MYREPORTS_TEMPLATE_ACCESS_ERROR
-    );
+  for (const error of errors) {
+    const code = error.extensions?.code;
+    const category = classifyErrorCode(code);
+
+    if (category === "auth" || (code !== undefined && extraAuthCodes.has(code))) {
+      throw new McpError(
+        JsonRpcErrorCode.Forbidden,
+        options?.unauthorizedMessage ?? `${defaultMessage}: ${messages}`
+      );
+    }
+
+    if (category === "rate_limit") {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `TTD rate/complexity limit exceeded: ${messages}. Reduce query complexity or retry later.`
+      );
+    }
+
+    if (category === "validation") {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `${defaultMessage}: ${messages}`
+      );
+    }
   }
 
   throw new McpError(
     JsonRpcErrorCode.InternalError,
-    `${defaultMessage}: ${formatGraphqlErrorMessages(errors)}`
+    `${defaultMessage}: ${messages}`
   );
 }

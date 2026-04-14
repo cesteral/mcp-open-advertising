@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_cancel_report_execution";
 const TOOL_TITLE = "Cancel TTD Report Execution (GraphQL)";
@@ -80,6 +81,8 @@ export async function cancelReportExecutionLogic(
     variables,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error cancelling report execution");
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =

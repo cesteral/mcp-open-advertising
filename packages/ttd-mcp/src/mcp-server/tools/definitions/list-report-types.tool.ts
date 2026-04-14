@@ -53,7 +53,7 @@ export async function listReportTypesLogic(
 
   const raw = (await ttdService.graphqlQuery(
     LIST_REPORT_TYPES_QUERY,
-    { input: { format: input.format } },
+    { input: { format: input.format ?? "EXCEL" } },
     context
   )) as Record<string, unknown>;
 

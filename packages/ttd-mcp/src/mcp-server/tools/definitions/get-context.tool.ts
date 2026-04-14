@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_get_context";
 const TOOL_TITLE = "TTD Get Context";
@@ -53,6 +54,8 @@ export async function getContextLogic(
     undefined,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(result, "GraphQL error fetching partner context");
 
   const data = (result.data as Record<string, unknown> | undefined) ?? result;
   const partners = (

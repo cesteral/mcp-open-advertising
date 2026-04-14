@@ -97,7 +97,7 @@ export async function getReportTypeSchemaLogic(
 ): Promise<GetReportTypeSchemaOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  const gqlInput = { format: input.format, reportTypeId: input.reportTypeId };
+  const gqlInput = { format: input.format ?? "EXCEL", reportTypeId: input.reportTypeId };
 
   // First request: get report type info + first page of both fields and metrics
   const raw = (await ttdService.graphqlQuery(

@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
+import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_rerun_report_schedule";
 const TOOL_TITLE = "Rerun TTD Report Schedule Immediately (GraphQL)";
@@ -84,6 +85,8 @@ export async function rerunReportScheduleLogic(
     variables,
     context
   )) as Record<string, unknown>;
+
+  throwIfGraphqlErrors(raw, "GraphQL error rerunning report schedule");
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =
