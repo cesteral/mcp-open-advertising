@@ -92,18 +92,18 @@ validation via DV360 API v4.
 
 | Server | Platform | Tools | Auth |
 |--------|----------|-------|------|
-| [gads-mcp](packages/gads-mcp) | Google Ads REST API v23 | 14 | OAuth2 refresh token |
-| [meta-mcp](packages/meta-mcp) | Meta Marketing API v22.0 | 20 | Bearer token |
-| [dv360-mcp](packages/dv360-mcp) | DV360 API v4 | 24 | Google OAuth2 / service account |
-| [ttd-mcp](packages/ttd-mcp) | The Trade Desk REST API | 21 | Partner ID + API secret |
+| [gads-mcp](packages/gads-mcp) | Google Ads REST API v23 | 15 | OAuth2 refresh token |
+| [meta-mcp](packages/meta-mcp) | Meta Marketing API v24.0 | 25 | Bearer token |
+| [dv360-mcp](packages/dv360-mcp) | DV360 API v4 | 25 | Google OAuth2 / service account |
+| [ttd-mcp](packages/ttd-mcp) | The Trade Desk REST + GraphQL API | 55 | Partner ID + API secret |
 | [linkedin-mcp](packages/linkedin-mcp) | LinkedIn Marketing API v2 | 20 | Bearer token |
 | [tiktok-mcp](packages/tiktok-mcp) | TikTok Marketing API v1.3 | 23 | Bearer token + advertiser ID |
-| [cm360-mcp](packages/cm360-mcp) | CM360 API v5 | 16 | Google OAuth2 |
-| [sa360-mcp](packages/sa360-mcp) | SA360 Reporting API v0 + v2 | 15 | OAuth2 refresh token |
+| [cm360-mcp](packages/cm360-mcp) | CM360 API v5 | 20 | Google OAuth2 |
+| [sa360-mcp](packages/sa360-mcp) | SA360 Reporting API v0 + DS v2 | 15 | OAuth2 refresh token |
 | [pinterest-mcp](packages/pinterest-mcp) | Pinterest Ads API v5 | 23 | Bearer token |
 | [snapchat-mcp](packages/snapchat-mcp) | Snapchat Ads API v1 | 23 | Bearer token |
 | [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API | 19 | Bearer token |
-| [msads-mcp](packages/msads-mcp) | Microsoft Advertising API v13 | 20 | Access token + developer token |
+| [msads-mcp](packages/msads-mcp) | Microsoft Advertising API v13 | 24 | Access token + developer token |
 | [dbm-mcp](packages/dbm-mcp) | Bid Manager API v2 | 6 | Google OAuth2 |
 
 ---
