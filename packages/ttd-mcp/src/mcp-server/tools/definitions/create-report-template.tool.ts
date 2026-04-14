@@ -57,7 +57,9 @@ export const CreateReportTemplateInputSchema = z
 
 export const CreateReportTemplateOutputSchema = z
   .object({
-    templateData: z.unknown().optional().describe("Raw data scalar returned by TTD (contains template ID)"),
+    templateData: z.unknown().optional().describe("Raw data scalar returned by TTD"),
+    templateId: z.string().optional().describe("ID of the newly created template (retrieved via follow-up query)"),
+    templateName: z.string().optional().describe("Name of the newly created template"),
     errors: z
       .array(z.object({ field: z.string().optional(), message: z.string() }))
       .optional()
@@ -73,12 +75,20 @@ type CreateReportTemplateOutput = z.infer<typeof CreateReportTemplateOutputSchem
 
 const CREATE_REPORT_TEMPLATE_MUTATION = `mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
   myReportsTemplateCreate(input: $input) {
-    data { id }
+    data
     errors {
-      ... on MyReportsTemplateCreateValidationError {
+      __typename
+      ... on MutationError {
+        field
         message
       }
     }
+  }
+}`;
+
+const GET_NEWEST_TEMPLATE_QUERY = `query GetNewestTemplate {
+  myReportsReportTemplates(last: 1) {
+    nodes { id name format }
   }
 }`;
 
@@ -114,8 +124,33 @@ export async function createReportTemplateLogic(
     | Array<{ field?: string; message: string }>
     | undefined;
 
+  let templateId: string | undefined;
+  let templateName: string | undefined;
+
+  if (mutationResult.data && !errors?.length) {
+    try {
+      const listRaw = (await ttdService.graphqlQuery(
+        GET_NEWEST_TEMPLATE_QUERY,
+        {},
+        context
+      )) as Record<string, unknown>;
+      const listData = (listRaw.data as Record<string, unknown> | undefined) ?? {};
+      const connection =
+        (listData.myReportsReportTemplates as Record<string, unknown> | undefined) ?? {};
+      const nodes = (connection.nodes as Array<Record<string, unknown>> | undefined) ?? [];
+      if (nodes.length > 0) {
+        templateId = nodes[0].id as string | undefined;
+        templateName = nodes[0].name as string | undefined;
+      }
+    } catch {
+      // Follow-up query failed — mutation still succeeded, just can't retrieve the ID
+    }
+  }
+
   return {
     templateData: mutationResult.data,
+    templateId,
+    templateName,
     errors: errors?.length ? errors : undefined,
     rawResponse: raw as Record<string, unknown>,
     timestamp: new Date().toISOString(),
@@ -153,16 +188,19 @@ export function createReportTemplateResponseFormatter(
     ];
   }
 
-  return [
-    {
-      type: "text" as const,
-      text:
-        `Report template created successfully.\n\n` +
-        `Template data: ${JSON.stringify(result.templateData, null, 2)}\n\n` +
-        `Use the template ID with \`ttd_create_template_schedule\` to schedule reports.\n\n` +
-        `Timestamp: ${result.timestamp}`,
-    },
-  ];
+  const lines = [`Report template created successfully.`];
+  if (result.templateId) {
+    lines.push(`\nTemplate ID: ${result.templateId}`);
+  }
+  if (result.templateName) {
+    lines.push(`Template Name: ${result.templateName}`);
+  }
+  lines.push(
+    `\nUse the template ID with \`ttd_create_template_schedule\` to schedule reports.`,
+    `\nTimestamp: ${result.timestamp}`
+  );
+
+  return [{ type: "text" as const, text: lines.join("\n") }];
 }
 
 export const createReportTemplateTool = {

@@ -31,7 +31,7 @@ This is the step after \`ttd_create_report_template\` — it links an existing r
 
 **Tips:**
 - Use \`frequency: SINGLE_RUN\` for one-time on-demand reports
-- \`reportFilters\` scopes the report to specific partners/advertisers — omit to run across all accessible entities
+- \`reportFilters\` is **required** — each entry needs a \`reportType\` plus at least one of \`partnerIds\` or \`advertiserIds\`
 - \`startDate\` sets when the first run occurs (ISO 8601, e.g. \`2025-10-10T00:00:00Z\`)
 
 Use \`ttd_list_report_schedules\` to see existing schedules and \`ttd_list_report_templates\` to find template IDs.`;
@@ -83,24 +83,27 @@ export const CreateTemplateScheduleInputSchema = z
       .describe("Whether to include column headers in the output"),
     reportFilters: z
       .array(ReportFilterSchema)
-      .optional()
-      .describe("Scope the report to specific partners or advertisers"),
+      .min(1)
+      .describe(
+        "Required. Scope the report to specific partners or advertisers. " +
+        "Each entry must include a reportType and at least one of partnerIds, advertiserIds, campaignIds, etc."
+      ),
     suppressTotals: z
       .boolean()
-      .optional()
+      .default(false)
       .describe("Suppress totals row in the report output"),
     suppressZeroMeasureRows: z
       .boolean()
-      .optional()
+      .default(false)
       .describe("Suppress rows where all metrics are zero"),
     dateFormat: z
       .enum(SUPPORTED_REPORT_DATE_FORMATS)
-      .optional()
-      .describe("Date format for the report output. Supported value: International"),
+      .default("International")
+      .describe("Date format for the report output (default: International)"),
     numericFormat: z
       .enum(SUPPORTED_REPORT_NUMERIC_FORMATS)
-      .optional()
-      .describe("Numeric format for the report output. Supported value: US"),
+      .default("US")
+      .describe("Numeric format for the report output (default: US)"),
     conversionMetricOrdering: z
       .string()
       .optional()
@@ -161,13 +164,11 @@ export async function createTemplateScheduleLogic(
       timezone: input.timezone,
       format: input.format,
       includeHeaders: input.includeHeaders,
-      ...(input.reportFilters !== undefined && { reportFilters: input.reportFilters }),
-      ...(input.suppressTotals !== undefined && { suppressTotals: input.suppressTotals }),
-      ...(input.suppressZeroMeasureRows !== undefined && {
-        suppressZeroMeasureRows: input.suppressZeroMeasureRows,
-      }),
-      ...(input.dateFormat !== undefined && { dateFormat: input.dateFormat }),
-      ...(input.numericFormat !== undefined && { numericFormat: input.numericFormat }),
+      reportFilters: input.reportFilters,
+      suppressTotals: input.suppressTotals ?? false,
+      suppressZeroMeasureRows: input.suppressZeroMeasureRows ?? false,
+      dateFormat: (input.dateFormat ?? "International").toUpperCase(),
+      numericFormat: input.numericFormat ?? "US",
       ...(input.conversionMetricOrdering !== undefined && {
         conversionMetricOrdering: input.conversionMetricOrdering,
       }),
@@ -267,6 +268,12 @@ export const createTemplateScheduleTool = {
         timezone: "UTC",
         format: "EXCEL",
         includeHeaders: true,
+        reportFilters: [
+          {
+            reportType: "1",
+            partnerIds: ["partner-id"],
+          },
+        ],
       },
     },
     {

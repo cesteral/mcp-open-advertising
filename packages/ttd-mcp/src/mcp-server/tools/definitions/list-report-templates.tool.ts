@@ -75,8 +75,6 @@ const LIST_REPORT_TEMPLATES_QUERY = `query GetReportTemplates($first: Int, $afte
     nodes {
       id
       name
-      userGenerated
-      createdBy
       format
     }
   }
