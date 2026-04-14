@@ -193,36 +193,57 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `dv360_upload_image` | Upload image from URL | `advertiserId`, `mediaUrl`, `name?` |
 | `dv360_upload_video` | Upload video from URL | `advertiserId`, `mediaUrl`, `title?` |
 
-### ttd-mcp — 31 Tools (Unique: GraphQL, Bid Lists, Seeds)
+### ttd-mcp — 55 Tools (Unique: Workflows API, GraphQL, Bid Lists, Seeds)
 
-Standard CRUD/bulk/reporting/preview/validate tools plus:
+**CRUD (5):** `ttd_get_entity`, `ttd_list_entities`, `ttd_create_entity`, `ttd_update_entity`, `ttd_delete_entity`
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `ttd_archive_entities` | Batch archive (soft-delete) | `entityType`, `entityIds[]` |
-| `ttd_graphql_query` | Execute GraphQL query/mutation | `query`, `variables` |
-| `ttd_graphql_query_bulk` | Bulk GraphQL queries | `query`, `variables[]` |
-| `ttd_graphql_mutation_bulk` | Bulk GraphQL mutations | `mutation`, `inputs[]` |
-| `ttd_graphql_bulk_job` | Check async bulk GraphQL job status | `jobId` |
-| `ttd_graphql_cancel_bulk_job` | Cancel bulk GraphQL query job | `jobId` |
-| `ttd_execute_entity_report` | Execute immediate entity report via GraphQL (no polling) | `entityType`, `entityId`, `reportType` |
-| `ttd_get_entity_report_types` | Discover available report types for an entity | `entityType`, `entityId`, `tile` |
-| `ttd_create_report_schedule` | Create named recurring report schedule | `reportName`, `scheduleType`, `dateRange` |
-| `ttd_delete_report_schedule` | Delete a report schedule | `scheduleId` |
-| `ttd_list_report_schedules` | List report schedules with optional advertiser filter | `advertiserIds?`, `pageSize?` |
-| `ttd_get_report_schedule` | Get a specific report schedule by ID | `scheduleId` |
-| `ttd_list_report_templates` | List read-only report templates created in TTD UI | `pageSize?` |
-| `ttd_create_report_template` | Create a user-defined report template via GraphQL | `name`, `format`, `resultSets[]` |
-| `ttd_update_report_template` | Update (fully replace) a report template via GraphQL | `id`, `name`, `resultSets[]` |
-| `ttd_get_report_template` | Get full structure of a report template via GraphQL | `id` |
-| `ttd_create_template_schedule` | Create a report schedule from a template ID via GraphQL | `templateId`, `reportName`, `frequency`, `dateRange` |
-| `ttd_update_report_schedule` | Enable or disable a report schedule via GraphQL | `scheduleId`, `status` |
-| `ttd_cancel_report_execution` | Cancel an in-progress report execution via GraphQL | `executionId` |
-| `ttd_rerun_report_schedule` | Immediately rerun an existing schedule via GraphQL | `scheduleId` |
-| `ttd_get_report_executions` | Get schedule execution status + download links via GraphQL | `scheduleId?`, `lastStatusChangeAfter?`, `first?` |
-| `ttd_manage_bid_list` | Create, get, or update a single bid list | `operation`, `bidListId?`, `data?` |
-| `ttd_bulk_manage_bid_lists` | Batch get or update bid lists (up to 50) | `operation`, `bidListIds?`, `items?` |
-| `ttd_manage_seed` | Manage audience seeds via GraphQL | `operation`, `seedId?`, `advertiserId?`, `campaignId?`, `data?` |
+**Bulk (4):** `ttd_bulk_create_entities`, `ttd_bulk_update_entities`, `ttd_bulk_update_status`, `ttd_adjust_bids`
+
+**Utility (4):** `ttd_get_context` (partner IDs for current credentials), `ttd_archive_entities` (soft-delete), `ttd_validate_entity` (offline payload validation), `ttd_get_ad_preview`
+
+**Reporting — REST (6):** `ttd_submit_report`, `ttd_check_report_status`, `ttd_download_report`, `ttd_get_report` (blocking), `ttd_list_report_types`, `ttd_get_report_type_schema`
+
+**Reporting — GraphQL schedules/templates (15):**
+
+| Tool | Description |
+|------|-------------|
+| `ttd_execute_entity_report` | Execute an immediate dimension-specific report (no polling) |
+| `ttd_get_entity_report_types` | Discover available report types for an entity |
+| `ttd_create_report_schedule` | Create a named recurring schedule (Once/Daily/Weekly/Monthly) |
+| `ttd_update_report_schedule` | Enable or disable a report schedule |
+| `ttd_delete_report_schedule` | Permanently delete a report schedule |
+| `ttd_list_report_schedules` | List report schedules with optional advertiser filter |
+| `ttd_get_report_schedule` | Get full details for a schedule by ID |
+| `ttd_rerun_report_schedule` | Immediately rerun an existing schedule |
+| `ttd_get_report_executions` | Execution status + download links |
+| `ttd_cancel_report_execution` | Cancel an in-progress report execution |
+| `ttd_create_report_template` | Create a user-defined report template |
+| `ttd_update_report_template` | Fully replace a report template |
+| `ttd_get_report_template` | Retrieve full template structure |
+| `ttd_list_report_templates` | List template headers |
+| `ttd_create_template_schedule` | Create a schedule from a template ID |
+
+**Workflows API (13):** TTD's newer workflow-aware payload API (preferred over REST for campaign/ad group writes).
+
+| Tool | Description |
+|------|-------------|
+| `ttd_create_campaign_workflow` | Create a campaign via Workflows API |
+| `ttd_update_campaign_workflow` | Update a campaign (PATCH semantics) |
+| `ttd_get_campaign_version` | Get a campaign's Workflows version payload |
+| `ttd_create_ad_group_workflow` | Create an ad group via Workflows API |
+| `ttd_update_ad_group_workflow` | Update an ad group (PATCH semantics) |
+| `ttd_create_campaigns_job` | Async job: create multiple campaigns |
+| `ttd_update_campaigns_job` | Async job: update multiple campaigns |
+| `ttd_create_ad_groups_job` | Async job: create multiple ad groups |
+| `ttd_update_ad_groups_job` | Async job: update multiple ad groups |
+| `ttd_get_first_party_data_job` | Async job: retrieve first-party data for an advertiser |
+| `ttd_get_third_party_data_job` | Async job: retrieve third-party data for a partner |
+| `ttd_get_job_status` | Poll status of a Workflows job |
+| `ttd_rest_request` | Escape hatch: arbitrary REST request through Workflows API |
+
+**GraphQL (5):** `ttd_graphql_query`, `ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job` (status), `ttd_graphql_cancel_bulk_job`
+
+**Bid Lists & Seeds (3):** `ttd_manage_bid_list` (create/get/update single), `ttd_bulk_manage_bid_lists` (batch up to 50), `ttd_manage_seed` (audience seeds via GraphQL)
 
 ### gads-mcp — 15 Tools (Unique: GAQL)
 
