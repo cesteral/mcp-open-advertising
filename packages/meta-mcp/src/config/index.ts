@@ -26,8 +26,8 @@ const ConfigSchema = BaseConfigSchema.extend({
   metaApiBaseUrl: z
     .string()
     .url()
-    .default("https://graph.facebook.com/v24.0"),
-  metaApiVersion: z.string().default("v24.0"),
+    .default("https://graph.facebook.com/v25.0"),
+  metaApiVersion: z.string().default("v25.0"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via META_RATE_LIMIT_PER_MINUTE for different scaling profiles.

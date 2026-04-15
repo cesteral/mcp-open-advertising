@@ -29,6 +29,11 @@ export const CheckReportStatusOutputSchema = z
     status: z.string().describe("Job status: Job Not Started, Job Started, Job Running, Job Succeeded, Job Failed"),
     isComplete: z.boolean().describe("True when status is 'Job Succeeded' — safe to call meta_download_report"),
     asyncPercentCompletion: z.number().optional().describe("Completion percentage (0–100)"),
+    errorCode: z.number().optional().describe("Meta error code (set when status is 'Job Failed')"),
+    errorMessage: z.string().optional().describe("Meta error message (set when status is 'Job Failed')"),
+    errorSubcode: z.number().optional().describe("Meta error subcode (set when status is 'Job Failed')"),
+    errorUserTitle: z.string().optional().describe("User-facing error title (set when status is 'Job Failed')"),
+    errorUserMsg: z.string().optional().describe("User-facing error message (set when status is 'Job Failed')"),
     timestamp: z.string().datetime(),
   })
   .describe("Report status check result");
@@ -50,16 +55,32 @@ export async function checkReportStatusLogic(
     status: result.status,
     isComplete: result.status === "Job Succeeded",
     asyncPercentCompletion: result.asyncPercentCompletion,
+    errorCode: result.errorCode,
+    errorMessage: result.errorMessage,
+    errorSubcode: result.errorSubcode,
+    errorUserTitle: result.errorUserTitle,
+    errorUserMsg: result.errorUserMsg,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
   const pct = result.asyncPercentCompletion != null ? ` (${result.asyncPercentCompletion}%)` : "";
+  const failureDetail =
+    result.status === "Job Failed"
+      ? [
+          result.errorUserTitle,
+          result.errorUserMsg ?? result.errorMessage,
+          result.errorCode != null ? `code=${result.errorCode}` : undefined,
+          result.errorSubcode != null ? `subcode=${result.errorSubcode}` : undefined,
+        ]
+          .filter(Boolean)
+          .join(" | ")
+      : "";
   const next = result.isComplete
     ? `\n\nReport complete — call \`meta_download_report\` with reportRunId: "${result.reportRunId}"`
     : result.status === "Job Failed"
-    ? `\n\nReport failed. Submit a new report with \`meta_submit_report\`.`
+    ? `\n\nReport failed${failureDetail ? `: ${failureDetail}` : ""}. Submit a new report with \`meta_submit_report\`.`
     : `\n\nReport in progress${pct}. Poll again in ~10 seconds.`;
 
   return [

@@ -2,8 +2,8 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * Meta Marketing API v24.0 entity type definitions
- * Hand-crafted from Meta Marketing API v24.0 reference
+ * Meta Marketing API v25.0 entity type definitions
+ * Hand-crafted from Meta Marketing API v25.0 reference
  * Source: https://developers.facebook.com/docs/marketing-apis/
  */
 

@@ -17,7 +17,9 @@ Returns the new entity ID. Use meta_get_entity to fetch the full entity.
 
 **Options:**
 - \`rename_options\`: { prefix, suffix } for naming the copy
-- \`status_option\`: ACTIVE, PAUSED, or INHERITED`;
+- \`status_option\`: ACTIVE, PAUSED, or INHERITED
+
+**Note:** Effective 2026-05-19 Meta blocks \`/copies\` for Advantage+ Shopping and Advantage+ App campaigns (Marketing API v25.0). Use the standard Advantage+ campaign structure for those objectives instead.`;
 
 export const DuplicateEntityInputSchema = z
   .object({

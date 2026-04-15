@@ -17,7 +17,7 @@
 import { createHash } from "crypto";
 import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
 
-const DEFAULT_META_GRAPH_API_BASE_URL = "https://graph.facebook.com/v24.0";
+const DEFAULT_META_GRAPH_API_BASE_URL = "https://graph.facebook.com/v25.0";
 
 /**
  * Contract for Meta authentication adapters.

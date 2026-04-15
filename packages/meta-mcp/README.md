@@ -1,6 +1,6 @@
 # @cesteral/meta-mcp
 
-Meta Ads MCP Server - Campaign management via the configured Meta Graph API (default: v24.0).
+Meta Ads MCP Server - Campaign management via the configured Meta Graph API (default: v25.0).
 
 ## Purpose
 
@@ -280,8 +280,8 @@ pnpm run typecheck
 - `META_MCP_HOST`: Server host (default: 127.0.0.1)
 - `MCP_AUTH_MODE`: Authentication mode - `meta-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`
-- `META_API_BASE_URL`: Graph API base URL (default: `https://graph.facebook.com/v24.0`)
-- `META_API_VERSION`: API version (default: `v24.0`)
+- `META_API_BASE_URL`: Graph API base URL (default: `https://graph.facebook.com/v25.0`)
+- `META_API_VERSION`: API version (default: `v25.0`)
 - `META_RATE_LIMIT_PER_MINUTE`: Rate limit ceiling (default: 200)
 - `META_ACCESS_TOKEN`: Access token for stdio mode
 - `META_VIDEO_UPLOAD_MAX_BUFFERED_BYTES`: Max buffered video upload size in bytes (default: `268435456`)

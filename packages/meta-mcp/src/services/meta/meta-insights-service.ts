@@ -174,12 +174,24 @@ export class MetaInsightsService {
   async checkReportStatus(
     reportRunId: string,
     context?: RequestContext
-  ): Promise<{ reportRunId: string; status: string; asyncPercentCompletion?: number }> {
+  ): Promise<{
+    reportRunId: string;
+    status: string;
+    asyncPercentCompletion?: number;
+    errorCode?: number;
+    errorMessage?: string;
+    errorSubcode?: number;
+    errorUserTitle?: string;
+    errorUserMsg?: string;
+  }> {
     await this.rateLimiter.consume(`meta:default`);
 
     const result = (await this.httpClient.get(
       `/${reportRunId}`,
-      { fields: "id,async_status,async_percent_completion" },
+      {
+        fields:
+          "id,async_status,async_percent_completion,error_code,error_message,error_subcode,error_user_title,error_user_msg",
+      },
       context
     )) as Record<string, unknown>;
 
@@ -189,6 +201,11 @@ export class MetaInsightsService {
       asyncPercentCompletion: result.async_percent_completion != null
         ? Number(result.async_percent_completion)
         : undefined,
+      errorCode: result.error_code != null ? Number(result.error_code) : undefined,
+      errorMessage: result.error_message != null ? String(result.error_message) : undefined,
+      errorSubcode: result.error_subcode != null ? Number(result.error_subcode) : undefined,
+      errorUserTitle: result.error_user_title != null ? String(result.error_user_title) : undefined,
+      errorUserMsg: result.error_user_msg != null ? String(result.error_user_msg) : undefined,
     };
   }
 

@@ -112,14 +112,14 @@ describe("MetaAccessTokenAdapter", () => {
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
-    it("uses the v24.0 default Graph API base URL when none is provided", async () => {
+    it("uses the v25.0 default Graph API base URL when none is provided", async () => {
       const adapter = new MetaAccessTokenAdapter("test-token");
       mockSuccessResponse();
 
       await adapter.validate();
 
       expect(mockFetchWithTimeout.mock.calls[0]?.[0]).toBe(
-        "https://graph.facebook.com/v24.0/me?fields=id,name"
+        "https://graph.facebook.com/v25.0/me?fields=id,name"
       );
     });
 
@@ -249,7 +249,7 @@ describe("MetaRefreshTokenAdapter", () => {
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
     });
 
-    it("uses the v24.0 default Graph API base URL when none is provided", async () => {
+    it("uses the v25.0 default Graph API base URL when none is provided", async () => {
       const adapter = new MetaRefreshTokenAdapter(
         "short-lived-token",
         MOCK_APP_CREDENTIALS
@@ -259,7 +259,7 @@ describe("MetaRefreshTokenAdapter", () => {
       await adapter.getAccessToken();
 
       expect(mockFetchWithTimeout.mock.calls[0]?.[0]).toBe(
-        "https://graph.facebook.com/v24.0/oauth/access_token"
+        "https://graph.facebook.com/v25.0/oauth/access_token"
       );
     });
 

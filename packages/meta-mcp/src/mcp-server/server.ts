@@ -62,14 +62,14 @@ export async function createMcpServer(
     {
       name: "meta-mcp",
       version: packageJson.version,
-      description: "Meta Ads campaign management, reporting, and optimization via the configured Meta Graph API (default: v24.0). Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
+      description: "Meta Ads campaign management, reporting, and optimization via the configured Meta Graph API (default: v25.0). Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
     },
     {
       capabilities: {
         logging: {},
       },
       instructions:
-        "Meta Ads campaign management server. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights, targeting, and bulk operations via the configured Meta Graph API (default: v24.0). " +
+        "Meta Ads campaign management server. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights, targeting, and bulk operations via the configured Meta Graph API (default: v25.0). " +
         "Use meta_list_ad_accounts to discover accounts, meta_list_entities to browse entities. " +
         "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
     }
