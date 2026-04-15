@@ -188,7 +188,6 @@ export async function runCustomQueryLogic(
       input,
       warnings: warningsOut,
     }),
-    warnings: warningsOut,
     timestamp: new Date().toISOString(),
   };
 }

@@ -30,16 +30,16 @@ export const DownloadReportInputSchema = z
     cursor: z
       .string()
       .optional()
-      .describe("Meta paging cursor returned as nextCursor by a previous call"),
+      .describe("Meta paging cursor returned as nextCursor by a previous call. This tool pages via cursor; offset is not supported."),
   })
-  .merge(ReportViewInputSchema)
+  .merge(ReportViewInputSchema.omit({ offset: true }))
   .describe("Parameters for downloading Meta report results");
 
 export const DownloadReportOutputSchema = z
   .object({
     reportRunId: z.string(),
     ...ReportViewOutputSchema.shape,
-    fetchedAllRows: z.boolean().describe("Whether all available report rows were fetched"),
+    fetchedAllRows: z.boolean().describe("Whether all available report rows were fetched. When false, totalRows is a lower bound and nextCursor should be used to continue."),
     nextCursor: z.string().optional().describe("Cursor for additional rows when maxRows capped the result set"),
     timestamp: z.string().datetime(),
   })

@@ -36,15 +36,15 @@ export const GAQLSearchInputSchema = z
     pageToken: z
       .string()
       .optional()
-      .describe("Page token for pagination (from previous response)"),
+      .describe("Page token for pagination (from previous response). This tool pages across result sets via pageToken; offset is not supported."),
   })
-  .merge(ReportViewInputSchema)
+  .merge(ReportViewInputSchema.omit({ offset: true }))
   .describe("Parameters for executing a GAQL query");
 
 export const GAQLSearchOutputSchema = z
   .object({
     ...ReportViewOutputSchema.shape,
-    totalResultsCount: z.number().optional().describe("Total results available"),
+    totalResultsCount: z.number().optional().describe("Total results available (when known; otherwise totalRows is a lower bound and nextPageToken indicates more are available)"),
     nextPageToken: z.string().optional().describe("Token for next page"),
     has_more: z.boolean().describe("Whether more results are available via pagination"),
     timestamp: z.string().datetime(),

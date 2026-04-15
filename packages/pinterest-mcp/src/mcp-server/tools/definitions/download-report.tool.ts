@@ -83,7 +83,6 @@ export async function downloadReportLogic(
       totalRows: result.totalRows,
       input,
     }),
-    headers,
     timestamp: new Date().toISOString(),
   };
 }
