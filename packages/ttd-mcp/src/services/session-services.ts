@@ -13,6 +13,7 @@ import { TtdReportingService } from "./ttd/ttd-reporting-service.js";
 export interface SessionServices {
   ttdService: TtdService;
   ttdReportingService: TtdReportingService;
+  authAdapter: TtdAuthAdapter;
 }
 
 export interface TtdSessionConfig {
@@ -34,6 +35,7 @@ export function createSessionServices(
   return {
     ttdService,
     ttdReportingService,
+    authAdapter,
   };
 }
 

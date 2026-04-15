@@ -143,8 +143,7 @@ export async function downloadReportLogic(
   _context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DownloadOutput> {
-  // Resolve session to ensure the user is authenticated
-  resolveSessionServices(sdkContext);
+  const { authAdapter } = resolveSessionServices(sdkContext);
 
   if (!isAllowedReportUrl(input.downloadUrl)) {
     throw new Error(
@@ -152,7 +151,15 @@ export async function downloadReportLogic(
     );
   }
 
-  const response = await fetchWithTimeout(input.downloadUrl, 60_000);
+  // TTD-hosted download URLs (api.thetradedesk.com/v3/myreports/view/...) require
+  // the TTD-Auth header. Pre-signed AWS S3 URLs carry their own signature and
+  // must NOT receive auth headers (would 400/403).
+  const { hostname } = new URL(input.downloadUrl);
+  const requestInit: RequestInit = /thetradedesk\.com$/.test(hostname)
+    ? { headers: { "TTD-Auth": await authAdapter.getAccessToken() } }
+    : {};
+
+  const response = await fetchWithTimeout(input.downloadUrl, 60_000, undefined, requestInit);
   if (!response.ok) {
     throw new Error(
       `Failed to download report: ${response.status} ${response.statusText}`

@@ -277,7 +277,7 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic parses CSV and applies maxRows", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({});
+    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
     const csv = [
       "CampaignId,Impressions",
       "c1,100",
@@ -308,7 +308,7 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic throws when fetch fails", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({});
+    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -325,7 +325,7 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic rejects XLSX/ExcelPivot downloads with a clear error", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({});
+    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
     const zipBytes = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]);
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,

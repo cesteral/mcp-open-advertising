@@ -81,7 +81,8 @@ describe("createSessionServices", () => {
 
     expect(services).toHaveProperty("ttdService");
     expect(services).toHaveProperty("ttdReportingService");
-    expect(Object.keys(services)).toHaveLength(2);
+    expect(services).toHaveProperty("authAdapter");
+    expect(Object.keys(services)).toHaveLength(3);
   });
 });
 
