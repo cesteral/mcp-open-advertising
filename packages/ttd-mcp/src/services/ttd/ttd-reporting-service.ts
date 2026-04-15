@@ -144,12 +144,13 @@ export class TtdReportingService {
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
     const body = {
-      ReportScheduleIds: [reportScheduleId],
+      PartnerIds: [partnerId],
+      ReportScheduleIds: [Number(reportScheduleId)],
       PageSize: 1,
     };
 
     const result = (await this.httpClient.fetch(
-      "/myreports/reportexecution/query/reportschedule",
+      "/myreports/reportexecution/query/partners",
       context,
       {
         method: "POST",
@@ -259,12 +260,13 @@ export class TtdReportingService {
       await this.rateLimiter.consume(`ttd:${partnerId}`);
 
       const body = {
-        ReportScheduleIds: [reportScheduleId],
+        PartnerIds: [partnerId],
+        ReportScheduleIds: [Number(reportScheduleId)],
         PageSize: 1,
       };
 
       const result = (await this.httpClient.fetch(
-        "/myreports/reportexecution/query/reportschedule",
+        "/myreports/reportexecution/query/partners",
         context,
         {
           method: "POST",

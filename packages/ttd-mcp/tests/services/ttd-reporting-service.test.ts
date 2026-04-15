@@ -103,10 +103,11 @@ describe("TtdReportingService", () => {
 
       // Second call is the poll
       const [path, , options] = httpClient.fetch.mock.calls[1];
-      expect(path).toBe("/myreports/reportexecution/query/reportschedule");
+      expect(path).toBe("/myreports/reportexecution/query/partners");
       expect(options.method).toBe("POST");
       const body = JSON.parse(options.body);
-      expect(body.ReportScheduleIds).toEqual(["sched-1"]);
+      expect(body.ReportScheduleIds).toHaveLength(1);
+      expect(body.PartnerIds).toHaveLength(1);
       expect(body.PageSize).toBe(1);
     });
 
