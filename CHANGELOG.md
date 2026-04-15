@@ -29,6 +29,10 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) (
 ### Fixed
 
 - Pre-deploy drift and config alignment across fleet (registry tool counts, `server.json` hostnames, `amazon-dsp` port).
+
+### Removed
+
+- **amazon-dsp-mcp** — Removed `amazon_dsp_search_targeting` tool; the `/dsp/audienceSegments` endpoint it targeted is not present in Amazon's public DSP API (verified against Amazon's Postman collection and the reference `python-amazon-ad-api` SDK). Tool count dropped from 19 to 18.
 - Corrected three broken computed-metric and pacing calculations.
 - Numerous ttd-mcp runtime fixes found via live tool testing (entity-type counts, output schemas, ad preview extraction, GraphQL type alignment, report execution endpoint paths, partner-ID threading on advertiser writes).
 
@@ -56,7 +60,7 @@ Initial public release of Cesteral MCP Servers — thirteen independent MCP serv
 - **sa360-mcp** — SA360 Reporting API v0 + v2 (15 tools)
 - **pinterest-mcp** — Pinterest Ads API v5 (21 tools)
 - **snapchat-mcp** — Snapchat Ads API v1 (23 tools)
-- **amazon-dsp-mcp** — Amazon DSP API (19 tools)
+- **amazon-dsp-mcp** — Amazon DSP API (18 tools)
 - **msads-mcp** — Microsoft Advertising API v13 (20 tools)
 - **dbm-mcp** — Bid Manager API v2 (6 tools)
 
