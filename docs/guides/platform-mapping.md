@@ -10,7 +10,7 @@ This table tracks current and planned ad-platform packages.
 | DV360 Management | `packages/dv360-mcp` | DV360 entity creation/updates | Active |
 | The Trade Desk | `packages/ttd-mcp` | TTD entity management and reporting | Active |
 | Google Ads | `packages/gads-mcp` | Google Ads campaign management and reporting | Active |
-| Meta Ads | `packages/meta-mcp` | Meta Marketing API v21.0 campaign management | Active |
+| Meta Ads | `packages/meta-mcp` | Meta Marketing API v25.0 campaign management | Active |
 | LinkedIn Ads | `packages/linkedin-mcp` | LinkedIn Marketing API v2 campaign management | Active |
 | TikTok Ads | `packages/tiktok-mcp` | TikTok Marketing API v1.3 campaign management | Active |
 

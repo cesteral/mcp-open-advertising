@@ -192,7 +192,7 @@ META_MCP_HOST=0.0.0.0
 
 # Meta API Configuration
 META_ACCESS_TOKEN=your-meta-access-token
-META_API_BASE_URL=https://graph.facebook.com/v21.0
+META_API_BASE_URL=https://graph.facebook.com/v25.0
 META_RATE_LIMIT_PER_MINUTE=60
 ```
 
