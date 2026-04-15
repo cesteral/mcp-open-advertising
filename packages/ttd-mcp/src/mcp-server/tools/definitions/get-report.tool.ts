@@ -85,6 +85,7 @@ export async function getReportLogic(
     ReportDateFormat: "Sortable",
     ReportNumericFormat: "US",
     ReportFileFormat: "CSV",
+    IncludeHeaders: true,
     ...(input.reportTemplateId && { ReportTemplateId: input.reportTemplateId }),
     ...(input.dimensions && { ReportDimensions: input.dimensions }),
     ...(input.metrics && { ReportMetrics: input.metrics }),
