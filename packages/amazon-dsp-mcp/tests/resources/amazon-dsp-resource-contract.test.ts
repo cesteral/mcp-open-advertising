@@ -28,8 +28,10 @@ describe("Amazon DSP resource contract", () => {
   it("reporting reference documents reporting v3", () => {
     const content = reportingReferenceResource.getContent();
 
-    expect(content).toContain("POST /reporting/reports");
-    expect(content).toContain("application/vnd.createasyncreportrequest.v3+json");
+    expect(content).toContain("POST /accounts/{accountId}/dsp/reports");
+    expect(content).toContain("GET /accounts/{accountId}/dsp/reports/{reportId}");
+    expect(content).toContain("application/vnd.dspcreatereports.v3+json");
+    expect(content).toContain("application/vnd.dspgetreports.v3+json");
     expect(content).toContain("PENDING, PROCESSING, COMPLETED, FAILED");
   });
 });

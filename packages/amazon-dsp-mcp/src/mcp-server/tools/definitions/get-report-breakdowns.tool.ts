@@ -21,10 +21,10 @@ Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is the longest supp
 
 export const GetReportBreakdownsInputSchema = z
   .object({
-    profileId: z
+    accountId: z
       .string()
       .min(1)
-      .describe("Amazon DSP Profile/Advertiser ID"),
+      .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
     name: z
       .string()
       .optional()
@@ -111,6 +111,7 @@ export async function getReportBreakdownsLogic(
   }
 
   const result = await amazonDspReportingService.getReportBreakdowns(
+    input.accountId,
     {
       name: input.name,
       startDate: resolvedStartDate!,
@@ -215,7 +216,7 @@ export const getReportBreakdownsTool = {
     {
       label: "Line item report broken down by geography",
       input: {
-        profileId: "1234567890",
+        accountId: "1234567890",
         datePreset: "LAST_7_DAYS",
         reportTypeId: "dspLineItem",
         groupBy: ["order", "lineItem"],
@@ -227,7 +228,7 @@ export const getReportBreakdownsTool = {
     {
       label: "Order report broken down by device",
       input: {
-        profileId: "1234567890",
+        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         reportTypeId: "dspOrder",

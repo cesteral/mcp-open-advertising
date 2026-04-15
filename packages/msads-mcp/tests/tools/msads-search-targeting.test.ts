@@ -27,10 +27,9 @@ function createMockServices(): SessionServices {
       bulkUpdateStatus: vi.fn(),
       adjustBids: vi.fn(),
       executeOperation: vi.fn(),
-      executeReadOperation: vi.fn().mockResolvedValue({
-        Locations: [{ Id: 190, Name: "New York", Type: "City" }],
-      }),
+      executeReadOperation: vi.fn(),
     } as any,
+    msadsCustomerService: {} as any,
     msadsReportingService: {} as any,
   };
 }
@@ -44,26 +43,10 @@ describe("msads_search_targeting", () => {
     mockResolveSession.mockReturnValue(mockServices);
   });
 
-  it("routes location search through executeReadOperation (not executeOperation)", async () => {
-    const result = await searchTargetingLogic(
-      { targetingType: "location", query: "New York", maxResults: 25 },
-      { requestId: "req-1" }
-    );
-
-    expect(mockServices.msadsService.executeReadOperation).toHaveBeenCalledWith(
-      "/LocationTarget/Search",
-      { Query: "New York", MaxResults: 25 },
-      { requestId: "req-1" }
-    );
-    expect(mockServices.msadsService.executeOperation).not.toHaveBeenCalled();
-    expect(result.results).toHaveLength(1);
-    expect(result.targetingType).toBe("location");
-  });
-
   it("returns static age ranges without API call", async () => {
     const result = await searchTargetingLogic(
       { targetingType: "age", maxResults: 25 },
-      { requestId: "req-2" }
+      { requestId: "req-1" }
     );
 
     expect(mockServices.msadsService.executeReadOperation).not.toHaveBeenCalled();
@@ -72,12 +55,23 @@ describe("msads_search_targeting", () => {
     expect(result.targetingType).toBe("age");
   });
 
-  it("throws when location search has no query", async () => {
-    await expect(
-      searchTargetingLogic(
-        { targetingType: "location", maxResults: 25 },
-        { requestId: "req-3" }
-      )
-    ).rejects.toThrow("query is required");
+  it("returns static genders without API call", async () => {
+    const result = await searchTargetingLogic(
+      { targetingType: "gender", maxResults: 25 },
+      { requestId: "req-2" }
+    );
+
+    expect(result.results.length).toBeGreaterThan(0);
+    expect(result.targetingType).toBe("gender");
+  });
+
+  it("returns static device types without API call", async () => {
+    const result = await searchTargetingLogic(
+      { targetingType: "device", maxResults: 25 },
+      { requestId: "req-3" }
+    );
+
+    expect(result.results.length).toBeGreaterThan(0);
+    expect(result.targetingType).toBe("device");
   });
 });

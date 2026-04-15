@@ -45,7 +45,7 @@ describe("submitReportLogic", () => {
 
     const result = await submitReportLogic(
       {
-        profileId: "1234567890",
+        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         reportTypeId: "dspLineItem",
@@ -65,7 +65,7 @@ describe("submitReportLogic", () => {
 
     await submitReportLogic(
       {
-        profileId: "1234567890",
+        accountId: "1234567890",
         name: "My Test Report",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
@@ -80,6 +80,7 @@ describe("submitReportLogic", () => {
     );
 
     expect(mockSubmitReport).toHaveBeenCalledWith(
+      "1234567890",
       expect.objectContaining({
         name: "My Test Report",
         startDate: "2026-03-01",
@@ -100,7 +101,7 @@ describe("submitReportLogic", () => {
 
     await submitReportLogic(
       {
-        profileId: "1234567890",
+        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         reportTypeId: "dspLineItem",

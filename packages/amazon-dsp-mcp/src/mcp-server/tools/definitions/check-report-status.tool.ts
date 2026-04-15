@@ -18,10 +18,10 @@ Makes a single API call to check task status. Does not poll or wait.
 
 export const CheckReportStatusInputSchema = z
   .object({
-    profileId: z
+    accountId: z
       .string()
       .min(1)
-      .describe("Amazon DSP Profile/Advertiser ID"),
+      .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
     taskId: z
       .string()
       .min(1)
@@ -50,6 +50,7 @@ export async function checkReportStatusLogic(
   const { amazonDspReportingService } = resolveSessionServices(sdkContext);
 
   const result = await amazonDspReportingService.checkReportStatus(
+    input.accountId,
     input.taskId,
     context
   );
@@ -106,7 +107,7 @@ export const checkReportStatusTool = {
     {
       label: "Check report task status",
       input: {
-        profileId: "1234567890",
+        accountId: "1234567890",
         taskId: "rpt-abc123",
       },
     },

@@ -24,10 +24,10 @@ Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is the longest supp
 
 export const SubmitReportInputSchema = z
   .object({
-    profileId: z
+    accountId: z
       .string()
       .min(1)
-      .describe("Amazon DSP Profile/Advertiser ID"),
+      .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
     name: z
       .string()
       .optional()
@@ -101,6 +101,7 @@ export async function submitReportLogic(
   }
 
   const result = await amazonDspReportingService.submitReport(
+    input.accountId,
     {
       name: input.name,
       startDate: resolvedStartDate!,
@@ -147,7 +148,7 @@ export const submitReportTool = {
     {
       label: "Submit line item performance report",
       input: {
-        profileId: "1234567890",
+        accountId: "1234567890",
         datePreset: "LAST_7_DAYS",
         reportTypeId: "dspLineItem",
         groupBy: ["order", "lineItem"],

@@ -50,6 +50,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
     {
       campaignApiBaseUrl: mcpConfig.msadsCampaignApiBaseUrl,
       reportingApiBaseUrl: mcpConfig.msadsReportingApiBaseUrl,
+      customerApiBaseUrl: mcpConfig.msadsCustomerApiBaseUrl,
       reportPollIntervalMs: mcpConfig.msadsReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.msadsReportMaxPollAttempts,
     },

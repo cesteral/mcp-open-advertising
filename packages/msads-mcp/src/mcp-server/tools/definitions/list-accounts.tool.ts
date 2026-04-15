@@ -54,9 +54,9 @@ export async function listAccountsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ListAccountsOutput> {
-  const { msadsService } = resolveSessionServices(sdkContext);
+  const { msadsCustomerService } = resolveSessionServices(sdkContext);
 
-  const result = (await msadsService.executeReadOperation(
+  const result = (await msadsCustomerService.executeReadOperation(
     "/Accounts/Search",
     {
       Predicates: input.predicates,

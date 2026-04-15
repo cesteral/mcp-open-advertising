@@ -11,12 +11,14 @@ import { MsAdsReportingService } from "./msads/msads-reporting-service.js";
 
 export interface SessionServices {
   msadsService: MsAdsService;
+  msadsCustomerService: MsAdsService;
   msadsReportingService: MsAdsReportingService;
 }
 
 export interface MsAdsSessionConfig {
   campaignApiBaseUrl: string;
   reportingApiBaseUrl: string;
+  customerApiBaseUrl: string;
   reportPollIntervalMs: number;
   reportMaxPollAttempts: number;
 }
@@ -31,8 +33,10 @@ export function createSessionServices(
 ): SessionServices {
   const campaignClient = new MsAdsHttpClient(authAdapter, config.campaignApiBaseUrl, logger);
   const reportingClient = new MsAdsHttpClient(authAdapter, config.reportingApiBaseUrl, logger);
+  const customerClient = new MsAdsHttpClient(authAdapter, config.customerApiBaseUrl, logger);
 
   const msadsService = new MsAdsService(rateLimiter, campaignClient, logger);
+  const msadsCustomerService = new MsAdsService(rateLimiter, customerClient, logger);
   const msadsReportingService = new MsAdsReportingService(
     rateLimiter,
     reportingClient,
@@ -40,5 +44,5 @@ export function createSessionServices(
     config.reportMaxPollAttempts
   );
 
-  return { msadsService, msadsReportingService };
+  return { msadsService, msadsCustomerService, msadsReportingService };
 }

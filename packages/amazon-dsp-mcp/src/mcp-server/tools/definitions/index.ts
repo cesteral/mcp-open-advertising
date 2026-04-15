@@ -4,16 +4,14 @@
 /**
  * Tool definitions barrel export
  *
- * 19 tools total:
+ * 18 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
- *   1 targeting: search targeting (audience segments via /dsp/audienceSegments)
  *   1 specialized: get ad preview
  *   1 duplication: duplicate entity (manual read-strip-create)
- *   1 validation: validate entity (client-side)
  *   1 validation: validate entity (client-side)
  */
 
@@ -32,7 +30,6 @@ export { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
-export { searchTargetingTool } from "./search-targeting.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
@@ -52,7 +49,6 @@ import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
-import { searchTargetingTool } from "./search-targeting.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
@@ -79,8 +75,6 @@ const productionTools: ToolDefinitionForFactory[] = [
   bulkUpdateEntitiesTool,
   // ── Bids ──
   adjustBidsTool,
-  // ── Targeting / Audience ──
-  searchTargetingTool,
   // ── Specialized ──
   getAdPreviewTool,
   duplicateEntityTool,

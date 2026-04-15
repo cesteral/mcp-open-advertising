@@ -175,7 +175,7 @@ export class MsAdsService {
     const config = getEntityConfig(entityType);
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     this.logger.info({ entityType }, "Updating entity");
-    return this.httpClient.post(config.updateOperation, data, context);
+    return this.httpClient.put(config.updateOperation, data, context);
   }
 
   /**
@@ -194,7 +194,7 @@ export class MsAdsService {
       ...params,
     };
     this.logger.info({ entityType, entityIds }, "Deleting entities");
-    return this.httpClient.post(config.deleteOperation, body, context);
+    return this.httpClient.delete(config.deleteOperation, body, context);
   }
 
   /**
@@ -236,7 +236,7 @@ export class MsAdsService {
       await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
       const body = { [config.pluralName]: batch };
       this.logger.info({ entityType, batchSize: batch.length }, "Bulk updating entities");
-      const result = await this.httpClient.post(config.updateOperation, body, context);
+      const result = await this.httpClient.put(config.updateOperation, body, context);
       results.push(result);
     }
 
@@ -262,7 +262,7 @@ export class MsAdsService {
       const body = {
         [config.pluralName]: [{ Id: Number(entityId), Status: status }],
       };
-      return this.httpClient.post(config.updateOperation, body, context);
+      return this.httpClient.put(config.updateOperation, body, context);
     }, { logger: this.logger });
 
     return {
@@ -314,7 +314,7 @@ export class MsAdsService {
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     const body = { [config.pluralName]: updatedEntities };
     this.logger.info({ entityType, count: adjustments.length }, "Adjusting bids");
-    return this.httpClient.post(config.updateOperation, body, context);
+    return this.httpClient.put(config.updateOperation, body, context);
   }
 
   /**
@@ -331,16 +331,19 @@ export class MsAdsService {
   }
 
   /**
-   * Generic POST for write operations not covered by CRUD (ad extensions, criterions, etc.)
+   * Generic write operation with caller-selected HTTP verb (ad extensions, criterions, etc.)
+   * Microsoft Advertising REST v13 uses Add=POST, Update=PUT, Delete=DELETE on shared
+   * collection paths (e.g. /CampaignCriterions), so callers must pass the right verb.
    */
   async executeOperation(
     path: string,
     data: Record<string, unknown>,
-    context?: RequestContext
+    context?: RequestContext,
+    method: "POST" | "PUT" | "DELETE" = "POST"
   ): Promise<unknown> {
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
-    this.logger.debug({ path }, "Executing custom operation");
-    return this.httpClient.post(path, data, context);
+    this.logger.debug({ path, method }, "Executing custom operation");
+    return this.httpClient.request(method, path, data, context);
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────

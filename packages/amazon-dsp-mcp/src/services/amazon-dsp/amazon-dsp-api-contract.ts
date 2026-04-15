@@ -173,8 +173,10 @@ export const AMAZON_DSP_PUBLIC_ENTITY_TYPES = [
 ] as const satisfies readonly AmazonDspPublicEntityType[];
 
 export const AMAZON_DSP_REPORTING_CONTRACT = {
-  endpoint: "/reporting/reports",
-  mediaType: "application/vnd.createasyncreportrequest.v3+json",
+  submitPathTemplate: "/accounts/{accountId}/dsp/reports",
+  statusPathTemplate: "/accounts/{accountId}/dsp/reports/{reportId}",
+  submitAcceptMediaType: "application/vnd.dspcreatereports.v3+json",
+  statusAcceptMediaType: "application/vnd.dspgetreports.v3+json",
   statuses: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"] as const,
   defaultAdProduct: "DEMAND_SIDE_PLATFORM",
   defaultTimeUnit: "DAILY" as const,
@@ -183,8 +185,10 @@ export const AMAZON_DSP_REPORTING_CONTRACT = {
   commonGroupBy: ["order", "lineItem", "creative", "audience", "date"],
   commonColumns: ["impressions", "clickThroughs", "totalCost", "dpv14d", "purchases14d"],
   notes: [
-    "Amazon Ads reporting v3 is asynchronous and uses POST /reporting/reports followed by GET /reporting/reports/{reportId}.",
-    "Completed reports expose a download URL containing compressed raw JSON output.",
+    "Amazon DSP reporting v3 is asynchronous and uses POST /accounts/{accountId}/dsp/reports followed by GET /accounts/{accountId}/dsp/reports/{reportId}.",
+    "The accountId is the DSP account (entity) identifier and appears in the URL path; it is separate from the Amazon-Advertising-API-Scope profile header.",
+    "POST requires Accept: application/vnd.dspcreatereports.v3+json; status GET requires Accept: application/vnd.dspgetreports.v3+json.",
+    "Completed reports expose a presigned download URL for the compressed report output.",
   ],
 } as const;
 

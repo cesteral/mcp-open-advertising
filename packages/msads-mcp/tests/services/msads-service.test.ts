@@ -7,10 +7,19 @@ import pino from "pino";
 const logger = pino({ level: "silent" });
 
 function createMockHttpClient(): MsAdsHttpClient {
-  return {
+  const client = {
     get: vi.fn().mockResolvedValue({}),
     post: vi.fn().mockResolvedValue({}),
+    put: vi.fn().mockResolvedValue({}),
+    delete: vi.fn().mockResolvedValue({}),
   } as unknown as MsAdsHttpClient;
+  (client as unknown as { request: typeof client.post }).request = vi.fn(
+    async (method: "GET" | "POST" | "PUT" | "DELETE", path: string, data?: unknown) => {
+      const verb = method.toLowerCase() as "get" | "post" | "put" | "delete";
+      return (client[verb] as unknown as (...a: unknown[]) => Promise<unknown>)(path, data);
+    }
+  );
+  return client;
 }
 
 function createMockRateLimiter(): RateLimiter {
@@ -109,21 +118,23 @@ describe("MsAdsService", () => {
   });
 
   describe("updateEntity", () => {
-    it("updates an entity via Update operation", async () => {
+    it("updates an entity via PUT on the collection path", async () => {
       const data = { Campaigns: [{ Id: 1, Name: "Updated" }] };
       await service.updateEntity("campaign", data);
-      expect(httpClient.post).toHaveBeenCalledWith("/Campaigns", data, undefined);
+      expect(httpClient.put).toHaveBeenCalledWith("/Campaigns", data, undefined);
+      expect(httpClient.post).not.toHaveBeenCalled();
     });
   });
 
   describe("deleteEntity", () => {
-    it("deletes entities by IDs", async () => {
+    it("deletes entities via DELETE on the collection path", async () => {
       await service.deleteEntity("campaign", ["1", "2"], { AccountId: 123 });
-      expect(httpClient.post).toHaveBeenCalledWith(
+      expect(httpClient.delete).toHaveBeenCalledWith(
         "/Campaigns",
         expect.objectContaining({ CampaignIds: [1, 2], AccountId: 123 }),
         undefined
       );
+      expect(httpClient.post).not.toHaveBeenCalled();
     });
   });
 
@@ -141,17 +152,17 @@ describe("MsAdsService", () => {
   });
 
   describe("bulkUpdateStatus", () => {
-    it("updates status for multiple entities with per-entity calls", async () => {
+    it("updates status for multiple entities with per-entity PUT calls", async () => {
       const result = await service.bulkUpdateStatus("campaign", ["1", "2"], "Paused");
 
-      // Should make one call per entity
-      expect(httpClient.post).toHaveBeenCalledTimes(2);
-      expect(httpClient.post).toHaveBeenCalledWith(
+      // Should make one PUT call per entity
+      expect(httpClient.put).toHaveBeenCalledTimes(2);
+      expect(httpClient.put).toHaveBeenCalledWith(
         "/Campaigns",
         { Campaigns: [{ Id: 1, Status: "Paused" }] },
         undefined
       );
-      expect(httpClient.post).toHaveBeenCalledWith(
+      expect(httpClient.put).toHaveBeenCalledWith(
         "/Campaigns",
         { Campaigns: [{ Id: 2, Status: "Paused" }] },
         undefined
@@ -164,7 +175,7 @@ describe("MsAdsService", () => {
     });
 
     it("reports per-entity failures without failing the entire batch", async () => {
-      (httpClient.post as ReturnType<typeof vi.fn>)
+      (httpClient.put as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({}) // entity "1" succeeds
         .mockRejectedValueOnce(new Error("Entity 2 not found")); // entity "2" fails
 
@@ -181,13 +192,12 @@ describe("MsAdsService", () => {
   });
 
   describe("adjustBids", () => {
-    it("performs read-modify-write bid adjustment", async () => {
-      // Mock getEntity (getByIdsOperation)
-      (httpClient.post as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({
-          Keywords: [{ Id: 1, Bid: { Amount: 1.50 } }],
-        })
-        .mockResolvedValueOnce({ PartialErrors: null });
+    it("reads via POST then writes the update via PUT", async () => {
+      // Mock getEntity (getByIdsOperation) — read uses POST
+      (httpClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        Keywords: [{ Id: 1, Bid: { Amount: 1.50 } }],
+      });
+      (httpClient.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ PartialErrors: null });
 
       await service.adjustBids(
         "keyword",
@@ -195,35 +205,46 @@ describe("MsAdsService", () => {
         { AdGroupId: 123 }
       );
 
-      // First call: getByIds, second call: update
-      expect(httpClient.post).toHaveBeenCalledTimes(2);
-      expect(httpClient.post).toHaveBeenNthCalledWith(
-        1,
+      expect(httpClient.post).toHaveBeenCalledTimes(1);
+      expect(httpClient.post).toHaveBeenCalledWith(
         "/Keywords/QueryByIds",
         expect.objectContaining({ KeywordIds: [1], AdGroupId: 123 }),
         undefined
       );
-      const updateCall = (httpClient.post as ReturnType<typeof vi.fn>).mock.calls[1]!;
+      expect(httpClient.put).toHaveBeenCalledTimes(1);
+      const updateCall = (httpClient.put as ReturnType<typeof vi.fn>).mock.calls[0]!;
       expect(updateCall[0]).toBe("/Keywords");
       expect(updateCall[1].Keywords[0].Bid).toBe(2.0);
     });
   });
 
   describe("executeReadOperation", () => {
-    it("consumes msads:read with cost 1", async () => {
-      const data = { Query: "New York", MaxResults: 25 };
-      await service.executeReadOperation("/LocationTarget/Search", data);
+    it("consumes msads:read with cost 1 and POSTs to the read endpoint", async () => {
+      const data = { Predicates: [] };
+      await service.executeReadOperation("/Accounts/Search", data);
       expect(rateLimiter.consume).toHaveBeenCalledWith("msads:read");
-      expect(httpClient.post).toHaveBeenCalledWith("/LocationTarget/Search", data, undefined);
+      expect(httpClient.post).toHaveBeenCalledWith("/Accounts/Search", data, undefined);
     });
   });
 
   describe("executeOperation", () => {
-    it("consumes msads:write with cost 3", async () => {
+    it("defaults to POST and consumes msads:write with cost 3", async () => {
       const data = { AdExtensionIds: [1, 2] };
       await service.executeOperation("/AdExtensions/QueryByIds", data);
       expect(rateLimiter.consume).toHaveBeenCalledWith("msads:write", 3);
-      expect(httpClient.post).toHaveBeenCalledWith("/AdExtensions/QueryByIds", data, undefined);
+      expect(httpClient.post).toHaveBeenCalledWith("/AdExtensions/QueryByIds", data);
+    });
+
+    it("dispatches PUT when caller requests it", async () => {
+      const data = { Campaigns: [{ Id: 1 }] };
+      await service.executeOperation("/CampaignCriterions", data, undefined, "PUT");
+      expect(httpClient.put).toHaveBeenCalledWith("/CampaignCriterions", data);
+    });
+
+    it("dispatches DELETE when caller requests it", async () => {
+      const data = { AdExtensionIds: [1] };
+      await service.executeOperation("/AdExtensionsAssociations", data, undefined, "DELETE");
+      expect(httpClient.delete).toHaveBeenCalledWith("/AdExtensionsAssociations", data);
     });
   });
 });

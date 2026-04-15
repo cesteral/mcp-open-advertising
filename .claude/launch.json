@@ -1,0 +1,83 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dbm-mcp",
+      "runtimeExecutable": "packages/dbm-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/dbm-mcp/src/index.ts"],
+      "port": 3001
+    },
+    {
+      "name": "dv360-mcp",
+      "runtimeExecutable": "packages/dv360-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/dv360-mcp/src/index.ts"],
+      "port": 3002
+    },
+    {
+      "name": "ttd-mcp",
+      "runtimeExecutable": "packages/ttd-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/ttd-mcp/src/index.ts"],
+      "port": 3003
+    },
+    {
+      "name": "gads-mcp",
+      "runtimeExecutable": "packages/gads-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/gads-mcp/src/index.ts"],
+      "port": 3004
+    },
+    {
+      "name": "meta-mcp",
+      "runtimeExecutable": "packages/meta-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/meta-mcp/src/index.ts"],
+      "port": 3005
+    },
+    {
+      "name": "linkedin-mcp",
+      "runtimeExecutable": "packages/linkedin-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/linkedin-mcp/src/index.ts"],
+      "port": 3006
+    },
+    {
+      "name": "tiktok-mcp",
+      "runtimeExecutable": "packages/tiktok-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/tiktok-mcp/src/index.ts"],
+      "port": 3007
+    },
+    {
+      "name": "cm360-mcp",
+      "runtimeExecutable": "packages/cm360-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/cm360-mcp/src/index.ts"],
+      "port": 3008
+    },
+    {
+      "name": "snapchat-mcp",
+      "runtimeExecutable": "packages/snapchat-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/snapchat-mcp/src/index.ts"],
+      "port": 3009
+    },
+    {
+      "name": "sa360-mcp",
+      "runtimeExecutable": "packages/sa360-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/sa360-mcp/src/index.ts"],
+      "port": 3010
+    },
+    {
+      "name": "pinterest-mcp",
+      "runtimeExecutable": "packages/pinterest-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/pinterest-mcp/src/index.ts"],
+      "port": 3011
+    },
+    {
+      "name": "amazon-dsp-mcp",
+      "runtimeExecutable": "packages/amazon-dsp-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/amazon-dsp-mcp/src/index.ts"],
+      "port": 3012
+    },
+    {
+      "name": "msads-mcp",
+      "runtimeExecutable": "packages/msads-mcp/node_modules/.bin/tsx",
+      "runtimeArgs": ["watch", "packages/msads-mcp/src/index.ts"],
+      "port": 3013
+    }
+  ]
+}

@@ -60,7 +60,7 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
+          { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
           log,
           rateLimiter
         );
@@ -85,7 +85,7 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
+            { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
             log,
             rateLimiter
           );

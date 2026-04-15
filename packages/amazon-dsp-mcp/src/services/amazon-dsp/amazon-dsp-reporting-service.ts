@@ -52,11 +52,11 @@ export interface AmazonDspReportConfig {
 }
 
 /**
- * AmazonDsp Reporting Service — Handles async reporting via Amazon DSP Reporting API.
+ * AmazonDsp Reporting Service — Handles async reporting via Amazon DSP Reporting v3 API.
  *
  * Amazon DSP reporting uses an async polling pattern:
- * 1. POST /reporting/reports → get reportId
- * 2. GET /reporting/reports/{reportId} → poll until COMPLETED or FAILURE
+ * 1. POST /accounts/{accountId}/dsp/reports → get reportId
+ * 2. GET /accounts/{accountId}/dsp/reports/{reportId} → poll until COMPLETED or FAILURE
  * 3. GET url (presigned) to retrieve report data
  */
 export class AmazonDspReportingService {
@@ -75,13 +75,18 @@ export class AmazonDspReportingService {
    * Returns the reportId for polling.
    */
   async submitReport(
+    accountId: string,
     reportConfig: AmazonDspReportConfig,
     context?: RequestContext
   ): Promise<{ taskId: string }> {
     await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
+    const path = AMAZON_DSP_REPORTING_CONTRACT.submitPathTemplate.replace(
+      "{accountId}",
+      encodeURIComponent(accountId)
+    );
     const result = (await this.httpClient.post(
-      "/reporting/reports",
+      path,
       {
         name: reportConfig.name ?? "MCP Report",
         startDate: reportConfig.startDate,
@@ -96,7 +101,7 @@ export class AmazonDspReportingService {
         },
       },
       context,
-      AMAZON_DSP_REPORTING_CONTRACT.mediaType
+      AMAZON_DSP_REPORTING_CONTRACT.submitAcceptMediaType
     )) as { reportId: string; status: string };
 
     return { taskId: result.reportId };
@@ -106,18 +111,24 @@ export class AmazonDspReportingService {
    * Poll a report task until it is COMPLETED or FAILURE.
    */
   async pollReport(
+    accountId: string,
     taskId: string,
     context?: RequestContext
   ): Promise<ReportTaskCheckData> {
-    this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
+    this.logger.debug({ accountId, taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
+
+    const path = AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate
+      .replace("{accountId}", encodeURIComponent(accountId))
+      .replace("{reportId}", encodeURIComponent(taskId));
 
     for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
       await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
       const result = (await this.httpClient.get(
-        `/reporting/reports/${taskId}`,
+        path,
         undefined,
-        context
+        context,
+        AMAZON_DSP_REPORTING_CONTRACT.statusAcceptMediaType
       )) as ReportTaskCheckData;
 
       if (result.status === "COMPLETED" || result.status === "FAILED") {
@@ -147,15 +158,21 @@ export class AmazonDspReportingService {
    * Returns current status and download URL if COMPLETED.
    */
   async checkReportStatus(
+    accountId: string,
     taskId: string,
     context?: RequestContext
   ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
     await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
+    const path = AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate
+      .replace("{accountId}", encodeURIComponent(accountId))
+      .replace("{reportId}", encodeURIComponent(taskId));
+
     const result = (await this.httpClient.get(
-      `/reporting/reports/${taskId}`,
+      path,
       undefined,
-      context
+      context,
+      AMAZON_DSP_REPORTING_CONTRACT.statusAcceptMediaType
     )) as ReportTaskCheckData;
 
     return {
@@ -228,11 +245,12 @@ export class AmazonDspReportingService {
    * Full async report flow: submit → poll → download.
    */
   async getReport(
+    accountId: string,
     reportConfig: AmazonDspReportConfig,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const { taskId } = await this.submitReport(reportConfig, context);
-    const taskResult = await this.pollReport(taskId, context);
+    const { taskId } = await this.submitReport(accountId, reportConfig, context);
+    const taskResult = await this.pollReport(accountId, taskId, context);
 
     if (taskResult.status === "FAILED") {
       throw new McpError(JsonRpcErrorCode.InternalError, `Amazon DSP report task ${taskId} failed`);
@@ -255,6 +273,7 @@ export class AmazonDspReportingService {
    * Adds breakdown groupBy dimensions to the report config.
    */
   async getReportBreakdowns(
+    accountId: string,
     reportConfig: AmazonDspReportConfig,
     breakdowns: string[],
     context?: RequestContext
@@ -267,7 +286,7 @@ export class AmazonDspReportingService {
       },
     };
 
-    return this.getReport(configWithBreakdowns, context);
+    return this.getReport(accountId, configWithBreakdowns, context);
   }
 
 }

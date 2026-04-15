@@ -2,28 +2,25 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_search_targeting";
-const TOOL_TITLE = "Search Microsoft Ads Targeting Options";
-const TOOL_DESCRIPTION = `Search for available targeting options in Microsoft Advertising.
+const TOOL_TITLE = "List Microsoft Ads Targeting Options";
+const TOOL_DESCRIPTION = `List the enumerated targeting option values supported by Microsoft Advertising.
 
 Supported targeting types:
-- location: Search locations by name (cities, states, countries)
 - age: List available age range targets
 - gender: List available gender targets
-- device: List available device targets`;
+- device: List available device targets
+
+Note: location targets are not searchable via the Microsoft Advertising REST API. Use the Campaign Management GetGeoLocationsFileUrl operation to download the full geo-location reference file.`;
 
 export const SearchTargetingInputSchema = z
   .object({
     targetingType: z
-      .enum(["location", "age", "gender", "device"])
-      .describe("Type of targeting to search"),
-    query: z
-      .string()
-      .optional()
-      .describe("Search query (required for location targeting)"),
+      .enum(["age", "gender", "device"])
+      .describe("Type of targeting to list"),
     maxResults: z
       .number()
       .int()
@@ -32,17 +29,16 @@ export const SearchTargetingInputSchema = z
       .default(25)
       .describe("Maximum number of results to return"),
   })
-  .describe("Parameters for searching targeting options");
+  .describe("Parameters for listing targeting options");
 
 export const SearchTargetingOutputSchema = z
   .object({
     targetingType: z.string(),
-    query: z.string().optional(),
     results: z.array(z.record(z.any())),
     totalResults: z.number(),
     timestamp: z.string().datetime(),
   })
-  .describe("Targeting search result");
+  .describe("Targeting options result");
 
 type SearchTargetingInput = z.infer<typeof SearchTargetingInputSchema>;
 type SearchTargetingOutput = z.infer<typeof SearchTargetingOutputSchema>;
@@ -68,30 +64,12 @@ const DEVICE_TYPES = [
 
 export async function searchTargetingLogic(
   input: SearchTargetingInput,
-  context: RequestContext,
-  sdkContext?: SdkContext
+  _context: RequestContext,
+  _sdkContext?: SdkContext
 ): Promise<SearchTargetingOutput> {
-  const { msadsService } = resolveSessionServices(sdkContext);
-
   let results: Record<string, unknown>[];
 
   switch (input.targetingType) {
-    case "location": {
-      if (!input.query) {
-        throw new Error("query is required for location targeting search");
-      }
-      const response = (await msadsService.executeReadOperation(
-        "/LocationTarget/Search",
-        {
-          Query: input.query,
-          MaxResults: input.maxResults,
-        },
-        context
-      )) as Record<string, unknown>;
-
-      results = (response.Locations as Record<string, unknown>[]) ?? [];
-      break;
-    }
     case "age":
       results = AGE_RANGES;
       break;
@@ -101,11 +79,15 @@ export async function searchTargetingLogic(
     case "device":
       results = DEVICE_TYPES;
       break;
+    default:
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Unsupported targeting type: ${input.targetingType satisfies never}`
+      );
   }
 
   return {
     targetingType: input.targetingType,
-    query: input.query,
     results: results.slice(0, input.maxResults),
     totalResults: results.length,
     timestamp: new Date().toISOString(),
@@ -113,10 +95,7 @@ export async function searchTargetingLogic(
 }
 
 export function searchTargetingResponseFormatter(result: SearchTargetingOutput): McpTextContent[] {
-  const header = result.query
-    ? `Found ${result.totalResults} ${result.targetingType} results for "${result.query}"`
-    : `Available ${result.targetingType} targeting options (${result.totalResults})`;
-
+  const header = `Available ${result.targetingType} targeting options (${result.totalResults})`;
   return [
     {
       type: "text" as const,
@@ -139,12 +118,12 @@ export const searchTargetingTool = {
   },
   inputExamples: [
     {
-      label: "Search for location targeting",
-      input: { targetingType: "location", query: "New York" },
-    },
-    {
       label: "List available age range targets",
       input: { targetingType: "age" },
+    },
+    {
+      label: "List available device targets",
+      input: { targetingType: "device" },
     },
   ],
   logic: searchTargetingLogic,

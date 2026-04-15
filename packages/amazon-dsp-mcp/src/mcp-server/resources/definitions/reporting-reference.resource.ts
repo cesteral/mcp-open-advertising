@@ -13,9 +13,10 @@ function formatReportingReferenceMarkdown(): string {
   return `# Amazon DSP Reporting Reference
 
 ## Reporting v3 Contract
-- Submit endpoint: \`POST ${AMAZON_DSP_REPORTING_CONTRACT.endpoint}\`
-- Status endpoint: \`GET ${AMAZON_DSP_REPORTING_CONTRACT.endpoint}/{reportId}\`
-- Required media type: \`${AMAZON_DSP_REPORTING_CONTRACT.mediaType}\`
+- Submit endpoint: \`POST ${AMAZON_DSP_REPORTING_CONTRACT.submitPathTemplate}\`
+- Status endpoint: \`GET ${AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate}\`
+- Submit Accept header: \`${AMAZON_DSP_REPORTING_CONTRACT.submitAcceptMediaType}\`
+- Status Accept header: \`${AMAZON_DSP_REPORTING_CONTRACT.statusAcceptMediaType}\`
 - Status values: ${AMAZON_DSP_REPORTING_CONTRACT.statuses.join(", ")}
 - Default format: \`${AMAZON_DSP_REPORTING_CONTRACT.defaultFormat}\`
 

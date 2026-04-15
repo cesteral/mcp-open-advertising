@@ -36,10 +36,10 @@ export const ManageAdExtensionsOutputSchema = z
 type ManageAdExtensionsInput = z.infer<typeof ManageAdExtensionsInputSchema>;
 type ManageAdExtensionsOutput = z.infer<typeof ManageAdExtensionsOutputSchema>;
 
-const OPERATION_PATHS: Record<string, string> = {
-  setAssociations: "/AdExtensionsAssociations",
-  deleteAssociations: "/AdExtensionsAssociations",
-  getAssociations: "/AdExtensionsAssociations/Query",
+const OPERATION_PATHS: Record<string, { path: string; method: "POST" | "PUT" | "DELETE" }> = {
+  setAssociations: { path: "/AdExtensionsAssociations", method: "POST" },
+  deleteAssociations: { path: "/AdExtensionsAssociations", method: "DELETE" },
+  getAssociations: { path: "/AdExtensionsAssociations/Query", method: "POST" },
 };
 
 export async function manageAdExtensionsLogic(
@@ -49,15 +49,16 @@ export async function manageAdExtensionsLogic(
 ): Promise<ManageAdExtensionsOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
 
-  const path = OPERATION_PATHS[input.operation];
-  if (!path) {
+  const op = OPERATION_PATHS[input.operation];
+  if (!op) {
     throw new Error(`Unknown ad extension operation: ${input.operation}`);
   }
 
   const result = (await msadsService.executeOperation(
-    path,
+    op.path,
     input.data,
-    context
+    context,
+    op.method
   )) as Record<string, unknown>;
 
   return {

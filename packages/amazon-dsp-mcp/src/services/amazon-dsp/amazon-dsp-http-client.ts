@@ -44,30 +44,36 @@ export class AmazonDspHttpClient {
   async get(
     path: string,
     params?: Record<string, string>,
-    context?: RequestContext
+    context?: RequestContext,
+    accept?: string
   ): Promise<unknown> {
     const url = this.buildUrl(path, params);
-    return this.executeRequest(url, context, { method: "GET" });
+    const headers = accept ? { Accept: accept } : undefined;
+    return this.executeRequest(url, context, { method: "GET", headers });
   }
 
   /**
    * Make an authenticated POST request with JSON body.
-   * @param contentType - Override Content-Type (e.g. for Reporting v3 API vendor media types)
+   * @param accept - Override Accept header (e.g. for DSP Reporting v3 vendor media types)
    */
   async post(
     path: string,
     data?: Record<string, unknown>,
     context?: RequestContext,
-    contentType?: string
+    accept?: string
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     const body = JSON.stringify(data ?? {});
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (accept) {
+      headers.Accept = accept;
+    }
 
     return this.executeRequest(url, context, {
       method: "POST",
-      headers: {
-        "Content-Type": contentType ?? "application/json",
-      },
+      headers,
       body,
     });
   }

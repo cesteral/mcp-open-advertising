@@ -48,7 +48,7 @@ describe("checkReportStatusLogic", () => {
     });
 
     const result = await checkReportStatusLogic(
-      { profileId: "1234567890", taskId: "rpt-1" },
+      { accountId: "1234567890", taskId: "rpt-1" },
       baseContext,
       baseSdkContext
     );
@@ -66,7 +66,7 @@ describe("checkReportStatusLogic", () => {
     });
 
     const result = await checkReportStatusLogic(
-      { profileId: "1234567890", taskId: "rpt-2" },
+      { accountId: "1234567890", taskId: "rpt-2" },
       baseContext,
       baseSdkContext
     );
@@ -83,12 +83,12 @@ describe("checkReportStatusLogic", () => {
     });
 
     await checkReportStatusLogic(
-      { profileId: "1234567890", taskId: "rpt-xyz" },
+      { accountId: "1234567890", taskId: "rpt-xyz" },
       baseContext,
       baseSdkContext
     );
 
-    expect(mockCheckReportStatus).toHaveBeenCalledWith("rpt-xyz", baseContext);
+    expect(mockCheckReportStatus).toHaveBeenCalledWith("1234567890", "rpt-xyz", baseContext);
   });
 });
 

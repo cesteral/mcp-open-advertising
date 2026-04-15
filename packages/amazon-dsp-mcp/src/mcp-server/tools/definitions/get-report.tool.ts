@@ -22,10 +22,10 @@ Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is supported; avoid
 
 export const GetReportInputSchema = z
   .object({
-    profileId: z
+    accountId: z
       .string()
       .min(1)
-      .describe("Amazon DSP Profile/Advertiser ID"),
+      .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
     name: z
       .string()
       .optional()
@@ -107,6 +107,7 @@ export async function getReportLogic(
   }
 
   const result = await amazonDspReportingService.getReport(
+    input.accountId,
     {
       name: input.name,
       startDate: resolvedStartDate!,
@@ -208,7 +209,7 @@ export const getReportTool = {
     {
       label: "Line item delivery report for last 7 days",
       input: {
-        profileId: "1234567890",
+        accountId: "1234567890",
         datePreset: "LAST_7_DAYS",
         reportTypeId: "dspLineItem",
         groupBy: ["order", "lineItem"],
@@ -219,7 +220,7 @@ export const getReportTool = {
     {
       label: "Order performance report",
       input: {
-        profileId: "1234567890",
+        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         reportTypeId: "dspOrder",

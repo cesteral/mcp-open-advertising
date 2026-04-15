@@ -30,7 +30,7 @@ export const CheckReportStatusOutputSchema = z
     reportScheduleId: z.string().describe("Report schedule ID"),
     state: z.string().describe("Current execution state"),
     isComplete: z.boolean().describe("Whether the report is complete"),
-    downloadUrl: z.string().optional().describe("Download URL when complete"),
+    downloadUrl: z.string().nullish().describe("Download URL when complete"),
     execution: z.record(z.any()).describe("Full execution details"),
     timestamp: z.string().datetime(),
   })

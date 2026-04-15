@@ -93,7 +93,7 @@ describe("AmazonDspHttpClient", () => {
     );
   });
 
-  it("preserves vendor content type for reporting v3 POST requests", async () => {
+  it("sets vendor Accept header for DSP reporting v3 POST requests", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -102,13 +102,33 @@ describe("AmazonDspHttpClient", () => {
     });
 
     await client.post(
-      "/reporting/reports",
+      "/accounts/acct-1/dsp/reports",
       { name: "Test Report" },
       undefined,
-      "application/vnd.createasyncreportrequest.v3+json"
+      "application/vnd.dspcreatereports.v3+json"
     );
 
     const headers = mockFetch.mock.calls[0][3].headers;
-    expect(headers["Content-Type"]).toBe("application/vnd.createasyncreportrequest.v3+json");
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(headers["Accept"]).toBe("application/vnd.dspcreatereports.v3+json");
+  });
+
+  it("sets vendor Accept header for DSP reporting v3 status GET requests", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({ reportId: "rpt-1", status: "COMPLETED", url: "https://..." }),
+    });
+
+    await client.get(
+      "/accounts/acct-1/dsp/reports/rpt-1",
+      undefined,
+      undefined,
+      "application/vnd.dspgetreports.v3+json"
+    );
+
+    const headers = mockFetch.mock.calls[0][3].headers;
+    expect(headers["Accept"]).toBe("application/vnd.dspgetreports.v3+json");
   });
 });

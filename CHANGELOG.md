@@ -20,6 +20,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) (
 
 - **meta-mcp** — Upgraded to Meta Marketing API **v24.0** (from v22.0); expanded from 20 to 25 tools with insights breakdowns, delivery estimate, budget schedules.
 - **amazon-dsp-mcp** — Schemas rebaselined against Amazon Reporting v3 OpenAPI spec.
+- **amazon-dsp-mcp** — Reporting endpoints corrected to the DSP-specific async reporting API: `POST /accounts/{accountId}/dsp/reports` with `Accept: application/vnd.dspcreatereports.v3+json` (previously hit the unified Sponsored Ads reporting path). Reporting tools now take `accountId` (DSP entity ID) instead of the unused `profileId` input.
 - **snapchat-mcp** — Aligned with latest Snapchat Ads API endpoints.
 - **msads-mcp** — Migrated to Microsoft Advertising JSON API.
 - **dbm-mcp** — Report polling budget increased to handle large date ranges.

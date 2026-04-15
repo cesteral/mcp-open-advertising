@@ -9,7 +9,9 @@ import {
   getEntityConfig,
   buildMutateUrl,
   buildResourceName,
+  assertMutateOpSupported,
   type GAdsEntityType,
+  type MutateOp,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
 import {
   buildListQuery,
@@ -159,6 +161,7 @@ export class GAdsService {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
+    assertMutateOpSupported(entityType, "create");
     await this.rateLimiter.consume(`gads:${customerId}`);
 
     this.logger.debug({ entityType, customerId }, "Creating Google Ads entity");
@@ -194,6 +197,7 @@ export class GAdsService {
     updateMask: string,
     context?: RequestContext
   ): Promise<unknown> {
+    assertMutateOpSupported(entityType, "update");
     await this.rateLimiter.consume(`gads:${customerId}`);
 
     this.logger.debug({ entityType, customerId, entityId, updateMask }, "Updating Google Ads entity");
@@ -233,6 +237,7 @@ export class GAdsService {
     entityId: string,
     context?: RequestContext
   ): Promise<unknown> {
+    assertMutateOpSupported(entityType, "remove");
     await this.rateLimiter.consume(`gads:${customerId}`);
 
     this.logger.debug({ entityType, customerId, entityId }, "Removing Google Ads entity");
@@ -274,6 +279,11 @@ export class GAdsService {
     updateMask?: string,
     context?: RequestContext
   ): Promise<{ valid: boolean; errors?: string[] }> {
+    try {
+      assertMutateOpSupported(entityType, mode);
+    } catch (err) {
+      return { valid: false, errors: [(err as Error).message] };
+    }
     await this.rateLimiter.consume(`gads:${customerId}`);
 
     this.logger.debug({ entityType, customerId, mode }, "Validating Google Ads entity (dry-run)");
@@ -336,6 +346,18 @@ export class GAdsService {
     partialFailure?: boolean,
     context?: RequestContext
   ): Promise<unknown> {
+    for (const op of operations) {
+      const kind: MutateOp | undefined =
+        "create" in op ? "create" : "update" in op ? "update" : "remove" in op ? "remove" : undefined;
+      if (!kind) {
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          "Each bulk mutate operation must have one of: create, update, remove"
+        );
+      }
+      assertMutateOpSupported(entityType, kind);
+    }
+
     await this.rateLimiter.consume(`gads:${customerId}`);
 
     this.logger.debug(

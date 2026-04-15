@@ -96,7 +96,7 @@ describe("Amazon DSP MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 25 : 19); // 19 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 24 : 18); // 18 business + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);
@@ -111,7 +111,7 @@ describe("Amazon DSP MCP definitions coverage", () => {
     expect(schemaResources.some((resource) => resource.uri.endsWith("/target"))).toBe(true);
     expect(schemaResources.some((resource) => resource.uri.endsWith("/creativeAssociation"))).toBe(true);
     expect(hierarchyResource?.getContent()).toContain("Creative Association");
-    expect(reportingResource?.getContent()).toContain("POST /reporting/reports");
+    expect(reportingResource?.getContent()).toContain("POST /accounts/{accountId}/dsp/reports");
     expect(reportingResource?.getContent()).toContain("PROCESSING");
   });
 

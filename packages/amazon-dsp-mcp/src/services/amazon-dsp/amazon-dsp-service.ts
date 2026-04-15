@@ -247,23 +247,6 @@ export class AmazonDspService {
     };
   }
 
-  // ─── Audience Segments ──────────────────────────────────────────
-
-  async searchAudienceSegments(
-    query?: string,
-    limit = 20,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const params: Record<string, string> = {
-      count: String(limit),
-    };
-    if (query) {
-      params.name = query;
-    }
-    await this.rateLimiter.consume("amazon_dsp:read");
-    return this.httpClient.get("/dsp/audienceSegments", params, context);
-  }
-
   // ─── Ad Previews ────────────────────────────────────────────────
 
   async getAdPreviews(

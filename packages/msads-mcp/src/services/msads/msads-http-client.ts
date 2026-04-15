@@ -57,6 +57,46 @@ export class MsAdsHttpClient {
     });
   }
 
+  async put(
+    path: string,
+    data?: Record<string, unknown> | unknown[],
+    context?: RequestContext
+  ): Promise<unknown> {
+    const url = this.buildUrl(path);
+    return this.executeRequest(url, "PUT", context, {
+      body: JSON.stringify(data),
+    });
+  }
+
+  async delete(
+    path: string,
+    data?: Record<string, unknown> | unknown[],
+    context?: RequestContext
+  ): Promise<unknown> {
+    const url = this.buildUrl(path);
+    return this.executeRequest(url, "DELETE", context, {
+      body: data !== undefined ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  async request(
+    method: "GET" | "POST" | "PUT" | "DELETE",
+    path: string,
+    data?: Record<string, unknown> | unknown[],
+    context?: RequestContext
+  ): Promise<unknown> {
+    switch (method) {
+      case "GET":
+        return this.get(path, undefined, context);
+      case "POST":
+        return this.post(path, data, context);
+      case "PUT":
+        return this.put(path, data, context);
+      case "DELETE":
+        return this.delete(path, data, context);
+    }
+  }
+
   private buildUrl(path: string, params?: Record<string, string>): string {
     const url = new URL(`${this.baseUrl}${path}`);
     if (params) {

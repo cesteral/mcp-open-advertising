@@ -25,6 +25,8 @@ export type GAdsEntityType =
 
 export type ParentIdKey = "customerId" | "campaignId" | "adGroupId";
 
+export type MutateOp = "create" | "update" | "remove";
+
 export interface GAdsEntityConfig {
   /** GAQL resource name for SELECT queries (e.g., "campaign", "ad_group") */
   gaqlResource: string;
@@ -40,7 +42,11 @@ export interface GAdsEntityConfig {
   statusField?: string;
   /** GAQL field path to the entity's name (e.g., "campaign.name") */
   nameField?: string;
+  /** Mutate operations the API supports for this entity. Defaults to all three. */
+  supportedMutateOps: readonly MutateOp[];
 }
+
+const ALL_MUTATE_OPS: readonly MutateOp[] = ["create", "update", "remove"];
 
 const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
   campaign: {
@@ -51,6 +57,7 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     idField: "campaign.id",
     statusField: "campaign.status",
     nameField: "campaign.name",
+    supportedMutateOps: ALL_MUTATE_OPS,
   },
   adGroup: {
     gaqlResource: "ad_group",
@@ -60,6 +67,7 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     idField: "ad_group.id",
     statusField: "ad_group.status",
     nameField: "ad_group.name",
+    supportedMutateOps: ALL_MUTATE_OPS,
   },
   ad: {
     gaqlResource: "ad_group_ad",
@@ -69,6 +77,7 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     idField: "ad_group_ad.ad.id",
     statusField: "ad_group_ad.status",
     nameField: "ad_group_ad.ad.name",
+    supportedMutateOps: ALL_MUTATE_OPS,
   },
   keyword: {
     gaqlResource: "ad_group_criterion",
@@ -77,6 +86,7 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     parentIds: ["customerId"],
     idField: "ad_group_criterion.criterion_id",
     statusField: "ad_group_criterion.status",
+    supportedMutateOps: ALL_MUTATE_OPS,
   },
   campaignBudget: {
     gaqlResource: "campaign_budget",
@@ -85,16 +95,33 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
     parentIds: ["customerId"],
     idField: "campaign_budget.id",
     nameField: "campaign_budget.name",
+    supportedMutateOps: ALL_MUTATE_OPS,
   },
   asset: {
+    // AssetService only exposes a `create` field on AssetOperation — assets
+    // cannot be updated or removed programmatically once uploaded.
+    // https://developers.google.com/google-ads/api/docs/assets/working-with-assets
     gaqlResource: "asset",
     mutateEndpoint: "assets",
     resourceNamePattern: "customers/{customerId}/assets/{assetId}",
     parentIds: ["customerId"],
     idField: "asset.id",
     nameField: "asset.name",
+    supportedMutateOps: ["create"],
   },
 };
+
+export function assertMutateOpSupported(
+  entityType: GAdsEntityType,
+  op: MutateOp
+): void {
+  const config = ENTITY_CONFIGS[entityType];
+  if (!config.supportedMutateOps.includes(op)) {
+    throw new Error(
+      `Google Ads API does not support ${op} on ${entityType} entities (supported: ${config.supportedMutateOps.join(", ")})`
+    );
+  }
+}
 
 export function getEntityConfig(entityType: GAdsEntityType): GAdsEntityConfig {
   const config = ENTITY_CONFIGS[entityType];

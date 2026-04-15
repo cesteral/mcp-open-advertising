@@ -42,20 +42,23 @@ export const ManageCriterionsOutputSchema = z
 type ManageCriterionsInput = z.infer<typeof ManageCriterionsInputSchema>;
 type ManageCriterionsOutput = z.infer<typeof ManageCriterionsOutputSchema>;
 
-function getOperationPath(operation: string, entityLevel: string): string {
+function getOperation(
+  operation: string,
+  entityLevel: string
+): { path: string; method: "POST" | "PUT" | "DELETE" } {
   const level = entityLevel === "campaign" ? "Campaign" : "AdGroup";
-  const paths: Record<string, string> = {
-    add: `/${level}Criterions`,
-    update: `/${level}Criterions`,
-    delete: `/${level}Criterions`,
-    getByCampaign: "/CampaignCriterions/QueryByIds",
-    getByAdGroup: "/AdGroupCriterions/QueryByIds",
+  const ops: Record<string, { path: string; method: "POST" | "PUT" | "DELETE" }> = {
+    add: { path: `/${level}Criterions`, method: "POST" },
+    update: { path: `/${level}Criterions`, method: "PUT" },
+    delete: { path: `/${level}Criterions`, method: "DELETE" },
+    getByCampaign: { path: "/CampaignCriterions/QueryByIds", method: "POST" },
+    getByAdGroup: { path: "/AdGroupCriterions/QueryByIds", method: "POST" },
   };
-  const path = paths[operation];
-  if (!path) {
+  const op = ops[operation];
+  if (!op) {
     throw new Error(`Unknown criterion operation: ${operation}`);
   }
-  return path;
+  return op;
 }
 
 export async function manageCriterionsLogic(
@@ -65,12 +68,13 @@ export async function manageCriterionsLogic(
 ): Promise<ManageCriterionsOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
 
-  const path = getOperationPath(input.operation, input.entityLevel);
+  const op = getOperation(input.operation, input.entityLevel);
 
   const result = (await msadsService.executeOperation(
-    path,
+    op.path,
     input.data,
-    context
+    context,
+    op.method
   )) as Record<string, unknown>;
 
   return {

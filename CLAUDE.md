@@ -23,7 +23,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 9 | `snapchat-mcp` | 3009 | Snapchat Ads API v1 | campaign, adGroup, ad, creative | 23 |
 | 10 | `sa360-mcp` | 3010 | SA360 Reporting API v0 + DS v2 | _(reporting + conversions)_ | 15 |
 | 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 22 |
-| 12 | `amazon-dsp-mcp` | 3012 | Amazon DSP API | order, lineItem, creative | 19 |
+| 12 | `amazon-dsp-mcp` | 3012 | Amazon DSP API | order, lineItem, creative | 18 |
 | 13 | `msads-mcp` | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label | 24 |
 
 ## Essential Commands
@@ -310,7 +310,7 @@ Standard CRUD/bulk/reporting tools plus:
 - **cm360-mcp** (20 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting; scheduling via `create/list/delete_report_schedule`
 - **pinterest-mcp** (22 tools): cursor-based pagination via `bookmark` tokens. Video upload via `/v5/media`; image creatives reference URLs directly (Pinterest's `/v5/media` endpoint only supports `media_type="video"`)
 - **snapchat-mcp** (23 tools): Ad Squads (adGroups), cursor-based pagination
-- **amazon-dsp-mcp** (19 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status)
+- **amazon-dsp-mcp** (18 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status). Reporting v3 is scoped by `accountId` (DSP entity ID) in the URL path, distinct from the profile header.
 
 ### How the Servers Work Together
 
