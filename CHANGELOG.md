@@ -21,7 +21,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) (
 - **meta-mcp** — Upgraded to Meta Marketing API **v25.0** (from v22.0); expanded from 20 to 25 tools with insights breakdowns, delivery estimate, budget schedules. `meta_check_report_status` now surfaces v25.0 async-report failure fields (`error_code`, `error_message`, `error_subcode`, `error_user_title`, `error_user_msg`). `meta_duplicate_entity` notes Meta's 2026-05-19 sunset of `/copies` for Advantage+ Shopping/App campaigns.
 - **amazon-dsp-mcp** — Schemas rebaselined against Amazon Reporting v3 OpenAPI spec.
 - **amazon-dsp-mcp** — Reporting endpoints corrected to the DSP-specific async reporting API: `POST /accounts/{accountId}/dsp/reports` with `Accept: application/vnd.dspcreatereports.v3+json` (previously hit the unified Sponsored Ads reporting path). Reporting tools now take `accountId` (DSP entity ID) instead of the unused `profileId` input.
-- **snapchat-mcp** — Aligned with latest Snapchat Ads API endpoints.
+- **snapchat-mcp** — Aligned media uploads with latest Snapchat Ads API endpoints.
 - **msads-mcp** — Migrated to Microsoft Advertising JSON API.
 - **dbm-mcp** — Report polling budget increased to handle large date ranges.
 - Shared: service method signatures now use typed entity interfaces end-to-end.
@@ -33,6 +33,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) (
 ### Removed
 
 - **amazon-dsp-mcp** — Removed `amazon_dsp_search_targeting` tool; the `/dsp/audienceSegments` endpoint it targeted is not present in Amazon's public DSP API (verified against Amazon's Postman collection and the reference `python-amazon-ad-api` SDK). Tool count dropped from 19 to 18.
+- **snapchat-mcp** — Removed `snapchat_duplicate_entity` and its workflow prompt because Snapchat's current public Ads API does not expose a supported duplicate/copy endpoint. Tool count dropped from 23 to 22.
 - Corrected three broken computed-metric and pacing calculations.
 - Numerous ttd-mcp runtime fixes found via live tool testing (entity-type counts, output schemas, ad preview extraction, GraphQL type alignment, report execution endpoint paths, partner-ID threading on advertiser writes).
 

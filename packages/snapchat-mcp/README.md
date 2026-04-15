@@ -6,7 +6,7 @@ Snapchat Ads MCP Server - Campaign management and reporting via Snapchat Ads API
 
 Management server for Snapchat Ads. Provides full CRUD operations, async
 reporting, targeting discovery, bulk operations, and specialized features like
-entity duplication and audience estimation. Designed for AI agents to manage
+audience estimation and ad previews. Designed for AI agents to manage
 Snapchat Ads campaigns programmatically through the Model Context Protocol with
 per-session Bearer token authentication.
 
@@ -293,7 +293,7 @@ pnpm run typecheck
 ### Key Components
 
 - **`SnapchatHttpClient`** - HTTP client for Snapchat Ads API v1
-- **`SnapchatService`** - CRUD, bulk ops, duplication, targeting, audience estimates, ad previews
+- **`SnapchatService`** - CRUD, bulk ops, targeting, audience estimates, ad previews
 - **`SnapchatReportingService`** - Async report submission, polling, and download
 - **`SnapchatBearerAuthStrategy`** - Bearer token + advertiser ID auth
 - **`SnapchatAuthAdapter`** - Token + advertiser ID management for per-session API calls
