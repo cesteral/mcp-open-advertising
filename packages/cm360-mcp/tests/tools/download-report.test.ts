@@ -66,14 +66,14 @@ describe("downloadReportLogic", () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 1000 },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000 },
       mockContext
     );
 
     expect(result.headers).toEqual(["Name", "Impressions", "Clicks"]);
     expect(result.rows).toEqual([
-      ["Campaign A", "1000", "50"],
-      ["Campaign B", "2000", "100"],
+      { Name: "Campaign A", Impressions: "1000", Clicks: "50" },
+      { Name: "Campaign B", Impressions: "2000", Clicks: "100" },
     ]);
     expect(result.totalRows).toBe(2);
     expect(result.returnedRows).toBe(2);
@@ -84,7 +84,7 @@ describe("downloadReportLogic", () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(""));
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 1000 },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000 },
       mockContext
     );
 
@@ -102,7 +102,7 @@ describe("downloadReportLogic", () => {
     );
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 3 },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 3 },
       mockContext
     );
 
@@ -119,7 +119,7 @@ describe("downloadReportLogic", () => {
     );
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 10 },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 10 },
       mockContext
     );
 
@@ -132,11 +132,15 @@ describe("downloadReportLogic", () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 1000 },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000 },
       mockContext
     );
 
-    expect(result.rows[0]).toEqual(["field with, comma", 'field with "quotes"', "simple"]);
+    expect(result.rows?.[0]).toEqual({
+      H1: "field with, comma",
+      H2: 'field with "quotes"',
+      H3: "simple",
+    });
   });
 
   it("parses quoted multiline CSV fields correctly", async () => {
@@ -144,11 +148,11 @@ describe("downloadReportLogic", () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 1000 },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000 },
       mockContext
     );
 
-    expect(result.rows[0]).toEqual(["line 1\nline 2", "value"]);
+    expect(result.rows?.[0]).toEqual({ H1: "line 1\nline 2", H2: "value" });
   });
 
   it("rejects Excel downloads", async () => {
@@ -169,12 +173,12 @@ describe("downloadReportLogic", () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", maxRows: 1000, includeComputedMetrics: true },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000, includeComputedMetrics: true },
       mockContext
     );
 
     expect(result.headers).toEqual(["Name"]);
-    expect(result.rows).toEqual([["Campaign A"]]);
+    expect(result.rows).toEqual([{ Name: "Campaign A" }]);
   });
 
   it("throws on non-OK response", async () => {
@@ -208,10 +212,14 @@ describe("downloadReportResponseFormatter", () => {
   it("shows row count", () => {
     const output = downloadReportResponseFormatter({
       headers: ["A", "B"],
+      selectedColumns: ["A", "B"],
+      mode: "rows",
       rows: [["1", "2"], ["3", "4"]],
       totalRows: 2,
       returnedRows: 2,
       truncated: false,
+      nextOffset: null,
+      warnings: [],
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
@@ -221,14 +229,18 @@ describe("downloadReportResponseFormatter", () => {
   it("shows truncation note when truncated", () => {
     const output = downloadReportResponseFormatter({
       headers: ["A"],
+      selectedColumns: ["A"],
+      mode: "rows",
       rows: [["1"], ["2"], ["3"]],
       totalRows: 10,
       returnedRows: 3,
       truncated: true,
+      nextOffset: 3,
+      warnings: [],
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
-    expect(output[0].text).toContain("truncated");
+    expect(output[0].text).toContain("Next offset");
     expect(output[0].text).toContain("3");
     expect(output[0].text).toContain("10");
   });
@@ -236,10 +248,14 @@ describe("downloadReportResponseFormatter", () => {
   it("shows empty message when 0 rows", () => {
     const output = downloadReportResponseFormatter({
       headers: [],
-      rows: [],
+      selectedColumns: [],
+      mode: "summary",
+      previewRows: [],
       totalRows: 0,
       returnedRows: 0,
       truncated: false,
+      nextOffset: null,
+      warnings: [],
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
@@ -262,10 +278,11 @@ describe("DownloadReportInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("maxRows defaults to 1000", () => {
+  it("defaults to summary mode without maxRows", () => {
     const result = DownloadReportInputSchema.parse({
       downloadUrl: "https://example.com/report.csv",
     });
-    expect(result.maxRows).toBe(1000);
+    expect(result.mode).toBe("summary");
+    expect(result.maxRows).toBeUndefined();
   });
 });

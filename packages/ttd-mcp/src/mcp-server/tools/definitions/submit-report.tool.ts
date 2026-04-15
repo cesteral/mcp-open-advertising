@@ -15,7 +15,7 @@ Returns a \`reportScheduleId\` immediately. Use \`ttd_check_report_status\` to p
 **Non-blocking workflow:**
 1. \`ttd_submit_report\` → get \`reportScheduleId\`
 2. \`ttd_check_report_status\` (repeat every 5-10s) → wait for "Complete"
-3. \`ttd_download_report\` with the \`downloadUrl\` → get parsed data
+3. \`ttd_download_report\` with the \`downloadUrl\` → get a bounded summary or paged row slice
 
 Use \`ttd_get_report\` instead for a blocking convenience shortcut.`;
 

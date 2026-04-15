@@ -3,7 +3,14 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { computeMetrics } from "@cesteral/shared";
+import {
+  arrayRowsToRecords,
+  computeMetrics,
+  createReportView,
+  formatReportViewResponse,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
@@ -12,7 +19,7 @@ const TOOL_NAME = "cm360_download_report";
 const TOOL_TITLE = "Download CM360 Report";
 const TOOL_DESCRIPTION = `Download and parse a CM360 report from its download URL.
 
-Use the downloadUrl from cm360_get_report or cm360_check_report_status. Returns parsed CSV rows as JSON.`;
+Use the downloadUrl from cm360_get_report or cm360_check_report_status. Returns a bounded summary or paged row slice.`;
 
 export const DownloadReportInputSchema = z
   .object({
@@ -20,28 +27,18 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL (from cm360_get_report or cm360_check_report_status)"),
-    maxRows: z
-      .number()
-      .min(1)
-      .max(10000)
-      .optional()
-      .default(1000)
-      .describe("Maximum number of rows to return (default: 1000)"),
     includeComputedMetrics: z
       .boolean()
       .optional()
       .default(false)
       .describe("Include computed CPA, ROAS, CPM, CTR, CPC"),
   })
+  .merge(ReportViewInputSchema)
   .describe("Parameters for downloading a CM360 report");
 
 export const DownloadReportOutputSchema = z
   .object({
-    headers: z.array(z.string()).describe("Column headers"),
-    rows: z.array(z.array(z.string())).describe("Data rows"),
-    totalRows: z.number().describe("Total rows in the report (before truncation)"),
-    returnedRows: z.number().describe("Number of rows actually returned"),
-    truncated: z.boolean().describe("Whether results were truncated by maxRows"),
+    ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
   })
   .describe("Report download result");
@@ -82,33 +79,36 @@ export async function downloadReportLogic(
   if (rows.length === 0) {
     return {
       headers: [],
-      rows: [],
+      selectedColumns: [],
       totalRows: 0,
       returnedRows: 0,
       truncated: false,
+      nextOffset: null,
+      mode: input.mode ?? "summary",
+      previewRows: input.mode === "rows" ? undefined : [],
+      rows: input.mode === "rows" ? [] : undefined,
+      warnings: [],
       timestamp: new Date().toISOString(),
     };
   }
 
   const headers = rows[0];
-  const maxRows = input.maxRows ?? 1000;
   const dataRows = rows.slice(1);
-  const truncated = dataRows.length > maxRows;
-  const limitedRows = dataRows.slice(0, maxRows);
 
   let finalHeaders = headers;
-  let finalRows = limitedRows;
+  let finalRows = dataRows;
 
   if (input.includeComputedMetrics) {
-    ({ headers: finalHeaders, rows: finalRows } = appendComputedMetricsToRows(headers, limitedRows));
+    ({ headers: finalHeaders, rows: finalRows } = appendComputedMetricsToRows(headers, dataRows));
   }
 
   return {
-    headers: finalHeaders,
-    rows: finalRows,
-    totalRows: dataRows.length,
-    returnedRows: finalRows.length,
-    truncated,
+    ...createReportView({
+      headers: finalHeaders,
+      rows: arrayRowsToRecords(finalHeaders, finalRows),
+      totalRows: dataRows.length,
+      input,
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -241,10 +241,6 @@ function inferReportFormat(downloadUrl: string, response: Response): "CSV" | "EX
 }
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
-  const truncatedNote = result.truncated
-    ? `\n\nResults truncated to ${result.returnedRows} of ${result.totalRows} rows.`
-    : "";
-
   if (result.returnedRows === 0) {
     return [
       {
@@ -254,13 +250,10 @@ export function downloadReportResponseFormatter(result: DownloadReportOutput): M
     ];
   }
 
-  const table = [result.headers, ...result.rows];
-  const tableText = table.map((row) => row.join("\t")).join("\n");
-
   return [
     {
       type: "text" as const,
-      text: `Report data (${result.returnedRows} rows):\n\n${tableText}${truncatedNote}\n\nTimestamp: ${result.timestamp}`,
+      text: formatReportViewResponse(result, "Report data"),
     },
   ];
 }
@@ -282,7 +275,8 @@ export const downloadReportTool = {
       label: "Download a report",
       input: {
         downloadUrl: "https://dfareporting.googleapis.com/dfareporting/v5/userprofiles/123456/reports/789012/files/345678?alt=media",
-        maxRows: 500,
+        mode: "rows",
+        maxRows: 50,
       },
     },
   ],

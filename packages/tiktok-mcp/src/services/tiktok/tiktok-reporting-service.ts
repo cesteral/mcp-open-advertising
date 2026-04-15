@@ -217,10 +217,14 @@ export class TikTokReportingService {
    */
   async getReport(
     reportConfig: TikTokReportConfig,
+    maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const { task_id } = await this.submitReport(reportConfig, context);
-    const taskResult = await this.pollReport(task_id, context);
+    const maxRows = typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
+    const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
+
+    const { task_id } = await this.submitReport(reportConfig, requestContext);
+    const taskResult = await this.pollReport(task_id, requestContext);
 
     if (taskResult.status === "FAILED") {
       throw new McpError(JsonRpcErrorCode.InternalError, `TikTok report task ${task_id} failed`);
@@ -230,7 +234,7 @@ export class TikTokReportingService {
       throw new McpError(JsonRpcErrorCode.InternalError, `TikTok report task ${task_id} completed but has no download URL`);
     }
 
-    const reportData = await this.downloadReport(taskResult.download_url, DEFAULT_REPORT_MAX_ROWS, context);
+    const reportData = await this.downloadReport(taskResult.download_url, maxRows, requestContext);
 
     return {
       ...reportData,
@@ -245,6 +249,7 @@ export class TikTokReportingService {
   async getReportBreakdowns(
     reportConfig: TikTokReportConfig,
     breakdowns: string[],
+    maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: TikTokReportConfig = {
@@ -252,7 +257,7 @@ export class TikTokReportingService {
       dimensions: [...reportConfig.dimensions, ...breakdowns],
     };
 
-    return this.getReport(configWithBreakdowns, context);
+    return this.getReport(configWithBreakdowns, maxRowsOrContext, context);
   }
 
 }

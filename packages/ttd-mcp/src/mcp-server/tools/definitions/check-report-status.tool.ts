@@ -66,7 +66,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
     return [
       {
         type: "text" as const,
-        text: `Report complete: ${result.reportScheduleId}\n\nDownload URL: ${result.downloadUrl}\n\nUse \`ttd_download_report\` with this URL to fetch and parse the report data.\n\nExecution details:\n${JSON.stringify(result.execution, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+        text: `Report complete: ${result.reportScheduleId}\n\nDownload URL: ${result.downloadUrl}\n\nUse \`ttd_download_report\` with this URL to fetch a bounded summary or paged row slice.\n\nExecution details:\n${JSON.stringify(result.execution, null, 2)}\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }

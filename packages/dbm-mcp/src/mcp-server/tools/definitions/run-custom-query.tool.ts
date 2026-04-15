@@ -3,6 +3,12 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  createReportView,
+  formatReportViewResponse,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
@@ -90,8 +96,9 @@ export const RunCustomQueryInputSchema = z
       .enum(["structured", "csv"])
       .optional()
       .default("structured")
-      .describe("Output format: 'structured' (JSON array) or 'csv' (raw CSV string)"),
+      .describe("Deprecated. Results are always returned as a bounded report view; csv requests add a warning."),
   })
+  .merge(ReportViewInputSchema)
   .superRefine((input, ctx) => {
     addQueryValidationIssues(ctx, input);
   })
@@ -105,12 +112,8 @@ export const RunCustomQueryOutputSchema = z
     queryId: z.string().describe("Bid Manager query ID"),
     reportId: z.string().describe("Bid Manager report ID"),
     status: z.string().describe("Query execution status"),
-    rowCount: z.number().describe("Number of rows returned"),
-    columns: z.array(z.string()).describe("Column names in the result"),
-    data: z
-      .union([z.array(z.record(z.any())), z.string()])
-      .describe("Result data (JSON array or CSV string)"),
-    warnings: z.array(z.string()).optional().describe("Any warnings during execution"),
+    rowCount: z.number().describe("Total number of rows in the report"),
+    ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime().describe("Execution timestamp"),
   })
   .describe("Custom query execution result");
@@ -161,14 +164,31 @@ export async function runCustomQueryLogic(
     outputFormat: input.outputFormat,
   });
 
+  const warningsOut = warnings.length > 0 ? [...warnings] : [];
+  if (input.outputFormat === "csv") {
+    warningsOut.push("outputFormat: \"csv\" is deprecated for MCP responses; returned a bounded structured report view instead.");
+  }
+
+  const rows = typeof result.data === "string"
+    ? []
+    : result.data as Record<string, unknown>[];
+  if (typeof result.data === "string") {
+    warningsOut.push("CSV result was not embedded to avoid MCP response-size failures. Use outputFormat: \"structured\" for bounded row previews.");
+  }
+
   return {
     queryId: result.queryId,
     reportId: result.reportId,
     status: result.status,
     rowCount: result.rowCount,
-    columns: result.columns,
-    data: result.data,
-    warnings: warnings.length > 0 ? warnings : undefined,
+    ...createReportView({
+      headers: result.columns,
+      rows,
+      totalRows: result.rowCount,
+      input,
+      warnings: warningsOut,
+    }),
+    warnings: warningsOut,
     timestamp: new Date().toISOString(),
   };
 }
@@ -185,20 +205,6 @@ export function runCustomQueryResponseFormatter(
       ? input.dateRange.preset
       : `${input.dateRange.startDate} to ${input.dateRange.endDate}`;
 
-  let dataPreview: string;
-  if (typeof result.data === "string") {
-    // CSV format - show first few lines
-    const lines = result.data.split("\n");
-    dataPreview =
-      lines.length > 10 ? lines.slice(0, 10).join("\n") + "\n... (truncated)" : result.data;
-  } else {
-    // Structured format - show first few rows
-    const preview = result.data.slice(0, 5);
-    dataPreview =
-      JSON.stringify(preview, null, 2) +
-      (result.data.length > 5 ? `\n... (${result.data.length - 5} more rows)` : "");
-  }
-
   return [
     {
       type: "text" as const,
@@ -213,10 +219,8 @@ Query Details:
 ${result.warnings ? `\nWarnings:\n${result.warnings.map((w) => `- ${w}`).join("\n")}` : ""}
 
 Results: ${result.rowCount} rows
-Columns: ${result.columns.join(", ")}
 
-Data Preview:
-${dataPreview}`,
+${formatReportViewResponse(result, "Data preview")}`,
     },
   ];
 }

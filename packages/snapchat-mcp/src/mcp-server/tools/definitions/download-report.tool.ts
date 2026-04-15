@@ -3,7 +3,15 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { computeMetrics } from "@cesteral/shared";
+import {
+  arrayRowsToRecords,
+  computeMetrics,
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -16,10 +24,13 @@ After a report task is DONE (via \`snapchat_check_report_status\`), use the \`do
 **Workflow:**
 1. \`snapchat_submit_report\` → get \`taskId\`
 2. \`snapchat_check_report_status\` → get \`downloadUrl\` when DONE
-3. \`snapchat_download_report\` with that URL → get parsed data
+3. \`snapchat_download_report\` with that URL → get a bounded summary or paged row slice
 
 **Options:**
-- \`maxRows\` limits returned rows (default 1000) to avoid large payloads`;
+- \`mode: "summary"\` (default) returns headers, counts, and a small preview
+- \`mode: "rows"\` returns one bounded page of rows
+- \`columns\` projects returned rows to selected columns
+- \`offset\` and \`maxRows\` page through rows; \`maxRows\` is capped at 200`;
 
 export const DownloadReportInputSchema = z
   .object({
@@ -27,27 +38,18 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL from snapchat_check_report_status"),
-    maxRows: z
-      .number()
-      .min(1)
-      .max(10000)
-      .optional()
-      .describe("Maximum rows to return (default: 1000)"),
     includeComputedMetrics: z
       .boolean()
       .optional()
       .default(false)
       .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
+  .merge(ReportViewInputSchema)
   .describe("Parameters for downloading a Snapchat report");
 
 export const DownloadReportOutputSchema = z
   .object({
-    totalRows: z.number().describe("Total rows in the report"),
-    returnedRows: z.number().describe("Number of rows returned"),
-    truncated: z.boolean().describe("Whether rows were truncated"),
-    headers: z.array(z.string()).describe("Column headers"),
-    rows: z.array(z.array(z.string())).describe("Parsed data rows"),
+    ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
   })
   .describe("Downloaded report data");
@@ -90,13 +92,10 @@ export async function downloadReportLogic(
 ): Promise<DownloadOutput> {
   const { snapchatReportingService } = resolveSessionServices(sdkContext);
 
-  const maxRows = input.maxRows ?? 1000;
   const result = await snapchatReportingService.downloadReport(
     input.downloadUrl,
-    maxRows
+    getReportViewFetchLimit(input)
   );
-
-  const truncated = result.totalRows > result.rows.length;
 
   let headers = result.headers;
   let rows = result.rows;
@@ -106,30 +105,22 @@ export async function downloadReportLogic(
   }
 
   return {
-    totalRows: result.totalRows,
-    returnedRows: rows.length,
-    truncated,
+    ...createReportView({
+      headers,
+      rows: arrayRowsToRecords(headers, rows),
+      totalRows: result.totalRows,
+      input,
+    }),
     headers,
-    rows,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {
-  const truncNote = result.truncated
-    ? `\n\nShowing ${result.returnedRows} of ${result.totalRows} rows (truncated)`
-    : "";
-
-  const headerLine = result.headers.join(", ");
-  const previewRows = result.rows.slice(0, 10).map((row) => row.join(", "));
-  const moreRows = result.returnedRows > 10
-    ? `\n... and ${result.returnedRows - 10} more rows`
-    : "";
-
   return [
     {
       type: "text" as const,
-      text: `Report data: ${result.totalRows} rows, ${result.headers.length} columns\nColumns: ${headerLine}${truncNote}\n\nSample rows:\n${previewRows.join("\n")}${moreRows}\n\nTimestamp: ${result.timestamp}`,
+      text: formatReportViewResponse(result, "Report data"),
     },
   ];
 }
@@ -148,16 +139,18 @@ export const downloadReportTool = {
   },
   inputExamples: [
     {
-      label: "Download report CSV with default row limit",
+      label: "Download report summary preview",
       input: {
         downloadUrl: "https://analytics.snapchat.com/reports/task-abc123/report.csv",
       },
     },
     {
-      label: "Download report with custom row limit",
+      label: "Download selected columns as a paged row slice",
       input: {
         downloadUrl: "https://analytics.snapchat.com/reports/task-xyz789/report.csv",
-        maxRows: 5000,
+        mode: "rows",
+        columns: ["campaign_id", "impressions", "spend"],
+        maxRows: 50,
       },
     },
   ],

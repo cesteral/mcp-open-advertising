@@ -99,29 +99,37 @@ Input: {
 
 ## Step 4: Download & Parse Results
 
-\`ttd_get_report\` returns a \`downloadUrl\` pointing to a CSV file. Use \`ttd_download_report\` to fetch and parse the data:
+\`ttd_get_report\` returns a \`downloadUrl\` pointing to a CSV file. Use \`ttd_download_report\` to fetch a bounded summary first:
 
 \`\`\`
 Tool: ttd_download_report
 Input: {
-  "downloadUrl": "{downloadUrl from Step 3}",
-  "maxRows": 1000
+  "downloadUrl": "{downloadUrl from Step 3}"
 }
 \`\`\`
 
 The tool returns:
 - \`headers\` — Column names from the CSV
-- \`rows\` — Parsed data rows as JSON objects (keyed by header name)
+- \`previewRows\` — Small parsed preview in summary mode
+- \`rows\` — Parsed row page when \`mode: "rows"\`
 - \`totalRows\` / \`returnedRows\` — Row counts
-- \`truncated\` — Whether rows were capped by \`maxRows\`
+- \`truncated\` / \`nextOffset\` — Whether more rows are available
+- \`selectedColumns\` — Columns included in row payloads
 
 ### Handling Large Reports
 
-| \`maxRows\` | Use Case |
-|-----------|----------|
-| 100 | Quick preview / spot-check |
-| 1000 | Default — sufficient for most analyses |
-| 5000–10000 | Large reports with many dimensions |
+\`\`\`
+Tool: ttd_download_report
+Input: {
+  "downloadUrl": "{downloadUrl from Step 3}",
+  "mode": "rows",
+  "columns": ["Site", "Impressions", "TotalCost"],
+  "maxRows": 50,
+  "offset": 0
+}
+\`\`\`
+
+Use \`columns\` to project only the fields needed for the analysis. Use \`nextOffset\` for the next page. \`maxRows\` is capped at 200 to avoid MCP response-size failures.
 
 ⚠️ **GOTCHA**: If \`ttd_get_report\` returns no \`downloadUrl\`, the report may still be processing. Wait and retry the \`ttd_get_report\` call.
 

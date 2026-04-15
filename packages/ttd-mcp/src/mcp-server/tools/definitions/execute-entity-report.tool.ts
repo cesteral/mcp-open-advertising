@@ -124,7 +124,7 @@ export function executeEntityReportResponseFormatter(
           `Report ready for ${result.entityType} ${result.entityId} (${result.reportType}):\n\n` +
           `Download URL: ${result.downloadUrl}\n` +
           (result.hasSampleData ? `⚠ Contains sample data only.\n` : "") +
-          `\nUse \`ttd_download_report\` with this URL to fetch the CSV data.\n\n` +
+          `\nUse \`ttd_download_report\` with this URL to fetch a bounded summary or paged row slice.\n\n` +
           `Timestamp: ${result.timestamp}`,
       },
     ];

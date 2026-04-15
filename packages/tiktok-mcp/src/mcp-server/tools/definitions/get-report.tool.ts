@@ -3,7 +3,17 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { computeMetrics, resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
+import {
+  arrayRowsToRecords,
+  computeMetrics,
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  resolveDatePreset,
+  DATE_PRESET_VALUES,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -66,6 +76,7 @@ export const GetReportInputSchema = z
       .default(false)
       .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
+  .merge(ReportViewInputSchema)
   .refine(
     (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
@@ -75,9 +86,7 @@ export const GetReportInputSchema = z
 export const GetReportOutputSchema = z
   .object({
     taskId: z.string().describe("Report task ID"),
-    headers: z.array(z.string()).describe("CSV column headers"),
-    rows: z.array(z.array(z.string())).describe("CSV data rows"),
-    totalRows: z.number().describe("Total number of data rows"),
+    ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
   })
   .describe("Report result");
@@ -138,6 +147,7 @@ export async function getReportLogic(
       ...(input.orderField ? { order_field: input.orderField } : {}),
       ...(input.orderType ? { order_type: input.orderType } : {}),
     },
+    getReportViewFetchLimit(input),
     context
   );
 
@@ -150,35 +160,21 @@ export async function getReportLogic(
 
   return {
     taskId: result.taskId,
-    headers,
-    rows,
-    totalRows: result.totalRows,
+    ...createReportView({
+      headers,
+      rows: arrayRowsToRecords(headers, rows),
+      totalRows: result.totalRows,
+      input,
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function getReportResponseFormatter(result: GetReportOutput): McpTextContent[] {
-  const headerLine = result.headers.join(", ");
-  const previewRows = result.rows.slice(0, 5).map((row) => row.join(", "));
-  const truncated = result.rows.length > 5
-    ? `\n... and ${result.rows.length - 5} more rows`
-    : "";
-
   return [
     {
       type: "text" as const,
-      text: [
-        `Report task: ${result.taskId}`,
-        `Total rows: ${result.totalRows}`,
-        "",
-        `Headers: ${headerLine}`,
-        "",
-        "Sample rows:",
-        ...previewRows,
-        truncated,
-        "",
-        `Timestamp: ${result.timestamp}`,
-      ].filter((line) => line !== undefined).join("\n"),
+      text: `Report task: ${result.taskId}\n\n${formatReportViewResponse(result, "Report data")}`,
     },
   ];
 }

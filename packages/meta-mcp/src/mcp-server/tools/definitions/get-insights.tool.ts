@@ -5,7 +5,14 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { computeMetrics } from "@cesteral/shared";
+import {
+  computeMetrics,
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "meta_get_insights";
 const TOOL_TITLE = "Get Meta Ads Insights";
@@ -58,7 +65,7 @@ export const GetInsightsInputSchema = z
       .min(1)
       .max(500)
       .optional()
-      .describe("Number of results per page"),
+      .describe("Deprecated. Use maxRows for the returned row count."),
     after: z
       .string()
       .optional()
@@ -69,11 +76,12 @@ export const GetInsightsInputSchema = z
       .default(false)
       .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
+  .merge(ReportViewInputSchema)
   .describe("Parameters for getting Meta Ads insights");
 
 export const GetInsightsOutputSchema = z
   .object({
-    data: z.array(z.record(z.any())).describe("Insights data rows"),
+    ...ReportViewOutputSchema.shape,
     nextCursor: z.string().optional().describe("Cursor for next page"),
     has_more: z.boolean().describe("Whether more results are available via pagination"),
     summary: z.record(z.any()).optional().describe("Summary statistics"),
@@ -91,6 +99,9 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { metaInsightsService } = resolveSessionServices(sdkContext);
+  const viewInput = input.maxRows === undefined && input.limit !== undefined
+    ? { ...input, maxRows: input.limit }
+    : input;
 
   const result = await metaInsightsService.getInsights(
     input.entityId,
@@ -100,7 +111,7 @@ export async function getInsightsLogic(
       timeRange: input.timeRange,
       timeIncrement: input.timeIncrement,
       level: input.level,
-      limit: input.limit,
+      limit: getReportViewFetchLimit(viewInput),
       after: input.after,
     },
     context
@@ -134,7 +145,12 @@ export async function getInsightsLogic(
   }
 
   return {
-    data: rows,
+    ...createReportView({
+      rows,
+      totalRows: rows.length + (result.nextCursor ? 1 : 0),
+      input: viewInput,
+      warnings: result.nextCursor ? ["More rows are available. Call again with after set to nextCursor to continue."] : [],
+    }),
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,
     summary: result.summary as Record<string, unknown> | undefined,
@@ -144,10 +160,7 @@ export async function getInsightsLogic(
 }
 
 export function getInsightsResponseFormatter(result: GetInsightsOutput): McpTextContent[] {
-  const summary = `Retrieved ${result.totalCount} insight row(s)`;
-  const data = result.totalCount > 0
-    ? `\n\n${JSON.stringify(result.data, null, 2)}`
-    : "\n\nNo data available for the specified period";
+  const summary = `Retrieved ${result.returnedRows} insight row(s)`;
   const pagination = result.nextCursor
     ? `\n\nMore results available. Use after: "${result.nextCursor}"`
     : "";
@@ -155,7 +168,7 @@ export function getInsightsResponseFormatter(result: GetInsightsOutput): McpText
   return [
     {
       type: "text" as const,
-      text: `${summary}${data}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}\n\n${formatReportViewResponse(result, "Insight data")}${pagination}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

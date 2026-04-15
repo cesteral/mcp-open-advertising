@@ -276,7 +276,7 @@ describe("ttd advanced tools", () => {
     expect(badText).toContain("Bad payload");
   });
 
-  it("downloadReportLogic parses CSV and applies maxRows", async () => {
+  it("downloadReportLogic defaults to summary preview and bounded structured content", async () => {
     mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
     const csv = [
       "CampaignId,Impressions",
@@ -293,18 +293,93 @@ describe("ttd advanced tools", () => {
     const result = await downloadReportLogic(
       {
         downloadUrl: "https://reports.thetradedesk.com/report.csv",
-        maxRows: 1,
       },
       createMockContext(),
       createMockSdkContext()
     );
 
     expect(result.totalRows).toBe(2);
-    expect(result.returnedRows).toBe(1);
-    expect(result.truncated).toBe(true);
-    expect(result.rows[0]).toEqual({ CampaignId: "c1", Impressions: "100" });
+    expect(result.mode).toBe("summary");
+    expect(result.returnedRows).toBe(2);
+    expect(result.truncated).toBe(false);
+    expect(result.nextOffset).toBeNull();
+    expect(result.previewRows).toEqual([
+      { CampaignId: "c1", Impressions: "100" },
+      { CampaignId: "c2", Impressions: "200" },
+    ]);
+    expect(result.rows).toBeUndefined();
     // Verify 60s timeout is used
     expect(mockFetchWithTimeout.mock.calls[0][1]).toBe(60_000);
+  });
+
+  it("downloadReportLogic supports rows mode, column projection, and pagination", async () => {
+    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
+    const csv = [
+      "CampaignId,Site,Impressions,TotalCost",
+      "c1,example.com,100,1.25",
+      "c2,news.example,200,3.50",
+      "c3,shop.example,300,5.75",
+    ].join("\n");
+    const csvBytes = new TextEncoder().encode(csv);
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: vi.fn().mockResolvedValue(csvBytes.buffer),
+      headers: new Headers({ "content-type": "text/csv" }),
+    } as unknown as Response);
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/report.csv",
+        mode: "rows",
+        columns: ["Site", "Impressions"],
+        offset: 1,
+        maxRows: 1,
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    expect(result.mode).toBe("rows");
+    expect(result.totalRows).toBe(3);
+    expect(result.returnedRows).toBe(1);
+    expect(result.truncated).toBe(true);
+    expect(result.nextOffset).toBe(2);
+    expect(result.selectedColumns).toEqual(["Site", "Impressions"]);
+    expect(result.rows).toEqual([{ Site: "news.example", Impressions: "200" }]);
+    expect(result.previewRows).toBeUndefined();
+  });
+
+  it("downloadReportLogic caps maxRows at 200 and warns about unknown columns", async () => {
+    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
+    const lines = ["CampaignId,Impressions"];
+    for (let i = 0; i < 250; i++) {
+      lines.push(`c${i},${i}`);
+    }
+    const csvBytes = new TextEncoder().encode(lines.join("\n"));
+    mockFetchWithTimeout.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: vi.fn().mockResolvedValue(csvBytes.buffer),
+      headers: new Headers({ "content-type": "text/csv" }),
+    } as unknown as Response);
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/report.csv",
+        mode: "rows",
+        columns: ["Impressions", "MissingColumn"],
+        maxRows: 1000,
+      },
+      createMockContext(),
+      createMockSdkContext()
+    );
+
+    expect(result.returnedRows).toBe(200);
+    expect(result.nextOffset).toBe(200);
+    expect(result.rows).toHaveLength(200);
+    expect(result.selectedColumns).toEqual(["Impressions"]);
+    expect(result.rows?.[0]).toEqual({ Impressions: "0" });
+    expect(result.warnings).toContain("maxRows capped at 200 to keep the MCP response bounded.");
+    expect(result.warnings).toContain("Unknown columns ignored: MissingColumn");
   });
 
   it("downloadReportLogic throws when fetch fails", async () => {
@@ -350,12 +425,17 @@ describe("ttd advanced tools", () => {
       totalRows: 2,
       returnedRows: 2,
       truncated: false,
+      nextOffset: null,
       headers: ["CampaignId", "Impressions"],
-      rows: [{ CampaignId: "c1", Impressions: "100" }],
+      selectedColumns: ["CampaignId", "Impressions"],
+      mode: "summary",
+      previewRows: [{ CampaignId: "c1", Impressions: "100" }],
+      warnings: [],
       timestamp: new Date().toISOString(),
     })[0].text;
 
     expect(text).toContain("2 rows, 2 columns");
     expect(text).toContain("CampaignId, Impressions");
+    expect(text).toContain("Preview rows:");
   });
 });

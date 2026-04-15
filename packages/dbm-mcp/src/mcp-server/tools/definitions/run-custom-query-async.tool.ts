@@ -20,12 +20,11 @@ import type {
 import type { CallToolResult, GetTaskResult } from "@modelcontextprotocol/sdk/types.js";
 import {
   RunCustomQueryInputSchema,
+  runCustomQueryLogic,
   runCustomQueryResponseFormatter,
   type RunCustomQueryInput,
-  type RunCustomQueryOutput,
 } from "./run-custom-query.tool.js";
 import { extractZodShape } from "@cesteral/shared";
-import { resolveSessionServices } from "../utils/resolve-session.js";
 import { validateQueryParams } from "../utils/query-validation.js";
 import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
 
@@ -95,29 +94,16 @@ export function registerRunCustomQueryAsyncTool(
         // Start background execution
         (async () => {
           try {
-            // Resolve session services using the sessionId from the closure
             const sdkContext = sessionId ? { sessionId } : undefined;
-            const { bidManagerService } = resolveSessionServices(sdkContext);
-
-            // Execute the query
-            const result = await bidManagerService.executeCustomQuery({
-              reportType: input.reportType,
-              groupBys: input.groupBys,
-              metrics: input.metrics,
-              filters: input.filters,
-              dateRange: input.dateRange,
-              outputFormat: input.outputFormat,
-            });
-
-            const output: RunCustomQueryOutput = {
-              queryId: result.queryId,
-              reportId: result.reportId,
-              status: result.status,
-              rowCount: result.rowCount,
-              columns: result.columns,
-              data: result.data,
-              timestamp: new Date().toISOString(),
-            };
+            const output = await runCustomQueryLogic(
+              input,
+              {
+                requestId: `task-${task.taskId}`,
+                timestamp: new Date().toISOString(),
+                operation: "dbm_run_custom_query_async",
+              },
+              sdkContext
+            );
 
             // Format as MCP content
             const content = runCustomQueryResponseFormatter(output, input);

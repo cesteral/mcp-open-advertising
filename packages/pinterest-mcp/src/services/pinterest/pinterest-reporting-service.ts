@@ -224,10 +224,14 @@ export class PinterestReportingService {
    */
   async getReport(
     reportConfig: PinterestReportConfig,
+    maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const { task_id } = await this.submitReport(reportConfig, context);
-    const taskResult = await this.pollReport(task_id, context);
+    const maxRows = typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
+    const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
+
+    const { task_id } = await this.submitReport(reportConfig, requestContext);
+    const taskResult = await this.pollReport(task_id, requestContext);
 
     if (taskResult.report_status === "FAILED" || taskResult.report_status === "EXPIRED" || taskResult.report_status === "DOES_NOT_EXIST") {
       throw new McpError(JsonRpcErrorCode.InternalError, `Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`);
@@ -237,7 +241,7 @@ export class PinterestReportingService {
       throw new McpError(JsonRpcErrorCode.InternalError, `Pinterest report task ${task_id} completed but has no download URL`);
     }
 
-    const reportData = await this.downloadReport(taskResult.url, DEFAULT_REPORT_MAX_ROWS, context);
+    const reportData = await this.downloadReport(taskResult.url, maxRows, requestContext);
 
     return {
       ...reportData,
@@ -252,6 +256,7 @@ export class PinterestReportingService {
   async getReportBreakdowns(
     reportConfig: PinterestReportConfig,
     breakdowns: string[],
+    maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: PinterestReportConfig = {
@@ -259,7 +264,7 @@ export class PinterestReportingService {
       columns: [...reportConfig.columns, ...breakdowns],
     };
 
-    return this.getReport(configWithBreakdowns, context);
+    return this.getReport(configWithBreakdowns, maxRowsOrContext, context);
   }
 
 }

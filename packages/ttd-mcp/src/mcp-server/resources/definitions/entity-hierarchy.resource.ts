@@ -136,7 +136,7 @@ List queries use POST to scoped query endpoints. Each endpoint is scoped to a pa
 | \`ttd_graphql_bulk_job\` | Check bulk job status / get result URL | |
 | \`ttd_graphql_cancel_bulk_job\` | Cancel bulk query job (not mutations) | |
 | \`ttd_get_report\` | Generate async report | |
-| \`ttd_download_report\` | Download & parse report CSV | |
+| \`ttd_download_report\` | Download report CSV and return bounded views | |
 
 ## GraphQL Bulk Constraints
 

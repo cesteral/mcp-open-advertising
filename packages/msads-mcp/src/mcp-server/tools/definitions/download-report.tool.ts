@@ -3,13 +3,21 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  arrayRowsToRecords,
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_download_report";
 const TOOL_TITLE = "Download Microsoft Ads Report";
 const TOOL_DESCRIPTION = `Download and parse a completed Microsoft Advertising report from its download URL.
 
-Use after msads_check_report_status returns a downloadUrl.`;
+Use after msads_check_report_status returns a downloadUrl. Returns a bounded summary or paged row slice.`;
 
 export const DownloadReportInputSchema = z
   .object({
@@ -17,18 +25,13 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL from check-report-status"),
-    maxRows: z
-      .number()
-      .optional()
-      .describe("Maximum rows to return"),
   })
+  .merge(ReportViewInputSchema)
   .describe("Parameters for downloading a Microsoft Ads report");
 
 export const DownloadReportOutputSchema = z
   .object({
-    headers: z.array(z.string()),
-    rows: z.array(z.array(z.string())),
-    totalRows: z.number(),
+    ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
   })
   .describe("Downloaded report data");
@@ -45,28 +48,26 @@ export async function downloadReportLogic(
 
   const result = await msadsReportingService.downloadReport(
     input.downloadUrl,
-    input.maxRows,
+    getReportViewFetchLimit(input),
     context
   );
 
   return {
-    headers: result.headers,
-    rows: result.rows,
-    totalRows: result.totalRows,
+    ...createReportView({
+      headers: result.headers,
+      rows: arrayRowsToRecords(result.headers, result.rows),
+      totalRows: result.totalRows,
+      input,
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
-  const preview = result.rows.slice(0, 10);
-  const previewText = preview.length > 0
-    ? `\n\nHeaders: ${result.headers.join(", ")}\n\nData (${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${result.rows.length > 10 ? ", showing first 10" : ""}):\n${JSON.stringify(preview, null, 2)}`
-    : "\n\nNo data rows in report";
-
   return [
     {
       type: "text" as const,
-      text: `Downloaded report with ${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${previewText}\n\nTimestamp: ${result.timestamp}`,
+      text: formatReportViewResponse(result, "Downloaded report"),
     },
   ];
 }
@@ -86,7 +87,11 @@ export const downloadReportTool = {
   inputExamples: [
     {
       label: "Download a report",
-      input: { downloadUrl: "https://download.api.bingads.microsoft.com/reports/..." },
+      input: {
+        downloadUrl: "https://download.api.bingads.microsoft.com/reports/...",
+        mode: "rows",
+        maxRows: 50,
+      },
     },
   ],
   logic: downloadReportLogic,

@@ -3,7 +3,16 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
+import {
+  arrayRowsToRecords,
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  resolveDatePreset,
+  DATE_PRESET_VALUES,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_get_report";
@@ -42,11 +51,8 @@ export const GetReportInputSchema = z
       .string()
       .optional()
       .describe("Time aggregation (Daily, Weekly, Monthly, Hourly). Default: Daily"),
-    maxRows: z
-      .number()
-      .optional()
-      .describe("Maximum rows to return from downloaded report"),
   })
+  .merge(ReportViewInputSchema.omit({ columns: true }))
   .refine(
     (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
@@ -56,12 +62,10 @@ export const GetReportInputSchema = z
 export const GetReportOutputSchema = z
   .object({
     reportRequestId: z.string(),
-    headers: z.array(z.string()),
-    rows: z.array(z.array(z.string())),
-    totalRows: z.number(),
+    ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
   })
-  .describe("Report result with parsed data");
+  .describe("Report result");
 
 type GetReportInput = z.infer<typeof GetReportInputSchema>;
 type GetReportOutput = z.infer<typeof GetReportOutputSchema>;
@@ -89,29 +93,27 @@ export async function getReportLogic(
       dateRange: { startDate: resolvedStartDate!, endDate: resolvedEndDate! },
       aggregation: input.aggregation,
     },
-    input.maxRows,
+    getReportViewFetchLimit(input),
     context
   );
 
   return {
     reportRequestId: result.reportRequestId,
-    headers: result.headers,
-    rows: result.rows,
-    totalRows: result.totalRows,
+    ...createReportView({
+      headers: result.headers,
+      rows: arrayRowsToRecords(result.headers, result.rows),
+      totalRows: result.totalRows,
+      input,
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function getReportResponseFormatter(result: GetReportOutput): McpTextContent[] {
-  const preview = result.rows.slice(0, 10);
-  const previewText = preview.length > 0
-    ? `\n\nHeaders: ${result.headers.join(", ")}\n\nData (${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${result.rows.length > 10 ? ", showing first 10" : ""}):\n${JSON.stringify(preview, null, 2)}`
-    : "\n\nNo data rows returned";
-
   return [
     {
       type: "text" as const,
-      text: `Report ${result.reportRequestId} completed with ${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${previewText}\n\nTimestamp: ${result.timestamp}`,
+      text: `Report ${result.reportRequestId} completed\n\n${formatReportViewResponse(result, "Report data")}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -136,6 +138,7 @@ export const getReportTool = {
         accountId: "123456789",
         columns: ["CampaignName", "Impressions", "Clicks", "Spend"],
         datePreset: "LAST_30_DAYS",
+        mode: "summary",
       },
     },
     {

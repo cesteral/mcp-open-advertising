@@ -247,10 +247,14 @@ export class AmazonDspReportingService {
   async getReport(
     accountId: string,
     reportConfig: AmazonDspReportConfig,
+    maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const { taskId } = await this.submitReport(accountId, reportConfig, context);
-    const taskResult = await this.pollReport(accountId, taskId, context);
+    const maxRows = typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
+    const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
+
+    const { taskId } = await this.submitReport(accountId, reportConfig, requestContext);
+    const taskResult = await this.pollReport(accountId, taskId, requestContext);
 
     if (taskResult.status === "FAILED") {
       throw new McpError(JsonRpcErrorCode.InternalError, `Amazon DSP report task ${taskId} failed`);
@@ -260,7 +264,7 @@ export class AmazonDspReportingService {
       throw new McpError(JsonRpcErrorCode.InternalError, `Amazon DSP report task ${taskId} completed but has no download URL`);
     }
 
-    const reportData = await this.downloadReport(taskResult.url, DEFAULT_REPORT_MAX_ROWS, context);
+    const reportData = await this.downloadReport(taskResult.url, maxRows, requestContext);
 
     return {
       ...reportData,
@@ -276,6 +280,7 @@ export class AmazonDspReportingService {
     accountId: string,
     reportConfig: AmazonDspReportConfig,
     breakdowns: string[],
+    maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: AmazonDspReportConfig = {
@@ -286,7 +291,7 @@ export class AmazonDspReportingService {
       },
     };
 
-    return this.getReport(accountId, configWithBreakdowns, context);
+    return this.getReport(accountId, configWithBreakdowns, maxRowsOrContext, context);
   }
 
 }

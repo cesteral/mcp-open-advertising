@@ -3,6 +3,13 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -27,18 +34,18 @@ export const SA360SearchInputSchema = z
       .min(1)
       .max(10000)
       .optional()
-      .default(1000)
-      .describe("Number of results per page (default 1000, max 10000)"),
+      .describe("Deprecated. Use maxRows for the returned row count."),
     pageToken: z
       .string()
       .optional()
       .describe("Page token for pagination (from previous response)"),
   })
+  .merge(ReportViewInputSchema)
   .describe("Parameters for executing an SA360 query");
 
 export const SA360SearchOutputSchema = z
   .object({
-    results: z.array(z.record(z.any())).describe("Query result rows"),
+    ...ReportViewOutputSchema.shape,
     totalResultsCount: z.number().optional().describe("Total results available"),
     nextPageToken: z.string().optional().describe("Token for next page"),
     has_more: z.boolean().describe("Whether more results are available via pagination"),
@@ -55,17 +62,26 @@ export async function sa360SearchLogic(
   sdkContext?: SdkContext
 ): Promise<SA360SearchOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
+  const viewInput = input.maxRows === undefined && input.pageSize !== undefined
+    ? { ...input, maxRows: input.pageSize }
+    : input;
 
   const result = await sa360Service.sa360Search(
     input.customerId,
     input.query,
-    input.pageSize,
+    getReportViewFetchLimit(viewInput),
     input.pageToken,
     context
   );
+  const rows = result.results as unknown as Record<string, unknown>[];
 
   return {
-    results: result.results as unknown as Record<string, any>[],
+    ...createReportView({
+      rows,
+      totalRows: result.totalResultsCount ?? rows.length + (result.nextPageToken ? 1 : 0),
+      input: viewInput,
+      warnings: result.nextPageToken ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."] : [],
+    }),
     totalResultsCount: result.totalResultsCount,
     nextPageToken: result.nextPageToken,
     has_more: !!result.nextPageToken,
@@ -74,14 +90,14 @@ export async function sa360SearchLogic(
 }
 
 export function sa360SearchResponseFormatter(result: SA360SearchOutput): McpTextContent[] {
-  const summary = `SA360 query returned ${result.results.length} results${
+  const summary = `SA360 query returned ${result.returnedRows} result(s)${
     result.totalResultsCount ? ` (${result.totalResultsCount} total)` : ""
   }${result.nextPageToken ? " — more pages available" : ""}`;
 
   return [
     {
       type: "text" as const,
-      text: `${summary}\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}\n\n${formatReportViewResponse(result, "Query data")}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -111,7 +127,8 @@ export const sa360SearchTool = {
       input: {
         customerId: "1234567890",
         query: "SELECT ad_group.id, ad_group.name, ad_group.engine_id, metrics.impressions, metrics.conversions FROM ad_group WHERE campaign.id = 123456789 AND segments.date DURING LAST_7_DAYS",
-        pageSize: 500,
+        mode: "rows",
+        maxRows: 50,
       },
     },
   ],

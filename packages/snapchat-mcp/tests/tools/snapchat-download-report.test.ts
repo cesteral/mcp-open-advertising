@@ -48,7 +48,7 @@ describe("downloadReportLogic", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv" },
+      { downloadUrl: "https://example.com/report.csv", mode: "rows" },
       baseContext,
       baseSdkContext
     );
@@ -78,7 +78,7 @@ describe("downloadReportLogic", () => {
     expect(result.totalRows).toBe(5000);
   });
 
-  it("uses default maxRows of 1000", async () => {
+  it("uses summary fetch limit by default", async () => {
     mockDownloadReport.mockResolvedValueOnce({
       headers: ["date"],
       rows: [],
@@ -93,7 +93,7 @@ describe("downloadReportLogic", () => {
 
     expect(mockDownloadReport).toHaveBeenCalledWith(
       "https://example.com/report.csv",
-      1000
+      10
     );
   });
 });
@@ -105,7 +105,11 @@ describe("downloadReportResponseFormatter", () => {
       returnedRows: 2,
       truncated: false,
       headers: ["date", "impressions"],
-      rows: [["2026-03-01", "1000"], ["2026-03-02", "1200"]],
+      selectedColumns: ["date", "impressions"],
+      mode: "rows" as const,
+      rows: [{ date: "2026-03-01", impressions: "1000" }, { date: "2026-03-02", impressions: "1200" }],
+      nextOffset: null,
+      warnings: [],
       timestamp: "2026-03-04T00:00:00.000Z",
     };
 
@@ -122,11 +126,15 @@ describe("downloadReportResponseFormatter", () => {
       returnedRows: 1000,
       truncated: true,
       headers: ["date"],
-      rows: [["2026-03-01"]],
+      selectedColumns: ["date"],
+      mode: "rows" as const,
+      rows: [{ date: "2026-03-01" }],
+      nextOffset: 1000,
+      warnings: [],
       timestamp: "2026-03-04T00:00:00.000Z",
     };
 
     const content = downloadReportResponseFormatter(result);
-    expect(content[0].text).toContain("1000 of 5000 rows (truncated)");
+    expect(content[0].text).toContain("Showing 1000 of 5000 rows");
   });
 });

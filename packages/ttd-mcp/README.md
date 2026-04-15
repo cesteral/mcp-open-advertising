@@ -33,7 +33,7 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 | Tool                      | Description                                  |
 | ------------------------- | -------------------------------------------- |
 | `ttd_get_report`          | Generate async report via MyReports V3 API   |
-| `ttd_download_report`     | Download and parse report CSV from URL       |
+| `ttd_download_report`     | Download report CSV and return bounded views |
 | `ttd_submit_report`       | Submit report without waiting (non-blocking) |
 | `ttd_check_report_status` | Single status check for a submitted report   |
 

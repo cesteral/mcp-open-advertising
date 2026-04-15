@@ -3,13 +3,14 @@ import { DownloadReportInputSchema } from "../../src/mcp-server/tools/definition
 import { parseCSVLine } from "../../src/mcp-server/tools/definitions/download-report.tool.js";
 
 describe("DownloadReportInputSchema", () => {
-  it("accepts valid input with defaults", () => {
+  it("accepts valid input with summary defaults", () => {
     const result = DownloadReportInputSchema.safeParse({
       downloadUrl: "https://www.googleapis.com/doubleclicksearch/v2/reports/123/files/0",
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.maxRows).toBe(1000);
+      expect(result.data.mode).toBe("summary");
+      expect(result.data.maxRows).toBeUndefined();
     }
   });
 

@@ -3,7 +3,16 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
+import {
+  arrayRowsToRecords,
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  resolveDatePreset,
+  DATE_PRESET_VALUES,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_get_report_breakdowns";
@@ -51,11 +60,8 @@ export const GetReportBreakdownsInputSchema = z
       .string()
       .optional()
       .describe("Time aggregation (Daily, Weekly, Monthly, Hourly). Default: Daily"),
-    maxRows: z
-      .number()
-      .optional()
-      .describe("Maximum rows to return from downloaded report"),
   })
+  .merge(ReportViewInputSchema.omit({ columns: true }))
   .refine(
     (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
@@ -65,9 +71,7 @@ export const GetReportBreakdownsInputSchema = z
 export const GetReportBreakdownsOutputSchema = z
   .object({
     reportRequestId: z.string(),
-    headers: z.array(z.string()),
-    rows: z.array(z.array(z.string())),
-    totalRows: z.number(),
+    ...ReportViewOutputSchema.shape,
     appliedColumns: z.array(z.string()).describe("All columns used (base + breakdown)"),
     timestamp: z.string().datetime(),
   })
@@ -108,31 +112,28 @@ export async function getReportBreakdownsLogic(
       dateRange: { startDate: resolvedStartDate!, endDate: resolvedEndDate! },
       aggregation: input.aggregation,
     },
-    input.maxRows,
+    getReportViewFetchLimit(input),
     context
   );
 
   return {
     reportRequestId: result.reportRequestId,
-    headers: result.headers,
-    rows: result.rows,
-    totalRows: result.totalRows,
+    ...createReportView({
+      headers: result.headers,
+      rows: arrayRowsToRecords(result.headers, result.rows),
+      totalRows: result.totalRows,
+      input: { ...input, columns: allColumns },
+    }),
     appliedColumns: allColumns,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function getReportBreakdownsResponseFormatter(result: GetReportBreakdownsOutput): McpTextContent[] {
-  const preview = result.rows.slice(0, 10);
-  const previewText =
-    preview.length > 0
-      ? `\n\nHeaders: ${result.headers.join(", ")}\n\nData (${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${result.rows.length > 10 ? ", showing first 10" : ""}):\n${JSON.stringify(preview, null, 2)}`
-      : "\n\nNo data rows returned";
-
   return [
     {
       type: "text" as const,
-      text: `Report ${result.reportRequestId} completed\nApplied columns: ${result.appliedColumns.join(", ")}\n${result.rows.length}${result.rows.length < result.totalRows ? ` of ${result.totalRows}` : ""} rows${previewText}\n\nTimestamp: ${result.timestamp}`,
+      text: `Report ${result.reportRequestId} completed\nApplied columns: ${result.appliedColumns.join(", ")}\n\n${formatReportViewResponse(result, "Report data")}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -158,6 +159,7 @@ export const getReportBreakdownsTool = {
         columns: ["CampaignName", "Impressions", "Clicks", "Spend"],
         breakdownColumns: ["DeviceOS", "Network"],
         datePreset: "LAST_30_DAYS",
+        mode: "summary",
       },
     },
     {

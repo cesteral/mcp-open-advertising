@@ -134,7 +134,7 @@ Inspect the output, then iterate with more specific calls.
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
 | \`ttd_get_report\` | Generate and retrieve reports (blocking) | Read |
-| \`ttd_download_report\` | Download & parse report CSV | Read |
+| \`ttd_download_report\` | Download report CSV and return bounded views | Read |
 | \`ttd_submit_report\` | Submit report without waiting (non-blocking) | Write |
 | \`ttd_check_report_status\` | Check status of submitted report | Read |
 

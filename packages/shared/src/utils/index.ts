@@ -37,3 +37,4 @@ export * from "./bulk-executor.js";
 export * from "./computed-metrics.js";
 export * from "./pacing.js";
 export * from "./date-presets.js";
+export * from "./report-view.js";

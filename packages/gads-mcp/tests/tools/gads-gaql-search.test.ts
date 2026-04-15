@@ -10,12 +10,13 @@ describe("GAQLSearchInputSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("defaults pageSize to 1000", () => {
+  it("defaults to summary mode without a legacy pageSize", () => {
     const result = GAQLSearchInputSchema.parse({
       customerId: "1234567890",
       query: "SELECT campaign.id FROM campaign",
     });
-    expect(result.pageSize).toBe(1000);
+    expect(result.pageSize).toBeUndefined();
+    expect(result.mode).toBe("summary");
   });
 
   it("rejects empty customerId", () => {

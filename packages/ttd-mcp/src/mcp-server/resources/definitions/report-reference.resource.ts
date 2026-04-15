@@ -20,7 +20,7 @@ TTD reports are generated via the MyReports V3 API which provides **188 dimensio
 
 ### Two-Step Workflow
 1. \`ttd_get_report\` — create report schedule, poll for completion, get download URL
-2. \`ttd_download_report\` — fetch and parse CSV from the download URL
+2. \`ttd_download_report\` — fetch the CSV server-side and return a bounded summary or paged row slice
 
 ---
 
@@ -284,8 +284,9 @@ TTD reports are generated via the MyReports V3 API which provides **188 dimensio
 - **Start small** — fewer dimensions = fewer rows = faster report.
 - **Always filter** — use \`advertiserIds\` to scope reports.
 - **Custom dates** — set \`ReportStartDate\` and \`ReportEndDate\` in \`additionalConfig\` (format: \`YYYY-MM-DDTHH:mm:ss\`).
-- **Download & parse** — use \`ttd_download_report\` to fetch and parse the CSV into structured JSON.
-- **Large reports** — may time out (5 min polling limit). Use shorter date ranges or fewer dimensions.
+- **Download & inspect** — use \`ttd_download_report\` without row options first; it returns counts, headers, and a small preview.
+- **Narrow row payloads** — use \`mode: "rows"\`, \`columns\`, \`maxRows\`, and \`offset\` for paged access. \`maxRows\` is capped at 200 to avoid MCP response-size failures.
+- **Large reports** — may time out during polling or exceed useful response size. Use shorter date ranges, fewer dimensions, column projection, or pagination.
 - **V3 upgrade** — this reference covers MyReports V3 with 188 dimensions and 318 metrics. V2 had only 52 dimensions.
 `;
 }

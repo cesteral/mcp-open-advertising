@@ -11,6 +11,13 @@ import {
   type SA360InsightsEntityType,
 } from "../utils/entity-mapping.js";
 import { addComputedMetrics } from "../utils/computed-metrics.js";
+import {
+  createReportView,
+  formatReportViewResponse,
+  getReportViewFetchLimit,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -102,13 +109,13 @@ export const GetInsightsInputSchema = z
       .min(1)
       .max(10000)
       .optional()
-      .default(50)
-      .describe("Max results to return (default 50)"),
+      .describe("Deprecated. Use maxRows for the returned row count."),
     pageToken: z
       .string()
       .optional()
       .describe("Page token for pagination (from previous response)"),
   })
+  .merge(ReportViewInputSchema)
   .refine(
     (data) => {
       const hasPreset = !!data.dateRange;
@@ -128,7 +135,7 @@ export const GetInsightsInputSchema = z
 
 export const GetInsightsOutputSchema = z
   .object({
-    results: z.array(z.record(z.any())).describe("Insight result rows"),
+    ...ReportViewOutputSchema.shape,
     totalResults: z.number().describe("Number of results returned"),
     dateRange: z.string().describe("Date range used"),
     startDate: z.string().optional().describe("Custom start date (when used)"),
@@ -186,13 +193,16 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
+  const viewInput = input.maxRows === undefined && input.limit !== undefined
+    ? { ...input, maxRows: input.limit }
+    : input;
 
-  const query = buildInsightsQuery(input);
+  const query = buildInsightsQuery({ ...input, limit: getReportViewFetchLimit(viewInput) });
 
   const result = await sa360Service.sa360Search(
     input.customerId,
     query,
-    input.limit,
+    getReportViewFetchLimit(viewInput),
     input.pageToken,
     context
   );
@@ -206,7 +216,12 @@ export async function getInsightsLogic(
   const dateRangeLabel = input.dateRange || `${input.startDate} to ${input.endDate}`;
 
   return {
-    results,
+    ...createReportView({
+      rows: results,
+      totalRows: results.length + (result.nextPageToken ? 1 : 0),
+      input: viewInput,
+      warnings: result.nextPageToken ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."] : [],
+    }),
     totalResults: results.length,
     dateRange: dateRangeLabel,
     ...(input.startDate && { startDate: input.startDate }),
@@ -224,7 +239,7 @@ export function getInsightsResponseFormatter(result: GetInsightsOutput): McpText
   return [
     {
       type: "text" as const,
-      text: `Insights (${result.dateRange}): ${result.totalResults} results${paginationNote}\n\n${JSON.stringify(result.results, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Insights (${result.dateRange}): ${result.returnedRows} result(s)${paginationNote}\n\n${formatReportViewResponse(result, "Insight data")}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -256,7 +271,8 @@ export const getInsightsTool = {
         customerId: "1234567890",
         entityType: "adGroup",
         dateRange: "LAST_7_DAYS",
-        limit: 100,
+        mode: "rows",
+        maxRows: 50,
       },
     },
     {

@@ -214,13 +214,13 @@ export class MetaInsightsService {
    */
   async getReportResults(
     reportRunId: string,
-    options: { limit?: number },
+    options: { limit?: number; after?: string },
     context?: RequestContext
   ): Promise<{ data: unknown[]; fetchedAllRows: boolean; nextCursor?: string }> {
     await this.rateLimiter.consume(`meta:default`);
 
     const data: unknown[] = [];
-    let after: string | undefined;
+    let after = options.after;
     let fetchedAllRows = true;
 
     do {

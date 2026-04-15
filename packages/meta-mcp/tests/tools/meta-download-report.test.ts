@@ -58,7 +58,9 @@ describe("downloadReportLogic", () => {
 
     expect(result).toMatchObject({
       reportRunId: "report-123",
-      totalResults: 2,
+      totalRows: 2,
+      returnedRows: 2,
+      previewRows: [{ id: "1" }, { id: "2" }],
       fetchedAllRows: true,
       nextCursor: undefined,
     });
@@ -74,6 +76,7 @@ describe("downloadReportLogic", () => {
     const result = await downloadReportLogic(
       {
         reportRunId: "report-123",
+        mode: "rows",
         maxRows: 1,
       },
       createMockContext(),
@@ -82,7 +85,9 @@ describe("downloadReportLogic", () => {
 
     expect(result).toMatchObject({
       reportRunId: "report-123",
-      totalResults: 1,
+      totalRows: 2,
+      returnedRows: 1,
+      rows: [{ id: "1" }],
       fetchedAllRows: false,
       nextCursor: "cursor-2",
     });
@@ -93,8 +98,15 @@ describe("downloadReportResponseFormatter", () => {
   it("omits truncation text when all rows were fetched", () => {
     const result = {
       reportRunId: "report-123",
-      results: [{ id: "1" }],
-      totalResults: 1,
+      totalRows: 1,
+      returnedRows: 1,
+      truncated: false,
+      nextOffset: null,
+      headers: ["id"],
+      selectedColumns: ["id"],
+      mode: "summary" as const,
+      previewRows: [{ id: "1" }],
+      warnings: [],
       fetchedAllRows: true,
       nextCursor: undefined,
       timestamp: new Date().toISOString(),
@@ -107,8 +119,15 @@ describe("downloadReportResponseFormatter", () => {
   it("mentions truncation and the continuation cursor when maxRows capped the result set", () => {
     const result = {
       reportRunId: "report-123",
-      results: [{ id: "1" }],
-      totalResults: 1,
+      totalRows: 2,
+      returnedRows: 1,
+      truncated: true,
+      nextOffset: 1,
+      headers: ["id"],
+      selectedColumns: ["id"],
+      mode: "summary" as const,
+      previewRows: [{ id: "1" }],
+      warnings: ["More rows are available. Call again with cursor set to nextCursor to continue."],
       fetchedAllRows: false,
       nextCursor: "cursor-2",
       timestamp: new Date().toISOString(),

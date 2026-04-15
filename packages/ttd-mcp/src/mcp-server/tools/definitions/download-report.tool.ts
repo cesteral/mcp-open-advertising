@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { fetchWithTimeout } from "@cesteral/shared";
+import { fetchWithTimeout, parseCsvLine } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -11,14 +11,21 @@ const TOOL_NAME = "ttd_download_report";
 const TOOL_TITLE = "Download TTD Report";
 const TOOL_DESCRIPTION = `Download and parse a TTD report from a download URL.
 
-After generating a report with \`ttd_get_report\`, use the returned \`downloadUrl\` to fetch and parse the CSV data. Returns parsed rows as structured JSON.
+After generating a report with \`ttd_get_report\`, use the returned \`downloadUrl\` to fetch and parse the CSV data. TTD-hosted report URLs require server-side \`TTD-Auth\`, so this tool fetches the report and returns a bounded view that stays within MCP response-size limits.
 
 **Workflow:**
 1. Run \`ttd_get_report\` → get \`downloadUrl\`
-2. Run \`ttd_download_report\` with that URL → get parsed data
+2. Run \`ttd_download_report\` with that URL → get a summary preview or a paged row slice
 
 **Options:**
-- \`maxRows\` limits returned rows (default 1000) to avoid large payloads`;
+- \`mode: "summary"\` (default) returns headers, counts, and a small preview
+- \`mode: "rows"\` returns one bounded page of rows
+- \`columns\` projects returned rows to selected columns
+- \`offset\` and \`maxRows\` page through rows; \`maxRows\` is capped at 200`;
+
+const SUMMARY_DEFAULT_MAX_ROWS = 10;
+const ROWS_DEFAULT_MAX_ROWS = 50;
+const MAX_RETURNED_ROWS = 200;
 
 export const DownloadReportInputSchema = z
   .object({
@@ -28,10 +35,25 @@ export const DownloadReportInputSchema = z
       .describe("Report download URL from ttd_get_report"),
     maxRows: z
       .number()
+      .int()
       .min(1)
       .max(10000)
       .optional()
-      .describe("Maximum rows to return (default: 1000)"),
+      .describe("Maximum rows to return before the server cap is applied (default: 10 for summary, 50 for rows; hard cap: 200)"),
+    mode: z
+      .enum(["summary", "rows"])
+      .optional()
+      .describe("Return mode. summary returns counts, headers, and previewRows. rows returns a bounded page of rows. Default: summary"),
+    columns: z
+      .array(z.string().min(1))
+      .optional()
+      .describe("Optional list of columns to include in returned row payloads"),
+    offset: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Zero-based row offset for previewRows or rows pagination (default: 0)"),
   })
   .describe("Parameters for downloading a TTD report");
 
@@ -40,8 +62,13 @@ export const DownloadReportOutputSchema = z
     totalRows: z.number().describe("Total rows in the report"),
     returnedRows: z.number().describe("Number of rows returned"),
     truncated: z.boolean().describe("Whether rows were truncated"),
+    nextOffset: z.number().nullable().describe("Next offset to request, or null when there are no more rows"),
     headers: z.array(z.string()).describe("Column headers"),
-    rows: z.array(z.record(z.any())).describe("Parsed data rows"),
+    selectedColumns: z.array(z.string()).describe("Columns included in returned row payloads"),
+    mode: z.enum(["summary", "rows"]).describe("Return mode used for this response"),
+    previewRows: z.array(z.record(z.string())).optional().describe("Small parsed row preview for summary mode"),
+    rows: z.array(z.record(z.string())).optional().describe("Parsed data rows for rows mode"),
+    warnings: z.array(z.string()).describe("Non-fatal warnings about projection, caps, or pagination"),
     timestamp: z.string().datetime(),
   })
   .describe("Downloaded report data");
@@ -53,39 +80,18 @@ type DownloadOutput = z.infer<typeof DownloadReportOutputSchema>;
  * Parse CSV text into an array of row objects keyed by header names.
  */
 function parseCsv(csvText: string): { headers: string[]; rows: Record<string, string>[] } {
-  const lines = csvText.replace(/\r\n/g, "\n").trim().split("\n");
-  if (lines.length === 0) return { headers: [], rows: [] };
+  const normalized = csvText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!normalized) return { headers: [], rows: [] };
 
-  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+  const lines = normalized.split("\n");
+  const headers = parseCsvLine(lines[0]);
   const rows: Record<string, string>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // RFC 4180 CSV parse (handles quoted fields with commas and escaped quotes)
-    const values: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    for (let ci = 0; ci < line.length; ci++) {
-      const ch = line[ci];
-      if (ch === '"') {
-        if (inQuotes && line[ci + 1] === '"') {
-          // Escaped quote ("") → literal quote
-          current += '"';
-          ci++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch === "," && !inQuotes) {
-        values.push(current.trim());
-        current = "";
-      } else {
-        current += ch;
-      }
-    }
-    values.push(current.trim());
-
+    const values = parseCsvLine(line);
     const row: Record<string, string> = {};
     for (let j = 0; j < headers.length && j < values.length; j++) {
       row[headers[j]] = values[j];
@@ -94,6 +100,43 @@ function parseCsv(csvText: string): { headers: string[]; rows: Record<string, st
   }
 
   return { headers, rows };
+}
+
+function resolveSelectedColumns(
+  headers: string[],
+  requestedColumns: string[] | undefined,
+  warnings: string[]
+): string[] {
+  if (!requestedColumns || requestedColumns.length === 0) {
+    return headers;
+  }
+
+  const headerSet = new Set(headers);
+  const selectedColumns = requestedColumns.filter((column) => headerSet.has(column));
+  const missingColumns = requestedColumns.filter((column) => !headerSet.has(column));
+
+  if (missingColumns.length > 0) {
+    warnings.push(`Unknown columns ignored: ${missingColumns.join(", ")}`);
+  }
+
+  if (selectedColumns.length === 0) {
+    warnings.push("No requested columns matched the report headers; returned row payloads are empty objects.");
+  }
+
+  return selectedColumns;
+}
+
+function projectRows(
+  rows: Record<string, string>[],
+  selectedColumns: string[]
+): Record<string, string>[] {
+  return rows.map((row) => {
+    const projected: Record<string, string> = {};
+    for (const column of selectedColumns) {
+      projected[column] = row[column] ?? "";
+    }
+    return projected;
+  });
 }
 
 const ALLOWED_REPORT_HOSTNAME_PATTERN = /(?:^|\.)(?:thetradedesk\.com|amazonaws\.com)$/;
@@ -180,29 +223,65 @@ export async function downloadReportLogic(
   const csvText = new TextDecoder("utf-8").decode(bytes);
   const { headers, rows: allRows } = parseCsv(csvText);
 
-  const maxRows = input.maxRows ?? 1000;
-  const truncated = allRows.length > maxRows;
-  const rows = allRows.slice(0, maxRows);
+  const mode = input.mode ?? "summary";
+  const requestedMaxRows = input.maxRows ?? (mode === "summary" ? SUMMARY_DEFAULT_MAX_ROWS : ROWS_DEFAULT_MAX_ROWS);
+  const maxRows = Math.min(requestedMaxRows, MAX_RETURNED_ROWS);
+  const offset = input.offset ?? 0;
+  const warnings: string[] = [];
+
+  if (requestedMaxRows > MAX_RETURNED_ROWS) {
+    warnings.push(`maxRows capped at ${MAX_RETURNED_ROWS} to keep the MCP response bounded.`);
+  }
+
+  if (offset > allRows.length) {
+    warnings.push(`offset ${offset} is beyond the report row count ${allRows.length}; returned no rows.`);
+  }
+
+  const selectedColumns = resolveSelectedColumns(headers, input.columns, warnings);
+  const pageRows = projectRows(allRows.slice(offset, offset + maxRows), selectedColumns);
+  const nextOffset = offset + pageRows.length < allRows.length
+    ? offset + pageRows.length
+    : null;
+  const truncated = nextOffset !== null;
+
+  if (truncated) {
+    warnings.push(`More rows are available. Call again with offset ${nextOffset}.`);
+  }
+
+  const rowPayload = mode === "summary"
+    ? { previewRows: pageRows }
+    : { rows: pageRows };
 
   return {
     totalRows: allRows.length,
-    returnedRows: rows.length,
+    returnedRows: pageRows.length,
     truncated,
+    nextOffset,
     headers,
-    rows,
+    selectedColumns,
+    mode,
+    ...rowPayload,
+    warnings,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {
   const truncNote = result.truncated
-    ? `\n\n⚠️ Showing ${result.returnedRows} of ${result.totalRows} rows (truncated)`
+    ? `\n\nShowing ${result.returnedRows} of ${result.totalRows} rows from this page. Next offset: ${result.nextOffset}`
+    : "";
+  const rowPayload = result.mode === "summary"
+    ? result.previewRows ?? []
+    : result.rows ?? [];
+  const rowLabel = result.mode === "summary" ? "Preview rows" : "Rows";
+  const warnings = result.warnings.length > 0
+    ? `\n\nWarnings:\n${result.warnings.map((warning) => `- ${warning}`).join("\n")}`
     : "";
 
   return [
     {
       type: "text" as const,
-      text: `Report data: ${result.totalRows} rows, ${result.headers.length} columns\nColumns: ${result.headers.join(", ")}${truncNote}\n\n${JSON.stringify(result.rows.slice(0, 20), null, 2)}${result.returnedRows > 20 ? `\n\n... and ${result.returnedRows - 20} more rows` : ""}\n\nTimestamp: ${result.timestamp}`,
+      text: `Report data: ${result.totalRows} rows, ${result.headers.length} columns\nMode: ${result.mode}\nColumns: ${result.headers.join(", ")}\nReturned columns: ${result.selectedColumns.join(", ")}${truncNote}${warnings}\n\n${rowLabel}:\n${JSON.stringify(rowPayload, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -221,16 +300,18 @@ export const downloadReportTool = {
   },
   inputExamples: [
     {
-      label: "Download report CSV with default row limit",
+      label: "Download report summary preview",
       input: {
         downloadUrl: "https://reports.thetradedesk.com/results/abc123def456/report.csv",
       },
     },
     {
-      label: "Download report with custom row limit",
+      label: "Download selected columns as a paged row slice",
       input: {
         downloadUrl: "https://reports.thetradedesk.com/results/xyz789uvw012/report.csv",
-        maxRows: 5000,
+        mode: "rows",
+        columns: ["Site", "Impressions", "TotalCost"],
+        maxRows: 50,
       },
     },
   ],
