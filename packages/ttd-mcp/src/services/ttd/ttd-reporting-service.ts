@@ -79,9 +79,14 @@ export class TtdReportingService {
       "Report schedule created — polling for results"
     );
 
-    // Poll for completion
+    // Poll for completion — reuse advertiser filters from the submitted
+    // config so we do not need a second HTTP call to discover them.
+    const advertiserIds =
+      ((config as unknown) as { AdvertiserFilters?: string[] })
+        .AdvertiserFilters ?? [];
     const execution = await this.pollReportExecution(
       reportScheduleId,
+      advertiserIds,
       context
     );
 
@@ -143,15 +148,20 @@ export class TtdReportingService {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
+    const advertiserIds = await this.getScheduleAdvertiserIds(
+      reportScheduleId,
+      context
+    );
+
     const body = {
-      PartnerIds: [partnerId],
+      AdvertiserIds: advertiserIds,
       ReportScheduleIds: [Number(reportScheduleId)],
       PageStartIndex: 0,
       PageSize: 1,
     };
 
     const result = (await this.httpClient.fetch(
-      "/myreports/reportexecution/query/partners",
+      "/myreports/reportexecution/query/advertisers",
       context,
       {
         method: "POST",
@@ -194,6 +204,31 @@ export class TtdReportingService {
       method: "POST",
       body: JSON.stringify(query),
     });
+  }
+
+  /**
+   * Resolve the AdvertiserFilters of a report schedule so the execution query
+   * endpoint can be scoped without relying on a partner id the auth adapter
+   * may not know (direct-token auth has no partnerId).
+   */
+  private async getScheduleAdvertiserIds(
+    reportScheduleId: string,
+    context?: RequestContext
+  ): Promise<string[]> {
+    const schedule = (await this.getReportSchedule(
+      reportScheduleId,
+      context
+    )) as Record<string, unknown>;
+    const advertiserFilters = schedule.AdvertiserFilters as
+      | string[]
+      | undefined;
+    if (!advertiserFilters || advertiserFilters.length === 0) {
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Report schedule ${reportScheduleId} has no AdvertiserFilters; cannot query execution status via /query/advertisers.`
+      );
+    }
+    return advertiserFilters;
   }
 
   /**
@@ -249,9 +284,16 @@ export class TtdReportingService {
 
   private async pollReportExecution(
     reportScheduleId: string,
+    advertiserIds: string[],
     context?: RequestContext
   ): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
+    if (!advertiserIds || advertiserIds.length === 0) {
+      advertiserIds = await this.getScheduleAdvertiserIds(
+        reportScheduleId,
+        context
+      );
+    }
 
     for (
       let attempt = 0;
@@ -261,13 +303,14 @@ export class TtdReportingService {
       await this.rateLimiter.consume(`ttd:${partnerId}`);
 
       const body = {
-        PartnerIds: [partnerId],
+        AdvertiserIds: advertiserIds,
         ReportScheduleIds: [Number(reportScheduleId)],
+        PageStartIndex: 0,
         PageSize: 1,
       };
 
       const result = (await this.httpClient.fetch(
-        "/myreports/reportexecution/query/partners",
+        "/myreports/reportexecution/query/advertisers",
         context,
         {
           method: "POST",

@@ -39,7 +39,8 @@ function sampleReportConfig(): TtdReportConfig {
     ReportDateRange: "Last7Days",
     ReportDimensions: ["AdvertiserId"],
     ReportMetrics: ["Impressions", "Clicks"],
-  };
+    AdvertiserFilters: ["adv-1"],
+  } as TtdReportConfig;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,11 +104,11 @@ describe("TtdReportingService", () => {
 
       // Second call is the poll
       const [path, , options] = httpClient.fetch.mock.calls[1];
-      expect(path).toBe("/myreports/reportexecution/query/partners");
+      expect(path).toBe("/myreports/reportexecution/query/advertisers");
       expect(options.method).toBe("POST");
       const body = JSON.parse(options.body);
       expect(body.ReportScheduleIds).toHaveLength(1);
-      expect(body.PartnerIds).toHaveLength(1);
+      expect(body.AdvertiserIds).toEqual(["adv-1"]);
       expect(body.PageSize).toBe(1);
     });
 
@@ -363,7 +364,15 @@ describe("TtdReportingService", () => {
   // ==========================================================================
 
   describe("checkReportExecution", () => {
+    // Every check first looks up the schedule to resolve AdvertiserFilters,
+    // then queries execution status.
+    const mockScheduleLookup = () =>
+      httpClient.fetch.mockResolvedValueOnce({
+        AdvertiserFilters: ["adv-1"],
+      });
+
     it("returns Pending state when execution is in progress", async () => {
+      mockScheduleLookup();
       httpClient.fetch.mockResolvedValueOnce({
         Result: [{ ReportExecutionState: "Pending" }],
       });
@@ -376,6 +385,7 @@ describe("TtdReportingService", () => {
     });
 
     it("returns Complete state with downloadUrl when deliveries present", async () => {
+      mockScheduleLookup();
       httpClient.fetch.mockResolvedValueOnce({
         Result: [
           {
@@ -393,6 +403,7 @@ describe("TtdReportingService", () => {
     });
 
     it("returns Failed state", async () => {
+      mockScheduleLookup();
       httpClient.fetch.mockResolvedValueOnce({
         Result: [{ ReportExecutionState: "Failed", ErrorMessage: "bad query" }],
       });
@@ -404,6 +415,7 @@ describe("TtdReportingService", () => {
     });
 
     it("returns Unknown state when no executions found", async () => {
+      mockScheduleLookup();
       httpClient.fetch.mockResolvedValueOnce({ Result: [] });
 
       const result = await service.checkReportExecution("sched-4");
@@ -413,24 +425,27 @@ describe("TtdReportingService", () => {
     });
 
     it("consumes rate limiter once per call", async () => {
+      mockScheduleLookup();
       httpClient.fetch.mockResolvedValueOnce({
         Result: [{ ReportExecutionState: "Pending" }],
       });
 
       await service.checkReportExecution("sched-5");
 
-      expect(rateLimiter.consume).toHaveBeenCalledTimes(1);
+      // Two rate-limiter hits: one for schedule lookup, one for execution query.
+      expect(rateLimiter.consume).toHaveBeenCalledTimes(2);
       expect(rateLimiter.consume).toHaveBeenCalledWith("ttd:test-partner");
     });
 
-    it("makes exactly one HTTP call (no polling)", async () => {
+    it("makes two HTTP calls: schedule lookup + execution query", async () => {
+      mockScheduleLookup();
       httpClient.fetch.mockResolvedValueOnce({
         Result: [{ ReportExecutionState: "Pending" }],
       });
 
       await service.checkReportExecution("sched-6");
 
-      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
     });
   });
 });
