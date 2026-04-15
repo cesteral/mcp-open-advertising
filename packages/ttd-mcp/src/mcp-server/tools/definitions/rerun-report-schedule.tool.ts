@@ -52,8 +52,6 @@ const RERUN_REPORT_SCHEDULE_MUTATION = `mutation RerunReportSchedule($input: MyR
   myReportsReportScheduleCreate(input: $input) {
     data {
       id
-      name
-      status
     }
     errors {
       __typename

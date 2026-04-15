@@ -330,8 +330,6 @@ mutation RerunSchedule($input: MyReportsReportScheduleCreateInput!) {
   myReportsReportScheduleCreate(input: $input) {
     data {
       id
-      name
-      status
     }
     errors {
       __typename
