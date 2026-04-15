@@ -56,27 +56,35 @@ export async function uploadVideoLogic(
     context
   );
 
-  const fields: Record<string, string> = {
-    upload_type: "VIDEO",
-    ad_account_id: input.adAccountId,
-    name: input.name ?? filename,
-  };
+  // Step 1: Create the media entity
+  const createResult = await snapchatService.client.post(
+    `/v1/adaccounts/${input.adAccountId}/media`,
+    {
+      media: [{
+        name: input.name ?? filename,
+        type: "VIDEO",
+        ad_account_id: input.adAccountId,
+      }],
+    },
+    context
+  ) as SnapchatMediaUploadResponse;
 
-  const uploadResult = await snapchatService.client.postMultipart(
-    "/v1/media",
-    fields,
+  const mediaItem = createResult.media?.[0]?.media;
+  const mediaId = mediaItem?.id;
+  if (!mediaId) {
+    throw new Error("Snapchat video upload failed: no media id returned from create step");
+  }
+
+  // Step 2: Upload the binary
+  await snapchatService.client.postMultipart(
+    `/v1/media/${mediaId}/upload`,
+    {},
     "file",
     buffer,
     filename,
     contentType,
     context
-  ) as SnapchatMediaUploadResponse;
-
-  const mediaItem = uploadResult.media?.[0]?.media;
-  const mediaId = mediaItem?.id;
-  if (!mediaId) {
-    throw new Error("Snapchat video upload failed: no media id returned");
-  }
+  );
 
   // Poll for READY status
   const maxAttempts = mcpConfig.snapchatVideoUploadMaxPollAttempts;

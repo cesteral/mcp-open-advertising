@@ -36,7 +36,6 @@ export interface SnapchatEntityConfig {
   displayName: string;
   /** Default fields to include in responses */
   defaultFields: string[];
-  supportsDuplicate?: boolean;
 }
 
 const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
@@ -61,7 +60,6 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
       "start_time",
       "end_time",
     ],
-    supportsDuplicate: true,
   },
   adGroup: {
     listPath: "/v1/campaigns/{campaignId}/adsquads",
@@ -83,7 +81,6 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
       "optimization_goal",
       "placement",
     ],
-    supportsDuplicate: false,
   },
   ad: {
     listPath: "/v1/adsquads/{adSquadId}/ads",
@@ -96,7 +93,6 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
     entityKey: "ad",
     displayName: "Ad",
     defaultFields: ["id", "name", "status", "ad_squad_id", "creative_id", "type"],
-    supportsDuplicate: false,
   },
   creative: {
     listPath: "/v1/adaccounts/{adAccountId}/creatives",
@@ -117,7 +113,6 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
       "headline",
       "call_to_action",
     ],
-    supportsDuplicate: false,
   },
 };
 
@@ -135,17 +130,6 @@ export function getSupportedEntityTypes(): SnapchatEntityType[] {
 
 export function getEntityTypeEnum(): [string, ...string[]] {
   const types = getSupportedEntityTypes();
-  return types as [string, ...string[]];
-}
-
-export function getDuplicateSupportedEntityTypes(): SnapchatEntityType[] {
-  return (Object.entries(ENTITY_CONFIGS) as [SnapchatEntityType, SnapchatEntityConfig][])
-    .filter(([, config]) => config.supportsDuplicate)
-    .map(([type]) => type);
-}
-
-export function getDuplicateEntityTypeEnum(): [string, ...string[]] {
-  const types = getDuplicateSupportedEntityTypes();
   return types as [string, ...string[]];
 }
 

@@ -183,7 +183,6 @@ Snapchat uses cursor-based pagination:
 | \`snapchat_adjust_bids\` | Batch bid adjustment | ✓ |
 | \`snapchat_search_targeting\` | Search targeting options | |
 | \`snapchat_get_targeting_options\` | Browse targeting categories | |
-| \`snapchat_duplicate_entity\` | Duplicate campaigns (not adGroups/ads) | |
 | \`snapchat_get_audience_estimate\` | Audience size estimation | |
 | \`snapchat_get_ad_preview\` | Ad preview data | |
 | \`snapchat_validate_entity\` | Client-side payload validation | |

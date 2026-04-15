@@ -97,9 +97,9 @@ export async function uploadVideoLogic(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);
 
-    const statusResult = await tiktokService.client.post(
+    const statusResult = await tiktokService.client.get(
       tiktokService.client.versionedPath("file/video/ad/info/"),
-      { video_ids: [videoId] },
+      { video_ids: JSON.stringify([videoId]) },
       context
     ) as TikTokVideoInfoResponse;
 

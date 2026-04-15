@@ -45,7 +45,6 @@ const snapchatWorkflowIdByToolName: Record<string, string> = {
   snapchat_search_targeting: "mcp.execute.snapchat_entity_read",
   snapchat_get_targeting_options: "mcp.execute.snapchat_entity_read",
   // Specialized
-  snapchat_duplicate_entity: "mcp.execute.snapchat_entity_update",
   snapchat_get_audience_estimate: "mcp.execute.snapchat_entity_read",
   snapchat_get_ad_preview: "mcp.execute.snapchat_entity_read",
   snapchat_validate_entity: "mcp.execute.snapchat_entity_read",

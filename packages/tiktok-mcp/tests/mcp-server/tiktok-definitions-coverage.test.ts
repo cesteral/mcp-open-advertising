@@ -47,7 +47,8 @@ const tiktokService = {
       }
       return { video_id: "vid-test-123", video_name: "Test Video" };
     }),
-    post: vi.fn(async () => ({
+    post: vi.fn(async () => ({})),
+    get: vi.fn(async () => ({
       list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
     })),
   },

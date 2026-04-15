@@ -36,13 +36,13 @@ const snapchatService = {
   })),
   searchTargeting: vi.fn(async () => ({ results: [{ id: "targeting-1" }] })),
   getTargetingOptions: vi.fn(async () => ({ results: [{ id: "targeting-option-1" }] })),
-  duplicateEntity: vi.fn(async () => ({ id: "copy" })),
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
   getCreativePreview: vi.fn(async () => ({ creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=123" })),
   client: {
-    postMultipart: vi.fn(async () => ({
+    post: vi.fn(async () => ({
       media: [{ media: { id: "media-test-123", media_status: "PENDING" } }],
     })),
+    postMultipart: vi.fn(async () => ({ request_status: "SUCCESS" })),
     get: vi.fn(async () => ({
       media: [{ media: { id: "media-test-123", media_status: "READY" } }],
     })),
@@ -95,10 +95,10 @@ describe("Snapchat MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 29 : 23); // 23 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 28 : 22); // 22 business + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
-    expect(getAllPrompts()).toHaveLength(11);
-    expect(promptRegistry.size).toBe(11);
+    expect(getAllPrompts()).toHaveLength(10);
+    expect(promptRegistry.size).toBe(10);
     expect(getPromptDefinition("snapchat_campaign_setup_workflow")).toBeDefined();
   });
 

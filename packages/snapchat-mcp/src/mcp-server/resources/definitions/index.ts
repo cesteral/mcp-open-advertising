@@ -30,7 +30,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     reporting: ["snapchat_get_report", "snapchat_get_report_breakdowns", "snapchat_submit_report", "snapchat_check_report_status", "snapchat_download_report"],
     bulk: ["snapchat_bulk_update_status", "snapchat_bulk_create_entities", "snapchat_bulk_update_entities", "snapchat_adjust_bids"],
     targeting: ["snapchat_search_targeting", "snapchat_get_targeting_options"],
-    specialized: ["snapchat_duplicate_entity", "snapchat_get_audience_estimate", "snapchat_get_ad_preview"],
+    specialized: ["snapchat_get_audience_estimate", "snapchat_get_ad_preview"],
     validation: ["snapchat_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],

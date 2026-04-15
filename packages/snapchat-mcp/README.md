@@ -208,18 +208,7 @@ Browse available targeting categories.
 
 ### Specialized
 
-#### 18. `snapchat_duplicate_entity`
-
-Duplicate a campaign, ad group, or ad.
-
-**Parameters:**
-
-- `entityType` (string, required): Type of entity to duplicate (`campaign`, `adGroup`, `ad`)
-- `adAccountId` (string, required): Snapchat Advertiser ID
-- `entityId` (string, required): ID of the entity to duplicate
-- `options` (object, optional): Duplication options (e.g., rename prefix/suffix)
-
-#### 19. `snapchat_get_audience_estimate`
+#### 18. `snapchat_get_audience_estimate`
 
 Get estimated audience size for a targeting configuration.
 
@@ -228,7 +217,7 @@ Get estimated audience size for a targeting configuration.
 - `adAccountId` (string, required): Snapchat Advertiser ID
 - `targetingConfig` (object, required): Targeting specification for estimation
 
-#### 20. `snapchat_get_ad_preview`
+#### 19. `snapchat_get_ad_preview`
 
 Get ad preview for video or image ads.
 
@@ -240,7 +229,7 @@ Get ad preview for video or image ads.
 
 ### Validation
 
-#### 21. `snapchat_validate_entity`
+#### 20. `snapchat_validate_entity`
 
 Client-side validation of entity payloads without making API calls.
 

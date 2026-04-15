@@ -327,32 +327,6 @@ export class SnapchatService {
     return { entities, nextCursor };
   }
 
-  // ─── Duplicate ──────────────────────────────────────────────────
-
-  async duplicateEntity(
-    entityType: SnapchatEntityType,
-    entityId: string,
-    options?: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const config = getEntityConfig(entityType);
-
-    if (!config.supportsDuplicate) {
-      throw new McpError(JsonRpcErrorCode.InvalidParams, `Entity type ${entityType} does not support duplication`);
-    }
-
-    await this.rateLimiter.consume(`snapchat:default`, 3);
-
-    // Snapchat copy body: { <responseKey>: [{ id: entityId, ...options }] }
-    const body = { [config.responseKey]: [{ id: entityId, ...options }] };
-    // Interpolate path params then derive copy path
-    const pathParams: Record<string, string> = { adAccountId: this.adAccountId };
-    const interpolatedCreatePath = interpolatePath(config.createPath, pathParams);
-    const copyPath = interpolatedCreatePath.replace(new RegExp(`/${config.responseKey}$`), `/${config.responseKey}/copy`);
-
-    return this.httpClient.post(copyPath, body, context);
-  }
-
   // ─── Bid Adjustment ─────────────────────────────────────────────
 
   async adjustBids(

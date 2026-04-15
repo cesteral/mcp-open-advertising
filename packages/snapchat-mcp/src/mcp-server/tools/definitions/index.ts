@@ -4,14 +4,14 @@
 /**
  * Tool definitions barrel export
  *
- * 23 tools total:
+ * 22 tools total:
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
  *   3 bulk: bulk update status, bulk create entities, bulk update entities
  *   1 bids: adjust bids
  *   2 targeting: search targeting, get targeting options
- *   3 specialized: duplicate entity, get audience estimate, get ad preview
+ *   2 specialized: get audience estimate, get ad preview
  *   1 validation: validate entity (client-side)
  *   2 media: upload image, upload video
  */
@@ -33,7 +33,6 @@ export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { searchTargetingTool } from "./search-targeting.tool.js";
 export { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
-export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
@@ -57,7 +56,6 @@ import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { searchTargetingTool } from "./search-targeting.tool.js";
 import { getTargetingOptionsTool } from "./get-targeting-options.tool.js";
-import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getAudienceEstimateTool } from "./get-audience-estimate.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
@@ -90,7 +88,6 @@ const productionTools: ToolDefinitionForFactory[] = [
   searchTargetingTool,
   getTargetingOptionsTool,
   // ── Specialized ──
-  duplicateEntityTool,
   getAudienceEstimateTool,
   getAdPreviewTool,
   // ── Validation ──

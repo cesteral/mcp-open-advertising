@@ -74,7 +74,6 @@ Fetch these resources for detailed schema information:
 - \`snapchat_get_targeting_options\` — Browse targeting categories
 
 ### Specialized
-- \`snapchat_duplicate_entity\` — Copy campaigns, ad groups, ads
 - \`snapchat_get_audience_estimate\` — Audience size estimation
 - \`snapchat_get_ad_preview\` — Ad preview for video/image ads
 
@@ -88,7 +87,6 @@ Fetch these resources for detailed schema information:
 | Create a full campaign structure | \`snapchat_campaign_setup_workflow\` |
 | Research audiences & build targeting | \`snapchat_targeting_discovery_workflow\` |
 | Update entities safely | \`snapchat_entity_update_workflow\` |
-| Duplicate campaigns/ad groups/ads | \`snapchat_entity_duplication_workflow\` |
 | Bulk create/update/status/bids | \`snapchat_bulk_operations_workflow\` |
 | Async reporting & breakdowns | \`snapchat_reporting_workflow\` |
 | Troubleshoot entity issues | \`snapchat_troubleshoot_entity\` |

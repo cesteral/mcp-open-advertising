@@ -35,10 +35,6 @@ import {
   getSnapchatTargetingDiscoveryWorkflowMessage,
 } from "./definitions/targeting-discovery-workflow.prompt.js";
 import {
-  snapchatEntityDuplicationWorkflowPrompt,
-  getSnapchatEntityDuplicationWorkflowMessage,
-} from "./definitions/entity-duplication-workflow.prompt.js";
-import {
   crossPlatformPerformancePrompt,
   getCrossPlatformPerformanceMessage,
 } from "./definitions/cross-platform-performance.prompt.js";
@@ -104,13 +100,6 @@ export const promptRegistry: Map<string, PromptDefinition> = new Map([
     {
       prompt: snapchatTargetingDiscoveryWorkflowPrompt,
       generateMessage: getSnapchatTargetingDiscoveryWorkflowMessage,
-    },
-  ],
-  [
-    snapchatEntityDuplicationWorkflowPrompt.name,
-    {
-      prompt: snapchatEntityDuplicationWorkflowPrompt,
-      generateMessage: getSnapchatEntityDuplicationWorkflowMessage,
     },
   ],
   [

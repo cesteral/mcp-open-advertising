@@ -6,7 +6,8 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import type { SnapchatMediaUploadResponse } from "../utils/media-types.js";
+import type { SnapchatMediaUploadResponse, SnapchatMediaGetResponse } from "../utils/media-types.js";
+import { mcpConfig } from "../../../config/index.js";
 
 const TOOL_NAME = "snapchat_upload_image";
 const TOOL_TITLE = "Upload Image to Snapchat Ads";
@@ -37,6 +38,10 @@ export const UploadImageOutputSchema = z.object({
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function uploadImageLogic(
   input: UploadImageInput,
   context: RequestContext,
@@ -50,33 +55,61 @@ export async function uploadImageLogic(
     context
   );
 
-  const fields: Record<string, string> = {
-    upload_type: "IMAGE",
-    ad_account_id: input.adAccountId,
-    name: input.name ?? filename,
-  };
+  // Step 1: Create the media entity
+  const createResult = await snapchatService.client.post(
+    `/v1/adaccounts/${input.adAccountId}/media`,
+    {
+      media: [{
+        name: input.name ?? filename,
+        type: "IMAGE",
+        ad_account_id: input.adAccountId,
+      }],
+    },
+    context
+  ) as SnapchatMediaUploadResponse;
 
-  const result = await snapchatService.client.postMultipart(
-    "/v1/media",
-    fields,
+  const createdItem = createResult.media?.[0]?.media;
+  const mediaId = createdItem?.id;
+  if (!mediaId) {
+    throw new Error("Snapchat image upload failed: no media id returned from create step");
+  }
+
+  // Step 2: Upload the binary
+  await snapchatService.client.postMultipart(
+    `/v1/media/${mediaId}/upload`,
+    {},
     "file",
     buffer,
     filename,
     contentType,
     context
-  ) as SnapchatMediaUploadResponse;
+  );
 
-  const mediaItem = result.media?.[0]?.media;
-  const mediaId = mediaItem?.id;
-  if (!mediaId) {
-    throw new Error("Snapchat image upload failed: no media id returned");
+  // Step 3: Poll for READY status
+  const maxAttempts = mcpConfig.snapchatVideoUploadMaxPollAttempts;
+  const pollIntervalMs = mcpConfig.snapchatVideoUploadPollIntervalMs;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    await sleep(pollIntervalMs);
+
+    const statusResult = await snapchatService.client.get(
+      `/v1/media/${mediaId}`,
+      undefined,
+      context
+    ) as SnapchatMediaGetResponse;
+
+    const mediaStatus = statusResult.media?.[0]?.media?.media_status ?? "PENDING";
+
+    if (mediaStatus === "READY") {
+      return { mediaId, mediaStatus, uploadedAt: new Date().toISOString() };
+    }
+
+    if (mediaStatus === "FAILED") {
+      throw new Error(`Snapchat image processing failed: status=${mediaStatus}`);
+    }
   }
 
-  return {
-    mediaId,
-    mediaStatus: mediaItem?.media_status,
-    uploadedAt: new Date().toISOString(),
-  };
+  return { mediaId, uploadedAt: new Date().toISOString() };
 }
 
 export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
