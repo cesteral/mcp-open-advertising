@@ -26,7 +26,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     reporting: ["msads_get_report", "msads_submit_report", "msads_check_report_status", "msads_download_report"],
     bulk: ["msads_bulk_create_entities", "msads_bulk_update_entities", "msads_bulk_update_status", "msads_adjust_bids"],
     targeting: ["msads_manage_criterions", "msads_manage_ad_extensions"],
-    specialized: ["msads_get_ad_preview", "msads_import_from_google"],
+    specialized: ["msads_get_ad_details", "msads_import_from_google"],
     validation: ["msads_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "google_import"],

@@ -18,7 +18,7 @@ import { bulkUpdateStatusTool } from "./bulk-update-status.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { manageAdExtensionsTool } from "./manage-ad-extensions.tool.js";
 import { manageCriterionsTool } from "./manage-criterions.tool.js";
-import { getAdPreviewTool } from "./get-ad-preview.tool.js";
+import { getAdDetailsTool } from "./get-ad-details.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { importFromGoogleTool } from "./import-from-google.tool.js";
 import { searchTargetingTool } from "./search-targeting.tool.js";
@@ -44,7 +44,7 @@ export const productionTools = [
   adjustBidsTool,
   manageAdExtensionsTool,
   manageCriterionsTool,
-  getAdPreviewTool,
+  getAdDetailsTool,
   validateEntityTool,
   importFromGoogleTool,
   searchTargetingTool,

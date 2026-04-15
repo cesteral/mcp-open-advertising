@@ -47,7 +47,7 @@ const msadsWorkflowIdByToolName: Record<string, string> = {
   msads_manage_ad_extensions: "mcp.execute.msads_entity_update",
   msads_manage_criterions: "mcp.execute.msads_entity_update",
   // Specialized
-  msads_get_ad_preview: "mcp.execute.msads_entity_read",
+  msads_get_ad_details: "mcp.execute.msads_entity_read",
   msads_validate_entity: "mcp.execute.msads_entity_read",
   msads_import_from_google: "mcp.execute.msads_entity_update",
 };

@@ -58,7 +58,7 @@ through the Model Context Protocol.
 | `msads_manage_ad_extensions` | Manage ad extensions (sitelinks, callouts, etc.) |
 | `msads_manage_criterions` | Manage targeting criterions |
 | `msads_search_targeting` | Search available targeting options |
-| `msads_get_ad_preview` | Get ad preview |
+| `msads_get_ad_details` | Get stored ad details (copy, URLs, status) |
 | `msads_validate_entity` | Validate entity payload |
 | `msads_import_from_google` | Import campaigns from Google Ads |
 

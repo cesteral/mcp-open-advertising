@@ -5,37 +5,37 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
-const TOOL_NAME = "msads_get_ad_preview";
-const TOOL_TITLE = "Get Microsoft Ads Ad Preview";
-const TOOL_DESCRIPTION = `Get a preview of a Microsoft Advertising ad by retrieving its full details including ad copy, URLs, and extensions.`;
+const TOOL_NAME = "msads_get_ad_details";
+const TOOL_TITLE = "Get Microsoft Ads Ad Details";
+const TOOL_DESCRIPTION = `Get the full details of one or more Microsoft Advertising ads — copy, URLs, status, and other fields. Microsoft Advertising does not expose a rendered ad-preview endpoint; this tool returns the stored ad payload via the CampaignManagement /Ads/QueryByIds operation.`;
 
-export const GetAdPreviewInputSchema = z
+export const GetAdDetailsInputSchema = z
   .object({
     adIds: z
       .array(z.string())
       .min(1)
-      .describe("Ad IDs to preview"),
+      .describe("Ad IDs to retrieve"),
     adGroupId: z
       .string()
       .describe("Ad Group ID containing the ads"),
   })
-  .describe("Parameters for getting ad previews");
+  .describe("Parameters for getting ad details");
 
-export const GetAdPreviewOutputSchema = z
+export const GetAdDetailsOutputSchema = z
   .object({
     ads: z.array(z.record(z.any())),
     timestamp: z.string().datetime(),
   })
-  .describe("Ad preview result");
+  .describe("Ad details result");
 
-type GetAdPreviewInput = z.infer<typeof GetAdPreviewInputSchema>;
-type GetAdPreviewOutput = z.infer<typeof GetAdPreviewOutputSchema>;
+type GetAdDetailsInput = z.infer<typeof GetAdDetailsInputSchema>;
+type GetAdDetailsOutput = z.infer<typeof GetAdDetailsOutputSchema>;
 
-export async function getAdPreviewLogic(
-  input: GetAdPreviewInput,
+export async function getAdDetailsLogic(
+  input: GetAdDetailsInput,
   context: RequestContext,
   sdkContext?: SdkContext
-): Promise<GetAdPreviewOutput> {
+): Promise<GetAdDetailsOutput> {
   const { msadsService } = resolveSessionServices(sdkContext);
 
   const result = (await msadsService.executeReadOperation(
@@ -56,12 +56,12 @@ export async function getAdPreviewLogic(
   };
 }
 
-export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTextContent[] {
+export function getAdDetailsResponseFormatter(result: GetAdDetailsOutput): McpTextContent[] {
   if (result.ads.length === 0) {
     return [{ type: "text" as const, text: "No ads found for the given IDs." }];
   }
 
-  const previews = result.ads.map((ad: Record<string, unknown>) => {
+  const details = result.ads.map((ad: Record<string, unknown>) => {
     const lines = [
       `Ad ID: ${ad.Id}`,
       `Type: ${ad.Type ?? "Unknown"}`,
@@ -80,17 +80,17 @@ export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTe
   return [
     {
       type: "text" as const,
-      text: `Ad Previews:\n\n${previews.join("\n\n---\n\n")}\n\nTimestamp: ${result.timestamp}`,
+      text: `Ad Details:\n\n${details.join("\n\n---\n\n")}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
 
-export const getAdPreviewTool = {
+export const getAdDetailsTool = {
   name: TOOL_NAME,
   title: TOOL_TITLE,
   description: TOOL_DESCRIPTION,
-  inputSchema: GetAdPreviewInputSchema,
-  outputSchema: GetAdPreviewOutputSchema,
+  inputSchema: GetAdDetailsInputSchema,
+  outputSchema: GetAdDetailsOutputSchema,
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
@@ -99,10 +99,10 @@ export const getAdPreviewTool = {
   },
   inputExamples: [
     {
-      label: "Preview ads",
+      label: "Get ad details",
       input: { adIds: ["111", "222"], adGroupId: "333" },
     },
   ],
-  logic: getAdPreviewLogic,
-  responseFormatter: getAdPreviewResponseFormatter,
+  logic: getAdDetailsLogic,
+  responseFormatter: getAdDetailsResponseFormatter,
 };

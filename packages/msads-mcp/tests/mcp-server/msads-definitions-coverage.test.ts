@@ -47,7 +47,7 @@ describe("msads-mcp tool definitions coverage", () => {
       "msads_get_report",
       "msads_check_report_status",
       "msads_download_report",
-      "msads_get_ad_preview",
+      "msads_get_ad_details",
       "msads_validate_entity",
       "msads_search_targeting",
     ];

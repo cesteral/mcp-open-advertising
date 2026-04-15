@@ -48,7 +48,7 @@ describe("msads-mcp cross-server contract", () => {
       "msads_adjust_bids",
       "msads_manage_ad_extensions",
       "msads_manage_criterions",
-      "msads_get_ad_preview",
+      "msads_get_ad_details",
       "msads_validate_entity",
       "msads_import_from_google",
       "msads_search_targeting",
