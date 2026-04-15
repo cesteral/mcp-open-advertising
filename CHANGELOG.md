@@ -28,6 +28,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) (
 
 ### Fixed
 
+- **tiktok-mcp** — Video upload polling now calls `GET /open_api/v1.3/file/video/ad/info/` (previously `POST`), matching TikTok's current v1.3 File API spec.
 - Pre-deploy drift and config alignment across fleet (registry tool counts, `server.json` hostnames, `amazon-dsp` port).
 
 ### Removed
