@@ -146,6 +146,7 @@ export class TtdReportingService {
     const body = {
       PartnerIds: [partnerId],
       ReportScheduleIds: [Number(reportScheduleId)],
+      PageStartIndex: 0,
       PageSize: 1,
     };
 
