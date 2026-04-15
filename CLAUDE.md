@@ -16,7 +16,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 25 |
 | 3 | `ttd-mcp` | 3003 | TTD REST + GraphQL API | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed | 55 |
 | 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 15 |
-| 5 | `meta-mcp` | 3005 | Meta Marketing API v24.0 | campaign, adSet, ad, adCreative, customAudience | 25 |
+| 5 | `meta-mcp` | 3005 | Meta Marketing API v25.0 | campaign, adSet, ad, adCreative, customAudience | 25 |
 | 6 | `linkedin-mcp` | 3006 | LinkedIn Marketing API v2 | adAccount, campaignGroup, campaign, creative, conversionRule | 20 |
 | 7 | `tiktok-mcp` | 3007 | TikTok Marketing API v1.3 | campaign, adGroup, ad, creative | 23 |
 | 8 | `cm360-mcp` | 3008 | CM360 API v5 | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 20 |

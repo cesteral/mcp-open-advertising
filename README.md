@@ -63,7 +63,7 @@ Google Ads REST API v23.
 ### <img src="docs/logos/meta.svg" width="20" height="20" alt="Meta"> Meta Ads MCP
 
 Campaign writes, insights, targeting discovery, delivery estimates, previews, and
-bulk operations via Meta Marketing API v22.0.
+bulk operations via Meta Marketing API v25.0.
 
 [Package docs](packages/meta-mcp) | [Use with Cesteral Intelligence](https://cesteral.com/integrations/meta-ads?utm_source=github&utm_medium=readme&utm_campaign=meta-mcp)
 
@@ -93,7 +93,7 @@ validation via DV360 API v4.
 | Server | Platform | Tools | Auth |
 |--------|----------|-------|------|
 | [gads-mcp](packages/gads-mcp) | Google Ads REST API v23 | 15 | OAuth2 refresh token |
-| [meta-mcp](packages/meta-mcp) | Meta Marketing API v24.0 | 25 | Bearer token |
+| [meta-mcp](packages/meta-mcp) | Meta Marketing API v25.0 | 25 | Bearer token |
 | [dv360-mcp](packages/dv360-mcp) | DV360 API v4 | 25 | Google OAuth2 / service account |
 | [ttd-mcp](packages/ttd-mcp) | The Trade Desk REST + GraphQL API | 55 | Partner ID + API secret |
 | [linkedin-mcp](packages/linkedin-mcp) | LinkedIn Marketing API v2 | 20 | Bearer token |
