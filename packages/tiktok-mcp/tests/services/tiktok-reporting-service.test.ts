@@ -182,6 +182,7 @@ describe("TikTokReportingService", () => {
 
     expect(getReportSpy).toHaveBeenCalledWith(
       expect.objectContaining({ dimensions: ["campaign_id", "country"] }),
+      expect.any(Number),
       undefined
     );
     expect(result.taskId).toBe("task-bd");

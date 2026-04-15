@@ -181,6 +181,7 @@ describe("SnapchatReportingService", () => {
 
     expect(getReportSpy).toHaveBeenCalledWith(
       expect.objectContaining({ fields: ["impressions", "swipes"] }),
+      expect.any(Number),
       undefined
     );
     expect(result.taskId).toBe("rpt-bd");

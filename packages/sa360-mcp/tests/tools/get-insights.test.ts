@@ -78,13 +78,15 @@ describe("GetInsightsInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("defaults limit to 50", () => {
+  it("defaults mode to summary and leaves limit/maxRows unset", () => {
     const result = GetInsightsInputSchema.parse({
       customerId: "1234567890",
       entityType: "campaign",
       dateRange: "LAST_30_DAYS",
     });
-    expect(result.limit).toBe(50);
+    expect(result.mode).toBe("summary");
+    expect(result.limit).toBeUndefined();
+    expect(result.maxRows).toBeUndefined();
   });
 
   it("requires numeric customerId", () => {

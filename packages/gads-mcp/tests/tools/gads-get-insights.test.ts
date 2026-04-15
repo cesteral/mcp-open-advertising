@@ -227,10 +227,11 @@ describe("gads_get_insights", () => {
       { sessionId: "test-session" } as any
     );
 
-    expect(output.results[0]).toHaveProperty("computedMetrics");
-    expect(output.results[0].computedMetrics.cpa).toBe(0.5);
-    expect(output.results[0].computedMetrics.roas).toBe(20);
-    expect(output.results[0].computedMetrics.cpm).toBe(5);
+    const firstRow = output.previewRows?.[0] as any;
+    expect(firstRow).toHaveProperty("computedMetrics");
+    expect(firstRow.computedMetrics.cpa).toBe(0.5);
+    expect(firstRow.computedMetrics.roas).toBe(20);
+    expect(firstRow.computedMetrics.cpm).toBe(5);
   });
 
   it("does not add computedMetrics when includeComputedMetrics=false", async () => {
@@ -255,7 +256,7 @@ describe("gads_get_insights", () => {
       { sessionId: "test-session" } as any
     );
 
-    expect(output.results[0]).not.toHaveProperty("computedMetrics");
+    expect(output.previewRows?.[0]).not.toHaveProperty("computedMetrics");
   });
 
   it("uses BETWEEN clause for custom date range", async () => {

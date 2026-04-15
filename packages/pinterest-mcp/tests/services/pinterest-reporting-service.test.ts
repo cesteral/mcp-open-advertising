@@ -233,6 +233,7 @@ describe("PinterestReportingService", () => {
 
     expect(getReportSpy).toHaveBeenCalledWith(
       expect.objectContaining({ columns: ["IMPRESSION_1", "SPEND_IN_DOLLAR"] }),
+      expect.any(Number),
       undefined
     );
     expect(result.taskId).toBe("token-bd");

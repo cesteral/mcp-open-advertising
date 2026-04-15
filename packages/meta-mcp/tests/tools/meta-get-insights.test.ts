@@ -64,9 +64,11 @@ describe("getInsightsLogic", () => {
       createMockSdkContext()
     );
 
-    expect(result.data).toHaveLength(1);
-    expect(result.data[0]).toEqual({ impressions: "100", clicks: "10", spend: "5.00" });
+    expect(result.mode).toBe("summary");
+    expect(result.previewRows).toHaveLength(1);
+    expect(result.previewRows?.[0]).toEqual({ impressions: "100", clicks: "10", spend: "5.00" });
     expect(result.totalCount).toBe(1);
+    expect(result.returnedRows).toBe(1);
     expect(result.summary).toEqual({ impressions: "100" });
     expect(result.nextCursor).toBeUndefined();
     expect(result.timestamp).toBeDefined();
@@ -144,54 +146,51 @@ describe("getInsightsLogic", () => {
 });
 
 describe("getInsightsResponseFormatter", () => {
-  it("shows insight row count", () => {
-    const result = {
-      data: [{ impressions: "100" }],
+  function baseResult(overrides: Partial<any> = {}) {
+    return {
+      totalRows: 1,
+      returnedRows: 1,
+      truncated: false,
+      nextOffset: null,
+      headers: ["impressions"],
+      selectedColumns: ["impressions"],
+      mode: "summary" as const,
+      previewRows: [{ impressions: "100" }],
+      warnings: [],
       totalCount: 1,
+      has_more: false,
       timestamp: new Date().toISOString(),
+      ...overrides,
     };
+  }
 
-    const content = getInsightsResponseFormatter(result);
+  it("shows insight row count", () => {
+    const content = getInsightsResponseFormatter(baseResult());
 
     expect(content).toHaveLength(1);
     expect((content[0] as any).type).toBe("text");
     expect((content[0] as any).text).toContain("Retrieved 1 insight row(s)");
   });
 
-  it("shows 'No data available' when empty", () => {
-    const result = {
-      data: [],
-      totalCount: 0,
-      timestamp: new Date().toISOString(),
-    };
+  it("shows zero-row summary when empty", () => {
+    const content = getInsightsResponseFormatter(
+      baseResult({ totalRows: 0, returnedRows: 0, previewRows: [], totalCount: 0 })
+    );
 
-    const content = getInsightsResponseFormatter(result);
-
-    expect((content[0] as any).text).toContain("No data available for the specified period");
+    expect((content[0] as any).text).toContain("Retrieved 0 insight row(s)");
   });
 
   it("shows cursor when present", () => {
-    const result = {
-      data: [{ impressions: "100" }],
-      nextCursor: "next_cursor_123",
-      totalCount: 1,
-      timestamp: new Date().toISOString(),
-    };
-
-    const content = getInsightsResponseFormatter(result);
+    const content = getInsightsResponseFormatter(
+      baseResult({ nextCursor: "next_cursor_123", has_more: true })
+    );
 
     expect((content[0] as any).text).toContain("More results available");
     expect((content[0] as any).text).toContain("next_cursor_123");
   });
 
   it("does not show pagination info when no cursor", () => {
-    const result = {
-      data: [{ impressions: "100" }],
-      totalCount: 1,
-      timestamp: new Date().toISOString(),
-    };
-
-    const content = getInsightsResponseFormatter(result);
+    const content = getInsightsResponseFormatter(baseResult());
 
     expect((content[0] as any).text).not.toContain("More results available");
   });

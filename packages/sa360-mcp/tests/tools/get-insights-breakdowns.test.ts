@@ -53,9 +53,11 @@ describe("GetInsightsBreakdownsInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("defaults limit to 100", () => {
+  it("defaults mode to summary and leaves limit/maxRows unset", () => {
     const result = GetInsightsBreakdownsInputSchema.parse(validInput);
-    expect(result.limit).toBe(100);
+    expect(result.mode).toBe("summary");
+    expect(result.limit).toBeUndefined();
+    expect(result.maxRows).toBeUndefined();
   });
 
   it("requires at least one breakdown", () => {
