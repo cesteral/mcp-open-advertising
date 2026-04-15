@@ -72,7 +72,7 @@ export class TtdReportingService {
       }
     )) as Record<string, unknown>;
 
-    const reportScheduleId = schedule.ReportScheduleId as string;
+    const reportScheduleId = String(schedule.ReportScheduleId);
 
     this.logger.info(
       { reportScheduleId, requestId: context?.requestId },
@@ -117,7 +117,7 @@ export class TtdReportingService {
       }
     )) as Record<string, unknown>;
 
-    const reportScheduleId = schedule.ReportScheduleId as string;
+    const reportScheduleId = String(schedule.ReportScheduleId);
 
     this.logger.info(
       { reportScheduleId, requestId: context?.requestId },
