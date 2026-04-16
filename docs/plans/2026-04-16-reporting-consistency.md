@@ -1094,29 +1094,48 @@ Commit messages:
 - `refactor(cm360-mcp): normalize schedule list/get to ReportScheduleSummarySchema`
 - `refactor(msads-mcp): normalize schedule list/get to ReportScheduleSummarySchema`
 
-#### Task 3C.2: `meta_{create,list,delete}_report_schedule`
+#### Task 3C.2: `meta_{create,list,delete}_report_schedule` — **DEFERRED (no native API)**
 
-**Files:**
-- Create: `packages/meta-mcp/src/services/report-schedule-service.ts`
-- Create: `packages/meta-mcp/src/mcp-server/tools/definitions/{create,list,delete}-report-schedule.tool.ts`
-- Modify: `packages/meta-mcp/src/mcp-server/tools/index.ts`
-- Create: `packages/meta-mcp/tests/report-schedules.test.ts`
+**Status (2026-04-16):** Deferred during Phase 3 execution.
 
-**Step 1:** Fixture test covers create → list → delete cycle; asserts `ReportScheduleSummarySchema` on list/get; asserts `ReportingError` with `upstreamCode: 100` on "not entitled" path.
+The Meta Marketing API does not expose a public "report schedule" CRUD
+surface. Meta's "Custom Exports" feature in Ads Manager supports recurrence
+in the UI but has no documented create/list/delete endpoints. Any
+implementation built now would be either (a) a speculative stub against a
+non-existent endpoint, (b) an in-process cron that re-invokes
+`meta_submit_report` — which breaks the stateless Cloud Run model and is not
+"native scheduling," or (c) a surface-only tool that always returns a
+`ReportingError` with an "entitlement required" message.
 
-**Step 2:** FAIL.
+**Revisit when:** Meta ships a public schedule CRUD endpoint, or an internal
+Cesteral policy decision chooses one of (b)/(c) as an acceptable trade-off.
 
-**Step 3:** Implement service against Meta async reports + custom exports endpoint; gate on entitlement via `mapReportingError(err, "meta")`.
+#### Task 3C.3: `sa360_{create,list,delete}_report_schedule` — **DEFERRED (no native API)**
 
-**Step 4:** PASS.
+**Status (2026-04-16):** Deferred during Phase 3 execution.
 
-**Step 5:** Commit: `feat(meta-mcp): add meta report schedule CRUD tools`
+Neither the SA360 Reporting API v0 (GAQL, one-shot queries) nor the SA360 v2
+legacy API (`Reports.request()`, one-shot async reports used in this repo
+for conversion upload) exposes a recurring-schedule resource. The plan
+originally referenced "SA360 v2 recurring report endpoints," but those
+endpoints do not exist — v2 reports are single-run submissions.
 
-#### Task 3C.3: `sa360_{create,list,delete}_report_schedule`
+**Revisit when:** Google ships schedule CRUD in the Reporting API v0, or a
+policy decision chooses a server-side cron fallback.
 
-Same structure against SA360 v2 recurring report endpoints.
+#### Canonical `ReportScheduleSummarySchema` coverage (as-of Phase 3)
 
-Commit: `feat(sa360-mcp): add sa360 report schedule CRUD tools`
+Even without 3C.2 / 3C.3, the canonical shape introduced in Task 3C.0 is
+still load-bearing — three platforms have real list/get schedule surfaces
+that now return `ReportScheduleSummary`:
+
+- `ttd-mcp` (3C.1a)
+- `cm360-mcp` (3C.1b) — list only; CM360 has no singular get tool
+- `msads-mcp` (3C.1c) — documentation-only; MSADS offers no list endpoint
+
+Meta and SA360 will slot into the same canonical shape via `fromMetaSchedule`
+/ `fromSa360Schedule` normalizers once their respective APIs expose a
+schedule resource.
 
 ---
 
@@ -1126,6 +1145,17 @@ Commit: `feat(sa360-mcp): add sa360 report schedule CRUD tools`
 
 **Step 1:** Run `pnpm run build && pnpm run typecheck && pnpm run test`. PASS.
 **Step 2:** Manually smoke-test (via `curl` MCP ping) that each new tool registers. Done when all Phase 3 tasks are green on `main`.
+
+**Phase 3 final scope (executed 2026-04-16):**
+- Track 3A — 6/6 tasks delivered (shared factory + 5 servers expose raw CSVs via `report-csv://{id}`).
+- Track 3B — 2/2 tasks delivered (Meta + SA360 discovery tools).
+- Track 3C — 4/6 tasks delivered (shared `ReportScheduleSummarySchema` + 3
+  normalize-list/get migrations). Tasks 3C.2 and 3C.3 deferred with API-
+  constraint notes above.
+- Phase 3 gate — pending.
+
+**Total: 12/15 Phase 3 tasks landed. Remaining 3 tasks are blocked on
+upstream platform APIs, not on internal work.**
 
 ---
 
