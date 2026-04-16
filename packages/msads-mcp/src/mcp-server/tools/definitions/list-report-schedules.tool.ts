@@ -11,6 +11,8 @@ const TOOL_DESCRIPTION = `List scheduled reports in Microsoft Advertising.
 
 Note: The Microsoft Advertising API v13 JSON endpoints do not provide an endpoint to programmatically list all scheduled reports. This tool returns guidance on how to find existing schedules.
 
+If Microsoft Advertising exposed such an endpoint, this tool would return an array of canonical \`ReportScheduleSummary\` entries (the same cross-platform shape used by \`ttd_list_report_schedules\` and \`cm360_list_report_schedules\`), mapped via the shared \`fromMsAdsSchedule\` normalizer, with the raw Microsoft Advertising envelopes preserved on a sibling \`raw\` field for platform-specific debugging.
+
 To view scheduled reports: visit app.ads.microsoft.com → Reports → Scheduled Reports.
 To manage schedules programmatically, track the scheduleIds returned by msads_create_report_schedule.`;
 
