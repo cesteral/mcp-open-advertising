@@ -13,10 +13,9 @@ import {
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
   DEFAULT_REPORT_MAX_SIZE_BYTES,
   DEFAULT_REPORT_MAX_ROWS,
-  REPORT_POLL_WARNING_THRESHOLD,
-  delay,
-  parseCsvLine,
-  computeExponentialBackoff,
+  parseCSV,
+  pollUntilComplete,
+  ReportFailedError,
   type RequestContext,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
@@ -60,8 +59,6 @@ export interface AmazonDspReportConfig {
  * 3. GET url (presigned) to retrieve report data
  */
 export class AmazonDspReportingService {
-  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
-
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: AmazonDspHttpClient,
@@ -121,36 +118,29 @@ export class AmazonDspReportingService {
       .replace("{accountId}", encodeURIComponent(accountId))
       .replace("{reportId}", encodeURIComponent(taskId));
 
-    for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
-      await this.rateLimiter.consume(`amazon_dsp:reporting`);
-
-      const result = (await this.httpClient.get(
-        path,
-        undefined,
-        context,
-        AMAZON_DSP_REPORTING_CONTRACT.statusAcceptMediaType
-      )) as ReportTaskCheckData;
-
-      if (result.status === "COMPLETED" || result.status === "FAILED") {
-        this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
-        return result;
+    try {
+      return await pollUntilComplete<ReportTaskCheckData>({
+        fetchStatus: async () => {
+          await this.rateLimiter.consume(`amazon_dsp:reporting`);
+          return (await this.httpClient.get(
+            path,
+            undefined,
+            context,
+            AMAZON_DSP_REPORTING_CONTRACT.statusAcceptMediaType
+          )) as ReportTaskCheckData;
+        },
+        isComplete: (r) => r.status === "COMPLETED",
+        isFailed: (r) => r.status === "FAILED",
+        initialDelayMs: this.pollIntervalMs,
+        maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
+        maxAttempts: this.maxPollAttempts,
+      });
+    } catch (err) {
+      if (err instanceof ReportFailedError) {
+        return err.status as ReportTaskCheckData;
       }
-
-      const attemptsRemaining = this.maxPollAttempts - attempt - 1;
-      if (attemptsRemaining <= REPORT_POLL_WARNING_THRESHOLD) {
-        this.logger.warn({ taskId, attemptsRemaining, status: result.status }, "Report poll nearing attempt limit");
-      } else {
-        this.logger.debug({ taskId, attempt, status: result.status }, "Report still pending, waiting");
-      }
-
-      // Wait before next poll (exponential backoff)
-      await delay(computeExponentialBackoff(attempt, this.pollIntervalMs, AmazonDspReportingService.MAX_BACKOFF_MS));
+      throw err;
     }
-
-    throw new McpError(
-      JsonRpcErrorCode.Timeout,
-      `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
-    );
   }
 
   /**
@@ -229,16 +219,17 @@ export class AmazonDspReportingService {
       return { rows, headers, totalRows };
     }
 
-    // CSV/TSV fallback
-    const lines = text.replace(/\r\n/g, "\n").trim().split("\n");
-    if (lines.length === 0) {
+    // CSV/TSV fallback via shared parseCSV
+    if (text.replace(/^\uFEFF/, "").trim() === "") {
       return { rows: [], headers: [], totalRows: 0 };
     }
-    const headers = parseCsvLine(lines[0]);
-    const dataLines = lines.slice(1);
-    const limitedLines = dataLines.slice(0, maxRows);
-    const rows = limitedLines.map(parseCsvLine);
-    return { rows, headers, totalRows: dataLines.length };
+    const { headers, rows: recordRows } = parseCSV(text);
+    if (headers.length === 0 && recordRows.length === 0) {
+      return { rows: [], headers: [], totalRows: 0 };
+    }
+    const limited = recordRows.slice(0, maxRows);
+    const rows = limited.map((record) => headers.map((h) => record[h] ?? ""));
+    return { rows, headers, totalRows: recordRows.length };
   }
 
   /**
