@@ -183,12 +183,17 @@ export class SnapchatReportingService {
 
   /**
    * Download a report CSV from a URL.
+   *
+   * When `includeRawCsv` is true, the original (BOM-stripped, LF-only) CSV
+   * body is returned alongside the parsed rows so callers can persist it
+   * via `ReportCsvStore`.
    */
   async downloadReport(
     downloadUrl: string,
     maxRows = DEFAULT_REPORT_MAX_ROWS,
-    context?: RequestContext
-  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number }> {
+    context?: RequestContext,
+    options: { includeRawCsv?: boolean } = {}
+  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
     const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
@@ -207,13 +212,24 @@ export class SnapchatReportingService {
     }
 
     const csvText = await response.text();
-    if (csvText.replace(/^\uFEFF/, "").trim() === "") {
-      return { rows: [], headers: [], totalRows: 0 };
+    const normalizedCsvText = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
+    if (normalizedCsvText === "") {
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: "" } : {}),
+      };
     }
-    const { headers, rows } = parseCSV(csvText);
+    const { headers, rows } = parseCSV(normalizedCsvText);
 
     if (headers.length === 0 && rows.length === 0) {
-      return { rows: [], headers: [], totalRows: 0 };
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
+      };
     }
 
     const limited = rows.slice(0, maxRows);
@@ -225,6 +241,7 @@ export class SnapchatReportingService {
       rows: rowArrays,
       headers,
       totalRows: rows.length,
+      ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
     };
   }
 

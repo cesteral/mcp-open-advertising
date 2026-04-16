@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { SnapchatAuthAdapter } from "../auth/snapchat-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { SessionServiceStore } from "@cesteral/shared";
+import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { SnapchatHttpClient } from "./snapchat/snapchat-http-client.js";
 import { SnapchatService } from "./snapchat/snapchat-service.js";
@@ -54,3 +54,10 @@ export function createSessionServices(
 }
 
 export const sessionServiceStore = new SessionServiceStore<SessionServices>();
+
+/**
+ * Per-process store for raw report CSV bodies that `snapchat_download_report`
+ * persists on demand (via `storeRawCsv: true`). Served through the
+ * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes.
+ */
+export const reportCsvStore = new ReportCsvStore();

@@ -1,15 +1,16 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
-import { sessionServiceStore } from "../services/session-services.js";
+import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
   extractZodShape,
+  registerReportCsvResource,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
@@ -108,6 +109,17 @@ export async function createMcpServer(
   registerStaticResourcesFromDefinitions({
     server,
     resources: allResources,
+    logger,
+  });
+
+  // Register `report-csv://{id}` template for raw CSV bodies stored on demand
+  // by `snapchat_download_report` (storeRawCsv: true).
+  registerReportCsvResource({
+    server,
+    ResourceTemplate,
+    store: reportCsvStore,
+    platform: "Snapchat",
+    downloadToolName: "snapchat_download_report",
     logger,
   });
 

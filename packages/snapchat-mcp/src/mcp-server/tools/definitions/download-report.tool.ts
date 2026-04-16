@@ -3,8 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { reportCsvStore } from "../../../services/session-services.js";
 import {
   appendComputedMetricsToRows,
+  buildReportCsvUri,
   ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
@@ -38,6 +40,14 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL from snapchat_check_report_status"),
+    storeRawCsv: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Persist the full CSV body in the in-process report-csv store and return " +
+        "a `report-csv://{id}` resource URI. Entries expire after 30 minutes."
+      ),
   })
   .merge(ReportViewInputSchema)
   .merge(ComputedMetricsFlagSchema)
@@ -47,6 +57,14 @@ export const DownloadReportOutputSchema = z
   .object({
     ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
+    rawCsvResourceUri: z
+      .string()
+      .optional()
+      .describe("MCP resource URI of the persisted raw CSV (only present when storeRawCsv is true)"),
+    rawCsvByteLength: z
+      .number()
+      .optional()
+      .describe("Stored CSV size in bytes (after redaction and any truncation)"),
   })
   .describe("Downloaded report data");
 
@@ -71,7 +89,9 @@ export async function downloadReportLogic(
 
   const result = await snapchatReportingService.downloadReport(
     input.downloadUrl,
-    getReportViewFetchLimit(input)
+    getReportViewFetchLimit(input),
+    undefined,
+    { includeRawCsv: input.storeRawCsv === true }
   );
 
   const recordRows: Record<string, string>[] = result.rows.map((row) => {
@@ -91,17 +111,34 @@ export async function downloadReportLogic(
     ? [...result.headers, "cpa", "roas", "cpm", "ctr", "cpc"]
     : result.headers;
 
+  const view = createReportView({
+    headers: augmentedHeaders,
+    rows: augmented,
+    totalRows: result.totalRows,
+    input,
+    warnings: computedWarning
+      ? [`computed metrics: ${computedWarning}`]
+      : undefined,
+  });
+
+  const extras: { rawCsvResourceUri?: string; rawCsvByteLength?: number } = {};
+  if (input.storeRawCsv === true && result.rawCsv !== undefined) {
+    const entry = reportCsvStore.store({
+      csv: result.rawCsv,
+      mimeType: "text/csv",
+      sessionId: sdkContext?.sessionId,
+    });
+    extras.rawCsvResourceUri = buildReportCsvUri(entry.resourceId);
+    extras.rawCsvByteLength = entry.byteLength;
+    if (entry.warnings.length > 0) {
+      view.warnings = [...view.warnings, ...entry.warnings];
+    }
+  }
+
   return {
-    ...createReportView({
-      headers: augmentedHeaders,
-      rows: augmented,
-      totalRows: result.totalRows,
-      input,
-      warnings: computedWarning
-        ? [`computed metrics: ${computedWarning}`]
-        : undefined,
-    }),
+    ...view,
     timestamp: new Date().toISOString(),
+    ...extras,
   };
 }
 
