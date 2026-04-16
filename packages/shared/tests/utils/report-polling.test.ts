@@ -1,6 +1,10 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
 import { describe, expect, it, vi } from "vitest";
 import {
   pollUntilComplete,
+  ReportAbortedError,
   ReportFailedError,
   ReportTimeoutError,
 } from "../../src/utils/report-polling.js";
@@ -47,6 +51,33 @@ describe("pollUntilComplete", () => {
     expect(fetchStatus).toHaveBeenCalledTimes(3);
   });
 
+  it("runs exactly one fetch when maxAttempts is 1", async () => {
+    const fetchStatus = vi.fn().mockResolvedValue({ state: "pending" });
+    await expect(
+      pollUntilComplete({
+        fetchStatus,
+        isComplete: () => false,
+        maxAttempts: 1,
+        initialDelayMs: 1000,
+      }),
+    ).rejects.toBeInstanceOf(ReportTimeoutError);
+    expect(fetchStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects immediately when signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const fetchStatus = vi.fn().mockResolvedValue({ state: "pending" });
+    await expect(
+      pollUntilComplete({
+        fetchStatus,
+        isComplete: () => false,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(ReportAbortedError);
+    expect(fetchStatus).not.toHaveBeenCalled();
+  });
+
   it("aborts on signal", async () => {
     const controller = new AbortController();
     const fetchStatus = vi.fn().mockResolvedValue({ state: "pending" });
@@ -57,7 +88,7 @@ describe("pollUntilComplete", () => {
       signal: controller.signal,
     });
     setTimeout(() => controller.abort(), 10);
-    await expect(promise).rejects.toThrow(/abort/i);
+    await expect(promise).rejects.toBeInstanceOf(ReportAbortedError);
   });
 
   it("applies exponential backoff capped by maxDelayMs", async () => {
@@ -83,7 +114,7 @@ describe("pollUntilComplete", () => {
       maxDelayMs: 300,
       backoffFactor: 2,
     });
-    expect(delays.slice(0, 3)).toEqual([100, 200, 300]);
+    expect(delays).toEqual([100, 200, 300]);
     vi.restoreAllMocks();
   });
 });
