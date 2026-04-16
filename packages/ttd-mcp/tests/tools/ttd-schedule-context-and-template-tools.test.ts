@@ -149,7 +149,14 @@ describe("ttd schedule/context/template tools", () => {
       createMockSdkContext()
     );
 
-    expect(result.schedules).toEqual([{ ReportScheduleId: 1 }]);
+    // Schedules are now normalized to ReportScheduleSummary; raw envelopes
+    // stay on `result.raw` for debugging.
+    expect(result.raw).toEqual([{ ReportScheduleId: 1 }]);
+    expect(result.schedules[0]).toMatchObject({
+      scheduleId: "1",
+      platform: "ttd",
+      status: "ACTIVE",
+    });
     expect(mockTtdReportingService.listReportSchedules).toHaveBeenCalledWith(
       {
         PageSize: 25,

@@ -3,6 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  fromTtdSchedule,
+  ReportScheduleSummarySchema,
+} from "@cesteral/shared";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_list_report_schedules";
@@ -41,13 +45,19 @@ export const ListReportSchedulesInputSchema = z
 
 export const ListReportSchedulesOutputSchema = z
   .object({
-    schedules: z.array(z.record(z.unknown())).describe("List of report schedule objects"),
+    schedules: z
+      .array(ReportScheduleSummarySchema)
+      .describe("Canonical ReportScheduleSummary entries"),
+    raw: z
+      .array(z.record(z.unknown()))
+      .optional()
+      .describe("Raw TTD schedule envelopes (kept for platform-specific debugging)"),
     totalCount: z.number().optional(),
     pageSize: z.number(),
     pageStartIndex: z.number(),
     timestamp: z.string().datetime(),
   })
-  .describe("List of report schedules");
+  .describe("List of report schedules (normalized to ReportScheduleSummary)");
 
 type ListReportSchedulesInput = z.infer<typeof ListReportSchedulesInputSchema>;
 type ListReportSchedulesOutput = z.infer<typeof ListReportSchedulesOutputSchema>;
@@ -79,11 +89,13 @@ export async function listReportSchedulesLogic(
     unknown
   >;
 
-  const schedules = (result.Result as Array<Record<string, unknown>>) ?? [];
+  const rawSchedules = (result.Result as Array<Record<string, unknown>>) ?? [];
   const totalCount = result.TotalFilteredCount as number | undefined;
+  const schedules = rawSchedules.map((r) => fromTtdSchedule(r));
 
   return {
     schedules,
+    raw: rawSchedules,
     totalCount,
     pageSize,
     pageStartIndex,
