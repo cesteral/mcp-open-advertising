@@ -24,6 +24,7 @@ export { deleteEntityTool } from "./delete-entity.tool.js";
 export { listAdAccountsTool } from "./list-ad-accounts.tool.js";
 export { getInsightsTool } from "./get-insights.tool.js";
 export { getInsightsBreakdownsTool } from "./get-insights-breakdowns.tool.js";
+export { getAvailableMetricsTool } from "./get-available-metrics.tool.js";
 export { submitReportTool } from "./submit-report.tool.js";
 export { checkReportStatusTool } from "./check-report-status.tool.js";
 export { downloadReportTool } from "./download-report.tool.js";
@@ -50,6 +51,7 @@ import { deleteEntityTool } from "./delete-entity.tool.js";
 import { listAdAccountsTool } from "./list-ad-accounts.tool.js";
 import { getInsightsTool } from "./get-insights.tool.js";
 import { getInsightsBreakdownsTool } from "./get-insights-breakdowns.tool.js";
+import { getAvailableMetricsTool } from "./get-available-metrics.tool.js";
 import { submitReportTool } from "./submit-report.tool.js";
 import { checkReportStatusTool } from "./check-report-status.tool.js";
 import { downloadReportTool } from "./download-report.tool.js";
@@ -81,6 +83,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Insights ──
   getInsightsTool,
   getInsightsBreakdownsTool,
+  getAvailableMetricsTool,
   // ── Async Reporting ──
   submitReportTool,
   checkReportStatusTool,

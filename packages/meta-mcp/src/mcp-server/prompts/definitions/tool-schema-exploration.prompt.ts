@@ -49,7 +49,7 @@ Fetch these resources for detailed schema information:
 | \`insights-reference://all\` | Metrics, breakdowns, date presets |
 | \`targeting-reference://all\` | Targeting spec structure |
 
-## Tool Categories (25 tools)
+## Tool Categories (26 tools)
 
 ### Read Operations
 - \`meta_list_ad_accounts\` — Discover accessible accounts
@@ -62,6 +62,7 @@ Fetch these resources for detailed schema information:
 - \`meta_delete_entity\` — Delete entity
 
 ### Insights
+- \`meta_get_available_metrics\` — List valid metrics, breakdowns, and action breakdowns per entity level (call before \`meta_get_insights\`)
 - \`meta_get_insights\` — Performance metrics
 - \`meta_get_insights_breakdowns\` — Metrics with dimensional breakdowns
 - \`meta_submit_report\` — Submit async insights report job
