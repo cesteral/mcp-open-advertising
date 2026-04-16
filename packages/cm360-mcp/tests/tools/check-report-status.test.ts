@@ -43,7 +43,7 @@ describe("checkReportStatusLogic", () => {
     vi.clearAllMocks();
   });
 
-  it("REPORT_AVAILABLE: returns status with downloadUrl", async () => {
+  it("REPORT_AVAILABLE: returns canonical 'complete' state with downloadUrl", async () => {
     mockState.cm360ReportingService.checkReportFile.mockResolvedValue({
       reportId: "r1",
       fileId: "f1",
@@ -57,14 +57,16 @@ describe("checkReportStatusLogic", () => {
       mockContext
     );
 
-    expect(result.status).toBe("REPORT_AVAILABLE");
+    expect(result.state).toBe("complete");
+    expect(result.rawStatus).toBe("REPORT_AVAILABLE");
+    expect(result.isComplete).toBe(true);
     expect(result.downloadUrl).toBe("https://example.com/download");
     expect(result.reportId).toBe("r1");
     expect(result.fileId).toBe("f1");
     expect(result.timestamp).toBeDefined();
   });
 
-  it("PROCESSING: returns status without downloadUrl", async () => {
+  it("PROCESSING: returns canonical 'running' state without downloadUrl", async () => {
     mockState.cm360ReportingService.checkReportFile.mockResolvedValue({
       reportId: "r1",
       fileId: "f1",
@@ -77,7 +79,9 @@ describe("checkReportStatusLogic", () => {
       mockContext
     );
 
-    expect(result.status).toBe("PROCESSING");
+    expect(result.state).toBe("running");
+    expect(result.rawStatus).toBe("PROCESSING");
+    expect(result.isComplete).toBe(false);
     expect(result.downloadUrl).toBeUndefined();
   });
 
@@ -117,24 +121,29 @@ describe("checkReportStatusLogic", () => {
 });
 
 describe("checkReportStatusResponseFormatter", () => {
-  it("shows status in output", () => {
+  it("shows state and rawStatus in output", () => {
     const result = checkReportStatusResponseFormatter({
       reportId: "r1",
       fileId: "f1",
-      status: "PROCESSING",
+      state: "running",
+      rawStatus: "PROCESSING",
+      isComplete: false,
       file: {},
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
     expect(result).toHaveLength(1);
     expect(result[0].text).toContain("PROCESSING");
+    expect(result[0].text).toContain("running");
   });
 
-  it("shows download URL and usage hint when REPORT_AVAILABLE", () => {
+  it("shows download URL and usage hint when complete", () => {
     const result = checkReportStatusResponseFormatter({
       reportId: "r1",
       fileId: "f1",
-      status: "REPORT_AVAILABLE",
+      state: "complete",
+      rawStatus: "REPORT_AVAILABLE",
+      isComplete: true,
       file: {},
       downloadUrl: "https://example.com/download",
       timestamp: "2026-01-01T00:00:00.000Z",
@@ -144,11 +153,13 @@ describe("checkReportStatusResponseFormatter", () => {
     expect(result[0].text).toContain("cm360_download_report");
   });
 
-  it("no download info when PROCESSING", () => {
+  it("no download info when running", () => {
     const result = checkReportStatusResponseFormatter({
       reportId: "r1",
       fileId: "f1",
-      status: "PROCESSING",
+      state: "running",
+      rawStatus: "PROCESSING",
+      isComplete: false,
       file: {},
       timestamp: "2026-01-01T00:00:00.000Z",
     });

@@ -97,3 +97,31 @@ export function fromMicrosoftStatus(raw: {
     ...(raw.ReportDownloadUrl ? { downloadUrl: raw.ReportDownloadUrl } : {}),
   };
 }
+
+/**
+ * Normalize a CM360 report-file status (`PROCESSING`/`REPORT_AVAILABLE`/
+ * `FAILED`/`CANCELLED`) to {@link ReportStatus}.
+ *
+ * CM360 has its own state machine — distinct from the generic Google
+ * long-running operation shape handled by {@link fromGoogleStatus}.
+ */
+export function fromCm360Status(raw: {
+  status?: string;
+  downloadUrl?: string;
+}): ReportStatus {
+  const s = raw.status ?? "";
+  const state: ReportStatus["state"] =
+    s === "REPORT_AVAILABLE"
+      ? "complete"
+      : s === "FAILED"
+        ? "failed"
+        : s === "CANCELLED"
+          ? "cancelled"
+          : s === "PROCESSING"
+            ? "running"
+            : "pending";
+  return {
+    state,
+    ...(raw.downloadUrl ? { downloadUrl: raw.downloadUrl } : {}),
+  };
+}

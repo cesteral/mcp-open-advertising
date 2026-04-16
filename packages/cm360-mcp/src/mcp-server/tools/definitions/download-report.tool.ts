@@ -4,10 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
-  arrayRowsToRecords,
-  computeMetrics,
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
+  parseCSV,
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
@@ -27,13 +28,9 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL (from cm360_get_report or cm360_check_report_status)"),
-    includeComputedMetrics: z
-      .boolean()
-      .optional()
-      .default(false)
-      .describe("Include computed CPA, ROAS, CPM, CTR, CPC"),
   })
   .merge(ReportViewInputSchema)
+  .merge(ComputedMetricsFlagSchema)
   .describe("Parameters for downloading a CM360 report");
 
 export const DownloadReportOutputSchema = z
@@ -74,9 +71,9 @@ export async function downloadReportLogic(
   }
 
   const csvText = await response.text();
-  const rows = parseCSV(csvText);
+  const { headers, rows } = parseCSV(csvText);
 
-  if (rows.length === 0) {
+  if (headers.length === 0 && rows.length === 0) {
     return {
       headers: [],
       selectedColumns: [],
@@ -92,126 +89,37 @@ export async function downloadReportLogic(
     };
   }
 
-  const headers = rows[0];
-  const dataRows = rows.slice(1);
-
-  let finalHeaders = headers;
-  let finalRows = dataRows;
-
-  if (input.includeComputedMetrics) {
-    ({ headers: finalHeaders, rows: finalRows } = appendComputedMetricsToRows(headers, dataRows));
-  }
+  const augmented = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(rows, CM360_COMPUTED_METRIC_ALIASES)
+    : rows;
+  const computedWarning = input.includeComputedMetrics
+    ? augmented[0]?._computedMetricsWarnings
+    : undefined;
+  const augmentedHeaders = input.includeComputedMetrics
+    ? [...headers, "cpa", "roas", "cpm", "ctr", "cpc"]
+    : headers;
 
   return {
     ...createReportView({
-      headers: finalHeaders,
-      rows: arrayRowsToRecords(finalHeaders, finalRows),
-      totalRows: dataRows.length,
+      headers: augmentedHeaders,
+      rows: augmented,
+      totalRows: rows.length,
       input,
+      warnings: computedWarning
+        ? [`computed metrics: ${computedWarning}`]
+        : undefined,
     }),
     timestamp: new Date().toISOString(),
   };
 }
 
-function appendComputedMetricsToRows(
-  headers: string[],
-  rows: string[][],
-): { headers: string[]; rows: string[][] } {
-  const idx = (...names: string[]) =>
-    headers.findIndex((header) => names.some((name) => header.toLowerCase().includes(name.toLowerCase())));
-
-  const spendIdx = idx("mediaCost", "cost");
-  const impIdx = idx("impressions");
-  const clickIdx = idx("clicks");
-  const convIdx = idx("totalConversions", "conversions");
-  const revenueIdx = idx("floodlightRevenue", "revenue", "totalRevenue");
-
-  const computedColumns = [
-    { name: "computed_cpa", enabled: spendIdx >= 0 && convIdx >= 0 },
-    { name: "computed_roas", enabled: spendIdx >= 0 && revenueIdx >= 0 },
-    { name: "computed_cpm", enabled: spendIdx >= 0 && impIdx >= 0 },
-    { name: "computed_ctr", enabled: clickIdx >= 0 && impIdx >= 0 },
-    { name: "computed_cpc", enabled: spendIdx >= 0 && clickIdx >= 0 },
-  ].filter((column) => column.enabled);
-
-  if (computedColumns.length === 0) {
-    return { headers, rows };
-  }
-
-  const newHeaders = [...headers, ...computedColumns.map((column) => column.name)];
-  const newRows = rows.map(row => {
-    const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
-    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
-    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
-    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
-    const conversionValue = revenueIdx >= 0 ? Number(row[revenueIdx] || 0) : 0;
-    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue });
-    const computedValues = computedColumns.map((column) => {
-      switch (column.name) {
-        case "computed_cpa":
-          return m.cpa !== null ? String(m.cpa) : "";
-        case "computed_roas":
-          return m.roas !== null ? String(m.roas) : "";
-        case "computed_cpm":
-          return m.cpm !== null ? String(m.cpm) : "";
-        case "computed_ctr":
-          return m.ctr !== null ? String(m.ctr) : "";
-        case "computed_cpc":
-          return m.cpc !== null ? String(m.cpc) : "";
-        default:
-          return "";
-      }
-    });
-    return [...row, ...computedValues];
-  });
-  return { headers: newHeaders, rows: newRows };
-}
-
-function parseCSV(text: string): string[][] {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (inQuotes) {
-      if (char === '"' && text[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else if (char === '"') {
-        inQuotes = false;
-      } else {
-        current += char;
-      }
-    } else {
-      if (char === '"') {
-        inQuotes = true;
-      } else if (char === ",") {
-        currentRow.push(current.trim());
-        current = "";
-      } else if (char === "\n") {
-        currentRow.push(current.trim());
-        if (currentRow.some((value) => value.length > 0)) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-        current = "";
-      } else if (char === "\r") {
-        continue;
-      } else {
-        current += char;
-      }
-    }
-  }
-  if (current.length > 0 || currentRow.length > 0) {
-    currentRow.push(current.trim());
-    if (currentRow.some((value) => value.length > 0)) {
-      rows.push(currentRow);
-    }
-  }
-  return rows;
-}
+const CM360_COMPUTED_METRIC_ALIASES = {
+  cost: ["mediaCost", "cost", "dfa:mediaCost", "Media Cost", "MediaCost"],
+  impressions: ["impressions", "dfa:impressions", "Impressions"],
+  clicks: ["clicks", "dfa:clicks", "Clicks"],
+  conversions: ["totalConversions", "conversions", "dfa:totalConversions", "Total Conversions"],
+  conversionValue: ["floodlightRevenue", "revenue", "totalRevenue", "dfa:floodlightRevenue"],
+};
 
 function inferReportFormat(downloadUrl: string, response: Response): "CSV" | "EXCEL" | "UNKNOWN" {
   const contentType = response.headers?.get?.("content-type")?.toLowerCase() ?? "";

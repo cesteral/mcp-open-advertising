@@ -8,6 +8,7 @@ import {
   fromMetaStatus,
   fromGoogleStatus,
   fromMicrosoftStatus,
+  fromCm360Status,
 } from "../../src/schemas/report-status.js";
 
 describe("ReportStatusSchema", () => {
@@ -75,6 +76,29 @@ describe("fromGoogleStatus", () => {
     const status = fromGoogleStatus({ done: true, error: { message: "boom" } });
     expect(status.state).toBe("failed");
     expect(status.errors).toEqual(["boom"]);
+  });
+});
+
+describe("fromCm360Status", () => {
+  it("maps REPORT_AVAILABLE to complete", () => {
+    expect(fromCm360Status({ status: "REPORT_AVAILABLE" }).state).toBe("complete");
+  });
+  it("maps PROCESSING to running", () => {
+    expect(fromCm360Status({ status: "PROCESSING" }).state).toBe("running");
+  });
+  it("maps FAILED to failed", () => {
+    expect(fromCm360Status({ status: "FAILED" }).state).toBe("failed");
+  });
+  it("maps CANCELLED to cancelled", () => {
+    expect(fromCm360Status({ status: "CANCELLED" }).state).toBe("cancelled");
+  });
+  it("propagates downloadUrl", () => {
+    expect(
+      fromCm360Status({
+        status: "REPORT_AVAILABLE",
+        downloadUrl: "https://cm/r.csv",
+      }).downloadUrl,
+    ).toBe("https://cm/r.csv");
   });
 });
 

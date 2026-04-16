@@ -168,7 +168,7 @@ describe("downloadReportLogic", () => {
     ).rejects.toThrow("Unsupported CM360 report format: EXCEL");
   });
 
-  it("omits computed columns when required inputs are unavailable", async () => {
+  it("emits empty computed columns with warnings when required inputs are unavailable", async () => {
     const csv = "Name\nCampaign A";
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
 
@@ -177,8 +177,11 @@ describe("downloadReportLogic", () => {
       mockContext
     );
 
-    expect(result.headers).toEqual(["Name"]);
-    expect(result.rows).toEqual([{ Name: "Campaign A" }]);
+    expect(result.headers).toEqual(["Name", "cpa", "roas", "cpm", "ctr", "cpc"]);
+    const row = (result.rows ?? [])[0] ?? {};
+    expect(row.Name).toBe("Campaign A");
+    expect(row.cpa).toBe("");
+    expect(result.warnings.some((w) => w.includes("missing:cost"))).toBe(true);
   });
 
   it("throws on non-OK response", async () => {

@@ -5,10 +5,10 @@ import type { Logger } from "pino";
 import type { CM360HttpClient } from "./cm360-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import {
-  delay,
-  computeLinearBackoff,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
+  pollUntilComplete,
+  ReportFailedError,
   type RequestContext,
 } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
@@ -23,8 +23,6 @@ export interface CM360ReportConfig {
 }
 
 export class CM360ReportingService {
-  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
-
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: CM360HttpClient,
@@ -156,45 +154,35 @@ export class CM360ReportingService {
     fileId: string,
     context?: RequestContext
   ): Promise<unknown> {
-    for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
-      await this.rateLimiter.consume("cm360");
-
-      const file = (await this.httpClient.fetch(
-        `/userprofiles/${profileId}/reports/${reportId}/files/${fileId}`,
-        context
-      )) as Record<string, unknown>;
-
-      const status = file.status as string;
-
-      if (status === "REPORT_AVAILABLE") {
-        this.logger.info(
-          { reportId, fileId, attempt, requestId: context?.requestId },
-          "CM360 report available"
-        );
-        return file;
-      }
-
-      if (status === "FAILED" || status === "CANCELLED") {
+    try {
+      return await pollUntilComplete<Record<string, unknown>>({
+        fetchStatus: async () => {
+          await this.rateLimiter.consume("cm360");
+          return (await this.httpClient.fetch(
+            `/userprofiles/${profileId}/reports/${reportId}/files/${fileId}`,
+            context
+          )) as Record<string, unknown>;
+        },
+        isComplete: (file) => (file.status as string) === "REPORT_AVAILABLE",
+        isFailed: (file) => {
+          const s = file.status as string;
+          return s === "FAILED" || s === "CANCELLED";
+        },
+        initialDelayMs: this.pollIntervalMs,
+        maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
+        maxAttempts: this.maxPollAttempts,
+      });
+    } catch (err) {
+      if (err instanceof ReportFailedError) {
+        const file = err.status as Record<string, unknown>;
         throw new McpError(
           JsonRpcErrorCode.InternalError,
-          `CM360 report ${status.toLowerCase()}`,
-          { reportId, fileId, status, file }
+          `CM360 report ${String(file.status).toLowerCase()}`,
+          { reportId, fileId, status: file.status, file }
         );
       }
-
-      this.logger.debug(
-        { reportId, fileId, status, attempt },
-        "CM360 report still processing"
-      );
-
-      await delay(computeLinearBackoff(attempt, this.pollIntervalMs, CM360ReportingService.MAX_BACKOFF_MS));
+      throw err;
     }
-
-    throw new McpError(
-      JsonRpcErrorCode.Timeout,
-      `CM360 report polling timed out after ${this.maxPollAttempts} attempts`,
-      { reportId, fileId }
-    );
   }
 
   async downloadReportFile(

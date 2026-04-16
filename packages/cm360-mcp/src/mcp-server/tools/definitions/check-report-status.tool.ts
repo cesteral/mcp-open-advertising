@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { fromCm360Status, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -10,9 +11,10 @@ const TOOL_NAME = "cm360_check_report_status";
 const TOOL_TITLE = "Check CM360 Report Status";
 const TOOL_DESCRIPTION = `Check the status of a CM360 report file. Single status check — no polling.
 
-Status values: PROCESSING, REPORT_AVAILABLE, FAILED, CANCELLED.
+Canonical states: \`pending\`, \`running\`, \`complete\`, \`failed\`, \`cancelled\`.
+CM360 source states are mapped: PROCESSING → running, REPORT_AVAILABLE → complete, FAILED → failed, CANCELLED → cancelled. The original string is returned as \`rawStatus\`.
 
-When status is REPORT_AVAILABLE, a downloadUrl is provided. Use cm360_download_report to fetch the results.`;
+When state is \`complete\`, a downloadUrl is provided. Use cm360_download_report to fetch the results.`;
 
 export const CheckReportStatusInputSchema = z
   .object({
@@ -31,16 +33,16 @@ export const CheckReportStatusInputSchema = z
   })
   .describe("Parameters for checking CM360 report status");
 
-export const CheckReportStatusOutputSchema = z
-  .object({
-    reportId: z.string().describe("Report ID"),
-    fileId: z.string().describe("File ID"),
-    status: z.string().describe("Report status (PROCESSING, REPORT_AVAILABLE, FAILED, CANCELLED)"),
-    file: z.record(z.any()).describe("File details"),
-    downloadUrl: z.string().optional().describe("Download URL when REPORT_AVAILABLE"),
-    timestamp: z.string().datetime(),
-  })
-  .describe("Report status result");
+export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
+  reportId: z.string().describe("Report ID"),
+  fileId: z.string().describe("File ID"),
+  rawStatus: z
+    .string()
+    .describe("Raw CM360 status string (PROCESSING, REPORT_AVAILABLE, FAILED, CANCELLED)"),
+  file: z.record(z.any()).describe("File details"),
+  isComplete: z.boolean().describe("True when state is 'complete'"),
+  timestamp: z.string().datetime(),
+}).describe("Report status result");
 
 type CheckReportStatusInput = z.infer<typeof CheckReportStatusInputSchema>;
 type CheckReportStatusOutput = z.infer<typeof CheckReportStatusOutputSchema>;
@@ -59,12 +61,18 @@ export async function checkReportStatusLogic(
     context
   );
 
+  const canonical = fromCm360Status({
+    status: result.status,
+    downloadUrl: result.downloadUrl,
+  });
+
   return {
+    ...canonical,
     reportId: result.reportId,
     fileId: result.fileId,
-    status: result.status,
+    rawStatus: result.status,
     file: result.file,
-    downloadUrl: result.downloadUrl,
+    isComplete: canonical.state === "complete",
     timestamp: new Date().toISOString(),
   };
 }
@@ -77,7 +85,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
   return [
     {
       type: "text" as const,
-      text: `Report ${result.reportId} status: ${result.status}${downloadInfo}\n\nFile details:\n${JSON.stringify(result.file, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Report ${result.reportId} state: ${result.state} (${result.rawStatus})${downloadInfo}\n\nFile details:\n${JSON.stringify(result.file, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

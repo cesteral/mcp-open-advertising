@@ -219,7 +219,7 @@ describe("CM360ReportingService", () => {
 
       await expect(
         service.runReport("12345", { name: "Test", type: "STANDARD" })
-      ).rejects.toThrow("CM360 report polling timed out after 3 attempts");
+      ).rejects.toThrow(/Report polling exceeded 3 attempts/);
     });
   });
 
