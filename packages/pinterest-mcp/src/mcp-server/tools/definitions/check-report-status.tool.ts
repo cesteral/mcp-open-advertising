@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { fromPinterestStatus, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -12,8 +13,9 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted Pinterest r
 
 Makes a single API call to check task status. Does not poll or wait.
 
-**Statuses:** IN_PROGRESS, FINISHED, FAILED, EXPIRED, DOES_NOT_EXIST
-- If FINISHED with a \`downloadUrl\`, use \`pinterest_download_report\` to fetch results.
+**Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`.
+Pinterest raw statuses (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST) are mapped; EXPIRED and DOES_NOT_EXIST surface as \`failed\` since the artifact is no longer retrievable. The raw string is returned as \`rawStatus\`.
+- If state is \`complete\` with a \`downloadUrl\`, use \`pinterest_download_report\` to fetch results.
 - If not finished, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
@@ -29,15 +31,12 @@ export const CheckReportStatusInputSchema = z
   })
   .describe("Parameters for checking Pinterest report status");
 
-export const CheckReportStatusOutputSchema = z
-  .object({
-    taskId: z.string().describe("Report token/task ID"),
-    status: z.string().describe("Current task status"),
-    isComplete: z.boolean().describe("Whether the report is complete (FINISHED)"),
-    downloadUrl: z.string().optional().describe("Download URL when FINISHED"),
-    timestamp: z.string().datetime(),
-  })
-  .describe("Report status check result");
+export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
+  taskId: z.string().describe("Report token/task ID"),
+  rawStatus: z.string().describe("Raw Pinterest status (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST)"),
+  isComplete: z.boolean().describe("Whether the canonical state is 'complete'"),
+  timestamp: z.string().datetime(),
+}).describe("Report status check result");
 
 type CheckReportStatusInput = z.infer<typeof CheckReportStatusInputSchema>;
 type CheckReportStatusOutput = z.infer<typeof CheckReportStatusOutputSchema>;
@@ -54,11 +53,16 @@ export async function checkReportStatusLogic(
     context
   );
 
-  return {
-    taskId: result.taskId,
+  const canonical = fromPinterestStatus({
     status: result.status,
-    isComplete: result.status === "FINISHED",
     downloadUrl: result.downloadUrl,
+  });
+
+  return {
+    ...canonical,
+    taskId: result.taskId,
+    rawStatus: result.status,
+    isComplete: canonical.state === "complete",
     timestamp: new Date().toISOString(),
   };
 }
@@ -73,11 +77,11 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
     ];
   }
 
-  if (result.status === "FAILED" || result.status === "EXPIRED") {
+  if (result.state === "failed") {
     return [
       {
         type: "text" as const,
-        text: `Report failed: ${result.taskId}\nStatus: ${result.status}\n\nThe report task failed. Check the report configuration and try again.\n\nTimestamp: ${result.timestamp}`,
+        text: `Report failed: ${result.taskId}\nState: ${result.state} (${result.rawStatus})\n\nThe report task failed. Check the report configuration and try again.\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }
@@ -85,7 +89,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
   return [
     {
       type: "text" as const,
-      text: `Report in progress: ${result.taskId}\nStatus: ${result.status}\n\nCall \`pinterest_check_report_status\` again in ~10 seconds.\n\nTimestamp: ${result.timestamp}`,
+      text: `Report in progress: ${result.taskId}\nState: ${result.state} (${result.rawStatus})\n\nCall \`pinterest_check_report_status\` again in ~10 seconds.\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

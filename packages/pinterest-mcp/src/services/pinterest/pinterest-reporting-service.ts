@@ -13,10 +13,9 @@ import {
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
   DEFAULT_REPORT_MAX_SIZE_BYTES,
   DEFAULT_REPORT_MAX_ROWS,
-  REPORT_POLL_WARNING_THRESHOLD,
-  delay,
-  parseCsvLine,
-  computeExponentialBackoff,
+  parseCSV,
+  pollUntilComplete,
+  ReportFailedError,
   type RequestContext,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
@@ -53,8 +52,6 @@ export interface PinterestReportConfig {
  * 3. GET download url to retrieve CSV report data
  */
 export class PinterestReportingService {
-  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
-
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: PinterestHttpClient,
@@ -104,40 +101,31 @@ export class PinterestReportingService {
 
     const adAccountId = this.httpClient.accountId;
 
-    for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
-      await this.rateLimiter.consume(`pinterest:reporting`);
-
-      const result = (await this.httpClient.get(
-        `/v5/ad_accounts/${adAccountId}/reports`,
-        { token: taskId },
-        context
-      )) as ReportTaskCheckData;
-
-      if (
-        result.report_status === "FINISHED" ||
-        result.report_status === "FAILED" ||
-        result.report_status === "EXPIRED" ||
-        result.report_status === "DOES_NOT_EXIST"
-      ) {
-        this.logger.debug({ taskId, status: result.report_status, attempt }, "Report poll complete");
-        return result;
+    try {
+      return await pollUntilComplete<ReportTaskCheckData>({
+        fetchStatus: async () => {
+          await this.rateLimiter.consume(`pinterest:reporting`);
+          return (await this.httpClient.get(
+            `/v5/ad_accounts/${adAccountId}/reports`,
+            { token: taskId },
+            context
+          )) as ReportTaskCheckData;
+        },
+        isComplete: (r) => r.report_status === "FINISHED",
+        isFailed: (r) =>
+          r.report_status === "FAILED" ||
+          r.report_status === "EXPIRED" ||
+          r.report_status === "DOES_NOT_EXIST",
+        initialDelayMs: this.pollIntervalMs,
+        maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
+        maxAttempts: this.maxPollAttempts,
+      });
+    } catch (err) {
+      if (err instanceof ReportFailedError) {
+        return err.status as ReportTaskCheckData;
       }
-
-      const attemptsRemaining = this.maxPollAttempts - attempt - 1;
-      if (attemptsRemaining <= REPORT_POLL_WARNING_THRESHOLD) {
-        this.logger.warn({ taskId, attemptsRemaining, status: result.report_status }, "Report poll nearing attempt limit");
-      } else {
-        this.logger.debug({ taskId, attempt, status: result.report_status }, "Report still pending, waiting");
-      }
-
-      // Wait before next poll (exponential backoff)
-      await delay(computeExponentialBackoff(attempt, this.pollIntervalMs, PinterestReportingService.MAX_BACKOFF_MS));
+      throw err;
     }
-
-    throw new McpError(
-      JsonRpcErrorCode.Timeout,
-      `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
-    );
   }
 
   /**
@@ -195,12 +183,10 @@ export class PinterestReportingService {
       );
     }
 
-    let csvText = await response.text();
-    // Strip BOM if present
-    if (csvText.charCodeAt(0) === 0xFEFF) {
-      csvText = csvText.slice(1);
-    }
-    const normalizedCsvText = csvText.replace(/\r\n/g, "\n").trim();
+    const csvText = await response.text();
+    // Normalize for downstream ReportCsvStore persistence — BOM-stripped and
+    // LF-only so consumers get a stable canonical payload.
+    const normalizedCsvText = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
 
     if (normalizedCsvText.length === 0) {
       return {
@@ -211,9 +197,9 @@ export class PinterestReportingService {
       };
     }
 
-    const lines = normalizedCsvText.split("\n");
+    const { headers, rows: recordRows } = parseCSV(normalizedCsvText);
 
-    if (lines.length === 0) {
+    if (headers.length === 0 && recordRows.length === 0) {
       return {
         rows: [],
         headers: [],
@@ -222,15 +208,13 @@ export class PinterestReportingService {
       };
     }
 
-    const headers = parseCsvLine(lines[0]);
-    const dataLines = lines.slice(1);
-    const limitedLines = dataLines.slice(0, maxRows);
-    const rows = limitedLines.map(parseCsvLine);
+    const limited = recordRows.slice(0, maxRows);
+    const rows = limited.map((record) => headers.map((h) => record[h] ?? ""));
 
     return {
       rows,
       headers,
-      totalRows: dataLines.length,
+      totalRows: recordRows.length,
       ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
     };
   }

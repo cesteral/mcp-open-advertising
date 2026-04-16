@@ -5,9 +5,9 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { reportCsvStore } from "../../../services/session-services.js";
 import {
-  arrayRowsToRecords,
+  appendComputedMetricsToRows,
   buildReportCsvUri,
-  computeMetrics,
+  ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
   getReportViewFetchLimit,
@@ -40,11 +40,6 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL from pinterest_check_report_status"),
-    includeComputedMetrics: z
-      .boolean()
-      .optional()
-      .default(false)
-      .describe("Include computed CPA, ROAS, CPM, CTR, CPC"),
     storeRawCsv: z
       .boolean()
       .optional()
@@ -56,6 +51,7 @@ export const DownloadReportInputSchema = z
       ),
   })
   .merge(ReportViewInputSchema)
+  .merge(ComputedMetricsFlagSchema)
   .describe("Parameters for downloading a Pinterest report");
 
 export const DownloadReportOutputSchema = z
@@ -76,6 +72,14 @@ export const DownloadReportOutputSchema = z
 type DownloadInput = z.infer<typeof DownloadReportInputSchema>;
 type DownloadOutput = z.infer<typeof DownloadReportOutputSchema>;
 
+const PINTEREST_COMPUTED_METRIC_ALIASES = {
+  cost: ["SPEND_IN_DOLLAR", "SPEND_IN_MICRO_DOLLAR"],
+  impressions: ["IMPRESSION_1", "IMPRESSION_2", "IMPRESSIONS"],
+  clicks: ["CLICKTHROUGH_1", "CLICKTHROUGH_2", "CLICKS"],
+  conversions: ["TOTAL_CONVERSIONS", "TOTAL_CHECKOUT", "CONVERSIONS"],
+  conversionValue: ["TOTAL_CONVERSIONS_VALUE_IN_MICRO_DOLLAR", "TOTAL_CHECKOUT_VALUE_IN_MICRO_DOLLAR"],
+};
+
 export async function downloadReportLogic(
   input: DownloadInput,
   _context: RequestContext,
@@ -90,18 +94,31 @@ export async function downloadReportLogic(
     { includeRawCsv: input.storeRawCsv === true }
   );
 
-  let headers = result.headers;
-  let rows = result.rows;
-
-  if (input.includeComputedMetrics) {
-    ({ headers, rows } = appendComputedMetricsToRows(headers, rows));
-  }
+  const recordRows: Record<string, string>[] = result.rows.map((row) => {
+    const record: Record<string, string> = {};
+    for (let i = 0; i < result.headers.length; i++) {
+      record[result.headers[i] ?? String(i)] = row[i] ?? "";
+    }
+    return record;
+  });
+  const augmented = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(recordRows, PINTEREST_COMPUTED_METRIC_ALIASES)
+    : recordRows;
+  const computedWarning = input.includeComputedMetrics
+    ? augmented[0]?._computedMetricsWarnings
+    : undefined;
+  const augmentedHeaders = input.includeComputedMetrics
+    ? [...result.headers, "cpa", "roas", "cpm", "ctr", "cpc"]
+    : result.headers;
 
   const view = createReportView({
-    headers,
-    rows: arrayRowsToRecords(headers, rows),
+    headers: augmentedHeaders,
+    rows: augmented,
     totalRows: result.totalRows,
     input,
+    warnings: computedWarning
+      ? [`computed metrics: ${computedWarning}`]
+      : undefined,
   });
 
   const extras: { rawCsvResourceUri?: string; rawCsvByteLength?: number } = {};
@@ -123,34 +140,6 @@ export async function downloadReportLogic(
     timestamp: new Date().toISOString(),
     ...extras,
   };
-}
-
-function appendComputedMetricsToRows(
-  headers: string[],
-  rows: string[][],
-): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex(h => h.toUpperCase() === name.toUpperCase());
-  const spendIdx = idx('SPEND_IN_DOLLAR');
-  const impIdx = idx('IMPRESSION_1');
-  const clickIdx = idx('CLICKTHROUGH_1');
-  const convIdx = idx('TOTAL_CONVERSIONS');
-
-  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
-  const newRows = rows.map(row => {
-    const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
-    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
-    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
-    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
-    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [...row,
-      m.cpa !== null ? String(m.cpa) : '',
-      m.roas !== null ? String(m.roas) : '',
-      m.cpm !== null ? String(m.cpm) : '',
-      m.ctr !== null ? String(m.ctr) : '',
-      m.cpc !== null ? String(m.cpc) : '',
-    ];
-  });
-  return { headers: newHeaders, rows: newRows };
 }
 
 export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {
