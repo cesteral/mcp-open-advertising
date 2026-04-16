@@ -5,6 +5,16 @@
  * Computed Metrics Utility
  *
  * Derives CPA, ROAS, and CPM from raw Google Ads metrics.
+ *
+ * Note: gads-mcp intentionally does not adopt @cesteral/shared's
+ * `appendComputedMetricsToRows` because the GAQL response shape nests
+ * metrics under `row.metrics.*` (e.g. `metrics.cost_micros`) rather than
+ * living at the top-level of a flat row record. The shared helper expects
+ * flat `Record<string, string>` rows. Per the Phase 2 migration plan,
+ * gads-mcp only needs the bounded-view contract (already in place) and
+ * the ComputedMetricsFlagSchema input gate (already in place as an
+ * inline z.boolean()). No polling loop, CSV parser, or status normalizer
+ * applies because Google Ads GAQL is synchronous and returns JSON.
  */
 
 export interface ComputedMetrics {
