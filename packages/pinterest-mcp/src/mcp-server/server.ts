@@ -1,15 +1,17 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
-import { sessionServiceStore } from "../services/session-services.js";
+import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
 import {
+  buildReportCsvUri,
   extractZodShape,
+  REPORT_CSV_RESOURCE_SCHEME,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
@@ -110,6 +112,37 @@ export async function createMcpServer(
     resources: allResources,
     logger,
   });
+
+  // Register `report-csv://{id}` template for raw CSV bodies stored on demand
+  // by `pinterest_download_report` (storeRawCsv: true).
+  const reportCsvTemplate = new ResourceTemplate(`${REPORT_CSV_RESOURCE_SCHEME}://{id}`, {
+    list: async () => ({
+      resources: reportCsvStore.list().map((entry) => ({
+        uri: buildReportCsvUri(entry.resourceId),
+        name: `Pinterest report CSV ${entry.resourceId}`,
+        description: `Stored Pinterest report CSV (${entry.byteLength} bytes${entry.truncated ? ", truncated" : ""}). Expires at ${new Date(entry.expiresAt).toISOString()}.`,
+        mimeType: entry.mimeType,
+      })),
+    }),
+  });
+  server.registerResource(
+    "report_csv_template",
+    reportCsvTemplate,
+    {
+      description: "Raw report CSV bodies stored on demand by pinterest_download_report (storeRawCsv: true). Entries expire after 30 minutes.",
+      mimeType: "text/csv",
+    },
+    async (uri) => {
+      logger.info({ uri: uri.href }, "Reading report CSV resource");
+      const entry = reportCsvStore.getByUri(uri.href);
+      if (!entry) {
+        throw new Error(`Report CSV resource not found or expired: ${uri.href}`);
+      }
+      return {
+        contents: [{ uri: uri.href, mimeType: entry.mimeType, text: entry.csv }],
+      };
+    }
+  );
 
   // Register conformance fixtures (resources + prompts) when enabled
   if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {

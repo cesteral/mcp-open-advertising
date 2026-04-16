@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
+const { mockStoreCsv } = vi.hoisted(() => ({
+  mockStoreCsv: vi.fn(),
+}));
+
 vi.mock("../../src/services/session-services.js", () => ({
   sessionServiceStore: {
     get: vi.fn(),
     set: vi.fn(),
     delete: vi.fn(),
     getAuthContext: vi.fn(),
+  },
+  reportCsvStore: {
+    store: mockStoreCsv,
   },
 }));
 
@@ -29,6 +36,7 @@ const mockDownloadReport = vi.fn();
 
 beforeEach(() => {
   mockDownloadReport.mockReset();
+  mockStoreCsv.mockReset();
   mockResolveSession.mockReturnValue({
     pinterestReportingService: {
       downloadReport: mockDownloadReport,
@@ -93,8 +101,90 @@ describe("downloadReportLogic", () => {
 
     expect(mockDownloadReport).toHaveBeenCalledWith(
       "https://example.com/report.csv",
-      10
+      10,
+      undefined,
+      { includeRawCsv: false }
     );
+  });
+
+  it("persists the raw CSV and returns a resource URI when storeRawCsv is true", async () => {
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date", "impressions"],
+      rows: [["2026-03-01", "1000"]],
+      totalRows: 1,
+      rawCsv: "date,impressions\n2026-03-01,1000\n",
+    });
+    mockStoreCsv.mockReturnValueOnce({
+      resourceId: "stored-id-1",
+      byteLength: 32,
+      warnings: [],
+    });
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://example.com/report.csv",
+        mode: "summary",
+        storeRawCsv: true,
+      } as any,
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(mockDownloadReport).toHaveBeenCalledWith(
+      "https://example.com/report.csv",
+      10,
+      undefined,
+      { includeRawCsv: true }
+    );
+    expect(mockStoreCsv).toHaveBeenCalledWith({
+      csv: "date,impressions\n2026-03-01,1000\n",
+      mimeType: "text/csv",
+      sessionId: "test-session",
+    });
+    expect(result.rawCsvResourceUri).toBe("report-csv://stored-id-1");
+    expect(result.rawCsvByteLength).toBe(32);
+  });
+
+  it("propagates store warnings into the report-view warnings", async () => {
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date"],
+      rows: [],
+      totalRows: 0,
+      rawCsv: "date\n",
+    });
+    mockStoreCsv.mockReturnValueOnce({
+      resourceId: "stored-id-2",
+      byteLength: 5,
+      warnings: ["CSV exceeded 100 bytes and was truncated to 100 bytes."],
+    });
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://example.com/report.csv",
+        storeRawCsv: true,
+      } as any,
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.warnings.some((w) => w.includes("truncated"))).toBe(true);
+  });
+
+  it("does not call the store when storeRawCsv is false", async () => {
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date"],
+      rows: [],
+      totalRows: 0,
+    });
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(mockStoreCsv).not.toHaveBeenCalled();
+    expect(result.rawCsvResourceUri).toBeUndefined();
   });
 });
 

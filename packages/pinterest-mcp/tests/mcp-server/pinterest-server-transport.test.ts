@@ -10,7 +10,11 @@ const hoisted = vi.hoisted(() => ({
 }));
 
 vi.mock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
-  McpServer: vi.fn().mockImplementation(() => ({ connect: hoisted.connect })),
+  McpServer: vi.fn().mockImplementation(() => ({
+    connect: hoisted.connect,
+    registerResource: vi.fn(),
+  })),
+  ResourceTemplate: vi.fn().mockImplementation((uriTemplate: string) => ({ uriTemplate })),
 }));
 
 vi.mock("@modelcontextprotocol/sdk/server/stdio.js", () => ({

@@ -167,12 +167,17 @@ export class PinterestReportingService {
 
   /**
    * Download a report CSV from a URL.
+   *
+   * When `includeRawCsv` is true, the original (BOM-stripped, line-normalized)
+   * CSV body is returned alongside the parsed rows so callers can persist it
+   * via `ReportCsvStore`.
    */
   async downloadReport(
     downloadUrl: string,
     maxRows = DEFAULT_REPORT_MAX_ROWS,
-    context?: RequestContext
-  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number }> {
+    context?: RequestContext,
+    options: { includeRawCsv?: boolean } = {}
+  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
     const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
@@ -198,13 +203,23 @@ export class PinterestReportingService {
     const normalizedCsvText = csvText.replace(/\r\n/g, "\n").trim();
 
     if (normalizedCsvText.length === 0) {
-      return { rows: [], headers: [], totalRows: 0 };
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: "" } : {}),
+      };
     }
 
     const lines = normalizedCsvText.split("\n");
 
     if (lines.length === 0) {
-      return { rows: [], headers: [], totalRows: 0 };
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
+      };
     }
 
     const headers = parseCsvLine(lines[0]);
@@ -216,6 +231,7 @@ export class PinterestReportingService {
       rows,
       headers,
       totalRows: dataLines.length,
+      ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
     };
   }
 
