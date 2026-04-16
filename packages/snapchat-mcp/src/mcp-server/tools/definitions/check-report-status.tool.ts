@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { fromSnapchatStatus, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -12,8 +13,9 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted Snapchat re
 
 Makes a single API call to check task status. Does not poll or wait.
 
-**Statuses:** PENDING, RUNNING, COMPLETE, FAILED
-- If COMPLETE with a \`downloadUrl\`, use \`snapchat_download_report\` to fetch results.
+**Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`.
+Snapchat raw statuses (PENDING/RUNNING/COMPLETE/FAILED) are mapped; the raw string is returned as \`rawStatus\`.
+- If state is \`complete\` with a \`downloadUrl\`, use \`snapchat_download_report\` to fetch results.
 - If not done, call this tool again in ~10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
@@ -29,15 +31,12 @@ export const CheckReportStatusInputSchema = z
   })
   .describe("Parameters for checking Snapchat report status");
 
-export const CheckReportStatusOutputSchema = z
-  .object({
-    taskId: z.string().describe("Report task ID"),
-    status: z.string().describe("Current task status"),
-    isComplete: z.boolean().describe("Whether the report is complete (COMPLETE)"),
-    downloadUrl: z.string().optional().describe("Download URL when COMPLETE"),
-    timestamp: z.string().datetime(),
-  })
-  .describe("Report status check result");
+export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
+  taskId: z.string().describe("Report task ID"),
+  rawStatus: z.string().describe("Raw Snapchat status (PENDING/RUNNING/COMPLETE/FAILED)"),
+  isComplete: z.boolean().describe("Whether the canonical state is 'complete'"),
+  timestamp: z.string().datetime(),
+}).describe("Report status check result");
 
 type CheckReportStatusInput = z.infer<typeof CheckReportStatusInputSchema>;
 type CheckReportStatusOutput = z.infer<typeof CheckReportStatusOutputSchema>;
@@ -54,11 +53,16 @@ export async function checkReportStatusLogic(
     context
   );
 
-  return {
-    taskId: result.taskId,
+  const canonical = fromSnapchatStatus({
     status: result.status,
-    isComplete: result.status === "COMPLETE",
     downloadUrl: result.downloadUrl,
+  });
+
+  return {
+    ...canonical,
+    taskId: result.taskId,
+    rawStatus: result.status,
+    isComplete: canonical.state === "complete",
     timestamp: new Date().toISOString(),
   };
 }
@@ -73,7 +77,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
     ];
   }
 
-  if (result.status === "FAILED") {
+  if (result.state === "failed") {
     return [
       {
         type: "text" as const,
@@ -85,7 +89,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
   return [
     {
       type: "text" as const,
-      text: `Report in progress: ${result.taskId}\nStatus: ${result.status}\n\nCall \`snapchat_check_report_status\` again in ~10 seconds.\n\nTimestamp: ${result.timestamp}`,
+      text: `Report in progress: ${result.taskId}\nState: ${result.state} (${result.rawStatus})\n\nCall \`snapchat_check_report_status\` again in ~10 seconds.\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
