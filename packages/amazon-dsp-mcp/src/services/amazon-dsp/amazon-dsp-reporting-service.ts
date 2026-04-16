@@ -174,12 +174,24 @@ export class AmazonDspReportingService {
 
   /**
    * Download a report from a URL.
+   *
+   * When `includeRawCsv` is true, the original response body is returned
+   * alongside the parsed rows so callers can persist it via `ReportCsvStore`.
+   * Amazon DSP reports may be JSON or CSV depending on report type — the raw
+   * body is stored as-is; consumers inspect the mimeType hint on the entry.
    */
   async downloadReport(
     downloadUrl: string,
     maxRows = DEFAULT_REPORT_MAX_ROWS,
-    context?: RequestContext
-  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number }> {
+    context?: RequestContext,
+    options: { includeRawCsv?: boolean } = {}
+  ): Promise<{
+    rows: string[][];
+    headers: string[];
+    totalRows: number;
+    rawCsv?: string;
+    rawMimeType?: string;
+  }> {
     const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
@@ -206,30 +218,34 @@ export class AmazonDspReportingService {
       text.trimStart().startsWith("[") ||
       text.trimStart().startsWith("{");
 
+    const rawExtras = options.includeRawCsv
+      ? { rawCsv: text, rawMimeType: looksLikeJson ? "application/json" : "text/csv" }
+      : {};
+
     if (looksLikeJson) {
       const parsed = JSON.parse(text) as Record<string, unknown>[];
       const data = Array.isArray(parsed) ? parsed : [parsed];
       if (data.length === 0) {
-        return { rows: [], headers: [], totalRows: 0 };
+        return { rows: [], headers: [], totalRows: 0, ...rawExtras };
       }
       const headers = Object.keys(data[0]);
       const totalRows = data.length;
       const limitedData = data.slice(0, maxRows);
       const rows = limitedData.map((row) => headers.map((h) => String(row[h] ?? "")));
-      return { rows, headers, totalRows };
+      return { rows, headers, totalRows, ...rawExtras };
     }
 
     // CSV/TSV fallback via shared parseCSV
     if (text.replace(/^\uFEFF/, "").trim() === "") {
-      return { rows: [], headers: [], totalRows: 0 };
+      return { rows: [], headers: [], totalRows: 0, ...rawExtras };
     }
     const { headers, rows: recordRows } = parseCSV(text);
     if (headers.length === 0 && recordRows.length === 0) {
-      return { rows: [], headers: [], totalRows: 0 };
+      return { rows: [], headers: [], totalRows: 0, ...rawExtras };
     }
     const limited = recordRows.slice(0, maxRows);
     const rows = limited.map((record) => headers.map((h) => record[h] ?? ""));
-    return { rows, headers, totalRows: recordRows.length };
+    return { rows, headers, totalRows: recordRows.length, ...rawExtras };
   }
 
   /**
