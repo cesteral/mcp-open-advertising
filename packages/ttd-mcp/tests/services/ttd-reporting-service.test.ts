@@ -175,7 +175,7 @@ describe("TtdReportingService", () => {
 
       const error = await errorPromise;
       expect(error).toBeInstanceOf(Error);
-      expect((error as Error).message).toContain("Report polling timed out");
+      expect((error as Error).message).toContain("Report polling exceeded");
       expect((error as Error).message).toContain("60");
     });
 

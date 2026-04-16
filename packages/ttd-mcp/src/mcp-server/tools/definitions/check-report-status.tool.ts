@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { fromTtdStatus, ReportStatusSchema } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -12,8 +13,8 @@ const TOOL_DESCRIPTION = `Check the status of a previously submitted TTD report.
 
 Makes a single API call to check execution state. Does not poll or wait.
 
-**States:** Pending, InProgress, Complete, Failed
-- If Complete with a \`downloadUrl\`, use \`ttd_download_report\` to fetch results.
+**States** (canonical): \`pending\`, \`running\`, \`complete\`, \`failed\`, \`cancelled\`
+- If \`complete\` with a \`downloadUrl\`, use \`ttd_download_report\` to fetch results.
 - If not complete, call this tool again in 5-10 seconds.`;
 
 export const CheckReportStatusInputSchema = z
@@ -25,16 +26,12 @@ export const CheckReportStatusInputSchema = z
   })
   .describe("Parameters for checking TTD report status");
 
-export const CheckReportStatusOutputSchema = z
-  .object({
-    reportScheduleId: z.string().describe("Report schedule ID"),
-    state: z.string().describe("Current execution state"),
-    isComplete: z.boolean().describe("Whether the report is complete"),
-    downloadUrl: z.string().nullish().describe("Download URL when complete"),
-    execution: z.record(z.any()).describe("Full execution details"),
-    timestamp: z.string().datetime(),
-  })
-  .describe("Report status check result");
+export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
+  reportScheduleId: z.string().describe("Report schedule ID"),
+  isComplete: z.boolean().describe("Whether the report is complete"),
+  execution: z.record(z.any()).describe("Full execution details"),
+  timestamp: z.string().datetime(),
+}).describe("Report status check result");
 
 type CheckReportStatusInput = z.infer<typeof CheckReportStatusInputSchema>;
 type CheckReportStatusOutput = z.infer<typeof CheckReportStatusOutputSchema>;
@@ -51,11 +48,15 @@ export async function checkReportStatusLogic(
     context
   );
 
+  const canonical = fromTtdStatus({
+    ExecutionState: result.state,
+    ReportDownloadUrl: result.downloadUrl,
+  });
+
   return {
+    ...canonical,
     reportScheduleId: result.reportScheduleId,
-    state: result.state,
-    isComplete: result.state === "Complete",
-    downloadUrl: result.downloadUrl,
+    isComplete: canonical.state === "complete",
     execution: result.execution,
     timestamp: new Date().toISOString(),
   };
@@ -80,7 +81,7 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
     ];
   }
 
-  if (result.state === "Failed") {
+  if (result.state === "failed") {
     return [
       {
         type: "text" as const,

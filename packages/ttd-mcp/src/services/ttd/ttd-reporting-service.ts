@@ -7,10 +7,10 @@ import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import {
   McpError,
   JsonRpcErrorCode,
-  delay,
-  computeExponentialBackoff,
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
+  pollUntilComplete,
+  ReportFailedError,
   type RequestContext,
 } from "@cesteral/shared";
 
@@ -42,8 +42,6 @@ export interface TtdReportConfig {
  * 3. Download the result
  */
 export class TtdReportingService {
-  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
-
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: TtdHttpClient,
@@ -295,62 +293,44 @@ export class TtdReportingService {
       );
     }
 
-    for (
-      let attempt = 0;
-      attempt < this.maxPollAttempts;
-      attempt++
-    ) {
-      await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-      const body = {
-        AdvertiserIds: advertiserIds,
-        ReportScheduleIds: [Number(reportScheduleId)],
-        PageStartIndex: 0,
-        PageSize: 1,
-      };
-
-      const result = (await this.httpClient.fetch(
-        "/myreports/reportexecution/query/advertisers",
-        context,
-        {
-          method: "POST",
-          body: JSON.stringify(body),
-        }
-      )) as Record<string, unknown>;
-
-      const executions = (result.Result as Array<Record<string, unknown>>) || [];
-      if (executions.length > 0) {
-        const execution = executions[0];
-        const state = execution.ReportExecutionState as string;
-
-        if (state === "Complete") {
-          this.logger.info(
-            { reportScheduleId, attempt, requestId: context?.requestId },
-            "Report execution complete"
-          );
-          return execution;
-        }
-
-        if (state === "Failed") {
-          throw new McpError(
-            JsonRpcErrorCode.InternalError,
-            `Report execution failed: ${JSON.stringify(execution)}`
-          );
-        }
-
-        this.logger.debug(
-          { reportScheduleId, state, attempt },
-          "Report still processing"
+    try {
+      return await pollUntilComplete<Record<string, unknown>>({
+        fetchStatus: async () => {
+          await this.rateLimiter.consume(`ttd:${partnerId}`);
+          const body = {
+            AdvertiserIds: advertiserIds,
+            ReportScheduleIds: [Number(reportScheduleId)],
+            PageStartIndex: 0,
+            PageSize: 1,
+          };
+          const result = (await this.httpClient.fetch(
+            "/myreports/reportexecution/query/advertisers",
+            context,
+            { method: "POST", body: JSON.stringify(body) }
+          )) as Record<string, unknown>;
+          const executions =
+            (result.Result as Array<Record<string, unknown>>) || [];
+          return executions[0] ?? {};
+        },
+        isComplete: (exec) =>
+          (exec as { ReportExecutionState?: string }).ReportExecutionState ===
+          "Complete",
+        isFailed: (exec) =>
+          (exec as { ReportExecutionState?: string }).ReportExecutionState ===
+          "Failed",
+        initialDelayMs: this.pollIntervalMs,
+        maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
+        maxAttempts: this.maxPollAttempts,
+      });
+    } catch (err) {
+      if (err instanceof ReportFailedError) {
+        throw new ReportFailedError(
+          err.status as Record<string, unknown>,
+          `Report execution failed: ${JSON.stringify(err.status)}`
         );
       }
-
-      await delay(computeExponentialBackoff(attempt, this.pollIntervalMs, TtdReportingService.MAX_BACKOFF_MS));
+      throw err;
     }
-
-    throw new McpError(
-      JsonRpcErrorCode.Timeout,
-      `Report polling timed out after ${this.maxPollAttempts} attempts`
-    );
   }
 
 }

@@ -4,11 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
-  arrayRowsToRecords,
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
   createReportView,
   fetchWithTimeout,
   formatReportViewResponse,
-  parseCsvLine,
+  parseCSV,
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
@@ -39,6 +40,7 @@ export const DownloadReportInputSchema = z
       .describe("Report download URL from ttd_get_report"),
   })
   .merge(ReportViewInputSchema)
+  .merge(ComputedMetricsFlagSchema)
   .describe("Parameters for downloading a TTD report");
 
 export const DownloadReportOutputSchema = z
@@ -51,22 +53,13 @@ export const DownloadReportOutputSchema = z
 type DownloadInput = z.infer<typeof DownloadReportInputSchema>;
 type DownloadOutput = z.infer<typeof DownloadReportOutputSchema>;
 
-function parseCsv(csvText: string): { headers: string[]; rows: string[][] } {
-  const normalized = csvText.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
-  if (!normalized) return { headers: [], rows: [] };
-
-  const lines = normalized.split("\n");
-  const headers = parseCsvLine(lines[0]);
-  const rows: string[][] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    rows.push(parseCsvLine(line));
-  }
-
-  return { headers, rows };
-}
+const TTD_COMPUTED_METRIC_ALIASES = {
+  cost: ["TotalCost", "AdvertiserCost", "PartnerCost"],
+  impressions: ["Impressions"],
+  clicks: ["Clicks"],
+  conversions: ["TotalConversions", "Conversions"],
+  conversionValue: ["TotalConversionsValue", "ConversionValue"],
+};
 
 const ALLOWED_REPORT_HOSTNAME_PATTERN = /(?:^|\.)(?:thetradedesk\.com|amazonaws\.com)$/;
 
@@ -150,12 +143,19 @@ export async function downloadReportLogic(
   }
 
   const csvText = new TextDecoder("utf-8").decode(bytes);
-  const { headers, rows: allRows } = parseCsv(csvText);
+  const { headers, rows } = parseCSV(csvText);
+
+  const augmented = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(rows, TTD_COMPUTED_METRIC_ALIASES)
+    : rows;
+  const augmentedHeaders = input.includeComputedMetrics
+    ? [...headers, "cpa", "roas", "cpm", "ctr", "cpc"]
+    : headers;
 
   return {
     ...createReportView({
-      headers,
-      rows: arrayRowsToRecords(headers, allRows),
+      headers: augmentedHeaders,
+      rows: augmented,
       input,
     }),
     timestamp: new Date().toISOString(),

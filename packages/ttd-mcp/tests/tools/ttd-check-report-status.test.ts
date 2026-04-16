@@ -44,7 +44,7 @@ describe("checkReportStatusLogic", () => {
       createMockSdkContext()
     );
 
-    expect(result.state).toBe("Complete");
+    expect(result.state).toBe("complete");
     expect(result.isComplete).toBe(true);
     expect(result.downloadUrl).toBe("https://files.ttd.com/report.csv");
     expect(result.timestamp).toBeDefined();
@@ -63,7 +63,7 @@ describe("checkReportStatusLogic", () => {
       createMockSdkContext()
     );
 
-    expect(result.state).toBe("Pending");
+    expect(result.state).toBe("pending");
     expect(result.isComplete).toBe(false);
     expect(result.downloadUrl).toBeUndefined();
   });
@@ -86,7 +86,7 @@ describe("checkReportStatusResponseFormatter", () => {
   it("shows download guidance when complete with URL", () => {
     const result = {
       reportScheduleId: "sched-1",
-      state: "Complete",
+      state: "complete" as const,
       isComplete: true,
       downloadUrl: "https://files.ttd.com/report.csv",
       execution: { ReportExecutionState: "Complete" },
@@ -101,7 +101,7 @@ describe("checkReportStatusResponseFormatter", () => {
   it("shows retry guidance when in progress", () => {
     const result = {
       reportScheduleId: "sched-2",
-      state: "Pending",
+      state: "pending" as const,
       isComplete: false,
       execution: { ReportExecutionState: "Pending" },
       timestamp: new Date().toISOString(),
@@ -116,7 +116,7 @@ describe("checkReportStatusResponseFormatter", () => {
   it("shows failure message when failed", () => {
     const result = {
       reportScheduleId: "sched-3",
-      state: "Failed",
+      state: "failed" as const,
       isComplete: false,
       execution: { ReportExecutionState: "Failed" },
       timestamp: new Date().toISOString(),
