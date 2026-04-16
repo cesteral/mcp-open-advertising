@@ -63,6 +63,7 @@ Fetch these resources for detailed schema information:
 - \`sa360_get_entity\` — Get single entity by type and ID
 - \`sa360_list_entities\` — List entities with query filters
 - \`sa360_search_fields\` — Search available SA360 query fields
+- \`sa360_list_report_columns\` — List field groups for a resource (live + static fallback)
 
 ### Insights
 - \`sa360_get_insights\` — Performance insights with preset or custom date ranges

@@ -1,0 +1,86 @@
+{
+  "description": "Static fallback catalog of common SA360 Reporting API v0 field prefixes. Seeded from https://developers.google.com/search-ads/reporting/query/query-structure. Used when the live sa360_search_fields call is unavailable (e.g. credentials not provisioned, SA360-reporting entitlement gated) so callers can still discover field groupings.",
+  "resources": [
+    "account",
+    "campaign",
+    "ad_group",
+    "ad_group_ad",
+    "ad_group_criterion",
+    "ad_group_bid_modifier",
+    "campaign_budget",
+    "conversion",
+    "conversion_action",
+    "customer",
+    "keyword_view"
+  ],
+  "fieldGroups": {
+    "campaign": [
+      "campaign.id",
+      "campaign.name",
+      "campaign.status",
+      "campaign.advertising_channel_type",
+      "campaign.start_date",
+      "campaign.end_date",
+      "campaign.bidding_strategy_type",
+      "campaign.effective_target_roas",
+      "campaign.effective_target_cpa_micros"
+    ],
+    "ad_group": [
+      "ad_group.id",
+      "ad_group.name",
+      "ad_group.status",
+      "ad_group.type",
+      "ad_group.cpc_bid_micros",
+      "ad_group.cpm_bid_micros"
+    ],
+    "ad_group_ad": [
+      "ad_group_ad.ad.id",
+      "ad_group_ad.ad.name",
+      "ad_group_ad.ad.type",
+      "ad_group_ad.status",
+      "ad_group_ad.policy_summary.review_status"
+    ],
+    "ad_group_criterion": [
+      "ad_group_criterion.criterion_id",
+      "ad_group_criterion.type",
+      "ad_group_criterion.keyword.text",
+      "ad_group_criterion.keyword.match_type",
+      "ad_group_criterion.status",
+      "ad_group_criterion.quality_info.quality_score"
+    ],
+    "metrics": [
+      "metrics.impressions",
+      "metrics.clicks",
+      "metrics.ctr",
+      "metrics.cost_micros",
+      "metrics.average_cpc",
+      "metrics.conversions",
+      "metrics.conversions_value",
+      "metrics.cost_per_conversion",
+      "metrics.value_per_conversion",
+      "metrics.all_conversions",
+      "metrics.all_conversions_value",
+      "metrics.search_impression_share",
+      "metrics.search_top_impression_share",
+      "metrics.engagements",
+      "metrics.video_views"
+    ],
+    "segments": [
+      "segments.date",
+      "segments.day_of_week",
+      "segments.month",
+      "segments.quarter",
+      "segments.week",
+      "segments.device",
+      "segments.ad_network_type",
+      "segments.conversion_action_category",
+      "segments.conversion_action"
+    ]
+  },
+  "notes": [
+    "Use the live `sa360_search_fields` tool for the authoritative field list; call `sa360_list_report_columns` (this tool) for a quick browse of the standard groupings.",
+    "Field names are dotted (e.g. `campaign.id`). Select them via the SA360 report query DSL: `SELECT campaign.id, metrics.clicks FROM campaign WHERE segments.date DURING LAST_30_DAYS`.",
+    "Cost values are always micros (1 USD = 1_000_000). Divide by 1_000_000 before displaying to humans.",
+    "Not every metric is selectable alongside every resource; the live searchAds360Fields endpoint declares `selectable_with` constraints that this static catalog does not model."
+  ]
+}

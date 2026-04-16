@@ -4,9 +4,10 @@
 /**
  * Tool definitions barrel export
  *
- * 15 tools total:
- *   8 read:  sa360 search, list accounts, get entity, list entities, get insights,
- *            get insights breakdowns, list custom columns, search fields
+ * 16 tools total:
+ *   9 read:  sa360 search, list accounts, get entity, list entities, get insights,
+ *            get insights breakdowns, list custom columns, search fields,
+ *            list report columns (discovery)
  *   3 async reporting: submit report, check report status, download report (v2 API)
  *   2 write: insert conversions, update conversions (v2 API)
  *   1 validation: validate conversion
@@ -21,6 +22,7 @@ export { getInsightsTool } from "./get-insights.tool.js";
 export { getInsightsBreakdownsTool } from "./get-insights-breakdowns.tool.js";
 export { listCustomColumnsTool } from "./list-custom-columns.tool.js";
 export { searchFieldsTool } from "./search-fields.tool.js";
+export { listReportColumnsTool } from "./list-report-columns.tool.js";
 export { insertConversionsTool } from "./insert-conversions.tool.js";
 export { updateConversionsTool } from "./update-conversions.tool.js";
 export { validateConversionTool } from "./validate-conversion.tool.js";
@@ -37,6 +39,7 @@ import { getInsightsTool } from "./get-insights.tool.js";
 import { getInsightsBreakdownsTool } from "./get-insights-breakdowns.tool.js";
 import { listCustomColumnsTool } from "./list-custom-columns.tool.js";
 import { searchFieldsTool } from "./search-fields.tool.js";
+import { listReportColumnsTool } from "./list-report-columns.tool.js";
 import { insertConversionsTool } from "./insert-conversions.tool.js";
 import { updateConversionsTool } from "./update-conversions.tool.js";
 import { validateConversionTool } from "./validate-conversion.tool.js";
@@ -56,6 +59,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   getInsightsBreakdownsTool,
   listCustomColumnsTool,
   searchFieldsTool,
+  listReportColumnsTool,
   // ── Async Reporting (v2 API) ──
   submitReportTool,
   checkReportStatusTool,
