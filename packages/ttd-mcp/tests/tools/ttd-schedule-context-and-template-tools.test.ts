@@ -345,6 +345,12 @@ describe("ttd schedule/context/template tools", () => {
       startDate: "2026-04-02T00:00:00Z",
       frequency: "SINGLE_RUN",
       dateRange: "LAST14_DAYS",
+      reportFilters: [
+        {
+          reportType: "60",
+          partnerIds: ["partner-1"],
+        },
+      ],
       tailAggregations: {
         columnId: "21",
         tailAggregation: "NO_IMPRESSIONS",

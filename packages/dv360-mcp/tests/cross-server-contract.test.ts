@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { getObjectShape } from "@cesteral/shared";
+import {
+  getObjectShape,
+  isBoundedReportViewInputSchema,
+  getBoundedReportViewOutputMissingKeys,
+} from "@cesteral/shared";
 import { allTools } from "../src/mcp-server/tools/definitions/index.js";
 
 describe("Cross-server contract compliance", () => {
@@ -115,4 +119,24 @@ describe("Cross-server contract compliance", () => {
       ).toBe(true);
     });
   });
+});
+
+
+describe("bounded report-view contract", () => {
+  const reportTools = allTools.filter((t: any) =>
+    isBoundedReportViewInputSchema(t.inputSchema)
+  );
+
+  if (reportTools.length === 0) {
+    it("has no bounded report-view tools registered", () => {
+      expect(reportTools).toEqual([]);
+    });
+  } else {
+    for (const tool of reportTools) {
+      it(`${tool.name} output schema includes bounded report-view fields`, () => {
+        const missing = getBoundedReportViewOutputMissingKeys((tool as any).outputSchema);
+        expect(missing).toEqual([]);
+      });
+    }
+  }
 });

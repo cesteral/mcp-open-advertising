@@ -81,6 +81,12 @@ describe("ttd report template tools", () => {
       format: "EXCEL",
       dateFormat: "International",
       numericFormat: "US",
+      reportFilters: [
+        {
+          reportType: "60",
+          partnerIds: ["partner-1"],
+        },
+      ],
     });
 
     expect(result.success).toBe(true);
@@ -144,33 +150,21 @@ describe("ttd report template tools", () => {
     );
   });
 
-  it("returns report template result sets with reportTypeId and columnId values", async () => {
+  it("returns report template result sets with reportTypeName and column ordering", async () => {
     mockTtdService.graphqlQuery.mockResolvedValueOnce({
       data: {
         derivedReportTemplate: {
           requestedReportTemplateId: "tpl-123",
-          isDerived: false,
           name: "Weekly Report",
           reportFormatType: "EXCEL",
           resultSets: [
             {
-              name: "Performance",
-              reportType: { id: "60", name: "Campaign" },
+              reportType: { name: "Campaign" },
               fields: [
-                {
-                  columnId: "21",
-                  name: "Campaign Name",
-                  columnOrder: 1,
-                  includedInPivot: true,
-                },
+                { columnOrder: 1, includedInPivot: true, isOverlapColumn: false },
               ],
               metrics: [
-                {
-                  columnId: "7",
-                  name: "Impressions",
-                  columnOrder: 2,
-                  includedInPivot: true,
-                },
+                { columnOrder: 2, includedInPivot: true, isOverlapColumn: false },
               ],
             },
           ],
@@ -184,10 +178,10 @@ describe("ttd report template tools", () => {
       createMockSdkContext()
     );
 
-    expect(result.resultSets?.[0]?.name).toBe("Performance");
-    expect(result.resultSets?.[0]?.reportTypeId).toBe("60");
-    expect(result.resultSets?.[0]?.fields?.[0]?.columnId).toBe("21");
-    expect(result.resultSets?.[0]?.metrics?.[0]?.columnId).toBe("7");
+    expect(result.name).toBe("Weekly Report");
+    expect(result.resultSets?.[0]?.reportTypeName).toBe("Campaign");
+    expect(result.resultSets?.[0]?.fields?.[0]?.columnOrder).toBe(1);
+    expect(result.resultSets?.[0]?.metrics?.[0]?.columnOrder).toBe(2);
   });
 
   it("uses GraphQL pagination when no legacy offset is provided", async () => {
