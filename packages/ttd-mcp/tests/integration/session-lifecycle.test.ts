@@ -107,6 +107,10 @@ vi.mock("../../src/services/session-services.js", async () => {
       } as any,
       ttdReportingService: { runReport: vi.fn() } as any,
     })),
+    reportCsvStore: {
+      list: () => [],
+      getByUri: () => undefined,
+    },
   };
 });
 

@@ -70,6 +70,10 @@ vi.mock("../../src/services/session-services.js", async () => {
       ttdService: mockState.ttdService,
       ttdReportingService: { runReport: vi.fn() } as any,
     })),
+    reportCsvStore: {
+      list: () => [],
+      getByUri: () => undefined,
+    },
   };
 });
 

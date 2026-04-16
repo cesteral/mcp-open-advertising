@@ -3,8 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { reportCsvStore } from "../../../services/session-services.js";
 import {
   appendComputedMetricsToRows,
+  buildReportCsvUri,
   ComputedMetricsFlagSchema,
   createReportView,
   fetchWithTimeout,
@@ -38,6 +40,16 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL from ttd_get_report"),
+    storeRawCsv: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "Persist the full CSV body in the in-process report-csv store and return " +
+        "a `report-csv://{id}` resource URI. Use when a downstream tool/user needs " +
+        "the complete CSV but the model only needs a bounded preview. Entries " +
+        "expire after 30 minutes. Sensitive token-like values are redacted before storage."
+      ),
   })
   .merge(ReportViewInputSchema)
   .merge(ComputedMetricsFlagSchema)
@@ -47,6 +59,14 @@ export const DownloadReportOutputSchema = z
   .object({
     ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
+    rawCsvResourceUri: z
+      .string()
+      .optional()
+      .describe("MCP resource URI of the persisted raw CSV (only present when storeRawCsv is true)"),
+    rawCsvByteLength: z
+      .number()
+      .optional()
+      .describe("Stored CSV size in bytes (after redaction and any truncation)"),
   })
   .describe("Downloaded report data");
 
@@ -152,13 +172,30 @@ export async function downloadReportLogic(
     ? [...headers, "cpa", "roas", "cpm", "ctr", "cpc"]
     : headers;
 
+  const view = createReportView({
+    headers: augmentedHeaders,
+    rows: augmented,
+    input,
+  });
+
+  const extras: { rawCsvResourceUri?: string; rawCsvByteLength?: number } = {};
+  if (input.storeRawCsv === true) {
+    const entry = reportCsvStore.store({
+      csv: csvText,
+      mimeType: "text/csv",
+      sessionId: sdkContext?.sessionId,
+    });
+    extras.rawCsvResourceUri = buildReportCsvUri(entry.resourceId);
+    extras.rawCsvByteLength = entry.byteLength;
+    if (entry.warnings.length > 0) {
+      view.warnings = [...view.warnings, ...entry.warnings];
+    }
+  }
+
   return {
-    ...createReportView({
-      headers: augmentedHeaders,
-      rows: augmented,
-      input,
-    }),
+    ...view,
     timestamp: new Date().toISOString(),
+    ...extras,
   };
 }
 

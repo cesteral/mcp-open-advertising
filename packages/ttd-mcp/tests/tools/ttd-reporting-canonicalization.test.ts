@@ -171,3 +171,67 @@ describe("ttd_download_report computed metrics flag", () => {
     expect(row.roas).toBe("4");
   });
 });
+
+describe("ttd_download_report storeRawCsv flag", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockResolveSessionServices.mockReturnValue({
+      authAdapter: {
+        getAccessToken: vi.fn().mockResolvedValue("test-token"),
+      },
+    });
+  });
+
+  const CSV = "AdvertiserId,Impressions\nadv-1,10000\n";
+
+  function mockCsvResponse() {
+    const bytes = new TextEncoder().encode(CSV);
+    (fetchWithTimeout as any).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: { get: (name: string) => (name === "content-type" ? "text/csv" : null) },
+      arrayBuffer: async () => bytes.buffer.slice(0),
+    });
+  }
+
+  it("does not include rawCsvResourceUri by default", async () => {
+    mockCsvResponse();
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/results/x/report.csv",
+        mode: "summary",
+        includeComputedMetrics: false,
+        storeRawCsv: false,
+      },
+      createMockContext(),
+      createMockSdkContext(),
+    );
+    expect(result.rawCsvResourceUri).toBeUndefined();
+    expect(result.rawCsvByteLength).toBeUndefined();
+  });
+
+  it("returns a report-csv:// URI and byte length when storeRawCsv is true", async () => {
+    mockCsvResponse();
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/results/x/report.csv",
+        mode: "summary",
+        includeComputedMetrics: false,
+        storeRawCsv: true,
+      },
+      createMockContext(),
+      createMockSdkContext(),
+    );
+    expect(result.rawCsvResourceUri).toMatch(/^report-csv:\/\//);
+    expect(result.rawCsvByteLength).toBe(Buffer.byteLength(CSV, "utf8"));
+
+    // The URI should resolve to the stored entry
+    const { reportCsvStore } = await import(
+      "../../src/services/session-services.js"
+    );
+    const entry = reportCsvStore.getByUri(result.rawCsvResourceUri!);
+    expect(entry).toBeDefined();
+    expect(entry!.csv).toBe(CSV);
+  });
+});
