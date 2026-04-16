@@ -9,6 +9,10 @@ import {
   fromGoogleStatus,
   fromMicrosoftStatus,
   fromCm360Status,
+  fromTikTokStatus,
+  fromSnapchatStatus,
+  fromAmazonDspStatus,
+  fromPinterestStatus,
 } from "../../src/schemas/report-status.js";
 
 describe("ReportStatusSchema", () => {
@@ -76,6 +80,63 @@ describe("fromGoogleStatus", () => {
     const status = fromGoogleStatus({ done: true, error: { message: "boom" } });
     expect(status.state).toBe("failed");
     expect(status.errors).toEqual(["boom"]);
+  });
+});
+
+describe("fromTikTokStatus", () => {
+  it("maps DONE to complete", () => {
+    expect(fromTikTokStatus({ status: "DONE" }).state).toBe("complete");
+  });
+  it("maps RUNNING to running", () => {
+    expect(fromTikTokStatus({ status: "RUNNING" }).state).toBe("running");
+  });
+  it("maps FAILED to failed", () => {
+    expect(fromTikTokStatus({ status: "FAILED" }).state).toBe("failed");
+  });
+  it("defaults unknown to pending", () => {
+    expect(fromTikTokStatus({ status: "PENDING" }).state).toBe("pending");
+  });
+});
+
+describe("fromSnapchatStatus", () => {
+  it("accepts raw COMPLETED and pre-normalized COMPLETE", () => {
+    expect(fromSnapchatStatus({ status: "COMPLETED" }).state).toBe("complete");
+    expect(fromSnapchatStatus({ status: "COMPLETE" }).state).toBe("complete");
+  });
+  it("accepts raw STARTED and pre-normalized RUNNING as running", () => {
+    expect(fromSnapchatStatus({ status: "STARTED" }).state).toBe("running");
+    expect(fromSnapchatStatus({ status: "RUNNING" }).state).toBe("running");
+  });
+  it("maps FAILED to failed", () => {
+    expect(fromSnapchatStatus({ status: "FAILED" }).state).toBe("failed");
+  });
+});
+
+describe("fromAmazonDspStatus", () => {
+  it("maps COMPLETED to complete", () => {
+    expect(fromAmazonDspStatus({ status: "COMPLETED" }).state).toBe("complete");
+  });
+  it("maps PROCESSING to running", () => {
+    expect(fromAmazonDspStatus({ status: "PROCESSING" }).state).toBe("running");
+  });
+  it("maps FAILED to failed", () => {
+    expect(fromAmazonDspStatus({ status: "FAILED" }).state).toBe("failed");
+  });
+  it("maps CANCELLED to cancelled", () => {
+    expect(fromAmazonDspStatus({ status: "CANCELLED" }).state).toBe("cancelled");
+  });
+});
+
+describe("fromPinterestStatus", () => {
+  it("maps FINISHED to complete", () => {
+    expect(fromPinterestStatus({ status: "FINISHED" }).state).toBe("complete");
+  });
+  it("maps IN_PROGRESS to running", () => {
+    expect(fromPinterestStatus({ status: "IN_PROGRESS" }).state).toBe("running");
+  });
+  it("treats EXPIRED and DOES_NOT_EXIST as failed", () => {
+    expect(fromPinterestStatus({ status: "EXPIRED" }).state).toBe("failed");
+    expect(fromPinterestStatus({ status: "DOES_NOT_EXIST" }).state).toBe("failed");
   });
 });
 

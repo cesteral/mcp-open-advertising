@@ -125,3 +125,101 @@ export function fromCm360Status(raw: {
     ...(raw.downloadUrl ? { downloadUrl: raw.downloadUrl } : {}),
   };
 }
+
+/**
+ * Normalize a TikTok report task status (`PENDING`/`RUNNING`/`DONE`/`FAILED`)
+ * to {@link ReportStatus}.
+ */
+export function fromTikTokStatus(raw: {
+  status?: string;
+  downloadUrl?: string;
+}): ReportStatus {
+  const s = raw.status ?? "";
+  const state: ReportStatus["state"] =
+    s === "DONE"
+      ? "complete"
+      : s === "FAILED"
+        ? "failed"
+        : s === "RUNNING"
+          ? "running"
+          : "pending";
+  return {
+    state,
+    ...(raw.downloadUrl ? { downloadUrl: raw.downloadUrl } : {}),
+  };
+}
+
+/**
+ * Normalize a Snapchat report status (`PENDING`/`RUNNING`/`COMPLETE`/
+ * `FAILED`) to {@link ReportStatus}. Accepts both Snapchat's raw API strings
+ * (e.g. `STARTED`, `COMPLETED`) and the pre-normalized forms emitted by
+ * snapchat-mcp's internal status normalizer.
+ */
+export function fromSnapchatStatus(raw: {
+  status?: string;
+  downloadUrl?: string;
+}): ReportStatus {
+  const s = (raw.status ?? "").toUpperCase();
+  const state: ReportStatus["state"] =
+    s === "COMPLETE" || s === "COMPLETED"
+      ? "complete"
+      : s === "FAILED"
+        ? "failed"
+        : s === "RUNNING" || s === "STARTED"
+          ? "running"
+          : "pending";
+  return {
+    state,
+    ...(raw.downloadUrl ? { downloadUrl: raw.downloadUrl } : {}),
+  };
+}
+
+/**
+ * Normalize an Amazon DSP report status (`PENDING`/`PROCESSING`/`COMPLETED`/
+ * `FAILED`) to {@link ReportStatus}.
+ */
+export function fromAmazonDspStatus(raw: {
+  status?: string;
+  downloadUrl?: string;
+}): ReportStatus {
+  const s = (raw.status ?? "").toUpperCase();
+  const state: ReportStatus["state"] =
+    s === "COMPLETED" || s === "SUCCESS"
+      ? "complete"
+      : s === "FAILED"
+        ? "failed"
+        : s === "CANCELLED"
+          ? "cancelled"
+          : s === "PROCESSING" || s === "RUNNING"
+            ? "running"
+            : "pending";
+  return {
+    state,
+    ...(raw.downloadUrl ? { downloadUrl: raw.downloadUrl } : {}),
+  };
+}
+
+/**
+ * Normalize a Pinterest async report status (`IN_PROGRESS`/`FINISHED`/
+ * `FAILED`/`EXPIRED`/`DOES_NOT_EXIST`) to {@link ReportStatus}. `EXPIRED`
+ * and `DOES_NOT_EXIST` surface as `failed` since the artifact is no longer
+ * retrievable.
+ */
+export function fromPinterestStatus(raw: {
+  status?: string;
+  downloadUrl?: string;
+}): ReportStatus {
+  const s = raw.status ?? "";
+  const state: ReportStatus["state"] =
+    s === "FINISHED"
+      ? "complete"
+      : s === "FAILED" || s === "EXPIRED" || s === "DOES_NOT_EXIST"
+        ? "failed"
+        : s === "IN_PROGRESS"
+          ? "running"
+          : "pending";
+  return {
+    state,
+    ...(raw.downloadUrl ? { downloadUrl: raw.downloadUrl } : {}),
+  };
+}

@@ -4,8 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
-  arrayRowsToRecords,
-  computeMetrics,
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
   getReportViewFetchLimit,
@@ -38,13 +38,9 @@ export const DownloadReportInputSchema = z
       .string()
       .url()
       .describe("Report download URL from tiktok_check_report_status"),
-    includeComputedMetrics: z
-      .boolean()
-      .optional()
-      .default(false)
-      .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
   .merge(ReportViewInputSchema)
+  .merge(ComputedMetricsFlagSchema)
   .describe("Parameters for downloading a TikTok report");
 
 export const DownloadReportOutputSchema = z
@@ -57,33 +53,13 @@ export const DownloadReportOutputSchema = z
 type DownloadInput = z.infer<typeof DownloadReportInputSchema>;
 type DownloadOutput = z.infer<typeof DownloadReportOutputSchema>;
 
-function appendComputedMetricsToRows(
-  headers: string[],
-  rows: string[][],
-): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
-  const spendIdx = idx('spend');
-  const impIdx = idx('impressions');
-  const clickIdx = idx('clicks');
-  const convIdx = idx('conversions');
-
-  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
-  const newRows = rows.map(row => {
-    const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
-    const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
-    const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
-    const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
-    const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [...row,
-      m.cpa !== null ? String(m.cpa) : '',
-      m.roas !== null ? String(m.roas) : '',
-      m.cpm !== null ? String(m.cpm) : '',
-      m.ctr !== null ? String(m.ctr) : '',
-      m.cpc !== null ? String(m.cpc) : '',
-    ];
-  });
-  return { headers: newHeaders, rows: newRows };
-}
+const TIKTOK_COMPUTED_METRIC_ALIASES = {
+  cost: ["spend", "cost"],
+  impressions: ["impressions"],
+  clicks: ["clicks"],
+  conversions: ["conversions"],
+  conversionValue: ["conversion_value", "total_purchase_value"],
+};
 
 export async function downloadReportLogic(
   input: DownloadInput,
@@ -97,21 +73,33 @@ export async function downloadReportLogic(
     getReportViewFetchLimit(input)
   );
 
-  let headers = result.headers;
-  let rows = result.rows;
-
-  if (input.includeComputedMetrics) {
-    ({ headers, rows } = appendComputedMetricsToRows(headers, rows));
-  }
+  const recordRows: Record<string, string>[] = result.rows.map((row) => {
+    const record: Record<string, string> = {};
+    for (let i = 0; i < result.headers.length; i++) {
+      record[result.headers[i] ?? String(i)] = row[i] ?? "";
+    }
+    return record;
+  });
+  const augmented = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(recordRows, TIKTOK_COMPUTED_METRIC_ALIASES)
+    : recordRows;
+  const computedWarning = input.includeComputedMetrics
+    ? augmented[0]?._computedMetricsWarnings
+    : undefined;
+  const augmentedHeaders = input.includeComputedMetrics
+    ? [...result.headers, "cpa", "roas", "cpm", "ctr", "cpc"]
+    : result.headers;
 
   return {
     ...createReportView({
-      headers,
-      rows: arrayRowsToRecords(headers, rows),
+      headers: augmentedHeaders,
+      rows: augmented,
       totalRows: result.totalRows,
       input,
+      warnings: computedWarning
+        ? [`computed metrics: ${computedWarning}`]
+        : undefined,
     }),
-    headers,
     timestamp: new Date().toISOString(),
   };
 }

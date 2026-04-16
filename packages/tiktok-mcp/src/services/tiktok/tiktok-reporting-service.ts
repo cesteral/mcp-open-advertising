@@ -14,10 +14,9 @@ import {
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
   DEFAULT_REPORT_MAX_SIZE_BYTES,
   DEFAULT_REPORT_MAX_ROWS,
-  REPORT_POLL_WARNING_THRESHOLD,
-  delay,
-  parseCsvLine,
-  computeExponentialBackoff,
+  parseCSV,
+  pollUntilComplete,
+  ReportFailedError,
 } from "@cesteral/shared";
 import type { Logger } from "pino";
 
@@ -54,8 +53,6 @@ export interface TikTokReportConfig {
  * 3. GET download URL to retrieve CSV report data
  */
 export class TikTokReportingService {
-  private static readonly MAX_BACKOFF_MS = DEFAULT_REPORT_MAX_BACKOFF_MS;
-
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: TikTokHttpClient,
@@ -104,35 +101,30 @@ export class TikTokReportingService {
   ): Promise<ReportTaskCheckData> {
     this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
 
-    for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
-      await this.rateLimiter.consume(`tiktok:reporting`);
-
-      const result = (await this.httpClient.get(
-        `/open_api/${this.apiVersion}/report/task/check/`,
-        { task_id: taskId },
-        context
-      )) as ReportTaskCheckData;
-
-      if (result.status === "DONE" || result.status === "FAILED") {
-        this.logger.debug({ taskId, status: result.status, attempt }, "Report poll complete");
-        return result;
+    try {
+      return await pollUntilComplete<ReportTaskCheckData>({
+        fetchStatus: async () => {
+          await this.rateLimiter.consume(`tiktok:reporting`);
+          return (await this.httpClient.get(
+            `/open_api/${this.apiVersion}/report/task/check/`,
+            { task_id: taskId },
+            context
+          )) as ReportTaskCheckData;
+        },
+        isComplete: (r) => r.status === "DONE",
+        isFailed: (r) => r.status === "FAILED",
+        initialDelayMs: this.pollIntervalMs,
+        maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
+        maxAttempts: this.maxPollAttempts,
+      });
+    } catch (err) {
+      if (err instanceof ReportFailedError) {
+        // Surface the full task payload (which carries status=FAILED) to callers
+        // that previously received it from the old direct-return path.
+        return err.status as ReportTaskCheckData;
       }
-
-      const attemptsRemaining = this.maxPollAttempts - attempt - 1;
-      if (attemptsRemaining <= REPORT_POLL_WARNING_THRESHOLD) {
-        this.logger.warn({ taskId, attemptsRemaining, status: result.status }, "Report poll nearing attempt limit");
-      } else {
-        this.logger.debug({ taskId, attempt, status: result.status }, "Report still pending, waiting");
-      }
-
-      // Wait before next poll (exponential backoff)
-      await delay(computeExponentialBackoff(attempt, this.pollIntervalMs, TikTokReportingService.MAX_BACKOFF_MS));
+      throw err;
     }
-
-    throw new McpError(
-      JsonRpcErrorCode.Timeout,
-      `Report task ${taskId} did not complete after ${this.maxPollAttempts} polling attempts`
-    );
   }
 
   /**
@@ -183,32 +175,29 @@ export class TikTokReportingService {
       );
     }
 
-    let csvText = await response.text();
-    // Strip BOM if present
-    if (csvText.charCodeAt(0) === 0xFEFF) {
-      csvText = csvText.slice(1);
+    const csvText = await response.text();
+    // Guard against BOM-only or whitespace-only bodies before delegating to
+    // the shared parser — parseCSV treats a whitespace line as a header row
+    // of a single empty column, which would mislead downstream bounded-view
+    // consumers for a truly-empty report.
+    if (csvText.replace(/^\uFEFF/, "").trim() === "") {
+      return { rows: [], headers: [], totalRows: 0 };
     }
-    const normalizedCsvText = csvText.replace(/\r\n/g, "\n").trim();
+    const { headers, rows } = parseCSV(csvText);
 
-    if (normalizedCsvText.length === 0) {
+    if (headers.length === 0 && rows.length === 0) {
       return { rows: [], headers: [], totalRows: 0 };
     }
 
-    const lines = normalizedCsvText.split("\n");
-
-    if (lines.length === 0) {
-      return { rows: [], headers: [], totalRows: 0 };
-    }
-
-    const headers = parseCsvLine(lines[0]);
-    const dataLines = lines.slice(1);
-    const limitedLines = dataLines.slice(0, maxRows);
-    const rows = limitedLines.map(parseCsvLine);
+    const limitedRecords = rows.slice(0, maxRows);
+    const rowArrays = limitedRecords.map((record) =>
+      headers.map((h) => record[h] ?? "")
+    );
 
     return {
-      rows,
+      rows: rowArrays,
       headers,
-      totalRows: dataLines.length,
+      totalRows: rows.length,
     };
   }
 
