@@ -35,15 +35,18 @@ vi.mock("../../src/mcp-server/resources/index.js", () => ({
 }));
 
 describe("msads-mcp server", () => {
+  // Dynamic imports pull in the whole telemetry/Zod/pino graph through
+  // vitest's transform pipeline; under heavy parallel test load this can
+  // exceed 15s on some machines. 60s gives the transformer headroom.
   it("can import createMcpServer", async () => {
     const { createMcpServer } = await import("../../src/mcp-server/server.js");
     expect(createMcpServer).toBeTypeOf("function");
-  }, 15_000);
+  }, 60_000);
 
   it("can import runStdioServer", async () => {
     const { runStdioServer } = await import("../../src/mcp-server/server.js");
     expect(runStdioServer).toBeTypeOf("function");
-  }, 15_000);
+  }, 60_000);
 
   it("can import transport functions", async () => {
     const { createMcpHttpServer, startHttpServer } = await import(
@@ -51,5 +54,5 @@ describe("msads-mcp server", () => {
     );
     expect(createMcpHttpServer).toBeTypeOf("function");
     expect(startHttpServer).toBeTypeOf("function");
-  }, 15_000);
+  }, 60_000);
 });
