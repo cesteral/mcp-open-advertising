@@ -4,12 +4,13 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
-  arrayRowsToRecords,
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
+  parseCSV,
   ReportViewInputSchema,
   ReportViewOutputSchema,
-  parseCsvLine,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -30,6 +31,7 @@ export const DownloadReportInputSchema = z
       .describe("Download URL from sa360_check_report_status file list"),
   })
   .merge(ReportViewInputSchema)
+  .merge(ComputedMetricsFlagSchema)
   .describe("Parameters for downloading a report file");
 
 export const DownloadReportOutputSchema = z
@@ -42,13 +44,6 @@ export const DownloadReportOutputSchema = z
 type DownloadReportInput = z.infer<typeof DownloadReportInputSchema>;
 type DownloadReportOutput = z.infer<typeof DownloadReportOutputSchema>;
 
-/**
- * Parse a CSV line handling quoted fields with commas and escaped quotes.
- */
-export function parseCSVLine(line: string): string[] {
-  return parseCsvLine(line);
-}
-
 export async function downloadReportLogic(
   input: DownloadReportInput,
   context: RequestContext,
@@ -57,11 +52,9 @@ export async function downloadReportLogic(
   const { reportingService } = resolveSessionServices(sdkContext);
 
   const csvData = await reportingService.downloadReport(input.downloadUrl, context);
+  const { headers, rows } = parseCSV(csvData);
 
-  // Parse CSV
-  const lines = csvData.split("\n").filter((line) => line.trim() !== "");
-
-  if (lines.length === 0) {
+  if (headers.length === 0 && rows.length === 0) {
     return {
       headers: [],
       selectedColumns: [],
@@ -77,21 +70,37 @@ export async function downloadReportLogic(
     };
   }
 
-  const headers = parseCSVLine(lines[0]);
-  const dataLines = lines.slice(1);
-  const totalRows = dataLines.length;
-  const rows = dataLines.map((line) => parseCSVLine(line));
+  const augmented = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(rows, SA360_COMPUTED_METRIC_ALIASES)
+    : rows;
+  const computedWarning = input.includeComputedMetrics
+    ? augmented[0]?._computedMetricsWarnings
+    : undefined;
+  const augmentedHeaders = input.includeComputedMetrics
+    ? [...headers, "cpa", "roas", "cpm", "ctr", "cpc"]
+    : headers;
 
   return {
     ...createReportView({
-      headers,
-      rows: arrayRowsToRecords(headers, rows),
-      totalRows,
+      headers: augmentedHeaders,
+      rows: augmented,
+      totalRows: rows.length,
       input,
+      warnings: computedWarning
+        ? [`computed metrics: ${computedWarning}`]
+        : undefined,
     }),
     timestamp: new Date().toISOString(),
   };
 }
+
+const SA360_COMPUTED_METRIC_ALIASES = {
+  cost: ["cost", "costMicros", "totalCost"],
+  impressions: ["impressions", "impr"],
+  clicks: ["clicks"],
+  conversions: ["conversions", "allConversions"],
+  conversionValue: ["conversionsValue", "allConversionsValue", "totalConversionValue"],
+};
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
   return [

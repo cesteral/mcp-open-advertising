@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DownloadReportInputSchema } from "../../src/mcp-server/tools/definitions/download-report.tool.js";
-import { parseCSVLine } from "../../src/mcp-server/tools/definitions/download-report.tool.js";
+import { parseCsvLine as parseCSVLine } from "@cesteral/shared";
 
 describe("DownloadReportInputSchema", () => {
   it("accepts valid input with summary defaults", () => {
