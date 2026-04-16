@@ -3,7 +3,16 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { computeMetrics, resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
+import {
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
+  createReportView,
+  DATE_PRESET_VALUES,
+  formatReportViewResponse,
+  ReportViewInputSchema,
+  ReportViewOutputSchema,
+  resolveDatePreset,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -56,34 +65,35 @@ export const GetAnalyticsInputSchema = z
       .enum(["DAILY", "MONTHLY", "YEARLY", "ALL"])
       .optional()
       .describe("Time granularity (default: DAILY)"),
-    includeComputedMetrics: z
-      .boolean()
-      .optional()
-      .default(false)
-      .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
+  .merge(ReportViewInputSchema)
+  .merge(ComputedMetricsFlagSchema)
   .refine(
     (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for getting LinkedIn Ads analytics");
 
-export const GetAnalyticsOutputSchema = z
-  .object({
-    elements: z.array(z.record(z.any())).describe("Analytics data rows"),
-    pivot: z.string().describe("Pivot dimension used"),
-    timeGranularity: z.string(),
-    dateRange: z.object({
-      start: z.string(),
-      end: z.string(),
-    }),
-    count: z.number(),
-    timestamp: z.string().datetime(),
-  })
-  .describe("Analytics result");
+export const GetAnalyticsOutputSchema = ReportViewOutputSchema.extend({
+  pivot: z.string().describe("Pivot dimension used"),
+  timeGranularity: z.string(),
+  dateRange: z.object({
+    start: z.string(),
+    end: z.string(),
+  }),
+  timestamp: z.string().datetime(),
+}).describe("Analytics result");
 
 type GetAnalyticsInput = z.infer<typeof GetAnalyticsInputSchema>;
 type GetAnalyticsOutput = z.infer<typeof GetAnalyticsOutputSchema>;
+
+const LINKEDIN_COMPUTED_METRIC_ALIASES = {
+  cost: ["costInUsd", "costInLocalCurrency"],
+  impressions: ["impressions"],
+  clicks: ["clicks"],
+  conversions: ["externalWebsiteConversions", "conversions", "oneClickLeads"],
+  conversionValue: ["conversionValueInLocalCurrency"],
+};
 
 export async function getAnalyticsLogic(
   input: GetAnalyticsInput,
@@ -109,41 +119,50 @@ export async function getAnalyticsLogic(
     context
   );
 
-  let elements = result.elements as Record<string, unknown>[];
+  // LinkedIn returns a flat JSON element array. Stringify field values so the
+  // bounded-view + computed-metrics helpers (which both expect string-valued
+  // records) can work on the same shape.
+  const rawElements = result.elements as Record<string, unknown>[];
+  const stringRows: Record<string, string>[] = rawElements.map((row) => {
+    const record: Record<string, string> = {};
+    for (const [k, v] of Object.entries(row)) {
+      record[k] =
+        typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
+    }
+    return record;
+  });
 
-  if (input.includeComputedMetrics) {
-    elements = elements.map((row) => {
-      const cost = Number((row as Record<string, unknown>).costInUsd || 0);
-      const impressions = Number((row as Record<string, unknown>).impressions || 0);
-      const clicks = Number((row as Record<string, unknown>).clicks || 0);
-      const conversions = Number(
-        (row as Record<string, unknown>).externalWebsiteConversions ||
-        (row as Record<string, unknown>).conversions ||
-        0
-      );
-      const conversionValue = Number(
-        (row as Record<string, unknown>).conversionValueInLocalCurrency || 0
-      );
-      const computedMetrics = computeMetrics({ cost, impressions, clicks, conversions, conversionValue });
-      return { ...row, computedMetrics };
-    });
-  }
+  const augmented = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(stringRows, LINKEDIN_COMPUTED_METRIC_ALIASES)
+    : stringRows;
+  const computedWarning = input.includeComputedMetrics
+    ? augmented[0]?._computedMetricsWarnings
+    : undefined;
+
+  const view = createReportView({
+    rows: augmented,
+    totalRows: augmented.length,
+    input,
+    warnings: computedWarning
+      ? [`computed metrics: ${computedWarning}`]
+      : undefined,
+  });
 
   return {
-    elements,
+    ...view,
     pivot: input.pivot ?? "CAMPAIGN",
     timeGranularity: input.timeGranularity ?? "DAILY",
     dateRange: { start: resolvedStartDate!, end: resolvedEndDate! },
-    count: elements.length,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function getAnalyticsResponseFormatter(result: GetAnalyticsOutput): McpTextContent[] {
+  const header = `Analytics (${result.pivot}, ${result.timeGranularity})\nDate range: ${result.dateRange.start} to ${result.dateRange.end}`;
   return [
     {
       type: "text" as const,
-      text: `Analytics (${result.pivot}, ${result.timeGranularity})\nDate range: ${result.dateRange.start} to ${result.dateRange.end}\n${result.count} rows returned\n\n${JSON.stringify(result.elements, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `${header}\n\n${formatReportViewResponse(result, "Rows")}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

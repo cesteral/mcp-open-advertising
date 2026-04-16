@@ -3,7 +3,12 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { computeMetrics, resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
+import {
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
+  DATE_PRESET_VALUES,
+  resolveDatePreset,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -46,12 +51,8 @@ export const GetAnalyticsBreakdownsInputSchema = z
       .array(z.string())
       .optional()
       .describe("Metrics to retrieve (defaults to impressions, clicks, costInUsd)"),
-    includeComputedMetrics: z
-      .boolean()
-      .optional()
-      .default(false)
-      .describe("Include computed CPA, ROAS, CPM, CTR, CPC derived from raw metrics"),
   })
+  .merge(ComputedMetricsFlagSchema)
   .refine(
     (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
@@ -101,27 +102,24 @@ export async function getAnalyticsBreakdownsLogic(
 
   return {
     results: result.results.map((r) => {
-      let elements = r.elements as Record<string, unknown>[];
-      if (input.includeComputedMetrics) {
-        elements = elements.map((row) => {
-          const cost = Number((row as Record<string, unknown>).costInUsd || 0);
-          const impressions = Number((row as Record<string, unknown>).impressions || 0);
-          const clicks = Number((row as Record<string, unknown>).clicks || 0);
-          const conversions = Number(
-            (row as Record<string, unknown>).externalWebsiteConversions ||
-            (row as Record<string, unknown>).conversions ||
-            0
-          );
-          const conversionValue = Number(
-            (row as Record<string, unknown>).conversionValueInLocalCurrency || 0
-          );
-          const computedMetrics = computeMetrics({ cost, impressions, clicks, conversions, conversionValue });
-          return { ...row, computedMetrics };
-        });
-      }
+      const raw = r.elements as Record<string, unknown>[];
+      const stringRows: Record<string, string>[] = raw.map((row) => {
+        const record: Record<string, string> = {};
+        for (const [k, v] of Object.entries(row)) {
+          record[k] =
+            typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
+        }
+        return record;
+      });
+      const elements = input.includeComputedMetrics
+        ? appendComputedMetricsToRows(
+            stringRows,
+            BREAKDOWNS_COMPUTED_METRIC_ALIASES,
+          )
+        : stringRows;
       return {
         pivot: r.pivot,
-        elements,
+        elements: elements as Record<string, unknown>[],
         count: elements.length,
       };
     }),
@@ -129,6 +127,14 @@ export async function getAnalyticsBreakdownsLogic(
     timestamp: new Date().toISOString(),
   };
 }
+
+const BREAKDOWNS_COMPUTED_METRIC_ALIASES = {
+  cost: ["costInUsd", "costInLocalCurrency"],
+  impressions: ["impressions"],
+  clicks: ["clicks"],
+  conversions: ["externalWebsiteConversions", "conversions", "oneClickLeads"],
+  conversionValue: ["conversionValueInLocalCurrency"],
+};
 
 export function getAnalyticsBreakdownsResponseFormatter(
   result: GetAnalyticsBreakdownsOutput
