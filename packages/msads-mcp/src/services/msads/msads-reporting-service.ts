@@ -138,8 +138,9 @@ export class MsAdsReportingService {
   async downloadReport(
     downloadUrl: string,
     maxRows?: number,
-    context?: RequestContext
-  ): Promise<{ headers: string[]; rows: string[][]; totalRows: number }> {
+    context?: RequestContext,
+    options: { includeRawCsv?: boolean } = {}
+  ): Promise<{ headers: string[]; rows: string[][]; totalRows: number; rawCsv?: string }> {
     this.logger.info({ downloadUrl: downloadUrl.substring(0, 80) }, "Downloading report");
 
     const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
@@ -152,7 +153,8 @@ export class MsAdsReportingService {
     }
 
     const text = await response.text();
-    return this.parseCsv(text, maxRows);
+    const parsed = this.parseCsv(text, maxRows);
+    return options.includeRawCsv ? { ...parsed, rawCsv: text } : parsed;
   }
 
   /**

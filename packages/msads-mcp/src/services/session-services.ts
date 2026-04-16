@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { RateLimiter } from "@cesteral/shared";
-import { SessionServiceStore } from "@cesteral/shared";
+import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
 import type { MsAdsAuthAdapter } from "../auth/msads-auth-adapter.js";
 import { MsAdsHttpClient } from "./msads/msads-http-client.js";
 import { MsAdsService } from "./msads/msads-service.js";
@@ -24,6 +24,13 @@ export interface MsAdsSessionConfig {
 }
 
 export const sessionServiceStore = new SessionServiceStore<SessionServices>();
+
+/**
+ * Per-process store for raw report CSV bodies that `msads_download_report`
+ * persists on demand (via `storeRawCsv: true`). Served through the
+ * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes.
+ */
+export const reportCsvStore = new ReportCsvStore();
 
 export function createSessionServices(
   authAdapter: MsAdsAuthAdapter,
