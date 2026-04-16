@@ -9,6 +9,7 @@
 
 import type { DeliveryMetrics, HistoricalDataPoint, PerformanceMetrics } from "./types.js";
 import { calculateAllMetrics } from "../../utils/metrics.js";
+import { parseCSV as sharedParseCSV } from "@cesteral/shared";
 
 // =============================================================================
 // Types
@@ -36,78 +37,38 @@ export interface ParsedRow {
 // =============================================================================
 
 /**
- * Parse a CSV row handling quoted fields and escaped quotes
- */
-function parseRow(row: string, delimiter: string): string[] {
-  const values: string[] = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < row.length; i++) {
-    const char = row[i];
-
-    if (char === '"') {
-      if (inQuotes && row[i + 1] === '"') {
-        current += '"';
-        i++;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === delimiter && !inQuotes) {
-      values.push(current.trim().replace(/^"|"$/g, ""));
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  values.push(current.trim().replace(/^"|"$/g, ""));
-  return values;
-}
-
-/**
- * Generic CSV to JSON parser
+ * Generic CSV to JSON parser for Bid Manager reports.
  *
- * Converts CSV string to array of records where each record maps
- * header names to cell values as strings.
+ * Delegates CSV tokenization to the shared `parseCSV` helper (quote/CRLF/BOM
+ * handling), then applies the DBM-specific "drop any row where a non-nullable
+ * field is empty" filter that discards Bid Manager's summary/footer rows.
+ *
+ * Note: the `delimiter` parameter is retained for API compatibility but is
+ * ignored — Bid Manager reports are always comma-delimited, and the shared
+ * parser is comma-only.
  */
 export function csvToJson(
   csv: string,
-  delimiter: string = ",",
+  _delimiter: string = ",",
   nullableFields: string[] = []
 ): Record<string, string>[] {
-  // Strip BOM if present
-  if (csv.charCodeAt(0) === 0xFEFF) {
-    csv = csv.slice(1);
-  }
-  const lines = csv.replace(/\r\n/g, "\n").split("\n").filter((line) => line.trim() !== "");
-  if (lines.length === 0) return [];
-
-  const firstLine = lines[0];
-  if (!firstLine) return [];
-
-  const headers = parseRow(firstLine, delimiter);
+  const { headers, rows } = sharedParseCSV(csv);
   if (headers.length === 0) return [];
 
-  return lines
-    .slice(1)
-    .map((row) => {
-      const values = parseRow(row, delimiter);
-      if (values.length !== headers.length) return null;
-
-      const record: Record<string, string> = {};
+  const nullable = new Set(nullableFields);
+  return rows
+    .map((record) => {
+      const cleaned: Record<string, string> = {};
       let allFieldsHaveValues = true;
-
-      headers.forEach((header, index) => {
-        const value = values[index]?.trim() ?? "";
-        if (value === "" && !nullableFields.includes(header)) {
+      for (const header of headers) {
+        const value = (record[header] ?? "").trim();
+        if (value === "" && !nullable.has(header)) {
           allFieldsHaveValues = false;
         } else {
-          record[header] = value;
+          cleaned[header] = value;
         }
-      });
-
-      return allFieldsHaveValues ? record : null;
+      }
+      return allFieldsHaveValues ? cleaned : null;
     })
     .filter((row): row is Record<string, string> => row !== null);
 }

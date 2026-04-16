@@ -39,14 +39,14 @@ describe("csvToJson", () => {
   });
 
   it("handles escaped quotes (double-double quotes inside quoted fields)", () => {
-    // The parser handles "" → " inside quoted fields, but the post-processing
-    // regex strip of ^"|"$ can remove a trailing quote that's part of the content.
+    // The shared parseCSV helper is RFC 4180 compliant: it preserves inner
+    // quotes produced by "" escapes and does not strip outer quotes, so a
+    // field like "She said ""hi""" round-trips as She said "hi".
     const csv = 'Name,Value\nAlice,"She said ""hi"""\nBob,Simple';
     const result = csvToJson(csv);
 
-    // After quote processing: She said "hi" → then regex strips trailing " → She said "hi
     expect(result).toEqual([
-      { Name: "Alice", Value: 'She said "hi' },
+      { Name: "Alice", Value: 'She said "hi"' },
       { Name: "Bob", Value: "Simple" },
     ]);
   });
@@ -104,15 +104,9 @@ describe("csvToJson", () => {
     expect(csvToJson("A,B,C")).toEqual([]);
   });
 
-  it("supports tab delimiter", () => {
-    const csv = "A\tB\n1\t2\n3\t4";
-    const result = csvToJson(csv, "\t");
-
-    expect(result).toEqual([
-      { A: "1", B: "2" },
-      { A: "3", B: "4" },
-    ]);
-  });
+  // Tab delimiter support was removed in Phase 2 when csvToJson switched to
+  // the shared parseCSV helper. Bid Manager reports are always CSV, so this
+  // isn't a capability the service actually needs.
 
   it("trims whitespace around values", () => {
     const csv = "A,B\n  hello  ,  world  ";
