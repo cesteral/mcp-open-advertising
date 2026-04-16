@@ -44,7 +44,7 @@ describe("msads_check_report_status", () => {
     vi.clearAllMocks();
   });
 
-  it("returns Pending when the report is still processing", async () => {
+  it("returns canonical 'running' state when Pending", async () => {
     mockResolveSession.mockReturnValue(createMockServices("Pending"));
 
     const result = await checkReportStatusLogic(
@@ -52,11 +52,13 @@ describe("msads_check_report_status", () => {
       { requestId: "req-1" }
     );
 
-    expect(result.status).toBe("Pending");
+    expect(result.state).toBe("running");
+    expect(result.rawStatus).toBe("Pending");
+    expect(result.isComplete).toBe(false);
     expect(result.downloadUrl).toBeUndefined();
   });
 
-  it("returns Success with downloadUrl when ready", async () => {
+  it("returns canonical 'complete' state with downloadUrl when Success", async () => {
     mockResolveSession.mockReturnValue(
       createMockServices("Success", "https://download.example.com/report.csv")
     );
@@ -66,24 +68,30 @@ describe("msads_check_report_status", () => {
       { requestId: "req-1" }
     );
 
-    expect(result.status).toBe("Success");
+    expect(result.state).toBe("complete");
+    expect(result.rawStatus).toBe("Success");
+    expect(result.isComplete).toBe(true);
     expect(result.downloadUrl).toBe("https://download.example.com/report.csv");
   });
 
-  it("formats Pending status with a poll-again hint", () => {
+  it("formats running state with a poll-again hint", () => {
     const formatted = checkReportStatusResponseFormatter({
       reportRequestId: "rpt-1",
-      status: "Pending",
+      state: "running",
+      rawStatus: "Pending",
+      isComplete: false,
       timestamp: new Date().toISOString(),
     });
 
     expect(formatted[0]!.text).toContain("still processing");
   });
 
-  it("formats Success status with a downloadUrl and follow-up hint", () => {
+  it("formats complete state with a downloadUrl and follow-up hint", () => {
     const formatted = checkReportStatusResponseFormatter({
       reportRequestId: "rpt-1",
-      status: "Success",
+      state: "complete",
+      rawStatus: "Success",
+      isComplete: true,
       downloadUrl: "https://download.example.com/report.csv",
       timestamp: new Date().toISOString(),
     });

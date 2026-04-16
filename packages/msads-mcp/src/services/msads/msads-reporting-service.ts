@@ -8,10 +8,10 @@ import {
   fetchWithTimeout,
   McpError,
   JsonRpcErrorCode,
-  delay,
-  parseCsvLine,
+  parseCSV,
+  pollUntilComplete,
+  ReportFailedError,
   DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
-  computeExponentialBackoff,
   type RequestContext,
 } from "@cesteral/shared";
 import { MSADS_READ_KEY, MSADS_WRITE_KEY } from "./rate-limit-keys.js";
@@ -57,7 +57,8 @@ export class MsAdsReportingService {
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MsAdsHttpClient,
     private readonly logger: Logger,
-    private readonly maxPollAttempts: number = DEFAULT_MAX_POLL_ATTEMPTS
+    private readonly maxPollAttempts: number = DEFAULT_MAX_POLL_ATTEMPTS,
+    private readonly pollIntervalMs: number = POLL_BASE_MS
   ) {}
 
   /**
@@ -89,33 +90,26 @@ export class MsAdsReportingService {
   ): Promise<string> {
     this.logger.debug({ reportRequestId }, "Starting report poll");
 
-    for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
-      const status = await this.checkReportStatus(reportRequestId, context);
-
-      if (status.status === "Success" && status.downloadUrl) {
-        this.logger.info({ reportRequestId, attempts: attempt + 1 }, "Report ready");
-        return status.downloadUrl;
-      }
-
-      if (status.status === "Error") {
+    try {
+      const status = await pollUntilComplete<{ status: string; downloadUrl?: string }>({
+        fetchStatus: async () => this.checkReportStatus(reportRequestId, context),
+        isComplete: (s) => s.status === "Success" && !!s.downloadUrl,
+        isFailed: (s) => s.status === "Error",
+        initialDelayMs: this.pollIntervalMs,
+        maxDelayMs: POLL_MAX_MS,
+        maxAttempts: this.maxPollAttempts,
+      });
+      this.logger.info({ reportRequestId }, "Report ready");
+      return status.downloadUrl!;
+    } catch (err) {
+      if (err instanceof ReportFailedError) {
         throw new McpError(
           JsonRpcErrorCode.InternalError,
           `Microsoft Ads report failed: reportRequestId=${reportRequestId}`
         );
       }
-
-      this.logger.debug(
-        { reportRequestId, status: status.status, attempt },
-        "Report not ready, polling"
-      );
-
-      await delay(computeExponentialBackoff(attempt, POLL_BASE_MS, POLL_MAX_MS));
+      throw err;
     }
-
-    throw new McpError(
-      JsonRpcErrorCode.Timeout,
-      `Microsoft Ads report timed out after ${this.maxPollAttempts} attempts: reportRequestId=${reportRequestId}`
-    );
   }
 
   /**
@@ -285,38 +279,28 @@ export class MsAdsReportingService {
   }
 
   private parseCsv(text: string, maxRows?: number): { headers: string[]; rows: string[][]; totalRows: number } {
-    // Strip BOM if present
-    if (text.charCodeAt(0) === 0xFEFF) {
-      text = text.slice(1);
-    }
-    // Microsoft Ads CSV reports may have metadata lines before the header
-    const lines = text.split("\n").filter((line) => line.trim().length > 0);
-
-    // Find the header line (skip lines that start with "@" or are metadata)
-    let headerIndex = 0;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]!;
-      if (!line.startsWith("@") && !line.startsWith('"@')) {
-        headerIndex = i;
-        break;
-      }
-    }
-
-    if (lines.length <= headerIndex) {
+    // Microsoft Ads CSV reports are prefixed with @-metadata and suffixed with
+    // ©-footer rows. Strip both before handing off to the shared parser so it
+    // never interprets them as data rows.
+    const stripped = text.replace(/^\uFEFF/, "");
+    const filtered = stripped
+      .split(/\r?\n/)
+      .filter((line) => {
+        const trimmed = line.trim();
+        if (trimmed.length === 0) return false;
+        if (trimmed.startsWith("@") || trimmed.startsWith('"@')) return false;
+        if (trimmed.startsWith("©") || trimmed.startsWith('"©')) return false;
+        return true;
+      })
+      .join("\n");
+    if (filtered === "") {
       return { headers: [], rows: [], totalRows: 0 };
     }
 
-    const headers = parseCsvLine(lines[headerIndex]!);
-    const dataLines = lines.slice(headerIndex + 1);
-
-    // Filter out summary/footer lines
-    const dataRows = dataLines
-      .filter((line) => !line.startsWith("©") && !line.startsWith('"©'))
-      .map((line) => parseCsvLine(line));
-
-    const totalRows = dataRows.length;
-    const limitedRows = maxRows ? dataRows.slice(0, maxRows) : dataRows;
-
+    const { headers, rows: recordRows } = parseCSV(filtered);
+    const rows = recordRows.map((record) => headers.map((h) => record[h] ?? ""));
+    const totalRows = rows.length;
+    const limitedRows = maxRows ? rows.slice(0, maxRows) : rows;
     return { headers, rows: limitedRows, totalRows };
   }
 

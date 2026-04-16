@@ -4,7 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
-  arrayRowsToRecords,
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
   getReportViewFetchLimit,
@@ -27,6 +28,7 @@ export const DownloadReportInputSchema = z
       .describe("Report download URL from check-report-status"),
   })
   .merge(ReportViewInputSchema)
+  .merge(ComputedMetricsFlagSchema)
   .describe("Parameters for downloading a Microsoft Ads report");
 
 export const DownloadReportOutputSchema = z
@@ -38,6 +40,14 @@ export const DownloadReportOutputSchema = z
 
 type DownloadReportInput = z.infer<typeof DownloadReportInputSchema>;
 type DownloadReportOutput = z.infer<typeof DownloadReportOutputSchema>;
+
+const MSADS_COMPUTED_METRIC_ALIASES = {
+  cost: ["Spend", "spend", "Cost", "cost"],
+  impressions: ["Impressions", "impressions"],
+  clicks: ["Clicks", "clicks"],
+  conversions: ["Conversions", "conversions", "AllConversions"],
+  conversionValue: ["Revenue", "revenue", "AllRevenue"],
+};
 
 export async function downloadReportLogic(
   input: DownloadReportInput,
@@ -52,12 +62,32 @@ export async function downloadReportLogic(
     context
   );
 
+  const recordRows: Record<string, string>[] = result.rows.map((row) => {
+    const record: Record<string, string> = {};
+    for (let i = 0; i < result.headers.length; i++) {
+      record[result.headers[i] ?? String(i)] = row[i] ?? "";
+    }
+    return record;
+  });
+  const augmented = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(recordRows, MSADS_COMPUTED_METRIC_ALIASES)
+    : recordRows;
+  const computedWarning = input.includeComputedMetrics
+    ? augmented[0]?._computedMetricsWarnings
+    : undefined;
+  const augmentedHeaders = input.includeComputedMetrics
+    ? [...result.headers, "cpa", "roas", "cpm", "ctr", "cpc"]
+    : result.headers;
+
   return {
     ...createReportView({
-      headers: result.headers,
-      rows: arrayRowsToRecords(result.headers, result.rows),
+      headers: augmentedHeaders,
+      rows: augmented,
       totalRows: result.totalRows,
       input,
+      warnings: computedWarning
+        ? [`computed metrics: ${computedWarning}`]
+        : undefined,
     }),
     timestamp: new Date().toISOString(),
   };

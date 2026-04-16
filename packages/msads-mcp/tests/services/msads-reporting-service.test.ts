@@ -45,8 +45,8 @@ describe("MsAdsReportingService", () => {
     vi.clearAllMocks();
     httpClient = createMockHttpClient();
     rateLimiter = createMockRateLimiter();
-    // Use low maxPollAttempts for tests (delay is mocked to no-op)
-    service = new MsAdsReportingService(rateLimiter, httpClient, logger, 5);
+    // Use low maxPollAttempts + 1ms poll interval so timing tests don't wait.
+    service = new MsAdsReportingService(rateLimiter, httpClient, logger, 5, 1);
   });
 
   describe("submitReport", () => {
@@ -136,7 +136,9 @@ describe("MsAdsReportingService", () => {
         ReportRequestStatus: { Status: "Pending" },
       });
 
-      await expect(service.pollReport("req-123")).rejects.toThrow("timed out");
+      await expect(service.pollReport("req-123")).rejects.toThrow(
+        /Report polling exceeded 5 attempts/
+      );
     });
   });
 
