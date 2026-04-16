@@ -37,8 +37,9 @@ Execute arbitrary GAQL queries against the Google Ads API.
 
 - `customerId` (string): Google Ads customer ID (no dashes)
 - `query` (string): GAQL query string
-- `pageSize` (number, optional): Results per page (default 1000, max 10000)
-- `pageToken` (string, optional): Pagination token
+- `pageSize` (number, optional): _Deprecated._ Use `maxRows` instead.
+- `pageToken` (string, optional): Cursor for the next upstream page (different from `offset` which slices the in-memory buffer)
+- `mode`, `columns`, `maxRows` (optional): Bounded report-view params — `mode` is `"summary"` (default — headers + counts + 10-row preview) or `"rows"` (paginated rows page); `columns` projects to selected columns; `maxRows` caps page size (default 10/50; hard cap 200). `offset` is not supported here — paginate via `pageToken`.
 
 #### 2. `gads_list_accounts`
 
@@ -80,7 +81,8 @@ Get performance insights for Google Ads entities using preset parameters. Conven
 - `entityId` (string, optional): Filter to a specific entity
 - `dateRange` (string): Date range preset (`TODAY`, `YESTERDAY`, `LAST_7_DAYS`, `LAST_30_DAYS`, `THIS_MONTH`, `LAST_MONTH`, `LAST_90_DAYS`)
 - `metrics` (string[], optional): Custom metrics (defaults to impressions, clicks, cost_micros, conversions, ctr, average_cpc)
-- `limit` (number, optional): Max results (default 50)
+- `limit` (number, optional): _Deprecated._ Use `maxRows` instead.
+- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params — `mode` is `"summary"` (default) or `"rows"`; `columns` projects to selected columns; `offset` paginates; `maxRows` caps page size (default 10/50; hard cap 200).
 
 ### Write Tools
 

@@ -86,6 +86,8 @@ List advertiser accounts accessible to the authenticated user.
 
 ### Reporting
 
+> All TikTok reporting tools return data using the shared bounded report-view contract: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
+
 #### 7. `tiktok_get_report`
 
 Submit an async report and download results once complete.
@@ -97,6 +99,7 @@ Submit an async report and download results once complete.
 - `metrics` (string[], required): Metrics to include (e.g., `spend`, `impressions`, `clicks`)
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
+- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above)
 
 #### 8. `tiktok_get_report_breakdowns`
 
@@ -110,6 +113,7 @@ Submit a report with additional breakdown dimensions.
 - `metrics` (string[], required): Metrics to include
 - `startDate` (string, required): Start date (YYYY-MM-DD)
 - `endDate` (string, required): End date (YYYY-MM-DD)
+- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above)
 
 #### 9. `tiktok_submit_report`
 
@@ -139,7 +143,7 @@ Download and parse report CSV from URL.
 **Parameters:**
 
 - `downloadUrl` (string, required): Report download URL
-- `maxRows` (number, optional): Maximum rows to return
+- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above the reporting tools)
 
 ### Bulk Operations
 

@@ -176,7 +176,7 @@ CM360 reports are asynchronous. Two workflows available:
 | `cm360_get_report` | Create + run + poll (blocking) | `profileId`, `name`, `type`, `criteria?` |
 | `cm360_submit_report` | Create + run (non-blocking) | `profileId`, `name`, `type`, `criteria?` |
 | `cm360_check_report_status` | Single status check | `profileId`, `reportId`, `fileId` |
-| `cm360_download_report` | Download and parse CSV results | `downloadUrl`, `maxRows?` |
+| `cm360_download_report` | Download and parse CSV results | `downloadUrl`, `mode?`, `columns?`, `offset?`, `maxRows?` (bounded report-view; `maxRows` capped at 200) |
 
 **Report types**: `STANDARD`, `REACH`, `PATH_TO_CONVERSION`, `CROSS_DIMENSION_REACH`, `FLOODLIGHT`
 
@@ -234,7 +234,8 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 
 2. cm360_download_report
    -> downloadUrl: "<url from step 1>"
-      maxRows: 500
+      mode: "rows"
+      maxRows: 100   # 200 hard cap; use offset for pagination
 ```
 
 ### Set Up Floodlight Tracking

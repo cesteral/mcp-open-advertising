@@ -30,10 +30,12 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### Reporting
 
+`ttd_download_report` accepts the shared bounded report-view params: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
+
 | Tool                      | Description                                  |
 | ------------------------- | -------------------------------------------- |
 | `ttd_get_report`          | Generate async report via MyReports V3 API   |
-| `ttd_download_report`     | Download report CSV and return bounded views |
+| `ttd_download_report`     | Download report CSV and return a bounded view |
 | `ttd_submit_report`       | Submit report without waiting (non-blocking) |
 | `ttd_check_report_status` | Single status check for a submitted report   |
 

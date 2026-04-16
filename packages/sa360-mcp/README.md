@@ -146,8 +146,12 @@ Execute raw SA360 query language queries against any SA360 resource. Same syntax
 |-----------|------|----------|-------------|
 | `customerId` | string | Yes | SA360 customer ID (no dashes) |
 | `query` | string | Yes | SA360 query (SELECT ... FROM ... WHERE ...) |
-| `pageSize` | number | No | Results per page (default 1000, max 10000) |
-| `pageToken` | string | No | Pagination token from previous response |
+| `pageSize` | number | No | _Deprecated._ Use `maxRows` for the returned row count. |
+| `pageToken` | string | No | Cursor for the next upstream page (different from `offset` which slices the in-memory buffer) |
+| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns` | string[] | No | Project returned rows to selected columns |
+| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
+| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
 
 ```json
 {
@@ -197,7 +201,11 @@ Performance metrics with preset or custom date ranges. Convenience wrapper that 
 | `endDate` | string | No* | Custom end date (YYYY-MM-DD) |
 | `metrics` | string[] | No | Custom metrics (defaults: impressions, clicks, cost_micros, conversions, ctr, average_cpc) |
 | `includeComputedMetrics` | boolean | No | Add derived CPA, ROAS, CPM (default false) |
-| `limit` | number | No | Max results (default 50) |
+| `limit` | number | No | _Deprecated._ Use `maxRows` instead. |
+| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns` | string[] | No | Project returned rows to selected columns |
+| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
+| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
 
 *Provide either `dateRange` OR both `startDate` + `endDate`.
 
@@ -215,7 +223,11 @@ Performance metrics with dimensional breakdowns (device, date, network, etc.).
 | `breakdowns` | string[] | Yes | Segment dimensions (e.g., `segments.date`, `segments.device`) |
 | `metrics` | string[] | No | Custom metrics |
 | `includeComputedMetrics` | boolean | No | Add derived CPA, ROAS, CPM (default false) |
-| `limit` | number | No | Max results (default 100) |
+| `limit` | number | No | _Deprecated._ Use `maxRows` instead. |
+| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns` | string[] | No | Project returned rows to selected columns |
+| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
+| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
 
 *Provide either `dateRange` OR both `startDate` + `endDate`.
 
@@ -282,7 +294,10 @@ Download a completed report file as parsed CSV.
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `downloadUrl` | string | Yes | File URL from check_report_status |
-| `maxRows` | number | No | Max rows to return (default 1000, max 10000) |
+| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns` | string[] | No | Project returned rows to selected columns |
+| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
+| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
 
 ### Conversion API v2 Tools (Write)
 

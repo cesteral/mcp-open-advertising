@@ -69,12 +69,13 @@ Compose and execute a custom Bid Manager report with specified metrics, dimensio
 - `dimensions` (string[]): Dimensions for grouping
 - `filters` (object[], optional): Filter conditions
 - `advertiserId` (string): DV360 Advertiser ID
+- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params — `mode` is `"summary"` (default — headers + counts + 10-row preview) or `"rows"` (paginated rows page); `columns` projects to selected columns; `offset` paginates; `maxRows` caps page size (default 10/50; hard cap 200).
 
 ### 6. `dbm_run_custom_query_async`
 
 Submit a custom Bid Manager report without waiting for completion (non-blocking). Uses the MCP experimental Tasks API to return a task handle immediately; clients poll via `tasks/getTask` and retrieve results via `tasks/getTaskResult`.
 
-**Parameters:** Same as `dbm_run_custom_query`.
+**Parameters:** Same as `dbm_run_custom_query` (including the bounded report-view params).
 
 ## Authentication Modes
 

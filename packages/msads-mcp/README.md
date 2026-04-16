@@ -35,12 +35,15 @@ through the Model Context Protocol.
 
 ### Reporting
 
+All reporting tools below accept the shared bounded report-view params: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
+
 | Tool | Description |
 |------|-------------|
 | `msads_get_report` | Submit and download async report (blocking) |
 | `msads_submit_report` | Submit async report (non-blocking) |
 | `msads_check_report_status` | Check report status |
 | `msads_download_report` | Download and parse report results |
+| `msads_get_report_breakdowns` | Async report with additional breakdown columns |
 
 ### Bulk Operations
 

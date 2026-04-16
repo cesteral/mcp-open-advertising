@@ -25,6 +25,8 @@ Amazon Ads reporting uses reporting v3:
 
 Downloaded reports are handled as raw JSON after decompression, with CSV-style fallback parsing for defensive compatibility.
 
+The `amazon_dsp_get_report`, `amazon_dsp_get_report_breakdowns`, and `amazon_dsp_download_report` tools all return data using the shared bounded report-view contract: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
+
 ## Auth And Headers
 
 All requests use:

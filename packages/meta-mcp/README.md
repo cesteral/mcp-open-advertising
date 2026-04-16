@@ -99,6 +99,8 @@ List ad accounts accessible to the authenticated user.
 
 ### Insights
 
+> All Meta reporting tools (`meta_get_insights`, `meta_get_insights_breakdowns`, and the `meta_download_report` tool used in async report flows) return data using the shared bounded report-view contract: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200). `limit` and `after` remain available for cursoring across upstream Meta pages.
+
 #### 7. `meta_get_insights`
 
 Get performance insights for a Meta Ads entity (account, campaign, ad set, or ad).
@@ -111,8 +113,9 @@ Get performance insights for a Meta Ads entity (account, campaign, ad set, or ad
 - `timeRange` (object, optional): Object with `since` and `until` (YYYY-MM-DD)
 - `timeIncrement` (string, optional): Granularity (`1` for daily, `7` for weekly, `monthly`, `all_days`)
 - `level` (string, optional): Aggregation level (`account`, `campaign`, `adset`, `ad`)
-- `limit` (number, optional): Results per page (1-500)
-- `after` (string, optional): Cursor for next page
+- `limit` (number, optional): Upstream Meta page size (1-500). Use `maxRows` to control the bounded view's returned-row count.
+- `after` (string, optional): Cursor for next upstream page
+- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above)
 
 #### 8. `meta_get_insights_breakdowns`
 
@@ -128,8 +131,9 @@ Get performance insights broken down by dimension (age, gender, country, device,
 - `timeIncrement` (string, optional): Time granularity
 - `level` (string, optional): Aggregation level
 - `actionAttributionWindows` (string[], optional): Attribution windows (e.g., `['1d_click', '7d_click']`)
-- `limit` (number, optional): Results per page (1-500)
-- `after` (string, optional): Cursor for next page
+- `limit` (number, optional): Upstream Meta page size (1-500). Use `maxRows` for bounded-view row count.
+- `after` (string, optional): Cursor for next upstream page
+- `mode`, `columns`, `offset`, `maxRows` (optional): Bounded report-view params (see note above)
 
 ### Bulk Operations
 
