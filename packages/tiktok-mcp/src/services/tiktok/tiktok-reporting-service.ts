@@ -152,12 +152,17 @@ export class TikTokReportingService {
 
   /**
    * Download a report CSV from a URL.
+   *
+   * When `includeRawCsv` is true, the original (BOM-stripped, LF-only) CSV
+   * body is returned alongside the parsed rows so callers can persist it
+   * via `ReportCsvStore`.
    */
   async downloadReport(
     downloadUrl: string,
     maxRows = DEFAULT_REPORT_MAX_ROWS,
-    context?: RequestContext
-  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number }> {
+    context?: RequestContext,
+    options: { includeRawCsv?: boolean } = {}
+  ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
     const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
 
     if (!response.ok) {
@@ -176,17 +181,28 @@ export class TikTokReportingService {
     }
 
     const csvText = await response.text();
+    const normalizedCsvText = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
     // Guard against BOM-only or whitespace-only bodies before delegating to
     // the shared parser — parseCSV treats a whitespace line as a header row
     // of a single empty column, which would mislead downstream bounded-view
     // consumers for a truly-empty report.
-    if (csvText.replace(/^\uFEFF/, "").trim() === "") {
-      return { rows: [], headers: [], totalRows: 0 };
+    if (normalizedCsvText === "") {
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: "" } : {}),
+      };
     }
-    const { headers, rows } = parseCSV(csvText);
+    const { headers, rows } = parseCSV(normalizedCsvText);
 
     if (headers.length === 0 && rows.length === 0) {
-      return { rows: [], headers: [], totalRows: 0 };
+      return {
+        rows: [],
+        headers: [],
+        totalRows: 0,
+        ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
+      };
     }
 
     const limitedRecords = rows.slice(0, maxRows);
@@ -198,6 +214,7 @@ export class TikTokReportingService {
       rows: rowArrays,
       headers,
       totalRows: rows.length,
+      ...(options.includeRawCsv ? { rawCsv: normalizedCsvText } : {}),
     };
   }
 

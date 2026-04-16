@@ -1,13 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../../src/services/session-services.js", () => ({
-  sessionServiceStore: {
-    get: vi.fn(),
-    set: vi.fn(),
-    delete: vi.fn(),
-    getAuthContext: vi.fn(),
-  },
-}));
+// A single in-memory ReportCsvStore instance is created lazily inside the
+// mock factory so tests can assert round-trips against the persisted entry.
+vi.mock("../../src/services/session-services.js", async () => {
+  const { ReportCsvStore } = await import("@cesteral/shared");
+  return {
+    sessionServiceStore: {
+      get: vi.fn(),
+      set: vi.fn(),
+      delete: vi.fn(),
+      getAuthContext: vi.fn(),
+    },
+    reportCsvStore: new ReportCsvStore(),
+  };
+});
 
 vi.mock("@cesteral/shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@cesteral/shared")>();
@@ -93,8 +99,44 @@ describe("downloadReportLogic", () => {
 
     expect(mockDownloadReport).toHaveBeenCalledWith(
       "https://example.com/report.csv",
-      10
+      10,
+      undefined,
+      { includeRawCsv: false }
     );
+  });
+
+  it("persists rawCsv and returns a report-csv:// URI when storeRawCsv is true", async () => {
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date", "impressions"],
+      rows: [["2026-03-01", "1000"]],
+      totalRows: 1,
+      rawCsv: "date,impressions\n2026-03-01,1000\n",
+    });
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://example.com/report.csv",
+        storeRawCsv: true,
+      },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(mockDownloadReport).toHaveBeenCalledWith(
+      "https://example.com/report.csv",
+      10,
+      undefined,
+      { includeRawCsv: true }
+    );
+    expect(result.rawCsvResourceUri).toMatch(/^report-csv:\/\//);
+    expect(result.rawCsvByteLength).toBe(Buffer.byteLength("date,impressions\n2026-03-01,1000\n", "utf8"));
+
+    const { reportCsvStore } = await import(
+      "../../src/services/session-services.js"
+    );
+    const entry = reportCsvStore.getByUri(result.rawCsvResourceUri!);
+    expect(entry).toBeDefined();
+    expect(entry!.csv).toBe("date,impressions\n2026-03-01,1000\n");
   });
 });
 

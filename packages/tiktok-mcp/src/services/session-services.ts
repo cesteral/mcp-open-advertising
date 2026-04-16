@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../auth/tiktok-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { SessionServiceStore } from "@cesteral/shared";
+import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { TikTokHttpClient } from "./tiktok/tiktok-http-client.js";
 import { TikTokService } from "./tiktok/tiktok-service.js";
@@ -56,3 +56,10 @@ export function createSessionServices(
 }
 
 export const sessionServiceStore = new SessionServiceStore<SessionServices>();
+
+/**
+ * Per-process store for raw report CSV bodies that `tiktok_download_report`
+ * persists on demand (via `storeRawCsv: true`). Served through the
+ * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes.
+ */
+export const reportCsvStore = new ReportCsvStore();
