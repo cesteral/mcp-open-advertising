@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { fromMetaStatus, ReportStatusSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -12,7 +13,8 @@ const TOOL_DESCRIPTION = `Check the status of an async Meta Ads insights report 
 
 Poll this tool after \`meta_submit_report\` until \`isComplete\` is true, then call \`meta_download_report\`.
 
-**Status values:** "Job Not Started", "Job Started", "Job Running", "Job Succeeded", "Job Failed"`;
+**Canonical states:** \`pending\`, \`running\`, \`complete\`, \`failed\`, \`cancelled\`.
+Meta source states are mapped — "Job Completed" → \`complete\`, "Job Failed" → \`failed\`, "Job Started"/"Job Running" → \`running\`, everything else → \`pending\`. The original Meta status string is returned as \`rawStatus\`.`;
 
 export const CheckReportStatusInputSchema = z
   .object({
@@ -23,20 +25,37 @@ export const CheckReportStatusInputSchema = z
   })
   .describe("Parameters for checking a Meta report status");
 
-export const CheckReportStatusOutputSchema = z
-  .object({
-    reportRunId: z.string(),
-    status: z.string().describe("Job status: Job Not Started, Job Started, Job Running, Job Succeeded, Job Failed"),
-    isComplete: z.boolean().describe("True when status is 'Job Succeeded' — safe to call meta_download_report"),
-    asyncPercentCompletion: z.number().optional().describe("Completion percentage (0–100)"),
-    errorCode: z.number().optional().describe("Meta error code (set when status is 'Job Failed')"),
-    errorMessage: z.string().optional().describe("Meta error message (set when status is 'Job Failed')"),
-    errorSubcode: z.number().optional().describe("Meta error subcode (set when status is 'Job Failed')"),
-    errorUserTitle: z.string().optional().describe("User-facing error title (set when status is 'Job Failed')"),
-    errorUserMsg: z.string().optional().describe("User-facing error message (set when status is 'Job Failed')"),
-    timestamp: z.string().datetime(),
-  })
-  .describe("Report status check result");
+export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
+  reportRunId: z.string(),
+  rawStatus: z
+    .string()
+    .describe("Raw Meta async_status string (e.g. 'Job Completed', 'Job Running')"),
+  isComplete: z
+    .boolean()
+    .describe("True when canonical state is 'complete' — safe to call meta_download_report"),
+  asyncPercentCompletion: z
+    .number()
+    .optional()
+    .describe("Completion percentage (0–100)"),
+  errorCode: z.number().optional().describe("Meta error code (set when state is 'failed')"),
+  errorMessage: z
+    .string()
+    .optional()
+    .describe("Meta error message (set when state is 'failed')"),
+  errorSubcode: z
+    .number()
+    .optional()
+    .describe("Meta error subcode (set when state is 'failed')"),
+  errorUserTitle: z
+    .string()
+    .optional()
+    .describe("User-facing error title (set when state is 'failed')"),
+  errorUserMsg: z
+    .string()
+    .optional()
+    .describe("User-facing error message (set when state is 'failed')"),
+  timestamp: z.string().datetime(),
+}).describe("Report status check result");
 
 type CheckReportStatusInput = z.infer<typeof CheckReportStatusInputSchema>;
 type CheckReportStatusOutput = z.infer<typeof CheckReportStatusOutputSchema>;
@@ -50,10 +69,16 @@ export async function checkReportStatusLogic(
 
   const result = await metaInsightsService.checkReportStatus(input.reportRunId, context);
 
+  const canonical = fromMetaStatus({
+    async_status: result.status,
+    async_percent_completion: result.asyncPercentCompletion,
+  });
+
   return {
+    ...canonical,
     reportRunId: result.reportRunId,
-    status: result.status,
-    isComplete: result.status === "Job Succeeded",
+    rawStatus: result.status,
+    isComplete: canonical.state === "complete",
     asyncPercentCompletion: result.asyncPercentCompletion,
     errorCode: result.errorCode,
     errorMessage: result.errorMessage,
@@ -67,7 +92,7 @@ export async function checkReportStatusLogic(
 export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
   const pct = result.asyncPercentCompletion != null ? ` (${result.asyncPercentCompletion}%)` : "";
   const failureDetail =
-    result.status === "Job Failed"
+    result.state === "failed"
       ? [
           result.errorUserTitle,
           result.errorUserMsg ?? result.errorMessage,
@@ -79,14 +104,14 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
       : "";
   const next = result.isComplete
     ? `\n\nReport complete — call \`meta_download_report\` with reportRunId: "${result.reportRunId}"`
-    : result.status === "Job Failed"
+    : result.state === "failed"
     ? `\n\nReport failed${failureDetail ? `: ${failureDetail}` : ""}. Submit a new report with \`meta_submit_report\`.`
     : `\n\nReport in progress${pct}. Poll again in ~10 seconds.`;
 
   return [
     {
       type: "text" as const,
-      text: `Report ${result.reportRunId}: ${result.status}${next}\n\nTimestamp: ${result.timestamp}`,
+      text: `Report ${result.reportRunId}: ${result.state} (${result.rawStatus})${next}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

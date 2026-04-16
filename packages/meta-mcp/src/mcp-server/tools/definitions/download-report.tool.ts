@@ -4,6 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
+  appendComputedMetricsToRows,
+  ComputedMetricsFlagSchema,
   createReportView,
   formatReportViewResponse,
   getReportViewFetchLimit,
@@ -33,6 +35,7 @@ export const DownloadReportInputSchema = z
       .describe("Meta paging cursor returned as nextCursor by a previous call. This tool pages via cursor; offset is not supported."),
   })
   .merge(ReportViewInputSchema.omit({ offset: true }))
+  .merge(ComputedMetricsFlagSchema)
   .describe("Parameters for downloading Meta report results");
 
 export const DownloadReportOutputSchema = z
@@ -60,7 +63,13 @@ export async function downloadReportLogic(
     { limit: getReportViewFetchLimit(input), after: input.cursor },
     context
   );
-  const rows = result.data as Record<string, unknown>[];
+  const rawRows = result.data as Record<string, unknown>[];
+  const rows = input.includeComputedMetrics
+    ? appendComputedMetricsToRows(
+        rawRows.map(stringifyRow),
+        META_COMPUTED_METRIC_ALIASES,
+      )
+    : rawRows;
   const warnings = result.fetchedAllRows
     ? []
     : ["More rows are available. Call again with cursor set to nextCursor to continue."];
@@ -77,6 +86,22 @@ export async function downloadReportLogic(
     nextCursor: result.nextCursor,
     timestamp: new Date().toISOString(),
   };
+}
+
+const META_COMPUTED_METRIC_ALIASES = {
+  cost: ["spend", "Spend"],
+  impressions: ["impressions", "Impressions"],
+  clicks: ["clicks", "Clicks", "inline_link_clicks"],
+  conversions: ["conversions", "actions", "Conversions"],
+  conversionValue: ["conversion_values", "action_values", "purchase_roas"],
+};
+
+function stringifyRow(row: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(row)) {
+    out[k] = typeof v === "string" ? v : v == null ? "" : String(v);
+  }
+  return out;
 }
 
 export function downloadReportResponseFormatter(result: DownloadReportOutput): McpTextContent[] {
