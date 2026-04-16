@@ -48,12 +48,14 @@ export interface ParsedCsv {
 /**
  * Parse a full CSV document into headers and row records.
  *
+ * - Strips a leading UTF-8 BOM if present.
  * - Normalizes CRLF to LF.
  * - Supports RFC 4180 quoted fields, including embedded commas and newlines.
  * - Skips blank lines after the header row.
  * - Returns `{ headers: [], rows: [] }` for empty input.
  */
 export function parseCSV(text: string): ParsedCsv {
+  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1);
   const normalized = text.replace(/\r\n/g, "\n");
   const lines = splitCsvLines(normalized);
   if (lines.length === 0) return { headers: [], rows: [] };

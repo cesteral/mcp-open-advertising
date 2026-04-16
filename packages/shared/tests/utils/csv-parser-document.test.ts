@@ -33,4 +33,10 @@ describe("parseCSV", () => {
     const out = parseCSV("a\n1\n\n\n");
     expect(out.rows).toEqual([{ a: "1" }]);
   });
+
+  it("strips a leading UTF-8 BOM", () => {
+    const out = parseCSV("\uFEFFa,b\n1,2\n");
+    expect(out.headers).toEqual(["a", "b"]);
+    expect(out.rows).toEqual([{ a: "1", b: "2" }]);
+  });
 });
