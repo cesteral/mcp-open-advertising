@@ -4,7 +4,11 @@
 import type { Logger } from "pino";
 import type { TtdAuthAdapter } from "../auth/ttd-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
+import {
+  deleteSpilledObjectsForSession,
+  ReportCsvStore,
+  SessionServiceStore,
+} from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { TtdHttpClient } from "./ttd/ttd-http-client.js";
 import { TtdService } from "./ttd/ttd-service.js";
@@ -48,3 +52,11 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * (see ReportCsvStore default TTL).
  */
 export const reportCsvStore = new ReportCsvStore();
+
+// On session close, sweep this session's GCS spill objects and clear its
+// in-memory report-csv store entries. Belt-and-braces alongside the 24h
+// bucket lifecycle rule.
+sessionServiceStore.onDelete((sessionId) => {
+  void deleteSpilledObjectsForSession("ttd", sessionId);
+  reportCsvStore.clearForSession(sessionId);
+});

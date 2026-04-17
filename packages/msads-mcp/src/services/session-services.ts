@@ -3,7 +3,11 @@
 
 import type { Logger } from "pino";
 import type { RateLimiter } from "@cesteral/shared";
-import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
+import {
+  deleteSpilledObjectsForSession,
+  ReportCsvStore,
+  SessionServiceStore,
+} from "@cesteral/shared";
 import type { MsAdsAuthAdapter } from "../auth/msads-auth-adapter.js";
 import { MsAdsHttpClient } from "./msads/msads-http-client.js";
 import { MsAdsService } from "./msads/msads-service.js";
@@ -31,6 +35,14 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes.
  */
 export const reportCsvStore = new ReportCsvStore();
+
+// On session close, sweep this session's GCS spill objects and clear its
+// in-memory report-csv entries. Note: slug "microsoft" matches the
+// canonical ReportingPlatform value used by the spill helper.
+sessionServiceStore.onDelete((sessionId) => {
+  void deleteSpilledObjectsForSession("microsoft", sessionId);
+  reportCsvStore.clearForSession(sessionId);
+});
 
 export function createSessionServices(
   authAdapter: MsAdsAuthAdapter,

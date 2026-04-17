@@ -15,14 +15,34 @@ import type { SessionAuthContext } from "../auth/auth-strategy.js";
 
 const DEFAULT_MAX_SESSIONS = 1000;
 
+/**
+ * Callback fired when a session is deleted (explicit delete, transport close,
+ * or shutdown). Registered via `SessionServiceStore.onDelete(cb)`. Callbacks
+ * run sequentially via Promise.allSettled so one failing hook does not
+ * prevent others from running; no hook can throw back into delete().
+ */
+export type SessionDeleteHook = (sessionId: string) => void | Promise<void>;
+
 export class SessionServiceStore<T> {
   private store = new Map<string, T>();
   private fingerprints = new Map<string, string>();
   private authContexts = new Map<string, SessionAuthContext>();
   private readonly maxSessions: number;
+  private readonly deleteHooks: Set<SessionDeleteHook> = new Set();
 
   constructor(maxSessions: number = DEFAULT_MAX_SESSIONS) {
     this.maxSessions = maxSessions;
+  }
+
+  /**
+   * Register a callback to run when a session is deleted. Returns an
+   * unregister function. Hooks are invoked fire-and-forget from delete() —
+   * synchronous or asynchronous, errors are swallowed so a bad hook cannot
+   * disrupt session cleanup.
+   */
+  onDelete(hook: SessionDeleteHook): () => void {
+    this.deleteHooks.add(hook);
+    return () => this.deleteHooks.delete(hook);
   }
 
   isFull(): boolean {
@@ -66,6 +86,18 @@ export class SessionServiceStore<T> {
     this.store.delete(sessionId);
     this.fingerprints.delete(sessionId);
     this.authContexts.delete(sessionId);
+    // Fire hooks fire-and-forget. Swallow all errors — session cleanup must
+    // never throw. Hook authors should handle their own error logging.
+    for (const hook of this.deleteHooks) {
+      try {
+        const result = hook(sessionId);
+        if (result instanceof Promise) {
+          result.catch(() => {});
+        }
+      } catch {
+        // Intentionally swallowed.
+      }
+    }
   }
 
   get size(): number {

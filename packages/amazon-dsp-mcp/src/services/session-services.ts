@@ -4,7 +4,11 @@
 import type { Logger } from "pino";
 import type { AmazonDspAuthAdapter } from "../auth/amazon-dsp-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
+import {
+  deleteSpilledObjectsForSession,
+  ReportCsvStore,
+  SessionServiceStore,
+} from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { AmazonDspHttpClient } from "./amazon-dsp/amazon-dsp-http-client.js";
 import { AmazonDspService } from "./amazon-dsp/amazon-dsp-service.js";
@@ -59,3 +63,11 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * expire after 30 minutes.
  */
 export const reportCsvStore = new ReportCsvStore();
+
+// On session close, sweep this session's GCS spill objects and clear its
+// in-memory report-csv entries. Note: slug "amazonDsp" matches the
+// canonical ReportingPlatform value used by the spill helper.
+sessionServiceStore.onDelete((sessionId) => {
+  void deleteSpilledObjectsForSession("amazonDsp", sessionId);
+  reportCsvStore.clearForSession(sessionId);
+});

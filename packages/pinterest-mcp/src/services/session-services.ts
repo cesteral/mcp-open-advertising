@@ -4,7 +4,11 @@
 import type { Logger } from "pino";
 import type { PinterestAuthAdapter } from "../auth/pinterest-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
+import {
+  deleteSpilledObjectsForSession,
+  ReportCsvStore,
+  SessionServiceStore,
+} from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { PinterestHttpClient } from "./pinterest/pinterest-http-client.js";
 import { PinterestService } from "./pinterest/pinterest-service.js";
@@ -51,6 +55,15 @@ export function createSessionServices(
 }
 
 export const sessionServiceStore = new SessionServiceStore<SessionServices>();
+
+// On session close, sweep any GCS spill objects persisted for this session
+// under the `pinterest/{sessionId}/` prefix. Belt-and-braces alongside the
+// 24h bucket lifecycle rule — keeps short-lived sessions from accumulating
+// cost.
+sessionServiceStore.onDelete((sessionId) => {
+  void deleteSpilledObjectsForSession("pinterest", sessionId);
+  reportCsvStore.clearForSession(sessionId);
+});
 
 /**
  * Per-process singleton for raw report CSV resources. Reads via

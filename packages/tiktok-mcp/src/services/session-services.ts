@@ -4,7 +4,11 @@
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../auth/tiktok-auth-adapter.js";
 import type { RateLimiter } from "../utils/security/rate-limiter.js";
-import { ReportCsvStore, SessionServiceStore } from "@cesteral/shared";
+import {
+  deleteSpilledObjectsForSession,
+  ReportCsvStore,
+  SessionServiceStore,
+} from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { TikTokHttpClient } from "./tiktok/tiktok-http-client.js";
 import { TikTokService } from "./tiktok/tiktok-service.js";
@@ -63,3 +67,10 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes.
  */
 export const reportCsvStore = new ReportCsvStore();
+
+// On session close, sweep this session's GCS spill objects and clear its
+// in-memory report-csv entries.
+sessionServiceStore.onDelete((sessionId) => {
+  void deleteSpilledObjectsForSession("tiktok", sessionId);
+  reportCsvStore.clearForSession(sessionId);
+});
