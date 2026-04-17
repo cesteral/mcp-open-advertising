@@ -42,3 +42,5 @@ export * from "./report-csv-store.js";
 export * from "./report-csv-resource.js";
 export * from "./report-polling.js";
 export * from "./report-errors.js";
+export * from "./report-spill.js";
+export * from "./download-file-stream.js";
