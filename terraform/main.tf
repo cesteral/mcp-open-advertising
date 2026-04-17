@@ -75,6 +75,33 @@ resource "google_storage_bucket" "gcs_persistence" {
   }
 }
 
+# Report-CSV spill bucket. Populated by the shared spillCsvToGcs helper
+# whenever REPORT_SPILL_BUCKET is set and a downloaded report exceeds the
+# byte/row threshold. Objects are expected to be ephemeral — the
+# 1-day lifecycle rule is the primary cost control; per-session cleanup
+# hooks (packages/shared/src/utils/report-spill.ts#deleteSpilledObjectsForSession)
+# best-effort delete objects sooner.
+resource "google_storage_bucket" "report_spill" {
+  count    = var.enable_report_spill ? 1 : 0
+  name     = var.report_spill_bucket_name
+  location = var.region
+  project  = var.project_id
+
+  uniform_bucket_level_access = true
+
+  labels = {
+    application = "cesteral"
+    environment = var.environment
+    managed_by  = "terraform"
+    purpose     = "report-csv-spill"
+  }
+
+  lifecycle_rule {
+    condition { age = 1 }
+    action { type = "Delete" }
+  }
+}
+
 module "networking" {
   source = "./modules/networking"
 

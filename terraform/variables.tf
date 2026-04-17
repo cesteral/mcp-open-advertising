@@ -626,6 +626,22 @@ variable "gcs_bucket_name" {
   }
 }
 
+variable "enable_report_spill" {
+  description = "Enable GCS-backed CSV spill for large reports (REPORT_SPILL_BUCKET)"
+  type        = bool
+  default     = false
+}
+
+variable "report_spill_bucket_name" {
+  description = "GCS bucket name for the report CSV spill feature. Objects are short-lived (24h lifecycle)."
+  type        = string
+  default     = ""
+  validation {
+    condition     = !var.enable_report_spill || length(trim(var.report_spill_bucket_name)) > 0
+    error_message = "report_spill_bucket_name must be set when enable_report_spill is true."
+  }
+}
+
 variable "monitoring_notification_channels" {
   description = "Notification channel IDs for monitoring alerts"
   type        = list(string)
