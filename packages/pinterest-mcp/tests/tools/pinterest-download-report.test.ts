@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockStoreCsv } = vi.hoisted(() => ({
+const { mockStoreCsv, mockSpillCsvToGcs } = vi.hoisted(() => ({
   mockStoreCsv: vi.fn(),
+  mockSpillCsvToGcs: vi.fn(),
 }));
 
 vi.mock("../../src/services/session-services.js", () => ({
@@ -21,6 +22,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   return {
     ...actual,
     resolveSessionServicesFromStore: vi.fn(),
+    spillCsvToGcs: mockSpillCsvToGcs,
   };
 });
 
@@ -35,8 +37,13 @@ import {
 const mockDownloadReport = vi.fn();
 
 beforeEach(() => {
+  // Scrub the spill env so tests that don't opt into spill behavior stay
+  // deterministic regardless of the developer's shell.
+  delete process.env.REPORT_SPILL_BUCKET;
   mockDownloadReport.mockReset();
   mockStoreCsv.mockReset();
+  mockSpillCsvToGcs.mockReset();
+  mockSpillCsvToGcs.mockResolvedValue({ disabled: true, reason: "bucket-not-set" });
   mockResolveSession.mockReturnValue({
     pinterestReportingService: {
       downloadReport: mockDownloadReport,
@@ -185,6 +192,138 @@ describe("downloadReportLogic", () => {
 
     expect(mockStoreCsv).not.toHaveBeenCalled();
     expect(result.rawCsvResourceUri).toBeUndefined();
+  });
+});
+
+describe("GCS spill integration", () => {
+  it("does not fetch rawCsv when neither storeRawCsv nor REPORT_SPILL_BUCKET is set", async () => {
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date"],
+      rows: [],
+      totalRows: 0,
+    });
+
+    await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(mockDownloadReport).toHaveBeenCalledWith(
+      "https://example.com/report.csv",
+      10,
+      undefined,
+      { includeRawCsv: false }
+    );
+  });
+
+  it("forces includeRawCsv: true when REPORT_SPILL_BUCKET is set", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date"],
+      rows: [["2026-03-01"]],
+      totalRows: 1,
+      rawCsv: "date\n2026-03-01\n",
+    });
+
+    await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(mockDownloadReport).toHaveBeenCalledWith(
+      "https://example.com/report.csv",
+      10,
+      undefined,
+      { includeRawCsv: true }
+    );
+  });
+
+  it("returns spill metadata when the helper reports success", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date"],
+      rows: [["2026-03-01"]],
+      totalRows: 1,
+      rawCsv: "date\n2026-03-01\n",
+    });
+    mockSpillCsvToGcs.mockResolvedValueOnce({
+      spilled: true,
+      bucket: "test-bucket",
+      objectName: "pinterest/s-1/report-ts.csv",
+      bytes: 128,
+      rowCount: 1,
+      signedUrl: "https://signed.example/report",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      mimeType: "text/csv",
+    });
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/reports/tok-abc/report.csv" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(mockSpillCsvToGcs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        csv: "date\n2026-03-01\n",
+        mimeType: "text/csv",
+        sessionId: "test-session",
+        server: "pinterest",
+        reportId: "report.csv",
+        rowCount: 1,
+      }),
+    );
+    expect(result.spill).toEqual({
+      bucket: "test-bucket",
+      objectName: "pinterest/s-1/report-ts.csv",
+      bytes: 128,
+      rowCount: 1,
+      signedUrl: "https://signed.example/report",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      mimeType: "text/csv",
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("surfaces spill failures as a warning without breaking the response", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date"],
+      rows: [],
+      totalRows: 0,
+      rawCsv: "date\n",
+    });
+    mockSpillCsvToGcs.mockResolvedValueOnce({ error: "gcs unreachable" });
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.spill).toEqual({ error: "gcs unreachable" });
+    expect(result.warnings.some((w) => w.includes("gcs unreachable"))).toBe(true);
+  });
+
+  it("omits spill when the helper says disabled (bucket set but under threshold)", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockDownloadReport.mockResolvedValueOnce({
+      headers: ["date"],
+      rows: [],
+      totalRows: 0,
+      rawCsv: "date\n",
+    });
+    mockSpillCsvToGcs.mockResolvedValueOnce({ disabled: true, reason: "under-threshold" });
+
+    const result = await downloadReportLogic(
+      { downloadUrl: "https://example.com/report.csv" },
+      baseContext,
+      baseSdkContext
+    );
+
+    expect(result.spill).toBeUndefined();
   });
 });
 

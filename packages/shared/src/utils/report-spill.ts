@@ -1,7 +1,15 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import type { Logger } from "pino";
+import pino, { type Logger } from "pino";
+
+/**
+ * Default logger used when a caller does not supply one — silent, so spill
+ * calls from tool handlers that can't easily plumb a logger don't spam
+ * stdout. Production server telemetry is still captured via
+ * InteractionLogger because spill errors surface as bounded-view warnings.
+ */
+const defaultLogger: Logger = pino({ name: "report-spill", level: "silent" });
 
 /**
  * Environment variable names the spill helper reads at call time. We read
@@ -41,8 +49,8 @@ export interface SpillCsvOptions {
   thresholdRows?: number;
   /** Override signed URL TTL in seconds (default 3600). */
   signedUrlTtlSeconds?: number;
-  /** Logger for spill lifecycle events. */
-  logger: Logger;
+  /** Logger for spill lifecycle events. Defaults to a silent logger. */
+  logger?: Logger;
 }
 
 /**
@@ -164,7 +172,8 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
       expires: expiresAtMs,
     });
 
-    opts.logger.info(
+    const log = opts.logger ?? defaultLogger;
+    log.info(
       { bucket: bucketName, objectName, bytes, rowCount: opts.rowCount },
       "Report CSV spilled to GCS",
     );
@@ -181,7 +190,8 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    opts.logger.warn(
+    const log = opts.logger ?? defaultLogger;
+    log.warn(
       { err, bucket: bucketName, objectName },
       "Report CSV spill to GCS failed; continuing with bounded-view only",
     );
@@ -201,7 +211,7 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
 export async function deleteSpilledObjectsForSession(
   server: string,
   sessionId: string,
-  logger: Logger,
+  logger?: Logger,
 ): Promise<number> {
   const bucketName = process.env[REPORT_SPILL_ENV.BUCKET];
   if (!bucketName) return 0;
@@ -220,13 +230,15 @@ export async function deleteSpilledObjectsForSession(
     };
     const bucket = storage.bucket(bucketName);
     await bucket.deleteFiles({ prefix });
-    logger.info(
+    const log = logger ?? defaultLogger;
+    log.info(
       { bucket: bucketName, prefix },
       "Spill objects for session deleted",
     );
     return 1;
   } catch (err) {
-    logger.warn(
+    const log = logger ?? defaultLogger;
+    log.warn(
       { err, bucket: bucketName, prefix },
       "Spill cleanup failed; relying on bucket lifecycle rule",
     );
