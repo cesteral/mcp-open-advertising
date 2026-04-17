@@ -13,6 +13,7 @@ import {
   getReportViewFetchLimit,
   ReportViewInputSchema,
   ReportViewOutputSchema,
+  spillCsvToGcs,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -66,6 +67,25 @@ export const DownloadReportOutputSchema = z
       .number()
       .optional()
       .describe("Stored body size in bytes (after redaction and any truncation)"),
+    spill: z
+      .union([
+        z.object({
+          bucket: z.string(),
+          objectName: z.string(),
+          bytes: z.number(),
+          rowCount: z.number().optional(),
+          signedUrl: z.string(),
+          expiresAt: z.string().datetime(),
+          mimeType: z.string(),
+        }),
+        z.object({ error: z.string() }),
+      ])
+      .optional()
+      .describe(
+        "GCS spill result. Present only when REPORT_SPILL_BUCKET is set and thresholds are exceeded. " +
+          "On success carries a signed URL to the full report body; on failure carries { error } and the " +
+          "bounded-view path is still returned.",
+      ),
   })
   .describe("Downloaded report data");
 
@@ -80,6 +100,21 @@ const AMAZON_DSP_COMPUTED_METRIC_ALIASES = {
   conversionValue: ["sales14d", "totalSales", "purchasesValue14d"],
 };
 
+/**
+ * Derive a stable filename hint from an Amazon DSP report download URL. The
+ * last non-empty path segment (usually a report/task token) is a reasonable
+ * key; malformed URLs fall back to the literal string "report".
+ */
+function extractAmazonDspReportId(downloadUrl: string): string {
+  try {
+    const u = new URL(downloadUrl);
+    const segments = u.pathname.split("/").filter(Boolean);
+    return segments[segments.length - 1] ?? "report";
+  } catch {
+    return "report";
+  }
+}
+
 export async function downloadReportLogic(
   input: DownloadInput,
   _context: RequestContext,
@@ -87,11 +122,17 @@ export async function downloadReportLogic(
 ): Promise<DownloadOutput> {
   const { amazonDspReportingService } = resolveSessionServices(sdkContext);
 
+  // Always ask the service for raw body — storeRawCsv controls the in-memory
+  // MCP resource store, while REPORT_SPILL_BUCKET controls the GCS spill.
+  // Both paths need the raw body, and holding the string for the duration
+  // of this handler is free (parseCSV materializes it anyway).
+  const spillEnabled = !!process.env.REPORT_SPILL_BUCKET;
+  const needRawCsv = input.storeRawCsv === true || spillEnabled;
   const result = await amazonDspReportingService.downloadReport(
     input.downloadUrl,
     getReportViewFetchLimit(input),
     undefined,
-    { includeRawCsv: input.storeRawCsv === true }
+    { includeRawCsv: needRawCsv }
   );
 
   const recordRows: Record<string, string>[] = result.rows.map((row) => {
@@ -121,7 +162,11 @@ export async function downloadReportLogic(
       : undefined,
   });
 
-  const extras: { rawCsvResourceUri?: string; rawCsvByteLength?: number } = {};
+  const extras: {
+    rawCsvResourceUri?: string;
+    rawCsvByteLength?: number;
+    spill?: DownloadOutput["spill"];
+  } = {};
   if (input.storeRawCsv === true && result.rawCsv !== undefined) {
     const entry = reportCsvStore.store({
       csv: result.rawCsv,
@@ -132,6 +177,37 @@ export async function downloadReportLogic(
     extras.rawCsvByteLength = entry.byteLength;
     if (entry.warnings.length > 0) {
       view.warnings = [...view.warnings, ...entry.warnings];
+    }
+  }
+
+  // Attempt GCS spill. The helper is a no-op when REPORT_SPILL_BUCKET is
+  // unset or the payload is under thresholds; any failure is captured as
+  // { error } and surfaces as a bounded-view warning rather than breaking
+  // the response. Amazon DSP reports can be JSON or CSV — thread
+  // rawMimeType through so the stored GCS object carries the right
+  // Content-Type.
+  if (result.rawCsv !== undefined) {
+    const spill = await spillCsvToGcs({
+      csv: result.rawCsv,
+      mimeType: result.rawMimeType ?? "text/csv",
+      sessionId: sdkContext?.sessionId,
+      server: "amazonDsp",
+      reportId: extractAmazonDspReportId(input.downloadUrl),
+      rowCount: result.totalRows,
+    });
+    if ("spilled" in spill && spill.spilled) {
+      extras.spill = {
+        bucket: spill.bucket,
+        objectName: spill.objectName,
+        bytes: spill.bytes,
+        rowCount: spill.rowCount,
+        signedUrl: spill.signedUrl,
+        expiresAt: spill.expiresAt,
+        mimeType: spill.mimeType,
+      };
+    } else if ("error" in spill) {
+      extras.spill = { error: spill.error };
+      view.warnings = [...view.warnings, `spill failed: ${spill.error}`];
     }
   }
 
