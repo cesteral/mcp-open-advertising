@@ -14,6 +14,7 @@ import {
   parseCSV,
   ReportViewInputSchema,
   ReportViewOutputSchema,
+  spillCsvToGcs,
 } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -67,6 +68,25 @@ export const DownloadReportOutputSchema = z
       .number()
       .optional()
       .describe("Stored CSV size in bytes (after redaction and any truncation)"),
+    spill: z
+      .union([
+        z.object({
+          bucket: z.string(),
+          objectName: z.string(),
+          bytes: z.number(),
+          rowCount: z.number().optional(),
+          signedUrl: z.string(),
+          expiresAt: z.string().datetime(),
+          mimeType: z.string(),
+        }),
+        z.object({ error: z.string() }),
+      ])
+      .optional()
+      .describe(
+        "GCS spill result. Present only when REPORT_SPILL_BUCKET is set and thresholds are exceeded. " +
+          "On success carries a signed URL to the full CSV; on failure carries { error } and the " +
+          "bounded-view path is still returned.",
+      ),
   })
   .describe("Downloaded report data");
 
@@ -82,6 +102,21 @@ const TTD_COMPUTED_METRIC_ALIASES = {
 };
 
 const ALLOWED_REPORT_HOSTNAME_PATTERN = /(?:^|\.)(?:thetradedesk\.com|amazonaws\.com)$/;
+
+/**
+ * Derive a stable filename hint from a TTD report download URL. The
+ * last non-empty path segment (usually a report token) is a reasonable
+ * key; malformed URLs fall back to the literal string "report".
+ */
+function extractTtdReportId(downloadUrl: string): string {
+  try {
+    const u = new URL(downloadUrl);
+    const segments = u.pathname.split("/").filter(Boolean);
+    return segments[segments.length - 1] ?? "report";
+  } catch {
+    return "report";
+  }
+}
 
 function isAllowedReportUrl(rawUrl: string): boolean {
   try {
@@ -178,7 +213,11 @@ export async function downloadReportLogic(
     input,
   });
 
-  const extras: { rawCsvResourceUri?: string; rawCsvByteLength?: number } = {};
+  const extras: {
+    rawCsvResourceUri?: string;
+    rawCsvByteLength?: number;
+    spill?: DownloadOutput["spill"];
+  } = {};
   if (input.storeRawCsv === true) {
     const entry = reportCsvStore.store({
       csv: csvText,
@@ -190,6 +229,33 @@ export async function downloadReportLogic(
     if (entry.warnings.length > 0) {
       view.warnings = [...view.warnings, ...entry.warnings];
     }
+  }
+
+  // Attempt GCS spill. The helper is a no-op when REPORT_SPILL_BUCKET is
+  // unset or the payload is under thresholds; any failure is captured as
+  // { error } and surfaces as a bounded-view warning rather than breaking
+  // the response.
+  const spill = await spillCsvToGcs({
+    csv: csvText,
+    mimeType: "text/csv",
+    sessionId: sdkContext?.sessionId,
+    server: "ttd",
+    reportId: extractTtdReportId(input.downloadUrl),
+    rowCount: rows.length,
+  });
+  if ("spilled" in spill && spill.spilled) {
+    extras.spill = {
+      bucket: spill.bucket,
+      objectName: spill.objectName,
+      bytes: spill.bytes,
+      rowCount: spill.rowCount,
+      signedUrl: spill.signedUrl,
+      expiresAt: spill.expiresAt,
+      mimeType: spill.mimeType,
+    };
+  } else if ("error" in spill) {
+    extras.spill = { error: spill.error };
+    view.warnings = [...view.warnings, `spill failed: ${spill.error}`];
   }
 
   return {

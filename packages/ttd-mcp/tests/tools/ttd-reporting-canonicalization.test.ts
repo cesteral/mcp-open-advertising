@@ -4,8 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ReportStatusSchema } from "@cesteral/shared";
 
-const { mockResolveSessionServices } = vi.hoisted(() => ({
+const { mockResolveSessionServices, mockSpillCsvToGcs } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
+  mockSpillCsvToGcs: vi.fn(),
 }));
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
@@ -20,6 +21,7 @@ vi.mock("@cesteral/shared", async () => {
   return {
     ...actual,
     fetchWithTimeout: vi.fn(),
+    spillCsvToGcs: mockSpillCsvToGcs,
   };
 });
 
@@ -113,6 +115,11 @@ describe("ttd_check_report_status canonical shape", () => {
 describe("ttd_download_report computed metrics flag", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Scrub the spill env so tests that don't opt into spill behavior stay
+    // deterministic regardless of the developer's shell.
+    delete process.env.REPORT_SPILL_BUCKET;
+    mockSpillCsvToGcs.mockReset();
+    mockSpillCsvToGcs.mockResolvedValue({ disabled: true, reason: "bucket-not-set" });
     mockResolveSessionServices.mockReturnValue({
       authAdapter: {
         getAccessToken: vi.fn().mockResolvedValue("test-token"),
@@ -175,6 +182,11 @@ describe("ttd_download_report computed metrics flag", () => {
 describe("ttd_download_report storeRawCsv flag", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Scrub the spill env so tests that don't opt into spill behavior stay
+    // deterministic regardless of the developer's shell.
+    delete process.env.REPORT_SPILL_BUCKET;
+    mockSpillCsvToGcs.mockReset();
+    mockSpillCsvToGcs.mockResolvedValue({ disabled: true, reason: "bucket-not-set" });
     mockResolveSessionServices.mockReturnValue({
       authAdapter: {
         getAccessToken: vi.fn().mockResolvedValue("test-token"),
@@ -233,5 +245,135 @@ describe("ttd_download_report storeRawCsv flag", () => {
     const entry = reportCsvStore.getByUri(result.rawCsvResourceUri!);
     expect(entry).toBeDefined();
     expect(entry!.csv).toBe(CSV);
+  });
+});
+
+describe("GCS spill integration", () => {
+  const CSV = "AdvertiserId,Impressions\nadv-1,10000\n";
+
+  function mockCsvResponse() {
+    const bytes = new TextEncoder().encode(CSV);
+    (fetchWithTimeout as any).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      headers: { get: (name: string) => (name === "content-type" ? "text/csv" : null) },
+      arrayBuffer: async () => bytes.buffer.slice(0),
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.REPORT_SPILL_BUCKET;
+    mockSpillCsvToGcs.mockReset();
+    mockSpillCsvToGcs.mockResolvedValue({ disabled: true, reason: "bucket-not-set" });
+    mockResolveSessionServices.mockReturnValue({
+      authAdapter: {
+        getAccessToken: vi.fn().mockResolvedValue("test-token"),
+      },
+    });
+  });
+
+  it("calls spillCsvToGcs with the TTD server slug and extracted report id", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockCsvResponse();
+
+    await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/results/tok-abc/report.csv",
+        mode: "summary",
+        includeComputedMetrics: false,
+        storeRawCsv: false,
+      },
+      createMockContext(),
+      createMockSdkContext(),
+    );
+
+    expect(mockSpillCsvToGcs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        csv: CSV,
+        mimeType: "text/csv",
+        sessionId: "session-123",
+        server: "ttd",
+        reportId: "report.csv",
+        rowCount: 1,
+      }),
+    );
+  });
+
+  it("returns spill metadata when the helper reports success", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockCsvResponse();
+    mockSpillCsvToGcs.mockResolvedValueOnce({
+      spilled: true,
+      bucket: "test-bucket",
+      objectName: "ttd/s-1/report-ts.csv",
+      bytes: 128,
+      rowCount: 1,
+      signedUrl: "https://signed.example/report",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      mimeType: "text/csv",
+    });
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/results/tok-abc/report.csv",
+        mode: "summary",
+        includeComputedMetrics: false,
+        storeRawCsv: false,
+      },
+      createMockContext(),
+      createMockSdkContext(),
+    );
+
+    expect(result.spill).toEqual({
+      bucket: "test-bucket",
+      objectName: "ttd/s-1/report-ts.csv",
+      bytes: 128,
+      rowCount: 1,
+      signedUrl: "https://signed.example/report",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      mimeType: "text/csv",
+    });
+    expect(result.warnings).toEqual([]);
+  });
+
+  it("surfaces spill failures as a warning without breaking the response", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockCsvResponse();
+    mockSpillCsvToGcs.mockResolvedValueOnce({ error: "gcs unreachable" });
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/results/tok-abc/report.csv",
+        mode: "summary",
+        includeComputedMetrics: false,
+        storeRawCsv: false,
+      },
+      createMockContext(),
+      createMockSdkContext(),
+    );
+
+    expect(result.spill).toEqual({ error: "gcs unreachable" });
+    expect(result.warnings.some((w) => w.includes("gcs unreachable"))).toBe(true);
+  });
+
+  it("omits spill when the helper says disabled (bucket set but under threshold)", async () => {
+    process.env.REPORT_SPILL_BUCKET = "test-bucket";
+    mockCsvResponse();
+    mockSpillCsvToGcs.mockResolvedValueOnce({ disabled: true, reason: "under-threshold" });
+
+    const result = await downloadReportLogic(
+      {
+        downloadUrl: "https://reports.thetradedesk.com/results/tok-abc/report.csv",
+        mode: "summary",
+        includeComputedMetrics: false,
+        storeRawCsv: false,
+      },
+      createMockContext(),
+      createMockSdkContext(),
+    );
+
+    expect(result.spill).toBeUndefined();
   });
 });
