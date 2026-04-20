@@ -74,11 +74,11 @@ describe("tiktok_list_entities tool", () => {
       expect(result.page).toBe(1);
       expect(result.totalNumber).toBe(2);
       expect(result.totalPage).toBe(1);
-      expect(result.hasMore).toBe(false);
+      expect(result.has_more).toBe(false);
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates hasMore when more pages available", async () => {
+    it("indicates has_more when more pages available", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [{ campaign_id: "1800000001" }],
         pageInfo: {
@@ -100,7 +100,7 @@ describe("tiktok_list_entities tool", () => {
         baseSdkContext
       );
 
-      expect(result.hasMore).toBe(true);
+      expect(result.has_more).toBe(true);
     });
 
     it("passes filters to service when provided", async () => {
@@ -139,7 +139,7 @@ describe("tiktok_list_entities tool", () => {
         pageSize: 10,
         totalNumber: 1,
         totalPage: 1,
-        hasMore: false,
+        has_more: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -157,7 +157,7 @@ describe("tiktok_list_entities tool", () => {
         pageSize: 10,
         totalNumber: 0,
         totalPage: 0,
-        hasMore: false,
+        has_more: false,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -165,14 +165,14 @@ describe("tiktok_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows pagination hint when hasMore is true", () => {
+    it("shows pagination hint when has_more is true", () => {
       const result = {
         entities: [{ campaign_id: "abc" }],
         page: 1,
         pageSize: 1,
         totalNumber: 3,
         totalPage: 3,
-        hasMore: true,
+        has_more: true,
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 

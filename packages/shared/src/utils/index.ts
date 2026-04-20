@@ -38,6 +38,7 @@ export * from "./computed-metrics.js";
 export * from "./pacing.js";
 export * from "./date-presets.js";
 export * from "./report-view.js";
+export * from "./report-download-view.js";
 export * from "./report-csv-store.js";
 export * from "./report-csv-resource.js";
 export * from "./report-polling.js";

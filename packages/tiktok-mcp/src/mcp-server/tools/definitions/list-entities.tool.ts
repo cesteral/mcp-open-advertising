@@ -55,7 +55,7 @@ export const ListEntitiesOutputSchema = z
     pageSize: z.number().describe("Number of results per page"),
     totalNumber: z.number().describe("Total number of entities"),
     totalPage: z.number().describe("Total number of pages"),
-    hasMore: z.boolean().describe("Whether more pages are available"),
+    has_more: z.boolean().describe("Whether more pages are available"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -86,14 +86,14 @@ export async function listEntitiesLogic(
     pageSize: pageInfo.page_size,
     totalNumber: pageInfo.total_number,
     totalPage: pageInfo.total_page,
-    hasMore: pageInfo.page < pageInfo.total_page,
+    has_more: pageInfo.page < pageInfo.total_page,
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
   const summary = `Found ${result.entities.length} entities (page ${result.page}/${result.totalPage}, total ${result.totalNumber})`;
-  const pagination = result.hasMore
+  const pagination = result.has_more
     ? `\n\nMore results available. Use page: ${result.page + 1}`
     : "";
   const entities =
