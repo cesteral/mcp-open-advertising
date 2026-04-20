@@ -5,16 +5,17 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { reportCsvStore } from "../../../services/session-services.js";
 import {
-  appendComputedMetricsToRows,
-  buildReportCsvUri,
   ComputedMetricsFlagSchema,
-  createReportView,
+  createServiceDownloadedReportView,
+  extractReportIdFromUrl,
   fetchWithTimeout,
   formatReportViewResponse,
   parseCSV,
   ReportViewInputSchema,
   ReportViewOutputSchema,
+  StoredReportBodyOutputSchema,
   spillCsvToGcs,
+  type ServiceDownloadedReport,
 } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -60,33 +61,7 @@ export const DownloadReportOutputSchema = z
   .object({
     ...ReportViewOutputSchema.shape,
     timestamp: z.string().datetime(),
-    rawCsvResourceUri: z
-      .string()
-      .optional()
-      .describe("MCP resource URI of the persisted raw CSV (only present when storeRawCsv is true)"),
-    rawCsvByteLength: z
-      .number()
-      .optional()
-      .describe("Stored CSV size in bytes (after redaction and any truncation)"),
-    spill: z
-      .union([
-        z.object({
-          bucket: z.string(),
-          objectName: z.string(),
-          bytes: z.number(),
-          rowCount: z.number().optional(),
-          signedUrl: z.string(),
-          expiresAt: z.string().datetime(),
-          mimeType: z.string(),
-        }),
-        z.object({ error: z.string() }),
-      ])
-      .optional()
-      .describe(
-        "GCS spill result. Present only when REPORT_SPILL_BUCKET is set and thresholds are exceeded. " +
-          "On success carries a signed URL to the full CSV; on failure carries { error } and the " +
-          "bounded-view path is still returned.",
-      ),
+    ...StoredReportBodyOutputSchema.shape,
   })
   .describe("Downloaded report data");
 
@@ -102,21 +77,6 @@ const TTD_COMPUTED_METRIC_ALIASES = {
 };
 
 const ALLOWED_REPORT_HOSTNAME_PATTERN = /(?:^|\.)(?:thetradedesk\.com|amazonaws\.com)$/;
-
-/**
- * Derive a stable filename hint from a TTD report download URL. The
- * last non-empty path segment (usually a report token) is a reasonable
- * key; malformed URLs fall back to the literal string "report".
- */
-function extractTtdReportId(downloadUrl: string): string {
-  try {
-    const u = new URL(downloadUrl);
-    const segments = u.pathname.split("/").filter(Boolean);
-    return segments[segments.length - 1] ?? "report";
-  } catch {
-    return "report";
-  }
-}
 
 function isAllowedReportUrl(rawUrl: string): boolean {
   try {
@@ -171,98 +131,60 @@ export async function downloadReportLogic(
     );
   }
 
-  // TTD-hosted download URLs (api.thetradedesk.com/v3/myreports/view/...) require
-  // the TTD-Auth header. Pre-signed AWS S3 URLs carry their own signature and
-  // must NOT receive auth headers (would 400/403).
-  const { hostname } = new URL(input.downloadUrl);
-  const requestInit: RequestInit = /thetradedesk\.com$/.test(hostname)
-    ? { headers: { "TTD-Auth": await authAdapter.getAccessToken() } }
-    : {};
-
-  const response = await fetchWithTimeout(input.downloadUrl, 60_000, undefined, requestInit);
-  if (!response.ok) {
-    throw new Error(
-      `Failed to download report: ${response.status} ${response.statusText}`
-    );
-  }
-
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  const contentType = response.headers.get("content-type");
-  const binarySpreadsheetError = detectBinarySpreadsheet(
-    bytes,
-    contentType,
-    input.downloadUrl
-  );
-  if (binarySpreadsheetError) {
-    throw new Error(binarySpreadsheetError);
-  }
-
-  const csvText = new TextDecoder("utf-8").decode(bytes);
-  const { headers, rows } = parseCSV(csvText);
-
-  const augmented = input.includeComputedMetrics
-    ? appendComputedMetricsToRows(rows, TTD_COMPUTED_METRIC_ALIASES)
-    : rows;
-  const augmentedHeaders = input.includeComputedMetrics
-    ? [...headers, "cpa", "roas", "cpm", "ctr", "cpc"]
-    : headers;
-
-  const view = createReportView({
-    headers: augmentedHeaders,
-    rows: augmented,
+  return createServiceDownloadedReportView({
     input,
-  });
-
-  const extras: {
-    rawCsvResourceUri?: string;
-    rawCsvByteLength?: number;
-    spill?: DownloadOutput["spill"];
-  } = {};
-  if (input.storeRawCsv === true) {
-    const entry = reportCsvStore.store({
-      csv: csvText,
-      mimeType: "text/csv",
-      sessionId: sdkContext?.sessionId,
-    });
-    extras.rawCsvResourceUri = buildReportCsvUri(entry.resourceId);
-    extras.rawCsvByteLength = entry.byteLength;
-    if (entry.warnings.length > 0) {
-      view.warnings = [...view.warnings, ...entry.warnings];
-    }
-  }
-
-  // Attempt GCS spill. The helper is a no-op when REPORT_SPILL_BUCKET is
-  // unset or the payload is under thresholds; any failure is captured as
-  // { error } and surfaces as a bounded-view warning rather than breaking
-  // the response.
-  const spill = await spillCsvToGcs({
-    csv: csvText,
-    mimeType: "text/csv",
     sessionId: sdkContext?.sessionId,
-    server: "ttd",
-    reportId: extractTtdReportId(input.downloadUrl),
-    rowCount: rows.length,
-  });
-  if ("spilled" in spill && spill.spilled) {
-    extras.spill = {
-      bucket: spill.bucket,
-      objectName: spill.objectName,
-      bytes: spill.bytes,
-      rowCount: spill.rowCount,
-      signedUrl: spill.signedUrl,
-      expiresAt: spill.expiresAt,
-      mimeType: spill.mimeType,
-    };
-  } else if ("error" in spill) {
-    extras.spill = { error: spill.error };
-    view.warnings = [...view.warnings, `spill failed: ${spill.error}`];
-  }
+    reportCsvStore,
+    spillCsvToGcs,
+    spillServer: "ttd",
+    reportId: extractReportIdFromUrl(input.downloadUrl),
+    computedMetricAliases: TTD_COMPUTED_METRIC_ALIASES,
+    download: async ({ fetchLimit }): Promise<ServiceDownloadedReport> => {
+      // TTD-hosted download URLs (api.thetradedesk.com/v3/myreports/view/...)
+      // require the TTD-Auth header. Pre-signed AWS S3 URLs carry their own
+      // signature and must NOT receive auth headers (would 400/403).
+      const { hostname } = new URL(input.downloadUrl);
+      const requestInit: RequestInit = /thetradedesk\.com$/.test(hostname)
+        ? { headers: { "TTD-Auth": await authAdapter.getAccessToken() } }
+        : {};
 
-  return {
-    ...view,
-    timestamp: new Date().toISOString(),
-    ...extras,
-  };
+      const response = await fetchWithTimeout(
+        input.downloadUrl,
+        60_000,
+        undefined,
+        requestInit,
+      );
+      if (!response.ok) {
+        throw new Error(
+          `Failed to download report: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      const contentType = response.headers.get("content-type");
+      const binarySpreadsheetError = detectBinarySpreadsheet(
+        bytes,
+        contentType,
+        input.downloadUrl
+      );
+      if (binarySpreadsheetError) {
+        throw new Error(binarySpreadsheetError);
+      }
+
+      const csvText = new TextDecoder("utf-8").decode(bytes);
+      const { headers, rows: recordRows } = parseCSV(csvText);
+      const limited = recordRows.slice(0, fetchLimit);
+      const rows = limited.map((record) => headers.map((h) => record[h] ?? ""));
+
+      return {
+        headers,
+        rows,
+        totalRows: recordRows.length,
+        rawCsv: csvText,
+        rawMimeType: "text/csv",
+      };
+    },
+  });
 }
 
 export function downloadReportResponseFormatter(result: DownloadOutput): McpTextContent[] {
