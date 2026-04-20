@@ -20,6 +20,7 @@ import type {
 import type { CallToolResult, GetTaskResult } from "@modelcontextprotocol/sdk/types.js";
 import {
   RunCustomQueryInputSchema,
+  RunCustomQueryOutputSchema,
   runCustomQueryLogic,
   runCustomQueryResponseFormatter,
   type RunCustomQueryInput,
@@ -39,6 +40,7 @@ export function registerRunCustomQueryAsyncTool(
 ): void {
   // Extract raw shape from ZodEffects schema — the SDK expects ZodRawShapeCompat
   const inputShape = extractZodShape(RunCustomQueryInputSchema);
+  const outputShape = extractZodShape(RunCustomQueryOutputSchema);
 
   server.experimental.tasks.registerToolTask(
     "dbm_run_custom_query_async",
@@ -50,6 +52,7 @@ export function registerRunCustomQueryAsyncTool(
         "Use this for large or complex queries that may take time to execute.\n\n" +
         "Accepts the same parameters as dbm_run_custom_query.",
       inputSchema: inputShape,
+      outputSchema: outputShape,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
