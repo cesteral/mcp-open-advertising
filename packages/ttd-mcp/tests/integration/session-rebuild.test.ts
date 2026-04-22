@@ -212,4 +212,66 @@ describe("session rebuild after in-memory eviction (Cloud Run scale-out simulati
     expect(toolRes.status).toBe(200);
     expect(sessionServiceStore.get(sessionId!)).toBeTruthy();
   });
+
+  it("rebuilt session still rejects mismatched credentials on next call", async () => {
+    const { app: appA } = createMcpHttpServer(config, logger);
+    const { app: appB } = createMcpHttpServer(config, logger);
+
+    const initRes = await appA.request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        "mcp-protocol-version": "2025-03-26",
+        "ttd-auth": "token-client-1",
+        "x-test-fingerprint": "fp-client-1",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "initialize",
+        params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } },
+      }),
+    });
+    const sessionId = initRes.headers.get("mcp-session-id")!;
+
+    // Simulate scale-out eviction
+    sessionServiceStore.delete(sessionId);
+
+    // Attacker: hijacks sessionId, supplies different credentials
+    const hijackRes = await appB.request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        "mcp-protocol-version": "2025-03-26",
+        "ttd-auth": "token-attacker",
+        "x-test-fingerprint": "fp-attacker",
+        "mcp-session-id": sessionId,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+    });
+
+    // Rebuild path: attacker rebuilds "their" fingerprint onto the sessionId.
+    // This is acceptable — the sessionId is an opaque token the attacker
+    // already has to possess, and they do not gain access to the original
+    // client's data (services are rebuilt from *their* credentials).
+    // Follow-up calls from the ORIGINAL client would then fingerprint-
+    // mismatch and be rejected. Assert that:
+    expect(hijackRes.status).toBe(200);
+
+    // Now the legit client comes back — hits appB which now has the
+    // attacker's fingerprint stored. Must 401 on fingerprint mismatch.
+    const legitRes = await appB.request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        "mcp-protocol-version": "2025-03-26",
+        "ttd-auth": "token-client-1",
+        "x-test-fingerprint": "fp-client-1",
+        "mcp-session-id": sessionId,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }),
+    });
+    expect(legitRes.status).toBe(401);
+  });
 });
