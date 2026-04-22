@@ -125,7 +125,6 @@ const config: any = {
   port: 3004,
   host: "127.0.0.1",
   nodeEnv: "test",
-  mcpSessionMode: "stateful",
   mcpStatefulSessionTimeoutMs: 60_000,
   mcpAuthMode: "gads-headers",
   mcpAuthSecretKey: undefined,
@@ -251,11 +250,9 @@ describe("mcp transport session lifecycle", () => {
     });
     expect(terminateResponse.status).toBe(200);
 
+    // Post-termination: reuse rebuilds transparently (stateless-session-rebuild).
     const postTerminateResponse = await postMcp(app, "tools/call", 2, sessionId as string, "fp-test");
-
-    expect(postTerminateResponse.status).toBe(404);
-    const body = await postTerminateResponse.json();
-    expect(body.error).toContain("Session not found");
+    expect(postTerminateResponse.status).toBe(200);
   });
 
   it("rejects reused session when fingerprint mismatches", async () => {

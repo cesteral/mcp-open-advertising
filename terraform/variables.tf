@@ -222,12 +222,6 @@ variable "service_resource_overrides" {
   default = {}
 }
 
-variable "mcp_session_mode" {
-  description = "MCP session mode"
-  type        = string
-  default     = "stateless"
-}
-
 variable "service_auth_mode_overrides" {
   description = "Per-service MCP auth mode overrides keyed by service name"
   type        = map(string)

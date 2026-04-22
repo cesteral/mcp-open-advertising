@@ -218,7 +218,6 @@ module "dbm_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.dbm_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -245,7 +244,6 @@ module "dv360_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.dv360_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -272,7 +270,6 @@ module "ttd_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.ttd_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -299,7 +296,6 @@ module "gads_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.gads_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -326,7 +322,6 @@ module "meta_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.meta_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -353,7 +348,6 @@ module "linkedin_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.linkedin_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -380,7 +374,6 @@ module "tiktok_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.tiktok_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -407,7 +400,6 @@ module "cm360_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.cm360_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -434,7 +426,6 @@ module "sa360_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.sa360_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -461,7 +452,6 @@ module "pinterest_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.pinterest_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -488,7 +478,6 @@ module "snapchat_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.snapchat_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -515,7 +504,6 @@ module "amazon_dsp_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.amazon_dsp_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence
@@ -542,7 +530,6 @@ module "msads_mcp" {
   allow_unauthenticated  = var.allow_unauthenticated
   authorized_invokers    = var.authorized_invokers
   vpc_connector_name     = module.networking.vpc_connector_id
-  mcp_session_mode       = var.mcp_session_mode
   mcp_auth_mode          = local.msads_auth_mode
   log_level              = var.log_level
   enable_gcs_persistence = var.enable_gcs_persistence

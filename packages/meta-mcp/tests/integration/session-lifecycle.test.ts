@@ -147,7 +147,6 @@ const config: any = {
   port: 3005,
   host: "127.0.0.1",
   nodeEnv: "test",
-  mcpSessionMode: "stateful",
   mcpStatefulSessionTimeoutMs: 60_000,
   mcpAuthMode: "meta-bearer",
   mcpAuthSecretKey: undefined,
@@ -366,7 +365,7 @@ describe("meta-mcp transport session lifecycle", () => {
     const body = await deleteResponse.json();
     expect(body.status).toBe("terminated");
 
-    // Post-termination: session should be gone
+    // Post-termination: reuse rebuilds transparently (stateless-session-rebuild).
     const postTerminateResponse = await postMcp(
       app,
       "tools/call",
@@ -374,6 +373,6 @@ describe("meta-mcp transport session lifecycle", () => {
       sessionId as string,
       "fp-delete-ok"
     );
-    expect(postTerminateResponse.status).toBe(404);
+    expect(postTerminateResponse.status).toBe(200);
   });
 });

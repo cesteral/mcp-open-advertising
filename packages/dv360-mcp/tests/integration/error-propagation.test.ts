@@ -88,7 +88,6 @@ const config: any = {
   port: 3002,
   host: "127.0.0.1",
   nodeEnv: "test",
-  mcpSessionMode: "stateful",
   mcpStatefulSessionTimeoutMs: 60_000,
   mcpAuthMode: "google-headers",
   mcpAuthSecretKey: undefined,

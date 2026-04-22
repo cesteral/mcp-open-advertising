@@ -43,7 +43,6 @@ export const BaseConfigSchema = z.object({
   nodeEnv: z.enum(["development", "production", "test"]).default("development"),
 
   // Session Management
-  mcpSessionMode: z.enum(["stateless", "stateful", "auto"]).default("auto"),
   mcpStatefulSessionTimeoutMs: z.number().default(3600000), // 1 hour
 
   // Auth (servers refine mcpAuthMode with their own enum)
@@ -76,7 +75,6 @@ export function getBaseEnvConfig(defaultHost: string): Record<string, unknown> {
     nodeEnv: process.env.NODE_ENV,
 
     // Session
-    mcpSessionMode: process.env.MCP_SESSION_MODE,
     mcpStatefulSessionTimeoutMs: process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS
       ? Number(process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS)
       : undefined,
