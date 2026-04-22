@@ -23,7 +23,7 @@ import {
   runWithRequestContext,
   extractRequestId,
 } from "./request-context.js";
-import { registerActiveSessionsGauge, recordAuthValidation } from "./metrics.js";
+import { registerActiveSessionsGauge, recordAuthValidation, recordSessionRehydration } from "./metrics.js";
 import {
   isValidSessionId,
   generateSessionId,
@@ -393,6 +393,9 @@ export function createMcpHttpTransport(
       });
 
       const outcome = needsRebuild ? "rehydrated" : "created";
+      if (outcome === "rehydrated") {
+        recordSessionRehydration(authResult.authInfo.authType);
+      }
       sessions.trackSession(sessionId);
 
       logger.info(
