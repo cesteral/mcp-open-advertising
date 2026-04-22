@@ -343,6 +343,7 @@ gcloud run services logs tail <server-name> --region=europe-west2
 2. **Stateless**: No persistent state between requests
 3. **Type Safety**: Zod for runtime, TypeScript for compile-time
 4. **Observability**: OTEL traces + metrics, Pino structured logs, InteractionLogger for tool-call + tool-failure persistence
+5. **Scale-out-safe sessions**: the streamable-HTTP transport factory rebuilds session services on cache miss. A follow-up request whose `Mcp-Session-Id` is unknown to the receiving Cloud Run instance triggers a re-auth + `createSessionForAuth` using the client-supplied session ID. The existing credential fingerprint check runs on every call, so rebuild does not weaken session binding. Per-instance state that is *not* reconstructible from credentials (rate-limiter counters, in-memory `report-csv://` resources) may behave slightly differently after a scale-out event — documented inline in each subsystem.
 
 ## Tool Failure Logging
 

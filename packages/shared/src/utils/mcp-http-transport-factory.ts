@@ -23,7 +23,7 @@ import {
   runWithRequestContext,
   extractRequestId,
 } from "./request-context.js";
-import { registerActiveSessionsGauge, recordAuthValidation } from "./metrics.js";
+import { registerActiveSessionsGauge, recordAuthValidation, recordSessionRehydration } from "./metrics.js";
 import {
   isValidSessionId,
   generateSessionId,
@@ -299,9 +299,17 @@ export function createMcpHttpTransport(
       return c.json({ error: "Invalid session ID format" }, 400);
     }
 
-    if (providedSessionId && !sessionServiceStore.get(providedSessionId) && !sessions.sessionCreatedAt.has(providedSessionId)) {
-      return c.json({ error: "Session not found or expired" }, 404);
-    }
+    // Determine whether this request is:
+    // (a) a brand-new session (no Mcp-Session-Id header),
+    // (b) a known session on this instance (hot path),
+    // (c) an unknown session ID on this instance — which after Cloud Run
+    //     scale-out is the common case. We rebuild from the auth headers
+    //     using the client-provided session ID. The fingerprint check
+    //     below prevents hijacking of a rebuilt session.
+    const needsRebuild =
+      !!providedSessionId &&
+      !sessionServiceStore.get(providedSessionId) &&
+      !sessions.sessionCreatedAt.has(providedSessionId);
 
     if (providedSessionId) {
       const headers = extractHeadersMap(c.req.raw.headers);
@@ -340,9 +348,9 @@ export function createMcpHttpTransport(
       );
     }
 
-    // For new sessions, authenticate via configured strategy
+    // For new sessions or rebuilds, authenticate via configured strategy
     let sessionId = providedSessionId;
-    if (!sessionId) {
+    if (!sessionId || needsRebuild) {
       const headers = extractHeadersMap(c.req.raw.headers);
 
       let authResult: AuthResult;
@@ -362,7 +370,9 @@ export function createMcpHttpTransport(
         );
       }
 
-      sessionId = generateSessionId();
+      if (!sessionId) {
+        sessionId = generateSessionId();
+      }
 
       // Platform-specific session creation
       const result = await platformConfig.createSessionForAuth(
@@ -382,16 +392,23 @@ export function createMcpHttpTransport(
         allowedAdvertisers: authResult.allowedAdvertisers,
       });
 
+      const outcome = needsRebuild ? "rehydrated" : "created";
+      if (outcome === "rehydrated") {
+        recordSessionRehydration(authResult.authInfo.authType);
+      }
       sessions.trackSession(sessionId);
 
       logger.info(
         {
           sessionId,
+          outcome,
           activeSessions: sessionServiceStore.size,
           authType: authResult.authInfo.authType,
           clientId: authResult.authInfo.clientId,
         },
-        "New MCP session created"
+        outcome === "rehydrated"
+          ? "MCP session rehydrated on this instance"
+          : "New MCP session created"
       );
     }
 

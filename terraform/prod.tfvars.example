@@ -46,7 +46,6 @@ cpu_always_allocated  = true # Faster response times
 allow_unauthenticated = false
 
 # MCP Server configuration
-mcp_session_mode       = "stateless"
 log_level              = "info" # Production logging level
 enable_gcs_persistence = false
 gcs_bucket_name        = "YOUR_GCP_PROJECT_PROD-mcp-persistence" # Enable when ready

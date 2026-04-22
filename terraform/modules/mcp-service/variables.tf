@@ -96,16 +96,6 @@ variable "vpc_connector_name" {
 # MCP SERVER CONFIGURATION
 # ============================================================================
 
-variable "mcp_session_mode" {
-  description = "MCP session mode (stateless, stateful, auto)"
-  type        = string
-  default     = "stateless"
-  validation {
-    condition     = contains(["stateless", "stateful", "auto"], var.mcp_session_mode)
-    error_message = "MCP session mode must be stateless, stateful, or auto."
-  }
-}
-
 variable "mcp_auth_mode" {
   description = "MCP authentication mode for the target server"
   type        = string

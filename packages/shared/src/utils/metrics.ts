@@ -95,6 +95,30 @@ export function recordAuthValidation(
 }
 
 // ---------------------------------------------------------------------------
+// Session rehydration metrics
+// ---------------------------------------------------------------------------
+
+let sessionRehydrationsCounter: Counter | undefined;
+
+/**
+ * Record an MCP session being rebuilt from auth headers on a Cloud Run
+ * instance that had never seen the session ID (scale-out rebuild path).
+ */
+export function recordSessionRehydration(authType: string): void {
+  if (!sessionRehydrationsCounter) {
+    sessionRehydrationsCounter = getMeter().createCounter(
+      "mcp_session_rehydrated_total",
+      {
+        description:
+          "Count of MCP sessions rebuilt from auth headers on a new instance (Cloud Run scale-out rebuild path).",
+        unit: "1",
+      }
+    );
+  }
+  sessionRehydrationsCounter.add(1, { auth_type: authType });
+}
+
+// ---------------------------------------------------------------------------
 // Rate limit metrics
 // ---------------------------------------------------------------------------
 
