@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { SA360HeadersAuthStrategy } from "../../auth/sa360-auth-strategy.js";
 import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "sa360-headers"
@@ -61,7 +56,10 @@ function buildPlatformConfig(
         await adapter.validate();
         const services = createSessionServices(
           adapter,
-          { baseUrl: (appConfig as AppConfig).sa360ApiBaseUrl, v2BaseUrl: (appConfig as AppConfig).sa360V2ApiBaseUrl },
+          {
+            baseUrl: (appConfig as AppConfig).sa360ApiBaseUrl,
+            v2BaseUrl: (appConfig as AppConfig).sa360V2ApiBaseUrl,
+          },
           log,
           rateLimiter
         );
@@ -77,9 +75,7 @@ function buildPlatformConfig(
           typedConfig.sa360ClientSecret &&
           typedConfig.sa360RefreshToken
         ) {
-          const { SA360RefreshTokenAuthAdapter } = await import(
-            "../../auth/sa360-auth-adapter.js"
-          );
+          const { SA360RefreshTokenAuthAdapter } = await import("../../auth/sa360-auth-adapter.js");
           const envAdapter = new SA360RefreshTokenAuthAdapter({
             clientId: typedConfig.sa360ClientId,
             clientSecret: typedConfig.sa360ClientSecret,
@@ -124,13 +120,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "Search Ads 360",
-    serverCard: {
-      description: "Search Ads 360 reporting and offline conversion uploads.",
-      platform: "Google Search Ads 360",
-      supportedAuthModes: ["sa360-headers", "jwt", "none"],
-      documentationUrl: "https://developers.google.com/search-ads/v0/reference",
-    },
+    serverCard: buildServerCardExtras("sa360-mcp"),
   };
 }
 
@@ -141,9 +131,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

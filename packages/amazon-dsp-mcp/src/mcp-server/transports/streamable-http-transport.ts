@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { AmazonDspBearerAuthStrategy } from "../../auth/amazon-dsp-auth-strategy.js";
 import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "amazon-dsp-bearer"
@@ -63,7 +58,12 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts, clientId: adapter.clientId || cfg.amazonDspClientId },
+          {
+            baseUrl: cfg.amazonDspApiBaseUrl,
+            reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs,
+            reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts,
+            clientId: adapter.clientId || cfg.amazonDspClientId,
+          },
           log,
           rateLimiter
         );
@@ -77,15 +77,36 @@ function buildPlatformConfig(
         const amazonDspProfileId = cfg.amazonDspProfileId;
 
         // Prefer refresh token flow if app credentials are available
-        if (cfg.amazonDspAppId && cfg.amazonDspAppSecret && cfg.amazonDspRefreshToken && amazonDspProfileId) {
-          const { AmazonDspRefreshTokenAdapter } = await import("../../auth/amazon-dsp-auth-adapter.js");
+        if (
+          cfg.amazonDspAppId &&
+          cfg.amazonDspAppSecret &&
+          cfg.amazonDspRefreshToken &&
+          amazonDspProfileId
+        ) {
+          const { AmazonDspRefreshTokenAdapter } = await import(
+            "../../auth/amazon-dsp-auth-adapter.js"
+          );
           const envAdapter = new AmazonDspRefreshTokenAdapter(
-            { appId: cfg.amazonDspAppId, appSecret: cfg.amazonDspAppSecret, refreshToken: cfg.amazonDspRefreshToken },
+            {
+              appId: cfg.amazonDspAppId,
+              appSecret: cfg.amazonDspAppSecret,
+              refreshToken: cfg.amazonDspRefreshToken,
+            },
             amazonDspProfileId,
             cfg.amazonDspApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.amazonDspApiBaseUrl, reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts, clientId: cfg.amazonDspClientId }, log, rateLimiter);
+          const services = createSessionServices(
+            envAdapter,
+            {
+              baseUrl: cfg.amazonDspApiBaseUrl,
+              reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs,
+              reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts,
+              clientId: cfg.amazonDspClientId,
+            },
+            log,
+            rateLimiter
+          );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -93,7 +114,9 @@ function buildPlatformConfig(
         // Fallback: static access token
         const amazonDspToken = cfg.amazonDspAccessToken;
         if (amazonDspToken && amazonDspProfileId) {
-          const { AmazonDspAccessTokenAdapter } = await import("../../auth/amazon-dsp-auth-adapter.js");
+          const { AmazonDspAccessTokenAdapter } = await import(
+            "../../auth/amazon-dsp-auth-adapter.js"
+          );
           const envAdapter = new AmazonDspAccessTokenAdapter(
             amazonDspToken,
             amazonDspProfileId,
@@ -103,7 +126,12 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            { baseUrl: cfgFallback.amazonDspApiBaseUrl, reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts, clientId: cfgFallback.amazonDspClientId },
+            {
+              baseUrl: cfgFallback.amazonDspApiBaseUrl,
+              reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs,
+              reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts,
+              clientId: cfgFallback.amazonDspClientId,
+            },
             log,
             rateLimiter
           );
@@ -114,7 +142,8 @@ function buildPlatformConfig(
           return {
             services: null,
             error: {
-              message: "Amazon DSP access token and profile ID required. Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID env vars, or use MCP_AUTH_MODE=amazon-dsp-bearer.",
+              message:
+                "Amazon DSP access token and profile ID required. Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID env vars, or use MCP_AUTH_MODE=amazon-dsp-bearer.",
               status: 400 as const,
             },
           };
@@ -135,13 +164,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "AmazonDsp",
-    serverCard: {
-      description: "Amazon DSP: orders, line items, creatives, reporting.",
-      platform: "Amazon DSP",
-      supportedAuthModes: ["amazon-dsp-bearer", "jwt", "none"],
-      documentationUrl: "https://advertising.amazon.com/API/docs/en-us/",
-    },
+    serverCard: buildServerCardExtras("amazon-dsp-mcp"),
   };
 }
 
@@ -152,9 +175,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

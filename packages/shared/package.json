@@ -42,6 +42,7 @@
     }
   },
   "scripts": {
+    "prebuild": "node ../../scripts/sync-registry-data.mjs",
     "build": "tsc --build",
     "clean": "rm -rf dist *.tsbuildinfo",
     "typecheck": "tsc --noEmit",

@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { PinterestBearerAuthStrategy } from "../../auth/pinterest-auth-strategy.js";
 import type { PinterestAuthAdapter } from "../../auth/pinterest-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "pinterest-bearer"
@@ -62,7 +57,12 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { baseUrl: cfg.pinterestApiBaseUrl, apiVersion: cfg.pinterestApiVersion, reportPollIntervalMs: cfg.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts },
+          {
+            baseUrl: cfg.pinterestApiBaseUrl,
+            apiVersion: cfg.pinterestApiVersion,
+            reportPollIntervalMs: cfg.pinterestReportPollIntervalMs,
+            reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts,
+          },
           log,
           rateLimiter
         );
@@ -76,15 +76,36 @@ function buildPlatformConfig(
         const pinterestAdAccountId = cfg.pinterestAdAccountId;
 
         // Prefer refresh token flow if app credentials are available
-        if (cfg.pinterestAppId && cfg.pinterestAppSecret && cfg.pinterestRefreshToken && pinterestAdAccountId) {
-          const { PinterestRefreshTokenAdapter } = await import("../../auth/pinterest-auth-adapter.js");
+        if (
+          cfg.pinterestAppId &&
+          cfg.pinterestAppSecret &&
+          cfg.pinterestRefreshToken &&
+          pinterestAdAccountId
+        ) {
+          const { PinterestRefreshTokenAdapter } = await import(
+            "../../auth/pinterest-auth-adapter.js"
+          );
           const envAdapter = new PinterestRefreshTokenAdapter(
-            { appId: cfg.pinterestAppId, appSecret: cfg.pinterestAppSecret, refreshToken: cfg.pinterestRefreshToken },
+            {
+              appId: cfg.pinterestAppId,
+              appSecret: cfg.pinterestAppSecret,
+              refreshToken: cfg.pinterestRefreshToken,
+            },
             pinterestAdAccountId,
             cfg.pinterestApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.pinterestApiBaseUrl, apiVersion: cfg.pinterestApiVersion, reportPollIntervalMs: cfg.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts }, log, rateLimiter);
+          const services = createSessionServices(
+            envAdapter,
+            {
+              baseUrl: cfg.pinterestApiBaseUrl,
+              apiVersion: cfg.pinterestApiVersion,
+              reportPollIntervalMs: cfg.pinterestReportPollIntervalMs,
+              reportMaxPollAttempts: cfg.pinterestReportMaxPollAttempts,
+            },
+            log,
+            rateLimiter
+          );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -92,7 +113,9 @@ function buildPlatformConfig(
         // Fallback: static access token
         const pinterestToken = cfg.pinterestAccessToken;
         if (pinterestToken && pinterestAdAccountId) {
-          const { PinterestAccessTokenAdapter } = await import("../../auth/pinterest-auth-adapter.js");
+          const { PinterestAccessTokenAdapter } = await import(
+            "../../auth/pinterest-auth-adapter.js"
+          );
           const envAdapter = new PinterestAccessTokenAdapter(
             pinterestToken,
             pinterestAdAccountId,
@@ -102,7 +125,12 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            { baseUrl: cfgFallback.pinterestApiBaseUrl, apiVersion: cfgFallback.pinterestApiVersion, reportPollIntervalMs: cfgFallback.pinterestReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.pinterestReportMaxPollAttempts },
+            {
+              baseUrl: cfgFallback.pinterestApiBaseUrl,
+              apiVersion: cfgFallback.pinterestApiVersion,
+              reportPollIntervalMs: cfgFallback.pinterestReportPollIntervalMs,
+              reportMaxPollAttempts: cfgFallback.pinterestReportMaxPollAttempts,
+            },
             log,
             rateLimiter
           );
@@ -113,7 +141,8 @@ function buildPlatformConfig(
           return {
             services: null,
             error: {
-              message: "Pinterest access token and ad account ID required. Set PINTEREST_ACCESS_TOKEN and PINTEREST_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=pinterest-bearer.",
+              message:
+                "Pinterest access token and ad account ID required. Set PINTEREST_ACCESS_TOKEN and PINTEREST_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=pinterest-bearer.",
               status: 400 as const,
             },
           };
@@ -134,13 +163,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "Pinterest",
-    serverCard: {
-      description: "Pinterest Ads API: campaigns, ad groups, ads, creatives, reporting.",
-      platform: "Pinterest Ads",
-      supportedAuthModes: ["pinterest-bearer", "jwt", "none"],
-      documentationUrl: "https://developers.pinterest.com/docs/api/v5/",
-    },
+    serverCard: buildServerCardExtras("pinterest-mcp"),
   };
 }
 
@@ -151,9 +174,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

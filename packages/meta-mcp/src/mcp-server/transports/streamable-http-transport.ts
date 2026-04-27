@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { MetaBearerAuthStrategy } from "../../auth/meta-auth-strategy.js";
 import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "meta-bearer"
@@ -81,7 +76,12 @@ function buildPlatformConfig(
             cfg.metaApiBaseUrl
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.metaApiBaseUrl }, log, rateLimiter);
+          const services = createSessionServices(
+            envAdapter,
+            { baseUrl: cfg.metaApiBaseUrl },
+            log,
+            rateLimiter
+          );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -104,7 +104,8 @@ function buildPlatformConfig(
           return {
             services: null,
             error: {
-              message: "Meta access token required. Set META_ACCESS_TOKEN env var, or use MCP_AUTH_MODE=meta-bearer.",
+              message:
+                "Meta access token required. Set META_ACCESS_TOKEN env var, or use MCP_AUTH_MODE=meta-bearer.",
               status: 400 as const,
             },
           };
@@ -125,13 +126,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "Meta",
-    serverCard: {
-      description: "Meta Marketing API: Facebook/Instagram campaigns, ad sets, ads, audiences, insights.",
-      platform: "Meta (Facebook/Instagram)",
-      supportedAuthModes: ["meta-bearer", "jwt", "none"],
-      documentationUrl: "https://developers.facebook.com/docs/marketing-apis",
-    },
+    serverCard: buildServerCardExtras("meta-mcp"),
   };
 }
 
@@ -142,9 +137,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

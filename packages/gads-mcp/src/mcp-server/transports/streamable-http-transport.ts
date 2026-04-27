@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { GAdsHeadersAuthStrategy } from "../../auth/gads-auth-strategy.js";
 import type { GAdsAuthAdapter } from "../../auth/gads-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "gads-headers"
@@ -79,9 +74,7 @@ function buildPlatformConfig(
           typedConfig.gadsClientSecret &&
           typedConfig.gadsRefreshToken
         ) {
-          const { GAdsRefreshTokenAuthAdapter } = await import(
-            "../../auth/gads-auth-adapter.js"
-          );
+          const { GAdsRefreshTokenAuthAdapter } = await import("../../auth/gads-auth-adapter.js");
           const envAdapter = new GAdsRefreshTokenAuthAdapter({
             developerToken: typedConfig.gadsDeveloperToken,
             clientId: typedConfig.gadsClientId,
@@ -127,13 +120,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "Google Ads",
-    serverCard: {
-      description: "Google Ads search, display, and shopping campaign management with GAQL queries.",
-      platform: "Google Ads",
-      supportedAuthModes: ["gads-headers", "jwt", "none"],
-      documentationUrl: "https://developers.google.com/google-ads/api",
-    },
+    serverCard: buildServerCardExtras("gads-mcp"),
   };
 }
 
@@ -144,9 +131,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { MsAdsBearerAuthStrategy } from "../../auth/msads-auth-strategy.js";
 import type { MsAdsAuthAdapter } from "../../auth/msads-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "msads-bearer"
@@ -60,7 +55,13 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
+          {
+            campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl,
+            reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl,
+            customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl,
+            reportPollIntervalMs: cfg.msadsReportPollIntervalMs,
+            reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts,
+          },
           log,
           rateLimiter
         );
@@ -85,7 +86,13 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            { campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl, reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl, customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl, reportPollIntervalMs: cfg.msadsReportPollIntervalMs, reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts },
+            {
+              campaignApiBaseUrl: cfg.msadsCampaignApiBaseUrl,
+              reportingApiBaseUrl: cfg.msadsReportingApiBaseUrl,
+              customerApiBaseUrl: cfg.msadsCustomerApiBaseUrl,
+              reportPollIntervalMs: cfg.msadsReportPollIntervalMs,
+              reportMaxPollAttempts: cfg.msadsReportMaxPollAttempts,
+            },
             log,
             rateLimiter
           );
@@ -97,7 +104,8 @@ function buildPlatformConfig(
           return {
             services: null,
             error: {
-              message: "Microsoft Ads credentials required. Set MSADS_ACCESS_TOKEN, MSADS_DEVELOPER_TOKEN, MSADS_CUSTOMER_ID, and MSADS_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=msads-bearer.",
+              message:
+                "Microsoft Ads credentials required. Set MSADS_ACCESS_TOKEN, MSADS_DEVELOPER_TOKEN, MSADS_CUSTOMER_ID, and MSADS_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=msads-bearer.",
               status: 400 as const,
             },
           };
@@ -117,13 +125,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "Microsoft Ads",
-    serverCard: {
-      description: "Microsoft Advertising: campaigns, ad groups, ads, keywords, ad extensions, reporting, Google Ads import.",
-      platform: "Microsoft Advertising",
-      supportedAuthModes: ["msads-bearer", "jwt", "none"],
-      documentationUrl: "https://learn.microsoft.com/en-us/advertising/guides/",
-    },
+    serverCard: buildServerCardExtras("msads-mcp"),
   };
 }
 
@@ -134,9 +136,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

@@ -19,17 +19,12 @@ import {
   type GoogleAuthAdapter,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy: createAuthStrategy(config.mcpAuthMode as AuthMode, {
       scopes: [
@@ -73,7 +68,8 @@ function buildPlatformConfig(
         return {
           services: null,
           error: {
-            message: "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers.",
+            message:
+              "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers.",
             status: 400,
           },
         };
@@ -85,13 +81,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "CM360",
-    serverCard: {
-      description: "Campaign Manager 360 ad serving, placements, creatives, and Floodlight tracking.",
-      platform: "Google Campaign Manager 360",
-      supportedAuthModes: ["google-headers", "jwt", "none"],
-      documentationUrl: "https://developers.google.com/doubleclick-advertisers",
-    },
+    serverCard: buildServerCardExtras("cm360-mcp"),
   };
 }
 
@@ -102,9 +92,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

@@ -19,17 +19,12 @@ import {
   type GoogleAuthAdapter,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy: createAuthStrategy(config.mcpAuthMode as AuthMode, {
       scopes: ["https://www.googleapis.com/auth/display-video"],
@@ -70,7 +65,8 @@ function buildPlatformConfig(
         return {
           services: null,
           error: {
-            message: "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers.",
+            message:
+              "Google API credentials required for this server. Use MCP_AUTH_MODE=google-headers.",
             status: 400,
           },
         };
@@ -82,13 +78,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "DV360",
-    serverCard: {
-      description: "Display & Video 360 campaign, line item, creative, and targeting management.",
-      platform: "Google Display & Video 360",
-      supportedAuthModes: ["google-headers", "jwt", "none"],
-      documentationUrl: "https://developers.google.com/display-video",
-    },
+    serverCard: buildServerCardExtras("dv360-mcp"),
   };
 }
 
@@ -99,9 +89,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

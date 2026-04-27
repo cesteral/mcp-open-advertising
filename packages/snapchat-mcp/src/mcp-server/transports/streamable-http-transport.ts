@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { SnapchatBearerAuthStrategy } from "../../auth/snapchat-auth-strategy.js";
 import type { SnapchatAuthAdapter } from "../../auth/snapchat-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "snapchat-bearer"
@@ -63,7 +58,11 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { baseUrl: cfg.snapchatApiBaseUrl, reportPollIntervalMs: cfg.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts },
+          {
+            baseUrl: cfg.snapchatApiBaseUrl,
+            reportPollIntervalMs: cfg.snapchatReportPollIntervalMs,
+            reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts,
+          },
           log,
           rateLimiter
         );
@@ -77,16 +76,36 @@ function buildPlatformConfig(
         const snapchatAdAccountId = cfg.snapchatAdAccountId;
 
         // Prefer refresh token flow if app credentials are available
-        if (cfg.snapchatAppId && cfg.snapchatAppSecret && cfg.snapchatRefreshToken && snapchatAdAccountId) {
-          const { SnapchatRefreshTokenAdapter } = await import("../../auth/snapchat-auth-adapter.js");
+        if (
+          cfg.snapchatAppId &&
+          cfg.snapchatAppSecret &&
+          cfg.snapchatRefreshToken &&
+          snapchatAdAccountId
+        ) {
+          const { SnapchatRefreshTokenAdapter } = await import(
+            "../../auth/snapchat-auth-adapter.js"
+          );
           const envAdapter = new SnapchatRefreshTokenAdapter(
-            { appId: cfg.snapchatAppId, appSecret: cfg.snapchatAppSecret, refreshToken: cfg.snapchatRefreshToken },
+            {
+              appId: cfg.snapchatAppId,
+              appSecret: cfg.snapchatAppSecret,
+              refreshToken: cfg.snapchatRefreshToken,
+            },
             snapchatAdAccountId,
             cfg.snapchatApiBaseUrl,
             cfg.snapchatOrgId ?? ""
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.snapchatApiBaseUrl, reportPollIntervalMs: cfg.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts }, log, rateLimiter);
+          const services = createSessionServices(
+            envAdapter,
+            {
+              baseUrl: cfg.snapchatApiBaseUrl,
+              reportPollIntervalMs: cfg.snapchatReportPollIntervalMs,
+              reportMaxPollAttempts: cfg.snapchatReportMaxPollAttempts,
+            },
+            log,
+            rateLimiter
+          );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -94,7 +113,9 @@ function buildPlatformConfig(
         // Fallback: static access token
         const snapchatToken = cfg.snapchatAccessToken;
         if (snapchatToken && snapchatAdAccountId) {
-          const { SnapchatAccessTokenAdapter } = await import("../../auth/snapchat-auth-adapter.js");
+          const { SnapchatAccessTokenAdapter } = await import(
+            "../../auth/snapchat-auth-adapter.js"
+          );
           const envAdapter = new SnapchatAccessTokenAdapter(
             snapchatToken,
             snapchatAdAccountId,
@@ -105,7 +126,11 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            { baseUrl: cfgFallback.snapchatApiBaseUrl, reportPollIntervalMs: cfgFallback.snapchatReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.snapchatReportMaxPollAttempts },
+            {
+              baseUrl: cfgFallback.snapchatApiBaseUrl,
+              reportPollIntervalMs: cfgFallback.snapchatReportPollIntervalMs,
+              reportMaxPollAttempts: cfgFallback.snapchatReportMaxPollAttempts,
+            },
             log,
             rateLimiter
           );
@@ -116,7 +141,8 @@ function buildPlatformConfig(
           return {
             services: null,
             error: {
-              message: "Snapchat access token and ad account ID required. Set SNAPCHAT_ACCESS_TOKEN and SNAPCHAT_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=snapchat-bearer.",
+              message:
+                "Snapchat access token and ad account ID required. Set SNAPCHAT_ACCESS_TOKEN and SNAPCHAT_AD_ACCOUNT_ID env vars, or use MCP_AUTH_MODE=snapchat-bearer.",
               status: 400 as const,
             },
           };
@@ -137,13 +163,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "Snapchat",
-    serverCard: {
-      description: "Snapchat Ads API: campaigns, ad squads, ads, creatives, reporting.",
-      platform: "Snapchat Ads",
-      supportedAuthModes: ["snapchat-bearer", "jwt", "none"],
-      documentationUrl: "https://marketingapi.snapchat.com/docs/",
-    },
+    serverCard: buildServerCardExtras("snapchat-mcp"),
   };
 }
 
@@ -154,9 +174,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

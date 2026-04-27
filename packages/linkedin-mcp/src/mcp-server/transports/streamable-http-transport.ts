@@ -18,23 +18,22 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { LinkedInBearerAuthStrategy } from "../../auth/linkedin-auth-strategy.js";
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "linkedin-bearer"
-        ? new LinkedInBearerAuthStrategy(config.linkedinApiBaseUrl, config.linkedinApiVersion, logger)
+        ? new LinkedInBearerAuthStrategy(
+            config.linkedinApiBaseUrl,
+            config.linkedinApiVersion,
+            logger
+          )
         : createAuthStrategy(config.mcpAuthMode as AuthMode, {
             jwtSecret: config.mcpAuthSecretKey,
             logger,
@@ -60,7 +59,10 @@ function buildPlatformConfig(
       if (adapter) {
         const services = createSessionServices(
           adapter,
-          { baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl, apiVersion: (appConfig as AppConfig).linkedinApiVersion },
+          {
+            baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl,
+            apiVersion: (appConfig as AppConfig).linkedinApiVersion,
+          },
           log,
           rateLimiter
         );
@@ -74,14 +76,25 @@ function buildPlatformConfig(
 
         // Prefer refresh token flow if client credentials are available
         if (cfg.linkedinClientId && cfg.linkedinClientSecret && cfg.linkedinRefreshToken) {
-          const { LinkedInRefreshTokenAdapter } = await import("../../auth/linkedin-auth-adapter.js");
+          const { LinkedInRefreshTokenAdapter } = await import(
+            "../../auth/linkedin-auth-adapter.js"
+          );
           const envAdapter = new LinkedInRefreshTokenAdapter(
-            { clientId: cfg.linkedinClientId, clientSecret: cfg.linkedinClientSecret, refreshToken: cfg.linkedinRefreshToken },
+            {
+              clientId: cfg.linkedinClientId,
+              clientSecret: cfg.linkedinClientSecret,
+              refreshToken: cfg.linkedinRefreshToken,
+            },
             cfg.linkedinApiBaseUrl,
             cfg.linkedinApiVersion
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.linkedinApiBaseUrl, apiVersion: cfg.linkedinApiVersion }, log, rateLimiter);
+          const services = createSessionServices(
+            envAdapter,
+            { baseUrl: cfg.linkedinApiBaseUrl, apiVersion: cfg.linkedinApiVersion },
+            log,
+            rateLimiter
+          );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -89,7 +102,9 @@ function buildPlatformConfig(
         // Fallback: static access token
         const linkedInToken = cfg.linkedinAccessToken;
         if (linkedInToken) {
-          const { LinkedInAccessTokenAdapter } = await import("../../auth/linkedin-auth-adapter.js");
+          const { LinkedInAccessTokenAdapter } = await import(
+            "../../auth/linkedin-auth-adapter.js"
+          );
           const envAdapter = new LinkedInAccessTokenAdapter(
             linkedInToken,
             cfg.linkedinApiBaseUrl,
@@ -98,7 +113,10 @@ function buildPlatformConfig(
           await envAdapter.validate();
           const services = createSessionServices(
             envAdapter,
-            { baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl, apiVersion: (appConfig as AppConfig).linkedinApiVersion },
+            {
+              baseUrl: (appConfig as AppConfig).linkedinApiBaseUrl,
+              apiVersion: (appConfig as AppConfig).linkedinApiVersion,
+            },
             log,
             rateLimiter
           );
@@ -131,13 +149,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "LinkedIn",
-    serverCard: {
-      description: "LinkedIn Marketing API: campaigns, creatives, audiences, conversions, analytics.",
-      platform: "LinkedIn Ads",
-      supportedAuthModes: ["linkedin-bearer", "jwt", "none"],
-      documentationUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/",
-    },
+    serverCard: buildServerCardExtras("linkedin-mcp"),
   };
 }
 
@@ -148,9 +160,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

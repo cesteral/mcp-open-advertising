@@ -18,20 +18,15 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { TtdTokenAuthStrategy } from "../../auth/ttd-auth-strategy.js";
 import type { TtdAuthAdapter } from "../../auth/ttd-auth-adapter.js";
 import { TtdDirectTokenAuthAdapter } from "../../auth/ttd-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   const isHeaderTokenMode =
     config.mcpAuthMode === "ttd-token" || config.mcpAuthMode === "ttd-headers";
   const authStrategy = isHeaderTokenMode
@@ -118,13 +113,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "TTD",
-    serverCard: {
-      description: "The Trade Desk REST + GraphQL + Workflows API: campaigns, ad groups, creatives, bid lists, seeds, reporting.",
-      platform: "The Trade Desk",
-      supportedAuthModes: ["ttd-token", "ttd-headers", "jwt", "none"],
-      documentationUrl: "https://api.thetradedesk.com/v3/portal/api/doc/Welcome",
-    },
+    serverCard: buildServerCardExtras("ttd-mcp"),
   };
 }
 
@@ -135,9 +124,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

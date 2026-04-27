@@ -18,19 +18,14 @@ import {
   type AuthMode,
   type McpHttpServer,
   type TransportFactoryConfig,
+  buildServerCardExtras,
 } from "@cesteral/shared";
 import { TikTokBearerAuthStrategy } from "../../auth/tiktok-auth-strategy.js";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "../../services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
 import { rateLimiter } from "../../utils/security/rate-limiter.js";
 
-function buildPlatformConfig(
-  config: AppConfig,
-  logger: Logger
-): TransportFactoryConfig {
+function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
     authStrategy:
       config.mcpAuthMode === "tiktok-bearer"
@@ -62,7 +57,12 @@ function buildPlatformConfig(
         const cfg = appConfig as AppConfig;
         const services = createSessionServices(
           adapter,
-          { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts, apiVersion: cfg.tiktokApiVersion },
+          {
+            baseUrl: cfg.tiktokApiBaseUrl,
+            reportPollIntervalMs: cfg.tiktokReportPollIntervalMs,
+            reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts,
+            apiVersion: cfg.tiktokApiVersion,
+          },
           log,
           rateLimiter
         );
@@ -76,16 +76,35 @@ function buildPlatformConfig(
         const tiktokAdvertiserId = cfg.tiktokAdvertiserId;
 
         // Prefer refresh token flow if app credentials are available
-        if (cfg.tiktokAppId && cfg.tiktokAppSecret && cfg.tiktokRefreshToken && tiktokAdvertiserId) {
+        if (
+          cfg.tiktokAppId &&
+          cfg.tiktokAppSecret &&
+          cfg.tiktokRefreshToken &&
+          tiktokAdvertiserId
+        ) {
           const { TikTokRefreshTokenAdapter } = await import("../../auth/tiktok-auth-adapter.js");
           const envAdapter = new TikTokRefreshTokenAdapter(
-            { appId: cfg.tiktokAppId, appSecret: cfg.tiktokAppSecret, refreshToken: cfg.tiktokRefreshToken },
+            {
+              appId: cfg.tiktokAppId,
+              appSecret: cfg.tiktokAppSecret,
+              refreshToken: cfg.tiktokRefreshToken,
+            },
             tiktokAdvertiserId,
             cfg.tiktokApiBaseUrl,
             cfg.tiktokApiVersion
           );
           await envAdapter.validate();
-          const services = createSessionServices(envAdapter, { baseUrl: cfg.tiktokApiBaseUrl, reportPollIntervalMs: cfg.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts, apiVersion: cfg.tiktokApiVersion }, log, rateLimiter);
+          const services = createSessionServices(
+            envAdapter,
+            {
+              baseUrl: cfg.tiktokApiBaseUrl,
+              reportPollIntervalMs: cfg.tiktokReportPollIntervalMs,
+              reportMaxPollAttempts: cfg.tiktokReportMaxPollAttempts,
+              apiVersion: cfg.tiktokApiVersion,
+            },
+            log,
+            rateLimiter
+          );
           sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint);
           return { services };
         }
@@ -104,7 +123,12 @@ function buildPlatformConfig(
           const cfgFallback = appConfig as AppConfig;
           const services = createSessionServices(
             envAdapter,
-            { baseUrl: cfgFallback.tiktokApiBaseUrl, reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs, reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts, apiVersion: cfgFallback.tiktokApiVersion },
+            {
+              baseUrl: cfgFallback.tiktokApiBaseUrl,
+              reportPollIntervalMs: cfgFallback.tiktokReportPollIntervalMs,
+              reportMaxPollAttempts: cfgFallback.tiktokReportMaxPollAttempts,
+              apiVersion: cfgFallback.tiktokApiVersion,
+            },
             log,
             rateLimiter
           );
@@ -115,7 +139,8 @@ function buildPlatformConfig(
           return {
             services: null,
             error: {
-              message: "TikTok access token and advertiser ID required. Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID env vars, or use MCP_AUTH_MODE=tiktok-bearer.",
+              message:
+                "TikTok access token and advertiser ID required. Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID env vars, or use MCP_AUTH_MODE=tiktok-bearer.",
               status: 400 as const,
             },
           };
@@ -136,13 +161,7 @@ function buildPlatformConfig(
       return createMcpServer(log, sessionId, gcsBucket);
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
-    platformDisplayName: "TikTok",
-    serverCard: {
-      description: "TikTok Marketing API: campaigns, ad groups, ads, creatives, reporting.",
-      platform: "TikTok Ads",
-      supportedAuthModes: ["tiktok-bearer", "jwt", "none"],
-      documentationUrl: "https://business-api.tiktok.com/portal/docs",
-    },
+    serverCard: buildServerCardExtras("tiktok-mcp"),
   };
 }
 
@@ -153,9 +172,6 @@ export function createMcpHttpServer(
   return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
 }
 
-export async function startHttpServer(
-  config: AppConfig,
-  logger: Logger
-): Promise<McpHttpServer> {
+export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
   return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
 }

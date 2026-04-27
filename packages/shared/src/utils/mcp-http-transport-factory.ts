@@ -23,7 +23,11 @@ import {
   runWithRequestContext,
   extractRequestId,
 } from "./request-context.js";
-import { registerActiveSessionsGauge, recordAuthValidation, recordSessionRehydration } from "./metrics.js";
+import {
+  registerActiveSessionsGauge,
+  recordAuthValidation,
+  recordSessionRehydration,
+} from "./metrics.js";
 import {
   isValidSessionId,
   generateSessionId,
@@ -143,11 +147,13 @@ export interface TransportFactoryConfig {
   /**
    * Create the MCP server instance for a session.
    */
-  createMcpServer: (logger: Logger, sessionId: string, gcsBucket?: string) => Promise<McpServerLike>;
+  createMcpServer: (
+    logger: Logger,
+    sessionId: string,
+    gcsBucket?: string
+  ) => Promise<McpServerLike>;
   /** Absolute path to the server's package.json (for version in /health). */
   packageJsonPath: string;
-  /** Platform display name for the startup log message (e.g. "DBM", "TTD"). */
-  platformDisplayName: string;
   /** Server-card metadata served at `/.well-known/mcp/server-card.json`. */
   serverCard?: ServerCardExtras;
 }
@@ -196,18 +202,15 @@ export function createMcpHttpTransport(
     pkg = { version: "unknown" };
   }
 
-  const sessions = new SessionManager<McpServerLike>(
-    sessionServiceStore,
-    {
-      onBeforeCleanup: async (sessionId: string) => {
-        const transport = sessionTransports.get(sessionId);
-        if (transport) {
-          await transport.close?.().catch(() => {});
-          sessionTransports.delete(sessionId);
-        }
-      },
-    }
-  );
+  const sessions = new SessionManager<McpServerLike>(sessionServiceStore, {
+    onBeforeCleanup: async (sessionId: string) => {
+      const transport = sessionTransports.get(sessionId);
+      if (transport) {
+        await transport.close?.().catch(() => {});
+        sessionTransports.delete(sessionId);
+      }
+    },
+  });
 
   registerActiveSessionsGauge(() => sessionServiceStore.size);
 
@@ -228,17 +231,13 @@ export function createMcpHttpTransport(
   app.use("/mcp", async (c, next) => {
     const origin = c.req.header("origin");
     if (origin && allowedOrigin !== "*") {
-      const isAllowed =
-        Array.isArray(allowedOrigin) && allowedOrigin.includes(origin);
+      const isAllowed = Array.isArray(allowedOrigin) && allowedOrigin.includes(origin);
       if (!isAllowed) {
         logger.warn(
           { origin, allowedOrigins: allowedOrigin },
           "Rejected request with invalid Origin header"
         );
-        return c.json(
-          { error: "Invalid origin. DNS rebinding protection." },
-          403
-        );
+        return c.json({ error: "Invalid origin. DNS rebinding protection." }, 403);
       }
     }
     return await next();
@@ -268,7 +267,7 @@ export function createMcpHttpTransport(
     const body: Record<string, unknown> = {
       schema_version: "2026-04-27-draft",
       name: config.serviceName,
-      title: extras?.title ?? `${platformConfig.platformDisplayName} MCP Server`,
+      title: extras?.title ?? `${config.serviceName} MCP Server`,
       version: pkg.version,
       vendor: extras?.vendor ?? "Cesteral",
       ...(extras?.description ? { description: extras.description } : {}),
@@ -339,175 +338,166 @@ export function createMcpHttpTransport(
     reqCtx.requestId = requestId;
 
     return runWithRequestContext(reqCtx, async () => {
-
-    // Validate MCP-Protocol-Version header
-    const protocolVersion =
-      c.req.header("mcp-protocol-version") ?? "2025-03-26";
-    if (!validateProtocolVersion(protocolVersion)) {
-      logger.warn(
-        { protocolVersion, supportedVersions: SUPPORTED_PROTOCOL_VERSIONS },
-        "Unsupported MCP protocol version"
-      );
-      return c.json(
-        {
-          error: "Unsupported MCP protocol version",
-          protocolVersion,
-          supportedVersions: SUPPORTED_PROTOCOL_VERSIONS,
-        },
-        400
-      );
-    }
-
-    // Get or create session
-    const providedSessionId = c.req.header("mcp-session-id");
-    if (providedSessionId && !isValidSessionId(providedSessionId)) {
-      return c.json({ error: "Invalid session ID format" }, 400);
-    }
-
-    // Determine whether this request is:
-    // (a) a brand-new session (no Mcp-Session-Id header),
-    // (b) a known session on this instance (hot path),
-    // (c) an unknown session ID on this instance — which after Cloud Run
-    //     scale-out is the common case. We rebuild from the auth headers
-    //     using the client-provided session ID. The fingerprint check
-    //     below prevents hijacking of a rebuilt session.
-    const needsRebuild =
-      !!providedSessionId &&
-      !sessionServiceStore.get(providedSessionId) &&
-      !sessions.sessionCreatedAt.has(providedSessionId);
-
-    if (providedSessionId) {
-      const headers = extractHeadersMap(c.req.raw.headers);
-      const reuseResult = await validateSessionReuse(
-        authStrategy,
-        sessionServiceStore,
-        headers,
-        providedSessionId
-      );
-      if (!reuseResult.valid) {
-        const auditLogger = logger.child({ component: "audit" });
-        auditLogger.warn(
-          {
-            event: "session_fingerprint_mismatch",
-            sessionId: providedSessionId,
-            storedFingerprint: reuseResult.storedFingerprint,
-            requestFingerprint: reuseResult.requestFingerprint,
-          },
-          reuseResult.reason ?? "Session credential mismatch"
+      // Validate MCP-Protocol-Version header
+      const protocolVersion = c.req.header("mcp-protocol-version") ?? "2025-03-26";
+      if (!validateProtocolVersion(protocolVersion)) {
+        logger.warn(
+          { protocolVersion, supportedVersions: SUPPORTED_PROTOCOL_VERSIONS },
+          "Unsupported MCP protocol version"
         );
-        return c.json({ error: "Session credential mismatch" }, 401);
-      }
-      // Extend idle timeout on every request from an existing session
-      sessions.touchSession(providedSessionId);
-    }
-
-    // Check session capacity — only for new sessions
-    if (!providedSessionId && sessionServiceStore.isFull()) {
-      logger.warn(
-        { activeSessions: sessionServiceStore.size },
-        "Max session capacity reached"
-      );
-      return c.json(
-        { error: "Server at capacity. Please try again later." },
-        503
-      );
-    }
-
-    // For new sessions or rebuilds, authenticate via configured strategy
-    let sessionId = providedSessionId;
-    if (!sessionId || needsRebuild) {
-      const headers = extractHeadersMap(c.req.raw.headers);
-
-      let authResult: AuthResult;
-      try {
-        authResult = await authStrategy.verify(headers);
-        recordAuthValidation(authResult.authInfo.authType, "success");
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "Authentication failed";
-        recordAuthValidation(config.mcpAuthMode, "failure");
-        logger.warn({ error: message }, "Authentication failed");
         return c.json(
           {
-            error: message,
-            hint: platformConfig.authErrorHint,
+            error: "Unsupported MCP protocol version",
+            protocolVersion,
+            supportedVersions: SUPPORTED_PROTOCOL_VERSIONS,
           },
-          401
+          400
         );
       }
 
-      if (!sessionId) {
-        sessionId = generateSessionId();
+      // Get or create session
+      const providedSessionId = c.req.header("mcp-session-id");
+      if (providedSessionId && !isValidSessionId(providedSessionId)) {
+        return c.json({ error: "Invalid session ID format" }, 400);
       }
 
-      // Platform-specific session creation
-      const result = await platformConfig.createSessionForAuth(
-        authResult,
-        sessionId,
-        config,
-        logger
-      );
+      // Determine whether this request is:
+      // (a) a brand-new session (no Mcp-Session-Id header),
+      // (b) a known session on this instance (hot path),
+      // (c) an unknown session ID on this instance — which after Cloud Run
+      //     scale-out is the common case. We rebuild from the auth headers
+      //     using the client-provided session ID. The fingerprint check
+      //     below prevents hijacking of a rebuilt session.
+      const needsRebuild =
+        !!providedSessionId &&
+        !sessionServiceStore.get(providedSessionId) &&
+        !sessions.sessionCreatedAt.has(providedSessionId);
 
-      if (result.error) {
-        return c.json({ error: result.error.message }, result.error.status);
+      if (providedSessionId) {
+        const headers = extractHeadersMap(c.req.raw.headers);
+        const reuseResult = await validateSessionReuse(
+          authStrategy,
+          sessionServiceStore,
+          headers,
+          providedSessionId
+        );
+        if (!reuseResult.valid) {
+          const auditLogger = logger.child({ component: "audit" });
+          auditLogger.warn(
+            {
+              event: "session_fingerprint_mismatch",
+              sessionId: providedSessionId,
+              storedFingerprint: reuseResult.storedFingerprint,
+              requestFingerprint: reuseResult.requestFingerprint,
+            },
+            reuseResult.reason ?? "Session credential mismatch"
+          );
+          return c.json({ error: "Session credential mismatch" }, 401);
+        }
+        // Extend idle timeout on every request from an existing session
+        sessions.touchSession(providedSessionId);
       }
 
-      sessionServiceStore.setAuthContext(sessionId, {
-        authInfo: authResult.authInfo,
-        credentialFingerprint: authResult.credentialFingerprint,
-        allowedAdvertisers: authResult.allowedAdvertisers,
-      });
-
-      const outcome = needsRebuild ? "rehydrated" : "created";
-      if (outcome === "rehydrated") {
-        recordSessionRehydration(authResult.authInfo.authType);
+      // Check session capacity — only for new sessions
+      if (!providedSessionId && sessionServiceStore.isFull()) {
+        logger.warn({ activeSessions: sessionServiceStore.size }, "Max session capacity reached");
+        return c.json({ error: "Server at capacity. Please try again later." }, 503);
       }
-      sessions.trackSession(sessionId);
 
-      logger.info(
-        {
+      // For new sessions or rebuilds, authenticate via configured strategy
+      let sessionId = providedSessionId;
+      if (!sessionId || needsRebuild) {
+        const headers = extractHeadersMap(c.req.raw.headers);
+
+        let authResult: AuthResult;
+        try {
+          authResult = await authStrategy.verify(headers);
+          recordAuthValidation(authResult.authInfo.authType, "success");
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : "Authentication failed";
+          recordAuthValidation(config.mcpAuthMode, "failure");
+          logger.warn({ error: message }, "Authentication failed");
+          return c.json(
+            {
+              error: message,
+              hint: platformConfig.authErrorHint,
+            },
+            401
+          );
+        }
+
+        if (!sessionId) {
+          sessionId = generateSessionId();
+        }
+
+        // Platform-specific session creation
+        const result = await platformConfig.createSessionForAuth(
+          authResult,
           sessionId,
-          outcome,
-          activeSessions: sessionServiceStore.size,
-          authType: authResult.authInfo.authType,
-          clientId: authResult.authInfo.clientId,
-        },
-        outcome === "rehydrated"
-          ? "MCP session rehydrated on this instance"
-          : "New MCP session created"
-      );
-    }
+          config,
+          logger
+        );
 
-    // Get or create cached MCP server for this session
-    let mcpServer = sessions.getServer(sessionId);
-    if (!mcpServer) {
-      mcpServer = await platformConfig.createMcpServer(logger, sessionId, config.gcsBucketName);
-      sessions.setServer(sessionId, mcpServer);
-      logger.debug({ sessionId }, "Created new MCP server instance for session");
-    }
+        if (result.error) {
+          return c.json({ error: result.error.message }, result.error.status);
+        }
 
-    // Use one connected transport per session
-    let transport = sessionTransports.get(sessionId);
-    try {
-      if (!transport) {
-        transport = new McpSessionTransport(sessionId);
-        await mcpServer.connect(transport);
-        sessionTransports.set(sessionId, transport);
+        sessionServiceStore.setAuthContext(sessionId, {
+          authInfo: authResult.authInfo,
+          credentialFingerprint: authResult.credentialFingerprint,
+          allowedAdvertisers: authResult.allowedAdvertisers,
+        });
+
+        const outcome = needsRebuild ? "rehydrated" : "created";
+        if (outcome === "rehydrated") {
+          recordSessionRehydration(authResult.authInfo.authType);
+        }
+        sessions.trackSession(sessionId);
+
+        logger.info(
+          {
+            sessionId,
+            outcome,
+            activeSessions: sessionServiceStore.size,
+            authType: authResult.authInfo.authType,
+            clientId: authResult.authInfo.clientId,
+          },
+          outcome === "rehydrated"
+            ? "MCP session rehydrated on this instance"
+            : "New MCP session created"
+        );
       }
 
-      const response = await transport.handleRequest(c);
-
-      if (response) {
-        response.headers.set("Mcp-Session-Id", sessionId);
-        return response;
+      // Get or create cached MCP server for this session
+      let mcpServer = sessions.getServer(sessionId);
+      if (!mcpServer) {
+        mcpServer = await platformConfig.createMcpServer(logger, sessionId, config.gcsBucketName);
+        sessions.setServer(sessionId, mcpServer);
+        logger.debug({ sessionId }, "Created new MCP server instance for session");
       }
-      return c.body(null, 204);
-    } catch (error) {
-      logger.error({ error, sessionId, requestId }, "Error handling MCP request");
-      await transport?.close?.().catch(() => {});
-      sessionTransports.delete(sessionId);
-      throw error;
-    }
 
+      // Use one connected transport per session
+      let transport = sessionTransports.get(sessionId);
+      try {
+        if (!transport) {
+          transport = new McpSessionTransport(sessionId);
+          await mcpServer.connect(transport);
+          sessionTransports.set(sessionId, transport);
+        }
+
+        const response = await transport.handleRequest(c);
+
+        if (response) {
+          response.headers.set("Mcp-Session-Id", sessionId);
+          return response;
+        }
+        return c.body(null, 204);
+      } catch (error) {
+        logger.error({ error, sessionId, requestId }, "Error handling MCP request");
+        await transport?.close?.().catch(() => {});
+        sessionTransports.delete(sessionId);
+        throw error;
+      }
     }); // end runWithRequestContext
   });
 
@@ -528,8 +518,8 @@ export async function startMcpHttpServer(
   if (config.mcpAuthMode === "none") {
     logger.warn(
       "MCP_AUTH_MODE=none — server has no authentication. " +
-      "Sessions without platform credentials will accept protocol messages but tool calls will fail at runtime. " +
-      "This mode is intended for local development only."
+        "Sessions without platform credentials will accept protocol messages but tool calls will fail at runtime. " +
+        "This mode is intended for local development only."
     );
   }
 
@@ -544,7 +534,7 @@ export async function startMcpHttpServer(
     (info) => {
       logger.info(
         { host: info.address, port: info.port },
-        `${platformConfig.platformDisplayName} MCP Server listening at http://${info.address}:${info.port}/mcp`
+        `${platformConfig.serverCard?.title ?? config.serviceName} listening at http://${info.address}:${info.port}/mcp`
       );
     }
   );
