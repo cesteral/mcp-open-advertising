@@ -169,11 +169,6 @@ resource "google_cloud_run_v2_service" "mcp_server" {
       }
 
       env {
-        name  = "MCP_SESSION_MODE"
-        value = var.mcp_session_mode
-      }
-
-      env {
         name  = "MCP_HTTP_PORT"
         value = tostring(var.container_port)
       }

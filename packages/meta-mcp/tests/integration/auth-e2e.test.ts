@@ -44,7 +44,6 @@ const config: any = {
   port: 3005,
   host: "127.0.0.1",
   nodeEnv: "test",
-  mcpSessionMode: "stateful",
   mcpStatefulSessionTimeoutMs: 60_000,
   mcpAuthMode: "meta-bearer",
   mcpAuthSecretKey: undefined,
