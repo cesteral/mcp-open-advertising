@@ -138,6 +138,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "Snapchat",
+    serverCard: {
+      description: "Snapchat Ads API: campaigns, ad squads, ads, creatives, reporting.",
+      platform: "Snapchat Ads",
+      supportedAuthModes: ["snapchat-bearer", "jwt", "none"],
+      documentationUrl: "https://marketingapi.snapchat.com/docs/",
+    },
   };
 }
 

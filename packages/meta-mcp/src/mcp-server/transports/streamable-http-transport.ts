@@ -126,6 +126,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "Meta",
+    serverCard: {
+      description: "Meta Marketing API: Facebook/Instagram campaigns, ad sets, ads, audiences, insights.",
+      platform: "Meta (Facebook/Instagram)",
+      supportedAuthModes: ["meta-bearer", "jwt", "none"],
+      documentationUrl: "https://developers.facebook.com/docs/marketing-apis",
+    },
   };
 }
 

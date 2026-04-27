@@ -151,7 +151,8 @@ export function initializeOpenTelemetry(
             ignoreIncomingRequestHook: (req: IncomingMessage) => {
               return (
                 req.url === "/health" ||
-                req.url === "/.well-known/oauth-protected-resource"
+                req.url === "/.well-known/oauth-protected-resource" ||
+                req.url === "/.well-known/mcp/server-card.json"
               );
             },
           },

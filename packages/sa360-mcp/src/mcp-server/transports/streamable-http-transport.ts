@@ -125,6 +125,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "Search Ads 360",
+    serverCard: {
+      description: "Search Ads 360 reporting and offline conversion uploads.",
+      platform: "Google Search Ads 360",
+      supportedAuthModes: ["sa360-headers", "jwt", "none"],
+      documentationUrl: "https://developers.google.com/search-ads/v0/reference",
+    },
   };
 }
 

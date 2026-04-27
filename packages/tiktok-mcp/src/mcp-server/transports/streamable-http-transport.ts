@@ -137,6 +137,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "TikTok",
+    serverCard: {
+      description: "TikTok Marketing API: campaigns, ad groups, ads, creatives, reporting.",
+      platform: "TikTok Ads",
+      supportedAuthModes: ["tiktok-bearer", "jwt", "none"],
+      documentationUrl: "https://business-api.tiktok.com/portal/docs",
+    },
   };
 }
 

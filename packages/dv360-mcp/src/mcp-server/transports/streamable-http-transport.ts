@@ -83,6 +83,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "DV360",
+    serverCard: {
+      description: "Display & Video 360 campaign, line item, creative, and targeting management.",
+      platform: "Google Display & Video 360",
+      supportedAuthModes: ["google-headers", "jwt", "none"],
+      documentationUrl: "https://developers.google.com/display-video",
+    },
   };
 }
 

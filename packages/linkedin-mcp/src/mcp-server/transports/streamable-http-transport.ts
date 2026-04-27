@@ -132,6 +132,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "LinkedIn",
+    serverCard: {
+      description: "LinkedIn Marketing API: campaigns, creatives, audiences, conversions, analytics.",
+      platform: "LinkedIn Ads",
+      supportedAuthModes: ["linkedin-bearer", "jwt", "none"],
+      documentationUrl: "https://learn.microsoft.com/en-us/linkedin/marketing/",
+    },
   };
 }
 

@@ -128,6 +128,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "Google Ads",
+    serverCard: {
+      description: "Google Ads search, display, and shopping campaign management with GAQL queries.",
+      platform: "Google Ads",
+      supportedAuthModes: ["gads-headers", "jwt", "none"],
+      documentationUrl: "https://developers.google.com/google-ads/api",
+    },
   };
 }
 

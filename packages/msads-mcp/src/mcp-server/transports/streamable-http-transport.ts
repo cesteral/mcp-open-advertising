@@ -118,6 +118,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "Microsoft Ads",
+    serverCard: {
+      description: "Microsoft Advertising: campaigns, ad groups, ads, keywords, ad extensions, reporting, Google Ads import.",
+      platform: "Microsoft Advertising",
+      supportedAuthModes: ["msads-bearer", "jwt", "none"],
+      documentationUrl: "https://learn.microsoft.com/en-us/advertising/guides/",
+    },
   };
 }
 

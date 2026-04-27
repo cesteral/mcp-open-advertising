@@ -119,6 +119,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "TTD",
+    serverCard: {
+      description: "The Trade Desk REST + GraphQL + Workflows API: campaigns, ad groups, creatives, bid lists, seeds, reporting.",
+      platform: "The Trade Desk",
+      supportedAuthModes: ["ttd-token", "ttd-headers", "jwt", "none"],
+      documentationUrl: "https://api.thetradedesk.com/v3/portal/api/doc/Welcome",
+    },
   };
 }
 

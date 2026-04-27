@@ -86,6 +86,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "CM360",
+    serverCard: {
+      description: "Campaign Manager 360 ad serving, placements, creatives, and Floodlight tracking.",
+      platform: "Google Campaign Manager 360",
+      supportedAuthModes: ["google-headers", "jwt", "none"],
+      documentationUrl: "https://developers.google.com/doubleclick-advertisers",
+    },
   };
 }
 

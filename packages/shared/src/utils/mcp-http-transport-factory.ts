@@ -84,6 +84,37 @@ export interface SessionCreationResult {
 }
 
 /**
+ * Server-card metadata served at `/.well-known/mcp/server-card.json`.
+ * Tracks SEP-2127 (`.well-known/mcp/server-card.json`) — the proposal is still
+ * in flight, so `schema_version` is dated rather than spec-versioned.
+ *
+ * Fields without obvious defaults (description, platform, supportedAuthModes)
+ * must be supplied by each server. The factory fills in name, version,
+ * transports, current auth mode, and protocol versions.
+ */
+export interface ServerCardExtras {
+  /** One-line description of what the server does. */
+  description: string;
+  /** Ad platform / vendor the server fronts (e.g. "The Trade Desk"). */
+  platform: string;
+  /** Auth modes the server build supports (e.g. ["ttd-token", "jwt", "none"]). */
+  supportedAuthModes: string[];
+  /** Optional human title, defaults to "{platformDisplayName} MCP Server". */
+  title?: string;
+  /** Optional vendor, defaults to "Cesteral". */
+  vendor?: string;
+  /** Optional documentation URL. */
+  documentationUrl?: string;
+  /** Capabilities advertised. Defaults: tools=true, prompts=true, resources=true, elicitation=true. */
+  capabilities?: {
+    tools?: boolean;
+    prompts?: boolean;
+    resources?: boolean;
+    elicitation?: boolean;
+  };
+}
+
+/**
  * Configuration for the shared transport factory.
  * Each MCP server provides these platform-specific hooks.
  */
@@ -117,6 +148,8 @@ export interface TransportFactoryConfig {
   packageJsonPath: string;
   /** Platform display name for the startup log message (e.g. "DBM", "TTD"). */
   platformDisplayName: string;
+  /** Server-card metadata served at `/.well-known/mcp/server-card.json`. */
+  serverCard?: ServerCardExtras;
 }
 
 /** Minimal MCP server interface required by the factory. */
@@ -226,6 +259,38 @@ export function createMcpHttpTransport(
   app.get("/.well-known/oauth-protected-resource", (c) => {
     const { body, status } = oauthProtectedResourceBody(config.mcpAuthMode, c.req.url);
     return c.json(body, status as 200);
+  });
+
+  // SEP-2127 MCP Server Card (HTTP discovery)
+  app.get("/.well-known/mcp/server-card.json", (c) => {
+    const extras = platformConfig.serverCard;
+    const caps = extras?.capabilities ?? {};
+    const body: Record<string, unknown> = {
+      schema_version: "2026-04-27-draft",
+      name: config.serviceName,
+      title: extras?.title ?? `${platformConfig.platformDisplayName} MCP Server`,
+      version: pkg.version,
+      vendor: extras?.vendor ?? "Cesteral",
+      ...(extras?.description ? { description: extras.description } : {}),
+      ...(extras?.platform ? { platform: extras.platform } : {}),
+      ...(extras?.documentationUrl ? { documentation_url: extras.documentationUrl } : {}),
+      mcp_protocol_versions: SUPPORTED_PROTOCOL_VERSIONS,
+      transports: [{ type: "streamable_http", endpoint: "/mcp" }],
+      auth: {
+        current_mode: config.mcpAuthMode,
+        ...(extras?.supportedAuthModes ? { supported_modes: extras.supportedAuthModes } : {}),
+        ...(config.mcpAuthMode === "jwt"
+          ? { oauth_protected_resource: "/.well-known/oauth-protected-resource" }
+          : {}),
+      },
+      capabilities: {
+        tools: caps.tools ?? true,
+        prompts: caps.prompts ?? true,
+        resources: caps.resources ?? true,
+        elicitation: caps.elicitation ?? true,
+      },
+    };
+    return c.json(body, 200);
   });
 
   // GET /mcp — 405 Method Not Allowed

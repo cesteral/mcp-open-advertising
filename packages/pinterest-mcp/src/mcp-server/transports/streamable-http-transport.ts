@@ -135,6 +135,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "Pinterest",
+    serverCard: {
+      description: "Pinterest Ads API: campaigns, ad groups, ads, creatives, reporting.",
+      platform: "Pinterest Ads",
+      supportedAuthModes: ["pinterest-bearer", "jwt", "none"],
+      documentationUrl: "https://developers.pinterest.com/docs/api/v5/",
+    },
   };
 }
 

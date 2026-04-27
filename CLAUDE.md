@@ -127,6 +127,7 @@ Each server has its own `MCP_AUTH_MODE` options:
 
 - `MCP_AUTH_SECRET_KEY`: required for `jwt` mode
 - RFC 9728 endpoint at `/.well-known/oauth-protected-resource` returns metadata in `jwt` mode
+- SEP-2127 endpoint at `/.well-known/mcp/server-card.json` returns server discovery metadata (name, version, transports, auth modes, capabilities) on every server in every auth mode
 
 ## Common Development Patterns
 

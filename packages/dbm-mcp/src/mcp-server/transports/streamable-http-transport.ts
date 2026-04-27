@@ -78,6 +78,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "DBM",
+    serverCard: {
+      description: "Display & Video 360 Bid Manager reporting (delivery, pacing, custom queries).",
+      platform: "Google Bid Manager (DV360)",
+      supportedAuthModes: ["google-headers", "jwt", "none"],
+      documentationUrl: "https://developers.google.com/bid-manager",
+    },
   };
 }
 

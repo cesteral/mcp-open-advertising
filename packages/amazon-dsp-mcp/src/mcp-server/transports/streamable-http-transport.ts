@@ -136,6 +136,12 @@ function buildPlatformConfig(
     },
     packageJsonPath: new URL("../../../package.json", import.meta.url).pathname,
     platformDisplayName: "AmazonDsp",
+    serverCard: {
+      description: "Amazon DSP: orders, line items, creatives, reporting.",
+      platform: "Amazon DSP",
+      supportedAuthModes: ["amazon-dsp-bearer", "jwt", "none"],
+      documentationUrl: "https://advertising.amazon.com/API/docs/en-us/",
+    },
   };
 }
 
