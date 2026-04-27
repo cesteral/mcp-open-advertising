@@ -30,11 +30,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check registry manifests
+      - name: Check formatting
+        run: pnpm run format:check
+
+      - name: Check registry → server.json (per-package manifest matches registry.json)
         run: pnpm run check:registry
+
+      - name: Check registry → tools list (registry tools match source definitions)
+        run: pnpm run check:registry-tools
 
       - name: Build
         run: pnpm run build
+
+      - name: Check registry → live MCP advertisement (tools/list + prompts/list match registry)
+        run: pnpm run check:registry-runtime
 
       - name: Typecheck
         run: pnpm run typecheck

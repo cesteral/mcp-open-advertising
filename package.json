@@ -22,10 +22,15 @@
     "test:conformance": "./scripts/conformance-test.sh",
     "test:conformance:ci": "./scripts/conformance-test.sh --ci",
     "generate:registry": "node scripts/generate-server-json.mjs",
-    "check:registry": "node scripts/generate-server-json.mjs --check"
+    "check:registry": "node scripts/generate-server-json.mjs --check",
+    "sync:registry-tools": "node scripts/sync-registry-tools.mjs",
+    "check:registry-tools": "node scripts/sync-registry-tools.mjs --check",
+    "sync:registry-data": "node scripts/sync-registry-data.mjs",
+    "check:registry-runtime": "node scripts/check-registry-runtime.mjs"
   },
   "devDependencies": {
     "@modelcontextprotocol/conformance": "^0.1.15",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@types/node": "^20.17.6",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",
