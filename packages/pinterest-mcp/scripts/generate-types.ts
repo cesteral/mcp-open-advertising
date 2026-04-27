@@ -54,14 +54,10 @@ async function main(): Promise<void> {
 
   const openapiVersion = parsed.openapi as string | undefined;
   if (!openapiVersion?.startsWith("3.")) {
-    throw new Error(
-      `Not an OpenAPI 3.0 spec: openapi=${openapiVersion ?? "(missing)"}`
-    );
+    throw new Error(`Not an OpenAPI 3.0 spec: openapi=${openapiVersion ?? "(missing)"}`);
   }
 
-  const infoVersion = (parsed.info as Record<string, unknown>)?.version as
-    | string
-    | undefined;
+  const infoVersion = (parsed.info as Record<string, unknown>)?.version as string | undefined;
   console.log(
     `  Spec version: Pinterest REST API ${infoVersion ?? "(unknown)"} (OpenAPI ${openapiVersion})`
   );
@@ -71,13 +67,10 @@ async function main(): Promise<void> {
   console.log(`  Temp spec saved to: ${TEMP_SPEC_PATH}`);
 
   console.log("Generating TypeScript types with openapi-typescript...");
-  execSync(
-    `npx openapi-typescript "${TEMP_SPEC_PATH}" -o "${TYPES_PATH}"`,
-    {
-      cwd: PACKAGE_ROOT,
-      stdio: "inherit",
-    }
-  );
+  execSync(`npx openapi-typescript "${TEMP_SPEC_PATH}" -o "${TYPES_PATH}"`, {
+    cwd: PACKAGE_ROOT,
+    stdio: "inherit",
+  });
 
   await fs.unlink(TEMP_SPEC_PATH);
   console.log(`  Temp spec removed.`);

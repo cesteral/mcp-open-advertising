@@ -134,7 +134,13 @@ export class SnapchatHttpClient {
     return withSnapchatApiSpan("api.multipart.POST", path, async (span) => {
       span.setAttribute("http.request.method", "POST");
       span.setAttribute("http.url", url);
-      const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
+      const { body, contentType } = buildMultipartFormData(
+        fields,
+        fileField,
+        fileBuffer,
+        filename,
+        fileContentType
+      );
 
       const result = await executeWithRetry(SNAPCHAT_RETRY_CONFIG, {
         url,
@@ -157,9 +163,10 @@ export class SnapchatHttpClient {
   }
 
   private buildUrl(path: string, params?: Record<string, string>): string {
-    const url = path.startsWith("http://") || path.startsWith("https://")
-      ? new URL(path)
-      : new URL(`${this.baseUrl}${path}`);
+    const url =
+      path.startsWith("http://") || path.startsWith("https://")
+        ? new URL(path)
+        : new URL(`${this.baseUrl}${path}`);
     if (params) {
       for (const [key, value] of Object.entries(params)) {
         if (value !== undefined && value !== null) {

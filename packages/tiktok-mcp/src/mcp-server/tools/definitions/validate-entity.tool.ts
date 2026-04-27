@@ -43,26 +43,36 @@ reasons (e.g., invalid objective/placement combinations).`;
 const REQUIRED_FIELDS_CREATE: Record<TikTokEntityType, FieldRule[]> = {
   campaign: [
     { field: "campaign_name", expectedType: "string" },
-    { field: "objective_type", expectedType: "string", hint: "e.g., TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS" },
+    {
+      field: "objective_type",
+      expectedType: "string",
+      hint: "e.g., TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS",
+    },
   ],
   adGroup: [
     { field: "campaign_id", expectedType: "string" },
     { field: "adgroup_name", expectedType: "string" },
-    { field: "placements", expectedType: "array", hint: "e.g., ['PLACEMENT_TIKTOK'] when TikTok requires placement context" },
+    {
+      field: "placements",
+      expectedType: "array",
+      hint: "e.g., ['PLACEMENT_TIKTOK'] when TikTok requires placement context",
+    },
   ],
   ad: [
     { field: "adgroup_id", expectedType: "string" },
     { field: "creatives", expectedType: "array", hint: "TikTok AdCreateBody requires creatives[]" },
   ],
-  creative: [
-    { field: "display_name", expectedType: "string" },
-  ],
+  creative: [{ field: "display_name", expectedType: "string" }],
 };
 
 /** Fields that are always read-only and cannot be set via the API. */
 const READ_ONLY_FIELDS = [
-  "campaign_id", "adgroup_id", "ad_id", "creative_id",
-  "create_time", "modify_time",
+  "campaign_id",
+  "adgroup_id",
+  "ad_id",
+  "creative_id",
+  "create_time",
+  "modify_time",
 ];
 
 // ---------------------------------------------------------------------------
@@ -71,19 +81,10 @@ const READ_ONLY_FIELDS = [
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
-    mode: z
-      .enum(["create", "update"])
-      .describe("Whether validating for creation or update"),
-    data: z
-      .record(z.any())
-      .describe("Entity payload to validate"),
-    advertiserId: z
-      .string()
-      .optional()
-      .describe("Advertiser ID (recommended for create mode)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
+    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
+    data: z.record(z.any()).describe("Entity payload to validate"),
+    advertiserId: z.string().optional().describe("Advertiser ID (recommended for create mode)"),
   })
   .describe("Parameters for validating a TikTok Ads entity payload");
 

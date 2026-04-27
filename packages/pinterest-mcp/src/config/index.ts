@@ -23,10 +23,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["pinterest-bearer", "jwt", "none"]).default("pinterest-bearer"),
 
   // Pinterest API Configuration
-  pinterestApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://api.pinterest.com"),
+  pinterestApiBaseUrl: z.string().url().default("https://api.pinterest.com"),
   pinterestApiVersion: z.string().default("v5"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.

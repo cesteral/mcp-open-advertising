@@ -4,10 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
-import {
-  MYREPORTS_TEMPLATE_ACCESS_ERROR,
-  throwIfGraphqlErrors,
-} from "../utils/graphql-errors.js";
+import { MYREPORTS_TEMPLATE_ACCESS_ERROR, throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_get_report_template";
 const TOOL_TITLE = "Get TTD Report Template Structure (GraphQL)";
@@ -86,8 +83,7 @@ export async function getReportTemplateLogic(
   });
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
-  const templateData =
-    (gqlData.derivedReportTemplate as Record<string, unknown> | undefined) ?? {};
+  const templateData = (gqlData.derivedReportTemplate as Record<string, unknown> | undefined) ?? {};
 
   const resultSets = templateData.resultSets as
     | Array<{
@@ -135,9 +131,7 @@ export function getReportTemplateResponseFormatter(
   if (result.resultSets?.length) {
     lines.push(`Tabs (${result.resultSets.length}):`);
     result.resultSets.forEach((rs, i) => {
-      lines.push(
-        `\n  Tab ${i + 1}: ${rs.reportTypeName ?? "unknown report type"}`
-      );
+      lines.push(`\n  Tab ${i + 1}: ${rs.reportTypeName ?? "unknown report type"}`);
       if (rs.fields?.length) {
         lines.push(
           `    Fields (${rs.fields.length}): ${rs.fields

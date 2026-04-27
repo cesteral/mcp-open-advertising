@@ -14,14 +14,8 @@ Fetches the full ad entity. CM360 does not provide a native ad preview URL — u
 
 export const GetAdPreviewInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    adId: z
-      .string()
-      .min(1)
-      .describe("Ad ID to preview"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    adId: z.string().min(1).describe("Ad ID to preview"),
   })
   .describe("Parameters for getting an ad preview");
 

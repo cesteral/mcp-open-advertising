@@ -27,16 +27,9 @@ const TOOL_DESCRIPTION = `Create a new AmazonDsp Ads entity.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    profileId: z
-      .string()
-      .min(1)
-      .describe("AmazonDsp Advertiser ID"),
-    data: z
-      .record(z.any())
-      .describe("Entity fields as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
   })
   .describe("Parameters for creating a AmazonDsp Ads entity");
 

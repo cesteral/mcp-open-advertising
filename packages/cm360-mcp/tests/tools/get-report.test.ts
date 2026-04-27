@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -173,10 +179,7 @@ describe("getReportLogic", () => {
       file: {},
     });
 
-    await getReportLogic(
-      { profileId: "123", name: "Test", type: "STANDARD" },
-      mockContext
-    );
+    await getReportLogic({ profileId: "123", name: "Test", type: "STANDARD" }, mockContext);
 
     const calledConfig = mockState.cm360ReportingService.runReport.mock.calls[0][1];
     expect(calledConfig).not.toHaveProperty("criteria");
@@ -206,15 +209,10 @@ describe("getReportLogic", () => {
   });
 
   it("propagates service errors", async () => {
-    mockState.cm360ReportingService.runReport.mockRejectedValue(
-      new Error("Report timeout")
-    );
+    mockState.cm360ReportingService.runReport.mockRejectedValue(new Error("Report timeout"));
 
     await expect(
-      getReportLogic(
-        { profileId: "123", name: "Test", type: "STANDARD" },
-        mockContext
-      )
+      getReportLogic({ profileId: "123", name: "Test", type: "STANDARD" }, mockContext)
     ).rejects.toThrow("Report timeout");
   });
 });
@@ -282,12 +280,10 @@ describe("GetReportInputSchema", () => {
   });
 
   it("requires profileId and name", () => {
-    expect(
-      GetReportInputSchema.safeParse({ name: "Test", type: "STANDARD" }).success
-    ).toBe(false);
-    expect(
-      GetReportInputSchema.safeParse({ profileId: "123", type: "STANDARD" }).success
-    ).toBe(false);
+    expect(GetReportInputSchema.safeParse({ name: "Test", type: "STANDARD" }).success).toBe(false);
+    expect(GetReportInputSchema.safeParse({ profileId: "123", type: "STANDARD" }).success).toBe(
+      false
+    );
   });
 
   it("criteria and additionalConfig are optional", () => {

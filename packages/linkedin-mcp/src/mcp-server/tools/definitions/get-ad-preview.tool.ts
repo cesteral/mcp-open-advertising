@@ -21,10 +21,7 @@ export const GetAdPreviewInputSchema = z
       .string()
       .min(1)
       .describe("The creative URN to preview (e.g., urn:li:sponsoredCreative:123)"),
-    adFormat: z
-      .string()
-      .optional()
-      .describe("Ad format for the preview (e.g., SINGLE_IMAGE_AD)"),
+    adFormat: z.string().optional().describe("Ad format for the preview (e.g., SINGLE_IMAGE_AD)"),
   })
   .describe("Parameters for getting a LinkedIn ad preview");
 
@@ -46,11 +43,7 @@ export async function getAdPreviewLogic(
 ): Promise<GetAdPreviewOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  const preview = await linkedInService.getAdPreviews(
-    input.creativeUrn,
-    input.adFormat,
-    context
-  );
+  const preview = await linkedInService.getAdPreviews(input.creativeUrn, input.adFormat, context);
 
   return {
     preview: preview as Record<string, unknown>,

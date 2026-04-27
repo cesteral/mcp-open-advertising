@@ -22,10 +22,7 @@ Amounts are in cents (100 = $1.00 USD).
 - Max 50 adjustments per call.`;
 
 // ─── Auto-bidding strategies that ignore bid_amount ──────────────────
-const AUTO_BID_STRATEGIES = new Set([
-  "LOWEST_COST_WITHOUT_CAP",
-  "LOWEST_COST_WITH_MIN_ROAS",
-]);
+const AUTO_BID_STRATEGIES = new Set(["LOWEST_COST_WITHOUT_CAP", "LOWEST_COST_WITH_MIN_ROAS"]);
 
 // ─── Input Schema ───────────────────────────────────────────────────
 
@@ -34,24 +31,14 @@ export const AdjustBidsInputSchema = z
     adjustments: z
       .array(
         z.object({
-          adSetId: z
-            .string()
-            .min(1)
-            .describe("The ad set ID to adjust"),
-          bidAmount: z
-            .number()
-            .int()
-            .min(1)
-            .describe("New bid amount in cents (100 = $1.00 USD)"),
+          adSetId: z.string().min(1).describe("The ad set ID to adjust"),
+          bidAmount: z.number().int().min(1).describe("New bid amount in cents (100 = $1.00 USD)"),
         })
       )
       .min(1)
       .max(50)
       .describe("Bid adjustments to apply (max 50)"),
-    reason: z
-      .string()
-      .optional()
-      .describe("Optional reason for the bid adjustment"),
+    reason: z.string().optional().describe("Optional reason for the bid adjustment"),
   })
   .describe("Parameters for batch bid adjustment on Meta ad sets");
 
@@ -115,8 +102,7 @@ export async function adjustBidsLogic(
       );
 
       const adSetName = entity.name;
-      const previousBidAmount =
-        entity.bid_amount != null ? entity.bid_amount : undefined;
+      const previousBidAmount = entity.bid_amount != null ? entity.bid_amount : undefined;
       const bidStrategy = entity.bid_strategy;
 
       // Step 2: Check for auto-bidding strategies

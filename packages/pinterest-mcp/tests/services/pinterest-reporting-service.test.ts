@@ -27,7 +27,11 @@ describe("PinterestReportingService", () => {
   let service: PinterestReportingService;
 
   beforeEach(() => {
-    service = new PinterestReportingService(mockRateLimiter as any, mockHttpClient as any, mockLogger);
+    service = new PinterestReportingService(
+      mockRateLimiter as any,
+      mockHttpClient as any,
+      mockLogger
+    );
     vi.clearAllMocks();
   });
 
@@ -131,9 +135,9 @@ describe("PinterestReportingService", () => {
       text: async () => "should not be read",
     } as unknown as Response);
 
-    await expect(
-      service.downloadReport("https://example.com/huge-report.csv")
-    ).rejects.toThrow("too large");
+    await expect(service.downloadReport("https://example.com/huge-report.csv")).rejects.toThrow(
+      "too large"
+    );
   });
 
   it("downloadReport succeeds when Content-Length is under 50MB", async () => {

@@ -61,9 +61,9 @@ describe("PinterestBearerAuthStrategy", () => {
         "https://business-api.pinterest.com",
         mockLogger
       );
-      await expect(
-        strategy.verify({ "x-pinterest-advertiser-id": "1234567890" })
-      ).rejects.toThrow("Missing required Authorization header");
+      await expect(strategy.verify({ "x-pinterest-advertiser-id": "1234567890" })).rejects.toThrow(
+        "Missing required Authorization header"
+      );
     });
 
     it("throws when X-Pinterest-Advertiser-Id header is missing", async () => {
@@ -71,9 +71,9 @@ describe("PinterestBearerAuthStrategy", () => {
         "https://business-api.pinterest.com",
         mockLogger
       );
-      await expect(
-        strategy.verify({ authorization: "Bearer test-token" })
-      ).rejects.toThrow("Missing required X-Pinterest-Advertiser-Id header");
+      await expect(strategy.verify({ authorization: "Bearer test-token" })).rejects.toThrow(
+        "Missing required X-Pinterest-Advertiser-Id header"
+      );
     });
 
     it("throws on invalid token (HTTP 401)", async () => {

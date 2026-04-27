@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -113,17 +119,22 @@ describe("bulkCreateEntitiesLogic", () => {
     mockState.cm360Service.createEntity.mockResolvedValue({ id: "new" });
 
     const items = [{ name: "First" }, { name: "Second" }];
-    await bulkCreateEntitiesLogic(
-      { profileId: "p1", entityType: "placement", items },
-      mockContext
-    );
+    await bulkCreateEntitiesLogic({ profileId: "p1", entityType: "placement", items }, mockContext);
 
     expect(mockState.cm360Service.createEntity).toHaveBeenCalledTimes(2);
     expect(mockState.cm360Service.createEntity).toHaveBeenNthCalledWith(
-      1, "placement", "p1", { name: "First" }, mockContext
+      1,
+      "placement",
+      "p1",
+      { name: "First" },
+      mockContext
     );
     expect(mockState.cm360Service.createEntity).toHaveBeenNthCalledWith(
-      2, "placement", "p1", { name: "Second" }, mockContext
+      2,
+      "placement",
+      "p1",
+      { name: "Second" },
+      mockContext
     );
   });
 });

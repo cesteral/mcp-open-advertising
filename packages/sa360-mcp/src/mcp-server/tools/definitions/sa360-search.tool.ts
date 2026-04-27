@@ -21,24 +21,15 @@ SA360 is read-only — queries return data across Google Ads, Microsoft Ads, Yah
 
 export const SA360SearchInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .min(1)
-      .describe("SA360 customer ID (no dashes, e.g., '1234567890')"),
-    query: z
-      .string()
-      .min(1)
-      .describe("SA360 query string (must include SELECT and FROM clauses)"),
+    customerId: z.string().min(1).describe("SA360 customer ID (no dashes, e.g., '1234567890')"),
+    query: z.string().min(1).describe("SA360 query string (must include SELECT and FROM clauses)"),
     pageSize: z
       .number()
       .min(1)
       .max(10000)
       .optional()
       .describe("Deprecated. Use maxRows for the returned row count."),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination (from previous response)"),
+    pageToken: z.string().optional().describe("Page token for pagination (from previous response)"),
   })
   .merge(ReportViewInputSchema)
   .describe("Parameters for executing an SA360 query");
@@ -62,9 +53,10 @@ export async function sa360SearchLogic(
   sdkContext?: SdkContext
 ): Promise<SA360SearchOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
-  const viewInput = input.maxRows === undefined && input.pageSize !== undefined
-    ? { ...input, maxRows: input.pageSize }
-    : input;
+  const viewInput =
+    input.maxRows === undefined && input.pageSize !== undefined
+      ? { ...input, maxRows: input.pageSize }
+      : input;
 
   const result = await sa360Service.sa360Search(
     input.customerId,
@@ -80,7 +72,9 @@ export async function sa360SearchLogic(
       rows,
       totalRows: result.totalResultsCount ?? rows.length + (result.nextPageToken ? 1 : 0),
       input: viewInput,
-      warnings: result.nextPageToken ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."] : [],
+      warnings: result.nextPageToken
+        ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
+        : [],
     }),
     totalResultsCount: result.totalResultsCount,
     nextPageToken: result.nextPageToken,
@@ -119,14 +113,16 @@ export const sa360SearchTool = {
       label: "Campaign performance metrics",
       input: {
         customerId: "1234567890",
-        query: "SELECT campaign.id, campaign.name, campaign.engine_id, metrics.impressions, metrics.clicks, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS ORDER BY metrics.impressions DESC LIMIT 50",
+        query:
+          "SELECT campaign.id, campaign.name, campaign.engine_id, metrics.impressions, metrics.clicks, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS ORDER BY metrics.impressions DESC LIMIT 50",
       },
     },
     {
       label: "Cross-engine ad group performance",
       input: {
         customerId: "1234567890",
-        query: "SELECT ad_group.id, ad_group.name, ad_group.engine_id, metrics.impressions, metrics.conversions FROM ad_group WHERE campaign.id = 123456789 AND segments.date DURING LAST_7_DAYS",
+        query:
+          "SELECT ad_group.id, ad_group.name, ad_group.engine_id, metrics.impressions, metrics.conversions FROM ad_group WHERE campaign.id = 123456789 AND segments.date DURING LAST_7_DAYS",
         mode: "rows",
         maxRows: 50,
       },

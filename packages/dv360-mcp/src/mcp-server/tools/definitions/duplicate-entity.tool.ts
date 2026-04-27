@@ -37,13 +37,8 @@ export const DuplicateEntityInputSchema = z
     entityType: z
       .enum(getDuplicatableEntityTypeEnum())
       .describe("Type of entity to duplicate (insertionOrder or lineItem)"),
-    advertiserId: z
-      .string()
-      .describe("DV360 Advertiser ID that owns the entity"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("ID of the entity to duplicate"),
+    advertiserId: z.string().describe("DV360 Advertiser ID that owns the entity"),
+    entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     displayName: z
       .string()
       .optional()
@@ -78,12 +73,7 @@ export async function duplicateEntityLogic(
     [entityIdField]: input.entityId,
   };
 
-  const newEntity = await dv360Service.duplicateEntity(
-    entityType,
-    ids,
-    input.displayName,
-    context
-  );
+  const newEntity = await dv360Service.duplicateEntity(entityType, ids, input.displayName, context);
 
   return {
     duplicatedEntity: newEntity as Record<string, unknown>,
@@ -95,10 +85,7 @@ export async function duplicateEntityLogic(
 
 export function duplicateEntityResponseFormatter(result: DuplicateEntityOutput): McpTextContent[] {
   const entity = result.duplicatedEntity;
-  const newId =
-    entity[`${result.entityType}Id`] ??
-    entity.name ??
-    "unknown";
+  const newId = entity[`${result.entityType}Id`] ?? entity.name ?? "unknown";
 
   return [
     {

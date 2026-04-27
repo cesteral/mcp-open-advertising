@@ -41,17 +41,22 @@ export interface McpServerPromptLike {
       description: string;
       argsSchema?: Record<string, z.ZodType<string> | z.ZodOptional<z.ZodType<string>>>;
     },
-    handler: (args: Record<string, string | undefined> | undefined, extra: unknown) => {
-      messages: Array<{
-        role: "user" | "assistant";
-        content: { type: "text"; text: string };
-      }>;
-    } | Promise<{
-      messages: Array<{
-        role: "user" | "assistant";
-        content: { type: "text"; text: string };
-      }>;
-    }>
+    handler: (
+      args: Record<string, string | undefined> | undefined,
+      extra: unknown
+    ) =>
+      | {
+          messages: Array<{
+            role: "user" | "assistant";
+            content: { type: "text"; text: string };
+          }>;
+        }
+      | Promise<{
+          messages: Array<{
+            role: "user" | "assistant";
+            content: { type: "text"; text: string };
+          }>;
+        }>
   ): unknown;
 }
 

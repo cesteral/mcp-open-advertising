@@ -29,10 +29,7 @@ Results include metrics with the additional breakdown field values.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Ad Account ID"),
+    adAccountId: z.string().min(1).describe("Snapchat Ad Account ID"),
     fields: z
       .array(z.string())
       .min(1)
@@ -44,15 +41,21 @@ export const GetReportBreakdownsInputSchema = z
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
-      .describe("Preset date range. Use this OR startTime+endTime (not both). Converted to ISO 8601 timestamps automatically"),
+      .describe(
+        "Preset date range. Use this OR startTime+endTime (not both). Converted to ISO 8601 timestamps automatically"
+      ),
     startTime: z
       .string()
       .optional()
-      .describe("Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z, required if datePreset not provided)"),
+      .describe(
+        "Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z, required if datePreset not provided)"
+      ),
     endTime: z
       .string()
       .optional()
-      .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"),
+      .describe(
+        "End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"
+      ),
     granularity: z
       .enum(["TOTAL", "DAY", "HOUR", "LIFETIME"])
       .optional()
@@ -70,7 +73,8 @@ export const GetReportBreakdownsInputSchema = z
   })
   .merge(ReportViewInputSchema)
   .refine(
-    (data) => data.datePreset !== undefined || (data.startTime !== undefined && data.endTime !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startTime !== undefined && data.endTime !== undefined),
     { message: "Provide either datePreset or both startTime and endTime" }
   )
   .describe("Parameters for generating a Snapchat Ads report with breakdowns");
@@ -89,27 +93,35 @@ type GetReportBreakdownsOutput = z.infer<typeof GetReportBreakdownsOutputSchema>
 
 function appendComputedMetricsToRows(
   headers: string[],
-  rows: string[][],
+  rows: string[][]
 ): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
-  const spendIdx = idx('spend');
-  const impIdx = idx('impressions');
-  const clickIdx = idx('swipes'); // Snapchat calls clicks "swipes"
-  const convIdx = idx('conversion_purchases');
+  const idx = (name: string) => headers.findIndex((h) => h.toLowerCase() === name.toLowerCase());
+  const spendIdx = idx("spend");
+  const impIdx = idx("impressions");
+  const clickIdx = idx("swipes"); // Snapchat calls clicks "swipes"
+  const convIdx = idx("conversion_purchases");
 
-  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
-  const newRows = rows.map(row => {
+  const newHeaders = [
+    ...headers,
+    "computed_cpa",
+    "computed_roas",
+    "computed_cpm",
+    "computed_ctr",
+    "computed_cpc",
+  ];
+  const newRows = rows.map((row) => {
     const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
     const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
     const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
     const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
     const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [...row,
-      m.cpa !== null ? String(m.cpa) : '',
-      m.roas !== null ? String(m.roas) : '',
-      m.cpm !== null ? String(m.cpm) : '',
-      m.ctr !== null ? String(m.ctr) : '',
-      m.cpc !== null ? String(m.cpc) : '',
+    return [
+      ...row,
+      m.cpa !== null ? String(m.cpa) : "",
+      m.roas !== null ? String(m.roas) : "",
+      m.cpm !== null ? String(m.cpm) : "",
+      m.ctr !== null ? String(m.ctr) : "",
+      m.cpc !== null ? String(m.cpc) : "",
     ];
   });
   return { headers: newHeaders, rows: newRows };
@@ -163,7 +175,9 @@ export async function getReportBreakdownsLogic(
   };
 }
 
-export function getReportBreakdownsResponseFormatter(result: GetReportBreakdownsOutput): McpTextContent[] {
+export function getReportBreakdownsResponseFormatter(
+  result: GetReportBreakdownsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

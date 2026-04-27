@@ -3,10 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import {
-  CampaignsJobInputSchema,
-  toWorkflowCallbackInput,
-} from "../utils/workflow-schemas.js";
+import { CampaignsJobInputSchema, toWorkflowCallbackInput } from "../utils/workflow-schemas.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_create_campaigns_job";
@@ -31,11 +28,18 @@ export async function createCampaignsJobLogic(
   sdkContext?: SdkContext
 ): Promise<CreateCampaignsJobToolOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const job = (await ttdService.createCampaignsJob({
-    input: input.input,
-    ...(input.validateInputOnly !== undefined ? { validateInputOnly: input.validateInputOnly } : {}),
-    ...(input.callbackInput ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) } : {}),
-  }, context)) as Record<string, unknown>;
+  const job = (await ttdService.createCampaignsJob(
+    {
+      input: input.input,
+      ...(input.validateInputOnly !== undefined
+        ? { validateInputOnly: input.validateInputOnly }
+        : {}),
+      ...(input.callbackInput
+        ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) }
+        : {}),
+    },
+    context
+  )) as Record<string, unknown>;
   return { job, timestamp: new Date().toISOString() };
 }
 

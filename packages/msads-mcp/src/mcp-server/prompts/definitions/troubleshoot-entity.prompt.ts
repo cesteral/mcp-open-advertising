@@ -7,7 +7,11 @@ export const msadsTroubleshootEntityPrompt: Prompt = {
   name: "msads_troubleshoot_entity",
   description: "Troubleshoot issues with Microsoft Advertising entities",
   arguments: [
-    { name: "entityType", description: "Entity type (campaign, adGroup, ad, keyword)", required: true },
+    {
+      name: "entityType",
+      description: "Entity type (campaign, adGroup, ad, keyword)",
+      required: true,
+    },
     { name: "entityId", description: "Entity ID to troubleshoot", required: true },
   ],
 };

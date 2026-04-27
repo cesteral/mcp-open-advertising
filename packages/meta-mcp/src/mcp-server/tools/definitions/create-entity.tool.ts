@@ -29,15 +29,9 @@ All entities are created under an ad account via POST /act_{id}/{edge}.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    adAccountId: z
-      .string()
-      .describe("Ad Account ID (with or without act_ prefix)"),
-    data: z
-      .record(z.any())
-      .describe("Entity fields as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    adAccountId: z.string().describe("Ad Account ID (with or without act_ prefix)"),
+    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
   })
   .describe("Parameters for creating a Meta Ads entity");
 

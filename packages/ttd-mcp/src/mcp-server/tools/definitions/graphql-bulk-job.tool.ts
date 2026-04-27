@@ -95,10 +95,7 @@ export async function graphqlBulkJobLogic(
 }
 
 export function graphqlBulkJobResponseFormatter(result: GraphqlBulkJobOutput): McpTextContent[] {
-  const lines: string[] = [
-    `Bulk job: ${result.jobId}`,
-    `Status: ${result.status}`,
-  ];
+  const lines: string[] = [`Bulk job: ${result.jobId}`, `Status: ${result.status}`];
 
   if (result.jobType) {
     lines.push(`Type: ${result.jobType}`);

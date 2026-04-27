@@ -17,10 +17,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   port: z.number().int().min(1).max(65535).default(3008),
   otelServiceName: z.string().default("cm360-mcp"),
   mcpAuthMode: z.enum(["google-headers", "jwt", "none"]).default("google-headers"),
-  cm360ApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://dfareporting.googleapis.com/dfareporting/v5"),
+  cm360ApiBaseUrl: z.string().url().default("https://dfareporting.googleapis.com/dfareporting/v5"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via CM360_RATE_LIMIT_PER_MINUTE for different scaling profiles.

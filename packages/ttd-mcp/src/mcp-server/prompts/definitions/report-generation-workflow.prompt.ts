@@ -21,9 +21,7 @@ export const reportGenerationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getReportGenerationWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getReportGenerationWorkflowMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
 
   return `# TTD Report Generation Workflow

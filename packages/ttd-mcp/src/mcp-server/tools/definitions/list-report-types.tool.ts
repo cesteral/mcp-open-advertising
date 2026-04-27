@@ -69,9 +69,7 @@ export async function listReportTypesLogic(
   };
 }
 
-export function listReportTypesResponseFormatter(
-  result: ListReportTypesOutput
-): McpTextContent[] {
+export function listReportTypesResponseFormatter(result: ListReportTypesOutput): McpTextContent[] {
   if (result.reportTypes.length === 0) {
     return [
       {

@@ -31,10 +31,12 @@ The dv360-mcp package implements comprehensive, dynamic schema validation that p
 ### Entity Configuration Source
 
 All entity requirements are centrally defined in:
+
 - **File**: `src/mcp-server/tools/utils/entityMappingDynamic.ts`
 - **Registry**: `ENTITY_API_METADATA`
 
 Example configuration:
+
 ```typescript
 campaign: {
   apiPathTemplate: "/advertisers/{advertiserId}/campaigns",
@@ -76,6 +78,7 @@ campaign: {
 ```
 
 **Benefits**:
+
 - ✅ Catches errors before any API calls
 - ✅ Clear, specific error messages
 - ✅ No unnecessary network traffic
@@ -105,6 +108,7 @@ for (const requiredParentId of config.parentIds) {
 ```
 
 **Benefits**:
+
 - ✅ Defense-in-depth (catches issues that bypass schema validation)
 - ✅ Structured error with rich context (McpError)
 - ✅ Includes request tracing information
@@ -115,6 +119,7 @@ for (const requiredParentId of config.parentIds) {
 **Mechanism**: API returns 400 Bad Request for missing parameters
 
 **Benefits**:
+
 - ✅ Final safety net
 - ✅ Ensures correctness even if local validation has bugs
 
@@ -129,6 +134,7 @@ for (const requiredParentId of config.parentIds) {
 **Location**: Lines 39-65
 
 **Required Parent IDs (by entity type)**:
+
 - `partner`: none
 - `advertiser`: `partnerId`
 - `campaign`: `advertiserId`
@@ -139,6 +145,7 @@ for (const requiredParentId of config.parentIds) {
 - `creative`: `advertiserId`
 
 **Test Cases**:
+
 ```bash
 # Should succeed (no parent IDs required)
 { entityType: "partner" }
@@ -165,11 +172,13 @@ for (const requiredParentId of config.parentIds) {
 **Location**: Service validation at `DV360Service.ts:115-124`
 
 **Implementation Notes**:
+
 - Schema accepts all parent IDs as optional (lines 21-35)
 - Service extracts required IDs using `extractEntityIds()` utility
 - Service performs validation before API call
 
 **Validation Gap Analysis**: ✅ None
+
 - While schema doesn't enforce required IDs, service layer validates
 - This is acceptable because entity ID validation is complex (depends on entity type)
 - Service-level validation provides rich error context
@@ -185,11 +194,13 @@ for (const requiredParentId of config.parentIds) {
 **Location**: Service validation through `extractParentIds()` + API validation
 
 **Implementation Notes**:
+
 - Schema accepts all parent IDs as optional (lines 21-38)
 - Service extracts parent IDs using `extractParentIds()` utility
 - API enforces required parent IDs in request path
 
 **Validation Gap Analysis**: ✅ None
+
 - Service + API layers provide adequate validation
 - API will fail with 400 if parent IDs missing
 
@@ -204,11 +215,13 @@ for (const requiredParentId of config.parentIds) {
 **Location**: Service validation at `DV360Service.ts:221-229`
 
 **Implementation Notes**:
+
 - Schema accepts all parent IDs as optional (lines 33-40)
 - Service calls `getEntity()` first, which validates parent IDs
 - Service validates entity ID is present
 
 **Validation Gap Analysis**: ✅ None
+
 - Two-step process (get then update) ensures validation
 - Entity ID validation explicit in service
 
@@ -223,11 +236,13 @@ for (const requiredParentId of config.parentIds) {
 **Location**: Service validation at `DV360Service.ts:272-280`
 
 **Implementation Notes**:
+
 - Schema accepts all parent IDs as optional (lines 12-19)
 - Service validates entity ID is present
 - Service constructs API path with parent IDs
 
 **Validation Gap Analysis**: ✅ None
+
 - Service validation ensures required IDs present
 - API path construction will fail if parent IDs missing
 
@@ -242,11 +257,13 @@ for (const requiredParentId of config.parentIds) {
 **Location**: Schema requires `advertiserId` and `lineItemId` (lines 36-37)
 
 **Implementation Notes**:
+
 - Schema makes `advertiserId` and `lineItemId` **required** (not optional)
 - Each adjustment in the array must have both IDs
 - Service uses these IDs to call `getEntity()` and `updateEntity()`
 
 **Validation Gap Analysis**: ✅ None
+
 - ✅ Strong schema validation (required fields)
 - ✅ Service validates through entity operations
 
@@ -261,11 +278,13 @@ for (const requiredParentId of config.parentIds) {
 **Location**: Schema requires `advertiserId` (line 40)
 
 **Implementation Notes**:
+
 - Schema makes `advertiserId` **required** (not optional)
 - Schema makes `entityIds` array required
 - Service constructs full entity IDs by combining `advertiserId` + entity-specific ID
 
 **Validation Gap Analysis**: ✅ None
+
 - ✅ Strong schema validation
 - ✅ Service correctly constructs entity IDs
 
@@ -279,6 +298,7 @@ for (const requiredParentId of config.parentIds) {
 **Validation Layer**: Not applicable
 
 **Implementation Notes**:
+
 - Partners are top-level entities (no parent IDs)
 - No validation needed
 
@@ -290,20 +310,20 @@ for (const requiredParentId of config.parentIds) {
 
 All entities in `ENTITY_API_METADATA` have been reviewed:
 
-| Entity Type | API Path Template | Parent IDs | Validation |
-|-------------|-------------------|------------|------------|
-| `partner` | `/partners` | none | ✅ Correct |
-| `advertiser` | `/advertisers` | `partnerId` | ✅ Correct |
-| `campaign` | `/advertisers/{advertiserId}/campaigns` | `advertiserId` | ✅ Correct |
-| `insertionOrder` | `/advertisers/{advertiserId}/insertionOrders` | `advertiserId` | ✅ Correct |
-| `lineItem` | `/advertisers/{advertiserId}/lineItems` | `advertiserId` | ✅ Correct |
-| `adGroup` | `/advertisers/{advertiserId}/adGroups` | `advertiserId` | ✅ Correct |
-| `adGroupAd` | `/advertisers/{advertiserId}/adGroupAds` | `advertiserId` | ✅ Correct |
-| `creative` | `/advertisers/{advertiserId}/creatives` | `advertiserId` | ✅ Correct |
-| `customBiddingAlgorithm` | `/customBiddingAlgorithms` | none | ✅ Correct |
-| `inventorySource` | `/inventorySources` | none | ✅ Correct |
-| `inventorySourceGroup` | `/inventorySourceGroups` | none | ✅ Correct |
-| `locationList` | `/advertisers/{advertiserId}/locationLists` | `advertiserId` | ✅ Correct |
+| Entity Type              | API Path Template                             | Parent IDs     | Validation |
+| ------------------------ | --------------------------------------------- | -------------- | ---------- |
+| `partner`                | `/partners`                                   | none           | ✅ Correct |
+| `advertiser`             | `/advertisers`                                | `partnerId`    | ✅ Correct |
+| `campaign`               | `/advertisers/{advertiserId}/campaigns`       | `advertiserId` | ✅ Correct |
+| `insertionOrder`         | `/advertisers/{advertiserId}/insertionOrders` | `advertiserId` | ✅ Correct |
+| `lineItem`               | `/advertisers/{advertiserId}/lineItems`       | `advertiserId` | ✅ Correct |
+| `adGroup`                | `/advertisers/{advertiserId}/adGroups`        | `advertiserId` | ✅ Correct |
+| `adGroupAd`              | `/advertisers/{advertiserId}/adGroupAds`      | `advertiserId` | ✅ Correct |
+| `creative`               | `/advertisers/{advertiserId}/creatives`       | `advertiserId` | ✅ Correct |
+| `customBiddingAlgorithm` | `/customBiddingAlgorithms`                    | none           | ✅ Correct |
+| `inventorySource`        | `/inventorySources`                           | none           | ✅ Correct |
+| `inventorySourceGroup`   | `/inventorySourceGroups`                      | none           | ✅ Correct |
+| `locationList`           | `/advertisers/{advertiserId}/locationLists`   | `advertiserId` | ✅ Correct |
 
 ### Validation Coverage
 
@@ -331,11 +351,13 @@ All entities in `ENTITY_API_METADATA` have been reviewed:
 **Proposal**: Add `.refine()` validation similar to `list-entities.tool.ts`
 
 **Benefits**:
+
 - Fail-fast (errors caught before any service calls)
 - Consistent validation across all tools
 - Better error messages for AI agents
 
 **Implementation example**:
+
 ```typescript
 export const GetEntityInputSchema = z
   .object({
@@ -366,7 +388,7 @@ export const GetEntityInputSchema = z
       const entityIdField = `${data.entityType}Id`;
       const missingIds = [
         ...config.parentIds.filter((id) => !data[id]),
-        ...(!data[entityIdField] ? [entityIdField] : [])
+        ...(!data[entityIdField] ? [entityIdField] : []),
       ];
       return {
         message: `Missing required ID(s) for ${data.entityType}: ${missingIds.join(", ")}`,
@@ -381,6 +403,7 @@ export const GetEntityInputSchema = z
 💡 **Add validation telemetry**
 
 Track how often validation errors occur to identify common mistakes:
+
 ```typescript
 setSpanAttribute("validation.error.missingIds", missingIds.join(","));
 setSpanAttribute("validation.error.entityType", entityType);
@@ -400,6 +423,7 @@ setSpanAttribute("validation.error.entityType", entityType);
 3. ✅ `test-schema-validation.cjs` - Comprehensive validation test suite
 
 **Test cases**:
+
 - Partners (no parent IDs) - should succeed
 - Advertisers without partnerId - should fail
 - Advertisers with partnerId - should succeed
@@ -412,6 +436,7 @@ setSpanAttribute("validation.error.entityType", entityType);
 - Update entity without parent IDs - should fail
 
 **To run tests**:
+
 ```bash
 # Start server
 cd packages/dv360-mcp
@@ -449,6 +474,7 @@ The dv360-mcp package has **excellent validation coverage** for required paramet
 ### Example 1: Missing advertiserId for campaign
 
 **Request**:
+
 ```json
 {
   "entityType": "campaign"
@@ -456,6 +482,7 @@ The dv360-mcp package has **excellent validation coverage** for required paramet
 ```
 
 **Error (Schema Layer)**:
+
 ```
 Missing required parent ID(s) for entity type 'campaign': advertiserId. Required: advertiserId
 ```
@@ -463,6 +490,7 @@ Missing required parent ID(s) for entity type 'campaign': advertiserId. Required
 ### Example 2: Missing partnerId for advertiser
 
 **Request**:
+
 ```json
 {
   "entityType": "advertiser"
@@ -470,6 +498,7 @@ Missing required parent ID(s) for entity type 'campaign': advertiserId. Required
 ```
 
 **Error (Schema Layer)**:
+
 ```
 Missing required parent ID(s) for entity type 'advertiser': partnerId. Required: partnerId
 ```
@@ -477,6 +506,7 @@ Missing required parent ID(s) for entity type 'advertiser': partnerId. Required:
 ### Example 3: Service-level validation error
 
 **Request**:
+
 ```json
 {
   "entityType": "lineItem",
@@ -486,6 +516,7 @@ Missing required parent ID(s) for entity type 'advertiser': partnerId. Required:
 ```
 
 **Error (Service Layer)**:
+
 ```json
 {
   "code": -32602,

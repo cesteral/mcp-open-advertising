@@ -16,25 +16,14 @@ const TOOL_DESCRIPTION = `Get a single The Trade Desk entity by ID.
 
 export const GetEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to retrieve"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to retrieve"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
+    entityId: z.string().min(1).describe("The entity ID to retrieve"),
     advertiserId: z
       .string()
       .optional()
       .describe("Advertiser ID (required for most non-advertiser entities)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (required for adGroup)"),
-    adGroupId: z
-      .string()
-      .optional()
-      .describe("Ad Group ID (required for ad)"),
+    campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
+    adGroupId: z.string().optional().describe("Ad Group ID (required for ad)"),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(

@@ -120,7 +120,9 @@ export class LinkedInService {
     await this.rateLimiter.consume(`linkedin:default`);
 
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    return this.httpClient.get(`${config.apiPath}/${encodedUrn}`, undefined, context) as Promise<LinkedInEntityMap[T]>;
+    return this.httpClient.get(`${config.apiPath}/${encodedUrn}`, undefined, context) as Promise<
+      LinkedInEntityMap[T]
+    >;
   }
 
   async createEntity<T extends LinkedInEntityType>(
@@ -133,7 +135,11 @@ export class LinkedInService {
     // Writes consume 3x rate limit tokens
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
-    return this.httpClient.post(config.apiPath, data as unknown as Record<string, unknown>, context) as Promise<LinkedInEntityMap[T]>;
+    return this.httpClient.post(
+      config.apiPath,
+      data as unknown as Record<string, unknown>,
+      context
+    ) as Promise<LinkedInEntityMap[T]>;
   }
 
   async updateEntity<T extends LinkedInEntityType>(
@@ -148,7 +154,11 @@ export class LinkedInService {
     await this.rateLimiter.consume(`linkedin:default`, 3);
 
     const encodedUrn = LinkedInHttpClient.encodeUrn(entityUrn);
-    return this.httpClient.patch(`${config.apiPath}/${encodedUrn}`, data as unknown as Record<string, unknown>, context) as Promise<LinkedInEntityMap[T]>;
+    return this.httpClient.patch(
+      `${config.apiPath}/${encodedUrn}`,
+      data as unknown as Record<string, unknown>,
+      context
+    ) as Promise<LinkedInEntityMap[T]>;
   }
 
   async deleteEntity(
@@ -182,7 +192,11 @@ export class LinkedInService {
       count: String(Math.min(count ?? 25, 100)),
     };
 
-    const result = (await this.httpClient.get("/v2/adAccounts", params, context)) as LinkedInElementsResponse<LinkedInAdAccount>;
+    const result = (await this.httpClient.get(
+      "/v2/adAccounts",
+      params,
+      context
+    )) as LinkedInElementsResponse<LinkedInAdAccount>;
 
     return {
       accounts: result.elements ?? [],
@@ -223,7 +237,9 @@ export class LinkedInService {
     entityType: T,
     items: LinkedInCreateEntityInputMap[T][],
     context?: RequestContext
-  ): Promise<{ results: Array<{ success: boolean; entity?: LinkedInEntityMap[T]; error?: string }> }> {
+  ): Promise<{
+    results: Array<{ success: boolean; entity?: LinkedInEntityMap[T]; error?: string }>;
+  }> {
     const results = await executeBulkConcurrent(items, async (data) => {
       return this.createEntity(entityType, data, context);
     });
@@ -435,5 +451,4 @@ export class LinkedInService {
   }
 
   // ─── Internal Helpers ────────────────────────────────────────────
-
 }

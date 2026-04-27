@@ -15,9 +15,7 @@ Use this to discover available targeting dimensions before building a targeting 
 
 export const GetTargetingOptionsInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .describe("Ad Account ID (with or without act_ prefix)"),
+    adAccountId: z.string().describe("Ad Account ID (with or without act_ prefix)"),
     type: z
       .string()
       .optional()
@@ -49,7 +47,7 @@ export async function getTargetingOptionsLogic(
     context
   );
 
-  const data = (result as Record<string, unknown>)?.data as unknown[] || [];
+  const data = ((result as Record<string, unknown>)?.data as unknown[]) || [];
 
   return {
     options: data as Record<string, unknown>[],
@@ -58,7 +56,9 @@ export async function getTargetingOptionsLogic(
   };
 }
 
-export function getTargetingOptionsResponseFormatter(result: GetTargetingOptionsOutput): McpTextContent[] {
+export function getTargetingOptionsResponseFormatter(
+  result: GetTargetingOptionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

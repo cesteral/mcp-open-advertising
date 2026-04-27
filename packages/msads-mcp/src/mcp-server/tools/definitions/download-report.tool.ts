@@ -24,17 +24,14 @@ Use after msads_check_report_status returns a downloadUrl. Returns a bounded sum
 
 export const DownloadReportInputSchema = z
   .object({
-    downloadUrl: z
-      .string()
-      .url()
-      .describe("Report download URL from check-report-status"),
+    downloadUrl: z.string().url().describe("Report download URL from check-report-status"),
     storeRawCsv: z
       .boolean()
       .optional()
       .default(false)
       .describe(
         "Persist the full CSV body in the in-process report-csv store and return " +
-        "a `report-csv://{id}` resource URI. Entries expire after 30 minutes."
+          "a `report-csv://{id}` resource URI. Entries expire after 30 minutes."
       ),
   })
   .merge(ReportViewInputSchema)
@@ -76,12 +73,9 @@ export async function downloadReportLogic(
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: MSADS_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>
-      msadsReportingService.downloadReport(
-        input.downloadUrl,
-        fetchLimit,
-        context,
-        { includeRawCsv },
-      ),
+      msadsReportingService.downloadReport(input.downloadUrl, fetchLimit, context, {
+        includeRawCsv,
+      }),
   });
 }
 

@@ -46,8 +46,8 @@ export const DownloadReportInputSchema = z
       .default(false)
       .describe(
         "Persist the full CSV body in the in-process report-csv store and return a `report-csv://{id}` resource URI. " +
-        "Use when a downstream tool/user needs the complete CSV but the model only needs a bounded preview. " +
-        "Entries expire after 30 minutes. Sensitive token-like values are redacted before storage."
+          "Use when a downstream tool/user needs the complete CSV but the model only needs a bounded preview. " +
+          "Entries expire after 30 minutes. Sensitive token-like values are redacted before storage."
       ),
   })
   .merge(ReportViewInputSchema)
@@ -70,7 +70,10 @@ const PINTEREST_COMPUTED_METRIC_ALIASES = {
   impressions: ["IMPRESSION_1", "IMPRESSION_2", "IMPRESSIONS"],
   clicks: ["CLICKTHROUGH_1", "CLICKTHROUGH_2", "CLICKS"],
   conversions: ["TOTAL_CONVERSIONS", "TOTAL_CHECKOUT", "CONVERSIONS"],
-  conversionValue: ["TOTAL_CONVERSIONS_VALUE_IN_MICRO_DOLLAR", "TOTAL_CHECKOUT_VALUE_IN_MICRO_DOLLAR"],
+  conversionValue: [
+    "TOTAL_CONVERSIONS_VALUE_IN_MICRO_DOLLAR",
+    "TOTAL_CHECKOUT_VALUE_IN_MICRO_DOLLAR",
+  ],
 };
 
 export async function downloadReportLogic(
@@ -89,12 +92,9 @@ export async function downloadReportLogic(
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: PINTEREST_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>
-      pinterestReportingService.downloadReport(
-        input.downloadUrl,
-        fetchLimit,
-        undefined,
-        { includeRawCsv },
-      ),
+      pinterestReportingService.downloadReport(input.downloadUrl, fetchLimit, undefined, {
+        includeRawCsv,
+      }),
   });
 }
 

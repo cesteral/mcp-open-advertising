@@ -35,7 +35,10 @@ interface GoogleAdsFailure {
  */
 function parseGAdsErrors(body: string): string {
   try {
-    const parsed = JSON.parse(body) as { error?: { details?: GoogleAdsFailure[] }; message?: string };
+    const parsed = JSON.parse(body) as {
+      error?: { details?: GoogleAdsFailure[] };
+      message?: string;
+    };
 
     // Standard Google API error format
     if (parsed.error?.details) {
@@ -45,7 +48,9 @@ function parseGAdsErrors(body: string): string {
         if (failure.errors) {
           for (const err of failure.errors) {
             const code = err.errorCode
-              ? Object.entries(err.errorCode).map(([k, v]) => `${k}=${v}`).join(", ")
+              ? Object.entries(err.errorCode)
+                  .map(([k, v]) => `${k}=${v}`)
+                  .join(", ")
               : "unknown";
             messages.push(`[${code}] ${err.message || "No message"}`);
           }
@@ -107,11 +112,7 @@ export class GAdsHttpClient {
    * - Retries on 429 and 5xx with exponential backoff (respects Retry-After).
    * - Parses JSON or returns `{}` for 204 No Content.
    */
-  async fetch(
-    path: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
+  async fetch(path: string, context?: RequestContext, options?: RequestInit): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
     const method = options?.method || "GET";
 

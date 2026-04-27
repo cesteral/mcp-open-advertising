@@ -70,9 +70,7 @@ export function decodeJwtPayload(token: string): JwtPayload {
  * Create a stable credential fingerprint from JWT identity claims.
  */
 export function getJwtCredentialFingerprint(payload: JwtPayload): string {
-  return createHash("sha256")
-    .update(`${payload.iss}:${payload.sub}`)
-    .digest("hex");
+  return createHash("sha256").update(`${payload.iss}:${payload.sub}`).digest("hex");
 }
 
 /**
@@ -101,12 +99,15 @@ export async function createJwt(
  */
 export function extractBearerToken(authHeader?: string): string {
   if (!authHeader) {
-    throw new McpError(JsonRpcErrorCode.Unauthorized,"Missing Authorization header");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Missing Authorization header");
   }
 
   const parts = authHeader.split(" ");
   if (parts.length !== 2 || parts[0] !== "Bearer" || !parts[1]) {
-    throw new McpError(JsonRpcErrorCode.Unauthorized,"Invalid Authorization header format. Expected: Bearer <token>");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      "Invalid Authorization header format. Expected: Bearer <token>"
+    );
   }
 
   return parts[1];

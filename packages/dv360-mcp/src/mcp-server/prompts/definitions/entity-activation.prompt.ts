@@ -27,9 +27,7 @@ export const entityActivationPrompt: Prompt = {
   ],
 };
 
-export function getEntityActivationPromptMessage(
-  args?: Record<string, string>,
-): string {
+export function getEntityActivationPromptMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const campaignId = args?.campaignId || "{campaignId}";
 

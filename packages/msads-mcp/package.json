@@ -10,8 +10,18 @@
     "directory": "packages/msads-mcp"
   },
   "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
-  "keywords": ["mcp", "model-context-protocol", "advertising", "microsoft-ads", "bing-ads"],
-  "files": ["dist/", "README.md", "LICENSE"],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "advertising",
+    "microsoft-ads",
+    "bing-ads"
+  ],
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

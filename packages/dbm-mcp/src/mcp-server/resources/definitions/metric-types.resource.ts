@@ -23,7 +23,10 @@ let cachedMetricsMarkdown: string | undefined;
 const cachedCategoryMarkdown = new Map<string, string>();
 
 function toCategorySlug(category: string): string {
-  return category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return category
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 /**
@@ -87,9 +90,11 @@ ${Array.from(byReportType.get("REACH") || [])
 
 ### GRP-Only Metrics
 These GRP metrics require \`reportType: "GRP"\`:
-${Array.from(byReportType.get("GRP") || [])
-  .map(([m]) => `- \`${m}\``)
-  .join("\n") || "- None currently defined"}
+${
+  Array.from(byReportType.get("GRP") || [])
+    .map(([m]) => `- \`${m}\``)
+    .join("\n") || "- None currently defined"
+}
 
 ---
 

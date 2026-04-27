@@ -20,8 +20,7 @@ export const entityUpdateExecutionPrompt: Prompt = {
     },
     {
       name: "entityType",
-      description:
-        "DV360 entity type to update (e.g. campaign, insertionOrder, lineItem)",
+      description: "DV360 entity type to update (e.g. campaign, insertionOrder, lineItem)",
       required: true,
     },
     {

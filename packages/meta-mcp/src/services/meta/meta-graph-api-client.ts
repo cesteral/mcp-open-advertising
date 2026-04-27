@@ -112,10 +112,7 @@ export class MetaGraphApiClient {
   /**
    * Make an authenticated DELETE request.
    */
-  async delete(
-    path: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async delete(path: string, context?: RequestContext): Promise<unknown> {
     const url = this.buildUrl(path);
     return this.request(url, context, { method: "DELETE" });
   }
@@ -133,7 +130,13 @@ export class MetaGraphApiClient {
     fileContentType: string,
     context?: RequestContext
   ): Promise<unknown> {
-    const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
+    const { body, contentType } = buildMultipartFormData(
+      fields,
+      fileField,
+      fileBuffer,
+      filename,
+      fileContentType
+    );
     const url = this.buildUrl(path);
     return this.request(url, context, {
       method: "POST",
@@ -260,11 +263,7 @@ export class MetaGraphApiClient {
       }
       // x-app-usage format: { call_count, total_cputime, total_time }
       if (parsed.call_count !== undefined) {
-        return Math.max(
-          parsed.call_count ?? 0,
-          parsed.total_cputime ?? 0,
-          parsed.total_time ?? 0
-        );
+        return Math.max(parsed.call_count ?? 0, parsed.total_cputime ?? 0, parsed.total_time ?? 0);
       }
       // x-business-use-case-usage format: { "<id>": [{ call_count, ... }] }
       for (const values of Object.values(parsed)) {
@@ -278,5 +277,4 @@ export class MetaGraphApiClient {
     }
     return 0;
   }
-
 }

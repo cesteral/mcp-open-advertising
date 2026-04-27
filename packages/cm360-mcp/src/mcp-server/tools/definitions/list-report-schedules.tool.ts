@@ -3,10 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import {
-  fromCm360Schedule,
-  ReportScheduleSummarySchema,
-} from "@cesteral/shared";
+import { fromCm360Schedule, ReportScheduleSummarySchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_list_report_schedules";
@@ -17,10 +14,7 @@ Returns canonical ReportScheduleSummary entries for reports in the profile that 
 
 export const ListReportSchedulesInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
     maxResults: z
       .number()
       .int()
@@ -28,10 +22,7 @@ export const ListReportSchedulesInputSchema = z
       .max(1000)
       .optional()
       .describe("Maximum number of reports to return (default: all)"),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Pagination token from a previous response"),
+    pageToken: z.string().optional().describe("Pagination token from a previous response"),
   })
   .describe("Parameters for listing CM360 report schedules");
 
@@ -78,7 +69,9 @@ export async function listReportSchedulesLogic(
   };
 }
 
-export function listReportSchedulesResponseFormatter(result: ListReportSchedulesOutput): McpTextContent[] {
+export function listReportSchedulesResponseFormatter(
+  result: ListReportSchedulesOutput
+): McpTextContent[] {
   if (result.schedules.length === 0) {
     return [
       {

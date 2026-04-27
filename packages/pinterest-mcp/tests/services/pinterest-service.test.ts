@@ -68,10 +68,11 @@ describe("PinterestService", () => {
     it("passes campaignId and adGroupId filters as query params when provided", async () => {
       mockGet.mockResolvedValueOnce({ items: [], bookmark: null });
 
-      await service.listEntities(
-        "ad",
-        { adAccountId: "549755813599", campaignId: "111", adGroupId: "222" }
-      );
+      await service.listEntities("ad", {
+        adAccountId: "549755813599",
+        campaignId: "111",
+        adGroupId: "222",
+      });
 
       expect(mockGet).toHaveBeenCalledWith(
         "/v5/ad_accounts/549755813599/ads",
@@ -111,11 +112,7 @@ describe("PinterestService", () => {
       const data = { name: "Test Ad", ad_group_id: "1700000001" };
       await service.createEntity("ad", filters, data);
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/v5/ad_accounts/549755813599/ads",
-        [data],
-        undefined
-      );
+      expect(mockPost).toHaveBeenCalledWith("/v5/ad_accounts/549755813599/ads", [data], undefined);
     });
 
     it("returns first item from response", async () => {
@@ -146,7 +143,9 @@ describe("PinterestService", () => {
       const updated = { id: "687201361754", name: "Updated" };
       mockPatch.mockResolvedValueOnce({ items: [updated] });
 
-      const result = await service.updateEntity("campaign", filters, "687201361754", { name: "Updated" });
+      const result = await service.updateEntity("campaign", filters, "687201361754", {
+        name: "Updated",
+      });
       expect(result).toEqual(updated);
     });
   });
@@ -221,9 +220,9 @@ describe("PinterestService", () => {
     it("throws when entity not found in list", async () => {
       mockGet.mockResolvedValueOnce({ items: [], bookmark: null });
 
-      await expect(
-        service.getEntity("campaign", filters, "nonexistent-id")
-      ).rejects.toThrow("not found");
+      await expect(service.getEntity("campaign", filters, "nonexistent-id")).rejects.toThrow(
+        "not found"
+      );
     });
   });
 
@@ -231,12 +230,7 @@ describe("PinterestService", () => {
     it("returns success results for all entity IDs on success", async () => {
       mockPatch.mockResolvedValue({ items: [{}] });
 
-      const result = await service.bulkUpdateStatus(
-        "campaign",
-        filters,
-        ["111", "222"],
-        "PAUSED"
-      );
+      const result = await service.bulkUpdateStatus("campaign", filters, ["111", "222"], "PAUSED");
 
       expect(result.results).toHaveLength(2);
       expect(result.results[0].success).toBe(true);
@@ -246,12 +240,7 @@ describe("PinterestService", () => {
     it("returns failure results when status update throws", async () => {
       mockPatch.mockRejectedValueOnce(new Error("API error"));
 
-      const result = await service.bulkUpdateStatus(
-        "campaign",
-        filters,
-        ["111"],
-        "PAUSED"
-      );
+      const result = await service.bulkUpdateStatus("campaign", filters, ["111"], "PAUSED");
 
       expect(result.results[0].success).toBe(false);
       expect(result.results[0].error).toContain("API error");

@@ -22,10 +22,7 @@ Use \`pinterest_get_report\` instead for a blocking convenience shortcut.`;
 
 export const SubmitReportInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Ad Account ID"),
+    adAccountId: z.string().min(1).describe("Pinterest Ad Account ID"),
     type: z
       .enum(["CAMPAIGN", "AD_GROUP", "AD", "KEYWORD", "ACCOUNT"])
       .optional()
@@ -34,7 +31,9 @@ export const SubmitReportInputSchema = z
     columns: z
       .array(z.string())
       .min(1)
-      .describe("Columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"),
+      .describe(
+        "Columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"
+      ),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -54,21 +53,13 @@ export const SubmitReportInputSchema = z
       .optional()
       .default("DAY")
       .describe("Time granularity for the report (default: DAY)"),
-    campaignIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by campaign IDs"),
-    adGroupIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by ad group IDs"),
-    adIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by ad IDs"),
+    campaignIds: z.array(z.string()).optional().describe("Filter by campaign IDs"),
+    adGroupIds: z.array(z.string()).optional().describe("Filter by ad group IDs"),
+    adIds: z.array(z.string()).optional().describe("Filter by ad IDs"),
   })
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for submitting a Pinterest Ads report");

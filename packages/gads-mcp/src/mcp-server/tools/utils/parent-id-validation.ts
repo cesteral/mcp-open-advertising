@@ -2,11 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import {
-  getEntityConfig,
-  type ParentIdKey,
-  type GAdsEntityType,
-} from "./entity-mapping.js";
+import { getEntityConfig, type ParentIdKey, type GAdsEntityType } from "./entity-mapping.js";
 
 /** Entity types that require composite IDs (e.g., {adGroupId}~{adId}) */
 const COMPOSITE_ID_ENTITIES: Record<string, string> = {
@@ -47,9 +43,7 @@ export function buildMissingParentIdsMessage(
   entityType: GAdsEntityType,
   missing: ParentIdKey[]
 ): string {
-  const requiredFields = getRequiredParentIds(entityType).map(
-    (key) => `\`${key}\``
-  );
+  const requiredFields = getRequiredParentIds(entityType).map((key) => `\`${key}\``);
   const missingFields = missing.map((key) => `\`${key}\``);
 
   return `Missing required parent identifier(s) for entity type "${entityType}": ${missingFields.join(", ")}. Required parent identifiers: ${requiredFields.join(", ")}.`;

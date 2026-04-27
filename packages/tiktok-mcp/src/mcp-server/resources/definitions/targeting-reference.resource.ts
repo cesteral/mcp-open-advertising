@@ -134,7 +134,8 @@ Use these values with \`tiktok_search_targeting\`:
 export const targetingReferenceResource: Resource = {
   uri: "targeting-reference://tiktok",
   name: "TikTok Targeting Reference",
-  description: "Targeting types, age groups, genders, placements, objectives, bid strategies, and patterns for TikTok Ads",
+  description:
+    "Targeting types, age groups, genders, placements, objectives, bid strategies, and patterns for TikTok Ads",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatTargetingReferenceMarkdown();

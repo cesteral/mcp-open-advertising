@@ -23,10 +23,7 @@ export const GetEntityReportTypesInputSchema = z
     entityType: z
       .enum(["adGroup", "campaign", "advertiser"])
       .describe("The type of entity to query report types for"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("ID of the entity"),
+    entityId: z.string().min(1).describe("ID of the entity"),
     tile: z
       .string()
       .min(1)
@@ -47,13 +44,13 @@ export const GetEntityReportTypesOutputSchema = z
         z.object({
           type: z.string().describe("Report type value to pass to ttd_execute_entity_report"),
           available: z.boolean().describe("Whether report can be downloaded immediately"),
-          schedule: z.union([z.boolean(), z.string()]).describe("Whether report requires scheduling/email delivery"),
+          schedule: z
+            .union([z.boolean(), z.string()])
+            .describe("Whether report requires scheduling/email delivery"),
         })
       )
       .describe("Available report types for this entity"),
-    userErrors: z
-      .array(z.object({ field: z.string(), message: z.string() }))
-      .optional(),
+    userErrors: z.array(z.object({ field: z.string(), message: z.string() })).optional(),
     timestamp: z.string().datetime(),
   })
   .describe("Available entity report types");
@@ -78,7 +75,8 @@ export async function getEntityReportTypesLogic(
   throwIfGraphqlErrors(raw, "GraphQL error retrieving entity report types");
 
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
-  const metadata = (gqlData.programmaticTileReportMetadata as Record<string, unknown> | undefined) ?? {};
+  const metadata =
+    (gqlData.programmaticTileReportMetadata as Record<string, unknown> | undefined) ?? {};
   const reportTypes = (metadata.data as Array<Record<string, unknown>> | undefined) ?? [];
   const userErrors = metadata.userErrors as Array<{ field: string; message: string }> | undefined;
 

@@ -164,14 +164,8 @@ describe("telemetry utilities", () => {
         async () => "ok"
       );
 
-      expect(mockSpan.setAttribute).toHaveBeenCalledWith(
-        "mcp.tool.input.advertiserId",
-        "adv-123"
-      );
-      expect(mockSpan.setAttribute).toHaveBeenCalledWith(
-        "mcp.tool.input.entityType",
-        "campaign"
-      );
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("mcp.tool.input.advertiserId", "adv-123");
+      expect(mockSpan.setAttribute).toHaveBeenCalledWith("mcp.tool.input.entityType", "campaign");
     });
   });
 
@@ -219,10 +213,7 @@ describe("telemetry utilities", () => {
       await withDv360Span("list_accounts", undefined, async () => "ok");
 
       expect(mockSpan.setAttribute).toHaveBeenCalledWith("dv360.operation", "list_accounts");
-      expect(mockSpan.setAttribute).not.toHaveBeenCalledWith(
-        "dv360.entityType",
-        expect.anything()
-      );
+      expect(mockSpan.setAttribute).not.toHaveBeenCalledWith("dv360.entityType", expect.anything());
     });
 
     it("propagates errors from the wrapped function", async () => {

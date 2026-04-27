@@ -14,13 +14,8 @@ Items are automatically batched per entity type limits. Each batch is sent as a 
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to create"),
-    items: z
-      .array(z.record(z.unknown()))
-      .min(1)
-      .describe("Array of entity data objects to create"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
+    items: z.array(z.record(z.unknown())).min(1).describe("Array of entity data objects to create"),
   })
   .describe("Parameters for bulk creating Microsoft Ads entities");
 
@@ -57,7 +52,9 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): McpTextContent[] {
+export function bulkCreateEntitiesResponseFormatter(
+  result: BulkCreateEntitiesOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

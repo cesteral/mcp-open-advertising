@@ -238,9 +238,7 @@ export class AmazonDspRefreshTokenAdapter implements AmazonDspAuthAdapter {
 
     const data = (await response.json()) as AmazonDspTokenResponse;
     if (!data.access_token) {
-      throw new Error(
-        "AmazonDsp token refresh failed: missing access_token in response"
-      );
+      throw new Error("AmazonDsp token refresh failed: missing access_token in response");
     }
 
     this.cachedToken = data.access_token;
@@ -309,7 +307,7 @@ export function getAmazonDspProfileIdFromHeaders(
   if (!profileId) {
     throw new Error(
       "Missing required Amazon-Advertising-API-Scope header (DSP entity ID / profile ID). " +
-      "Also ensure Amazon-Advertising-API-ClientId header is set."
+        "Also ensure Amazon-Advertising-API-ClientId header is set."
     );
   }
 
@@ -319,10 +317,7 @@ export function getAmazonDspProfileIdFromHeaders(
 /**
  * Generate a fingerprint for a AmazonDsp access token + advertiser ID pair (for session binding).
  */
-export function getAmazonDspCredentialFingerprint(
-  accessToken: string,
-  profileId: string
-): string {
+export function getAmazonDspCredentialFingerprint(accessToken: string, profileId: string): string {
   return createHash("sha256")
     .update(`${accessToken.trim()}:${profileId.trim()}`)
     .digest("hex")

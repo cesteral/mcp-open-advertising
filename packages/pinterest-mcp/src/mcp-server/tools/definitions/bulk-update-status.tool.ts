@@ -22,21 +22,14 @@ Pinterest's status update API accepts an array of IDs in a single request.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
-    operationStatus: z
-      .enum(["ACTIVE", "PAUSED", "ARCHIVED"])
-      .describe("Target status to apply"),
+    operationStatus: z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]).describe("Target status to apply"),
   })
   .describe("Parameters for bulk status update of Pinterest Ads entities");
 
@@ -85,7 +78,9 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Status updates: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

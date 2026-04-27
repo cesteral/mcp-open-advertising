@@ -27,19 +27,23 @@ Polls until processing is complete (up to 5 minutes).
 
 **Usage:** The returned videoId is used in adCreative → video_data → video_id`;
 
-export const UploadVideoInputSchema = z.object({
-  adAccountId: z.string().describe("Meta Ad Account ID (e.g., act_1234567890)"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
-  title: z.string().optional().describe("Optional video title"),
-  description: z.string().optional().describe("Optional video description"),
-}).describe("Parameters for uploading a video to Meta");
+export const UploadVideoInputSchema = z
+  .object({
+    adAccountId: z.string().describe("Meta Ad Account ID (e.g., act_1234567890)"),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+    title: z.string().optional().describe("Optional video title"),
+    description: z.string().optional().describe("Optional video description"),
+  })
+  .describe("Parameters for uploading a video to Meta");
 
-export const UploadVideoOutputSchema = z.object({
-  videoId: z.string().describe("Video ID used in ad creative payloads"),
-  title: z.string().optional(),
-  status: z.string().describe("Processing status"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded video info");
+export const UploadVideoOutputSchema = z
+  .object({
+    videoId: z.string().describe("Video ID used in ad creative payloads"),
+    title: z.string().optional(),
+    status: z.string().describe("Processing status"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded video info");
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
@@ -107,12 +111,14 @@ export async function uploadVideoLogic(
     );
   }
 
-  const actId = input.adAccountId.startsWith("act_") ? input.adAccountId : `act_${input.adAccountId}`;
+  const actId = input.adAccountId.startsWith("act_")
+    ? input.adAccountId
+    : `act_${input.adAccountId}`;
   const fields: Record<string, string> = {};
   if (input.title) fields.title = input.title;
   if (input.description) fields.description = input.description;
 
-  const uploadResult = await metaService.graphApiClient.postMultipart(
+  const uploadResult = (await metaService.graphApiClient.postMultipart(
     `/${actId}/advideos`,
     fields,
     "source",
@@ -120,7 +126,7 @@ export async function uploadVideoLogic(
     filename,
     contentType,
     context
-  ) as MetaVideoUploadResponse;
+  )) as MetaVideoUploadResponse;
 
   const videoId = uploadResult.id;
   if (!videoId) {
@@ -135,11 +141,11 @@ export async function uploadVideoLogic(
     await sleep(pollIntervalMs);
 
     try {
-      const statusResult = await metaService.graphApiClient.get(
+      const statusResult = (await metaService.graphApiClient.get(
         `/${videoId}`,
         { fields: "status" },
         context
-      ) as MetaVideoStatusResponse;
+      )) as MetaVideoStatusResponse;
 
       const progress = statusResult.status?.processing_progress ?? 0;
       const videoStatus = statusResult.status?.video_status ?? "processing";
@@ -161,7 +167,10 @@ export async function uploadVideoLogic(
       if (error instanceof Error && error.message.startsWith("Meta video processing failed")) {
         throw error;
       }
-      logger.warn({ err: error, videoId, attempt }, "Transient error polling video status, will retry");
+      logger.warn(
+        { err: error, videoId, attempt },
+        "Transient error polling video status, will retry"
+      );
     }
   }
 
@@ -175,10 +184,12 @@ export async function uploadVideoLogic(
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Video uploaded to Meta!\n\nVideo ID: ${result.videoId}\nStatus: ${result.status}${result.title ? `\nTitle: ${result.title}` : ""}\n\nUse videoId in adCreative.video_data.video_id`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Video uploaded to Meta!\n\nVideo ID: ${result.videoId}\nStatus: ${result.status}${result.title ? `\nTitle: ${result.title}` : ""}\n\nUse videoId in adCreative.video_data.video_id`,
+    },
+  ];
 }
 
 export const uploadVideoTool = {

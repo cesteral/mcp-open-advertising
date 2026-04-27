@@ -90,7 +90,7 @@ export type ColumnAliases = Partial<Record<RequiredInputKey, string[]>>;
  */
 export function appendComputedMetricsToRows(
   rows: ComputedMetricRow[],
-  aliases: ColumnAliases = {},
+  aliases: ColumnAliases = {}
 ): ComputedMetricRow[] {
   if (rows.length === 0) return rows;
   const firstRow = rows[0]!;
@@ -101,12 +101,11 @@ export function appendComputedMetricsToRows(
     }
     return null;
   };
-  const cols = Object.fromEntries(
-    REQUIRED_INPUT_KEYS.map((k) => [k, findCol(k)]),
-  ) as Record<RequiredInputKey, string | null>;
-  const warnings = REQUIRED_INPUT_KEYS.filter((k) => !cols[k]).map(
-    (k) => `missing:${k}`,
-  );
+  const cols = Object.fromEntries(REQUIRED_INPUT_KEYS.map((k) => [k, findCol(k)])) as Record<
+    RequiredInputKey,
+    string | null
+  >;
+  const warnings = REQUIRED_INPUT_KEYS.filter((k) => !cols[k]).map((k) => `missing:${k}`);
   return rows.map((row) => {
     const num = (k: RequiredInputKey): number => {
       const col = cols[k];

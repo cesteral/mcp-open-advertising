@@ -28,9 +28,7 @@ export const targetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getTargetingDiscoveryWorkflowMessage(args?: Record<string, string>): string {
   const customerId = args?.customerId || "{customerId}";
   const campaignId = args?.campaignId || "{campaignId}";
 

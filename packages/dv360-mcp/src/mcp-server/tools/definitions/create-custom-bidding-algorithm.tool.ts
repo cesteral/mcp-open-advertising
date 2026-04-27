@@ -40,15 +40,21 @@ export const CreateCustomBiddingAlgorithmInputSchema = z
       .describe("Algorithm display name (max 240 bytes UTF-8). Will be prompted if not provided."),
     algorithmType: z
       .enum(["SCRIPT_BASED", "RULE_BASED"])
-      .describe("Type of algorithm. SCRIPT_BASED is most common. RULE_BASED requires allowlisting."),
+      .describe(
+        "Type of algorithm. SCRIPT_BASED is most common. RULE_BASED requires allowlisting."
+      ),
     ownerType: z
       .enum(["advertiser", "partner"])
       .optional()
-      .describe("Whether algorithm is owned by an advertiser or partner. Will be prompted if not provided."),
+      .describe(
+        "Whether algorithm is owned by an advertiser or partner. Will be prompted if not provided."
+      ),
     ownerId: z
       .string()
       .optional()
-      .describe("The advertiserId or partnerId depending on ownerType. Will be prompted if not provided."),
+      .describe(
+        "The advertiserId or partnerId depending on ownerType. Will be prompted if not provided."
+      ),
     sharedAdvertiserIds: z
       .array(z.string())
       .optional()
@@ -325,7 +331,8 @@ export const createCustomBiddingAlgorithmTool = {
         algorithmType: "SCRIPT_BASED",
         ownerType: "advertiser",
         ownerId: "1234567",
-        initialScript: "// Custom bidding script\nfunction bid(request) {\n  return request.floorPrice * 1.2;\n}",
+        initialScript:
+          "// Custom bidding script\nfunction bid(request) {\n  return request.floorPrice * 1.2;\n}",
       },
     },
     {

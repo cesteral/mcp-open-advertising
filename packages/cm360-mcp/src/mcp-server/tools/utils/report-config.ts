@@ -27,7 +27,7 @@ export const REPORT_CRITERIA_FIELD_BY_TYPE: Record<CM360ReportType, CriteriaFiel
 
 export const REPORT_CRITERIA_FIELDS = Object.values(REPORT_CRITERIA_FIELD_BY_TYPE);
 
-type CriteriaField = 
+type CriteriaField =
   | "criteria"
   | "reachCriteria"
   | "pathToConversionCriteria"

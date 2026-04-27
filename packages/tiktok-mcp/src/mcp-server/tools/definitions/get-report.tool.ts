@@ -34,7 +34,9 @@ export const GetReportInputSchema = z
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
     reportType: z
       .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
       .optional()
@@ -62,14 +64,8 @@ export const GetReportInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe("End date (YYYY-MM-DD, required if datePreset not provided)"),
-    orderField: z
-      .string()
-      .optional()
-      .describe("Field to order results by"),
-    orderType: z
-      .enum(["ASC", "DESC"])
-      .optional()
-      .describe("Sort order"),
+    orderField: z.string().optional().describe("Field to order results by"),
+    orderType: z.enum(["ASC", "DESC"]).optional().describe("Sort order"),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -78,7 +74,8 @@ export const GetReportInputSchema = z
   })
   .merge(ReportViewInputSchema)
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for generating a TikTok Ads report");
@@ -96,27 +93,35 @@ type GetReportOutput = z.infer<typeof GetReportOutputSchema>;
 
 function appendComputedMetricsToRows(
   headers: string[],
-  rows: string[][],
+  rows: string[][]
 ): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
-  const spendIdx = idx('spend');
-  const impIdx = idx('impressions');
-  const clickIdx = idx('clicks');
-  const convIdx = idx('conversions');
+  const idx = (name: string) => headers.findIndex((h) => h.toLowerCase() === name.toLowerCase());
+  const spendIdx = idx("spend");
+  const impIdx = idx("impressions");
+  const clickIdx = idx("clicks");
+  const convIdx = idx("conversions");
 
-  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
-  const newRows = rows.map(row => {
+  const newHeaders = [
+    ...headers,
+    "computed_cpa",
+    "computed_roas",
+    "computed_cpm",
+    "computed_ctr",
+    "computed_cpc",
+  ];
+  const newRows = rows.map((row) => {
     const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
     const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
     const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
     const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
     const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [...row,
-      m.cpa !== null ? String(m.cpa) : '',
-      m.roas !== null ? String(m.roas) : '',
-      m.cpm !== null ? String(m.cpm) : '',
-      m.ctr !== null ? String(m.ctr) : '',
-      m.cpc !== null ? String(m.cpc) : '',
+    return [
+      ...row,
+      m.cpa !== null ? String(m.cpa) : "",
+      m.roas !== null ? String(m.roas) : "",
+      m.cpm !== null ? String(m.cpm) : "",
+      m.ctr !== null ? String(m.ctr) : "",
+      m.cpc !== null ? String(m.cpc) : "",
     ];
   });
   return { headers: newHeaders, rows: newRows };

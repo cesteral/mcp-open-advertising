@@ -20,6 +20,7 @@ terraform/
 ### Module: `mcp-service`
 
 Instantiated once per MCP server across all 13 services. Creates:
+
 - Cloud Run v2 service with health probes
 - Service account with least-privilege IAM
 - Secret Manager secrets (values managed externally)
@@ -27,6 +28,7 @@ Instantiated once per MCP server across all 13 services. Creates:
 ### Module: `networking`
 
 Creates shared networking infrastructure:
+
 - VPC with private Google Access
 - Serverless VPC Access Connector for Cloud Run
 - Cloud NAT for egress to external APIs
@@ -35,6 +37,7 @@ Creates shared networking infrastructure:
 ### Module: `monitoring`
 
 Creates observability infrastructure:
+
 - Uptime checks per service
 - Alert policies (error rate, P99 latency, instance count, uptime)
 - Custom log-based metric for access denied events
@@ -42,10 +45,10 @@ Creates observability infrastructure:
 
 ## Environments
 
-| Environment | Project ID | State Bucket | Key Differences |
-|---|---|---|---|
-| **dev** | `YOUR_GCP_PROJECT_DEV` | `YOUR_GCP_PROJECT_DEV-terraform-state` | Scale-to-zero, debug logging, verbose NAT logs |
-| **prod** | `YOUR_GCP_PROJECT_PROD` | `YOUR_GCP_PROJECT_PROD-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory |
+| Environment | Project ID              | State Bucket                            | Key Differences                                |
+| ----------- | ----------------------- | --------------------------------------- | ---------------------------------------------- |
+| **dev**     | `YOUR_GCP_PROJECT_DEV`  | `YOUR_GCP_PROJECT_DEV-terraform-state`  | Scale-to-zero, debug logging, verbose NAT logs |
+| **prod**    | `YOUR_GCP_PROJECT_PROD` | `YOUR_GCP_PROJECT_PROD-terraform-state` | Always-allocated CPU, 2 vCPU, 1Gi memory       |
 
 ## Common Operations
 
@@ -92,6 +95,7 @@ terraform plan -var-file=prod.tfvars ...
 ### Adding a new MCP server
 
 1. Add a container image variable in `variables.tf`:
+
    ```hcl
    variable "new_mcp_image" {
      description = "Full container image URL for new-mcp server"
@@ -100,6 +104,7 @@ terraform plan -var-file=prod.tfvars ...
    ```
 
 2. Add secret env var config in `variables.tf` (the `secret_names` are derived automatically from the env var map):
+
    ```hcl
    variable "new_secret_env_vars" {
      type = map(object({ secret_name = string, version = string }))

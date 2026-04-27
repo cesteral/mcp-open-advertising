@@ -1,10 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
 import { BidManagerService } from "../../src/services/bid-manager/BidManagerService.js";
-import {
-  createSessionServices,
-  SessionServiceStore,
-} from "../../src/services/session-services.js";
+import { createSessionServices, SessionServiceStore } from "../../src/services/session-services.js";
 import { resolveSessionServices } from "../../src/mcp-server/tools/utils/resolve-session.js";
 
 function createMockLogger() {
@@ -35,7 +32,7 @@ describe("session services", () => {
         reportQueryRetries: 1,
         reportRetryCooldownMs: 100,
       } as any,
-      createMockLogger(),
+      createMockLogger()
     );
 
     expect(services.bidManagerService).toBeInstanceOf(BidManagerService);
@@ -52,7 +49,7 @@ describe("session services", () => {
         reportQueryRetries: 1,
         reportRetryCooldownMs: 100,
       } as any,
-      createMockLogger(),
+      createMockLogger()
     );
 
     store.set("s1", services);
@@ -65,14 +62,12 @@ describe("session services", () => {
 
 describe("resolveSessionServices", () => {
   it("throws when sessionId is missing", () => {
-    expect(() => resolveSessionServices(undefined)).toThrow(
-      "No session ID available",
-    );
+    expect(() => resolveSessionServices(undefined)).toThrow("No session ID available");
   });
 
   it("throws when services are not found for sessionId", () => {
     expect(() => resolveSessionServices({ sessionId: "missing" })).toThrow(
-      'No services registered for session "missing"',
+      'No services registered for session "missing"'
     );
   });
 });

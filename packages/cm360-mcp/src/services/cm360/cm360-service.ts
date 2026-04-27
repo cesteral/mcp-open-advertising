@@ -82,7 +82,12 @@ export class CM360Service {
     const rawEntities = result[config.apiCollection];
     if (rawEntities === undefined) {
       this.logger.warn(
-        { entityType, collection: config.apiCollection, responseKeys: Object.keys(result), requestId: context?.requestId },
+        {
+          entityType,
+          collection: config.apiCollection,
+          responseKeys: Object.keys(result),
+          requestId: context?.requestId,
+        },
         `CM360 API response missing expected collection key "${config.apiCollection}" — returning empty results`
       );
     }
@@ -183,7 +188,10 @@ export class CM360Service {
     await this.rateLimiter.consume("cm360");
     const config = getEntityConfig(entityType);
     if (!config.supportsDelete) {
-      throw new McpError(JsonRpcErrorCode.InvalidParams, `Delete is not supported for entity type: ${entityType}`);
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Delete is not supported for entity type: ${entityType}`
+      );
     }
     const path = `/userprofiles/${profileId}/${config.apiCollection}/${entityId}`;
     return this.httpClient.fetch(path, context, { method: "DELETE" });

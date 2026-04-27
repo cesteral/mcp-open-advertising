@@ -23,14 +23,8 @@ Each item must be a complete entity payload (same as linkedin_create_entity data
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to create"),
-    items: z
-      .array(z.record(z.any()))
-      .min(1)
-      .max(50)
-      .describe("Entity payloads to create (max 50)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
+    items: z.array(z.record(z.any())).min(1).max(50).describe("Entity payloads to create (max 50)"),
   })
   .describe("Parameters for bulk entity creation");
 

@@ -22,9 +22,7 @@ export const campaignSetupWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getCampaignSetupWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
   const customerId = args?.customerId || "{customerId}";
 
   return `# Google Ads Campaign Setup Workflow

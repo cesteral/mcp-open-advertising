@@ -27,23 +27,14 @@ Three-step async workflow:
 
 export const SubmitReportInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    name: z
-      .string()
-      .describe("Name for the report"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    name: z.string().describe("Name for the report"),
     type: CM360ReportTypeSchema.describe("Report type"),
-    datePreset: CM360DatePresetSchema
-      .optional()
-      .describe("Preset date range. Injected into the correct report criteria dateRange when not already set"),
-    criteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for STANDARD reports"),
-    reachCriteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for REACH reports"),
+    datePreset: CM360DatePresetSchema.optional().describe(
+      "Preset date range. Injected into the correct report criteria dateRange when not already set"
+    ),
+    criteria: genericCriteriaSchema.optional().describe("Criteria for STANDARD reports"),
+    reachCriteria: genericCriteriaSchema.optional().describe("Criteria for REACH reports"),
     pathToConversionCriteria: genericCriteriaSchema
       .optional()
       .describe("Criteria for PATH_TO_CONVERSION reports"),
@@ -81,11 +72,11 @@ export async function submitReportLogic(
 
   const reportConfig = buildTypedReportConfig(input) as CM360ReportConfig;
 
-  const result = await cm360ReportingService.createReport(
+  const result = (await cm360ReportingService.createReport(
     input.profileId,
     reportConfig,
     context
-  ) as Record<string, string>;
+  )) as Record<string, string>;
 
   return {
     reportId: result.reportId,

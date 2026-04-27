@@ -21,13 +21,8 @@ Refer to \`entity-schema://{entityType}\` resources for field reference.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
     data: z
       .record(z.any())
       .describe("Entity data to create (fields vary by entity type — see entity-schema resources)"),

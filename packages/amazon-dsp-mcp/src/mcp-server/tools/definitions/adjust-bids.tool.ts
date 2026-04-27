@@ -21,30 +21,18 @@ Bid prices are in the advertiser's account currency.
 
 export const AdjustBidsInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("AmazonDsp Advertiser ID"),
+    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
     adjustments: z
       .array(
         z.object({
-          lineItemId: z
-            .string()
-            .min(1)
-            .describe("The line item ID to adjust"),
-          bidAmount: z
-            .number()
-            .positive()
-            .describe("New bid amount in the advertiser's currency"),
+          lineItemId: z.string().min(1).describe("The line item ID to adjust"),
+          bidAmount: z.number().positive().describe("New bid amount in the advertiser's currency"),
         })
       )
       .min(1)
       .max(50)
       .describe("Bid adjustments to apply (max 50)"),
-    reason: z
-      .string()
-      .optional()
-      .describe("Optional reason for the bid adjustment"),
+    reason: z.string().optional().describe("Optional reason for the bid adjustment"),
   })
   .describe("Parameters for batch bid adjustment on Amazon DSP line items");
 

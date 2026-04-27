@@ -33,10 +33,7 @@ Backed by Snapchat's documented \`audience_size_v2\` endpoint.
 
 export const GetAudienceEstimateInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
     targetingConfig: z
       .record(z.any())
       .describe("Ad squad spec or targeting spec accepted by Snapchat audience_size_v2"),
@@ -72,7 +69,9 @@ export async function getAudienceEstimateLogic(
   };
 }
 
-export function getAudienceEstimateResponseFormatter(result: GetAudienceEstimateOutput): McpTextContent[] {
+export function getAudienceEstimateResponseFormatter(
+  result: GetAudienceEstimateOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

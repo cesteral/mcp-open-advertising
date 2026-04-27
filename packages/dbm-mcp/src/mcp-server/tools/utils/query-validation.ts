@@ -10,7 +10,12 @@ import {
 } from "../../../generated/index.js";
 
 export interface QueryValidationIssue {
-  code: "unknown_report_type" | "unknown_group_by" | "unknown_metric" | "unknown_filter" | "unknown_date_range";
+  code:
+    | "unknown_report_type"
+    | "unknown_group_by"
+    | "unknown_metric"
+    | "unknown_filter"
+    | "unknown_date_range";
   message: string;
   value: string;
   resourceUri: string;

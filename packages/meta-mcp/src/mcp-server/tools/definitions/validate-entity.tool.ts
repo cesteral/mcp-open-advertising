@@ -41,8 +41,16 @@ business-rule reasons (e.g., invalid objective/optimization_goal combinations).`
 const REQUIRED_FIELDS_CREATE: Record<MetaEntityType, FieldRule[]> = {
   campaign: [
     { field: "name", expectedType: "string" },
-    { field: "objective", expectedType: "string", hint: "e.g., OUTCOME_AWARENESS, OUTCOME_TRAFFIC" },
-    { field: "special_ad_categories", expectedType: "array", hint: "must be an array (can be empty [])" },
+    {
+      field: "objective",
+      expectedType: "string",
+      hint: "e.g., OUTCOME_AWARENESS, OUTCOME_TRAFFIC",
+    },
+    {
+      field: "special_ad_categories",
+      expectedType: "array",
+      hint: "must be an array (can be empty [])",
+    },
   ],
   adSet: [
     { field: "name", expectedType: "string" },
@@ -58,9 +66,7 @@ const REQUIRED_FIELDS_CREATE: Record<MetaEntityType, FieldRule[]> = {
     { field: "creative", expectedType: "object", hint: "must be an object with creative_id" },
     { field: "status", expectedType: "string", hint: "e.g., PAUSED, ACTIVE" },
   ],
-  adCreative: [
-    { field: "name", expectedType: "string" },
-  ],
+  adCreative: [{ field: "name", expectedType: "string" }],
   customAudience: [
     { field: "name", expectedType: "string" },
     { field: "subtype", expectedType: "string", hint: "e.g., CUSTOM, LOOKALIKE, WEBSITE" },
@@ -79,19 +85,10 @@ const BUDGET_FIELDS = ["daily_budget", "lifetime_budget", "bid_amount"];
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
-    mode: z
-      .enum(["create", "update"])
-      .describe("Whether validating for creation or update"),
-    data: z
-      .record(z.any())
-      .describe("Entity payload to validate"),
-    adAccountId: z
-      .string()
-      .optional()
-      .describe("Ad Account ID (required for create mode)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
+    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
+    data: z.record(z.any()).describe("Entity payload to validate"),
+    adAccountId: z.string().optional().describe("Ad Account ID (required for create mode)"),
   })
   .superRefine((val, ctx) => {
     if (val.mode === "create" && !val.adAccountId) {
@@ -141,7 +138,12 @@ export async function validateEntityLogic(
     errors.push(...validateRequiredFields(data, rules));
 
     // ── Ad-specific: creative must contain creative_id ─────────────────
-    if (entityType === "ad" && data.creative && typeof data.creative === "object" && !Array.isArray(data.creative)) {
+    if (
+      entityType === "ad" &&
+      data.creative &&
+      typeof data.creative === "object" &&
+      !Array.isArray(data.creative)
+    ) {
       if (!(data.creative as Record<string, unknown>).creative_id) {
         errors.push('Field "creative" object must contain "creative_id"');
       }

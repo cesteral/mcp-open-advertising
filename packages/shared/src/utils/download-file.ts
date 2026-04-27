@@ -46,8 +46,7 @@ export async function downloadFileToBuffer(
 
   // Determine content type from response headers
   const contentType =
-    response.headers.get("content-type")?.split(";")[0]?.trim() ??
-    "application/octet-stream";
+    response.headers.get("content-type")?.split(";")[0]?.trim() ?? "application/octet-stream";
 
   // Derive filename from Content-Disposition or URL
   const filename = extractFilename(url, response.headers.get("content-disposition"), contentType);

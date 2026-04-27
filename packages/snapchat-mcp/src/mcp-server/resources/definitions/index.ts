@@ -15,20 +15,34 @@ import { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas
 import { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 import { reportingReferenceResource } from "./reporting-reference.resource.js";
 import { allTools } from "../../tools/definitions/index.js";
-import {
-  createToolExamplesResource,
-  createServerCapabilitiesResource,
-} from "@cesteral/shared";
+import { createToolExamplesResource, createServerCapabilitiesResource } from "@cesteral/shared";
 import type { Resource } from "../types.js";
 
 const toolExamplesResource = createToolExamplesResource(allTools, "snapchat-mcp");
 const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "snapchat-mcp",
   toolGroups: {
-    crud: ["snapchat_list_entities", "snapchat_get_entity", "snapchat_create_entity", "snapchat_update_entity", "snapchat_delete_entity"],
+    crud: [
+      "snapchat_list_entities",
+      "snapchat_get_entity",
+      "snapchat_create_entity",
+      "snapchat_update_entity",
+      "snapchat_delete_entity",
+    ],
     account: ["snapchat_list_ad_accounts"],
-    reporting: ["snapchat_get_report", "snapchat_get_report_breakdowns", "snapchat_submit_report", "snapchat_check_report_status", "snapchat_download_report"],
-    bulk: ["snapchat_bulk_update_status", "snapchat_bulk_create_entities", "snapchat_bulk_update_entities", "snapchat_adjust_bids"],
+    reporting: [
+      "snapchat_get_report",
+      "snapchat_get_report_breakdowns",
+      "snapchat_submit_report",
+      "snapchat_check_report_status",
+      "snapchat_download_report",
+    ],
+    bulk: [
+      "snapchat_bulk_update_status",
+      "snapchat_bulk_create_entities",
+      "snapchat_bulk_update_entities",
+      "snapchat_adjust_bids",
+    ],
     targeting: ["snapchat_search_targeting", "snapchat_get_targeting_options"],
     specialized: ["snapchat_get_audience_estimate", "snapchat_get_ad_preview"],
     validation: ["snapchat_validate_entity"],

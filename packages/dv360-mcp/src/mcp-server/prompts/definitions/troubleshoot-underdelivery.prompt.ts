@@ -41,9 +41,7 @@ export const troubleshootUnderdeliveryPrompt: Prompt = {
 /**
  * Generate prompt message with troubleshooting workflow guidance
  */
-export function getTroubleshootUnderdeliveryPromptMessage(
-  args?: Record<string, string>,
-): string {
+export function getTroubleshootUnderdeliveryPromptMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const entityType = args?.entityType || "lineItem";
   const entityId = args?.entityId || `{${entityType}Id}`;

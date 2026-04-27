@@ -212,7 +212,10 @@ export class MsAdsService {
       const batch = items.slice(i, i + config.batchLimit);
       await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
       const body = { [config.pluralName]: batch };
-      this.logger.info({ entityType, batchSize: batch.length, batchIndex: i }, "Bulk creating entities");
+      this.logger.info(
+        { entityType, batchSize: batch.length, batchIndex: i },
+        "Bulk creating entities"
+      );
       const result = await this.httpClient.post(config.addOperation, body, context);
       results.push(result);
     }
@@ -256,14 +259,18 @@ export class MsAdsService {
 
     this.logger.info({ entityType, count: entityIds.length, status }, "Bulk updating status");
 
-    const bulkResults = await executeBulkConcurrent(entityIds, async (entityId) => {
-      // Cost 1 (not 3) — status-only updates are minimal single-field payloads
-      await this.rateLimiter.consume(MSADS_WRITE_KEY, 1);
-      const body = {
-        [config.pluralName]: [{ Id: Number(entityId), Status: status }],
-      };
-      return this.httpClient.put(config.updateOperation, body, context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      entityIds,
+      async (entityId) => {
+        // Cost 1 (not 3) — status-only updates are minimal single-field payloads
+        await this.rateLimiter.consume(MSADS_WRITE_KEY, 1);
+        const body = {
+          [config.pluralName]: [{ Id: Number(entityId), Status: status }],
+        };
+        return this.httpClient.put(config.updateOperation, body, context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -291,7 +298,12 @@ export class MsAdsService {
 
     // Read current entities
     const entityIds = adjustments.map((a) => a.entityId);
-    const { entities: currentEntities } = await this.getEntity(entityType, entityIds, queryParams, context);
+    const { entities: currentEntities } = await this.getEntity(
+      entityType,
+      entityIds,
+      queryParams,
+      context
+    );
 
     // Apply bid changes — skip missing entities to prevent data loss
     const updatedEntities = adjustments
@@ -300,7 +312,10 @@ export class MsAdsService {
           (e) => String((e as unknown as Record<string, unknown>)[config.idField]) === adj.entityId
         );
         if (!current) {
-          this.logger.warn({ entityId: adj.entityId }, "Entity not found during bid adjustment — skipping to prevent data loss");
+          this.logger.warn(
+            { entityId: adj.entityId },
+            "Entity not found during bid adjustment — skipping to prevent data loss"
+          );
           return null;
         }
         return { ...(current as unknown as Record<string, unknown>), [adj.bidField]: adj.newBid };
@@ -308,7 +323,10 @@ export class MsAdsService {
       .filter((e): e is Record<string, unknown> => e !== null);
 
     if (updatedEntities.length === 0) {
-      throw new McpError(JsonRpcErrorCode.InvalidParams, "No entities found for bid adjustment — all entity IDs were invalid or deleted");
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        "No entities found for bid adjustment — all entity IDs were invalid or deleted"
+      );
     }
 
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
@@ -370,5 +388,4 @@ export class MsAdsService {
       );
     }
   }
-
 }

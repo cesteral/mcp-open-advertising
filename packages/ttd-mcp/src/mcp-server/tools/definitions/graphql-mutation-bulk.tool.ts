@@ -49,10 +49,7 @@ const CREATE_MUTATION_BULK_MUTATION = `mutation CreateMutationBulk($input: Creat
 
 export const GraphqlMutationBulkInputSchema = z
   .object({
-    mutation: z
-      .string()
-      .min(1)
-      .describe("GraphQL mutation string"),
+    mutation: z.string().min(1).describe("GraphQL mutation string"),
     inputs: z
       .array(z.record(z.any()))
       .min(1)
@@ -84,9 +81,10 @@ export const GraphqlMutationBulkOutputSchema = z
 type GraphqlMutationBulkInput = z.infer<typeof GraphqlMutationBulkInputSchema>;
 type GraphqlMutationBulkOutput = z.infer<typeof GraphqlMutationBulkOutputSchema>;
 
-function extractMutationBulkJobOrThrow(
-  result: Record<string, any>
-): { id: string; status: string } {
+function extractMutationBulkJobOrThrow(result: Record<string, any>): {
+  id: string;
+  status: string;
+} {
   const errors = result.errors ?? result.data?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
@@ -151,7 +149,9 @@ export async function graphqlMutationBulkLogic(
   };
 }
 
-export function graphqlMutationBulkResponseFormatter(result: GraphqlMutationBulkOutput): McpTextContent[] {
+export function graphqlMutationBulkResponseFormatter(
+  result: GraphqlMutationBulkOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,
@@ -176,7 +176,8 @@ export const graphqlMutationBulkTool = {
     {
       label: "Batch update campaign names via bulk mutation",
       input: {
-        mutation: "mutation UpdateCampaign($input: UpdateCampaignInput!) { updateCampaign(input: $input) { campaign { campaignId name } } }",
+        mutation:
+          "mutation UpdateCampaign($input: UpdateCampaignInput!) { updateCampaign(input: $input) { campaign { campaignId name } } }",
         inputs: [
           { campaignId: "camp456def", name: "Q1 2025 Brand Awareness - Updated" },
           { campaignId: "camp789ghi", name: "Q1 2025 Retargeting - Updated" },
@@ -187,7 +188,8 @@ export const graphqlMutationBulkTool = {
     {
       label: "Batch update ad group bids via bulk mutation",
       input: {
-        mutation: "mutation UpdateAdGroup($input: UpdateAdGroupInput!) { updateAdGroup(input: $input) { adGroup { adGroupId baseBidCPM { amount } } } }",
+        mutation:
+          "mutation UpdateAdGroup($input: UpdateAdGroupInput!) { updateAdGroup(input: $input) { adGroup { adGroupId baseBidCPM { amount } } } }",
         inputs: [
           { adGroupId: "adg111aaa", baseBidCPM: { amount: 4.5, currencyCode: "USD" } },
           { adGroupId: "adg222bbb", baseBidCPM: { amount: 6.0, currencyCode: "USD" } },

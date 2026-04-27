@@ -28,9 +28,7 @@ export const ttdTargetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTtdTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getTtdTargetingDiscoveryWorkflowMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const goal = args?.goal || "audience";
 

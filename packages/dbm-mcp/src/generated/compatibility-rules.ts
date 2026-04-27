@@ -73,13 +73,15 @@ export const REPORT_TYPE_RESTRICTIONS: CompatibilityRule[] = [
     exclusive: true,
   },
   {
-    description: "YouTube Programmatic Guaranteed filters require YOUTUBE_PROGRAMMATIC_GUARANTEED report type",
+    description:
+      "YouTube Programmatic Guaranteed filters require YOUTUBE_PROGRAMMATIC_GUARANTEED report type",
     filtersPattern: /YOUTUBE_PROGRAMMATIC_GUARANTEED/,
     reportTypes: ["YOUTUBE_PROGRAMMATIC_GUARANTEED"],
     exclusive: true,
   },
   {
-    description: "Programmatic Guaranteed metrics require YOUTUBE_PROGRAMMATIC_GUARANTEED report type",
+    description:
+      "Programmatic Guaranteed metrics require YOUTUBE_PROGRAMMATIC_GUARANTEED report type",
     metricsPattern: /^METRIC_PROGRAMMATIC_GUARANTEED/,
     reportTypes: ["YOUTUBE_PROGRAMMATIC_GUARANTEED"],
     exclusive: true,
@@ -154,7 +156,10 @@ export function getCompatibilityWarnings(
   for (const rule of REPORT_TYPE_RESTRICTIONS) {
     if (rule.metricsPattern && rule.exclusive) {
       for (const metric of metrics) {
-        if (rule.metricsPattern.test(metric) && !rule.reportTypes.includes(reportType as ReportType)) {
+        if (
+          rule.metricsPattern.test(metric) &&
+          !rule.reportTypes.includes(reportType as ReportType)
+        ) {
           warnings.push(
             `Warning: ${metric} is typically only available in ${rule.reportTypes.join(", ")} reports, ` +
               `but you're using ${reportType}. ${rule.description}`
@@ -169,7 +174,10 @@ export function getCompatibilityWarnings(
     if (rule.filtersPattern && rule.exclusive) {
       const allFilters = [...filters, ...groupBys];
       for (const filter of allFilters) {
-        if (rule.filtersPattern.test(filter) && !rule.reportTypes.includes(reportType as ReportType)) {
+        if (
+          rule.filtersPattern.test(filter) &&
+          !rule.reportTypes.includes(reportType as ReportType)
+        ) {
           warnings.push(
             `Warning: ${filter} is typically only available in ${rule.reportTypes.join(", ")} reports, ` +
               `but you're using ${reportType}. ${rule.description}`

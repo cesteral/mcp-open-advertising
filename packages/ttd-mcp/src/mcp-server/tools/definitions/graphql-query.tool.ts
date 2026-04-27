@@ -30,14 +30,8 @@ Refer to the TTD Partner Portal GraphQL documentation for the full schema.`;
 
 export const GraphqlQueryInputSchema = z
   .object({
-    query: z
-      .string()
-      .min(1)
-      .describe("GraphQL query or mutation string"),
-    variables: z
-      .record(z.any())
-      .optional()
-      .describe("GraphQL variables (key-value object)"),
+    query: z.string().min(1).describe("GraphQL query or mutation string"),
+    variables: z.record(z.any()).optional().describe("GraphQL variables (key-value object)"),
     betaFeatures: z
       .string()
       .optional()
@@ -63,12 +57,9 @@ export async function graphqlQueryLogic(
 ): Promise<GraphqlOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  const result = (await ttdService.graphqlQuery(
-    input.query,
-    input.variables,
-    context,
-    { betaFeatures: input.betaFeatures }
-  )) as Record<string, unknown>;
+  const result = (await ttdService.graphqlQuery(input.query, input.variables, context, {
+    betaFeatures: input.betaFeatures,
+  })) as Record<string, unknown>;
 
   return {
     data: result.data ?? result,
@@ -114,7 +105,8 @@ export const graphqlQueryTool = {
     {
       label: "List campaigns for an advertiser",
       input: {
-        query: "query ListCampaigns($advertiserId: String!) { campaigns(advertiserId: $advertiserId) { edges { node { id name status budget { amount currencyCode } } } } }",
+        query:
+          "query ListCampaigns($advertiserId: String!) { campaigns(advertiserId: $advertiserId) { edges { node { id name status budget { amount currencyCode } } } } }",
         variables: { advertiserId: "adv123abc" },
       },
     },

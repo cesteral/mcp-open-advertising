@@ -8,9 +8,7 @@ import pino from "pino";
 // factory captures spies from a top-level `vi.hoisted` block.
 const { mockSave, mockGetSignedUrl, mockDeleteFiles, mockStorageCtor } = vi.hoisted(() => {
   const save = vi.fn().mockResolvedValue(undefined);
-  const getSignedUrl = vi
-    .fn()
-    .mockResolvedValue(["https://signed.example/object"]);
+  const getSignedUrl = vi.fn().mockResolvedValue(["https://signed.example/object"]);
   const deleteFiles = vi.fn().mockResolvedValue(undefined);
   const fileFn = vi.fn((_path: string) => ({ save, getSignedUrl }));
   const bucketFn = vi.fn((_name: string) => ({
@@ -178,7 +176,7 @@ describe("spillCsvToGcs", () => {
     });
     expect(mockSave).toHaveBeenCalledWith(
       expect.any(String),
-      expect.objectContaining({ contentType: "application/json" }),
+      expect.objectContaining({ contentType: "application/json" })
     );
     if ("spilled" in result && result.spilled) {
       expect(result.objectName).toMatch(/\.json$/);

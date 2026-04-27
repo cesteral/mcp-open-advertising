@@ -32,13 +32,15 @@ afterEach(() => {
   }
 });
 
-async function createToken(overrides: {
-  sub?: string;
-  iss?: string;
-  aud?: string;
-  exp?: number;
-  secret?: string;
-} = {}): Promise<string> {
+async function createToken(
+  overrides: {
+    sub?: string;
+    iss?: string;
+    aud?: string;
+    exp?: number;
+    secret?: string;
+  } = {}
+): Promise<string> {
   const secretKey = new TextEncoder().encode(overrides.secret ?? SECRET);
   const builder = new jose.SignJWT({ sub: overrides.sub ?? "user-123" })
     .setProtectedHeader({ alg: "HS256" })
@@ -78,36 +80,28 @@ describe("jwt e2e — real token generation and verification", () => {
     const expiredTime = Math.floor(Date.now() / 1000) - 3600;
     const token = await createToken({ exp: expiredTime });
 
-    await expect(
-      strategy.verify({ authorization: `Bearer ${token}` })
-    ).rejects.toThrow(McpError);
+    await expect(strategy.verify({ authorization: `Bearer ${token}` })).rejects.toThrow(McpError);
   });
 
   it("invalid signature → rejected with McpError", async () => {
     const strategy = new JwtBearerAuthStrategy(SECRET);
     const token = await createToken({ secret: "wrong-secret-different-key-here" });
 
-    await expect(
-      strategy.verify({ authorization: `Bearer ${token}` })
-    ).rejects.toThrow(McpError);
+    await expect(strategy.verify({ authorization: `Bearer ${token}` })).rejects.toThrow(McpError);
   });
 
   it("wrong issuer → rejected", async () => {
     const strategy = new JwtBearerAuthStrategy(SECRET);
     const token = await createToken({ iss: "wrong-issuer" });
 
-    await expect(
-      strategy.verify({ authorization: `Bearer ${token}` })
-    ).rejects.toThrow(McpError);
+    await expect(strategy.verify({ authorization: `Bearer ${token}` })).rejects.toThrow(McpError);
   });
 
   it("wrong audience → rejected", async () => {
     const strategy = new JwtBearerAuthStrategy(SECRET);
     const token = await createToken({ aud: "wrong-audience" });
 
-    await expect(
-      strategy.verify({ authorization: `Bearer ${token}` })
-    ).rejects.toThrow(McpError);
+    await expect(strategy.verify({ authorization: `Bearer ${token}` })).rejects.toThrow(McpError);
   });
 
   it("missing Authorization header → rejected", async () => {

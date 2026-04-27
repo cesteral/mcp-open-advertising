@@ -31,11 +31,18 @@ export async function updateAdGroupsJobLogic(
   sdkContext?: SdkContext
 ): Promise<UpdateAdGroupsJobToolOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const job = (await ttdService.updateAdGroupsJob({
-    input: input.input,
-    ...(input.validateInputOnly !== undefined ? { validateInputOnly: input.validateInputOnly } : {}),
-    ...(input.callbackInput ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) } : {}),
-  }, context)) as Record<string, unknown>;
+  const job = (await ttdService.updateAdGroupsJob(
+    {
+      input: input.input,
+      ...(input.validateInputOnly !== undefined
+        ? { validateInputOnly: input.validateInputOnly }
+        : {}),
+      ...(input.callbackInput
+        ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) }
+        : {}),
+    },
+    context
+  )) as Record<string, unknown>;
   return { job, timestamp: new Date().toISOString() };
 }
 

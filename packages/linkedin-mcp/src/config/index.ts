@@ -23,10 +23,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["linkedin-bearer", "jwt", "none"]).default("linkedin-bearer"),
 
   // LinkedIn API Configuration
-  linkedinApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://api.linkedin.com"),
+  linkedinApiBaseUrl: z.string().url().default("https://api.linkedin.com"),
   linkedinApiVersion: z.string().default("202409"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.

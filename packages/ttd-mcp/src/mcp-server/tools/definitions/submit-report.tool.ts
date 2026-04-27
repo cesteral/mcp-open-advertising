@@ -21,9 +21,7 @@ Use \`ttd_get_report\` instead for a blocking convenience shortcut.`;
 
 export const SubmitReportInputSchema = z
   .object({
-    reportName: z
-      .string()
-      .describe("Name for the report"),
+    reportName: z.string().describe("Name for the report"),
     dateRange: z
       .enum([
         "Last7Days",
@@ -45,10 +43,7 @@ export const SubmitReportInputSchema = z
       .array(z.string())
       .optional()
       .describe("Report metrics (e.g., ['Impressions', 'Clicks', 'TotalCost'])"),
-    advertiserIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by advertiser IDs"),
+    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
     reportTemplateId: z
       .number()
       .optional()
@@ -96,10 +91,7 @@ export async function submitReportLogic(
     ...input.additionalConfig,
   };
 
-  const result = await ttdReportingService.createReportSchedule(
-    reportConfig,
-    context
-  );
+  const result = await ttdReportingService.createReportSchedule(reportConfig, context);
 
   return {
     reportScheduleId: result.reportScheduleId,

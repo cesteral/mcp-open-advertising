@@ -28,12 +28,7 @@ interface PinterestEntityMap {
   creative: PinterestPin;
 }
 
-export type {
-  PinterestCampaign,
-  PinterestAdGroup,
-  PinterestAd,
-  PinterestPin,
-};
+export type { PinterestCampaign, PinterestAdGroup, PinterestAd, PinterestPin };
 
 /** Pinterest v5 list response shape — cursor-based pagination */
 interface PinterestListResponse {
@@ -88,7 +83,7 @@ export class PinterestService {
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`);
 
-    const data = await this.httpClient.get(path, params, context) as PinterestListResponse;
+    const data = (await this.httpClient.get(path, params, context)) as PinterestListResponse;
 
     return {
       entities: (data?.items ?? []) as PinterestEntityMap[T][],
@@ -113,7 +108,9 @@ export class PinterestService {
         entityId,
       });
 
-      const result = await this.httpClient.get(path, {}, context) as PinterestListResponse | Record<string, unknown>;
+      const result = (await this.httpClient.get(path, {}, context)) as
+        | PinterestListResponse
+        | Record<string, unknown>;
 
       // If single-entity response (e.g. GET /v5/pins/{id}), return as-is
       if (!("items" in (result as object))) {
@@ -122,9 +119,7 @@ export class PinterestService {
 
       // Otherwise it's a list; find by id
       const list = (result as PinterestListResponse).items ?? [];
-      const entity = list.find(
-        (e) => (e as Record<string, unknown>)[config.idField] === entityId
-      );
+      const entity = list.find((e) => (e as Record<string, unknown>)[config.idField] === entityId);
       if (!entity) {
         throw new Error(`${config.displayName} with ID ${entityId} not found`);
       }
@@ -135,7 +130,11 @@ export class PinterestService {
     const listPath = interpolatePath(config.listPath, {
       adAccountId: filters.adAccountId,
     });
-    const data = await this.httpClient.get(listPath, { [config.idField]: entityId, page_size: "1" }, context) as PinterestListResponse;
+    const data = (await this.httpClient.get(
+      listPath,
+      { [config.idField]: entityId, page_size: "1" },
+      context
+    )) as PinterestListResponse;
     const list = data?.items ?? [];
     if (list.length === 0) {
       throw new Error(`${config.displayName} with ID ${entityId} not found`);
@@ -154,7 +153,7 @@ export class PinterestService {
 
     await this.rateLimiter.consume(`pinterest:${filters.adAccountId}`, 3);
 
-    const data = await this.httpClient.post(path, [body], context) as { items?: unknown[] };
+    const data = (await this.httpClient.post(path, [body], context)) as { items?: unknown[] };
     return (data?.items ?? [])[0] as PinterestEntityMap[T];
   }
 
@@ -177,11 +176,11 @@ export class PinterestService {
     }
 
     // Bulk endpoints expect an array body and return { items: [...] }
-    const data = await this.httpClient.patch(
+    const data = (await this.httpClient.patch(
       path,
       [{ id: entityId, ...(updates as object) }],
       context
-    ) as { items?: unknown[] };
+    )) as { items?: unknown[] };
     return (data?.items ?? [])[0] as PinterestEntityMap[T];
   }
 
@@ -199,7 +198,10 @@ export class PinterestService {
     if (config.deletePath.includes("{entityId}")) {
       const results = await Promise.all(
         entityIds.map((id) => {
-          const path = interpolatePath(config.deletePath, { adAccountId: filters.adAccountId, entityId: id });
+          const path = interpolatePath(config.deletePath, {
+            adAccountId: filters.adAccountId,
+            entityId: id,
+          });
           return this.httpClient.delete(path, {}, context);
         })
       );
@@ -208,11 +210,7 @@ export class PinterestService {
 
     // Bulk delete via query params (e.g. ?campaign_ids=id1,id2)
     const path = interpolatePath(config.deletePath, { adAccountId: filters.adAccountId });
-    return this.httpClient.delete(
-      path,
-      { [config.deleteIdsParam]: entityIds.join(",") },
-      context
-    );
+    return this.httpClient.delete(path, { [config.deleteIdsParam]: entityIds.join(",") }, context);
   }
 
   async updateEntityStatus(
@@ -229,9 +227,14 @@ export class PinterestService {
 
   // ─── Ad Accounts ──────────────────────────────────────────────────
 
-  async listAdAccounts(context?: RequestContext): Promise<{ entities: unknown[]; nextCursor?: string }> {
+  async listAdAccounts(
+    context?: RequestContext
+  ): Promise<{ entities: unknown[]; nextCursor?: string }> {
     await this.rateLimiter.consume("pinterest:default");
-    const response = await this.httpClient.get("/v5/ad_accounts", {}, context) as Record<string, unknown>;
+    const response = (await this.httpClient.get("/v5/ad_accounts", {}, context)) as Record<
+      string,
+      unknown
+    >;
     const entities = Array.isArray(response.items) ? response.items : [];
     const nextCursor = typeof response.bookmark === "string" ? response.bookmark : undefined;
     return { entities, nextCursor };
@@ -249,15 +252,30 @@ export class PinterestService {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsDuplicate) {
-      this.logger.debug({ entityType }, "Duplicate skipped: entity type does not support duplication");
+      this.logger.debug(
+        { entityType },
+        "Duplicate skipped: entity type does not support duplication"
+      );
       throw new Error(`Entity type ${entityType} does not support duplication`);
     }
 
     // Pinterest v5 has no native copy/duplicate endpoint — implement as client-side read+create.
     // Read source entity, strip system-managed fields, then create a new one.
-    const source = await this.getEntity(entityType, filters, entityId, context) as unknown as Record<string, unknown>;
+    const source = (await this.getEntity(
+      entityType,
+      filters,
+      entityId,
+      context
+    )) as unknown as Record<string, unknown>;
 
-    const SYSTEM_FIELDS = ["id", "created_time", "updated_time", "ad_account_id", "pin_count", "view_tags"] as const;
+    const SYSTEM_FIELDS = [
+      "id",
+      "created_time",
+      "updated_time",
+      "ad_account_id",
+      "pin_count",
+      "view_tags",
+    ] as const;
     const body: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(source)) {
       if (!(SYSTEM_FIELDS as readonly string[]).includes(key)) {
@@ -279,19 +297,40 @@ export class PinterestService {
     filters: { adAccountId: string },
     adjustments: Array<{ adGroupId: string; bidPrice: number }>,
     context?: RequestContext
-  ): Promise<{ results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> }> {
-    const results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> = [];
+  ): Promise<{
+    results: Array<{
+      adGroupId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }>;
+  }> {
+    const results: Array<{
+      adGroupId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }> = [];
 
     for (const adjustment of adjustments) {
       try {
         // Read current ad group state
         const entity = await this.getEntity("adGroup", filters, adjustment.adGroupId, context);
-        const previousBid = entity.bid_in_micro_currency != null ? Number(entity.bid_in_micro_currency) : undefined;
+        const previousBid =
+          entity.bid_in_micro_currency != null ? Number(entity.bid_in_micro_currency) : undefined;
 
         // Update bid
-        await this.updateEntity("adGroup", filters, adjustment.adGroupId, {
-          bid_in_micro_currency: adjustment.bidPrice,
-        }, context);
+        await this.updateEntity(
+          "adGroup",
+          filters,
+          adjustment.adGroupId,
+          {
+            bid_in_micro_currency: adjustment.bidPrice,
+          },
+          context
+        );
 
         results.push({
           adGroupId: adjustment.adGroupId,
@@ -319,9 +358,13 @@ export class PinterestService {
     items: unknown[],
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await executeBulkConcurrent(items, async (data) => {
-      return this.createEntity(entityType, filters, data, context);
-    }, { logger: this.logger });
+    const results = await executeBulkConcurrent(
+      items,
+      async (data) => {
+        return this.createEntity(entityType, filters, data, context);
+      },
+      { logger: this.logger }
+    );
     return { results };
   }
 
@@ -331,9 +374,13 @@ export class PinterestService {
     items: Array<{ entityId: string; data: unknown }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await executeBulkConcurrent(items, async (item) => {
-      return this.updateEntity(entityType, filters, item.entityId, item.data, context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      items,
+      async (item) => {
+        return this.updateEntity(entityType, filters, item.entityId, item.data, context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -353,9 +400,13 @@ export class PinterestService {
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     this.logger.debug({ entityType, count: entityIds.length, status }, "Bulk status update");
 
-    const bulkResults = await executeBulkConcurrent(entityIds, async (entityId) => {
-      return this.updateEntity(entityType, filters, entityId, { status }, context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      entityIds,
+      async (entityId) => {
+        return this.updateEntity(entityType, filters, entityId, { status }, context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -387,15 +438,25 @@ export class PinterestService {
     return this.httpClient.get(`/v5/targeting_options/${targetingType}`, params, context);
   }
 
-  async getTargetingOptions(
-    targetingType?: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getTargetingOptions(targetingType?: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume("pinterest:default");
 
     // If no type specified, return the list of supported targeting types
     if (!targetingType) {
-      return { targeting_types: ["APPTYPE", "GENDER", "LOCALE", "AGE_BUCKET", "LOCATION", "GEO", "INTEREST", "KEYWORD", "AUDIENCE_INCLUDE", "AUDIENCE_EXCLUDE"] };
+      return {
+        targeting_types: [
+          "APPTYPE",
+          "GENDER",
+          "LOCALE",
+          "AGE_BUCKET",
+          "LOCATION",
+          "GEO",
+          "INTEREST",
+          "KEYWORD",
+          "AUDIENCE_INCLUDE",
+          "AUDIENCE_EXCLUDE",
+        ],
+      };
     }
 
     return this.httpClient.get(`/v5/targeting_options/${targetingType}`, {}, context);
@@ -438,5 +499,4 @@ export class PinterestService {
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────
-
 }

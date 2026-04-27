@@ -96,7 +96,9 @@ describe("Amazon DSP entity mapping", () => {
 
   describe("interpolatePath", () => {
     it("replaces {entityId}", () => {
-      expect(interpolatePath("/dsp/orders/{entityId}", { entityId: "ord_1" })).toBe("/dsp/orders/ord_1");
+      expect(interpolatePath("/dsp/orders/{entityId}", { entityId: "ord_1" })).toBe(
+        "/dsp/orders/ord_1"
+      );
     });
   });
 });

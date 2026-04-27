@@ -6,7 +6,10 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import type { SnapchatMediaUploadResponse, SnapchatMediaGetResponse } from "../utils/media-types.js";
+import type {
+  SnapchatMediaUploadResponse,
+  SnapchatMediaGetResponse,
+} from "../utils/media-types.js";
 import { mcpConfig } from "../../../config/index.js";
 
 const TOOL_NAME = "snapchat_upload_video";
@@ -24,17 +27,21 @@ Polls until processing is complete (up to 10 minutes).
 
 **Usage:** The returned mediaId is used in creative payloads.`;
 
-export const UploadVideoInputSchema = z.object({
-  adAccountId: z.string().describe("Snapchat Ad Account ID"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
-  name: z.string().optional().describe("Optional name for the video in the library"),
-}).describe("Parameters for uploading a video to Snapchat");
+export const UploadVideoInputSchema = z
+  .object({
+    adAccountId: z.string().describe("Snapchat Ad Account ID"),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+    name: z.string().optional().describe("Optional name for the video in the library"),
+  })
+  .describe("Parameters for uploading a video to Snapchat");
 
-export const UploadVideoOutputSchema = z.object({
-  mediaId: z.string().describe("Media ID for use in creative payloads"),
-  mediaStatus: z.string().optional().describe("Final media processing status"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded Snapchat video info");
+export const UploadVideoOutputSchema = z
+  .object({
+    mediaId: z.string().describe("Media ID for use in creative payloads"),
+    mediaStatus: z.string().optional().describe("Final media processing status"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded Snapchat video info");
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
@@ -57,17 +64,19 @@ export async function uploadVideoLogic(
   );
 
   // Step 1: Create the media entity
-  const createResult = await snapchatService.client.post(
+  const createResult = (await snapchatService.client.post(
     `/v1/adaccounts/${input.adAccountId}/media`,
     {
-      media: [{
-        name: input.name ?? filename,
-        type: "VIDEO",
-        ad_account_id: input.adAccountId,
-      }],
+      media: [
+        {
+          name: input.name ?? filename,
+          type: "VIDEO",
+          ad_account_id: input.adAccountId,
+        },
+      ],
     },
     context
-  ) as SnapchatMediaUploadResponse;
+  )) as SnapchatMediaUploadResponse;
 
   const mediaItem = createResult.media?.[0]?.media;
   const mediaId = mediaItem?.id;
@@ -93,11 +102,11 @@ export async function uploadVideoLogic(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);
 
-    const statusResult = await snapchatService.client.get(
+    const statusResult = (await snapchatService.client.get(
       `/v1/media/${mediaId}`,
       undefined,
       context
-    ) as SnapchatMediaGetResponse;
+    )) as SnapchatMediaGetResponse;
 
     const statusItem = statusResult.media?.[0]?.media;
     const mediaStatus = statusItem?.media_status ?? "PENDING";
@@ -123,10 +132,12 @@ export async function uploadVideoLogic(
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Video uploaded to Snapchat!\n\nMedia ID: ${result.mediaId}${result.mediaStatus ? `\nStatus: ${result.mediaStatus}` : ""}\n\nUse mediaId in your creative payload`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Video uploaded to Snapchat!\n\nMedia ID: ${result.mediaId}${result.mediaStatus ? `\nStatus: ${result.mediaStatus}` : ""}\n\nUse mediaId in your creative payload`,
+    },
+  ];
 }
 
 export const uploadVideoTool = {

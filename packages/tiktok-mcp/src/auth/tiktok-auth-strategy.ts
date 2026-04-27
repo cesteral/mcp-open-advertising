@@ -46,7 +46,12 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
     if (!refreshCreds) return null;
 
     const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
-    const adapter = new TikTokRefreshTokenAdapter(refreshCreds, advertiserId, this.baseUrl, this.apiVersion);
+    const adapter = new TikTokRefreshTokenAdapter(
+      refreshCreds,
+      advertiserId,
+      this.baseUrl,
+      this.apiVersion
+    );
     await adapter.validate();
 
     return {
@@ -64,7 +69,12 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
   ): Promise<BearerAdapterResult> {
     const token = parseTikTokTokenFromHeaders(headers);
     const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
-    const adapter = new TikTokAccessTokenAdapter(token, advertiserId, this.baseUrl, this.apiVersion);
+    const adapter = new TikTokAccessTokenAdapter(
+      token,
+      advertiserId,
+      this.baseUrl,
+      this.apiVersion
+    );
     await adapter.validate();
 
     return {
@@ -85,9 +95,7 @@ export class TikTokBearerAuthStrategy extends BearerAuthStrategyBase {
     return getTikTokCredentialFingerprint(refreshCreds.appId, advertiserId);
   }
 
-  protected getTokenFingerprint(
-    headers: Record<string, string | string[] | undefined>
-  ): string {
+  protected getTokenFingerprint(headers: Record<string, string | string[] | undefined>): string {
     const token = parseTikTokTokenFromHeaders(headers);
     const advertiserId = getTikTokAdvertiserIdFromHeaders(headers);
     return getTikTokCredentialFingerprint(token, advertiserId);

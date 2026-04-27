@@ -148,7 +148,8 @@ Use \`pinterest_get_report\` or \`pinterest_get_report_breakdowns\` — these to
 export const reportingReferenceResource: Resource = {
   uri: "reporting-reference://pinterest",
   name: "Pinterest Reporting Reference",
-  description: "Available dimensions, metrics, report types, and example configurations for Pinterest Ads reporting",
+  description:
+    "Available dimensions, metrics, report types, and example configurations for Pinterest Ads reporting",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatReportingReferenceMarkdown();

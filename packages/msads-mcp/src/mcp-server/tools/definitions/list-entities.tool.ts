@@ -18,21 +18,13 @@ Supported entity types: ${getEntityTypeEnum().join(", ")}
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to list"),
-    accountId: z
-      .string()
-      .optional()
-      .describe("Microsoft Ads Account ID (for top-level entities)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to list"),
+    accountId: z.string().optional().describe("Microsoft Ads Account ID (for top-level entities)"),
     parentId: z
       .string()
       .optional()
       .describe("Parent entity ID (e.g., CampaignId for adGroups, AdGroupId for ads/keywords)"),
-    filters: z
-      .record(z.unknown())
-      .optional()
-      .describe("Additional filters to pass to the API"),
+    filters: z.record(z.unknown()).optional().describe("Additional filters to pass to the API"),
   })
   .superRefine((data, ctx) => {
     if (data.entityType === "campaign" && !data.accountId) {

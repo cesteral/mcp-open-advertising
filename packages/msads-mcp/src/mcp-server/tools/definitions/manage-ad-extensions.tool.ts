@@ -19,9 +19,7 @@ export const ManageAdExtensionsInputSchema = z
     operation: z
       .enum(["setAssociations", "deleteAssociations", "getAssociations"])
       .describe("Operation to perform"),
-    data: z
-      .record(z.unknown())
-      .describe("Operation data (varies by operation)"),
+    data: z.record(z.unknown()).describe("Operation data (varies by operation)"),
   })
   .describe("Parameters for managing ad extensions");
 
@@ -68,7 +66,9 @@ export async function manageAdExtensionsLogic(
   };
 }
 
-export function manageAdExtensionsResponseFormatter(result: ManageAdExtensionsOutput): McpTextContent[] {
+export function manageAdExtensionsResponseFormatter(
+  result: ManageAdExtensionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,
@@ -96,9 +96,7 @@ export const manageAdExtensionsTool = {
         operation: "setAssociations",
         data: {
           AccountId: 123456,
-          AdExtensionIdToEntityIdAssociations: [
-            { AdExtensionId: 111, EntityId: 222 },
-          ],
+          AdExtensionIdToEntityIdAssociations: [{ AdExtensionId: 111, EntityId: 222 }],
           AssociationType: "Campaign",
         },
       },

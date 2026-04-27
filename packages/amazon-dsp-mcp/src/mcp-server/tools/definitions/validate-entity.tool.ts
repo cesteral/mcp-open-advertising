@@ -51,19 +51,10 @@ reasons (e.g., invalid objective/placement combinations).`;
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
-    mode: z
-      .enum(["create", "update"])
-      .describe("Whether validating for creation or update"),
-    data: z
-      .record(z.any())
-      .describe("Entity payload to validate"),
-    profileId: z
-      .string()
-      .optional()
-      .describe("Advertiser ID (recommended for create mode)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
+    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
+    data: z.record(z.any()).describe("Entity payload to validate"),
+    profileId: z.string().optional().describe("Advertiser ID (recommended for create mode)"),
   })
   .describe("Parameters for validating a AmazonDsp Ads entity payload");
 
@@ -133,7 +124,9 @@ export async function validateEntityLogic(
     if (typeof budgetValue === "number") {
       // Flat number is only valid for orders
       if (canonicalEntityType === "lineItem") {
-        errors.push('Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }');
+        errors.push(
+          'Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }'
+        );
       } else if (budgetValue <= 0) {
         errors.push('Field "budget" must be a positive number');
       }

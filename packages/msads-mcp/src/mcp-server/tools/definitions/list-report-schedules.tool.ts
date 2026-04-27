@@ -16,9 +16,7 @@ If Microsoft Advertising exposed such an endpoint, this tool would return an arr
 To view scheduled reports: visit app.ads.microsoft.com → Reports → Scheduled Reports.
 To manage schedules programmatically, track the scheduleIds returned by msads_create_report_schedule.`;
 
-export const ListReportSchedulesInputSchema = z
-  .object({})
-  .describe("No parameters required");
+export const ListReportSchedulesInputSchema = z.object({}).describe("No parameters required");
 
 export const ListReportSchedulesOutputSchema = z
   .object({
@@ -45,7 +43,9 @@ export async function listReportSchedulesLogic(
   };
 }
 
-export function listReportSchedulesResponseFormatter(result: ListReportSchedulesOutput): McpTextContent[] {
+export function listReportSchedulesResponseFormatter(
+  result: ListReportSchedulesOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

@@ -68,9 +68,7 @@ const REQUIRED_FIELDS_CREATE: Record<SnapchatEntityType, FieldRule[]> = {
 };
 
 /** Fields that are always read-only and cannot be set via the API. */
-const READ_ONLY_FIELDS = [
-  "created_at", "updated_at", "review_status", "delivery_status",
-];
+const READ_ONLY_FIELDS = ["created_at", "updated_at", "review_status", "delivery_status"];
 
 // ---------------------------------------------------------------------------
 // Input / Output schemas
@@ -78,27 +76,12 @@ const READ_ONLY_FIELDS = [
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
-    mode: z
-      .enum(["create", "update"])
-      .describe("Whether validating for creation or update"),
-    data: z
-      .record(z.any())
-      .describe("Entity payload to validate"),
-    adAccountId: z
-      .string()
-      .optional()
-      .describe("Advertiser ID (recommended for create mode)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID required for adGroup updates"),
-    adSquadId: z
-      .string()
-      .optional()
-      .describe("Ad Squad ID required for ad updates"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
+    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
+    data: z.record(z.any()).describe("Entity payload to validate"),
+    adAccountId: z.string().optional().describe("Advertiser ID (recommended for create mode)"),
+    campaignId: z.string().optional().describe("Campaign ID required for adGroup updates"),
+    adSquadId: z.string().optional().describe("Ad Squad ID required for ad updates"),
   })
   .describe("Parameters for validating a Snapchat Ads entity payload");
 
@@ -137,11 +120,23 @@ export async function validateEntityLogic(
     const rules = REQUIRED_FIELDS_CREATE[entityType as SnapchatEntityType] ?? [];
     errors.push(...validateRequiredFields(data, rules));
 
-    if (entityType === "campaign" && data.daily_budget_micro === undefined && data.lifetime_spend_cap_micro === undefined) {
-      errors.push('Campaign create requires either "daily_budget_micro" or "lifetime_spend_cap_micro"');
+    if (
+      entityType === "campaign" &&
+      data.daily_budget_micro === undefined &&
+      data.lifetime_spend_cap_micro === undefined
+    ) {
+      errors.push(
+        'Campaign create requires either "daily_budget_micro" or "lifetime_spend_cap_micro"'
+      );
     }
-    if (entityType === "adGroup" && data.daily_budget_micro === undefined && data.lifetime_budget_micro === undefined) {
-      errors.push('Ad group create requires either "daily_budget_micro" or "lifetime_budget_micro"');
+    if (
+      entityType === "adGroup" &&
+      data.daily_budget_micro === undefined &&
+      data.lifetime_budget_micro === undefined
+    ) {
+      errors.push(
+        'Ad group create requires either "daily_budget_micro" or "lifetime_budget_micro"'
+      );
     }
   }
 
@@ -166,7 +161,12 @@ export async function validateEntityLogic(
   }
 
   // Budget warnings (both modes)
-  for (const budgetField of ["daily_budget_micro", "lifetime_budget_micro", "lifetime_spend_cap_micro", "bid_micro"]) {
+  for (const budgetField of [
+    "daily_budget_micro",
+    "lifetime_budget_micro",
+    "lifetime_spend_cap_micro",
+    "bid_micro",
+  ]) {
     const budgetValue = data[budgetField];
     if (budgetValue !== undefined && typeof budgetValue === "number" && budgetValue <= 0) {
       errors.push(`Field "${budgetField}" must be a positive number`);

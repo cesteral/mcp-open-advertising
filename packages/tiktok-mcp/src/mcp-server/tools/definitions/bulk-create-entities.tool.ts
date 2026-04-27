@@ -21,13 +21,13 @@ Max 50 items per call. advertiser_id is automatically injected per item.`;
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to create"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -84,7 +84,9 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): McpTextContent[] {
+export function bulkCreateEntitiesResponseFormatter(
+  result: BulkCreateEntitiesOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Bulk create: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

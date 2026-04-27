@@ -97,9 +97,7 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
     const data = (await response.json()) as TikTokUserInfoResponse;
 
     if (data.code !== 0) {
-      throw new Error(
-        `TikTok token validation failed: code=${data.code} message=${data.message}`
-      );
+      throw new Error(`TikTok token validation failed: code=${data.code} message=${data.message}`);
     }
 
     this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
@@ -189,9 +187,7 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
 
     const data = (await response.json()) as TikTokUserInfoResponse;
     if (data.code !== 0) {
-      throw new Error(
-        `TikTok token validation failed: code=${data.code} message=${data.message}`
-      );
+      throw new Error(`TikTok token validation failed: code=${data.code} message=${data.message}`);
     }
 
     this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
@@ -240,9 +236,7 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
 
     const data = (await response.json()) as TikTokTokenResponse;
     if (data.code !== 0 || !data.data?.access_token) {
-      throw new Error(
-        `TikTok token refresh failed: code=${data.code} message=${data.message}`
-      );
+      throw new Error(`TikTok token refresh failed: code=${data.code} message=${data.message}`);
     }
 
     this.cachedToken = data.data.access_token;
@@ -316,10 +310,7 @@ export function getTikTokAdvertiserIdFromHeaders(
 /**
  * Generate a fingerprint for a TikTok access token + advertiser ID pair (for session binding).
  */
-export function getTikTokCredentialFingerprint(
-  accessToken: string,
-  advertiserId: string
-): string {
+export function getTikTokCredentialFingerprint(accessToken: string, advertiserId: string): string {
   return createHash("sha256")
     .update(`${accessToken.trim()}:${advertiserId.trim()}`)
     .digest("hex")

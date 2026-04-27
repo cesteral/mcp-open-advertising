@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "tiktok_campaign_setup_workflow",
-  description: "Step-by-step guide for creating a complete TikTok Ads campaign structure (Campaign > Ad Group > Ad)",
+  description:
+    "Step-by-step guide for creating a complete TikTok Ads campaign structure (Campaign > Ad Group > Ad)",
   arguments: [
     {
       name: "advertiserId",

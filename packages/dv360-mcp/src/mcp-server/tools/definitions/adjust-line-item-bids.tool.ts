@@ -172,8 +172,9 @@ export async function adjustLineItemBidsLogic(
       if (currentLineItem.bidStrategy?.fixedBid?.bidAmountMicros) {
         previousBidMicros = Number(currentLineItem.bidStrategy.fixedBid.bidAmountMicros);
       } else if (currentLineItem.bidStrategy?.maximizeSpendAutoBid?.maxAverageCpmBidAmountMicros) {
-        previousBidMicros =
-          Number(currentLineItem.bidStrategy.maximizeSpendAutoBid.maxAverageCpmBidAmountMicros);
+        previousBidMicros = Number(
+          currentLineItem.bidStrategy.maximizeSpendAutoBid.maxAverageCpmBidAmountMicros
+        );
       }
 
       // Update bid — DV360 API expects int64 as string for bidAmountMicros
@@ -231,7 +232,9 @@ export async function adjustLineItemBidsLogic(
 /**
  * Format response for MCP client
  */
-export function adjustLineItemBidsResponseFormatter(result: AdjustLineItemBidsOutput): McpTextContent[] {
+export function adjustLineItemBidsResponseFormatter(
+  result: AdjustLineItemBidsOutput
+): McpTextContent[] {
   const summary = `Batch bid adjustment completed: ${result.totalSuccessful}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0
@@ -267,7 +270,12 @@ export const adjustLineItemBidsTool = {
       label: "Adjust a single line item bid",
       input: {
         adjustments: [
-          { advertiserId: "1234567", lineItemId: "7654321", newBidMicros: 4500000, reason: "Increase bid due to underdelivery" },
+          {
+            advertiserId: "1234567",
+            lineItemId: "7654321",
+            newBidMicros: 4500000,
+            reason: "Increase bid due to underdelivery",
+          },
         ],
       },
     },
@@ -277,7 +285,12 @@ export const adjustLineItemBidsTool = {
         adjustments: [
           { advertiserId: "1234567", lineItemId: "7654321", newBidMicros: 4500000 },
           { advertiserId: "1234567", lineItemId: "7654322", newBidMicros: 3200000 },
-          { advertiserId: "1234567", lineItemId: "7654323", newBidMicros: 6000000, reason: "Priority placement" },
+          {
+            advertiserId: "1234567",
+            lineItemId: "7654323",
+            newBidMicros: 6000000,
+            reason: "Priority placement",
+          },
         ],
       },
     },

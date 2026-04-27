@@ -21,20 +21,10 @@ AmazonDsp uses PUT to the entity-specific resource. Only provided fields are mod
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    profileId: z
-      .string()
-      .min(1)
-      .describe("AmazonDsp Advertiser ID"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
-    data: z
-      .record(z.any())
-      .describe("Fields to update as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
+    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
   })
   .describe("Parameters for updating a AmazonDsp Ads entity");
 

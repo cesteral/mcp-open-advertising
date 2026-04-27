@@ -5,15 +5,14 @@ const { mockResolveSessionServices } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js",
-  () => ({
-    getSupportedEntityTypesDynamic: vi.fn().mockReturnValue([
+vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () => ({
+  getSupportedEntityTypesDynamic: vi
+    .fn()
+    .mockReturnValue([
       "adGroup",
       "adGroupAd",
       "advertiser",
@@ -27,48 +26,46 @@ vi.mock(
       "locationList",
       "partner",
     ]),
-    getEntityConfigDynamic: vi.fn().mockReturnValue({
-      parentIds: ["advertiserId"],
-      filterParamIds: [],
-      queryParamIds: [],
-      supportsFilter: true,
-      supportsCreate: true,
-      supportsUpdate: true,
-      supportsDelete: true,
-      apiPath: "/advertisers/{advertiserId}/lineItems",
-    }),
-  })
-);
+  getEntityConfigDynamic: vi.fn().mockReturnValue({
+    parentIds: ["advertiserId"],
+    filterParamIds: [],
+    queryParamIds: [],
+    supportsFilter: true,
+    supportsCreate: true,
+    supportsUpdate: true,
+    supportsDelete: true,
+    apiPath: "/advertisers/{advertiserId}/lineItems",
+  }),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-id-extraction.js",
-  () => ({
-    extractEntityIds: vi.fn().mockImplementation(
-      (input: Record<string, unknown>, _entityType: string) => {
-        const ids: Record<string, string> = {};
-        for (const key of [
-          "partnerId", "advertiserId", "campaignId",
-          "insertionOrderId", "lineItemId", "adGroupId",
-          "adId", "creativeId",
-        ]) {
-          if (input[key] && typeof input[key] === "string") {
-            ids[key] = input[key] as string;
-          }
+vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", () => ({
+  extractEntityIds: vi
+    .fn()
+    .mockImplementation((input: Record<string, unknown>, _entityType: string) => {
+      const ids: Record<string, string> = {};
+      for (const key of [
+        "partnerId",
+        "advertiserId",
+        "campaignId",
+        "insertionOrderId",
+        "lineItemId",
+        "adGroupId",
+        "adId",
+        "creativeId",
+      ]) {
+        if (input[key] && typeof input[key] === "string") {
+          ids[key] = input[key] as string;
         }
-        return ids;
       }
-    ),
-    extractParentIds: vi.fn(),
-  })
-);
+      return ids;
+    }),
+  extractParentIds: vi.fn(),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/parent-id-validation.js",
-  () => ({
-    addIdValidationIssues: vi.fn(),
-    mergeIdsIntoData: vi.fn(),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/parent-id-validation.js", () => ({
+  addIdValidationIssues: vi.fn(),
+  mergeIdsIntoData: vi.fn(),
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {
@@ -195,9 +192,7 @@ describe("dv360_delete_entity", () => {
     });
 
     it("propagates errors from getEntity (entity not found)", async () => {
-      mockDv360Service.getEntity.mockRejectedValueOnce(
-        new Error("Entity not found")
-      );
+      mockDv360Service.getEntity.mockRejectedValueOnce(new Error("Entity not found"));
 
       await expect(
         deleteEntityLogic(
@@ -216,9 +211,7 @@ describe("dv360_delete_entity", () => {
     });
 
     it("propagates errors from deleteEntity", async () => {
-      mockDv360Service.deleteEntity.mockRejectedValueOnce(
-        new Error("Permission denied")
-      );
+      mockDv360Service.deleteEntity.mockRejectedValueOnce(new Error("Permission denied"));
 
       await expect(
         deleteEntityLogic(

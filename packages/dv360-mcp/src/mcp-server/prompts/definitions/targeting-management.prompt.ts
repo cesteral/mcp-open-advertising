@@ -21,8 +21,7 @@ export const targetingManagementPrompt: Prompt = {
     },
     {
       name: "parentType",
-      description:
-        "Parent entity type: insertionOrder, lineItem, or adGroup (default: lineItem)",
+      description: "Parent entity type: insertionOrder, lineItem, or adGroup (default: lineItem)",
       required: false,
     },
     {
@@ -34,9 +33,7 @@ export const targetingManagementPrompt: Prompt = {
   ],
 };
 
-export function getTargetingManagementPromptMessage(
-  args?: Record<string, string>,
-): string {
+export function getTargetingManagementPromptMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const parentType = args?.parentType || "lineItem";
   const goal = args?.goal || "discover";

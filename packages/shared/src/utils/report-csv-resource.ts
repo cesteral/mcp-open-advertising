@@ -17,7 +17,7 @@ export interface McpServerResourceLike {
     metadata: { description?: string; mimeType?: string },
     handler: (uri: { href: string }) => Promise<{
       contents: Array<{ uri: string; mimeType: string; text: string }>;
-    }>,
+    }>
   ): void;
 }
 
@@ -38,7 +38,7 @@ export interface ResourceTemplateLike {
           mimeType: string;
         }>;
       }>;
-    },
+    }
   ): unknown;
 }
 
@@ -71,27 +71,22 @@ export interface RegisterReportCsvResourceOptions {
  * class, and per-process `ReportCsvStore`; everything else (listing format,
  * read handler, not-found error) is identical across platforms.
  */
-export function registerReportCsvResource(
-  opts: RegisterReportCsvResourceOptions,
-): void {
+export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions): void {
   const { server, ResourceTemplate, store, platform, downloadToolName, logger } = opts;
 
-  const template = new ResourceTemplate(
-    `${REPORT_CSV_RESOURCE_SCHEME}://{id}`,
-    {
-      list: async () => ({
-        resources: store.list().map((entry) => ({
-          uri: buildReportCsvUri(entry.resourceId),
-          name: `${platform} report CSV ${entry.resourceId}`,
-          description:
-            `Stored ${platform} report CSV (${entry.byteLength} bytes` +
-            `${entry.truncated ? ", truncated" : ""}). ` +
-            `Expires at ${new Date(entry.expiresAt).toISOString()}.`,
-          mimeType: entry.mimeType,
-        })),
-      }),
-    },
-  );
+  const template = new ResourceTemplate(`${REPORT_CSV_RESOURCE_SCHEME}://{id}`, {
+    list: async () => ({
+      resources: store.list().map((entry) => ({
+        uri: buildReportCsvUri(entry.resourceId),
+        name: `${platform} report CSV ${entry.resourceId}`,
+        description:
+          `Stored ${platform} report CSV (${entry.byteLength} bytes` +
+          `${entry.truncated ? ", truncated" : ""}). ` +
+          `Expires at ${new Date(entry.expiresAt).toISOString()}.`,
+        mimeType: entry.mimeType,
+      })),
+    }),
+  });
 
   server.registerResource(
     "report_csv_template",
@@ -111,6 +106,6 @@ export function registerReportCsvResource(
       return {
         contents: [{ uri: uri.href, mimeType: entry.mimeType, text: entry.csv }],
       };
-    },
+    }
   );
 }

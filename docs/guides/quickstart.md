@@ -32,12 +32,12 @@ cp .env.example .env
 
 Edit `.env` with your Google Ads OAuth2 credentials. You need:
 
-| Variable | Description |
-|----------|-------------|
-| `GADS_DEVELOPER_TOKEN` | Google Ads developer token |
-| `GADS_CLIENT_ID` | OAuth2 client ID |
-| `GADS_CLIENT_SECRET` | OAuth2 client secret |
-| `GADS_REFRESH_TOKEN` | OAuth2 refresh token |
+| Variable                 | Description                              |
+| ------------------------ | ---------------------------------------- |
+| `GADS_DEVELOPER_TOKEN`   | Google Ads developer token               |
+| `GADS_CLIENT_ID`         | OAuth2 client ID                         |
+| `GADS_CLIENT_SECRET`     | OAuth2 client secret                     |
+| `GADS_REFRESH_TOKEN`     | OAuth2 refresh token                     |
 | `GADS_LOGIN_CUSTOMER_ID` | Manager account ID (optional, no dashes) |
 
 All packages share a single root `.env` file -- no per-package config needed.
@@ -76,10 +76,10 @@ Ask Claude: "List my Google Ads accounts" or "Show me campaign performance for t
 
 Same steps with these substitutions:
 
-| Setting | Value |
-|---------|-------|
-| Filter | `@cesteral/meta-mcp` |
-| Port | `3005` |
+| Setting        | Value                                                 |
+| -------------- | ----------------------------------------------------- |
+| Filter         | `@cesteral/meta-mcp`                                  |
+| Port           | `3005`                                                |
 | Key credential | `META_ACCESS_TOKEN` (Meta Marketing API access token) |
 
 [Meta server docs](../../packages/meta-mcp/README.md)
@@ -88,10 +88,10 @@ Same steps with these substitutions:
 
 Same steps with these substitutions:
 
-| Setting | Value |
-|---------|-------|
-| Filter | `@cesteral/dv360-mcp` |
-| Port | `3002` |
+| Setting        | Value                                                                             |
+| -------------- | --------------------------------------------------------------------------------- |
+| Filter         | `@cesteral/dv360-mcp`                                                             |
+| Port           | `3002`                                                                            |
 | Key credential | `DV360_SERVICE_ACCOUNT_JSON` (Google Cloud service account with DV360 API access) |
 
 [DV360 server docs](../../packages/dv360-mcp/README.md)

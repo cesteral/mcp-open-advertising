@@ -15,9 +15,7 @@ const TOOL_DESCRIPTION = `List SA360 entities of a given type with optional quer
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to list"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to list"),
     customerId: z
       .string()
       .regex(/^\d+$/, "customerId must be numeric")
@@ -25,7 +23,9 @@ export const ListEntitiesInputSchema = z
     filters: z
       .record(z.string())
       .optional()
-      .describe("Filter conditions as field:value pairs (e.g., { 'campaign.status': '= \\'ENABLED\\'' })"),
+      .describe(
+        "Filter conditions as field:value pairs (e.g., { 'campaign.status': '= \\'ENABLED\\'' })"
+      ),
     pageSize: z
       .number()
       .min(1)
@@ -33,14 +33,8 @@ export const ListEntitiesInputSchema = z
       .optional()
       .default(100)
       .describe("Number of results per page (default 100)"),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination"),
-    orderBy: z
-      .string()
-      .optional()
-      .describe("ORDER BY clause (e.g., 'campaign.name ASC')"),
+    pageToken: z.string().optional().describe("Page token for pagination"),
+    orderBy: z.string().optional().describe("ORDER BY clause (e.g., 'campaign.name ASC')"),
   })
   .describe("Parameters for listing SA360 entities");
 

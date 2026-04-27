@@ -114,7 +114,8 @@ export const entityExampleAllResource: Resource = {
   name: "All SA360 Entity Examples",
   description: "Combined query examples for all SA360 entity types",
   mimeType: "text/markdown",
-  getContent: () => getSupportedEntityTypes()
-    .map((t) => ENTITY_EXAMPLES[t])
-    .join("\n\n---\n\n"),
+  getContent: () =>
+    getSupportedEntityTypes()
+      .map((t) => ENTITY_EXAMPLES[t])
+      .join("\n\n---\n\n"),
 };

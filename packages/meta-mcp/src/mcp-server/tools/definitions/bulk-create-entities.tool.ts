@@ -22,12 +22,8 @@ const TOOL_DESCRIPTION = `Batch create multiple entities of the same type.
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to create"),
-    adAccountId: z
-      .string()
-      .describe("Ad Account ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
+    adAccountId: z.string().describe("Ad Account ID"),
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -72,7 +68,9 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): McpTextContent[] {
+export function bulkCreateEntitiesResponseFormatter(
+  result: BulkCreateEntitiesOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,
@@ -106,7 +104,12 @@ export const bulkCreateEntitiesTool = {
             optimization_goal: "LINK_CLICKS",
             billing_event: "IMPRESSIONS",
             daily_budget: 5000,
-            targeting: { age_min: 25, age_max: 34, genders: [1], geo_locations: { countries: ["US"] } },
+            targeting: {
+              age_min: 25,
+              age_max: 34,
+              genders: [1],
+              geo_locations: { countries: ["US"] },
+            },
             status: "PAUSED",
           },
           {
@@ -115,7 +118,12 @@ export const bulkCreateEntitiesTool = {
             optimization_goal: "LINK_CLICKS",
             billing_event: "IMPRESSIONS",
             daily_budget: 5000,
-            targeting: { age_min: 25, age_max: 34, genders: [2], geo_locations: { countries: ["US"] } },
+            targeting: {
+              age_min: 25,
+              age_max: 34,
+              genders: [2],
+              geo_locations: { countries: ["US"] },
+            },
             status: "PAUSED",
           },
         ],

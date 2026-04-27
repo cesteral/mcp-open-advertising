@@ -47,11 +47,7 @@ describe("TtdService advanced methods", () => {
     it("returns valid=true for create when API call succeeds", async () => {
       httpClient.fetch.mockResolvedValueOnce({ CampaignId: "c1" });
 
-      const result = await service.testCreateOrUpdate(
-        "campaign",
-        { CampaignName: "A" },
-        "create"
-      );
+      const result = await service.testCreateOrUpdate("campaign", { CampaignName: "A" }, "create");
 
       expect(result).toEqual({ valid: true });
       const [path, , options] = httpClient.fetch.mock.calls[0];
@@ -82,11 +78,7 @@ describe("TtdService advanced methods", () => {
         new McpError(JsonRpcErrorCode.InvalidRequest, "Invalid payload")
       );
 
-      const result = await service.testCreateOrUpdate(
-        "campaign",
-        { CampaignName: "" },
-        "create"
-      );
+      const result = await service.testCreateOrUpdate("campaign", { CampaignName: "" }, "create");
 
       expect(result.valid).toBe(false);
       expect(result.errors).toEqual(["Invalid payload"]);
@@ -137,14 +129,16 @@ describe("TtdService advanced methods", () => {
     it("uses read-modify-write: GET entity, set Availability=Archived, PUT full entity", async () => {
       // Single entity to keep assertion ordering simple
       httpClient.fetch
-        .mockResolvedValueOnce({ CampaignId: "c1", CampaignName: "Camp1", Availability: "Available" }) // GET
+        .mockResolvedValueOnce({
+          CampaignId: "c1",
+          CampaignName: "Camp1",
+          Availability: "Available",
+        }) // GET
         .mockResolvedValueOnce({}); // PUT result
 
       const result = await service.archiveEntities("campaign", ["c1"]);
 
-      expect(result.results).toEqual([
-        { entityId: "c1", success: true },
-      ]);
+      expect(result.results).toEqual([{ entityId: "c1", success: true }]);
 
       // GET then PUT
       expect(httpClient.fetch).toHaveBeenCalledTimes(2);
@@ -165,11 +159,7 @@ describe("TtdService advanced methods", () => {
         .mockResolvedValueOnce({ AdGroupId: "ag1", AdGroupName: "AG1", Availability: "Available" })
         .mockResolvedValueOnce({}); // PUT result
 
-      const result = await service.bulkUpdateStatus(
-        "adGroup",
-        ["ag1"],
-        "Paused"
-      );
+      const result = await service.bulkUpdateStatus("adGroup", ["ag1"], "Paused");
 
       expect(result.results).toEqual([{ entityId: "ag1", success: true }]);
       // GET
@@ -221,10 +211,9 @@ describe("TtdService advanced methods", () => {
     it("posts query and variables to the configured GraphQL URL via fetchDirect", async () => {
       httpClient.fetchDirect.mockResolvedValueOnce({ data: { advertiser: { id: "a1" } } });
 
-      const result = await service.graphqlQuery(
-        "query ($id: ID!) { advertiser(id: $id) { id } }",
-        { id: "a1" }
-      );
+      const result = await service.graphqlQuery("query ($id: ID!) { advertiser(id: $id) { id } }", {
+        id: "a1",
+      });
 
       expect(result).toEqual({ data: { advertiser: { id: "a1" } } });
       const [url, , options] = httpClient.fetchDirect.mock.calls[0];
@@ -237,12 +226,9 @@ describe("TtdService advanced methods", () => {
     it("passes TTD-GQL-Beta header when betaFeatures is provided", async () => {
       httpClient.fetchDirect.mockResolvedValueOnce({ data: {} });
 
-      await service.graphqlQuery(
-        "query { partners { nodes { id } } }",
-        undefined,
-        undefined,
-        { betaFeatures: "my-beta-flag" }
-      );
+      await service.graphqlQuery("query { partners { nodes { id } } }", undefined, undefined, {
+        betaFeatures: "my-beta-flag",
+      });
 
       const [, , options] = httpClient.fetchDirect.mock.calls[0];
       expect(options.headers).toEqual({ "TTD-GQL-Beta": "my-beta-flag" });
@@ -333,7 +319,10 @@ describe("TtdService advanced methods", () => {
 
       await service.createCampaignWorkflow({ primaryInput: { name: "Campaign" } });
       await service.updateCampaignWorkflow({ id: "camp-1", primaryInput: { name: "Updated" } });
-      await service.createAdGroupWorkflow({ campaignId: "camp-1", primaryInput: { name: "Ad Group" } });
+      await service.createAdGroupWorkflow({
+        campaignId: "camp-1",
+        primaryInput: { name: "Ad Group" },
+      });
       await service.updateAdGroupWorkflow({ id: "ag-1", primaryInput: { name: "Updated AG" } });
 
       expect(httpClient.fetch.mock.calls[0][0]).toBe("/campaign");

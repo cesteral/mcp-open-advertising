@@ -13,14 +13,13 @@ This permanently deletes the report resource. Use cm360_list_report_schedules to
 
 export const DeleteReportScheduleInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
     reportId: z
       .string()
       .min(1)
-      .describe("Report ID to delete (from cm360_create_report_schedule or cm360_list_report_schedules)"),
+      .describe(
+        "Report ID to delete (from cm360_create_report_schedule or cm360_list_report_schedules)"
+      ),
   })
   .describe("Parameters for deleting a CM360 report schedule");
 
@@ -51,7 +50,9 @@ export async function deleteReportScheduleLogic(
   };
 }
 
-export function deleteReportScheduleResponseFormatter(result: DeleteReportScheduleOutput): McpTextContent[] {
+export function deleteReportScheduleResponseFormatter(
+  result: DeleteReportScheduleOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

@@ -14,16 +14,9 @@ Returns a ReportRequestId that can be used with msads_check_report_status to pol
 
 export const SubmitReportInputSchema = z
   .object({
-    reportType: z
-      .string()
-      .describe("Report type (e.g., CampaignPerformanceReportRequest)"),
-    accountId: z
-      .string()
-      .describe("Microsoft Ads Account ID"),
-    columns: z
-      .array(z.string())
-      .min(1)
-      .describe("Report columns to include"),
+    reportType: z.string().describe("Report type (e.g., CampaignPerformanceReportRequest)"),
+    accountId: z.string().describe("Microsoft Ads Account ID"),
+    columns: z.array(z.string()).min(1).describe("Report columns to include"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -42,7 +35,8 @@ export const SubmitReportInputSchema = z
       .describe("Time aggregation (Daily, Weekly, Monthly, Hourly). Default: Daily"),
   })
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for submitting a Microsoft Ads report");

@@ -33,7 +33,7 @@ export const amazonDspEntityDuplicationWorkflowPrompt: Prompt = {
 };
 
 export function getAmazonDspEntityDuplicationWorkflowMessage(
-  args?: Record<string, string>,
+  args?: Record<string, string>
 ): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";

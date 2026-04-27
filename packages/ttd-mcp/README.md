@@ -32,35 +32,35 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 `ttd_download_report` accepts the shared bounded report-view params: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
 
-| Tool                      | Description                                  |
-| ------------------------- | -------------------------------------------- |
-| `ttd_get_report`          | Generate async report via MyReports V3 API   |
+| Tool                      | Description                                   |
+| ------------------------- | --------------------------------------------- |
+| `ttd_get_report`          | Generate async report via MyReports V3 API    |
 | `ttd_download_report`     | Download report CSV and return a bounded view |
-| `ttd_submit_report`       | Submit report without waiting (non-blocking) |
-| `ttd_check_report_status` | Single status check for a submitted report   |
+| `ttd_submit_report`       | Submit report without waiting (non-blocking)  |
+| `ttd_check_report_status` | Single status check for a submitted report    |
 
 ### Bulk Operations
 
-| Tool                          | Description                                             |
-| ----------------------------- | ------------------------------------------------------- |
-| `ttd_bulk_create_entities`    | Batch create campaigns/ad groups (up to 50)             |
-| `ttd_bulk_update_entities`    | Batch update campaigns/ad groups (up to 50)             |
-| `ttd_bulk_update_status`      | Batch pause/resume/archive entities                     |
-| `ttd_archive_entities`        | Batch archive (soft-delete) entities                    |
-| `ttd_adjust_bids`             | Batch adjust ad group bid CPMs (safe read-modify-write) |
-| `ttd_bulk_manage_bid_lists`   | Batch get/update bid lists (up to 50)                   |
+| Tool                        | Description                                             |
+| --------------------------- | ------------------------------------------------------- |
+| `ttd_bulk_create_entities`  | Batch create campaigns/ad groups (up to 50)             |
+| `ttd_bulk_update_entities`  | Batch update campaigns/ad groups (up to 50)             |
+| `ttd_bulk_update_status`    | Batch pause/resume/archive entities                     |
+| `ttd_archive_entities`      | Batch archive (soft-delete) entities                    |
+| `ttd_adjust_bids`           | Batch adjust ad group bid CPMs (safe read-modify-write) |
+| `ttd_bulk_manage_bid_lists` | Batch get/update bid lists (up to 50)                   |
 
 ### Bid Lists
 
-| Tool                    | Description                                                       |
-| ----------------------- | ----------------------------------------------------------------- |
-| `ttd_manage_bid_list`   | Create, get, or update a single bid list (`create`/`get`/`update`) |
+| Tool                  | Description                                                        |
+| --------------------- | ------------------------------------------------------------------ |
+| `ttd_manage_bid_list` | Create, get, or update a single bid list (`create`/`get`/`update`) |
 
 ### Audience / Seeds
 
-| Tool               | Description                                                                                                     |
-| ------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `ttd_manage_seed`  | Manage audience seeds via GraphQL (`create`, `update`, `get`, `set_default_advertiser`, `attach_to_campaign`) |
+| Tool              | Description                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------- |
+| `ttd_manage_seed` | Manage audience seeds via GraphQL (`create`, `update`, `get`, `set_default_advertiser`, `attach_to_campaign`) |
 
 ### Advanced (GraphQL)
 
@@ -74,27 +74,27 @@ Management and reporting server for The Trade Desk. Provides full CRUD operation
 
 ### MyReports Templates and Schedules
 
-| Tool                           | Description                                                    |
-| ------------------------------ | -------------------------------------------------------------- |
-| `ttd_create_report_template`   | Create a MyReports template via GraphQL                        |
-| `ttd_update_report_template`   | Replace an existing MyReports template via GraphQL             |
-| `ttd_get_report_template`      | Retrieve template structure, including result-set column IDs   |
-| `ttd_list_report_templates`    | List template headers via GraphQL cursor pagination            |
-| `ttd_create_template_schedule` | Create a one-time or recurring template schedule via GraphQL   |
-| `ttd_update_report_schedule`   | Enable or disable an existing report schedule via GraphQL      |
-| `ttd_cancel_report_execution`  | Cancel an in-progress report execution via GraphQL             |
-| `ttd_rerun_report_schedule`    | Trigger a fresh execution from an existing schedule            |
-| `ttd_get_report_executions`    | Retrieve execution history, statuses, and download links       |
-| `ttd_create_report_schedule`   | Legacy-compatible REST wrapper for schedule creation           |
-| `ttd_list_report_schedules`    | List existing report schedules                                 |
-| `ttd_get_report_schedule`      | Get a specific report schedule                                 |
-| `ttd_delete_report_schedule`   | Delete a report schedule                                       |
+| Tool                           | Description                                                  |
+| ------------------------------ | ------------------------------------------------------------ |
+| `ttd_create_report_template`   | Create a MyReports template via GraphQL                      |
+| `ttd_update_report_template`   | Replace an existing MyReports template via GraphQL           |
+| `ttd_get_report_template`      | Retrieve template structure, including result-set column IDs |
+| `ttd_list_report_templates`    | List template headers via GraphQL cursor pagination          |
+| `ttd_create_template_schedule` | Create a one-time or recurring template schedule via GraphQL |
+| `ttd_update_report_schedule`   | Enable or disable an existing report schedule via GraphQL    |
+| `ttd_cancel_report_execution`  | Cancel an in-progress report execution via GraphQL           |
+| `ttd_rerun_report_schedule`    | Trigger a fresh execution from an existing schedule          |
+| `ttd_get_report_executions`    | Retrieve execution history, statuses, and download links     |
+| `ttd_create_report_schedule`   | Legacy-compatible REST wrapper for schedule creation         |
+| `ttd_list_report_schedules`    | List existing report schedules                               |
+| `ttd_get_report_schedule`      | Get a specific report schedule                               |
+| `ttd_delete_report_schedule`   | Delete a report schedule                                     |
 
 ### Preview
 
-| Tool                 | Description                                       |
-| -------------------- | ------------------------------------------------- |
-| `ttd_get_ad_preview` | Get preview URL and metadata for a TTD creative   |
+| Tool                 | Description                                     |
+| -------------------- | ----------------------------------------------- |
+| `ttd_get_ad_preview` | Get preview URL and metadata for a TTD creative |
 
 ## GraphQL API Reference
 
@@ -115,7 +115,14 @@ Same `TTD-Auth` token as the REST API. Set via session headers (HTTP mode) or `T
 ### Cold Start
 
 ```graphql
-{ partners { nodes { id name } } }
+{
+  partners {
+    nodes {
+      id
+      name
+    }
+  }
+}
 ```
 
 Returns all accessible partner IDs. Use with `ttd_list_entities` (entityType: `"advertiser"`) or the `ttd_get_context` tool.
@@ -124,10 +131,10 @@ Returns all accessible partner IDs. Use with `ttd_list_entities` (entityType: `"
 
 TTD uses two styles depending on the endpoint:
 
-| Style | Used for |
-|-------|---------|
+| Style                                                       | Used for                                     |
+| ----------------------------------------------------------- | -------------------------------------------- |
 | `edges { node { ... } } pageInfo { hasNextPage endCursor }` | campaigns, adGroups, and most entity queries |
-| `nodes { ... } pageInfo { hasNextPage endCursor }` | partners, report templates |
+| `nodes { ... } pageInfo { hasNextPage endCursor }`          | partners, report templates                   |
 
 Add `first: N` and `after: "cursor"` for forward pagination.
 
@@ -138,10 +145,15 @@ All mutations return `data` + `errors` (or `userErrors` on entity report mutatio
 ```graphql
 mutation ExampleMutation($input: ExampleInput!) {
   exampleMutation(input: $input) {
-    data { id }
+    data {
+      id
+    }
     errors {
       __typename
-      ... on MutationError { field message }
+      ... on MutationError {
+        field
+        message
+      }
     }
   }
 }
@@ -151,13 +163,13 @@ Enum values are UPPERCASE in JSON variables (`"format": "EXCEL"`, `"dateFormat":
 
 ### Seed / Audience Management
 
-| Operation | Mutation / Query |
-|-----------|-----------------|
-| Create seed | `seedCreate(input: { advertiserId, name, ... })` |
-| Update seed | `seedUpdate(input: { id, ... })` |
-| Get seed | `query { seed(id: $id) { id name status quality activeSeedIdCount } }` |
-| Set advertiser default seed | `advertiserSetDefaultSeed(input: { advertiserId, seedId })` |
-| Attach seed to campaign | `campaignUpdateSeed(input: { campaignId, seedId })` |
+| Operation                   | Mutation / Query                                                       |
+| --------------------------- | ---------------------------------------------------------------------- |
+| Create seed                 | `seedCreate(input: { advertiserId, name, ... })`                       |
+| Update seed                 | `seedUpdate(input: { id, ... })`                                       |
+| Get seed                    | `query { seed(id: $id) { id name status quality activeSeedIdCount } }` |
+| Set advertiser default seed | `advertiserSetDefaultSeed(input: { advertiserId, seedId })`            |
+| Attach seed to campaign     | `campaignUpdateSeed(input: { campaignId, seedId })`                    |
 
 Use `ttd_manage_seed` to execute these without writing GraphQL manually.
 
@@ -168,8 +180,13 @@ Run the same query or mutation across many variable sets in parallel:
 ```graphql
 mutation CreateQueryBulk($input: CreateQueryBulkInput!) {
   createQueryBulk(input: $input) {
-    data { id status }
-    errors { __typename }
+    data {
+      id
+      status
+    }
+    errors {
+      __typename
+    }
   }
 }
 ```
@@ -182,14 +199,14 @@ Poll with `{ bulkJob(id: $id) { status url } }` — results expire after **1 hou
 
 All GraphQL errors return HTTP 200. Check `errors[].extensions.code`:
 
-| Code | Meaning |
-|------|---------|
-| `AUTHENTICATION_FAILURE` | Invalid or expired token |
-| `VALIDATION_FAILURE` | Input failed server-side validation |
-| `GRAPHQL_VALIDATION_FAILED` | Query syntax / field error |
-| `RESOURCE_LIMIT_EXCEEDED` | Rate or complexity limit hit — reduce page size or retry |
-| `NOT_FOUND` | Entity does not exist |
-| `UNAUTHORIZED_FIELD_OR_TYPE` | Feature not enabled on account (e.g. MyReports) |
+| Code                         | Meaning                                                  |
+| ---------------------------- | -------------------------------------------------------- |
+| `AUTHENTICATION_FAILURE`     | Invalid or expired token                                 |
+| `VALIDATION_FAILURE`         | Input failed server-side validation                      |
+| `GRAPHQL_VALIDATION_FAILED`  | Query syntax / field error                               |
+| `RESOURCE_LIMIT_EXCEEDED`    | Rate or complexity limit hit — reduce page size or retry |
+| `NOT_FOUND`                  | Entity does not exist                                    |
+| `UNAUTHORIZED_FIELD_OR_TYPE` | Feature not enabled on account (e.g. MyReports)          |
 
 ---
 

@@ -33,7 +33,10 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 import { createMcpServer, runStdioServer } from "../../src/mcp-server/server.js";
-import { createMcpHttpServer, startHttpServer } from "../../src/mcp-server/transports/streamable-http-transport.js";
+import {
+  createMcpHttpServer,
+  startHttpServer,
+} from "../../src/mcp-server/transports/streamable-http-transport.js";
 
 describe("LinkedIn server + transport", () => {
   it("registers tools/resources/prompts and connects stdio", async () => {
@@ -59,7 +62,10 @@ describe("LinkedIn server + transport", () => {
       linkedinAccessToken: "token",
     } as any;
 
-    hoisted.createHttpTransport.mockReturnValueOnce({ app: { ok: true }, shutdown: async () => {} });
+    hoisted.createHttpTransport.mockReturnValueOnce({
+      app: { ok: true },
+      shutdown: async () => {},
+    });
     hoisted.startHttpServer.mockResolvedValueOnce({ app: { ok: true }, shutdown: async () => {} });
 
     const http = createMcpHttpServer(config, logger);

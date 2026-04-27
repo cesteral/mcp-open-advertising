@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "cm360_campaign_setup_workflow",
-  description:
-    "Step-by-step guide for creating a complete CM360 campaign structure",
+  description: "Step-by-step guide for creating a complete CM360 campaign structure",
   arguments: [
     {
       name: "profileId",
@@ -21,9 +20,7 @@ export const campaignSetupWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getCampaignSetupWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
   const advertiserId = args?.advertiserId || "{advertiserId}";
   return `# CM360 Campaign Setup Workflow

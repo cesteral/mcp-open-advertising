@@ -6,12 +6,14 @@ import {
   REPORT_CSV_RESOURCE_SCHEME,
 } from "../../src/utils/report-csv-store.js";
 
-function makeStore(opts: {
-  ttlMs?: number;
-  maxEntries?: number;
-  maxBytes?: number;
-  startTime?: number;
-} = {}) {
+function makeStore(
+  opts: {
+    ttlMs?: number;
+    maxEntries?: number;
+    maxBytes?: number;
+    startTime?: number;
+  } = {}
+) {
   let now = opts.startTime ?? 1_000_000;
   let counter = 0;
   const store = new ReportCsvStore({

@@ -12,12 +12,8 @@ import {
   createTemplateScheduleLogic,
   CreateTemplateScheduleInputSchema,
 } from "../../src/mcp-server/tools/definitions/create-template-schedule.tool.js";
-import {
-  getReportTemplateLogic,
-} from "../../src/mcp-server/tools/definitions/get-report-template.tool.js";
-import {
-  listReportTemplatesLogic,
-} from "../../src/mcp-server/tools/definitions/list-report-templates.tool.js";
+import { getReportTemplateLogic } from "../../src/mcp-server/tools/definitions/get-report-template.tool.js";
+import { listReportTemplatesLogic } from "../../src/mcp-server/tools/definitions/list-report-templates.tool.js";
 
 function createMockContext() {
   return {
@@ -160,12 +156,8 @@ describe("ttd report template tools", () => {
           resultSets: [
             {
               reportType: { name: "Campaign" },
-              fields: [
-                { columnOrder: 1, includedInPivot: true, isOverlapColumn: false },
-              ],
-              metrics: [
-                { columnOrder: 2, includedInPivot: true, isOverlapColumn: false },
-              ],
+              fields: [{ columnOrder: 1, includedInPivot: true, isOverlapColumn: false }],
+              metrics: [{ columnOrder: 2, includedInPivot: true, isOverlapColumn: false }],
             },
           ],
         },

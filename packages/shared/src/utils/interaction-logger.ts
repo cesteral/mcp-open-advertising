@@ -107,11 +107,19 @@ export function generateEntryId(input: GenerateEntryIdInput): string {
 // Keys are redacted if they contain any of these substrings (case-insensitive).
 // Covers: access_token, refresh_token, api_secret, app_secret, client_secret,
 // authorization, x-ttd-api-secret, x-pinterest-app-secret, etc.
-const SENSITIVE_KEY_PATTERNS = ["secret", "token", "authorization", "password", "key", "credential", "partner-id"];
+const SENSITIVE_KEY_PATTERNS = [
+  "secret",
+  "token",
+  "authorization",
+  "password",
+  "key",
+  "credential",
+  "partner-id",
+];
 
 function isSensitiveKey(key: string): boolean {
   const lower = key.toLowerCase();
-  return SENSITIVE_KEY_PATTERNS.some(pattern => lower.includes(pattern));
+  return SENSITIVE_KEY_PATTERNS.some((pattern) => lower.includes(pattern));
 }
 
 // ---------------------------------------------------------------------------
@@ -184,7 +192,8 @@ export class InteractionLogger {
     // implicit (gcs if bucket is set, else file). This keeps self-hosters one
     // env var away from stdout routing without touching per-server construction.
     const envMode = process.env.INTERACTION_LOG_MODE as InteractionLogMode | undefined;
-    const validEnvMode = envMode === "file" || envMode === "gcs" || envMode === "stdout" ? envMode : undefined;
+    const validEnvMode =
+      envMode === "file" || envMode === "gcs" || envMode === "stdout" ? envMode : undefined;
     this.mode = options.mode ?? validEnvMode ?? (this.gcsBucket ? "gcs" : "file");
 
     if (this.mode === "gcs" && !this.gcsBucket) {
@@ -223,7 +232,7 @@ export class InteractionLogger {
         const level = entry.type === "tool_failure" || entry.success === false ? "error" : "info";
         this.logger[level](
           { event: "mcp.interaction", interaction: entry },
-          `mcp.interaction ${entry.type ?? "tool_call"} ${entry.tool}`,
+          `mcp.interaction ${entry.type ?? "tool_call"} ${entry.tool}`
         );
         return;
       }
@@ -249,12 +258,14 @@ export class InteractionLogger {
    * analysis (BigQuery, log queries) can correlate failures to platform
    * responses without replaying the call.
    */
-  logFailure(entry: Omit<InteractionLogEntry, "type" | "success"> & {
-    errorCode?: number | string;
-    errorMessage?: string;
-    errorData?: unknown;
-    upstream?: UpstreamHttpRecord[];
-  }): void {
+  logFailure(
+    entry: Omit<InteractionLogEntry, "type" | "success"> & {
+      errorCode?: number | string;
+      errorMessage?: string;
+      errorData?: unknown;
+      upstream?: UpstreamHttpRecord[];
+    }
+  ): void {
     this.append({ ...entry, type: "tool_failure", success: false });
   }
 

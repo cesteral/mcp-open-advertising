@@ -18,23 +18,16 @@ import {
 } from "./sa360-auth-adapter.js";
 
 export class SA360HeadersAuthStrategy implements AuthStrategy {
-  constructor(
-    private readonly logger?: Logger
-  ) {}
+  constructor(private readonly logger?: Logger) {}
 
-  async verify(
-    headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
+  async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
     const credentials = parseSA360CredentialsFromHeaders(headers);
     const adapter = new SA360RefreshTokenAuthAdapter(credentials);
 
     // Validate by attempting to get an access token
     await adapter.getAccessToken();
 
-    this.logger?.debug(
-      { clientId: credentials.clientId },
-      "SA360 credentials validated"
-    );
+    this.logger?.debug({ clientId: credentials.clientId }, "SA360 credentials validated");
 
     const fingerprint = getSA360CredentialFingerprint(credentials);
 

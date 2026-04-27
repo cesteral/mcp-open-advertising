@@ -45,8 +45,16 @@ describe("tiktok_list_entities tool", () => {
   describe("listEntitiesLogic()", () => {
     it("returns formatted entity list with pagination info", async () => {
       const mockEntities = [
-        { campaign_id: "1800000001", campaign_name: "Campaign A", status: "CAMPAIGN_STATUS_ENABLE" },
-        { campaign_id: "1800000002", campaign_name: "Campaign B", status: "CAMPAIGN_STATUS_DISABLE" },
+        {
+          campaign_id: "1800000001",
+          campaign_name: "Campaign A",
+          status: "CAMPAIGN_STATUS_ENABLE",
+        },
+        {
+          campaign_id: "1800000002",
+          campaign_name: "Campaign B",
+          status: "CAMPAIGN_STATUS_DISABLE",
+        },
       ];
 
       mockListEntities.mockResolvedValueOnce({

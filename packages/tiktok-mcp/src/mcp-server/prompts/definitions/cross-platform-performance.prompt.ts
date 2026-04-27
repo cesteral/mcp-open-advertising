@@ -23,9 +23,7 @@ export const crossPlatformPerformancePrompt: Prompt = {
   ],
 };
 
-export function getCrossPlatformPerformanceMessage(
-  args?: Record<string, string>,
-): string {
+export function getCrossPlatformPerformanceMessage(args?: Record<string, string>): string {
   const dateRange = args?.dateRange || "LAST_7_DAYS";
 
   return `# Cross-Platform Performance Comparison

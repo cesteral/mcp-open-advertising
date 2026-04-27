@@ -28,6 +28,7 @@ cesteral-mcp-servers/
 ```
 
 **How `dotenv.config()` works:**
+
 - Searches for `.env` file starting from current directory
 - Walks UP the directory tree until it finds `.env`
 - In a monorepo, it finds the **root `.env`**
@@ -210,6 +211,7 @@ cp .env.example .env
 If you want package-specific documentation, create lightweight `.env.example` files:
 
 **`packages/dv360-mcp/.env.example`:**
+
 ```bash
 # DV360 MCP Server - Environment Variables
 # See root .env.example for full configuration
@@ -224,6 +226,7 @@ If you want package-specific documentation, create lightweight `.env.example` fi
 ```
 
 **Benefits of package-level `.env.example`:**
+
 - Quick reference for developers working on one package
 - Documents which variables are relevant to this package
 - Doesn't duplicate values, just references root
@@ -235,6 +238,7 @@ If you want package-specific documentation, create lightweight `.env.example` fi
 ### Local Development
 
 **1. First Time Setup:**
+
 ```bash
 # Clone repo
 git clone https://github.com/your-org/cesteral-mcp-servers.git
@@ -248,6 +252,7 @@ vim .env
 ```
 
 **2. Run Any Package:**
+
 ```bash
 # All packages automatically load root .env
 cd packages/dv360-mcp
@@ -256,6 +261,7 @@ pnpm run dev:http
 ```
 
 **3. Override for Testing:**
+
 ```bash
 # Temporarily override for one run
 DV360_MCP_PORT=9999 pnpm run dev:http
@@ -315,6 +321,7 @@ resource "google_cloud_run_service" "dv360_mcp" {
 If you ever need package-specific environment files, use `dotenv` path option:
 
 **`packages/dv360-mcp/src/config/index.ts`:**
+
 ```typescript
 import { config } from "dotenv";
 import path from "path";
@@ -327,6 +334,7 @@ config({ path: path.join(__dirname, "../../.env.dv360") });
 ```
 
 This gives you:
+
 1. Shared variables from root `.env`
 2. Package-specific overrides from `.env.dv360`
 
@@ -354,11 +362,12 @@ Load different files based on NODE_ENV:
 ```typescript
 import { config } from "dotenv";
 
-const envFile = process.env.NODE_ENV === "production"
-  ? ".env.production"
-  : process.env.NODE_ENV === "staging"
-  ? ".env.staging"
-  : ".env";
+const envFile =
+  process.env.NODE_ENV === "production"
+    ? ".env.production"
+    : process.env.NODE_ENV === "staging"
+      ? ".env.staging"
+      : ".env";
 
 config({ path: envFile });
 ```
@@ -401,6 +410,7 @@ OTEL_ENABLED=false                # Optional: Default false
 ### "Config not loading" / "Undefined environment variable"
 
 **Check dotenv is loading:**
+
 ```typescript
 // src/config/index.ts
 import { config } from "dotenv";
@@ -411,6 +421,7 @@ console.log("DV360_MCP_PORT:", process.env.DV360_MCP_PORT);
 ```
 
 **Check .env file location:**
+
 ```bash
 # From package directory
 pwd
@@ -421,6 +432,7 @@ ls ../../.env
 ```
 
 **Check .env is not in .gitignore by mistake:**
+
 ```bash
 git check-ignore .env
 # Should return nothing if .env is correctly gitignored
@@ -429,6 +441,7 @@ git check-ignore .env
 ### "Different packages see different values"
 
 This shouldn't happen with root `.env`. If it does:
+
 1. Check you're not loading package-specific `.env` files
 2. Verify `dotenv.config()` is called before reading `process.env`
 3. Restart dev server (env changes require restart)

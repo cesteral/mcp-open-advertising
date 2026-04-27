@@ -16,10 +16,7 @@ Use \`ttd_list_report_schedules\` to find the schedule ID.`;
 
 export const DeleteReportScheduleInputSchema = z
   .object({
-    scheduleId: z
-      .string()
-      .min(1)
-      .describe("Report schedule ID to delete"),
+    scheduleId: z.string().min(1).describe("Report schedule ID to delete"),
   })
   .describe("Parameters for deleting a TTD report schedule");
 

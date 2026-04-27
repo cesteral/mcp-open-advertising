@@ -7,11 +7,7 @@ export type AmazonDspOrderStatus = "ENABLED" | "PAUSED" | "ARCHIVED";
 export type AmazonDspLineItemStatus = "ENABLED" | "PAUSED" | "ARCHIVED";
 export type AmazonDspCreativeStatus = "ACTIVE" | "INACTIVE" | "ARCHIVED";
 export type AmazonDspBudgetType = "DAILY" | "LIFETIME";
-export type AmazonDspLineItemType =
-  | "standardDisplay"
-  | "video"
-  | "mobile"
-  | "interstitial";
+export type AmazonDspLineItemType = "standardDisplay" | "video" | "mobile" | "interstitial";
 export type AmazonDspCreativeType = "STANDARD_DISPLAY" | "VIDEO" | "RICH_MEDIA";
 export type AmazonDspBidOptimization =
   | "AUTO"
@@ -191,9 +187,7 @@ export function isAmazonDspOrder(value: unknown): value is AmazonDspOrder {
   );
 }
 
-export function isAmazonDspLineItem(
-  value: unknown
-): value is AmazonDspLineItem {
+export function isAmazonDspLineItem(value: unknown): value is AmazonDspLineItem {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -202,9 +196,7 @@ export function isAmazonDspLineItem(
   );
 }
 
-export function isAmazonDspCreative(
-  value: unknown
-): value is AmazonDspCreative {
+export function isAmazonDspCreative(value: unknown): value is AmazonDspCreative {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -213,9 +205,7 @@ export function isAmazonDspCreative(
   );
 }
 
-export function isAmazonDspApiError(
-  value: unknown
-): value is AmazonDspApiError {
+export function isAmazonDspApiError(value: unknown): value is AmazonDspApiError {
   return (
     typeof value === "object" &&
     value !== null &&

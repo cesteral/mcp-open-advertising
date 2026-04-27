@@ -160,9 +160,7 @@ describe("MetaInsightsService", () => {
     });
 
     it("returns data from response", async () => {
-      const insightsData = [
-        { impressions: "1000", clicks: "50", spend: "25.00" },
-      ];
+      const insightsData = [{ impressions: "1000", clicks: "50", spend: "25.00" }];
       httpClient.get.mockResolvedValueOnce({ data: insightsData });
 
       const result = await service.getInsights("campaign-123", {});

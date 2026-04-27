@@ -19,36 +19,31 @@ Snapchat status updates are sent as full-object PUTs to the parent collection ro
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID required when entityType is 'adGroup'"),
-    adSquadId: z
-      .string()
-      .optional()
-      .describe("Ad Squad ID required when entityType is 'ad'"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
+    campaignId: z.string().optional().describe("Campaign ID required when entityType is 'adGroup'"),
+    adSquadId: z.string().optional().describe("Ad Squad ID required when entityType is 'ad'"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
-    operationStatus: z
-      .enum(["ACTIVE", "PAUSED"])
-      .describe("Target status to apply"),
+    operationStatus: z.enum(["ACTIVE", "PAUSED"]).describe("Target status to apply"),
   })
   .superRefine((data, ctx) => {
     if (data.entityType === "adGroup" && !data.campaignId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["campaignId"], message: "campaignId is required for adGroup status updates" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["campaignId"],
+        message: "campaignId is required for adGroup status updates",
+      });
     }
     if (data.entityType === "ad" && !data.adSquadId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["adSquadId"], message: "adSquadId is required for ad status updates" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["adSquadId"],
+        message: "adSquadId is required for ad status updates",
+      });
     }
   })
   .describe("Parameters for bulk status update of Snapchat Ads entities");
@@ -102,7 +97,9 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Status updates: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

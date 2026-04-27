@@ -146,11 +146,7 @@ describe("getReportLogic", () => {
     });
 
     await expect(
-      getReportLogic(
-        { reportName: "Test", dateRange: "Last7Days" },
-        createMockContext(),
-        undefined
-      )
+      getReportLogic({ reportName: "Test", dateRange: "Last7Days" }, createMockContext(), undefined)
     ).rejects.toThrow("No session ID available.");
   });
 

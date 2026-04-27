@@ -27,13 +27,8 @@ LinkedIn does not have a native copy API endpoint, so this tool:
 
 export const DuplicateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to duplicate"),
-    entityUrn: z
-      .string()
-      .min(1)
-      .describe("The source entity URN to copy"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to duplicate"),
+    entityUrn: z.string().min(1).describe("The source entity URN to copy"),
     newName: z
       .string()
       .optional()

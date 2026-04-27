@@ -26,16 +26,8 @@ export const SearchTargetingInputSchema = z
     type: z
       .string()
       .describe("Search type (adinterest, adinterestsuggestion, adgeolocation, adlocale, etc.)"),
-    query: z
-      .string()
-      .min(1)
-      .describe("Search keyword or query"),
-    limit: z
-      .number()
-      .min(1)
-      .max(100)
-      .optional()
-      .describe("Max results to return (default 25)"),
+    query: z.string().min(1).describe("Search keyword or query"),
+    limit: z.number().min(1).max(100).optional().describe("Max results to return (default 25)"),
   })
   .describe("Parameters for searching targeting options");
 
@@ -64,7 +56,7 @@ export async function searchTargetingLogic(
     context
   );
 
-  const data = (result as Record<string, unknown>)?.data as unknown[] || [];
+  const data = ((result as Record<string, unknown>)?.data as unknown[]) || [];
 
   return {
     results: data as Record<string, unknown>[],
@@ -75,9 +67,10 @@ export async function searchTargetingLogic(
 
 export function searchTargetingResponseFormatter(result: SearchTargetingOutput): McpTextContent[] {
   const summary = `Found ${result.totalCount} targeting option(s)`;
-  const data = result.totalCount > 0
-    ? `\n\n${JSON.stringify(result.results, null, 2)}`
-    : "\n\nNo matching targeting options found";
+  const data =
+    result.totalCount > 0
+      ? `\n\n${JSON.stringify(result.results, null, 2)}`
+      : "\n\nNo matching targeting options found";
 
   return [
     {

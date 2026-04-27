@@ -2,14 +2,7 @@
   "description": "Static catalog of Meta Marketing API v24.0+ Insights fields, breakdowns, and action breakdowns. Seeded from https://developers.facebook.com/docs/marketing-api/insights/parameters. Keep in sync as the API evolves.",
   "levels": ["account", "campaign", "adset", "ad"],
   "metrics": {
-    "delivery": [
-      "impressions",
-      "reach",
-      "frequency",
-      "spend",
-      "cpm",
-      "cpp"
-    ],
+    "delivery": ["impressions", "reach", "frequency", "spend", "cpm", "cpp"],
     "engagement": [
       "clicks",
       "unique_clicks",
@@ -46,15 +39,8 @@
       "purchase_roas",
       "website_purchase_roas"
     ],
-    "attribution": [
-      "attribution_setting",
-      "mobile_app_purchase_roas"
-    ],
-    "quality": [
-      "quality_ranking",
-      "engagement_rate_ranking",
-      "conversion_rate_ranking"
-    ],
+    "attribution": ["attribution_setting", "mobile_app_purchase_roas"],
+    "quality": ["quality_ranking", "engagement_rate_ranking", "conversion_rate_ranking"],
     "other": [
       "date_start",
       "date_stop",

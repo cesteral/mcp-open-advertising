@@ -21,18 +21,26 @@ Returns the imageId for use in ad creatives.
 
 **Usage:** The returned imageId is used in ad creative payloads.`;
 
-export const UploadImageInputSchema = z.object({
-  advertiserId: z.string().describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
-  filename: z.string().optional().describe("Override filename (otherwise derived from URL)"),
-}).describe("Parameters for uploading an image to TikTok");
+export const UploadImageInputSchema = z
+  .object({
+    advertiserId: z
+      .string()
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
+    filename: z.string().optional().describe("Override filename (otherwise derived from URL)"),
+  })
+  .describe("Parameters for uploading an image to TikTok");
 
-export const UploadImageOutputSchema = z.object({
-  imageId: z.string().describe("Image ID for use in ad creative payloads"),
-  url: z.string().optional().describe("Preview URL of the uploaded image"),
-  size: z.number().optional().describe("File size in bytes"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded TikTok image info");
+export const UploadImageOutputSchema = z
+  .object({
+    imageId: z.string().describe("Image ID for use in ad creative payloads"),
+    url: z.string().optional().describe("Preview URL of the uploaded image"),
+    size: z.number().optional().describe("File size in bytes"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded TikTok image info");
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
@@ -58,7 +66,7 @@ export async function uploadImageLogic(
 
   const effectiveFilename = input.filename ?? filename;
 
-  const result = await tiktokService.client.postMultipart(
+  const result = (await tiktokService.client.postMultipart(
     tiktokService.client.versionedPath("file/image/ad/upload/"),
     {},
     "image_file",
@@ -66,7 +74,7 @@ export async function uploadImageLogic(
     effectiveFilename,
     contentType,
     context
-  ) as TikTokImageUploadResponse;
+  )) as TikTokImageUploadResponse;
 
   const imageId = result.image_id;
   if (!imageId) {
@@ -82,10 +90,12 @@ export async function uploadImageLogic(
 }
 
 export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Image uploaded to TikTok!\n\nImage ID: ${result.imageId}${result.url ? `\nPreview URL: ${result.url}` : ""}${result.size !== undefined ? `\nSize: ${result.size} bytes` : ""}\n\nUse imageId in your ad creative payload`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Image uploaded to TikTok!\n\nImage ID: ${result.imageId}${result.url ? `\nPreview URL: ${result.url}` : ""}${result.size !== undefined ? `\nSize: ${result.size} bytes` : ""}\n\nUse imageId in your ad creative payload`,
+    },
+  ];
 }
 
 export const uploadImageTool = {

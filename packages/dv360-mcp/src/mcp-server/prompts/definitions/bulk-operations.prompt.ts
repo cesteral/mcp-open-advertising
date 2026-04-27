@@ -21,16 +21,13 @@ export const bulkOperationsPrompt: Prompt = {
     },
     {
       name: "operation",
-      description:
-        "Operation type: 'create', 'update', 'status', or 'bids' (default: status)",
+      description: "Operation type: 'create', 'update', 'status', or 'bids' (default: status)",
       required: false,
     },
   ],
 };
 
-export function getBulkOperationsPromptMessage(
-  args?: Record<string, string>,
-): string {
+export function getBulkOperationsPromptMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const operation = args?.operation || "status";
 

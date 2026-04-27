@@ -11,13 +11,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: vi
     .fn()
-    .mockReturnValue([
-      "advertiser",
-      "campaign",
-      "adGroup",
-      "creative",
-      "conversionTracker",
-    ]),
+    .mockReturnValue(["advertiser", "campaign", "adGroup", "creative", "conversionTracker"]),
   getBulkEntityTypeEnum: vi.fn().mockReturnValue(["campaign", "adGroup"]),
   getArchiveSupportedEntityTypes: vi.fn().mockReturnValue(["campaign", "adGroup"]),
   getEntityConfig: vi.fn().mockImplementation((entityType: string) => {
@@ -62,22 +56,14 @@ import {
   bulkCreateEntitiesLogic,
   bulkCreateEntitiesResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/bulk-create-entities.tool.js";
-import {
-  bulkUpdateEntitiesLogic,
-} from "../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
-import {
-  archiveEntitiesLogic,
-} from "../../src/mcp-server/tools/definitions/archive-entities.tool.js";
-import {
-  bulkUpdateStatusLogic,
-} from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
+import { bulkUpdateEntitiesLogic } from "../../src/mcp-server/tools/definitions/bulk-update-entities.tool.js";
+import { archiveEntitiesLogic } from "../../src/mcp-server/tools/definitions/archive-entities.tool.js";
+import { bulkUpdateStatusLogic } from "../../src/mcp-server/tools/definitions/bulk-update-status.tool.js";
 import {
   graphqlQueryLogic,
   graphqlQueryResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/graphql-query.tool.js";
-import {
-  validateEntityLogic,
-} from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
+import { validateEntityLogic } from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
 import { validateEntityResponseFormatter } from "@cesteral/shared";
 import {
   downloadReportLogic,
@@ -215,7 +201,7 @@ describe("ttd advanced tools", () => {
   it("graphqlQueryLogic returns data + errors", async () => {
     const result = await graphqlQueryLogic(
       {
-        query: "query { advertiser(id: \"a1\") { id } }",
+        query: 'query { advertiser(id: "a1") { id } }',
         variables: { id: "a1" },
       },
       createMockContext(),
@@ -277,12 +263,10 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic defaults to summary preview and bounded structured content", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
-    const csv = [
-      "CampaignId,Impressions",
-      "c1,100",
-      "c2,200",
-    ].join("\n");
+    mockResolveSessionServices.mockReturnValueOnce({
+      authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") },
+    });
+    const csv = ["CampaignId,Impressions", "c1,100", "c2,200"].join("\n");
     const csvBytes = new TextEncoder().encode(csv);
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
@@ -313,7 +297,9 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic supports rows mode, column projection, and pagination", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
+    mockResolveSessionServices.mockReturnValueOnce({
+      authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") },
+    });
     const csv = [
       "CampaignId,Site,Impressions,TotalCost",
       "c1,example.com,100,1.25",
@@ -350,7 +336,9 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic caps maxRows at 200 and warns about unknown columns", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
+    mockResolveSessionServices.mockReturnValueOnce({
+      authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") },
+    });
     const lines = ["CampaignId,Impressions"];
     for (let i = 0; i < 250; i++) {
       lines.push(`c${i},${i}`);
@@ -383,7 +371,9 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic throws when fetch fails", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
+    mockResolveSessionServices.mockReturnValueOnce({
+      authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") },
+    });
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: false,
       status: 500,
@@ -400,14 +390,15 @@ describe("ttd advanced tools", () => {
   });
 
   it("downloadReportLogic rejects XLSX/ExcelPivot downloads with a clear error", async () => {
-    mockResolveSessionServices.mockReturnValueOnce({ authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") } });
+    mockResolveSessionServices.mockReturnValueOnce({
+      authAdapter: { getAccessToken: vi.fn().mockResolvedValue("test-token") },
+    });
     const zipBytes = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00]);
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       arrayBuffer: vi.fn().mockResolvedValue(zipBytes.buffer),
       headers: new Headers({
-        "content-type":
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       }),
     } as unknown as Response);
 

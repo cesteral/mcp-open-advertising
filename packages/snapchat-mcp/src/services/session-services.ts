@@ -31,11 +31,7 @@ export function createSessionServices(
   logger: Logger,
   rateLimiter: RateLimiter
 ): SessionServices {
-  const httpClient = new SnapchatHttpClient(
-    authAdapter,
-    config.baseUrl,
-    logger
-  );
+  const httpClient = new SnapchatHttpClient(authAdapter, config.baseUrl, logger);
   const snapchatService = new SnapchatService(
     httpClient,
     authAdapter.orgId,

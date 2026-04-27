@@ -23,7 +23,10 @@ function normalizeString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function getKnownIdFields(input: Record<string, unknown>, data?: Record<string, unknown>): string[] {
+function getKnownIdFields(
+  input: Record<string, unknown>,
+  data?: Record<string, unknown>
+): string[] {
   const fromInput = Object.keys(input).filter((key) => key.endsWith("Id"));
   const fromData = data ? Object.keys(data).filter((key) => key.endsWith("Id")) : [];
   return Array.from(new Set([...knownIdFields, ...fromInput, ...fromData]));

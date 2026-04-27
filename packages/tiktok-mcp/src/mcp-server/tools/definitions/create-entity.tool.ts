@@ -26,16 +26,14 @@ const TOOL_DESCRIPTION = `Create a new TikTok Ads entity.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
-    data: z
-      .record(z.any())
-      .describe("Entity fields as key-value pairs"),
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
+    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
   })
   .describe("Parameters for creating a TikTok Ads entity");
 

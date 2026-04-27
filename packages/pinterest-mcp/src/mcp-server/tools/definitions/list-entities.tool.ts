@@ -19,21 +19,13 @@ All entities are scoped to an advertiser account. Pagination uses cursor-based \
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     campaignId: z
       .string()
       .optional()
       .describe("Filter by campaign ID (for adGroup/ad entity types)"),
-    adGroupId: z
-      .string()
-      .optional()
-      .describe("Filter by ad group ID (for ad entity type)"),
+    adGroupId: z.string().optional().describe("Filter by ad group ID (for ad entity type)"),
     bookmark: z
       .string()
       .optional()

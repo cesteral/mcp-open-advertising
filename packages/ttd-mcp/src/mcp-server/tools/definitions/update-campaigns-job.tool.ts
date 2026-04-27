@@ -31,11 +31,18 @@ export async function updateCampaignsJobLogic(
   sdkContext?: SdkContext
 ): Promise<UpdateCampaignsJobToolOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const job = (await ttdService.updateCampaignsJob({
-    input: input.input,
-    ...(input.validateInputOnly !== undefined ? { validateInputOnly: input.validateInputOnly } : {}),
-    ...(input.callbackInput ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) } : {}),
-  }, context)) as Record<string, unknown>;
+  const job = (await ttdService.updateCampaignsJob(
+    {
+      input: input.input,
+      ...(input.validateInputOnly !== undefined
+        ? { validateInputOnly: input.validateInputOnly }
+        : {}),
+      ...(input.callbackInput
+        ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) }
+        : {}),
+    },
+    context
+  )) as Record<string, unknown>;
   return { job, timestamp: new Date().toISOString() };
 }
 

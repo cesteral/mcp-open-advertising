@@ -578,14 +578,7 @@ function getAllExamplesMarkdown(): string {
   return ENTITY_TYPES.map((t) => getExampleContent(t)).join("\n---\n\n");
 }
 
-const ENTITY_TYPES = [
-  "campaign",
-  "adGroup",
-  "ad",
-  "keyword",
-  "campaignBudget",
-  "asset",
-] as const;
+const ENTITY_TYPES = ["campaign", "adGroup", "ad", "keyword", "campaignBudget", "asset"] as const;
 
 export const entityExampleResources: Resource[] = ENTITY_TYPES.map((entityType) => ({
   uri: `entity-examples://${entityType}`,

@@ -75,7 +75,6 @@ describe("DeleteEntityInputSchema", () => {
       );
     }
   });
-
 });
 
 describe("deleteEntityResponseFormatter", () => {

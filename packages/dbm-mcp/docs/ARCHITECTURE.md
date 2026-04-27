@@ -56,6 +56,7 @@ The Bid Manager API v2 provides async report generation for DV360:
 4. **Fetch Results**: Download report data (CSV or JSON)
 
 **Key Endpoints:**
+
 - `POST /queries` - Create a new query
 - `POST /queries/{queryId}:run` - Run a query
 - `GET /queries/{queryId}/reports` - List reports for a query
@@ -260,6 +261,7 @@ packages/dbm-mcp/
 ### 1. Entry Point (`src/index.ts`)
 
 **Responsibilities:**
+
 - Initialize OpenTelemetry instrumentation
 - Compose DI container with all services
 - Detect transport mode (stdio vs HTTP)
@@ -267,6 +269,7 @@ packages/dbm-mcp/
 - Configure logging based on transport mode (stderr for stdio)
 
 **Example:**
+
 ```typescript
 import "reflect-metadata";
 import pino from "pino";
@@ -301,11 +304,13 @@ main();
 ### 2. Configuration (`src/config/index.ts`)
 
 **Responsibilities:**
+
 - Load and validate environment variables via Zod
 - Provide type-safe configuration access
 - Set sensible defaults for development
 
 **Key Configuration:**
+
 ```typescript
 import { z } from "zod";
 
@@ -348,6 +353,7 @@ export const dbmConfig = ConfigSchema.parse(/* parse from process.env */);
 ### 3. Dependency Injection (`src/container/`)
 
 **`src/container/tokens.ts`:**
+
 ```typescript
 // Core Services
 export const AppConfig = Symbol("AppConfig");
@@ -364,6 +370,7 @@ export const ResourceRegistry = Symbol("ResourceRegistry");
 ```
 
 **`src/container/registrations/core.ts`:**
+
 ```typescript
 import { container } from "tsyringe";
 import * as Tokens from "../tokens.js";
@@ -383,12 +390,14 @@ export function registerCoreServices(config: DbmConfig, logger: Logger) {
 ### 4. BidManagerService (`src/services/bid-manager/BidManagerService.ts`)
 
 **Responsibilities:**
+
 - Initialize OAuth 2.0 client with service account credentials
 - Create and execute Bid Manager API queries
 - Poll for report completion
 - Fetch and parse report data (CSV/JSON)
 
 **Example:**
+
 ```typescript
 import { google } from "googleapis";
 import { injectable, inject } from "tsyringe";
@@ -452,10 +461,7 @@ export class BidManagerService {
     this.logger.info({ reportId: report.key?.reportId }, "Started report generation");
 
     // Step 3: Poll for completion
-    const completedReport = await this.pollForCompletion(
-      query.queryId,
-      report.key?.reportId
-    );
+    const completedReport = await this.pollForCompletion(query.queryId, report.key?.reportId);
 
     // Step 4: Fetch and parse report data
     const csvData = await this.fetchReportData(completedReport.metadata?.googleCloudStoragePath);
@@ -478,11 +484,7 @@ export class BidManagerService {
     return response.data;
   }
 
-  private async pollForCompletion(
-    queryId: string,
-    reportId: string,
-    maxWaitMs = 120000
-  ) {
+  private async pollForCompletion(queryId: string, reportId: string, maxWaitMs = 120000) {
     const startTime = Date.now();
     const pollInterval = this.config.reportPollIntervalMs;
 
@@ -580,14 +582,21 @@ import type { RequestContext, SdkContext } from "../../../types-global/index.js"
 export const getCampaignDeliveryParamsSchema = z.object({
   advertiserId: z.string().describe("DV360 Advertiser ID"),
   campaignId: z.string().describe("DV360 Campaign ID"),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Start date (YYYY-MM-DD)"),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("End date (YYYY-MM-DD)"),
+  startDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .describe("Start date (YYYY-MM-DD)"),
+  endDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .describe("End date (YYYY-MM-DD)"),
 });
 
 // 2. Define tool metadata
 export const getCampaignDeliveryTool = {
   name: "dbm_get_campaign_delivery",
-  description: "Fetch DV360 delivery metrics (impressions, clicks, spend, conversions) for a campaign within a date range via Bid Manager API.",
+  description:
+    "Fetch DV360 delivery metrics (impressions, clicks, spend, conversions) for a campaign within a date range via Bid Manager API.",
   inputSchema: getCampaignDeliveryParamsSchema,
 };
 
@@ -707,6 +716,7 @@ Span: tool.dbm_get_campaign_delivery
 ### Environment Variables
 
 **Required:**
+
 ```bash
 # Google Cloud
 GCP_PROJECT_ID=your-project-id
@@ -716,6 +726,7 @@ SERVICE_ACCOUNT_JSON=<base64-encoded-json>
 ```
 
 **Optional:**
+
 ```bash
 # Server
 DBM_MCP_PORT=3001
@@ -763,42 +774,43 @@ const bidmanager = google.doubleclickbidmanager({ version: "v2", auth });
 ### Required Permissions
 
 The service account needs:
+
 - `doubleclickbidmanager.queries.create`
 - `doubleclickbidmanager.queries.run`
 - `doubleclickbidmanager.reports.get`
 
 ### Query Types
 
-| Type | Use Case |
-|------|----------|
-| `TYPE_GENERAL` | Standard delivery metrics (impressions, clicks, spend) |
-| `TYPE_AUDIENCE_COMPOSITION` | Audience demographic breakdowns |
-| `TYPE_REACH_FREQUENCY` | Reach and frequency analysis |
-| `TYPE_YOUTUBE` | YouTube-specific metrics |
+| Type                        | Use Case                                               |
+| --------------------------- | ------------------------------------------------------ |
+| `TYPE_GENERAL`              | Standard delivery metrics (impressions, clicks, spend) |
+| `TYPE_AUDIENCE_COMPOSITION` | Audience demographic breakdowns                        |
+| `TYPE_REACH_FREQUENCY`      | Reach and frequency analysis                           |
+| `TYPE_YOUTUBE`              | YouTube-specific metrics                               |
 
 ### Available Metrics
 
 Common metrics for delivery reports:
 
-| Metric | Description |
-|--------|-------------|
-| `METRIC_IMPRESSIONS` | Total impressions served |
-| `METRIC_CLICKS` | Total clicks |
-| `METRIC_TOTAL_MEDIA_COST_ADVERTISER` | Spend in advertiser currency |
-| `METRIC_CONVERSIONS` | Post-click + post-view conversions |
-| `METRIC_REVENUE_ADVERTISER` | Revenue in advertiser currency |
-| `METRIC_CTR` | Click-through rate |
-| `METRIC_ACTIVE_VIEW_MEASURABLE_IMPRESSIONS` | Viewability metrics |
+| Metric                                      | Description                        |
+| ------------------------------------------- | ---------------------------------- |
+| `METRIC_IMPRESSIONS`                        | Total impressions served           |
+| `METRIC_CLICKS`                             | Total clicks                       |
+| `METRIC_TOTAL_MEDIA_COST_ADVERTISER`        | Spend in advertiser currency       |
+| `METRIC_CONVERSIONS`                        | Post-click + post-view conversions |
+| `METRIC_REVENUE_ADVERTISER`                 | Revenue in advertiser currency     |
+| `METRIC_CTR`                                | Click-through rate                 |
+| `METRIC_ACTIVE_VIEW_MEASURABLE_IMPRESSIONS` | Viewability metrics                |
 
 ### Available Dimensions (Group Bys)
 
-| Dimension | Description |
-|-----------|-------------|
-| `FILTER_DATE` | Group by date |
-| `FILTER_ADVERTISER` | Group by advertiser |
-| `FILTER_MEDIA_PLAN` | Group by campaign (media plan) |
-| `FILTER_INSERTION_ORDER` | Group by insertion order |
-| `FILTER_LINE_ITEM` | Group by line item |
+| Dimension                | Description                    |
+| ------------------------ | ------------------------------ |
+| `FILTER_DATE`            | Group by date                  |
+| `FILTER_ADVERTISER`      | Group by advertiser            |
+| `FILTER_MEDIA_PLAN`      | Group by campaign (media plan) |
+| `FILTER_INSERTION_ORDER` | Group by insertion order       |
+| `FILTER_LINE_ITEM`       | Group by line item             |
 
 ### Handling Async Reports
 
@@ -869,6 +881,7 @@ export async function withBidManagerSpan<T>(
 ### Metrics
 
 Key metrics to track:
+
 - Report generation time (ms)
 - Poll attempt count
 - Report size (bytes)
@@ -882,6 +895,7 @@ Key metrics to track:
 ### Unit Tests
 
 **Services:**
+
 ```typescript
 // tests/unit/services/bid-manager.test.ts
 describe("BidManagerService", () => {
@@ -895,7 +909,9 @@ describe("BidManagerService", () => {
     const service = new BidManagerService(mockConfig, mockLogger);
     service["doubleclickbidmanager"] = mockApi as any;
 
-    await service.createQuery({ /* query spec */ });
+    await service.createQuery({
+      /* query spec */
+    });
 
     expect(mockApi.queries.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -953,6 +969,7 @@ describe("Bid Manager Integration", () => {
 ## Implementation Roadmap
 
 ### Phase 1: Infrastructure Setup ✅ (COMPLETE)
+
 - [x] Project scaffolding
 - [x] Directory structure aligned with dv360-mcp
 - [x] Configuration system with Zod validation
@@ -966,6 +983,7 @@ describe("Bid Manager Integration", () => {
 - [x] Types-global directory (mcp.ts, bid-manager.ts)
 
 ### Phase 2: Bid Manager API Integration (Next)
+
 - [ ] BidManagerService implementation
 - [ ] OAuth 2.0 service account authentication
 - [ ] Query creation and execution
@@ -974,18 +992,21 @@ describe("Bid Manager Integration", () => {
 - [ ] Error handling for API errors
 
 ### Phase 3: Tool Implementation
+
 - [ ] `dbm_get_campaign_delivery` - Delivery metrics via Bid Manager API
 - [ ] `dbm_get_performance_metrics` - Calculate KPIs from report data
 - [ ] `dbm_get_historical_metrics` - Time-series data with daily granularity
 - [ ] `dbm_get_pacing_status` - Pacing calculation (requires budget data)
 
 ### Phase 4: Resources & Prompts
+
 - [ ] MCP Resources for metric schemas
 - [ ] MCP Resources for report templates
 - [ ] Troubleshooting prompts (underdelivery, performance)
 - [ ] Workflow prompts (analysis, optimization)
 
 ### Phase 5: Observability & Testing
+
 - [ ] OpenTelemetry instrumentation
 - [ ] Structured logging throughout
 - [ ] Unit tests for all services
@@ -993,6 +1014,7 @@ describe("Bid Manager Integration", () => {
 - [ ] Performance benchmarking (report generation times)
 
 ### Phase 6: Production Readiness
+
 - [ ] Rate limiting per advertiser
 - [ ] JWT authentication for MCP clients
 - [ ] Optional report caching (in-memory or Redis)
@@ -1004,17 +1026,17 @@ describe("Bid Manager Integration", () => {
 
 ## Key Differences from dv360-mcp
 
-| Aspect | dv360-mcp | dbm-mcp |
-|--------|-----------|---------|
-| **Purpose** | Entity management (CRUD) | Reporting & analytics (read-only) |
-| **External API** | DV360 API (REST, sync) | Bid Manager API v2 (async reports) |
-| **Data Flow** | HTTP → DV360 API → Response | HTTP → Create Query → Poll → Fetch CSV → Parse |
-| **Response Time** | ~200-500ms | 2-30 seconds (async report generation) |
-| **Write Operations** | Yes (create, update, delete) | No (read-only) |
-| **Schema Source** | OpenAPI spec → Zod | API response types + CSV parsing |
-| **Primary Service** | `DV360Service` | `BidManagerService` |
-| **Tools** | 7 tools (CRUD + workflows) | 4 tools (queries + analytics) |
-| **Authentication** | OAuth 2.0 (DV360 API) | OAuth 2.0 (Bid Manager API) |
+| Aspect               | dv360-mcp                    | dbm-mcp                                        |
+| -------------------- | ---------------------------- | ---------------------------------------------- |
+| **Purpose**          | Entity management (CRUD)     | Reporting & analytics (read-only)              |
+| **External API**     | DV360 API (REST, sync)       | Bid Manager API v2 (async reports)             |
+| **Data Flow**        | HTTP → DV360 API → Response  | HTTP → Create Query → Poll → Fetch CSV → Parse |
+| **Response Time**    | ~200-500ms                   | 2-30 seconds (async report generation)         |
+| **Write Operations** | Yes (create, update, delete) | No (read-only)                                 |
+| **Schema Source**    | OpenAPI spec → Zod           | API response types + CSV parsing               |
+| **Primary Service**  | `DV360Service`               | `BidManagerService`                            |
+| **Tools**            | 7 tools (CRUD + workflows)   | 4 tools (queries + analytics)                  |
+| **Authentication**   | OAuth 2.0 (DV360 API)        | OAuth 2.0 (Bid Manager API)                    |
 
 ---
 

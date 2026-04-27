@@ -79,7 +79,9 @@ export class SnapchatReportingService {
       granularity: reportConfig.granularity ?? "DAY",
       start_time: reportConfig.start_time,
       end_time: reportConfig.end_time,
-      ...(reportConfig.dimension_type ? { breakdown: this.mapDimensionType(reportConfig.dimension_type) } : {}),
+      ...(reportConfig.dimension_type
+        ? { breakdown: this.mapDimensionType(reportConfig.dimension_type) }
+        : {}),
     };
 
     const result = (await this.httpClient.get(
@@ -95,7 +97,10 @@ export class SnapchatReportingService {
 
     const reportId = result.async_stats_reports?.[0]?.async_stats_report?.report_run_id;
     if (!reportId) {
-      throw new McpError(JsonRpcErrorCode.InternalError, "Snapchat async reporting: no report id returned from submit");
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        "Snapchat async reporting: no report id returned from submit"
+      );
     }
 
     return { task_id: reportId };
@@ -104,10 +109,7 @@ export class SnapchatReportingService {
   /**
    * Poll a report task until it is COMPLETE or FAILED.
    */
-  async pollReport(
-    taskId: string,
-    context?: RequestContext
-  ): Promise<ReportTaskCheckData> {
+  async pollReport(taskId: string, context?: RequestContext): Promise<ReportTaskCheckData> {
     this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
 
     try {
@@ -121,12 +123,19 @@ export class SnapchatReportingService {
           )) as {
             request_status: string;
             async_stats_reports?: Array<{
-              async_stats_report?: { report_run_id?: string; async_status?: string; result?: string };
+              async_stats_report?: {
+                report_run_id?: string;
+                async_status?: string;
+                result?: string;
+              };
             }>;
           };
           const report = envelope.async_stats_reports?.[0]?.async_stats_report;
           if (!report) {
-            throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report poll: unexpected response shape for task ${taskId}`);
+            throw new McpError(
+              JsonRpcErrorCode.InternalError,
+              `Snapchat report poll: unexpected response shape for task ${taskId}`
+            );
           }
           return {
             id: report.report_run_id ?? taskId,
@@ -171,7 +180,10 @@ export class SnapchatReportingService {
 
     const report = envelope.async_stats_reports?.[0]?.async_stats_report;
     if (!report) {
-      throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report status: unexpected response shape for task ${taskId}`);
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Snapchat report status: unexpected response shape for task ${taskId}`
+      );
     }
 
     return {
@@ -194,7 +206,11 @@ export class SnapchatReportingService {
     context?: RequestContext,
     options: { includeRawCsv?: boolean } = {}
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
-    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
+    const response = await fetchWithTimeout(
+      downloadUrl,
+      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context
+    );
 
     if (!response.ok) {
       throw new McpError(
@@ -212,7 +228,10 @@ export class SnapchatReportingService {
     }
 
     const csvText = await response.text();
-    const normalizedCsvText = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
+    const normalizedCsvText = csvText
+      .replace(/^\uFEFF/, "")
+      .replace(/\r\n/g, "\n")
+      .trim();
     if (normalizedCsvText === "") {
       return {
         rows: [],
@@ -233,9 +252,7 @@ export class SnapchatReportingService {
     }
 
     const limited = rows.slice(0, maxRows);
-    const rowArrays = limited.map((record) =>
-      headers.map((h) => record[h] ?? "")
-    );
+    const rowArrays = limited.map((record) => headers.map((h) => record[h] ?? ""));
 
     return {
       rows: rowArrays,
@@ -253,7 +270,8 @@ export class SnapchatReportingService {
     maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const maxRows = typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
+    const maxRows =
+      typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
     const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
 
     const { task_id } = await this.submitReport(reportConfig, requestContext);
@@ -264,7 +282,10 @@ export class SnapchatReportingService {
     }
 
     if (!taskResult.download_url) {
-      throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat report task ${task_id} completed but has no download URL`);
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Snapchat report task ${task_id} completed but has no download URL`
+      );
     }
 
     const reportData = await this.downloadReport(taskResult.download_url, maxRows, requestContext);
@@ -316,8 +337,10 @@ export class SnapchatReportingService {
       case "AD":
         return "ad";
       default:
-        throw new McpError(JsonRpcErrorCode.InvalidParams, `Unsupported Snapchat report dimension type: ${dimensionType}`);
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Unsupported Snapchat report dimension type: ${dimensionType}`
+        );
     }
   }
-
 }

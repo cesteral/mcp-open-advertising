@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -86,13 +92,7 @@ describe("SubmitReportInputSchema", () => {
   });
 
   it("accepts all valid report types", () => {
-    const types = [
-      "STANDARD",
-      "REACH",
-      "PATH_TO_CONVERSION",
-      "CROSS_MEDIA_REACH",
-      "FLOODLIGHT",
-    ];
+    const types = ["STANDARD", "REACH", "PATH_TO_CONVERSION", "CROSS_MEDIA_REACH", "FLOODLIGHT"];
 
     for (const type of types) {
       const result = SubmitReportInputSchema.safeParse({
@@ -307,10 +307,7 @@ describe("submitReportLogic", () => {
     mockState.cm360ReportingService.createReport.mockRejectedValue(new Error("Quota exceeded"));
 
     await expect(
-      submitReportLogic(
-        { profileId: "123", name: "Test", type: "STANDARD" as const },
-        mockContext
-      )
+      submitReportLogic({ profileId: "123", name: "Test", type: "STANDARD" as const }, mockContext)
     ).rejects.toThrow("Quota exceeded");
   });
 });

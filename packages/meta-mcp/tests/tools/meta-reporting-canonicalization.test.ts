@@ -46,7 +46,7 @@ describe("meta_check_report_status canonical shape", () => {
     const result = await checkReportStatusLogic(
       { reportRunId: "rr-1" },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.state).toBe("complete");
     expect(result.isComplete).toBe(true);
@@ -75,7 +75,7 @@ describe("meta_check_report_status canonical shape", () => {
     const result = await checkReportStatusLogic(
       { reportRunId: "rr-2" },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.state).toBe("failed");
     expect(result.errorCode).toBe(100);
@@ -95,7 +95,7 @@ describe("meta_check_report_status canonical shape", () => {
     const result = await checkReportStatusLogic(
       { reportRunId: "rr-3" },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.state).toBe("running");
     expect(result.progress).toBeCloseTo(0.42);
@@ -139,7 +139,7 @@ describe("meta_download_report computed metrics flag", () => {
         includeComputedMetrics: false,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.headers).not.toContain("cpa");
     expect(result.headers).not.toContain("roas");
@@ -155,7 +155,7 @@ describe("meta_download_report computed metrics flag", () => {
         includeComputedMetrics: true,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     const row = (result.rows ?? [])[0] ?? {};
     expect(row.cpa).toBe("25");

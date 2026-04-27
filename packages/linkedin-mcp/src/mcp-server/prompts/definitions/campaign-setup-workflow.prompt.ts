@@ -78,7 +78,9 @@ linkedin_create_entity({
 
 **Objective Types:** BRAND_AWARENESS, WEBSITE_TRAFFIC, WEBSITE_CONVERSIONS,
 LEAD_GENERATION, ENGAGEMENT, VIDEO_VIEWS
-${includeTargeting ? `
+${
+  includeTargeting
+    ? `
 ## Step 3: Add Targeting
 
 Add targeting criteria to the campaign via update:
@@ -120,7 +122,9 @@ linkedin_get_delivery_forecast({
   "targetingCriteria": { ... }
 })
 \`\`\`
-` : ""}
+`
+    : ""
+}
 ## Step 4: Create Creative
 
 Creative links your content (UGC post, share, etc.) to the campaign.

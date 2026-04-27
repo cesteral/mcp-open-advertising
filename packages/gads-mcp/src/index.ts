@@ -7,15 +7,8 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
 import { GAdsRefreshTokenAuthAdapter } from "./auth/gads-auth-adapter.js";
-import {
-  detectTransportMode,
-  createServerLogger,
-  bootstrapMcpServer,
-} from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "./services/session-services.js";
+import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
+import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
@@ -34,7 +27,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   if (!developerToken || !clientId || !clientSecret || !refreshToken) {
     logger.warn(
       "No Google Ads credentials found in env vars. " +
-      "Set GADS_DEVELOPER_TOKEN, GADS_CLIENT_ID, GADS_CLIENT_SECRET, and GADS_REFRESH_TOKEN for stdio mode."
+        "Set GADS_DEVELOPER_TOKEN, GADS_CLIENT_ID, GADS_CLIENT_SECRET, and GADS_REFRESH_TOKEN for stdio mode."
     );
     return false;
   }

@@ -4,21 +4,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mocks — vi.hoisted() ensures these are available when vi.mock factories run
 // ---------------------------------------------------------------------------
 
-const {
-  mockResolveSessionServices,
-  mockCalculateCTR,
-  mockCalculateCPM,
-  mockFormatMetricValue,
-} = vi.hoisted(() => ({
-  mockResolveSessionServices: vi.fn(),
-  mockCalculateCTR: vi.fn().mockReturnValue(2.0),
-  mockCalculateCPM: vi.fn().mockReturnValue(50.0),
-  mockFormatMetricValue: vi.fn().mockImplementation((_type: string, val: number) => {
-    if (_type === "ctr") return `${val.toFixed(2)}%`;
-    if (_type === "cpm") return `$${val.toFixed(2)}`;
-    return val.toFixed(2);
-  }),
-}));
+const { mockResolveSessionServices, mockCalculateCTR, mockCalculateCPM, mockFormatMetricValue } =
+  vi.hoisted(() => ({
+    mockResolveSessionServices: vi.fn(),
+    mockCalculateCTR: vi.fn().mockReturnValue(2.0),
+    mockCalculateCPM: vi.fn().mockReturnValue(50.0),
+    mockFormatMetricValue: vi.fn().mockImplementation((_type: string, val: number) => {
+      if (_type === "ctr") return `${val.toFixed(2)}%`;
+      if (_type === "cpm") return `$${val.toFixed(2)}`;
+      return val.toFixed(2);
+    }),
+  }));
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
@@ -134,7 +130,9 @@ describe("getCampaignDeliveryLogic", () => {
 
   it("throws when resolveSessionServices fails (no session)", async () => {
     mockResolveSessionServices.mockImplementation(() => {
-      throw new Error("No session ID available. Credentials must be provided via HTTP headers at connection time.");
+      throw new Error(
+        "No session ID available. Credentials must be provided via HTTP headers at connection time."
+      );
     });
 
     await expect(
@@ -148,11 +146,7 @@ describe("getCampaignDeliveryLogic", () => {
     );
 
     await expect(
-      getCampaignDeliveryLogic(
-        createDefaultInput(),
-        createMockContext(),
-        createMockSdkContext()
-      )
+      getCampaignDeliveryLogic(createDefaultInput(), createMockContext(), createMockSdkContext())
     ).rejects.toThrow("Bid Manager API error: 403 Forbidden");
   });
 });

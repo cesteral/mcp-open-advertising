@@ -61,15 +61,11 @@ function validateTikTokEnvelope(body: unknown): unknown {
   const jsonRpcCode = mapTikTokErrorToJsonRpc(json.code, 200);
   const retryable = RATE_LIMIT_CODES.has(json.code);
 
-  throw new McpError(
-    jsonRpcCode,
-    json.message || `TikTok API error: code=${json.code}`,
-    {
-      tiktokCode: json.code,
-      tiktokRequestId: json.request_id,
-      retryable,
-    }
-  );
+  throw new McpError(jsonRpcCode, json.message || `TikTok API error: code=${json.code}`, {
+    tiktokCode: json.code,
+    tiktokRequestId: json.request_id,
+    retryable,
+  });
 }
 
 /**
@@ -185,7 +181,13 @@ export class TikTokHttpClient {
       span.setAttribute("http.request.method", "POST");
       span.setAttribute("http.url", url);
       const allFields = { advertiser_id: this.advertiserId, ...fields };
-      const { body, contentType } = buildMultipartFormData(allFields, fileField, fileBuffer, filename, fileContentType);
+      const { body, contentType } = buildMultipartFormData(
+        allFields,
+        fileField,
+        fileBuffer,
+        filename,
+        fileContentType
+      );
 
       const result = await executeWithRetry(TIKTOK_RETRY_CONFIG, {
         url,

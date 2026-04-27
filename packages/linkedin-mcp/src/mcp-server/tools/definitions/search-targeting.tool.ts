@@ -25,13 +25,8 @@ Returns matching facet options with their LinkedIn URNs for use in targeting cri
 
 export const SearchTargetingInputSchema = z
   .object({
-    facetType: z
-      .string()
-      .describe("Targeting facet type to search (e.g., MEMBER_INTERESTS, GEO)"),
-    query: z
-      .string()
-      .optional()
-      .describe("Search query string to filter results"),
+    facetType: z.string().describe("Targeting facet type to search (e.g., MEMBER_INTERESTS, GEO)"),
+    query: z.string().optional().describe("Search query string to filter results"),
     limit: z
       .number()
       .int()

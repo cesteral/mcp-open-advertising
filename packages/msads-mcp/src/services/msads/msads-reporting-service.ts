@@ -64,10 +64,7 @@ export class MsAdsReportingService {
   /**
    * Submit a report request. Returns the ReportRequestId.
    */
-  async submitReport(
-    config: ReportConfig,
-    context?: RequestContext
-  ): Promise<string> {
+  async submitReport(config: ReportConfig, context?: RequestContext): Promise<string> {
     await this.rateLimiter.consume(MSADS_WRITE_KEY, 3);
     const body = this.buildReportRequest(config);
     this.logger.info({ reportType: config.reportType }, "Submitting report");
@@ -84,10 +81,7 @@ export class MsAdsReportingService {
   /**
    * Poll for report completion. Returns download URL when ready.
    */
-  async pollReport(
-    reportRequestId: string,
-    context?: RequestContext
-  ): Promise<string> {
+  async pollReport(reportRequestId: string, context?: RequestContext): Promise<string> {
     this.logger.debug({ reportRequestId }, "Starting report poll");
 
     try {
@@ -143,7 +137,11 @@ export class MsAdsReportingService {
   ): Promise<{ headers: string[]; rows: string[][]; totalRows: number; rawCsv?: string }> {
     this.logger.info({ downloadUrl: downloadUrl.substring(0, 80) }, "Downloading report");
 
-    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
+    const response = await fetchWithTimeout(
+      downloadUrl,
+      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context
+    );
 
     if (!response.ok) {
       throw new McpError(
@@ -213,9 +211,7 @@ export class MsAdsReportingService {
    * so we use PollReports to list active scheduled report IDs known by the session.
    * Returns an informational message directing users to use the UI or check known scheduleIds.
    */
-  async listReportSchedules(
-    context?: RequestContext
-  ): Promise<{ note: string }> {
+  async listReportSchedules(context?: RequestContext): Promise<{ note: string }> {
     void context;
     return {
       note: "Microsoft Advertising does not provide an API to list all report schedules. Use the Microsoft Advertising UI (app.ads.microsoft.com) to view existing scheduled reports, or track scheduleIds returned by msads_create_report_schedule.",
@@ -227,10 +223,7 @@ export class MsAdsReportingService {
    * MS Ads does not have a dedicated schedule-delete endpoint; the schedule is cancelled
    * by stopping the associated report request via the UI. This method logs the intent.
    */
-  async deleteReportSchedule(
-    scheduleId: string,
-    context?: RequestContext
-  ): Promise<void> {
+  async deleteReportSchedule(scheduleId: string, context?: RequestContext): Promise<void> {
     void context;
     this.logger.info(
       { scheduleId },
@@ -280,7 +273,10 @@ export class MsAdsReportingService {
     return { Year: year!, Month: month!, Day: day! };
   }
 
-  private parseCsv(text: string, maxRows?: number): { headers: string[]; rows: string[][]; totalRows: number } {
+  private parseCsv(
+    text: string,
+    maxRows?: number
+  ): { headers: string[]; rows: string[][]; totalRows: number } {
     // Microsoft Ads CSV reports are prefixed with @-metadata and suffixed with
     // ©-footer rows. Strip both before handing off to the shared parser so it
     // never interprets them as data rows.
@@ -305,5 +301,4 @@ export class MsAdsReportingService {
     const limitedRows = maxRows ? rows.slice(0, maxRows) : rows;
     return { headers, rows: limitedRows, totalRows };
   }
-
 }

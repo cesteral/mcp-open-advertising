@@ -33,12 +33,17 @@ export async function getFirstPartyDataJobLogic(
   sdkContext?: SdkContext
 ): Promise<GetFirstPartyDataJobToolOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const job = (await ttdService.getFirstPartyDataJob({
-    advertiserId: input.advertiserId,
-    ...(input.nameFilter !== undefined ? { nameFilter: input.nameFilter } : {}),
-    ...(input.queryShape !== undefined ? { queryShape: input.queryShape } : {}),
-    ...(input.callbackInput ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) } : {}),
-  }, context)) as Record<string, unknown>;
+  const job = (await ttdService.getFirstPartyDataJob(
+    {
+      advertiserId: input.advertiserId,
+      ...(input.nameFilter !== undefined ? { nameFilter: input.nameFilter } : {}),
+      ...(input.queryShape !== undefined ? { queryShape: input.queryShape } : {}),
+      ...(input.callbackInput
+        ? { callbackInput: toWorkflowCallbackInput(input.callbackInput) }
+        : {}),
+    },
+    context
+  )) as Record<string, unknown>;
   return { job, timestamp: new Date().toISOString() };
 }
 

@@ -57,4 +57,6 @@ Wrap entities in \`${config.pluralName}\` array:
   };
 }
 
-export const entitySchemaResources: Resource[] = getSupportedEntityTypes().map(createEntitySchemaResource);
+export const entitySchemaResources: Resource[] = getSupportedEntityTypes().map(
+  createEntitySchemaResource
+);

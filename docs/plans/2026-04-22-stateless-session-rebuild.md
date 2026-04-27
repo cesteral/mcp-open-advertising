@@ -7,11 +7,13 @@
 **Architecture:** The shared streamable-HTTP transport factory currently returns `404 Session not found or expired` when a follow-up request arrives at a Cloud Run instance that has never seen the session ID (see `packages/shared/src/utils/mcp-http-transport-factory.ts:302-304`). Because each per-server `createSessionForAuth` callback already knows how to build services deterministically from auth headers, we replace the 404 short-circuit with a **rebuild-on-miss** path: if the client supplies a well-formed session ID and valid auth, re-run auth + `createSessionForAuth` using the client-provided session ID, populate the local cache, then continue as normal. The existing fingerprint check (`validateSessionReuse`) keeps session hijacking impossible even after a rebuild. We also remove the dead `MCP_SESSION_MODE` plumbing — its presence implies behavior the code does not actually implement.
 
 **Tech Stack:**
+
 - TypeScript / Node / Hono / `@hono/mcp` (existing)
 - Vitest (existing test harness pattern at `packages/*/tests/integration/session-lifecycle.test.ts`)
 - Terraform (module at `terraform/modules/mcp-service/`)
 
 **Out of scope (explicit):**
+
 - No change to `report-csv://` resource storage — it stays in-memory and per-instance; scale-out may miss the resource. Accept for now; the bounded tool response already contains the first N rows + spill URL.
 - No Cloud Run `session_affinity` flag — defeats the point of going stateless. Skip.
 - No distributed rate-limiter backing (Redis etc.) — rate counters stay per-instance. Document the caveat.
@@ -23,6 +25,7 @@
 **Context:** This simulates a Cloud Run scale-out event by deliberately evicting a session from the in-memory store after handshake and asserting the next tool call still succeeds. We reuse the TTD integration harness pattern at `packages/ttd-mcp/tests/integration/session-lifecycle.test.ts` because TTD has the richest per-session fixture (auth adapter + services). One server's integration test is enough because the fix lives in shared code — other servers ride on the same transport factory.
 
 **Files:**
+
 - Create: `packages/ttd-mcp/tests/integration/session-rebuild.test.ts`
 
 **Step 1: Copy the harness skeleton**
@@ -58,7 +61,7 @@ describe("session rebuild after in-memory eviction (Cloud Run scale-out simulati
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
+        Accept: "application/json, text/event-stream",
         "MCP-Protocol-Version": "2025-11-25",
         "TTD-Auth": "token-client-1",
         "x-test-fingerprint": "fp-client-1",
@@ -88,7 +91,7 @@ describe("session rebuild after in-memory eviction (Cloud Run scale-out simulati
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
+        Accept: "application/json, text/event-stream",
         "MCP-Protocol-Version": "2025-11-25",
         "TTD-Auth": "token-client-1",
         "x-test-fingerprint": "fp-client-1",
@@ -131,11 +134,13 @@ git commit -m "test(ttd-mcp): add failing scale-out session rebuild test"
 ### Task 2: Implement rebuild-on-miss in the shared transport factory
 
 **Files:**
+
 - Modify: `packages/shared/src/utils/mcp-http-transport-factory.ts:296-396`
 
 **Step 1: Read the current session-creation block**
 
 Read `packages/shared/src/utils/mcp-http-transport-factory.ts:296-396` to confirm the structure. Two paths exist:
+
 - `providedSessionId && !store.get(...)` → today returns 404 early (the bug).
 - `!providedSessionId` → generates a new sessionId, authenticates, calls `createSessionForAuth`.
 
@@ -146,25 +151,29 @@ We want to merge them: treat "providedSessionId unknown to this instance" as equ
 Find this block:
 
 ```typescript
-    if (providedSessionId && !sessionServiceStore.get(providedSessionId) && !sessions.sessionCreatedAt.has(providedSessionId)) {
-      return c.json({ error: "Session not found or expired" }, 404);
-    }
+if (
+  providedSessionId &&
+  !sessionServiceStore.get(providedSessionId) &&
+  !sessions.sessionCreatedAt.has(providedSessionId)
+) {
+  return c.json({ error: "Session not found or expired" }, 404);
+}
 ```
 
 Replace with:
 
 ```typescript
-    // Determine whether this request is:
-    // (a) a brand-new session (no Mcp-Session-Id header),
-    // (b) a known session on this instance (hot path),
-    // (c) an unknown session ID on this instance — which after Cloud Run
-    //     scale-out is the common case. We rebuild from the auth headers
-    //     using the client-provided session ID. The fingerprint check
-    //     below prevents hijacking of a rebuilt session.
-    const needsRebuild =
-      !!providedSessionId &&
-      !sessionServiceStore.get(providedSessionId) &&
-      !sessions.sessionCreatedAt.has(providedSessionId);
+// Determine whether this request is:
+// (a) a brand-new session (no Mcp-Session-Id header),
+// (b) a known session on this instance (hot path),
+// (c) an unknown session ID on this instance — which after Cloud Run
+//     scale-out is the common case. We rebuild from the auth headers
+//     using the client-provided session ID. The fingerprint check
+//     below prevents hijacking of a rebuilt session.
+const needsRebuild =
+  !!providedSessionId &&
+  !sessionServiceStore.get(providedSessionId) &&
+  !sessions.sessionCreatedAt.has(providedSessionId);
 ```
 
 Then find the existing branch:
@@ -184,32 +193,30 @@ and change to:
 Inside that branch, the existing code calls `sessionId = generateSessionId();`. Guard it so we only generate when we actually have no sessionId:
 
 ```typescript
-      if (!sessionId) {
-        sessionId = generateSessionId();
-      }
+if (!sessionId) {
+  sessionId = generateSessionId();
+}
 ```
 
 Record a rehydration outcome so logs and metrics distinguish the paths. Just before `sessions.trackSession(sessionId);` add:
 
 ```typescript
-      const outcome = needsRebuild ? "rehydrated" : "created";
+const outcome = needsRebuild ? "rehydrated" : "created";
 ```
 
 and change the final info log from `"New MCP session created"` to:
 
 ```typescript
-      logger.info(
-        {
-          sessionId,
-          outcome,
-          activeSessions: sessionServiceStore.size,
-          authType: authResult.authInfo.authType,
-          clientId: authResult.authInfo.clientId,
-        },
-        outcome === "rehydrated"
-          ? "MCP session rehydrated on this instance"
-          : "New MCP session created"
-      );
+logger.info(
+  {
+    sessionId,
+    outcome,
+    activeSessions: sessionServiceStore.size,
+    authType: authResult.authInfo.authType,
+    clientId: authResult.authInfo.clientId,
+  },
+  outcome === "rehydrated" ? "MCP session rehydrated on this instance" : "New MCP session created"
+);
 ```
 
 Leave the rest of the function unchanged. The fingerprint check block at lines 306-326 is skipped naturally when `needsRebuild` is true (no stored fingerprint yet); the fingerprint gets set during `createSessionForAuth` via the existing `sessionServiceStore.set(sessionId, services, authResult.credentialFingerprint)` call inside each per-server callback.
@@ -247,74 +254,81 @@ binding post-rebuild."
 
 ### Task 3: Add a security test — fingerprint mismatch on rebuild must 401
 
-**Context:** A rebuilt session must reject a client that supplies someone else's session ID with different credentials. The fingerprint check already runs for *existing* sessions (`validateSessionReuse`). For a *rebuild*, the new fingerprint is captured from the current request — so two different clients each arriving with distinct fingerprints would each rebuild into separate state if they used different session IDs. But we must verify that if a client reuses the same sessionId after rebuild with different credentials, the second call fails fingerprint validation.
+**Context:** A rebuilt session must reject a client that supplies someone else's session ID with different credentials. The fingerprint check already runs for _existing_ sessions (`validateSessionReuse`). For a _rebuild_, the new fingerprint is captured from the current request — so two different clients each arriving with distinct fingerprints would each rebuild into separate state if they used different session IDs. But we must verify that if a client reuses the same sessionId after rebuild with different credentials, the second call fails fingerprint validation.
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/tests/integration/session-rebuild.test.ts` (append `it(...)`)
 
 **Step 1: Add the failing security test**
 
 ```typescript
-  it("rebuilt session still rejects mismatched credentials on next call", async () => {
-    const { app } = createMcpHttpServer(config, logger);
+it("rebuilt session still rejects mismatched credentials on next call", async () => {
+  const { app } = createMcpHttpServer(config, logger);
 
-    const initRes = await app.request("/mcp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        "MCP-Protocol-Version": "2025-11-25",
-        "TTD-Auth": "token-client-1",
-        "x-test-fingerprint": "fp-client-1",
+  const initRes = await app.request("/mcp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2025-11-25",
+      "TTD-Auth": "token-client-1",
+      "x-test-fingerprint": "fp-client-1",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-11-25",
+        capabilities: {},
+        clientInfo: { name: "t", version: "1" },
       },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: 1, method: "initialize",
-        params: { protocolVersion: "2025-11-25", capabilities: {}, clientInfo: { name: "t", version: "1" } },
-      }),
-    });
-    const sessionId = initRes.headers.get("mcp-session-id")!;
-
-    // Simulate scale-out eviction
-    sessionServiceStore.delete(sessionId);
-
-    // Attacker: hijacks sessionId, supplies different credentials
-    const hijackRes = await app.request("/mcp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        "MCP-Protocol-Version": "2025-11-25",
-        "TTD-Auth": "token-attacker",
-        "x-test-fingerprint": "fp-attacker",
-        "mcp-session-id": sessionId,
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
-    });
-
-    // Rebuild path: attacker rebuilds "their" fingerprint onto the sessionId.
-    // This is acceptable — the sessionId is an opaque token the attacker
-    // already has to possess, and they do not gain access to the original
-    // client's data (services are rebuilt from *their* credentials).
-    // Follow-up calls from the ORIGINAL client would then fingerprint-
-    // mismatch and be rejected. Assert that:
-
-    expect(hijackRes.status).toBe(200);
-
-    // Now the legit client comes back:
-    const legitRes = await app.request("/mcp", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json, text/event-stream",
-        "MCP-Protocol-Version": "2025-11-25",
-        "TTD-Auth": "token-client-1",
-        "x-test-fingerprint": "fp-client-1",
-        "mcp-session-id": sessionId,
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }),
-    });
-    expect(legitRes.status).toBe(401);
+    }),
   });
+  const sessionId = initRes.headers.get("mcp-session-id")!;
+
+  // Simulate scale-out eviction
+  sessionServiceStore.delete(sessionId);
+
+  // Attacker: hijacks sessionId, supplies different credentials
+  const hijackRes = await app.request("/mcp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2025-11-25",
+      "TTD-Auth": "token-attacker",
+      "x-test-fingerprint": "fp-attacker",
+      "mcp-session-id": sessionId,
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+  });
+
+  // Rebuild path: attacker rebuilds "their" fingerprint onto the sessionId.
+  // This is acceptable — the sessionId is an opaque token the attacker
+  // already has to possess, and they do not gain access to the original
+  // client's data (services are rebuilt from *their* credentials).
+  // Follow-up calls from the ORIGINAL client would then fingerprint-
+  // mismatch and be rejected. Assert that:
+
+  expect(hijackRes.status).toBe(200);
+
+  // Now the legit client comes back:
+  const legitRes = await app.request("/mcp", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      "MCP-Protocol-Version": "2025-11-25",
+      "TTD-Auth": "token-client-1",
+      "x-test-fingerprint": "fp-client-1",
+      "mcp-session-id": sessionId,
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list", params: {} }),
+  });
+  expect(legitRes.status).toBe(401);
+});
 ```
 
 **Step 2: Run**
@@ -341,6 +355,7 @@ git commit -m "test(ttd-mcp): verify fingerprint binding survives session rebuil
 **Context:** We want observability into how often scale-out is actually triggering rebuilds. If this number is zero in production over a week, the refactor wasn't needed. If it's non-trivial, it justifies the change and informs whether we need further work (e.g., GCS-backed `report-csv://`).
 
 **Files:**
+
 - Modify: `packages/shared/src/utils/metrics.ts` (add counter + recorder)
 - Modify: `packages/shared/src/utils/mcp-http-transport-factory.ts` (call recorder)
 
@@ -356,7 +371,8 @@ Identify the block that declares existing `recordAuthValidation`. Add:
 
 ```typescript
 const sessionRehydrationsCounter = meter.createCounter("mcp_session_rehydrated_total", {
-  description: "Count of MCP sessions rebuilt from auth headers on a new instance (Cloud Run scale-out rebuild path).",
+  description:
+    "Count of MCP sessions rebuilt from auth headers on a new instance (Cloud Run scale-out rebuild path).",
 });
 
 export function recordSessionRehydration(authType: string): void {
@@ -371,9 +387,9 @@ Export it from `packages/shared/src/utils/metrics.ts` so the transport factory c
 In `mcp-http-transport-factory.ts`, inside the block you modified in Task 2, add:
 
 ```typescript
-      if (outcome === "rehydrated") {
-        recordSessionRehydration(authResult.authInfo.authType);
-      }
+if (outcome === "rehydrated") {
+  recordSessionRehydration(authResult.authInfo.authType);
+}
 ```
 
 Import `recordSessionRehydration` at the top of the file alongside the other metric recorders.
@@ -399,6 +415,7 @@ git commit -m "feat(shared): add mcp_session_rehydrated_total counter"
 **Context:** `MCP_SESSION_MODE` is read into config, defaulted to `"stateless"` in terraform, and never consulted by any code path. Remove it. The new behavior (rebuild-on-miss) applies unconditionally — there is no "stateful-only" mode to preserve.
 
 **Files:**
+
 - Modify: `packages/shared/src/utils/config-base.ts:46,79`
 - Modify: `terraform/modules/mcp-service/variables.tf:99-106`
 - Modify: `terraform/modules/mcp-service/main.tf:171-174`
@@ -408,6 +425,7 @@ git commit -m "feat(shared): add mcp_session_rehydrated_total counter"
 **Step 1: Remove from shared config**
 
 In `packages/shared/src/utils/config-base.ts`:
+
 - Delete line 46: `mcpSessionMode: z.enum(["stateless", "stateful", "auto"]).default("auto"),`
 - Delete line 79: `mcpSessionMode: process.env.MCP_SESSION_MODE,`
 
@@ -471,6 +489,7 @@ preserve."
 ### Task 6: Update CLAUDE.md and auto-memory
 
 **Files:**
+
 - Modify: `CLAUDE.md` (add a section under "Key Design Principles" or "Common Development Patterns")
 - Create or update: `~/.claude/projects/-Users-daniel-thorner-GitHub-cesteral-mcp-servers/memory/project_stateless_sessions.md`
 
@@ -479,7 +498,7 @@ preserve."
 Under "Key Design Principles" insert:
 
 ```markdown
-5. **Scale-out-safe sessions**: the streamable-HTTP transport factory rebuilds session services on cache miss. A follow-up request whose `Mcp-Session-Id` is unknown to the receiving Cloud Run instance triggers a re-auth + `createSessionForAuth` using the client-supplied session ID. The existing credential fingerprint check runs on every call, so rebuild does not weaken session binding. Per-instance state that is *not* reconstructible from credentials (rate-limiter counters, in-memory `report-csv://` resources) may behave slightly differently after a scale-out event — documented inline in each subsystem.
+5. **Scale-out-safe sessions**: the streamable-HTTP transport factory rebuilds session services on cache miss. A follow-up request whose `Mcp-Session-Id` is unknown to the receiving Cloud Run instance triggers a re-auth + `createSessionForAuth` using the client-supplied session ID. The existing credential fingerprint check runs on every call, so rebuild does not weaken session binding. Per-instance state that is _not_ reconstructible from credentials (rate-limiter counters, in-memory `report-csv://` resources) may behave slightly differently after a scale-out event — documented inline in each subsystem.
 ```
 
 **Step 2: Save an auto-memory entry**
@@ -498,6 +517,7 @@ The streamable-HTTP transport factory at `packages/shared/src/utils/mcp-http-tra
 **Why:** Cloud Run round-robins requests across instances (no `session_affinity` configured), so follow-up calls routinely land on boxes that never saw the session. Without rebuild-on-miss, ~(N-1)/N of calls 404'd whenever the service scaled above 1 instance.
 
 **How to apply:**
+
 - Do not re-introduce sticky-routing assumptions anywhere in the transport layer.
 - Do not assume session-scoped in-memory state is available on every request. Rate limiter counters and `report-csv://` resources are per-instance and best-effort after scale-out. If a future feature needs true session-scoped persistence, back it with GCS or another shared store.
 - Observability: `mcp_session_rehydrated_total` counter. A rising rate is expected under load, not a bug.

@@ -4,10 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getBulkEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
-import {
-  addParentValidationIssue,
-  mergeParentIdsIntoData,
-} from "../utils/parent-id-validation.js";
+import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -31,10 +28,7 @@ export const BulkUpdateEntitiesInputSchema = z
       .string()
       .optional()
       .describe("Advertiser ID for all items (required for campaign/adGroup)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID for all items (required for adGroup)"),
+    campaignId: z.string().optional().describe("Campaign ID for all items (required for adGroup)"),
     items: z
       .array(
         z.object({

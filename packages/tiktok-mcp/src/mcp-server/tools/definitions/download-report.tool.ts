@@ -36,19 +36,16 @@ After a report task is DONE (via \`tiktok_check_report_status\`), use the \`down
 
 export const DownloadReportInputSchema = z
   .object({
-    downloadUrl: z
-      .string()
-      .url()
-      .describe("Report download URL from tiktok_check_report_status"),
+    downloadUrl: z.string().url().describe("Report download URL from tiktok_check_report_status"),
     storeRawCsv: z
       .boolean()
       .optional()
       .default(false)
       .describe(
         "Persist the full CSV body in the in-process report-csv store and return " +
-        "a `report-csv://{id}` resource URI. Use when a downstream tool/user needs " +
-        "the complete CSV but the model only needs a bounded preview. Entries " +
-        "expire after 30 minutes. Sensitive token-like values are redacted before storage."
+          "a `report-csv://{id}` resource URI. Use when a downstream tool/user needs " +
+          "the complete CSV but the model only needs a bounded preview. Entries " +
+          "expire after 30 minutes. Sensitive token-like values are redacted before storage."
       ),
   })
   .merge(ReportViewInputSchema)
@@ -90,12 +87,9 @@ export async function downloadReportLogic(
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: TIKTOK_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>
-      tiktokReportingService.downloadReport(
-        input.downloadUrl,
-        fetchLimit,
-        undefined,
-        { includeRawCsv },
-      ),
+      tiktokReportingService.downloadReport(input.downloadUrl, fetchLimit, undefined, {
+        includeRawCsv,
+      }),
   });
 }
 

@@ -15,16 +15,13 @@ export const toolSchemaExplorationPrompt: Prompt = {
   arguments: [
     {
       name: "objective",
-      description:
-        "Exploration objective (e.g., entity management, reporting, troubleshooting)",
+      description: "Exploration objective (e.g., entity management, reporting, troubleshooting)",
       required: false,
     },
   ],
 };
 
-export function getToolSchemaExplorationMessage(
-  args?: Record<string, string>
-): string {
+export function getToolSchemaExplorationMessage(args?: Record<string, string>): string {
   const objective = args?.objective || "general capability discovery";
 
   return `# TTD Tool and Schema Exploration

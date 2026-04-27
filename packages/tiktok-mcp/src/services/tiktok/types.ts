@@ -29,10 +29,7 @@ export type TikTokObjectiveType =
   | "PRODUCT_SALES"
   | "RF_REACH";
 
-export type TikTokBudgetMode =
-  | "BUDGET_MODE_DAY"
-  | "BUDGET_MODE_TOTAL"
-  | "BUDGET_MODE_INFINITE";
+export type TikTokBudgetMode = "BUDGET_MODE_DAY" | "BUDGET_MODE_TOTAL" | "BUDGET_MODE_INFINITE";
 
 export type TikTokAdGroupStatus =
   | "ADGROUP_STATUS_ENABLE"
@@ -58,17 +55,9 @@ export type TikTokOptimizationGoal =
   | "FORM"
   | "PAGE_EVENT";
 
-export type TikTokBillingEvent =
-  | "CPC"
-  | "CPM"
-  | "CPV"
-  | "OCPC"
-  | "OCPM";
+export type TikTokBillingEvent = "CPC" | "CPM" | "CPV" | "OCPC" | "OCPM";
 
-export type TikTokAdStatus =
-  | "AD_STATUS_ENABLE"
-  | "AD_STATUS_DISABLE"
-  | "AD_STATUS_DELETE";
+export type TikTokAdStatus = "AD_STATUS_ENABLE" | "AD_STATUS_DISABLE" | "AD_STATUS_DELETE";
 
 // ─── Entity Interfaces ───────────────────────────────────────────────────────
 

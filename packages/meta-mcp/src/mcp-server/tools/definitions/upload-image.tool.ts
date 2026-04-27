@@ -22,18 +22,22 @@ Returns the image hash which can be used in ad creative payloads.
 
 **Usage:** The returned imageHash is used in adCreative → object_story_spec → link_data → image_hash`;
 
-export const UploadImageInputSchema = z.object({
-  adAccountId: z.string().describe("Meta Ad Account ID (e.g., act_1234567890)"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
-  name: z.string().optional().describe("Optional name for the image in Media Library"),
-}).describe("Parameters for uploading an image to Meta");
+export const UploadImageInputSchema = z
+  .object({
+    adAccountId: z.string().describe("Meta Ad Account ID (e.g., act_1234567890)"),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
+    name: z.string().optional().describe("Optional name for the image in Media Library"),
+  })
+  .describe("Parameters for uploading an image to Meta");
 
-export const UploadImageOutputSchema = z.object({
-  imageHash: z.string().describe("Image hash used in ad creative payloads"),
-  name: z.string().describe("Image name in Media Library"),
-  url: z.string().optional().describe("Preview URL of the uploaded image"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded image info");
+export const UploadImageOutputSchema = z
+  .object({
+    imageHash: z.string().describe("Image hash used in ad creative payloads"),
+    name: z.string().describe("Image name in Media Library"),
+    url: z.string().optional().describe("Preview URL of the uploaded image"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded image info");
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
@@ -61,12 +65,14 @@ export async function uploadImageLogic(
     context
   );
 
-  const actId = input.adAccountId.startsWith("act_") ? input.adAccountId : `act_${input.adAccountId}`;
+  const actId = input.adAccountId.startsWith("act_")
+    ? input.adAccountId
+    : `act_${input.adAccountId}`;
   const effectiveName = input.name ?? filename;
   const fields: Record<string, string> = {};
   if (input.name) fields.name = input.name;
 
-  const result = await metaService.graphApiClient.postMultipart(
+  const result = (await metaService.graphApiClient.postMultipart(
     `/${actId}/adimages`,
     fields,
     "bytes",
@@ -74,7 +80,7 @@ export async function uploadImageLogic(
     effectiveName,
     contentType,
     context
-  ) as MetaImageUploadResponse;
+  )) as MetaImageUploadResponse;
 
   const images = result.images ?? {};
   const imageEntry = Object.values(images)[0];
@@ -91,10 +97,12 @@ export async function uploadImageLogic(
 }
 
 export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Image uploaded to Meta!\n\nImage Hash: ${result.imageHash}\nName: ${result.name}${result.url ? `\nPreview URL: ${result.url}` : ""}\n\nUse imageHash in adCreative.object_story_spec.link_data.image_hash`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Image uploaded to Meta!\n\nImage Hash: ${result.imageHash}\nName: ${result.name}${result.url ? `\nPreview URL: ${result.url}` : ""}\n\nUse imageHash in adCreative.object_story_spec.link_data.image_hash`,
+    },
+  ];
 }
 
 export const uploadImageTool = {

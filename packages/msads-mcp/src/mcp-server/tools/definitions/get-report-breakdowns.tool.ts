@@ -28,12 +28,8 @@ Results will include one row per combination of entity + breakdown dimensions.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
-    reportType: z
-      .string()
-      .describe("Report type (e.g., CampaignPerformanceReportRequest)"),
-    accountId: z
-      .string()
-      .describe("Microsoft Ads Account ID"),
+    reportType: z.string().describe("Report type (e.g., CampaignPerformanceReportRequest)"),
+    accountId: z.string().describe("Microsoft Ads Account ID"),
     columns: z
       .array(z.string())
       .min(1)
@@ -63,7 +59,8 @@ export const GetReportBreakdownsInputSchema = z
   })
   .merge(ReportViewInputSchema.omit({ columns: true }))
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for running a Microsoft Ads report with breakdown columns");
@@ -129,7 +126,9 @@ export async function getReportBreakdownsLogic(
   };
 }
 
-export function getReportBreakdownsResponseFormatter(result: GetReportBreakdownsOutput): McpTextContent[] {
+export function getReportBreakdownsResponseFormatter(
+  result: GetReportBreakdownsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

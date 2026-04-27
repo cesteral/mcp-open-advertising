@@ -42,10 +42,7 @@ describe("LinkedInService", () => {
         paging: { count: 2, start: 0, total: 2 },
       });
 
-      const result = await service.listEntities(
-        "campaign",
-        "urn:li:sponsoredAccount:123456789"
-      );
+      const result = await service.listEntities("campaign", "urn:li:sponsoredAccount:123456789");
 
       expect(result.entities).toHaveLength(2);
       expect(result.total).toBe(2);
@@ -130,11 +127,9 @@ describe("LinkedInService", () => {
     it("patches the entity with encoded URN", async () => {
       mockHttpClient.patch.mockResolvedValueOnce({});
 
-      await service.updateEntity(
-        "campaign",
-        "urn:li:sponsoredCampaign:111222333",
-        { status: "PAUSED" }
-      );
+      await service.updateEntity("campaign", "urn:li:sponsoredCampaign:111222333", {
+        status: "PAUSED",
+      });
 
       const [path, data] = mockHttpClient.patch.mock.calls[0];
       expect(path).toContain(encodeURIComponent("urn:li:sponsoredCampaign:111222333"));
@@ -174,10 +169,7 @@ describe("LinkedInService", () => {
 
       const result = await service.bulkUpdateStatus(
         "campaign",
-        [
-          "urn:li:sponsoredCampaign:111",
-          "urn:li:sponsoredCampaign:222",
-        ],
+        ["urn:li:sponsoredCampaign:111", "urn:li:sponsoredCampaign:222"],
         "PAUSED"
       );
 

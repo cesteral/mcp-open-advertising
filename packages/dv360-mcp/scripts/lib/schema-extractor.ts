@@ -5,7 +5,7 @@
  * circular reference detection, and exclusion pattern support.
  */
 
-import { minimatch } from 'minimatch';
+import { minimatch } from "minimatch";
 import {
   DiscoveryDocument,
   DiscoverySchema,
@@ -15,21 +15,21 @@ import {
   ExtractionWarning,
   ErrorCodes,
   ExtractionError,
-} from './types.js';
-import type { SchemaExtractionConfig } from '../../config/schema-extraction.config.js';
+} from "./types.js";
+import type { SchemaExtractionConfig } from "../../config/schema-extraction.config.js";
 
 /**
  * Common types that should be automatically included if found
  */
 const COMMON_TYPES = [
-  'Date',
-  'Money',
-  'Status',
-  'EntityStatus',
-  'TimeOfDay',
-  'LatLng',
-  'Dimensions',
-  'FrequencyCap',
+  "Date",
+  "Money",
+  "Status",
+  "EntityStatus",
+  "TimeOfDay",
+  "LatLng",
+  "Dimensions",
+  "FrequencyCap",
 ];
 
 /**
@@ -69,7 +69,7 @@ export class SchemaExtractor {
   async extract(): Promise<ExtractionResult> {
     this.startTime = Date.now();
 
-    console.log('🔍 Extracting schemas...');
+    console.log("🔍 Extracting schemas...");
     console.log(`   Root schemas: ${this.config.rootSchemas.length}`);
 
     // Step 1: Extract root schemas
@@ -82,9 +82,9 @@ export class SchemaExtractor {
           throw error;
         }
         this.warnings.push({
-          type: 'MISSING_ROOT_SCHEMA',
+          type: "MISSING_ROOT_SCHEMA",
           message: `Root schema "${schemaName}" not found in Discovery document`,
-          severity: 'warning',
+          severity: "warning",
           details: { schemaName },
         });
       }
@@ -150,7 +150,7 @@ export class SchemaExtractor {
     if (path.includes(schemaName)) {
       this.circularRefs.push({
         path: [...path, schemaName],
-        message: `Circular reference detected: ${[...path, schemaName].join(' -> ')}`,
+        message: `Circular reference detected: ${[...path, schemaName].join(" -> ")}`,
       });
       return;
     }
@@ -158,9 +158,9 @@ export class SchemaExtractor {
     // Check max depth
     if (currentDepth >= this.config.resolution.maxDepth) {
       this.warnings.push({
-        type: 'MAX_DEPTH_EXCEEDED',
+        type: "MAX_DEPTH_EXCEEDED",
         message: `Max depth ${this.config.resolution.maxDepth} reached at ${schemaName}`,
-        severity: 'warning',
+        severity: "warning",
         details: {
           schemaName,
           depth: currentDepth,
@@ -212,12 +212,12 @@ export class SchemaExtractor {
     const dependencies = new Set<string>();
 
     const walkSchema = (obj: any) => {
-      if (!obj || typeof obj !== 'object') {
+      if (!obj || typeof obj !== "object") {
         return;
       }
 
       // Check for $ref
-      if (obj.$ref && typeof obj.$ref === 'string') {
+      if (obj.$ref && typeof obj.$ref === "string") {
         const refName = this.parseSchemaRef(obj.$ref);
         dependencies.add(refName);
       }
@@ -271,8 +271,8 @@ export class SchemaExtractor {
   private parseSchemaRef(ref: string): string {
     // Discovery format: just the schema name
     // Handle edge case where someone might use OpenAPI format
-    if (ref.startsWith('#/')) {
-      const parts = ref.split('/');
+    if (ref.startsWith("#/")) {
+      const parts = ref.split("/");
       return parts[parts.length - 1];
     }
     return ref;
@@ -303,7 +303,7 @@ export class SchemaExtractor {
     }
 
     if (this.commonTypesAdded.length > 0) {
-      console.log(`   Added common types: ${this.commonTypesAdded.join(', ')}`);
+      console.log(`   Added common types: ${this.commonTypesAdded.join(", ")}`);
     }
   }
 
@@ -346,8 +346,8 @@ export class SchemaExtractor {
 
     // Calculate resolved dependencies (non-root schemas)
     const resolvedDependencies = Array.from(this.extractedSchemas.keys())
-      .filter(name => !this.rootSchemasExtracted.includes(name))
-      .filter(name => !this.commonTypesAdded.includes(name));
+      .filter((name) => !this.rootSchemasExtracted.includes(name))
+      .filter((name) => !this.commonTypesAdded.includes(name));
 
     // Build dependency graph as plain object
     const dependencyGraph: Record<string, string[]> = {};
@@ -391,13 +391,13 @@ export class SchemaExtractor {
       dependencyGraph,
       validation: {
         valid: this.circularRefs.length === 0 || !this.config.validation.failOnCircularRefs,
-        errors: this.circularRefs.map(ref => ({
-          code: 'CIRCULAR_REFERENCE',
+        errors: this.circularRefs.map((ref) => ({
+          code: "CIRCULAR_REFERENCE",
           message: ref.message,
-          severity: 'error' as const,
+          severity: "error" as const,
           details: { path: ref.path },
         })),
-        warnings: this.warnings.map(w => ({
+        warnings: this.warnings.map((w) => ({
           code: w.type,
           message: w.message,
           severity: w.severity,

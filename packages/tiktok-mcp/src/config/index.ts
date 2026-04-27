@@ -23,10 +23,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["tiktok-bearer", "jwt", "none"]).default("tiktok-bearer"),
 
   // TikTok API Configuration
-  tiktokApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://business-api.tiktok.com"),
+  tiktokApiBaseUrl: z.string().url().default("https://business-api.tiktok.com"),
   tiktokApiVersion: z.string().default("v1.3"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.

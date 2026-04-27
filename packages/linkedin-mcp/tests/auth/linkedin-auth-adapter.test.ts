@@ -120,9 +120,9 @@ describe("parseLinkedInTokenFromHeaders", () => {
   });
 
   it("throws when scheme is not Bearer", () => {
-    expect(() =>
-      parseLinkedInTokenFromHeaders({ authorization: "Basic abc123" })
-    ).toThrow("Authorization header must use Bearer scheme");
+    expect(() => parseLinkedInTokenFromHeaders({ authorization: "Basic abc123" })).toThrow(
+      "Authorization header must use Bearer scheme"
+    );
   });
 
   it("handles array authorization header", () => {
@@ -302,9 +302,7 @@ describe("LinkedInRefreshTokenAdapter", () => {
         text: async () => "Bad credentials",
       } as unknown as Response);
 
-      await expect(adapter.getAccessToken()).rejects.toThrow(
-        "LinkedIn token refresh failed"
-      );
+      await expect(adapter.getAccessToken()).rejects.toThrow("LinkedIn token refresh failed");
 
       // After failure, pendingAuth should be cleared so a second call retries
       mockTokenExchange();

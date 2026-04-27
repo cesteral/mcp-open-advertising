@@ -16,17 +16,8 @@ import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { TraceExporter as GcpTraceExporter } from "@google-cloud/opentelemetry-cloud-trace-exporter";
 import { MetricExporter as GcpMetricExporter } from "@google-cloud/opentelemetry-cloud-monitoring-exporter";
 import { resourceFromAttributes } from "@opentelemetry/resources";
-import {
-  ATTR_SERVICE_NAME,
-  ATTR_SERVICE_VERSION,
-} from "@opentelemetry/semantic-conventions";
-import {
-  trace,
-  context,
-  SpanStatusCode,
-  type Span,
-  type Tracer,
-} from "@opentelemetry/api";
+import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
+import { trace, context, SpanStatusCode, type Span, type Tracer } from "@opentelemetry/api";
 import type { IncomingMessage } from "http";
 import type { Logger } from "pino";
 
@@ -90,10 +81,7 @@ export function buildExporters(config: OtelConfig): {
 /**
  * Initialize OpenTelemetry with GCP Cloud Run detection and configurable sampling.
  */
-export function initializeOpenTelemetry(
-  config: OtelConfig,
-  logger: Logger
-): NodeSDK | null {
+export function initializeOpenTelemetry(config: OtelConfig, logger: Logger): NodeSDK | null {
   if (sdk) {
     logger.warn("OpenTelemetry SDK already initialized, skipping");
     return sdk;
@@ -204,10 +192,7 @@ export async function shutdownOpenTelemetry(
     await Promise.race([
       sdk.shutdown(),
       new Promise<void>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("OpenTelemetry shutdown timed out")),
-          timeoutMs
-        )
+        setTimeout(() => reject(new Error("OpenTelemetry shutdown timed out")), timeoutMs)
       ),
     ]);
     sdk = null;
@@ -272,10 +257,7 @@ export async function withSpan<T>(
   }
 
   try {
-    const result = await context.with(
-      trace.setSpan(context.active(), span),
-      () => fn(span)
-    );
+    const result = await context.with(trace.setSpan(context.active(), span), () => fn(span));
     span.setStatus({ code: SpanStatusCode.OK });
     return result;
   } catch (error: any) {
@@ -312,10 +294,7 @@ export async function withToolSpan<T>(
 /**
  * Set attribute on current active span.
  */
-export function setSpanAttribute(
-  key: string,
-  value: string | number | boolean
-): void {
+export function setSpanAttribute(key: string, value: string | number | boolean): void {
   const currentSpan = trace.getActiveSpan();
   if (currentSpan) {
     currentSpan.setAttribute(key, value);
@@ -359,10 +338,4 @@ export function createPlatformSpanHelper(prefix: string) {
 }
 
 // Re-export relevant OTEL API types for consumers
-export {
-  type Span,
-  type Tracer,
-  SpanStatusCode,
-  trace,
-  context,
-} from "@opentelemetry/api";
+export { type Span, type Tracer, SpanStatusCode, trace, context } from "@opentelemetry/api";

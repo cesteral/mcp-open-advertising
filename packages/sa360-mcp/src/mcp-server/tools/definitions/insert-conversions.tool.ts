@@ -84,7 +84,9 @@ export async function insertConversionsLogic(
   };
 }
 
-export function insertConversionsResponseFormatter(result: InsertConversionsOutput): McpTextContent[] {
+export function insertConversionsResponseFormatter(
+  result: InsertConversionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

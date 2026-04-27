@@ -17,9 +17,7 @@ export const pinterestToolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getPinterestToolSchemaExplorationMessage(
-  args?: Record<string, string>,
-): string {
+export function getPinterestToolSchemaExplorationMessage(args?: Record<string, string>): string {
   const objective = args?.objective || "general capability discovery";
 
   return `# Pinterest MCP Tool & Schema Exploration Guide

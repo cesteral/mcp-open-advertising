@@ -131,11 +131,7 @@ describe("searchTargetingLogic", () => {
     });
 
     await expect(
-      searchTargetingLogic(
-        { type: "adinterest", query: "running" },
-        createMockContext(),
-        undefined
-      )
+      searchTargetingLogic({ type: "adinterest", query: "running" }, createMockContext(), undefined)
     ).rejects.toThrow("No session ID available.");
   });
 });

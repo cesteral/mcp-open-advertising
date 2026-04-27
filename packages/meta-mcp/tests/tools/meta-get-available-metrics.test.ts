@@ -32,10 +32,7 @@ describe("meta_get_available_metrics", () => {
   });
 
   it("returns non-empty metric groups, breakdowns, and action breakdowns", async () => {
-    const result = await getAvailableMetricsLogic(
-      {},
-      { requestId: "req-1" } as any,
-    );
+    const result = await getAvailableMetricsLogic({}, { requestId: "req-1" } as any);
 
     expect(result.level).toBeNull();
     expect(Object.keys(result.metrics)).toContain("delivery");
@@ -53,18 +50,16 @@ describe("meta_get_available_metrics", () => {
   });
 
   it("echoes the requested level in the output", async () => {
-    const result = await getAvailableMetricsLogic(
-      { level: "campaign" },
-      { requestId: "req-2" } as any,
-    );
+    const result = await getAvailableMetricsLogic({ level: "campaign" }, {
+      requestId: "req-2",
+    } as any);
     expect(result.level).toBe("campaign");
   });
 
   it("response formatter renders metric groups and breakdowns", async () => {
-    const result = await getAvailableMetricsLogic(
-      { level: "adset" },
-      { requestId: "req-3" } as any,
-    );
+    const result = await getAvailableMetricsLogic({ level: "adset" }, {
+      requestId: "req-3",
+    } as any);
     const content = getAvailableMetricsResponseFormatter(result);
     expect(content).toHaveLength(1);
     expect(content[0]!.text).toContain("delivery");

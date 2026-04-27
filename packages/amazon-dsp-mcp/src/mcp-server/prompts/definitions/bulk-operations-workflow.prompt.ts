@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const bulkOperationsWorkflowPrompt: Prompt = {
   name: "amazon_dsp_bulk_operations_workflow",
-  description: "Guide for performing bulk create, update, and status operations on AmazonDsp Ads entities",
+  description:
+    "Guide for performing bulk create, update, and status operations on AmazonDsp Ads entities",
   arguments: [
     {
       name: "profileId",

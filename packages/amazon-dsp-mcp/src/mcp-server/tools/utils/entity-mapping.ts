@@ -79,7 +79,9 @@ export function getEntityTypeEnum(): [string, ...string[]] {
   return getSupportedEntityTypes() as [string, ...string[]];
 }
 
-export function getCanonicalEntityType(entityType: AmazonDspEntityType): AmazonDspCanonicalEntityType {
+export function getCanonicalEntityType(
+  entityType: AmazonDspEntityType
+): AmazonDspCanonicalEntityType {
   return normalizeAmazonDspEntityType(entityType);
 }
 
@@ -91,8 +93,5 @@ export function getEntityContract(entityType: AmazonDspEntityType) {
  * Interpolate path template placeholders.
  */
 export function interpolatePath(path: string, params: Record<string, string>): string {
-  return Object.entries(params).reduce(
-    (acc, [key, val]) => acc.replace(`{${key}}`, val),
-    path
-  );
+  return Object.entries(params).reduce((acc, [key, val]) => acc.replace(`{${key}}`, val), path);
 }

@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const pinterestCreativeUploadWorkflowPrompt: Prompt = {
   name: "creative_upload_workflow",
-  description: "Step-by-step guide for uploading video creatives and creating Pinterest Ads. Image creatives reference a hosted image URL directly rather than uploading a file.",
+  description:
+    "Step-by-step guide for uploading video creatives and creating Pinterest Ads. Image creatives reference a hosted image URL directly rather than uploading a file.",
   arguments: [
     {
       name: "adAccountId",

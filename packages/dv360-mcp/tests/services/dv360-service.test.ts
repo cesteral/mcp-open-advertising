@@ -6,7 +6,9 @@ import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
 // ---------------------------------------------------------------------------
 
 vi.mock("../../src/utils/telemetry/index.js", () => ({
-  withDV360ApiSpan: vi.fn().mockImplementation((_op: string, _type: string, fn: () => unknown) => fn()),
+  withDV360ApiSpan: vi
+    .fn()
+    .mockImplementation((_op: string, _type: string, fn: () => unknown) => fn()),
   setSpanAttribute: vi.fn(),
 }));
 
@@ -46,9 +48,9 @@ function createMockHttpClient() {
   return {
     fetch: vi.fn(),
     fetchRaw: vi.fn(),
-    getUploadBaseUrl: vi.fn().mockReturnValue(
-      "https://displayvideo.googleapis.com/upload/displayvideo/v4"
-    ),
+    getUploadBaseUrl: vi
+      .fn()
+      .mockReturnValue("https://displayvideo.googleapis.com/upload/displayvideo/v4"),
   } as any;
 }
 
@@ -113,10 +115,7 @@ describe("DV360Service", () => {
         nextPageToken: "page2",
       });
 
-      const result = await service.listEntities(
-        "lineItem",
-        { advertiserId: "123" },
-      );
+      const result = await service.listEntities("lineItem", { advertiserId: "123" });
 
       expect(result.entities).toEqual([{ id: "li-1" }, { id: "li-2" }]);
       expect(result.nextPageToken).toBe("page2");
@@ -126,9 +125,9 @@ describe("DV360Service", () => {
     it("throws McpError when a required parent ID is missing", async () => {
       mockEntityConfig({ parentIds: ["advertiserId", "campaignId"] });
 
-      await expect(
-        service.listEntities("lineItem", { advertiserId: "123" }),
-      ).rejects.toThrow(McpError);
+      await expect(service.listEntities("lineItem", { advertiserId: "123" })).rejects.toThrow(
+        McpError
+      );
 
       try {
         await service.listEntities("lineItem", { advertiserId: "123" });
@@ -148,7 +147,7 @@ describe("DV360Service", () => {
         { advertiserId: "123" },
         "status=ACTIVE",
         "next-page",
-        25,
+        25
       );
 
       const calledPath = httpClient.fetch.mock.calls[0][0] as string;
@@ -159,8 +158,7 @@ describe("DV360Service", () => {
 
     it("uses function-based apiPath when config provides one", async () => {
       mockEntityConfig({
-        apiPath: (ids: Record<string, string>) =>
-          `/advertisers/${ids.advertiserId}/lineItems`,
+        apiPath: (ids: Record<string, string>) => `/advertisers/${ids.advertiserId}/lineItems`,
         parentIds: ["advertiserId"],
       });
       mockEntitySchema();
@@ -181,10 +179,7 @@ describe("DV360Service", () => {
       mockEntitySchema();
       httpClient.fetch.mockResolvedValue({ advertisers: [] });
 
-      await service.listEntities(
-        "advertiser",
-        { partnerId: "p-99" },
-      );
+      await service.listEntities("advertiser", { partnerId: "p-99" });
 
       const calledPath = httpClient.fetch.mock.calls[0][0] as string;
       expect(calledPath).toContain("partnerId=p-99");
@@ -209,10 +204,7 @@ describe("DV360Service", () => {
       };
       httpClient.fetch.mockResolvedValue(responsePayload);
 
-      const result = await service.listEntities(
-        "lineItem",
-        { advertiserId: "123" },
-      );
+      const result = await service.listEntities("lineItem", { advertiserId: "123" });
 
       expect(schema.parse).toHaveBeenCalledWith(responsePayload);
       expect(result.entities).toEqual([{ id: "li-100" }]);
@@ -224,10 +216,7 @@ describe("DV360Service", () => {
       mockEntitySchema();
       httpClient.fetch.mockResolvedValue({});
 
-      const result = await service.listEntities(
-        "lineItem",
-        { advertiserId: "123" },
-      );
+      const result = await service.listEntities("lineItem", { advertiserId: "123" });
 
       expect(result.entities).toEqual([]);
       expect(result.nextPageToken).toBeUndefined();
@@ -245,10 +234,10 @@ describe("DV360Service", () => {
       const entity = { lineItemId: "li-1", displayName: "My Line Item" };
       httpClient.fetch.mockResolvedValue(entity);
 
-      const result = await service.getEntity(
-        "lineItem",
-        { advertiserId: "123", lineItemId: "li-1" },
-      );
+      const result = await service.getEntity("lineItem", {
+        advertiserId: "123",
+        lineItemId: "li-1",
+      });
 
       expect(result).toEqual(entity);
       const calledPath = httpClient.fetch.mock.calls[0][0] as string;
@@ -258,9 +247,9 @@ describe("DV360Service", () => {
     it("throws McpError when entity ID is missing", async () => {
       mockEntityConfig();
 
-      await expect(
-        service.getEntity("lineItem", { advertiserId: "123" }),
-      ).rejects.toThrow(McpError);
+      await expect(service.getEntity("lineItem", { advertiserId: "123" })).rejects.toThrow(
+        McpError
+      );
 
       try {
         await service.getEntity("lineItem", { advertiserId: "123" });
@@ -275,10 +264,7 @@ describe("DV360Service", () => {
       mockEntitySchema();
       httpClient.fetch.mockResolvedValue({ lineItemId: "li-1" });
 
-      await service.getEntity(
-        "lineItem",
-        { advertiserId: "555", lineItemId: "li-1" },
-      );
+      await service.getEntity("lineItem", { advertiserId: "555", lineItemId: "li-1" });
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("dv360:555", 1);
     });
@@ -306,11 +292,7 @@ describe("DV360Service", () => {
       const created = { lineItemId: "li-new", displayName: "New Line Item" };
       httpClient.fetch.mockResolvedValue(created);
 
-      const result = await service.createEntity(
-        "lineItem",
-        { advertiserId: "123" },
-        inputData,
-      );
+      const result = await service.createEntity("lineItem", { advertiserId: "123" }, inputData);
 
       expect(result).toEqual(created);
       expect(httpClient.fetch).toHaveBeenCalledWith(
@@ -320,16 +302,16 @@ describe("DV360Service", () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(inputData),
-        }),
+        })
       );
     });
 
     it("throws McpError when create is not supported", async () => {
       mockEntityConfig({ supportsCreate: false });
 
-      await expect(
-        service.createEntity("partner", {}, { displayName: "test" }),
-      ).rejects.toThrow(McpError);
+      await expect(service.createEntity("partner", {}, { displayName: "test" })).rejects.toThrow(
+        McpError
+      );
 
       try {
         await service.createEntity("partner", {}, { displayName: "test" });
@@ -344,11 +326,7 @@ describe("DV360Service", () => {
       mockEntitySchema();
       httpClient.fetch.mockResolvedValue({});
 
-      await service.createEntity(
-        "lineItem",
-        { advertiserId: "321" },
-        { displayName: "Test" },
-      );
+      await service.createEntity("lineItem", { advertiserId: "321" }, { displayName: "Test" });
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("dv360:321", 1);
     });
@@ -379,7 +357,7 @@ describe("DV360Service", () => {
         "lineItem",
         { advertiserId: "123", lineItemId: "li-1" },
         updateData,
-        "displayName",
+        "displayName"
       );
 
       expect(result).toEqual(patchResponse);
@@ -400,12 +378,7 @@ describe("DV360Service", () => {
       mockEntityConfig({ supportsUpdate: false });
 
       await expect(
-        service.updateEntity(
-          "partner",
-          { partnerId: "p-1" },
-          { displayName: "x" },
-          "displayName",
-        ),
+        service.updateEntity("partner", { partnerId: "p-1" }, { displayName: "x" }, "displayName")
       ).rejects.toThrow(McpError);
 
       try {
@@ -413,7 +386,7 @@ describe("DV360Service", () => {
           "partner",
           { partnerId: "p-1" },
           { displayName: "x" },
-          "displayName",
+          "displayName"
         );
       } catch (err) {
         expect((err as McpError).code).toBe(JsonRpcErrorCode.InvalidParams);
@@ -432,7 +405,7 @@ describe("DV360Service", () => {
         "lineItem",
         { advertiserId: "123", lineItemId: "li-1" },
         { displayName: "Updated" },
-        "displayName,budget.amount",
+        "displayName,budget.amount"
       );
 
       const patchPath = httpClient.fetch.mock.calls[1][0] as string;
@@ -442,20 +415,18 @@ describe("DV360Service", () => {
     it("rate-limits by advertiserId for the PATCH call", async () => {
       mockEntityConfig();
       mockEntitySchema();
-      httpClient.fetch
-        .mockResolvedValueOnce({ lineItemId: "li-1" })
-        .mockResolvedValueOnce({});
+      httpClient.fetch.mockResolvedValueOnce({ lineItemId: "li-1" }).mockResolvedValueOnce({});
 
       await service.updateEntity(
         "lineItem",
         { advertiserId: "777", lineItemId: "li-1" },
         { displayName: "X" },
-        "displayName",
+        "displayName"
       );
 
       // Rate limiter should have been called for both getEntity and updateEntity
       const consumeCalls = rateLimiter.consume.mock.calls.filter(
-        (c: string[]) => c[0] === "dv360:777",
+        (c: string[]) => c[0] === "dv360:777"
       );
       expect(consumeCalls.length).toBeGreaterThanOrEqual(1);
     });
@@ -470,24 +441,17 @@ describe("DV360Service", () => {
       mockEntityConfig();
       httpClient.fetch.mockResolvedValue(undefined);
 
-      await service.deleteEntity(
-        "lineItem",
-        { advertiserId: "123", lineItemId: "li-1" },
-      );
+      await service.deleteEntity("lineItem", { advertiserId: "123", lineItemId: "li-1" });
 
-      expect(httpClient.fetch).toHaveBeenCalledWith(
-        "/advertisers/123/lineItems/li-1",
-        undefined,
-        { method: "DELETE" },
-      );
+      expect(httpClient.fetch).toHaveBeenCalledWith("/advertisers/123/lineItems/li-1", undefined, {
+        method: "DELETE",
+      });
     });
 
     it("throws McpError when delete is not supported", async () => {
       mockEntityConfig({ supportsDelete: false });
 
-      await expect(
-        service.deleteEntity("partner", { partnerId: "p-1" }),
-      ).rejects.toThrow(McpError);
+      await expect(service.deleteEntity("partner", { partnerId: "p-1" })).rejects.toThrow(McpError);
 
       try {
         await service.deleteEntity("partner", { partnerId: "p-1" });
@@ -500,9 +464,9 @@ describe("DV360Service", () => {
     it("throws McpError when entity ID is missing for delete", async () => {
       mockEntityConfig();
 
-      await expect(
-        service.deleteEntity("lineItem", { advertiserId: "123" }),
-      ).rejects.toThrow(McpError);
+      await expect(service.deleteEntity("lineItem", { advertiserId: "123" })).rejects.toThrow(
+        McpError
+      );
 
       try {
         await service.deleteEntity("lineItem", { advertiserId: "123" });
@@ -516,10 +480,7 @@ describe("DV360Service", () => {
       mockEntityConfig();
       httpClient.fetch.mockResolvedValue(undefined);
 
-      await service.deleteEntity(
-        "lineItem",
-        { advertiserId: "888", lineItemId: "li-1" },
-      );
+      await service.deleteEntity("lineItem", { advertiserId: "888", lineItemId: "li-1" });
 
       expect(rateLimiter.consume).toHaveBeenCalledWith("dv360:888", 1);
     });
@@ -542,7 +503,7 @@ describe("DV360Service", () => {
 
       const result = await service.uploadCustomBiddingScript(
         "algo-42",
-        "function main() { return 1.0; }",
+        "function main() { return 1.0; }"
       );
 
       expect(result).toEqual({ resourceName: "media/abc123" });
@@ -550,7 +511,7 @@ describe("DV360Service", () => {
 
       const [url, timeout, _context, opts] = httpClient.fetchRaw.mock.calls[0];
       expect(url).toBe(
-        "https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/algo-42:uploadScript",
+        "https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/algo-42:uploadScript"
       );
       expect(timeout).toBe(30000);
       expect(opts.method).toBe("POST");
@@ -568,9 +529,9 @@ describe("DV360Service", () => {
       };
       httpClient.fetchRaw.mockResolvedValue(responseObj);
 
-      await expect(
-        service.uploadCustomBiddingScript("algo-42", "bad content"),
-      ).rejects.toThrow(McpError);
+      await expect(service.uploadCustomBiddingScript("algo-42", "bad content")).rejects.toThrow(
+        McpError
+      );
 
       try {
         // Reset mock for second call
@@ -618,10 +579,7 @@ describe("DV360Service", () => {
       };
       httpClient.fetch.mockResolvedValue(scriptResource);
 
-      const result = await service.createCustomBiddingScript(
-        "algo-42",
-        "media/abc123",
-      );
+      const result = await service.createCustomBiddingScript("algo-42", "media/abc123");
 
       expect(result).toEqual(scriptResource);
       expect(httpClient.fetch).toHaveBeenCalledWith(
@@ -633,7 +591,7 @@ describe("DV360Service", () => {
           body: JSON.stringify({
             script: { resourceName: "media/abc123" },
           }),
-        }),
+        })
       );
     });
   });
@@ -687,16 +645,13 @@ describe("DV360Service", () => {
       };
       httpClient.fetchRaw.mockResolvedValue(responseObj);
 
-      const result = await service.uploadCustomBiddingRules(
-        "algo-42",
-        '{"rules": []}',
-      );
+      const result = await service.uploadCustomBiddingRules("algo-42", '{"rules": []}');
 
       expect(result).toEqual({ resourceName: "media/rules-456" });
 
       const [url, _timeout, _ctx, opts] = httpClient.fetchRaw.mock.calls[0];
       expect(url).toBe(
-        "https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/algo-42:uploadRules",
+        "https://displayvideo.googleapis.com/upload/displayvideo/v4/customBiddingAlgorithms/algo-42:uploadRules"
       );
       expect(opts.method).toBe("POST");
       expect(opts.headers["Content-Type"]).toBe("application/octet-stream");
@@ -739,10 +694,7 @@ describe("DV360Service", () => {
       };
       httpClient.fetch.mockResolvedValue(rulesResource);
 
-      const result = await service.createCustomBiddingRules(
-        "algo-42",
-        "media/rules-456",
-      );
+      const result = await service.createCustomBiddingRules("algo-42", "media/rules-456");
 
       expect(result).toEqual(rulesResource);
       expect(httpClient.fetch).toHaveBeenCalledWith(
@@ -753,7 +705,7 @@ describe("DV360Service", () => {
           body: JSON.stringify({
             rules: { resourceName: "media/rules-456" },
           }),
-        }),
+        })
       );
     });
   });
@@ -777,7 +729,7 @@ describe("DV360Service", () => {
       expect(result).toEqual(script);
       expect(httpClient.fetch).toHaveBeenCalledWith(
         "/customBiddingAlgorithms/algo-42/scripts/s-7",
-        undefined,
+        undefined
       );
     });
   });
@@ -797,7 +749,7 @@ describe("DV360Service", () => {
       expect(result).toEqual(rules);
       expect(httpClient.fetch).toHaveBeenCalledWith(
         "/customBiddingAlgorithms/algo-42/rules/r-9",
-        undefined,
+        undefined
       );
     });
   });

@@ -23,20 +23,10 @@ Example updateMask: "name,status" or "campaignBudget,startDate"
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
-    data: z
-      .record(z.any())
-      .describe("Entity data fields to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
+    data: z.record(z.any()).describe("Entity data fields to update"),
     updateMask: z
       .string()
       .min(1)

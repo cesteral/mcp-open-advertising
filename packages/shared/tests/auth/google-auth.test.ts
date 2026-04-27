@@ -38,8 +38,7 @@ const MOCK_SA_CREDENTIALS: ServiceAccountCredentials = {
   type: "service_account",
   project_id: "test-project",
   private_key_id: "key123",
-  private_key:
-    "-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----\n",
+  private_key: "-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----\n",
   client_email: "test@test.iam.gserviceaccount.com",
   client_id: "123456",
   auth_uri: "https://accounts.google.com/o/oauth2/auth",
@@ -74,11 +73,7 @@ function mockFetchSuccess(token = "test-token", expiresIn = 3600) {
   });
 }
 
-function mockFetchFailure(
-  status = 401,
-  statusText = "Unauthorized",
-  body = "bad creds"
-) {
+function mockFetchFailure(status = 401, statusText = "Unauthorized", body = "bad creds") {
   return vi.fn().mockResolvedValue({
     ok: false,
     status,
@@ -205,10 +200,7 @@ describe("ServiceAccountAuthAdapter", () => {
   });
 
   it("throws on failed token exchange (non-ok response)", async () => {
-    vi.stubGlobal(
-      "fetch",
-      mockFetchFailure(400, "Bad Request", "invalid_grant")
-    );
+    vi.stubGlobal("fetch", mockFetchFailure(400, "Bad Request", "invalid_grant"));
 
     const adapter = new ServiceAccountAuthAdapter(MOCK_SA_CREDENTIALS, [
       "https://www.googleapis.com/auth/display-video",
@@ -291,10 +283,7 @@ describe("OAuth2RefreshTokenAuthAdapter", () => {
   });
 
   it("throws on failed refresh (non-ok response)", async () => {
-    vi.stubGlobal(
-      "fetch",
-      mockFetchFailure(401, "Unauthorized", "invalid_client")
-    );
+    vi.stubGlobal("fetch", mockFetchFailure(401, "Unauthorized", "invalid_client"));
 
     const adapter = new OAuth2RefreshTokenAuthAdapter(MOCK_OAUTH2_CREDENTIALS, [
       "https://www.googleapis.com/auth/display-video",
@@ -347,9 +336,7 @@ describe("createGoogleAuthAdapter", () => {
   });
 
   it("returns OAuth2RefreshTokenAuthAdapter for oauth2 type", () => {
-    const adapter = createGoogleAuthAdapter(MOCK_OAUTH2_CREDENTIALS, [
-      "scope1",
-    ]);
+    const adapter = createGoogleAuthAdapter(MOCK_OAUTH2_CREDENTIALS, ["scope1"]);
     expect(adapter).toBeInstanceOf(OAuth2RefreshTokenAuthAdapter);
     expect(adapter.credentialType).toBe("oauth2");
   });
@@ -357,15 +344,11 @@ describe("createGoogleAuthAdapter", () => {
 
 describe("parseCredentialsFromHeaders", () => {
   it("throws when X-Google-Auth-Type header is missing", () => {
-    expect(() => parseCredentialsFromHeaders({})).toThrow(
-      /Missing X-Google-Auth-Type header/
-    );
+    expect(() => parseCredentialsFromHeaders({})).toThrow(/Missing X-Google-Auth-Type header/);
   });
 
   it("parses service_account credentials from base64-encoded header", () => {
-    const encoded = Buffer.from(JSON.stringify(MOCK_SA_CREDENTIALS)).toString(
-      "base64"
-    );
+    const encoded = Buffer.from(JSON.stringify(MOCK_SA_CREDENTIALS)).toString("base64");
 
     const result = parseCredentialsFromHeaders({
       "x-google-auth-type": "service_account",
@@ -445,9 +428,7 @@ describe("parseCredentialsFromHeaders", () => {
 describe("getCredentialFingerprint", () => {
   it("returns SHA-256 hash of client_email for service accounts", () => {
     const result = getCredentialFingerprint(MOCK_SA_CREDENTIALS);
-    const expected = createHash("sha256")
-      .update("test@test.iam.gserviceaccount.com")
-      .digest("hex");
+    const expected = createHash("sha256").update("test@test.iam.gserviceaccount.com").digest("hex");
     expect(result).toBe(expected);
   });
 

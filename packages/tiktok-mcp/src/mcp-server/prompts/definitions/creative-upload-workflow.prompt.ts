@@ -37,7 +37,9 @@ TikTok creative workflow: Upload media → Create Ad Group → Create Ad with cr
 
 ## Step 1: Upload ${creativeType === "image" ? "Image" : "Video"}
 
-${creativeType === "image" ? `
+${
+  creativeType === "image"
+    ? `
 \`\`\`json
 tiktok_upload_image({
   "advertiserId": "${advertiserId}",
@@ -51,7 +53,8 @@ tiktok_upload_image({
 - Formats: JPEG, PNG
 - Max 100KB for feed ads
 - Recommended: 1200x628px, 1080x1080px, 720x1280px
-` : `
+`
+    : `
 \`\`\`json
 tiktok_upload_video({
   "advertiserId": "${advertiserId}",
@@ -70,7 +73,8 @@ When \`video_status == "bind_success"\`, the video is ready.
 - Max 500MB
 - Min resolution: 540x960 (9:16), 960x540 (16:9), or 640x640 (1:1)
 - Duration: 5-60 seconds for In-Feed ads
-`}
+`
+}
 
 ## Step 2: Create Ad
 
@@ -82,9 +86,13 @@ tiktok_create_entity({
     "adgroup_id": "{your_adgroup_id}",
     "ad_name": "Your Ad Name",
     "ad_format": "SINGLE_VIDEO",
-    ${creativeType === "image" ? `"image_ids": ["{imageId_from_step_1}"],
-    "ad_text": "Your ad copy here",` : `"video_id": "{videoId_from_step_1}",
-    "ad_text": "Your ad copy here",`}
+    ${
+      creativeType === "image"
+        ? `"image_ids": ["{imageId_from_step_1}"],
+    "ad_text": "Your ad copy here",`
+        : `"video_id": "{videoId_from_step_1}",
+    "ad_text": "Your ad copy here",`
+    }
     "landing_page_url": "https://yoursite.com",
     "call_to_action": "LEARN_MORE",
     "status": "DISABLE"

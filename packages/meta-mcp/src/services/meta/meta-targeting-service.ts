@@ -40,7 +40,10 @@ export class MetaTargetingService {
 
     // adinterestsuggestion requires interest_list instead of q
     if (normalizedType === "adinterestsuggestion") {
-      this.logger.debug({ type: normalizedType }, "Using interest_list param for adinterestsuggestion type");
+      this.logger.debug(
+        { type: normalizedType },
+        "Using interest_list param for adinterestsuggestion type"
+      );
       params.interest_list = query;
     } else {
       params.q = query;

@@ -4,12 +4,15 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
-import {
-  MYREPORTS_TEMPLATE_ACCESS_ERROR,
-  throwIfGraphqlErrors,
-} from "../utils/graphql-errors.js";
+import { MYREPORTS_TEMPLATE_ACCESS_ERROR, throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
-const SUPPORTED_REPORT_FREQUENCIES = ["SINGLE_RUN", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY"] as const;
+const SUPPORTED_REPORT_FREQUENCIES = [
+  "SINGLE_RUN",
+  "DAILY",
+  "WEEKLY",
+  "MONTHLY",
+  "QUARTERLY",
+] as const;
 const SUPPORTED_REPORT_FORMATS = ["EXCEL"] as const;
 const SUPPORTED_REPORT_DATE_FORMATS = ["International"] as const;
 const SUPPORTED_REPORT_NUMERIC_FORMATS = ["US"] as const;
@@ -44,9 +47,7 @@ const ReportFilterSchema = z.object({
 
 const TailAggregationSchema = z.object({
   columnId: z.string().describe("Column ID for the tail aggregation"),
-  tailAggregation: z
-    .string()
-    .describe("Tail aggregation type, e.g. NO_IMPRESSIONS"),
+  tailAggregation: z.string().describe("Tail aggregation type, e.g. NO_IMPRESSIONS"),
 });
 
 const TimezoneSchema = z
@@ -64,9 +65,7 @@ export const CreateTemplateScheduleInputSchema = z
     startDate: z
       .string()
       .describe("ISO 8601 datetime for the first run, e.g. 2025-10-10T00:00:00Z"),
-    frequency: z
-      .enum(SUPPORTED_REPORT_FREQUENCIES)
-      .describe("How often the report runs"),
+    frequency: z.enum(SUPPORTED_REPORT_FREQUENCIES).describe("How often the report runs"),
     dateRange: z
       .string()
       .describe(
@@ -86,12 +85,9 @@ export const CreateTemplateScheduleInputSchema = z
       .min(1)
       .describe(
         "Required. Scope the report to specific partners or advertisers. " +
-        "Each entry must include a reportType and at least one of partnerIds, advertiserIds, campaignIds, etc."
+          "Each entry must include a reportType and at least one of partnerIds, advertiserIds, campaignIds, etc."
       ),
-    suppressTotals: z
-      .boolean()
-      .default(false)
-      .describe("Suppress totals row in the report output"),
+    suppressTotals: z.boolean().default(false).describe("Suppress totals row in the report output"),
     suppressZeroMeasureRows: z
       .boolean()
       .default(false)
@@ -194,9 +190,7 @@ export async function createTemplateScheduleLogic(
   const mutationResult =
     (gqlData.myReportsTemplateScheduleCreate as Record<string, unknown> | undefined) ?? {};
   const scheduleData = (mutationResult.data as Record<string, unknown> | undefined) ?? {};
-  const errors = mutationResult.errors as
-    | Array<{ field?: string; message: string }>
-    | undefined;
+  const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
   return {
     scheduleId: scheduleData.scheduleId as string | undefined,
@@ -215,9 +209,7 @@ export function createTemplateScheduleResponseFormatter(
         type: "text" as const,
         text:
           `Template schedule creation failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];

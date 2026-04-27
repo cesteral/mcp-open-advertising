@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const bulkOperationsWorkflowPrompt: Prompt = {
   name: "snapchat_bulk_operations_workflow",
-  description: "Guide for performing bulk create, update, and status operations on Snapchat Ads entities",
+  description:
+    "Guide for performing bulk create, update, and status operations on Snapchat Ads entities",
   arguments: [
     {
       name: "adAccountId",

@@ -15,12 +15,7 @@ Use the returned URNs as \`adAccountUrn\` in other tools.`;
 
 export const ListAdAccountsInputSchema = z
   .object({
-    start: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe("Offset for pagination (default 0)"),
+    start: z.number().int().min(0).optional().describe("Offset for pagination (default 0)"),
     count: z
       .number()
       .int()
@@ -50,19 +45,14 @@ export async function listAdAccountsLogic(
 ): Promise<ListAdAccountsOutput> {
   const { linkedInService } = resolveSessionServices(sdkContext);
 
-  const result = await linkedInService.listAdAccounts(
-    input.start,
-    input.count,
-    context
-  );
+  const result = await linkedInService.listAdAccounts(input.start, input.count, context);
 
   const total = result.total;
   const currentStart = input.start ?? 0;
   const pageSize = result.accounts.length;
   const requestedCount = input.count ?? 25;
-  const hasMore = total !== undefined
-    ? currentStart + pageSize < total
-    : pageSize >= requestedCount;
+  const hasMore =
+    total !== undefined ? currentStart + pageSize < total : pageSize >= requestedCount;
 
   return {
     accounts: result.accounts as unknown as Record<string, unknown>[],

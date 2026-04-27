@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const bulkOperationsWorkflowPrompt: Prompt = {
   name: "pinterest_bulk_operations_workflow",
-  description: "Guide for performing bulk create, update, and status operations on Pinterest Ads entities",
+  description:
+    "Guide for performing bulk create, update, and status operations on Pinterest Ads entities",
   arguments: [
     {
       name: "adAccountId",

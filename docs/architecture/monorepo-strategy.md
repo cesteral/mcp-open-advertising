@@ -18,6 +18,7 @@ In a polyrepo, `@cesteral/shared` would need to become a published npm package (
 ## Deployments Are Already Independent
 
 The monorepo does not couple deployments. Each connector server already has:
+
 - Its own Docker image
 - Its own Cloud Run service
 - Independent rollout/rollback
@@ -28,10 +29,10 @@ The monorepo provides shared tooling without shared deployment risk.
 
 Split into separate repos only if:
 
-| Trigger | Action |
-|---|---|
-| Dedicated team per platform | Separate repo per platform for access control |
+| Trigger                                                | Action                                                                                      |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| Dedicated team per platform                            | Separate repo per platform for access control                                               |
 | Splitting OSS connectors from proprietary product code | Keep connectors here; place hosted Intelligence in a separate private repo/service boundary |
-| Shared package grows too large | Publish `@cesteral/shared` to a private npm registry |
+| Shared package grows too large                         | Publish `@cesteral/shared` to a private npm registry                                        |
 
 Until one of these applies, the monorepo is the right structure.

@@ -93,9 +93,7 @@ export class AmazonDspBearerAuthStrategy extends BearerAuthStrategyBase {
     return getAmazonDspCredentialFingerprint(refreshCreds.appId, profileId);
   }
 
-  protected getTokenFingerprint(
-    headers: Record<string, string | string[] | undefined>
-  ): string {
+  protected getTokenFingerprint(headers: Record<string, string | string[] | undefined>): string {
     const token = parseAmazonDspTokenFromHeaders(headers);
     const profileId = getAmazonDspProfileIdFromHeaders(headers);
     return getAmazonDspCredentialFingerprint(token, profileId);

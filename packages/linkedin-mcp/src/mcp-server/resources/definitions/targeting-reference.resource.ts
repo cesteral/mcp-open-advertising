@@ -123,7 +123,8 @@ LinkedIn targeting uses a \`targetingCriteria\` object with AND/OR logic across 
 export const targetingReferenceResource: Resource = {
   uri: "targeting-reference://linkedin",
   name: "LinkedIn Targeting Reference",
-  description: "Targeting facet types, URN formats, seniority/company-size enums, criteria structure, and discovery tools for LinkedIn Ads",
+  description:
+    "Targeting facet types, URN formats, seniority/company-size enums, criteria structure, and discovery tools for LinkedIn Ads",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatTargetingReferenceMarkdown();

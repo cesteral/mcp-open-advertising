@@ -34,10 +34,7 @@ vi.mock("../../src/services/sa360-v2/reporting-service.js", () => ({
   })),
 }));
 
-import {
-  sessionServiceStore,
-  createSessionServices,
-} from "../../src/services/session-services.js";
+import { sessionServiceStore, createSessionServices } from "../../src/services/session-services.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -101,12 +98,7 @@ describe("createSessionServices", () => {
   });
 
   it("returns object with all expected service keys", () => {
-    const services = createSessionServices(
-      authAdapter,
-      DEFAULT_CONFIG,
-      logger,
-      rateLimiter
-    );
+    const services = createSessionServices(authAdapter, DEFAULT_CONFIG, logger, rateLimiter);
 
     expect(services).toHaveProperty("httpClient");
     expect(services).toHaveProperty("v2HttpClient");
@@ -116,12 +108,7 @@ describe("createSessionServices", () => {
   });
 
   it("returns non-null service instances", () => {
-    const services = createSessionServices(
-      authAdapter,
-      DEFAULT_CONFIG,
-      logger,
-      rateLimiter
-    );
+    const services = createSessionServices(authAdapter, DEFAULT_CONFIG, logger, rateLimiter);
 
     expect(services.httpClient).toBeDefined();
     expect(services.v2HttpClient).toBeDefined();

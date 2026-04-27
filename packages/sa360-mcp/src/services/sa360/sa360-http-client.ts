@@ -39,7 +39,9 @@ function parseSA360Errors(body: string): string {
         if (failure.errors) {
           for (const err of failure.errors) {
             const code = err.errorCode
-              ? Object.entries(err.errorCode).map(([k, v]) => `${k}=${v}`).join(", ")
+              ? Object.entries(err.errorCode)
+                  .map(([k, v]) => `${k}=${v}`)
+                  .join(", ")
               : "unknown";
             messages.push(`[${code}] ${err.message || "No message"}`);
           }
@@ -88,18 +90,11 @@ export class SA360HttpClient {
   /**
    * Make an authenticated request to the SA360 Reporting API v0.
    */
-  async fetch(
-    path: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
+  async fetch(path: string, context?: RequestContext, options?: RequestInit): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
     const method = options?.method || "GET";
 
-    this.logger.debug(
-      { url, method, requestId: context?.requestId },
-      "Making SA360 API request"
-    );
+    this.logger.debug({ url, method, requestId: context?.requestId }, "Making SA360 API request");
 
     return withSA360ApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);

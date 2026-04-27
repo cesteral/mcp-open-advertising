@@ -134,7 +134,9 @@ describe("downloadReportResponseFormatter", () => {
     };
 
     const content = downloadReportResponseFormatter(result);
-    expect((content[0] as any).text).toContain("Results were capped before the full report was exhausted");
+    expect((content[0] as any).text).toContain(
+      "Results were capped before the full report was exhausted"
+    );
     expect((content[0] as any).text).toContain("cursor-2");
   });
 });

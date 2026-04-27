@@ -82,11 +82,8 @@ describe("Cross-server contract compliance", () => {
   });
 });
 
-
 describe("bounded report-view contract", () => {
-  const reportTools = allTools.filter((t: any) =>
-    isBoundedReportViewInputSchema(t.inputSchema)
-  );
+  const reportTools = allTools.filter((t: any) => isBoundedReportViewInputSchema(t.inputSchema));
 
   if (reportTools.length === 0) {
     it("has no bounded report-view tools registered", () => {

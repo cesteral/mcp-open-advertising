@@ -22,4 +22,3 @@ export interface PinterestMediaStatusResponse {
   };
   media_type?: string;
 }
-

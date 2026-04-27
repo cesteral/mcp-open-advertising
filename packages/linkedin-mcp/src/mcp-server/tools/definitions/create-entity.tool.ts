@@ -27,12 +27,8 @@ const TOOL_DESCRIPTION = `Create a new LinkedIn Ads entity.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    data: z
-      .record(z.any())
-      .describe("Entity fields as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
   })
   .describe("Parameters for creating a LinkedIn Ads entity");
 

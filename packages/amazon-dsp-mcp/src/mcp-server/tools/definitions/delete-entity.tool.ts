@@ -18,13 +18,8 @@ Archived entities cannot be recovered. Consider using \`amazon_dsp_bulk_update_s
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to delete"),
-    profileId: z
-      .string()
-      .min(1)
-      .describe("AmazonDsp Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
+    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)

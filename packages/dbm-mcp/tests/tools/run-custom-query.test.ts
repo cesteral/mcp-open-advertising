@@ -30,9 +30,14 @@ function makeStructuredRows(count: number): Record<string, unknown>[] {
   }));
 }
 
-function createMockBidManagerService(rowCount: number, dataMode: "structured" | "csv" = "structured") {
+function createMockBidManagerService(
+  rowCount: number,
+  dataMode: "structured" | "csv" = "structured"
+) {
   const data: Record<string, unknown>[] | string =
-    dataMode === "csv" ? "Date,Impressions,Clicks\n2026-01-01,1000,50\n" : makeStructuredRows(rowCount);
+    dataMode === "csv"
+      ? "Date,Impressions,Clicks\n2026-01-01,1000,50\n"
+      : makeStructuredRows(rowCount);
 
   return {
     executeCustomQuery: vi.fn().mockImplementation(async (req: any) => ({
@@ -115,7 +120,9 @@ describe("runCustomQueryLogic", () => {
     const service = createMockBidManagerService(120);
     mockResolveSessionServices.mockReturnValue({ bidManagerService: service });
 
-    const result = await runCustomQueryLogic(baseInput, createMockContext(), { sessionId: "s-1" } as any);
+    const result = await runCustomQueryLogic(baseInput, createMockContext(), {
+      sessionId: "s-1",
+    } as any);
 
     expect(result.queryId).toBe("q-1");
     expect(result.reportId).toBe("r-1");

@@ -21,23 +21,30 @@ const snapchatService = {
   createEntity: vi.fn(async () => ({ campaign_id: "new" })),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
-  listAdAccounts: vi.fn(async () => ({ entities: [{ ad_account_id: "123" }], nextCursor: undefined })),
+  listAdAccounts: vi.fn(async () => ({
+    entities: [{ ad_account_id: "123" }],
+    nextCursor: undefined,
+  })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, _filters: unknown, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),
   bulkCreateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: unknown[]) => ({
     results: items.map(() => ({ success: true, entity: { id: "new" } })),
   })),
-  bulkUpdateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: Array<{ entityId: string }>) => ({
-    results: items.map((item) => ({ entityId: item.entityId, success: true })),
-  })),
+  bulkUpdateEntities: vi.fn(
+    async (_entityType: string, _filters: unknown, items: Array<{ entityId: string }>) => ({
+      results: items.map((item) => ({ entityId: item.entityId, success: true })),
+    })
+  ),
   adjustBids: vi.fn(async (adjustments: Array<{ adGroupId: string }>) => ({
     results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
   })),
   searchTargeting: vi.fn(async () => ({ results: [{ id: "targeting-1" }] })),
   getTargetingOptions: vi.fn(async () => ({ results: [{ id: "targeting-option-1" }] })),
   getAudienceEstimate: vi.fn(async () => ({ audience_size: 1000 })),
-  getCreativePreview: vi.fn(async () => ({ creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=123" })),
+  getCreativePreview: vi.fn(async () => ({
+    creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=123",
+  })),
   client: {
     post: vi.fn(async () => ({
       media: [{ media: { id: "media-test-123", media_status: "PENDING" } }],
@@ -81,7 +88,11 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
 import { allResources } from "../../src/mcp-server/resources/definitions/index.js";
-import { getAllPrompts, getPromptDefinition, promptRegistry } from "../../src/mcp-server/prompts/index.js";
+import {
+  getAllPrompts,
+  getPromptDefinition,
+  promptRegistry,
+} from "../../src/mcp-server/prompts/index.js";
 
 describe("Snapchat MCP definitions coverage", () => {
   beforeEach(() => {

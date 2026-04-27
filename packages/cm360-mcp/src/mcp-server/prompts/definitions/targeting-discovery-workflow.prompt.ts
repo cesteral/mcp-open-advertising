@@ -15,9 +15,7 @@ export const targetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getTargetingDiscoveryWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
   return `# CM360 Targeting Discovery Workflow
 

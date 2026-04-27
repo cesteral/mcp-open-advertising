@@ -293,7 +293,8 @@ export const manageCustomBiddingRulesTool = {
       input: {
         customBiddingAlgorithmId: "1122334455",
         action: "upload",
-        rulesContent: '{"rules": [{"condition": {"impressionCount": {"min": 1000}}, "bid": {"fixedBid": {"bidAmountMicros": "5000000"}}}]}',
+        rulesContent:
+          '{"rules": [{"condition": {"impressionCount": {"min": 1000}}, "bid": {"fixedBid": {"bidAmountMicros": "5000000"}}}]}',
       },
     },
     {

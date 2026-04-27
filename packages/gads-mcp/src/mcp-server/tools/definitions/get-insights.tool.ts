@@ -79,9 +79,7 @@ export const GetInsightsInputSchema = z
       .string()
       .regex(/^\d+$/, "customerId must be numeric")
       .describe("Google Ads customer ID (no dashes)"),
-    entityType: z
-      .enum(ENTITY_TYPE_ENUM)
-      .describe("Type of entity to get insights for"),
+    entityType: z.enum(ENTITY_TYPE_ENUM).describe("Type of entity to get insights for"),
     entityId: z
       .string()
       .regex(/^\d+$/, "entityId must be numeric")
@@ -212,9 +210,10 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { gadsService } = resolveSessionServices(sdkContext);
-  const viewInput = input.maxRows === undefined && input.limit !== undefined
-    ? { ...input, maxRows: input.limit }
-    : input;
+  const viewInput =
+    input.maxRows === undefined && input.limit !== undefined
+      ? { ...input, maxRows: input.limit }
+      : input;
 
   const query = buildGaqlQuery({ ...input, limit: getReportViewFetchLimit(viewInput) });
 
@@ -239,7 +238,11 @@ export async function getInsightsLogic(
       rows: results,
       totalRows: results.length + (result.nextPageToken ? 1 : 0),
       input: viewInput,
-      warnings: result.nextPageToken ? ["More rows are available. Use gads_gaql_search with the returned page token to continue."] : [],
+      warnings: result.nextPageToken
+        ? [
+            "More rows are available. Use gads_gaql_search with the returned page token to continue.",
+          ]
+        : [],
     }),
     totalResults: results.length,
     dateRange: dateRangeLabel,

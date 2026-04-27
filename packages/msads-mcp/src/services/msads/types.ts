@@ -150,7 +150,11 @@ export interface MsAdsAdGroup {
   StartDate?: MsAdsDate;
   EndDate?: MsAdsDate;
   BiddingScheme?: MsAdsBiddingScheme;
-  Network?: "OwnedAndOperatedAndSyndicatedSearch" | "OwnedAndOperatedOnly" | "SyndicatedSearchOnly" | "InHousePromotion";
+  Network?:
+    | "OwnedAndOperatedAndSyndicatedSearch"
+    | "OwnedAndOperatedOnly"
+    | "SyndicatedSearchOnly"
+    | "InHousePromotion";
   Language?: string;
   TrackingUrlTemplate?: string;
 }

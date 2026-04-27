@@ -24,10 +24,7 @@ export const CheckReportStatusInputSchema = z
       .string()
       .min(1)
       .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
-    taskId: z
-      .string()
-      .min(1)
-      .describe("Report task ID from amazon_dsp_submit_report"),
+    taskId: z.string().min(1).describe("Report task ID from amazon_dsp_submit_report"),
   })
   .describe("Parameters for checking Amazon DSP report status");
 
@@ -68,7 +65,9 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   if (result.isComplete && result.downloadUrl) {
     return [
       {

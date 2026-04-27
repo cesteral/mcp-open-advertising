@@ -7,7 +7,9 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     headers: Record<string, string | string[] | undefined>,
     name: string
   ): string | undefined => {
-    const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const key = Object.keys(headers).find(
+      (candidate) => candidate.toLowerCase() === name.toLowerCase()
+    );
     const value = key ? headers[key] : undefined;
     return Array.isArray(value) ? value[0] : value;
   };
@@ -148,15 +150,13 @@ describe("parseTikTokTokenFromHeaders", () => {
   });
 
   it("throws when Authorization header is missing", () => {
-    expect(() => parseTikTokTokenFromHeaders({})).toThrow(
-      "Missing required Authorization header"
-    );
+    expect(() => parseTikTokTokenFromHeaders({})).toThrow("Missing required Authorization header");
   });
 
   it("throws when Authorization header has wrong scheme", () => {
-    expect(() =>
-      parseTikTokTokenFromHeaders({ authorization: "Basic abc123" })
-    ).toThrow("Authorization header must use Bearer scheme");
+    expect(() => parseTikTokTokenFromHeaders({ authorization: "Basic abc123" })).toThrow(
+      "Authorization header must use Bearer scheme"
+    );
   });
 });
 
@@ -264,9 +264,7 @@ describe("TikTokRefreshTokenAdapter", () => {
       const options = call[3] as RequestInit;
       const body = JSON.parse(options.body as string);
 
-      expect(url).toBe(
-        "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/"
-      );
+      expect(url).toBe("https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/");
       expect(body).toEqual({
         app_id: "test-app-id",
         secret: "test-app-secret",
@@ -278,10 +276,7 @@ describe("TikTokRefreshTokenAdapter", () => {
     it("returns cached token when not expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new TikTokRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new TikTokRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
       mockTokenExchangeSuccess();
 
       const first = await adapter.getAccessToken();
@@ -300,10 +295,7 @@ describe("TikTokRefreshTokenAdapter", () => {
     it("fetches new token when expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new TikTokRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new TikTokRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
       mockTokenExchangeSuccess();
 
       const first = await adapter.getAccessToken();
@@ -328,10 +320,7 @@ describe("TikTokRefreshTokenAdapter", () => {
     });
 
     it("concurrent calls share pending auth (mutex)", async () => {
-      const adapter = new TikTokRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new TikTokRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       let resolveToken!: (value: unknown) => void;
       mockFetchWithTimeout.mockReturnValueOnce(
@@ -360,10 +349,7 @@ describe("TikTokRefreshTokenAdapter", () => {
     });
 
     it("clears pending on failure (retry works)", async () => {
-      const adapter = new TikTokRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new TikTokRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -372,9 +358,7 @@ describe("TikTokRefreshTokenAdapter", () => {
         text: async () => "Bad credentials",
       } as unknown as Response);
 
-      await expect(adapter.getAccessToken()).rejects.toThrow(
-        "TikTok token refresh failed"
-      );
+      await expect(adapter.getAccessToken()).rejects.toThrow("TikTok token refresh failed");
 
       // After failure, pendingAuth should be cleared so a second call retries
       mockTokenExchangeSuccess();
@@ -384,10 +368,7 @@ describe("TikTokRefreshTokenAdapter", () => {
     });
 
     it("error on non-ok HTTP response", async () => {
-      const adapter = new TikTokRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new TikTokRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -402,10 +383,7 @@ describe("TikTokRefreshTokenAdapter", () => {
     });
 
     it("error on non-zero TikTok code", async () => {
-      const adapter = new TikTokRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new TikTokRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
@@ -446,12 +424,10 @@ describe("TikTokRefreshTokenAdapter", () => {
       const userInfoUrl = userInfoCall[0] as string;
       const userInfoOptions = userInfoCall[3] as RequestInit;
 
-      expect(userInfoUrl).toBe(
-        "https://business-api.tiktok.com/open_api/v1.3/user/info/"
+      expect(userInfoUrl).toBe("https://business-api.tiktok.com/open_api/v1.3/user/info/");
+      expect((userInfoOptions.headers as Record<string, string>)["Authorization"]).toBe(
+        "Bearer new-access-token"
       );
-      expect(
-        (userInfoOptions.headers as Record<string, string>)["Authorization"]
-      ).toBe("Bearer new-access-token");
     });
   });
 
@@ -459,10 +435,7 @@ describe("TikTokRefreshTokenAdapter", () => {
     it("uses rotated refresh token on subsequent exchanges", async () => {
       vi.useFakeTimers();
 
-      const adapter = new TikTokRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new TikTokRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       // First exchange returns a new refresh_token
       mockTokenExchangeSuccess({

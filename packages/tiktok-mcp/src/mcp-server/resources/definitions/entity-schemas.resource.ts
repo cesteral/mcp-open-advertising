@@ -5,7 +5,10 @@
  * TikTok Entity Schema Resources
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, type TikTokEntityType } from "../../tools/utils/entity-mapping.js";
+import {
+  getSupportedEntityTypes,
+  type TikTokEntityType,
+} from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_SCHEMA_CONTENT: Record<TikTokEntityType, string> = {
   campaign: `# TikTok Campaign Fields
@@ -122,7 +125,10 @@ creative_id, advertiser_id, created_time
 };
 
 function buildEntitySchemaMarkdown(entityType: TikTokEntityType): string {
-  return ENTITY_SCHEMA_CONTENT[entityType] ?? `# TikTok ${entityType}\n\nNo schema information available.\n`;
+  return (
+    ENTITY_SCHEMA_CONTENT[entityType] ??
+    `# TikTok ${entityType}\n\nNo schema information available.\n`
+  );
 }
 
 function buildAllSchemasMarkdown(): string {

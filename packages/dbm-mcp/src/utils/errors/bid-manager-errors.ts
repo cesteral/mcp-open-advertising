@@ -49,9 +49,7 @@ export class BidManagerError extends McpError {
 
       const httpStatus = apiError.code;
       const message =
-        apiError.message ||
-        apiError.errors?.[0]?.message ||
-        "Unknown Bid Manager API error";
+        apiError.message || apiError.errors?.[0]?.message || "Unknown Bid Manager API error";
       const apiErrorCode = apiError.errors?.[0]?.reason;
 
       // Map HTTP status to appropriate JSON-RPC error code
@@ -119,20 +117,12 @@ export class ReportGenerationError extends BidManagerError {
   public readonly reportId: string;
   public readonly failureReason?: string;
 
-  constructor(
-    queryId: string,
-    reportId: string,
-    failureReason?: string,
-    cause?: unknown
-  ) {
-    super(
-      `Report ${reportId} generation failed: ${failureReason || "Unknown reason"}`,
-      {
-        code: JsonRpcErrorCode.InternalError,
-        cause,
-        data: { queryId, reportId, failureReason },
-      }
-    );
+  constructor(queryId: string, reportId: string, failureReason?: string, cause?: unknown) {
+    super(`Report ${reportId} generation failed: ${failureReason || "Unknown reason"}`, {
+      code: JsonRpcErrorCode.InternalError,
+      cause,
+      data: { queryId, reportId, failureReason },
+    });
     this.name = "ReportGenerationError";
     this.queryId = queryId;
     this.reportId = reportId;
@@ -149,12 +139,7 @@ export class ReportTimeoutError extends BidManagerError {
   public readonly maxRetries: number;
   public readonly lastStatus?: string;
 
-  constructor(
-    queryId: string,
-    reportId: string,
-    maxRetries: number,
-    lastStatus?: string
-  ) {
+  constructor(queryId: string, reportId: string, maxRetries: number, lastStatus?: string) {
     super(
       `Report ${reportId} did not complete after ${maxRetries} poll attempts. Last status: ${lastStatus || "unknown"}`,
       {

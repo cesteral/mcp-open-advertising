@@ -22,7 +22,10 @@ let cachedFiltersMarkdown: string | undefined;
 const cachedCategoryMarkdown = new Map<string, string>();
 
 function toCategorySlug(category: string): string {
-  return category.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+  return category
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 /**
@@ -76,21 +79,27 @@ Some filters are ONLY available in specific report types:
 
 ### YOUTUBE-Only Filters
 These TrueView filters require \`reportType: "YOUTUBE"\`:
-${Array.from(byReportType.get("YOUTUBE") || [])
-  .map(([f]) => `- \`${f}\``)
-  .join("\n") || "- None currently defined"}
+${
+  Array.from(byReportType.get("YOUTUBE") || [])
+    .map(([f]) => `- \`${f}\``)
+    .join("\n") || "- None currently defined"
+}
 
 ### GRP-Only Filters
 These Nielsen filters require \`reportType: "GRP"\`:
-${Array.from(byReportType.get("GRP") || [])
-  .map(([f]) => `- \`${f}\``)
-  .join("\n") || "- None currently defined"}
+${
+  Array.from(byReportType.get("GRP") || [])
+    .map(([f]) => `- \`${f}\``)
+    .join("\n") || "- None currently defined"
+}
 
 ### YOUTUBE_PROGRAMMATIC_GUARANTEED-Only Filters
 These filters require \`reportType: "YOUTUBE_PROGRAMMATIC_GUARANTEED"\`:
-${Array.from(byReportType.get("YOUTUBE_PROGRAMMATIC_GUARANTEED") || [])
-  .map(([f]) => `- \`${f}\``)
-  .join("\n") || "- None currently defined"}
+${
+  Array.from(byReportType.get("YOUTUBE_PROGRAMMATIC_GUARANTEED") || [])
+    .map(([f]) => `- \`${f}\``)
+    .join("\n") || "- None currently defined"
+}
 
 ---
 

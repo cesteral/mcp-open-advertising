@@ -80,8 +80,7 @@ describe("executeWithRetry — isRetryable callback", () => {
 describe("executeWithRetry — onResponse callback", () => {
   it("calls onResponse for successful responses", async () => {
     const onResponse = vi.fn();
-    const fetchFn = async () =>
-      new Response(JSON.stringify({ ok: true }), { status: 200 });
+    const fetchFn = async () => new Response(JSON.stringify({ ok: true }), { status: 200 });
 
     await executeWithRetry(baseConfig, {
       url: "https://api.example.com/test",

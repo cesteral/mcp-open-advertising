@@ -31,22 +31,13 @@ const TOOL_DESCRIPTION = `Get performance insights broken down by dimension (age
 
 export const GetInsightsBreakdownsInputSchema = z
   .object({
-    entityId: z
-      .string()
-      .min(1)
-      .describe("Entity ID to get insights for"),
+    entityId: z.string().min(1).describe("Entity ID to get insights for"),
     breakdowns: z
       .array(z.string())
       .min(1)
       .describe("Breakdown dimensions (e.g., ['age', 'gender'])"),
-    fields: z
-      .array(z.string())
-      .optional()
-      .describe("Metrics to return"),
-    datePreset: z
-      .string()
-      .optional()
-      .describe("Date preset (last_7d, last_30d, etc.)"),
+    fields: z.array(z.string()).optional().describe("Metrics to return"),
+    datePreset: z.string().optional().describe("Date preset (last_7d, last_30d, etc.)"),
     timeRange: z
       .object({
         since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format"),
@@ -54,14 +45,8 @@ export const GetInsightsBreakdownsInputSchema = z
       })
       .optional()
       .describe("Custom date range"),
-    timeIncrement: z
-      .string()
-      .optional()
-      .describe("Time granularity"),
-    level: z
-      .string()
-      .optional()
-      .describe("Aggregation level"),
+    timeIncrement: z.string().optional().describe("Time granularity"),
+    level: z.string().optional().describe("Aggregation level"),
     actionAttributionWindows: z
       .array(z.string())
       .optional()
@@ -72,10 +57,7 @@ export const GetInsightsBreakdownsInputSchema = z
       .max(500)
       .optional()
       .describe("Deprecated. Use maxRows for the returned row count."),
-    after: z
-      .string()
-      .optional()
-      .describe("Cursor for next page"),
+    after: z.string().optional().describe("Cursor for next page"),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -104,9 +86,10 @@ export async function getInsightsBreakdownsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsBreakdownsOutput> {
   const { metaInsightsService } = resolveSessionServices(sdkContext);
-  const viewInput = input.maxRows === undefined && input.limit !== undefined
-    ? { ...input, maxRows: input.limit }
-    : input;
+  const viewInput =
+    input.maxRows === undefined && input.limit !== undefined
+      ? { ...input, maxRows: input.limit }
+      : input;
 
   const result = await metaInsightsService.getInsightsBreakdowns(
     input.entityId,
@@ -145,7 +128,16 @@ export async function getInsightsBreakdownsLogic(
             .filter((a) => isConversionAction(a.action_type ?? ""))
             .reduce((sum, a) => sum + Number(a.value || 0), 0)
         : 0;
-      return { ...row, computedMetrics: computeMetrics({ cost, impressions, clicks, conversions, conversionValue }) };
+      return {
+        ...row,
+        computedMetrics: computeMetrics({
+          cost,
+          impressions,
+          clicks,
+          conversions,
+          conversionValue,
+        }),
+      };
     });
   }
 
@@ -154,7 +146,9 @@ export async function getInsightsBreakdownsLogic(
       rows,
       totalRows: rows.length + (result.nextCursor ? 1 : 0),
       input: viewInput,
-      warnings: result.nextCursor ? ["More rows are available. Call again with after set to nextCursor to continue."] : [],
+      warnings: result.nextCursor
+        ? ["More rows are available. Call again with after set to nextCursor to continue."]
+        : [],
     }),
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,
@@ -163,7 +157,9 @@ export async function getInsightsBreakdownsLogic(
   };
 }
 
-export function getInsightsBreakdownsResponseFormatter(result: GetInsightsBreakdownsOutput): McpTextContent[] {
+export function getInsightsBreakdownsResponseFormatter(
+  result: GetInsightsBreakdownsOutput
+): McpTextContent[] {
   const summary = `Retrieved ${result.returnedRows} breakdown row(s)`;
   const pagination = result.nextCursor
     ? `\n\nMore results available. Use after: "${result.nextCursor}"`

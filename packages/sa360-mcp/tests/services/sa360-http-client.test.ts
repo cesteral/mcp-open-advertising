@@ -17,9 +17,8 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 vi.mock("../../src/utils/telemetry/tracing.js", () => ({
-  withSA360ApiSpan: vi.fn(
-    (_name: string, _path: string, fn: (span: any) => Promise<any>) =>
-      fn({ setAttribute: vi.fn() })
+  withSA360ApiSpan: vi.fn((_name: string, _path: string, fn: (span: any) => Promise<any>) =>
+    fn({ setAttribute: vi.fn() })
   ),
 }));
 
@@ -146,13 +145,9 @@ describe("SA360HttpClient", () => {
     });
 
     it("propagates errors from executeWithRetry", async () => {
-      mockExecuteWithRetry.mockRejectedValueOnce(
-        new Error("SA360 API request failed: 400")
-      );
+      mockExecuteWithRetry.mockRejectedValueOnce(new Error("SA360 API request failed: 400"));
 
-      await expect(client.fetch("/test")).rejects.toThrow(
-        "SA360 API request failed: 400"
-      );
+      await expect(client.fetch("/test")).rejects.toThrow("SA360 API request failed: 400");
     });
 
     it("provides a mapStatusCode function in retry options", async () => {

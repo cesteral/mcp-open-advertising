@@ -29,10 +29,7 @@ Results include metrics broken down by the additional columns.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Ad Account ID"),
+    adAccountId: z.string().min(1).describe("Pinterest Ad Account ID"),
     type: z
       .enum(["CAMPAIGN", "AD_GROUP", "AD", "KEYWORD", "ACCOUNT"])
       .optional()
@@ -41,7 +38,9 @@ export const GetReportBreakdownsInputSchema = z
     columns: z
       .array(z.string())
       .min(1)
-      .describe("Base columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"),
+      .describe(
+        "Base columns/metrics to include (e.g. ['IMPRESSION_1', 'CLICKTHROUGH_1', 'SPEND_IN_DOLLAR'])"
+      ),
     breakdowns: z
       .array(z.string())
       .min(1)
@@ -65,18 +64,9 @@ export const GetReportBreakdownsInputSchema = z
       .optional()
       .default("DAY")
       .describe("Time granularity for the report (default: DAY)"),
-    campaignIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by campaign IDs"),
-    adGroupIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by ad group IDs"),
-    adIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by ad IDs"),
+    campaignIds: z.array(z.string()).optional().describe("Filter by campaign IDs"),
+    adGroupIds: z.array(z.string()).optional().describe("Filter by ad group IDs"),
+    adIds: z.array(z.string()).optional().describe("Filter by ad IDs"),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -85,7 +75,8 @@ export const GetReportBreakdownsInputSchema = z
   })
   .merge(ReportViewInputSchema.omit({ columns: true }))
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for generating a Pinterest Ads report with breakdowns");
@@ -155,33 +146,43 @@ export async function getReportBreakdownsLogic(
 
 function appendComputedMetricsToRows(
   headers: string[],
-  rows: string[][],
+  rows: string[][]
 ): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex(h => h.toUpperCase() === name.toUpperCase());
-  const spendIdx = idx('SPEND_IN_DOLLAR');
-  const impIdx = idx('IMPRESSION_1');
-  const clickIdx = idx('CLICKTHROUGH_1');
-  const convIdx = idx('TOTAL_CONVERSIONS');
+  const idx = (name: string) => headers.findIndex((h) => h.toUpperCase() === name.toUpperCase());
+  const spendIdx = idx("SPEND_IN_DOLLAR");
+  const impIdx = idx("IMPRESSION_1");
+  const clickIdx = idx("CLICKTHROUGH_1");
+  const convIdx = idx("TOTAL_CONVERSIONS");
 
-  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
-  const newRows = rows.map(row => {
+  const newHeaders = [
+    ...headers,
+    "computed_cpa",
+    "computed_roas",
+    "computed_cpm",
+    "computed_ctr",
+    "computed_cpc",
+  ];
+  const newRows = rows.map((row) => {
     const cost = spendIdx >= 0 ? Number(row[spendIdx] || 0) : 0;
     const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
     const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
     const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
     const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [...row,
-      m.cpa !== null ? String(m.cpa) : '',
-      m.roas !== null ? String(m.roas) : '',
-      m.cpm !== null ? String(m.cpm) : '',
-      m.ctr !== null ? String(m.ctr) : '',
-      m.cpc !== null ? String(m.cpc) : '',
+    return [
+      ...row,
+      m.cpa !== null ? String(m.cpa) : "",
+      m.roas !== null ? String(m.roas) : "",
+      m.cpm !== null ? String(m.cpm) : "",
+      m.ctr !== null ? String(m.ctr) : "",
+      m.cpc !== null ? String(m.cpc) : "",
     ];
   });
   return { headers: newHeaders, rows: newRows };
 }
 
-export function getReportBreakdownsResponseFormatter(result: GetReportBreakdownsOutput): McpTextContent[] {
+export function getReportBreakdownsResponseFormatter(
+  result: GetReportBreakdownsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

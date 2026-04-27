@@ -14,19 +14,11 @@ export interface TtdGraphqlError {
  * TTD GraphQL error codes from the API docs.
  * All errors return HTTP 200 — the code lives in `errors[].extensions.code`.
  */
-const AUTH_ERROR_CODES = new Set([
-  "AUTHENTICATION_FAILURE",
-  "UNAUTHORIZED_FIELD_OR_TYPE",
-]);
+const AUTH_ERROR_CODES = new Set(["AUTHENTICATION_FAILURE", "UNAUTHORIZED_FIELD_OR_TYPE"]);
 
-const RATE_LIMIT_ERROR_CODES = new Set([
-  "RESOURCE_LIMIT_EXCEEDED",
-]);
+const RATE_LIMIT_ERROR_CODES = new Set(["RESOURCE_LIMIT_EXCEEDED"]);
 
-const VALIDATION_ERROR_CODES = new Set([
-  "VALIDATION_FAILURE",
-  "GRAPHQL_VALIDATION_FAILED",
-]);
+const VALIDATION_ERROR_CODES = new Set(["VALIDATION_FAILURE", "GRAPHQL_VALIDATION_FAILED"]);
 
 export const MYREPORTS_TEMPLATE_ACCESS_ERROR =
   "TTD account does not have access to MyReports template APIs. " +
@@ -43,7 +35,9 @@ function formatGraphqlErrorMessages(errors: TtdGraphqlError[]): string {
   return errors.map((error) => error.message ?? "Unknown GraphQL error").join("; ");
 }
 
-function classifyErrorCode(code: string | undefined): "auth" | "rate_limit" | "validation" | "unknown" {
+function classifyErrorCode(
+  code: string | undefined
+): "auth" | "rate_limit" | "validation" | "unknown" {
   if (!code) return "unknown";
   if (AUTH_ERROR_CODES.has(code)) return "auth";
   if (RATE_LIMIT_ERROR_CODES.has(code)) return "rate_limit";
@@ -84,15 +78,9 @@ export function throwIfGraphqlErrors(
     }
 
     if (category === "validation") {
-      throw new McpError(
-        JsonRpcErrorCode.InvalidParams,
-        `${defaultMessage}: ${messages}`
-      );
+      throw new McpError(JsonRpcErrorCode.InvalidParams, `${defaultMessage}: ${messages}`);
     }
   }
 
-  throw new McpError(
-    JsonRpcErrorCode.InternalError,
-    `${defaultMessage}: ${messages}`
-  );
+  throw new McpError(JsonRpcErrorCode.InternalError, `${defaultMessage}: ${messages}`);
 }

@@ -44,7 +44,10 @@ describe("AmazonDspService", () => {
     });
 
     it("passes orderId filter for lineItems", async () => {
-      mockHttpClient.get.mockResolvedValueOnce({ lineItems: [{ lineItemId: "li1" }], totalResults: 1 });
+      mockHttpClient.get.mockResolvedValueOnce({
+        lineItems: [{ lineItemId: "li1" }],
+        totalResults: 1,
+      });
       await service.listEntities("lineItem", { orderId: "order_1" });
       expect(mockHttpClient.get).toHaveBeenCalledWith(
         "/dsp/lineItems",
@@ -97,7 +100,11 @@ describe("AmazonDspService", () => {
     it("sends PUT to entity-specific path", async () => {
       mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", name: "Updated" });
       await service.updateEntity("order", "o1", { name: "Updated" });
-      expect(mockHttpClient.put).toHaveBeenCalledWith("/dsp/orders/o1", { name: "Updated" }, undefined);
+      expect(mockHttpClient.put).toHaveBeenCalledWith(
+        "/dsp/orders/o1",
+        { name: "Updated" },
+        undefined
+      );
     });
   });
 
@@ -118,7 +125,11 @@ describe("AmazonDspService", () => {
     it("sends PUT with state to entity path", async () => {
       mockHttpClient.put.mockResolvedValueOnce({ orderId: "o1", state: "PAUSED" });
       await service.updateEntityStatus("order", "o1", "PAUSED");
-      expect(mockHttpClient.put).toHaveBeenCalledWith("/dsp/orders/o1", { state: "PAUSED" }, undefined);
+      expect(mockHttpClient.put).toHaveBeenCalledWith(
+        "/dsp/orders/o1",
+        { state: "PAUSED" },
+        undefined
+      );
     });
   });
 

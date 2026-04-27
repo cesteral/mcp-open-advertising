@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -149,7 +155,10 @@ describe("getEntityLogic", () => {
     const result = await getEntityLogic(input, mockContext);
 
     expect(mockState.cm360Service.getEntity).toHaveBeenCalledWith(
-      "campaign", "123", "789", mockContext
+      "campaign",
+      "123",
+      "789",
+      mockContext
     );
     expect(result.entity).toEqual(mockEntity);
   });

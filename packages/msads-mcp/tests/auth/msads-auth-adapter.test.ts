@@ -51,7 +51,9 @@ describe("MsAdsAccessTokenAdapter", () => {
     expect(mockFetch).toHaveBeenCalledOnce();
     const [url, , , options] = mockFetch.mock.calls[0]!;
     expect(url).toContain("/User/Query");
-    expect((options?.headers as Record<string, string>).Authorization).toBe("Bearer test-access-token");
+    expect((options?.headers as Record<string, string>).Authorization).toBe(
+      "Bearer test-access-token"
+    );
   });
 
   it("throws on validation failure", async () => {

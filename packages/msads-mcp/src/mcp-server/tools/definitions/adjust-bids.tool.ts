@@ -19,11 +19,16 @@ export const AdjustBidsInputSchema = z
       .describe("Entity type (typically 'keyword' or 'adGroup')"),
     scope: z
       .object({
-        campaignId: z.string().optional().describe("CampaignId required when adjusting ad group bids"),
+        campaignId: z
+          .string()
+          .optional()
+          .describe("CampaignId required when adjusting ad group bids"),
         adGroupId: z.string().optional().describe("AdGroupId required when adjusting keyword bids"),
       })
       .optional()
-      .describe("Additional query context required by Microsoft Advertising read-before-write operations"),
+      .describe(
+        "Additional query context required by Microsoft Advertising read-before-write operations"
+      ),
     adjustments: z
       .array(
         z.object({
@@ -107,8 +112,8 @@ export const adjustBidsTool = {
         entityType: "keyword",
         scope: { adGroupId: "333" },
         adjustments: [
-          { entityId: "111", bidField: "Bid", newBid: 1.50 },
-          { entityId: "222", bidField: "Bid", newBid: 2.00 },
+          { entityId: "111", bidField: "Bid", newBid: 1.5 },
+          { entityId: "222", bidField: "Bid", newBid: 2.0 },
         ],
       },
     },

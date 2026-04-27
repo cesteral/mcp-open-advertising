@@ -17,25 +17,61 @@ import { entityExampleResources, entityExampleAllResource } from "./entity-examp
 import { reportingReferenceResource } from "./reporting-reference.resource.js";
 import { targetingReferenceResource } from "./targeting-reference.resource.js";
 import { allTools } from "../../tools/definitions/index.js";
-import {
-  createToolExamplesResource,
-  createServerCapabilitiesResource,
-} from "@cesteral/shared";
+import { createToolExamplesResource, createServerCapabilitiesResource } from "@cesteral/shared";
 import type { Resource } from "../types.js";
 
 const toolExamplesResource = createToolExamplesResource(allTools, "tiktok-mcp");
 const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "tiktok-mcp",
+  allTools,
   toolGroups: {
-    crud: ["tiktok_list_entities", "tiktok_get_entity", "tiktok_create_entity", "tiktok_update_entity", "tiktok_delete_entity"],
     account: ["tiktok_list_advertisers"],
-    reporting: ["tiktok_get_report", "tiktok_get_report_breakdowns", "tiktok_submit_report", "tiktok_check_report_status", "tiktok_download_report"],
-    bulk: ["tiktok_bulk_update_status", "tiktok_bulk_create_entities", "tiktok_bulk_update_entities", "tiktok_adjust_bids"],
+    crud: [
+      "tiktok_list_entities",
+      "tiktok_get_entity",
+      "tiktok_create_entity",
+      "tiktok_update_entity",
+      "tiktok_delete_entity",
+    ],
+    reporting: [
+      "tiktok_get_report",
+      "tiktok_get_report_breakdowns",
+      "tiktok_submit_report",
+      "tiktok_check_report_status",
+      "tiktok_download_report",
+    ],
+    bulk: [
+      "tiktok_bulk_update_status",
+      "tiktok_bulk_create_entities",
+      "tiktok_bulk_update_entities",
+      "tiktok_adjust_bids",
+    ],
     targeting: ["tiktok_search_targeting", "tiktok_get_targeting_options"],
-    specialized: ["tiktok_duplicate_entity", "tiktok_get_audience_estimate", "tiktok_get_ad_preview"],
+    media: ["tiktok_upload_image", "tiktok_upload_video"],
+    specialized: [
+      "tiktok_duplicate_entity",
+      "tiktok_get_audience_estimate",
+      "tiktok_get_ad_preview",
+    ],
     validation: ["tiktok_validate_entity"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],
+  discoveryFlow: [
+    "Read server-capabilities://tiktok-mcp/overview to choose a capability group.",
+    "Call tiktok_list_advertisers to discover accessible advertiser IDs.",
+    "Read entity-hierarchy://all and entity-schema://{entityType} before entity writes.",
+    "Read reporting-reference://all before report tools.",
+    "Read targeting-reference://all before targeting search or audience estimation.",
+    "Use tool-examples://tiktok-mcp/all only when concrete payload examples are needed.",
+  ],
+  relatedResources: [
+    "entity-hierarchy://all",
+    "entity-schema://all",
+    "entity-examples://all",
+    "reporting-reference://all",
+    "targeting-reference://all",
+    "tool-examples://tiktok-mcp/all",
+  ],
   startHere: "tiktok_list_advertisers",
 });
 

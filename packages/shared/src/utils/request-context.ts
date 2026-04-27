@@ -45,10 +45,7 @@ export function createRequestContext(service: string, userId?: string): RequestC
  * Run a function within a request context.
  * All async code within `fn` can access the context via `getRequestContext()`.
  */
-export function runWithRequestContext<T>(
-  ctx: RequestContext,
-  fn: () => T
-): T {
+export function runWithRequestContext<T>(ctx: RequestContext, fn: () => T): T {
   return requestContextStorage.run(ctx, fn);
 }
 
@@ -96,8 +93,7 @@ export function createOperationContext(params?: {
   additionalContext?: Record<string, unknown>;
   operation?: string;
 }): RequestContext {
-  const requestId =
-    (params?.parentContext?.requestId as string) ?? generateRequestContextId();
+  const requestId = (params?.parentContext?.requestId as string) ?? generateRequestContextId();
 
   return {
     requestId,

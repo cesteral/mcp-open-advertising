@@ -20,7 +20,11 @@ describe("validateEntityLogic", () => {
 
   it("create mode with id returns warning", async () => {
     const result = await validateEntityLogic(
-      { entityType: "campaign", mode: "create", data: { id: "123", name: "Test", advertiserId: "456" } },
+      {
+        entityType: "campaign",
+        mode: "create",
+        data: { id: "123", name: "Test", advertiserId: "456" },
+      },
       mockContext
     );
     expect(result.warnings).toContainEqual(
@@ -34,9 +38,7 @@ describe("validateEntityLogic", () => {
       mockContext
     );
     expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(
-      expect.stringContaining("advertiserId is required")
-    );
+    expect(result.errors).toContainEqual(expect.stringContaining("advertiserId is required"));
   });
 
   it("campaign create with advertiserId is valid", async () => {
@@ -52,9 +54,7 @@ describe("validateEntityLogic", () => {
       { entityType: "placement", mode: "create", data: { name: "Test", siteId: "1" } },
       mockContext
     );
-    expect(result.errors).toContainEqual(
-      expect.stringContaining("campaignId is required")
-    );
+    expect(result.errors).toContainEqual(expect.stringContaining("campaignId is required"));
   });
 
   it("placement create without siteId returns warning", async () => {
@@ -62,9 +62,7 @@ describe("validateEntityLogic", () => {
       { entityType: "placement", mode: "create", data: { name: "Test", campaignId: "1" } },
       mockContext
     );
-    expect(result.warnings).toContainEqual(
-      expect.stringContaining("siteId is typically required")
-    );
+    expect(result.warnings).toContainEqual(expect.stringContaining("siteId is typically required"));
   });
 
   it("ad create without campaignId returns error", async () => {
@@ -72,9 +70,7 @@ describe("validateEntityLogic", () => {
       { entityType: "ad", mode: "create", data: { name: "Test" } },
       mockContext
     );
-    expect(result.errors).toContainEqual(
-      expect.stringContaining("campaignId is required")
-    );
+    expect(result.errors).toContainEqual(expect.stringContaining("campaignId is required"));
   });
 
   it("floodlightActivity create without floodlightConfigurationId returns error", async () => {

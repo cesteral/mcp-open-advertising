@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -44,7 +50,10 @@ describe("listTargetingOptionsLogic", () => {
   });
 
   it("returns options array and totalCount matching length", async () => {
-    const options = [{ id: "1", name: "Chrome" }, { id: "2", name: "Firefox" }];
+    const options = [
+      { id: "1", name: "Chrome" },
+      { id: "2", name: "Firefox" },
+    ];
     mockState.cm360Service.listTargetingOptions.mockResolvedValue({ options });
 
     const result = await listTargetingOptionsLogic(
@@ -109,15 +118,10 @@ describe("listTargetingOptionsLogic", () => {
   });
 
   it("propagates service errors", async () => {
-    mockState.cm360Service.listTargetingOptions.mockRejectedValue(
-      new Error("API error")
-    );
+    mockState.cm360Service.listTargetingOptions.mockRejectedValue(new Error("API error"));
 
     await expect(
-      listTargetingOptionsLogic(
-        { profileId: "123", targetingType: "browsers" },
-        mockContext
-      )
+      listTargetingOptionsLogic({ profileId: "123", targetingType: "browsers" }, mockContext)
     ).rejects.toThrow("API error");
   });
 });
@@ -161,9 +165,19 @@ describe("listTargetingOptionsResponseFormatter", () => {
 describe("ListTargetingOptionsInputSchema", () => {
   it("accepts all 13 targeting types", () => {
     const types = [
-      "browsers", "connectionTypes", "contentCategories", "countries",
-      "languages", "metros", "mobileCarriers", "operatingSystemVersions",
-      "operatingSystems", "platformTypes", "postalCodes", "regions", "cities",
+      "browsers",
+      "connectionTypes",
+      "contentCategories",
+      "countries",
+      "languages",
+      "metros",
+      "mobileCarriers",
+      "operatingSystemVersions",
+      "operatingSystems",
+      "platformTypes",
+      "postalCodes",
+      "regions",
+      "cities",
     ];
 
     for (const targetingType of types) {
@@ -185,12 +199,10 @@ describe("ListTargetingOptionsInputSchema", () => {
 
   it("requires profileId and targetingType", () => {
     expect(ListTargetingOptionsInputSchema.safeParse({}).success).toBe(false);
-    expect(
-      ListTargetingOptionsInputSchema.safeParse({ profileId: "123" }).success
-    ).toBe(false);
-    expect(
-      ListTargetingOptionsInputSchema.safeParse({ targetingType: "browsers" }).success
-    ).toBe(false);
+    expect(ListTargetingOptionsInputSchema.safeParse({ profileId: "123" }).success).toBe(false);
+    expect(ListTargetingOptionsInputSchema.safeParse({ targetingType: "browsers" }).success).toBe(
+      false
+    );
   });
 
   it("accepts optional filters, pageToken, maxResults", () => {

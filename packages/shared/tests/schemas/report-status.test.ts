@@ -46,7 +46,7 @@ describe("fromTtdStatus", () => {
       fromTtdStatus({
         ExecutionState: "Complete",
         ReportDownloadUrl: "https://ttd/report.csv",
-      }).downloadUrl,
+      }).downloadUrl
     ).toBe("https://ttd/report.csv");
   });
 });
@@ -63,8 +63,7 @@ describe("fromMetaStatus", () => {
   });
   it("converts percent to progress", () => {
     expect(
-      fromMetaStatus({ async_status: "Job Running", async_percent_completion: 50 })
-        .progress,
+      fromMetaStatus({ async_status: "Job Running", async_percent_completion: 50 }).progress
     ).toBe(0.5);
   });
 });
@@ -158,7 +157,7 @@ describe("fromCm360Status", () => {
       fromCm360Status({
         status: "REPORT_AVAILABLE",
         downloadUrl: "https://cm/r.csv",
-      }).downloadUrl,
+      }).downloadUrl
     ).toBe("https://cm/r.csv");
   });
 });
@@ -178,7 +177,7 @@ describe("fromMicrosoftStatus", () => {
       fromMicrosoftStatus({
         ReportRequestStatus: "Success",
         ReportDownloadUrl: "https://bingads/r.csv",
-      }).downloadUrl,
+      }).downloadUrl
     ).toBe("https://bingads/r.csv");
   });
 });

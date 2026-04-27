@@ -99,9 +99,9 @@ export class ServiceAccountAuthAdapter implements GoogleAuthAdapter {
   private async exchangeToken(): Promise<void> {
     const now = Math.floor(Date.now() / 1000);
 
-    const jwtHeader = Buffer.from(
-      JSON.stringify({ alg: "RS256", typ: "JWT" })
-    ).toString("base64url");
+    const jwtHeader = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString(
+      "base64url"
+    );
 
     const jwtPayload = Buffer.from(
       JSON.stringify({
@@ -289,8 +289,7 @@ export function parseCredentialsFromHeaders(
     const encoded = getHeader("x-google-credentials");
     if (!encoded) {
       throw new Error(
-        "Missing X-Google-Credentials header. " +
-          "Provide base64-encoded service account JSON."
+        "Missing X-Google-Credentials header. " + "Provide base64-encoded service account JSON."
       );
     }
 
@@ -299,21 +298,15 @@ export function parseCredentialsFromHeaders(
       const decoded = Buffer.from(encoded, "base64").toString("utf-8");
       parsed = JSON.parse(decoded);
     } catch {
-      throw new Error(
-        "Invalid X-Google-Credentials: must be valid base64-encoded JSON."
-      );
+      throw new Error("Invalid X-Google-Credentials: must be valid base64-encoded JSON.");
     }
 
     if (!parsed.client_email || !parsed.private_key) {
-      throw new Error(
-        "Invalid service account JSON: missing client_email or private_key."
-      );
+      throw new Error("Invalid service account JSON: missing client_email or private_key.");
     }
 
     if (parsed.token_uri !== undefined && typeof parsed.token_uri !== "string") {
-      throw new Error(
-        "Invalid service account JSON: token_uri must be a string."
-      );
+      throw new Error("Invalid service account JSON: token_uri must be a string.");
     }
 
     return parsed as unknown as ServiceAccountCredentials;
@@ -329,9 +322,7 @@ export function parseCredentialsFromHeaders(
       if (!clientId) missing.push("X-Google-Client-Id");
       if (!clientSecret) missing.push("X-Google-Client-Secret");
       if (!refreshToken) missing.push("X-Google-Refresh-Token");
-      throw new Error(
-        `Missing required OAuth2 headers: ${missing.join(", ")}`
-      );
+      throw new Error(`Missing required OAuth2 headers: ${missing.join(", ")}`);
     }
 
     return {
@@ -357,8 +348,6 @@ export function parseCredentialsFromHeaders(
  */
 export function getCredentialFingerprint(credentials: GoogleCredentials): string {
   const identifier =
-    credentials.type === "service_account"
-      ? credentials.client_email
-      : credentials.clientId;
+    credentials.type === "service_account" ? credentials.client_email : credentials.clientId;
   return createHash("sha256").update(identifier).digest("hex");
 }

@@ -64,20 +64,17 @@ export async function getAdPreviewLogic(
   return {
     previewUrl: creative.PreviewUrl || creative.ShareLink,
     creativeName: creative.CreativeName,
-    clickUrl: creative.ClickUrl
-      || creative.TradeDeskHostedVideoAttributes?.ClickthroughUrl
-      || creative.TradeDeskHostedVideoAttributes?.LandingPageUrl,
+    clickUrl:
+      creative.ClickUrl ||
+      creative.TradeDeskHostedVideoAttributes?.ClickthroughUrl ||
+      creative.TradeDeskHostedVideoAttributes?.LandingPageUrl,
     adFormat: creative.CreativeType,
     creativeId: input.creativeId,
   };
 }
 
 export function getAdPreviewResponseFormatter(result: GetAdPreviewOutput): McpTextContent[] {
-  const lines: string[] = [
-    "TTD Creative Preview",
-    "",
-    `Creative ID: ${result.creativeId}`,
-  ];
+  const lines: string[] = ["TTD Creative Preview", "", `Creative ID: ${result.creativeId}`];
 
   if (result.creativeName) lines.push(`Name: ${result.creativeName}`);
   if (result.adFormat) lines.push(`Format: ${result.adFormat}`);

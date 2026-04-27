@@ -15,26 +15,41 @@ describe("SnapchatService", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new SnapchatService(mockHttpClient as any, "org_123", "acct_456", mockRateLimiter as any);
+    service = new SnapchatService(
+      mockHttpClient as any,
+      "org_123",
+      "acct_456",
+      mockRateLimiter as any
+    );
   });
 
   it("lists entities using next_link pagination and accepts lowercase success", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       request_status: "success",
       campaigns: [{ sub_request_status: "success", campaign: { id: "c1", name: "Test" } }],
-      paging: { next_link: "https://adsapi.snapchat.com/v1/adaccounts/acct_456/campaigns?cursor=abc" },
+      paging: {
+        next_link: "https://adsapi.snapchat.com/v1/adaccounts/acct_456/campaigns?cursor=abc",
+      },
     });
 
     const result = await service.listEntities("campaign", { adAccountId: "acct_456" });
 
-    expect(mockHttpClient.get).toHaveBeenCalledWith("/v1/adaccounts/acct_456/campaigns", {}, undefined);
+    expect(mockHttpClient.get).toHaveBeenCalledWith(
+      "/v1/adaccounts/acct_456/campaigns",
+      {},
+      undefined
+    );
     expect(result.entities).toEqual([{ id: "c1", name: "Test" }]);
     expect(result.nextCursor).toContain("cursor=abc");
   });
 
   it("passes the next page link through unchanged on subsequent list calls", async () => {
     const nextLink = "https://adsapi.snapchat.com/v1/adaccounts/acct_456/campaigns?cursor=abc";
-    mockHttpClient.get.mockResolvedValueOnce({ request_status: "SUCCESS", campaigns: [], paging: {} });
+    mockHttpClient.get.mockResolvedValueOnce({
+      request_status: "SUCCESS",
+      campaigns: [],
+      paging: {},
+    });
 
     await service.listEntities("campaign", { adAccountId: "acct_456" }, nextLink);
 
@@ -59,7 +74,11 @@ describe("SnapchatService", () => {
       campaigns: [{ sub_request_status: "SUCCESS", campaign: { id: "new_c", name: "New" } }],
     });
 
-    const result = await service.createEntity("campaign", { adAccountId: "acct_456" }, { name: "New", status: "ACTIVE" });
+    const result = await service.createEntity(
+      "campaign",
+      { adAccountId: "acct_456" },
+      { name: "New", status: "ACTIVE" }
+    );
 
     expect(mockHttpClient.post).toHaveBeenCalledWith(
       "/v1/adaccounts/acct_456/campaigns",
@@ -72,17 +91,19 @@ describe("SnapchatService", () => {
   it("updates campaigns via the parent-scoped collection route with a merged payload", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       request_status: "SUCCESS",
-      campaigns: [{
-        sub_request_status: "SUCCESS",
-        campaign: {
-          id: "c1",
-          ad_account_id: "acct_456",
-          name: "Original",
-          status: "ACTIVE",
-          objective: "WEB_CONVERSION",
-          daily_budget_micro: 10000000,
+      campaigns: [
+        {
+          sub_request_status: "SUCCESS",
+          campaign: {
+            id: "c1",
+            ad_account_id: "acct_456",
+            name: "Original",
+            status: "ACTIVE",
+            objective: "WEB_CONVERSION",
+            daily_budget_micro: 10000000,
+          },
         },
-      }],
+      ],
     });
     mockHttpClient.put.mockResolvedValueOnce({
       request_status: "SUCCESS",
@@ -94,14 +115,16 @@ describe("SnapchatService", () => {
     expect(mockHttpClient.put).toHaveBeenCalledWith(
       "/v1/adaccounts/acct_456/campaigns",
       {
-        campaigns: [{
-          id: "c1",
-          ad_account_id: "acct_456",
-          name: "Updated",
-          status: "ACTIVE",
-          objective: "WEB_CONVERSION",
-          daily_budget_micro: 10000000,
-        }],
+        campaigns: [
+          {
+            id: "c1",
+            ad_account_id: "acct_456",
+            name: "Updated",
+            status: "ACTIVE",
+            objective: "WEB_CONVERSION",
+            daily_budget_micro: 10000000,
+          },
+        ],
       },
       undefined
     );
@@ -110,17 +133,19 @@ describe("SnapchatService", () => {
   it("updates status by reusing the merged update flow", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       request_status: "SUCCESS",
-      campaigns: [{
-        sub_request_status: "SUCCESS",
-        campaign: {
-          id: "c1",
-          ad_account_id: "acct_456",
-          name: "Original",
-          status: "ACTIVE",
-          objective: "WEB_CONVERSION",
-          daily_budget_micro: 10000000,
+      campaigns: [
+        {
+          sub_request_status: "SUCCESS",
+          campaign: {
+            id: "c1",
+            ad_account_id: "acct_456",
+            name: "Original",
+            status: "ACTIVE",
+            objective: "WEB_CONVERSION",
+            daily_budget_micro: 10000000,
+          },
         },
-      }],
+      ],
     });
     mockHttpClient.put.mockResolvedValueOnce({
       request_status: "SUCCESS",
@@ -153,29 +178,47 @@ describe("SnapchatService", () => {
         { adaccount: { id: "acct_1", name: "Account 1" } },
         { adaccount: { id: "acct_2", name: "Account 2" } },
       ],
-      paging: { next_link: "https://adsapi.snapchat.com/v1/organizations/org_123/adaccounts?cursor=2" },
+      paging: {
+        next_link: "https://adsapi.snapchat.com/v1/organizations/org_123/adaccounts?cursor=2",
+      },
     });
 
     const result = await service.listAdAccounts();
 
-    expect(result.entities).toEqual([{ id: "acct_1", name: "Account 1" }, { id: "acct_2", name: "Account 2" }]);
+    expect(result.entities).toEqual([
+      { id: "acct_1", name: "Account 1" },
+      { id: "acct_2", name: "Account 2" },
+    ]);
     expect(result.nextCursor).toContain("cursor=2");
   });
 
   it("fetches creative previews from the documented creative_preview endpoint", async () => {
-    mockHttpClient.get.mockResolvedValueOnce({ creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=cr_1" });
+    mockHttpClient.get.mockResolvedValueOnce({
+      creative_preview_link: "https://ad-preview.snapchat.com/?creative_id=cr_1",
+    });
 
     await service.getCreativePreview("cr_1");
 
-    expect(mockHttpClient.get).toHaveBeenCalledWith("/v1/creatives/cr_1/creative_preview", undefined, undefined);
+    expect(mockHttpClient.get).toHaveBeenCalledWith(
+      "/v1/creatives/cr_1/creative_preview",
+      undefined,
+      undefined
+    );
   });
 
   it("posts audience estimates to audience_size_v2", async () => {
-    mockHttpClient.post.mockResolvedValueOnce({ request_status: "SUCCESS", audience_size: { audience_size_minimum: 100 } });
+    mockHttpClient.post.mockResolvedValueOnce({
+      request_status: "SUCCESS",
+      audience_size: { audience_size_minimum: 100 },
+    });
 
     await service.getAudienceEstimate({ name: "Audience Spec" }, "acct_456");
 
-    expect(mockHttpClient.post).toHaveBeenCalledWith("/v1/adaccounts/acct_456/audience_size_v2", { name: "Audience Spec" }, undefined);
+    expect(mockHttpClient.post).toHaveBeenCalledWith(
+      "/v1/adaccounts/acct_456/audience_size_v2",
+      { name: "Audience Spec" },
+      undefined
+    );
   });
 
   it("queries documented targeting endpoints and unwraps targeting dimensions", async () => {
@@ -216,11 +259,35 @@ describe("SnapchatService", () => {
     mockHttpClient.get
       .mockResolvedValueOnce({
         request_status: "SUCCESS",
-        campaigns: [{ sub_request_status: "SUCCESS", campaign: { id: "c1", ad_account_id: "acct_456", name: "A", status: "ACTIVE", objective: "WEB_CONVERSION", daily_budget_micro: 100 } }],
+        campaigns: [
+          {
+            sub_request_status: "SUCCESS",
+            campaign: {
+              id: "c1",
+              ad_account_id: "acct_456",
+              name: "A",
+              status: "ACTIVE",
+              objective: "WEB_CONVERSION",
+              daily_budget_micro: 100,
+            },
+          },
+        ],
       })
       .mockResolvedValueOnce({
         request_status: "SUCCESS",
-        campaigns: [{ sub_request_status: "SUCCESS", campaign: { id: "c2", ad_account_id: "acct_456", name: "B", status: "ACTIVE", objective: "WEB_CONVERSION", daily_budget_micro: 200 } }],
+        campaigns: [
+          {
+            sub_request_status: "SUCCESS",
+            campaign: {
+              id: "c2",
+              ad_account_id: "acct_456",
+              name: "B",
+              status: "ACTIVE",
+              objective: "WEB_CONVERSION",
+              daily_budget_micro: 200,
+            },
+          },
+        ],
       });
     mockHttpClient.put.mockResolvedValueOnce({
       request_status: "SUCCESS",
@@ -230,21 +297,31 @@ describe("SnapchatService", () => {
       ],
     });
 
-    const result = await service.bulkUpdateEntities(
-      "campaign",
-      { adAccountId: "acct_456" },
-      [
-        { entityId: "c1", data: { name: "Updated A" } },
-        { entityId: "c2", data: { daily_budget_micro: 50 } },
-      ]
-    );
+    const result = await service.bulkUpdateEntities("campaign", { adAccountId: "acct_456" }, [
+      { entityId: "c1", data: { name: "Updated A" } },
+      { entityId: "c2", data: { daily_budget_micro: 50 } },
+    ]);
 
     expect(mockHttpClient.put).toHaveBeenCalledWith(
       "/v1/adaccounts/acct_456/campaigns",
       {
         campaigns: [
-          { id: "c1", ad_account_id: "acct_456", name: "Updated A", status: "ACTIVE", objective: "WEB_CONVERSION", daily_budget_micro: 100 },
-          { id: "c2", ad_account_id: "acct_456", name: "B", status: "ACTIVE", objective: "WEB_CONVERSION", daily_budget_micro: 50 },
+          {
+            id: "c1",
+            ad_account_id: "acct_456",
+            name: "Updated A",
+            status: "ACTIVE",
+            objective: "WEB_CONVERSION",
+            daily_budget_micro: 100,
+          },
+          {
+            id: "c2",
+            ad_account_id: "acct_456",
+            name: "B",
+            status: "ACTIVE",
+            objective: "WEB_CONVERSION",
+            daily_budget_micro: 50,
+          },
         ],
       },
       undefined
@@ -259,11 +336,35 @@ describe("SnapchatService", () => {
     mockHttpClient.get
       .mockResolvedValueOnce({
         request_status: "SUCCESS",
-        campaigns: [{ sub_request_status: "SUCCESS", campaign: { id: "c1", ad_account_id: "acct_456", name: "A", status: "ACTIVE", objective: "WEB_CONVERSION", daily_budget_micro: 100 } }],
+        campaigns: [
+          {
+            sub_request_status: "SUCCESS",
+            campaign: {
+              id: "c1",
+              ad_account_id: "acct_456",
+              name: "A",
+              status: "ACTIVE",
+              objective: "WEB_CONVERSION",
+              daily_budget_micro: 100,
+            },
+          },
+        ],
       })
       .mockResolvedValueOnce({
         request_status: "SUCCESS",
-        campaigns: [{ sub_request_status: "SUCCESS", campaign: { id: "c2", ad_account_id: "acct_456", name: "B", status: "ACTIVE", objective: "WEB_CONVERSION", daily_budget_micro: 200 } }],
+        campaigns: [
+          {
+            sub_request_status: "SUCCESS",
+            campaign: {
+              id: "c2",
+              ad_account_id: "acct_456",
+              name: "B",
+              status: "ACTIVE",
+              objective: "WEB_CONVERSION",
+              daily_budget_micro: 200,
+            },
+          },
+        ],
       });
     mockHttpClient.put.mockResolvedValueOnce({
       request_status: "SUCCESS",
@@ -273,7 +374,12 @@ describe("SnapchatService", () => {
       ],
     });
 
-    const result = await service.bulkUpdateStatus("campaign", { adAccountId: "acct_456" }, ["c1", "c2"], "PAUSED");
+    const result = await service.bulkUpdateStatus(
+      "campaign",
+      { adAccountId: "acct_456" },
+      ["c1", "c2"],
+      "PAUSED"
+    );
 
     expect(result.results).toEqual([
       { entityId: "c1", success: true, error: undefined },

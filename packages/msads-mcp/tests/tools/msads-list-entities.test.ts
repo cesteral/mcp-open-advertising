@@ -11,7 +11,10 @@ vi.mock("@cesteral/shared", async () => {
 import { resolveSessionServicesFromStore } from "@cesteral/shared";
 const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
 
-import { listEntitiesLogic, listEntitiesResponseFormatter } from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
+import {
+  listEntitiesLogic,
+  listEntitiesResponseFormatter,
+} from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
 import type { SessionServices } from "../../src/services/session-services.js";
 
 function createMockServices(): SessionServices {

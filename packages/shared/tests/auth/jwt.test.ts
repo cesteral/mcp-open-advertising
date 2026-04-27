@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { extractBearerToken, createJwt, verifyJwt, getJwtCredentialFingerprint } from "../../src/auth/jwt.js";
+import {
+  extractBearerToken,
+  createJwt,
+  verifyJwt,
+  getJwtCredentialFingerprint,
+} from "../../src/auth/jwt.js";
 import { McpError } from "../../src/utils/mcp-errors.js";
 
 // ---------------------------------------------------------------------------
@@ -30,22 +35,16 @@ describe("extractBearerToken", () => {
 
   it("throws McpError when header is missing", () => {
     expect(() => extractBearerToken(undefined)).toThrow(McpError);
-    expect(() => extractBearerToken(undefined)).toThrow(
-      /Missing Authorization header/
-    );
+    expect(() => extractBearerToken(undefined)).toThrow(/Missing Authorization header/);
   });
 
   it('throws McpError for invalid format (no "Bearer" prefix)', () => {
     expect(() => extractBearerToken("Token abc123")).toThrow(McpError);
-    expect(() => extractBearerToken("Token abc123")).toThrow(
-      /Invalid Authorization header format/
-    );
+    expect(() => extractBearerToken("Token abc123")).toThrow(/Invalid Authorization header format/);
   });
 
   it('throws McpError for "Basic" auth type', () => {
-    expect(() => extractBearerToken("Basic dXNlcjpwYXNz")).toThrow(
-      McpError
-    );
+    expect(() => extractBearerToken("Basic dXNlcjpwYXNz")).toThrow(McpError);
     expect(() => extractBearerToken("Basic dXNlcjpwYXNz")).toThrow(
       /Invalid Authorization header format/
     );
@@ -53,9 +52,7 @@ describe("extractBearerToken", () => {
 
   it("throws McpError for token with extra spaces", () => {
     // "Bearer tok en" splits into 3 parts
-    expect(() => extractBearerToken("Bearer tok en")).toThrow(
-      McpError
-    );
+    expect(() => extractBearerToken("Bearer tok en")).toThrow(McpError);
   });
 });
 
@@ -84,9 +81,7 @@ describe("createJwt", () => {
 
     // Decode the header to verify algorithm
     const headerBase64 = token.split(".")[0];
-    const header = JSON.parse(
-      Buffer.from(headerBase64, "base64url").toString()
-    );
+    const header = JSON.parse(Buffer.from(headerBase64, "base64url").toString());
     expect(header.alg).toBe("HS256");
   });
 
@@ -171,12 +166,8 @@ describe("verifyJwt", () => {
   it("throws McpError for invalid signature (wrong secret)", async () => {
     const token = await createJwt("user-1", SECRET);
 
-    await expect(verifyJwt(token, "wrong-secret")).rejects.toThrow(
-      McpError
-    );
-    await expect(verifyJwt(token, "wrong-secret")).rejects.toThrow(
-      /verification failed/
-    );
+    await expect(verifyJwt(token, "wrong-secret")).rejects.toThrow(McpError);
+    await expect(verifyJwt(token, "wrong-secret")).rejects.toThrow(/verification failed/);
   });
 
   it("throws McpError for tampered payload", async () => {
@@ -184,16 +175,12 @@ describe("verifyJwt", () => {
 
     // Tamper with the payload segment
     const parts = token.split(".");
-    const payloadJson = JSON.parse(
-      Buffer.from(parts[1], "base64url").toString()
-    );
+    const payloadJson = JSON.parse(Buffer.from(parts[1], "base64url").toString());
     payloadJson.sub = "hacker";
     parts[1] = Buffer.from(JSON.stringify(payloadJson)).toString("base64url");
     const tampered = parts.join(".");
 
-    await expect(verifyJwt(tampered, SECRET)).rejects.toThrow(
-      McpError
-    );
+    await expect(verifyJwt(tampered, SECRET)).rejects.toThrow(McpError);
   });
 });
 
@@ -248,8 +235,6 @@ describe("Round-trip (createJwt -> verifyJwt)", () => {
   it("created JWT fails verification with different secret", async () => {
     const token = await createJwt("user-rt", "secret-A");
 
-    await expect(verifyJwt(token, "secret-B")).rejects.toThrow(
-      McpError
-    );
+    await expect(verifyJwt(token, "secret-B")).rejects.toThrow(McpError);
   });
 });

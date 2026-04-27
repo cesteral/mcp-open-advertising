@@ -32,7 +32,9 @@ describe("executeWithRetry — tokenExpiryHint", () => {
     ).rejects.toSatisfy((error: unknown) => {
       expect(error).toBeInstanceOf(McpError);
       const mcpError = error as McpError;
-      expect(mcpError.message).toContain("Action required: Token expired. Regenerate at example.com.");
+      expect(mcpError.message).toContain(
+        "Action required: Token expired. Regenerate at example.com."
+      );
       expect(mcpError.data?.tokenExpiryHint).toBe("Token expired. Regenerate at example.com.");
       return true;
     });

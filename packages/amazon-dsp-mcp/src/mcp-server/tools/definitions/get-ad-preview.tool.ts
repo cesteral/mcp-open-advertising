@@ -15,14 +15,8 @@ Uses the \`GET /dsp/creatives/{creativeId}/preview\` endpoint.`;
 
 export const GetAdPreviewInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("Amazon DSP Advertiser ID"),
-    adId: z
-      .string()
-      .min(1)
-      .describe("The creative ID to preview"),
+    profileId: z.string().min(1).describe("Amazon DSP Advertiser ID"),
+    adId: z.string().min(1).describe("The creative ID to preview"),
   })
   .describe("Parameters for getting an Amazon DSP creative preview");
 
@@ -44,10 +38,7 @@ export async function getAdPreviewLogic(
 ): Promise<GetAdPreviewOutput> {
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
-  const preview = await amazonDspService.getAdPreviews(
-    input.adId,
-    context
-  );
+  const preview = await amazonDspService.getAdPreviews(input.adId, context);
 
   return {
     preview: preview as Record<string, unknown>,

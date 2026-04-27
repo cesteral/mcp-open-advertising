@@ -83,18 +83,13 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
       return;
     }
 
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/v1/me`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetchWithTimeout(`${this.baseUrl}/v1/me`, 10_000, undefined, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
@@ -173,18 +168,13 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
     const token = await this.getAccessToken();
 
     // Validate the token against the Snapchat /v1/me endpoint
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/v1/me`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetchWithTimeout(`${this.baseUrl}/v1/me`, 10_000, undefined, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
@@ -246,9 +236,7 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
 
     const data = (await response.json()) as SnapchatTokenResponse;
     if (!data.access_token) {
-      throw new Error(
-        `Snapchat token refresh failed: missing access_token in response`
-      );
+      throw new Error(`Snapchat token refresh failed: missing access_token in response`);
     }
 
     this.cachedToken = data.access_token;
@@ -332,10 +320,7 @@ export function getSnapchatOrgIdFromHeaders(
 /**
  * Generate a fingerprint for a Snapchat access token + advertiser ID pair (for session binding).
  */
-export function getSnapchatCredentialFingerprint(
-  accessToken: string,
-  adAccountId: string
-): string {
+export function getSnapchatCredentialFingerprint(accessToken: string, adAccountId: string): string {
   return createHash("sha256")
     .update(`${accessToken.trim()}:${adAccountId.trim()}`)
     .digest("hex")

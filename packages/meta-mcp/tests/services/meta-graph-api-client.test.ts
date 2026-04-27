@@ -30,11 +30,7 @@ describe("MetaGraphApiClient", () => {
   let client: MetaGraphApiClient;
 
   beforeEach(() => {
-    client = new MetaGraphApiClient(
-      mockAuthAdapter,
-      "https://graph.test/v21.0",
-      mockLogger
-    );
+    client = new MetaGraphApiClient(mockAuthAdapter, "https://graph.test/v21.0", mockLogger);
     mockFetchWithTimeout.mockReset();
     vi.mocked(mockAuthAdapter.getAccessToken).mockResolvedValue("test-access-token");
   });
@@ -59,7 +55,7 @@ describe("MetaGraphApiClient", () => {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: false,
       status,
-      text: async () => metaError ? JSON.stringify(metaError) : "error",
+      text: async () => (metaError ? JSON.stringify(metaError) : "error"),
       headers: new Headers(),
     } as unknown as Response);
   }
@@ -75,7 +71,9 @@ describe("MetaGraphApiClient", () => {
       expect(calledUrl).toContain("/me");
       expect(calledUrl).toContain("fields=id%2Cname");
       expect(calledUrl).not.toContain("access_token=");
-      expect((options?.headers as Record<string, string>)["Authorization"]).toBe("Bearer test-access-token");
+      expect((options?.headers as Record<string, string>)["Authorization"]).toBe(
+        "Bearer test-access-token"
+      );
     });
   });
 
@@ -91,7 +89,9 @@ describe("MetaGraphApiClient", () => {
       expect((options?.headers as Record<string, string>)["Content-Type"]).toBe(
         "application/x-www-form-urlencoded"
       );
-      expect((options?.headers as Record<string, string>)["Authorization"]).toBe("Bearer test-access-token");
+      expect((options?.headers as Record<string, string>)["Authorization"]).toBe(
+        "Bearer test-access-token"
+      );
     });
   });
 
@@ -212,9 +212,7 @@ describe("MetaGraphApiClient", () => {
       expect(sanitizer).toBeTypeOf("function");
 
       // Verify the sanitizer masks access_token
-      const sanitized = sanitizer!(
-        "https://graph.test/v21.0/me?access_token=SECRET&fields=id"
-      );
+      const sanitized = sanitizer!("https://graph.test/v21.0/me?access_token=SECRET&fields=id");
       expect(sanitized).toContain("access_token=***");
       expect(sanitized).not.toContain("SECRET");
     });

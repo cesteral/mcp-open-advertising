@@ -23,10 +23,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["gads-headers", "jwt", "none"]).default("gads-headers"),
 
   // Google Ads API Configuration
-  gadsApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://googleads.googleapis.com/v23"),
+  gadsApiBaseUrl: z.string().url().default("https://googleads.googleapis.com/v23"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via GADS_RATE_LIMIT_PER_MINUTE for different scaling profiles.

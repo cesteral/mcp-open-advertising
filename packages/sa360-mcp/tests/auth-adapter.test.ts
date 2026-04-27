@@ -90,9 +90,7 @@ describe("SA360 Auth Adapter", () => {
         refreshToken: "token-2",
       };
 
-      expect(getSA360CredentialFingerprint(creds)).toBe(
-        getSA360CredentialFingerprint(creds2)
-      );
+      expect(getSA360CredentialFingerprint(creds)).toBe(getSA360CredentialFingerprint(creds2));
     });
 
     it("should produce different fingerprint for different client IDs", () => {
@@ -107,9 +105,7 @@ describe("SA360 Auth Adapter", () => {
         refreshToken: "token",
       };
 
-      expect(getSA360CredentialFingerprint(creds1)).not.toBe(
-        getSA360CredentialFingerprint(creds2)
-      );
+      expect(getSA360CredentialFingerprint(creds1)).not.toBe(getSA360CredentialFingerprint(creds2));
     });
   });
 });

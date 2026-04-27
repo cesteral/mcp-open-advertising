@@ -20,9 +20,7 @@ export const bulkOperationsWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getBulkOperationsWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getBulkOperationsWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
   const operation = args?.operation || "all";
   return `# CM360 Bulk Operations Workflow

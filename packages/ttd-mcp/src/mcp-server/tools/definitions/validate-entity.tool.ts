@@ -19,9 +19,7 @@ import {
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import {
-  mergeParentIdsIntoData,
-} from "../utils/parent-id-validation.js";
+import { mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -58,7 +56,11 @@ const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
     { field: "AdvertiserId", expectedType: "string" },
     { field: "CampaignId", expectedType: "string" },
     { field: "AdGroupName", expectedType: "string" },
-    { field: "RTBAttributes", expectedType: "object", hint: "must contain BudgetSettings and BaseBidCPM" },
+    {
+      field: "RTBAttributes",
+      expectedType: "object",
+      hint: "must contain BudgetSettings and BaseBidCPM",
+    },
   ],
   creative: [
     { field: "AdvertiserId", expectedType: "string" },
@@ -71,9 +73,7 @@ const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
 };
 
 /** Fields that are always read-only and cannot be set via the API. */
-const READ_ONLY_FIELDS = [
-  "CreatedAtUtc", "LastUpdatedAtUtc",
-];
+const READ_ONLY_FIELDS = ["CreatedAtUtc", "LastUpdatedAtUtc"];
 
 /** Budget-related fields — warn if values look suspiciously low. */
 const BUDGET_FIELDS = ["Amount"];
@@ -84,35 +84,22 @@ const BUDGET_FIELDS = ["Amount"];
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
-    mode: z
-      .enum(["create", "update"])
-      .describe("Whether validating for creation or update"),
-    entityId: z
-      .string()
-      .optional()
-      .describe("Entity ID (recommended for update mode)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
+    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
+    entityId: z.string().optional().describe("Entity ID (recommended for update mode)"),
     partnerId: z
       .string()
       .optional()
-      .describe("Partner ID (merged into data as PartnerId before validation, mirrors create tool)"),
+      .describe(
+        "Partner ID (merged into data as PartnerId before validation, mirrors create tool)"
+      ),
     advertiserId: z
       .string()
       .optional()
       .describe("Advertiser ID (merged into data before validation, mirrors create/update tools)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (merged into data before validation)"),
-    adGroupId: z
-      .string()
-      .optional()
-      .describe("Ad group ID (merged into data before validation)"),
-    data: z
-      .record(z.any())
-      .describe("Entity payload to validate"),
+    campaignId: z.string().optional().describe("Campaign ID (merged into data before validation)"),
+    adGroupId: z.string().optional().describe("Ad group ID (merged into data before validation)"),
+    data: z.record(z.any()).describe("Entity payload to validate"),
   })
   .describe("Parameters for validating a TTD entity payload");
 

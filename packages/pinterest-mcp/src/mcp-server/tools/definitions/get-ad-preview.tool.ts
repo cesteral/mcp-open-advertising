@@ -17,18 +17,9 @@ be displayed on Pinterest's platform.
 
 export const GetAdPreviewInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
-    adId: z
-      .string()
-      .min(1)
-      .describe("The ad ID to preview"),
-    adFormat: z
-      .string()
-      .optional()
-      .describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    adId: z.string().min(1).describe("The ad ID to preview"),
+    adFormat: z.string().optional().describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
   })
   .describe("Parameters for getting Pinterest ad preview");
 

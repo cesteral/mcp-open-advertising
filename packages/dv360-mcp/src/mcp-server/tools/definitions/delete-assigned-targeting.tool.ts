@@ -1,8 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { z } from 'zod';
-import { resolveSessionServices } from '../utils/resolve-session.js';
+import { z } from "zod";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   ALL_TARGETING_TYPES,
   type TargetingParentType,
@@ -12,13 +12,13 @@ import {
   validateTargetingInput,
   getTargetingValidationError,
   buildTargetingIds,
-} from '../utils/targeting-metadata.js';
-import { getTargetingRequiredIdInputShape } from '../utils/targeting-input-shape.js';
+} from "../utils/targeting-metadata.js";
+import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from '@cesteral/shared';
+import type { SdkContext } from "@cesteral/shared";
 
-const TOOL_NAME = 'dv360_delete_assigned_targeting';
-const TOOL_TITLE = 'Delete DV360 Assigned Targeting Option';
+const TOOL_NAME = "dv360_delete_assigned_targeting";
+const TOOL_TITLE = "Delete DV360 Assigned Targeting Option";
 
 const TOOL_DESCRIPTION = `Delete an assigned targeting option from a DV360 entity.
 
@@ -35,29 +35,29 @@ export const DeleteAssignedTargetingInputSchema = z
   .object({
     parentType: z
       .enum(getSupportedTargetingParentTypes() as [string, ...string[]])
-      .describe('Type of parent entity'),
-    advertiserId: z.string().describe('DV360 Advertiser ID'),
+      .describe("Type of parent entity"),
+    advertiserId: z.string().describe("DV360 Advertiser ID"),
     ...TargetingRequiredIdInputShape,
     targetingType: z
       .enum(ALL_TARGETING_TYPES as unknown as [string, ...string[]])
-      .describe('Targeting type'),
-    assignedTargetingOptionId: z.string().describe('The assigned targeting option ID to delete'),
+      .describe("Targeting type"),
+    assignedTargetingOptionId: z.string().describe("The assigned targeting option ID to delete"),
   })
   .refine(validateTargetingInput, getTargetingValidationError)
-  .describe('Parameters for deleting an assigned targeting option');
+  .describe("Parameters for deleting an assigned targeting option");
 
 /**
  * Output schema for delete assigned targeting tool
  */
 export const DeleteAssignedTargetingOutputSchema = z
   .object({
-    success: z.boolean().describe('Whether deletion was successful'),
-    deletedTargetingOptionId: z.string().describe('ID of the deleted targeting option'),
-    parentType: z.string().describe('Parent entity type'),
-    targetingType: z.string().describe('Targeting type'),
+    success: z.boolean().describe("Whether deletion was successful"),
+    deletedTargetingOptionId: z.string().describe("ID of the deleted targeting option"),
+    parentType: z.string().describe("Parent entity type"),
+    targetingType: z.string().describe("Targeting type"),
     timestamp: z.string().datetime(),
   })
-  .describe('Delete result');
+  .describe("Delete result");
 
 type DeleteAssignedTargetingInput = z.infer<typeof DeleteAssignedTargetingInputSchema>;
 type DeleteAssignedTargetingOutput = z.infer<typeof DeleteAssignedTargetingOutputSchema>;
@@ -95,13 +95,15 @@ export async function deleteAssignedTargetingLogic(
 /**
  * Format response for MCP client
  */
-export function deleteAssignedTargetingResponseFormatter(result: DeleteAssignedTargetingOutput): McpTextContent[] {
+export function deleteAssignedTargetingResponseFormatter(
+  result: DeleteAssignedTargetingOutput
+): McpTextContent[] {
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
 
   return [
     {
-      type: 'text' as const,
+      type: "text" as const,
       text: `Successfully deleted ${result.targetingType} targeting option
 
 Deleted ID: ${result.deletedTargetingOptionId}

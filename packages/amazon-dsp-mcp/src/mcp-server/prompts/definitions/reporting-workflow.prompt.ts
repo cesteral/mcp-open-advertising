@@ -21,9 +21,7 @@ export const amazonDspReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getAmazonDspReportingWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getAmazonDspReportingWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
   const reportLevel = args?.reportLevel || "LINE_ITEM";
 

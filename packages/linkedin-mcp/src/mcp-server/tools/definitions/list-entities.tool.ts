@@ -17,19 +17,12 @@ const TOOL_DESCRIPTION = `List LinkedIn Ads entities with offset-based paginatio
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
     adAccountUrn: z
       .string()
       .optional()
       .describe("Ad Account URN (required for campaignGroup, campaign, creative, conversionRule)"),
-    start: z
-      .number()
-      .int()
-      .min(0)
-      .optional()
-      .describe("Offset for pagination (default 0)"),
+    start: z.number().int().min(0).optional().describe("Offset for pagination (default 0)"),
     count: z
       .number()
       .int()
@@ -64,7 +57,7 @@ export async function listEntitiesLogic(
   if (isAccountScopedEntity(input.entityType as LinkedInEntityType) && !input.adAccountUrn) {
     throw new Error(
       `adAccountUrn is required for entityType "${input.entityType}". ` +
-      "Use linkedin_list_ad_accounts to find available accounts."
+        "Use linkedin_list_ad_accounts to find available accounts."
     );
   }
 
@@ -80,9 +73,8 @@ export async function listEntitiesLogic(
   const total = result.total;
   const currentStart = result.start ?? 0;
   const requestedCount = input.count ?? 25;
-  const has_more = total !== undefined
-    ? currentStart + pageSize < total
-    : pageSize >= requestedCount;
+  const has_more =
+    total !== undefined ? currentStart + pageSize < total : pageSize >= requestedCount;
 
   return {
     entities: result.entities as unknown as Record<string, unknown>[],

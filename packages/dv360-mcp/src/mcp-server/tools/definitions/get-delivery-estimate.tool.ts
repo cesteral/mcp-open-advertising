@@ -23,9 +23,7 @@ that can be used to estimate delivery potential.`;
 
 export const GetDeliveryEstimateInputSchema = z
   .object({
-    advertiserId: z
-      .string()
-      .describe("DV360 Advertiser ID"),
+    advertiserId: z.string().describe("DV360 Advertiser ID"),
     lineItemId: z
       .string()
       .optional()
@@ -35,7 +33,9 @@ export const GetDeliveryEstimateInputSchema = z
 
 export const GetDeliveryEstimateOutputSchema = z
   .object({
-    estimate: z.record(z.any()).describe("Delivery estimate data including targeting and configuration"),
+    estimate: z
+      .record(z.any())
+      .describe("Delivery estimate data including targeting and configuration"),
     timestamp: z.string().datetime(),
   })
   .describe("Delivery estimate result");
@@ -62,11 +62,14 @@ export async function getDeliveryEstimateLogic(
   };
 }
 
-export function getDeliveryEstimateResponseFormatter(result: GetDeliveryEstimateOutput): McpTextContent[] {
+export function getDeliveryEstimateResponseFormatter(
+  result: GetDeliveryEstimateOutput
+): McpTextContent[] {
   const source = (result.estimate as Record<string, unknown>).source as string | undefined;
-  const header = source === "lineItem"
-    ? "DV360 Line Item Delivery Info"
-    : "DV360 Default Line Item Configuration";
+  const header =
+    source === "lineItem"
+      ? "DV360 Line Item Delivery Info"
+      : "DV360 Default Line Item Configuration";
 
   return [
     {

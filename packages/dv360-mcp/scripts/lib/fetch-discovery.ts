@@ -5,11 +5,11 @@
  * Phase 1 implementation - basic fetch with minimal caching.
  */
 
-import fs from 'fs/promises';
-import path from 'path';
-import type { SchemaExtractionConfig } from '../../config/schema-extraction.config.js';
-import type { DiscoveryDocument, CacheEntry } from './types.js';
-import { ExtractionError, ErrorCodes } from './types.js';
+import fs from "fs/promises";
+import path from "path";
+import type { SchemaExtractionConfig } from "../../config/schema-extraction.config.js";
+import type { DiscoveryDocument, CacheEntry } from "./types.js";
+import { ExtractionError, ErrorCodes } from "./types.js";
 
 /**
  * Fetch Discovery Document from Google API
@@ -27,13 +27,13 @@ import { ExtractionError, ErrorCodes } from './types.js';
 export async function fetchDiscoveryDoc(
   config: SchemaExtractionConfig
 ): Promise<DiscoveryDocument> {
-  console.log('📥 Fetching Discovery Document...');
+  console.log("📥 Fetching Discovery Document...");
 
   // Check cache first (if enabled)
   if (config.discovery.enableCache) {
     const cached = await loadFromCache(config);
     if (cached) {
-      console.log('   ✓ Loaded from cache');
+      console.log("   ✓ Loaded from cache");
       return cached;
     }
   }
@@ -93,9 +93,7 @@ async function fetchWithRetry(
  * @returns Discovery document
  * @throws Error if fetch fails
  */
-async function fetchFromNetwork(
-  config: SchemaExtractionConfig
-): Promise<DiscoveryDocument> {
+async function fetchFromNetwork(config: SchemaExtractionConfig): Promise<DiscoveryDocument> {
   // Construct URL: https://displayvideo.googleapis.com/$discovery/rest?version=v4
   const url = `${config.discovery.baseUrl}?version=${config.apiVersion}`;
 
@@ -108,7 +106,7 @@ async function fetchFromNetwork(
   try {
     const response = await fetch(url, {
       signal: controller.signal,
-      headers: { 'Accept': 'application/json' }
+      headers: { Accept: "application/json" },
     });
 
     if (!response.ok) {
@@ -122,9 +120,9 @@ async function fetchFromNetwork(
     const data = await response.json();
 
     // Validate that we got a valid Discovery document
-    if (!data.schemas || typeof data.schemas !== 'object') {
+    if (!data.schemas || typeof data.schemas !== "object") {
       throw new ExtractionError(
-        'Invalid Discovery document: missing or invalid schemas field',
+        "Invalid Discovery document: missing or invalid schemas field",
         ErrorCodes.DISCOVERY_INVALID_FORMAT,
         { url }
       );
@@ -132,7 +130,7 @@ async function fetchFromNetwork(
 
     return data as DiscoveryDocument;
   } catch (error: any) {
-    if (error.name === 'AbortError') {
+    if (error.name === "AbortError") {
       throw new ExtractionError(
         `Request timeout after ${config.discovery.timeout}ms`,
         ErrorCodes.OPERATION_TIMEOUT,
@@ -155,14 +153,12 @@ async function fetchFromNetwork(
  * @param config - Schema extraction configuration
  * @returns Cached discovery document, or null if cache miss
  */
-async function loadFromCache(
-  config: SchemaExtractionConfig
-): Promise<DiscoveryDocument | null> {
+async function loadFromCache(config: SchemaExtractionConfig): Promise<DiscoveryDocument | null> {
   const cacheKey = getCacheKey(config);
   const cachePath = getCachePath(cacheKey);
 
   try {
-    const cacheData = await fs.readFile(cachePath, 'utf-8');
+    const cacheData = await fs.readFile(cachePath, "utf-8");
     const cacheEntry: CacheEntry = JSON.parse(cacheData);
 
     // Check if cache is still valid
@@ -188,10 +184,7 @@ async function loadFromCache(
  * @param config - Schema extraction configuration
  * @param doc - Discovery document to cache
  */
-async function saveToCache(
-  config: SchemaExtractionConfig,
-  doc: DiscoveryDocument
-): Promise<void> {
+async function saveToCache(config: SchemaExtractionConfig, doc: DiscoveryDocument): Promise<void> {
   const cacheKey = getCacheKey(config);
   const cachePath = getCachePath(cacheKey);
 
@@ -205,7 +198,7 @@ async function saveToCache(
   await fs.mkdir(path.dirname(cachePath), { recursive: true });
 
   // Write cache file
-  await fs.writeFile(cachePath, JSON.stringify(cacheEntry, null, 2), 'utf-8');
+  await fs.writeFile(cachePath, JSON.stringify(cacheEntry, null, 2), "utf-8");
 
   console.log(`   Saved to cache: ${cachePath}`);
 }
@@ -220,7 +213,7 @@ async function saveToCache(
  * @returns Cache key
  */
 function getCacheKey(config: SchemaExtractionConfig): string {
-  const today = new Date().toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+  const today = new Date().toISOString().split("T")[0].replace(/-/g, ""); // YYYYMMDD
   return `discovery-dv360-${config.apiVersion}-${today}`;
 }
 
@@ -231,7 +224,7 @@ function getCacheKey(config: SchemaExtractionConfig): string {
  * @returns Absolute path to cache file
  */
 function getCachePath(cacheKey: string): string {
-  return path.resolve(process.cwd(), '.tmp-specs', 'cache', `${cacheKey}.json`);
+  return path.resolve(process.cwd(), ".tmp-specs", "cache", `${cacheKey}.json`);
 }
 
 /**

@@ -2,13 +2,8 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import {
-  getSupportedEntityTypesDynamic,
-} from "../utils/entity-mapping-dynamic.js";
-import {
-  getEntitySchemaByType,
-  getFieldSchemaByPath,
-} from "../utils/schema-introspection.js";
+import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
+import { getEntitySchemaByType, getFieldSchemaByPath } from "../utils/schema-introspection.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { validateEntityResponseFormatter } from "@cesteral/shared";
@@ -35,15 +30,11 @@ const entityTypeEnum = getSupportedEntityTypesDynamic() as [string, ...string[]]
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(entityTypeEnum)
-      .describe("Type of entity to validate"),
+    entityType: z.enum(entityTypeEnum).describe("Type of entity to validate"),
     mode: z
       .enum(["create", "update"])
       .describe("Validation mode: 'create' for new entity, 'update' for existing"),
-    data: z
-      .record(z.any())
-      .describe("Entity data payload to validate"),
+    data: z.record(z.any()).describe("Entity data payload to validate"),
     advertiserId: z
       .string()
       .optional()
@@ -82,10 +73,7 @@ export const ValidateEntityOutputSchema = z
       .array(z.string())
       .optional()
       .describe("Validation error messages (present when valid is false)"),
-    warnings: z
-      .array(z.string())
-      .optional()
-      .describe("Non-fatal warnings"),
+    warnings: z.array(z.string()).optional().describe("Non-fatal warnings"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity validation result");
@@ -118,7 +106,12 @@ export async function validateEntityLogic(
   // For update mode, validate updateMask paths only (patch semantics).
   if (input.mode === "update" && input.updateMask) {
     const maskFields = Array.from(
-      new Set(input.updateMask.split(",").map((f) => f.trim()).filter(Boolean))
+      new Set(
+        input.updateMask
+          .split(",")
+          .map((f) => f.trim())
+          .filter(Boolean)
+      )
     );
 
     if (maskFields.length === 0) {

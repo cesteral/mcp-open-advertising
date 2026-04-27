@@ -8,10 +8,7 @@ export type AmazonDspCanonicalEntityType =
   | "target"
   | "creativeAssociation";
 
-export type AmazonDspPublicEntityType =
-  | AmazonDspCanonicalEntityType
-  | "campaign"
-  | "adGroup";
+export type AmazonDspPublicEntityType = AmazonDspCanonicalEntityType | "campaign" | "adGroup";
 
 export interface AmazonDspContractFieldRule {
   field: string;
@@ -83,9 +80,19 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
       { field: "name", expectedType: "string" },
       { field: "orderId", expectedType: "string", hint: "Parent campaign / order ID" },
       { field: "advertiserId", expectedType: "string" },
-      { field: "budget", expectedType: "object", hint: '{ budgetType: "DAILY" | "LIFETIME", budget: number }' },
+      {
+        field: "budget",
+        expectedType: "object",
+        hint: '{ budgetType: "DAILY" | "LIFETIME", budget: number }',
+      },
     ],
-    readOnlyFields: ["lineItemId", "creationDate", "lastUpdatedDate", "createdTime", "modifiedTime"],
+    readOnlyFields: [
+      "lineItemId",
+      "creationDate",
+      "lastUpdatedDate",
+      "createdTime",
+      "modifiedTime",
+    ],
     notes: [
       "Ad group management is backed by the line item object in Amazon DSP.",
       "Targeting and optimization options vary by media type and tactic.",
@@ -105,9 +112,19 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     requiredOnCreate: [
       { field: "name", expectedType: "string" },
       { field: "advertiserId", expectedType: "string" },
-      { field: "creativeType", expectedType: "string", hint: "Creative subtype accepted by Amazon DSP" },
+      {
+        field: "creativeType",
+        expectedType: "string",
+        hint: "Creative subtype accepted by Amazon DSP",
+      },
     ],
-    readOnlyFields: ["creativeId", "creationDate", "lastUpdatedDate", "createdTime", "modifiedTime"],
+    readOnlyFields: [
+      "creativeId",
+      "creationDate",
+      "lastUpdatedDate",
+      "createdTime",
+      "modifiedTime",
+    ],
     notes: [
       "Creative creation depends on the underlying format and may require additional assets or subtype-specific fields.",
       "Creative association to line items is modeled separately from creative asset creation.",

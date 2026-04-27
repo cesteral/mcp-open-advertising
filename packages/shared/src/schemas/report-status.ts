@@ -67,10 +67,7 @@ export function fromMetaStatus(raw: {
  * Normalize a Google long-running operation (used by DV360/CM360/SA360) to
  * {@link ReportStatus}.
  */
-export function fromGoogleStatus(raw: {
-  done?: boolean;
-  error?: unknown;
-}): ReportStatus {
+export function fromGoogleStatus(raw: { done?: boolean; error?: unknown }): ReportStatus {
   if (raw.error) {
     const msg =
       typeof raw.error === "object" && raw.error !== null && "message" in raw.error
@@ -105,10 +102,7 @@ export function fromMicrosoftStatus(raw: {
  * CM360 has its own state machine — distinct from the generic Google
  * long-running operation shape handled by {@link fromGoogleStatus}.
  */
-export function fromCm360Status(raw: {
-  status?: string;
-  downloadUrl?: string;
-}): ReportStatus {
+export function fromCm360Status(raw: { status?: string; downloadUrl?: string }): ReportStatus {
   const s = raw.status ?? "";
   const state: ReportStatus["state"] =
     s === "REPORT_AVAILABLE"
@@ -130,19 +124,10 @@ export function fromCm360Status(raw: {
  * Normalize a TikTok report task status (`PENDING`/`RUNNING`/`DONE`/`FAILED`)
  * to {@link ReportStatus}.
  */
-export function fromTikTokStatus(raw: {
-  status?: string;
-  downloadUrl?: string;
-}): ReportStatus {
+export function fromTikTokStatus(raw: { status?: string; downloadUrl?: string }): ReportStatus {
   const s = raw.status ?? "";
   const state: ReportStatus["state"] =
-    s === "DONE"
-      ? "complete"
-      : s === "FAILED"
-        ? "failed"
-        : s === "RUNNING"
-          ? "running"
-          : "pending";
+    s === "DONE" ? "complete" : s === "FAILED" ? "failed" : s === "RUNNING" ? "running" : "pending";
   return {
     state,
     ...(raw.downloadUrl ? { downloadUrl: raw.downloadUrl } : {}),
@@ -155,10 +140,7 @@ export function fromTikTokStatus(raw: {
  * (e.g. `STARTED`, `COMPLETED`) and the pre-normalized forms emitted by
  * snapchat-mcp's internal status normalizer.
  */
-export function fromSnapchatStatus(raw: {
-  status?: string;
-  downloadUrl?: string;
-}): ReportStatus {
+export function fromSnapchatStatus(raw: { status?: string; downloadUrl?: string }): ReportStatus {
   const s = (raw.status ?? "").toUpperCase();
   const state: ReportStatus["state"] =
     s === "COMPLETE" || s === "COMPLETED"
@@ -178,10 +160,7 @@ export function fromSnapchatStatus(raw: {
  * Normalize an Amazon DSP report status (`PENDING`/`PROCESSING`/`COMPLETED`/
  * `FAILED`) to {@link ReportStatus}.
  */
-export function fromAmazonDspStatus(raw: {
-  status?: string;
-  downloadUrl?: string;
-}): ReportStatus {
+export function fromAmazonDspStatus(raw: { status?: string; downloadUrl?: string }): ReportStatus {
   const s = (raw.status ?? "").toUpperCase();
   const state: ReportStatus["state"] =
     s === "COMPLETED" || s === "SUCCESS"
@@ -205,10 +184,7 @@ export function fromAmazonDspStatus(raw: {
  * and `DOES_NOT_EXIST` surface as `failed` since the artifact is no longer
  * retrievable.
  */
-export function fromPinterestStatus(raw: {
-  status?: string;
-  downloadUrl?: string;
-}): ReportStatus {
+export function fromPinterestStatus(raw: { status?: string; downloadUrl?: string }): ReportStatus {
   const s = raw.status ?? "";
   const state: ReportStatus["state"] =
     s === "FINISHED"

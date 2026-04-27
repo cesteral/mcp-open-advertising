@@ -19,17 +19,19 @@ All entities are scoped to an advertiser account. Pagination uses \`page\` (1-ba
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
     filters: z
       .record(z.unknown())
       .optional()
-      .describe("Optional TikTok filtering object (for example { primary_status: 'STATUS_ALL' } or { campaign_ids: ['123'] })"),
+      .describe(
+        "Optional TikTok filtering object (for example { primary_status: 'STATUS_ALL' } or { campaign_ids: ['123'] })"
+      ),
     page: z
       .number()
       .int()

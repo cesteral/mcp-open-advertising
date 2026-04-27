@@ -5,16 +5,12 @@ import type { Logger } from "pino";
 import type { SA360HttpClient } from "./sa360-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import type { RequestContext } from "@cesteral/shared";
-import {
-  type SA360EntityType,
-} from "../../mcp-server/tools/utils/entity-mapping.js";
-import {
-  buildListQuery,
-  buildGetByIdQuery,
-} from "../../mcp-server/tools/utils/query-helpers.js";
+import { type SA360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
+import { buildListQuery, buildGetByIdQuery } from "../../mcp-server/tools/utils/query-helpers.js";
 import type { components } from "../../generated/types.js";
 
-export type SA360SearchRow = components["schemas"]["GoogleAdsSearchads360V0Services__SearchAds360Row"];
+export type SA360SearchRow =
+  components["schemas"]["GoogleAdsSearchads360V0Services__SearchAds360Row"];
 
 /**
  * SA360 Service — SA360 query language queries, account listing, and entity reads
@@ -81,16 +77,12 @@ export class SA360Service {
    * List SA360 customer accounts accessible to the authenticated user.
    * Uses the listAccessibleCustomers endpoint.
    */
-  async listAccessibleCustomers(
-    context?: RequestContext
-  ): Promise<{ resourceNames: string[] }> {
+  async listAccessibleCustomers(context?: RequestContext): Promise<{ resourceNames: string[] }> {
     await this.rateLimiter.consume("sa360:global");
 
-    const result = (await this.httpClient.fetch(
-      "/customers:listAccessibleCustomers",
-      context,
-      { method: "GET" }
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.fetch("/customers:listAccessibleCustomers", context, {
+      method: "GET",
+    })) as Record<string, unknown>;
 
     return {
       resourceNames: (result.resourceNames as string[]) || [],
@@ -158,14 +150,10 @@ export class SA360Service {
       body.pageSize = pageSize;
     }
 
-    const result = (await this.httpClient.fetch(
-      "/searchAds360Fields:search",
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      }
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.fetch("/searchAds360Fields:search", context, {
+      method: "POST",
+      body: JSON.stringify(body),
+    })) as Record<string, unknown>;
 
     return {
       fields: (result.results as unknown[]) || [],
@@ -184,11 +172,9 @@ export class SA360Service {
   ): Promise<{ customColumns: unknown[] }> {
     await this.rateLimiter.consume(`sa360:${customerId}`);
 
-    const result = (await this.httpClient.fetch(
-      `/customers/${customerId}/customColumns`,
-      context,
-      { method: "GET" }
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.fetch(`/customers/${customerId}/customColumns`, context, {
+      method: "GET",
+    })) as Record<string, unknown>;
 
     return {
       customColumns: (result.customColumns as unknown[]) || [],

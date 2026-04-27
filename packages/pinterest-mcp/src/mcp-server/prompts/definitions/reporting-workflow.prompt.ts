@@ -21,9 +21,7 @@ export const pinterestReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getPinterestReportingWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getPinterestReportingWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
   const reportLevel = args?.reportLevel || "AUCTION";
 

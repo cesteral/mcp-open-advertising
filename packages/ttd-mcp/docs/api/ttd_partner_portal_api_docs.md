@@ -212,16 +212,16 @@ Attribution Windows
 
 An attribution window is the period of time after a click or impression occurs that a conversion is tracked for credit to the click or impression. The following table lists attribution examples.
 
-Type	Property	Example
-Click Lookback Window	AttributionClickLookbackWindowInSeconds	If the lookback window is set to 30 days, conversions or actions that take place 31 days after that impression is served do not count toward attribution credit and are not included in any reports.
-Impression	AttributionImpressionLookbackWindowInSeconds	A 30-day impression attribution window credits any conversion made within 30 days after an impression is served.
+Type Property Example
+Click Lookback Window AttributionClickLookbackWindowInSeconds If the lookback window is set to 30 days, conversions or actions that take place 31 days after that impression is served do not count toward attribution credit and are not included in any reports.
+Impression AttributionImpressionLookbackWindowInSeconds A 30-day impression attribution window credits any conversion made within 30 days after an impression is served.
 Deduplication Windows
 
 A deduplication window is the period during which duplicate clicks or conversions is disregarded for attribution. The following table lists deduplication examples.
 
-Type	Property	Example
-Click	ClickDedupWindowInSeconds	A window of seven seconds ensures that if a user clicks an ad more than once during those seven seconds, it is counted as one click.
-Conversion	ConversionDedupWindowInSeconds	A window of 500 seconds ensures that if a user performs a desired conversion action (for example, a sale, newsletter sign-ups, or any other measurable result) more than once during those 500 seconds, it will be counted as one conversion.
+Type Property Example
+Click ClickDedupWindowInSeconds A window of seven seconds ensures that if a user clicks an ad more than once during those seven seconds, it is counted as one click.
+Conversion ConversionDedupWindowInSeconds A window of 500 seconds ensures that if a user performs a desired conversion action (for example, a sale, newsletter sign-ups, or any other measurable result) more than once during those 500 seconds, it will be counted as one conversion.
 
 During the deduplication process for conversions, the decision of whether a conversion event should be recorded or deduplicated depends on the referrer URL in the tracking tag. By default, if conversion events occur on different pages (but with the same TDID and tracking tag ID) within the deduplication window, they are still counted as separate conversions.
 
@@ -243,10 +243,10 @@ The following table is an example of a report generated in April, including thre
 
 Example Report: Generated April
 
-Month	Advertiser Name	Partner Cost
-March	Advertiser A	$10,000
-March	Advertiser B	$5,000
-March	Advertiser C	$3,000
+Month Advertiser Name Partner Cost
+March Advertiser A $10,000
+March Advertiser B $5,000
+March Advertiser C $3,000
 Consent to Share Partner Cost
 
 To provide consent to share your partner cost data with retailers, use the following advertisers mutation with your advertiser ID and the merchant ID of the retailer in the retailCommitmentTrackerSettings object. You can use it for multiple advertisers and retailers.
@@ -273,9 +273,9 @@ If you are targeting anyone in the EU, review your advertiser properties and upd
 
 The following table summarizes the details.
 
-Required Information	DSA Property	Default Value	Notes
-Advertiser’s name	AdvertiserNameDsa	AdvertiserName	The default value is read from the advertiser API.
-Payer’s name	PayerNameDsa	CustomerName	The default value is read from our internal business database.
+Required Information DSA Property Default Value Notes
+Advertiser’s name AdvertiserNameDsa AdvertiserName The default value is read from the advertiser API.
+Payer’s name PayerNameDsa CustomerName The default value is read from our internal business database.
 
 IMPORTANT: It is your responsibility, as required under our Master Services Agreement, to ensure any information you provide to us is truthful and correct. If you fail to confirm the values, you agree to us using the default values.
 
@@ -289,12 +289,12 @@ The Trade Desk maintains an EU Health Policy that treats health data as sensitiv
 
 The following table summarizes the scope of impact.
 
-Endpoints	Condition	Notes
-Bid Lists	Bid list contains atmospheric conditions.	Pollen risk targeting is disabled in GDPR regions.
-Ad Groups	Ad group optimization uses Audience Booster, Prism, and Audience Predictor.	Certain ad group performance enhancements are not supported in GDPR regions. For details, see Performance-Enhancing Features.
+Endpoints Condition Notes
+Bid Lists Bid list contains atmospheric conditions. Pollen risk targeting is disabled in GDPR regions.
+Ad Groups Ad group optimization uses Audience Booster, Prism, and Audience Predictor. Certain ad group performance enhancements are not supported in GDPR regions. For details, see Performance-Enhancing Features.
 In GraphQL API, the Prism is controlled at the advertiser level by the new prism property.
 NOTE: Prism is disabled for advertisers whose partners have opted out of fee-based features.
-CRM Data	Upload contains health data that originates within GDPR regions	Advertisers cannot upload health data that violates policy.
+CRM Data Upload contains health data that originates within GDPR regions Advertisers cannot upload health data that violates policy.
 
 NOTE: Health advertisers are identified through self-categorization and review by The Trade Desk, of the advertised product.
 
@@ -1182,11 +1182,11 @@ Git Directory
 
 The following table lists the available directories on Github and links to user guides, sorted alphabetically.
 
-Directory	Description	User Guide
-Campaign	Create and manage campaigns for Kokai using GraphQL or REST.	Campaigns
-Delta	Track periodic metadata-level changes using GraphQL or REST.	Platform Synchronization
-Report	Download and query different kinds of reports using GraphQL.	Reports (More coming soon)
-Seed	Create an ideal audience to target your campaigns using GraphQL.	Seeds
+Directory Description User Guide
+Campaign Create and manage campaigns for Kokai using GraphQL or REST. Campaigns
+Delta Track periodic metadata-level changes using GraphQL or REST. Platform Synchronization
+Report Download and query different kinds of reports using GraphQL. Reports (More coming soon)
+Seed Create an ideal audience to target your campaigns using GraphQL. Seeds
 Campaign Scripts
 
 Learn how to create and update campaigns for Kokai using GraphQL or REST. For details on which scripts to use, see Campaign Creation Workflows.
@@ -1197,22 +1197,22 @@ Create campaigns in Kokai with the GraphQL API, through these fill-in-the-blank 
 
 The following table lists the available scripts for GraphQL and user guides, sorted alphabetically.
 
-Script	Description	User Guide
-CloneCampaignGQL.py	Create one or more Kokai copies of an existing campaign using GraphQL.	Clone Campaigns with the GraphQL API
-CreateCampaignWorkflowGQL.py	Create a Kokai campaign using GraphQL.	Campaign Creation Workflow with GraphQL
-CreateCampaignsBulkGQL	Create multiple Kokai campaigns in a single request using GraphQL.	GraphQL Bulk Operations
-GetCampaignBudgetGQL.py	Retrieve campaign budget settings using GraphQL.	Budget Allocation
-GetCampaignGQL.py	Retrieve campaign information using GraphQL.	GraphQL Campaign Query Examples
+Script Description User Guide
+CloneCampaignGQL.py Create one or more Kokai copies of an existing campaign using GraphQL. Clone Campaigns with the GraphQL API
+CreateCampaignWorkflowGQL.py Create a Kokai campaign using GraphQL. Campaign Creation Workflow with GraphQL
+CreateCampaignsBulkGQL Create multiple Kokai campaigns in a single request using GraphQL. GraphQL Bulk Operations
+GetCampaignBudgetGQL.py Retrieve campaign budget settings using GraphQL. Budget Allocation
+GetCampaignGQL.py Retrieve campaign information using GraphQL. GraphQL Campaign Query Examples
 REST API
 
 Create campaigns in Kokai with the REST API, through these fill-in-the-blank REST Python scripts.
 
 The following table lists the available scripts for REST and user guides, sorted alphabetically.
 
-Script	Description	User Guide
-CloneCampaignREST.py	Create a Kokai campaign copy of an existing campaign using REST.	Clone a Campaign with the REST API
-CreateCampaignWorkflowREST.py	Create a Kokai campaign using REST.	Campaign Creation Workflow with REST
-GetCampaignREST.py	Retrieve campaign information using REST.	Campaign REST Endpoints
+Script Description User Guide
+CloneCampaignREST.py Create a Kokai campaign copy of an existing campaign using REST. Clone a Campaign with the REST API
+CreateCampaignWorkflowREST.py Create a Kokai campaign using REST. Campaign Creation Workflow with REST
+GetCampaignREST.py Retrieve campaign information using REST. Campaign REST Endpoints
 Solimar-to-Kokai Upgrade
 
 Upgrade campaigns and/or their budgets to be fully compatible with Kokai using both GraphQL and REST.
@@ -1221,10 +1221,10 @@ IMPORTANT: The following scripts are listed in alphabetical order. To determine 
 
 The following table lists the available scripts and user guides.
 
-Script	Description	User Guide
-UpdateCampaignBudgetWorkflow.py	Check the campaign version (Kokai or Solimar) and update its budget accordingly, using REST and GraphQL.	Budget Allocation
-UpgradeBudgetSettingsToKokaiGQL.py	Upgrade a campaign's Solimar budget to Kokai using GraphQL.	Budget Allocation
-UpgradeCampaignToKokaiGQL.py	Upgrade a Solimar campaign to Kokai using GraphQL.	Upgrade Solimar Campaigns to Kokai
+Script Description User Guide
+UpdateCampaignBudgetWorkflow.py Check the campaign version (Kokai or Solimar) and update its budget accordingly, using REST and GraphQL. Budget Allocation
+UpgradeBudgetSettingsToKokaiGQL.py Upgrade a campaign's Solimar budget to Kokai using GraphQL. Budget Allocation
+UpgradeCampaignToKokaiGQL.py Upgrade a Solimar campaign to Kokai using GraphQL. Upgrade Solimar Campaigns to Kokai
 Data Scripts
 
 NOTE: For samples on targeting data and rate information, see Data Insights.
@@ -1235,15 +1235,15 @@ First-Party Data
 
 The following table lists the available scripts for GraphQL and user guides, sorted alphabetically.
 
-Script	Description	User Guide
-GetAdvertiserFirstPartyDataGQL.py	Retrieve all first-party data elements for an advertiser.	Building Audiences
-GetPartnerFirstPartyDataGQL.py	Retrieve first-party data from all advertisers under a partner.	N/A
+Script Description User Guide
+GetAdvertiserFirstPartyDataGQL.py Retrieve all first-party data elements for an advertiser. Building Audiences
+GetPartnerFirstPartyDataGQL.py Retrieve first-party data from all advertisers under a partner. N/A
 Third-Party Data
 
 The following table lists the available scripts for GraphQL and user guides, sorted alphabetically.
 
-Script	Description	User Guide
-GetAllThirdPartyDataForPartnerGQL.py	Retrieve all the third-party data elements of an audience.	Building Audiences
+Script Description User Guide
+GetAllThirdPartyDataForPartnerGQL.py Retrieve all the third-party data elements of an audience. Building Audiences
 
 ---
 
@@ -1306,8 +1306,8 @@ The following table provides information about seed quality scores.
 
 NOTE: High-quality seeds represent converters—seeds that contain brand purchasers.
 
-Quality	Type of Data	Details
-High	First-party	Includes segments that are categorized in the Advertiser Data and Identity (One) tile as one of the following:
+Quality Type of Data Details
+High First-party Includes segments that are categorized in the Advertiser Data and Identity (One) tile as one of the following:
 Purchase
 Loyalty members
 Voters for political advertisers
@@ -1316,8 +1316,8 @@ First-party segments are defined in two ways:
 User-defined
 Categorized daily by The Trade Desk through keyword matching
 
-Third-party	Includes only segments that are categorized as purchase. Only brand purchase segments are allowed (no category purchase), and the segment cannot be modeled. The Trade Desk categorizes third-party segments based on the data partner’s methodology.
-Medium	First-party	These segments are used in reporting and attribution.
+Third-party Includes only segments that are categorized as purchase. Only brand purchase segments are allowed (no category purchase), and the segment cannot be modeled. The Trade Desk categorizes third-party segments based on the data partner’s methodology.
+Medium First-party These segments are used in reporting and attribution.
 Either or both of the following:
 Third-party/retail targeting
 Offline conversion segments
@@ -1329,19 +1329,19 @@ Location visitors
 Modeled pharma segments for medical health
 Registered voters for political advertisers
 
-Low	All else
+Low All else
 
 TIP: The quality of the customers that make up the seed is more important than its initial size. A smaller seed with rich signals can be more effective because it provides a concentrated pool of users with the most desired behaviors for your brand.
 
 The following table lists a few practical guidelines for creating, updating, and evaluating your seeds to ensure the best relevance scores.
 
-Guideline	Description
-Focus on converters	Prioritize seeds that represent converted audiences rather than proxy actions. Converters typically exhibit more distinct behaviors, enhancing the seed's utility for our algorithms.
-Emphasize precision and concentration	Aim for the most precise and concentrated dataset possible. Our models do not rely on size to assess seed quality, and we need only 5000 IDs for modeling purposes, but platform averages typically range around 100,000.
-Ensure behavior consistency	Ensure that the seed represents one behavior consistently. Avoid mixing homepage visits with conversion pixels or combining conversions from multiple product lines, as this can dilute the quality concentration of the seed and broaden the range of behaviors targeted.
-Prioritize recent converters	When uploading first-party data, prioritize seeds containing individuals with recent conversion attributions. For example, seeds with converters from the last 30 days are more likely to appear in the bidstream for modeling, compared to those from the past six months.
-Monitor seed health	Recognize that seeds can evolve over time. Regularly monitor the health of your seeds.
-Track the number of active IDs	If a seed has fewer than 5000 active IDs, it does not impact bidding. When this happens, one way to improve the counts is to add contextual data. When the seed reaches 5000 active IDs, it prioritizes the segment again.
+Guideline Description
+Focus on converters Prioritize seeds that represent converted audiences rather than proxy actions. Converters typically exhibit more distinct behaviors, enhancing the seed's utility for our algorithms.
+Emphasize precision and concentration Aim for the most precise and concentrated dataset possible. Our models do not rely on size to assess seed quality, and we need only 5000 IDs for modeling purposes, but platform averages typically range around 100,000.
+Ensure behavior consistency Ensure that the seed represents one behavior consistently. Avoid mixing homepage visits with conversion pixels or combining conversions from multiple product lines, as this can dilute the quality concentration of the seed and broaden the range of behaviors targeted.
+Prioritize recent converters When uploading first-party data, prioritize seeds containing individuals with recent conversion attributions. For example, seeds with converters from the last 30 days are more likely to appear in the bidstream for modeling, compared to those from the past six months.
+Monitor seed health Recognize that seeds can evolve over time. Regularly monitor the health of your seeds.
+Track the number of active IDs If a seed has fewer than 5000 active IDs, it does not impact bidding. When this happens, one way to improve the counts is to add contextual data. When the seed reaches 5000 active IDs, it prioritizes the segment again.
 Choose Seed Data Sources
 
 To create a high-quality seed, start with well-sourced data as your foundation. First-party data stands out as the prime choice, offering direct insights into your audience. Additionally, retail data serves as a valuable seed source, providing unique perspectives on consumer behavior. Third-party data and custom segments are also viable options, especially if they align with your target audience's conversion patterns. In the event that purchase data is unavailable, proxy seeds offer an alternative choice. For example, you might choose to include homepage visits, which serve as early signals of potential conversions, ensuring your seed remains robust even in circumstances that are less than ideal. You can use any combination of data sources for your seed.
@@ -1350,14 +1350,14 @@ IMPORTANT: If you use third-party data, you must check that the segment supports
 
 The following table summarizes various data sources that you can use to create a seed, listing them in descending order of quality. See also FAQs.
 
-Data Source	Seed Quality	Description
-Real-time first-party conversion data	Converted audience	Online conversion events, such as purchases or sign-ups that we record. Best collected using pixels.
-Imported conversions	Converted audience	CRM data or offline first-party segments.
-Retail purchase data, precise and specific to the advertiser	Converted audience	Segments that The Trade Desk categorizes as including users who have made purchases from a specific brand. This might be a good choice, for example, if your product is for Consumer Packaged Goods (CPG), because you might not have the previous options.
-Brand-specific third-party purchase data	Converted audience	Advertisers, such as pharmaceuticals, QSR, political advertisers. who might not have access to good first-party conversion or retail data.
-Other real-time first-party data	Proxy audience	Tracking tags or app data, representing homepage landings or proxy actions (clicks) that express interest.
-Brand-specific category or interest data	Proxy audience	Less valuable than purchase data, but can be a starting point for a temporary seed.
-Custom keywords or sites	Proxy audience	A temporary solution for advertisers to create their first seed, until they can leverage a higher-quality data source.
+Data Source Seed Quality Description
+Real-time first-party conversion data Converted audience Online conversion events, such as purchases or sign-ups that we record. Best collected using pixels.
+Imported conversions Converted audience CRM data or offline first-party segments.
+Retail purchase data, precise and specific to the advertiser Converted audience Segments that The Trade Desk categorizes as including users who have made purchases from a specific brand. This might be a good choice, for example, if your product is for Consumer Packaged Goods (CPG), because you might not have the previous options.
+Brand-specific third-party purchase data Converted audience Advertisers, such as pharmaceuticals, QSR, political advertisers. who might not have access to good first-party conversion or retail data.
+Other real-time first-party data Proxy audience Tracking tags or app data, representing homepage landings or proxy actions (clicks) that express interest.
+Brand-specific category or interest data Proxy audience Less valuable than purchase data, but can be a starting point for a temporary seed.
+Custom keywords or sites Proxy audience A temporary solution for advertisers to create their first seed, until they can leverage a higher-quality data source.
 Seeds with Multiple Segments: Applying Boolean Logic
 
 You can create seeds using multiple segments. In this case, Boolean logic is applied to determine relevant users based on whether the segments are first-party or third-party data. Here's a high-level overview of the logic:
@@ -1368,15 +1368,15 @@ Third-party data segments: These are treated as "AND" conditions. This means tha
 
 The following table describes the Boolean logic for various data segments, listed in order of relevance from highest to lowest, as recommended for creating your seed.
 
-Data Segment Type	Boolean Logic	Description
-First-party data segments	OR	Users in any first-party data segment.
-Retail converter data segments	OR	Users in any retail converter data segment (where they have made a purchase of a specific brand). Category purchasers are not included: for example, Coca-Cola purchasers are included, but soda purchasers are not.
+Data Segment Type Boolean Logic Description
+First-party data segments OR Users in any first-party data segment.
+Retail converter data segments OR Users in any retail converter data segment (where they have made a purchase of a specific brand). Category purchasers are not included: for example, Coca-Cola purchasers are included, but soda purchasers are not.
 TIP: Use brand-purchase data whenever possible, because it directly represents your customers.
-Retail non-converter segments	AND	Only users found in all retail non-converter segments.
-Offline measurement data segments	OR	Users in any offline measurement data segment.
-Third-party data segments	AND	Only users found in all third-party data segments.
-Keywords or URLs for custom data segments	OR	Users if they match any keyword or URL in any segment.
-Across all data segments	OR	Users in any segment.
+Retail non-converter segments AND Only users found in all retail non-converter segments.
+Offline measurement data segments OR Users in any offline measurement data segment.
+Third-party data segments AND Only users found in all third-party data segments.
+Keywords or URLs for custom data segments OR Users if they match any keyword or URL in any segment.
+Across all data segments OR Users in any segment.
 Get Started
 
 Your partnership with us begins when you create your seed in the platform. You identify your ideal customer from the data uploaded to the platform, and we work together to find that type of person wherever they are on the internet.
@@ -1393,26 +1393,26 @@ Seed Object
 
 The following table lists the high-level fields that are part of a seed in the GraphQL API. When creating or updating seeds, you can specify some of them as input and others as response data to be returned.
 
-Field	Data Type	Required?	Description
-id	String	Required	The unique identifier for the seed, assigned at its creation. To update the seed, or to attach it to a campaign, you must provide the seed ID.
-advertiser	Object	Required	The details of the advertiser that owns the seed.
-targetingData	Object	Required	Depending on the data sources used for the seed, this might be a list of first-party, retail, or third-party data segment IDs, contextual key words and phrases, or URLs.
+Field Data Type Required? Description
+id String Required The unique identifier for the seed, assigned at its creation. To update the seed, or to attach it to a campaign, you must provide the seed ID.
+advertiser Object Required The details of the advertiser that owns the seed.
+targetingData Object Required Depending on the data sources used for the seed, this might be a list of first-party, retail, or third-party data segment IDs, contextual key words and phrases, or URLs.
 IMPORTANT: If you use third-party data, you must check that the segment supports seeds and that you have permission to use the data. To check whether your data is eligible for seed creation, see FAQs.
-activeIds	Integer	Optional	The number of IDs seen in bidding within the past seven days. For details, see Unique ID Counting Methodologies.
-createdAt	DateTime	Optional	The date and time when the seed was created.
-lastUpdatedAt	DateTime	Optional	The date and time when the seed was last updated.
-name	String	Optional	The seed name.
-status	String	Optional	The current status of the seed. For possible values, see Seed Status Values.
-uniqueHouseholds	Integer	Optional	The number of unique households that are in in the seed, based on matching it on the household graph.
-campaigns	Object	Optional	The details of the campaigns to which the seed is attached.
+activeIds Integer Optional The number of IDs seen in bidding within the past seven days. For details, see Unique ID Counting Methodologies.
+createdAt DateTime Optional The date and time when the seed was created.
+lastUpdatedAt DateTime Optional The date and time when the seed was last updated.
+name String Optional The seed name.
+status String Optional The current status of the seed. For possible values, see Seed Status Values.
+uniqueHouseholds Integer Optional The number of unique households that are in in the seed, based on matching it on the household graph.
+campaigns Object Optional The details of the campaigns to which the seed is attached.
 Seed Status Values
 
 The following table lists the possible seed status values.
 
-Status	Description
-Pending	We're currently gathering IDs for the seed. This might take up to 24 hours.
-Ready	The seed contains sufficient high-quality signals, and is ready for use.
-Error	The seed requires a minimum of 5,000 active IDs to be considered ready for use. Add more data segments.
+Status Description
+Pending We're currently gathering IDs for the seed. This might take up to 24 hours.
+Ready The seed contains sufficient high-quality signals, and is ready for use.
+Error The seed requires a minimum of 5,000 active IDs to be considered ready for use. Add more data segments.
 
 The following sections provide examples of critical seed mutations and queries.
 
@@ -1426,7 +1426,6 @@ Your advertiser ID
 A name for your seed that describes it
 Your selected targeting (source) data IDs
 Approval to use your selected targeting (source) data IDs, if you are using third-party data
-
 
 TIP: To look up targeting data IDs, use the POST /v3/dmp/firstparty/advertiser endpoint for first-party data or the POST /v3/dmp/thirdparty/advertiser endpoint for third-party data. For details, see the first-party data elements and third-party data elements look-up task examples under Audience.
 
@@ -1552,12 +1551,12 @@ Manage Seeds
 
 The following table lists some of the common tasks associated with seeds that you might need to perform.
 
-Task	GraphQL Operation	Notes
-Look up details of a seed by its ID.	Query	You can look up seed details as well as campaign details in a single call.
-Look up all seeds for an advertiser ID.	Query	You can look up seed details as well as advertiser details in a single call.
-Update a seed.	Mutation	Updating seeds can help ensure their quality.
-Replace a seed in a campaign.	Mutation	Use the same mutation to attach a new seed or to replace an existing one in a campaign.
-Change default seed for an advertiser.	Mutation	If you have multiple seeds, you can designate a different seed as the default. Only applicable if you have multiple seeds.
+Task GraphQL Operation Notes
+Look up details of a seed by its ID. Query You can look up seed details as well as campaign details in a single call.
+Look up all seeds for an advertiser ID. Query You can look up seed details as well as advertiser details in a single call.
+Update a seed. Mutation Updating seeds can help ensure their quality.
+Replace a seed in a campaign. Mutation Use the same mutation to attach a new seed or to replace an existing one in a campaign.
+Change default seed for an advertiser. Mutation If you have multiple seeds, you can designate a different seed as the default. Only applicable if you have multiple seeds.
 
 TIP: For basic guidelines on GraphQL operations, and additional examples, see GraphQL queries.
 
@@ -1792,9 +1791,9 @@ Where can I find targeting data IDs for my seed?
 
 To look up targeting data IDs, use the following endpoints:
 
-Data	Endpoint	Look-up Task Examples
-First-party	POST /v3/dmp/firstparty/advertiser	First-Party Data Elements
-Third-party	POST /v3/dmp/thirdparty/advertiser	Third-Party Data Elements
+Data Endpoint Look-up Task Examples
+First-party POST /v3/dmp/firstparty/advertiser First-Party Data Elements
+Third-party POST /v3/dmp/thirdparty/advertiser Third-Party Data Elements
 How do I determine whether third-party and retail segments are eligible for seed creation?
 
 Use the POST /v3/dmp/thirdparty/advertiser endpoint to check whether the IsEligibleForSeeds property is true.
@@ -1881,29 +1880,29 @@ A KPI, or key performance indicator, is a metric that enables you to measure the
 
 The following table lists the available goals.
 
-Goal	Has Target?	Description	Goal Object Property	Supported by Koa Optimizations?
-Reach	No	This is a broad goal without any specific metrics used as primary benchmarks. Choose this goal if you want to reach as many unique users as possible in your intended audience given your specified base bid, max bid, and any bid adjustments.	MaximizeReach	Yes
-Incremental Reach	No	Maximize the number of unique viewers beyond those who have already been reached through linear TV.
-This goal prioritizes spend toward CTV PMP deals that improve unique or incremental reach of the ad group and deprioritize spends toward PMP deals that do the opposite.	MaximizeLtvIncrementalReach	Yes
-CPC	Yes, currency amount	Cost per click. The amount the advertiser pays every time an ad is clicked. If your primary engagement metric is clicks, you may want to choose CPC as your goal. See also the CTR goal.	CPCInAdvertiserCurrency	Yes
-CPA	Yes, currency amount	Cost Per Acquisition. The amount the advertiser pays based on the number of "acquisitions" (conversions) made.
-If your goal is a specific action like a purchase or a newsletter sign up, you may want to choose CPA as your goal.	CPAInAdvertiserCurrency	Yes
-vCPM	Yes, currency amount	(Estimated) Viewable Cost Per Mille (thousand). Setting this goal optimizes based on the cost of viewable inventory. vCPM is calculated by dividing eCPM by the in-view rate (vCPM = eCPM / in-view rate).
-Unlike the Viewability goal, which optimizes toward an entered in-view target percentage, vCPM optimizes to inventory that is effective in terms of its viewable cost.	VCPMInAdvertiserCurrency	Yes
-CPCV	Yes, currency amount	Cost Per Completed View. The amount the advertiser pays after a video has been viewed all the way through. Set this goal if your campaign is using video creatives and you want to encourage immediate engagement. This is a great option for brand-focused advertisers.	CPCVInAdvertiserCurrency	Yes
-ROAS	Yes, percentage	Return On Ad Spend. The ratio of total revenue compared to total spend. Set this ROI-type of goal when you can pass specific revenue amounts to the platform in your conversion pixel.	ReturnOnAdSpendPercent	Yes
-CTR	Yes, percentage	Click Through Rate. It is calculated by dividing the number of clicks by the number of impressions. A high CTR indicates a more successful campaign.
-This alternative to CPC does not consider the cost of the media, but only how often a user clicks an ad.	CTRInPercent	Yes
-VCR	Yes, percentage	Video Completion Rate. This goal allows optimization toward inventory where ads are viewed or heard to completion.	VCRInPercent	Yes
-Viewability	Yes, percentage	Viewability is a metric that measures whether an ad impression has been viewed by a website user rather than simply being displayed.
-Unlike the vCPM goal, which optimizes based on the cost of viewable inventory, Viewability optimizes toward an entered in-view target percentage.	ViewabilityInPercent	No
-Nielsen OTP	Yes, percentage	Nielsen On Target Percentage. Setting this goal helps you optimize toward a percentage of impressions delivered to a chosen demographic (out of the total number of impressions served during your campaign).
+Goal Has Target? Description Goal Object Property Supported by Koa Optimizations?
+Reach No This is a broad goal without any specific metrics used as primary benchmarks. Choose this goal if you want to reach as many unique users as possible in your intended audience given your specified base bid, max bid, and any bid adjustments. MaximizeReach Yes
+Incremental Reach No Maximize the number of unique viewers beyond those who have already been reached through linear TV.
+This goal prioritizes spend toward CTV PMP deals that improve unique or incremental reach of the ad group and deprioritize spends toward PMP deals that do the opposite. MaximizeLtvIncrementalReach Yes
+CPC Yes, currency amount Cost per click. The amount the advertiser pays every time an ad is clicked. If your primary engagement metric is clicks, you may want to choose CPC as your goal. See also the CTR goal. CPCInAdvertiserCurrency Yes
+CPA Yes, currency amount Cost Per Acquisition. The amount the advertiser pays based on the number of "acquisitions" (conversions) made.
+If your goal is a specific action like a purchase or a newsletter sign up, you may want to choose CPA as your goal. CPAInAdvertiserCurrency Yes
+vCPM Yes, currency amount (Estimated) Viewable Cost Per Mille (thousand). Setting this goal optimizes based on the cost of viewable inventory. vCPM is calculated by dividing eCPM by the in-view rate (vCPM = eCPM / in-view rate).
+Unlike the Viewability goal, which optimizes toward an entered in-view target percentage, vCPM optimizes to inventory that is effective in terms of its viewable cost. VCPMInAdvertiserCurrency Yes
+CPCV Yes, currency amount Cost Per Completed View. The amount the advertiser pays after a video has been viewed all the way through. Set this goal if your campaign is using video creatives and you want to encourage immediate engagement. This is a great option for brand-focused advertisers. CPCVInAdvertiserCurrency Yes
+ROAS Yes, percentage Return On Ad Spend. The ratio of total revenue compared to total spend. Set this ROI-type of goal when you can pass specific revenue amounts to the platform in your conversion pixel. ReturnOnAdSpendPercent Yes
+CTR Yes, percentage Click Through Rate. It is calculated by dividing the number of clicks by the number of impressions. A high CTR indicates a more successful campaign.
+This alternative to CPC does not consider the cost of the media, but only how often a user clicks an ad. CTRInPercent Yes
+VCR Yes, percentage Video Completion Rate. This goal allows optimization toward inventory where ads are viewed or heard to completion. VCRInPercent Yes
+Viewability Yes, percentage Viewability is a metric that measures whether an ad impression has been viewed by a website user rather than simply being displayed.
+Unlike the vCPM goal, which optimizes based on the cost of viewable inventory, Viewability optimizes toward an entered in-view target percentage. ViewabilityInPercent No
+Nielsen OTP Yes, percentage Nielsen On Target Percentage. Setting this goal helps you optimize toward a percentage of impressions delivered to a chosen demographic (out of the total number of impressions served during your campaign).
 Nielsen sets different percentage benchmarks for different demographics and different regions. Nielsen's suggested benchmarks can be found on their website. You can also contact your Account Manager to get a better sense of what your percentage should be.
 When set, the demographic must be provided in the form of NielsenTrackingAttributes or you must set TargetDemographicSettingsEnabled to true.
-If you select this goal, fees for Nielsen reporting may apply.	NielsenOTPInPercent	No
-Miaozhen OTP	Yes, percentage	Miaozhen On Target Percentage. Setting this goal will help you optimize toward a percentage of impressions delivered to a chosen demographic (out of the total number of impressions served during your campaign).
+If you select this goal, fees for Nielsen reporting may apply. NielsenOTPInPercent No
+Miaozhen OTP Yes, percentage Miaozhen On Target Percentage. Setting this goal will help you optimize toward a percentage of impressions delivered to a chosen demographic (out of the total number of impressions served during your campaign).
 When set, the demographic must be provided in MiaozhenTrackingAttributes.
-If you select this goal, reporting fees may apply.	MiaozhenOTPInPercent	No
+If you select this goal, reporting fees may apply. MiaozhenOTPInPercent No
 
 NOTE: Some goals may require special permissions. If needed, contact your Account Manager for appropriate access.
 
@@ -1939,10 +1938,10 @@ Best Practices
 
 To successfully coordinate your funnel with your channels and audiences, follow these recommendations.
 
-Recommendation	Notes
-If you want to advertise on multiple channels, create a separate campaign for each channel you want to target. This ensures that your campaign settings, goals, and optimizations align with the channel attributes, signals, and inventory.	If you are using TV, display, and audio, set up three distinct campaigns in the platform.
-To represent different stages of the funnel within the same campaign, equate each ad group with a unique audience.	Designate a channel for your campaign and then create three distinct ad groups. Each ad group targets a different part of the funnel in the same campaign: prospecting, conquesting, and retargeting audiences.
-Set up distinct KPI goals for each campaign and ad group.	The prospecting ad group introduces the consumer to the product, the conquesting ad group might drive them toward the product homepage, and the retargeting ad group might drive them toward the actual purchase.
+Recommendation Notes
+If you want to advertise on multiple channels, create a separate campaign for each channel you want to target. This ensures that your campaign settings, goals, and optimizations align with the channel attributes, signals, and inventory. If you are using TV, display, and audio, set up three distinct campaigns in the platform.
+To represent different stages of the funnel within the same campaign, equate each ad group with a unique audience. Designate a channel for your campaign and then create three distinct ad groups. Each ad group targets a different part of the funnel in the same campaign: prospecting, conquesting, and retargeting audiences.
+Set up distinct KPI goals for each campaign and ad group. The prospecting ad group introduces the consumer to the product, the conquesting ad group might drive them toward the product homepage, and the retargeting ad group might drive them toward the actual purchase.
 
 NOTE: The audiences described here correspond to ad group funnel locations (awareness, consideration, and conversion), although the ultimate goal for each audience is driving conversions and sales. For details, see Funnel Location.
 
@@ -1959,16 +1958,16 @@ The ad group creative type must match the channel.
 
 Select a channel for your campaign and channel IDs for your ad groups from the following options.
 
-Channel	Definition
-Display	Ads served in standard, reserved spaces on web pages. These ads can be image- or text-based and found at the top of the webpage, in the middle, on the side, or at the bottom.
-Video	Ads running before, during, and after video content playing on websites. Video ads can also be embedded within online articles or through banner ads.
-Audio	The digital streaming of audio content, such as music, talk shows, and podcasts, through platforms like Spotify and Pandora.
-TV	Premium, long-form content (such as full episodes) streaming through apps on CTVs or over-the-top devices. Ads can be served before content or during traditional commercial breaks.
-NativeDisplay	Ads formatted to blend in with the design, function, and tone of the page on which they are placed. The disguised nature of native ads means consumers may not be able to easily distinguish a native ad from the publisher’s own content.
-NativeVideo	Video ads that seamlessly integrate with the platform they appear in for amplified storytelling. A native video ad can extend up to five minutes.
-DigitalOutOfHome	DOOH is primarily outdoor digital ad placements, such as digital billboards and signs in a variety of places including gas stations, airports, freeways, the sides of buildings, and so on. If you want to set DOOH as your channel but this option isn't available, contact your Technical Account Manager.
+Channel Definition
+Display Ads served in standard, reserved spaces on web pages. These ads can be image- or text-based and found at the top of the webpage, in the middle, on the side, or at the bottom.
+Video Ads running before, during, and after video content playing on websites. Video ads can also be embedded within online articles or through banner ads.
+Audio The digital streaming of audio content, such as music, talk shows, and podcasts, through platforms like Spotify and Pandora.
+TV Premium, long-form content (such as full episodes) streaming through apps on CTVs or over-the-top devices. Ads can be served before content or during traditional commercial breaks.
+NativeDisplay Ads formatted to blend in with the design, function, and tone of the page on which they are placed. The disguised nature of native ads means consumers may not be able to easily distinguish a native ad from the publisher’s own content.
+NativeVideo Video ads that seamlessly integrate with the platform they appear in for amplified storytelling. A native video ad can extend up to five minutes.
+DigitalOutOfHome DOOH is primarily outdoor digital ad placements, such as digital billboards and signs in a variety of places including gas stations, airports, freeways, the sides of buildings, and so on. If you want to set DOOH as your channel but this option isn't available, contact your Technical Account Manager.
 NOTE: The DOOH value for ad groups is OutOfHome.
-Mixed	Ads that use various media or device channels. This is a valid channel category if you do not designate a channel ID in your API POST calls.
+Mixed Ads that use various media or device channels. This is a valid channel category if you do not designate a channel ID in your API POST calls.
 
 NOTE: Some ChannelId settings are specific to certain channels. For example, content genre targeting for CTV wouldn’t apply to the Display channel.
 
@@ -2032,6 +2031,7 @@ The time zone names used in the platform are defined in the windowsZones.xml fil
 3
 4
 5
+
 <!-- (UTC-08\:00) Pacific Time (US & Canada) -->
 <mapZone other="Pacific Standard Time" territory="001" type="America/Los_Angeles"/>
 <mapZone other="Pacific Standard Time" territory="CA" type="America/Vancouver"/>
@@ -2046,6 +2046,7 @@ In each UTC time zone group, all territories share the same standard time specif
 4
 5
 6
+
 <!-- (UTC-07\:00) Arizona -->
 <mapZone other="US Mountain Standard Time" territory="001" type="America/Phoenix"/>
 <mapZone other="US Mountain Standard Time" territory="CA" type="America/Creston America/Dawson_Creek
@@ -2064,6 +2065,7 @@ The specific time zone names that you can pass in your campaign requests are the
 6
 7
 8
+
 <!-- (UTC+08\:00) Kuala Lumpur, Singapore -->
 <mapZone other="Singapore Standard Time" territory="001" type="Asia/Singapore"/>
 <mapZone other="Singapore Standard Time" territory="BN" type="Asia/Brunei"/>
@@ -2080,6 +2082,7 @@ NOTE: You do not need to specify this value in the request.
 1
 2
 3
+
 <!-- (UTC) Coordinated Universal Time -->
 <mapZone other="UTC" territory="001" type="Etc/UTC"/>
 <mapZone other="UTC" territory="ZZ" type="Etc/UTC Etc/GMT"/>
@@ -2093,11 +2096,11 @@ TIP: To avoid confusion, include the type attribute value from the top row of th
 
 The following table provides an example of the (UTC-07:00) Arizona time zone values in requests and responses.
 
-Request Value	Response Value
-America/Phoenix	America/Phoenix
-America/Creston America/Dawson_Creek America/Fort_Nelson	America/Phoenix
-America/Hermosillo	America/Phoenix
-Etc/GMT+7	America/Phoenix
+Request Value Response Value
+America/Phoenix America/Phoenix
+America/Creston America/Dawson_Creek America/Fort_Nelson America/Phoenix
+America/Hermosillo America/Phoenix
+Etc/GMT+7 America/Phoenix
 Change a Campaign Time Zone
 
 IMPORTANT: If you set up a campaign in your local time zone without considering the equivalent UTC time, you will likely see inconsistencies in the way your campaign paces and bids, as well as your billing for the campaign. For details, see How Time Zones Affect Pacing, Reporting, and Billing.
@@ -2155,14 +2158,14 @@ REST API: Ad Group Budget Allocation for Campaigns
 
 To ensure a smooth transition to Kokai while maintaining backward compatibility with Solimar budget allocation, Kokai campaigns currently support two budgeting versions for campaigns and ad groups. In the REST API, these are indicated by the BudgetingVersion property with two respective values: Kokai and Solimar. The primary distinction between the two budgeting versions lies in how campaign budgets are allocated across ad groups. The following table highlights the differences.
 
-Comparison Aspect	Kokai Budgeting Version (Recommended)	Solimar Budgeting Version
-Campaign settings	Version=Kokai
-BudgetingVersion=Kokai	Version=Kokai
+Comparison Aspect Kokai Budgeting Version (Recommended) Solimar Budgeting Version
+Campaign settings Version=Kokai
+BudgetingVersion=Kokai Version=Kokai
 BudgetingVersion=Solimar
-Ad group budget allocation	Based on minimums. Ad groups start with zero allocation by default, and the platform algorithm distributes the flight budget dynamically.	Based on maximums. You set a fixed budget per ad group, and the platform ensures that it is not exceeded.
-Fluid budget settings	Each ad group allocation in the campaign flight is set to 0.	Each unarchived ad group budget must be equal to the campaign budget.
-Efficiency	More efficient, as the platform optimizes allocation based on value.	May lead to underspending if the flight budget is not fully allocated.
-API	GraphQL (recommended) or REST	REST only
+Ad group budget allocation Based on minimums. Ad groups start with zero allocation by default, and the platform algorithm distributes the flight budget dynamically. Based on maximums. You set a fixed budget per ad group, and the platform ensures that it is not exceeded.
+Fluid budget settings Each ad group allocation in the campaign flight is set to 0. Each unarchived ad group budget must be equal to the campaign budget.
+Efficiency More efficient, as the platform optimizes allocation based on value. May lead to underspending if the flight budget is not fully allocated.
+API GraphQL (recommended) or REST REST only
 AllocationType Property
 
 To differentiate between the campaign budget allocation types, we've introduce a new read-only property in the ad group REST endpoints—AllocationType. Here's what you need to know about this property:
@@ -2303,13 +2306,13 @@ Process Overview
 
 The following table outlines the process step by step and provides links to detailed user guides, while the diagram in the preceding section illustrates the decision-making workflow.
 
-Step		Description	Mutation or Query	User Guide	Notes
-1		Ensure that you have a seed for your campaign.	seedCreate mutation	Seeds	To run impactful campaigns in Kokai, you need at least one high-quality seed, ideally sourced from first-party data. See also the Seed sample scripts in Python.
-2		Choose how you want to create your Kokai campaign.	N/A	N/A	With GraphQL, you can create one or more campaigns at once with each operation.
-a	Create a single campaign from scratch.	campaignCreate mutation	Create Campaigns	See also the Creating sample scripts in Python.
-b	Create multiple campaigns from scratch.	bulkCreateCampaigns mutation	GraphQL API Bulk Operations	This option is best suited for creating over 100 campaigns at once.
-c	Create one or more copies of one or more existing campaigns at once.	campaignClonesCreate mutation	Clone Campaigns	You can clone up to 50 different campaigns and create up to 1000 copies in a single call. For more details, see the user guide. See also the Cloning sample scripts in Python.
-3		(Optional) Review the newly created campaigns, their versions, budgets, and other settings.	campaign query	GraphQL Campaign Query Examples	See also the Querying sample scripts in Python.
+Step Description Mutation or Query User Guide Notes
+1 Ensure that you have a seed for your campaign. seedCreate mutation Seeds To run impactful campaigns in Kokai, you need at least one high-quality seed, ideally sourced from first-party data. See also the Seed sample scripts in Python.
+2 Choose how you want to create your Kokai campaign. N/A N/A With GraphQL, you can create one or more campaigns at once with each operation.
+a Create a single campaign from scratch. campaignCreate mutation Create Campaigns See also the Creating sample scripts in Python.
+b Create multiple campaigns from scratch. bulkCreateCampaigns mutation GraphQL API Bulk Operations This option is best suited for creating over 100 campaigns at once.
+c Create one or more copies of one or more existing campaigns at once. campaignClonesCreate mutation Clone Campaigns You can clone up to 50 different campaigns and create up to 1000 copies in a single call. For more details, see the user guide. See also the Cloning sample scripts in Python.
+3 (Optional) Review the newly created campaigns, their versions, budgets, and other settings. campaign query GraphQL Campaign Query Examples See also the Querying sample scripts in Python.
 
 ---
 
@@ -2329,12 +2332,12 @@ Process Overview
 
 The following table outlines the process step by step and provides links to detailed user guides, while the diagram in the preceding section illustrates the decision-making workflow.
 
-Step		Description	REST Endpoint or GQL Mutation	User Guide	Notes
-1		Ensure that you have a seed for your campaign.	seedCreate mutation	Seeds	To run impactful campaigns in Kokai, you need at least one high-quality seed, ideally sourced from first-party data. You can create seeds only with GraphQL. See also the Seed sample scripts in Python.
-2		Choose how you want to create your Kokai campaign.	N/A	N/A	With REST, you can create only one campaign at at time with each operation.
-a	Create a campaign from scratch.	POST /v3/campaign with the version property set to Kokai	Create Campaigns	See also the Creating sample scripts in Python.
-b	Clone an existing campaign.	POST /v3/campaign/clone with the version property set to Kokai	Clone Campaigns	See also the Cloning sample scripts in Python.
-3		Review the newly created campaign, its version, budget, and other settings.	GET /v3/campaign/{campaignId}	N/A	See also the Querying sample scripts in Python.
+Step Description REST Endpoint or GQL Mutation User Guide Notes
+1 Ensure that you have a seed for your campaign. seedCreate mutation Seeds To run impactful campaigns in Kokai, you need at least one high-quality seed, ideally sourced from first-party data. You can create seeds only with GraphQL. See also the Seed sample scripts in Python.
+2 Choose how you want to create your Kokai campaign. N/A N/A With REST, you can create only one campaign at at time with each operation.
+a Create a campaign from scratch. POST /v3/campaign with the version property set to Kokai Create Campaigns See also the Creating sample scripts in Python.
+b Clone an existing campaign. POST /v3/campaign/clone with the version property set to Kokai Clone Campaigns See also the Cloning sample scripts in Python.
+3 Review the newly created campaign, its version, budget, and other settings. GET /v3/campaign/{campaignId} N/A See also the Querying sample scripts in Python.
 
 ---
 
@@ -2390,9 +2393,9 @@ You can always update your reporting columns later, but new reports will not con
 
 To add a conversion reporting column to your campaign, include the CampaignConversionReportingColumns property with at least the following two fields.
 
-Property	Notes
-TrackingTagId	The tracking tag to which the ID belongs must have a type considered to be a conversion (for details, see the Tracking Tag and Tracking Tag Type APIs).
-ReportingColumnId	Metrics about this conversion will appear in reports under this reporting column. Only one tracking tag ID and cross-device attribution model ID may be mapped to each column within a campaign. For details, see Set Up Cross-Device Attribution for a Conversion Campaign.
+Property Notes
+TrackingTagId The tracking tag to which the ID belongs must have a type considered to be a conversion (for details, see the Tracking Tag and Tracking Tag Type APIs).
+ReportingColumnId Metrics about this conversion will appear in reports under this reporting column. Only one tracking tag ID and cross-device attribution model ID may be mapped to each column within a campaign. For details, see Set Up Cross-Device Attribution for a Conversion Campaign.
 GraphQL Mutation Example
 
 The following campaignCreate GraphQL mutation illustrates how to create a Kokai campaign with a Kokai budget version.
@@ -2569,24 +2572,24 @@ You can modify certain campaign settings for the copy, but not all.
 
 The following table lists the campaign settings that are copied and which settings you can modify for the new copy.
 
-Settings	Copied from the source campaign?	Modifiable during the cloning process?	Notes
-Name	Not copied	Modifiable	You must provide the name for the new copy of the campaign.
-Flights	Copied only if the flight ID is provided	Modifiable	None.
-Channel	Copied	Modifiable	You can change the campaign channel but you cannot modify the ad group channels during the cloning process. To change ad group channels, update the cloned ad groups.
-Goals	Copied	Modifiable	None.
-Targeting	Copied	Modifiable	None.
-Budget	Copied	Modifiable	If you clone campaigns using GraphQL or use REST with the version property set to Kokai, budgets for all new campaigns are automatically updated to use the Kokai budgeting version and settings. No additional updates are required.
-Seed	Copied	Modifiable	None.
-Frequency settings	Copied	Not modifiable	None.
-Advanced frequency settings	Not copied	Not modifiable	The frequency settings set in the source campaign through the API.
+Settings Copied from the source campaign? Modifiable during the cloning process? Notes
+Name Not copied Modifiable You must provide the name for the new copy of the campaign.
+Flights Copied only if the flight ID is provided Modifiable None.
+Channel Copied Modifiable You can change the campaign channel but you cannot modify the ad group channels during the cloning process. To change ad group channels, update the cloned ad groups.
+Goals Copied Modifiable None.
+Targeting Copied Modifiable None.
+Budget Copied Modifiable If you clone campaigns using GraphQL or use REST with the version property set to Kokai, budgets for all new campaigns are automatically updated to use the Kokai budgeting version and settings. No additional updates are required.
+Seed Copied Modifiable None.
+Frequency settings Copied Not modifiable None.
+Advanced frequency settings Not copied Not modifiable The frequency settings set in the source campaign through the API.
 IMPORTANT: To avoid unintentional spend, be sure to update frequency settings in the campaign copy.
-Ad groups	Copied	Modifiable only with GraphQL	You can copy all, none, or specific ad groups from the source campaign by doing the following with both REST and GraphQL:
+Ad groups Copied Modifiable only with GraphQL You can copy all, none, or specific ad groups from the source campaign by doing the following with both REST and GraphQL:
 To clone all ad groups, set the ad group array to null.
 To clone no ad groups, include an empty ad group array.
 For details about which ad group settings you can modify in GraphQL for the copies, see Ad Group Settings.
-Audiences	Copied only if an associated ad group has Prism enabled	Not modifiable	Copied with the - Copy suffix appended to the segment name, such as AUDIENCE_NAME_PLACEHOLDER - Copy.
-Bid lists	Copied	Not modifiable	To modify the cloned bid list, use the bidListClone mutation.
-All other settings	Copied	Not modifiable	None.
+Audiences Copied only if an associated ad group has Prism enabled Not modifiable Copied with the - Copy suffix appended to the segment name, such as AUDIENCE_NAME_PLACEHOLDER - Copy.
+Bid lists Copied Not modifiable To modify the cloned bid list, use the bidListClone mutation.
+All other settings Copied Not modifiable None.
 Ad Group Settings
 
 Here's what you need to know about ad groups when cloning campaigns:
@@ -2609,10 +2612,10 @@ NOTE: Depending on the amount of data in a campaign, it may take from a few seco
 
 The following table lists the differences between REST and GraphQL for cloning campaigns.
 
-Comparison	REST	GraphQL
-Number of campaigns you can clone	One campaign	Up to 50 different campaigns
-Number of copies or clones you can create	One copy	Up to 1000 copies
-Request Processing	2-step, asynchronous	2-step, asynchronous
+Comparison REST GraphQL
+Number of campaigns you can clone One campaign Up to 50 different campaigns
+Number of copies or clones you can create One copy Up to 1000 copies
+Request Processing 2-step, asynchronous 2-step, asynchronous
 
 TIP: For optimized audience-based buying, The Trade Desk has curated a pool of thousands of vetted, trusted sellers and publishers at no cost to you. Explore the Sellers and Publishers 500+ Marketplace to take advantage of this opportunity.
 
@@ -2620,9 +2623,9 @@ Clone Campaigns with the GraphQL API
 
 To clone a campaign in GraphQL, complete the following steps.
 
-Step	Task	Operation Type	Operation Name	Notes
-1	Submit the cloning job.	Mutation	campaignClonesCreate	A successful response returns an ID that you can use to check the status of the job.
-2	(Optional) Check the status of the job.	Query	campaignCloneJobsProgress	Include the job progress ID returned after you submitted the job.
+Step Task Operation Type Operation Name Notes
+1 Submit the cloning job. Mutation campaignClonesCreate A successful response returns an ID that you can use to check the status of the job.
+2 (Optional) Check the status of the job. Query campaignCloneJobsProgress Include the job progress ID returned after you submitted the job.
 
 NOTE: You can clone up to 50 campaigns at once and create up to 1000 campaign copies at a time.
 
@@ -2847,9 +2850,9 @@ Clone a Campaign with the REST API
 
 To clone a campaign using the platform REST API, complete the following steps.
 
-Step	Task	Endpoint	Notes
-1	Submit the cloning job.	POST /v3/campaign/clone	A successful response returns a reference ID that you can use to check the job progress.
-2	(Optional) Check the status of the job.	GET /v3/campaign/clone/status/{referenceId}	Include the reference ID returned in the response after you submitted the job.
+Step Task Endpoint Notes
+1 Submit the cloning job. POST /v3/campaign/clone A successful response returns a reference ID that you can use to check the job progress.
+2 (Optional) Check the status of the job. GET /v3/campaign/clone/status/{referenceId} Include the reference ID returned in the response after you submitted the job.
 
 To clone a campaign with the REST API, in a POST /v3/campaign/clone call, include the following:
 
@@ -3029,10 +3032,10 @@ If you update the primary goal of a campaign, its existing ad groups will not be
 
 The following table details how you can update and remove a goal from a campaign.
 
-Update Task	Notes
-Update	To change a goal, set a different value for the corresponding property. This will automatically remove the previously set goal property.
+Update Task Notes
+Update To change a goal, set a different value for the corresponding property. This will automatically remove the previously set goal property.
 IMPORTANT: If you update the primary goal of a campaign, its existing ad groups will not be automatically updated. To align them with the updated primary campaign goal, you need to update the ad group goals manually.
-Remove	To remove the secondary or tertiary goal, pass null or set the value to false for the SecondaryGoal or TertiaryGoal object.
+Remove To remove the secondary or tertiary goal, pass null or set the value to false for the SecondaryGoal or TertiaryGoal object.
 FAQs
 Can I use the GraphQL API to update campaigns?
 
@@ -3441,7 +3444,7 @@ How often do the Projected Spend and Relevance metrics get updated?
 
 The following table lists how frequently the Projected Spend and Relevance metrics are updated.
 
-Metric	Update Frequency
+Metric Update Frequency
 Projected Spend
 Approximately 2 hours after a campaign or ad group change
 Once a day
@@ -3470,11 +3473,11 @@ TIP: To begin testing the integration process, download the sample code in Pytho
 
 The typical Campaign Connector build involves interaction with a number of endpoints. Depending on your scenario, you may interact with some (if not all) of the endpoints outlined in the workflow.
 
-Call	Description
-Authentication	The authentication endpoint generates a user token that will be needed to sign all subsequent actions. Set an expiration for your token and ensure you include the token in the header of any other endpoint interactions. The token should be stored and regenerated periodically. Keep in mind that this endpoint is rate limited, so you will not be able to authenticate on every API call. Instead, it is recommended that you generate a new token once every 24 hours.
-Advertiser	To create campaigns, you will first need to create an advertiser or map an existing one. Remember to pass your authentication token in the header of the call.
-Campaigns	Now that you have an advertiser created, you can create a campaign, where you will define the flight dates, budget allocation, and global pacing settings for your strategies.
-Ad Groups	The ad group is where you define the details of your bidding strategy. In our example below, we've defined an ad-group template that outlines the budget, bids, sitelists, and enabled forms of Auto-Optimization. To help reduce redundant work and ensure your strategies are set up correctly, when designing your ad-group templates, think about the repetitive tasks your team handles that the API can define instead.
+Call Description
+Authentication The authentication endpoint generates a user token that will be needed to sign all subsequent actions. Set an expiration for your token and ensure you include the token in the header of any other endpoint interactions. The token should be stored and regenerated periodically. Keep in mind that this endpoint is rate limited, so you will not be able to authenticate on every API call. Instead, it is recommended that you generate a new token once every 24 hours.
+Advertiser To create campaigns, you will first need to create an advertiser or map an existing one. Remember to pass your authentication token in the header of the call.
+Campaigns Now that you have an advertiser created, you can create a campaign, where you will define the flight dates, budget allocation, and global pacing settings for your strategies.
+Ad Groups The ad group is where you define the details of your bidding strategy. In our example below, we've defined an ad-group template that outlines the budget, bids, sitelists, and enabled forms of Auto-Optimization. To help reduce redundant work and ensure your strategies are set up correctly, when designing your ad-group templates, think about the repetitive tasks your team handles that the API can define instead.
 Additional Tasks
 
 The Campaign Connector build isn't a strictly defined set of tasks. You can design your integration to automate any number of processes that would impact the efficiency of your day-to-day operations. Some partners look to also monitor the performance of their ad groups and campaigns by using the Reports endpoints to download insights. Managing the creative upload process by building a Creative Connector is another time-saving task that you can include in your design.
@@ -3568,9 +3571,9 @@ Data Elements
 
 Data elements are segments of information like cookies and various IDs (such as device IDs and Unified IDs like UID2 and EUID).
 
-Data Element Type	Description
-First-Party	First-party data elements are segments that you've sent to the platform or that you've authorized another data provider to send to our platform on your behalf. There are no fees associated with using your own data.
-Third-Party	Third-party data elements are segments that data providers have sent to the platform and are available for you to purchase and target in your audiences. These use a flat-fee CPM, a percentage of media cost, or a combination of both. These fees are clearly outlined in the platform.
+Data Element Type Description
+First-Party First-party data elements are segments that you've sent to the platform or that you've authorized another data provider to send to our platform on your behalf. There are no fees associated with using your own data.
+Third-Party Third-party data elements are segments that data providers have sent to the platform and are available for you to purchase and target in your audiences. These use a flat-fee CPM, a percentage of media cost, or a combination of both. These fees are clearly outlined in the platform.
 
 Data elements can be combined into data groups.
 
@@ -3616,15 +3619,15 @@ The following table lists the tasks for managing data elements in both the platf
 
 NOTE: The data API requires a different authentication.
 
-Task	API Suite	Endpoint or Further Reference	Notes
-Populate first-party segment data.	Data	POST /data/advertiser	Populate your segments with cookies or acceptable types of IDs. For details, see Getting Started with Data Onboarding.
-Create geofence segments.	Platform	Geofence Targeting	Create your own geofence segment and use points to define virtual boundaries to target specific areas.
-Look up first-party data elements.	Platform	POST /v3/dmp/firstparty/advertiser	To find the FirstPartyDataId to use in a data group, use the Data.Name value that you assigned to the segment when populating first-party segment data as a SearchTerm.
-Look up third-party data elements.	Platform	POST /v3/dmp/thirdparty/advertiser	Look up the ThirdPartyDataId to add to a data group.
-Remove inactive users from first-party data segments.	Data	POST /data/advertiser	To remove an inactive user, set the TTLInMinutes property to 0 for that user in the request.
+Task API Suite Endpoint or Further Reference Notes
+Populate first-party segment data. Data POST /data/advertiser Populate your segments with cookies or acceptable types of IDs. For details, see Getting Started with Data Onboarding.
+Create geofence segments. Platform Geofence Targeting Create your own geofence segment and use points to define virtual boundaries to target specific areas.
+Look up first-party data elements. Platform POST /v3/dmp/firstparty/advertiser To find the FirstPartyDataId to use in a data group, use the Data.Name value that you assigned to the segment when populating first-party segment data as a SearchTerm.
+Look up third-party data elements. Platform POST /v3/dmp/thirdparty/advertiser Look up the ThirdPartyDataId to add to a data group.
+Remove inactive users from first-party data segments. Data POST /data/advertiser To remove an inactive user, set the TTLInMinutes property to 0 for that user in the request.
 TIP: To delete the whole segment, set the TTLInMinutes property to 0 for all IDs in the segment.
-Look up third-party data elements similar to your first-party data elements.	Platform	GET /v3/dmp/lookalikemodel/build/{firstPartyDataId}
-POST /v3/dmp/lookalikethirdpartydata/query	Build a lookalike model and find similar ThirdPartyDataIds to your FirstPartyDataId.
+Look up third-party data elements similar to your first-party data elements. Platform GET /v3/dmp/lookalikemodel/build/{firstPartyDataId}
+POST /v3/dmp/lookalikethirdpartydata/query Build a lookalike model and find similar ThirdPartyDataIds to your FirstPartyDataId.
 First-Party Data Elements: Look-up Task Examples
 
 You can look up first-party data elements by using a variety of filters and sorting, which can be combined to find relevant segments more efficiently.
@@ -3906,11 +3909,11 @@ Third-Party Data Elements Similar to Your First-Party Data Element: Look-up Task
 
 NOTE: Third-party data elements are only available in our production environment. They are not available in our sandbox environment.
 
-Task	API Suite	Endpoint
-Look up eligible first-party data segments	Platform	POST /v3/dmp/firstparty/advertiser
-Build a lookalike model of third-party data elements	Platform	GET /v3/dmp/lookalikemodel/build/{firstPartyDataId}
-Check the lookalike model build status	Platform	GET /v3/dmp/lookalikemodel/{firstPartyDataId}
-Retrieve third-party data elements from the lookalike model	Platform	POST /v3/dmp/lookalikethirdpartydata/query/
+Task API Suite Endpoint
+Look up eligible first-party data segments Platform POST /v3/dmp/firstparty/advertiser
+Build a lookalike model of third-party data elements Platform GET /v3/dmp/lookalikemodel/build/{firstPartyDataId}
+Check the lookalike model build status Platform GET /v3/dmp/lookalikemodel/{firstPartyDataId}
+Retrieve third-party data elements from the lookalike model Platform POST /v3/dmp/lookalikethirdpartydata/query/
 Look up Eligible First-Party Data Segments
 
 For the best probability of having enough first-party data to generate a lookalike model, search for eligible first-party segments that have a minimum unique count ranging from 1000 to 5000.
@@ -3943,9 +3946,9 @@ The response includes a LookAlikeBuildStatus, which indicates whether the lookal
 
 The following table explains the LookAlikeModelResultStatus values.
 
-Status Value	Description
-NoResults	The first-party data segment the model was generated from did not have enough overlap with third-party data to generate model.
-Ready	The lookalike model has been generated and ThirdPartyDataIds can be retrieved to use in an audience.
+Status Value Description
+NoResults The first-party data segment the model was generated from did not have enough overlap with third-party data to generate model.
+Ready The lookalike model has been generated and ThirdPartyDataIds can be retrieved to use in an audience.
 Retrieve Third-Party Data Elements from the Lookalike Model
 
 Search for the results of the build using the query endpoint. The Result object shows the third-party data segments similar to the first-party data segment, as well as a relevance ratio and value ratio to help you evaluate the best segments to use in your audience. Use Result.ThirdPartyData.ThirdPartyDataId in your data groups.
@@ -3963,12 +3966,12 @@ The following is a POST /v3/dmp/lookalikethirdpartydata/query request body examp
 "PageSize": 10
 }
 Data Group Tasks
-Task	API Suite	Endpoint	Notes
-Create a data group	Platform	POST /v3/datagroup	All third-party data IDs in segments will be validated for biddability. Data group workflows will fail if the ThirdPartyDataIds array contains non-biddable IDs.
-Retrieve details for an individual data group by ID	Platform	GET /v3/datagroup/{dataGroupId}	N/A
-Look up all data groups for an advertiser	Platform	POST /v3/datagroup/query/advertiser	Use SearchTerms to search for matching terms in DataGroupId, DataGroupName, or Description.
-Look up all data groups since the last change tracking version	Platform	POST /v3/delta/dmp/query/advertiser/firstparty	N/A
-Update a data group	Platform	PUT /v3/datagroup	All third-party data IDs in segments will be validated for biddability. Data group workflows will fail if the ThirdPartyDataIds array contains non-biddable IDs.
+Task API Suite Endpoint Notes
+Create a data group Platform POST /v3/datagroup All third-party data IDs in segments will be validated for biddability. Data group workflows will fail if the ThirdPartyDataIds array contains non-biddable IDs.
+Retrieve details for an individual data group by ID Platform GET /v3/datagroup/{dataGroupId} N/A
+Look up all data groups for an advertiser Platform POST /v3/datagroup/query/advertiser Use SearchTerms to search for matching terms in DataGroupId, DataGroupName, or Description.
+Look up all data groups since the last change tracking version Platform POST /v3/delta/dmp/query/advertiser/firstparty N/A
+Update a data group Platform PUT /v3/datagroup All third-party data IDs in segments will be validated for biddability. Data group workflows will fail if the ThirdPartyDataIds array contains non-biddable IDs.
 Create Data Groups
 
 NOTE: Data groups are created using the platform API endpoints. For details, see Foundations.
@@ -4008,11 +4011,11 @@ The following is a POST /v3/datagroup request body example.
 "SkipUnauthorizedThirdPartyData": true
 }
 Audience Tasks
-Task	API Suite	Endpoint	Notes
-Create an Audience	Platform	POST /v3/audience	For details on what you need to know about data groups when creating audiences, see Data Groups.
-Retrieve Details For An Individual Audience By Id	Platform	GET /v3/audience/{audienceId}	N/A
-Look up all audiences for an advertiser	Platform	POST /v3/audience/query/advertiser	Use SearchTerms to search for matching terms in AudienceId, Audience, or Description.
-Update an audience	Platform	PUT /v3/audience	For examples, see Assign an Audience to an Ad Group.
+Task API Suite Endpoint Notes
+Create an Audience Platform POST /v3/audience For details on what you need to know about data groups when creating audiences, see Data Groups.
+Retrieve Details For An Individual Audience By Id Platform GET /v3/audience/{audienceId} N/A
+Look up all audiences for an advertiser Platform POST /v3/audience/query/advertiser Use SearchTerms to search for matching terms in AudienceId, Audience, or Description.
+Update an audience Platform PUT /v3/audience For examples, see Assign an Audience to an Ad Group.
 Create an Audience
 
 The following is POST /v3/audience request body examples.
@@ -4138,15 +4141,15 @@ A list made up of at least one keyword of phrase.
 
 Each keyword in a category has the following properties:
 
-Property	Description
-Value	The word or phrase to be searched for on webpages or in apps. For details, see Keyword Value Guidelines.
-MatchType	The logic to be used for matching the keyword to webpages or apps. The possible values include the following:
+Property Description
+Value The word or phrase to be searched for on webpages or in apps. For details, see Keyword Value Guidelines.
+MatchType The logic to be used for matching the keyword to webpages or apps. The possible values include the following:
 
 ExactMatch: At least one specified keyword must be present on matched pages. (Or)
 ExactRequired: All specified keywords must be present on matched pages. (And)
 ExactAvoid: None of the specified keywords must be present on matched pages. (Not)
 See also Keyword Matching Examples and Create a TTD Contextual Custom Category.
-MatchApplication	The method for matching each keyword to webpages or apps. The possible values include the following:
+MatchApplication The method for matching each keyword to webpages or apps. The possible values include the following:
 
 Exact: Search only for words and phrases that exactly match the keyword string specified in the Value property. For example, for the keyword "cat", the exact match would be "cat".
 If there are multiple words in a phrase, they must appear in the same order on webpages and in apps.
@@ -4274,17 +4277,17 @@ TTD Contextual Custom Category Tasks
 
 The following table lists the common tasks for TTD contextual custom categories and the respective endpoints.
 
-Task	Endpoint	Notes
-Create a category.	POST /v3/customcategory	Be sure to review the Category Keyword List Requirements and Keyword Value Guidelines.
-Update the keywords, category type, or language code of an existing category.	PUT /v3/customcategory	To rename a category, use the POST /v3/customcategory/rename endpoint.
-Look up a specific category and its TTD contextual category ID.	GET /v3/customcategory/{customCategoryId}	Just specify the custom category ID as the path parameter in your request.
+Task Endpoint Notes
+Create a category. POST /v3/customcategory Be sure to review the Category Keyword List Requirements and Keyword Value Guidelines.
+Update the keywords, category type, or language code of an existing category. PUT /v3/customcategory To rename a category, use the POST /v3/customcategory/rename endpoint.
+Look up a specific category and its TTD contextual category ID. GET /v3/customcategory/{customCategoryId} Just specify the custom category ID as the path parameter in your request.
 IMPORTANT: The response includes the TTDContextualCategoryId value that is required for including the category in bid lists.
-Look up all custom categories for a specific advertiser.	GET /v3/customcategory/advertiser/{advertiserId}	Just specify the advertiser ID as the path parameter in your request.
-Look up all custom categories for a specific partner.	POST /v3/customcategory/query	In the body of your request, specify the partner ID and set the CustomCategorySourceType property to TTDContextualCategory.
-Delete a category.	DELETE /v3/customcategory/{customCategoryId}	Just specify the custom category ID as the path parameter in your request.
+Look up all custom categories for a specific advertiser. GET /v3/customcategory/advertiser/{advertiserId} Just specify the advertiser ID as the path parameter in your request.
+Look up all custom categories for a specific partner. POST /v3/customcategory/query In the body of your request, specify the partner ID and set the CustomCategorySourceType property to TTDContextualCategory.
+Delete a category. DELETE /v3/customcategory/{customCategoryId} Just specify the custom category ID as the path parameter in your request.
 IMPORTANT: Deleting categories removes them from ad groups, which may result in the loss of historical usage data.
-Include a category as a bid line in a bid list.	POST /v3/bidlist
-PUT /v3/bidlist	Bid lines require the TTDContextualCategoryId value returned by GET /v3/customcategory/{customCategoryId} calls with the ttd-ct- prefix added to it.
+Include a category as a bid line in a bid list. POST /v3/bidlist
+PUT /v3/bidlist Bid lines require the TTDContextualCategoryId value returned by GET /v3/customcategory/{customCategoryId} calls with the ttd-ct- prefix added to it.
 Create a TTD Contextual Custom Category
 
 To create a contextual custom category in The Trade Desk platform, in a POST /v3/customcategory request, specify its name, type, your advertiser or partner ID, and at least one keyword. For guidelines and requirements, see the following sections.
@@ -4589,9 +4592,9 @@ Why are webpages with the keywords that I expressly set to avoid get matched ins
 
 The following table provides possible solutions.
 
-Possible Issue	Description	Solution
-Category status	Your category might be still in NotReady status. It takes up to three hours to process a category, and any bidding on inventory before the category is fully processed might result in not blocking webpages or apps with the specified keywords.	Be sure to wait until the category is live before enabling your ad groups, especially for exclusion categories (with the CustomCategoryType property value set to Block).
-Category and match type mismatch	The CustomCategoryType property to Block and the keyword MatchType property value to ExactAvoid. This allows bids on pages and apps that contain the specified keywords rather than blocking bids.	To block bidding on webpages or apps with certain keywords or phrases, change the CustomCategoryType property to Target. See the example after this table.
+Possible Issue Description Solution
+Category status Your category might be still in NotReady status. It takes up to three hours to process a category, and any bidding on inventory before the category is fully processed might result in not blocking webpages or apps with the specified keywords. Be sure to wait until the category is live before enabling your ad groups, especially for exclusion categories (with the CustomCategoryType property value set to Block).
+Category and match type mismatch The CustomCategoryType property to Block and the keyword MatchType property value to ExactAvoid. This allows bids on pages and apps that contain the specified keywords rather than blocking bids. To block bidding on webpages or apps with certain keywords or phrases, change the CustomCategoryType property to Target. See the example after this table.
 
 For example, with the following Block category, you bid only on content about cats and pets in general but won't bid on content about other specific pets. If you change the custom category type to Target, then you bid only on all webpages and apps that mention pets, but not cats. See also Keyword Matching Examples.
 
@@ -4655,8 +4658,8 @@ How Geo-Interest Segments Are Created
 
 To create geo-interest segments, The Trade Desk collects IP addresses from received bid requests, removes the last octet so they no longer correspond to a single household, and hashes the result into a geographical area code known as MCID, as shown in the following example.
 
-Original IP Address	IP Address Without Last Octet	Area Code After Hashing (MCID)
-102.89.159.92	102.89.159	18c74e02-a796-47ff-86ff-24b95bb7a25f"
+Original IP Address IP Address Without Last Octet Area Code After Hashing (MCID)
+102.89.159.92 102.89.159 18c74e02-a796-47ff-86ff-24b95bb7a25f"
 
 Here's what The Trade Desk takes into consideration when creating geo-interest segments:
 To determine the set of interests in each area, we look at the categories of sites visited by users in that area who have consented to our cookies. For example, Jessica is looking for a late-night bite and browses the website of her favorite fast-food restaurant. The Trade Desk classifies this website as fast food by using the standard TTD contextual taxonomy.
@@ -4675,17 +4678,15 @@ The following example illustrates a geo-interest segment that has multiple MCID 
 
 The following image provides a closeup of one of the MCIDs from the preceding image by illustrating how many people in this area are interested in fast food, which is the top interest in this location.
 
-
-
 Set Up Geo-Interest Targeting
 
 To target geo-interest segments, complete the following tasks.
 
-Task	Endpoint or Further Reference	Notes
-(Recommended) Set geo-interest targeting as your primary audience targeting strategy.	POST /v3/adgroup or
-PUT /v3/adgroup	When you create or update an ad group, set the UseMcIdAsPrimary value to true.
-Look up geo-interest data segments.	POST /v3/dmp/thirdparty/advertiser	Retrieve the third-party data ID of each geo-interest segment you want to use.
-Include geo-interest segments in your audience.	Building Audiences	During audience creation, include the third-party data ID of the geo-interest segments you want to use in the ThirdPartyDataIds array of your audience data groups.
+Task Endpoint or Further Reference Notes
+(Recommended) Set geo-interest targeting as your primary audience targeting strategy. POST /v3/adgroup or
+PUT /v3/adgroup When you create or update an ad group, set the UseMcIdAsPrimary value to true.
+Look up geo-interest data segments. POST /v3/dmp/thirdparty/advertiser Retrieve the third-party data ID of each geo-interest segment you want to use.
+Include geo-interest segments in your audience. Building Audiences During audience creation, include the third-party data ID of the geo-interest segments you want to use in the ThirdPartyDataIds array of your audience data groups.
 Set Geo-Interest Targeting as Your Primary Targeting Strategy
 
 By default, ad groups that use geo-interest targeting can bid only on avails that other forms of audience targeting cannot reach. To enable an ad group with geo-interest targeting to bid on all avails, you need to set geo-interest as your primary audience targeting strategy.
@@ -4850,11 +4851,11 @@ To help you stay informed and adapt to changes that Koa applies, the GET /v3/adg
 
 The following table explains the potential impact data.
 
-Parameter	Description
-GoalPerformancePercent	The expected percentage change in goal performance.
-IsGoalImprovement	Indicates whether the GoalPerformancePercent value is a goal improvement.
-SpendPercent	The percentage change impact that Koa expects the recommended optimizations to have on potential spend. When using Koa v3.5 this value will always be zero.
-GeneratedOn	The date when the PotentialImpact data was generated.
+Parameter Description
+GoalPerformancePercent The expected percentage change in goal performance.
+IsGoalImprovement Indicates whether the GoalPerformancePercent value is a goal improvement.
+SpendPercent The percentage change impact that Koa expects the recommended optimizations to have on potential spend. When using Koa v3.5 this value will always be zero.
+GeneratedOn The date when the PotentialImpact data was generated.
 
 Any features, user settings, or ad group performance data that may be negatively affecting Koa's ability to generate optimal strategies are indicated in the UpdateAttemptDetails and IncompatibleFeatures properties of the GET /v3/adgroup/koaapplieditems/{adGroupId}. For an example, see Retrieve Applied Koa Optimizations.
 
@@ -4862,13 +4863,13 @@ Managing Koa Optimizations
 
 The following table lists all tasks that you might need to perform when managing optimizations applied or recommended by Koa.
 
-Task	Endpoint	Notes
-Verify the Koa Optimizations API version.	GET/adgroup/{adGroupId}	Check the value of KoaOptimizationsVersion property value.
-Turn on Koa Optimizations for specified bid dimensions.	POST /v3/adgroup
-PUT /v3/adgroup	IMPORTANT: To avoid unintended complex integrations and degraded experience, do not use the Koa v3 properties such as IsEnabled and OptionalDimensions to manage the Koa Optimizations settings, even if they are returned in responses for backward compatibility. Instead, use only the KoaDimensions object.
-Retrieve applied optimizations for an ad group.	GET /v3/adgroup/koaapplieditems/{adGroupId}	Use the returned PotentialImpact object to interpret the benefits of the applied optimizations.
-Turn off Koa Optimizations for an entire ad group or specified bid dimensions.	POST /v3/adgroup
-PUT /v3/adgroup	IMPORTANT: To avoid unintended complex integrations and degraded experience, do not use the Koa v3 properties such as IsEnabled and OptionalDimensions to manage the Koa Optimizations settings, even if they are returned in responses for backward compatibility. Instead, use only the KoaDimensions object.
+Task Endpoint Notes
+Verify the Koa Optimizations API version. GET/adgroup/{adGroupId} Check the value of KoaOptimizationsVersion property value.
+Turn on Koa Optimizations for specified bid dimensions. POST /v3/adgroup
+PUT /v3/adgroup IMPORTANT: To avoid unintended complex integrations and degraded experience, do not use the Koa v3 properties such as IsEnabled and OptionalDimensions to manage the Koa Optimizations settings, even if they are returned in responses for backward compatibility. Instead, use only the KoaDimensions object.
+Retrieve applied optimizations for an ad group. GET /v3/adgroup/koaapplieditems/{adGroupId} Use the returned PotentialImpact object to interpret the benefits of the applied optimizations.
+Turn off Koa Optimizations for an entire ad group or specified bid dimensions. POST /v3/adgroup
+PUT /v3/adgroup IMPORTANT: To avoid unintended complex integrations and degraded experience, do not use the Koa v3 properties such as IsEnabled and OptionalDimensions to manage the Koa Optimizations settings, even if they are returned in responses for backward compatibility. Instead, use only the KoaDimensions object.
 Verify the Koa Optimizations Version
 
 You may not apply different Koa Optimizations version settings, such as v3 and v3.5 settings. Koa endpoints return an error when there is a version mismatch. To confirm the Koa version and to use the correct APIs, check the value of the KoaOptimizationsVersion and KoaOptimizationsMinorVersion properties in your ad groups. For example, a GET/adgroup/{adGroupId} call might return the following response.
@@ -4928,10 +4929,10 @@ Note that the sample response also includes the Koa v3 properties, such as IsEna
 
 KoaOptimizationsVersion and KoaOptimizationsMinorVersion are read-only properties that in conjunction indicate the version of Koa used to apply optimizations, if there are any, to the ad group. The following table explains their values.
 
-Koa Optimizations Version Value	Koa Optimizations Minor Version Value	Description
-None	None	The ad group is not using Koa for optimizations.
-V3	0	The ad group is using Koa version 3 for optimizations. See Koa Optimizations (Solimar) for the Solimar experience.
-V3	5	The ad group is using Koa version 3.5 for optimizations. Continue using this documentation.
+Koa Optimizations Version Value Koa Optimizations Minor Version Value Description
+None None The ad group is not using Koa for optimizations.
+V3 0 The ad group is using Koa version 3 for optimizations. See Koa Optimizations (Solimar) for the Solimar experience.
+V3 5 The ad group is using Koa version 3.5 for optimizations. Continue using this documentation.
 Turn On Koa Optimizations
 
 IMPORTANT: You must use only the new Koa v3.5 properties (KoaDimensions) to manage Koa Optimizations in Kokai. Using the Koa v3 properties can lead to a more complex integration and a degraded user experience.
@@ -5239,9 +5240,9 @@ What's the difference between the OptionalDimensions and KoaDimensions objects?
 
 The following table summarizes the differences between the two objects.
 
-Property	Experience	Koa Version	Notes
-KoaDimensions	Kokai	v3.5	This property enables you to turn on and off Koa Optimizations for all supported bid dimensions in Kokai.
-OptionalDimensions	Solimar	v3	This property enables you to turn on Koa Optimizations only for the Ad Format and Geography bid dimensions that are optional in Solimar.
+Property Experience Koa Version Notes
+KoaDimensions Kokai v3.5 This property enables you to turn on and off Koa Optimizations for all supported bid dimensions in Kokai.
+OptionalDimensions Solimar v3 This property enables you to turn on Koa Optimizations only for the Ad Format and Geography bid dimensions that are optional in Solimar.
 
 IMPORTANT: To avoid confusion and unintended optimizations, use only the KoaDimensions object in Kokai.
 
@@ -5267,10 +5268,10 @@ Predictive Clearing enables you to win more impressions at a lower cost per mill
 
 Here are some key terms that you need to be familiar with to understand the Predictive Clearing workflow.
 
-Term	Definition
-First-price auction	An auction in which the winning bidder pays the bid amount, no matter how much higher it is than the second-highest bid. Compare with a second-price auction, in which the winning bidder pays the amount of the second-highest bid plus one cent.
-Clearing price	The amount paid by the winning bidder.
-Win rate	The percentage of impressions won, calculated using the following formula:
+Term Definition
+First-price auction An auction in which the winning bidder pays the bid amount, no matter how much higher it is than the second-highest bid. Compare with a second-price auction, in which the winning bidder pays the amount of the second-highest bid plus one cent.
+Clearing price The amount paid by the winning bidder.
+Win rate The percentage of impressions won, calculated using the following formula:
 (Number of impressions won / Number of impressions bid on) x 100
 
 Predictive Clearing enables Koa, The Trade Desk AI, to analyze historical clearing prices and win rates across first-price auctions to select the optimal bid for each impression. Koa analyzes historical data around SSPs, publishers, sites, ad format, and how much the inventory is worth to other advertisers. This ensures that you (the advertiser) continue to win bids, but at the lowest price needed to win.
@@ -5336,15 +5337,15 @@ Terms and Definitions
 
 The following table defines key terms used for bid lists.
 
-Term	Definition
-Bid list	A collection of bid lines with the same dimensions. It is used to target, block, or apply optimizations to adjust the base bid of an ad group. For example, a bid list might include bid lines that target specific domains or geographic locations. Bid list names typically describe the dimension and adjustment type, such as "Site/App Target List".
-Bid line	A component of a bid list used in digital advertising to adjust an ad group's base bid based on specific criteria. Each bid line consists of dimensions and bid factors. For details, see bid factors.
-Dimension	A specific attribute or data point used to categorize, filter, or analyze audiences, campaigns, or inventory. It serves as a parameter for targeting, helping advertisers define who sees an ad. For example, you can target users based on a geographical dimension or a device dimension.
+Term Definition
+Bid list A collection of bid lines with the same dimensions. It is used to target, block, or apply optimizations to adjust the base bid of an ad group. For example, a bid list might include bid lines that target specific domains or geographic locations. Bid list names typically describe the dimension and adjustment type, such as "Site/App Target List".
+Bid line A component of a bid list used in digital advertising to adjust an ad group's base bid based on specific criteria. Each bid line consists of dimensions and bid factors. For details, see bid factors.
+Dimension A specific attribute or data point used to categorize, filter, or analyze audiences, campaigns, or inventory. It serves as a parameter for targeting, helping advertisers define who sees an ad. For example, you can target users based on a geographical dimension or a device dimension.
 Bid lists can be either single- or multi-dimensional.
-Bid factor	A multiplier applied to your base bid to adjust the value placed on specific dimensions, such as location, device type, or audience segment.
-Bid adjustment type/bid list type	The method for controlling bidding strategies by aligning adjustments with specific criteria for each impression. It establishes rules for modifying bids, including allowing or denying participation in bidding or applying specific adjustments based on predefined dimensions.
-Bid list owner	The entity that owns a bid list, such as the partner, advertiser, campaign, or ad group. This ownership determines who can use and manage the bid list. Owning does not automatically associate or enable the bid list for use. For details, see Ownership.
-Resolution type	The method for resolving multiple bid factors when an impression matches more than one bid line within the same bid list. Typically, this is done by multiplying bid factor values.
+Bid factor A multiplier applied to your base bid to adjust the value placed on specific dimensions, such as location, device type, or audience segment.
+Bid adjustment type/bid list type The method for controlling bidding strategies by aligning adjustments with specific criteria for each impression. It establishes rules for modifying bids, including allowing or denying participation in bidding or applying specific adjustments based on predefined dimensions.
+Bid list owner The entity that owns a bid list, such as the partner, advertiser, campaign, or ad group. This ownership determines who can use and manage the bid list. Owning does not automatically associate or enable the bid list for use. For details, see Ownership.
+Resolution type The method for resolving multiple bid factors when an impression matches more than one bid line within the same bid list. Typically, this is done by multiplying bid factor values.
 Bid Factors
 
 To manage bid expressiveness and add value to your campaigns, set bid factors to increase or decrease bids dynamically. For example, setting a higher bid factor means you value an impression highly and are willing to pay more for it. This increases your chances of winning and leads to more volume.
@@ -5396,16 +5397,16 @@ When it comes to managing bid lists, both GraphQL and REST APIs offer distinct a
 
 The following table compares the bid list actions supported by each API. For a general comparison of our platform APIs, see Platform API: REST and GraphQL.
 
-Action	GraphQL	REST
-Create a bid list.	Supported	Supported
-Clone a bid list.	Supported	Not supported
-Associate a bid list.	Supported	Supported
-Enable a bid list.	Supported	Supported
-Look up a bid list.	Supported	Supported
-Update a bid list.	Supported	Supported
-Delete a bid list.	Not supported	Supported
-Create or update multiple bid lists at once.	Not supported	Supported. Use batch requests.
-Make bid adjustments.	Supported. Use these options:
+Action GraphQL REST
+Create a bid list. Supported Supported
+Clone a bid list. Supported Not supported
+Associate a bid list. Supported Supported
+Enable a bid list. Supported Supported
+Look up a bid list. Supported Supported
+Update a bid list. Supported Supported
+Delete a bid list. Not supported Supported
+Create or update multiple bid lists at once. Not supported Supported. Use batch requests.
+Make bid adjustments. Supported. Use these options:
 INCLUSION
 EXCLUSION
 OPTIMIZED
@@ -5439,11 +5440,11 @@ For specific bid list adjustments to be applied, you must associate and enable b
 The following table lists the entities a bid list can be associated with based on its ownership. For example, a bid list owned by an advertiser can be associated only with that advertiser or one of its descendants (the campaigns and ad groups that the advertiser owns). The bid list cannot be associated with the parent partner or any other advertisers or their campaigns.
 
 Bid List Owned By
-Bid Lists Can Be Associated With	Partner	Advertiser	Campaign	Ad Group
-Partner	Owning Partner Only	No	No	No
-Advertiser	Yes	Owning Advertiser Only	No	No
-Campaign	Yes	Yes	Owning Campaign Only	No
-Ad Group	Yes	Yes	Yes	Owning Ad Group Only
+Bid Lists Can Be Associated With Partner Advertiser Campaign Ad Group
+Partner Owning Partner Only No No No
+Advertiser Yes Owning Advertiser Only No No
+Campaign Yes Yes Owning Campaign Only No
+Ad Group Yes Yes Yes Owning Ad Group Only
 
 TIP: As bid list associations at the campaign or advertiser level are not visible in the UI, it is a best practice to associate bid lists at the ad group level.
 
@@ -5461,11 +5462,11 @@ There are limits to the number of bid lines owned by or associated with each ad 
 
 TIP: To use bid lines efficiently, create bid lists at a parent-level entity that can be shared and inherited by the descendants.
 
-Entity Type	Maximum Number of Bid Lines	Bid Lines Counted Toward Limit
-Partner	20,000,000	Bid lines in bid lists owned by a partner, including its advertisers, campaigns, and ad groups.
-Advertiser	5,000,000	Bid lines in bid lists owned by an advertiser, including its campaigns and ad groups.
-Campaign	No campaign limit	While there are no bid line limits for campaign-owned bid lists, these bid lines still count toward advertiser and partner limits.
-Ad group	10,000	This limit applies to bid lines in ad-group owned bid lists associated with the ad group. Unassociated ad-group owned bid lists only apply to advertiser and partner limits.
+Entity Type Maximum Number of Bid Lines Bid Lines Counted Toward Limit
+Partner 20,000,000 Bid lines in bid lists owned by a partner, including its advertisers, campaigns, and ad groups.
+Advertiser 5,000,000 Bid lines in bid lists owned by an advertiser, including its campaigns and ad groups.
+Campaign No campaign limit While there are no bid line limits for campaign-owned bid lists, these bid lines still count toward advertiser and partner limits.
+Ad group 10,000 This limit applies to bid lines in ad-group owned bid lists associated with the ad group. Unassociated ad-group owned bid lists only apply to advertiser and partner limits.
 
 Exceeding bid line limits will cause bid list creation or updates to fail. The following limitations also apply:
 
@@ -5565,14 +5566,14 @@ When creating a bid list, choose an adjustment type to determine bid adjustments
 
 The following table outlines the different types of bid list adjustments available.
 
-Adjustment Type	Description	Bid Adjustment for Matched Bid Lines	Bid Adjustment for Non-Matched Bid Lines
-INCLUSION	Includes the ad group in bidding without any bid adjustment when the request matches the bid lines.	1	0
-EXCLUSION	Excludes the ad group from bidding when the request matches the bid lines.	0	1
-OPTIMIZED	An optimized list can do the following:
+Adjustment Type Description Bid Adjustment for Matched Bid Lines Bid Adjustment for Non-Matched Bid Lines
+INCLUSION Includes the ad group in bidding without any bid adjustment when the request matches the bid lines. 1 0
+EXCLUSION Excludes the ad group from bidding when the request matches the bid lines. 0 1
+OPTIMIZED An optimized list can do the following:
 When requests match bid lines, apply bid adjustments using decimals to ad groups, unlike inclusion or exclusion lists which are limited to 0 or 1.
 Use the resolution type to determine the final bid adjustment when an impression matches multiple bid lines.
 Allow bids for impressions that do not match any bid line.
-Value specified	1
+Value specified 1
 Create Bid Lists
 
 To create a bid list in GraphQL, you can use the bidListCreate mutation and manually define its bid lines and key properties, including the dimensions and bid list adjustment type. To quickly create a bid list based on an existing one for a new owner, use the bidListClone mutation instead. For details, see Clone Bid Lists for New Owners.
@@ -5957,10 +5958,10 @@ Update Bid Lists
 
 To optimize your ad campaign, you can make adjustments to your bid list using different mutations as described in the following table.
 
-Mutation	Description
-bidListSet	Updates bid list details such as the bid list name, owner, and all its bid lines at once.
-bidListUpdate	Adds and removes bid lines in a bid list.
-bidFactorBulkUpdate	Updates multiple bid lists at once.
+Mutation Description
+bidListSet Updates bid list details such as the bid list name, owner, and all its bid lines at once.
+bidListUpdate Adds and removes bid lines in a bid list.
+bidFactorBulkUpdate Updates multiple bid lists at once.
 
 NOTE: You can also update bid lines for an entity by activating or deactivating bid lists inherited from parent entities. To update bid list associations, whether bid lists are defaults, and whether they are enabled, use an AssociateBidList mutation. For details, see Associate Bid Lists.
 
@@ -6009,7 +6010,7 @@ data {
 id
 name
 owner {
-__typename
+\_\_typename
 ... on Partner {
 id
 name
@@ -6175,7 +6176,7 @@ name
 }
 }
 errors {
-__typename
+\_\_typename
 ... on MutationError {
 field
 message
@@ -6249,7 +6250,7 @@ name
 }
 }
 errors {
-__typename
+\_\_typename
 ... on MutationError {
 field
 message
@@ -6338,22 +6339,22 @@ When creating a bid list, choose an adjustment type to determine bid adjustments
 
 The following table outlines bid adjustment types in REST and their impact on matching and non-matching bid lines.
 
-Adjustment Type	Description	Bid Adjustment for Matched Bid Lines	Bid Adjustment for Non-Matching Bid Lines
-TargetList	Includes impressions that match the specified dimensions for targeting. Impressions that do not match any line in a target list are excluded from bidding.	1	0
-BlockList	Excludes impressions that match the specified dimensions from targeting. Only impressions that do not match any line in a block list are included in bidding.	0	1
-Optimized	Offers more more flexibility compared to block or target lists. Here are key points:
+Adjustment Type Description Bid Adjustment for Matched Bid Lines Bid Adjustment for Non-Matching Bid Lines
+TargetList Includes impressions that match the specified dimensions for targeting. Impressions that do not match any line in a target list are excluded from bidding. 1 0
+BlockList Excludes impressions that match the specified dimensions from targeting. Only impressions that do not match any line in a block list are included in bidding. 0 1
+Optimized Offers more more flexibility compared to block or target lists. Here are key points:
 Unlike block or target lists, where bid adjustments are limited to 0 and 1, optimized bid adjustments can include decimals like 0.25 or 1.75.
 Impressions matching a bid line get the specified adjustment.
 If an impression matches multiple bid lines, the resolution type sets the final bid adjustment.
-TIP: Use the ApplyMultiplyAdjustment property to multiply the bid adjustments of all matching bid lines. Impressions not matching any bid line continue to bid.	Value Specified	1
+TIP: Use the ApplyMultiplyAdjustment property to multiply the bid adjustments of all matching bid lines. Impressions not matching any bid line continue to bid. Value Specified 1
 Create Bid Lists
 
 The following table describes different methods for creating bid lists. You can create individual bid lists, multiple bid lists in a single request, or create a bid list as you're creating or updating an ad group.
 
-Task	Endpoint	Notes
-Create an individual bid list.	POST /v3/bidlist	N/A
-Create multiple bid lists.	POST /v3/bidlist/batch	N/A
-Create a bid list while creating or updating an ad group.	POST /v3/adgroup and PUT /v3/adgroup	Use the NewBidLists object.
+Task Endpoint Notes
+Create an individual bid list. POST /v3/bidlist N/A
+Create multiple bid lists. POST /v3/bidlist/batch N/A
+Create a bid list while creating or updating an ad group. POST /v3/adgroup and PUT /v3/adgroup Use the NewBidLists object.
 
 The following request examples detail the requirements for creating different types of bid lists, such as target, block, and optimized.
 
@@ -6361,12 +6362,12 @@ Target and Block Bid Lists Example
 
 The following table describes the required properties for creating target and block bid lists.
 
-Property	Description
-Name	A name to describe this bid list.
-BidListAdjustmentType	Must be set to TargetList or BlockList.
-BidListOwner	The entity type that owns this bid list.
-BidListOwnerId	The partner, advertiser, campaign, or ad group that owns this bid list.
-BidLines. Dimension	Choose one of the dimensions from the BidLines object. Commonly used dimensions include AdFormatId, DomainFragment, GeoSegmentId and RecencyWindowInMinutes.
+Property Description
+Name A name to describe this bid list.
+BidListAdjustmentType Must be set to TargetList or BlockList.
+BidListOwner The entity type that owns this bid list.
+BidListOwnerId The partner, advertiser, campaign, or ad group that owns this bid list.
+BidLines. Dimension Choose one of the dimensions from the BidLines object. Commonly used dimensions include AdFormatId, DomainFragment, GeoSegmentId and RecencyWindowInMinutes.
 NOTE: Some dimensions use third-party providers and may incur additional fees.
 
 For target or block lists, the bid adjustment should not be passed, or if it is passed, it should be 1 for target lists and 0 for block lists.
@@ -6405,14 +6406,14 @@ Optimized Bid List Example
 
 This table describes the required properties for creating optimized bid lists. These properties define the bid list's name, ownership, and the specific dimensions and adjustments to apply when an impression matches the criteria.
 
-Property	Description
-Name	A name to describe this bid list.
-BidListAdjustmentType	Must be set to Optimized.
-ResolutionType	Must be set to ApplyMultiplyAdjustment.
-BidListOwner	The entity type that owns this bid list.
-BidListOwnerId	The partner, advertiser, campaign, or ad group that owns this bid list.
-BidLines.BidAdjustment	The adjustment applied to the base bid when an impression matches all of the dimensions in this bid line.
-BidLines. Dimension	Choose one of the dimensions from the BidLines object. Commonly used dimensions include AdFormatId, DomainFragment, GeoSegmentId and RecencyWindowInMinutes.
+Property Description
+Name A name to describe this bid list.
+BidListAdjustmentType Must be set to Optimized.
+ResolutionType Must be set to ApplyMultiplyAdjustment.
+BidListOwner The entity type that owns this bid list.
+BidListOwnerId The partner, advertiser, campaign, or ad group that owns this bid list.
+BidLines.BidAdjustment The adjustment applied to the base bid when an impression matches all of the dimensions in this bid line.
+BidLines. Dimension Choose one of the dimensions from the BidLines object. Commonly used dimensions include AdFormatId, DomainFragment, GeoSegmentId and RecencyWindowInMinutes.
 NOTE: Some dimensions use third-party providers and may incur additional fees.
 
 The following is an optimized example of a POST /v3/bidlist request.
@@ -6468,48 +6469,45 @@ Associate Bid Lists
 
 The following table describes various methods to associate and enable bid lists with different entities. See Bid List Relationships for more information on ownership and association.
 
-Task	Endpoints	Notes
-Create, associate, and enable a bid list for an ad group.	POST /v3/adgroup
+Task Endpoints Notes
+Create, associate, and enable a bid list for an ad group. POST /v3/adgroup
 or
-PUT /v3/adgroup	Use the NewBidLists property. To enable the new bid list upon creation, set IsEnabled to true in the AssociatedBidLists property for that bid list.
-Associate existing bid lists to an ad group.	POST /v3/adgroup
+PUT /v3/adgroup Use the NewBidLists property. To enable the new bid list upon creation, set IsEnabled to true in the AssociatedBidLists property for that bid list.
+Associate existing bid lists to an ad group. POST /v3/adgroup
 or
-PUT /v3/adgroup	Use the AssociatedBidLists property. To enable the bid list for the ad group, set IsEnabled to true in the AssociatedBidLists property for that bid list.
-Associate a bid list to an ad group with existing associated bid lists.	GET /v3/adgroup/{adGroupId}
+PUT /v3/adgroup Use the AssociatedBidLists property. To enable the bid list for the ad group, set IsEnabled to true in the AssociatedBidLists property for that bid list.
+Associate a bid list to an ad group with existing associated bid lists. GET /v3/adgroup/{adGroupId}
 and
-PUT /v3/adgroup	Do the following:
+PUT /v3/adgroup Do the following:
 Retrieve the current associated bid lists using the GET /v3/adgroup/{adGroupId} endpoint.
 Pass the existing and the added bid lists in the AssociatedBidLists property using the PUT /v3/adgroup endpoint.
 To enable the bid list for the ad group, set IsEnabled to true in AssociatedBidLists property for that bid list.
-Associate existing bid lists to a campaign.	POST /v3/campaign
+Associate existing bid lists to a campaign. POST /v3/campaign
 or
-PUT /v3/campaign	Use the AssociatedBidLists object. To enable the bid list for the campaign, set IsEnabled to true in AssociatedBidLists for that bid list.
-Add a bid list to a campaign with existing associated bid lists.	GET /v3/campaign/{campaignId}
+PUT /v3/campaign Use the AssociatedBidLists object. To enable the bid list for the campaign, set IsEnabled to true in AssociatedBidLists for that bid list.
+Add a bid list to a campaign with existing associated bid lists. GET /v3/campaign/{campaignId}
 and
-PUT /v3/campaign	1. Retrieve the current associated bid lists using GET /v3/campaign/{campaignId}.
-2. Pass the existing and the added bid lists using the PUT /v3/campaign endpoint for the associated bid lists. To enable the bid list for the campaign, set IsEnabled to true in the AssociatedBidLists property for that bid list.
-Associate existing bid lists to an advertiser.	POST /v3/advertiser
+PUT /v3/campaign 1. Retrieve the current associated bid lists using GET /v3/campaign/{campaignId}. 2. Pass the existing and the added bid lists using the PUT /v3/campaign endpoint for the associated bid lists. To enable the bid list for the campaign, set IsEnabled to true in the AssociatedBidLists property for that bid list.
+Associate existing bid lists to an advertiser. POST /v3/advertiser
 or
-PUT /v3/advertiser	Use the AssociatedBidLists object. To enable the bid list for the advertiser, set IsEnabled to true in the AssociatedBidLists property for that bid list.
-Associate a bid list to an advertiser with existing associated bid lists.	GET /v3/advertiser/{advertiserId}
+PUT /v3/advertiser Use the AssociatedBidLists object. To enable the bid list for the advertiser, set IsEnabled to true in the AssociatedBidLists property for that bid list.
+Associate a bid list to an advertiser with existing associated bid lists. GET /v3/advertiser/{advertiserId}
 and
-PUT /v3/advertiser	1. Retrieve the current associated bid lists using GET /v3/advertiser/{advertiserId}.
-2. Pass the existing and the added bid lists in PUT /v3/advertiser AssociatedBidLists. To enable the bid list for the ad group, set IsEnabled to true in the AssociatedBidLists property for that bid list.
-Add existing bid lists to a partner.	PUT /v3/partner	Use the AssociatedBidLists object. To enable the bid list for the partner, set IsEnabled to true in the AssociatedBidLists property for that bid list.
-Add a bid list to a partner with existing associated bid lists.	GET /v3/partner/{partnerId}
+PUT /v3/advertiser 1. Retrieve the current associated bid lists using GET /v3/advertiser/{advertiserId}. 2. Pass the existing and the added bid lists in PUT /v3/advertiser AssociatedBidLists. To enable the bid list for the ad group, set IsEnabled to true in the AssociatedBidLists property for that bid list.
+Add existing bid lists to a partner. PUT /v3/partner Use the AssociatedBidLists object. To enable the bid list for the partner, set IsEnabled to true in the AssociatedBidLists property for that bid list.
+Add a bid list to a partner with existing associated bid lists. GET /v3/partner/{partnerId}
 and
-PUT /v3/partner	1. Retrieve the current associated bid lists using GET /v3/partner/{partnerId}.
-2. Pass the existing and the bid lists in the PUT /v3/partner endpoint for the associated bid lists. To enable the bid list for the partner, set IsEnabled to true in the AssociatedBidLists property for that bid list.
+PUT /v3/partner 1. Retrieve the current associated bid lists using GET /v3/partner/{partnerId}. 2. Pass the existing and the bid lists in the PUT /v3/partner endpoint for the associated bid lists. To enable the bid list for the partner, set IsEnabled to true in the AssociatedBidLists property for that bid list.
 Properties
 
 The AssociatedBidLists object is a list of bid lists that can be associated with the partner, advertiser, campaign, and ad group entities through their relative endpoints (outlined in the previous section).
 
 Bid lists included in the AssociatedBidLists object have a few more properties that can be sent along with their bid list IDs.
 
-Property	Description
-BidListId	The identifier of the bid list to associate.
-IsEnabled	Whether or not the bid list is enabled for use with this association. The bid list must be both associated and enabled to take effect.
-IsDefaultForDimension	Use the property to do the following:
+Property Description
+BidListId The identifier of the bid list to associate.
+IsEnabled Whether or not the bid list is enabled for use with this association. The bid list must be both associated and enabled to take effect.
+IsDefaultForDimension Use the property to do the following:
 Determine which bid list is primarily displayed in an Ad Group (Ag) tile.
 Specify which bid list to log activity for user inline, bulk, or rollup updates that do not apply to an individual bid list.
 This property only applies to associated bid lists at the ad group level. Be sure each ad group includes one bid list per dimension or dimension combination with this property set to true.
@@ -6581,23 +6579,19 @@ The bid list is already associated with an ancestor. For example, you are trying
 A peer rather than an ancestor owns the bid list. For example, you are trying to associate a bid list owned by an ad group to another ad group.
 More than one bid list has the IsDefaultForDimension property set to true for the same dimension combination and bid list type at the ad-group level.
 Disassociate Bid Lists
-Task	Endpoint	Notes
-Disassociate or disable a bid list for an ad group.	GET /v3/adgroup/{adGroupId}
+Task Endpoint Notes
+Disassociate or disable a bid list for an ad group. GET /v3/adgroup/{adGroupId}
 and
-PUT /v3/adgroup	1. Use GET /v3/adgroup/{adGroupId} to retrieve all of the associated bid lists for the ad group.
-2. Send all the associated bid lists with the request to PUT /v3/adgroup, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
-Disassociate or disable a bid list for a campaign.	GET /v3/campaign/{campaignId}
+PUT /v3/adgroup 1. Use GET /v3/adgroup/{adGroupId} to retrieve all of the associated bid lists for the ad group. 2. Send all the associated bid lists with the request to PUT /v3/adgroup, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
+Disassociate or disable a bid list for a campaign. GET /v3/campaign/{campaignId}
 and
-PUT /v3/campaign	1. Use GET /v3/campaign/{campaignId} to retrieve all of the associated bid lists for campaign.
-2. Send all the associated bid lists with the request to PUT /v3/campaign, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
-Disassociate or disable a bid list for an advertiser.	GET /v3/advertiser/{advertiserId}
+PUT /v3/campaign 1. Use GET /v3/campaign/{campaignId} to retrieve all of the associated bid lists for campaign. 2. Send all the associated bid lists with the request to PUT /v3/campaign, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
+Disassociate or disable a bid list for an advertiser. GET /v3/advertiser/{advertiserId}
 and
-PUT /v3/advertiser	1. Use GET /v3/advertiser/{advertiserId} to retrieve all of the associated bid lists for the advertiser.
-2. Send the associated bid lists with the request to PUT /v3/advertiser, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
-Disassociate or disable a bid list for a partner.	GET /v3/partner/{partnerId}
+PUT /v3/advertiser 1. Use GET /v3/advertiser/{advertiserId} to retrieve all of the associated bid lists for the advertiser. 2. Send the associated bid lists with the request to PUT /v3/advertiser, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
+Disassociate or disable a bid list for a partner. GET /v3/partner/{partnerId}
 and
-PUT /v3/partner	1. Use GET /v3/partner/{partnerId} to retrieve all of the associated bid lists for the partner.
-2. Send all the associated bid lists with the request to PUT /v3/partner, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
+PUT /v3/partner 1. Use GET /v3/partner/{partnerId} to retrieve all of the associated bid lists for the partner. 2. Send all the associated bid lists with the request to PUT /v3/partner, removing any bid lists that should be disassociated, and changing IsEnabled to false for any bid lists that should be disabled.
 Common Errors
 
 For each ad group, when more than one bid list of a bid list adjustment type exists for a dimension, not setting the remaining bid list's IsDefaultForDimension property to true at the ad-group level. Users in the UI may not be able to see the line items for that dimension.
@@ -6606,14 +6600,14 @@ Look Up Bid Lists
 
 Use the following endpoints to look up bid list details or find available bid lists that can be associated with a target object.
 
-Task	Endpoint	Full Bid Line Details?	Filters
-Get details about an individual bid list.	GET /v3/bidlist/{bidListId}	Yes	N/A
-Get details for multiple bid lists	POST /v3/bidlist/batch/get	Yes	N/A
-Get a filterable, paginated list of bid lists available for association with a specific ad group.	POST /v3/bidlistsummary/query/adgroup/available	No	DimensionDescriptorFilters, MaximumLevel
-Get a filterable, paginated list of bid lists available for association with a specific campaign.	POST /v3/bidlistsummary/query/campaign/available	No	DimensionDescriptorFilters, MaximumLevel
-Get a filterable, paginated list of bid lists available for association with a specific advertiser.	POST /v3/bidlistsummary/query/advertiser/available	No	DimensionDescriptorFilters, MaximumLevel
-Get a filterable, paginated list of bid lists available for association with a specific partner.	POST /v3/bidlistsummary/query/partner/available	No	DimensionDescriptorFilters, MaximumLevel
-Get a list of global bid lists maintained by The Trade Desk marketplace quality team.	POST /v3/bidlistsummary/query/global	No	DimensionDescriptorFilters
+Task Endpoint Full Bid Line Details? Filters
+Get details about an individual bid list. GET /v3/bidlist/{bidListId} Yes N/A
+Get details for multiple bid lists POST /v3/bidlist/batch/get Yes N/A
+Get a filterable, paginated list of bid lists available for association with a specific ad group. POST /v3/bidlistsummary/query/adgroup/available No DimensionDescriptorFilters, MaximumLevel
+Get a filterable, paginated list of bid lists available for association with a specific campaign. POST /v3/bidlistsummary/query/campaign/available No DimensionDescriptorFilters, MaximumLevel
+Get a filterable, paginated list of bid lists available for association with a specific advertiser. POST /v3/bidlistsummary/query/advertiser/available No DimensionDescriptorFilters, MaximumLevel
+Get a filterable, paginated list of bid lists available for association with a specific partner. POST /v3/bidlistsummary/query/partner/available No DimensionDescriptorFilters, MaximumLevel
+Get a list of global bid lists maintained by The Trade Desk marketplace quality team. POST /v3/bidlistsummary/query/global No DimensionDescriptorFilters
 Get Multiple Bid Lists
 
 To retrieve multiple bid lists, in a POST /v3/bidlist/batch/get request, specify the ID of each bid list you want to return.
@@ -6633,15 +6627,13 @@ NOTE: You can also update bid lines for an entity by activating or deactivating 
 
 The following table describes the endpoints for updating single or multiple bid lists.
 
-Task	Endpoint	Notes
-Update an individual bid list.	GET /v3/bidlist/{bidListId}
+Task Endpoint Notes
+Update an individual bid list. GET /v3/bidlist/{bidListId}
 and
-PUT /v3/bidlist	1. Use GET /v3/bidlist/{bidListId} to retrieve all of the bid lines for the bid list.
-2. Send all the bid lines with the request to PUT /v3/bidlist, including any additions, changes, or deletions from the bid lines.
-Update multiple bid lists.	POST /v3/bidlist/batch/get
+PUT /v3/bidlist 1. Use GET /v3/bidlist/{bidListId} to retrieve all of the bid lines for the bid list. 2. Send all the bid lines with the request to PUT /v3/bidlist, including any additions, changes, or deletions from the bid lines.
+Update multiple bid lists. POST /v3/bidlist/batch/get
 and
-PUT /v3/bidlist/batch	1. Use POST /v3/bidlist/batch/get to retrieve all of the bid lines for the bid lists.
-2. Send all the bid lines with the request to PUT /v3/bidlist/batch, including any additions, changes, or deletions from the bid lines.
+PUT /v3/bidlist/batch 1. Use POST /v3/bidlist/batch/get to retrieve all of the bid lines for the bid lists. 2. Send all the bid lines with the request to PUT /v3/bidlist/batch, including any additions, changes, or deletions from the bid lines.
 Common Errors
 
 The following is common errors you may encounter when updating bid lists.
@@ -6653,8 +6645,8 @@ Delete Bid Lists
 
 Deleting a bid list is permanent and disassociates the bid list from all associated partners, advertisers, campaigns, and ad groups.
 
-Task	Endpoint	Notes
-Delete an individual bid list.	DELETE /v3/bidlist/{bidListId}	After a bid list is deleted, it will still return in delta functions but will only show the bid list ID and IsDeleted property set to true.
+Task Endpoint Notes
+Delete an individual bid list. DELETE /v3/bidlist/{bidListId} After a bid list is deleted, it will still return in delta functions but will only show the bid list ID and IsDeleted property set to true.
 Common Errors
 
 When creating and updating bid lists, errors occur if the bid lines within a bid list do not have the same dimensions or dimension combinations. The following examples show you how to fix them.
@@ -6830,70 +6822,71 @@ Standard vs. Default Bid Lists
 
 Default bid lists are a subset of standard bid lists, which allows more user control, efficiency, and granularity in bid list management as well as complete parity and visibility in the UI. The following table provides a high-level comparison. For details on standard bid lists, see Bid Lists.
 
-Comparison Aspect	Standard Bid Lists	Default Bid Lists
-Ownership	Can be owned by:
+Comparison Aspect Standard Bid Lists Default Bid Lists
+Ownership Can be owned by:
+
 - Partner
 - Advertiser
 - Campaign
-- Ad group	Can be owned by:
+- Ad group Can be owned by:
 - Partner
 - Advertiser
 - Campaign
-Level Applied	N/A	Can be applied only to these levels:
+  Level Applied N/A Can be applied only to these levels:
 - Advertiser
 - Campaign
-Association levels	Can be associated with the bid list owner and all respective descendants under it.
-For details, see the Bid List Relationships section in Bid Lists.	Can be associated only with ad groups under a campaign that has applied advertiser- or campaign-level default bid lists.
-Inheritance	All associated and enabled bid lists are automatically inherited by all respective descendants.	Advertiser- and campaign-owned default bid lists are not inherited automatically by their descendants. You, as the API user, determine if and when a bid list will be inherited by a lower entity.
-Allowed bid adjustment types	- Target
+  Association levels Can be associated with the bid list owner and all respective descendants under it.
+  For details, see the Bid List Relationships section in Bid Lists. Can be associated only with ad groups under a campaign that has applied advertiser- or campaign-level default bid lists.
+  Inheritance All associated and enabled bid lists are automatically inherited by all respective descendants. Advertiser- and campaign-owned default bid lists are not inherited automatically by their descendants. You, as the API user, determine if and when a bid list will be inherited by a lower entity.
+  Allowed bid adjustment types - Target
 - Block
-- Optimized	- Target
+- Optimized - Target
 - Block
-Allowed dimensions	All	- All available at the campaign level
+  Allowed dimensions All - All available at the campaign level
 - Limited at the advertiser level
-For details, see Allowed Dimensions.
-Single- or multi-dimensional bid lists	Both	Only single-dimensional lists
-Checking for inherited higher-level bid lists	For a given entity level, you can only see bid lists that are associated directly with that entity. You must query higher entity bid list associations to see all bid lists that are inherited and active for a lower entity level.	Since advertiser- or campaign-owned default bid lists are always associated only at the ad group level, you will always be able to query for all associated default bid lists at the ad group level.
-Bid line limits and counts	No difference. For details, see the Bid Line Limits section in Bid Lists.	No difference. For details, see the Bid Line Limits section in Bid Lists.
-Allowed Dimensions in Default Bid Lists
-Default bid lists can be only single-dimensional. Multi-dimensional bid lists are currently not allowed.
-Some dimensions may require permissions. If needed, please contact your Account Manager for help.
-At the campaign level, default bid lists can include any dimensions, except HasVideoPlayerSizeId.
-At the advertiser level, default bid lists can include only the following dimensions.
-Category	Dimension Values
-Brand Safety	HasGrapeshotBrandSafetyCategoryId
-HasIntegralBrandSafetyCategoryId
-HasDoubleVerifyBrandSafetyCategoryId
-HasIntegralVideoBrandSafetyCategoryId
-HasPeer39BrandSafetyCategoryId
-Page Quality	HasIntegralPageQualityCategoryId
-HasGrapeshotDisplayPageQualityCategoryId
-HasGrapeshotVideoPageQualityCategoryId
-HasPeer39PageQualityCategoryId
-HasIntegralVideoPageQualityCategoryId
-HasTencentPageQualityCategoryId
-HasAdBugPageQualityCategoryId
-HasAdBugVideoPageQualityCategoryId
-HasRTBAsiaPageQualityCategoryId
-HasRTBAsiaVideoPageQualityCategoryId
-Viewability	HasDisplayViewabilityScoreRange
-HasIntegralViewabilityCategoryId
-HasVideoViewabilityScoreRange
-HasDoubleVerifyViewabilityCategoryId
-HasIntegralVideoViewabilityCategoryId
-HasDoubleVerifyVideoViewabilityCategoryId
-HasPeer39ViewabilityCategoryId
-HasGrapeshotViewabilityCategoryId
-HasGrapeshotVideoViewabilityCategoryIds
-Language	HasLanguageId
-HasGrapeshotLanguageId
-HasPeer39LanguageId
-Other Dimensions	HasAdsTxtSellerTypeId
-HasGeoSegmentId
-HasDomainFragmentId
-HasPrivateContractId
-HasSupplyVendorId
-What You Need to Know
+  For details, see Allowed Dimensions.
+  Single- or multi-dimensional bid lists Both Only single-dimensional lists
+  Checking for inherited higher-level bid lists For a given entity level, you can only see bid lists that are associated directly with that entity. You must query higher entity bid list associations to see all bid lists that are inherited and active for a lower entity level. Since advertiser- or campaign-owned default bid lists are always associated only at the ad group level, you will always be able to query for all associated default bid lists at the ad group level.
+  Bid line limits and counts No difference. For details, see the Bid Line Limits section in Bid Lists. No difference. For details, see the Bid Line Limits section in Bid Lists.
+  Allowed Dimensions in Default Bid Lists
+  Default bid lists can be only single-dimensional. Multi-dimensional bid lists are currently not allowed.
+  Some dimensions may require permissions. If needed, please contact your Account Manager for help.
+  At the campaign level, default bid lists can include any dimensions, except HasVideoPlayerSizeId.
+  At the advertiser level, default bid lists can include only the following dimensions.
+  Category Dimension Values
+  Brand Safety HasGrapeshotBrandSafetyCategoryId
+  HasIntegralBrandSafetyCategoryId
+  HasDoubleVerifyBrandSafetyCategoryId
+  HasIntegralVideoBrandSafetyCategoryId
+  HasPeer39BrandSafetyCategoryId
+  Page Quality HasIntegralPageQualityCategoryId
+  HasGrapeshotDisplayPageQualityCategoryId
+  HasGrapeshotVideoPageQualityCategoryId
+  HasPeer39PageQualityCategoryId
+  HasIntegralVideoPageQualityCategoryId
+  HasTencentPageQualityCategoryId
+  HasAdBugPageQualityCategoryId
+  HasAdBugVideoPageQualityCategoryId
+  HasRTBAsiaPageQualityCategoryId
+  HasRTBAsiaVideoPageQualityCategoryId
+  Viewability HasDisplayViewabilityScoreRange
+  HasIntegralViewabilityCategoryId
+  HasVideoViewabilityScoreRange
+  HasDoubleVerifyViewabilityCategoryId
+  HasIntegralVideoViewabilityCategoryId
+  HasDoubleVerifyVideoViewabilityCategoryId
+  HasPeer39ViewabilityCategoryId
+  HasGrapeshotViewabilityCategoryId
+  HasGrapeshotVideoViewabilityCategoryIds
+  Language HasLanguageId
+  HasGrapeshotLanguageId
+  HasPeer39LanguageId
+  Other Dimensions HasAdsTxtSellerTypeId
+  HasGeoSegmentId
+  HasDomainFragmentId
+  HasPrivateContractId
+  HasSupplyVendorId
+  What You Need to Know
 
 Here’s what you need to keep in mind when working with default bid lists. They:
 
@@ -6913,28 +6906,28 @@ FAQs
 
 The following table provides a matrix of answers to some default bid list FAQs about each entity involved.
 
-Question	Advertiser	Campaign	Ad Group
-Where can default bid lists be defined?	In DefaultBidLists array	In DefaultBidLists array	N/A
-Can default bid list be multi-dimensional?	No	No	N/A
-How can default bid lists be inherited from the parent?	N/A	Using IncludeDefaultsFromAdvertiser property, but only at creation	Using IncludeDefaultsFromCampaign property, but only at creation
-Can other bid lists be included as default bid lists in addition to those from the parent at creation?	N/A	Yes, by setting IncludeDefaultsFromAdvertiser to true and adding bid list IDs to DefaultBidLists array	N/A
-Can the items in the DefaultBidLists array be modified?	Yes, but changes will apply only to new campaigns	Yes, but changes will apply only to new ad groups	N/A
-Can default bid lists be automatically added to AssociatedBidLists and enabled for bidding?	No	No	Yes, but only at creation
+Question Advertiser Campaign Ad Group
+Where can default bid lists be defined? In DefaultBidLists array In DefaultBidLists array N/A
+Can default bid list be multi-dimensional? No No N/A
+How can default bid lists be inherited from the parent? N/A Using IncludeDefaultsFromAdvertiser property, but only at creation Using IncludeDefaultsFromCampaign property, but only at creation
+Can other bid lists be included as default bid lists in addition to those from the parent at creation? N/A Yes, by setting IncludeDefaultsFromAdvertiser to true and adding bid list IDs to DefaultBidLists array N/A
+Can the items in the DefaultBidLists array be modified? Yes, but changes will apply only to new campaigns Yes, but changes will apply only to new ad groups N/A
+Can default bid lists be automatically added to AssociatedBidLists and enabled for bidding? No No Yes, but only at creation
 Any subsequent enabling or disabling of bid lists will affect only the current ad group.
-If the contents of a default bid list are updated, are the changes automatically applied to all campaigns and ad groups that use it?	N/A	Yes	Yes
+If the contents of a default bid list are updated, are the changes automatically applied to all campaigns and ad groups that use it? N/A Yes Yes
 Endpoints
 
 The following table lists the endpoints for creating, updating, applying, and retrieving default bid lists.
 
 IMPORTANT: Since arrays in PUT requests replace the current ones instead of adding to them, if you want to add bid lists to any current arrays, make sure to retrieve them with the respective GET requests first and then include the current and new values in respective PUT requests with any other appropriate changes.
 
-Endpoints	Advertiser	Campaign	Ad Group
-For defining/adding default bid lists	POST/advertiser
-PUT/advertiser	POST/campaign
-PUT/campaign	N/A
-For including default bid lists in descendants	N/A	POST/campaign	POST/adgroup
-For updating default bid lists	PUT/advertiser	PUT/campaign	N/A
-For retrieving default bid lists	GET/advertiser/{advertiserId}	GET/campaign/{campaignId}	N/A, the applied default bid lists will be returned in the AssociatedBidLists array
+Endpoints Advertiser Campaign Ad Group
+For defining/adding default bid lists POST/advertiser
+PUT/advertiser POST/campaign
+PUT/campaign N/A
+For including default bid lists in descendants N/A POST/campaign POST/adgroup
+For updating default bid lists PUT/advertiser PUT/campaign N/A
+For retrieving default bid lists GET/advertiser/{advertiserId} GET/campaign/{campaignId} N/A, the applied default bid lists will be returned in the AssociatedBidLists array
 
 See also Request Examples.
 
@@ -6942,37 +6935,38 @@ Apply Advertiser's Default Bid Lists
 
 The following table outlines the process of creating a set of default bid lists for an existing advertiser and including them as default bid lists in a new campaign and a new ad group for that campaign.
 
-Step #	Description	Endpoints and Further Reference	Notes
-1	(Optional, if you already have the necessary bid lists)
-Create bid lists with the allowed dimensions common to most campaigns for the advertiser and make sure that the BidAdjustmentType is set to either TargetList or BlockList and the advertiser or partner is set as the bid list owner.	POST/bidlist
-For details, see Create Bid Lists.	Request example snippet
-2	Update the advertiser by adding the bid list IDs to the DefaultBidLists array.
-IMPORTANT: If the advertiser already has an array of default bid lists to which you want to add the new ones, make sure to retrieve the current list using a GET request.	PUT/advertiser	Request example snippet
+Step # Description Endpoints and Further Reference Notes
+1 (Optional, if you already have the necessary bid lists)
+Create bid lists with the allowed dimensions common to most campaigns for the advertiser and make sure that the BidAdjustmentType is set to either TargetList or BlockList and the advertiser or partner is set as the bid list owner. POST/bidlist
+For details, see Create Bid Lists. Request example snippet
+2 Update the advertiser by adding the bid list IDs to the DefaultBidLists array.
+IMPORTANT: If the advertiser already has an array of default bid lists to which you want to add the new ones, make sure to retrieve the current list using a GET request. PUT/advertiser Request example snippet
 For an example with all required fields, see Create Advertiser.
-3	Create a new campaign for the advertiser and set the IncludeDefaultsFromAdvertiser parameter to true.
+3 Create a new campaign for the advertiser and set the IncludeDefaultsFromAdvertiser parameter to true.
 If you want to include:
+
 - Only advertiser’s default bid lists, do not include the DefaultBidLists array in the request.
-- Other bid lists in addition to the advertiser’s default bid lists, include the IDs of the additional bid lists in the DefaultBidLists array in the request.	POST/campaign
-For details on creating campaigns, see Campaigns.	Request example snippet
-The response will include the DefaultBidLists array automatically populated with the advertiser’s default bid lists and any other bid lists that were specified in the request.
-4	Create a new ad group for the campaign and set the IncludeDefaultsFromCampaign parameter to true.
-If you want to include other bid lists in addition to the campaign default bid lists, include the IDs of the additional bid lists in the AssociatedBidLists array in the request and set the lists as enabled.	POST/adgroup
-For details on creating ad groups, see Ad Groups.	Request example snippet
-The response will include the AssociatedBidLists array automatically populated with the default bid lists from the specified campaign, already enabled for bidding, and any additional bid lists you may have included in the request.
-Update Campaign Default Bid Lists
+- Other bid lists in addition to the advertiser’s default bid lists, include the IDs of the additional bid lists in the DefaultBidLists array in the request. POST/campaign
+  For details on creating campaigns, see Campaigns. Request example snippet
+  The response will include the DefaultBidLists array automatically populated with the advertiser’s default bid lists and any other bid lists that were specified in the request.
+  4 Create a new ad group for the campaign and set the IncludeDefaultsFromCampaign parameter to true.
+  If you want to include other bid lists in addition to the campaign default bid lists, include the IDs of the additional bid lists in the AssociatedBidLists array in the request and set the lists as enabled. POST/adgroup
+  For details on creating ad groups, see Ad Groups. Request example snippet
+  The response will include the AssociatedBidLists array automatically populated with the default bid lists from the specified campaign, already enabled for bidding, and any additional bid lists you may have included in the request.
+  Update Campaign Default Bid Lists
 
 The following table outlines the process of creating a set of default bid lists for an existing campaign and including them as associated bid lists in a new ad group for that campaign. The sections that follow provide code examples for each request.
 
-Step #	Description	Endpoints and Further Reference	Notes
-1	(Optional, if you already have the necessary bid lists)
-Create bid lists with dimensions common to all campaign’s ad groups and make sure that the BidAdjustmentType is set to either TargetList or BlockList and the campaign is set as the bid list owner.	POST/bidlist
-For details, see Bid List.	Request example snippet
-2	Retrieve the existing default bid lists for the campaign.	GET/campaign/{campaignId}	Request example snippet
-3	Update the campaign by adding the new bid list IDs to the retrieved DefaultBidLists array.	PUT/campaign	Request example snippet
+Step # Description Endpoints and Further Reference Notes
+1 (Optional, if you already have the necessary bid lists)
+Create bid lists with dimensions common to all campaign’s ad groups and make sure that the BidAdjustmentType is set to either TargetList or BlockList and the campaign is set as the bid list owner. POST/bidlist
+For details, see Bid List. Request example snippet
+2 Retrieve the existing default bid lists for the campaign. GET/campaign/{campaignId} Request example snippet
+3 Update the campaign by adding the new bid list IDs to the retrieved DefaultBidLists array. PUT/campaign Request example snippet
 For an example with all required fields, see Campaigns.
-4	Create a new ad group for the campaign and set the IncludeDefaultsFromCampaign parameter to true.
-If you want to include other bid lists in addition to the campaign default bid lists, include the IDs of the additional bid lists in the AssociatedBidLists array in the request and set the lists as enabled.	POST/adgroup
-For details on creating ad groups, see Ad Groups.	Request example snippet
+4 Create a new ad group for the campaign and set the IncludeDefaultsFromCampaign parameter to true.
+If you want to include other bid lists in addition to the campaign default bid lists, include the IDs of the additional bid lists in the AssociatedBidLists array in the request and set the lists as enabled. POST/adgroup
+For details on creating ad groups, see Ad Groups. Request example snippet
 The response will include the AssociatedBidLists array automatically populated with the default bid lists from the specified campaign, already enabled for bidding.
 Request Examples
 
@@ -7312,12 +7306,12 @@ Yes. You can include both single-dimensional and multi-dimensional bid lists in 
 
 For example, consider three bid lists with the following bid factors:
 
-Dimensions	Bid Factors
-example.com	1.25
-example.com	1.15
-SSP_One and example.com	1.5
+Dimensions Bid Factors
+example.com 1.25
+example.com 1.15
+SSP_One and example.com 1.5
 
-If SSP One requests inventory on example.com, this would match both your bid factors for the SSP and the domain fragment and your bid factor for the combination of those dimensions. The result would be the product of all bid factors (1.25 * 1.15 * 1.5 = 2.16).
+If SSP One requests inventory on example.com, this would match both your bid factors for the SSP and the domain fragment and your bid factor for the combination of those dimensions. The result would be the product of all bid factors (1.25 _ 1.15 _ 1.5 = 2.16).
 
 ---
 
@@ -7369,10 +7363,10 @@ Frequency Framework Elements
 
 There are three individually configurable elements that make up the frequency framework and allow better leveraging of the frequency cycle.
 
-Element	Definition
-Counter	A container that holds the user’s frequency count information (the number of times the user has seen the ad) and defines the time interval (in minutes) after which the counter is reset.
-Increment	An entity (partner, advertiser, campaign, and ad group) that serves impressions to users and increases the user's frequency count for the associated counter.
-Bid List	Bid lists apply frequency settings to ad groups, campaigns, and other entities by associating the bid list with the entity and enabling the relationship for the entity.
+Element Definition
+Counter A container that holds the user’s frequency count information (the number of times the user has seen the ad) and defines the time interval (in minutes) after which the counter is reset.
+Increment An entity (partner, advertiser, campaign, and ad group) that serves impressions to users and increases the user's frequency count for the associated counter.
+Bid List Bid lists apply frequency settings to ad groups, campaigns, and other entities by associating the bid list with the entity and enabling the relationship for the entity.
 Use bid lists to define frequency caps, set frequency goals, and adjust bids based on the associated counter.
 
 TIP: While these elements are individually configurable, for basic configurations, it is most efficient to use the frequency configuration endpoints, which allow you to set up counters, increments, and bid lists in one step.
@@ -7481,23 +7475,23 @@ Creating Counters
 
 The following table lists the endpoints you can use to create counters.
 
-Task	Endpoint	Configuration	Notes
-Create a counter, its increments, and bid lists.	POST /v3/frequency/config	Basic	For example, see Frequency Caps or Frequency Goals.
-Create an individual counter.	POST /v3/frequency/counter	Advanced	This is one step in a multi-step workflow of manually configuring frequency.
+Task Endpoint Configuration Notes
+Create a counter, its increments, and bid lists. POST /v3/frequency/config Basic For example, see Frequency Caps or Frequency Goals.
+Create an individual counter. POST /v3/frequency/counter Advanced This is one step in a multi-step workflow of manually configuring frequency.
 TIP: For basic configurations, it is most efficient to use the frequency configuration endpoints, which allow you to create and manage counters.
-Create a counter while creating or updating a campaign.	POST /v3/campaign
-PUT /v3/campaign	Basic	Specify the counter details in the NewFrequencyConfigs object of the request. For example, see Frequency Caps or Frequency Goals.
-Create a counter while creating or updating an ad group.	POST /v3/adgroup
-PUT /v3/adgroup	Basic	Specify the counter details in the NewFrequencyConfigs object of the request. For example, see Frequency Caps or Frequency Goals.
+Create a counter while creating or updating a campaign. POST /v3/campaign
+PUT /v3/campaign Basic Specify the counter details in the NewFrequencyConfigs object of the request. For example, see Frequency Caps or Frequency Goals.
+Create a counter while creating or updating an ad group. POST /v3/adgroup
+PUT /v3/adgroup Basic Specify the counter details in the NewFrequencyConfigs object of the request. For example, see Frequency Caps or Frequency Goals.
 Retrieving Counters
 
 The following table lists the endpoints you can use to retrieve counter information.
 
-Task	Endpoint	Configuration	Notes
-Retrieve details for a counter, its increments, and bid lists.	GET /v3/frequency/config/{counterId}	Basic	Use this endpoint to retrieve entire frequency configuration, including counter information and other details at the same time. For details, see Look up Frequency Configuration for a Counter.
-Retrieve details for an individual counter.	GET /v3/frequency/counter/{counterId}	Advanced	Use this endpoint to look up only counter details with no increment or bid list details.
-Retrieve a paged and filterable list of frequency counters for a specific advertiser or partner.	POST /v3/frequency/counter/query	Basic	N/A
-Retrieve a paged and filterable list of frequency configurations, including counters, for a specific entity.	POST /v3/frequency/config/query	Basic	N/A
+Task Endpoint Configuration Notes
+Retrieve details for a counter, its increments, and bid lists. GET /v3/frequency/config/{counterId} Basic Use this endpoint to retrieve entire frequency configuration, including counter information and other details at the same time. For details, see Look up Frequency Configuration for a Counter.
+Retrieve details for an individual counter. GET /v3/frequency/counter/{counterId} Advanced Use this endpoint to look up only counter details with no increment or bid list details.
+Retrieve a paged and filterable list of frequency counters for a specific advertiser or partner. POST /v3/frequency/counter/query Basic N/A
+Retrieve a paged and filterable list of frequency configurations, including counters, for a specific entity. POST /v3/frequency/config/query Basic N/A
 Look up Frequency Configuration for a Counter
 
 To view the frequency information for a specific counter, include its ID as the path parameter in a GET /v3/frequency/config/{counterId} request.
@@ -7582,15 +7576,15 @@ Updating Counters
 
 The following table lists the endpoints you can use to update counters.
 
-Task	Endpoint	Configuration	Notes
-Update a counter, its increments, and bid lists.	PUT /v3/frequency/config	Basic	N/A
-Update an individual counter.	PUT /v3/frequency/counter	Advanced	Using this endpoint is more efficient if you want to edit only a counter name or reset interval.
+Task Endpoint Configuration Notes
+Update a counter, its increments, and bid lists. PUT /v3/frequency/config Basic N/A
+Update an individual counter. PUT /v3/frequency/counter Advanced Using this endpoint is more efficient if you want to edit only a counter name or reset interval.
 Deleting Counters
 
 The following table lists the endpoint you can use to delete counters.
 
-Task	Endpoint	Configuration
-Delete an individual frequency counter and all of its associated increments, and bid lists.	DELETE /v3/frequency/config/{counterId}	Basic
+Task Endpoint Configuration
+Delete an individual frequency counter and all of its associated increments, and bid lists. DELETE /v3/frequency/config/{counterId} Basic
 Increments
 
 Increments are entities (partners, advertisers, campaigns, and ad groups) that serve impressions to users and increase the user's frequency count for the associated counter.
@@ -7602,41 +7596,41 @@ TIP: Use the entity-level inheritance to set up frequency increments at the appr
 For example, to increment frequency counts for every ad group in a campaign, set the campaign to increment the counter rather than individual ad groups. If an ad group is added to the campaign after frequency is set up, the campaign-level increment will apply to the new ad group, whereas if individual ad groups are specified as increments, the new ad group will need to be manually added.
 
 Creating Increments
-Task	Endpoint	Configuration	Notes
-Create a counter, its increments, and bid lists.	POST /v3/frequency/config	Basic	For example, see Frequency Caps or Frequency Goals.
-Add an ad group as an increment to a counter.	POST /v3/adgroup
-PUT /v3/adgroup	Advanced	To increase counts each time a user sees an ad for this ad group, list the frequency CounterIds in the Increments array.
-Add a campaign as an increment to a counter.	POST /v3/campaign
-PUT /v3/campaign	Advanced	To increase counts each time a user sees an ad for this campaign, including any of its ad groups, list the frequency CounterIds in the Increments array.
-Add an advertiser as an increment to this counter.	POST /v3/advertiser
-PUT /v3/advertiser	Advanced	To increase counts each time a user sees an ad for this advertiser, including all of its campaigns and ad groups, list the frequency CounterIds in the Increments array.
+Task Endpoint Configuration Notes
+Create a counter, its increments, and bid lists. POST /v3/frequency/config Basic For example, see Frequency Caps or Frequency Goals.
+Add an ad group as an increment to a counter. POST /v3/adgroup
+PUT /v3/adgroup Advanced To increase counts each time a user sees an ad for this ad group, list the frequency CounterIds in the Increments array.
+Add a campaign as an increment to a counter. POST /v3/campaign
+PUT /v3/campaign Advanced To increase counts each time a user sees an ad for this campaign, including any of its ad groups, list the frequency CounterIds in the Increments array.
+Add an advertiser as an increment to this counter. POST /v3/advertiser
+PUT /v3/advertiser Advanced To increase counts each time a user sees an ad for this advertiser, including all of its campaigns and ad groups, list the frequency CounterIds in the Increments array.
 Retrieving Increments
 
 The endpoints listed below return all increments as a list of CounterIds in the Increments array. To retrieve individual counter details, use the GET /v3/frequency/counter/{counterId} endpoint.
 
-Task	Endpoint	Configuration
-Retrieve all increments for a specific counter.	GET /v3/frequency/config/{counterId}	Basic
-Retrieve all counters incremented by an ad group.	GET /v3/adgroup/{adGroupId}	Basic
-Retrieve all counters incremented by a campaign.	GET /v3/campaign/{campaignId}	Basic
-Retrieve all counters incremented by an advertiser.	GET /v3/advertiser/{advertiserId}	Basic
+Task Endpoint Configuration
+Retrieve all increments for a specific counter. GET /v3/frequency/config/{counterId} Basic
+Retrieve all counters incremented by an ad group. GET /v3/adgroup/{adGroupId} Basic
+Retrieve all counters incremented by a campaign. GET /v3/campaign/{campaignId} Basic
+Retrieve all counters incremented by an advertiser. GET /v3/advertiser/{advertiserId} Basic
 Updating Increments
-Task	Endpoint	Configuration	Notes
-Update a counter, its increments, and bid lists.	PUT /v3/frequency/config	Basic	N/A
-Update an ad group as an increment to a counter.	POST /v3/adgroup
-PUT /v3/adgroup	Advanced	Update CounterIds in the Increments array as needed.
-Update a campaign as an increment to a counter.	POST /v3/campaign
-PUT /v3/campaign	Advanced	Update CounterIds in the Increments array as needed.
-Update an advertiser as an increment to a counter.	POST /v3/advertiser
-PUT /v3/advertiser	Advanced	Update CounterIds in the Increments array as needed.
+Task Endpoint Configuration Notes
+Update a counter, its increments, and bid lists. PUT /v3/frequency/config Basic N/A
+Update an ad group as an increment to a counter. POST /v3/adgroup
+PUT /v3/adgroup Advanced Update CounterIds in the Increments array as needed.
+Update a campaign as an increment to a counter. POST /v3/campaign
+PUT /v3/campaign Advanced Update CounterIds in the Increments array as needed.
+Update an advertiser as an increment to a counter. POST /v3/advertiser
+PUT /v3/advertiser Advanced Update CounterIds in the Increments array as needed.
 Removing Increments
-Task	Endpoint	Configuration	Notes
-Update a counter, its increments, and bid lists.	PUT /v3/frequency/config	Basic	Remove entities from the Increments object.
-Remove an ad group as an increment to a counter.	POST /v3/adgroup
-PUT /v3/adgroup	Advanced	Remove CounterIds from the Increments array.
-Remove a campaign as an increment to a counter.	POST /v3/campaign
-PUT /v3/campaign	Advanced	Remove CounterIds from the Increments array.
-Remove an advertiser as an increment to a counter.	POST /v3/advertiser
-PUT /v3/advertiser	Advanced	Remove CounterIds from the Increments array.
+Task Endpoint Configuration Notes
+Update a counter, its increments, and bid lists. PUT /v3/frequency/config Basic Remove entities from the Increments object.
+Remove an ad group as an increment to a counter. POST /v3/adgroup
+PUT /v3/adgroup Advanced Remove CounterIds from the Increments array.
+Remove a campaign as an increment to a counter. POST /v3/campaign
+PUT /v3/campaign Advanced Remove CounterIds from the Increments array.
+Remove an advertiser as an increment to a counter. POST /v3/advertiser
+PUT /v3/advertiser Advanced Remove CounterIds from the Increments array.
 Bid Lists
 
 Use bid lists to apply frequency caps, frequency goals, and bid adjustments to partners, advertisers, campaigns, and ad groups by specifying the counter to use and configuring the relevant adjustments. For details, see Frequency Bid Adjustments.
@@ -7699,12 +7693,10 @@ Frequency Configuration Properties
 
 The following table explains the NewFrequencyConfigs object properties.
 
-Property	Value Example	Description
-CounterName	advt1234 24 Hours	An optional alphanumeric string with whitespace to identify the counter.
-ResetIntervalInMinutes	1440	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes, for example, 24 hr x 60 min = 1440 min.
-FrequencyCap	1	A positive integer that specifies the maximum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
-
-
+Property Value Example Description
+CounterName advt1234 24 Hours An optional alphanumeric string with whitespace to identify the counter.
+ResetIntervalInMinutes 1440 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes, for example, 24 hr x 60 min = 1440 min.
+FrequencyCap 1 A positive integer that specifies the maximum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
 
 This request creates a counter, sets the ad group to increment the counter, and creates a bid list that will appear in all bid list endpoints, for example, as shown in the following example.
 
@@ -7841,20 +7833,20 @@ The following is a snippet of a POST /v3/frequency/config request for creating a
 The following tables explain the property values in the above request.
 
 Counter Properties
-Property	Value Example	Description
-AdvertiserId	advt1234	The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
-ResetIntervalInMinutes	1440	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes, for example, 24 hr x 60 min = 1440 min.
-CounterName	advt1234 24 Hours	An optional alphanumeric string with whitespace to identify the counter.
+Property Value Example Description
+AdvertiserId advt1234 The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
+ResetIntervalInMinutes 1440 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes, for example, 24 hr x 60 min = 1440 min.
+CounterName advt1234 24 Hours An optional alphanumeric string with whitespace to identify the counter.
 Bid List Properties
-Property	Value Example	Description
-Name	adgr1234 1/24 Frequency Cap	An alphanumeric string with whitespace to identify the bid list.
-BidListOwner	AdGroup	The type of the owner of this bid list.
-BidListOwnerId	adgr1234	The ID of the ad group that owns the bid lis.
-BidListAdjustmentType	TargetList	Setting the BidListAdjustmentType to TargetList allows the ad group to bid only on users who appear within the specified frequency range. Once the user's frequency count is beyond the range, they are no longer served ads.
-BidLines.Range.Min	0	The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
+Property Value Example Description
+Name adgr1234 1/24 Frequency Cap An alphanumeric string with whitespace to identify the bid list.
+BidListOwner AdGroup The type of the owner of this bid list.
+BidListOwnerId adgr1234 The ID of the ad group that owns the bid lis.
+BidListAdjustmentType TargetList Setting the BidListAdjustmentType to TargetList allows the ad group to bid only on users who appear within the specified frequency range. Once the user's frequency count is beyond the range, they are no longer served ads.
+BidLines.Range.Min 0 The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
 To include users who have not yet seen the ad, set this value to 0.
-BidLines.Range.Max	1	The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
-BidLines.BidAdjustment	1	Bid lines in a TargetList must always be set to 1.
+BidLines.Range.Max 1 The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
+BidLines.BidAdjustment 1 Bid lines in a TargetList must always be set to 1.
 Create Campaign Frequency Caps
 
 There are two ways of creating campaign frequency caps:
@@ -7899,10 +7891,10 @@ Frequency Configuration Properties
 
 The following table explains the NewFrequencyConfigs object properties.
 
-Property	Value Example	Description
-CounterName	camp1234 One Week	An optional alphanumeric string with whitespace to identify the counter.
-ResetIntervalInMinutes	10080	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes.
-FrequencyCap	5	A positive integer that specifies the maximum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
+Property Value Example Description
+CounterName camp1234 One Week An optional alphanumeric string with whitespace to identify the counter.
+ResetIntervalInMinutes 10080 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes.
+FrequencyCap 5 A positive integer that specifies the maximum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
 Create Campaign Frequency Caps Using Frequency Configuration
 
 To create a campaign frequency cap by configuring frequency, use the POST /v3/frequency/config endpoint and do the following:
@@ -7973,20 +7965,20 @@ The following is a snippet of a POST /v3/frequency/config request for creating a
 The following tables explain the property values in the above request.
 
 Counter Properties
-Property	Value Example	Description
-AdvertiserId	advt1234	The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
-ResetIntervalInMinutes	10080	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes.
-CounterName	advt1234 One Week	An optional alphanumeric string with whitespace to identify the counter.
+Property Value Example Description
+AdvertiserId advt1234 The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
+ResetIntervalInMinutes 10080 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes.
+CounterName advt1234 One Week An optional alphanumeric string with whitespace to identify the counter.
 Bid List Properties
-Property	Value Example	Description
-Name	camp1234 5/10080 Frequency Cap	An alphanumeric string with whitespace to identify the bid list.
-BidListOwner	Campaign	The type of the owner of this bid list.
-BidListOwnerId	camp1234	The ID of the campaign that owns the bid list.
-BidListAdjustmentType	TargetList	Setting the BidListAdjustmentType to TargetList allows the campaign's ad groups to bid only on users who appear within the specified frequency range. Once the user's frequency count is beyond the range, they are no longer served ads.
-BidLines.Range.Min	0	The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
+Property Value Example Description
+Name camp1234 5/10080 Frequency Cap An alphanumeric string with whitespace to identify the bid list.
+BidListOwner Campaign The type of the owner of this bid list.
+BidListOwnerId camp1234 The ID of the campaign that owns the bid list.
+BidListAdjustmentType TargetList Setting the BidListAdjustmentType to TargetList allows the campaign's ad groups to bid only on users who appear within the specified frequency range. Once the user's frequency count is beyond the range, they are no longer served ads.
+BidLines.Range.Min 0 The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
 To include users who have not yet seen the ad, set this value to 0.
-BidLines.Range.Max	5	The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
-BidLines.BidAdjustment	1	Bid lines in a TargetList must always be set to 1.
+BidLines.Range.Max 5 The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency cap fraction.
+BidLines.BidAdjustment 1 Bid lines in a TargetList must always be set to 1.
 FAQs
 
 The following is a list of commonly asked questions about frequency caps.
@@ -7999,7 +7991,6 @@ Create only one counter per ad group. If you reuse counters on multiple ad group
 Associate and enable only one frequency cap bid list for the ad group. The bid list must be owned by the same ad group.
 Make sure that the ad group’s Increments list includes the same counter ID as the bid list associated with the ad group.
 If you are defining both a frequency cap and a frequency goal for an ad group, use separate counters, even if the cap and goal have the same reset interval.
-
 
 ---
 
@@ -8061,13 +8052,11 @@ Frequency Configuration Properties
 
 The following table explains the NewFrequencyConfigs object properties.
 
-Property	Value Example	Description
-CounterName	adgr1234 24 Hours	An optional alphanumeric string with whitespace to identify the counter.
-ResetIntervalInMinutes	1440	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
-FrequencyGoal	2	A positive integer that specifies the minimum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. For example, the value of 2 targets users who have been exposed to an ad once, while the value of 1 targets only new users, which may have a dramatic impact on bidding.
+Property Value Example Description
+CounterName adgr1234 24 Hours An optional alphanumeric string with whitespace to identify the counter.
+ResetIntervalInMinutes 1440 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
+FrequencyGoal 2 A positive integer that specifies the minimum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. For example, the value of 2 targets users who have been exposed to an ad once, while the value of 1 targets only new users, which may have a dramatic impact on bidding.
 NOTE: The system will try to reach each user the designated number of times. It is not guaranteed that every user will reach this target, as user behavior cannot be controlled.
-
-
 
 This request creates a counter, sets the ad group to increment the counter, and creates a bid list that will appear in all bid list endpoints, for example, as shown in the following example.
 
@@ -8207,21 +8196,21 @@ The following is a snippet of a POST /v3/frequency/config request for creating a
 The following tables explain the property values in the above request.
 
 Counter Properties
-Property	Value Example	Description
-AdvertiserId	advt1234	The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
-ResetIntervalInMinutes	1440	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
-CounterName	advt1234 24 Hours	An optional alphanumeric string with whitespace to identify the counter.
+Property Value Example Description
+AdvertiserId advt1234 The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
+ResetIntervalInMinutes 1440 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
+CounterName advt1234 24 Hours An optional alphanumeric string with whitespace to identify the counter.
 Bid List Properties
-Property	Value Example	Description
-Name	adgr1234 1/24 Frequency Goal	An alphanumeric string with whitespace to identify the bid list.
-BidListOwner	AdGroup	The type of the owner of this bid list.
-BidListOwnerId	adgr1234	The ID of the ad group that owns the bid list.
-BidListAdjustmentType	Optimized	Setting the BidListAdjustmentType to Optimized allows the bid list to set the bid line VolumeControlPriority to FrequencyGoal.
-BidLines.Range.Min	0	The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
+Property Value Example Description
+Name adgr1234 1/24 Frequency Goal An alphanumeric string with whitespace to identify the bid list.
+BidListOwner AdGroup The type of the owner of this bid list.
+BidListOwnerId adgr1234 The ID of the ad group that owns the bid list.
+BidListAdjustmentType Optimized Setting the BidListAdjustmentType to Optimized allows the bid list to set the bid line VolumeControlPriority to FrequencyGoal.
+BidLines.Range.Min 0 The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
 To include users who have not yet seen the ad, set this value to 0.
-BidLines.Range.Max	2	The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency goal fraction.
-BidLines.BidAdjustment	1	Bid lines in a bid list using VolumeControlPriority must always have their bid adjustment set to 1.
-BidLines.VolumeControlPriority	FrequencyGoal	The volume control priority to apply to this adjustment.
+BidLines.Range.Max 2 The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency goal fraction.
+BidLines.BidAdjustment 1 Bid lines in a bid list using VolumeControlPriority must always have their bid adjustment set to 1.
+BidLines.VolumeControlPriority FrequencyGoal The volume control priority to apply to this adjustment.
 Create Campaign Frequency Goals
 
 There are two ways of creating campaign frequency goals:
@@ -8266,10 +8255,10 @@ Frequency Configuration Properties
 
 The following table explains the NewFrequencyConfigs object properties.
 
-Property	Value Example	Description
-CounterName	adgr1234 24 Hours	An optional alphanumeric string with whitespace to identify the counter.
-ResetIntervalInMinutes	1440	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
-FrequencyGoal	2	A positive integer that specifies the minimum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. For example, the value of 2 targets users who have been exposed to an ad once, while the value of 1 targets only new users, which may have a dramatic impact on bidding.
+Property Value Example Description
+CounterName adgr1234 24 Hours An optional alphanumeric string with whitespace to identify the counter.
+ResetIntervalInMinutes 1440 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
+FrequencyGoal 2 A positive integer that specifies the minimum number of ads to be shown to a user during the time interval specified in ResetIntervalInMinutes. For example, the value of 2 targets users who have been exposed to an ad once, while the value of 1 targets only new users, which may have a dramatic impact on bidding.
 NOTE: The system will try to reach each user the designated number of times. It is not guaranteed that every user will reach this target, as user behavior cannot be controlled.
 Create Campaign Frequency Goals Using Frequency Configuration
 
@@ -8345,21 +8334,21 @@ The following is a snippet of a POST /v3/frequency/config request for creating a
 The following tables explain the property values in the above request.
 
 Counter Properties
-Property	Value Example	Description
-AdvertiserId	advt1234	The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
-ResetIntervalInMinutes	1440	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
-CounterName	advt1234 24 Hours	An optional alphanumeric string with whitespace to identify the counter.
+Property Value Example Description
+AdvertiserId advt1234 The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
+ResetIntervalInMinutes 1440 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency goal fraction in minutes, for example, 24 hr x 60 min = 1440 min.
+CounterName advt1234 24 Hours An optional alphanumeric string with whitespace to identify the counter.
 Bid List Properties
-Property	Value Example	Description
-Name	camp1234 1/24 Frequency Goal	An alphanumeric string with whitespace to identify the bid list.
-BidListOwner	Campaign	The type of the owner of this bid list.
-BidListOwnerId	camp1234	The ID of the campaign that owns the bid list.
-BidListAdjustmentType	Optimized	Setting the BidListAdjustmentType to Optimized allows the bid list to set the bid line VolumeControlPriority to FrequencyGoal.
-BidLines.Range.Min	0	The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
+Property Value Example Description
+Name camp1234 1/24 Frequency Goal An alphanumeric string with whitespace to identify the bid list.
+BidListOwner Campaign The type of the owner of this bid list.
+BidListOwnerId camp1234 The ID of the campaign that owns the bid list.
+BidListAdjustmentType Optimized Setting the BidListAdjustmentType to Optimized allows the bid list to set the bid line VolumeControlPriority to FrequencyGoal.
+BidLines.Range.Min 0 The minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes.
 To include users who have not yet seen the ad, set this value to 0.
-BidLines.Range.Max	2	The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency goal fraction.
-BidLines.BidAdjustment	1	Bid lines in a bid list using VolumeControlPriority must always have their bid adjustment set to 1.
-BidLines.VolumeControlPriority	FrequencyGoal	The volume control priority to apply to this adjustment.
+BidLines.Range.Max 2 The maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes. This is the numerator in the frequency goal fraction.
+BidLines.BidAdjustment 1 Bid lines in a bid list using VolumeControlPriority must always have their bid adjustment set to 1.
+BidLines.VolumeControlPriority FrequencyGoal The volume control priority to apply to this adjustment.
 FAQs
 
 The following is a list of commonly asked questions about frequency caps.
@@ -8370,15 +8359,11 @@ To make your frequency goal configuration editable in the platform UI, be sure t
 
 Create only one counter per ad group. If you reuse counters on multiple ad groups, you will not be able to edit values in the UI without using the Override Values button.
 
-
 Associate and enable only one frequency cap bid list for the ad group. The bid list must be owned by the same ad group.
-
 
 Make sure that the ad group’s Increments list includes the same counter ID as the bid list associated with the ad group.
 
-
 If you are defining both a frequency cap and a frequency goal for an ad group, use separate counters, even if the cap and goal have the same reset interval.
-
 
 ---
 
@@ -8414,10 +8399,10 @@ To add the ad group in AssociatedAdGroups as an increment for this counter, set 
 
 For example, the following POST /v3/frequency/config request sample illustrates how to create a bid list with the following three frequency ranges and bid adjustments for a 4-week interval:
 
-Range Description	Min	Max	Bid Adjustment
-No ads seen yet / first ad to be shown	0	1	1.75
-Ad seen 1-4 times / to show ad 2-5 times	1	5	1.5
-Ad seen 5-9 times / to show ad 6-10 times	5	10	1.25
+Range Description Min Max Bid Adjustment
+No ads seen yet / first ad to be shown 0 1 1.75
+Ad seen 1-4 times / to show ad 2-5 times 1 5 1.5
+Ad seen 5-9 times / to show ad 6-10 times 5 10 1.25
 
 Here's a request example:
 
@@ -8511,19 +8496,19 @@ Here's a request example:
 The following tables explain the property values in the above request.
 
 Counter Properties
-Property	Value Example	Description
-AdvertiserId	advt1234	The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
-ResetIntervalInMinutes	40320	A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes, for example, 4 weeks x 60 min = 40320 min.
-CounterName	advt1234 Four Weeks	An optional alphanumeric string with whitespace to identify the counter.
+Property Value Example Description
+AdvertiserId advt1234 The platform ID of the advertiser that owns this counter. This value cannot be updated after creation.
+ResetIntervalInMinutes 40320 A positive integer that defines the time interval (in minutes) after which the frequency counter is reset to 0. This is the denominator in the frequency cap fraction in minutes, for example, 4 weeks x 60 min = 40320 min.
+CounterName advt1234 Four Weeks An optional alphanumeric string with whitespace to identify the counter.
 Bid List Properties
-Property	Value Example	Description
-Name	adgr1234 Four Week Frequency	An alphanumeric string with whitespace to identify the bid list.
-BidListOwner	AdGroup	The type of the owner of this bid list.
-BidListOwnerId	adgr1234	The ID of the owning ad group.
-BidListAdjustmentType	Optimized	The bid list adjustment type.
-BidLines.Range.Min	N/A	The respective minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes for each frequency range in the bid list.
-BidLines.Range.Max	N/A	The respective maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes for each frequency range in the bid list.
-BidLines.BidAdjustment	N/A	The respective bid list adjustment amount for each frequency range in the bid list.
+Property Value Example Description
+Name adgr1234 Four Week Frequency An alphanumeric string with whitespace to identify the bid list.
+BidListOwner AdGroup The type of the owner of this bid list.
+BidListOwnerId adgr1234 The ID of the owning ad group.
+BidListAdjustmentType Optimized The bid list adjustment type.
+BidLines.Range.Min N/A The respective minimum number of times to show an ad to a user within the counter's ResetIntervalInMinutes for each frequency range in the bid list.
+BidLines.Range.Max N/A The respective maximum number of times to show an ad to a user within the counter's ResetIntervalInMinutes for each frequency range in the bid list.
+BidLines.BidAdjustment N/A The respective bid list adjustment amount for each frequency range in the bid list.
 
 ---
 
@@ -8535,9 +8520,9 @@ Custom Optimization Algorithms
 
 The Trade Desk offers the following custom optimization algorithms:
 
-Algorithm	Description
-Dimensional Bidding	As a feature, dimensional bidding allows you to apply one bid factor to a combination of target vector values. For example, you could apply a bid factor of 3.14 to the combination of mobile (device type) and Singapore (geo). If you targeted each of those vectors separately with a different bid factor, your two bid factors would multiply together. Multiplying multiple bid factors together to target precise, high-value market niches can result in unnecessarily high bids, which may result in the need for a max bid to act as a cap on your bid possibilities. To solve for this, you can extend your current ad group strategy with dimensional bidding to look for small pockets of high value while avoiding an exponential rise in bid value.
-User Scoring	By default, ad groups assign all users in an audience the same base bid for each impression. User scoring provides an opportunity to assign a discrete bid value for each user, thus allowing a partner to override an ad group's base bid when creating data segments in The Trade Desk platform. This functionality combined with the data available in REDS solves the problem of determining the value of users that haven't been seen before.
+Algorithm Description
+Dimensional Bidding As a feature, dimensional bidding allows you to apply one bid factor to a combination of target vector values. For example, you could apply a bid factor of 3.14 to the combination of mobile (device type) and Singapore (geo). If you targeted each of those vectors separately with a different bid factor, your two bid factors would multiply together. Multiplying multiple bid factors together to target precise, high-value market niches can result in unnecessarily high bids, which may result in the need for a max bid to act as a cap on your bid possibilities. To solve for this, you can extend your current ad group strategy with dimensional bidding to look for small pockets of high value while avoiding an exponential rise in bid value.
+User Scoring By default, ad groups assign all users in an audience the same base bid for each impression. User scoring provides an opportunity to assign a discrete bid value for each user, thus allowing a partner to override an ad group's base bid when creating data segments in The Trade Desk platform. This functionality combined with the data available in REDS solves the problem of determining the value of users that haven't been seen before.
 
 ---
 
@@ -8557,11 +8542,11 @@ Dimensional bidding is key performance indicator (KPI)-agnostic, so it doesn't m
 
 This guide uses data from the REDS service as its input source, but you can use any data available to you to tailor your bidding strategy. The KPI you choose will determine the type of REDS events that you need to ingest.
 
-CPA	CTR	CPC	CPCV	TVCR	Viewability
-Impressions	*	*	*	*	*	*
-Conversions	*
-Clicks	*	*	*
-Video Events				*	*	*
+CPA CTR CPC CPCV TVCR Viewability
+Impressions \* \* \* \* \* _
+Conversions _
+Clicks \* \* _
+Video Events _ \* \*
 Considerations
 
 To create a bid list with more than two dimensions, like the examples in this article, please contact your Account Manager.
@@ -8678,7 +8663,7 @@ The first major code snippet showcases the importance of choosing the most appro
 1
 2
 subImpData <- impData2 %>% select(impID, advertiserID, campaignID, adgroupID, ssp, publisherID, site, placementID)
-subImpData$SPSPID = paste(subImpData$ssp, subImpData$publisherID, subImpData$site, subImpData$placementID, sep="_")
+subImpData$SPSPID = paste(subImpData$ssp, subImpData$publisherID, subImpData$site, subImpData$placementID, sep="\_")
 
 Following your selection of specific combinations, you can then determine how to handle the calculation of the click-through rates (CTRs) for each combination (in this case, the combination of SSP, publisher, site, and impression placement ID). The CTR ratio requires the numerator count, or the number of times a combination has appeared for a specific campaign and ad group.
 
@@ -8709,7 +8694,7 @@ With the above calculations finished, you could create a mathematical threshold 
 1
 2
 3
-transformedData3 <- transformedData2 %>% group_by(campaignID, adgroupID.x) %>% mutate(sdFactor = 0.1*(ctr/ctrThreshold))
+transformedData3 <- transformedData2 %>% group_by(campaignID, adgroupID.x) %>% mutate(sdFactor = 0.1\*(ctr/ctrThreshold))
 transformedData3 <- unique(transformedData3, by = c("campaignID", "adgroupID.x", "SPSPID.x"))
 finalData <- transformedData3 %>% filter(ctr >= ctrThreshold & ctr > 0)
 Activate
@@ -8971,7 +8956,7 @@ GET /v3/adgroup/{adGroupId} Response
 "AdGroupCategory":{
 "CategoryId": 8311
 },
-"RTBAttributes": {}, /*This object was collapsed to save page space.*/
+"RTBAttributes": {}, /_This object was collapsed to save page space._/
 "Availability": "Available",
 "CreatedAtUTC": "2020-03-11T00:39:53.227",
 "LastUpdatedAtUTC": "2020-03-11T00:39:53.227",
@@ -9085,7 +9070,7 @@ PUT /v3/adgroup Response
 "AdGroupCategory":{
 "CategoryId": 8311
 },
-"RTBAttributes": {}, /*This object was collapsed to save page space.*/
+"RTBAttributes": {}, /_This object was collapsed to save page space._/
 "Availability": "Available",
 "CreatedAtUTC": "2020-03-11T00:39:53.227",
 "LastUpdatedAtUTC": "2020-03-11T00:39:53.227",
@@ -9141,11 +9126,11 @@ Step One - Identify a Data Source
 
 Once a business problem has been identified and the relevant Key Performance Indicator (KPI) selected, the right data set needs to be identified to correctly build the model. The table below shows the most common data sources depending on the main KPI:
 
-CPA	CTR	CPC	CPCV	TVCR	Viewability
-Impressions	*	*	*	*	*	*
-Conversions	*
-Clicks	*	*	*
-Video Events				*	*	*
+CPA CTR CPC CPCV TVCR Viewability
+Impressions \* \* \* \* \* _
+Conversions _
+Clicks \* \* _
+Video Events _ \* \*
 Step Two - Choose an Ad Group
 
 Once you've decided on a data source, you should next consider which ad group will be used to build a model for User Scoring predictions. Whichever ad group or groups you select, remember that their configuration will act as a statistical experiment to generate the sample data that will be used for modeling.
@@ -9353,7 +9338,7 @@ Before training your first machine learning model, you may need to deal with the
 
 An example of this is shown in the following code snippet that helps determine how many features are needed.
 
-plot(cumsum(pcaData$sdev)/sum(pcaData$sdev)*100,main='Cumulative proportion of variance explained',ylab='cumulative variance')
+plot(cumsum(pcaData$sdev)/sum(pcaData$sdev)\*100,main='Cumulative proportion of variance explained',ylab='cumulative variance')
 
 This results in the following plot:
 
@@ -9554,16 +9539,16 @@ These new observations would initially come from your REDS data, but you also ha
 
 Our POST /data/advertiser guide covers all the necessary integration considerations however in order to assign a user base bid cpm, you will need to include a new parameter in the JSON payload as Items.Data.BaseBidCPM. See below for details and an example.
 
-POST Fields	Required?	Description
-AdvertiserID	Yes	The ID for the advertiser that will use this data
-Items.TDID	Yes, if DAID is blank	The Trade Desk ID for the user
+POST Fields Required? Description
+AdvertiserID Yes The ID for the advertiser that will use this data
+Items.TDID Yes, if DAID is blank The Trade Desk ID for the user
 It is a requirement to use either a Trade Desk ID (TDID) or Device Advertising ID (DAID)
-Items.DAID	Yes, if TDID is blank	The DAID for the user; can be the iOS IDFA or AAID
+Items.DAID Yes, if TDID is blank The DAID for the user; can be the iOS IDFA or AAID
 It is a requirement to use either a TDID or DAID
-Items.Data.Name	Yes	A name that describes the data being assigned to this user; will be used as the element name in the UI for targeting
-Items.Data.TimestampUTC	No	Used for recency targeting; omitting this field assumes the user was put into the segment as soon as The Trade Desk processed the data, instead of when the user was actually eligible for the data segment
-Items.Data.TTLinMinutes	Yes	How long this user will remain active, relative to Items.Data.TimestampUTC; once it has expired, this data will not be used for targeting
-Items.Data.BaseBidCPM	No	A base bid override for this user. When this is not empty, it will override the ad group's base bid.
+Items.Data.Name Yes A name that describes the data being assigned to this user; will be used as the element name in the UI for targeting
+Items.Data.TimestampUTC No Used for recency targeting; omitting this field assumes the user was put into the segment as soon as The Trade Desk processed the data, instead of when the user was actually eligible for the data segment
+Items.Data.TTLinMinutes Yes How long this user will remain active, relative to Items.Data.TimestampUTC; once it has expired, this data will not be used for targeting
+Items.Data.BaseBidCPM No A base bid override for this user. When this is not empty, it will override the ad group's base bid.
 If more than one base bid is assigned to a user across multiple data elements, then the highest base bid will be used.
 BaseBidCPM in Data API
 1
@@ -9648,4 +9633,3 @@ Hidden endpoints may require additional access through your Technical Account Ma
 There are exceptions to the list order, such as /v3/ecommerce, which contains a large set of endpoints that are grouped differently.
 
 ---
-

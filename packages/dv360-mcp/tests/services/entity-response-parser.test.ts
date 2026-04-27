@@ -66,7 +66,7 @@ describe("extractEntitiesFromListResponse", () => {
   // Y-ending pluralisation (consonant + y → ies)
   // ==========================================================================
 
-  describe('y-ending plural (consonant + y → ies)', () => {
+  describe("y-ending plural (consonant + y → ies)", () => {
     it('finds "categories" for entityType "category"', () => {
       const response = {
         categories: [{ name: "cat-1" }],

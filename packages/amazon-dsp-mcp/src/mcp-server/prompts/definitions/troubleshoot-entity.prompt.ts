@@ -25,9 +25,7 @@ export const amazonDspTroubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getAmazonDspTroubleshootEntityMessage(
-  args?: Record<string, string>,
-): string {
+export function getAmazonDspTroubleshootEntityMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   const profileId = args?.profileId || "{profileId}";

@@ -21,9 +21,7 @@ export const linkedInBulkOperationsWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getLinkedInBulkOperationsWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getLinkedInBulkOperationsWorkflowMessage(args?: Record<string, string>): string {
   const adAccountUrn = args?.adAccountUrn || "{adAccountUrn}";
   const operation = args?.operation ?? "update";
 
@@ -41,7 +39,9 @@ export function getLinkedInBulkOperationsWorkflowMessage(
 | \`linkedin_adjust_bids\` | 50 | Batch adjust campaign bid amounts |
 
 ---
-${operation === "create" ? `
+${
+  operation === "create"
+    ? `
 ## Bulk Create Workflow
 
 ### Step 1: Validate a single entity first
@@ -95,7 +95,8 @@ linkedin_list_entities({
   "count": 50
 })
 \`\`\`
-` : `
+`
+    : `
 ## Bulk Update Workflow
 
 ### Step 1: List entities to update
@@ -135,7 +136,8 @@ linkedin_bulk_update_status({
   "status": "PAUSED"
 })
 \`\`\`
-`}
+`
+}
 
 ## Bulk Bid Adjustment
 

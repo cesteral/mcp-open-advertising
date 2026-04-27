@@ -163,7 +163,8 @@ GET /v2/adAnalytics?
 export const analyticsReferenceResource: Resource = {
   uri: "analytics-reference://linkedin",
   name: "LinkedIn Analytics Reference",
-  description: "Available metrics, pivot dimensions, date formats, and examples for LinkedIn adAnalytics API",
+  description:
+    "Available metrics, pivot dimensions, date formats, and examples for LinkedIn adAnalytics API",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatAnalyticsReferenceMarkdown();

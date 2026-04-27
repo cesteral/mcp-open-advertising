@@ -36,22 +36,12 @@ CM360 schedules are embedded in the report resource itself. The returned reportI
 
 export const CreateReportScheduleInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    name: z
-      .string()
-      .min(1)
-      .describe("Name for the scheduled report"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    name: z.string().min(1).describe("Name for the scheduled report"),
     type: CM360ReportTypeSchema.describe("Report type"),
     schedule: CM360ScheduleSchema.describe("Schedule configuration"),
-    criteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for STANDARD reports"),
-    reachCriteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for REACH reports"),
+    criteria: genericCriteriaSchema.optional().describe("Criteria for STANDARD reports"),
+    reachCriteria: genericCriteriaSchema.optional().describe("Criteria for REACH reports"),
     pathToConversionCriteria: genericCriteriaSchema
       .optional()
       .describe("Criteria for PATH_TO_CONVERSION reports"),
@@ -72,11 +62,7 @@ export const CreateReportScheduleInputSchema = z
   })
   .superRefine((input, ctx) => {
     validateTypedCriteriaUsage(input as Parameters<typeof validateTypedCriteriaUsage>[0], ctx);
-    validateScheduleCompatibility(
-      input.type,
-      getReportCriteriaFromConfig(input, input.type),
-      ctx
-    );
+    validateScheduleCompatibility(input.type, getReportCriteriaFromConfig(input, input.type), ctx);
   })
   .describe("Parameters for creating a scheduled CM360 report");
 
@@ -119,7 +105,9 @@ export async function createReportScheduleLogic(
   };
 }
 
-export function createReportScheduleResponseFormatter(result: CreateReportScheduleOutput): McpTextContent[] {
+export function createReportScheduleResponseFormatter(
+  result: CreateReportScheduleOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

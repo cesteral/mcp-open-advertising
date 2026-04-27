@@ -21,21 +21,13 @@ Max 50 items per call. ad_account_id is automatically injected per item.`;
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to create"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
     campaignId: z
       .string()
       .optional()
       .describe("Campaign ID — required when entityType is 'adGroup'"),
-    adSquadId: z
-      .string()
-      .optional()
-      .describe("Ad Squad ID — required when entityType is 'ad'"),
+    adSquadId: z.string().optional().describe("Ad Squad ID — required when entityType is 'ad'"),
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -97,7 +89,9 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): McpTextContent[] {
+export function bulkCreateEntitiesResponseFormatter(
+  result: BulkCreateEntitiesOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Bulk create: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

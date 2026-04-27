@@ -15,20 +15,34 @@ import { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas
 import { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 import { reportingReferenceResource } from "./reporting-reference.resource.js";
 import { allTools } from "../../tools/definitions/index.js";
-import {
-  createToolExamplesResource,
-  createServerCapabilitiesResource,
-} from "@cesteral/shared";
+import { createToolExamplesResource, createServerCapabilitiesResource } from "@cesteral/shared";
 import type { Resource } from "../types.js";
 
 const toolExamplesResource = createToolExamplesResource(allTools, "amazon-dsp-mcp");
 const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "amazon-dsp-mcp",
   toolGroups: {
-    crud: ["amazon_dsp_list_entities", "amazon_dsp_get_entity", "amazon_dsp_create_entity", "amazon_dsp_update_entity", "amazon_dsp_delete_entity"],
+    crud: [
+      "amazon_dsp_list_entities",
+      "amazon_dsp_get_entity",
+      "amazon_dsp_create_entity",
+      "amazon_dsp_update_entity",
+      "amazon_dsp_delete_entity",
+    ],
     account: ["amazon_dsp_list_advertisers"],
-    reporting: ["amazon_dsp_get_report", "amazon_dsp_get_report_breakdowns", "amazon_dsp_submit_report", "amazon_dsp_check_report_status", "amazon_dsp_download_report"],
-    bulk: ["amazon_dsp_bulk_update_status", "amazon_dsp_bulk_create_entities", "amazon_dsp_bulk_update_entities", "amazon_dsp_adjust_bids"],
+    reporting: [
+      "amazon_dsp_get_report",
+      "amazon_dsp_get_report_breakdowns",
+      "amazon_dsp_submit_report",
+      "amazon_dsp_check_report_status",
+      "amazon_dsp_download_report",
+    ],
+    bulk: [
+      "amazon_dsp_bulk_update_status",
+      "amazon_dsp_bulk_create_entities",
+      "amazon_dsp_bulk_update_entities",
+      "amazon_dsp_adjust_bids",
+    ],
     targeting: ["amazon_dsp_search_targeting"],
     specialized: ["amazon_dsp_duplicate_entity", "amazon_dsp_get_ad_preview"],
     validation: ["amazon_dsp_validate_entity"],

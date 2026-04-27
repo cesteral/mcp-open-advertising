@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const floodlightWorkflowPrompt: Prompt = {
   name: "cm360_floodlight_workflow",
-  description:
-    "Guide for setting up CM360 Floodlight conversion tracking",
+  description: "Guide for setting up CM360 Floodlight conversion tracking",
   arguments: [
     {
       name: "profileId",
@@ -21,9 +20,7 @@ export const floodlightWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getFloodlightWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getFloodlightWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
   const advertiserId = args?.advertiserId || "{advertiserId}";
   return `# CM360 Floodlight Conversion Tracking Setup

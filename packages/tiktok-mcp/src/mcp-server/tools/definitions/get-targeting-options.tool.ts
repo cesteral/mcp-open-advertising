@@ -19,10 +19,7 @@ INTEREST_KEYWORD, ISP, LANGUAGE, LOCATION`;
 
 export const GetTargetingOptionsInputSchema = z
   .object({
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
     optionType: z
       .enum([
         "ACTION_CATEGORY",
@@ -35,10 +32,7 @@ export const GetTargetingOptionsInputSchema = z
         "LOCATION",
       ])
       .describe("Which official TikTok targeting endpoint to query"),
-    keyword: z
-      .string()
-      .optional()
-      .describe("Keyword for INTEREST_KEYWORD lookups"),
+    keyword: z.string().optional().describe("Keyword for INTEREST_KEYWORD lookups"),
     placements: z
       .array(z.string())
       .optional()
@@ -55,10 +49,7 @@ export const GetTargetingOptionsInputSchema = z
       .enum(["ANDROID", "IOS"])
       .optional()
       .describe("Optional OS filter used by LOCATION lookups"),
-    locationIds: z
-      .array(z.string())
-      .optional()
-      .describe("Location IDs used by ISP lookups"),
+    locationIds: z.array(z.string()).optional().describe("Location IDs used by ISP lookups"),
     scene: z
       .enum(["ISP"])
       .optional()
@@ -108,7 +99,9 @@ export async function getTargetingOptionsLogic(
   };
 }
 
-export function getTargetingOptionsResponseFormatter(result: GetTargetingOptionsOutput): McpTextContent[] {
+export function getTargetingOptionsResponseFormatter(
+  result: GetTargetingOptionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

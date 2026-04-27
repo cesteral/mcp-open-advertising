@@ -13,7 +13,9 @@ describe("msads-mcp tool definitions coverage", () => {
       expect(tool.inputSchema, `${tool.name} missing inputSchema`).toBeTruthy();
       expect(tool.outputSchema, `${tool.name} missing outputSchema`).toBeTruthy();
       expect(tool.logic, `${tool.name} missing logic`).toBeTypeOf("function");
-      expect(tool.responseFormatter, `${tool.name} missing responseFormatter`).toBeTypeOf("function");
+      expect(tool.responseFormatter, `${tool.name} missing responseFormatter`).toBeTypeOf(
+        "function"
+      );
     }
   });
 

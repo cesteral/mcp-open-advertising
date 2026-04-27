@@ -18,13 +18,8 @@ Deleted entities cannot be recovered. Consider using \`snapchat_bulk_update_stat
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to delete"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)

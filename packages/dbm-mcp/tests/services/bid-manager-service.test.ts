@@ -46,12 +46,8 @@ vi.mock("../../src/services/bid-manager/report-parser.js", () => ({
 vi.mock("../../src/utils/math.js", () => ({
   safeDivide: vi
     .fn()
-    .mockImplementation((a: number, b: number, fallback: number) =>
-      b === 0 ? fallback : a / b
-    ),
-  round: vi
-    .fn()
-    .mockImplementation((v: number, d: number) => Number(v.toFixed(d))),
+    .mockImplementation((a: number, b: number, fallback: number) => (b === 0 ? fallback : a / b)),
+  round: vi.fn().mockImplementation((v: number, d: number) => Number(v.toFixed(d))),
 }));
 
 // Import after mocks
@@ -231,19 +227,13 @@ describe("BidManagerService", () => {
         data: { queryId: undefined },
       });
 
-      await expect(service.createQuery(createQuerySpec())).rejects.toThrow(
-        QueryCreationError
-      );
+      await expect(service.createQuery(createQuerySpec())).rejects.toThrow(QueryCreationError);
     });
 
     it("throws QueryCreationError on API error", async () => {
-      mockClient.queries.create.mockRejectedValue(
-        new Error("API unavailable")
-      );
+      mockClient.queries.create.mockRejectedValue(new Error("API unavailable"));
 
-      await expect(service.createQuery(createQuerySpec())).rejects.toThrow(
-        QueryCreationError
-      );
+      await expect(service.createQuery(createQuerySpec())).rejects.toThrow(QueryCreationError);
     });
   });
 
@@ -270,17 +260,13 @@ describe("BidManagerService", () => {
         data: { key: {} },
       });
 
-      await expect(service.runQuery("q-123")).rejects.toThrow(
-        QueryExecutionError
-      );
+      await expect(service.runQuery("q-123")).rejects.toThrow(QueryExecutionError);
     });
 
     it("throws QueryExecutionError on API error", async () => {
       mockClient.queries.run.mockRejectedValue(new Error("API error"));
 
-      await expect(service.runQuery("q-123")).rejects.toThrow(
-        QueryExecutionError
-      );
+      await expect(service.runQuery("q-123")).rejects.toThrow(QueryExecutionError);
     });
   });
 
@@ -323,9 +309,7 @@ describe("BidManagerService", () => {
         message: "Not found",
       });
 
-      await expect(
-        service.getReportStatus("q-123", "r-456")
-      ).rejects.toThrow(BidManagerError);
+      await expect(service.getReportStatus("q-123", "r-456")).rejects.toThrow(BidManagerError);
     });
   });
 
@@ -344,9 +328,7 @@ describe("BidManagerService", () => {
         },
       });
 
-      const result = await withAdvancedTimers(() =>
-        service.pollForCompletion("q-123", "r-456")
-      );
+      const result = await withAdvancedTimers(() => service.pollForCompletion("q-123", "r-456"));
 
       expect(result.status.state).toBe("DONE");
       expect(result.googleCloudStoragePath).toBe("gs://bucket/report.csv");
@@ -524,9 +506,7 @@ describe("BidManagerService", () => {
     });
 
     it("re-runs when getReportStatus throws", async () => {
-      mockClient.queries.reports.get.mockRejectedValue(
-        new Error("Not found")
-      );
+      mockClient.queries.reports.get.mockRejectedValue(new Error("Not found"));
       mockClient.queries.run.mockResolvedValue({
         data: { key: { reportId: "r-new" } },
       });
@@ -737,9 +717,7 @@ describe("BidManagerService", () => {
       );
 
       expect(result).toBe("header1,header2\nvalue1,value2");
-      expect(fetch).toHaveBeenCalledWith(
-        "https://storage.googleapis.com/bucket/report.csv"
-      );
+      expect(fetch).toHaveBeenCalledWith("https://storage.googleapis.com/bucket/report.csv");
     });
 
     it("throws ReportFetchError on HTTP error", async () => {
@@ -752,20 +730,17 @@ describe("BidManagerService", () => {
         })
       );
 
-      await expect(
-        service.fetchReportData("https://example.com/report.csv")
-      ).rejects.toThrow(ReportFetchError);
+      await expect(service.fetchReportData("https://example.com/report.csv")).rejects.toThrow(
+        ReportFetchError
+      );
     });
 
     it("throws ReportFetchError on network error", async () => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockRejectedValue(new Error("Network timeout"))
-      );
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network timeout")));
 
-      await expect(
-        service.fetchReportData("https://example.com/report.csv")
-      ).rejects.toThrow(ReportFetchError);
+      await expect(service.fetchReportData("https://example.com/report.csv")).rejects.toThrow(
+        ReportFetchError
+      );
     });
   });
 
@@ -798,9 +773,7 @@ describe("BidManagerService", () => {
       // Verify the query spec was built correctly
       const createCall = mockClient.queries.create.mock.calls[0][0];
       expect(createCall.requestBody.metadata.title).toContain("camp-456");
-      expect(createCall.requestBody.metadata.dataRange.range).toBe(
-        "CUSTOM_DATES"
-      );
+      expect(createCall.requestBody.metadata.dataRange.range).toBe("CUSTOM_DATES");
       expect(createCall.requestBody.params.filters).toEqual(
         expect.arrayContaining([
           { type: "FILTER_ADVERTISER", value: "adv-123" },
@@ -1030,12 +1003,8 @@ describe("BidManagerService", () => {
 
       // Verify the query used a preset range
       const createCall = mockClient.queries.create.mock.calls[0][0];
-      expect(createCall.requestBody.metadata.dataRange.range).toBe(
-        "LAST_7_DAYS"
-      );
-      expect(
-        createCall.requestBody.metadata.dataRange.customStartDate
-      ).toBeUndefined();
+      expect(createCall.requestBody.metadata.dataRange.range).toBe("LAST_7_DAYS");
+      expect(createCall.requestBody.metadata.dataRange.customStartDate).toBeUndefined();
     });
 
     it("handles custom date range", async () => {
@@ -1059,12 +1028,8 @@ describe("BidManagerService", () => {
       expect(result.status).toBe("DONE");
 
       const createCall = mockClient.queries.create.mock.calls[0][0];
-      expect(createCall.requestBody.metadata.dataRange.range).toBe(
-        "CUSTOM_DATES"
-      );
-      expect(
-        createCall.requestBody.metadata.dataRange.customStartDate
-      ).toEqual({
+      expect(createCall.requestBody.metadata.dataRange.range).toBe("CUSTOM_DATES");
+      expect(createCall.requestBody.metadata.dataRange.customStartDate).toEqual({
         year: 2024,
         month: 3,
         day: 1,

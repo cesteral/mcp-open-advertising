@@ -39,7 +39,9 @@ export class ResourceRegistry {
    * Find a resource by URI template pattern
    * Supports URI templates with parameters (e.g., "entity-schema://{entityType}")
    */
-  findResourceByUri(uri: string): { resource: ResourceDefinition; params: Record<string, string> } | null {
+  findResourceByUri(
+    uri: string
+  ): { resource: ResourceDefinition; params: Record<string, string> } | null {
     for (const resource of this.resources.values()) {
       const params = this.matchUriTemplate(resource.uriTemplate, uri);
       if (params !== null) {

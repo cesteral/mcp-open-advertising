@@ -19,9 +19,7 @@ This is a zero-argument cold-start tool. It requires no prior knowledge of the a
 2. \`ttd_list_entities\` (entityType: advertiser, partnerId: "...") → list advertisers
 3. \`ttd_list_entities\` (entityType: campaign, advertiserId: "...") → list campaigns`;
 
-export const GetContextInputSchema = z
-  .object({})
-  .describe("No inputs required");
+export const GetContextInputSchema = z.object({}).describe("No inputs required");
 
 export const GetContextOutputSchema = z
   .object({
@@ -49,21 +47,19 @@ export async function getContextLogic(
 ): Promise<GetContextOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  const result = (await ttdService.graphqlQuery(
-    PARTNERS_QUERY,
-    undefined,
-    context
-  )) as Record<string, unknown>;
+  const result = (await ttdService.graphqlQuery(PARTNERS_QUERY, undefined, context)) as Record<
+    string,
+    unknown
+  >;
 
   throwIfGraphqlErrors(result, "GraphQL error fetching partner context");
 
   const data = (result.data as Record<string, unknown> | undefined) ?? result;
-  const partners = (
-    (data.partners as Record<string, unknown> | undefined)?.nodes as Array<{
+  const partners =
+    ((data.partners as Record<string, unknown> | undefined)?.nodes as Array<{
       id: string;
       name: string;
-    }>
-  ) ?? [];
+    }>) ?? [];
 
   return {
     partners,
@@ -81,9 +77,7 @@ export function getContextResponseFormatter(result: GetContextOutput): McpTextCo
     ];
   }
 
-  const lines = result.partners
-    .map((p) => `- ${p.name} (id: \`${p.id}\`)`)
-    .join("\n");
+  const lines = result.partners.map((p) => `- ${p.name} (id: \`${p.id}\`)`).join("\n");
 
   return [
     {

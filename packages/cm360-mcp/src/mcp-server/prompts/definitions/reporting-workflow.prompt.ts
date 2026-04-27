@@ -15,9 +15,7 @@ export const reportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getReportingWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getReportingWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
   return `# CM360 Reporting Workflow
 

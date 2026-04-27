@@ -25,17 +25,17 @@ Use this to stop a report that is currently generating. Only reports in the \`IN
 
 export const CancelReportExecutionInputSchema = z
   .object({
-    executionId: z
-      .string()
-      .min(1)
-      .describe("Execution ID of the in-progress report to cancel"),
+    executionId: z.string().min(1).describe("Execution ID of the in-progress report to cancel"),
   })
   .describe("Parameters for cancelling a TTD report execution");
 
 export const CancelReportExecutionOutputSchema = z
   .object({
     executionId: z.string().describe("Execution ID echoed from input"),
-    isCancelled: z.boolean().optional().describe("Whether the execution was successfully cancelled"),
+    isCancelled: z
+      .boolean()
+      .optional()
+      .describe("Whether the execution was successfully cancelled"),
     errors: z
       .array(z.object({ field: z.string().optional(), message: z.string() }))
       .optional()
@@ -88,9 +88,7 @@ export async function cancelReportExecutionLogic(
   const mutationResult =
     (gqlData.myReportsReportExecutionCancel as Record<string, unknown> | undefined) ?? {};
   const executionData = (mutationResult.data as Record<string, unknown> | undefined) ?? {};
-  const errors = mutationResult.errors as
-    | Array<{ field?: string; message: string }>
-    | undefined;
+  const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
   return {
     executionId: input.executionId,
@@ -110,9 +108,7 @@ export function cancelReportExecutionResponseFormatter(
         type: "text" as const,
         text:
           `Report execution cancellation failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];

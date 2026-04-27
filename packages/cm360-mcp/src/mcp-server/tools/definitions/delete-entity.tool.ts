@@ -17,17 +17,9 @@ Only floodlightActivity supports deletion. Other entity types must be archived b
 
 export const DeleteEntityInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getDeletableEntityTypeEnum())
-      .describe("Type of entity to delete"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to delete"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getDeletableEntityTypeEnum()).describe("Type of entity to delete"),
+    entityId: z.string().min(1).describe("The entity ID to delete"),
   })
   .describe("Parameters for deleting a CM360 entity");
 

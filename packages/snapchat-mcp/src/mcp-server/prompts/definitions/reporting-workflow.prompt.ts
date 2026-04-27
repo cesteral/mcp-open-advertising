@@ -21,9 +21,7 @@ export const snapchatReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getSnapchatReportingWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getSnapchatReportingWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
   const reportLevel = args?.reportLevel || "AUCTION";
 

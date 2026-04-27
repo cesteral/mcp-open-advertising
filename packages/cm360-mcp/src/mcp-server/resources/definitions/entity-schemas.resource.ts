@@ -118,7 +118,8 @@ export const entitySchemaAllResource: Resource = {
   name: "All CM360 Entity Schemas",
   description: "Combined schema reference for all CM360 entity types",
   mimeType: "text/markdown",
-  getContent: () => getSupportedEntityTypes()
-    .map((t) => ENTITY_SCHEMAS[t])
-    .join("\n\n---\n\n"),
+  getContent: () =>
+    getSupportedEntityTypes()
+      .map((t) => ENTITY_SCHEMAS[t])
+      .join("\n\n---\n\n"),
 };

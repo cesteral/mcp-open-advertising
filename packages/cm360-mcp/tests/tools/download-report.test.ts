@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -157,7 +163,13 @@ describe("downloadReportLogic", () => {
 
   it("rejects Excel downloads", async () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(
-      mockResponse("binary", true, 200, "OK", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+      mockResponse(
+        "binary",
+        true,
+        200,
+        "OK",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      )
     );
 
     await expect(
@@ -173,7 +185,12 @@ describe("downloadReportLogic", () => {
     mockState.cm360ReportingService.downloadReportFile.mockResolvedValue(mockResponse(csv));
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://example.com/report.csv", mode: "rows", maxRows: 1000, includeComputedMetrics: true },
+      {
+        downloadUrl: "https://example.com/report.csv",
+        mode: "rows",
+        maxRows: 1000,
+        includeComputedMetrics: true,
+      },
       mockContext
     );
 
@@ -217,7 +234,10 @@ describe("downloadReportResponseFormatter", () => {
       headers: ["A", "B"],
       selectedColumns: ["A", "B"],
       mode: "rows",
-      rows: [["1", "2"], ["3", "4"]],
+      rows: [
+        ["1", "2"],
+        ["3", "4"],
+      ],
       totalRows: 2,
       returnedRows: 2,
       truncated: false,

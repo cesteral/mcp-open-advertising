@@ -35,14 +35,17 @@ export const GetAvailableMetricsInputSchema = z
       .enum(["account", "campaign", "adset", "ad"])
       .optional()
       .describe(
-        "Entity level you plan to report on. Currently the catalog is identical across levels; the parameter is retained so callers can adopt level-specific filtering in a future revision without a breaking change.",
+        "Entity level you plan to report on. Currently the catalog is identical across levels; the parameter is retained so callers can adopt level-specific filtering in a future revision without a breaking change."
       ),
   })
   .describe("Parameters for listing available Meta insights fields");
 
 export const GetAvailableMetricsOutputSchema = z
   .object({
-    level: z.string().nullable().describe("Level the response was scoped to (null when not provided)"),
+    level: z
+      .string()
+      .nullable()
+      .describe("Level the response was scoped to (null when not provided)"),
     metrics: z
       .record(z.array(z.string()))
       .describe("Metric field names grouped by semantic category"),
@@ -59,7 +62,7 @@ type GetAvailableMetricsOutput = z.infer<typeof GetAvailableMetricsOutputSchema>
 export async function getAvailableMetricsLogic(
   input: GetAvailableMetricsInput,
   _context: RequestContext,
-  _sdkContext?: SdkContext,
+  _sdkContext?: SdkContext
 ): Promise<GetAvailableMetricsOutput> {
   return {
     level: input.level ?? null,
@@ -72,7 +75,7 @@ export async function getAvailableMetricsLogic(
 }
 
 export function getAvailableMetricsResponseFormatter(
-  result: GetAvailableMetricsOutput,
+  result: GetAvailableMetricsOutput
 ): McpTextContent[] {
   const metricLines = Object.entries(result.metrics)
     .map(([group, list]) => `${group} (${list.length}):\n  ${list.join(", ")}`)

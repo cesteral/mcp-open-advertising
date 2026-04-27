@@ -271,8 +271,5 @@ export function parseMetaAppCredentialsFromHeaders(
  * Generate a fingerprint for a Meta access token (for session binding).
  */
 export function getMetaCredentialFingerprint(accessToken: string): string {
-  return createHash("sha256")
-    .update(accessToken.trim())
-    .digest("hex")
-    .substring(0, 32);
+  return createHash("sha256").update(accessToken.trim()).digest("hex").substring(0, 32);
 }

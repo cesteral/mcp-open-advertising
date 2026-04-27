@@ -6,26 +6,26 @@ Guide for validating and publishing Cesteral MCP servers to the [MCP Registry](h
 
 Server metadata lives in two places with a clear ownership boundary:
 
-| File | Role | Committed |
-|------|------|-----------|
-| `registry.json` | Canonical source of rich metadata (tools, resources, prompts, auth, tags) for all 13 servers | Yes |
-| `packages/*/server.json` | Official MCP Registry manifest (generated from `registry.json` + `package.json`) | Yes |
-| `packages/*/package.json` | Contains `mcpName` for registry ownership verification | Yes |
+| File                      | Role                                                                                         | Committed |
+| ------------------------- | -------------------------------------------------------------------------------------------- | --------- |
+| `registry.json`           | Canonical source of rich metadata (tools, resources, prompts, auth, tags) for all 13 servers | Yes       |
+| `packages/*/server.json`  | Official MCP Registry manifest (generated from `registry.json` + `package.json`)             | Yes       |
+| `packages/*/package.json` | Contains `mcpName` for registry ownership verification                                       | Yes       |
 
 `server.json` files are **generated artifacts** — never edit them by hand.
 
 ### Generated server.json Fields
 
-| Field | Source |
-|-------|--------|
-| `$schema` | Hard-coded MCP Registry schema URL |
-| `name` | `mcpName` from `package.json` |
-| `title` | `title` from `registry.json` server entry |
-| `description` | `description` from `registry.json` server entry |
-| `repository` | `repository` from `registry.json` (top-level) |
-| `version` | `version` from `package.json` |
-| `remotes` | Streamable HTTP transport with `{host}` template variable, URL from `remoteUrlTemplate` in `registry.json` |
-| `packages` | npm package with stdio transport, identifier from `package.json` `name` |
+| Field         | Source                                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| `$schema`     | Hard-coded MCP Registry schema URL                                                                         |
+| `name`        | `mcpName` from `package.json`                                                                              |
+| `title`       | `title` from `registry.json` server entry                                                                  |
+| `description` | `description` from `registry.json` server entry                                                            |
+| `repository`  | `repository` from `registry.json` (top-level)                                                              |
+| `version`     | `version` from `package.json`                                                                              |
+| `remotes`     | Streamable HTTP transport with `{host}` template variable, URL from `remoteUrlTemplate` in `registry.json` |
+| `packages`    | npm package with stdio transport, identifier from `package.json` `name`                                    |
 
 ## Workflow
 
@@ -33,7 +33,7 @@ Server metadata lives in two places with a clear ownership boundary:
 
 1. Create/modify tool files in `src/mcp-server/tools/definitions/`
 2. Register in `src/mcp-server/tools/index.ts`
-3. Update the `tools` array for the server in `registry.json`
+3. Run `pnpm run sync:registry-tools` to update the `tools` array for the server in `registry.json`
 4. No changes needed to `server.json` — tool lists are in `registry.json`, not in the generated manifests
 
 ### Bumping a version
@@ -47,6 +47,8 @@ Server metadata lives in two places with a clear ownership boundary:
 ```bash
 pnpm run generate:registry    # Regenerate all server.json files
 pnpm run check:registry       # Verify committed files match generator output (CI)
+pnpm run sync:registry-tools  # Sync registry.json tool lists from tool definitions
+pnpm run check:registry-tools # Verify registry.json tool lists match source definitions (CI)
 ```
 
 ## Validation
@@ -55,9 +57,14 @@ pnpm run check:registry       # Verify committed files match generator output (C
 
 ```bash
 pnpm run check:registry
+pnpm run check:registry-tools
 ```
 
-This compares each committed `server.json` against what the generator would produce. Non-zero exit if any file is stale or missing — safe for CI gates.
+These checks compare each committed `server.json` against what the manifest generator would produce and each `registry.json` tool list against the source tool definitions. Non-zero exit if any file is stale or missing — safe for CI gates.
+
+### Check capability resources
+
+For servers with large tool surfaces, keep `server-capabilities://{server}/overview` grouped by user workflow rather than by implementation file. The overview should list every registered tool exactly once where practical. Any tool left in `ungroupedTools` is a signal that the progressive-discovery surface needs maintenance.
 
 ### Validate JSON syntax
 
@@ -100,18 +107,18 @@ done
 
 ## Current Servers
 
-| Server | mcpName | Tools |
-|--------|---------|-------|
-| `dbm-mcp` | `io.github.cesteral/dbm-mcp` | 5 |
-| `dv360-mcp` | `io.github.cesteral/dv360-mcp` | 24 |
-| `ttd-mcp` | `io.github.cesteral/ttd-mcp` | 21 |
-| `gads-mcp` | `io.github.cesteral/gads-mcp` | 14 |
-| `meta-mcp` | `io.github.cesteral/meta-mcp` | 20 |
-| `linkedin-mcp` | `io.github.cesteral/linkedin-mcp` | 20 |
-| `tiktok-mcp` | `io.github.cesteral/tiktok-mcp` | 23 |
-| `cm360-mcp` | `io.github.cesteral/cm360-mcp` | 16 |
-| `sa360-mcp` | `io.github.cesteral/sa360-mcp` | 11 |
-| `pinterest-mcp` | `io.github.cesteral/pinterest-mcp` | 20 |
-| `snapchat-mcp` | `io.github.cesteral/snapchat-mcp` | 21 |
-| `amazon-dsp-mcp` | `io.github.cesteral/amazon-dsp-mcp` | 20 |
-| `msads-mcp` | `io.github.cesteral/msads-mcp` | 19 |
+| Server           | mcpName                             | Tools |
+| ---------------- | ----------------------------------- | ----- |
+| `dbm-mcp`        | `io.github.cesteral/dbm-mcp`        | 6     |
+| `dv360-mcp`      | `io.github.cesteral/dv360-mcp`      | 25    |
+| `ttd-mcp`        | `io.github.cesteral/ttd-mcp`        | 55    |
+| `gads-mcp`       | `io.github.cesteral/gads-mcp`       | 15    |
+| `meta-mcp`       | `io.github.cesteral/meta-mcp`       | 26    |
+| `linkedin-mcp`   | `io.github.cesteral/linkedin-mcp`   | 20    |
+| `tiktok-mcp`     | `io.github.cesteral/tiktok-mcp`     | 23    |
+| `cm360-mcp`      | `io.github.cesteral/cm360-mcp`      | 20    |
+| `sa360-mcp`      | `io.github.cesteral/sa360-mcp`      | 16    |
+| `pinterest-mcp`  | `io.github.cesteral/pinterest-mcp`  | 22    |
+| `snapchat-mcp`   | `io.github.cesteral/snapchat-mcp`   | 22    |
+| `amazon-dsp-mcp` | `io.github.cesteral/amazon-dsp-mcp` | 18    |
+| `msads-mcp`      | `io.github.cesteral/msads-mcp`      | 24    |

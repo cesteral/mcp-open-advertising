@@ -126,20 +126,20 @@ packages/dv360-mcp/
 
 ### Core Utilities (`src/mcp-server/tools/utils/`)
 
-| File | Purpose | Lines | Status |
-|------|---------|-------|--------|
-| `schemaIntrospection.ts` | Auto-discover schemas from `generated/schemas/zod.ts`, extract required fields, schema caching | ~200 | ✅ |
-| `entityMappingDynamic.ts` | Minimal API metadata (5 lines/entity), auto-infer CRUD capabilities, filter fields | ~295 | ✅ |
-| `entityIdExtraction.ts` | DRY utilities for ID extraction (eliminates ~70 lines of duplication) | ~120 | ✅ |
-| `demo-dynamic-system.ts` | Interactive demo of dynamic system capabilities | ~150 | ✅ |
-| `index.ts` | Barrel export for dynamic utilities only | ~15 | ✅ |
+| File                      | Purpose                                                                                        | Lines | Status |
+| ------------------------- | ---------------------------------------------------------------------------------------------- | ----- | ------ |
+| `schemaIntrospection.ts`  | Auto-discover schemas from `generated/schemas/zod.ts`, extract required fields, schema caching | ~200  | ✅     |
+| `entityMappingDynamic.ts` | Minimal API metadata (5 lines/entity), auto-infer CRUD capabilities, filter fields             | ~295  | ✅     |
+| `entityIdExtraction.ts`   | DRY utilities for ID extraction (eliminates ~70 lines of duplication)                          | ~120  | ✅     |
+| `demo-dynamic-system.ts`  | Interactive demo of dynamic system capabilities                                                | ~150  | ✅     |
+| `index.ts`                | Barrel export for dynamic utilities only                                                       | ~15   | ✅     |
 
 ### Removed Legacy Files
 
-| File | Reason | Replacement |
-|------|--------|-------------|
-| `entityMapping.ts` (145 lines) | Manual entity configuration | `entityMappingDynamic.ts` (auto-inferred) |
-| `requiredFields.ts` (89 lines) | Hardcoded required fields | `schemaIntrospection.ts` (extracted from schemas) |
+| File                           | Reason                      | Replacement                                       |
+| ------------------------------ | --------------------------- | ------------------------------------------------- |
+| `entityMapping.ts` (145 lines) | Manual entity configuration | `entityMappingDynamic.ts` (auto-inferred)         |
+| `requiredFields.ts` (89 lines) | Hardcoded required fields   | `schemaIntrospection.ts` (extracted from schemas) |
 
 **Total Code Reduction**: ~234 lines removed, ~300 lines eliminated overall including duplicates
 

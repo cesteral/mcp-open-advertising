@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const ttdCreativeSetupWorkflowPrompt: Prompt = {
   name: "creative_setup_workflow",
-  description: "Step-by-step guide for creating The Trade Desk creatives and attaching them to ad groups",
+  description:
+    "Step-by-step guide for creating The Trade Desk creatives and attaching them to ad groups",
 };
 
 export function getTtdCreativeSetupWorkflowMessage(_args?: Record<string, string>): string {

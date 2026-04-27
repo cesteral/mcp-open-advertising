@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const bulkOperationsWorkflowPrompt: Prompt = {
   name: "tiktok_bulk_operations_workflow",
-  description: "Guide for performing bulk create, update, and status operations on TikTok Ads entities",
+  description:
+    "Guide for performing bulk create, update, and status operations on TikTok Ads entities",
   arguments: [
     {
       name: "advertiserId",

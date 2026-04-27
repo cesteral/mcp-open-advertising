@@ -6,7 +6,8 @@ import type { Resource } from "../types.js";
 export const entityHierarchyResource: Resource = {
   uri: "msads://entity-hierarchy",
   name: "Microsoft Ads Entity Hierarchy",
-  description: "Entity relationships and API operation patterns for Microsoft Advertising API v13 JSON endpoints",
+  description:
+    "Entity relationships and API operation patterns for Microsoft Advertising API v13 JSON endpoints",
   mimeType: "text/markdown",
   getContent: () => `# Microsoft Advertising Entity Hierarchy
 

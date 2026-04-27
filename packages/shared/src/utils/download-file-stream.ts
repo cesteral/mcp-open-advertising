@@ -29,7 +29,7 @@ export async function downloadFileStream(
   url: string,
   timeoutMs: number,
   context?: RequestContext,
-  init?: RequestInit,
+  init?: RequestInit
 ): Promise<StreamedDownload> {
   const response = await fetchWithTimeout(url, timeoutMs, context, init);
   if (!response.ok) {

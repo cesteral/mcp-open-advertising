@@ -10,21 +10,21 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 
 ### Server Reference
 
-| # | Server | Port | API | Entity Types | Tools |
-|---|--------|------|-----|-------------|-------|
-| 1 | `dbm-mcp` | 3001 | Bid Manager API v2 | _(reporting only)_ | 6 |
-| 2 | `dv360-mcp` | 3002 | DV360 API v4 | advertiser, campaign, insertionOrder, lineItem, + more | 25 |
-| 3 | `ttd-mcp` | 3003 | TTD REST + GraphQL API | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed | 55 |
-| 4 | `gads-mcp` | 3004 | Google Ads REST API v23 | campaign, adGroup, ad, keyword, campaignBudget, asset | 15 |
-| 5 | `meta-mcp` | 3005 | Meta Marketing API v25.0 | campaign, adSet, ad, adCreative, customAudience | 25 |
-| 6 | `linkedin-mcp` | 3006 | LinkedIn Marketing API v2 | adAccount, campaignGroup, campaign, creative, conversionRule | 20 |
-| 7 | `tiktok-mcp` | 3007 | TikTok Marketing API v1.3 | campaign, adGroup, ad, creative | 23 |
-| 8 | `cm360-mcp` | 3008 | CM360 API v5 | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 20 |
-| 9 | `snapchat-mcp` | 3009 | Snapchat Ads API v1 | campaign, adGroup, ad, creative | 22 |
-| 10 | `sa360-mcp` | 3010 | SA360 Reporting API v0 + DS v2 | _(reporting + conversions)_ | 15 |
-| 11 | `pinterest-mcp` | 3011 | Pinterest Ads API v5 | campaign, adGroup, ad, creative | 22 |
-| 12 | `amazon-dsp-mcp` | 3012 | Amazon DSP API | order, lineItem, creative | 18 |
-| 13 | `msads-mcp` | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label | 24 |
+| #   | Server           | Port | API                                | Entity Types                                                                                     | Tools |
+| --- | ---------------- | ---- | ---------------------------------- | ------------------------------------------------------------------------------------------------ | ----- |
+| 1   | `dbm-mcp`        | 3001 | Bid Manager API v2                 | _(reporting only)_                                                                               | 6     |
+| 2   | `dv360-mcp`      | 3002 | DV360 API v4                       | advertiser, campaign, insertionOrder, lineItem, + more                                           | 25    |
+| 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 55    |
+| 4   | `gads-mcp`       | 3004 | Google Ads REST API v23            | campaign, adGroup, ad, keyword, campaignBudget, asset                                            | 15    |
+| 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 25    |
+| 6   | `linkedin-mcp`   | 3006 | LinkedIn Marketing API v2          | adAccount, campaignGroup, campaign, creative, conversionRule                                     | 20    |
+| 7   | `tiktok-mcp`     | 3007 | TikTok Marketing API v1.3          | campaign, adGroup, ad, creative                                                                  | 23    |
+| 8   | `cm360-mcp`      | 3008 | CM360 API v5                       | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 20    |
+| 9   | `snapchat-mcp`   | 3009 | Snapchat Ads API v1                | campaign, adGroup, ad, creative                                                                  | 22    |
+| 10  | `sa360-mcp`      | 3010 | SA360 Reporting API v0 + DS v2     | _(reporting + conversions)_                                                                      | 15    |
+| 11  | `pinterest-mcp`  | 3011 | Pinterest Ads API v5               | campaign, adGroup, ad, creative                                                                  | 22    |
+| 12  | `amazon-dsp-mcp` | 3012 | Amazon DSP API                     | order, lineItem, creative                                                                        | 18    |
+| 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 24    |
 
 ## Essential Commands
 
@@ -74,6 +74,7 @@ packages/{server-name}/src/
 ### Creating a New MCP Tool
 
 Each tool is a single file in `src/mcp-server/tools/definitions/` exporting three things:
+
 1. **Zod schema** for parameter validation
 2. **Tool metadata** object with `name`, `description`, `inputSchema`
 3. **Handler function** that returns `{ content: [{ type: "text", text: ... }] }`
@@ -85,6 +86,7 @@ Tool handlers should focus on business logic; errors propagate to the factory's 
 ### Session Service Pattern
 
 Per-session service instances hold authenticated API clients. Key components in `src/services/session-services.ts`:
+
 - `SessionServiceStore<SessionServices>` — typed map from sessionId → services
 - `createSessionServices()` — called on new session connect
 - `resolveSessionServices(sdkContext)` — called inside tool handlers
@@ -110,20 +112,20 @@ Available: `full_campaign_setup_workflow` (dv360-mcp), `msads_import_from_google
 
 Each server has its own `MCP_AUTH_MODE` options:
 
-| Server | Auth Modes | Default |
-|--------|-----------|---------|
-| `dbm-mcp`, `dv360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
-| `gads-mcp` | `gads-headers`, `jwt`, `none` | `gads-headers` |
-| `cm360-mcp` | `google-headers`, `jwt`, `none` | `google-headers` |
-| `ttd-mcp` | `ttd-token`, `ttd-headers` (alias of `ttd-token`), `jwt`, `none` | `ttd-token` |
-| `meta-mcp` | `meta-bearer`, `jwt`, `none` | `meta-bearer` |
-| `linkedin-mcp` | `linkedin-bearer`, `jwt`, `none` | `linkedin-bearer` |
-| `tiktok-mcp` | `tiktok-bearer`, `jwt`, `none` | `tiktok-bearer` |
-| `sa360-mcp` | `sa360-headers`, `jwt`, `none` | `sa360-headers` |
-| `pinterest-mcp` | `pinterest-bearer`, `jwt`, `none` | `pinterest-bearer` |
-| `snapchat-mcp` | `snapchat-bearer`, `jwt`, `none` | `snapchat-bearer` |
-| `amazon-dsp-mcp` | `amazon-dsp-bearer`, `jwt`, `none` | `amazon-dsp-bearer` |
-| `msads-mcp` | `msads-bearer`, `jwt`, `none` | `msads-bearer` |
+| Server                 | Auth Modes                                                       | Default             |
+| ---------------------- | ---------------------------------------------------------------- | ------------------- |
+| `dbm-mcp`, `dv360-mcp` | `google-headers`, `jwt`, `none`                                  | `google-headers`    |
+| `gads-mcp`             | `gads-headers`, `jwt`, `none`                                    | `gads-headers`      |
+| `cm360-mcp`            | `google-headers`, `jwt`, `none`                                  | `google-headers`    |
+| `ttd-mcp`              | `ttd-token`, `ttd-headers` (alias of `ttd-token`), `jwt`, `none` | `ttd-token`         |
+| `meta-mcp`             | `meta-bearer`, `jwt`, `none`                                     | `meta-bearer`       |
+| `linkedin-mcp`         | `linkedin-bearer`, `jwt`, `none`                                 | `linkedin-bearer`   |
+| `tiktok-mcp`           | `tiktok-bearer`, `jwt`, `none`                                   | `tiktok-bearer`     |
+| `sa360-mcp`            | `sa360-headers`, `jwt`, `none`                                   | `sa360-headers`     |
+| `pinterest-mcp`        | `pinterest-bearer`, `jwt`, `none`                                | `pinterest-bearer`  |
+| `snapchat-mcp`         | `snapchat-bearer`, `jwt`, `none`                                 | `snapchat-bearer`   |
+| `amazon-dsp-mcp`       | `amazon-dsp-bearer`, `jwt`, `none`                               | `amazon-dsp-bearer` |
+| `msads-mcp`            | `msads-bearer`, `jwt`, `none`                                    | `msads-bearer`      |
 
 - `MCP_AUTH_SECRET_KEY`: required for `jwt` mode
 - RFC 9728 endpoint at `/.well-known/oauth-protected-resource` returns metadata in `jwt` mode
@@ -152,47 +154,47 @@ const params = schema.parse(rawInput);
 
 Most servers (linkedin, tiktok, cm360, pinterest, snapchat, amazon-dsp) follow this pattern. Only unique tools per server are listed in detail below.
 
-| Category | Tools | Description |
-|----------|-------|-------------|
-| **CRUD** | `{prefix}_list_entities`, `get_entity`, `create_entity`, `update_entity`, `delete_entity` | Standard entity CRUD |
-| **Account** | `{prefix}_list_accounts` / `list_advertisers` / `list_profiles` | List accessible accounts |
-| **Reporting** | `{prefix}_get_report`, `get_report_breakdowns`, `submit_report`, `check_report_status`, `download_report` | Async report flow (submit → poll → download) |
-| **Bulk** | `{prefix}_bulk_create_entities`, `bulk_update_entities`, `bulk_update_status`, `adjust_bids` | Batch operations (up to 50) |
-| **Targeting** | `{prefix}_search_targeting`, `get_targeting_options` | Audience/interest search |
-| **Specialized** | `{prefix}_duplicate_entity`, `get_delivery_estimate`/`get_audience_estimate`, `get_ad_preview`, `validate_entity` | Copy, preview, validate |
-| **Media** | `{prefix}_upload_image`, `upload_video` | Binary upload via URL (where supported) |
+| Category        | Tools                                                                                                             | Description                                  |
+| --------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **CRUD**        | `{prefix}_list_entities`, `get_entity`, `create_entity`, `update_entity`, `delete_entity`                         | Standard entity CRUD                         |
+| **Account**     | `{prefix}_list_accounts` / `list_advertisers` / `list_profiles`                                                   | List accessible accounts                     |
+| **Reporting**   | `{prefix}_get_report`, `get_report_breakdowns`, `submit_report`, `check_report_status`, `download_report`         | Async report flow (submit → poll → download) |
+| **Bulk**        | `{prefix}_bulk_create_entities`, `bulk_update_entities`, `bulk_update_status`, `adjust_bids`                      | Batch operations (up to 50)                  |
+| **Targeting**   | `{prefix}_search_targeting`, `get_targeting_options`                                                              | Audience/interest search                     |
+| **Specialized** | `{prefix}_duplicate_entity`, `get_delivery_estimate`/`get_audience_estimate`, `get_ad_preview`, `validate_entity` | Copy, preview, validate                      |
+| **Media**       | `{prefix}_upload_image`, `upload_video`                                                                           | Binary upload via URL (where supported)      |
 
 ### dbm-mcp — 6 Tools (Reporting Only)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `dbm_get_campaign_delivery` | Fetch delivery metrics via Bid Manager API | `campaignId`, `advertiserId`, `startDate`, `endDate` |
-| `dbm_get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS | `campaignId`, `advertiserId`, `dateRange` |
-| `dbm_get_historical_metrics` | Time-series data for trends | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
-| `dbm_get_pacing_status` | Real-time pacing calculation | `campaignId`, `advertiserId` |
-| `dbm_run_custom_query` | Execute custom Bid Manager reports (blocking) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
-| `dbm_run_custom_query_async` | Submit custom query (non-blocking, task-based) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters` |
+| Tool                          | Description                                    | Key Parameters                                                      |
+| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------------- |
+| `dbm_get_campaign_delivery`   | Fetch delivery metrics via Bid Manager API     | `campaignId`, `advertiserId`, `startDate`, `endDate`                |
+| `dbm_get_performance_metrics` | Calculate CPM, CTR, CPA, ROAS                  | `campaignId`, `advertiserId`, `dateRange`                           |
+| `dbm_get_historical_metrics`  | Time-series data for trends                    | `campaignId`, `advertiserId`, `startDate`, `endDate`, `granularity` |
+| `dbm_get_pacing_status`       | Real-time pacing calculation                   | `campaignId`, `advertiserId`                                        |
+| `dbm_run_custom_query`        | Execute custom Bid Manager reports (blocking)  | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters`       |
+| `dbm_run_custom_query_async`  | Submit custom query (non-blocking, task-based) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters`       |
 
 ### dv360-mcp — 25 Tools (Unique Tools Beyond Standard Pattern)
 
 Standard CRUD/bulk/targeting/validation/preview tools plus:
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `dv360_adjust_line_item_bids` | Batch adjust line item bids | `advertiserId`, `adjustments[]` |
-| `dv360_create_custom_bidding_algorithm` | Create custom bidding algorithm | `advertiserId`, `data` |
-| `dv360_manage_custom_bidding_script` | Upload/manage custom bidding scripts | `algorithmId`, `data` |
-| `dv360_manage_custom_bidding_rules` | Manage rules for custom bidding | `algorithmId`, `data` |
-| `dv360_list_custom_bidding_algorithms` | List custom bidding algorithms | `advertiserId`, filters |
-| `dv360_list_assigned_targeting` | List assigned targeting options | `entityType`, entity IDs |
-| `dv360_get_assigned_targeting` | Get specific targeting assignment | `entityType`, entity IDs, `targetingType` |
-| `dv360_create_assigned_targeting` | Create targeting assignment | `entityType`, entity IDs, `data` |
-| `dv360_delete_assigned_targeting` | Delete targeting assignment | `entityType`, entity IDs, `targetingType` |
-| `dv360_validate_targeting_config` | Validate targeting configuration | `entityType`, entity IDs, `config` |
-| `dv360_duplicate_entity` | Copy/duplicate entities | `entityType`, entity IDs, `options?` |
-| `dv360_get_delivery_estimate` | Audience size and delivery estimation | `advertiserId`, `targetingConfig` |
-| `dv360_upload_image` | Upload image from URL | `advertiserId`, `mediaUrl`, `name?` |
-| `dv360_upload_video` | Upload video from URL | `advertiserId`, `mediaUrl`, `title?` |
+| Tool                                    | Description                           | Key Parameters                            |
+| --------------------------------------- | ------------------------------------- | ----------------------------------------- |
+| `dv360_adjust_line_item_bids`           | Batch adjust line item bids           | `advertiserId`, `adjustments[]`           |
+| `dv360_create_custom_bidding_algorithm` | Create custom bidding algorithm       | `advertiserId`, `data`                    |
+| `dv360_manage_custom_bidding_script`    | Upload/manage custom bidding scripts  | `algorithmId`, `data`                     |
+| `dv360_manage_custom_bidding_rules`     | Manage rules for custom bidding       | `algorithmId`, `data`                     |
+| `dv360_list_custom_bidding_algorithms`  | List custom bidding algorithms        | `advertiserId`, filters                   |
+| `dv360_list_assigned_targeting`         | List assigned targeting options       | `entityType`, entity IDs                  |
+| `dv360_get_assigned_targeting`          | Get specific targeting assignment     | `entityType`, entity IDs, `targetingType` |
+| `dv360_create_assigned_targeting`       | Create targeting assignment           | `entityType`, entity IDs, `data`          |
+| `dv360_delete_assigned_targeting`       | Delete targeting assignment           | `entityType`, entity IDs, `targetingType` |
+| `dv360_validate_targeting_config`       | Validate targeting configuration      | `entityType`, entity IDs, `config`        |
+| `dv360_duplicate_entity`                | Copy/duplicate entities               | `entityType`, entity IDs, `options?`      |
+| `dv360_get_delivery_estimate`           | Audience size and delivery estimation | `advertiserId`, `targetingConfig`         |
+| `dv360_upload_image`                    | Upload image from URL                 | `advertiserId`, `mediaUrl`, `name?`       |
+| `dv360_upload_video`                    | Upload video from URL                 | `advertiserId`, `mediaUrl`, `title?`      |
 
 ### ttd-mcp — 55 Tools (Unique: Workflows API, GraphQL, Bid Lists, Seeds)
 
@@ -206,41 +208,41 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 
 **Reporting — GraphQL schedules/templates (15):**
 
-| Tool | Description |
-|------|-------------|
-| `ttd_execute_entity_report` | Execute an immediate dimension-specific report (no polling) |
-| `ttd_get_entity_report_types` | Discover available report types for an entity |
-| `ttd_create_report_schedule` | Create a named recurring schedule (Once/Daily/Weekly/Monthly) |
-| `ttd_update_report_schedule` | Enable or disable a report schedule |
-| `ttd_delete_report_schedule` | Permanently delete a report schedule |
-| `ttd_list_report_schedules` | List report schedules with optional advertiser filter |
-| `ttd_get_report_schedule` | Get full details for a schedule by ID |
-| `ttd_rerun_report_schedule` | Immediately rerun an existing schedule |
-| `ttd_get_report_executions` | Execution status + download links |
-| `ttd_cancel_report_execution` | Cancel an in-progress report execution |
-| `ttd_create_report_template` | Create a user-defined report template |
-| `ttd_update_report_template` | Fully replace a report template |
-| `ttd_get_report_template` | Retrieve full template structure |
-| `ttd_list_report_templates` | List template headers |
-| `ttd_create_template_schedule` | Create a schedule from a template ID |
+| Tool                           | Description                                                   |
+| ------------------------------ | ------------------------------------------------------------- |
+| `ttd_execute_entity_report`    | Execute an immediate dimension-specific report (no polling)   |
+| `ttd_get_entity_report_types`  | Discover available report types for an entity                 |
+| `ttd_create_report_schedule`   | Create a named recurring schedule (Once/Daily/Weekly/Monthly) |
+| `ttd_update_report_schedule`   | Enable or disable a report schedule                           |
+| `ttd_delete_report_schedule`   | Permanently delete a report schedule                          |
+| `ttd_list_report_schedules`    | List report schedules with optional advertiser filter         |
+| `ttd_get_report_schedule`      | Get full details for a schedule by ID                         |
+| `ttd_rerun_report_schedule`    | Immediately rerun an existing schedule                        |
+| `ttd_get_report_executions`    | Execution status + download links                             |
+| `ttd_cancel_report_execution`  | Cancel an in-progress report execution                        |
+| `ttd_create_report_template`   | Create a user-defined report template                         |
+| `ttd_update_report_template`   | Fully replace a report template                               |
+| `ttd_get_report_template`      | Retrieve full template structure                              |
+| `ttd_list_report_templates`    | List template headers                                         |
+| `ttd_create_template_schedule` | Create a schedule from a template ID                          |
 
 **Workflows API (13):** TTD's newer workflow-aware payload API (preferred over REST for campaign/ad group writes).
 
-| Tool | Description |
-|------|-------------|
-| `ttd_create_campaign_workflow` | Create a campaign via Workflows API |
-| `ttd_update_campaign_workflow` | Update a campaign (PATCH semantics) |
-| `ttd_get_campaign_version` | Get a campaign's Workflows version payload |
-| `ttd_create_ad_group_workflow` | Create an ad group via Workflows API |
-| `ttd_update_ad_group_workflow` | Update an ad group (PATCH semantics) |
-| `ttd_create_campaigns_job` | Async job: create multiple campaigns |
-| `ttd_update_campaigns_job` | Async job: update multiple campaigns |
-| `ttd_create_ad_groups_job` | Async job: create multiple ad groups |
-| `ttd_update_ad_groups_job` | Async job: update multiple ad groups |
-| `ttd_get_first_party_data_job` | Async job: retrieve first-party data for an advertiser |
-| `ttd_get_third_party_data_job` | Async job: retrieve third-party data for a partner |
-| `ttd_get_job_status` | Poll status of a Workflows job |
-| `ttd_rest_request` | Escape hatch: arbitrary REST request through Workflows API |
+| Tool                           | Description                                                |
+| ------------------------------ | ---------------------------------------------------------- |
+| `ttd_create_campaign_workflow` | Create a campaign via Workflows API                        |
+| `ttd_update_campaign_workflow` | Update a campaign (PATCH semantics)                        |
+| `ttd_get_campaign_version`     | Get a campaign's Workflows version payload                 |
+| `ttd_create_ad_group_workflow` | Create an ad group via Workflows API                       |
+| `ttd_update_ad_group_workflow` | Update an ad group (PATCH semantics)                       |
+| `ttd_create_campaigns_job`     | Async job: create multiple campaigns                       |
+| `ttd_update_campaigns_job`     | Async job: update multiple campaigns                       |
+| `ttd_create_ad_groups_job`     | Async job: create multiple ad groups                       |
+| `ttd_update_ad_groups_job`     | Async job: update multiple ad groups                       |
+| `ttd_get_first_party_data_job` | Async job: retrieve first-party data for an advertiser     |
+| `ttd_get_third_party_data_job` | Async job: retrieve third-party data for a partner         |
+| `ttd_get_job_status`           | Poll status of a Workflows job                             |
+| `ttd_rest_request`             | Escape hatch: arbitrary REST request through Workflows API |
 
 **GraphQL (5):** `ttd_graphql_query`, `ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job` (status), `ttd_graphql_cancel_bulk_job`
 
@@ -248,12 +250,12 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 
 ### gads-mcp — 15 Tools (Unique: GAQL)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `gads_gaql_search` | Execute arbitrary GAQL queries | `customerId`, `query`, `pageSize` |
-| `gads_list_accounts` | List accessible customer accounts | _(none)_ |
-| `gads_get_insights` | Performance insights with presets | `customerId`, `entityType`, `dateRange` |
-| `gads_bulk_mutate` | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
+| Tool                 | Description                                   | Key Parameters                             |
+| -------------------- | --------------------------------------------- | ------------------------------------------ |
+| `gads_gaql_search`   | Execute arbitrary GAQL queries                | `customerId`, `query`, `pageSize`          |
+| `gads_list_accounts` | List accessible customer accounts             | _(none)_                                   |
+| `gads_get_insights`  | Performance insights with presets             | `customerId`, `entityType`, `dateRange`    |
+| `gads_bulk_mutate`   | Multi-operation mutate (create+update+remove) | `entityType`, `customerId`, `operations[]` |
 
 Plus standard CRUD (`get_entity`, `list_entities`, `create_entity`, `update_entity`, `remove_entity`), `bulk_create_entities`, `bulk_update_status`, `adjust_bids`, `validate_entity`, `get_ad_preview`.
 
@@ -261,48 +263,48 @@ Plus standard CRUD (`get_entity`, `list_entities`, `create_entity`, `update_enti
 
 Standard CRUD/bulk/targeting/media tools plus:
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `meta_list_ad_accounts` | List accessible ad accounts | `fields`, `limit` |
-| `meta_get_insights` | Performance metrics for an entity | `entityId`, `fields`, `datePreset`, `timeRange` |
-| `meta_get_insights_breakdowns` | Metrics with dimensional breakdowns | `entityId`, `breakdowns`, `fields`, `datePreset` |
-| `meta_duplicate_entity` | Copy campaigns/adSets/ads | `entityId`, `options` |
-| `meta_get_delivery_estimate` | Audience size estimation (reachestimate with delivery_estimate fallback) | `adAccountId`, `targetingSpec` |
-| `meta_manage_budget_schedule` | Create/list budget schedules for high-demand periods | `operation`, `campaignId`, `data` |
+| Tool                           | Description                                                              | Key Parameters                                   |
+| ------------------------------ | ------------------------------------------------------------------------ | ------------------------------------------------ |
+| `meta_list_ad_accounts`        | List accessible ad accounts                                              | `fields`, `limit`                                |
+| `meta_get_insights`            | Performance metrics for an entity                                        | `entityId`, `fields`, `datePreset`, `timeRange`  |
+| `meta_get_insights_breakdowns` | Metrics with dimensional breakdowns                                      | `entityId`, `breakdowns`, `fields`, `datePreset` |
+| `meta_duplicate_entity`        | Copy campaigns/adSets/ads                                                | `entityId`, `options`                            |
+| `meta_get_delivery_estimate`   | Audience size estimation (reachestimate with delivery_estimate fallback) | `adAccountId`, `targetingSpec`                   |
+| `meta_manage_budget_schedule`  | Create/list budget schedules for high-demand periods                     | `operation`, `campaignId`, `data`                |
 
 ### sa360-mcp — 15 Tools (Reporting + Conversions)
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `sa360_search` | Execute SA360 query language queries | `customerId`, `query`, `pageSize?` |
-| `sa360_list_accounts` | List accessible accounts | _(none)_ |
-| `sa360_get_entity` | Get entity by type/ID | `entityType`, `customerId`, `entityId` |
-| `sa360_list_entities` | List entities with filters | `entityType`, `customerId`, `filters?` |
-| `sa360_get_insights` | Performance insights | `customerId`, `entityType`, `dateRange` |
-| `sa360_get_insights_breakdowns` | Metrics with segment breakdowns | `customerId`, `entityType`, `dateRange`, `breakdowns[]` |
-| `sa360_list_custom_columns` | List custom columns | `customerId` |
-| `sa360_search_fields` | Search available query fields | `query?`, `resourceType?` |
-| `sa360_insert_conversions` | Insert offline conversions (v2 API) | `agencyId`, `advertiserId`, `conversions[]` |
-| `sa360_update_conversions` | Update existing conversions (v2 API) | `agencyId`, `advertiserId`, `conversions[]` |
-| `sa360_submit_report` | Submit async report (v2 API) | `agencyId`, `advertiserId`, `reportType` |
-| `sa360_check_report_status` | Check report generation status | `reportId` |
-| `sa360_download_report` | Download completed report results | `reportId` |
-| `sa360_validate_conversion` | Validate conversion payload | `mode`, `conversion` |
-| `sa360_get_change_history` | Get change history for entities | `customerId`, `entityType?`, `dateRange?` |
+| Tool                            | Description                          | Key Parameters                                          |
+| ------------------------------- | ------------------------------------ | ------------------------------------------------------- |
+| `sa360_search`                  | Execute SA360 query language queries | `customerId`, `query`, `pageSize?`                      |
+| `sa360_list_accounts`           | List accessible accounts             | _(none)_                                                |
+| `sa360_get_entity`              | Get entity by type/ID                | `entityType`, `customerId`, `entityId`                  |
+| `sa360_list_entities`           | List entities with filters           | `entityType`, `customerId`, `filters?`                  |
+| `sa360_get_insights`            | Performance insights                 | `customerId`, `entityType`, `dateRange`                 |
+| `sa360_get_insights_breakdowns` | Metrics with segment breakdowns      | `customerId`, `entityType`, `dateRange`, `breakdowns[]` |
+| `sa360_list_custom_columns`     | List custom columns                  | `customerId`                                            |
+| `sa360_search_fields`           | Search available query fields        | `query?`, `resourceType?`                               |
+| `sa360_insert_conversions`      | Insert offline conversions (v2 API)  | `agencyId`, `advertiserId`, `conversions[]`             |
+| `sa360_update_conversions`      | Update existing conversions (v2 API) | `agencyId`, `advertiserId`, `conversions[]`             |
+| `sa360_submit_report`           | Submit async report (v2 API)         | `agencyId`, `advertiserId`, `reportType`                |
+| `sa360_check_report_status`     | Check report generation status       | `reportId`                                              |
+| `sa360_download_report`         | Download completed report results    | `reportId`                                              |
+| `sa360_validate_conversion`     | Validate conversion payload          | `mode`, `conversion`                                    |
+| `sa360_get_change_history`      | Get change history for entities      | `customerId`, `entityType?`, `dateRange?`               |
 
 ### msads-mcp — 24 Tools (Unique: Google Import, Ad Extensions, Report Scheduling)
 
 Standard CRUD/bulk/reporting tools plus:
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `msads_manage_ad_extensions` | Add/update/delete ad extensions | `accountId`, `adExtensions[]` |
-| `msads_manage_criterions` | Manage targeting criteria | `entityType`, `accountId`, `parentId?`, `items[]` |
-| `msads_import_from_google` | Import campaigns from Google Ads | `operation`, `data` |
-| `msads_create_report_schedule` | Create a scheduled report request | `accountId`, `scheduleName`, `reportType`, `columns`, `schedule` |
-| `msads_list_report_schedules` | List scheduled reports (guidance, no API endpoint) | _(none)_ |
-| `msads_delete_report_schedule` | Delete a report schedule (guidance, no API endpoint) | `scheduleId` |
-| `msads_get_report_breakdowns` | Run report with additional breakdown columns | `reportType`, `accountId`, `columns`, `breakdownColumns`, dates |
+| Tool                           | Description                                          | Key Parameters                                                   |
+| ------------------------------ | ---------------------------------------------------- | ---------------------------------------------------------------- |
+| `msads_manage_ad_extensions`   | Add/update/delete ad extensions                      | `accountId`, `adExtensions[]`                                    |
+| `msads_manage_criterions`      | Manage targeting criteria                            | `entityType`, `accountId`, `parentId?`, `items[]`                |
+| `msads_import_from_google`     | Import campaigns from Google Ads                     | `operation`, `data`                                              |
+| `msads_create_report_schedule` | Create a scheduled report request                    | `accountId`, `scheduleName`, `reportType`, `columns`, `schedule` |
+| `msads_list_report_schedules`  | List scheduled reports (guidance, no API endpoint)   | _(none)_                                                         |
+| `msads_delete_report_schedule` | Delete a report schedule (guidance, no API endpoint) | `scheduleId`                                                     |
+| `msads_get_report_breakdowns`  | Run report with additional breakdown columns         | `reportType`, `accountId`, `columns`, `breakdownColumns`, dates  |
 
 ### Server-Specific Notes
 
@@ -316,6 +318,7 @@ Standard CRUD/bulk/reporting tools plus:
 ### How the Servers Work Together
 
 **Example: Fixing an underdelivering campaign**
+
 1. **dbm-mcp** → `dbm_get_pacing_status` detects 72% pacing
 2. **dbm-mcp** → `dbm_get_performance_metrics` analyzes CPMs
 3. AI calculates bid adjustments
@@ -344,7 +347,7 @@ gcloud run services logs tail <server-name> --region=europe-west2
 2. **Stateless**: No persistent state between requests
 3. **Type Safety**: Zod for runtime, TypeScript for compile-time
 4. **Observability**: OTEL traces + metrics, Pino structured logs, InteractionLogger for tool-call + tool-failure persistence
-5. **Scale-out-safe sessions**: the streamable-HTTP transport factory rebuilds session services on cache miss. A follow-up request whose `Mcp-Session-Id` is unknown to the receiving Cloud Run instance triggers a re-auth + `createSessionForAuth` using the client-supplied session ID. The existing credential fingerprint check runs on every call, so rebuild does not weaken session binding. Per-instance state that is *not* reconstructible from credentials (rate-limiter counters, in-memory `report-csv://` resources) may behave slightly differently after a scale-out event — documented inline in each subsystem.
+5. **Scale-out-safe sessions**: the streamable-HTTP transport factory rebuilds session services on cache miss. A follow-up request whose `Mcp-Session-Id` is unknown to the receiving Cloud Run instance triggers a re-auth + `createSessionForAuth` using the client-supplied session ID. The existing credential fingerprint check runs on every call, so rebuild does not weaken session binding. Per-instance state that is _not_ reconstructible from credentials (rate-limiter counters, in-memory `report-csv://` resources) may behave slightly differently after a scale-out event — documented inline in each subsystem.
 
 ## Tool Failure Logging
 
@@ -362,11 +365,11 @@ Record shape (JSONL):
 
 Destination is chosen by `INTERACTION_LOG_MODE`:
 
-| Mode | When | Storage |
-|------|------|---------|
-| `gcs` | Hosted Cloud Run (default when `GCS_BUCKET_NAME` is set) | Instance-unique JSONL in GCS, flushed every 5s |
-| `file` | Self-host default | Rotating JSONL at `~/.cesteral/interactions/` |
-| `stdout` | Self-host with external log pipeline | Pino `info`/`error` line per entry — ship via any stdout log agent |
+| Mode     | When                                                     | Storage                                                            |
+| -------- | -------------------------------------------------------- | ------------------------------------------------------------------ |
+| `gcs`    | Hosted Cloud Run (default when `GCS_BUCKET_NAME` is set) | Instance-unique JSONL in GCS, flushed every 5s                     |
+| `file`   | Self-host default                                        | Rotating JSONL at `~/.cesteral/interactions/`                      |
+| `stdout` | Self-host with external log pipeline                     | Pino `info`/`error` line per entry — ship via any stdout log agent |
 
 Query hosted data in BigQuery via an external table:
 
@@ -388,12 +391,12 @@ Redaction lives in `http-request-recorder.ts` (headers: Authorization, TTD-Auth,
 
 Large report CSVs (TTD, TikTok, Snapchat, Amazon DSP, Pinterest, MSADS) can be spilled to GCS so the MCP response stays bounded while the full body is still fetchable via a signed URL. Controlled by `@cesteral/shared`'s `spillCsvToGcs` helper, wired into each server's `download_report` tool; the helper reads these envs at call time:
 
-| Env | Default | Behavior |
-|-----|---------|----------|
-| `REPORT_SPILL_BUCKET` | _(unset)_ | When unset, spill is disabled entirely — the download tool returns only the bounded view. When set, the bucket receives CSV/JSON bodies that exceed the thresholds. |
-| `REPORT_SPILL_THRESHOLD_BYTES` | `16777216` (16 MB) | Minimum UTF-8 byte size that triggers a spill. |
-| `REPORT_SPILL_THRESHOLD_ROWS` | `100000` | Minimum parsed row count that triggers a spill (OR'd with the byte threshold — either can fire). |
-| `REPORT_SPILL_SIGNED_URL_TTL_SECONDS` | `3600` (1h) | Expiry on the V4 signed URL returned in `spill.signedUrl`. |
+| Env                                   | Default            | Behavior                                                                                                                                                            |
+| ------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REPORT_SPILL_BUCKET`                 | _(unset)_          | When unset, spill is disabled entirely — the download tool returns only the bounded view. When set, the bucket receives CSV/JSON bodies that exceed the thresholds. |
+| `REPORT_SPILL_THRESHOLD_BYTES`        | `16777216` (16 MB) | Minimum UTF-8 byte size that triggers a spill.                                                                                                                      |
+| `REPORT_SPILL_THRESHOLD_ROWS`         | `100000`           | Minimum parsed row count that triggers a spill (OR'd with the byte threshold — either can fire).                                                                    |
+| `REPORT_SPILL_SIGNED_URL_TTL_SECONDS` | `3600` (1h)        | Expiry on the V4 signed URL returned in `spill.signedUrl`.                                                                                                          |
 
 **Object path:** `{server}/{sessionId?}/{reportId}-{timestamp}.{csv\|json}`. Sessioned prefixes enable per-session cleanup sweeps via `SessionServiceStore.onDelete` hooks (wired in each server's `session-services.ts`). A 24-hour GCS lifecycle rule on the `report_spill` bucket (provisioned in `terraform/main.tf`) is the primary cost control; the session hook is a belt-and-braces deletion that runs earlier when possible.
 
@@ -404,6 +407,7 @@ Terraform variables `enable_report_spill` + `report_spill_bucket_name` gate the 
 ## TypeScript Build Issues
 
 If you encounter "The inferred type cannot be named" errors, add explicit return type annotations:
+
 ```typescript
 export function createMcpHttpServer(): express.Application { ... }
 ```

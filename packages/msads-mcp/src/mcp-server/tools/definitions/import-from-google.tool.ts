@@ -23,7 +23,9 @@ export const ImportFromGoogleInputSchema = z
       .describe("Import operation to perform"),
     data: z
       .record(z.unknown())
-      .describe("Operation data — for create: import job config; for getStatus/getResults: { ImportJobId }"),
+      .describe(
+        "Operation data — for create: import job config; for getStatus/getResults: { ImportJobId }"
+      ),
   })
   .describe("Parameters for Google Ads import");
 
@@ -56,11 +58,10 @@ export async function importFromGoogleLogic(
     throw new Error(`Unknown import operation: ${input.operation}`);
   }
 
-  const result = (await msadsService.executeOperation(
-    path,
-    input.data,
-    context
-  )) as Record<string, unknown>;
+  const result = (await msadsService.executeOperation(path, input.data, context)) as Record<
+    string,
+    unknown
+  >;
 
   return {
     result,
@@ -69,7 +70,9 @@ export async function importFromGoogleLogic(
   };
 }
 
-export function importFromGoogleResponseFormatter(result: ImportFromGoogleOutput): McpTextContent[] {
+export function importFromGoogleResponseFormatter(
+  result: ImportFromGoogleOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

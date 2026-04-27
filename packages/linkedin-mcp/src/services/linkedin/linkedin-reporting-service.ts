@@ -67,11 +67,10 @@ export class LinkedInReportingService {
       fields: (metrics ?? defaultMetrics).join(","),
     };
 
-    const result = (await this.httpClient.get(
-      "/v2/adAnalytics",
-      params,
-      context
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.get("/v2/adAnalytics", params, context)) as Record<
+      string,
+      unknown
+    >;
 
     return {
       elements: (result.elements as unknown[]) || [],

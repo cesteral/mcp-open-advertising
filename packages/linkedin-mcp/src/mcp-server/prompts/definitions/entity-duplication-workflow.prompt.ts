@@ -27,9 +27,7 @@ export const linkedInEntityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getLinkedInEntityDuplicationWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getLinkedInEntityDuplicationWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityUrn = args?.entityUrn || "{entityUrn}";
 

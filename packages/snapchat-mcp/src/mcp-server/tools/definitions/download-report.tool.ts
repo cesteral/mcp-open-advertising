@@ -36,17 +36,14 @@ After a report task is DONE (via \`snapchat_check_report_status\`), use the \`do
 
 export const DownloadReportInputSchema = z
   .object({
-    downloadUrl: z
-      .string()
-      .url()
-      .describe("Report download URL from snapchat_check_report_status"),
+    downloadUrl: z.string().url().describe("Report download URL from snapchat_check_report_status"),
     storeRawCsv: z
       .boolean()
       .optional()
       .default(false)
       .describe(
         "Persist the full CSV body in the in-process report-csv store and return " +
-        "a `report-csv://{id}` resource URI. Entries expire after 30 minutes."
+          "a `report-csv://{id}` resource URI. Entries expire after 30 minutes."
       ),
   })
   .merge(ReportViewInputSchema)
@@ -89,12 +86,9 @@ export async function downloadReportLogic(
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: SNAPCHAT_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>
-      snapchatReportingService.downloadReport(
-        input.downloadUrl,
-        fetchLimit,
-        undefined,
-        { includeRawCsv },
-      ),
+      snapchatReportingService.downloadReport(input.downloadUrl, fetchLimit, undefined, {
+        includeRawCsv,
+      }),
   });
 }
 

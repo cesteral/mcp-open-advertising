@@ -68,9 +68,9 @@ describe("LinkedInBearerAuthStrategy", () => {
         "202409",
         mockLogger
       );
-      await expect(
-        strategy.verify({ authorization: "Bearer bad-token" })
-      ).rejects.toThrow("LinkedIn token validation failed");
+      await expect(strategy.verify({ authorization: "Bearer bad-token" })).rejects.toThrow(
+        "LinkedIn token validation failed"
+      );
     });
 
     it("throws when Authorization header is missing", async () => {
@@ -79,9 +79,7 @@ describe("LinkedInBearerAuthStrategy", () => {
         "202409",
         mockLogger
       );
-      await expect(strategy.verify({})).rejects.toThrow(
-        "Missing required Authorization header"
-      );
+      await expect(strategy.verify({})).rejects.toThrow("Missing required Authorization header");
     });
 
     it("throws when Authorization header uses wrong scheme", async () => {
@@ -90,9 +88,9 @@ describe("LinkedInBearerAuthStrategy", () => {
         "202409",
         mockLogger
       );
-      await expect(
-        strategy.verify({ authorization: "Basic dXNlcjpwYXNz" })
-      ).rejects.toThrow("Authorization header must use Bearer scheme");
+      await expect(strategy.verify({ authorization: "Basic dXNlcjpwYXNz" })).rejects.toThrow(
+        "Authorization header must use Bearer scheme"
+      );
     });
   });
 

@@ -13,12 +13,8 @@ const TOOL_DESCRIPTION = `List Meta Ads entities with optional filtering and cur
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
-    adAccountId: z
-      .string()
-      .describe("Ad Account ID (with or without act_ prefix)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
+    adAccountId: z.string().describe("Ad Account ID (with or without act_ prefix)"),
     fields: z
       .array(z.string())
       .optional()
@@ -33,10 +29,7 @@ export const ListEntitiesInputSchema = z
       .max(100)
       .optional()
       .describe("Number of entities per page (default 25)"),
-    after: z
-      .string()
-      .optional()
-      .describe("Cursor for next page of results"),
+    after: z.string().optional().describe("Cursor for next page of results"),
   })
   .describe("Parameters for listing Meta Ads entities");
 

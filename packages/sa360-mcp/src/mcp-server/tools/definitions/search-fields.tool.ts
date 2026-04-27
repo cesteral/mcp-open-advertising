@@ -22,7 +22,9 @@ export const SearchFieldsInputSchema = z
     query: z
       .string()
       .min(1)
-      .describe("SA360 field query (e.g., SELECT name FROM searchAds360Fields WHERE name LIKE 'campaign.%')"),
+      .describe(
+        "SA360 field query (e.g., SELECT name FROM searchAds360Fields WHERE name LIKE 'campaign.%')"
+      ),
     pageSize: z
       .number()
       .min(1)
@@ -85,7 +87,8 @@ export const searchFieldsTool = {
     {
       label: "Discover campaign fields",
       input: {
-        query: "SELECT name, category, data_type, selectable, filterable, sortable FROM searchAds360Fields WHERE name LIKE 'campaign.%'",
+        query:
+          "SELECT name, category, data_type, selectable, filterable, sortable FROM searchAds360Fields WHERE name LIKE 'campaign.%'",
       },
     },
     {

@@ -84,9 +84,7 @@ export class PinterestBearerAuthStrategy extends BearerAuthStrategyBase {
     return getPinterestCredentialFingerprint(refreshCreds.appId, adAccountId);
   }
 
-  protected getTokenFingerprint(
-    headers: Record<string, string | string[] | undefined>
-  ): string {
+  protected getTokenFingerprint(headers: Record<string, string | string[] | undefined>): string {
     const token = parsePinterestTokenFromHeaders(headers);
     const adAccountId = getPinterestAdvertiserIdFromHeaders(headers);
     return getPinterestCredentialFingerprint(token, adAccountId);

@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BearerAuthStrategyBase, type BearerAdapterResult } from "../../src/auth/bearer-auth-strategy-base.js";
+import {
+  BearerAuthStrategyBase,
+  type BearerAdapterResult,
+} from "../../src/auth/bearer-auth-strategy-base.js";
 
 // ---------------------------------------------------------------------------
 // Minimal concrete subclass used throughout this test file
@@ -48,9 +51,7 @@ class TestBearerStrategy extends BearerAuthStrategyBase {
     return this.hasRefreshCreds ? REFRESH_FINGERPRINT : undefined;
   }
 
-  protected getTokenFingerprint(
-    _headers: Record<string, string | string[] | undefined>
-  ): string {
+  protected getTokenFingerprint(_headers: Record<string, string | string[] | undefined>): string {
     return TOKEN_FINGERPRINT;
   }
 }

@@ -18,29 +18,18 @@ Warning: This is a destructive operation that cannot be undone.`;
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to delete"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to delete"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
+    entityId: z.string().min(1).describe("The entity ID to delete"),
     advertiserId: z
       .string()
       .optional()
       .describe("Advertiser ID (required for most non-advertiser entities)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (required for adGroup)"),
+    campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
     adGroupId: z
       .string()
       .optional()
       .describe("Ad Group ID (not currently required for any entity type)"),
-    reason: z
-      .string()
-      .optional()
-      .describe("Reason for deletion (for audit logging)"),
+    reason: z.string().optional().describe("Reason for deletion (for audit logging)"),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(
@@ -70,11 +59,7 @@ export async function deleteEntityLogic(
 ): Promise<DeleteEntityOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
 
-  await ttdService.deleteEntity(
-    input.entityType as TtdEntityType,
-    input.entityId,
-    context
-  );
+  await ttdService.deleteEntity(input.entityType as TtdEntityType, input.entityId, context);
 
   return {
     success: true,

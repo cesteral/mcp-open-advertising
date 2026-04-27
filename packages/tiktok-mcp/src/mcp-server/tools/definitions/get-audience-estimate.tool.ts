@@ -25,10 +25,7 @@ Returns estimated reach and audience size ranges.
 
 export const GetAudienceEstimateInputSchema = z
   .object({
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
     targetingConfig: z
       .record(z.any())
       .describe("Targeting specification object with demographic and interest criteria"),
@@ -52,10 +49,7 @@ export async function getAudienceEstimateLogic(
 ): Promise<GetAudienceEstimateOutput> {
   const { tiktokService } = resolveSessionServices(sdkContext);
 
-  const estimate = await tiktokService.getAudienceEstimate(
-    input.targetingConfig,
-    context
-  );
+  const estimate = await tiktokService.getAudienceEstimate(input.targetingConfig, context);
 
   return {
     estimate: estimate as Record<string, unknown>,
@@ -63,7 +57,9 @@ export async function getAudienceEstimateLogic(
   };
 }
 
-export function getAudienceEstimateResponseFormatter(result: GetAudienceEstimateOutput): McpTextContent[] {
+export function getAudienceEstimateResponseFormatter(
+  result: GetAudienceEstimateOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

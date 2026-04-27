@@ -23,35 +23,27 @@ This tool fetches the current entity, merges your changes, and sends the full pa
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID required when entityType is 'adGroup'"),
-    adSquadId: z
-      .string()
-      .optional()
-      .describe("Ad Squad ID required when entityType is 'ad'"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
-    data: z
-      .record(z.any())
-      .describe("Fields to update as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
+    campaignId: z.string().optional().describe("Campaign ID required when entityType is 'adGroup'"),
+    adSquadId: z.string().optional().describe("Ad Squad ID required when entityType is 'ad'"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
+    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
   })
   .superRefine((data, ctx) => {
     if (data.entityType === "adGroup" && !data.campaignId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["campaignId"], message: "campaignId is required for adGroup updates" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["campaignId"],
+        message: "campaignId is required for adGroup updates",
+      });
     }
     if (data.entityType === "ad" && !data.adSquadId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["adSquadId"], message: "adSquadId is required for ad updates" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["adSquadId"],
+        message: "adSquadId is required for ad updates",
+      });
     }
   })
   .describe("Parameters for updating a Snapchat Ads entity");

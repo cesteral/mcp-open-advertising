@@ -214,7 +214,9 @@ export class ErrorHandler {
         return new McpError(JsonRpcErrorCode.NotFound, error.message, undefined, { cause: error });
       }
       if (errorMessage.includes("unauthorized") || errorMessage.includes("authentication")) {
-        return new McpError(JsonRpcErrorCode.Unauthorized, error.message, undefined, { cause: error });
+        return new McpError(JsonRpcErrorCode.Unauthorized, error.message, undefined, {
+          cause: error,
+        });
       }
       if (errorMessage.includes("forbidden") || errorMessage.includes("permission")) {
         return new McpError(JsonRpcErrorCode.Forbidden, error.message, undefined, { cause: error });
@@ -223,13 +225,19 @@ export class ErrorHandler {
         return new McpError(JsonRpcErrorCode.Timeout, error.message, undefined, { cause: error });
       }
       if (errorMessage.includes("rate limit") || errorMessage.includes("too many requests")) {
-        return new McpError(JsonRpcErrorCode.RateLimited, error.message, undefined, { cause: error });
+        return new McpError(JsonRpcErrorCode.RateLimited, error.message, undefined, {
+          cause: error,
+        });
       }
       if (errorMessage.includes("validation") || errorMessage.includes("invalid")) {
-        return new McpError(JsonRpcErrorCode.ValidationError, error.message, undefined, { cause: error });
+        return new McpError(JsonRpcErrorCode.ValidationError, error.message, undefined, {
+          cause: error,
+        });
       }
 
-      return new McpError(JsonRpcErrorCode.InternalError, error.message, undefined, { cause: error });
+      return new McpError(JsonRpcErrorCode.InternalError, error.message, undefined, {
+        cause: error,
+      });
     }
 
     return new McpError(JsonRpcErrorCode.InternalError, "An unknown error occurred", {
@@ -276,8 +284,10 @@ export class ErrorHandler {
 
 const STRING_SECRET_PATTERNS: Array<[RegExp, string]> = [
   [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
-  [/("(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"\s*:\s*")[^"]*(")/gi,
-    '$1[REDACTED]$2'],
+  [
+    /("(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"\s*:\s*")[^"]*(")/gi,
+    "$1[REDACTED]$2",
+  ],
 ];
 
 function redactSecretsInString(text: string): string {

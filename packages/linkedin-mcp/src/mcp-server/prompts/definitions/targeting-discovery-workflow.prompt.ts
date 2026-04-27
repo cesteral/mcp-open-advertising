@@ -29,7 +29,7 @@ export const linkedInTargetingDiscoveryWorkflowPrompt: Prompt = {
 };
 
 export function getLinkedInTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>,
+  args?: Record<string, string>
 ): string {
   const adAccountUrn = args?.adAccountUrn || "{adAccountUrn}";
   const goal = args?.goal || "search";

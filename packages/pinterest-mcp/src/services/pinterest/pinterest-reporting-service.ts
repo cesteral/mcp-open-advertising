@@ -93,10 +93,7 @@ export class PinterestReportingService {
   /**
    * Poll a report task until it is FINISHED or FAILED/EXPIRED.
    */
-  async pollReport(
-    taskId: string,
-    context?: RequestContext
-  ): Promise<ReportTaskCheckData> {
+  async pollReport(taskId: string, context?: RequestContext): Promise<ReportTaskCheckData> {
     this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
 
     const adAccountId = this.httpClient.accountId;
@@ -166,7 +163,11 @@ export class PinterestReportingService {
     context?: RequestContext,
     options: { includeRawCsv?: boolean } = {}
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
-    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
+    const response = await fetchWithTimeout(
+      downloadUrl,
+      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context
+    );
 
     if (!response.ok) {
       throw new McpError(
@@ -186,7 +187,10 @@ export class PinterestReportingService {
     const csvText = await response.text();
     // Normalize for downstream ReportCsvStore persistence — BOM-stripped and
     // LF-only so consumers get a stable canonical payload.
-    const normalizedCsvText = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
+    const normalizedCsvText = csvText
+      .replace(/^\uFEFF/, "")
+      .replace(/\r\n/g, "\n")
+      .trim();
 
     if (normalizedCsvText.length === 0) {
       return {
@@ -227,18 +231,29 @@ export class PinterestReportingService {
     maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const maxRows = typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
+    const maxRows =
+      typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
     const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
 
     const { task_id } = await this.submitReport(reportConfig, requestContext);
     const taskResult = await this.pollReport(task_id, requestContext);
 
-    if (taskResult.report_status === "FAILED" || taskResult.report_status === "EXPIRED" || taskResult.report_status === "DOES_NOT_EXIST") {
-      throw new McpError(JsonRpcErrorCode.InternalError, `Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`);
+    if (
+      taskResult.report_status === "FAILED" ||
+      taskResult.report_status === "EXPIRED" ||
+      taskResult.report_status === "DOES_NOT_EXIST"
+    ) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Pinterest report task ${task_id} failed with status: ${taskResult.report_status}`
+      );
     }
 
     if (!taskResult.url) {
-      throw new McpError(JsonRpcErrorCode.InternalError, `Pinterest report task ${task_id} completed but has no download URL`);
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Pinterest report task ${task_id} completed but has no download URL`
+      );
     }
 
     const reportData = await this.downloadReport(taskResult.url, maxRows, requestContext);
@@ -266,5 +281,4 @@ export class PinterestReportingService {
 
     return this.getReport(configWithBreakdowns, maxRowsOrContext, context);
   }
-
 }

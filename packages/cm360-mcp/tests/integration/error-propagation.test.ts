@@ -122,10 +122,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 

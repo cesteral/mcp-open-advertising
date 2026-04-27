@@ -27,14 +27,11 @@ export const UpdateEntityInputSchema = z
     entityType: z
       .enum(getEntityTypeEnum())
       .optional()
-      .describe("Type of entity to update (optional — for informational purposes only, not used in API call)"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
-    data: z
-      .record(z.any())
-      .describe("Fields to update as key-value pairs"),
+      .describe(
+        "Type of entity to update (optional — for informational purposes only, not used in API call)"
+      ),
+    entityId: z.string().min(1).describe("The entity ID to update"),
+    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
   })
   .describe("Parameters for updating a Meta Ads entity");
 
@@ -57,11 +54,7 @@ export async function updateEntityLogic(
 ): Promise<UpdateEntityOutput> {
   const { metaService } = resolveSessionServices(sdkContext);
 
-  const result = await metaService.updateEntity(
-    input.entityId,
-    input.data,
-    context
-  );
+  const result = await metaService.updateEntity(input.entityId, input.data, context);
 
   const success = (result as Record<string, unknown>)?.success === true;
 

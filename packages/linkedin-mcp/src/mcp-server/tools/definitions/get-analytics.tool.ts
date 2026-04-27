@@ -57,10 +57,7 @@ export const GetAnalyticsInputSchema = z
       .array(z.string())
       .optional()
       .describe("Metrics to retrieve (defaults to impressions, clicks, costInUsd, conversions)"),
-    pivot: z
-      .string()
-      .optional()
-      .describe("Dimension to pivot on (default: CAMPAIGN)"),
+    pivot: z.string().optional().describe("Dimension to pivot on (default: CAMPAIGN)"),
     timeGranularity: z
       .enum(["DAILY", "MONTHLY", "YEARLY", "ALL"])
       .optional()
@@ -69,7 +66,8 @@ export const GetAnalyticsInputSchema = z
   .merge(ReportViewInputSchema)
   .merge(ComputedMetricsFlagSchema)
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for getting LinkedIn Ads analytics");
@@ -126,8 +124,7 @@ export async function getAnalyticsLogic(
   const stringRows: Record<string, string>[] = rawElements.map((row) => {
     const record: Record<string, string> = {};
     for (const [k, v] of Object.entries(row)) {
-      record[k] =
-        typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
+      record[k] = typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
     }
     return record;
   });
@@ -143,9 +140,7 @@ export async function getAnalyticsLogic(
     rows: augmented,
     totalRows: augmented.length,
     input,
-    warnings: computedWarning
-      ? [`computed metrics: ${computedWarning}`]
-      : undefined,
+    warnings: computedWarning ? [`computed metrics: ${computedWarning}`] : undefined,
   });
 
   return {

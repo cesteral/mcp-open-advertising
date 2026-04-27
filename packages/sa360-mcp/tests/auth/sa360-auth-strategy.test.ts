@@ -11,8 +11,7 @@ const mockGetAccessToken = vi.fn();
 vi.mock("../../src/auth/sa360-auth-adapter.js", () => ({
   parseSA360CredentialsFromHeaders: (...args: unknown[]) =>
     mockParseSA360CredentialsFromHeaders(...args),
-  getSA360CredentialFingerprint: (...args: unknown[]) =>
-    mockGetSA360CredentialFingerprint(...args),
+  getSA360CredentialFingerprint: (...args: unknown[]) => mockGetSA360CredentialFingerprint(...args),
   SA360RefreshTokenAuthAdapter: vi.fn().mockImplementation(() => ({
     getAccessToken: mockGetAccessToken,
   })),

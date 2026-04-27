@@ -5,7 +5,10 @@
  * Pinterest Entity Example Resources
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, type PinterestEntityType } from "../../tools/utils/entity-mapping.js";
+import {
+  getSupportedEntityTypes,
+  type PinterestEntityType,
+} from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_EXAMPLE_CONTENT: Record<PinterestEntityType, string> = {
   campaign: `# Pinterest Campaign Examples
@@ -180,7 +183,9 @@ export const entityExampleResources: Resource[] = getSupportedEntityTypes().map(
   name: `Pinterest ${entityType} Examples`,
   description: `Example payloads for creating and updating Pinterest ${entityType} entities`,
   mimeType: "text/markdown",
-  getContent: () => ENTITY_EXAMPLE_CONTENT[entityType] ?? `# Pinterest ${entityType} Examples\n\nNo examples available.\n`,
+  getContent: () =>
+    ENTITY_EXAMPLE_CONTENT[entityType] ??
+    `# Pinterest ${entityType} Examples\n\nNo examples available.\n`,
 }));
 
 export const entityExampleAllResource: Resource = {

@@ -32,13 +32,8 @@ Returns a \`downloadUrl\`. Use \`cm360_download_report\` with \`includeComputedM
 
 export const GetReportBreakdownsInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    name: z
-      .string()
-      .describe("Name for the report"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    name: z.string().describe("Name for the report"),
     type: CM360ReportTypeSchema.describe("Report type"),
     breakdownDimensions: z
       .array(z.string().min(1))
@@ -46,15 +41,11 @@ export const GetReportBreakdownsInputSchema = z
       .describe(
         "Dimension names to break down by (e.g., ['date', 'device', 'country']). These are merged into criteria.dimensions."
       ),
-    datePreset: CM360DatePresetSchema
-      .optional()
-      .describe("Preset date range. Injected into the correct report criteria dateRange when not already set"),
-    criteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for STANDARD reports"),
-    reachCriteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for REACH reports"),
+    datePreset: CM360DatePresetSchema.optional().describe(
+      "Preset date range. Injected into the correct report criteria dateRange when not already set"
+    ),
+    criteria: genericCriteriaSchema.optional().describe("Criteria for STANDARD reports"),
+    reachCriteria: genericCriteriaSchema.optional().describe("Criteria for REACH reports"),
     floodlightCriteria: genericCriteriaSchema
       .optional()
       .describe("Criteria for FLOODLIGHT reports"),
@@ -100,7 +91,10 @@ export async function getReportBreakdownsLogic(
   const { cm360ReportingService } = resolveSessionServices(sdkContext);
 
   const criteriaField = ensureReportSupportsBreakdowns(input.type);
-  const baseCriteria = (getReportCriteriaFromConfig(input, input.type) ?? {}) as Record<string, unknown>;
+  const baseCriteria = (getReportCriteriaFromConfig(input, input.type) ?? {}) as Record<
+    string,
+    unknown
+  >;
   const existingDimensions: { name: string }[] =
     (baseCriteria?.dimensions as { name: string }[] | undefined) ?? [];
   const existingDimensionNames = new Set(existingDimensions.map((d) => d.name));
@@ -138,7 +132,9 @@ export async function getReportBreakdownsLogic(
   };
 }
 
-export function getReportBreakdownsResponseFormatter(result: GetReportBreakdownsOutput): McpTextContent[] {
+export function getReportBreakdownsResponseFormatter(
+  result: GetReportBreakdownsOutput
+): McpTextContent[] {
   const downloadInfo = result.downloadUrl
     ? `\n\nDownload URL: ${result.downloadUrl}`
     : "\n\nNo download URL available yet.";

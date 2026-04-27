@@ -19,7 +19,11 @@ const mockAdapter: SnapchatAuthAdapter = {
 };
 
 const mockLogger: any = {
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
 };
 mockLogger.child.mockReturnValue(mockLogger);
 
@@ -46,7 +50,7 @@ describe("SnapchatHttpClient", () => {
         campaigns: [{ sub_request_status: "SUCCESS", campaign: { id: "c1", name: "Test" } }],
       }),
     });
-    const result = await client.get("/v1/adaccounts/acct_123/campaigns") as any;
+    const result = (await client.get("/v1/adaccounts/acct_123/campaigns")) as any;
     expect(result.request_status).toBe("SUCCESS");
     expect(result.campaigns).toHaveLength(1);
     expect(result.campaigns[0].campaign.id).toBe("c1");
@@ -122,7 +126,7 @@ describe("SnapchatHttpClient", () => {
       expect.any(Number),
       undefined,
       expect.objectContaining({
-        headers: expect.objectContaining({ Authorization: "Bearer test_token" })
+        headers: expect.objectContaining({ Authorization: "Bearer test_token" }),
       })
     );
   });

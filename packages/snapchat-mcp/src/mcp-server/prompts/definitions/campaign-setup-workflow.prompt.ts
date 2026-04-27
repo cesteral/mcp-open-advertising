@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "snapchat_campaign_setup_workflow",
-  description: "Step-by-step guide for creating a complete Snapchat Ads campaign structure (Campaign > Ad Squad > Ad)",
+  description:
+    "Step-by-step guide for creating a complete Snapchat Ads campaign structure (Campaign > Ad Squad > Ad)",
   arguments: [
     {
       name: "adAccountId",

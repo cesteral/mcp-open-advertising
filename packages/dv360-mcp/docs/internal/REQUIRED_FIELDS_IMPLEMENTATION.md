@@ -20,6 +20,7 @@ This caused **all fields to be marked as `.optional()` in Zod schemas**, breakin
 ### 1. Automatic Detection from Descriptions
 
 Added smart parsing logic in `convert-to-openapi.ts` that:
+
 - Detects "Required" at the start of field descriptions
 - Excludes output-only fields (marked as "Output only" or "Assigned by the system")
 - Handles edge cases (fields ending in "Id" that are required inputs like `campaignId`)
@@ -33,10 +34,10 @@ function isRequiredFromDescription(description?: string): boolean {
 
 function isOutputOnlyField(fieldName: string, description?: string): boolean {
   // Check explicit "Output only" marker
-  if (description?.toLowerCase().includes('output only')) return true;
+  if (description?.toLowerCase().includes("output only")) return true;
 
   // Don't exclude fields explicitly marked as required
-  const isExplicitlyRequired = description?.toLowerCase().startsWith('required');
+  const isExplicitlyRequired = description?.toLowerCase().startsWith("required");
   if (isExplicitlyRequired) return false;
 
   // Check field name patterns (name, updateTime, createTime)
@@ -106,7 +107,7 @@ export const InsertionOrder = z.object({
 ### Test 1: Missing Required Fields Caught
 
 ```javascript
-InsertionOrder.parse({ displayName: 'Test' });
+InsertionOrder.parse({ displayName: "Test" });
 // ❌ ZodError: Missing required fields: budget, pacing, campaignId, entityStatus, kpi, frequencyCap
 ```
 
@@ -116,13 +117,13 @@ InsertionOrder.parse({ displayName: 'Test' });
 
 ```javascript
 InsertionOrder.parse({
-  displayName: 'Sweden IO',
-  campaignId: '456',
-  entityStatus: 'ENTITY_STATUS_ACTIVE',
-  budget: { budgetUnit: 'BUDGET_UNIT_CURRENCY', budgetSegments: [] },
-  pacing: { pacingType: 'PACING_TYPE_AHEAD' },
-  kpi: { kpiType: 'KPI_TYPE_CPM', kpiAmountMicros: '1000000' },
-  frequencyCap: { unlimited: true }
+  displayName: "Sweden IO",
+  campaignId: "456",
+  entityStatus: "ENTITY_STATUS_ACTIVE",
+  budget: { budgetUnit: "BUDGET_UNIT_CURRENCY", budgetSegments: [] },
+  pacing: { pacingType: "PACING_TYPE_AHEAD" },
+  kpi: { kpiType: "KPI_TYPE_CPM", kpiAmountMicros: "1000000" },
+  frequencyCap: { unlimited: true },
 });
 // ✅ Validation passes
 ```
@@ -144,12 +145,13 @@ Our system now has **two complementary validation layers**:
    - Runtime validation before API calls
 
 **Integration Test:**
+
 ```javascript
 // Bad data (missing campaignId)
-const data = { displayName: 'Test', advertiserId: '123' };
+const data = { displayName: "Test", advertiserId: "123" };
 
 // Layer 1: Relationship validation catches it
-validateEntityRelationships('insertionOrder', data);
+validateEntityRelationships("insertionOrder", data);
 // → Missing: ['campaignId']
 
 // Layer 2: Schema validation also catches it (plus more)
@@ -164,6 +166,7 @@ InsertionOrder.parse(data);
 ### Schemas Updated: 124
 
 All entity schemas now have correct required fields:
+
 - Partner
 - Advertiser
 - Campaign (displayName, entityStatus, frequencyCap, campaignGoal, campaignFlight)
@@ -196,11 +199,11 @@ All entity schemas now have correct required fields:
 
 ```typescript
 // Before: No validation until API call fails
-await createEntity('insertionOrder', ids, { displayName: 'Test' });
+await createEntity("insertionOrder", ids, { displayName: "Test" });
 // → 400 Bad Request: "invalid argument" (unhelpful!)
 
 // After: Validation fails immediately with clear error
-await createEntity('insertionOrder', ids, { displayName: 'Test' });
+await createEntity("insertionOrder", ids, { displayName: "Test" });
 // → ZodError: Missing required fields: campaignId, budget, pacing, ...
 ```
 
@@ -210,13 +213,13 @@ TypeScript types now correctly reflect required vs optional:
 
 ```typescript
 type InsertionOrder = {
-  displayName: string;        // Required (not `string | undefined`)
-  campaignId: string;         // Required
-  budget: InsertionOrderBudget;  // Required
+  displayName: string; // Required (not `string | undefined`)
+  campaignId: string; // Required
+  budget: InsertionOrderBudget; // Required
 
-  insertionOrderId?: string;  // Optional (output-only)
-  updateTime?: string;        // Optional (output-only)
-}
+  insertionOrderId?: string; // Optional (output-only)
+  updateTime?: string; // Optional (output-only)
+};
 ```
 
 ### 3. AI Agent Guidance
@@ -261,6 +264,7 @@ Future tooling can generate documentation from schemas showing required vs optio
 ### 1. `scripts/lib/convert-to-openapi.ts` (+118 lines)
 
 Added:
+
 - `extractRequiredFieldsFromDescriptions()` - Main extraction logic
 - `isRequiredFromDescription()` - Pattern matching for "Required"
 - `isOutputOnlyField()` - Detection of output-only fields
@@ -268,6 +272,7 @@ Added:
 - `OUTPUT_ONLY_PATTERNS` - Field name patterns for output-only fields
 
 Modified:
+
 - `convertSchema()` - Call extraction logic when `required` array not present
 
 ### 2. `src/generated/schemas/zod.ts` (regenerated)
@@ -281,6 +286,7 @@ Modified:
 ### Unit Tests (Manual)
 
 Created comprehensive test harness:
+
 - ✅ Pattern matching for "Required."
 - ✅ Pattern matching for "Required:"
 - ✅ Pattern matching for "Required " (space)
@@ -341,6 +347,7 @@ Current implementation is production-ready. The above enhancements are optional 
 ### When to Update
 
 Regenerate schemas when:
+
 1. **DV360 API version changes** (e.g., v4 → v5)
 2. **Google adds/removes entities** (rare)
 3. **Google changes field requirements** (quarterly review recommended)
@@ -362,8 +369,8 @@ If auto-detection misses a field:
 // In convert-to-openapi.ts
 const REQUIRED_FIELDS_OVERRIDES = {
   EntityName: {
-    add: ['missedRequiredField'],
-    remove: ['incorrectlyDetectedField'],
+    add: ["missedRequiredField"],
+    remove: ["incorrectlyDetectedField"],
   },
 };
 ```
@@ -379,6 +386,7 @@ This implementation complements our earlier work on **entity relationship valida
 - **Together:** Defense in depth for data validation
 
 See also:
+
 - `docs/ENTITY_RELATIONSHIPS.md` - Entity hierarchy system
 - `docs/SCHEMA_REQUIRED_FIELDS_ISSUE.md` - Original problem analysis
 
@@ -389,6 +397,7 @@ See also:
 Required field detection is now **fully automated**, **accurate**, and **maintenance-free**.
 
 All 124 DV360 schemas have correct required/optional field markings, providing:
+
 - Runtime validation before API calls
 - TypeScript type safety
 - Better error messages

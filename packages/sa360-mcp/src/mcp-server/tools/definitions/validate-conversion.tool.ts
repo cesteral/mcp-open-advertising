@@ -50,11 +50,8 @@ const ConversionPayloadSchema = z.object({
 
 export const ValidateConversionInputSchema = z
   .object({
-    mode: z
-      .enum(["insert", "update"])
-      .describe("Whether validating for insert or update"),
-    conversion: ConversionPayloadSchema
-      .describe("Conversion payload to validate"),
+    mode: z.enum(["insert", "update"]).describe("Whether validating for insert or update"),
+    conversion: ConversionPayloadSchema.describe("Conversion payload to validate"),
   })
   .describe("Parameters for validating an SA360 conversion payload");
 
@@ -82,33 +79,45 @@ export async function validateConversionLogic(
 
   // Click ID: at least one of clickId or gclid required
   if (!conversion.clickId && !conversion.gclid) {
-    errors.push("At least one of 'clickId' or 'gclid' is required to attribute the conversion to a click.");
+    errors.push(
+      "At least one of 'clickId' or 'gclid' is required to attribute the conversion to a click."
+    );
   }
 
   // conversionTimestamp: required and must be valid epoch milliseconds
   if (!conversion.conversionTimestamp) {
-    errors.push("'conversionTimestamp' is required (epoch milliseconds as a string, e.g., '1700000000000').");
+    errors.push(
+      "'conversionTimestamp' is required (epoch milliseconds as a string, e.g., '1700000000000')."
+    );
   } else if (!/^\d+$/.test(conversion.conversionTimestamp)) {
-    errors.push(`'conversionTimestamp' must be a numeric string (epoch milliseconds). Got: "${conversion.conversionTimestamp}"`);
+    errors.push(
+      `'conversionTimestamp' must be a numeric string (epoch milliseconds). Got: "${conversion.conversionTimestamp}"`
+    );
   } else {
     const ts = Number(conversion.conversionTimestamp);
     // Sanity check: should be after 2000-01-01 and not absurdly far in the future
     if (ts < 946684800000) {
-      warnings.push("'conversionTimestamp' appears to be before year 2000 — verify this is epoch milliseconds, not seconds.");
+      warnings.push(
+        "'conversionTimestamp' appears to be before year 2000 — verify this is epoch milliseconds, not seconds."
+      );
     }
   }
 
   // revenueMicros: must be numeric if present
   if (conversion.revenueMicros !== undefined) {
     if (!/^-?\d+$/.test(conversion.revenueMicros)) {
-      errors.push(`'revenueMicros' must be a numeric string (1,000,000 = 1 currency unit). Got: "${conversion.revenueMicros}"`);
+      errors.push(
+        `'revenueMicros' must be a numeric string (1,000,000 = 1 currency unit). Got: "${conversion.revenueMicros}"`
+      );
     }
   }
 
   // quantityMillis: must be numeric if present
   if (conversion.quantityMillis !== undefined) {
     if (!/^-?\d+$/.test(conversion.quantityMillis)) {
-      errors.push(`'quantityMillis' must be a numeric string (1000 = 1). Got: "${conversion.quantityMillis}"`);
+      errors.push(
+        `'quantityMillis' must be a numeric string (1000 = 1). Got: "${conversion.quantityMillis}"`
+      );
     }
   }
 
@@ -116,12 +125,16 @@ export async function validateConversionLogic(
   if (!conversion.segmentationType) {
     errors.push("'segmentationType' is required (e.g., 'FLOODLIGHT').");
   } else if (!VALID_SEGMENTATION_TYPES.includes(conversion.segmentationType)) {
-    warnings.push(`'segmentationType' value "${conversion.segmentationType}" is not a recognized type. Known types: ${VALID_SEGMENTATION_TYPES.join(", ")}`);
+    warnings.push(
+      `'segmentationType' value "${conversion.segmentationType}" is not a recognized type. Known types: ${VALID_SEGMENTATION_TYPES.join(", ")}`
+    );
   }
 
   // Floodlight identification: need segmentationName or floodlightActivityId
   if (!conversion.segmentationName && !conversion.floodlightActivityId) {
-    errors.push("Either 'segmentationName' or 'floodlightActivityId' is required to identify the Floodlight activity.");
+    errors.push(
+      "Either 'segmentationName' or 'floodlightActivityId' is required to identify the Floodlight activity."
+    );
   }
 
   // state: must be valid enum if present
@@ -131,24 +144,32 @@ export async function validateConversionLogic(
 
   // type: warn if unrecognized
   if (conversion.type !== undefined && !VALID_CONVERSION_TYPES.includes(conversion.type)) {
-    warnings.push(`'type' value "${conversion.type}" is not a recognized conversion type. Known types: ${VALID_CONVERSION_TYPES.join(", ")}`);
+    warnings.push(
+      `'type' value "${conversion.type}" is not a recognized conversion type. Known types: ${VALID_CONVERSION_TYPES.join(", ")}`
+    );
   }
 
   // Update mode: conversionId required
   if (mode === "update") {
     if (!conversion.conversionId) {
-      errors.push("'conversionId' is required for update mode (returned from the original insert response).");
+      errors.push(
+        "'conversionId' is required for update mode (returned from the original insert response)."
+      );
     }
   }
 
   // Insert mode: conversionId should not be present
   if (mode === "insert" && conversion.conversionId) {
-    warnings.push("'conversionId' is set but mode is 'insert'. conversionId is typically only used for updates.");
+    warnings.push(
+      "'conversionId' is set but mode is 'insert'. conversionId is typically only used for updates."
+    );
   }
 
   // currencyCode format warning
   if (conversion.currencyCode && !/^[A-Z]{3}$/.test(conversion.currencyCode)) {
-    warnings.push(`'currencyCode' should be an ISO 4217 code (e.g., USD, EUR). Got: "${conversion.currencyCode}"`);
+    warnings.push(
+      `'currencyCode' should be an ISO 4217 code (e.g., USD, EUR). Got: "${conversion.currencyCode}"`
+    );
   }
 
   return {
@@ -160,7 +181,9 @@ export async function validateConversionLogic(
   };
 }
 
-export function validateConversionResponseFormatter(result: ValidateConversionOutput): McpTextContent[] {
+export function validateConversionResponseFormatter(
+  result: ValidateConversionOutput
+): McpTextContent[] {
   const statusIcon = result.valid ? "VALID" : "INVALID";
   const parts = [`Validation: ${statusIcon} (mode: ${result.mode})`];
 

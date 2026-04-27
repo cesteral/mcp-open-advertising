@@ -21,16 +21,13 @@ export const bulkOperationsWorkflowPrompt: Prompt = {
     },
     {
       name: "operation",
-      description:
-        "Operation type: 'create', 'update', 'status', or 'bids' (default: status)",
+      description: "Operation type: 'create', 'update', 'status', or 'bids' (default: status)",
       required: false,
     },
   ],
 };
 
-export function getBulkOperationsWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getBulkOperationsWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
   const operation = args?.operation || "status";
 

@@ -19,18 +19,29 @@ import {
 } from "../../src/auth/snapchat-auth-adapter.js";
 
 describe("SnapchatAccessTokenAdapter", () => {
-  beforeEach(() => { mockFetch.mockReset(); });
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
 
   it("validates by calling GET /v1/me (Snapchat endpoint, not TikTok)", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ request_status: "SUCCESS", me: { id: "user_1", display_name: "Test User" } }),
+      json: async () => ({
+        request_status: "SUCCESS",
+        me: { id: "user_1", display_name: "Test User" },
+      }),
     });
-    const adapter = new SnapchatAccessTokenAdapter("token", "acct_123", "https://adsapi.snapchat.com");
+    const adapter = new SnapchatAccessTokenAdapter(
+      "token",
+      "acct_123",
+      "https://adsapi.snapchat.com"
+    );
     await adapter.validate();
     expect(mockFetch).toHaveBeenCalledWith(
       "https://adsapi.snapchat.com/v1/me",
-      expect.any(Number), undefined, expect.objectContaining({ method: "GET" })
+      expect.any(Number),
+      undefined,
+      expect.objectContaining({ method: "GET" })
     );
     expect(adapter.userId).toBe("user_1");
   });
@@ -38,7 +49,10 @@ describe("SnapchatAccessTokenAdapter", () => {
   it("sets userId from me.id field", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ request_status: "SUCCESS", me: { id: "snap_user_456", display_name: "Snap User" } }),
+      json: async () => ({
+        request_status: "SUCCESS",
+        me: { id: "snap_user_456", display_name: "Snap User" },
+      }),
     });
     const adapter = new SnapchatAccessTokenAdapter("token", "acct_123");
     await adapter.validate();
@@ -47,7 +61,10 @@ describe("SnapchatAccessTokenAdapter", () => {
 
   it("throws on HTTP error without checking code field", async () => {
     mockFetch.mockResolvedValueOnce({
-      ok: false, status: 401, statusText: "Unauthorized", text: async () => "Invalid token"
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      text: async () => "Invalid token",
     });
     const adapter = new SnapchatAccessTokenAdapter("bad_token", "acct_123");
     await expect(adapter.validate()).rejects.toThrow("401");
@@ -76,25 +93,44 @@ describe("SnapchatAccessTokenAdapter", () => {
 });
 
 describe("SnapchatRefreshTokenAdapter", () => {
-  beforeEach(() => { mockFetch.mockReset(); });
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
 
   it("refreshes via POST to Snapchat accounts domain (not TikTok endpoint)", async () => {
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "snap_token", expires_in: 1800 }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ request_status: "SUCCESS", me: { id: "u1", display_name: "User" } }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "snap_token", expires_in: 1800 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ request_status: "SUCCESS", me: { id: "u1", display_name: "User" } }),
+      });
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "cid", appSecret: "cs", refreshToken: "rt" }, "acct_123", "https://adsapi.snapchat.com"
+      { appId: "cid", appSecret: "cs", refreshToken: "rt" },
+      "acct_123",
+      "https://adsapi.snapchat.com"
     );
     await adapter.validate();
-    expect(mockFetch.mock.calls[0][0]).toBe("https://accounts.snapchat.com/login/oauth2/access_token");
+    expect(mockFetch.mock.calls[0][0]).toBe(
+      "https://accounts.snapchat.com/login/oauth2/access_token"
+    );
   });
 
   it("sends form-encoded refresh token body", async () => {
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "snap_token", expires_in: 1800 }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ request_status: "SUCCESS", me: { id: "u1", display_name: "User" } }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "snap_token", expires_in: 1800 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ request_status: "SUCCESS", me: { id: "u1", display_name: "User" } }),
+      });
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "my_client_id", appSecret: "my_secret", refreshToken: "my_rt" }, "acct_123"
+      { appId: "my_client_id", appSecret: "my_secret", refreshToken: "my_rt" },
+      "acct_123"
     );
     await adapter.validate();
     const refreshCall = mockFetch.mock.calls[0];
@@ -107,10 +143,17 @@ describe("SnapchatRefreshTokenAdapter", () => {
 
   it("reads access_token from top-level (flat OAuth2, no data wrapper)", async () => {
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "flat_token", expires_in: 3600 }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ request_status: "SUCCESS", me: { id: "u1", display_name: "User" } }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "flat_token", expires_in: 3600 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ request_status: "SUCCESS", me: { id: "u1", display_name: "User" } }),
+      });
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "a", appSecret: "b", refreshToken: "c" }, "acct_123"
+      { appId: "a", appSecret: "b", refreshToken: "c" },
+      "acct_123"
     );
     const token = await adapter.getAccessToken();
     expect(token).toBe("flat_token");
@@ -118,21 +161,33 @@ describe("SnapchatRefreshTokenAdapter", () => {
 
   it("throws if access_token missing in refresh response", async () => {
     mockFetch.mockResolvedValueOnce({
-      ok: true, json: async () => ({ error: "invalid_grant" })
+      ok: true,
+      json: async () => ({ error: "invalid_grant" }),
     });
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "a", appSecret: "b", refreshToken: "bad" }, "acct_123"
+      { appId: "a", appSecret: "b", refreshToken: "bad" },
+      "acct_123"
     );
     await expect(adapter.getAccessToken()).rejects.toThrow("access_token");
   });
 
   it("rotates refresh token if new one provided", async () => {
     mockFetch
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t1", expires_in: 3600 }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t2", refresh_token: "new_rt", expires_in: 3600 }) })
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t3", expires_in: 3600 }) });
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "t1", expires_in: 3600 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "t2", refresh_token: "new_rt", expires_in: 3600 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ access_token: "t3", expires_in: 3600 }),
+      });
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "a", appSecret: "b", refreshToken: "old_rt" }, "acct_123"
+      { appId: "a", appSecret: "b", refreshToken: "old_rt" },
+      "acct_123"
     );
     // First call — gets t1, currentRefreshToken stays "old_rt"
     await adapter.getAccessToken();
@@ -151,9 +206,13 @@ describe("SnapchatRefreshTokenAdapter", () => {
   it("returns cached token when not expired", async () => {
     vi.useFakeTimers();
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "a", appSecret: "b", refreshToken: "rt" }, "adv-123"
+      { appId: "a", appSecret: "b", refreshToken: "rt" },
+      "adv-123"
     );
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "cached-token", expires_in: 86400 }) });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "cached-token", expires_in: 86400 }),
+    });
 
     const first = await adapter.getAccessToken();
     expect(first).toBe("cached-token");
@@ -170,16 +229,23 @@ describe("SnapchatRefreshTokenAdapter", () => {
   it("fetches new token when expired", async () => {
     vi.useFakeTimers();
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "a", appSecret: "b", refreshToken: "rt" }, "adv-123"
+      { appId: "a", appSecret: "b", refreshToken: "rt" },
+      "adv-123"
     );
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "first-token", expires_in: 86400 }) });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "first-token", expires_in: 86400 }),
+    });
 
     await adapter.getAccessToken();
 
     // Advance past expiry
     vi.advanceTimersByTime(86341 * 1000);
 
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "refreshed-token", expires_in: 86400 }) });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "refreshed-token", expires_in: 86400 }),
+    });
     const second = await adapter.getAccessToken();
     expect(second).toBe("refreshed-token");
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -188,7 +254,8 @@ describe("SnapchatRefreshTokenAdapter", () => {
 
   it("concurrent calls share pending auth (mutex)", async () => {
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "a", appSecret: "b", refreshToken: "rt" }, "adv-123"
+      { appId: "a", appSecret: "b", refreshToken: "rt" },
+      "adv-123"
     );
 
     let resolveToken!: (value: unknown) => void;
@@ -202,7 +269,10 @@ describe("SnapchatRefreshTokenAdapter", () => {
     const p2 = adapter.getAccessToken();
     const p3 = adapter.getAccessToken();
 
-    resolveToken({ ok: true, json: async () => ({ access_token: "shared-token", expires_in: 86400 }) });
+    resolveToken({
+      ok: true,
+      json: async () => ({ access_token: "shared-token", expires_in: 86400 }),
+    });
 
     const [t1, t2, t3] = await Promise.all([p1, p2, p3]);
     expect(t1).toBe("shared-token");
@@ -213,16 +283,23 @@ describe("SnapchatRefreshTokenAdapter", () => {
 
   it("clears pending on failure (retry works)", async () => {
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "a", appSecret: "b", refreshToken: "rt" }, "adv-123"
+      { appId: "a", appSecret: "b", refreshToken: "rt" },
+      "adv-123"
     );
 
     mockFetch.mockResolvedValueOnce({
-      ok: false, status: 401, statusText: "Unauthorized", text: async () => "Bad credentials"
+      ok: false,
+      status: 401,
+      statusText: "Unauthorized",
+      text: async () => "Bad credentials",
     });
 
     await expect(adapter.getAccessToken()).rejects.toThrow("Snapchat token refresh failed");
 
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "new-access-token", expires_in: 86400 }) });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "new-access-token", expires_in: 86400 }),
+    });
     const token = await adapter.getAccessToken();
     expect(token).toBe("new-access-token");
     expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -230,11 +307,22 @@ describe("SnapchatRefreshTokenAdapter", () => {
 
   it("validates token via /v1/me Snapchat endpoint", async () => {
     const adapter = new SnapchatRefreshTokenAdapter(
-      { appId: "app-id", appSecret: "secret", refreshToken: "refresh" }, "adv-123", "https://adsapi.snapchat.com"
+      { appId: "app-id", appSecret: "secret", refreshToken: "refresh" },
+      "adv-123",
+      "https://adsapi.snapchat.com"
     );
 
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "new-access-token", expires_in: 86400 }) });
-    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ request_status: "SUCCESS", me: { id: "snap-user-123", display_name: "Snap User" } }) });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ access_token: "new-access-token", expires_in: 86400 }),
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        request_status: "SUCCESS",
+        me: { id: "snap-user-123", display_name: "Snap User" },
+      }),
+    });
 
     await adapter.validate();
 
@@ -244,7 +332,9 @@ describe("SnapchatRefreshTokenAdapter", () => {
 
     const userInfoCall = mockFetch.mock.calls[1];
     expect(userInfoCall[0]).toBe("https://adsapi.snapchat.com/v1/me");
-    expect((userInfoCall[3].headers as Record<string, string>)["Authorization"]).toBe("Bearer new-access-token");
+    expect((userInfoCall[3].headers as Record<string, string>)["Authorization"]).toBe(
+      "Bearer new-access-token"
+    );
   });
 });
 
@@ -263,9 +353,9 @@ describe("parseSnapchatTokenFromHeaders", () => {
   });
 
   it("throws when Authorization header has wrong scheme", () => {
-    expect(() =>
-      parseSnapchatTokenFromHeaders({ authorization: "Basic abc123" })
-    ).toThrow("Authorization header must use Bearer scheme");
+    expect(() => parseSnapchatTokenFromHeaders({ authorization: "Basic abc123" })).toThrow(
+      "Authorization header must use Bearer scheme"
+    );
   });
 });
 

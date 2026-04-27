@@ -1,8 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { z } from 'zod';
-import { resolveSessionServices } from '../utils/resolve-session.js';
+import { z } from "zod";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   ALL_TARGETING_TYPES,
   type TargetingParentType,
@@ -13,13 +13,13 @@ import {
   validateTargetingInput,
   getTargetingValidationError,
   buildTargetingIds,
-} from '../utils/targeting-metadata.js';
-import { getTargetingRequiredIdInputShape } from '../utils/targeting-input-shape.js';
+} from "../utils/targeting-metadata.js";
+import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from '@cesteral/shared';
+import type { SdkContext } from "@cesteral/shared";
 
-const TOOL_NAME = 'dv360_create_assigned_targeting';
-const TOOL_TITLE = 'Create DV360 Assigned Targeting Option';
+const TOOL_NAME = "dv360_create_assigned_targeting";
+const TOOL_TITLE = "Create DV360 Assigned Targeting Option";
 
 const TOOL_DESCRIPTION = `Create a new assigned targeting option on a DV360 entity (Insertion Order, Line Item, or Ad Group).
 
@@ -58,33 +58,33 @@ export const CreateAssignedTargetingInputSchema = z
   .object({
     parentType: z
       .enum(getSupportedTargetingParentTypes() as [string, ...string[]])
-      .describe('Type of parent entity'),
-    advertiserId: z.string().describe('DV360 Advertiser ID'),
+      .describe("Type of parent entity"),
+    advertiserId: z.string().describe("DV360 Advertiser ID"),
     ...TargetingRequiredIdInputShape,
     targetingType: z
       .enum(ALL_TARGETING_TYPES as unknown as [string, ...string[]])
-      .describe('Targeting type to create'),
+      .describe("Targeting type to create"),
     data: z
       .record(z.any())
       .describe(
-        'Targeting option data payload. Structure depends on targetingType. Fetch targeting-schema://{type} for schema details.'
+        "Targeting option data payload. Structure depends on targetingType. Fetch targeting-schema://{type} for schema details."
       ),
   })
   .refine(validateTargetingInput, getTargetingValidationError)
-  .describe('Parameters for creating an assigned targeting option');
+  .describe("Parameters for creating an assigned targeting option");
 
 /**
  * Output schema for create assigned targeting tool
  */
 export const CreateAssignedTargetingOutputSchema = z
   .object({
-    createdTargetingOption: z.record(z.any()).describe('The created assigned targeting option'),
-    assignedTargetingOptionId: z.string().describe('ID of the newly created targeting option'),
-    parentType: z.string().describe('Parent entity type'),
-    targetingType: z.string().describe('Targeting type'),
+    createdTargetingOption: z.record(z.any()).describe("The created assigned targeting option"),
+    assignedTargetingOptionId: z.string().describe("ID of the newly created targeting option"),
+    parentType: z.string().describe("Parent entity type"),
+    targetingType: z.string().describe("Targeting type"),
     timestamp: z.string().datetime(),
   })
-  .describe('Created assigned targeting option result');
+  .describe("Created assigned targeting option result");
 
 type CreateAssignedTargetingInput = z.infer<typeof CreateAssignedTargetingInputSchema>;
 type CreateAssignedTargetingOutput = z.infer<typeof CreateAssignedTargetingOutputSchema>;
@@ -114,7 +114,8 @@ export async function createAssignedTargetingLogic(
 
   return {
     createdTargetingOption: resultObj,
-    assignedTargetingOptionId: resultObj.assignedTargetingOptionId || resultObj.name?.split('/').pop() || 'unknown',
+    assignedTargetingOptionId:
+      resultObj.assignedTargetingOptionId || resultObj.name?.split("/").pop() || "unknown",
     parentType: input.parentType,
     targetingType: input.targetingType,
     timestamp: new Date().toISOString(),
@@ -124,14 +125,16 @@ export async function createAssignedTargetingLogic(
 /**
  * Format response for MCP client
  */
-export function createAssignedTargetingResponseFormatter(result: CreateAssignedTargetingOutput): McpTextContent[] {
+export function createAssignedTargetingResponseFormatter(
+  result: CreateAssignedTargetingOutput
+): McpTextContent[] {
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
   const schemaName = getTargetingDetailSchemaName(result.targetingType as TargetingType);
 
   return [
     {
-      type: 'text' as const,
+      type: "text" as const,
       text: `Successfully created ${result.targetingType} targeting option
 
 ID: ${result.assignedTargetingOptionId}
@@ -165,7 +168,11 @@ export const createAssignedTargetingTool = {
         lineItemId: "7654321",
         targetingType: "TARGETING_TYPE_GEO_REGION",
         data: {
-          geoRegionDetails: { displayName: "United States", geoRegionType: "GEO_REGION_TYPE_COUNTRY", negative: false },
+          geoRegionDetails: {
+            displayName: "United States",
+            geoRegionType: "GEO_REGION_TYPE_COUNTRY",
+            negative: false,
+          },
         },
       },
     },

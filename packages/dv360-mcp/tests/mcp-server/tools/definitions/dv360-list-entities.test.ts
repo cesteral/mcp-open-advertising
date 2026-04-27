@@ -5,15 +5,14 @@ const { mockResolveSessionServices } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js",
-  () => ({
-    getSupportedEntityTypesDynamic: vi.fn().mockReturnValue([
+vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () => ({
+  getSupportedEntityTypesDynamic: vi
+    .fn()
+    .mockReturnValue([
       "adGroup",
       "adGroupAd",
       "advertiser",
@@ -27,47 +26,57 @@ vi.mock(
       "locationList",
       "partner",
     ]),
-    getEntityConfigDynamic: vi.fn().mockReturnValue({
-      parentIds: ["advertiserId"],
-      filterParamIds: [],
-      queryParamIds: [],
-      supportsFilter: true,
-      supportsCreate: true,
-      supportsUpdate: true,
-      supportsDelete: true,
-      apiPath: "/advertisers/{advertiserId}/campaigns",
-    }),
-    generateRelationshipDescription: vi.fn().mockReturnValue(""),
-    validateEntityRelationships: vi.fn().mockReturnValue([]),
-    getEntityHierarchyPath: vi.fn().mockReturnValue(["advertiser", "campaign"]),
-    getEntitySchemaForOperation: vi.fn(),
-    getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName"]),
-  })
-);
+  getEntityConfigDynamic: vi.fn().mockReturnValue({
+    parentIds: ["advertiserId"],
+    filterParamIds: [],
+    queryParamIds: [],
+    supportsFilter: true,
+    supportsCreate: true,
+    supportsUpdate: true,
+    supportsDelete: true,
+    apiPath: "/advertisers/{advertiserId}/campaigns",
+  }),
+  generateRelationshipDescription: vi.fn().mockReturnValue(""),
+  validateEntityRelationships: vi.fn().mockReturnValue([]),
+  getEntityHierarchyPath: vi.fn().mockReturnValue(["advertiser", "campaign"]),
+  getEntitySchemaForOperation: vi.fn(),
+  getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName"]),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-id-extraction.js",
-  () => ({
-    extractParentIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
-      const ids: Record<string, string> = {};
-      for (const key of ["partnerId", "advertiserId", "campaignId", "insertionOrderId", "lineItemId", "adGroupId"]) {
-        if (input[key] && typeof input[key] === "string") {
-          ids[key] = input[key] as string;
-        }
+vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", () => ({
+  extractParentIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
+    const ids: Record<string, string> = {};
+    for (const key of [
+      "partnerId",
+      "advertiserId",
+      "campaignId",
+      "insertionOrderId",
+      "lineItemId",
+      "adGroupId",
+    ]) {
+      if (input[key] && typeof input[key] === "string") {
+        ids[key] = input[key] as string;
       }
-      return ids;
-    }),
-    extractEntityIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
-      const ids: Record<string, string> = {};
-      for (const key of ["partnerId", "advertiserId", "campaignId", "insertionOrderId", "lineItemId", "adGroupId"]) {
-        if (input[key] && typeof input[key] === "string") {
-          ids[key] = input[key] as string;
-        }
+    }
+    return ids;
+  }),
+  extractEntityIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
+    const ids: Record<string, string> = {};
+    for (const key of [
+      "partnerId",
+      "advertiserId",
+      "campaignId",
+      "insertionOrderId",
+      "lineItemId",
+      "adGroupId",
+    ]) {
+      if (input[key] && typeof input[key] === "string") {
+        ids[key] = input[key] as string;
       }
-      return ids;
-    }),
-  })
-);
+    }
+    return ids;
+  }),
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {

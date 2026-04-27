@@ -13,6 +13,7 @@
 ## Task 1: Fix create-report-template false-positive response
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/create-report-template.tool.ts:125-152`
 
 **What:** The response formatter says "created successfully" even when `templateData` is null/undefined. This happened in production when an `UNAUTHORIZED_FIELD_OR_TYPE` error was swallowed or the mutation returned no data.
@@ -31,9 +32,7 @@ export function createReportTemplateResponseFormatter(
         type: "text" as const,
         text:
           `Report template creation failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];
@@ -71,6 +70,7 @@ export function createReportTemplateResponseFormatter(
 ## Task 2: Fix update-report-template false-positive response (same bug)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/update-report-template.tool.ts:118-144`
 
 **What:** Identical bug — says "updated successfully" when `templateData` is null/undefined.
@@ -87,9 +87,7 @@ export function updateReportTemplateResponseFormatter(
         type: "text" as const,
         text:
           `Report template update failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];
@@ -126,6 +124,7 @@ export function updateReportTemplateResponseFormatter(
 ## Task 3: Create `ttd_list_report_types` tool
 
 **Files:**
+
 - Create: `packages/ttd-mcp/src/mcp-server/tools/definitions/list-report-types.tool.ts`
 
 **What:** Wraps `reportTypes(input: { format: $format })` so agents can discover available report types without raw GraphQL. Returns `{ id, name }` for all types.
@@ -204,9 +203,7 @@ export async function listReportTypesLogic(
   };
 }
 
-export function listReportTypesResponseFormatter(
-  result: ListReportTypesOutput
-): McpTextContent[] {
+export function listReportTypesResponseFormatter(result: ListReportTypesOutput): McpTextContent[] {
   if (result.reportTypes.length === 0) {
     return [
       {
@@ -260,6 +257,7 @@ export const listReportTypesTool = {
 ## Task 4: Create `ttd_get_report_type_schema` tool
 
 **Files:**
+
 - Create: `packages/ttd-mcp/src/mcp-server/tools/definitions/get-report-type-schema.tool.ts`
 
 **What:** Wraps `reportType(input: { format, reportTypeId })` with **auto-pagination** for both fields and metrics. Returns the full list of column IDs needed to build report templates.
@@ -394,9 +392,7 @@ export async function getReportTypeSchemaLogic(
 
   // Collect fields with pagination
   const fieldsConnection = (reportType.fields as ConnectionPage) ?? {};
-  const allFields: Array<{ id: string; name: string }> = [
-    ...(fieldsConnection.nodes ?? []),
-  ];
+  const allFields: Array<{ id: string; name: string }> = [...(fieldsConnection.nodes ?? [])];
   let fieldsHasNext = fieldsConnection.pageInfo?.hasNextPage ?? false;
   let fieldsAfter = fieldsConnection.pageInfo?.endCursor;
 
@@ -417,9 +413,7 @@ export async function getReportTypeSchemaLogic(
 
   // Collect metrics with pagination
   const metricsConnection = (reportType.metrics as ConnectionPage) ?? {};
-  const allMetrics: Array<{ id: string; name: string }> = [
-    ...(metricsConnection.nodes ?? []),
-  ];
+  const allMetrics: Array<{ id: string; name: string }> = [...(metricsConnection.nodes ?? [])];
   let metricsHasNext = metricsConnection.pageInfo?.hasNextPage ?? false;
   let metricsAfter = metricsConnection.pageInfo?.endCursor;
 
@@ -504,12 +498,14 @@ export const getReportTypeSchemaTool = {
 ## Task 5: Update create/update template descriptions
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/create-report-template.tool.ts:14-24`
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/update-report-template.tool.ts:14-19`
 
 **What:** Replace references to `ttd_graphql_query` for schema discovery with the new dedicated tools.
 
 **create-report-template.tool.ts** — replace workflow steps:
+
 ```
 **Workflow:**
 1. Use \`ttd_list_report_types\` to discover available report type IDs
@@ -519,6 +515,7 @@ export const getReportTypeSchemaTool = {
 ```
 
 **update-report-template.tool.ts** — add discovery guidance:
+
 ```
 Use \`ttd_get_report_template\` first to retrieve the current template structure before updating.
 Use \`ttd_list_report_templates\` to find the template ID.
@@ -530,6 +527,7 @@ Use \`ttd_list_report_types\` and \`ttd_get_report_type_schema\` to discover ava
 ## Task 6: Register new tools in definitions/index.ts
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/index.ts`
 
 **What:** Add exports + imports for both new tools. Add them to the `productionTools` array under a "Report Type Discovery" comment. Update the tool count comment.
@@ -539,6 +537,7 @@ Use \`ttd_list_report_types\` and \`ttd_get_report_type_schema\` to discover ava
 ## Task 7: Build and typecheck
 
 **Run:**
+
 ```bash
 cd packages/ttd-mcp && pnpm run build && pnpm run typecheck
 ```

@@ -14,11 +14,7 @@ import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
 import { fetchWithTimeout } from "./fetch-with-timeout.js";
 import type { RequestContext } from "./request-context.js";
 import { setSpanAttribute } from "./telemetry.js";
-import {
-  recordUpstreamRequest,
-  redactHeaders,
-  truncateBody,
-} from "./http-request-recorder.js";
+import { recordUpstreamRequest, redactHeaders, truncateBody } from "./http-request-recorder.js";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -130,10 +126,7 @@ function calculateBackoff(
   maxBackoffMs: number,
   response: Response
 ): number {
-  let delayMs = Math.min(
-    initialBackoffMs * Math.pow(2, attempt),
-    maxBackoffMs
-  );
+  let delayMs = Math.min(initialBackoffMs * Math.pow(2, attempt), maxBackoffMs);
 
   // Respect Retry-After header on any retryable response (429, 5xx, or custom)
   {
@@ -173,9 +166,17 @@ export async function executeWithRetry(
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   const {
-    url, fetchOptions, context, logger, getHeaders,
-    mapStatusCode, parseErrorBody, validateResponseBody,
-    isRetryable, onResponse, buildErrorData,
+    url,
+    fetchOptions,
+    context,
+    logger,
+    getHeaders,
+    mapStatusCode,
+    parseErrorBody,
+    validateResponseBody,
+    isRetryable,
+    onResponse,
+    buildErrorData,
   } = options;
   const doFetch = options.fetchFn ?? fetchWithTimeout;
 
@@ -186,7 +187,10 @@ export async function executeWithRetry(
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     const headers = await getHeaders();
-    const requestHeadersRedacted = redactHeaders({ ...headers, ...(fetchOptions?.headers as Record<string, string> | undefined) });
+    const requestHeadersRedacted = redactHeaders({
+      ...headers,
+      ...(fetchOptions?.headers as Record<string, string> | undefined),
+    });
 
     const attemptStart = Date.now();
     let response: Response;
@@ -223,7 +227,7 @@ export async function executeWithRetry(
           status: 204,
           durationMs: Date.now() - attemptStart,
           attempt,
-            requestBodyRedacted,
+          requestBodyRedacted,
           requestHeadersRedacted,
           responseHeadersRedacted: redactHeaders(response.headers),
         });
@@ -322,31 +326,25 @@ export async function executeWithRetry(
     const errorCode = mapStatusCode
       ? mapStatusCode(response.status, errorBody)
       : defaultMapStatusCode(response.status);
-    const errorSummary = parseErrorBody
-      ? parseErrorBody(errorBody)
-      : errorBody.substring(0, 500);
+    const errorSummary = parseErrorBody ? parseErrorBody(errorBody) : errorBody.substring(0, 500);
 
     let errorMessage = `${config.platformName} API request failed: ${response.status} ${response.statusText}${errorSummary ? ` — ${errorSummary}` : ""}`;
     if (response.status === 401 && config.tokenExpiryHint) {
       errorMessage += `\n\nAction required: ${config.tokenExpiryHint}`;
     }
 
-    const mcpError = new McpError(
-      errorCode,
-      errorMessage,
-      {
-        requestId: context?.requestId,
-        httpStatus: response.status,
-        url,
-        method: fetchOptions?.method ?? "GET",
-        errorBody: errorBody.substring(0, 500),
-        attempt,
-        ...(response.status === 401 && config.tokenExpiryHint
-          ? { tokenExpiryHint: config.tokenExpiryHint }
-          : {}),
-        ...buildErrorData?.(response.status, errorBody),
-      }
-    );
+    const mcpError = new McpError(errorCode, errorMessage, {
+      requestId: context?.requestId,
+      httpStatus: response.status,
+      url,
+      method: fetchOptions?.method ?? "GET",
+      errorBody: errorBody.substring(0, 500),
+      attempt,
+      ...(response.status === 401 && config.tokenExpiryHint
+        ? { tokenExpiryHint: config.tokenExpiryHint }
+        : {}),
+      ...buildErrorData?.(response.status, errorBody),
+    });
 
     const retryable = isRetryable
       ? isRetryable(response.status, errorBody)

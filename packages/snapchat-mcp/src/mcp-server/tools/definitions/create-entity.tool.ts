@@ -29,24 +29,14 @@ const TOOL_DESCRIPTION = `Create a new Snapchat Ads entity.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
     campaignId: z
       .string()
       .optional()
       .describe("Campaign ID — required when entityType is 'adGroup'"),
-    adSquadId: z
-      .string()
-      .optional()
-      .describe("Ad Squad ID — required when entityType is 'ad'"),
-    data: z
-      .record(z.any())
-      .describe("Entity fields as key-value pairs"),
+    adSquadId: z.string().optional().describe("Ad Squad ID — required when entityType is 'ad'"),
+    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
   })
   .describe("Parameters for creating a Snapchat Ads entity");
 

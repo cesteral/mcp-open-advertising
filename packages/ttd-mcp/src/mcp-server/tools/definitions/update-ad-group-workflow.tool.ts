@@ -28,7 +28,10 @@ export async function updateAdGroupWorkflowLogic(
   sdkContext?: SdkContext
 ): Promise<UpdateAdGroupWorkflowToolOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const adGroup = (await ttdService.updateAdGroupWorkflow(input, context)) as Record<string, unknown>;
+  const adGroup = (await ttdService.updateAdGroupWorkflow(input, context)) as Record<
+    string,
+    unknown
+  >;
   return { adGroup, timestamp: new Date().toISOString() };
 }
 

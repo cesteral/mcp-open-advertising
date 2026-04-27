@@ -15,10 +15,7 @@ Returns the documented creative preview payload from Snapchat's
 
 export const GetAdPreviewInputSchema = z
   .object({
-    creativeId: z
-      .string()
-      .min(1)
-      .describe("The creative ID to preview"),
+    creativeId: z.string().min(1).describe("The creative ID to preview"),
   })
   .describe("Parameters for getting a Snapchat creative preview");
 

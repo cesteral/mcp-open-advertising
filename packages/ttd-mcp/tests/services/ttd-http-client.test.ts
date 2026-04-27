@@ -58,7 +58,7 @@ const statusNames: Record<number, string> = {
 function fakeResponse(
   status: number,
   body: unknown = {},
-  headers: Record<string, string> = {},
+  headers: Record<string, string> = {}
 ): Response {
   const headersObj = new Headers(headers);
   return {
@@ -145,9 +145,7 @@ describe("TtdHttpClient", () => {
 
       // Verify the TTD-Auth header was set
       const callOptions = mockFetchWithTimeout.mock.calls[0]![3] as RequestInit;
-      expect((callOptions.headers as Record<string, string>)["TTD-Auth"]).toBe(
-        "test-token",
-      );
+      expect((callOptions.headers as Record<string, string>)["TTD-Auth"]).toBe("test-token");
     });
   });
 
@@ -196,9 +194,7 @@ describe("TtdHttpClient", () => {
   describe("retry on 429", () => {
     it("respects Retry-After header on 429 responses", async () => {
       mockFetchWithTimeout
-        .mockResolvedValueOnce(
-          fakeResponse(429, { error: "rate limited" }, { "Retry-After": "3" }),
-        )
+        .mockResolvedValueOnce(fakeResponse(429, { error: "rate limited" }, { "Retry-After": "3" }))
         .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
 
       const fetchPromise = client.fetch("/limited");
@@ -216,7 +212,7 @@ describe("TtdHttpClient", () => {
     it("caps Retry-After to MAX_BACKOFF_MS (10s)", async () => {
       mockFetchWithTimeout
         .mockResolvedValueOnce(
-          fakeResponse(429, { error: "rate limited" }, { "Retry-After": "60" }),
+          fakeResponse(429, { error: "rate limited" }, { "Retry-After": "60" })
         )
         .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
 
@@ -239,9 +235,7 @@ describe("TtdHttpClient", () => {
 
     for (const status of nonRetryableStatuses) {
       it(`does NOT retry on ${status} -- throws immediately`, async () => {
-        mockFetchWithTimeout.mockResolvedValueOnce(
-          fakeResponse(status, { error: "client error" }),
-        );
+        mockFetchWithTimeout.mockResolvedValueOnce(fakeResponse(status, { error: "client error" }));
 
         await expect(client.fetch("/bad")).rejects.toThrow(McpError);
 

@@ -64,7 +64,6 @@ describe("msads-mcp cross-server contract", () => {
   });
 });
 
-
 describe("bounded report-view contract", () => {
   const reportTools = productionTools.filter((t: any) =>
     isBoundedReportViewInputSchema(t.inputSchema)

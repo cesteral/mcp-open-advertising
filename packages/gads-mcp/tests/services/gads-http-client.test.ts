@@ -61,9 +61,7 @@ describe("GAdsHttpClient", () => {
 
   describe("successful requests", () => {
     it("makes authenticated request with correct headers", async () => {
-      mockFetchWithTimeout.mockResolvedValueOnce(
-        mockResponse(200, { results: [] })
-      );
+      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, { results: [] }));
 
       await client.fetch("/customers/123/googleAds:search", undefined, {
         method: "POST",
@@ -72,7 +70,9 @@ describe("GAdsHttpClient", () => {
 
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
       const callArgs = mockFetchWithTimeout.mock.calls[0];
-      expect(callArgs[0]).toBe("https://googleads.googleapis.com/v23/customers/123/googleAds:search");
+      expect(callArgs[0]).toBe(
+        "https://googleads.googleapis.com/v23/customers/123/googleAds:search"
+      );
 
       const options = callArgs[3] as RequestInit;
       const headers = options.headers as Record<string, string>;
@@ -85,9 +85,7 @@ describe("GAdsHttpClient", () => {
       adapter = createMockAdapter({ loginCustomerId: "9876543210" });
       client = new GAdsHttpClient(adapter, "https://googleads.googleapis.com/v23", logger);
 
-      mockFetchWithTimeout.mockResolvedValueOnce(
-        mockResponse(200, { results: [] })
-      );
+      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, { results: [] }));
 
       await client.fetch("/test", undefined, { method: "GET" });
 
@@ -97,9 +95,7 @@ describe("GAdsHttpClient", () => {
     });
 
     it("returns empty object for 204 No Content", async () => {
-      mockFetchWithTimeout.mockResolvedValueOnce(
-        mockResponse(204, "")
-      );
+      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(204, ""));
 
       const result = await client.fetch("/test");
       expect(result).toEqual({});
@@ -107,9 +103,7 @@ describe("GAdsHttpClient", () => {
 
     it("returns parsed JSON for 200", async () => {
       const data = { results: [{ campaign: { id: "123" } }] };
-      mockFetchWithTimeout.mockResolvedValueOnce(
-        mockResponse(200, data)
-      );
+      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(200, data));
 
       const result = await client.fetch("/test");
       expect(result).toEqual(data);
@@ -156,8 +150,7 @@ describe("GAdsHttpClient", () => {
     });
 
     it("gives up after max retries", async () => {
-      mockFetchWithTimeout
-        .mockResolvedValue(mockResponse(500, "Server error"));
+      mockFetchWithTimeout.mockResolvedValue(mockResponse(500, "Server error"));
 
       await expect(client.fetch("/test")).rejects.toThrow("Google Ads API request failed: 500");
       // 1 initial + 3 retries = 4 total calls
@@ -182,9 +175,7 @@ describe("GAdsHttpClient", () => {
         },
       };
 
-      mockFetchWithTimeout.mockResolvedValueOnce(
-        mockResponse(400, errorBody)
-      );
+      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(400, errorBody));
 
       await expect(client.fetch("/test")).rejects.toThrow("DUPLICATE_CAMPAIGN_NAME");
     });
@@ -194,9 +185,7 @@ describe("GAdsHttpClient", () => {
         error: { message: "Permission denied for customer 123" },
       };
 
-      mockFetchWithTimeout.mockResolvedValueOnce(
-        mockResponse(403, errorBody)
-      );
+      mockFetchWithTimeout.mockResolvedValueOnce(mockResponse(403, errorBody));
 
       await expect(client.fetch("/test")).rejects.toThrow("Permission denied for customer 123");
     });

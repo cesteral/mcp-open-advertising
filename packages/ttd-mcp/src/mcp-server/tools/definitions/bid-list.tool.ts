@@ -25,14 +25,8 @@ Bid lists define price floors or ceilings for specific inventory targets (domain
 export const BidListInputSchema = z
   .object({
     operation: z.enum(["create", "get", "update"]).describe("Operation to perform"),
-    bidListId: z
-      .string()
-      .optional()
-      .describe("Required for get and update operations"),
-    data: z
-      .record(z.any())
-      .optional()
-      .describe("Bid list payload for create and update"),
+    bidListId: z.string().optional().describe("Required for get and update operations"),
+    data: z.record(z.any()).optional().describe("Bid list payload for create and update"),
   })
   .refine(
     (val) => {
@@ -78,10 +72,7 @@ export async function bidListLogic(
   switch (input.operation) {
     case "create": {
       if (!input.data) {
-        throw new McpError(
-          JsonRpcErrorCode.InvalidParams,
-          "data is required for create operation"
-        );
+        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for create operation");
       }
       result = await ttdService.createBidList(input.data, context);
       return {
@@ -101,10 +92,7 @@ export async function bidListLogic(
     }
     case "update": {
       if (!input.data) {
-        throw new McpError(
-          JsonRpcErrorCode.InvalidParams,
-          "data is required for update operation"
-        );
+        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for update operation");
       }
       const payload = { ...input.data, BidListId: input.bidListId };
       result = await ttdService.updateBidList(payload, context);
@@ -119,10 +107,7 @@ export async function bidListLogic(
 }
 
 export function bidListResponseFormatter(result: BidListOutput): McpTextContent[] {
-  const lines: string[] = [
-    `Bid list ${result.operation} successful.`,
-    "",
-  ];
+  const lines: string[] = [`Bid list ${result.operation} successful.`, ""];
 
   if (result.bidListId) {
     lines.push(`Bid List ID: ${result.bidListId}`);

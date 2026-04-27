@@ -85,10 +85,7 @@ describe("ttd bid list tools", () => {
       expect(result.bidListId).toBe("bl-001");
       expect(result.result).toEqual(mockResult);
       expect(result.timestamp).toBeDefined();
-      expect(mockTtdService.getBidList).toHaveBeenCalledWith(
-        "bl-001",
-        expect.any(Object)
-      );
+      expect(mockTtdService.getBidList).toHaveBeenCalledWith("bl-001", expect.any(Object));
     });
 
     it("update: calls ttdService.updateBidList with data + BidListId merged and returns result", async () => {
@@ -119,9 +116,7 @@ describe("ttd bid list tools", () => {
       const result = BidListInputSchema.safeParse({ operation: "get" });
       expect(result.success).toBe(false);
       if (!result.success) {
-        const issue = result.error.issues.find((i) =>
-          i.message.includes("bidListId")
-        );
+        const issue = result.error.issues.find((i) => i.message.includes("bidListId"));
         expect(issue).toBeDefined();
       }
     });
@@ -144,10 +139,7 @@ describe("ttd bid list tools", () => {
       });
 
       await expect(
-        bidListLogic(
-          { operation: "get", bidListId: "bl-001" },
-          createMockContext()
-        )
+        bidListLogic({ operation: "get", bidListId: "bl-001" }, createMockContext())
       ).rejects.toThrow("No session ID available");
     });
   });
@@ -200,10 +192,7 @@ describe("ttd bid list tools", () => {
       expect(result.count).toBe(2);
       expect(result.results).toEqual(mockResults);
       expect(result.timestamp).toBeDefined();
-      expect(mockTtdService.batchUpdateBidLists).toHaveBeenCalledWith(
-        items,
-        expect.any(Object)
-      );
+      expect(mockTtdService.batchUpdateBidLists).toHaveBeenCalledWith(items, expect.any(Object));
     });
 
     it("Zod validation: bidListIds > 50 fails validation", () => {
@@ -243,9 +232,7 @@ describe("ttd bid list tools", () => {
       const result = BidListBulkInputSchema.safeParse({ operation: "batch_get" });
       expect(result.success).toBe(false);
       if (!result.success) {
-        const issue = result.error.issues.find((i) =>
-          i.message.includes("bidListIds")
-        );
+        const issue = result.error.issues.find((i) => i.message.includes("bidListIds"));
         expect(issue).toBeDefined();
       }
     });
@@ -265,10 +252,7 @@ describe("ttd bid list tools", () => {
       });
 
       await expect(
-        bidListBulkLogic(
-          { operation: "batch_get", bidListIds: ["bl-001"] },
-          createMockContext()
-        )
+        bidListBulkLogic({ operation: "batch_get", bidListIds: ["bl-001"] }, createMockContext())
       ).rejects.toThrow("No session ID available");
     });
   });

@@ -73,7 +73,7 @@ Compose and execute a custom Bid Manager report with specified metrics, dimensio
 
 ### 6. `dbm_run_custom_query_async`
 
-Submit a custom Bid Manager report without waiting for completion (non-blocking). Uses the MCP experimental Tasks API to return a task handle immediately; clients poll via `tasks/getTask` and retrieve results via `tasks/getTaskResult`.
+Submit a custom Bid Manager report without waiting for completion (non-blocking). Uses MCP Tasks to return a task handle immediately; clients poll via `tasks/getTask` and retrieve results via `tasks/getTaskResult`.
 
 **Parameters:** Same as `dbm_run_custom_query` (including the bounded report-view params).
 

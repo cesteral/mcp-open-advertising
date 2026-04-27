@@ -17,9 +17,7 @@ const TOOL_DESCRIPTION = `Get a single LinkedIn Ads entity by URN.
 
 export const GetEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to retrieve"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
     entityUrn: z
       .string()
       .min(1)

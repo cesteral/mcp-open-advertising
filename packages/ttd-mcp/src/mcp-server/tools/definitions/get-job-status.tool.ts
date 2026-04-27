@@ -13,7 +13,11 @@ Use this after tools like \`ttd_get_first_party_data_job\`, \`ttd_get_third_part
 \`ttd_create_campaigns_job\`, or \`ttd_create_ad_groups_job\`.`;
 
 export const GetJobStatusInputSchema = z.object({
-  jobId: z.number().int().positive().describe("Standard job ID returned by a TTD Workflows async endpoint"),
+  jobId: z
+    .number()
+    .int()
+    .positive()
+    .describe("Standard job ID returned by a TTD Workflows async endpoint"),
 });
 
 export const GetJobStatusOutputSchema = z.object({
@@ -30,7 +34,10 @@ export async function getJobStatusLogic(
   sdkContext?: SdkContext
 ): Promise<GetJobStatusOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const jobStatus = (await ttdService.getJobStatus(input.jobId, context)) as Record<string, unknown>;
+  const jobStatus = (await ttdService.getJobStatus(input.jobId, context)) as Record<
+    string,
+    unknown
+  >;
   return { jobStatus, timestamp: new Date().toISOString() };
 }
 

@@ -425,7 +425,6 @@ export function getEntitySchemaForOperation(
   return schema;
 }
 
-
 /**
  * Get entity relationships for a given entity type
  */

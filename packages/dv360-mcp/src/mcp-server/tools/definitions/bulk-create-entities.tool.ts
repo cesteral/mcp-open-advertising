@@ -26,7 +26,9 @@ export const BulkCreateEntitiesInputSchema = z
   .object({
     entityType: z
       .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
-      .describe("Type of entities to create. Fetch entity-schema://{entityType} for required fields."),
+      .describe(
+        "Type of entities to create. Fetch entity-schema://{entityType} for required fields."
+      ),
     advertiserId: z
       .string()
       .min(1)
@@ -39,10 +41,7 @@ export const BulkCreateEntitiesInputSchema = z
         "Array of entity data payloads to create (max 50). " +
           "Each item follows the same schema as dv360_create_entity data field."
       ),
-    reason: z
-      .string()
-      .optional()
-      .describe("Reason for bulk creation (audit trail)"),
+    reason: z.string().optional().describe("Reason for bulk creation (audit trail)"),
   })
   .describe("Parameters for bulk creating DV360 entities");
 

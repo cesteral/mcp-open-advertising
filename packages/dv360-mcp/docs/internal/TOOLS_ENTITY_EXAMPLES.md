@@ -15,12 +15,14 @@ The `entityExamples.ts` utility provides:
 ## Why This Utility?
 
 While our dynamic schema system (`schemaIntrospection.ts`, `entityMappingDynamic.ts`) provides:
+
 - ✅ Auto-discovered schemas
 - ✅ Field lists with types and descriptions
 - ✅ Required fields extraction
 - ✅ Common updateMask paths
 
 It **doesn't provide**:
+
 - ❌ Full example payloads showing correct data structure
 - ❌ Usage notes (e.g., "bid in micros", "cannot unarchive")
 - ❌ Examples of complex nested updates
@@ -30,6 +32,7 @@ It **doesn't provide**:
 ## Supported Entities
 
 Currently provides examples for:
+
 - **lineItem** (8 examples: bids, status, flight, budget, pacing, margin)
 - **campaign** (4 examples: budget, status, flight, performance goals)
 - **insertionOrder** (4 examples: budget, status, pacing, KPI)
@@ -46,35 +49,35 @@ import {
   getEntityExamples,
   getEntityExamplesByCategory,
   formatEntityExamplesAsText,
-} from './utils/entityExamples.js';
+} from "./utils/entityExamples.js";
 
 // Get all examples for an entity type
-const lineItemExamples = getEntityExamples('lineItem');
+const lineItemExamples = getEntityExamples("lineItem");
 console.log(`Found ${lineItemExamples.length} examples`);
 
 // Get examples by category
-const bidExamples = getEntityExamplesByCategory('lineItem', 'bid');
-bidExamples.forEach(ex => {
+const bidExamples = getEntityExamplesByCategory("lineItem", "bid");
+bidExamples.forEach((ex) => {
   console.log(`${ex.operation}: ${ex.updateMask}`);
 });
 
 // Format examples as text (for tool descriptions)
-const helpText = formatEntityExamplesAsText('campaign');
+const helpText = formatEntityExamplesAsText("campaign");
 console.log(helpText);
 ```
 
 ### Use Case 1: Enhanced Error Messages
 
 ```typescript
-import { getEntityExamplesByCategory } from './utils/entityExamples.js';
+import { getEntityExamplesByCategory } from "./utils/entityExamples.js";
 
 // When user provides invalid updateMask, suggest valid patterns
-const invalidUpdateMask = 'invalidField';
-const validExamples = getEntityExamplesByCategory('lineItem', 'bid');
+const invalidUpdateMask = "invalidField";
+const validExamples = getEntityExamplesByCategory("lineItem", "bid");
 
 console.log(`Error: Invalid updateMask '${invalidUpdateMask}'`);
-console.log('Did you mean one of these?');
-validExamples.forEach(ex => {
+console.log("Did you mean one of these?");
+validExamples.forEach((ex) => {
   console.log(`  - ${ex.updateMask} (${ex.operation})`);
 });
 ```
@@ -82,7 +85,7 @@ validExamples.forEach(ex => {
 ### Use Case 2: Tool Description Help Text
 
 ```typescript
-import { getExamplesByCategory } from './utils/entityExamples.js';
+import { getExamplesByCategory } from "./utils/entityExamples.js";
 
 // Generate rich tool descriptions with examples
 function generateToolDescription(entityType: string): string {
@@ -91,10 +94,10 @@ function generateToolDescription(entityType: string): string {
 
   Object.entries(grouped).forEach(([category, examples]) => {
     description += `**${category.toUpperCase()}:**\n`;
-    examples.forEach(ex => {
+    examples.forEach((ex) => {
       description += `- ${ex.operation} (updateMask: ${ex.updateMask})\n`;
     });
-    description += '\n';
+    description += "\n";
   });
 
   return description;
@@ -104,13 +107,13 @@ function generateToolDescription(entityType: string): string {
 ### Use Case 3: Validate Updates Against Known Patterns
 
 ```typescript
-import { findMatchingExample } from './utils/entityExamples.js';
+import { findMatchingExample } from "./utils/entityExamples.js";
 
 // Check if an update matches a known pattern
-const updateData = { entityStatus: 'ENTITY_STATUS_PAUSED' };
-const updateMask = 'entityStatus';
+const updateData = { entityStatus: "ENTITY_STATUS_PAUSED" };
+const updateMask = "entityStatus";
 
-const matchingExample = findMatchingExample('lineItem', updateData, updateMask);
+const matchingExample = findMatchingExample("lineItem", updateData, updateMask);
 if (matchingExample) {
   console.log(`✓ Valid pattern: ${matchingExample.operation}`);
   console.log(`  Notes: ${matchingExample.notes}`);
@@ -120,10 +123,10 @@ if (matchingExample) {
 ### Use Case 4: Guide Users Step-by-Step
 
 ```typescript
-import { getEntityExampleByOperation } from './utils/entityExamples.js';
+import { getEntityExampleByOperation } from "./utils/entityExamples.js";
 
 // Show users how to perform a specific operation
-const example = getEntityExampleByOperation('lineItem', 'Update CPM bid');
+const example = getEntityExampleByOperation("lineItem", "Update CPM bid");
 if (example) {
   console.log(`To update CPM bid:`);
   console.log(`1. Set data:`, JSON.stringify(example.data, null, 2));
@@ -138,12 +141,12 @@ Each example contains:
 
 ```typescript
 interface EntityExample {
-  operation: string;        // "Update CPM bid"
-  description: string;      // "Change the fixed bid amount for a line item"
-  category?: string;        // "bid" | "budget" | "status" | "flight" | "targeting" | "general"
+  operation: string; // "Update CPM bid"
+  description: string; // "Change the fixed bid amount for a line item"
+  category?: string; // "bid" | "budget" | "status" | "flight" | "targeting" | "general"
   data: Record<string, any>; // { bidStrategy: { fixedBid: { bidAmountMicros: 5000000 } } }
-  updateMask: string;       // "bidStrategy.fixedBid.bidAmountMicros"
-  notes: string;            // "Bid amount is in micros (1 USD = 1,000,000 micros)..."
+  updateMask: string; // "bidStrategy.fixedBid.bidAmountMicros"
+  notes: string; // "Bid amount is in micros (1 USD = 1,000,000 micros)..."
 }
 ```
 
@@ -181,10 +184,10 @@ const MY_ENTITY_EXAMPLES: EntityExample[] = [
     category: "bid", // or "budget", "status", "flight", "targeting", "general"
     data: {
       // Full example payload
-      fieldName: "newValue"
+      fieldName: "newValue",
     },
     updateMask: "fieldName",
-    notes: "Important notes about this operation (formats, constraints, warnings)"
+    notes: "Important notes about this operation (formats, constraints, warnings)",
   },
   // ... more examples
 ];
@@ -209,14 +212,14 @@ npx tsx src/examples/entity-examples-usage.ts
 
 Examples are organized by category:
 
-| Category | Description | Example Operations |
-|----------|-------------|-------------------|
-| `bid` | Bid adjustments (CPM, CPC, auto-bidding) | Update CPM bid, Update max average CPM |
-| `budget` | Budget changes, daily caps, margins | Update budget, Update daily max, Update margin |
-| `status` | Pause, activate, archive | Pause line item, Activate campaign |
-| `flight` | Flight dates, scheduling | Update flight dates, Update campaign dates |
-| `targeting` | Targeting options (future) | Update geo targeting, Update audience |
-| `general` | Other operations | Update display name, Update pacing |
+| Category    | Description                              | Example Operations                             |
+| ----------- | ---------------------------------------- | ---------------------------------------------- |
+| `bid`       | Bid adjustments (CPM, CPC, auto-bidding) | Update CPM bid, Update max average CPM         |
+| `budget`    | Budget changes, daily caps, margins      | Update budget, Update daily max, Update margin |
+| `status`    | Pause, activate, archive                 | Pause line item, Activate campaign             |
+| `flight`    | Flight dates, scheduling                 | Update flight dates, Update campaign dates     |
+| `targeting` | Targeting options (future)               | Update geo targeting, Update audience          |
+| `general`   | Other operations                         | Update display name, Update pacing             |
 
 ## Integration with Tools
 
@@ -229,7 +232,7 @@ export const updateEntityTool = {
   name: "dv360_update_entity",
   description: `Update a DV360 entity with flexible field updates.
 
-${getExamplesSummary('lineItem')}
+${getExamplesSummary("lineItem")}
 
 For detailed examples, see the entity examples utility.`,
   // ... rest of tool definition
@@ -241,16 +244,12 @@ For detailed examples, see the entity examples utility.`,
 ```typescript
 export async function updateEntityLogic(input: UpdateEntityInput) {
   // Validate against known patterns
-  const matchingExample = findMatchingExample(
-    input.entityType,
-    input.data,
-    input.updateMask
-  );
+  const matchingExample = findMatchingExample(input.entityType, input.data, input.updateMask);
 
   if (!matchingExample) {
     // Suggest valid patterns
-    const examples = getEntityExamplesByCategory(input.entityType, 'bid');
-    throw new Error(`Unknown update pattern. Try: ${examples.map(e => e.updateMask).join(', ')}`);
+    const examples = getEntityExamplesByCategory(input.entityType, "bid");
+    throw new Error(`Unknown update pattern. Try: ${examples.map((e) => e.updateMask).join(", ")}`);
   }
 
   // Proceed with update...
@@ -269,18 +268,19 @@ catch (error) {
 
 ## Comparison with Schema Introspection
 
-| Feature | Schema Introspection | Entity Examples |
-|---------|---------------------|-----------------|
-| Auto-discovered | ✅ Yes | ❌ Manual curation |
-| Field types | ✅ Yes | ✅ In data payload |
-| Required fields | ✅ Yes | ❌ Not included |
-| Example payloads | ❌ No | ✅ Full examples |
-| UpdateMask values | ⚠️ Common paths only | ✅ For each operation |
-| Usage notes | ❌ No | ✅ Detailed notes |
-| Format guidance | ❌ No | ✅ Yes (e.g., "micros") |
-| Constraint warnings | ❌ No | ✅ Yes (e.g., "cannot unarchive") |
+| Feature             | Schema Introspection | Entity Examples                   |
+| ------------------- | -------------------- | --------------------------------- |
+| Auto-discovered     | ✅ Yes               | ❌ Manual curation                |
+| Field types         | ✅ Yes               | ✅ In data payload                |
+| Required fields     | ✅ Yes               | ❌ Not included                   |
+| Example payloads    | ❌ No                | ✅ Full examples                  |
+| UpdateMask values   | ⚠️ Common paths only | ✅ For each operation             |
+| Usage notes         | ❌ No                | ✅ Detailed notes                 |
+| Format guidance     | ❌ No                | ✅ Yes (e.g., "micros")           |
+| Constraint warnings | ❌ No                | ✅ Yes (e.g., "cannot unarchive") |
 
 **Both utilities complement each other:**
+
 - Use **schema introspection** for discovery, validation, and generic field lists
 - Use **entity examples** for guidance, error messages, and learning common patterns
 
@@ -293,6 +293,7 @@ npx tsx src/examples/entity-examples-usage.ts
 ```
 
 This demonstrates:
+
 - Getting examples by entity type
 - Filtering by category
 - Finding specific operations
@@ -321,6 +322,7 @@ Potential improvements:
 ## Questions?
 
 For questions or suggestions:
+
 1. Check the example script: `src/examples/entity-examples-usage.ts`
 2. Review existing examples in `entityExamples.ts`
 3. See how schema introspection complements this: `schemaIntrospection.ts`

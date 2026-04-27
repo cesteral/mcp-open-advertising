@@ -19,9 +19,17 @@ import { z } from "zod";
 import { withToolSpan, setSpanAttribute, recordSpanError } from "./telemetry.js";
 import { ErrorHandler, McpError } from "./mcp-errors.js";
 import { recordToolExecution } from "./metrics.js";
-import { type InteractionLogger, type InteractionLogEntry, sanitizeParams } from "./interaction-logger.js";
+import {
+  type InteractionLogger,
+  type InteractionLogEntry,
+  sanitizeParams,
+} from "./interaction-logger.js";
 import { getRecordedUpstreamRequests } from "./http-request-recorder.js";
-import { runWithRequestContext, getRequestContext, type RequestContext } from "./request-context.js";
+import {
+  runWithRequestContext,
+  getRequestContext,
+  type RequestContext,
+} from "./request-context.js";
 import type { SessionAuthContext } from "../auth/auth-strategy.js";
 
 /**
@@ -66,14 +74,9 @@ interface ScopedIdentifier {
   value: string;
 }
 
-function collectScopedIdentifiers(
-  value: unknown,
-  path = ""
-): ScopedIdentifier[] {
+function collectScopedIdentifiers(value: unknown, path = ""): ScopedIdentifier[] {
   if (Array.isArray(value)) {
-    return value.flatMap((item, index) =>
-      collectScopedIdentifiers(item, `${path}[${index}]`)
-    );
+    return value.flatMap((item, index) => collectScopedIdentifiers(item, `${path}[${index}]`));
   }
 
   if (!value || typeof value !== "object") {
@@ -84,9 +87,7 @@ function collectScopedIdentifiers(
     const currentPath = path ? `${path}.${key}` : key;
 
     if (SCOPED_ID_KEYS.has(key)) {
-      return typeof nestedValue === "string"
-        ? [{ path: currentPath, value: nestedValue }]
-        : [];
+      return typeof nestedValue === "string" ? [{ path: currentPath, value: nestedValue }] : [];
     }
 
     if (SCOPED_ID_ARRAY_KEYS.has(key)) {
@@ -132,7 +133,11 @@ export interface ToolSdkContext {
   requestId?: string;
   sessionId?: string;
   elicitInput?: (params: Record<string, unknown>) => Promise<unknown>;
-  sendLoggingMessage?: (params: { level: string; logger?: string; data?: unknown }) => Promise<void>;
+  sendLoggingMessage?: (params: {
+    level: string;
+    logger?: string;
+    data?: unknown;
+  }) => Promise<void>;
   [key: string]: unknown;
 }
 
@@ -199,11 +204,7 @@ export interface ToolDefinitionForFactory {
    * by the cesteral-intelligence frontend for Anthropic API `input_examples`.
    */
   inputExamples?: ToolInputExample[];
-  logic: (
-    input: any,
-    context: any,
-    sdkContext?: any
-  ) => Promise<any>;
+  logic: (input: any, context: any, sdkContext?: any) => Promise<any>;
   responseFormatter?: (result: any, input: any) => McpTextContent[];
 }
 
@@ -301,7 +302,7 @@ function estimatePayloadBytes(value: unknown): number {
  */
 export function truncateTextContent(
   content: Array<{ type: string; text?: string; [key: string]: unknown }>,
-  limit: number,
+  limit: number
 ): Array<{ type: string; text?: string; [key: string]: unknown }> {
   return content.map((block) => {
     if (block.type !== "text" || typeof block.text !== "string") {
@@ -349,7 +350,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
   } = opts;
 
   if (!Number.isFinite(responseCharacterLimit) || responseCharacterLimit < 1) {
-    throw new Error(`responseCharacterLimit must be a positive finite number, got ${responseCharacterLimit}`);
+    throw new Error(
+      `responseCharacterLimit must be a positive finite number, got ${responseCharacterLimit}`
+    );
   }
 
   const auditLogger = logger.child({ component: "audit" });
@@ -389,51 +392,53 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
     }
     logger.debug(schemaSizeLog, "Tool schema sizes");
 
-    server.registerTool(
-      tool.name,
-      toolConfig,
-      async (args: unknown) => {
-        logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
+    server.registerTool(tool.name, toolConfig, async (args: unknown) => {
+      logger.info({ toolName: tool.name, arguments: sanitizeParams(args) }, "Handling tool call");
 
-        // Send MCP logging notification for tool invocation
-        server.sendLoggingMessage({
+      // Send MCP logging notification for tool invocation
+      server
+        .sendLoggingMessage({
           level: "info",
           logger: tool.name,
           data: `Invoking tool: ${tool.name}`,
-        }).catch(() => { /* ignore if no client connected */ });
+        })
+        .catch(() => {
+          /* ignore if no client connected */
+        });
 
-        const startTime = Date.now();
+      const startTime = Date.now();
 
-        return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
-          let requestId: string | undefined;
-          let resolvedAuthContext: SessionAuthContext | undefined;
-          let auditedIdentifiers: Record<string, string | string[]> = {};
+      return withToolSpan(tool.name, (args as Record<string, unknown>) || {}, async () => {
+        let requestId: string | undefined;
+        let resolvedAuthContext: SessionAuthContext | undefined;
+        let auditedIdentifiers: Record<string, string | string[]> = {};
 
-          // ALS ownership boundary:
-          //   - Transport layer MAY install a request-scoped context
-          //     (HTTP transport does; stdio transport does not).
-          //   - Tool handler OWNS the per-invocation context used by the
-          //     upstream recorder. We always install one here so:
-          //       1. stdio tool calls have a store (otherwise
-          //          `recordUpstreamRequest()` no-ops and the failure trail
-          //          is always empty).
-          //       2. Successive tool invocations within the same HTTP
-          //          request don't share recorder state across calls.
-          //   Do not "simplify" this to rely solely on transport ALS —
-          //   stdio has no transport ALS at all.
-          const parent = getRequestContext();
-          const toolAlsContext: RequestContext = {
-            requestId: parent?.requestId ?? `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-            timestamp: new Date().toISOString(),
-            sessionId: sessionId ?? parent?.sessionId,
-            operation: `tool:${tool.name}`,
-            ...(parent ?? {}),
-            // Always start with an empty recorder array so this tool call
-            // sees only its own upstream attempts.
-            upstreamRequests: [],
-          };
+        // ALS ownership boundary:
+        //   - Transport layer MAY install a request-scoped context
+        //     (HTTP transport does; stdio transport does not).
+        //   - Tool handler OWNS the per-invocation context used by the
+        //     upstream recorder. We always install one here so:
+        //       1. stdio tool calls have a store (otherwise
+        //          `recordUpstreamRequest()` no-ops and the failure trail
+        //          is always empty).
+        //       2. Successive tool invocations within the same HTTP
+        //          request don't share recorder state across calls.
+        //   Do not "simplify" this to rely solely on transport ALS —
+        //   stdio has no transport ALS at all.
+        const parent = getRequestContext();
+        const toolAlsContext: RequestContext = {
+          requestId:
+            parent?.requestId ?? `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+          timestamp: new Date().toISOString(),
+          sessionId: sessionId ?? parent?.sessionId,
+          operation: `tool:${tool.name}`,
+          ...(parent ?? {}),
+          // Always start with an empty recorder array so this tool call
+          // sees only its own upstream attempts.
+          upstreamRequests: [],
+        };
 
-          return runWithRequestContext(toolAlsContext, async () => {
+        return runWithRequestContext(toolAlsContext, async () => {
           try {
             const context = createRequestContext({
               operation: `HandleToolRequest:${tool.name}`,
@@ -452,7 +457,8 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               resolvedAuthContext = authContextResolver();
               if (resolvedAuthContext && resolvedAuthContext.allowedAdvertisers !== undefined) {
                 const input = validatedInput as Record<string, unknown>;
-                const allowedAdvertisers = resolvedAuthContext.allowedAdvertisers.map(normalizeScopedId);
+                const allowedAdvertisers =
+                  resolvedAuthContext.allowedAdvertisers.map(normalizeScopedId);
                 const scopedIdentifiers = collectScopedIdentifiers(input);
 
                 for (const identifier of scopedIdentifiers) {
@@ -565,7 +571,11 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
 
             if (content.some((block, i) => block !== rawContent[i])) {
               logger.warn(
-                { toolName: tool.name, requestId: context.requestId, limit: responseCharacterLimit },
+                {
+                  toolName: tool.name,
+                  requestId: context.requestId,
+                  limit: responseCharacterLimit,
+                },
                 "Tool response text truncated"
               );
             }
@@ -591,11 +601,15 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             );
 
             // Send MCP logging notification for successful completion
-            server.sendLoggingMessage({
-              level: "info",
-              logger: tool.name,
-              data: `Tool ${tool.name} completed successfully`,
-            }).catch(() => { /* ignore if no client connected */ });
+            server
+              .sendLoggingMessage({
+                level: "info",
+                logger: tool.name,
+                data: `Tool ${tool.name} completed successfully`,
+              })
+              .catch(() => {
+                /* ignore if no client connected */
+              });
 
             if (resolvedAuthContext) {
               auditLogger.info(
@@ -681,11 +695,15 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             // Send MCP logging notification for tool failure
-            server.sendLoggingMessage({
-              level: "error",
-              logger: tool.name,
-              data: `Tool ${tool.name} failed: ${(error as Error).message}`,
-            }).catch(() => { /* ignore if no client connected */ });
+            server
+              .sendLoggingMessage({
+                level: "error",
+                logger: tool.name,
+                data: `Tool ${tool.name} failed: ${(error as Error).message}`,
+              })
+              .catch(() => {
+                /* ignore if no client connected */
+              });
 
             const sanitizedData = ErrorHandler.sanitizeErrorData(mcpError.data);
 
@@ -707,10 +725,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               isError: true,
             };
           }
-          }); // end runWithRequestContext(toolAlsContext)
-        });
-      }
-    );
+        }); // end runWithRequestContext(toolAlsContext)
+      });
+    });
   }
 
   logger.info({ toolCount: tools.length }, "Registered MCP tools");

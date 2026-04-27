@@ -46,8 +46,8 @@ export const DownloadReportInputSchema = z
       .default(false)
       .describe(
         "Persist the full report body (JSON or CSV, depending on report type) in " +
-        "the in-process report-csv store and return a `report-csv://{id}` resource URI. " +
-        "Entries expire after 30 minutes."
+          "the in-process report-csv store and return a `report-csv://{id}` resource URI. " +
+          "Entries expire after 30 minutes."
       ),
   })
   .merge(ReportViewInputSchema)
@@ -89,12 +89,9 @@ export async function downloadReportLogic(
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: AMAZON_DSP_COMPUTED_METRIC_ALIASES,
     download: ({ fetchLimit, includeRawCsv }) =>
-      amazonDspReportingService.downloadReport(
-        input.downloadUrl,
-        fetchLimit,
-        undefined,
-        { includeRawCsv },
-      ),
+      amazonDspReportingService.downloadReport(input.downloadUrl, fetchLimit, undefined, {
+        includeRawCsv,
+      }),
   });
 }
 

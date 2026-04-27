@@ -6,7 +6,8 @@ import type { Resource } from "../types.js";
 export const insightsReferenceResource: Resource = {
   uri: "insights-reference://all",
   name: "SA360 Insights Reference",
-  description: "Available metrics, segments, entity types, computed metrics, and date range options for SA360 insights tools",
+  description:
+    "Available metrics, segments, entity types, computed metrics, and date range options for SA360 insights tools",
   mimeType: "text/markdown",
   getContent: () => `# SA360 Insights Reference
 

@@ -15,11 +15,13 @@ Successfully implemented OpenTelemetry distributed tracing and metrics for produ
 ### 1. OpenTelemetry SDK Setup ✅
 
 **Files Created:**
+
 - `src/utils/telemetry/opentelemetry.ts` - SDK initialization and configuration
 - `src/utils/telemetry/tracing.ts` - Custom span utilities
 - `src/utils/telemetry/index.ts` - Barrel export
 
 **Features:**
+
 - Automatic initialization from environment variables
 - Configurable OTLP exporters for traces and metrics
 - Auto-instrumentation of HTTP, Express, and fetch
@@ -44,11 +46,13 @@ Successfully implemented OpenTelemetry distributed tracing and metrics for produ
 ### 3. Instrumentation Added ✅
 
 #### **A. HTTP Transport Layer** (`src/index.ts`)
+
 - OpenTelemetry initialized at startup (before any other imports)
 - Auto-instrumentation captures all HTTP requests automatically
 - Session tracking integrated with traces
 
 #### **B. Tool Handlers** (`src/mcp-server/server.ts`)
+
 - Every tool execution wrapped in custom span (`withToolSpan`)
 - Span attributes include:
   - `tool.name` - Tool being executed
@@ -59,6 +63,7 @@ Successfully implemented OpenTelemetry distributed tracing and metrics for produ
 - Automatic error recording on failures
 
 #### **C. DV360 Service** (`src/services/dv360/DV360Service.ts`)
+
 - API calls wrapped in custom spans (`withDV360ApiSpan`)
 - Instrumented methods:
   - `listEntities()` - With result count and filter tracking
@@ -81,21 +86,23 @@ Successfully implemented OpenTelemetry distributed tracing and metrics for produ
 
 OpenTelemetry is configured via these environment variables (already defined in `src/config/index.ts`):
 
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `OTEL_ENABLED` | boolean | `false` | Enable/disable OpenTelemetry |
-| `OTEL_SERVICE_NAME` | string | `dv360-mcp` | Service name for traces |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | URL | - | OTLP endpoint for traces |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | URL | - | OTLP endpoint for metrics |
+| Variable                              | Type    | Default     | Description                  |
+| ------------------------------------- | ------- | ----------- | ---------------------------- |
+| `OTEL_ENABLED`                        | boolean | `false`     | Enable/disable OpenTelemetry |
+| `OTEL_SERVICE_NAME`                   | string  | `dv360-mcp` | Service name for traces      |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`  | URL     | -           | OTLP endpoint for traces     |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | URL     | -           | OTLP endpoint for metrics    |
 
 ### Example Configuration
 
 **Local Development (disabled):**
+
 ```bash
 OTEL_ENABLED=false
 ```
 
 **Production (with Jaeger/Zipkin):**
+
 ```bash
 OTEL_ENABLED=true
 OTEL_SERVICE_NAME=dv360-mcp
@@ -104,6 +111,7 @@ OTEL_EXPORTER_OTLP_METRICS_ENDPOINT=http://localhost:4318/v1/metrics
 ```
 
 **Production (with Google Cloud Trace):**
+
 ```bash
 OTEL_ENABLED=true
 OTEL_SERVICE_NAME=dv360-mcp
@@ -111,6 +119,7 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://cloudtrace.googleapis.com/v1/projects
 ```
 
 **Production (with Datadog):**
+
 ```bash
 OTEL_ENABLED=true
 OTEL_SERVICE_NAME=dv360-mcp
@@ -132,6 +141,7 @@ HTTP Request (auto-instrumented)
 ### Example Trace Attributes
 
 **Tool Span** (`tool.dv360_update_entity`):
+
 ```json
 {
   "tool.name": "dv360_update_entity",
@@ -144,6 +154,7 @@ HTTP Request (auto-instrumented)
 ```
 
 **DV360 API Span** (`dv360.updateEntity`):
+
 ```json
 {
   "dv360.operation": "updateEntity",
@@ -165,52 +176,62 @@ HTTP Request (auto-instrumented)
 From `src/utils/telemetry/tracing.ts`:
 
 #### 1. `withSpan(spanName, fn, attributes?)`
+
 Create a custom span and execute function within its context.
 
 ```typescript
-import { withSpan } from '../utils/telemetry';
+import { withSpan } from "../utils/telemetry";
 
-await withSpan('custom.operation', async (span) => {
-  // Your code here
-  return result;
-}, {
-  'custom.attribute': 'value',
-});
+await withSpan(
+  "custom.operation",
+  async (span) => {
+    // Your code here
+    return result;
+  },
+  {
+    "custom.attribute": "value",
+  }
+);
 ```
 
 #### 2. `withToolSpan(toolName, input, fn)`
+
 Create a span specifically for tool execution (already used in server.ts).
 
 ```typescript
-await withToolSpan('dv360_list_entities', input, async () => {
+await withToolSpan("dv360_list_entities", input, async () => {
   // Tool logic
 });
 ```
 
 #### 3. `withDV360ApiSpan(operation, entityType, fn)`
+
 Create a span for DV360 API calls (already used in DV360Service.ts).
 
 ```typescript
-await withDV360ApiSpan('listEntities', 'lineItem', async () => {
+await withDV360ApiSpan("listEntities", "lineItem", async () => {
   // API call logic
 });
 ```
 
 #### 4. `setSpanAttribute(key, value)`
+
 Add attribute to current active span.
 
 ```typescript
-setSpanAttribute('dv360.advertiserId', advertiserId);
+setSpanAttribute("dv360.advertiserId", advertiserId);
 ```
 
 #### 5. `addSpanEvent(name, attributes?)`
+
 Add event to current span.
 
 ```typescript
-addSpanEvent('cache.hit', { key: 'lineItem:123' });
+addSpanEvent("cache.hit", { key: "lineItem:123" });
 ```
 
 #### 6. `recordSpanError(error)`
+
 Record error on current span.
 
 ```typescript
@@ -236,6 +257,7 @@ The following is automatically instrumented (no code changes needed):
 ### Excluded Endpoints
 
 Health check endpoints are excluded from tracing to reduce noise:
+
 - `GET /health`
 - `GET /.well-known/oauth-protected-resource`
 
@@ -305,18 +327,21 @@ HTTP POST /mcp [200ms]
 ## Benefits Delivered
 
 ### For Operations
+
 - **Distributed Tracing** - Track requests across services and API calls
 - **Performance Monitoring** - Identify slow operations and bottlenecks
 - **Error Tracking** - Automatic error recording with full context
 - **Service Health** - Metrics on request rates, latencies, errors
 
 ### For Debugging
+
 - **Request Flow Visualization** - See exact path of each request
 - **Timing Breakdown** - Identify where time is spent (validation, API calls, etc.)
 - **Contextual Logging** - Logs correlated with traces via trace IDs
 - **Error Context** - Full span context when errors occur
 
 ### For Development
+
 - **Local Testing** - Run Jaeger locally for trace visualization
 - **Performance Profiling** - Identify optimization opportunities
 - **API Debugging** - See exact DV360 API calls made
@@ -329,6 +354,7 @@ HTTP POST /mcp [200ms]
 ### Google Cloud Trace
 
 1. **Set environment variables:**
+
 ```bash
 OTEL_ENABLED=true
 OTEL_SERVICE_NAME=dv360-mcp
@@ -336,6 +362,7 @@ OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=https://cloudtrace.googleapis.com/v1/projects
 ```
 
 2. **Add service account permissions:**
+
 ```bash
 gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
   --member="serviceAccount:YOUR_SA@YOUR_PROJECT.iam.gserviceaccount.com" \
@@ -345,6 +372,7 @@ gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
 ### Datadog
 
 1. **Install Datadog agent with OTLP support:**
+
 ```yaml
 # datadog.yaml
 otlp_config:
@@ -357,6 +385,7 @@ otlp_config:
 ```
 
 2. **Set environment variables:**
+
 ```bash
 OTEL_ENABLED=true
 OTEL_SERVICE_NAME=dv360-mcp
@@ -409,11 +438,13 @@ Potential improvements:
 ### OpenTelemetry Not Working
 
 **Check logs on startup:**
+
 ```
 INFO: OpenTelemetry SDK started successfully
 ```
 
 If you see:
+
 ```
 INFO: OpenTelemetry is disabled (OTEL_ENABLED=false)
 ```
@@ -423,16 +454,19 @@ Then set `OTEL_ENABLED=true` in environment.
 ### Traces Not Appearing in Backend
 
 1. **Verify exporter endpoint is reachable:**
+
 ```bash
 curl http://localhost:4318/v1/traces -X POST
 ```
 
 2. **Check for SDK errors in logs:**
+
 ```bash
 grep "OpenTelemetry" logs.txt
 ```
 
 3. **Verify service name matches:**
+
 ```bash
 echo $OTEL_SERVICE_NAME
 ```

@@ -39,8 +39,7 @@ describe("Cross-server contract compliance", () => {
 
     it("has bid adjustment tool", () => {
       const hasBids = toolNames.some(
-        (n) =>
-          n.includes("adjust_bids") || n.includes("adjust_line_item_bids")
+        (n) => n.includes("adjust_bids") || n.includes("adjust_line_item_bids")
       );
       expect(hasBids).toBe(true);
     });
@@ -90,9 +89,8 @@ describe("Cross-server contract compliance", () => {
         });
 
         it("canonical bulk tools expose standard bulk output fields", () => {
-          const isCanonicalBulkTool = /_(bulk_update_status|bulk_create_entities|bulk_update_entities)$/.test(
-            tool.name
-          );
+          const isCanonicalBulkTool =
+            /_(bulk_update_status|bulk_create_entities|bulk_update_entities)$/.test(tool.name);
           if (!isCanonicalBulkTool) {
             expect(true).toBe(true);
             return;
@@ -111,11 +109,8 @@ describe("Cross-server contract compliance", () => {
   });
 });
 
-
 describe("bounded report-view contract", () => {
-  const reportTools = allTools.filter((t: any) =>
-    isBoundedReportViewInputSchema(t.inputSchema)
-  );
+  const reportTools = allTools.filter((t: any) => isBoundedReportViewInputSchema(t.inputSchema));
 
   if (reportTools.length === 0) {
     it("has no bounded report-view tools registered", () => {

@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const amazonDspCreativeUploadWorkflowPrompt: Prompt = {
   name: "amazon_dsp_creative_upload_workflow",
-  description: "Step-by-step guide for uploading creative assets and creating AmazonDsp Ads creatives",
+  description:
+    "Step-by-step guide for uploading creative assets and creating AmazonDsp Ads creatives",
   arguments: [
     {
       name: "profileId",
@@ -37,7 +38,9 @@ AmazonDsp creative workflow: Upload media → Create Ad Group → Create Ad with
 
 ## Step 1: Upload ${creativeType === "image" ? "Image" : "Video"}
 
-${creativeType === "image" ? `
+${
+  creativeType === "image"
+    ? `
 \`\`\`json
 amazon_dsp_upload_image({
   "profileId": "${profileId}",
@@ -51,7 +54,8 @@ amazon_dsp_upload_image({
 - Formats: JPEG, PNG
 - Max 100KB for feed ads
 - Recommended: 1200x628px, 1080x1080px, 720x1280px
-` : `
+`
+    : `
 \`\`\`json
 amazon_dsp_upload_video({
   "profileId": "${profileId}",
@@ -70,7 +74,8 @@ When \`video_status == "bind_success"\`, the video is ready.
 - Max 500MB
 - Min resolution: 540x960 (9:16), 960x540 (16:9), or 640x640 (1:1)
 - Duration: 5-60 seconds for In-Feed ads
-`}
+`
+}
 
 ## Step 2: Create Creative
 

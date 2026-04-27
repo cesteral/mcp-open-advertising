@@ -111,14 +111,7 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
     idField: "id",
     deleteIdsParam: "pin_id",
     displayName: "Pin (Creative)",
-    defaultFields: [
-      "id",
-      "title",
-      "description",
-      "media",
-      "link",
-      "created_at",
-    ],
+    defaultFields: ["id", "title", "description", "media", "link", "created_at"],
     supportsDuplicate: false,
   },
 };
@@ -129,10 +122,7 @@ const ENTITY_CONFIGS: Record<PinterestEntityType, PinterestEntityConfig> = {
  *   → "/v5/ad_accounts/act_123/campaigns"
  */
 export function interpolatePath(path: string, params: Record<string, string>): string {
-  return Object.entries(params).reduce(
-    (acc, [key, val]) => acc.replace(`{${key}}`, val),
-    path
-  );
+  return Object.entries(params).reduce((acc, [key, val]) => acc.replace(`{${key}}`, val), path);
 }
 
 export function getEntityConfig(entityType: PinterestEntityType): PinterestEntityConfig {

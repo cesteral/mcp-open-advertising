@@ -89,7 +89,9 @@ export async function graphqlCancelBulkJobLogic(
   };
 }
 
-export function graphqlCancelBulkJobResponseFormatter(result: GraphqlCancelBulkJobOutput): McpTextContent[] {
+export function graphqlCancelBulkJobResponseFormatter(
+  result: GraphqlCancelBulkJobOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

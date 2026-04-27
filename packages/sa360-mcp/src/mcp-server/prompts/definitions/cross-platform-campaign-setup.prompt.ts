@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const crossPlatformCampaignSetupPrompt: Prompt = {
   name: "cross_platform_campaign_setup",
-  description:
-    "Multi-platform campaign setup guide with budget allocation and naming conventions",
+  description: "Multi-platform campaign setup guide with budget allocation and naming conventions",
   arguments: [
     {
       name: "totalBudget",
@@ -21,9 +20,7 @@ export const crossPlatformCampaignSetupPrompt: Prompt = {
   ],
 };
 
-export function getCrossPlatformCampaignSetupMessage(
-  args?: Record<string, string>
-): string {
+export function getCrossPlatformCampaignSetupMessage(args?: Record<string, string>): string {
   const totalBudget = args?.totalBudget || "{totalBudget}";
   const objective = args?.objective || "conversion";
   return `# Cross-Platform Campaign Setup Guide

@@ -29,7 +29,7 @@ export const amazonDspTargetingDiscoveryWorkflowPrompt: Prompt = {
 };
 
 export function getAmazonDspTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>,
+  args?: Record<string, string>
 ): string {
   const profileId = args?.profileId || "{profileId}";
   const goal = args?.goal || "search";

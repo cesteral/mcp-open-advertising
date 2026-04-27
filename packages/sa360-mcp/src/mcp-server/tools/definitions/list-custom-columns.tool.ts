@@ -48,7 +48,9 @@ export async function listCustomColumnsLogic(
   };
 }
 
-export function listCustomColumnsResponseFormatter(result: ListCustomColumnsOutput): McpTextContent[] {
+export function listCustomColumnsResponseFormatter(
+  result: ListCustomColumnsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

@@ -39,22 +39,15 @@ export class CM360ReportingService {
     await this.rateLimiter.consume("cm360");
 
     // Step 1: Create report
-    const report = (await this.httpClient.fetch(
-      `/userprofiles/${profileId}/reports`,
-      context,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      }
-    )) as Record<string, unknown>;
+    const report = (await this.httpClient.fetch(`/userprofiles/${profileId}/reports`, context, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    })) as Record<string, unknown>;
 
     const reportId = report.id as string;
 
-    this.logger.info(
-      { reportId, requestId: context?.requestId },
-      "CM360 report created"
-    );
+    this.logger.info({ reportId, requestId: context?.requestId }, "CM360 report created");
 
     // Step 2: Run report
     await this.rateLimiter.consume("cm360");
@@ -72,14 +65,11 @@ export class CM360ReportingService {
     );
 
     // Step 3: Poll for completion
-    const completedFile = await this.pollReportFile(
-      profileId,
-      reportId,
-      fileId,
-      context
-    );
+    const completedFile = await this.pollReportFile(profileId, reportId, fileId, context);
 
-    const urls = (completedFile as Record<string, unknown>).urls as Record<string, string> | undefined;
+    const urls = (completedFile as Record<string, unknown>).urls as
+      | Record<string, string>
+      | undefined;
     const downloadUrl = urls?.apiUrl;
 
     return { reportId, fileId, file: completedFile, downloadUrl };
@@ -92,15 +82,11 @@ export class CM360ReportingService {
   ): Promise<{ reportId: string; fileId: string }> {
     await this.rateLimiter.consume("cm360");
 
-    const report = (await this.httpClient.fetch(
-      `/userprofiles/${profileId}/reports`,
-      context,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      }
-    )) as Record<string, unknown>;
+    const report = (await this.httpClient.fetch(`/userprofiles/${profileId}/reports`, context, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    })) as Record<string, unknown>;
 
     const reportId = report.id as string;
 
@@ -209,15 +195,11 @@ export class CM360ReportingService {
   ): Promise<{ reportId: string; reportName: string; schedule: Record<string, unknown> }> {
     await this.rateLimiter.consume("cm360");
 
-    const report = (await this.httpClient.fetch(
-      `/userprofiles/${profileId}/reports`,
-      context,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      }
-    )) as Record<string, unknown>;
+    const report = (await this.httpClient.fetch(`/userprofiles/${profileId}/reports`, context, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
+    })) as Record<string, unknown>;
 
     this.logger.info(
       { reportId: report.id, requestId: context?.requestId },
@@ -272,16 +254,10 @@ export class CM360ReportingService {
   ): Promise<void> {
     await this.rateLimiter.consume("cm360");
 
-    await this.httpClient.fetch(
-      `/userprofiles/${profileId}/reports/${reportId}`,
-      context,
-      { method: "DELETE" }
-    );
+    await this.httpClient.fetch(`/userprofiles/${profileId}/reports/${reportId}`, context, {
+      method: "DELETE",
+    });
 
-    this.logger.info(
-      { reportId, requestId: context?.requestId },
-      "CM360 scheduled report deleted"
-    );
+    this.logger.info({ reportId, requestId: context?.requestId }, "CM360 scheduled report deleted");
   }
-
 }

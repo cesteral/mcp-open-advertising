@@ -16,8 +16,8 @@ import {
   UnmappedField,
   LossyConversion,
   ExtractionReport,
-} from './types.js';
-import type { SchemaExtractionConfig } from '../../config/schema-extraction.config.js';
+} from "./types.js";
+import type { SchemaExtractionConfig } from "../../config/schema-extraction.config.js";
 
 /**
  * Convert extracted Discovery schemas to OpenAPI 3.0 specification
@@ -34,7 +34,7 @@ export async function convertToOpenAPI(
   extractionReport: ExtractionReport,
   config: SchemaExtractionConfig
 ): Promise<OpenAPISpec> {
-  console.log('🔄 Converting to OpenAPI 3.0...');
+  console.log("🔄 Converting to OpenAPI 3.0...");
 
   const conversionContext = {
     unmappedFields: [] as UnmappedField[],
@@ -45,21 +45,17 @@ export async function convertToOpenAPI(
   // Convert each schema
   const openApiSchemas: Record<string, OpenAPISchema> = {};
   for (const [schemaName, discoverySchema] of Object.entries(schemas)) {
-    openApiSchemas[schemaName] = convertSchema(
-      schemaName,
-      discoverySchema,
-      conversionContext
-    );
+    openApiSchemas[schemaName] = convertSchema(schemaName, discoverySchema, conversionContext);
   }
 
   // Generate OpenAPI spec wrapper
   const openApiSpec: OpenAPISpec = {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
       title: discoveryDoc.title || `${discoveryDoc.name} API Minimal Schema`,
       version: discoveryDoc.version || config.apiVersion,
-      description: discoveryDoc.description || 'Extracted minimal schema subset',
-      'x-extraction-metadata': extractionReport.extractionMetadata,
+      description: discoveryDoc.description || "Extracted minimal schema subset",
+      "x-extraction-metadata": extractionReport.extractionMetadata,
     },
     paths: {}, // Required by OpenAPI 3.0 spec, even if empty
     components: {
@@ -132,7 +128,7 @@ function convertSchema(
     openApiSchema.enum = discoverySchema.enum;
     if (discoverySchema.enumDescriptions) {
       // Store enum descriptions in vendor extension
-      openApiSchema['x-enumDescriptions'] = discoverySchema.enumDescriptions;
+      openApiSchema["x-enumDescriptions"] = discoverySchema.enumDescriptions;
     }
   }
 
@@ -166,10 +162,10 @@ function convertSchema(
 
   // Convert additionalProperties
   if (discoverySchema.additionalProperties) {
-    if (typeof discoverySchema.additionalProperties === 'object') {
+    if (typeof discoverySchema.additionalProperties === "object") {
       openApiSchema.additionalProperties = convertProperty(
         schemaName,
-        'additionalProperties',
+        "additionalProperties",
         discoverySchema.additionalProperties,
         context
       );
@@ -180,12 +176,7 @@ function convertSchema(
 
   // Convert items (for arrays)
   if (discoverySchema.items) {
-    openApiSchema.items = convertProperty(
-      schemaName,
-      'items',
-      discoverySchema.items,
-      context
-    );
+    openApiSchema.items = convertProperty(schemaName, "items", discoverySchema.items, context);
   }
 
   return openApiSchema;
@@ -208,7 +199,7 @@ function convertProperty(
 
   // Handle Discovery "repeated" field (convert to array)
   if (discoveryProp.repeated) {
-    openApiProp.type = 'array';
+    openApiProp.type = "array";
     openApiProp.items = convertProperty(
       schemaName,
       `${propName}[]`,
@@ -259,7 +250,7 @@ function convertProperty(
   if (discoveryProp.enum) {
     openApiProp.enum = discoveryProp.enum;
     if (discoveryProp.enumDescriptions) {
-      openApiProp['x-enumDescriptions'] = discoveryProp.enumDescriptions;
+      openApiProp["x-enumDescriptions"] = discoveryProp.enumDescriptions;
     }
   }
 
@@ -278,7 +269,7 @@ function convertProperty(
 
   // Convert additionalProperties
   if (discoveryProp.additionalProperties) {
-    if (typeof discoveryProp.additionalProperties === 'object') {
+    if (typeof discoveryProp.additionalProperties === "object") {
       openApiProp.additionalProperties = convertProperty(
         schemaName,
         `${propName}.additionalProperties`,
@@ -292,12 +283,7 @@ function convertProperty(
 
   // Convert items (for arrays)
   if (discoveryProp.items) {
-    openApiProp.items = convertProperty(
-      schemaName,
-      `${propName}[]`,
-      discoveryProp.items,
-      context
-    );
+    openApiProp.items = convertProperty(schemaName, `${propName}[]`, discoveryProp.items, context);
   }
 
   // Track Discovery-specific "required" field on property
@@ -308,7 +294,8 @@ function convertProperty(
       schemaName,
       fieldPath: propName,
       discoveryValue: discoveryProp.required,
-      handlingStrategy: 'Property-level "required" should be moved to parent schema\'s required array',
+      handlingStrategy:
+        'Property-level "required" should be moved to parent schema\'s required array',
     });
   }
 
@@ -323,7 +310,7 @@ function convertProperty(
  */
 function convertRef(ref: string): string {
   // If already in OpenAPI format, return as-is
-  if (ref.startsWith('#/')) {
+  if (ref.startsWith("#/")) {
     return ref;
   }
 
@@ -353,8 +340,8 @@ export function generateConversionReport(
  * Markers in field descriptions that indicate output-only fields
  */
 const OUTPUT_ONLY_MARKERS = {
-  EXPLICIT: 'output only',
-  ASSIGNED: 'assigned by the system',
+  EXPLICIT: "output only",
+  ASSIGNED: "assigned by the system",
 } as const;
 
 /**
@@ -362,9 +349,9 @@ const OUTPUT_ONLY_MARKERS = {
  * These patterns apply to all schemas
  */
 const OUTPUT_ONLY_PATTERNS: ReadonlyArray<RegExp> = [
-  /^name$/,        // 'name' is usually the resource name (output-only)
-  /^updateTime$/,  // updateTime is always output-only
-  /^createTime$/,  // createTime is always output-only
+  /^name$/, // 'name' is usually the resource name (output-only)
+  /^updateTime$/, // updateTime is always output-only
+  /^createTime$/, // createTime is always output-only
 ] as const;
 
 /**
@@ -396,16 +383,16 @@ const REQUIRED_FIELDS_OVERRIDES: Record<
   { add?: string[]; remove?: string[]; reason?: string }
 > = {
   PartnerRevenueModel: {
-    remove: ['markupAmount'],
-    reason: 'DV360 API omits markupAmount in GET responses when set to default/zero',
+    remove: ["markupAmount"],
+    reason: "DV360 API omits markupAmount in GET responses when set to default/zero",
   },
   LineItemBudget: {
-    remove: ['budgetAllocationType'],
-    reason: 'DV360 API may omit budgetAllocationType for certain budget configurations',
+    remove: ["budgetAllocationType"],
+    reason: "DV360 API may omit budgetAllocationType for certain budget configurations",
   },
   TargetingExpansionConfig: {
-    remove: ['enableOptimizedTargeting'],
-    reason: 'DV360 API may omit enableOptimizedTargeting when optimized targeting is disabled',
+    remove: ["enableOptimizedTargeting"],
+    reason: "DV360 API may omit enableOptimizedTargeting when optimized targeting is disabled",
   },
 };
 
@@ -427,7 +414,7 @@ function isOutputOnlyField(fieldName: string, description?: string): boolean {
 
   // Check field name patterns (only if not explicitly marked as required)
   // This prevents false positives for fields like campaignId which may be required inputs
-  const isExplicitlyRequired = lowerDesc.startsWith('required');
+  const isExplicitlyRequired = lowerDesc.startsWith("required");
   if (!isExplicitlyRequired) {
     for (const pattern of OUTPUT_ONLY_PATTERNS) {
       if (pattern.test(fieldName)) {
@@ -506,19 +493,19 @@ function extractRequiredFieldsFromDescriptions(
     // Remove fields that shouldn't be required
     if (overrides.remove) {
       const originalLength = required.length;
-      const filtered = required.filter(field => !overrides.remove!.includes(field));
+      const filtered = required.filter((field) => !overrides.remove!.includes(field));
       stats.overrideRemoved = originalLength - filtered.length;
 
       // Log override activity
       if (stats.overrideAdded > 0 || stats.overrideRemoved > 0) {
         console.log(
-          `     ${schemaName}: Manual override applied (${overrides.reason || 'no reason provided'})`
+          `     ${schemaName}: Manual override applied (${overrides.reason || "no reason provided"})`
         );
         if (stats.overrideAdded > 0) {
-          console.log(`       + Added: ${overrides.add?.join(', ')}`);
+          console.log(`       + Added: ${overrides.add?.join(", ")}`);
         }
         if (stats.overrideRemoved > 0) {
-          console.log(`       - Removed: ${overrides.remove?.join(', ')}`);
+          console.log(`       - Removed: ${overrides.remove?.join(", ")}`);
         }
       }
 

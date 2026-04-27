@@ -21,20 +21,10 @@ TikTok uses POST for updates with entity ID in the body. Only provided fields ar
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
-    data: z
-      .record(z.any())
-      .describe("Fields to update as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
+    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
   })
   .describe("Parameters for updating a TikTok Ads entity");
 

@@ -23,15 +23,23 @@ Uses LinkedIn's 3-step upload flow: register → upload binary → confirm.
 
 **Usage:** The returned assetUrn is referenced in creative → content → media → reference`;
 
-export const UploadVideoInputSchema = z.object({
-  adAccountUrn: z.string().describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
-}).describe("Parameters for uploading a video to LinkedIn");
+export const UploadVideoInputSchema = z
+  .object({
+    adAccountUrn: z
+      .string()
+      .describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+  })
+  .describe("Parameters for uploading a video to LinkedIn");
 
-export const UploadVideoOutputSchema = z.object({
-  assetUrn: z.string().describe("Asset URN (urn:li:digitalmediaAsset:...) for use in creative payloads"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded LinkedIn video asset");
+export const UploadVideoOutputSchema = z
+  .object({
+    assetUrn: z
+      .string()
+      .describe("Asset URN (urn:li:digitalmediaAsset:...) for use in creative payloads"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded LinkedIn video asset");
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
@@ -57,14 +65,16 @@ export async function uploadVideoLogic(
     },
   };
 
-  const registerResult = await linkedInService.client.post(
+  const registerResult = (await linkedInService.client.post(
     "/v2/assets?action=registerUpload",
     registerPayload,
     context
-  ) as LinkedInRegisterUploadResponse;
+  )) as LinkedInRegisterUploadResponse;
 
   const uploadRequest =
-    registerResult.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"];
+    registerResult.value?.uploadMechanism?.[
+      "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+    ];
   const uploadUrl = uploadRequest?.uploadUrl;
   const assetUrn = registerResult.value?.asset;
 
@@ -73,11 +83,7 @@ export async function uploadVideoLogic(
   }
 
   // Step 2: Download file and PUT binary (5 min timeout for larger videos)
-  const { buffer, contentType } = await downloadFileToBuffer(
-    input.mediaUrl,
-    300_000,
-    context
-  );
+  const { buffer, contentType } = await downloadFileToBuffer(input.mediaUrl, 300_000, context);
 
   const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
   if (buffer.length > MAX_VIDEO_SIZE) {
@@ -95,10 +101,12 @@ export async function uploadVideoLogic(
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Video uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Video uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
+    },
+  ];
 }
 
 export const uploadVideoTool = {

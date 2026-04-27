@@ -13,31 +13,38 @@ vi.mock("@cesteral/shared", async () => {
             ? headers["x-test-fingerprint"]
             : "fp-test",
       })),
-      getCredentialFingerprint: vi.fn(async (headers: Record<string, string | string[] | undefined>) => {
-        return typeof headers["x-test-fingerprint"] === "string"
-          ? headers["x-test-fingerprint"]
-          : "fp-test";
-      }),
+      getCredentialFingerprint: vi.fn(
+        async (headers: Record<string, string | string[] | undefined>) => {
+          return typeof headers["x-test-fingerprint"] === "string"
+            ? headers["x-test-fingerprint"]
+            : "fp-test";
+        }
+      ),
     })),
-    validateSessionReuse: vi.fn(async (authStrategy: any, sessionServiceStore: any, headers: any, sessionId: string) => {
-      const requestFingerprint = authStrategy.getCredentialFingerprint
-        ? await authStrategy.getCredentialFingerprint(headers)
-        : (await authStrategy.verify(headers)).credentialFingerprint;
+    validateSessionReuse: vi.fn(
+      async (authStrategy: any, sessionServiceStore: any, headers: any, sessionId: string) => {
+        const requestFingerprint = authStrategy.getCredentialFingerprint
+          ? await authStrategy.getCredentialFingerprint(headers)
+          : (await authStrategy.verify(headers)).credentialFingerprint;
 
-      if (requestFingerprint && !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)) {
+        if (
+          requestFingerprint &&
+          !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)
+        ) {
+          return {
+            valid: false,
+            reason: "Credential fingerprint mismatch",
+            storedFingerprint: sessionServiceStore.getFingerprint(sessionId),
+            requestFingerprint,
+          };
+        }
+
         return {
-          valid: false,
-          reason: "Credential fingerprint mismatch",
-          storedFingerprint: sessionServiceStore.getFingerprint(sessionId),
+          valid: true,
           requestFingerprint,
         };
       }
-
-      return {
-        valid: true,
-        requestFingerprint,
-      };
-    }),
+    ),
   };
 });
 
@@ -193,11 +200,7 @@ function extractSessionId(response: any, bodyText: string): string | undefined {
   } catch {
     body = undefined;
   }
-  return (
-    response.headers.get("mcp-session-id") ??
-    body?.result?.sessionId ??
-    body?.sessionId
-  );
+  return response.headers.get("mcp-session-id") ?? body?.result?.sessionId ?? body?.sessionId;
 }
 
 describe("dbm transport session lifecycle", () => {

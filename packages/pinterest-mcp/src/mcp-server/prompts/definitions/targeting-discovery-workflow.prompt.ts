@@ -29,7 +29,7 @@ export const pinterestTargetingDiscoveryWorkflowPrompt: Prompt = {
 };
 
 export function getPinterestTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>,
+  args?: Record<string, string>
 ): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
   const goal = args?.goal || "search";

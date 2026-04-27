@@ -33,9 +33,7 @@ describe("CheckReportStatusInputSchema", () => {
   });
 
   it("accepts a request id", () => {
-    expect(
-      CheckReportStatusInputSchema.safeParse({ reportRequestId: "rpt-1" }).success
-    ).toBe(true);
+    expect(CheckReportStatusInputSchema.safeParse({ reportRequestId: "rpt-1" }).success).toBe(true);
   });
 });
 

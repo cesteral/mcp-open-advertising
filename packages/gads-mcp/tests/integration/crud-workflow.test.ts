@@ -21,7 +21,9 @@ vi.mock("../../src/auth/gads-auth-adapter.js", async () => {
         this.developerToken = creds.developerToken;
         this.loginCustomerId = creds.loginCustomerId;
       }
-      async getAccessToken() { return "mock-token"; }
+      async getAccessToken() {
+        return "mock-token";
+      }
       async validate() {}
     },
   };
@@ -135,10 +137,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -166,7 +165,12 @@ describe("mcp transport CRUD integration", () => {
       }
     );
     mockState.gadsService.updateEntity.mockImplementation(
-      async (_entityType: string, _customerId: string, entityId: string, data: Record<string, unknown>) => {
+      async (
+        _entityType: string,
+        _customerId: string,
+        entityId: string,
+        data: Record<string, unknown>
+      ) => {
         const existing = mockState.entities.get(entityId) ?? {};
         const updated = { ...existing, ...data };
         mockState.entities.set(entityId, updated);
@@ -189,84 +193,72 @@ describe("mcp transport CRUD integration", () => {
   });
 
   it("supports create -> get -> update -> remove through /mcp", async () => {
-    const createResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/call",
-        params: {
-          name: "gads_create_entity",
-          arguments: {
-            entityType: "campaign",
-            customerId: "1234567890",
-            data: { name: "Test Campaign" },
-          },
+    const createResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "gads_create_entity",
+        arguments: {
+          entityType: "campaign",
+          customerId: "1234567890",
+          data: { name: "Test Campaign" },
         },
-      }
-    );
+      },
+    });
     expect(createResult.response.status).toBe(200);
     expect(createResult.json?.error).toBeUndefined();
     expect(createResult.sessionId).toBeDefined();
 
-    const getResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 2,
-        method: "tools/call",
-        params: {
-          name: "gads_get_entity",
-          arguments: {
-            entityType: "campaign",
-            customerId: "1234567890",
-            entityId: "123456789",
-          },
+    const getResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "gads_get_entity",
+        arguments: {
+          entityType: "campaign",
+          customerId: "1234567890",
+          entityId: "123456789",
         },
-      }
-    );
+      },
+    });
     expect(getResult.response.status).toBe(200);
     expect(getResult.json?.error).toBeUndefined();
     expect(getResult.sessionId).toBeDefined();
 
-    const updateResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 3,
-        method: "tools/call",
-        params: {
-          name: "gads_update_entity",
-          arguments: {
-            entityType: "campaign",
-            customerId: "1234567890",
-            entityId: "123456789",
-            data: { name: "Updated Campaign" },
-            updateMask: "name",
-          },
+    const updateResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: {
+        name: "gads_update_entity",
+        arguments: {
+          entityType: "campaign",
+          customerId: "1234567890",
+          entityId: "123456789",
+          data: { name: "Updated Campaign" },
+          updateMask: "name",
         },
-      }
-    );
+      },
+    });
     expect(updateResult.response.status).toBe(200);
     expect(updateResult.json?.error).toBeUndefined();
     expect(updateResult.sessionId).toBeDefined();
 
-    const removeResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 4,
-        method: "tools/call",
-        params: {
-          name: "gads_remove_entity",
-          arguments: {
-            entityType: "campaign",
-            customerId: "1234567890",
-            entityId: "123456789",
-          },
+    const removeResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: {
+        name: "gads_remove_entity",
+        arguments: {
+          entityType: "campaign",
+          customerId: "1234567890",
+          entityId: "123456789",
         },
-      }
-    );
+      },
+    });
     expect(removeResult.response.status).toBe(200);
     expect(removeResult.json?.error).toBeUndefined();
     expect(removeResult.sessionId).toBeDefined();

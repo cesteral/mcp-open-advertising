@@ -6,15 +6,14 @@ const { mockResolveSessionServices } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js",
-  () => ({
-    getSupportedEntityTypesDynamic: vi.fn().mockReturnValue([
+vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () => ({
+  getSupportedEntityTypesDynamic: vi
+    .fn()
+    .mockReturnValue([
       "adGroup",
       "adGroupAd",
       "advertiser",
@@ -28,54 +27,61 @@ vi.mock(
       "locationList",
       "partner",
     ]),
-    getEntityConfigDynamic: vi.fn().mockReturnValue({
-      parentIds: ["advertiserId"],
-      filterParamIds: [],
-      queryParamIds: [],
-      supportsFilter: true,
-      supportsCreate: true,
-      supportsUpdate: true,
-      supportsDelete: true,
-      apiPath: "/advertisers/{advertiserId}/lineItems",
-    }),
-    generateRelationshipDescription: vi.fn().mockReturnValue(""),
-    validateEntityRelationships: vi.fn().mockReturnValue([]),
-    getEntityHierarchyPath: vi.fn().mockReturnValue(["advertiser", "lineItem"]),
-    getEntitySchemaForOperation: vi.fn().mockReturnValue(z.record(z.any())),
-    getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName"]),
-  })
-);
+  getEntityConfigDynamic: vi.fn().mockReturnValue({
+    parentIds: ["advertiserId"],
+    filterParamIds: [],
+    queryParamIds: [],
+    supportsFilter: true,
+    supportsCreate: true,
+    supportsUpdate: true,
+    supportsDelete: true,
+    apiPath: "/advertisers/{advertiserId}/lineItems",
+  }),
+  generateRelationshipDescription: vi.fn().mockReturnValue(""),
+  validateEntityRelationships: vi.fn().mockReturnValue([]),
+  getEntityHierarchyPath: vi.fn().mockReturnValue(["advertiser", "lineItem"]),
+  getEntitySchemaForOperation: vi.fn().mockReturnValue(z.record(z.any())),
+  getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName"]),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-id-extraction.js",
-  () => ({
-    extractEntityIds: vi.fn().mockImplementation(
-      (input: Record<string, unknown>, _entityType: string) => {
-        const ids: Record<string, string> = {};
-        for (const key of [
-          "partnerId", "advertiserId", "campaignId",
-          "insertionOrderId", "lineItemId", "adGroupId",
-          "adId", "creativeId",
-        ]) {
-          if (input[key] && typeof input[key] === "string") {
-            ids[key] = input[key] as string;
-          }
+vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", () => ({
+  extractEntityIds: vi
+    .fn()
+    .mockImplementation((input: Record<string, unknown>, _entityType: string) => {
+      const ids: Record<string, string> = {};
+      for (const key of [
+        "partnerId",
+        "advertiserId",
+        "campaignId",
+        "insertionOrderId",
+        "lineItemId",
+        "adGroupId",
+        "adId",
+        "creativeId",
+      ]) {
+        if (input[key] && typeof input[key] === "string") {
+          ids[key] = input[key] as string;
         }
-        return ids;
       }
-    ),
-    extractParentIds: vi.fn(),
-  })
-);
+      return ids;
+    }),
+  extractParentIds: vi.fn(),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/parent-id-validation.js",
-  () => ({
-    addIdValidationIssues: vi.fn(),
-    mergeIdsIntoData: vi.fn().mockImplementation(
+vi.mock("../../../../src/mcp-server/tools/utils/parent-id-validation.js", () => ({
+  addIdValidationIssues: vi.fn(),
+  mergeIdsIntoData: vi
+    .fn()
+    .mockImplementation(
       (_entityType: string, data: Record<string, unknown>, input: Record<string, unknown>) => {
         const merged = { ...data };
-        for (const key of ["partnerId", "advertiserId", "campaignId", "insertionOrderId", "lineItemId"]) {
+        for (const key of [
+          "partnerId",
+          "advertiserId",
+          "campaignId",
+          "insertionOrderId",
+          "lineItemId",
+        ]) {
           if (input[key]) {
             merged[key] = input[key];
           }
@@ -83,44 +89,46 @@ vi.mock(
         return merged;
       }
     ),
-  })
-);
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/simplified-schemas.js",
-  () => ({
-    createSimplifiedUpdateEntityInputSchema: vi.fn().mockReturnValue(
-      z.object({
-        entityType: z.enum([
-          "adGroup", "adGroupAd", "advertiser", "campaign", "creative",
-          "customBiddingAlgorithm", "insertionOrder", "inventorySource",
-          "inventorySourceGroup", "lineItem", "locationList", "partner",
-        ]),
-        partnerId: z.string().optional(),
-        advertiserId: z.string().optional(),
-        campaignId: z.string().optional(),
-        insertionOrderId: z.string().optional(),
-        lineItemId: z.string().optional(),
-        adGroupId: z.string().optional(),
-        adId: z.string().optional(),
-        creativeId: z.string().optional(),
-        data: z.record(z.any()),
-        updateMask: z.string(),
-        reason: z.string().optional(),
-      })
-    ),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/simplified-schemas.js", () => ({
+  createSimplifiedUpdateEntityInputSchema: vi.fn().mockReturnValue(
+    z.object({
+      entityType: z.enum([
+        "adGroup",
+        "adGroupAd",
+        "advertiser",
+        "campaign",
+        "creative",
+        "customBiddingAlgorithm",
+        "insertionOrder",
+        "inventorySource",
+        "inventorySourceGroup",
+        "lineItem",
+        "locationList",
+        "partner",
+      ]),
+      partnerId: z.string().optional(),
+      advertiserId: z.string().optional(),
+      campaignId: z.string().optional(),
+      insertionOrderId: z.string().optional(),
+      lineItemId: z.string().optional(),
+      adGroupId: z.string().optional(),
+      adId: z.string().optional(),
+      creativeId: z.string().optional(),
+      data: z.record(z.any()),
+      updateMask: z.string(),
+      reason: z.string().optional(),
+    })
+  ),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-examples.js",
-  () => ({
-    getEntityTypesWithExamples: vi.fn().mockReturnValue(["lineItem", "insertionOrder"]),
-    getEntityExamples: vi.fn().mockReturnValue([]),
-    findMatchingExample: vi.fn().mockReturnValue(null),
-    getEntityExamplesByCategory: vi.fn().mockReturnValue([]),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/entity-examples.js", () => ({
+  getEntityTypesWithExamples: vi.fn().mockReturnValue(["lineItem", "insertionOrder"]),
+  getEntityExamples: vi.fn().mockReturnValue([]),
+  findMatchingExample: vi.fn().mockReturnValue(null),
+  getEntityExamplesByCategory: vi.fn().mockReturnValue([]),
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {
@@ -186,9 +194,7 @@ describe("dv360_update_entity", () => {
         createMockSdkContext()
       );
 
-      expect(result.entity).toEqual(
-        expect.objectContaining({ displayName: "New Name" })
-      );
+      expect(result.entity).toEqual(expect.objectContaining({ displayName: "New Name" }));
       expect(result.timestamp).toBeDefined();
     });
 
@@ -293,9 +299,7 @@ describe("dv360_update_entity", () => {
     });
 
     it("propagates service errors from updateEntity", async () => {
-      mockDv360Service.updateEntity.mockRejectedValueOnce(
-        new Error("Permission denied")
-      );
+      mockDv360Service.updateEntity.mockRejectedValueOnce(new Error("Permission denied"));
 
       await expect(
         updateEntityLogic(

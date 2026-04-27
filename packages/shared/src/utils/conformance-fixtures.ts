@@ -76,7 +76,4 @@ const promptWithArguments: PromptDefinitionForFactory = {
   },
 };
 
-export const conformancePrompts: PromptDefinitionForFactory[] = [
-  simplePrompt,
-  promptWithArguments,
-];
+export const conformancePrompts: PromptDefinitionForFactory[] = [simplePrompt, promptWithArguments];

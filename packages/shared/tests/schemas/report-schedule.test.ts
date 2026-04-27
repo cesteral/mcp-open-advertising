@@ -29,7 +29,7 @@ describe("ReportScheduleSummarySchema", () => {
         platform: "myspace",
         frequency: "DAILY",
         status: "ACTIVE",
-      }),
+      })
     ).toThrow();
   });
 
@@ -41,7 +41,7 @@ describe("ReportScheduleSummarySchema", () => {
         platform: "ttd",
         frequency: "FORTNIGHTLY",
         status: "ACTIVE",
-      }),
+      })
     ).toThrow();
   });
 });
@@ -77,10 +77,10 @@ describe("fromTtdSchedule", () => {
 
   it("maps Once to SINGLE_RUN and unknown to CUSTOM", () => {
     expect(fromTtdSchedule({ ReportScheduleId: "a", ReportScheduleType: "Once" }).frequency).toBe(
-      "SINGLE_RUN",
+      "SINGLE_RUN"
     );
     expect(fromTtdSchedule({ ReportScheduleId: "b", ReportScheduleType: "Cron" }).frequency).toBe(
-      "CUSTOM",
+      "CUSTOM"
     );
   });
 });

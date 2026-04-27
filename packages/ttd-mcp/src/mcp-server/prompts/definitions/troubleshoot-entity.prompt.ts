@@ -15,16 +15,13 @@ export const troubleshootEntityPrompt: Prompt = {
   arguments: [
     {
       name: "entityType",
-      description:
-        "Entity type experiencing issues: advertiser, campaign, adGroup, or ad",
+      description: "Entity type experiencing issues: advertiser, campaign, adGroup, or ad",
       required: true,
     },
   ],
 };
 
-export function getTroubleshootEntityMessage(
-  args?: Record<string, string>
-): string {
+export function getTroubleshootEntityMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
 
   return `# TTD Entity Troubleshooting: ${entityType}

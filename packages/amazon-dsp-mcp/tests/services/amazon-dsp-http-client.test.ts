@@ -17,7 +17,11 @@ const mockAdapter = {
 } as unknown as AmazonDspAuthAdapter;
 
 const mockLogger: any = {
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
 };
 mockLogger.child.mockReturnValue(mockLogger);
 
@@ -36,7 +40,8 @@ describe("AmazonDspHttpClient", () => {
 
   it("injects Amazon-Advertising-API-Scope header on GET", async () => {
     mockFetch.mockResolvedValueOnce({
-      ok: true, status: 200,
+      ok: true,
+      status: 200,
       headers: { get: () => null },
       json: async () => ({ orders: [], totalResults: 0 }),
     });
@@ -47,12 +52,19 @@ describe("AmazonDspHttpClient", () => {
 
   it("injects Amazon-Advertising-API-ClientId header when clientId is available", async () => {
     mockFetch.mockResolvedValueOnce({
-      ok: true, status: 200,
+      ok: true,
+      status: 200,
       headers: { get: () => null },
       json: async () => ({ orders: [] }),
     });
     // Create client with adapter that has clientId
-    const clientWithId = new AmazonDspHttpClient(mockAdapter, "profile_123", "https://advertising-api.amazon.com", mockLogger, "client_abc");
+    const clientWithId = new AmazonDspHttpClient(
+      mockAdapter,
+      "profile_123",
+      "https://advertising-api.amazon.com",
+      mockLogger,
+      "client_abc"
+    );
     await clientWithId.get("/dsp/orders");
     const headers = mockFetch.mock.calls[0][3].headers;
     expect(headers["Amazon-Advertising-API-ClientId"]).toBe("client_abc");
@@ -60,18 +72,21 @@ describe("AmazonDspHttpClient", () => {
 
   it("returns raw response body (no TikTok envelope unwrapping)", async () => {
     mockFetch.mockResolvedValueOnce({
-      ok: true, status: 200,
+      ok: true,
+      status: 200,
       headers: { get: () => null },
       json: async () => ({ orders: [{ orderId: "o1" }], totalResults: 1 }),
     });
-    const result = await client.get("/dsp/orders") as any;
+    const result = (await client.get("/dsp/orders")) as any;
     expect(result.orders).toHaveLength(1);
     expect(result.totalResults).toBe(1);
   });
 
   it("throws on HTTP error", async () => {
     mockFetch.mockResolvedValueOnce({
-      ok: false, status: 400, statusText: "Bad Request",
+      ok: false,
+      status: 400,
+      statusText: "Bad Request",
       headers: { get: () => null },
       text: async () => "Bad request body",
     });
@@ -80,7 +95,8 @@ describe("AmazonDspHttpClient", () => {
 
   it("PUT request sends correct method", async () => {
     mockFetch.mockResolvedValueOnce({
-      ok: true, status: 200,
+      ok: true,
+      status: 200,
       headers: { get: () => null },
       json: async () => ({ orderId: "o1", state: "PAUSED" }),
     });

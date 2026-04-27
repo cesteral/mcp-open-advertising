@@ -258,7 +258,14 @@ describe("SA360Service", () => {
     it("passes orderBy to the query builder", async () => {
       httpClient.fetch.mockResolvedValueOnce({ results: [] });
 
-      await service.listEntities("campaign", "123", undefined, undefined, undefined, "campaign.name ASC");
+      await service.listEntities(
+        "campaign",
+        "123",
+        undefined,
+        undefined,
+        undefined,
+        "campaign.name ASC"
+      );
 
       const [, , options] = httpClient.fetch.mock.calls[0];
       const body = JSON.parse(options.body);

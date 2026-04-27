@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "amazon_dsp_campaign_setup_workflow",
-  description: "Step-by-step guide for creating a complete Amazon DSP campaign structure (Order > Line Item > Creative)",
+  description:
+    "Step-by-step guide for creating a complete Amazon DSP campaign structure (Order > Line Item > Creative)",
   arguments: [
     {
       name: "profileId",
@@ -14,7 +15,8 @@ export const campaignSetupWorkflowPrompt: Prompt = {
     },
     {
       name: "objective",
-      description: "Campaign goal (e.g., REACH, REMARKETING, BEHAVIORAL_RETARGETING, CONTEXTUAL_TARGETING)",
+      description:
+        "Campaign goal (e.g., REACH, REMARKETING, BEHAVIORAL_RETARGETING, CONTEXTUAL_TARGETING)",
       required: false,
     },
   ],

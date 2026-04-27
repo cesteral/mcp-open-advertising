@@ -293,7 +293,11 @@ describe("TtdService", () => {
   describe("executeEntityReport", () => {
     it("calls adGroupReportExecute mutation for adGroup", async () => {
       httpClient.fetchDirect.mockResolvedValueOnce({
-        data: { adGroupReportExecute: { data: { id: "r1", url: "https://ttd.com/report.csv", hasSampleData: false } } },
+        data: {
+          adGroupReportExecute: {
+            data: { id: "r1", url: "https://ttd.com/report.csv", hasSampleData: false },
+          },
+        },
       });
 
       await service.executeEntityReport("adGroup", "ag123", "AD_GROUP");
@@ -341,9 +345,9 @@ describe("TtdService", () => {
     });
 
     it("rejects invalid enum-like reportType values before sending the request", async () => {
-      await expect(
-        service.executeEntityReport("campaign", "c1", "bad-value")
-      ).rejects.toThrow("reportType must be a valid CampaignReportType enum value");
+      await expect(service.executeEntityReport("campaign", "c1", "bad-value")).rejects.toThrow(
+        "reportType must be a valid CampaignReportType enum value"
+      );
 
       expect(httpClient.fetchDirect).not.toHaveBeenCalled();
     });

@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -74,7 +80,12 @@ describe("bulkUpdateStatusLogic", () => {
   });
 
   it("maps ad ACTIVE to active=true and archived=false", async () => {
-    mockState.cm360Service.getEntity.mockResolvedValue({ id: "1", name: "Ad", active: false, archived: true });
+    mockState.cm360Service.getEntity.mockResolvedValue({
+      id: "1",
+      name: "Ad",
+      active: false,
+      archived: true,
+    });
     mockState.cm360Service.updateEntity.mockResolvedValue({});
 
     await bulkUpdateStatusLogic(

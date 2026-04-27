@@ -125,9 +125,9 @@ describe("parsePinterestTokenFromHeaders", () => {
   });
 
   it("throws when Authorization header has wrong scheme", () => {
-    expect(() =>
-      parsePinterestTokenFromHeaders({ authorization: "Basic abc123" })
-    ).toThrow("Authorization header must use Bearer scheme");
+    expect(() => parsePinterestTokenFromHeaders({ authorization: "Basic abc123" })).toThrow(
+      "Authorization header must use Bearer scheme"
+    );
   });
 });
 
@@ -240,10 +240,7 @@ describe("PinterestRefreshTokenAdapter", () => {
     it("returns cached token when not expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
       mockTokenExchangeSuccess();
 
       const first = await adapter.getAccessToken();
@@ -262,10 +259,7 @@ describe("PinterestRefreshTokenAdapter", () => {
     it("fetches new token when expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
       mockTokenExchangeSuccess();
 
       const first = await adapter.getAccessToken();
@@ -287,10 +281,7 @@ describe("PinterestRefreshTokenAdapter", () => {
     });
 
     it("concurrent calls share pending auth (mutex)", async () => {
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       let resolveToken!: (value: unknown) => void;
       mockFetchWithTimeout.mockReturnValueOnce(
@@ -319,10 +310,7 @@ describe("PinterestRefreshTokenAdapter", () => {
     });
 
     it("clears pending on failure (retry works)", async () => {
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -331,9 +319,7 @@ describe("PinterestRefreshTokenAdapter", () => {
         text: async () => "Bad credentials",
       } as unknown as Response);
 
-      await expect(adapter.getAccessToken()).rejects.toThrow(
-        "Pinterest token refresh failed"
-      );
+      await expect(adapter.getAccessToken()).rejects.toThrow("Pinterest token refresh failed");
 
       // After failure, pendingAuth should be cleared so a second call retries
       mockTokenExchangeSuccess();
@@ -343,10 +329,7 @@ describe("PinterestRefreshTokenAdapter", () => {
     });
 
     it("error on non-ok HTTP response", async () => {
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -361,10 +344,7 @@ describe("PinterestRefreshTokenAdapter", () => {
     });
 
     it("error when access_token is missing from response", async () => {
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
@@ -404,12 +384,10 @@ describe("PinterestRefreshTokenAdapter", () => {
       const userInfoUrl = userInfoCall[0] as string;
       const userInfoOptions = userInfoCall[3] as RequestInit;
 
-      expect(userInfoUrl).toBe(
-        "https://business-api.pinterest.com/v5/user_account"
+      expect(userInfoUrl).toBe("https://business-api.pinterest.com/v5/user_account");
+      expect((userInfoOptions.headers as Record<string, string>)["Authorization"]).toBe(
+        "Bearer new-access-token"
       );
-      expect(
-        (userInfoOptions.headers as Record<string, string>)["Authorization"]
-      ).toBe("Bearer new-access-token");
     });
   });
 
@@ -417,10 +395,7 @@ describe("PinterestRefreshTokenAdapter", () => {
     it("uses rotated refresh token on subsequent exchanges", async () => {
       vi.useFakeTimers();
 
-      const adapter = new PinterestRefreshTokenAdapter(
-        MOCK_REFRESH_CREDENTIALS,
-        "adv-123"
-      );
+      const adapter = new PinterestRefreshTokenAdapter(MOCK_REFRESH_CREDENTIALS, "adv-123");
 
       // First exchange returns a new refresh_token
       mockTokenExchangeSuccess({

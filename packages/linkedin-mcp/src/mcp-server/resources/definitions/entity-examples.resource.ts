@@ -161,13 +161,13 @@ function buildExampleResource(entityType: string): Resource {
     name: `LinkedIn ${entityType} Examples`,
     description: `Example payloads for creating and updating LinkedIn ${entityType} entities`,
     mimeType: "text/markdown",
-    getContent: () => ENTITY_EXAMPLES[entityType] ?? `# ${entityType} Examples\n\nNo examples available.`,
+    getContent: () =>
+      ENTITY_EXAMPLES[entityType] ?? `# ${entityType} Examples\n\nNo examples available.`,
   };
 }
 
-export const entityExampleResources: Resource[] = Object.keys(ENTITY_EXAMPLES).map(
-  buildExampleResource
-);
+export const entityExampleResources: Resource[] =
+  Object.keys(ENTITY_EXAMPLES).map(buildExampleResource);
 
 export const entityExampleAllResource: Resource = {
   uri: "entity-examples://linkedin/all",

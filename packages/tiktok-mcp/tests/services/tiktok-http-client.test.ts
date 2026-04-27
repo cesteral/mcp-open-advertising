@@ -133,9 +133,7 @@ describe("TikTokHttpClient", () => {
       await client.post("/open_api/v1.3/campaign/create/", { campaign_name: "Test" });
 
       const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;
-      expect((options.headers as Record<string, string>)["Content-Type"]).toBe(
-        "application/json"
-      );
+      expect((options.headers as Record<string, string>)["Content-Type"]).toBe("application/json");
     });
 
     it("uses POST method", async () => {

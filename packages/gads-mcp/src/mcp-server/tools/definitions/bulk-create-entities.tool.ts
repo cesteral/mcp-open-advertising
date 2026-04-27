@@ -26,13 +26,8 @@ Each item in \`items\` is the entity data object (same format as \`gads_create_e
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to create"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -101,9 +96,7 @@ export async function bulkCreateEntitiesLogic(
       const opIndex = opElement ? Number(opElement.index) : -1;
       const message =
         (err?.message as string) ??
-        (err?.errorCode
-          ? JSON.stringify(err.errorCode)
-          : "Unknown error");
+        (err?.errorCode ? JSON.stringify(err.errorCode) : "Unknown error");
       if (opIndex >= 0) {
         errorsByIndex.set(opIndex, message);
       }
@@ -124,7 +117,7 @@ export async function bulkCreateEntitiesLogic(
 
     return {
       success: true,
-      entity: resourceName ? { resourceName } : mutateResult ?? {},
+      entity: resourceName ? { resourceName } : (mutateResult ?? {}),
     };
   });
 
@@ -142,9 +135,7 @@ export async function bulkCreateEntitiesLogic(
  * Extract resourceName from nested result objects like
  * { campaignBudgetResult: { resourceName: "..." } }
  */
-function extractResourceName(
-  result: Record<string, unknown> | undefined
-): string | undefined {
+function extractResourceName(result: Record<string, unknown> | undefined): string | undefined {
   if (!result) return undefined;
   for (const value of Object.values(result)) {
     if (

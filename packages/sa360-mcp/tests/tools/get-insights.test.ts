@@ -108,7 +108,14 @@ describe("GetInsightsInputSchema", () => {
   });
 
   it("accepts all 6 supported insights entity types", () => {
-    const entityTypes = ["customer", "campaign", "adGroup", "adGroupAd", "adGroupCriterion", "campaignCriterion"];
+    const entityTypes = [
+      "customer",
+      "campaign",
+      "adGroup",
+      "adGroupAd",
+      "adGroupCriterion",
+      "campaignCriterion",
+    ];
 
     for (const entityType of entityTypes) {
       const result = GetInsightsInputSchema.safeParse({

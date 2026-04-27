@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const entityUpdateWorkflowPrompt: Prompt = {
   name: "cm360_entity_update_workflow",
-  description:
-    "Safe entity update workflow for CM360 (PUT semantics — full object required)",
+  description: "Safe entity update workflow for CM360 (PUT semantics — full object required)",
   arguments: [
     {
       name: "entityType",
@@ -22,9 +21,7 @@ export const entityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getEntityUpdateWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   return `# CM360 Entity Update Workflow

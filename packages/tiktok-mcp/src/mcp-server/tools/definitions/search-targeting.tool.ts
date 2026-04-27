@@ -20,14 +20,8 @@ interest categories, device models, and geographic options.
 
 export const SearchTargetingInputSchema = z
   .object({
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
-    query: z
-      .string()
-      .min(1)
-      .describe("Search keyword passed to TikTok targeting search"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
+    query: z.string().min(1).describe("Search keyword passed to TikTok targeting search"),
     scene: z
       .enum(["GEO", "ISP"])
       .optional()
@@ -40,7 +34,9 @@ export const SearchTargetingInputSchema = z
     objectiveType: z
       .string()
       .optional()
-      .describe("Objective type required by TikTok for GEO searches, e.g. TRAFFIC or APP_PROMOTION"),
+      .describe(
+        "Objective type required by TikTok for GEO searches, e.g. TRAFFIC or APP_PROMOTION"
+      ),
     promotionType: z
       .string()
       .optional()

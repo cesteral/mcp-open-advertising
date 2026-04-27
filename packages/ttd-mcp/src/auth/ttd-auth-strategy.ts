@@ -12,9 +12,7 @@ import {
 export class TtdTokenAuthStrategy implements AuthStrategy {
   constructor(private readonly logger?: Logger) {}
 
-  async verify(
-    headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
+  async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
     const credentials = parseTtdDirectTokenFromHeaders(headers);
     const adapter = new TtdDirectTokenAuthAdapter(credentials.token);
     await adapter.validate();

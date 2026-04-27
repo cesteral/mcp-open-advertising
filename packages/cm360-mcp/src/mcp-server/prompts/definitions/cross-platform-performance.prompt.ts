@@ -5,21 +5,17 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const crossPlatformPerformancePrompt: Prompt = {
   name: "cross_platform_performance_comparison",
-  description:
-    "Cross-platform performance comparison and budget reallocation guide",
+  description: "Cross-platform performance comparison and budget reallocation guide",
   arguments: [
     {
       name: "dateRange",
-      description:
-        "Date range (e.g., LAST_7_DAYS, LAST_30_DAYS, or custom dates)",
+      description: "Date range (e.g., LAST_7_DAYS, LAST_30_DAYS, or custom dates)",
       required: false,
     },
   ],
 };
 
-export function getCrossPlatformPerformanceMessage(
-  args?: Record<string, string>,
-): string {
+export function getCrossPlatformPerformanceMessage(args?: Record<string, string>): string {
   const dateRange = args?.dateRange || "LAST_7_DAYS";
   return `# Cross-Platform Performance Comparison
 

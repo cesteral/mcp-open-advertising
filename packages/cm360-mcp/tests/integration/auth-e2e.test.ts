@@ -12,35 +12,30 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   return {
     ...actual,
     createAuthStrategy: vi.fn(() => ({
-      verify: vi.fn(
-        async (headers: Record<string, string | string[] | undefined>) => {
-          if (
-            !headers.authorization &&
-            !headers["x-google-auth-type"]
-          ) {
-            throw new Error("Missing required credentials");
-          }
-          if (headers.authorization === "Bearer invalid-token") {
-            throw new Error("Invalid credentials");
-          }
-          const fp =
-            typeof headers["x-test-fingerprint"] === "string"
-              ? headers["x-test-fingerprint"]
-              : "fp-default";
-          return {
-            authInfo: {
-              clientId: "test-user",
-              authType: "google-headers",
-            },
-            googleAuthAdapter: {
-              validate: vi.fn(),
-              getAccessToken: vi.fn().mockResolvedValue("mock-token"),
-              getAuthClient: vi.fn(),
-            },
-            credentialFingerprint: fp,
-          };
+      verify: vi.fn(async (headers: Record<string, string | string[] | undefined>) => {
+        if (!headers.authorization && !headers["x-google-auth-type"]) {
+          throw new Error("Missing required credentials");
         }
-      ),
+        if (headers.authorization === "Bearer invalid-token") {
+          throw new Error("Invalid credentials");
+        }
+        const fp =
+          typeof headers["x-test-fingerprint"] === "string"
+            ? headers["x-test-fingerprint"]
+            : "fp-default";
+        return {
+          authInfo: {
+            clientId: "test-user",
+            authType: "google-headers",
+          },
+          googleAuthAdapter: {
+            validate: vi.fn(),
+            getAccessToken: vi.fn().mockResolvedValue("mock-token"),
+            getAuthClient: vi.fn(),
+          },
+          credentialFingerprint: fp,
+        };
+      }),
       getCredentialFingerprint: vi.fn(
         async (headers: Record<string, string | string[] | undefined>) => {
           return typeof headers["x-test-fingerprint"] === "string"
@@ -79,13 +74,8 @@ vi.mock("../../src/services/session-services.js", async () => {
   const fingerprints = new Map<string, string>();
   const authContexts = new Map<string, any>();
   const store = {
-    set(
-      _sessionId: string,
-      _sessionServices: any,
-      credentialFingerprint?: string
-    ) {
-      if (credentialFingerprint)
-        fingerprints.set(_sessionId, credentialFingerprint);
+    set(_sessionId: string, _sessionServices: any, credentialFingerprint?: string) {
+      if (credentialFingerprint) fingerprints.set(_sessionId, credentialFingerprint);
     },
     get(_sessionId: string) {
       return mockServices;
@@ -183,10 +173,7 @@ async function postMcp(
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -255,15 +242,10 @@ describe("cm360-mcp auth e2e", () => {
     expect(sessionId).toBeDefined();
 
     // Second request with different fingerprint reusing same session
-    const second = await postMcp(
-      app,
-      { ...toolCallPayload, id: 2 },
-      sessionId as string,
-      {
-        authorization: "Bearer valid-token",
-        "x-test-fingerprint": "fp-B",
-      }
-    );
+    const second = await postMcp(app, { ...toolCallPayload, id: 2 }, sessionId as string, {
+      authorization: "Bearer valid-token",
+      "x-test-fingerprint": "fp-B",
+    });
     expect(second.response.status).toBe(401);
     const body = second.json ?? JSON.parse(second.text);
     expect(JSON.stringify(body)).toContain("credential mismatch");

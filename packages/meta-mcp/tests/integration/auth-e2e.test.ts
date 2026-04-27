@@ -15,16 +15,16 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     fetchWithTimeout: vi.fn(async (url: string) => {
       // Auth validation (GET /me)
       if (url.includes("/me?")) {
-        return new Response(
-          JSON.stringify({ id: "user-123", name: "Test User" }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ id: "user-123", name: "Test User" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
       // API calls — generic success
-      return new Response(
-        JSON.stringify({ id: "camp-001", name: "Test Campaign" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ id: "camp-001", name: "Test Campaign" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }),
   };
 });
@@ -35,7 +35,11 @@ import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-
 const mockFetch = vi.mocked(fetchWithTimeout);
 
 const logger: any = {
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
 };
 logger.child.mockReturnValue(logger);
 
@@ -112,11 +116,20 @@ describe("meta-mcp auth e2e", () => {
     mockFetch.mockImplementationOnce(async (url: string) => {
       if (url.includes("/me?")) {
         return new Response(
-          JSON.stringify({ error: { message: "Invalid OAuth access token", type: "OAuthException", code: 190 } }),
-          { status: 401, statusText: "Unauthorized", headers: { "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: { message: "Invalid OAuth access token", type: "OAuthException", code: 190 },
+          }),
+          {
+            status: 401,
+            statusText: "Unauthorized",
+            headers: { "Content-Type": "application/json" },
+          }
         );
       }
-      return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     });
 
     const response = await makeRequest(app, {

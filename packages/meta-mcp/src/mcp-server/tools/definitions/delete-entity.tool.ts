@@ -23,13 +23,8 @@ Uses DELETE /{entityId}.
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to delete"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to delete"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
+    entityId: z.string().min(1).describe("The entity ID to delete"),
   })
   .describe("Parameters for deleting a Meta Ads entity");
 

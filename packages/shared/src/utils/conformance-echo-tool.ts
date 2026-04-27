@@ -31,9 +31,7 @@ export const echoTool: ToolDefinitionForFactory = {
   logic: async (input: z.infer<typeof echoInputSchema>) => {
     return input.message;
   },
-  responseFormatter: (result: string) => [
-    { type: "text" as const, text: result },
-  ],
+  responseFormatter: (result: string) => [{ type: "text" as const, text: result }],
 };
 
 // ---------------------------------------------------------------------------
@@ -50,9 +48,7 @@ export const testSimpleTextTool: ToolDefinitionForFactory = {
   logic: async () => {
     return "This is a simple text response for testing.";
   },
-  responseFormatter: (result: string) => [
-    { type: "text" as const, text: result },
-  ],
+  responseFormatter: (result: string) => [{ type: "text" as const, text: result }],
 };
 
 // ---------------------------------------------------------------------------
@@ -75,18 +71,24 @@ export const testToolWithLoggingTool: ToolDefinitionForFactory = {
       | undefined;
 
     if (send) {
-      await send({ level: "info", logger: "test_tool_with_logging", data: "Tool execution started" });
+      await send({
+        level: "info",
+        logger: "test_tool_with_logging",
+        data: "Tool execution started",
+      });
       await new Promise((r) => setTimeout(r, 50));
       await send({ level: "info", logger: "test_tool_with_logging", data: "Tool processing data" });
       await new Promise((r) => setTimeout(r, 50));
-      await send({ level: "info", logger: "test_tool_with_logging", data: "Tool execution completed" });
+      await send({
+        level: "info",
+        logger: "test_tool_with_logging",
+        data: "Tool execution completed",
+      });
     }
 
     return "Logging test completed successfully.";
   },
-  responseFormatter: (result: string) => [
-    { type: "text" as const, text: result },
-  ],
+  responseFormatter: (result: string) => [{ type: "text" as const, text: result }],
 };
 
 // ---------------------------------------------------------------------------
@@ -100,21 +102,20 @@ const testElicitationInputSchema = z.object({
 export const testElicitationTool: ToolDefinitionForFactory = {
   name: "test_elicitation",
   title: "Test Elicitation",
-  description:
-    "Requests user input via MCP elicitation. Used by MCP conformance tests.",
+  description: "Requests user input via MCP elicitation. Used by MCP conformance tests.",
   inputSchema: testElicitationInputSchema,
   annotations: { readOnlyHint: true },
   inputExamples: [{ label: "Elicitation test", input: { message: "Please provide a value" } }],
   logic: async (
     input: z.infer<typeof testElicitationInputSchema>,
     _context: unknown,
-    sdkContext?: ToolSdkContext,
+    sdkContext?: ToolSdkContext
   ) => {
     if (!sdkContext?.elicitInput) {
       return "Elicitation not supported by client.";
     }
 
-    const result: { action: string; content?: unknown } = await sdkContext.elicitInput({
+    const result: { action: string; content?: unknown } = (await sdkContext.elicitInput({
       message: input.message,
       requestedSchema: {
         type: "object",
@@ -127,13 +128,11 @@ export const testElicitationTool: ToolDefinitionForFactory = {
         },
         required: ["response"],
       },
-    }) as any;
+    })) as any;
 
     return `Elicitation completed: action=${result.action}, content=${JSON.stringify(result.content ?? {})}`;
   },
-  responseFormatter: (result: string) => [
-    { type: "text" as const, text: result },
-  ],
+  responseFormatter: (result: string) => [{ type: "text" as const, text: result }],
 };
 
 // ---------------------------------------------------------------------------
@@ -153,7 +152,7 @@ export const testElicitationSep1034DefaultsTool: ToolDefinitionForFactory = {
       return "Elicitation not supported by client.";
     }
 
-    const result: { action: string; content?: unknown } = await sdkContext.elicitInput({
+    const result: { action: string; content?: unknown } = (await sdkContext.elicitInput({
       message: "Please confirm or modify the following default values:",
       requestedSchema: {
         type: "object",
@@ -171,13 +170,11 @@ export const testElicitationSep1034DefaultsTool: ToolDefinitionForFactory = {
         },
         required: ["name", "age", "score", "status", "verified"],
       },
-    }) as any;
+    })) as any;
 
     return `Elicitation completed: action=${result.action}, content=${JSON.stringify(result.content ?? {})}`;
   },
-  responseFormatter: (result: string) => [
-    { type: "text" as const, text: result },
-  ],
+  responseFormatter: (result: string) => [{ type: "text" as const, text: result }],
 };
 
 // ---------------------------------------------------------------------------
@@ -187,8 +184,7 @@ export const testElicitationSep1034DefaultsTool: ToolDefinitionForFactory = {
 export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
   name: "test_elicitation_sep1330_enums",
   title: "Test Elicitation SEP-1330 Enums",
-  description:
-    "Tests all 5 enum variants in elicitation schemas. Used by MCP conformance tests.",
+  description: "Tests all 5 enum variants in elicitation schemas. Used by MCP conformance tests.",
   inputSchema: z.object({}),
   inputExamples: [{ label: "SEP-1330 enums test", input: {} }],
   annotations: { readOnlyHint: true },
@@ -197,7 +193,7 @@ export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
       return "Elicitation not supported by client.";
     }
 
-    const result: { action: string; content?: unknown } = await sdkContext.elicitInput({
+    const result: { action: string; content?: unknown } = (await sdkContext.elicitInput({
       message: "Please select values for each enum variant:",
       requestedSchema: {
         type: "object",
@@ -236,20 +232,13 @@ export const testElicitationSep1330EnumsTool: ToolDefinitionForFactory = {
             },
           },
         },
-        required: [
-          "untitledSingle",
-          "titledSingle",
-          "untitledMulti",
-          "titledMulti",
-        ],
+        required: ["untitledSingle", "titledSingle", "untitledMulti", "titledMulti"],
       },
-    }) as any;
+    })) as any;
 
     return `Elicitation completed: action=${result.action}, content=${JSON.stringify(result.content ?? {})}`;
   },
-  responseFormatter: (result: string) => [
-    { type: "text" as const, text: result },
-  ],
+  responseFormatter: (result: string) => [{ type: "text" as const, text: result }],
 };
 
 // ---------------------------------------------------------------------------

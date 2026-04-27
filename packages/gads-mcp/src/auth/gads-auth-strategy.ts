@@ -18,23 +18,16 @@ import {
 } from "./gads-auth-adapter.js";
 
 export class GAdsHeadersAuthStrategy implements AuthStrategy {
-  constructor(
-    private readonly logger?: Logger
-  ) {}
+  constructor(private readonly logger?: Logger) {}
 
-  async verify(
-    headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
+  async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
     const credentials = parseGAdsCredentialsFromHeaders(headers);
     const adapter = new GAdsRefreshTokenAuthAdapter(credentials);
 
     // Validate by attempting to get an access token
     await adapter.getAccessToken();
 
-    this.logger?.debug(
-      { clientId: credentials.clientId },
-      "Google Ads credentials validated"
-    );
+    this.logger?.debug({ clientId: credentials.clientId }, "Google Ads credentials validated");
 
     const fingerprint = getGAdsCredentialFingerprint(credentials);
 

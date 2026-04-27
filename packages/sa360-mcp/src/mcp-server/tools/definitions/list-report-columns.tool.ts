@@ -34,7 +34,7 @@ export const ListReportColumnsInputSchema = z
       .string()
       .optional()
       .describe(
-        "Resource or field-group prefix (e.g. campaign, ad_group, metrics, segments). When omitted, returns the full catalog.",
+        "Resource or field-group prefix (e.g. campaign, ad_group, metrics, segments). When omitted, returns the full catalog."
       ),
     includeMetrics: z
       .boolean()
@@ -51,7 +51,7 @@ export const ListReportColumnsInputSchema = z
       .optional()
       .default(true)
       .describe(
-        "When true (default), try the live searchAds360Fields endpoint first and only fall back to the static catalog on failure.",
+        "When true (default), try the live searchAds360Fields endpoint first and only fall back to the static catalog on failure."
       ),
   })
   .describe("Parameters for listing SA360 report columns");
@@ -62,7 +62,9 @@ export const ListReportColumnsOutputSchema = z
     source: z.enum(["live", "catalog"]),
     fields: z
       .array(z.record(z.any()))
-      .describe("Field objects. Live results carry name/category/data_type/selectable; catalog results carry {name}."),
+      .describe(
+        "Field objects. Live results carry name/category/data_type/selectable; catalog results carry {name}."
+      ),
     fieldGroups: z
       .record(z.array(z.string()))
       .optional()
@@ -78,7 +80,7 @@ type ListReportColumnsOutput = z.infer<typeof ListReportColumnsOutputSchema>;
 function flattenCatalog(
   resource: string | undefined,
   includeMetrics: boolean,
-  includeSegments: boolean,
+  includeSegments: boolean
 ): { fields: Record<string, unknown>[]; fieldGroups: Record<string, string[]> } {
   const groups: Record<string, string[]> = {};
   if (resource && resource in catalog.fieldGroups) {
@@ -114,7 +116,7 @@ function buildLiveQuery(resource: string, pageSize: number): string {
 export async function listReportColumnsLogic(
   input: ListReportColumnsInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<ListReportColumnsOutput> {
   const resource = input.resource?.trim();
 
@@ -122,11 +124,7 @@ export async function listReportColumnsLogic(
   if (resource && input.preferLive !== false) {
     try {
       const { sa360Service } = resolveSessionServices(sdkContext);
-      const result = await sa360Service.searchFields(
-        buildLiveQuery(resource, 1000),
-        1000,
-        context,
-      );
+      const result = await sa360Service.searchFields(buildLiveQuery(resource, 1000), 1000, context);
       const liveFields = result.fields as Record<string, unknown>[];
       if (liveFields.length > 0) {
         return {
@@ -146,7 +144,7 @@ export async function listReportColumnsLogic(
   const { fields, fieldGroups } = flattenCatalog(
     resource,
     input.includeMetrics !== false,
-    input.includeSegments !== false,
+    input.includeSegments !== false
   );
   return {
     resource: resource ?? null,
@@ -159,7 +157,7 @@ export async function listReportColumnsLogic(
 }
 
 export function listReportColumnsResponseFormatter(
-  result: ListReportColumnsOutput,
+  result: ListReportColumnsOutput
 ): McpTextContent[] {
   const header = `SA360 report columns${result.resource ? ` (resource=${result.resource})` : ""} — source: ${result.source}`;
   const body =

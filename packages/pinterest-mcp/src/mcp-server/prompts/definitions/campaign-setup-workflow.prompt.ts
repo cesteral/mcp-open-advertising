@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "pinterest_campaign_setup_workflow",
-  description: "Step-by-step guide for creating a complete Pinterest Ads campaign structure (Campaign > Ad Group > Ad)",
+  description:
+    "Step-by-step guide for creating a complete Pinterest Ads campaign structure (Campaign > Ad Group > Ad)",
   arguments: [
     {
       name: "adAccountId",
@@ -14,7 +15,8 @@ export const campaignSetupWorkflowPrompt: Prompt = {
     },
     {
       name: "objective",
-      description: "Campaign objective (e.g., AWARENESS, CONSIDERATION, VIDEO_VIEW, CATALOG_SALES, CONVERSIONS, APP_INSTALL, SHOPPING)",
+      description:
+        "Campaign objective (e.g., AWARENESS, CONSIDERATION, VIDEO_VIEW, CATALOG_SALES, CONVERSIONS, APP_INSTALL, SHOPPING)",
       required: false,
     },
   ],

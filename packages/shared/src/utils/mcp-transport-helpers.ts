@@ -169,7 +169,10 @@ export async function validateSessionReuse(
     }
   }
 
-  if (requestFingerprint && !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)) {
+  if (
+    requestFingerprint &&
+    !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)
+  ) {
     const storedFingerprint = sessionServiceStore.getFingerprint(sessionId);
     return {
       valid: false,
@@ -268,10 +271,7 @@ export class SessionManager<TMcpServer extends { close(): Promise<void> }> {
         const lastActivity = this.sessionLastActivity.get(sessionId) ?? 0;
         const idleMs = now - lastActivity;
         if (idleMs > timeoutMs) {
-          logger.info(
-            { sessionId, idleMs },
-            "Session timed out (idle) — cleaning up"
-          );
+          logger.info({ sessionId, idleMs }, "Session timed out (idle) — cleaning up");
           this.cleanupSession(sessionId).catch(() => {});
         }
       }

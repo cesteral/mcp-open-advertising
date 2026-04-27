@@ -75,9 +75,7 @@ describe("DownloadReportInputSchema", () => {
   });
 
   it("rejects an invalid downloadUrl", () => {
-    expect(
-      DownloadReportInputSchema.safeParse({ downloadUrl: "not-a-url" }).success
-    ).toBe(false);
+    expect(DownloadReportInputSchema.safeParse({ downloadUrl: "not-a-url" }).success).toBe(false);
   });
 });
 
@@ -227,9 +225,7 @@ describe("GCS spill integration", () => {
 
   it("returns spill metadata when the helper reports success", async () => {
     process.env.REPORT_SPILL_BUCKET = "test-bucket";
-    mockResolveSession.mockReturnValue(
-      createMockServicesWithRawCsv(1, "date\n2026-03-01\n")
-    );
+    mockResolveSession.mockReturnValue(createMockServicesWithRawCsv(1, "date\n2026-03-01\n"));
     mockSpillCsvToGcs.mockResolvedValueOnce({
       spilled: true,
       bucket: "test-bucket",
@@ -242,7 +238,9 @@ describe("GCS spill integration", () => {
     });
 
     const result = await downloadReportLogic(
-      { downloadUrl: "https://download.api.bingads.microsoft.com/reports/tok-abc/report.csv" } as any,
+      {
+        downloadUrl: "https://download.api.bingads.microsoft.com/reports/tok-abc/report.csv",
+      } as any,
       { requestId: "req-1" },
       baseSdkContext
     );
@@ -255,7 +253,7 @@ describe("GCS spill integration", () => {
         server: "microsoft",
         reportId: "report.csv",
         rowCount: 1,
-      }),
+      })
     );
     expect(result.spill).toEqual({
       bucket: "test-bucket",
@@ -271,9 +269,7 @@ describe("GCS spill integration", () => {
 
   it("surfaces spill failures as a warning without breaking the response", async () => {
     process.env.REPORT_SPILL_BUCKET = "test-bucket";
-    mockResolveSession.mockReturnValue(
-      createMockServicesWithRawCsv(0, "date\n")
-    );
+    mockResolveSession.mockReturnValue(createMockServicesWithRawCsv(0, "date\n"));
     mockSpillCsvToGcs.mockResolvedValueOnce({ error: "gcs unreachable" });
 
     const result = await downloadReportLogic(
@@ -288,9 +284,7 @@ describe("GCS spill integration", () => {
 
   it("omits spill when the helper says disabled (bucket set but under threshold)", async () => {
     process.env.REPORT_SPILL_BUCKET = "test-bucket";
-    mockResolveSession.mockReturnValue(
-      createMockServicesWithRawCsv(0, "date\n")
-    );
+    mockResolveSession.mockReturnValue(createMockServicesWithRawCsv(0, "date\n"));
     mockSpillCsvToGcs.mockResolvedValueOnce({ disabled: true, reason: "under-threshold" });
 
     const result = await downloadReportLogic(

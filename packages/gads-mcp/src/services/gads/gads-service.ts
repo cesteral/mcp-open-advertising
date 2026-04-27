@@ -13,10 +13,7 @@ import {
   type GAdsEntityType,
   type MutateOp,
 } from "../../mcp-server/tools/utils/entity-mapping.js";
-import {
-  buildListQuery,
-  buildGetByIdQuery,
-} from "../../mcp-server/tools/utils/gaql-helpers.js";
+import { buildListQuery, buildGetByIdQuery } from "../../mcp-server/tools/utils/gaql-helpers.js";
 import type { GoogleAdsQueryRow } from "./types.js";
 
 export type { GoogleAdsQueryRow };
@@ -86,17 +83,13 @@ export class GAdsService {
    * List all Google Ads accounts accessible to the authenticated user.
    * Uses the CustomerService:listAccessibleCustomers endpoint.
    */
-  async listAccessibleCustomers(
-    context?: RequestContext
-  ): Promise<{ resourceNames: string[] }> {
+  async listAccessibleCustomers(context?: RequestContext): Promise<{ resourceNames: string[] }> {
     await this.rateLimiter.consume("gads:global");
 
     // This endpoint doesn't require a customer ID in the path
-    const result = (await this.httpClient.fetch(
-      "/customers:listAccessibleCustomers",
-      context,
-      { method: "GET" }
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.fetch("/customers:listAccessibleCustomers", context, {
+      method: "GET",
+    })) as Record<string, unknown>;
 
     return {
       resourceNames: (result.resourceNames as string[]) || [],
@@ -118,7 +111,10 @@ export class GAdsService {
     const { results } = await this.gaqlSearch(customerId, query, 1, undefined, context);
 
     if (results.length === 0) {
-      throw new McpError(JsonRpcErrorCode.NotFound, `${entityType} with ID ${entityId} not found in customer ${customerId}`);
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `${entityType} with ID ${entityId} not found in customer ${customerId}`
+      );
     }
 
     return results[0];
@@ -135,7 +131,11 @@ export class GAdsService {
     pageToken?: string,
     orderBy?: string,
     context?: RequestContext
-  ): Promise<{ entities: GoogleAdsQueryRow[]; nextPageToken?: string; totalResultsCount?: number }> {
+  ): Promise<{
+    entities: GoogleAdsQueryRow[];
+    nextPageToken?: string;
+    totalResultsCount?: number;
+  }> {
     const query = buildListQuery(entityType, filters, orderBy);
     const result = await this.gaqlSearch(customerId, query, pageSize, pageToken, context);
 
@@ -168,16 +168,12 @@ export class GAdsService {
 
     const mutateUrl = buildMutateUrl(entityType, customerId);
 
-    const result = await this.httpClient.fetch(
-      mutateUrl,
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          operations: [{ create: data }],
-        }),
-      }
-    );
+    const result = await this.httpClient.fetch(mutateUrl, context, {
+      method: "POST",
+      body: JSON.stringify({
+        operations: [{ create: data }],
+      }),
+    });
 
     return result;
   }
@@ -200,26 +196,25 @@ export class GAdsService {
     assertMutateOpSupported(entityType, "update");
     await this.rateLimiter.consume(`gads:${customerId}`);
 
-    this.logger.debug({ entityType, customerId, entityId, updateMask }, "Updating Google Ads entity");
+    this.logger.debug(
+      { entityType, customerId, entityId, updateMask },
+      "Updating Google Ads entity"
+    );
 
     const resourceName = buildResourceName(entityType, customerId, entityId);
     const mutateUrl = buildMutateUrl(entityType, customerId);
 
-    const result = await this.httpClient.fetch(
-      mutateUrl,
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          operations: [
-            {
-              update: { ...data, resourceName },
-              updateMask: updateMask,
-            },
-          ],
-        }),
-      }
-    );
+    const result = await this.httpClient.fetch(mutateUrl, context, {
+      method: "POST",
+      body: JSON.stringify({
+        operations: [
+          {
+            update: { ...data, resourceName },
+            updateMask: updateMask,
+          },
+        ],
+      }),
+    });
 
     return result;
   }
@@ -245,16 +240,12 @@ export class GAdsService {
     const resourceName = buildResourceName(entityType, customerId, entityId);
     const mutateUrl = buildMutateUrl(entityType, customerId);
 
-    const result = await this.httpClient.fetch(
-      mutateUrl,
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          operations: [{ remove: resourceName }],
-        }),
-      }
-    );
+    const result = await this.httpClient.fetch(mutateUrl, context, {
+      method: "POST",
+      body: JSON.stringify({
+        operations: [{ remove: resourceName }],
+      }),
+    });
 
     return result;
   }
@@ -311,22 +302,18 @@ export class GAdsService {
     }
 
     try {
-      await this.httpClient.fetch(
-        mutateUrl,
-        context,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            operations,
-            validateOnly: true,
-          }),
-        }
-      );
+      await this.httpClient.fetch(mutateUrl, context, {
+        method: "POST",
+        body: JSON.stringify({
+          operations,
+          validateOnly: true,
+        }),
+      });
       return { valid: true };
     } catch (error: unknown) {
       const err = error as Record<string, unknown> | null;
       const errorMessage = (err as { message?: string })?.message ?? String(error);
-      const errorBody = ((err as { data?: { errorBody?: string } })?.data?.errorBody) ?? errorMessage;
+      const errorBody = (err as { data?: { errorBody?: string } })?.data?.errorBody ?? errorMessage;
       return { valid: false, errors: [errorBody] };
     }
   }
@@ -348,7 +335,13 @@ export class GAdsService {
   ): Promise<unknown> {
     for (const op of operations) {
       const kind: MutateOp | undefined =
-        "create" in op ? "create" : "update" in op ? "update" : "remove" in op ? "remove" : undefined;
+        "create" in op
+          ? "create"
+          : "update" in op
+            ? "update"
+            : "remove" in op
+              ? "remove"
+              : undefined;
       if (!kind) {
         throw new McpError(
           JsonRpcErrorCode.InvalidParams,
@@ -372,14 +365,10 @@ export class GAdsService {
       body.partialFailure = true;
     }
 
-    const result = await this.httpClient.fetch(
-      mutateUrl,
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      }
-    );
+    const result = await this.httpClient.fetch(mutateUrl, context, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
 
     return result;
   }
@@ -431,7 +420,13 @@ export class GAdsService {
       try {
         // 1. Read — fetch current ad group to capture previous bids
         const readQuery = `SELECT ad_group.id, ad_group.name, ad_group.cpc_bid_micros, ad_group.cpm_bid_micros FROM ad_group WHERE ad_group.id = ${adjustment.adGroupId}`;
-        const { results: rows } = await this.gaqlSearch(customerId, readQuery, 1, undefined, context);
+        const { results: rows } = await this.gaqlSearch(
+          customerId,
+          readQuery,
+          1,
+          undefined,
+          context
+        );
 
         if (rows.length === 0) {
           results.push({
@@ -512,9 +507,7 @@ export class GAdsService {
    * Parse per-operation error messages from a Google Ads partial failure response.
    * Returns a Map from operation index to error message string.
    */
-  private parsePartialFailureErrors(
-    result: Record<string, unknown>
-  ): Map<number, string> {
+  private parsePartialFailureErrors(result: Record<string, unknown>): Map<number, string> {
     const errorsByIndex = new Map<number, string>();
     const partialErrors = (result.partialFailureError as Record<string, unknown>) ?? null;
     if (!partialErrors) return errorsByIndex;

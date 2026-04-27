@@ -12,9 +12,7 @@ const TOOL_DESCRIPTION = `List all CM360 user profiles accessible with the curre
 
 This is the bootstrap call — profileId is required for all other CM360 operations. Call this first to discover available profiles.`;
 
-export const ListUserProfilesInputSchema = z
-  .object({})
-  .describe("No parameters required");
+export const ListUserProfilesInputSchema = z.object({}).describe("No parameters required");
 
 export const ListUserProfilesOutputSchema = z
   .object({
@@ -43,7 +41,9 @@ export async function listUserProfilesLogic(
   };
 }
 
-export function listUserProfilesResponseFormatter(result: ListUserProfilesOutput): McpTextContent[] {
+export function listUserProfilesResponseFormatter(
+  result: ListUserProfilesOutput
+): McpTextContent[] {
   const profiles =
     result.totalCount > 0
       ? `\n\nProfiles:\n${JSON.stringify(result.profiles, null, 2)}`

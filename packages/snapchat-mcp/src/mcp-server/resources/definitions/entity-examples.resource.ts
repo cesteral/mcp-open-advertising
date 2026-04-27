@@ -5,7 +5,10 @@
  * Snapchat Entity Example Resources
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, type SnapchatEntityType } from "../../tools/utils/entity-mapping.js";
+import {
+  getSupportedEntityTypes,
+  type SnapchatEntityType,
+} from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_EXAMPLE_CONTENT: Record<SnapchatEntityType, string> = {
   campaign: `# Snapchat Campaign Examples
@@ -177,7 +180,9 @@ export const entityExampleResources: Resource[] = getSupportedEntityTypes().map(
   name: `Snapchat ${entityType} Examples`,
   description: `Example payloads for creating and updating Snapchat ${entityType} entities`,
   mimeType: "text/markdown",
-  getContent: () => ENTITY_EXAMPLE_CONTENT[entityType] ?? `# Snapchat ${entityType} Examples\n\nNo examples available.\n`,
+  getContent: () =>
+    ENTITY_EXAMPLE_CONTENT[entityType] ??
+    `# Snapchat ${entityType} Examples\n\nNo examples available.\n`,
 }));
 
 export const entityExampleAllResource: Resource = {

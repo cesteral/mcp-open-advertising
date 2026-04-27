@@ -28,24 +28,27 @@ export const SubmitReportInputSchema = z
       .string()
       .min(1)
       .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
-    name: z
-      .string()
-      .optional()
-      .describe("Report name (optional)"),
+    name: z.string().optional().describe("Report name (optional)"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
-      .describe("Preset date range. Use this OR startDate+endDate (not both). Max 95-day lookback — LAST_90_DAYS is the longest supported preset"),
+      .describe(
+        "Preset date range. Use this OR startDate+endDate (not both). Max 95-day lookback — LAST_90_DAYS is the longest supported preset"
+      ),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
-      .describe("Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."),
+      .describe(
+        "Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."
+      ),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
-      .describe("End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."),
+      .describe(
+        "End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."
+      ),
     reportTypeId: z
       .string()
       .min(1)
@@ -67,10 +70,13 @@ export const SubmitReportInputSchema = z
       .string()
       .optional()
       .default("DEMAND_SIDE_PLATFORM")
-      .describe("Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"),
+      .describe(
+        "Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"
+      ),
   })
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for submitting an Amazon DSP report");

@@ -3,10 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import {
-  fromTtdSchedule,
-  ReportScheduleSummarySchema,
-} from "@cesteral/shared";
+import { fromTtdSchedule, ReportScheduleSummarySchema } from "@cesteral/shared";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_get_report_schedule";
@@ -20,17 +17,14 @@ Use \`ttd_list_report_schedules\` to discover schedule IDs.`;
 
 export const GetReportScheduleInputSchema = z
   .object({
-    scheduleId: z
-      .string()
-      .min(1)
-      .describe("Report schedule ID to retrieve"),
+    scheduleId: z.string().min(1).describe("Report schedule ID to retrieve"),
   })
   .describe("Parameters for getting a TTD report schedule");
 
 export const GetReportScheduleOutputSchema = z
   .object({
     schedule: ReportScheduleSummarySchema.describe(
-      "Canonical ReportScheduleSummary for the requested schedule",
+      "Canonical ReportScheduleSummary for the requested schedule"
     ),
     raw: z
       .record(z.unknown())
@@ -49,10 +43,10 @@ export async function getReportScheduleLogic(
 ): Promise<GetReportScheduleOutput> {
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
-  const raw = (await ttdReportingService.getReportSchedule(
-    input.scheduleId,
-    context
-  )) as Record<string, unknown>;
+  const raw = (await ttdReportingService.getReportSchedule(input.scheduleId, context)) as Record<
+    string,
+    unknown
+  >;
 
   return {
     schedule: fromTtdSchedule(raw),

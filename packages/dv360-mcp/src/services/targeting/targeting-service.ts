@@ -1,12 +1,12 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import type { Logger } from 'pino';
-import { McpError, JsonRpcErrorCode } from '../../utils/errors/index.js';
-import { RateLimiter } from '../../utils/security/rate-limiter.js';
-import { withDV360ApiSpan, setSpanAttribute } from '../../utils/telemetry/index.js';
+import type { Logger } from "pino";
+import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { RateLimiter } from "../../utils/security/rate-limiter.js";
+import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
 import type { RequestContext } from "@cesteral/shared";
-import { DV360HttpClient } from '../dv360/dv360-http-client.js';
+import { DV360HttpClient } from "../dv360/dv360-http-client.js";
 import {
   type TargetingType,
   type TargetingParentType,
@@ -16,7 +16,7 @@ import {
   isValidTargetingParentType,
   getEntityIdField,
   TARGETING_PARENT_TYPES,
-} from '../domain/targeting-metadata.js';
+} from "../domain/targeting-metadata.js";
 
 /**
  * Response from list targeting options
@@ -52,7 +52,7 @@ export class TargetingService {
     pageSize?: number,
     context?: RequestContext
   ): Promise<ListTargetingOptionsResult> {
-    return withDV360ApiSpan('listAssignedTargetingOptions', parentType, async () => {
+    return withDV360ApiSpan("listAssignedTargetingOptions", parentType, async () => {
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -67,7 +67,7 @@ export class TargetingService {
       if (!validation.valid) {
         throw new McpError(
           JsonRpcErrorCode.InvalidParams,
-          `Missing required IDs for ${parentType}: ${validation.missingIds.join(', ')}`,
+          `Missing required IDs for ${parentType}: ${validation.missingIds.join(", ")}`,
           {
             parentType,
             requiredIds: TARGETING_PARENT_TYPES[parentType].requiredIds,
@@ -79,26 +79,26 @@ export class TargetingService {
 
       // Build API path
       const basePath = buildTargetingApiPath(parentType, ids, targetingType);
-      setSpanAttribute('dv360.apiPath', basePath);
-      setSpanAttribute('dv360.targetingType', targetingType);
-      setSpanAttribute('dv360.parentType', parentType);
+      setSpanAttribute("dv360.apiPath", basePath);
+      setSpanAttribute("dv360.targetingType", targetingType);
+      setSpanAttribute("dv360.parentType", parentType);
 
       // Build query params
       const params = new URLSearchParams();
       if (pageToken) {
-        params.append('pageToken', pageToken);
-        setSpanAttribute('dv360.pageToken', 'present');
+        params.append("pageToken", pageToken);
+        setSpanAttribute("dv360.pageToken", "present");
       }
       if (pageSize) {
-        params.append('pageSize', pageSize.toString());
-        setSpanAttribute('dv360.pageSize', pageSize);
+        params.append("pageSize", pageSize.toString());
+        setSpanAttribute("dv360.pageSize", pageSize);
       }
 
-      const path = `${basePath}${params.toString() ? `?${params.toString()}` : ''}`;
+      const path = `${basePath}${params.toString() ? `?${params.toString()}` : ""}`;
 
       // Rate limit by advertiser
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-      setSpanAttribute('dv360.advertiserId', ids.advertiserId);
+      setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       const response = await this.httpClient.fetch(path, context);
 
@@ -107,7 +107,7 @@ export class TargetingService {
         nextPageToken?: string;
       };
 
-      setSpanAttribute('dv360.resultCount', result.assignedTargetingOptions?.length ?? 0);
+      setSpanAttribute("dv360.resultCount", result.assignedTargetingOptions?.length ?? 0);
 
       return {
         assignedTargetingOptions: result.assignedTargetingOptions ?? [],
@@ -126,7 +126,7 @@ export class TargetingService {
     assignedTargetingOptionId: string,
     context?: RequestContext
   ): Promise<unknown> {
-    return withDV360ApiSpan('getAssignedTargetingOption', parentType, async () => {
+    return withDV360ApiSpan("getAssignedTargetingOption", parentType, async () => {
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -141,7 +141,7 @@ export class TargetingService {
       if (!validation.valid) {
         throw new McpError(
           JsonRpcErrorCode.InvalidParams,
-          `Missing required IDs for ${parentType}: ${validation.missingIds.join(', ')}`,
+          `Missing required IDs for ${parentType}: ${validation.missingIds.join(", ")}`,
           {
             parentType,
             requiredIds: TARGETING_PARENT_TYPES[parentType].requiredIds,
@@ -153,14 +153,14 @@ export class TargetingService {
 
       // Build API path with option ID
       const path = buildTargetingApiPath(parentType, ids, targetingType, assignedTargetingOptionId);
-      setSpanAttribute('dv360.apiPath', path);
-      setSpanAttribute('dv360.targetingType', targetingType);
-      setSpanAttribute('dv360.parentType', parentType);
-      setSpanAttribute('dv360.assignedTargetingOptionId', assignedTargetingOptionId);
+      setSpanAttribute("dv360.apiPath", path);
+      setSpanAttribute("dv360.targetingType", targetingType);
+      setSpanAttribute("dv360.parentType", parentType);
+      setSpanAttribute("dv360.assignedTargetingOptionId", assignedTargetingOptionId);
 
       // Rate limit by advertiser
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-      setSpanAttribute('dv360.advertiserId', ids.advertiserId);
+      setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       return this.httpClient.fetch(path, context);
     });
@@ -176,7 +176,7 @@ export class TargetingService {
     data: Record<string, unknown>,
     context?: RequestContext
   ): Promise<unknown> {
-    return withDV360ApiSpan('createAssignedTargetingOption', parentType, async () => {
+    return withDV360ApiSpan("createAssignedTargetingOption", parentType, async () => {
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -191,7 +191,7 @@ export class TargetingService {
       if (!validation.valid) {
         throw new McpError(
           JsonRpcErrorCode.InvalidParams,
-          `Missing required IDs for ${parentType}: ${validation.missingIds.join(', ')}`,
+          `Missing required IDs for ${parentType}: ${validation.missingIds.join(", ")}`,
           {
             parentType,
             requiredIds: TARGETING_PARENT_TYPES[parentType].requiredIds,
@@ -203,18 +203,18 @@ export class TargetingService {
 
       // Build API path
       const path = buildTargetingApiPath(parentType, ids, targetingType);
-      setSpanAttribute('dv360.apiPath', path);
-      setSpanAttribute('dv360.targetingType', targetingType);
-      setSpanAttribute('dv360.parentType', parentType);
-      setSpanAttribute('dv360.operation', 'create');
+      setSpanAttribute("dv360.apiPath", path);
+      setSpanAttribute("dv360.targetingType", targetingType);
+      setSpanAttribute("dv360.parentType", parentType);
+      setSpanAttribute("dv360.operation", "create");
 
       // Rate limit by advertiser
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-      setSpanAttribute('dv360.advertiserId', ids.advertiserId);
+      setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
       return this.httpClient.fetch(path, context, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
     });
@@ -230,7 +230,7 @@ export class TargetingService {
     assignedTargetingOptionId: string,
     context?: RequestContext
   ): Promise<void> {
-    return withDV360ApiSpan('deleteAssignedTargetingOption', parentType, async () => {
+    return withDV360ApiSpan("deleteAssignedTargetingOption", parentType, async () => {
       // Validate targeting type
       if (!isValidTargetingType(targetingType)) {
         throw new McpError(
@@ -245,7 +245,7 @@ export class TargetingService {
       if (!validation.valid) {
         throw new McpError(
           JsonRpcErrorCode.InvalidParams,
-          `Missing required IDs for ${parentType}: ${validation.missingIds.join(', ')}`,
+          `Missing required IDs for ${parentType}: ${validation.missingIds.join(", ")}`,
           {
             parentType,
             requiredIds: TARGETING_PARENT_TYPES[parentType].requiredIds,
@@ -257,17 +257,17 @@ export class TargetingService {
 
       // Build API path with option ID
       const path = buildTargetingApiPath(parentType, ids, targetingType, assignedTargetingOptionId);
-      setSpanAttribute('dv360.apiPath', path);
-      setSpanAttribute('dv360.targetingType', targetingType);
-      setSpanAttribute('dv360.parentType', parentType);
-      setSpanAttribute('dv360.assignedTargetingOptionId', assignedTargetingOptionId);
-      setSpanAttribute('dv360.operation', 'delete');
+      setSpanAttribute("dv360.apiPath", path);
+      setSpanAttribute("dv360.targetingType", targetingType);
+      setSpanAttribute("dv360.parentType", parentType);
+      setSpanAttribute("dv360.assignedTargetingOptionId", assignedTargetingOptionId);
+      setSpanAttribute("dv360.operation", "delete");
 
       // Rate limit by advertiser
       await this.rateLimiter.consume(`dv360:${ids.advertiserId}`, 1);
-      setSpanAttribute('dv360.advertiserId', ids.advertiserId);
+      setSpanAttribute("dv360.advertiserId", ids.advertiserId);
 
-      await this.httpClient.fetch(path, context, { method: 'DELETE' });
+      await this.httpClient.fetch(path, context, { method: "DELETE" });
     });
   }
 
@@ -292,7 +292,7 @@ export class TargetingService {
       entityId: string;
       targetingType: TargetingType;
       issue: string;
-      severity: 'error' | 'warning' | 'info';
+      severity: "error" | "warning" | "info";
     }>;
     summary: {
       totalEntitiesChecked: number;
@@ -305,7 +305,7 @@ export class TargetingService {
       entityId: string;
       targetingType: TargetingType;
       issue: string;
-      severity: 'error' | 'warning' | 'info';
+      severity: "error" | "warning" | "info";
     }> = [];
 
     let totalEntitiesChecked = 0;
@@ -334,42 +334,42 @@ export class TargetingService {
 
           // Check for common issues based on targeting type
           if (
-            targetingType === 'TARGETING_TYPE_GEO_REGION' &&
+            targetingType === "TARGETING_TYPE_GEO_REGION" &&
             result.assignedTargetingOptions.length === 0
           ) {
             issues.push({
               entityType: parentType,
               entityId,
               targetingType,
-              issue: 'No geographic targeting configured - ads may serve worldwide',
-              severity: 'warning',
+              issue: "No geographic targeting configured - ads may serve worldwide",
+              severity: "warning",
             });
           }
 
           if (
-            targetingType === 'TARGETING_TYPE_CHANNEL' &&
-            parentType === 'insertionOrder' &&
+            targetingType === "TARGETING_TYPE_CHANNEL" &&
+            parentType === "insertionOrder" &&
             result.assignedTargetingOptions.length === 0
           ) {
             issues.push({
               entityType: parentType,
               entityId,
               targetingType,
-              issue: 'No channel exclusions at IO level - consider adding brand safety exclusions',
-              severity: 'info',
+              issue: "No channel exclusions at IO level - consider adding brand safety exclusions",
+              severity: "info",
             });
           }
         } catch (error) {
           this.logger.warn(
             { error, entityType: parentType, entityId, targetingType },
-            'Failed to check targeting'
+            "Failed to check targeting"
           );
           issues.push({
             entityType: parentType,
             entityId,
             targetingType,
-            issue: `Failed to retrieve targeting: ${error instanceof Error ? error.message : 'Unknown error'}`,
-            severity: 'error',
+            issue: `Failed to retrieve targeting: ${error instanceof Error ? error.message : "Unknown error"}`,
+            severity: "error",
           });
         }
       }
@@ -378,7 +378,7 @@ export class TargetingService {
     // Iterate over all provided parent types dynamically
     for (const [parentType, ids] of Object.entries(entityIds)) {
       if (!isValidTargetingParentType(parentType)) {
-        this.logger.warn({ parentType }, 'Unknown parent type in entityIds, skipping');
+        this.logger.warn({ parentType }, "Unknown parent type in entityIds, skipping");
         continue;
       }
       for (const entityId of ids) {
@@ -387,7 +387,7 @@ export class TargetingService {
     }
 
     return {
-      valid: issues.filter((i) => i.severity === 'error').length === 0,
+      valid: issues.filter((i) => i.severity === "error").length === 0,
       issues,
       summary: {
         totalEntitiesChecked,

@@ -17,16 +17,9 @@ Provide the entity data as a JSON object. Required fields vary by entity type â€
 
 export const CreateEntityInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    data: z
-      .record(z.any())
-      .describe("Entity data to create (fields vary by entity type)"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    data: z.record(z.any()).describe("Entity data to create (fields vary by entity type)"),
   })
   .describe("Parameters for creating a CM360 entity");
 

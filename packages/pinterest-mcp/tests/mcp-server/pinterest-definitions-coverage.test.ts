@@ -28,9 +28,11 @@ const pinterestService = {
   bulkCreateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: unknown[]) => ({
     results: items.map(() => ({ success: true, entity: { id: "new" } })),
   })),
-  bulkUpdateEntities: vi.fn(async (_entityType: string, _filters: unknown, items: Array<{ entityId: string }>) => ({
-    results: items.map((item) => ({ entityId: item.entityId, success: true })),
-  })),
+  bulkUpdateEntities: vi.fn(
+    async (_entityType: string, _filters: unknown, items: Array<{ entityId: string }>) => ({
+      results: items.map((item) => ({ entityId: item.entityId, success: true })),
+    })
+  ),
   adjustBids: vi.fn(async (_filters: unknown, adjustments: Array<{ adGroupId: string }>) => ({
     results: adjustments.map((a) => ({ adGroupId: a.adGroupId, success: true, newBid: 1 })),
   })),
@@ -56,7 +58,14 @@ const pinterestService = {
         };
       }
       return {
-        list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
+        list: [
+          {
+            video_id: "vid-test-123",
+            video_status: "bind_success",
+            video_name: "Test Video",
+            duration: 15,
+          },
+        ],
       };
     }),
     uploadToS3: vi.fn(async () => undefined),
@@ -98,7 +107,11 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
 import { allResources } from "../../src/mcp-server/resources/definitions/index.js";
-import { getAllPrompts, getPromptDefinition, promptRegistry } from "../../src/mcp-server/prompts/index.js";
+import {
+  getAllPrompts,
+  getPromptDefinition,
+  promptRegistry,
+} from "../../src/mcp-server/prompts/index.js";
 
 describe("Pinterest MCP definitions coverage", () => {
   beforeEach(() => {

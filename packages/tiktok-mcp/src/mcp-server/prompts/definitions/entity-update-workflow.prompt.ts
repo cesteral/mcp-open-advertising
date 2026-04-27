@@ -33,9 +33,7 @@ export const tiktokEntityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityUpdateWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getTiktokEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   const advertiserId = args?.advertiserId || "{advertiserId}";

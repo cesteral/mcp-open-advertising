@@ -4,25 +4,30 @@ vi.mock("@cesteral/shared", async () => {
   const actual = await vi.importActual<any>("@cesteral/shared");
   return {
     ...actual,
-    validateSessionReuse: vi.fn(async (authStrategy: any, sessionServiceStore: any, headers: any, sessionId: string) => {
-      const requestFingerprint = authStrategy.getCredentialFingerprint
-        ? await authStrategy.getCredentialFingerprint(headers)
-        : (await authStrategy.verify(headers)).credentialFingerprint;
+    validateSessionReuse: vi.fn(
+      async (authStrategy: any, sessionServiceStore: any, headers: any, sessionId: string) => {
+        const requestFingerprint = authStrategy.getCredentialFingerprint
+          ? await authStrategy.getCredentialFingerprint(headers)
+          : (await authStrategy.verify(headers)).credentialFingerprint;
 
-      if (requestFingerprint && !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)) {
+        if (
+          requestFingerprint &&
+          !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)
+        ) {
+          return {
+            valid: false,
+            reason: "Credential fingerprint mismatch",
+            storedFingerprint: sessionServiceStore.getFingerprint(sessionId),
+            requestFingerprint,
+          };
+        }
+
         return {
-          valid: false,
-          reason: "Credential fingerprint mismatch",
-          storedFingerprint: sessionServiceStore.getFingerprint(sessionId),
+          valid: true,
           requestFingerprint,
         };
       }
-
-      return {
-        valid: true,
-        requestFingerprint,
-      };
-    }),
+    ),
   };
 });
 
@@ -32,9 +37,10 @@ vi.mock("../../src/auth/gads-auth-strategy.js", () => {
       constructor(_logger?: unknown) {}
 
       async verify(headers: Record<string, string | string[] | undefined>) {
-        const fp = typeof headers["x-test-fingerprint"] === "string"
-          ? headers["x-test-fingerprint"]
-          : "fp-test";
+        const fp =
+          typeof headers["x-test-fingerprint"] === "string"
+            ? headers["x-test-fingerprint"]
+            : "fp-test";
         return {
           authInfo: { clientId: "client-test", authType: "gads-headers" },
           platformAuthAdapter: { validate: vi.fn() } as any,
@@ -210,11 +216,7 @@ function extractSessionId(response: any, bodyText: string): string | undefined {
   } catch {
     body = undefined;
   }
-  return (
-    response.headers.get("mcp-session-id") ??
-    body?.result?.sessionId ??
-    body?.sessionId
-  );
+  return response.headers.get("mcp-session-id") ?? body?.result?.sessionId ?? body?.sessionId;
 }
 
 describe("mcp transport session lifecycle", () => {
@@ -251,7 +253,13 @@ describe("mcp transport session lifecycle", () => {
     expect(terminateResponse.status).toBe(200);
 
     // Post-termination: reuse rebuilds transparently (stateless-session-rebuild).
-    const postTerminateResponse = await postMcp(app, "tools/call", 2, sessionId as string, "fp-test");
+    const postTerminateResponse = await postMcp(
+      app,
+      "tools/call",
+      2,
+      sessionId as string,
+      "fp-test"
+    );
     expect(postTerminateResponse.status).toBe(200);
   });
 

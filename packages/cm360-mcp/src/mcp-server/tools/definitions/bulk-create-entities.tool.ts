@@ -15,13 +15,8 @@ Loops individual create calls with rate limiting. At ~1 QPS, 50 items takes ~50 
 
 export const BulkCreateEntitiesInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to create"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to create"),
     items: z
       .array(z.record(z.any()))
       .min(1)
@@ -34,14 +29,16 @@ export const BulkCreateEntitiesOutputSchema = z
   .object({
     created: z.number().describe("Number of entities created"),
     failed: z.number().describe("Number that failed"),
-    results: z.array(
-      z.object({
-        index: z.number(),
-        success: z.boolean(),
-        entity: z.record(z.any()).optional(),
-        error: z.string().optional(),
-      })
-    ).describe("Per-item results"),
+    results: z
+      .array(
+        z.object({
+          index: z.number(),
+          success: z.boolean(),
+          entity: z.record(z.any()).optional(),
+          error: z.string().optional(),
+        })
+      )
+      .describe("Per-item results"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk creation result");
@@ -85,7 +82,9 @@ export async function bulkCreateEntitiesLogic(
   };
 }
 
-export function bulkCreateEntitiesResponseFormatter(result: BulkCreateEntitiesOutput): McpTextContent[] {
+export function bulkCreateEntitiesResponseFormatter(
+  result: BulkCreateEntitiesOutput
+): McpTextContent[] {
   const summary = `Bulk create: ${result.created} succeeded, ${result.failed} failed`;
   const failures = result.results
     .filter((r) => !r.success)

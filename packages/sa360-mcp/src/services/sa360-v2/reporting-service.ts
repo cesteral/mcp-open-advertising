@@ -107,10 +107,7 @@ export class SA360ReportingService {
    * GET /reports/{reportId}
    * Returns: { id, isReportReady, rowCount?, files? }
    */
-  async getReportStatus(
-    reportId: string,
-    context?: RequestContext
-  ): Promise<ReportStatus> {
+  async getReportStatus(reportId: string, context?: RequestContext): Promise<ReportStatus> {
     await this.rateLimiter.consume(`sa360v2:reports`);
 
     this.logger.debug({ reportId }, "Checking SA360 report status");
@@ -132,10 +129,7 @@ export class SA360ReportingService {
    * GET {downloadUrl} with auth header
    * Returns: raw CSV string
    */
-  async downloadReport(
-    downloadUrl: string,
-    context?: RequestContext
-  ): Promise<string> {
+  async downloadReport(downloadUrl: string, context?: RequestContext): Promise<string> {
     await this.rateLimiter.consume(`sa360v2:reports`);
 
     this.logger.debug({ downloadUrl }, "Downloading SA360 report");
@@ -143,9 +137,14 @@ export class SA360ReportingService {
     // Download URLs are absolute Google storage URLs — bypass httpClient
     // to avoid baseUrl prepending and JSON parsing of CSV responses.
     const accessToken = await this.authAdapter.getAccessToken();
-    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const response = await fetchWithTimeout(
+      downloadUrl,
+      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to download SA360 report: ${response.status} ${response.statusText}`);

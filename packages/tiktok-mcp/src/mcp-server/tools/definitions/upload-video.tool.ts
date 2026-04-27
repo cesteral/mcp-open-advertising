@@ -23,18 +23,26 @@ Polls until binding is complete (up to 10 minutes).
 
 **Usage:** The returned videoId is used in ad creative payloads.`;
 
-export const UploadVideoInputSchema = z.object({
-  advertiserId: z.string().describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
-  videoName: z.string().optional().describe("Optional name for the video in the library"),
-}).describe("Parameters for uploading a video to TikTok");
+export const UploadVideoInputSchema = z
+  .object({
+    advertiserId: z
+      .string()
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+    videoName: z.string().optional().describe("Optional name for the video in the library"),
+  })
+  .describe("Parameters for uploading a video to TikTok");
 
-export const UploadVideoOutputSchema = z.object({
-  videoId: z.string().describe("Video ID for use in ad creative payloads"),
-  videoName: z.string().optional(),
-  duration: z.number().optional().describe("Video duration in seconds"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded TikTok video info");
+export const UploadVideoOutputSchema = z
+  .object({
+    videoId: z.string().describe("Video ID for use in ad creative payloads"),
+    videoName: z.string().optional(),
+    duration: z.number().optional().describe("Video duration in seconds"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded TikTok video info");
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
@@ -75,7 +83,7 @@ export async function uploadVideoLogic(
   const fields: Record<string, string> = {};
   if (input.videoName) fields.video_name = input.videoName;
 
-  const uploadResult = await tiktokService.client.postMultipart(
+  const uploadResult = (await tiktokService.client.postMultipart(
     tiktokService.client.versionedPath("file/video/ad/upload/"),
     fields,
     "video_file",
@@ -83,7 +91,7 @@ export async function uploadVideoLogic(
     filename,
     contentType,
     context
-  ) as TikTokVideoUploadResponse;
+  )) as TikTokVideoUploadResponse;
 
   const videoId = uploadResult.video_id;
   if (!videoId) {
@@ -97,11 +105,11 @@ export async function uploadVideoLogic(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);
 
-    const statusResult = await tiktokService.client.get(
+    const statusResult = (await tiktokService.client.get(
       tiktokService.client.versionedPath("file/video/ad/info/"),
       { video_ids: JSON.stringify([videoId]) },
       context
-    ) as TikTokVideoInfoResponse;
+    )) as TikTokVideoInfoResponse;
 
     const videoInfo = statusResult.list?.[0];
     const videoStatus = videoInfo?.video_status ?? "processing";
@@ -126,10 +134,12 @@ export async function uploadVideoLogic(
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Video uploaded to TikTok!\n\nVideo ID: ${result.videoId}${result.videoName ? `\nName: ${result.videoName}` : ""}${result.duration !== undefined ? `\nDuration: ${result.duration}s` : ""}\n\nUse videoId in your ad creative payload`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Video uploaded to TikTok!\n\nVideo ID: ${result.videoId}${result.videoName ? `\nName: ${result.videoName}` : ""}${result.duration !== undefined ? `\nDuration: ${result.duration}s` : ""}\n\nUse videoId in your ad creative payload`,
+    },
+  ];
 }
 
 export const uploadVideoTool = {

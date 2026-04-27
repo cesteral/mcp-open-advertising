@@ -22,9 +22,7 @@ export const toolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getToolSchemaExplorationMessage(
-  args?: Record<string, string>
-): string {
+export function getToolSchemaExplorationMessage(args?: Record<string, string>): string {
   const objective = args?.objective || "general capability discovery";
 
   return `# DV360 Tool and Schema Exploration

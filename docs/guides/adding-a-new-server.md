@@ -73,6 +73,7 @@ Before writing code, decide three things:
 The prefix appears in every tool name: `{prefix}_list_entities`, `{prefix}_get_entity`, etc.
 
 Rules:
+
 - Lowercase, no hyphens (underscores OK for multi-word like `amazon_dsp`)
 - Must be unique across all servers (check `docs/CROSS_SERVER_CONTRACT.md`)
 - Match the platform's common abbreviation
@@ -81,21 +82,21 @@ Rules:
 
 Ports are assigned sequentially. Current allocation:
 
-| Port | Server |
-|------|--------|
-| 3001 | dbm-mcp |
-| 3002 | dv360-mcp |
-| 3003 | ttd-mcp |
-| 3004 | gads-mcp |
-| 3005 | meta-mcp |
-| 3006 | linkedin-mcp |
-| 3007 | tiktok-mcp |
-| 3008 | cm360-mcp |
-| 3009 | snapchat-mcp |
-| 3010 | sa360-mcp |
-| 3011 | pinterest-mcp |
-| 3012 | amazon-dsp-mcp |
-| 3013 | msads-mcp |
+| Port     | Server             |
+| -------- | ------------------ |
+| 3001     | dbm-mcp            |
+| 3002     | dv360-mcp          |
+| 3003     | ttd-mcp            |
+| 3004     | gads-mcp           |
+| 3005     | meta-mcp           |
+| 3006     | linkedin-mcp       |
+| 3007     | tiktok-mcp         |
+| 3008     | cm360-mcp          |
+| 3009     | snapchat-mcp       |
+| 3010     | sa360-mcp          |
+| 3011     | pinterest-mcp      |
+| 3012     | amazon-dsp-mcp     |
+| 3013     | msads-mcp          |
 | **3014** | **Next available** |
 
 ### 3. Identify entity types
@@ -782,29 +783,29 @@ export const listEntitiesTool = {
 
 ### Required tool fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | `string` | `{prefix}_{action}` pattern |
-| `title` | `string` | Human-readable display name |
-| `description` | `string` | Tool description (>10 chars). Embed entity types, hierarchy hints |
-| `inputSchema` | `z.ZodTypeAny` | Zod schema — factory calls `.parse()` for validation |
-| `outputSchema` | `z.ZodTypeAny` | Zod schema for structured return type |
-| `annotations` | `object` | `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` |
-| `inputExamples` | `array` | `{ label, input }` objects — embedded as markdown in description |
-| `logic` | `async function` | `(input, context, sdkContext?) => Promise<Output>` |
-| `responseFormatter` | `function` | `(result, input?) => McpTextContent[]` |
+| Field               | Type             | Description                                                          |
+| ------------------- | ---------------- | -------------------------------------------------------------------- |
+| `name`              | `string`         | `{prefix}_{action}` pattern                                          |
+| `title`             | `string`         | Human-readable display name                                          |
+| `description`       | `string`         | Tool description (>10 chars). Embed entity types, hierarchy hints    |
+| `inputSchema`       | `z.ZodTypeAny`   | Zod schema — factory calls `.parse()` for validation                 |
+| `outputSchema`      | `z.ZodTypeAny`   | Zod schema for structured return type                                |
+| `annotations`       | `object`         | `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` |
+| `inputExamples`     | `array`          | `{ label, input }` objects — embedded as markdown in description     |
+| `logic`             | `async function` | `(input, context, sdkContext?) => Promise<Output>`                   |
+| `responseFormatter` | `function`       | `(result, input?) => McpTextContent[]`                               |
 
 ### Required tools (cross-server contract)
 
 Every management server must provide these tools. See `docs/CROSS_SERVER_CONTRACT.md` for the full contract.
 
-| Category | Tools |
-|----------|-------|
-| **Core CRUD** | `{prefix}_list_entities`, `_get_entity`, `_create_entity`, `_update_entity`, `_delete_entity` |
-| **Account** | `{prefix}_list_accounts` or similar |
-| **Bulk** | `{prefix}_bulk_update_status` |
-| **Bids** | `{prefix}_adjust_bids` |
-| **Validation** | `{prefix}_validate_entity` |
+| Category       | Tools                                                                                         |
+| -------------- | --------------------------------------------------------------------------------------------- |
+| **Core CRUD**  | `{prefix}_list_entities`, `_get_entity`, `_create_entity`, `_update_entity`, `_delete_entity` |
+| **Account**    | `{prefix}_list_accounts` or similar                                                           |
+| **Bulk**       | `{prefix}_bulk_update_status`                                                                 |
+| **Bids**       | `{prefix}_adjust_bids`                                                                        |
+| **Validation** | `{prefix}_validate_entity`                                                                    |
 
 Additional recommended tools: reporting (5), bulk create/update (2), targeting (2), duplicate, delivery estimate, ad preview, media upload.
 
@@ -824,19 +825,32 @@ import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/share
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
-  listEntitiesTool, getEntityTool, createEntityTool, updateEntityTool, deleteEntityTool,
+  listEntitiesTool,
+  getEntityTool,
+  createEntityTool,
+  updateEntityTool,
+  deleteEntityTool,
   // ── Account ──
   listAccountsTool,
   // ── Reporting ──
-  getReportTool, getReportBreakdownsTool, submitReportTool, checkReportStatusTool, downloadReportTool,
+  getReportTool,
+  getReportBreakdownsTool,
+  submitReportTool,
+  checkReportStatusTool,
+  downloadReportTool,
   // ── Bulk Operations ──
-  bulkUpdateStatusTool, bulkCreateEntitiesTool, bulkUpdateEntitiesTool,
+  bulkUpdateStatusTool,
+  bulkCreateEntitiesTool,
+  bulkUpdateEntitiesTool,
   // ── Bids (required by contract) ──
   adjustBidsTool,
   // ── Targeting ──
-  searchTargetingTool, getTargetingOptionsTool,
+  searchTargetingTool,
+  getTargetingOptionsTool,
   // ── Specialized ──
-  duplicateEntityTool, getDeliveryEstimateTool, getAdPreviewTool,
+  duplicateEntityTool,
+  getDeliveryEstimateTool,
+  getAdPreviewTool,
   // ── Validation (required by contract) ──
   validateEntityTool,
   // ── Media (if platform supports upload) ──
@@ -887,7 +901,14 @@ export const entitySchemasResource: Resource = {
   name: "{Platform} Entity Schemas",
   description: "JSON schemas for all {Platform} entity types",
   mimeType: "application/json",
-  getContent: () => JSON.stringify({ /* schema definitions */ }, null, 2),
+  getContent: () =>
+    JSON.stringify(
+      {
+        /* schema definitions */
+      },
+      null,
+      2
+    ),
 };
 ```
 
@@ -899,19 +920,22 @@ import { entitySchemaResources, entitySchemaAllResource } from "./entity-schemas
 import { entityExampleResources, entityExampleAllResource } from "./entity-examples.resource.js";
 import { reportingReferenceResource } from "./reporting-reference.resource.js";
 import { allTools } from "../../tools/definitions/index.js";
-import {
-  createToolExamplesResource,
-  createServerCapabilitiesResource,
-} from "@cesteral/shared";
+import { createToolExamplesResource, createServerCapabilitiesResource } from "@cesteral/shared";
 import type { Resource } from "../types.js";
 
 const toolExamplesResource = createToolExamplesResource(allTools, "{platform}-mcp");
 const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "{platform}-mcp",
   toolGroups: {
-    crud: ["{prefix}_list_entities", "{prefix}_get_entity", "{prefix}_create_entity", "{prefix}_update_entity", "{prefix}_delete_entity"],
+    crud: [
+      "{prefix}_list_entities",
+      "{prefix}_get_entity",
+      "{prefix}_create_entity",
+      "{prefix}_update_entity",
+      "{prefix}_delete_entity",
+    ],
     account: ["{prefix}_list_accounts"],
-    reporting: ["{prefix}_get_report", "{prefix}_submit_report", /* ... */],
+    reporting: ["{prefix}_get_report", "{prefix}_submit_report" /* ... */],
     bulk: ["{prefix}_bulk_update_status", "{prefix}_adjust_bids"],
     // ... additional groups
   },
@@ -940,14 +964,14 @@ export { allResources } from "./definitions/index.js";
 
 **Resource categories to implement:**
 
-| Resource | Description |
-|----------|-------------|
-| Entity hierarchy | Visual tree of entity relationships |
-| Entity schemas (per-type + combined) | JSON field definitions for each entity type |
-| Entity examples (per-type + combined) | Example API payloads |
-| Reporting reference | Available metrics, dimensions, date ranges |
-| Tool examples | Auto-generated from `inputExamples` (via shared helper) |
-| Server capabilities | Tool groups and workflows (via shared helper) |
+| Resource                              | Description                                             |
+| ------------------------------------- | ------------------------------------------------------- |
+| Entity hierarchy                      | Visual tree of entity relationships                     |
+| Entity schemas (per-type + combined)  | JSON field definitions for each entity type             |
+| Entity examples (per-type + combined) | Example API payloads                                    |
+| Reporting reference                   | Available metrics, dimensions, date ranges              |
+| Tool examples                         | Auto-generated from `inputExamples` (via shared helper) |
+| Server capabilities                   | Tool groups and workflows (via shared helper)           |
 
 > **Reference:** `packages/pinterest-mcp/src/mcp-server/resources/`
 
@@ -964,9 +988,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "{prefix}_campaign_setup_workflow",
   description: "Step-by-step guide for creating a full campaign on {Platform}",
-  arguments: [
-    { name: "objective", description: "Campaign objective", required: false },
-  ],
+  arguments: [{ name: "objective", description: "Campaign objective", required: false }],
 };
 
 export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
@@ -996,10 +1018,13 @@ export interface PromptDefinition {
 }
 
 export const promptRegistry: Map<string, PromptDefinition> = new Map([
-  [campaignSetupWorkflowPrompt.name, {
-    prompt: campaignSetupWorkflowPrompt,
-    generateMessage: getCampaignSetupWorkflowMessage,
-  }],
+  [
+    campaignSetupWorkflowPrompt.name,
+    {
+      prompt: campaignSetupWorkflowPrompt,
+      generateMessage: getCampaignSetupWorkflowMessage,
+    },
+  ],
   // ... additional prompts
 ]);
 ```
@@ -1382,8 +1407,11 @@ Create `src/utils/errors/index.ts`:
 
 ```typescript
 export {
-  McpError, ErrorHandler, type ErrorContext,
-  JsonRpcErrorCode, mapErrorCodeToHttpStatus,
+  McpError,
+  ErrorHandler,
+  type ErrorContext,
+  JsonRpcErrorCode,
+  mapErrorCodeToHttpStatus,
 } from "@cesteral/shared";
 ```
 
@@ -1395,12 +1423,12 @@ Create tests in a `tests/` directory at the package root.
 
 ### Test categories
 
-| Category | Example file | What to test |
-|----------|-------------|--------------|
-| **Unit** | `tests/entity-mapping.test.ts` | Entity config lookup, path interpolation, enum helpers |
-| **Unit** | `tests/auth-adapter.test.ts` | Token parsing, fingerprint generation, header extraction |
-| **Integration** | `tests/tool-registration.test.ts` | All tools register without errors, have valid schemas |
-| **Integration** | `tests/session-lifecycle.test.ts` | Session create/resolve/cleanup cycle |
+| Category        | Example file                      | What to test                                             |
+| --------------- | --------------------------------- | -------------------------------------------------------- |
+| **Unit**        | `tests/entity-mapping.test.ts`    | Entity config lookup, path interpolation, enum helpers   |
+| **Unit**        | `tests/auth-adapter.test.ts`      | Token parsing, fingerprint generation, header extraction |
+| **Integration** | `tests/tool-registration.test.ts` | All tools register without errors, have valid schemas    |
+| **Integration** | `tests/session-lifecycle.test.ts` | Session create/resolve/cleanup cycle                     |
 
 ### Test patterns
 
@@ -1596,51 +1624,51 @@ Run through this checklist before submitting your PR:
 
 Create files in this order (each step depends only on previous steps):
 
-| # | File | Depends on |
-|---|------|------------|
-| 1 | `package.json`, `tsconfig.json`, `vitest.config.ts` | Nothing |
-| 2 | `src/config/index.ts` | Package metadata |
-| 3 | `src/utils/errors/index.ts` | Nothing (re-exports from shared) |
-| 4 | `src/utils/telemetry/tracing.ts`, `index.ts` | Nothing (re-exports from shared) |
-| 5 | `src/utils/security/rate-limiter.ts` | Config |
-| 6 | `src/types-global/mcp.ts` | Nothing |
-| 7 | `src/auth/{platform}-auth-adapter.ts` | Utils |
-| 8 | `src/auth/{platform}-auth-strategy.ts` | Auth adapter |
-| 9 | `src/auth/index.ts` | Auth files |
-| 10 | `src/services/{platform}/{platform}-http-client.ts` | Auth, utils |
-| 11 | `src/services/{platform}/{platform}-service.ts` | HTTP client |
-| 12 | `src/mcp-server/tools/utils/entity-mapping.ts` | Nothing |
-| 13 | `src/services/session-services.ts` | Services, HTTP client |
-| 14 | `src/mcp-server/tools/utils/resolve-session.ts` | Session services |
-| 15 | `src/mcp-server/tools/definitions/*.tool.ts` | Entity mapping, session resolver |
-| 16 | `src/mcp-server/tools/definitions/index.ts` | Tool definitions |
-| 17 | `src/mcp-server/tools/index.ts` | Tool barrel |
-| 18 | `src/mcp-server/resources/` | Entity mapping |
-| 19 | `src/mcp-server/prompts/` | Nothing |
-| 20 | `src/mcp-server/server.ts` | Tools, resources, prompts |
-| 21 | `src/mcp-server/transports/streamable-http-transport.ts` | Server, auth, sessions |
-| 22 | `src/index.ts` | Everything |
-| 23 | `tests/` | Source code |
+| #   | File                                                     | Depends on                       |
+| --- | -------------------------------------------------------- | -------------------------------- |
+| 1   | `package.json`, `tsconfig.json`, `vitest.config.ts`      | Nothing                          |
+| 2   | `src/config/index.ts`                                    | Package metadata                 |
+| 3   | `src/utils/errors/index.ts`                              | Nothing (re-exports from shared) |
+| 4   | `src/utils/telemetry/tracing.ts`, `index.ts`             | Nothing (re-exports from shared) |
+| 5   | `src/utils/security/rate-limiter.ts`                     | Config                           |
+| 6   | `src/types-global/mcp.ts`                                | Nothing                          |
+| 7   | `src/auth/{platform}-auth-adapter.ts`                    | Utils                            |
+| 8   | `src/auth/{platform}-auth-strategy.ts`                   | Auth adapter                     |
+| 9   | `src/auth/index.ts`                                      | Auth files                       |
+| 10  | `src/services/{platform}/{platform}-http-client.ts`      | Auth, utils                      |
+| 11  | `src/services/{platform}/{platform}-service.ts`          | HTTP client                      |
+| 12  | `src/mcp-server/tools/utils/entity-mapping.ts`           | Nothing                          |
+| 13  | `src/services/session-services.ts`                       | Services, HTTP client            |
+| 14  | `src/mcp-server/tools/utils/resolve-session.ts`          | Session services                 |
+| 15  | `src/mcp-server/tools/definitions/*.tool.ts`             | Entity mapping, session resolver |
+| 16  | `src/mcp-server/tools/definitions/index.ts`              | Tool definitions                 |
+| 17  | `src/mcp-server/tools/index.ts`                          | Tool barrel                      |
+| 18  | `src/mcp-server/resources/`                              | Entity mapping                   |
+| 19  | `src/mcp-server/prompts/`                                | Nothing                          |
+| 20  | `src/mcp-server/server.ts`                               | Tools, resources, prompts        |
+| 21  | `src/mcp-server/transports/streamable-http-transport.ts` | Server, auth, sessions           |
+| 22  | `src/index.ts`                                           | Everything                       |
+| 23  | `tests/`                                                 | Source code                      |
 
 ---
 
 ## Appendix A: Auth Pattern Reference
 
-| Server | Auth Mode | Adapter Pattern | Headers Required (HTTP) |
-|--------|-----------|----------------|------------------------|
-| dv360-mcp | `google-headers` | `GoogleAuthAdapter` (shared) | Google OAuth2 headers |
-| dbm-mcp | `google-headers` | `GoogleAuthAdapter` (shared) | Google OAuth2 headers |
-| gads-mcp | `google-headers` | `GoogleAuthAdapter` (shared) | Google OAuth2 headers |
-| cm360-mcp | `google-headers` | `GoogleAuthAdapter` (shared) | Google OAuth2 headers |
-| sa360-mcp | `sa360-headers` | OAuth2 refresh token | `Authorization`, `X-SA360-Client-Id`, etc. |
-| ttd-mcp | `ttd-token` (default) | `TtdDirectTokenAuthAdapter` | `TTD-Auth` |
-| meta-mcp | `meta-bearer` | `MetaAccessTokenAdapter` | `Authorization: Bearer` |
-| linkedin-mcp | `linkedin-bearer` | `LinkedInAccessTokenAdapter` | `Authorization: Bearer` |
-| tiktok-mcp | `tiktok-bearer` | `TikTokAccessTokenAdapter` | `Authorization: Bearer`, `X-TikTok-Advertiser-Id` |
-| pinterest-mcp | `pinterest-bearer` | `PinterestAccessTokenAdapter` / `PinterestRefreshTokenAdapter` | `Authorization: Bearer`, `X-Pinterest-Ad-Account-Id` |
-| snapchat-mcp | `snapchat-bearer` | `SnapchatAccessTokenAdapter` / `SnapchatRefreshTokenAdapter` | `Authorization: Bearer`, `X-Snapchat-Ad-Account-Id` |
-| amazon-dsp-mcp | `amazon-dsp-bearer` | `AmazonDspAccessTokenAdapter` | `Authorization: Bearer`, `X-Amazon-DSP-Profile-Id` |
-| msads-mcp | `msads-bearer` | `MsAdsAccessTokenAdapter` | `AuthenticationToken`, `DeveloperToken`, `CustomerId`, `CustomerAccountId` |
+| Server         | Auth Mode             | Adapter Pattern                                                | Headers Required (HTTP)                                                    |
+| -------------- | --------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| dv360-mcp      | `google-headers`      | `GoogleAuthAdapter` (shared)                                   | Google OAuth2 headers                                                      |
+| dbm-mcp        | `google-headers`      | `GoogleAuthAdapter` (shared)                                   | Google OAuth2 headers                                                      |
+| gads-mcp       | `google-headers`      | `GoogleAuthAdapter` (shared)                                   | Google OAuth2 headers                                                      |
+| cm360-mcp      | `google-headers`      | `GoogleAuthAdapter` (shared)                                   | Google OAuth2 headers                                                      |
+| sa360-mcp      | `sa360-headers`       | OAuth2 refresh token                                           | `Authorization`, `X-SA360-Client-Id`, etc.                                 |
+| ttd-mcp        | `ttd-token` (default) | `TtdDirectTokenAuthAdapter`                                    | `TTD-Auth`                                                                 |
+| meta-mcp       | `meta-bearer`         | `MetaAccessTokenAdapter`                                       | `Authorization: Bearer`                                                    |
+| linkedin-mcp   | `linkedin-bearer`     | `LinkedInAccessTokenAdapter`                                   | `Authorization: Bearer`                                                    |
+| tiktok-mcp     | `tiktok-bearer`       | `TikTokAccessTokenAdapter`                                     | `Authorization: Bearer`, `X-TikTok-Advertiser-Id`                          |
+| pinterest-mcp  | `pinterest-bearer`    | `PinterestAccessTokenAdapter` / `PinterestRefreshTokenAdapter` | `Authorization: Bearer`, `X-Pinterest-Ad-Account-Id`                       |
+| snapchat-mcp   | `snapchat-bearer`     | `SnapchatAccessTokenAdapter` / `SnapchatRefreshTokenAdapter`   | `Authorization: Bearer`, `X-Snapchat-Ad-Account-Id`                        |
+| amazon-dsp-mcp | `amazon-dsp-bearer`   | `AmazonDspAccessTokenAdapter`                                  | `Authorization: Bearer`, `X-Amazon-DSP-Profile-Id`                         |
+| msads-mcp      | `msads-bearer`        | `MsAdsAccessTokenAdapter`                                      | `AuthenticationToken`, `DeveloperToken`, `CustomerId`, `CustomerAccountId` |
 
 **Which pattern to use:**
 
@@ -1652,18 +1680,21 @@ Create files in this order (each step depends only on previous steps):
 
 Every management server must provide:
 
-| Category | Required Tools | Notes |
-|----------|---------------|-------|
-| Core CRUD | `list_entities`, `get_entity`, `create_entity`, `update_entity`, `delete_entity` | `delete` may be `remove` (Google Ads) |
-| Bulk | `bulk_update_status` | Batch status changes |
-| Bids | `adjust_bids` | May be `adjust_line_item_bids` (DV360) |
-| Validation | `validate_entity` | Client-side or server-side |
+| Category   | Required Tools                                                                   | Notes                                  |
+| ---------- | -------------------------------------------------------------------------------- | -------------------------------------- |
+| Core CRUD  | `list_entities`, `get_entity`, `create_entity`, `update_entity`, `delete_entity` | `delete` may be `remove` (Google Ads)  |
+| Bulk       | `bulk_update_status`                                                             | Batch status changes                   |
+| Bids       | `adjust_bids`                                                                    | May be `adjust_line_item_bids` (DV360) |
+| Validation | `validate_entity`                                                                | Client-side or server-side             |
 
 **Bulk result format** (all bulk tools must return):
 
 ```json
 {
-  "results": [{ "success": true, "entityId": "123" }, { "success": false, "entityId": "456", "error": "..." }],
+  "results": [
+    { "success": true, "entityId": "123" },
+    { "success": false, "entityId": "456", "error": "..." }
+  ],
   "successCount": 1,
   "failureCount": 1,
   "timestamp": "2026-01-01T00:00:00.000Z"

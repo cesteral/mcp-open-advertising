@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -52,15 +58,15 @@ describe("getAdPreviewLogic", () => {
       },
     });
 
-    const result = await getAdPreviewLogic(
-      { profileId: "prof-1", adId: "ad-1" },
-      mockContext
-    );
+    const result = await getAdPreviewLogic({ profileId: "prof-1", adId: "ad-1" }, mockContext);
 
     expect(result.previewUrl).toBe("https://example.com/landing");
     expect(result.adId).toBe("ad-1");
     expect(mockState.cm360Service.getEntity).toHaveBeenCalledWith(
-      "ad", "prof-1", "ad-1", mockContext
+      "ad",
+      "prof-1",
+      "ad-1",
+      mockContext
     );
   });
 
@@ -70,10 +76,7 @@ describe("getAdPreviewLogic", () => {
       name: "Test Ad",
     });
 
-    const result = await getAdPreviewLogic(
-      { profileId: "prof-1", adId: "ad-1" },
-      mockContext
-    );
+    const result = await getAdPreviewLogic({ profileId: "prof-1", adId: "ad-1" }, mockContext);
 
     expect(result.previewUrl).toBeUndefined();
   });
@@ -85,10 +88,7 @@ describe("getAdPreviewLogic", () => {
       clickThroughUrl: { defaultLandingPage: true },
     });
 
-    const result = await getAdPreviewLogic(
-      { profileId: "prof-1", adId: "ad-1" },
-      mockContext
-    );
+    const result = await getAdPreviewLogic({ profileId: "prof-1", adId: "ad-1" }, mockContext);
 
     expect(result.previewUrl).toBeUndefined();
   });
@@ -99,10 +99,7 @@ describe("getAdPreviewLogic", () => {
       name: "My Display Ad",
     });
 
-    const result = await getAdPreviewLogic(
-      { profileId: "prof-1", adId: "ad-1" },
-      mockContext
-    );
+    const result = await getAdPreviewLogic({ profileId: "prof-1", adId: "ad-1" }, mockContext);
 
     expect(result.adName).toBe("My Display Ad");
   });
@@ -112,10 +109,7 @@ describe("getAdPreviewLogic", () => {
       id: "ad-1",
     });
 
-    const result = await getAdPreviewLogic(
-      { profileId: "prof-1", adId: "ad-1" },
-      mockContext
-    );
+    const result = await getAdPreviewLogic({ profileId: "prof-1", adId: "ad-1" }, mockContext);
 
     expect(result.adName).toBeUndefined();
   });

@@ -27,9 +27,7 @@ export const ttdEntityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTtdEntityDuplicationWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getTtdEntityDuplicationWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
 

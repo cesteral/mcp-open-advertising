@@ -30,9 +30,7 @@ vi.mock("../../src/auth/meta-auth-strategy.js", () => {
         };
       }
 
-      async getCredentialFingerprint(
-        _headers: Record<string, string | string[] | undefined>
-      ) {
+      async getCredentialFingerprint(_headers: Record<string, string | string[] | undefined>) {
         return "fp-test";
       }
     },
@@ -44,14 +42,9 @@ vi.mock("../../src/services/session-services.js", async () => {
   const fingerprints = new Map<string, string>();
   const authContexts = new Map<string, any>();
   const store = {
-    set(
-      sessionId: string,
-      sessionServices: any,
-      credentialFingerprint?: string
-    ) {
+    set(sessionId: string, sessionServices: any, credentialFingerprint?: string) {
       services.set(sessionId, sessionServices);
-      if (credentialFingerprint)
-        fingerprints.set(sessionId, credentialFingerprint);
+      if (credentialFingerprint) fingerprints.set(sessionId, credentialFingerprint);
     },
     get(sessionId: string) {
       return services.get(sessionId);
@@ -152,10 +145,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -164,9 +154,7 @@ describe("mcp transport error propagation", () => {
   let shutdown: () => Promise<void>;
 
   beforeAll(() => {
-    mockState.metaService.createEntity.mockRejectedValue(
-      new Error("Injected create failure")
-    );
+    mockState.metaService.createEntity.mockRejectedValue(new Error("Injected create failure"));
 
     const server = createMcpHttpServer(config, logger);
     app = server.app;

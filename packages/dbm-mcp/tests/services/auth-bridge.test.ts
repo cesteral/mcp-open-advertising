@@ -15,12 +15,14 @@ describe("createGoogleAuthFromAdapter", () => {
     const adapter = createMockAdapter("bridge-token");
     const authClient = createGoogleAuthFromAdapter(adapter);
 
-    const headers = await authClient.getRequestHeaders("https://doubleclickbidmanager.googleapis.com");
+    const headers = await authClient.getRequestHeaders(
+      "https://doubleclickbidmanager.googleapis.com"
+    );
     const authorization =
       headers instanceof Headers
-        ? headers.get("authorization") ?? headers.get("Authorization")
-        : (headers as Record<string, string>).authorization ??
-          (headers as Record<string, string>).Authorization;
+        ? (headers.get("authorization") ?? headers.get("Authorization"))
+        : ((headers as Record<string, string>).authorization ??
+          (headers as Record<string, string>).Authorization);
 
     expect(authorization).toBe("Bearer bridge-token");
     expect(adapter.getAccessToken).toHaveBeenCalledTimes(1);

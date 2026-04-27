@@ -75,7 +75,8 @@ export async function createMcpServer(
     {
       name: "dv360-mcp",
       version: packageJson.version,
-      description: "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
+      description:
+        "DV360 campaign entity management via Display & Video 360 API. Supports CRUD operations on campaigns, insertion orders, line items, and targeting.",
     },
     {
       capabilities: {
@@ -146,91 +147,86 @@ export async function createMcpServer(
           : undefined,
       });
 
-      server.registerResource(
-        resourceId,
-        template,
-        metadata,
-        async (uri, variables) => {
-          logger.info({ uri: uri.href, variables }, "Reading parameterized resource");
-          const match = resourceRegistry.findResourceByUri(uri.href);
-          if (!match) {
-            throw new Error(`Resource not found: ${uri.href}`);
-          }
-          try {
-            const content = await match.resource.read(match.params);
-            logger.debug(
-              {
-                uri: uri.href,
-                contentBytes: Buffer.byteLength(content.text, "utf-8"),
-              },
-              "Resource content size"
-            );
-            return {
-              contents: [
-                {
-                  uri: content.uri,
-                  mimeType: content.mimeType,
-                  text: content.text,
-                },
-              ],
-            };
-          } catch (error) {
-            logger.error({ uri: uri.href, error }, "Failed to read resource");
-            const mcpError = ErrorHandler.handleError(
-              error,
-              { operation: "resource:read", context: { uri: uri.href } },
-              logger
-            );
-            throw new Error(`Failed to read resource: ${mcpError.message}`);
-          }
+      server.registerResource(resourceId, template, metadata, async (uri, variables) => {
+        logger.info({ uri: uri.href, variables }, "Reading parameterized resource");
+        const match = resourceRegistry.findResourceByUri(uri.href);
+        if (!match) {
+          throw new Error(`Resource not found: ${uri.href}`);
         }
-      );
+        try {
+          const content = await match.resource.read(match.params);
+          logger.debug(
+            {
+              uri: uri.href,
+              contentBytes: Buffer.byteLength(content.text, "utf-8"),
+            },
+            "Resource content size"
+          );
+          return {
+            contents: [
+              {
+                uri: content.uri,
+                mimeType: content.mimeType,
+                text: content.text,
+              },
+            ],
+          };
+        } catch (error) {
+          logger.error({ uri: uri.href, error }, "Failed to read resource");
+          const mcpError = ErrorHandler.handleError(
+            error,
+            { operation: "resource:read", context: { uri: uri.href } },
+            logger
+          );
+          throw new Error(`Failed to read resource: ${mcpError.message}`);
+        }
+      });
     } else {
-      server.registerResource(
-        resourceId,
-        resource.uriTemplate,
-        metadata,
-        async (uri) => {
-          logger.info({ uri: uri.href }, "Reading static resource");
-          const match = resourceRegistry.findResourceByUri(uri.href);
-          if (!match) {
-            throw new Error(`Resource not found: ${uri.href}`);
-          }
-          try {
-            const content = await match.resource.read(match.params);
-            logger.debug(
-              {
-                uri: uri.href,
-                contentBytes: Buffer.byteLength(content.text, "utf-8"),
-              },
-              "Resource content size"
-            );
-            return {
-              contents: [
-                {
-                  uri: content.uri,
-                  mimeType: content.mimeType,
-                  text: content.text,
-                },
-              ],
-            };
-          } catch (error) {
-            logger.error({ uri: uri.href, error }, "Failed to read resource");
-            const mcpError = ErrorHandler.handleError(
-              error,
-              { operation: "resource:read", context: { uri: uri.href } },
-              logger
-            );
-            throw new Error(`Failed to read resource: ${mcpError.message}`);
-          }
+      server.registerResource(resourceId, resource.uriTemplate, metadata, async (uri) => {
+        logger.info({ uri: uri.href }, "Reading static resource");
+        const match = resourceRegistry.findResourceByUri(uri.href);
+        if (!match) {
+          throw new Error(`Resource not found: ${uri.href}`);
         }
-      );
+        try {
+          const content = await match.resource.read(match.params);
+          logger.debug(
+            {
+              uri: uri.href,
+              contentBytes: Buffer.byteLength(content.text, "utf-8"),
+            },
+            "Resource content size"
+          );
+          return {
+            contents: [
+              {
+                uri: content.uri,
+                mimeType: content.mimeType,
+                text: content.text,
+              },
+            ],
+          };
+        } catch (error) {
+          logger.error({ uri: uri.href, error }, "Failed to read resource");
+          const mcpError = ErrorHandler.handleError(
+            error,
+            { operation: "resource:read", context: { uri: uri.href } },
+            logger
+          );
+          throw new Error(`Failed to read resource: ${mcpError.message}`);
+        }
+      });
     }
   }
 
   // Register conformance fixtures (resources + prompts) when enabled
   if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts, registerStaticResourcesFromDefinitions } = await import("@cesteral/shared");
+    const {
+      conformanceResources,
+      conformanceResourceTemplate,
+      conformancePrompts,
+      registerStaticResourcesFromDefinitions,
+    } = await import("@cesteral/shared");
 
     registerStaticResourcesFromDefinitions({
       server,
@@ -238,7 +234,9 @@ export async function createMcpServer(
       logger,
     });
 
-    const template = new ResourceTemplate(conformanceResourceTemplate.uriTemplate, { list: undefined });
+    const template = new ResourceTemplate(conformanceResourceTemplate.uriTemplate, {
+      list: undefined,
+    });
     server.registerResource(
       "conformance_template",
       template,
@@ -250,11 +248,13 @@ export async function createMcpServer(
         const id = (variables.id as string) || "unknown";
         const content = conformanceResourceTemplate.getContent(id);
         return {
-          contents: [{
-            uri: uri.href,
-            mimeType: conformanceResourceTemplate.mimeType,
-            text: content,
-          }],
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: conformanceResourceTemplate.mimeType,
+              text: content,
+            },
+          ],
         };
       }
     );
@@ -267,13 +267,19 @@ export async function createMcpServer(
   }
 
   // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
-    name: def.prompt.name,
-    description: def.prompt.description ?? "",
-    arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-    generateMessage: def.generateMessage,
-  }));
-  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
+  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
+    (def) => ({
+      name: def.prompt.name,
+      description: def.prompt.description ?? "",
+      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
+      generateMessage: def.generateMessage,
+    })
+  );
+  registerPromptsFromDefinitions({
+    server: server as unknown as McpServerPromptLike,
+    prompts: allPrompts,
+    logger,
+  });
 
   return server;
 }

@@ -85,11 +85,11 @@ describe("snapchat_create_entity tool", () => {
       mockCreateEntity.mockResolvedValueOnce(mockEntity);
 
       const result = await createEntityLogic(
-          {
-            entityType: "adGroup",
-            adAccountId: "1234567890",
-            campaignId: "1800123456789",
-            data: {
+        {
+          entityType: "adGroup",
+          adAccountId: "1234567890",
+          campaignId: "1800123456789",
+          data: {
             name: "Test Ad Group",
             type: "SNAP_ADS",
             placement: "CONTENT",

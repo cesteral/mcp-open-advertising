@@ -23,10 +23,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["meta-bearer", "jwt", "none"]).default("meta-bearer"),
 
   // Meta API Configuration
-  metaApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://graph.facebook.com/v25.0"),
+  metaApiBaseUrl: z.string().url().default("https://graph.facebook.com/v25.0"),
   metaApiVersion: z.string().default("v25.0"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
@@ -39,7 +36,11 @@ const ConfigSchema = BaseConfigSchema.extend({
   // Video upload poll configuration
   metaVideoUploadPollIntervalMs: z.number().default(15_000),
   metaVideoUploadMaxPollAttempts: z.number().default(20),
-  metaVideoUploadMaxBufferedBytes: z.number().int().positive().default(256 * 1024 * 1024),
+  metaVideoUploadMaxBufferedBytes: z
+    .number()
+    .int()
+    .positive()
+    .default(256 * 1024 * 1024),
 
   // Optional: for token debug endpoint
   metaAppId: z.string().optional(),

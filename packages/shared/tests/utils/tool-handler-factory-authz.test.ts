@@ -24,9 +24,11 @@ function createMockServer() {
   return {
     server: { elicitInput: vi.fn() },
     sendLoggingMessage: vi.fn().mockResolvedValue(undefined),
-    registerTool: vi.fn((name: string, _config: unknown, handler: (args: unknown) => Promise<unknown>) => {
-      handlers.set(name, handler);
-    }),
+    registerTool: vi.fn(
+      (name: string, _config: unknown, handler: (args: unknown) => Promise<unknown>) => {
+        handlers.set(name, handler);
+      }
+    ),
     callTool: async (name: string, args: unknown) => {
       const handler = handlers.get(name);
       if (!handler) throw new Error(`Tool ${name} not registered`);

@@ -59,7 +59,9 @@ export async function downloadReportLogic(
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
     const detail = errorBody ? ` — ${errorBody.substring(0, 500)}` : "";
-    throw new Error(`Failed to download report: ${response.status} ${response.statusText}${detail}`);
+    throw new Error(
+      `Failed to download report: ${response.status} ${response.statusText}${detail}`
+    );
   }
 
   const format = inferReportFormat(input.downloadUrl, response);
@@ -105,9 +107,7 @@ export async function downloadReportLogic(
       rows: augmented,
       totalRows: rows.length,
       input,
-      warnings: computedWarning
-        ? [`computed metrics: ${computedWarning}`]
-        : undefined,
+      warnings: computedWarning ? [`computed metrics: ${computedWarning}`] : undefined,
     }),
     timestamp: new Date().toISOString(),
   };
@@ -123,10 +123,7 @@ const CM360_COMPUTED_METRIC_ALIASES = {
 
 function inferReportFormat(downloadUrl: string, response: Response): "CSV" | "EXCEL" | "UNKNOWN" {
   const contentType = response.headers?.get?.("content-type")?.toLowerCase() ?? "";
-  if (
-    contentType.includes("spreadsheetml") ||
-    contentType.includes("application/vnd.ms-excel")
-  ) {
+  if (contentType.includes("spreadsheetml") || contentType.includes("application/vnd.ms-excel")) {
     return "EXCEL";
   }
   if (
@@ -141,7 +138,11 @@ function inferReportFormat(downloadUrl: string, response: Response): "CSV" | "EX
   if (normalizedUrl.includes(".csv") || normalizedUrl.includes("format=csv")) {
     return "CSV";
   }
-  if (normalizedUrl.includes(".xls") || normalizedUrl.includes(".xlsx") || normalizedUrl.includes("format=excel")) {
+  if (
+    normalizedUrl.includes(".xls") ||
+    normalizedUrl.includes(".xlsx") ||
+    normalizedUrl.includes("format=excel")
+  ) {
     return "EXCEL";
   }
 
@@ -182,7 +183,8 @@ export const downloadReportTool = {
     {
       label: "Download a report",
       input: {
-        downloadUrl: "https://dfareporting.googleapis.com/dfareporting/v5/userprofiles/123456/reports/789012/files/345678?alt=media",
+        downloadUrl:
+          "https://dfareporting.googleapis.com/dfareporting/v5/userprofiles/123456/reports/789012/files/345678?alt=media",
         mode: "rows",
         maxRows: 50,
       },

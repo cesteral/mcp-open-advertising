@@ -141,7 +141,9 @@ describe("GAdsService", () => {
 
   describe("createEntity", () => {
     it("calls correct :mutate endpoint for campaigns", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ results: [{ resourceName: "customers/123/campaigns/456" }] });
+      httpClient.fetch.mockResolvedValueOnce({
+        results: [{ resourceName: "customers/123/campaigns/456" }],
+      });
 
       await service.createEntity("campaign", "123", { name: "Test Campaign" });
 
@@ -215,10 +217,7 @@ describe("GAdsService", () => {
     it("sends all operations in a single call", async () => {
       httpClient.fetch.mockResolvedValueOnce({ results: [] });
 
-      const operations = [
-        { create: { name: "Campaign A" } },
-        { create: { name: "Campaign B" } },
-      ];
+      const operations = [{ create: { name: "Campaign A" } }, { create: { name: "Campaign B" } }];
 
       await service.bulkMutate("campaign", "123", operations);
 
@@ -246,12 +245,7 @@ describe("GAdsService", () => {
     it("creates update operations for ENABLED/PAUSED status", async () => {
       httpClient.fetch.mockResolvedValueOnce({ results: [{}, {}] });
 
-      const result = await service.bulkUpdateStatus(
-        "campaign",
-        "123",
-        ["c1", "c2"],
-        "PAUSED"
-      );
+      const result = await service.bulkUpdateStatus("campaign", "123", ["c1", "c2"], "PAUSED");
 
       const [, , options] = httpClient.fetch.mock.calls[0];
       const body = JSON.parse(options.body);
@@ -261,7 +255,9 @@ describe("GAdsService", () => {
     });
 
     it("creates remove operations for REMOVED status", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ results: [{ resourceName: "customers/123/campaigns/c1" }] });
+      httpClient.fetch.mockResolvedValueOnce({
+        results: [{ resourceName: "customers/123/campaigns/c1" }],
+      });
 
       await service.bulkUpdateStatus("campaign", "123", ["c1"], "REMOVED");
 
@@ -276,12 +272,7 @@ describe("GAdsService", () => {
         partialFailureError: { code: 3, message: "some error" },
       });
 
-      const result = await service.bulkUpdateStatus(
-        "campaign",
-        "123",
-        ["c1", "c2"],
-        "REMOVED"
-      );
+      const result = await service.bulkUpdateStatus("campaign", "123", ["c1", "c2"], "REMOVED");
 
       expect(result.results[0].success).toBe(true);
       expect(result.results[1].success).toBe(false);
@@ -290,26 +281,19 @@ describe("GAdsService", () => {
 
     it("reports all success when REMOVE has no partial failures", async () => {
       httpClient.fetch.mockResolvedValueOnce({
-        results: [{ resourceName: "customers/123/campaigns/c1" }, { resourceName: "customers/123/campaigns/c2" }],
+        results: [
+          { resourceName: "customers/123/campaigns/c1" },
+          { resourceName: "customers/123/campaigns/c2" },
+        ],
       });
 
-      const result = await service.bulkUpdateStatus(
-        "campaign",
-        "123",
-        ["c1", "c2"],
-        "REMOVED"
-      );
+      const result = await service.bulkUpdateStatus("campaign", "123", ["c1", "c2"], "REMOVED");
 
       expect(result.results.every((r) => r.success)).toBe(true);
     });
 
     it("rejects statusless entity types for ENABLED/PAUSED", async () => {
-      const result = await service.bulkUpdateStatus(
-        "campaignBudget",
-        "123",
-        ["b1"],
-        "ENABLED"
-      );
+      const result = await service.bulkUpdateStatus("campaignBudget", "123", ["b1"], "ENABLED");
 
       expect(result.results[0].success).toBe(false);
       expect(result.results[0].error).toContain("does not have a status field");
@@ -321,12 +305,7 @@ describe("GAdsService", () => {
         results: [{ resourceName: "customers/123/campaignBudgets/b1" }],
       });
 
-      const result = await service.bulkUpdateStatus(
-        "campaignBudget",
-        "123",
-        ["b1"],
-        "REMOVED"
-      );
+      const result = await service.bulkUpdateStatus("campaignBudget", "123", ["b1"], "REMOVED");
 
       expect(result.results[0].success).toBe(true);
       expect(httpClient.fetch).toHaveBeenCalledTimes(1);

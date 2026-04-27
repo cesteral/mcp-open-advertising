@@ -53,6 +53,7 @@ The DV360 MCP server now features a **dynamic, schema-driven entity system** tha
 **Purpose**: Extract metadata from generated Zod schemas
 
 **Capabilities**:
+
 - ✅ Auto-discover all entity schemas from `generated/schemas/zod.ts`
 - ✅ Extract field information (name, type, optional, description)
 - ✅ Extract required fields for validation
@@ -61,15 +62,16 @@ The DV360 MCP server now features a **dynamic, schema-driven entity system** tha
 - ✅ Extract enum values
 
 **Example Usage**:
+
 ```typescript
-import { getAvailableEntitySchemas, extractRequiredFields } from './schemaIntrospection';
+import { getAvailableEntitySchemas, extractRequiredFields } from "./schemaIntrospection";
 
 // Discover all entities with generated schemas
 const schemas = getAvailableEntitySchemas();
 // Map(5) { 'partner' => ZodSchema, 'advertiser' => ZodSchema, ... }
 
 // Extract required fields for creating a line item
-const lineItemSchema = schemas.get('lineItem');
+const lineItemSchema = schemas.get("lineItem");
 const required = extractRequiredFields(lineItemSchema);
 // ['displayName', 'lineItemType', 'entityStatus', ...]
 ```
@@ -79,11 +81,12 @@ const required = extractRequiredFields(lineItemSchema);
 **Purpose**: Build entity configurations with minimal manual setup
 
 **Configuration Format**:
+
 ```typescript
 const ENTITY_API_METADATA = {
   lineItem: {
-    apiPathTemplate: '/advertisers/{advertiserId}/lineItems',
-    parentResourceIds: ['advertiserId'],
+    apiPathTemplate: "/advertisers/{advertiserId}/lineItems",
+    parentResourceIds: ["advertiserId"],
     supportsFilter: true,
   },
 };
@@ -92,6 +95,7 @@ const ENTITY_API_METADATA = {
 That's it! Just 4 lines per entity. Everything else is inferred.
 
 **Auto-Inferred**:
+
 - ✅ `supportsCreate` - Inferred from `isReadOnly` flag (defaults to true)
 - ✅ `supportsUpdate` - Inferred from `isReadOnly` flag (defaults to true)
 - ✅ `supportsDelete` - Inferred from `isReadOnly` flag (defaults to true)
@@ -99,11 +103,12 @@ That's it! Just 4 lines per entity. Everything else is inferred.
 - ✅ `apiPath` - Built as function if template has placeholders, static string otherwise
 
 **Example Usage**:
+
 ```typescript
-import { getEntityConfigDynamic, getSupportedEntityTypesDynamic } from './entityMappingDynamic';
+import { getEntityConfigDynamic, getSupportedEntityTypesDynamic } from "./entityMappingDynamic";
 
 // Get full configuration (auto-built)
-const config = getEntityConfigDynamic('lineItem');
+const config = getEntityConfigDynamic("lineItem");
 // {
 //   apiPath: (ids) => `/advertisers/${ids.advertiserId}/lineItems`,
 //   parentIds: ['advertiserId'],
@@ -124,11 +129,13 @@ const entities = getSupportedEntityTypesDynamic();
 **Purpose**: Interactive demo showing the dynamic system in action
 
 **Run**:
+
 ```bash
 npx tsx src/mcp-server/tools/utils/demo-dynamic-system.ts
 ```
 
 **Output**:
+
 - Auto-discovered entity schemas (5 entities)
 - Supported entity types with API config (12 entities)
 - Full configuration for sample entity
@@ -153,18 +160,20 @@ Required fields are extracted from schemas at runtime, so they're always correct
 
 ```typescript
 // If OpenAPI spec changes, no code update needed!
-const required = getRequiredFieldsFromSchema('lineItem');
+const required = getRequiredFieldsFromSchema("lineItem");
 ```
 
 ### 3. **Minimal Configuration** ⚡
 
 **Old System**: ~40 lines per entity
+
 - Entity config entry
 - Schema mapping
 - Required fields list
 - Filter fields list
 
 **New System**: ~5 lines per entity
+
 ```typescript
 lineItem: {
   apiPathTemplate: '/advertisers/{advertiserId}/lineItems',
@@ -179,7 +188,7 @@ Extract field descriptions, types, enums directly from schema:
 
 ```typescript
 const fields = extractFieldsFromSchema(schema);
-fields.forEach(field => {
+fields.forEach((field) => {
   console.log(`${field.name}: ${field.type} - ${field.description}`);
 });
 ```
@@ -190,7 +199,7 @@ Filter fields are inferred by checking which common fields exist:
 
 ```typescript
 // Automatically detects: entityStatus, advertiserId, campaignId, etc.
-const config = buildEntityConfig('lineItem');
+const config = buildEntityConfig("lineItem");
 console.log(config.filterFields);
 ```
 
@@ -200,7 +209,7 @@ Helper functions make it easy to add new entities:
 
 ```typescript
 // Get suggestion for new entity
-const suggestion = suggestApiMetadata('newEntity');
+const suggestion = suggestApiMetadata("newEntity");
 // {
 //   apiPathTemplate: '/advertisers/{advertiserId}/newEntitys',
 //   parentResourceIds: ['advertiserId'],
@@ -215,6 +224,7 @@ const suggestion = suggestApiMetadata('newEntity');
 #### Old Approach (Manual)
 
 **entityMapping.ts** (~20 lines):
+
 ```typescript
 export const ENTITY_TYPE_CONFIG: Record<string, EntityConfig> = {
   lineItem: {
@@ -237,6 +247,7 @@ export function getEntitySchema(entityType: string, operation: string) {
 ```
 
 **requiredFields.ts** (~15 lines):
+
 ```typescript
 const createRequiredFields = {
   lineItem: [
@@ -257,11 +268,12 @@ const createRequiredFields = {
 #### New Approach (Dynamic)
 
 **entityMappingDynamic.ts** (~5 lines):
+
 ```typescript
 const ENTITY_API_METADATA = {
   lineItem: {
-    apiPathTemplate: '/advertisers/{advertiserId}/lineItems',
-    parentResourceIds: ['advertiserId'],
+    apiPathTemplate: "/advertisers/{advertiserId}/lineItems",
+    parentResourceIds: ["advertiserId"],
     supportsFilter: true,
   },
 };
@@ -279,26 +291,26 @@ Replace imports and function calls:
 
 ```typescript
 // Before
-import { getEntityConfig, getEntitySchema, getSupportedEntityTypes } from './entityMapping';
-import { getRequiredFields } from './requiredFields';
+import { getEntityConfig, getEntitySchema, getSupportedEntityTypes } from "./entityMapping";
+import { getRequiredFields } from "./requiredFields";
 
-const config = getEntityConfig('lineItem');
-const schema = getEntitySchema('lineItem', 'create');
+const config = getEntityConfig("lineItem");
+const schema = getEntitySchema("lineItem", "create");
 const types = getSupportedEntityTypes();
-const required = getRequiredFields('lineItem', 'create');
+const required = getRequiredFields("lineItem", "create");
 
 // After
 import {
   getEntityConfigDynamic,
   getEntitySchemaForOperation,
   getSupportedEntityTypesDynamic,
-  getRequiredFieldsFromSchema
-} from './entityMappingDynamic';
+  getRequiredFieldsFromSchema,
+} from "./entityMappingDynamic";
 
-const config = getEntityConfigDynamic('lineItem');
-const schema = getEntitySchemaForOperation('lineItem', 'create');
+const config = getEntityConfigDynamic("lineItem");
+const schema = getEntitySchemaForOperation("lineItem", "create");
 const types = getSupportedEntityTypesDynamic();
-const required = getRequiredFieldsFromSchema('lineItem');
+const required = getRequiredFieldsFromSchema("lineItem");
 ```
 
 ### Gradual Migration
@@ -353,6 +365,7 @@ npx tsx src/mcp-server/tools/utils/demo-dynamic-system.ts
 ```
 
 Sample output:
+
 ```
 🎯 DV360 MCP - Dynamic Entity System Demo
 

@@ -2,7 +2,10 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { describe, it, expect } from "vitest";
-import { computeMetrics, addComputedMetrics } from "../../../src/mcp-server/tools/utils/computed-metrics.js";
+import {
+  computeMetrics,
+  addComputedMetrics,
+} from "../../../src/mcp-server/tools/utils/computed-metrics.js";
 
 describe("computeMetrics", () => {
   it("computes CPA correctly", () => {

@@ -14,7 +14,7 @@ export interface EntityExample {
   data: Record<string, any>;
   updateMask: string;
   notes: string;
-  category?: 'status' | 'bid' | 'budget' | 'flight' | 'targeting' | 'general';
+  category?: "status" | "bid" | "budget" | "flight" | "targeting" | "general";
 }
 
 export interface EntityExamplesCollection {
@@ -38,7 +38,8 @@ const LINE_ITEM_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "bidStrategy.fixedBid.bidAmountMicros",
-    notes: "Bid amount is in micros (1 USD = 1,000,000 micros). Only use fixedBid if the line item uses a fixed bidding strategy.",
+    notes:
+      "Bid amount is in micros (1 USD = 1,000,000 micros). Only use fixedBid if the line item uses a fixed bidding strategy.",
   },
   {
     operation: "Update max average CPM bid (auto-bidding)",
@@ -52,7 +53,8 @@ const LINE_ITEM_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "bidStrategy.maximizeSpendAutoBid.maxAverageCpmBidAmountMicros",
-    notes: "Use this for auto-bidding line items with maximize spend strategy. Bid amount is in micros.",
+    notes:
+      "Use this for auto-bidding line items with maximize spend strategy. Bid amount is in micros.",
   },
   {
     operation: "Pause line item",
@@ -62,7 +64,8 @@ const LINE_ITEM_EXAMPLES: EntityExample[] = [
       entityStatus: "ENTITY_STATUS_PAUSED",
     },
     updateMask: "entityStatus",
-    notes: "Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_PAUSED, ENTITY_STATUS_ARCHIVED. Note: Cannot unarchive once archived.",
+    notes:
+      "Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_PAUSED, ENTITY_STATUS_ARCHIVED. Note: Cannot unarchive once archived.",
   },
   {
     operation: "Activate line item",
@@ -87,7 +90,8 @@ const LINE_ITEM_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "flight.dateRange",
-    notes: "Dates must be in the future (or current for start date) and end date must be after start date. Use YYYY-MM-DD format converted to date object.",
+    notes:
+      "Dates must be in the future (or current for start date) and end date must be after start date. Use YYYY-MM-DD format converted to date object.",
   },
   {
     operation: "Update line item budget",
@@ -111,7 +115,8 @@ const LINE_ITEM_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "pacing.pacingType",
-    notes: "Valid pacing types: PACING_TYPE_EVEN, PACING_TYPE_AHEAD, PACING_TYPE_ASAP. ASAP spends budget as quickly as possible.",
+    notes:
+      "Valid pacing types: PACING_TYPE_EVEN, PACING_TYPE_AHEAD, PACING_TYPE_ASAP. ASAP spends budget as quickly as possible.",
   },
   {
     operation: "Update revenue margin (markup)",
@@ -126,7 +131,8 @@ const LINE_ITEM_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "partnerRevenueModel",
-    notes: "Markup amount is in micros. This is the margin added on top of media costs. Common for reseller models.",
+    notes:
+      "Markup amount is in micros. This is the margin added on top of media costs. Common for reseller models.",
   },
 ];
 
@@ -146,7 +152,8 @@ const CAMPAIGN_EXAMPLES: EntityExample[] = [
       ],
     },
     updateMask: "campaignBudgets",
-    notes: "Budget amount is in micros. Use campaignBudgets array even for single budget. All insertion orders under this campaign share this budget.",
+    notes:
+      "Budget amount is in micros. Use campaignBudgets array even for single budget. All insertion orders under this campaign share this budget.",
   },
   {
     operation: "Pause campaign",
@@ -171,7 +178,8 @@ const CAMPAIGN_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "campaignFlight.plannedDates",
-    notes: "Campaign flight dates must encompass all child insertion order and line item flight dates.",
+    notes:
+      "Campaign flight dates must encompass all child insertion order and line item flight dates.",
   },
   {
     operation: "Update campaign performance goal",
@@ -184,7 +192,8 @@ const CAMPAIGN_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "campaignGoal",
-    notes: "Common goal types: CPA, CPC, CTR, VIEWABILITY, CPIAVC (Cost per Incremental Attributed Viewable Conversion).",
+    notes:
+      "Common goal types: CPA, CPC, CTR, VIEWABILITY, CPIAVC (Cost per Incremental Attributed Viewable Conversion).",
   },
 ];
 
@@ -202,7 +211,8 @@ const INSERTION_ORDER_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "budget.budgetAmountMicros",
-    notes: "Budget amount is in micros. IO budget cannot exceed campaign budget. Line items under this IO share this budget.",
+    notes:
+      "Budget amount is in micros. IO budget cannot exceed campaign budget. Line items under this IO share this budget.",
   },
   {
     operation: "Pause insertion order",
@@ -238,7 +248,8 @@ const INSERTION_ORDER_EXAMPLES: EntityExample[] = [
       },
     },
     updateMask: "kpi",
-    notes: "Common KPI types: CPA, CPC, CPM, CTR. This guides optimization but doesn't enforce constraints.",
+    notes:
+      "Common KPI types: CPA, CPC, CPM, CTR. This guides optimization but doesn't enforce constraints.",
   },
 ];
 
@@ -264,7 +275,8 @@ const ADVERTISER_EXAMPLES: EntityExample[] = [
       entityStatus: "ENTITY_STATUS_PAUSED",
     },
     updateMask: "entityStatus",
-    notes: "Pausing an advertiser pauses all campaigns, insertion orders, and line items under it. Use with caution.",
+    notes:
+      "Pausing an advertiser pauses all campaigns, insertion orders, and line items under it. Use with caution.",
   },
 ];
 
@@ -290,7 +302,8 @@ const CREATIVE_EXAMPLES: EntityExample[] = [
       entityStatus: "ENTITY_STATUS_ARCHIVED",
     },
     updateMask: "entityStatus",
-    notes: "Archived creatives cannot be reactivated. Use PAUSED if you might need to reactivate later.",
+    notes:
+      "Archived creatives cannot be reactivated. Use PAUSED if you might need to reactivate later.",
   },
 ];
 
@@ -335,7 +348,8 @@ const CUSTOM_BIDDING_ALGORITHM_EXAMPLES: EntityExample[] = [
       advertiserId: "123456789",
     },
     updateMask: "displayName,customBiddingAlgorithmType,entityStatus,advertiserId",
-    notes: "Use the dv360_create_custom_bidding_algorithm tool. Algorithm type is immutable after creation. Advertiser ownership is also immutable.",
+    notes:
+      "Use the dv360_create_custom_bidding_algorithm tool. Algorithm type is immutable after creation. Advertiser ownership is also immutable.",
   },
   {
     operation: "Create SCRIPT_BASED algorithm (partner-owned, shared)",
@@ -349,7 +363,8 @@ const CUSTOM_BIDDING_ALGORITHM_EXAMPLES: EntityExample[] = [
       sharedAdvertiserIds: ["123456789", "234567890"],
     },
     updateMask: "displayName,customBiddingAlgorithmType,entityStatus,partnerId,sharedAdvertiserIds",
-    notes: "Partner-owned algorithms can be shared with multiple advertisers via sharedAdvertiserIds. Useful for agency-wide bidding strategies.",
+    notes:
+      "Partner-owned algorithms can be shared with multiple advertisers via sharedAdvertiserIds. Useful for agency-wide bidding strategies.",
   },
   {
     operation: "Create RULE_BASED algorithm",
@@ -362,7 +377,8 @@ const CUSTOM_BIDDING_ALGORITHM_EXAMPLES: EntityExample[] = [
       advertiserId: "123456789",
     },
     updateMask: "displayName,customBiddingAlgorithmType,entityStatus,advertiserId",
-    notes: "RULE_BASED algorithms are restricted to allowlisted customers. Contact Google support if you need access to this feature.",
+    notes:
+      "RULE_BASED algorithms are restricted to allowlisted customers. Contact Google support if you need access to this feature.",
   },
   {
     operation: "Update algorithm display name",
@@ -382,7 +398,8 @@ const CUSTOM_BIDDING_ALGORITHM_EXAMPLES: EntityExample[] = [
       entityStatus: "ENTITY_STATUS_ARCHIVED",
     },
     updateMask: "entityStatus",
-    notes: "Archived algorithms cannot be used for bidding. Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_ARCHIVED.",
+    notes:
+      "Archived algorithms cannot be used for bidding. Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_ARCHIVED.",
   },
   {
     operation: "Example script content",
@@ -412,7 +429,8 @@ function main() {
 }`,
     },
     updateMask: "scriptContent",
-    notes: "Use the dv360_manage_custom_bidding_script tool with action='upload' to upload scripts. Scripts are processed asynchronously - check state for ACCEPTED/REJECTED.",
+    notes:
+      "Use the dv360_manage_custom_bidding_script tool with action='upload' to upload scripts. Scripts are processed asynchronously - check state for ACCEPTED/REJECTED.",
   },
 ];
 
@@ -441,7 +459,7 @@ export function getEntityExamples(entityType: string): EntityExample[] {
  */
 export function getEntityExamplesByCategory(
   entityType: string,
-  category: EntityExample['category']
+  category: EntityExample["category"]
 ): EntityExample[] {
   const examples = getEntityExamples(entityType);
   return category ? examples.filter((ex) => ex.category === category) : examples;
@@ -472,7 +490,7 @@ export function formatExampleAsText(example: EntityExample): string {
   return `
 Operation: ${example.operation}
 Description: ${example.description}
-Category: ${example.category || 'general'}
+Category: ${example.category || "general"}
 
 Data:
 ${JSON.stringify(example.data, null, 2)}
@@ -496,7 +514,7 @@ export function formatEntityExamplesAsText(entityType: string): string {
   const header = `# Examples for ${entityType}\n\n`;
   const examplesText = examples
     .map((ex, idx) => `## Example ${idx + 1}: ${ex.operation}\n\n${formatExampleAsText(ex)}`)
-    .join('\n\n---\n\n');
+    .join("\n\n---\n\n");
 
   return header + examplesText;
 }
@@ -509,7 +527,7 @@ export function getExamplesByCategory(entityType: string): Record<string, Entity
   const grouped: Record<string, EntityExample[]> = {};
 
   for (const example of examples) {
-    const category = example.category || 'general';
+    const category = example.category || "general";
     if (!grouped[category]) {
       grouped[category] = [];
     }
@@ -529,7 +547,7 @@ export function getExamplesSummary(entityType: string): string {
     return `No examples available for ${entityType}`;
   }
 
-  const operations = examples.map((ex) => `- ${ex.operation}`).join('\n');
+  const operations = examples.map((ex) => `- ${ex.operation}`).join("\n");
   return `Available examples for ${entityType} (${examples.length} total):\n${operations}`;
 }
 

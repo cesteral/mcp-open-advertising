@@ -9,10 +9,7 @@ export type { Resource } from "./types.js";
 
 import { definitionResources } from "./definitions/index.js";
 import { allTools } from "../tools/definitions/index.js";
-import {
-  createToolExamplesResource,
-  createServerCapabilitiesResource,
-} from "@cesteral/shared";
+import { createToolExamplesResource, createServerCapabilitiesResource } from "@cesteral/shared";
 import type { Resource } from "./types.js";
 
 const toolExamplesResource = createToolExamplesResource(allTools, "sa360-mcp");

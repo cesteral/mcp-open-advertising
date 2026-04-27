@@ -42,9 +42,9 @@ describe("TtdTokenAuthStrategy", () => {
       () => mockAdapterInstance
     );
 
-    (parseTtdDirectTokenFromHeaders as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
-      { token: "direct-token-123" }
-    );
+    (parseTtdDirectTokenFromHeaders as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      token: "direct-token-123",
+    });
 
     (getTtdDirectTokenFingerprint as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
       "1234567890abcdef"

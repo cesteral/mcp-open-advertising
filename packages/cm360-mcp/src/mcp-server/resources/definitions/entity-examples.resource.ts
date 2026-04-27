@@ -147,7 +147,8 @@ export const entityExampleAllResource: Resource = {
   name: "All CM360 Entity Examples",
   description: "Combined examples for all CM360 entity types",
   mimeType: "text/markdown",
-  getContent: () => getSupportedEntityTypes()
-    .map((t) => ENTITY_EXAMPLES[t])
-    .join("\n\n---\n\n"),
+  getContent: () =>
+    getSupportedEntityTypes()
+      .map((t) => ENTITY_EXAMPLES[t])
+      .join("\n\n---\n\n"),
 };

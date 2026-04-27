@@ -17,17 +17,12 @@ Returns all default fields for the entity type. Use \`sa360_search\` for custom 
 
 export const GetEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to retrieve"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
     customerId: z
       .string()
       .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to retrieve"),
+    entityId: z.string().min(1).describe("The entity ID to retrieve"),
   })
   .describe("Parameters for getting an SA360 entity");
 

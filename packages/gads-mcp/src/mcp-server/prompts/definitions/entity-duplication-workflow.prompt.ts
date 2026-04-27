@@ -22,8 +22,7 @@ export const entityDuplicationWorkflowPrompt: Prompt = {
     },
     {
       name: "entityType",
-      description:
-        "Entity type to duplicate: campaign, adGroup, ad, or keyword",
+      description: "Entity type to duplicate: campaign, adGroup, ad, or keyword",
       required: true,
     },
     {
@@ -34,9 +33,7 @@ export const entityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getEntityDuplicationWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getEntityDuplicationWorkflowMessage(args?: Record<string, string>): string {
   const customerId = args?.customerId || "{customerId}";
   const entityType = args?.entityType || "{entityType}";
   const sourceEntityId = args?.sourceEntityId || "{sourceEntityId}";

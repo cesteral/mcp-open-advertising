@@ -24,10 +24,7 @@ export const ExecuteEntityReportInputSchema = z
     entityType: z
       .enum(["adGroup", "campaign", "advertiser"])
       .describe("The type of entity to generate the report for"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("ID of the entity (ad group, campaign, or advertiser)"),
+    entityId: z.string().min(1).describe("ID of the entity (ad group, campaign, or advertiser)"),
     reportType: z
       .string()
       .min(1)

@@ -65,7 +65,10 @@ describe("BulkMutateInputSchema", () => {
       customerId: "1234567890",
       operations: [
         { create: { name: "New Campaign" } },
-        { update: { resourceName: "customers/123/campaigns/456", name: "Updated" }, updateMask: "name" },
+        {
+          update: { resourceName: "customers/123/campaigns/456", name: "Updated" },
+          updateMask: "name",
+        },
         { remove: "customers/123/campaigns/789" },
       ],
     });

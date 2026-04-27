@@ -23,13 +23,8 @@ Returns the new entity ID. Use meta_get_entity to fetch the full entity.
 
 export const DuplicateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getDuplicateEntityTypeEnum())
-      .describe("Type of entity to duplicate"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("ID of the entity to duplicate"),
+    entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
+    entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     renameOptions: z
       .object({
         prefix: z.string().optional(),

@@ -20,11 +20,9 @@ import type { StaticResourceDefinition } from "./resource-handler-factory.js";
  */
 export function createToolExamplesResource(
   tools: ToolDefinitionForFactory[],
-  serverName: string,
+  serverName: string
 ): StaticResourceDefinition | undefined {
-  const toolsWithExamples = tools.filter(
-    (t) => t.inputExamples && t.inputExamples.length > 0,
-  );
+  const toolsWithExamples = tools.filter((t) => t.inputExamples && t.inputExamples.length > 0);
 
   if (toolsWithExamples.length === 0) return undefined;
 
@@ -42,7 +40,7 @@ export function createToolExamplesResource(
  * Returns one resource per tool that has inputExamples.
  */
 export function createPerToolExampleResources(
-  tools: ToolDefinitionForFactory[],
+  tools: ToolDefinitionForFactory[]
 ): StaticResourceDefinition[] {
   return tools
     .filter((t) => t.inputExamples && t.inputExamples.length > 0)
@@ -69,15 +67,29 @@ export interface ServerCapabilitiesConfig {
   serverName: string;
   toolGroups: ToolGroup;
   commonWorkflows?: string[];
+  discoveryFlow?: string[];
+  relatedResources?: string[];
   startHere: string;
+  allTools?: ToolDefinitionForFactory[];
+  allToolNames?: string[];
 }
 
 /**
  * Generate a server-capabilities overview resource.
  */
 export function createServerCapabilitiesResource(
-  config: ServerCapabilitiesConfig,
+  config: ServerCapabilitiesConfig
 ): StaticResourceDefinition {
+  const groupedTools = new Set(Object.values(config.toolGroups).flat());
+  const toolGroupSummaries = Object.fromEntries(
+    Object.entries(config.toolGroups).map(([groupName, tools]) => [
+      groupName,
+      { toolCount: tools.length, tools },
+    ])
+  );
+  const allToolNames = config.allToolNames ?? config.allTools?.map((tool) => tool.name) ?? [];
+  const ungroupedTools = allToolNames.filter((name) => !groupedTools.has(name));
+
   return {
     uri: `server-capabilities://${config.serverName}/overview`,
     name: `${config.serverName} Capabilities Overview`,
@@ -86,24 +98,27 @@ export function createServerCapabilitiesResource(
     getContent: () =>
       JSON.stringify(
         {
+          serverName: config.serverName,
+          toolCount: allToolNames.length || groupedTools.size,
           toolGroups: config.toolGroups,
+          toolGroupSummaries,
+          ungroupedTools,
           commonWorkflows: config.commonWorkflows ?? [],
+          discoveryFlow: config.discoveryFlow ?? [],
+          relatedResources: config.relatedResources ?? [],
           startHere: config.startHere,
         },
         null,
-        2,
+        2
       ),
   };
 }
 
-function formatToolExamplesMarkdown(
-  tools: ToolDefinitionForFactory[],
-  serverName: string,
-): string {
+function formatToolExamplesMarkdown(tools: ToolDefinitionForFactory[], serverName: string): string {
   const sections = tools.map((tool) => {
     const header = `## ${tool.title ?? tool.name} (\`${tool.name}\`)`;
     const examples = tool.inputExamples!.map(
-      (ex) => `**${ex.label}:**\n\`\`\`json\n${JSON.stringify(ex.input, null, 2)}\n\`\`\``,
+      (ex) => `**${ex.label}:**\n\`\`\`json\n${JSON.stringify(ex.input, null, 2)}\n\`\`\``
     );
     return `${header}\n\n${examples.join("\n\n")}`;
   });
@@ -114,10 +129,10 @@ function formatToolExamplesMarkdown(
 function formatSingleToolExamples(
   name: string,
   title: string | undefined,
-  examples: ToolInputExample[],
+  examples: ToolInputExample[]
 ): string {
   const blocks = examples.map(
-    (ex) => `**${ex.label}:**\n\`\`\`json\n${JSON.stringify(ex.input, null, 2)}\n\`\`\``,
+    (ex) => `**${ex.label}:**\n\`\`\`json\n${JSON.stringify(ex.input, null, 2)}\n\`\`\``
   );
 
   return `# ${title ?? name} Examples\n\n${blocks.join("\n\n")}`;

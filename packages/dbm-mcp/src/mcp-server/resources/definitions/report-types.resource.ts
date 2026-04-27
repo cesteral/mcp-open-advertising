@@ -66,7 +66,10 @@ This resource provides a complete reference of all available report types and da
 |-------------|--------------|-------------|
 `;
 
-  for (const [type, meta] of Object.entries(REPORT_TYPE_METADATA) as [ReportType, typeof REPORT_TYPE_METADATA[ReportType]][]) {
+  for (const [type, meta] of Object.entries(REPORT_TYPE_METADATA) as [
+    ReportType,
+    (typeof REPORT_TYPE_METADATA)[ReportType],
+  ][]) {
     markdown += `| \`${type}\` | ${meta.displayName} | ${meta.description} |\n`;
   }
 
@@ -126,7 +129,10 @@ Date ranges can be specified either as a preset or with custom dates.
 |--------|-------------|
 `;
 
-  for (const [preset, description] of Object.entries(DATA_RANGE_DESCRIPTIONS) as [DataRange, string][]) {
+  for (const [preset, description] of Object.entries(DATA_RANGE_DESCRIPTIONS) as [
+    DataRange,
+    string,
+  ][]) {
     markdown += `| \`${preset}\` | ${description} |\n`;
   }
 
@@ -212,9 +218,11 @@ ${getFiltersForReportType("YOUTUBE").filter((f) => f.includes("TRUEVIEW")).lengt
 ### GRP Report Filters (${getFiltersForReportType("GRP").length} filters)
 Includes Nielsen-specific filters:
 \`\`\`
-${getFiltersForReportType("GRP")
-  .filter((f) => f.includes("NIELSEN"))
-  .join("\n") || "See filter-types://all for details"}
+${
+  getFiltersForReportType("GRP")
+    .filter((f) => f.includes("NIELSEN"))
+    .join("\n") || "See filter-types://all for details"
+}
 \`\`\`
 
 ---
@@ -236,7 +244,8 @@ For complete lists, fetch these MCP Resources:
 export const reportTypesResource: Resource = {
   uri: "report-types://all",
   name: "Bid Manager Report Types",
-  description: "Complete reference of all available Bid Manager API report types and date range presets",
+  description:
+    "Complete reference of all available Bid Manager API report types and date range presets",
   mimeType: "text/markdown",
   getContent: () => formatReportTypesMarkdown(),
 };

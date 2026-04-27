@@ -15,17 +15,9 @@ const TOOL_DESCRIPTION = `Get a single Snapchat Ads entity by ID.
 
 export const GetEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to retrieve"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to retrieve"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
+    entityId: z.string().min(1).describe("The entity ID to retrieve"),
   })
   .describe("Parameters for getting a Snapchat Ads entity");
 

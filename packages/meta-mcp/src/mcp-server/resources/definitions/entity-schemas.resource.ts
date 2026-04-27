@@ -7,7 +7,11 @@
  * Provides schema details for each entity type.
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, getEntityConfig, type MetaEntityType } from "../../tools/utils/entity-mapping.js";
+import {
+  getSupportedEntityTypes,
+  getEntityConfig,
+  type MetaEntityType,
+} from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_SCHEMAS: Record<MetaEntityType, string> = {
   campaign: `# Campaign Schema
@@ -134,7 +138,8 @@ export const entitySchemaAllResource: Resource = {
   name: "All Meta Entity Schemas",
   description: "Combined schema reference for all Meta Ads entity types",
   mimeType: "text/markdown",
-  getContent: () => getSupportedEntityTypes()
-    .map((t) => ENTITY_SCHEMAS[t])
-    .join("\n\n---\n\n"),
+  getContent: () =>
+    getSupportedEntityTypes()
+      .map((t) => ENTITY_SCHEMAS[t])
+      .join("\n\n---\n\n"),
 };

@@ -165,11 +165,11 @@ describe("calculateAllMetrics", () => {
     expect(result.revenue).toBe(1000);
 
     // Derived metrics
-    expect(result.cpm).toBe(2.5);     // 250/100000*1000
-    expect(result.ctr).toBe(0.5);     // 500/100000*100
-    expect(result.cpc).toBe(0.5);     // 250/500
-    expect(result.cpa).toBe(10);      // 250/25
-    expect(result.roas).toBe(4);      // 1000/250
+    expect(result.cpm).toBe(2.5); // 250/100000*1000
+    expect(result.ctr).toBe(0.5); // 500/100000*100
+    expect(result.cpc).toBe(0.5); // 250/500
+    expect(result.cpa).toBe(10); // 250/25
+    expect(result.roas).toBe(4); // 1000/250
   });
 
   it("handles zero delivery gracefully", () => {

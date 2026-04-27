@@ -145,22 +145,19 @@ describe("ErrorHandler", () => {
       });
       expect(timeout.code).toBe(JsonRpcErrorCode.Timeout);
 
-      const rateLimit = ErrorHandler.handleError(
-        new Error("Rate limit exceeded"),
-        { operation: "test" }
-      );
+      const rateLimit = ErrorHandler.handleError(new Error("Rate limit exceeded"), {
+        operation: "test",
+      });
       expect(rateLimit.code).toBe(JsonRpcErrorCode.RateLimited);
 
-      const unauthorized = ErrorHandler.handleError(
-        new Error("Unauthorized access"),
-        { operation: "test" }
-      );
+      const unauthorized = ErrorHandler.handleError(new Error("Unauthorized access"), {
+        operation: "test",
+      });
       expect(unauthorized.code).toBe(JsonRpcErrorCode.Unauthorized);
 
-      const forbidden = ErrorHandler.handleError(
-        new Error("Permission denied"),
-        { operation: "test" }
-      );
+      const forbidden = ErrorHandler.handleError(new Error("Permission denied"), {
+        operation: "test",
+      });
       expect(forbidden.code).toBe(JsonRpcErrorCode.Forbidden);
     });
 

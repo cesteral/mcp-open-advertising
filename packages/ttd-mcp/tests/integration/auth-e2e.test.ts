@@ -13,7 +13,9 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     headers: Record<string, string | string[] | undefined>,
     name: string
   ): string | undefined => {
-    const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const key = Object.keys(headers).find(
+      (candidate) => candidate.toLowerCase() === name.toLowerCase()
+    );
     const value = key ? headers[key] : undefined;
     return Array.isArray(value) ? value[0] : value;
   };
@@ -23,12 +25,15 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     fetchWithTimeout: vi.fn(async (url: string) => {
       // API calls — generic success
       if (url.startsWith(API_BASE)) {
-        return new Response(
-          JSON.stringify({ CampaignId: "cmp-001", CampaignName: "Test" }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ CampaignId: "cmp-001", CampaignName: "Test" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
-      return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({}), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }),
   };
 });
@@ -36,7 +41,11 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-http-transport.js";
 
 const logger: any = {
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
 };
 logger.child.mockReturnValue(logger);
 

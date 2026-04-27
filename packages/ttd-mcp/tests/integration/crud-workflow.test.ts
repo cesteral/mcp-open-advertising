@@ -19,7 +19,9 @@ vi.mock("../../src/auth/ttd-auth-adapter.js", async () => {
       constructor(_token: string, partnerId = "direct-token") {
         this.partnerId = partnerId;
       }
-      async getAccessToken() { return "mock-direct-token"; }
+      async getAccessToken() {
+        return "mock-direct-token";
+      }
       async validate() {}
     },
   };
@@ -134,10 +136,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -172,9 +171,11 @@ describe("mcp transport CRUD integration", () => {
         return updated;
       }
     );
-    mockState.ttdService.deleteEntity.mockImplementation(async (_entityType: string, entityId: string) => {
-      mockState.entities.delete(entityId);
-    });
+    mockState.ttdService.deleteEntity.mockImplementation(
+      async (_entityType: string, entityId: string) => {
+        mockState.entities.delete(entityId);
+      }
+    );
 
     const server = createMcpHttpServer(config, logger);
     app = server.app;
@@ -186,83 +187,71 @@ describe("mcp transport CRUD integration", () => {
   });
 
   it("supports create -> get -> update -> delete through /mcp", async () => {
-    const createResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/call",
-        params: {
-          name: "ttd_create_entity",
-          arguments: {
-            entityType: "campaign",
-            advertiserId: "adv-123",
-            data: { CampaignName: "Alpha Campaign" },
-          },
+    const createResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "ttd_create_entity",
+        arguments: {
+          entityType: "campaign",
+          advertiserId: "adv-123",
+          data: { CampaignName: "Alpha Campaign" },
         },
-      }
-    );
+      },
+    });
     expect(createResult.response.status).toBe(200);
     expect(createResult.json?.error).toBeUndefined();
     expect(createResult.sessionId).toBeDefined();
 
-    const getResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 2,
-        method: "tools/call",
-        params: {
-          name: "ttd_get_entity",
-          arguments: {
-            entityType: "campaign",
-            entityId: "cmp-001",
-            advertiserId: "adv-123",
-          },
+    const getResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 2,
+      method: "tools/call",
+      params: {
+        name: "ttd_get_entity",
+        arguments: {
+          entityType: "campaign",
+          entityId: "cmp-001",
+          advertiserId: "adv-123",
         },
-      }
-    );
+      },
+    });
     expect(getResult.response.status).toBe(200);
     expect(getResult.json?.error).toBeUndefined();
     expect(getResult.sessionId).toBeDefined();
 
-    const updateResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 3,
-        method: "tools/call",
-        params: {
-          name: "ttd_update_entity",
-          arguments: {
-            entityType: "campaign",
-            entityId: "cmp-001",
-            advertiserId: "adv-123",
-            data: { CampaignName: "Updated Campaign" },
-          },
+    const updateResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 3,
+      method: "tools/call",
+      params: {
+        name: "ttd_update_entity",
+        arguments: {
+          entityType: "campaign",
+          entityId: "cmp-001",
+          advertiserId: "adv-123",
+          data: { CampaignName: "Updated Campaign" },
         },
-      }
-    );
+      },
+    });
     expect(updateResult.response.status).toBe(200);
     expect(updateResult.json?.error).toBeUndefined();
     expect(updateResult.sessionId).toBeDefined();
 
-    const deleteResult = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 4,
-        method: "tools/call",
-        params: {
-          name: "ttd_delete_entity",
-          arguments: {
-            entityType: "campaign",
-            entityId: "cmp-001",
-            advertiserId: "adv-123",
-          },
+    const deleteResult = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 4,
+      method: "tools/call",
+      params: {
+        name: "ttd_delete_entity",
+        arguments: {
+          entityType: "campaign",
+          entityId: "cmp-001",
+          advertiserId: "adv-123",
         },
-      }
-    );
+      },
+    });
     expect(deleteResult.response.status).toBe(200);
     expect(deleteResult.json?.error).toBeUndefined();
     expect(deleteResult.sessionId).toBeDefined();

@@ -38,15 +38,10 @@ export interface ValidateEntityResult {
  * Check whether `value` matches the expected primitive type.
  * Distinguishes between array, object, and primitives correctly.
  */
-export function checkType(
-  value: unknown,
-  expected: FieldRule["expectedType"]
-): boolean {
+export function checkType(value: unknown, expected: FieldRule["expectedType"]): boolean {
   if (expected === "array") return Array.isArray(value);
   if (expected === "object")
-    return (
-      typeof value === "object" && value !== null && !Array.isArray(value)
-    );
+    return typeof value === "object" && value !== null && !Array.isArray(value);
   return typeof value === expected;
 }
 
@@ -109,9 +104,7 @@ export function checkReadOnlyFields(
  * Format a validation result as an MCP text content block.
  * Shared across all servers with validate-entity tools.
  */
-export function validateEntityResponseFormatter(
-  result: ValidateEntityResult
-): McpTextContent[] {
+export function validateEntityResponseFormatter(result: ValidateEntityResult): McpTextContent[] {
   const lines: string[] = [];
   const errors = result.errors ?? [];
   const warnings = result.warnings ?? [];
@@ -119,9 +112,7 @@ export function validateEntityResponseFormatter(
   if (result.valid) {
     lines.push(`Validation passed for ${result.entityType} (${result.mode})`);
   } else {
-    lines.push(
-      `Validation failed for ${result.entityType} (${result.mode}):`
-    );
+    lines.push(`Validation failed for ${result.entityType} (${result.mode}):`);
     for (const err of errors) {
       lines.push(`  - ${err}`);
     }

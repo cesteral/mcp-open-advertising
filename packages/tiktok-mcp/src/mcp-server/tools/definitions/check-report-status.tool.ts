@@ -20,14 +20,8 @@ TikTok raw statuses (PENDING/RUNNING/DONE/FAILED) are mapped; the raw string is 
 
 export const CheckReportStatusInputSchema = z
   .object({
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
-    taskId: z
-      .string()
-      .min(1)
-      .describe("Report task ID from tiktok_submit_report"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
+    taskId: z.string().min(1).describe("Report task ID from tiktok_submit_report"),
   })
   .describe("Parameters for checking TikTok report status");
 
@@ -48,10 +42,7 @@ export async function checkReportStatusLogic(
 ): Promise<CheckReportStatusOutput> {
   const { tiktokReportingService } = resolveSessionServices(sdkContext);
 
-  const result = await tiktokReportingService.checkReportStatus(
-    input.taskId,
-    context
-  );
+  const result = await tiktokReportingService.checkReportStatus(input.taskId, context);
 
   const canonical = fromTikTokStatus({
     status: result.status,
@@ -67,7 +58,9 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   if (result.isComplete && result.downloadUrl) {
     return [
       {

@@ -19,25 +19,11 @@ All entities are scoped to an advertiser account. Pagination uses Snapchat's ret
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (required for adGroup entity type)"),
-    adSquadId: z
-      .string()
-      .optional()
-      .describe("Ad Squad ID (required for ad entity type)"),
-    cursor: z
-      .string()
-      .optional()
-      .describe("Next page link from a previous response"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
+    campaignId: z.string().optional().describe("Campaign ID (required for adGroup entity type)"),
+    adSquadId: z.string().optional().describe("Ad Squad ID (required for ad entity type)"),
+    cursor: z.string().optional().describe("Next page link from a previous response"),
   })
   .describe("Parameters for listing Snapchat Ads entities");
 

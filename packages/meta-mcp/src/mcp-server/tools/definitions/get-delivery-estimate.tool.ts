@@ -15,9 +15,7 @@ Returns estimated daily reach, impressions, and audience size.`;
 
 export const GetDeliveryEstimateInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .describe("Ad Account ID (with or without act_ prefix)"),
+    adAccountId: z.string().describe("Ad Account ID (with or without act_ prefix)"),
     targetingSpec: z
       .record(z.any())
       .describe("Targeting specification (must include geo_locations or custom_audiences)"),
@@ -58,7 +56,9 @@ export async function getDeliveryEstimateLogic(
   };
 }
 
-export function getDeliveryEstimateResponseFormatter(result: GetDeliveryEstimateOutput): McpTextContent[] {
+export function getDeliveryEstimateResponseFormatter(
+  result: GetDeliveryEstimateOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

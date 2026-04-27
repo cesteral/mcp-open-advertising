@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const campaignSetupWorkflowPrompt: Prompt = {
   name: "meta_campaign_setup_workflow",
-  description: "Step-by-step guide for creating a complete Meta Ads campaign structure (Campaign > Ad Set > Ad Creative > Ad)",
+  description:
+    "Step-by-step guide for creating a complete Meta Ads campaign structure (Campaign > Ad Set > Ad Creative > Ad)",
   arguments: [
     {
       name: "adAccountId",

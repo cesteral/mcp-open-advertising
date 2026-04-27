@@ -25,12 +25,8 @@ This is a blocking operation — it will wait for the report to complete before 
 
 export const GetReportInputSchema = z
   .object({
-    reportType: z
-      .string()
-      .describe("Report type (e.g., CampaignPerformanceReportRequest)"),
-    accountId: z
-      .string()
-      .describe("Microsoft Ads Account ID"),
+    reportType: z.string().describe("Report type (e.g., CampaignPerformanceReportRequest)"),
+    accountId: z.string().describe("Microsoft Ads Account ID"),
     columns: z
       .array(z.string())
       .min(1)
@@ -54,7 +50,8 @@ export const GetReportInputSchema = z
   })
   .merge(ReportViewInputSchema.omit({ columns: true }))
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for running a Microsoft Ads report");

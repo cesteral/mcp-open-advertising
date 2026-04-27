@@ -85,7 +85,9 @@ export async function updateConversionsLogic(
   };
 }
 
-export function updateConversionsResponseFormatter(result: UpdateConversionsOutput): McpTextContent[] {
+export function updateConversionsResponseFormatter(
+  result: UpdateConversionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

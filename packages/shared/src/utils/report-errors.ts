@@ -65,10 +65,7 @@ interface HttpLikeError {
  *   Microsoft `Errors[0].Code`/`Errors[0].Message`) are unpacked when present.
  * - An existing {@link ReportingError} is returned unchanged.
  */
-export function mapReportingError(
-  err: unknown,
-  platform: ReportingPlatform,
-): ReportingError {
+export function mapReportingError(err: unknown, platform: ReportingPlatform): ReportingError {
   if (err instanceof ReportingError) return err;
 
   const httpErr = err as HttpLikeError;
@@ -88,7 +85,12 @@ export function mapReportingError(
       const e = body as { error?: { code?: number; message?: string } };
       if (typeof e.error?.code === "number") upstreamCode = e.error.code;
       if (e.error?.message) msg = e.error.message;
-    } else if (platform === "google" || platform === "dbm" || platform === "cm360" || platform === "sa360") {
+    } else if (
+      platform === "google" ||
+      platform === "dbm" ||
+      platform === "cm360" ||
+      platform === "sa360"
+    ) {
       const e = body as { error?: { status?: string; message?: string } };
       if (e.error?.status) upstreamCode = e.error.status;
       if (e.error?.message) msg = e.error.message;

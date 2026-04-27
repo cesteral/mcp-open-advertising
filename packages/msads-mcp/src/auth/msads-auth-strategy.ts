@@ -28,13 +28,9 @@ import {
  * in BearerAuthStrategyBase does not apply here. The adapter holds the token for the session lifetime.
  */
 export class MsAdsBearerAuthStrategy implements AuthStrategy {
-  constructor(
-    private readonly customerApiBaseUrl?: string
-  ) {}
+  constructor(private readonly customerApiBaseUrl?: string) {}
 
-  async verify(
-    headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
+  async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
     const accessToken = parseMsAdsTokenFromHeaders(headers);
     const developerToken = getMsAdsDeveloperTokenFromHeaders(headers);
     const customerId = getMsAdsCustomerIdFromHeaders(headers);
@@ -50,11 +46,7 @@ export class MsAdsBearerAuthStrategy implements AuthStrategy {
 
     await adapter.validate();
 
-    const fingerprint = getMsAdsCredentialFingerprint(
-      accessToken,
-      developerToken,
-      accountId
-    );
+    const fingerprint = getMsAdsCredentialFingerprint(accessToken, developerToken, accountId);
 
     return {
       authInfo: {

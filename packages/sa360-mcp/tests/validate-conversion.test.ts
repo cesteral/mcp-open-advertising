@@ -59,9 +59,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("clickId")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("clickId"));
     });
 
     it("should fail when conversionTimestamp is missing", async () => {
@@ -77,9 +75,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("conversionTimestamp")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("conversionTimestamp"));
     });
 
     it("should fail when conversionTimestamp is not numeric", async () => {
@@ -96,9 +92,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("numeric string")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("numeric string"));
     });
 
     it("should fail when segmentationType is missing", async () => {
@@ -114,9 +108,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("segmentationType")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("segmentationType"));
     });
 
     it("should fail when neither segmentationName nor floodlightActivityId is provided", async () => {
@@ -132,9 +124,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("segmentationName")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("segmentationName"));
     });
 
     it("should fail when revenueMicros is not numeric", async () => {
@@ -152,9 +142,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("revenueMicros")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("revenueMicros"));
     });
 
     it("should fail when state is invalid", async () => {
@@ -172,9 +160,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("state")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("state"));
     });
 
     it("should warn when conversionId is set in insert mode", async () => {
@@ -192,9 +178,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(true);
-      expect(result.warnings).toContainEqual(
-        expect.stringContaining("conversionId")
-      );
+      expect(result.warnings).toContainEqual(expect.stringContaining("conversionId"));
     });
 
     it("should warn when conversionTimestamp looks like seconds instead of millis", async () => {
@@ -210,9 +194,7 @@ describe("SA360 Validate Conversion", () => {
         },
         mockContext
       );
-      expect(result.warnings).toContainEqual(
-        expect.stringContaining("before year 2000")
-      );
+      expect(result.warnings).toContainEqual(expect.stringContaining("before year 2000"));
     });
 
     it("should warn for non-ISO 4217 currencyCode", async () => {
@@ -229,9 +211,7 @@ describe("SA360 Validate Conversion", () => {
         },
         mockContext
       );
-      expect(result.warnings).toContainEqual(
-        expect.stringContaining("ISO 4217")
-      );
+      expect(result.warnings).toContainEqual(expect.stringContaining("ISO 4217"));
     });
   });
 
@@ -269,9 +249,7 @@ describe("SA360 Validate Conversion", () => {
         mockContext
       );
       expect(result.valid).toBe(false);
-      expect(result.errors).toContainEqual(
-        expect.stringContaining("conversionId")
-      );
+      expect(result.errors).toContainEqual(expect.stringContaining("conversionId"));
     });
 
     it("should allow state REMOVED for update mode", async () => {

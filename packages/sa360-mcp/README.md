@@ -25,10 +25,10 @@ The SA360 API is **read-only for campaign entities** — there are no mutate/CRU
 
 ### APIs Used
 
-| API | Base URL | Capabilities |
-|-----|----------|-------------|
-| SA360 Reporting API v0 | `https://searchads360.googleapis.com/v0` | Read-only queries (SQL-like, mirrors GAQL syntax) |
-| SA360 v2 (DoubleClick Search) | `https://www.googleapis.com/doubleclicksearch/v2` | Conversion insert/update, async reporting |
+| API                           | Base URL                                          | Capabilities                                      |
+| ----------------------------- | ------------------------------------------------- | ------------------------------------------------- |
+| SA360 Reporting API v0        | `https://searchads360.googleapis.com/v0`          | Read-only queries (SQL-like, mirrors GAQL syntax) |
+| SA360 v2 (DoubleClick Search) | `https://www.googleapis.com/doubleclicksearch/v2` | Conversion insert/update, async reporting         |
 
 ---
 
@@ -99,12 +99,12 @@ SA360 uses OAuth2 refresh token authentication. Unlike Google Ads, **no develope
 
 Pass credentials via HTTP headers on each request:
 
-| Header | Required | Description |
-|--------|----------|-------------|
-| `X-SA360-Client-Id` | Yes | OAuth2 client ID |
-| `X-SA360-Client-Secret` | Yes | OAuth2 client secret |
-| `X-SA360-Refresh-Token` | Yes | OAuth2 refresh token |
-| `X-SA360-Login-Customer-Id` | No | Manager account ID (for MCC access) |
+| Header                      | Required | Description                         |
+| --------------------------- | -------- | ----------------------------------- |
+| `X-SA360-Client-Id`         | Yes      | OAuth2 client ID                    |
+| `X-SA360-Client-Secret`     | Yes      | OAuth2 client secret                |
+| `X-SA360-Refresh-Token`     | Yes      | OAuth2 refresh token                |
+| `X-SA360-Login-Customer-Id` | No       | Manager account ID (for MCC access) |
 
 ### Stdio Mode
 
@@ -140,18 +140,19 @@ MCP_AUTH_SECRET_KEY=your-jwt-secret
 ### Reporting API v0 Tools (Read-Only)
 
 #### `sa360_search`
+
 Execute raw SA360 query language queries against any SA360 resource. Same syntax as GAQL (Google Ads Query Language).
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `customerId` | string | Yes | SA360 customer ID (no dashes) |
-| `query` | string | Yes | SA360 query (SELECT ... FROM ... WHERE ...) |
-| `pageSize` | number | No | _Deprecated._ Use `maxRows` for the returned row count. |
-| `pageToken` | string | No | Cursor for the next upstream page (different from `offset` which slices the in-memory buffer) |
-| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
-| `columns` | string[] | No | Project returned rows to selected columns |
-| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
-| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
+| Parameter    | Type     | Required | Description                                                                                                |
+| ------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `customerId` | string   | Yes      | SA360 customer ID (no dashes)                                                                              |
+| `query`      | string   | Yes      | SA360 query (SELECT ... FROM ... WHERE ...)                                                                |
+| `pageSize`   | number   | No       | _Deprecated._ Use `maxRows` for the returned row count.                                                    |
+| `pageToken`  | string   | No       | Cursor for the next upstream page (different from `offset` which slices the in-memory buffer)              |
+| `mode`       | enum     | No       | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns`    | string[] | No       | Project returned rows to selected columns                                                                  |
+| `offset`     | number   | No       | Zero-based row offset for pagination (default: 0)                                                          |
+| `maxRows`    | number   | No       | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows)                               |
 
 ```json
 {
@@ -161,92 +162,99 @@ Execute raw SA360 query language queries against any SA360 resource. Same syntax
 ```
 
 #### `sa360_list_accounts`
+
 List all SA360 customer accounts accessible to the authenticated user.
 
 No parameters required.
 
 #### `sa360_list_entities`
+
 List SA360 entities with optional query filters and pagination.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `entityType` | enum | Yes | Entity type (see supported types below) |
-| `customerId` | string | Yes | SA360 customer ID |
-| `filters` | object | No | Field:value filter conditions |
-| `pageSize` | number | No | Results per page (default 100) |
-| `pageToken` | string | No | Pagination token |
-| `orderBy` | string | No | ORDER BY clause |
+| Parameter    | Type   | Required | Description                             |
+| ------------ | ------ | -------- | --------------------------------------- |
+| `entityType` | enum   | Yes      | Entity type (see supported types below) |
+| `customerId` | string | Yes      | SA360 customer ID                       |
+| `filters`    | object | No       | Field:value filter conditions           |
+| `pageSize`   | number | No       | Results per page (default 100)          |
+| `pageToken`  | string | No       | Pagination token                        |
+| `orderBy`    | string | No       | ORDER BY clause                         |
 
 **Supported entity types:** `customer`, `campaign`, `adGroup`, `adGroupAd`, `adGroupCriterion`, `campaignCriterion`, `biddingStrategy`, `conversionAction`
 
 #### `sa360_get_entity`
+
 Get a single entity by type and ID.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `entityType` | enum | Yes | Entity type |
-| `customerId` | string | Yes | SA360 customer ID |
-| `entityId` | string | Yes | Entity ID to retrieve |
+| Parameter    | Type   | Required | Description           |
+| ------------ | ------ | -------- | --------------------- |
+| `entityType` | enum   | Yes      | Entity type           |
+| `customerId` | string | Yes      | SA360 customer ID     |
+| `entityId`   | string | Yes      | Entity ID to retrieve |
 
 #### `sa360_get_insights`
+
 Performance metrics with preset or custom date ranges. Convenience wrapper that builds queries from simple parameters.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `customerId` | string | Yes | SA360 customer ID |
-| `entityType` | enum | Yes | customer, campaign, adGroup, adGroupAd, adGroupCriterion, or campaignCriterion |
-| `entityId` | string | No | Filter to specific entity |
-| `dateRange` | enum | No* | TODAY, YESTERDAY, LAST_7_DAYS, LAST_30_DAYS, THIS_MONTH, LAST_MONTH, LAST_90_DAYS |
-| `startDate` | string | No* | Custom start date (YYYY-MM-DD) |
-| `endDate` | string | No* | Custom end date (YYYY-MM-DD) |
-| `metrics` | string[] | No | Custom metrics (defaults: impressions, clicks, cost_micros, conversions, ctr, average_cpc) |
-| `includeComputedMetrics` | boolean | No | Add derived CPA, ROAS, CPM (default false) |
-| `limit` | number | No | _Deprecated._ Use `maxRows` instead. |
-| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
-| `columns` | string[] | No | Project returned rows to selected columns |
-| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
-| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
+| Parameter                | Type     | Required | Description                                                                                                |
+| ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `customerId`             | string   | Yes      | SA360 customer ID                                                                                          |
+| `entityType`             | enum     | Yes      | customer, campaign, adGroup, adGroupAd, adGroupCriterion, or campaignCriterion                             |
+| `entityId`               | string   | No       | Filter to specific entity                                                                                  |
+| `dateRange`              | enum     | No\*     | TODAY, YESTERDAY, LAST_7_DAYS, LAST_30_DAYS, THIS_MONTH, LAST_MONTH, LAST_90_DAYS                          |
+| `startDate`              | string   | No\*     | Custom start date (YYYY-MM-DD)                                                                             |
+| `endDate`                | string   | No\*     | Custom end date (YYYY-MM-DD)                                                                               |
+| `metrics`                | string[] | No       | Custom metrics (defaults: impressions, clicks, cost_micros, conversions, ctr, average_cpc)                 |
+| `includeComputedMetrics` | boolean  | No       | Add derived CPA, ROAS, CPM (default false)                                                                 |
+| `limit`                  | number   | No       | _Deprecated._ Use `maxRows` instead.                                                                       |
+| `mode`                   | enum     | No       | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns`                | string[] | No       | Project returned rows to selected columns                                                                  |
+| `offset`                 | number   | No       | Zero-based row offset for pagination (default: 0)                                                          |
+| `maxRows`                | number   | No       | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows)                               |
 
-*Provide either `dateRange` OR both `startDate` + `endDate`.
+\*Provide either `dateRange` OR both `startDate` + `endDate`.
 
 #### `sa360_get_insights_breakdowns`
+
 Performance metrics with dimensional breakdowns (device, date, network, etc.).
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `customerId` | string | Yes | SA360 customer ID |
-| `entityType` | enum | Yes | customer, campaign, adGroup, adGroupAd, adGroupCriterion, or campaignCriterion |
-| `entityId` | string | No | Filter to specific entity |
-| `dateRange` | enum | No* | Date range preset |
-| `startDate` | string | No* | Custom start date (YYYY-MM-DD) |
-| `endDate` | string | No* | Custom end date (YYYY-MM-DD) |
-| `breakdowns` | string[] | Yes | Segment dimensions (e.g., `segments.date`, `segments.device`) |
-| `metrics` | string[] | No | Custom metrics |
-| `includeComputedMetrics` | boolean | No | Add derived CPA, ROAS, CPM (default false) |
-| `limit` | number | No | _Deprecated._ Use `maxRows` instead. |
-| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
-| `columns` | string[] | No | Project returned rows to selected columns |
-| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
-| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
+| Parameter                | Type     | Required | Description                                                                                                |
+| ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `customerId`             | string   | Yes      | SA360 customer ID                                                                                          |
+| `entityType`             | enum     | Yes      | customer, campaign, adGroup, adGroupAd, adGroupCriterion, or campaignCriterion                             |
+| `entityId`               | string   | No       | Filter to specific entity                                                                                  |
+| `dateRange`              | enum     | No\*     | Date range preset                                                                                          |
+| `startDate`              | string   | No\*     | Custom start date (YYYY-MM-DD)                                                                             |
+| `endDate`                | string   | No\*     | Custom end date (YYYY-MM-DD)                                                                               |
+| `breakdowns`             | string[] | Yes      | Segment dimensions (e.g., `segments.date`, `segments.device`)                                              |
+| `metrics`                | string[] | No       | Custom metrics                                                                                             |
+| `includeComputedMetrics` | boolean  | No       | Add derived CPA, ROAS, CPM (default false)                                                                 |
+| `limit`                  | number   | No       | _Deprecated._ Use `maxRows` instead.                                                                       |
+| `mode`                   | enum     | No       | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns`                | string[] | No       | Project returned rows to selected columns                                                                  |
+| `offset`                 | number   | No       | Zero-based row offset for pagination (default: 0)                                                          |
+| `maxRows`                | number   | No       | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows)                               |
 
-*Provide either `dateRange` OR both `startDate` + `endDate`.
+\*Provide either `dateRange` OR both `startDate` + `endDate`.
 
 **Supported breakdowns:** `segments.date`, `segments.device`, `segments.ad_network_type`, `segments.conversion_action`, `segments.day_of_week`, `segments.month`, `segments.quarter`, `segments.week`, `segments.year`
 
 #### `sa360_list_custom_columns`
+
 List custom columns defined for an SA360 customer account.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `customerId` | string | Yes | SA360 customer ID |
+| Parameter    | Type   | Required | Description       |
+| ------------ | ------ | -------- | ----------------- |
+| `customerId` | string | Yes      | SA360 customer ID |
 
 #### `sa360_search_fields`
+
 Discover available fields, resources, and metrics in the SA360 API schema.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `query` | string | Yes | Field discovery query |
-| `pageSize` | number | No | Max results (default 100) |
+| Parameter  | Type   | Required | Description               |
+| ---------- | ------ | -------- | ------------------------- |
+| `query`    | string | Yes      | Field discovery query     |
+| `pageSize` | number | No       | Max results (default 100) |
 
 ```json
 {
@@ -255,75 +263,81 @@ Discover available fields, resources, and metrics in the SA360 API schema.
 ```
 
 #### `sa360_get_change_history`
+
 Get change history for SA360 entities using the `change_event` resource.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `customerId` | string | Yes | SA360 customer ID |
-| `startDate` | string | Yes | Start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | End date (YYYY-MM-DD) |
-| `resourceType` | enum | No | Filter: CAMPAIGN, AD_GROUP, AD, KEYWORD, CRITERION |
-| `limit` | number | No | Max results (default 100) |
+| Parameter      | Type   | Required | Description                                        |
+| -------------- | ------ | -------- | -------------------------------------------------- |
+| `customerId`   | string | Yes      | SA360 customer ID                                  |
+| `startDate`    | string | Yes      | Start date (YYYY-MM-DD)                            |
+| `endDate`      | string | Yes      | End date (YYYY-MM-DD)                              |
+| `resourceType` | enum   | No       | Filter: CAMPAIGN, AD_GROUP, AD, KEYWORD, CRITERION |
+| `limit`        | number | No       | Max results (default 100)                          |
 
 ### Async Reporting Tools (v2 API)
 
 #### `sa360_submit_report`
+
 Submit an asynchronous report request. Returns a report ID for polling.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `agencyId` | string | Yes | SA360 agency ID |
-| `advertiserId` | string | No | SA360 advertiser ID |
-| `reportType` | enum | Yes | campaign, adGroup, keyword, ad, advertiser, etc. |
-| `columns` | array | Yes | Columns to include (min 1) |
-| `startDate` | string | Yes | Report start date (YYYY-MM-DD) |
-| `endDate` | string | Yes | Report end date (YYYY-MM-DD) |
-| `filters` | array | No | Filter conditions |
-| `includeRemovedEntities` | boolean | No | Include deleted entities |
+| Parameter                | Type    | Required | Description                                      |
+| ------------------------ | ------- | -------- | ------------------------------------------------ |
+| `agencyId`               | string  | Yes      | SA360 agency ID                                  |
+| `advertiserId`           | string  | No       | SA360 advertiser ID                              |
+| `reportType`             | enum    | Yes      | campaign, adGroup, keyword, ad, advertiser, etc. |
+| `columns`                | array   | Yes      | Columns to include (min 1)                       |
+| `startDate`              | string  | Yes      | Report start date (YYYY-MM-DD)                   |
+| `endDate`                | string  | Yes      | Report end date (YYYY-MM-DD)                     |
+| `filters`                | array   | No       | Filter conditions                                |
+| `includeRemovedEntities` | boolean | No       | Include deleted entities                         |
 
 #### `sa360_check_report_status`
+
 Poll a submitted report until ready.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `reportId` | string | Yes | Report ID from submit_report |
+| Parameter  | Type   | Required | Description                  |
+| ---------- | ------ | -------- | ---------------------------- |
+| `reportId` | string | Yes      | Report ID from submit_report |
 
 #### `sa360_download_report`
+
 Download a completed report file as parsed CSV.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `downloadUrl` | string | Yes | File URL from check_report_status |
-| `mode` | enum | No | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
-| `columns` | string[] | No | Project returned rows to selected columns |
-| `offset` | number | No | Zero-based row offset for pagination (default: 0) |
-| `maxRows` | number | No | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows) |
+| Parameter     | Type     | Required | Description                                                                                                |
+| ------------- | -------- | -------- | ---------------------------------------------------------------------------------------------------------- |
+| `downloadUrl` | string   | Yes      | File URL from check_report_status                                                                          |
+| `mode`        | enum     | No       | `"summary"` (default) returns headers + counts + 10-row preview; `"rows"` returns one bounded page of rows |
+| `columns`     | string[] | No       | Project returned rows to selected columns                                                                  |
+| `offset`      | number   | No       | Zero-based row offset for pagination (default: 0)                                                          |
+| `maxRows`     | number   | No       | Page size before the 200-row hard cap (default: 10 for summary, 50 for rows)                               |
 
 ### Conversion API v2 Tools (Write)
 
 #### `sa360_insert_conversions`
+
 Insert offline conversions via the legacy v2 API.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `agencyId` | string | Yes | SA360 agency ID |
-| `advertiserId` | string | Yes | SA360 advertiser ID |
-| `conversions` | array | Yes | Conversion rows (max 200) |
+| Parameter      | Type   | Required | Description               |
+| -------------- | ------ | -------- | ------------------------- |
+| `agencyId`     | string | Yes      | SA360 agency ID           |
+| `advertiserId` | string | Yes      | SA360 advertiser ID       |
+| `conversions`  | array  | Yes      | Conversion rows (max 200) |
 
 Each conversion row:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `clickId` | string | No | SA360 click ID |
-| `gclid` | string | No | Google click ID |
-| `conversionTimestamp` | string | Yes | Epoch milliseconds |
-| `revenueMicros` | string | No | Revenue (1,000,000 = 1 currency unit) |
-| `currencyCode` | string | No | ISO 4217 currency code |
-| `segmentationType` | string | Yes | Segment type (default: FLOODLIGHT) |
-| `floodlightActivityId` | string | No | Floodlight activity ID |
-| `type` | string | No | ACTION or TRANSACTION |
+| Field                  | Type   | Required | Description                           |
+| ---------------------- | ------ | -------- | ------------------------------------- |
+| `clickId`              | string | No       | SA360 click ID                        |
+| `gclid`                | string | No       | Google click ID                       |
+| `conversionTimestamp`  | string | Yes      | Epoch milliseconds                    |
+| `revenueMicros`        | string | No       | Revenue (1,000,000 = 1 currency unit) |
+| `currencyCode`         | string | No       | ISO 4217 currency code                |
+| `segmentationType`     | string | Yes      | Segment type (default: FLOODLIGHT)    |
+| `floodlightActivityId` | string | No       | Floodlight activity ID                |
+| `type`                 | string | No       | ACTION or TRANSACTION                 |
 
 #### `sa360_update_conversions`
+
 Update existing conversions via the legacy v2 API.
 
 Same parameters as `sa360_insert_conversions`, but each conversion row **must** include `conversionId` (returned from the original insert). Set `state: "REMOVED"` to delete a conversion.
@@ -331,20 +345,21 @@ Same parameters as `sa360_insert_conversions`, but each conversion row **must** 
 ### Validation
 
 #### `sa360_validate_conversion`
+
 Validate a conversion payload before uploading (no API call).
 
 ---
 
 ## Key Gotchas
 
-| Issue | Details |
-|-------|---------|
+| Issue                               | Details                                                                                              |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
 | **SA360 is read-only for entities** | No create/update/delete for campaigns, ad groups, or ads. Only conversions and reports are writable. |
-| **cost_micros convention** | All monetary values are in micros (1,000,000 = 1 currency unit). Divide by 1M for display. |
-| **Dual API** | Reporting API v0 for reads, legacy v2 API for conversions and async reports. Different auth headers. |
-| **login-customer-id** | Required for MCC (manager) accounts to access sub-accounts. Set via `SA360_LOGIN_CUSTOMER_ID`. |
-| **No developer token** | Unlike Google Ads, SA360 does not require a developer token — just OAuth2 credentials. |
-| **90-day conversion window** | Conversions older than 90 days are rejected by the v2 API. |
+| **cost_micros convention**          | All monetary values are in micros (1,000,000 = 1 currency unit). Divide by 1M for display.           |
+| **Dual API**                        | Reporting API v0 for reads, legacy v2 API for conversions and async reports. Different auth headers. |
+| **login-customer-id**               | Required for MCC (manager) accounts to access sub-accounts. Set via `SA360_LOGIN_CUSTOMER_ID`.       |
+| **No developer token**              | Unlike Google Ads, SA360 does not require a developer token — just OAuth2 credentials.               |
+| **90-day conversion window**        | Conversions older than 90 days are rejected by the v2 API.                                           |
 
 ## Rate Limiting
 
@@ -359,16 +374,16 @@ Validate a conversion payload before uploading (no API call).
 
 SA360 supports 8 entity types for read-only access:
 
-| Entity Type | Query Resource | ID Field | Has Status |
-|-------------|---------------|----------|------------|
-| `customer` | `customer` | `customer.id` | No |
-| `campaign` | `campaign` | `campaign.id` | Yes |
-| `adGroup` | `ad_group` | `ad_group.id` | Yes |
-| `adGroupAd` | `ad_group_ad` | `ad_group_ad.ad.id` | Yes |
-| `adGroupCriterion` | `ad_group_criterion` | `ad_group_criterion.criterion_id` | Yes |
-| `campaignCriterion` | `campaign_criterion` | `campaign_criterion.criterion_id` | No |
-| `biddingStrategy` | `bidding_strategy` | `bidding_strategy.id` | Yes |
-| `conversionAction` | `conversion_action` | `conversion_action.id` | Yes |
+| Entity Type         | Query Resource       | ID Field                          | Has Status |
+| ------------------- | -------------------- | --------------------------------- | ---------- |
+| `customer`          | `customer`           | `customer.id`                     | No         |
+| `campaign`          | `campaign`           | `campaign.id`                     | Yes        |
+| `adGroup`           | `ad_group`           | `ad_group.id`                     | Yes        |
+| `adGroupAd`         | `ad_group_ad`        | `ad_group_ad.ad.id`               | Yes        |
+| `adGroupCriterion`  | `ad_group_criterion` | `ad_group_criterion.criterion_id` | Yes        |
+| `campaignCriterion` | `campaign_criterion` | `campaign_criterion.criterion_id` | No         |
+| `biddingStrategy`   | `bidding_strategy`   | `bidding_strategy.id`             | Yes        |
+| `conversionAction`  | `conversion_action`  | `conversion_action.id`            | Yes        |
 
 SA360 entities include an `engine_id` field that maps back to the source engine (Google Ads, Microsoft Ads, etc.), enabling cross-engine correlation.
 
@@ -425,22 +440,22 @@ AI Agent:
 
 ## Configuration Reference
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SA360_MCP_PORT` | `3010` | HTTP server port |
-| `SA360_MCP_HOST` | `127.0.0.1` | HTTP server bind address |
-| `MCP_AUTH_MODE` | `sa360-headers` | Auth mode: `sa360-headers`, `jwt`, `none` |
-| `MCP_AUTH_SECRET_KEY` | — | JWT secret (jwt mode only) |
-| `SA360_API_BASE_URL` | `https://searchads360.googleapis.com/v0` | Reporting API base URL |
-| `SA360_V2_API_BASE_URL` | `https://www.googleapis.com/doubleclicksearch/v2` | Legacy v2 API base URL |
-| `SA360_RATE_LIMIT_PER_MINUTE` | `100` | Rate limit per customer ID |
-| `SA360_CLIENT_ID` | — | OAuth2 client ID (stdio mode) |
-| `SA360_CLIENT_SECRET` | — | OAuth2 client secret (stdio mode) |
-| `SA360_REFRESH_TOKEN` | — | OAuth2 refresh token (stdio mode) |
-| `SA360_LOGIN_CUSTOMER_ID` | — | Manager account ID (optional) |
-| `LOG_LEVEL` | `info` | Logging level |
-| `OTEL_ENABLED` | `false` | Enable OpenTelemetry |
-| `OTEL_SERVICE_NAME` | `sa360-mcp` | OTEL service name |
+| Variable                      | Default                                           | Description                               |
+| ----------------------------- | ------------------------------------------------- | ----------------------------------------- |
+| `SA360_MCP_PORT`              | `3010`                                            | HTTP server port                          |
+| `SA360_MCP_HOST`              | `127.0.0.1`                                       | HTTP server bind address                  |
+| `MCP_AUTH_MODE`               | `sa360-headers`                                   | Auth mode: `sa360-headers`, `jwt`, `none` |
+| `MCP_AUTH_SECRET_KEY`         | —                                                 | JWT secret (jwt mode only)                |
+| `SA360_API_BASE_URL`          | `https://searchads360.googleapis.com/v0`          | Reporting API base URL                    |
+| `SA360_V2_API_BASE_URL`       | `https://www.googleapis.com/doubleclicksearch/v2` | Legacy v2 API base URL                    |
+| `SA360_RATE_LIMIT_PER_MINUTE` | `100`                                             | Rate limit per customer ID                |
+| `SA360_CLIENT_ID`             | —                                                 | OAuth2 client ID (stdio mode)             |
+| `SA360_CLIENT_SECRET`         | —                                                 | OAuth2 client secret (stdio mode)         |
+| `SA360_REFRESH_TOKEN`         | —                                                 | OAuth2 refresh token (stdio mode)         |
+| `SA360_LOGIN_CUSTOMER_ID`     | —                                                 | Manager account ID (optional)             |
+| `LOG_LEVEL`                   | `info`                                            | Logging level                             |
+| `OTEL_ENABLED`                | `false`                                           | Enable OpenTelemetry                      |
+| `OTEL_SERVICE_NAME`           | `sa360-mcp`                                       | OTEL service name                         |
 
 ---
 

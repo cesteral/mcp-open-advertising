@@ -24,59 +24,59 @@ through the Model Context Protocol.
 
 ### Core CRUD
 
-| Tool | Description |
-|------|-------------|
+| Tool                  | Description                                             |
+| --------------------- | ------------------------------------------------------- |
 | `msads_list_entities` | List Microsoft Ads entities with filters and pagination |
-| `msads_get_entity` | Get a single entity by ID |
-| `msads_create_entity` | Create a new entity |
-| `msads_update_entity` | Update an existing entity |
-| `msads_delete_entity` | Delete an entity |
-| `msads_list_accounts` | List accessible ad accounts |
+| `msads_get_entity`    | Get a single entity by ID                               |
+| `msads_create_entity` | Create a new entity                                     |
+| `msads_update_entity` | Update an existing entity                               |
+| `msads_delete_entity` | Delete an entity                                        |
+| `msads_list_accounts` | List accessible ad accounts                             |
 
 ### Reporting
 
 All reporting tools below accept the shared bounded report-view params: `mode` (`"summary"` default — headers + counts + 10-row preview, or `"rows"` for a paginated rows page), `columns` (project to selected columns), `offset` (zero-based pagination), and `maxRows` (page size; default 10 for summary, 50 for rows; hard cap 200).
 
-| Tool | Description |
-|------|-------------|
-| `msads_get_report` | Submit and download async report (blocking) |
-| `msads_submit_report` | Submit async report (non-blocking) |
-| `msads_check_report_status` | Check report status |
-| `msads_download_report` | Download and parse report results |
+| Tool                          | Description                                    |
+| ----------------------------- | ---------------------------------------------- |
+| `msads_get_report`            | Submit and download async report (blocking)    |
+| `msads_submit_report`         | Submit async report (non-blocking)             |
+| `msads_check_report_status`   | Check report status                            |
+| `msads_download_report`       | Download and parse report results              |
 | `msads_get_report_breakdowns` | Async report with additional breakdown columns |
 
 ### Bulk Operations
 
-| Tool | Description |
-|------|-------------|
+| Tool                         | Description           |
+| ---------------------------- | --------------------- |
 | `msads_bulk_create_entities` | Batch create entities |
 | `msads_bulk_update_entities` | Batch update entities |
-| `msads_bulk_update_status` | Batch status updates |
-| `msads_adjust_bids` | Batch bid adjustments |
+| `msads_bulk_update_status`   | Batch status updates  |
+| `msads_adjust_bids`          | Batch bid adjustments |
 
 ### Specialized
 
-| Tool | Description |
-|------|-------------|
+| Tool                         | Description                                      |
+| ---------------------------- | ------------------------------------------------ |
 | `msads_manage_ad_extensions` | Manage ad extensions (sitelinks, callouts, etc.) |
-| `msads_manage_criterions` | Manage targeting criterions |
-| `msads_search_targeting` | Search available targeting options |
-| `msads_get_ad_details` | Get stored ad details (copy, URLs, status) |
-| `msads_validate_entity` | Validate entity payload |
-| `msads_import_from_google` | Import campaigns from Google Ads |
+| `msads_manage_criterions`    | Manage targeting criterions                      |
+| `msads_search_targeting`     | Search available targeting options               |
+| `msads_get_ad_details`       | Get stored ad details (copy, URLs, status)       |
+| `msads_validate_entity`      | Validate entity payload                          |
+| `msads_import_from_google`   | Import campaigns from Google Ads                 |
 
 ## Supported Entity Types
 
-| Entity Type    | API Service Path | Parent Entity | Batch Limit | Notes |
-|----------------|------------------|---------------|-------------|-------|
-| `campaign`     | `/Campaigns/*`   | Account       | 100         | Top-level entity; requires budget reference |
-| `adGroup`      | `/AdGroups/*`     | Campaign      | 1000        | Requires parent `CampaignId` |
-| `ad`           | `/Ads/*`         | Ad Group      | 50          | Requires parent `AdGroupId` |
-| `keyword`      | `/Keywords/*`    | Ad Group      | 1000        | Requires parent `AdGroupId` |
-| `budget`       | `/Budgets/*`     | Account       | 100         | Shared budgets; create before campaigns |
-| `adExtension`  | `/AdExtensions/*`| Account       | 100         | Sitelinks, callouts, structured snippets, etc. |
-| `audience`     | `/Audiences/*`   | Account       | 100         | Remarketing lists, custom audiences |
-| `label`        | `/Labels/*`      | Account       | 100         | For organizing and filtering entities |
+| Entity Type   | API Service Path  | Parent Entity | Batch Limit | Notes                                          |
+| ------------- | ----------------- | ------------- | ----------- | ---------------------------------------------- |
+| `campaign`    | `/Campaigns/*`    | Account       | 100         | Top-level entity; requires budget reference    |
+| `adGroup`     | `/AdGroups/*`     | Campaign      | 1000        | Requires parent `CampaignId`                   |
+| `ad`          | `/Ads/*`          | Ad Group      | 50          | Requires parent `AdGroupId`                    |
+| `keyword`     | `/Keywords/*`     | Ad Group      | 1000        | Requires parent `AdGroupId`                    |
+| `budget`      | `/Budgets/*`      | Account       | 100         | Shared budgets; create before campaigns        |
+| `adExtension` | `/AdExtensions/*` | Account       | 100         | Sitelinks, callouts, structured snippets, etc. |
+| `audience`    | `/Audiences/*`    | Account       | 100         | Remarketing lists, custom audiences            |
+| `label`       | `/Labels/*`       | Account       | 100         | For organizing and filtering entities          |
 
 **Entity Hierarchy:** Account > Budget > Campaign > Ad Group > Ad / Keyword
 

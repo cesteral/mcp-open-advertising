@@ -42,17 +42,24 @@ const ENTITY_CONFIGS: Record<LinkedInEntityType, LinkedInEntityConfig> = {
   campaignGroup: {
     apiPath: "/v2/adCampaignGroups",
     displayName: "Campaign Group",
-    defaultFields: [
-      "id", "name", "status", "account", "totalBudget", "runSchedule",
-    ],
+    defaultFields: ["id", "name", "status", "account", "totalBudget", "runSchedule"],
     listScopingParam: "account", // /v2/adCampaignGroups?q=search&account=<urn>
   },
   campaign: {
     apiPath: "/v2/adCampaigns",
     displayName: "Campaign",
     defaultFields: [
-      "id", "name", "status", "campaignGroup", "type", "objectiveType",
-      "dailyBudget", "totalBudget", "bidType", "unitCost", "runSchedule",
+      "id",
+      "name",
+      "status",
+      "campaignGroup",
+      "type",
+      "objectiveType",
+      "dailyBudget",
+      "totalBudget",
+      "bidType",
+      "unitCost",
+      "runSchedule",
     ],
     listScopingParam: "accounts[0]", // /v2/adCampaigns?q=search&accounts[0]=<urn>
   },

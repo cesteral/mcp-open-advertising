@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const snapchatToolSchemaExplorationPrompt: Prompt = {
   name: "snapchat_tool_schema_exploration",
-  description:
-    "Guide for discovering and understanding Snapchat MCP tools, resources, and schemas",
+  description: "Guide for discovering and understanding Snapchat MCP tools, resources, and schemas",
   arguments: [
     {
       name: "objective",
@@ -17,9 +16,7 @@ export const snapchatToolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getSnapchatToolSchemaExplorationMessage(
-  args?: Record<string, string>,
-): string {
+export function getSnapchatToolSchemaExplorationMessage(args?: Record<string, string>): string {
   const objective = args?.objective || "general capability discovery";
 
   return `# Snapchat MCP Tool & Schema Exploration Guide

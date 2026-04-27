@@ -6,27 +6,20 @@ const { mockResolveSessionServices, mockEnsureRequiredFieldValue } = vi.hoisted(
   mockEnsureRequiredFieldValue: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/elicitation.js",
-  () => ({
-    ensureRequiredFieldValue: mockEnsureRequiredFieldValue,
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/elicitation.js", () => ({
+  ensureRequiredFieldValue: mockEnsureRequiredFieldValue,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-examples.js",
-  () => ({
-    getEntityExamplesByCategory: vi.fn().mockReturnValue([]),
-    getEntityTypesWithExamples: vi.fn().mockReturnValue([]),
-    getEntityExamples: vi.fn().mockReturnValue([]),
-    findMatchingExample: vi.fn().mockReturnValue(null),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/entity-examples.js", () => ({
+  getEntityExamplesByCategory: vi.fn().mockReturnValue([]),
+  getEntityTypesWithExamples: vi.fn().mockReturnValue([]),
+  getEntityExamples: vi.fn().mockReturnValue([]),
+  findMatchingExample: vi.fn().mockReturnValue(null),
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {
@@ -79,8 +72,8 @@ describe("dv360_adjust_line_item_bids", () => {
     });
 
     // By default, ensureRequiredFieldValue returns the currentValue
-    mockEnsureRequiredFieldValue.mockImplementation(
-      ({ currentValue }: { currentValue?: string }) => Promise.resolve(currentValue)
+    mockEnsureRequiredFieldValue.mockImplementation(({ currentValue }: { currentValue?: string }) =>
+      Promise.resolve(currentValue)
     );
   });
 
@@ -88,9 +81,7 @@ describe("dv360_adjust_line_item_bids", () => {
     it("adjusts a single bid successfully", async () => {
       const result = await adjustLineItemBidsLogic(
         {
-          adjustments: [
-            { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 },
-          ],
+          adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 }],
         },
         createMockContext(),
         createMockSdkContext()
@@ -113,9 +104,7 @@ describe("dv360_adjust_line_item_bids", () => {
     it("reports previous bid from fixedBid strategy", async () => {
       const result = await adjustLineItemBidsLogic(
         {
-          adjustments: [
-            { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 4500000 },
-          ],
+          adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 4500000 }],
         },
         createMockContext(),
         createMockSdkContext()
@@ -138,9 +127,7 @@ describe("dv360_adjust_line_item_bids", () => {
 
       const result = await adjustLineItemBidsLogic(
         {
-          adjustments: [
-            { advertiserId: "adv-1", lineItemId: "li-2", newBidMicros: 8000000 },
-          ],
+          adjustments: [{ advertiserId: "adv-1", lineItemId: "li-2", newBidMicros: 8000000 }],
         },
         createMockContext(),
         createMockSdkContext()
@@ -159,9 +146,7 @@ describe("dv360_adjust_line_item_bids", () => {
 
       const result = await adjustLineItemBidsLogic(
         {
-          adjustments: [
-            { advertiserId: "adv-1", lineItemId: "li-3", newBidMicros: 2000000 },
-          ],
+          adjustments: [{ advertiserId: "adv-1", lineItemId: "li-3", newBidMicros: 2000000 }],
         },
         createMockContext(),
         createMockSdkContext()
@@ -173,9 +158,7 @@ describe("dv360_adjust_line_item_bids", () => {
     it("updates the bid via updateEntity with correct data", async () => {
       await adjustLineItemBidsLogic(
         {
-          adjustments: [
-            { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 },
-          ],
+          adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 }],
         },
         createMockContext(),
         createMockSdkContext()
@@ -194,9 +177,7 @@ describe("dv360_adjust_line_item_bids", () => {
     it("includes lineItemName, campaignId, and insertionOrderId in results", async () => {
       const result = await adjustLineItemBidsLogic(
         {
-          adjustments: [
-            { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 },
-          ],
+          adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 }],
         },
         createMockContext(),
         createMockSdkContext()
@@ -273,9 +254,7 @@ describe("dv360_adjust_line_item_bids", () => {
       await expect(
         adjustLineItemBidsLogic(
           {
-            adjustments: [
-              { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 },
-            ],
+            adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 }],
           },
           createMockContext(),
           createMockSdkContext("gone")
@@ -345,9 +324,7 @@ describe("dv360_adjust_line_item_bids", () => {
   describe("AdjustLineItemBidsInputSchema", () => {
     it("accepts valid input with adjustments array", () => {
       const parsed = AdjustLineItemBidsInputSchema.safeParse({
-        adjustments: [
-          { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 },
-        ],
+        adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 5000000 }],
       });
 
       expect(parsed.success).toBe(true);
@@ -375,9 +352,7 @@ describe("dv360_adjust_line_item_bids", () => {
 
     it("requires positive newBidMicros", () => {
       const parsed = AdjustLineItemBidsInputSchema.safeParse({
-        adjustments: [
-          { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 0 },
-        ],
+        adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 0 }],
       });
 
       expect(parsed.success).toBe(false);
@@ -385,9 +360,7 @@ describe("dv360_adjust_line_item_bids", () => {
 
     it("requires integer newBidMicros", () => {
       const parsed = AdjustLineItemBidsInputSchema.safeParse({
-        adjustments: [
-          { advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 1.5 },
-        ],
+        adjustments: [{ advertiserId: "adv-1", lineItemId: "li-1", newBidMicros: 1.5 }],
       });
 
       expect(parsed.success).toBe(false);
@@ -395,9 +368,7 @@ describe("dv360_adjust_line_item_bids", () => {
 
     it("accepts adjustments without advertiserId (for elicitation)", () => {
       const parsed = AdjustLineItemBidsInputSchema.safeParse({
-        adjustments: [
-          { lineItemId: "li-1", newBidMicros: 5000000 },
-        ],
+        adjustments: [{ lineItemId: "li-1", newBidMicros: 5000000 }],
       });
 
       expect(parsed.success).toBe(true);

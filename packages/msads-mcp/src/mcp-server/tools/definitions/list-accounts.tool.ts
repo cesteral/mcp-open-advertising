@@ -14,7 +14,10 @@ Uses the Customer Management API SearchAccounts operation.
 Microsoft Advertising requires at least one predicate for SearchAccounts.`;
 
 const PredicateSchema = z.object({
-  Field: z.string().min(1).describe("SearchAccounts field name, e.g. UserId or AccountLifeCycleStatus"),
+  Field: z
+    .string()
+    .min(1)
+    .describe("SearchAccounts field name, e.g. UserId or AccountLifeCycleStatus"),
   Operator: z.string().min(1).describe("Predicate operator, e.g. Equals"),
   Value: z.string().min(1).describe("Predicate value"),
 });
@@ -25,14 +28,17 @@ export const ListAccountsInputSchema = z
       .array(PredicateSchema)
       .min(1)
       .max(2)
-      .describe("One SearchAccounts predicate, or two when filtering by AccountLifeCycleStatus plus another field such as UserId"),
+      .describe(
+        "One SearchAccounts predicate, or two when filtering by AccountLifeCycleStatus plus another field such as UserId"
+      ),
   })
   .refine(
     ({ predicates }) =>
       predicates.length === 1 ||
       predicates.some((predicate) => predicate.Field === "AccountLifeCycleStatus"),
     {
-      message: "A second predicate is only valid when one predicate uses Field='AccountLifeCycleStatus'",
+      message:
+        "A second predicate is only valid when one predicate uses Field='AccountLifeCycleStatus'",
       path: ["predicates"],
     }
   )

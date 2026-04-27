@@ -18,12 +18,14 @@ Implemented comprehensive schema-level validation for all CRUD tools to prevent 
 **File**: `src/mcp-server/tools/definitions/get-entity.tool.ts`
 
 **Changes**:
+
 - Added import for `getEntityConfigDynamic`
 - Added `.refine()` validation to `GetEntityInputSchema`
 - Validates both parent IDs and entity ID are present
 - Provides clear error messages listing all missing IDs
 
 **Validation Logic**:
+
 ```typescript
 .refine(
   (data) => {
@@ -53,6 +55,7 @@ Implemented comprehensive schema-level validation for all CRUD tools to prevent 
 ```
 
 **Example Error**:
+
 ```
 Missing required ID(s) for campaign: advertiserId, campaignId. Required: advertiserId, campaignId
 ```
@@ -64,11 +67,13 @@ Missing required ID(s) for campaign: advertiserId, campaignId. Required: adverti
 **File**: `src/mcp-server/tools/definitions/create-entity.tool.ts`
 
 **Changes**:
+
 - Added import for `getEntityConfigDynamic`
 - Added `.refine()` validation to `CreateEntityInputSchema`
 - Validates parent IDs are present (entity ID not needed for create)
 
 **Validation Logic**:
+
 ```typescript
 .refine(
   (data) => {
@@ -93,6 +98,7 @@ Missing required ID(s) for campaign: advertiserId, campaignId. Required: adverti
 ```
 
 **Example Error**:
+
 ```
 Missing required parent ID(s) for creating campaign: advertiserId. Required: advertiserId
 ```
@@ -104,6 +110,7 @@ Missing required parent ID(s) for creating campaign: advertiserId. Required: adv
 **File**: `src/mcp-server/tools/definitions/update-entity.tool.ts`
 
 **Changes**:
+
 - Added import for `getEntityConfigDynamic`
 - Added `.refine()` validation to `UpdateEntityInputSchema`
 - Validates both parent IDs and entity ID are present
@@ -112,6 +119,7 @@ Missing required parent ID(s) for creating campaign: advertiserId. Required: adv
 Same as get-entity (validates both parent IDs and entity ID)
 
 **Example Error**:
+
 ```
 Missing required ID(s) for updating lineItem: advertiserId, lineItemId. Required: advertiserId, lineItemId
 ```
@@ -123,6 +131,7 @@ Missing required ID(s) for updating lineItem: advertiserId, lineItemId. Required
 **File**: `src/mcp-server/tools/definitions/delete-entity.tool.ts`
 
 **Changes**:
+
 - Added import for `getEntityConfigDynamic`
 - Added `.refine()` validation to `DeleteEntityInputSchema`
 - Validates both parent IDs and entity ID are present
@@ -131,6 +140,7 @@ Missing required ID(s) for updating lineItem: advertiserId, lineItemId. Required
 Same as get-entity (validates both parent IDs and entity ID)
 
 **Example Error**:
+
 ```
 Missing required ID(s) for deleting insertionOrder: advertiserId, insertionOrderId. Required: advertiserId, insertionOrderId
 ```
@@ -142,11 +152,13 @@ Missing required ID(s) for deleting insertionOrder: advertiserId, insertionOrder
 **File**: `src/mcp-server/tools/utils/entityMappingDynamic.ts`
 
 **Changes**:
+
 - Added validation in `buildEntityConfig()` API path builder
 - Now throws error instead of returning empty strings for missing parameters
 - Defense-in-depth: catches issues even if schema validation is bypassed
 
 **Before**:
+
 ```typescript
 path = path.replace(/\{(\w+)\}/g, (_, key) => ids[key] || "");
 //                                                        ^^
@@ -154,6 +166,7 @@ path = path.replace(/\{(\w+)\}/g, (_, key) => ids[key] || "");
 ```
 
 **After**:
+
 ```typescript
 // Extract required parameters from template
 const requiredParams = [...path.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
@@ -171,6 +184,7 @@ path = path.replace(/\{(\w+)\}/g, (_, key) => ids[key]);
 ```
 
 **Benefits**:
+
 - Prevents malformed paths like `/advertisers//campaigns`
 - Clear error messages with `[PathBuilder]` prefix
 - Defense-in-depth validation layer
@@ -221,38 +235,39 @@ path = path.replace(/\{(\w+)\}/g, (_, key) => ids[key]);
 
 ### Before Implementation
 
-| Issue | Impact |
-|-------|--------|
-| ❌ Malformed API paths | `/advertisers//campaigns/123` reached DV360 API |
-| ❌ Generic errors | HTTP 400/404 without clear guidance |
-| ❌ Wasted resources | Auth, rate limiting, network calls for invalid requests |
-| ❌ Slow error response | 500-1000ms to detect validation errors |
-| ❌ Inconsistent UX | Different error handling across tools |
+| Issue                  | Impact                                                  |
+| ---------------------- | ------------------------------------------------------- |
+| ❌ Malformed API paths | `/advertisers//campaigns/123` reached DV360 API         |
+| ❌ Generic errors      | HTTP 400/404 without clear guidance                     |
+| ❌ Wasted resources    | Auth, rate limiting, network calls for invalid requests |
+| ❌ Slow error response | 500-1000ms to detect validation errors                  |
+| ❌ Inconsistent UX     | Different error handling across tools                   |
 
 ### After Implementation
 
-| Improvement | Impact |
-|-------------|--------|
+| Improvement             | Impact                                                    |
+| ----------------------- | --------------------------------------------------------- |
 | ✅ Fail-fast validation | Errors caught in schema validation (line 83 of server.ts) |
-| ✅ Clear error messages | "Missing required ID(s) for campaign: advertiserId" |
-| ✅ Zero API calls | No network traffic for invalid requests |
-| ✅ Fast error response | 1-5ms vs 500-1000ms (100-1000x faster) |
-| ✅ Consistent UX | Same validation pattern across all tools |
-| ✅ Defense-in-depth | 4 layers of validation |
+| ✅ Clear error messages | "Missing required ID(s) for campaign: advertiserId"       |
+| ✅ Zero API calls       | No network traffic for invalid requests                   |
+| ✅ Fast error response  | 1-5ms vs 500-1000ms (100-1000x faster)                    |
+| ✅ Consistent UX        | Same validation pattern across all tools                  |
+| ✅ Defense-in-depth     | 4 layers of validation                                    |
 
 ---
 
 ## Validation Coverage Matrix
 
-| Tool | Schema Validation | Path Builder | Service Layer | API Layer |
-|------|------------------|--------------|---------------|-----------|
-| `list-entities` | ✅ `.refine()` (parent IDs) | ✅ Error throw | ✅ Full validation | ✅ Final check |
-| `get-entity` | ✅ `.refine()` (parent + entity ID) | ✅ Error throw | ⚠️ Entity ID only | ✅ Final check |
-| `create-entity` | ✅ `.refine()` (parent IDs) | ✅ Error throw | ❌ None | ✅ Final check |
-| `update-entity` | ✅ `.refine()` (parent + entity ID) | ✅ Error throw | ⚠️ Via getEntity | ✅ Final check |
-| `delete-entity` | ✅ `.refine()` (parent + entity ID) | ✅ Error throw | ⚠️ Entity ID only | ✅ Final check |
+| Tool            | Schema Validation                   | Path Builder   | Service Layer      | API Layer      |
+| --------------- | ----------------------------------- | -------------- | ------------------ | -------------- |
+| `list-entities` | ✅ `.refine()` (parent IDs)         | ✅ Error throw | ✅ Full validation | ✅ Final check |
+| `get-entity`    | ✅ `.refine()` (parent + entity ID) | ✅ Error throw | ⚠️ Entity ID only  | ✅ Final check |
+| `create-entity` | ✅ `.refine()` (parent IDs)         | ✅ Error throw | ❌ None            | ✅ Final check |
+| `update-entity` | ✅ `.refine()` (parent + entity ID) | ✅ Error throw | ⚠️ Via getEntity   | ✅ Final check |
+| `delete-entity` | ✅ `.refine()` (parent + entity ID) | ✅ Error throw | ⚠️ Entity ID only  | ✅ Final check |
 
 **Legend**:
+
 - ✅ Full validation
 - ⚠️ Partial validation
 - ❌ No validation
@@ -293,6 +308,7 @@ pnpm run dev:http
 ```
 
 **Expected Results**:
+
 - All validation errors caught at schema layer
 - Clear error messages listing missing IDs
 - No malformed API requests reach DV360 API
@@ -304,6 +320,7 @@ pnpm run dev:http
 ### Example 1: Get campaign without advertiserId
 
 **Request**:
+
 ```json
 {
   "entityType": "campaign",
@@ -314,6 +331,7 @@ pnpm run dev:http
 **Before Fix**: API returns `400 Bad Request` with path `/advertisers//campaigns/12345`
 
 **After Fix** (Schema Layer):
+
 ```
 Error: Missing required ID(s) for campaign: advertiserId. Required: advertiserId, campaignId
 ```
@@ -321,6 +339,7 @@ Error: Missing required ID(s) for campaign: advertiserId. Required: advertiserId
 ### Example 2: Create lineItem without advertiserId
 
 **Request**:
+
 ```json
 {
   "entityType": "lineItem",
@@ -331,6 +350,7 @@ Error: Missing required ID(s) for campaign: advertiserId. Required: advertiserId
 **Before Fix**: API returns `400 Bad Request`
 
 **After Fix** (Schema Layer):
+
 ```
 Error: Missing required parent ID(s) for creating lineItem: advertiserId. Required: advertiserId
 ```
@@ -338,6 +358,7 @@ Error: Missing required parent ID(s) for creating lineItem: advertiserId. Requir
 ### Example 3: Update insertionOrder without insertionOrderId
 
 **Request**:
+
 ```json
 {
   "entityType": "insertionOrder",
@@ -350,6 +371,7 @@ Error: Missing required parent ID(s) for creating lineItem: advertiserId. Requir
 **Before Fix**: Service validation catches (entity ID check), but after path construction
 
 **After Fix** (Schema Layer):
+
 ```
 Error: Missing required ID(s) for updating insertionOrder: insertionOrderId. Required: advertiserId, insertionOrderId
 ```
@@ -384,19 +406,19 @@ Created/updated the following documentation:
 
 ### Validation Timing
 
-| Scenario | Before | After | Improvement |
-|----------|--------|-------|-------------|
-| Valid request | 500-1000ms | 1-5ms + normal processing | N/A (valid) |
-| Invalid request (missing ID) | 500-1000ms | 1-5ms | **100-1000x faster** |
+| Scenario                     | Before     | After                     | Improvement          |
+| ---------------------------- | ---------- | ------------------------- | -------------------- |
+| Valid request                | 500-1000ms | 1-5ms + normal processing | N/A (valid)          |
+| Invalid request (missing ID) | 500-1000ms | 1-5ms                     | **100-1000x faster** |
 
 ### Resource Savings (per invalid request)
 
-| Resource | Before | After | Savings |
-|----------|--------|-------|---------|
-| Authentication calls | 1 JWT generation | 0 | 100% |
-| Rate limiter checks | 1 quota consumption | 0 | 100% |
-| Network requests | 1 HTTP request | 0 | 100% |
-| API quota | Consumes quota | No quota used | 100% |
+| Resource             | Before              | After         | Savings |
+| -------------------- | ------------------- | ------------- | ------- |
+| Authentication calls | 1 JWT generation    | 0             | 100%    |
+| Rate limiter checks  | 1 quota consumption | 0             | 100%    |
+| Network requests     | 1 HTTP request      | 0             | 100%    |
+| API quota            | Consumes quota      | No quota used | 100%    |
 
 ---
 
@@ -412,6 +434,7 @@ Created/updated the following documentation:
 ### For AI Agents
 
 AI agents using these tools will now receive:
+
 - **Clearer error messages** - Specific IDs that are missing
 - **Faster feedback** - Errors in 1-5ms instead of 500-1000ms
 - **Consistent format** - Same error pattern across all tools
@@ -441,6 +464,7 @@ AI agents using these tools will now receive:
 ✅ **Implementation Complete**
 
 All CRUD tools now have comprehensive schema-level validation that:
+
 - ✅ Prevents malformed API requests
 - ✅ Provides clear, actionable error messages
 - ✅ Fails fast (1-5ms vs 500-1000ms)

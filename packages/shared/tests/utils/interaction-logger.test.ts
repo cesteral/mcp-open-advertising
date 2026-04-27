@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { InteractionLogger, generateEntryId, sanitizeParams } from "../../src/utils/interaction-logger.js";
+import {
+  InteractionLogger,
+  generateEntryId,
+  sanitizeParams,
+} from "../../src/utils/interaction-logger.js";
 
 // ---------------------------------------------------------------------------
 // GCS mock — maintained at module level so vi.mock hoisting works correctly
@@ -217,11 +221,11 @@ describe("InteractionLogger", () => {
     expect(readdirSync(dataDir)).toHaveLength(0);
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ event: "mcp.interaction" }),
-      expect.stringContaining("tool_call"),
+      expect.stringContaining("tool_call")
     );
     expect(logger.error).toHaveBeenCalledWith(
       expect.objectContaining({ event: "mcp.interaction" }),
-      expect.stringContaining("tool_failure"),
+      expect.stringContaining("tool_failure")
     );
   });
 
@@ -267,8 +271,13 @@ describe("InteractionLogger", () => {
     // gcsObjectPath = `${gcsPrefix}/${filePath}` where gcsPrefix defaults to serverName
     // Instance-unique paths include a hex instanceId to prevent cross-instance races
     const [path, payload] = Array.from(gcsFiles.entries())[0] ?? [];
-    expect(path).toMatch(/^test-server\/interactions\/test-server-[a-f0-9]{8}-\d{4}-\d{2}-\d{2}\.jsonl$/);
-    const lines = (payload ?? "").trim().split("\n").map((line) => JSON.parse(line) as { id: string });
+    expect(path).toMatch(
+      /^test-server\/interactions\/test-server-[a-f0-9]{8}-\d{4}-\d{2}-\d{2}\.jsonl$/
+    );
+    const lines = (payload ?? "")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as { id: string });
     expect(lines).toHaveLength(2);
     expect(lines[0].id).not.toBe(lines[1].id);
   });

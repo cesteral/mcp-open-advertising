@@ -239,9 +239,9 @@ describe("SA360ReportingService", () => {
         statusText: "Not Found",
       });
 
-      await expect(
-        service.downloadReport("https://example.com/file0")
-      ).rejects.toThrow("Failed to download SA360 report: 404 Not Found");
+      await expect(service.downloadReport("https://example.com/file0")).rejects.toThrow(
+        "Failed to download SA360 report: 404 Not Found"
+      );
     });
 
     it("consumes rate limiter", async () => {
@@ -258,9 +258,9 @@ describe("SA360ReportingService", () => {
     it("propagates fetch errors", async () => {
       mockFetchWithTimeout.mockRejectedValueOnce(new Error("Network error"));
 
-      await expect(
-        service.downloadReport("https://example.com/bad")
-      ).rejects.toThrow("Network error");
+      await expect(service.downloadReport("https://example.com/bad")).rejects.toThrow(
+        "Network error"
+      );
     });
   });
 });

@@ -4,10 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
-import {
-  addParentValidationIssue,
-  mergeParentIdsIntoData,
-} from "../utils/parent-id-validation.js";
+import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -21,9 +18,7 @@ Provide the entity data as a JSON object. Required fields vary by entity type â€
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
     partnerId: z
       .string()
       .optional()
@@ -32,25 +27,15 @@ export const CreateEntityInputSchema = z
       .string()
       .optional()
       .describe("Advertiser ID (required for most non-advertiser entities)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (required for adGroup)"),
-    adGroupId: z
-      .string()
-      .optional()
-      .describe("Ad Group ID (required for ad)"),
-    data: z
-      .record(z.any())
-      .describe("Entity data to create (fields vary by entity type)"),
+    campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
+    adGroupId: z.string().optional().describe("Ad Group ID (required for ad)"),
+    data: z.record(z.any()).describe("Entity data to create (fields vary by entity type)"),
   })
   .superRefine((input, ctx) => {
-    const topLevelPartnerId = typeof input.partnerId === "string"
-      ? input.partnerId.trim()
-      : undefined;
-    const payloadPartnerId = typeof input.data?.PartnerId === "string"
-      ? input.data.PartnerId.trim()
-      : undefined;
+    const topLevelPartnerId =
+      typeof input.partnerId === "string" ? input.partnerId.trim() : undefined;
+    const payloadPartnerId =
+      typeof input.data?.PartnerId === "string" ? input.data.PartnerId.trim() : undefined;
 
     if (input.entityType === "advertiser" && !topLevelPartnerId && !payloadPartnerId) {
       ctx.addIssue({
@@ -87,11 +72,7 @@ export async function createEntityLogic(
 
   const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
 
-  const entity = await ttdService.createEntity(
-    input.entityType as TtdEntityType,
-    data,
-    context
-  );
+  const entity = await ttdService.createEntity(input.entityType as TtdEntityType, data, context);
 
   return {
     entity: entity as unknown as Record<string, any>,
@@ -156,7 +137,7 @@ export const createEntityTool = {
           AdGroupName: "Prospecting - Display",
           RTBAttributes: {
             BudgetSettings: { DailyBudget: { Amount: 500, CurrencyCode: "USD" } },
-            BaseBidCPM: { Amount: 3.50, CurrencyCode: "USD" },
+            BaseBidCPM: { Amount: 3.5, CurrencyCode: "USD" },
           },
         },
       },

@@ -355,11 +355,10 @@ export const entitySchemaResource: ResourceDefinition = {
   async read({ entityType }: { entityType: string }) {
     const config = ENTITY_TYPE_CONFIG[entityType];
     if (!config) {
-      throw new McpError(
-        JsonRpcErrorCode.NotFound,
-        `Unknown entity type: ${entityType}`,
-        { entityType, availableTypes: Object.keys(ENTITY_TYPE_CONFIG) }
-      );
+      throw new McpError(JsonRpcErrorCode.NotFound, `Unknown entity type: ${entityType}`, {
+        entityType,
+        availableTypes: Object.keys(ENTITY_TYPE_CONFIG),
+      });
     }
 
     // Get Zod schema for entity (from Phase 1 generated schemas)
@@ -408,6 +407,7 @@ export const entitySchemaResource: ResourceDefinition = {
 ```
 
 **Example Usage:**
+
 ```
 AI: Read entity-schema://lineItem
 Returns: Full JSON Schema + required fields + supported operations (~5-10KB)
@@ -463,6 +463,7 @@ export const entityFieldsResource: ResourceDefinition = {
 ```
 
 **Example Usage:**
+
 ```
 AI: Read entity-fields://campaign
 Returns: ["displayName", "entityStatus", "campaignGoal.performanceGoalType", "campaignFlight.plannedDates.startDate", ...] (~2-3KB)
@@ -508,6 +509,7 @@ export const entityExamplesResource: ResourceDefinition = {
 ```
 
 **Example Usage:**
+
 ```
 AI: Read entity-examples://lineItem
 Returns: Common patterns like "Update CPM bid", "Pause line item", "Change flight dates" with exact payloads (~1-2KB)
@@ -530,10 +532,7 @@ export interface FieldInfo {
 /**
  * Recursively extract all field paths from a Zod schema
  */
-export function extractFieldsFromZodSchema(
-  schema: z.ZodTypeAny,
-  pathPrefix = ""
-): FieldInfo[] {
+export function extractFieldsFromZodSchema(schema: z.ZodTypeAny, pathPrefix = ""): FieldInfo[] {
   const fields: FieldInfo[] = [];
 
   if (schema instanceof z.ZodObject) {

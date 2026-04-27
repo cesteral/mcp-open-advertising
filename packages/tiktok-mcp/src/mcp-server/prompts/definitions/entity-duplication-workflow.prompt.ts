@@ -32,9 +32,7 @@ export const tiktokEntityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokEntityDuplicationWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getTiktokEntityDuplicationWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   const advertiserId = args?.advertiserId || "{advertiserId}";

@@ -26,16 +26,9 @@ const TOOL_DESCRIPTION = `Create a new Pinterest Ads entity.
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
-    data: z
-      .record(z.any())
-      .describe("Entity fields as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    data: z.record(z.any()).describe("Entity fields as key-value pairs"),
   })
   .describe("Parameters for creating a Pinterest Ads entity");
 

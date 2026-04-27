@@ -33,9 +33,7 @@ export const pinterestEntityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getPinterestEntityUpdateWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getPinterestEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   const adAccountId = args?.adAccountId || "{adAccountId}";

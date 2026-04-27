@@ -60,16 +60,14 @@ describe("MetaBearerAuthStrategy", () => {
       } as unknown as Response);
 
       const strategy = new MetaBearerAuthStrategy("https://graph.test/v21.0", mockLogger);
-      await expect(
-        strategy.verify({ authorization: "Bearer bad-token" })
-      ).rejects.toThrow("Meta token validation failed");
+      await expect(strategy.verify({ authorization: "Bearer bad-token" })).rejects.toThrow(
+        "Meta token validation failed"
+      );
     });
 
     it("throws when Authorization header is missing", async () => {
       const strategy = new MetaBearerAuthStrategy("https://graph.test/v21.0", mockLogger);
-      await expect(strategy.verify({})).rejects.toThrow(
-        "Missing required Authorization header"
-      );
+      await expect(strategy.verify({})).rejects.toThrow("Missing required Authorization header");
     });
   });
 

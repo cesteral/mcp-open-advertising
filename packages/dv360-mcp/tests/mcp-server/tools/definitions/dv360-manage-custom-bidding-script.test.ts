@@ -6,17 +6,13 @@ const { mockResolveSessionServices, mockEnsureRequiredFieldValue } = vi.hoisted(
   mockEnsureRequiredFieldValue: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/elicitation.js",
-  () => ({
-    ensureRequiredFieldValue: mockEnsureRequiredFieldValue,
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/elicitation.js", () => ({
+  ensureRequiredFieldValue: mockEnsureRequiredFieldValue,
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {
@@ -88,8 +84,8 @@ describe("dv360_manage_custom_bidding_script", () => {
       dv360Service: mockDv360Service,
     });
 
-    mockEnsureRequiredFieldValue.mockImplementation(
-      ({ currentValue }: { currentValue?: string }) => Promise.resolve(currentValue)
+    mockEnsureRequiredFieldValue.mockImplementation(({ currentValue }: { currentValue?: string }) =>
+      Promise.resolve(currentValue)
     );
   });
 

@@ -20,7 +20,8 @@ export const troubleshootReportPrompt: Prompt = {
     },
     {
       name: "queryType",
-      description: "Type of query that failed (e.g., 'dbm_run_custom_query', 'dbm_get_campaign_delivery')",
+      description:
+        "Type of query that failed (e.g., 'dbm_run_custom_query', 'dbm_get_campaign_delivery')",
       required: false,
     },
   ],

@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -150,9 +156,7 @@ describe("bulkUpdateEntitiesResponseFormatter", () => {
     const result = bulkUpdateEntitiesResponseFormatter({
       updated: 0,
       failed: 1,
-      results: [
-        { entityId: "failing-entity", success: false, error: "API error" },
-      ],
+      results: [{ entityId: "failing-entity", success: false, error: "API error" }],
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 

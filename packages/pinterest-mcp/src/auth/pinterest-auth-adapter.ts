@@ -70,18 +70,13 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
       return;
     }
 
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/v5/user_account`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetchWithTimeout(`${this.baseUrl}/v5/user_account`, 10_000, undefined, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
@@ -155,18 +150,13 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
     const token = await this.getAccessToken();
 
     // Validate the token against the Pinterest v5 user account endpoint
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/v5/user_account`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetchWithTimeout(`${this.baseUrl}/v5/user_account`, 10_000, undefined, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
@@ -198,9 +188,9 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
   }
 
   private async refreshAccessToken(): Promise<string> {
-    const b64 = Buffer.from(
-      `${this.credentials.appId}:${this.credentials.appSecret}`
-    ).toString("base64");
+    const b64 = Buffer.from(`${this.credentials.appId}:${this.credentials.appSecret}`).toString(
+      "base64"
+    );
 
     const body = new URLSearchParams({
       grant_type: "refresh_token",
@@ -233,9 +223,7 @@ export class PinterestRefreshTokenAdapter implements PinterestAuthAdapter {
 
     const data = (await response.json()) as PinterestTokenResponse;
     if (!data.access_token) {
-      throw new Error(
-        `Pinterest token refresh failed: missing access_token in response`
-      );
+      throw new Error(`Pinterest token refresh failed: missing access_token in response`);
     }
 
     this.cachedToken = data.access_token;

@@ -29,9 +29,7 @@ export const ttdEntityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTtdEntityUpdateWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getTtdEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
 

@@ -21,6 +21,7 @@ MCP servers run behind the Cesteral Intelligence control plane. Intelligence han
 **What you need in Secret Manager:** Only `cesteral-jwt-secret-key` (for MCP ingress authentication between Intelligence and the servers).
 
 **How credentials flow:**
+
 1. User stores platform credentials in Intelligence UI → encrypted at rest via GCP KMS
 2. On each request, Intelligence decrypts credentials and injects them as HTTP headers
 3. MCP server's auth strategy extracts credentials from headers, uses them for the API call, discards them
@@ -51,13 +52,13 @@ Run the one-time project setup script. This is idempotent — safe to re-run.
 
 **What it creates:**
 
-| Resource | Details |
-|----------|---------|
-| **GCP APIs** | 14 APIs enabled (Cloud Run, Secret Manager, Artifact Registry, VPC Access, Cloud Build, etc.) |
-| **Artifact Registry** | `cesteral` Docker repository in `europe-west2` |
-| **Terraform state bucket** | `{PROJECT_ID}-terraform-state` with versioning and 90-day lifecycle |
-| **Build artifacts bucket** | `{PROJECT_ID}-build-artifacts` |
-| **Terraform service account** | `terraform-deployer@{PROJECT_ID}.iam.gserviceaccount.com` with least-privilege roles |
+| Resource                      | Details                                                                                       |
+| ----------------------------- | --------------------------------------------------------------------------------------------- |
+| **GCP APIs**                  | 14 APIs enabled (Cloud Run, Secret Manager, Artifact Registry, VPC Access, Cloud Build, etc.) |
+| **Artifact Registry**         | `cesteral` Docker repository in `europe-west2`                                                |
+| **Terraform state bucket**    | `{PROJECT_ID}-terraform-state` with versioning and 90-day lifecycle                           |
+| **Build artifacts bucket**    | `{PROJECT_ID}-build-artifacts`                                                                |
+| **Terraform service account** | `terraform-deployer@{PROJECT_ID}.iam.gserviceaccount.com` with least-privilege roles          |
 
 ## Step 3: Populate Secrets
 
@@ -74,22 +75,22 @@ This script interactively prompts for each secret. It checks if each secret alre
 <details>
 <summary>Full secret inventory (40 secrets)</summary>
 
-| Platform | Secrets |
-|----------|---------|
-| **Shared** | `cesteral-jwt-secret-key` |
-| **DBM** | `cesteral-dbm-service-account-json` |
-| **DV360** | `cesteral-dv360-service-account-json` |
-| **CM360** | `cesteral-cm360-service-account-json` |
-| **Google Ads** | `cesteral-gads-developer-token`, `cesteral-gads-client-id`, `cesteral-gads-client-secret`, `cesteral-gads-refresh-token`, `cesteral-gads-login-customer-id` |
-| **Meta** | `cesteral-meta-app-id`, `cesteral-meta-app-secret` |
-| **TTD** | `cesteral-ttd-partner-id`, `cesteral-ttd-api-secret` |
-| **LinkedIn** | `cesteral-linkedin-access-token`, `cesteral-linkedin-client-id`, `cesteral-linkedin-client-secret`, `cesteral-linkedin-refresh-token` |
-| **TikTok** | `cesteral-tiktok-access-token`, `cesteral-tiktok-advertiser-id`, `cesteral-tiktok-app-id`, `cesteral-tiktok-app-secret`, `cesteral-tiktok-refresh-token` |
-| **SA360** | `cesteral-sa360-client-id`, `cesteral-sa360-client-secret`, `cesteral-sa360-refresh-token`, `cesteral-sa360-login-customer-id` |
-| **Pinterest** | `cesteral-pinterest-access-token`, `cesteral-pinterest-ad-account-id`, `cesteral-pinterest-app-id`, `cesteral-pinterest-app-secret`, `cesteral-pinterest-refresh-token` |
-| **Snapchat** | `cesteral-snapchat-access-token`, `cesteral-snapchat-ad-account-id`, `cesteral-snapchat-org-id`, `cesteral-snapchat-app-id`, `cesteral-snapchat-app-secret`, `cesteral-snapchat-refresh-token` |
-| **Amazon DSP** | `cesteral-amazon-dsp-access-token`, `cesteral-amazon-dsp-profile-id`, `cesteral-amazon-dsp-client-id`, `cesteral-amazon-dsp-app-id`, `cesteral-amazon-dsp-app-secret`, `cesteral-amazon-dsp-refresh-token` |
-| **Microsoft Ads** | `cesteral-msads-access-token`, `cesteral-msads-developer-token`, `cesteral-msads-customer-id`, `cesteral-msads-account-id` |
+| Platform          | Secrets                                                                                                                                                                                                    |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shared**        | `cesteral-jwt-secret-key`                                                                                                                                                                                  |
+| **DBM**           | `cesteral-dbm-service-account-json`                                                                                                                                                                        |
+| **DV360**         | `cesteral-dv360-service-account-json`                                                                                                                                                                      |
+| **CM360**         | `cesteral-cm360-service-account-json`                                                                                                                                                                      |
+| **Google Ads**    | `cesteral-gads-developer-token`, `cesteral-gads-client-id`, `cesteral-gads-client-secret`, `cesteral-gads-refresh-token`, `cesteral-gads-login-customer-id`                                                |
+| **Meta**          | `cesteral-meta-app-id`, `cesteral-meta-app-secret`                                                                                                                                                         |
+| **TTD**           | `cesteral-ttd-partner-id`, `cesteral-ttd-api-secret`                                                                                                                                                       |
+| **LinkedIn**      | `cesteral-linkedin-access-token`, `cesteral-linkedin-client-id`, `cesteral-linkedin-client-secret`, `cesteral-linkedin-refresh-token`                                                                      |
+| **TikTok**        | `cesteral-tiktok-access-token`, `cesteral-tiktok-advertiser-id`, `cesteral-tiktok-app-id`, `cesteral-tiktok-app-secret`, `cesteral-tiktok-refresh-token`                                                   |
+| **SA360**         | `cesteral-sa360-client-id`, `cesteral-sa360-client-secret`, `cesteral-sa360-refresh-token`, `cesteral-sa360-login-customer-id`                                                                             |
+| **Pinterest**     | `cesteral-pinterest-access-token`, `cesteral-pinterest-ad-account-id`, `cesteral-pinterest-app-id`, `cesteral-pinterest-app-secret`, `cesteral-pinterest-refresh-token`                                    |
+| **Snapchat**      | `cesteral-snapchat-access-token`, `cesteral-snapchat-ad-account-id`, `cesteral-snapchat-org-id`, `cesteral-snapchat-app-id`, `cesteral-snapchat-app-secret`, `cesteral-snapchat-refresh-token`             |
+| **Amazon DSP**    | `cesteral-amazon-dsp-access-token`, `cesteral-amazon-dsp-profile-id`, `cesteral-amazon-dsp-client-id`, `cesteral-amazon-dsp-app-id`, `cesteral-amazon-dsp-app-secret`, `cesteral-amazon-dsp-refresh-token` |
+| **Microsoft Ads** | `cesteral-msads-access-token`, `cesteral-msads-developer-token`, `cesteral-msads-customer-id`, `cesteral-msads-account-id`                                                                                 |
 
 </details>
 
@@ -101,10 +102,10 @@ This script interactively prompts for each secret. It checks if each secret alre
 
 **Flags:**
 
-| Flag | Effect |
-|------|--------|
-| `--skip-build` | Skip Docker build/push, deploy with existing `:latest` images |
-| `--plan-only` | Run Terraform plan only — shows what would change without applying |
+| Flag           | Effect                                                             |
+| -------------- | ------------------------------------------------------------------ |
+| `--skip-build` | Skip Docker build/push, deploy with existing `:latest` images      |
+| `--plan-only`  | Run Terraform plan only — shows what would change without applying |
 
 **What it does:**
 
@@ -119,13 +120,13 @@ This script interactively prompts for each secret. It checks if each secret alre
 
 ### Environment Differences
 
-| Setting | Dev | Prod |
-|---------|-----|------|
-| Min instances | 0 (scale to zero) | 1 (always warm) |
-| Max instances | 3 | 10 |
-| CPU / Memory | 1 vCPU / 512Mi | 2 vCPU / 1Gi |
-| Log level | `debug` | `info` |
-| Cloud NAT logging | ALL | ERRORS only |
+| Setting           | Dev               | Prod            |
+| ----------------- | ----------------- | --------------- |
+| Min instances     | 0 (scale to zero) | 1 (always warm) |
+| Max instances     | 3                 | 10              |
+| CPU / Memory      | 1 vCPU / 512Mi    | 2 vCPU / 1Gi    |
+| Log level         | `debug`           | `info`          |
+| Cloud NAT logging | ALL               | ERRORS only     |
 
 ## Step 5: Verify
 

@@ -53,22 +53,15 @@ export class TtdReportingService {
   /**
    * Create and run a report, polling until completion.
    */
-  async runReport(
-    config: TtdReportConfig,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async runReport(config: TtdReportConfig, context?: RequestContext): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
     // Create report schedule
-    const schedule = (await this.httpClient.fetch(
-      "/myreports/reportschedule",
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify(config),
-      }
-    )) as Record<string, unknown>;
+    const schedule = (await this.httpClient.fetch("/myreports/reportschedule", context, {
+      method: "POST",
+      body: JSON.stringify(config),
+    })) as Record<string, unknown>;
 
     const reportScheduleId = String(schedule.ReportScheduleId);
 
@@ -80,16 +73,13 @@ export class TtdReportingService {
     // Poll for completion — reuse advertiser filters from the submitted
     // config so we do not need a second HTTP call to discover them.
     const advertiserIds =
-      ((config as unknown) as { AdvertiserFilters?: string[] })
-        .AdvertiserFilters ?? [];
-    const execution = await this.pollReportExecution(
-      reportScheduleId,
-      advertiserIds,
-      context
-    );
+      (config as unknown as { AdvertiserFilters?: string[] }).AdvertiserFilters ?? [];
+    const execution = await this.pollReportExecution(reportScheduleId, advertiserIds, context);
 
     // Get the download URL and fetch results
-    const reportDeliveries = (execution as Record<string, unknown>).ReportDeliveries as Array<Record<string, unknown>> | undefined;
+    const reportDeliveries = (execution as Record<string, unknown>).ReportDeliveries as
+      | Array<Record<string, unknown>>
+      | undefined;
     if (reportDeliveries && reportDeliveries.length > 0) {
       const deliveryUrl = reportDeliveries[0].DownloadURL as string | undefined;
       if (deliveryUrl) {
@@ -111,14 +101,10 @@ export class TtdReportingService {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    const schedule = (await this.httpClient.fetch(
-      "/myreports/reportschedule",
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify(config),
-      }
-    )) as Record<string, unknown>;
+    const schedule = (await this.httpClient.fetch("/myreports/reportschedule", context, {
+      method: "POST",
+      body: JSON.stringify(config),
+    })) as Record<string, unknown>;
 
     const reportScheduleId = String(schedule.ReportScheduleId);
 
@@ -146,10 +132,7 @@ export class TtdReportingService {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    const advertiserIds = await this.getScheduleAdvertiserIds(
-      reportScheduleId,
-      context
-    );
+    const advertiserIds = await this.getScheduleAdvertiserIds(reportScheduleId, context);
 
     const body = {
       AdvertiserIds: advertiserIds,
@@ -213,13 +196,11 @@ export class TtdReportingService {
     reportScheduleId: string,
     context?: RequestContext
   ): Promise<string[]> {
-    const schedule = (await this.getReportSchedule(
-      reportScheduleId,
-      context
-    )) as Record<string, unknown>;
-    const advertiserFilters = schedule.AdvertiserFilters as
-      | string[]
-      | undefined;
+    const schedule = (await this.getReportSchedule(reportScheduleId, context)) as Record<
+      string,
+      unknown
+    >;
+    const advertiserFilters = schedule.AdvertiserFilters as string[] | undefined;
     if (!advertiserFilters || advertiserFilters.length === 0) {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
@@ -232,33 +213,23 @@ export class TtdReportingService {
   /**
    * Get a single report schedule by ID.
    */
-  async getReportSchedule(
-    scheduleId: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getReportSchedule(scheduleId: string, context?: RequestContext): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch(
-      `/myreports/reportschedule/${scheduleId}`,
-      context,
-      { method: "GET" }
-    );
+    return this.httpClient.fetch(`/myreports/reportschedule/${scheduleId}`, context, {
+      method: "GET",
+    });
   }
 
   /**
    * Delete a report schedule by ID.
    */
-  async deleteReportSchedule(
-    scheduleId: string,
-    context?: RequestContext
-  ): Promise<void> {
+  async deleteReportSchedule(scheduleId: string, context?: RequestContext): Promise<void> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
-    await this.httpClient.fetch(
-      `/myreports/reportschedule/${scheduleId}`,
-      context,
-      { method: "DELETE" }
-    );
+    await this.httpClient.fetch(`/myreports/reportschedule/${scheduleId}`, context, {
+      method: "DELETE",
+    });
   }
 
   /**
@@ -270,14 +241,10 @@ export class TtdReportingService {
   ): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch(
-      "/myreports/reporttemplateheader/query",
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify(query),
-      }
-    );
+    return this.httpClient.fetch("/myreports/reporttemplateheader/query", context, {
+      method: "POST",
+      body: JSON.stringify(query),
+    });
   }
 
   private async pollReportExecution(
@@ -287,10 +254,7 @@ export class TtdReportingService {
   ): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     if (!advertiserIds || advertiserIds.length === 0) {
-      advertiserIds = await this.getScheduleAdvertiserIds(
-        reportScheduleId,
-        context
-      );
+      advertiserIds = await this.getScheduleAdvertiserIds(reportScheduleId, context);
     }
 
     try {
@@ -308,16 +272,13 @@ export class TtdReportingService {
             context,
             { method: "POST", body: JSON.stringify(body) }
           )) as Record<string, unknown>;
-          const executions =
-            (result.Result as Array<Record<string, unknown>>) || [];
+          const executions = (result.Result as Array<Record<string, unknown>>) || [];
           return executions[0] ?? {};
         },
         isComplete: (exec) =>
-          (exec as { ReportExecutionState?: string }).ReportExecutionState ===
-          "Complete",
+          (exec as { ReportExecutionState?: string }).ReportExecutionState === "Complete",
         isFailed: (exec) =>
-          (exec as { ReportExecutionState?: string }).ReportExecutionState ===
-          "Failed",
+          (exec as { ReportExecutionState?: string }).ReportExecutionState === "Failed",
         initialDelayMs: this.pollIntervalMs,
         maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
         maxAttempts: this.maxPollAttempts,
@@ -332,5 +293,4 @@ export class TtdReportingService {
       throw err;
     }
   }
-
 }

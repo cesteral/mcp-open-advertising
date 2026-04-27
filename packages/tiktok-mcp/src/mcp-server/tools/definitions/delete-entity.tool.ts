@@ -18,13 +18,8 @@ Deleted entities cannot be recovered. Consider using \`tiktok_bulk_update_status
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to delete"),
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
@@ -52,11 +47,7 @@ export async function deleteEntityLogic(
 ): Promise<DeleteEntityOutput> {
   const { tiktokService } = resolveSessionServices(sdkContext);
 
-  await tiktokService.deleteEntity(
-    input.entityType as TikTokEntityType,
-    input.entityIds,
-    context
-  );
+  await tiktokService.deleteEntity(input.entityType as TikTokEntityType, input.entityIds, context);
 
   return {
     deleted: true,

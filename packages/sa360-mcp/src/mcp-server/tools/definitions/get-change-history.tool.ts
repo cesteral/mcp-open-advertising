@@ -16,13 +16,7 @@ Tracks entity modifications including what changed, when, and by which client. U
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-const RESOURCE_TYPE_ENUM = [
-  "CAMPAIGN",
-  "AD_GROUP",
-  "AD",
-  "KEYWORD",
-  "CRITERION",
-] as const;
+const RESOURCE_TYPE_ENUM = ["CAMPAIGN", "AD_GROUP", "AD", "KEYWORD", "CRITERION"] as const;
 
 export const GetChangeHistoryInputSchema = z
   .object({
@@ -80,9 +74,7 @@ function buildChangeHistoryQuery(input: GetChangeHistoryInput): string {
   ];
 
   if (input.resourceType) {
-    whereClauses.push(
-      `change_event.change_resource_type = '${input.resourceType}'`
-    );
+    whereClauses.push(`change_event.change_resource_type = '${input.resourceType}'`);
   }
 
   return `SELECT ${selectFields} FROM change_event WHERE ${whereClauses.join(" AND ")} ORDER BY change_event.change_date_time DESC LIMIT ${input.limit}`;
@@ -112,7 +104,9 @@ export async function getChangeHistoryLogic(
   };
 }
 
-export function getChangeHistoryResponseFormatter(result: GetChangeHistoryOutput): McpTextContent[] {
+export function getChangeHistoryResponseFormatter(
+  result: GetChangeHistoryOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

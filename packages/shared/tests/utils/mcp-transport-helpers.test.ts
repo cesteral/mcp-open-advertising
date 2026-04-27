@@ -98,7 +98,10 @@ describe("extractHeadersMap", () => {
 
 describe("oauthProtectedResourceBody", () => {
   it("should return metadata for jwt mode", () => {
-    const result = oauthProtectedResourceBody("jwt", "https://example.com/.well-known/oauth-protected-resource");
+    const result = oauthProtectedResourceBody(
+      "jwt",
+      "https://example.com/.well-known/oauth-protected-resource"
+    );
     expect(result.status).toBe(200);
     expect(result.body.resource).toBe("https://example.com");
   });

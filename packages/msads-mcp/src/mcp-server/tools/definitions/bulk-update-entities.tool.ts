@@ -14,9 +14,7 @@ Each item must include the Id field. Only include fields you want to change.`;
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     items: z
       .array(z.record(z.unknown()))
       .min(1)
@@ -57,7 +55,9 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateEntitiesOutput): McpTextContent[] {
+export function bulkUpdateEntitiesResponseFormatter(
+  result: BulkUpdateEntitiesOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

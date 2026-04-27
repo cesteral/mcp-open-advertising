@@ -63,11 +63,6 @@ export function parseTtdDirectTokenFromHeaders(
 /**
  * Generate a fingerprint for direct TTD API tokens (for session binding).
  */
-export function getTtdDirectTokenFingerprint(
-  credentials: TtdDirectTokenCredentials
-): string {
-  return createHash("sha256")
-    .update(credentials.token)
-    .digest("hex")
-    .substring(0, 32);
+export function getTtdDirectTokenFingerprint(credentials: TtdDirectTokenCredentials): string {
+  return createHash("sha256").update(credentials.token).digest("hex").substring(0, 32);
 }

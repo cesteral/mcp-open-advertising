@@ -82,31 +82,25 @@ describe("recordUpstreamRequest / ALS scoping", () => {
   });
 
   it("records and reads within a context", () => {
-    runWithRequestContext(
-      { requestId: "r1", timestamp: new Date().toISOString() },
-      () => {
-        recordUpstreamRequest({ method: "POST", url: "https://a", durationMs: 1 });
-        recordUpstreamRequest({ method: "POST", url: "https://a", durationMs: 2, status: 400 });
-        const entries = getRecordedUpstreamRequests();
-        expect(entries).toHaveLength(2);
-        expect(entries[1]!.status).toBe(400);
-      },
-    );
+    runWithRequestContext({ requestId: "r1", timestamp: new Date().toISOString() }, () => {
+      recordUpstreamRequest({ method: "POST", url: "https://a", durationMs: 1 });
+      recordUpstreamRequest({ method: "POST", url: "https://a", durationMs: 2, status: 400 });
+      const entries = getRecordedUpstreamRequests();
+      expect(entries).toHaveLength(2);
+      expect(entries[1]!.status).toBe(400);
+    });
   });
 
   it("bounds the array to the most recent 20 entries", () => {
-    runWithRequestContext(
-      { requestId: "r1", timestamp: new Date().toISOString() },
-      () => {
-        for (let i = 0; i < 25; i++) {
-          recordUpstreamRequest({ method: "GET", url: `https://x/${i}`, durationMs: i });
-        }
-        const entries = getRecordedUpstreamRequests();
-        expect(entries).toHaveLength(20);
-        expect(entries[0]!.url).toBe("https://x/5");
-        expect(entries[19]!.url).toBe("https://x/24");
-      },
-    );
+    runWithRequestContext({ requestId: "r1", timestamp: new Date().toISOString() }, () => {
+      for (let i = 0; i < 25; i++) {
+        recordUpstreamRequest({ method: "GET", url: `https://x/${i}`, durationMs: i });
+      }
+      const entries = getRecordedUpstreamRequests();
+      expect(entries).toHaveLength(20);
+      expect(entries[0]!.url).toBe("https://x/5");
+      expect(entries[19]!.url).toBe("https://x/24");
+    });
   });
 });
 
@@ -133,8 +127,8 @@ describe("executeWithRetry integration", () => {
               logger,
               getHeaders: async () => ({ Authorization: "Bearer secret-token" }),
               fetchFn,
-            },
-          ),
+            }
+          )
         ).rejects.toThrow();
 
         const entries = getRecordedUpstreamRequests();
@@ -146,7 +140,7 @@ describe("executeWithRetry integration", () => {
         expect(entries[0]!.requestHeadersRedacted?.["Authorization"]).toBe("[REDACTED]");
         expect(entries[0]!.responseBodyRedacted).toContain("invalid advertiser");
         expect(entries[0]!.responseBodyRedacted).not.toContain("leak-me");
-      },
+      }
     );
   });
 
@@ -168,15 +162,15 @@ describe("executeWithRetry integration", () => {
               logger,
               getHeaders: async () => ({}),
               fetchFn,
-            },
-          ),
+            }
+          )
         ).rejects.toThrow();
 
         expect(count).toBe(3);
         const entries = getRecordedUpstreamRequests();
         expect(entries).toHaveLength(3);
         expect(entries.map((e) => e.attempt)).toEqual([0, 1, 2]);
-      },
+      }
     );
   });
 
@@ -212,8 +206,8 @@ describe("executeWithRetry integration", () => {
                 }
                 return b;
               },
-            },
-          ),
+            }
+          )
         ).rejects.toThrow(/invalid advertiser id/);
 
         const entries = getRecordedUpstreamRequests();
@@ -221,7 +215,7 @@ describe("executeWithRetry integration", () => {
         expect(entries[0]!.status).toBe(200);
         expect(entries[0]!.responseBodyRedacted).toContain("invalid advertiser id");
         expect(entries[0]!.responseBodyRedacted).toContain("40002");
-      },
+      }
     );
   });
 
@@ -243,7 +237,7 @@ describe("executeWithRetry integration", () => {
             getHeaders: async () => ({}),
             fetchFn,
             validateResponseBody: (body: unknown) => (body as { data: unknown }).data,
-          },
+          }
         );
 
         expect(result).toEqual({ ok: true, secret: "should-not-leak" });
@@ -251,7 +245,7 @@ describe("executeWithRetry integration", () => {
         expect(entries).toHaveLength(1);
         expect(entries[0]!.status).toBe(200);
         expect(entries[0]!.responseBodyRedacted).toBeUndefined();
-      },
+      }
     );
   });
 
@@ -271,14 +265,14 @@ describe("executeWithRetry integration", () => {
               logger,
               getHeaders: async () => ({}),
               fetchFn,
-            },
-          ),
+            }
+          )
         ).rejects.toThrow("ECONNREFUSED");
 
         const entries = getRecordedUpstreamRequests();
         expect(entries).toHaveLength(1);
         expect(entries[0]!.networkError).toBe("ECONNREFUSED");
-      },
+      }
     );
   });
 });

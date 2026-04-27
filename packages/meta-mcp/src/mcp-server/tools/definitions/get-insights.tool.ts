@@ -47,8 +47,14 @@ export const GetInsightsInputSchema = z
       .describe("Date preset (today, yesterday, last_7d, last_30d, etc.)"),
     timeRange: z
       .object({
-        since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").describe("Start date YYYY-MM-DD"),
-        until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").describe("End date YYYY-MM-DD"),
+        since: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+          .describe("Start date YYYY-MM-DD"),
+        until: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+          .describe("End date YYYY-MM-DD"),
       })
       .optional()
       .describe("Custom date range (mutually exclusive with datePreset)"),
@@ -66,10 +72,7 @@ export const GetInsightsInputSchema = z
       .max(500)
       .optional()
       .describe("Deprecated. Use maxRows for the returned row count."),
-    after: z
-      .string()
-      .optional()
-      .describe("Cursor for next page"),
+    after: z.string().optional().describe("Cursor for next page"),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -99,9 +102,10 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { metaInsightsService } = resolveSessionServices(sdkContext);
-  const viewInput = input.maxRows === undefined && input.limit !== undefined
-    ? { ...input, maxRows: input.limit }
-    : input;
+  const viewInput =
+    input.maxRows === undefined && input.limit !== undefined
+      ? { ...input, maxRows: input.limit }
+      : input;
 
   const result = await metaInsightsService.getInsights(
     input.entityId,
@@ -140,7 +144,16 @@ export async function getInsightsLogic(
             .filter((a) => isConversionAction(a.action_type ?? ""))
             .reduce((sum, a) => sum + Number(a.value || 0), 0)
         : 0;
-      return { ...row, computedMetrics: computeMetrics({ cost, impressions, clicks, conversions, conversionValue }) };
+      return {
+        ...row,
+        computedMetrics: computeMetrics({
+          cost,
+          impressions,
+          clicks,
+          conversions,
+          conversionValue,
+        }),
+      };
     });
   }
 
@@ -149,7 +162,9 @@ export async function getInsightsLogic(
       rows,
       totalRows: rows.length + (result.nextCursor ? 1 : 0),
       input: viewInput,
-      warnings: result.nextCursor ? ["More rows are available. Call again with after set to nextCursor to continue."] : [],
+      warnings: result.nextCursor
+        ? ["More rows are available. Call again with after set to nextCursor to continue."]
+        : [],
     }),
     nextCursor: result.nextCursor,
     has_more: !!result.nextCursor,

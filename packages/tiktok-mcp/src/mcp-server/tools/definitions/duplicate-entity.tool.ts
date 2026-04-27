@@ -18,17 +18,9 @@ Use the returned entity ID to make modifications before enabling.`;
 
 export const DuplicateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getDuplicateEntityTypeEnum())
-      .describe("Type of entity to duplicate"),
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("ID of the entity to duplicate"),
+    entityType: z.enum(getDuplicateEntityTypeEnum()).describe("Type of entity to duplicate"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
+    entityId: z.string().min(1).describe("ID of the entity to duplicate"),
     options: z
       .record(z.any())
       .optional()

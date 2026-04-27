@@ -28,9 +28,7 @@ export const tiktokTargetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getTiktokTargetingDiscoveryWorkflowMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const goal = args?.goal || "search";
 

@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const {
-  mockResolveSessionServices,
-  mockDownloadFileToBuffer,
-  mockFetchWithTimeout,
-} = vi.hoisted(() => ({
-  mockResolveSessionServices: vi.fn(),
-  mockDownloadFileToBuffer: vi.fn(),
-  mockFetchWithTimeout: vi.fn(),
-}));
+const { mockResolveSessionServices, mockDownloadFileToBuffer, mockFetchWithTimeout } = vi.hoisted(
+  () => ({
+    mockResolveSessionServices: vi.fn(),
+    mockDownloadFileToBuffer: vi.fn(),
+    mockFetchWithTimeout: vi.fn(),
+  })
+);
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
@@ -60,14 +58,19 @@ function createHeadResponse(contentLength?: string) {
 }
 
 describe("uploadVideoLogic", () => {
-  let mockGraphApiClient: { postMultipart: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
+  let mockGraphApiClient: {
+    postMultipart: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
 
     mockGraphApiClient = {
       postMultipart: vi.fn().mockResolvedValue({ id: "video-123", title: "Uploaded Video" }),
-      get: vi.fn().mockResolvedValue({ status: { processing_progress: 100, video_status: "ready" } }),
+      get: vi
+        .fn()
+        .mockResolvedValue({ status: { processing_progress: 100, video_status: "ready" } }),
     };
 
     mockResolveSessionServices.mockReturnValue({

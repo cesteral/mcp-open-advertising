@@ -4,10 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
-import {
-  MYREPORTS_TEMPLATE_ACCESS_ERROR,
-  throwIfGraphqlErrors,
-} from "../utils/graphql-errors.js";
+import { MYREPORTS_TEMPLATE_ACCESS_ERROR, throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_create_report_template";
 const TOOL_TITLE = "Create TTD Report Template (GraphQL)";
@@ -58,7 +55,10 @@ export const CreateReportTemplateInputSchema = z
 export const CreateReportTemplateOutputSchema = z
   .object({
     templateData: z.unknown().optional().describe("Raw data scalar returned by TTD"),
-    templateId: z.string().optional().describe("ID of the newly created template (retrieved via follow-up query)"),
+    templateId: z
+      .string()
+      .optional()
+      .describe("ID of the newly created template (retrieved via follow-up query)"),
     templateName: z.string().optional().describe("Name of the newly created template"),
     errors: z
       .array(z.object({ field: z.string().optional(), message: z.string() }))
@@ -71,7 +71,6 @@ export const CreateReportTemplateOutputSchema = z
 
 type CreateReportTemplateInput = z.infer<typeof CreateReportTemplateInputSchema>;
 type CreateReportTemplateOutput = z.infer<typeof CreateReportTemplateOutputSchema>;
-
 
 const CREATE_REPORT_TEMPLATE_MUTATION = `mutation CreateReportTemplate($input: MyReportsTemplateCreateInput!) {
   myReportsTemplateCreate(input: $input) {
@@ -120,9 +119,7 @@ export async function createReportTemplateLogic(
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =
     (gqlData.myReportsTemplateCreate as Record<string, unknown> | undefined) ?? {};
-  const errors = mutationResult.errors as
-    | Array<{ field?: string; message: string }>
-    | undefined;
+  const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
   let templateId: string | undefined;
   let templateName: string | undefined;
@@ -166,9 +163,7 @@ export function createReportTemplateResponseFormatter(
         type: "text" as const,
         text:
           `Report template creation failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];

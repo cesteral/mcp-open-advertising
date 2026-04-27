@@ -6,9 +6,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 export const msadsReportingWorkflowPrompt: Prompt = {
   name: "msads_reporting_workflow",
   description: "Guide for running Microsoft Advertising reports (blocking and non-blocking)",
-  arguments: [
-    { name: "accountId", description: "Microsoft Ads Account ID", required: true },
-  ],
+  arguments: [{ name: "accountId", description: "Microsoft Ads Account ID", required: true }],
 };
 
 export function getMsAdsReportingWorkflowMessage(args?: Record<string, string>): string {

@@ -22,9 +22,7 @@ export const campaignSetupWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getCampaignSetupWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getCampaignSetupWorkflowMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
 
   return `# TTD Campaign Setup Workflow

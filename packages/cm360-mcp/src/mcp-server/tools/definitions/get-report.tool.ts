@@ -28,23 +28,14 @@ This may take 30-120 seconds depending on report complexity.`;
 
 export const GetReportInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    name: z
-      .string()
-      .describe("Name for the report"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    name: z.string().describe("Name for the report"),
     type: CM360ReportTypeSchema.describe("Report type"),
-    datePreset: CM360DatePresetSchema
-      .optional()
-      .describe("Preset date range. Injected into the correct report criteria dateRange when not already set"),
-    criteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for STANDARD reports"),
-    reachCriteria: genericCriteriaSchema
-      .optional()
-      .describe("Criteria for REACH reports"),
+    datePreset: CM360DatePresetSchema.optional().describe(
+      "Preset date range. Injected into the correct report criteria dateRange when not already set"
+    ),
+    criteria: genericCriteriaSchema.optional().describe("Criteria for STANDARD reports"),
+    reachCriteria: genericCriteriaSchema.optional().describe("Criteria for REACH reports"),
     pathToConversionCriteria: genericCriteriaSchema
       .optional()
       .describe("Criteria for PATH_TO_CONVERSION reports"),
@@ -133,10 +124,7 @@ export const getReportTool = {
         type: "STANDARD",
         datePreset: "LAST_7_DAYS",
         criteria: {
-          dimensions: [
-            { name: "campaign" },
-            { name: "date" },
-          ],
+          dimensions: [{ name: "campaign" }, { name: "date" }],
           metricNames: ["impressions", "clicks", "totalConversions", "mediaCost"],
         },
       },
@@ -149,10 +137,7 @@ export const getReportTool = {
         type: "FLOODLIGHT",
         floodlightCriteria: {
           dateRange: { relativeDateRange: "MONTH_TO_DATE" },
-          dimensions: [
-            { name: "activity" },
-            { name: "campaign" },
-          ],
+          dimensions: [{ name: "activity" }, { name: "campaign" }],
           metricNames: ["floodlightImpressions", "floodlightClicks", "floodlightRevenue"],
         },
       },

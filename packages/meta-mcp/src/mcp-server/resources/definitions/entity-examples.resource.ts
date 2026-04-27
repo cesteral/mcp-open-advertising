@@ -5,7 +5,11 @@
  * Meta Entity Example Resources
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, getEntityConfig, type MetaEntityType } from "../../tools/utils/entity-mapping.js";
+import {
+  getSupportedEntityTypes,
+  getEntityConfig,
+  type MetaEntityType,
+} from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_EXAMPLES: Record<MetaEntityType, string> = {
   campaign: `# Campaign Examples
@@ -147,7 +151,8 @@ export const entityExampleAllResource: Resource = {
   name: "All Meta Entity Examples",
   description: "Combined examples for all Meta Ads entity types",
   mimeType: "text/markdown",
-  getContent: () => getSupportedEntityTypes()
-    .map((t) => ENTITY_EXAMPLES[t])
-    .join("\n\n---\n\n"),
+  getContent: () =>
+    getSupportedEntityTypes()
+      .map((t) => ENTITY_EXAMPLES[t])
+      .join("\n\n---\n\n"),
 };

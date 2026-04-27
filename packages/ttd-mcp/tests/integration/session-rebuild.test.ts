@@ -4,25 +4,30 @@ vi.mock("@cesteral/shared", async () => {
   const actual = await vi.importActual<any>("@cesteral/shared");
   return {
     ...actual,
-    validateSessionReuse: vi.fn(async (authStrategy: any, sessionServiceStore: any, headers: any, sessionId: string) => {
-      const requestFingerprint = authStrategy.getCredentialFingerprint
-        ? await authStrategy.getCredentialFingerprint(headers)
-        : (await authStrategy.verify(headers)).credentialFingerprint;
+    validateSessionReuse: vi.fn(
+      async (authStrategy: any, sessionServiceStore: any, headers: any, sessionId: string) => {
+        const requestFingerprint = authStrategy.getCredentialFingerprint
+          ? await authStrategy.getCredentialFingerprint(headers)
+          : (await authStrategy.verify(headers)).credentialFingerprint;
 
-      if (requestFingerprint && !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)) {
+        if (
+          requestFingerprint &&
+          !sessionServiceStore.validateFingerprint(sessionId, requestFingerprint)
+        ) {
+          return {
+            valid: false,
+            reason: "Credential fingerprint mismatch",
+            storedFingerprint: sessionServiceStore.getFingerprint(sessionId),
+            requestFingerprint,
+          };
+        }
+
         return {
-          valid: false,
-          reason: "Credential fingerprint mismatch",
-          storedFingerprint: sessionServiceStore.getFingerprint(sessionId),
+          valid: true,
           requestFingerprint,
         };
       }
-
-      return {
-        valid: true,
-        requestFingerprint,
-      };
-    }),
+    ),
   };
 });
 
@@ -32,9 +37,10 @@ vi.mock("../../src/auth/ttd-auth-strategy.js", () => {
       constructor(_logger?: unknown) {}
 
       async verify(headers: Record<string, string | string[] | undefined>) {
-        const fp = typeof headers["x-test-fingerprint"] === "string"
-          ? headers["x-test-fingerprint"]
-          : "fp-test";
+        const fp =
+          typeof headers["x-test-fingerprint"] === "string"
+            ? headers["x-test-fingerprint"]
+            : "fp-test";
         return {
           authInfo: { clientId: "ttd-direct-token", authType: "ttd-token" },
           platformAuthAdapter: { validate: vi.fn() } as any,
@@ -226,8 +232,14 @@ describe("session rebuild after in-memory eviction (Cloud Run scale-out simulati
         "x-test-fingerprint": "fp-client-1",
       },
       body: JSON.stringify({
-        jsonrpc: "2.0", id: 1, method: "initialize",
-        params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "t", version: "1" } },
+        jsonrpc: "2.0",
+        id: 1,
+        method: "initialize",
+        params: {
+          protocolVersion: "2025-03-26",
+          capabilities: {},
+          clientInfo: { name: "t", version: "1" },
+        },
       }),
     });
     const sessionId = initRes.headers.get("mcp-session-id")!;

@@ -21,9 +21,7 @@ export const gaqlReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getGaqlReportingWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getGaqlReportingWorkflowMessage(args?: Record<string, string>): string {
   const customerId = args?.customerId || "{customerId}";
 
   return `# GAQL Reporting Workflow

@@ -102,17 +102,14 @@ export class LinkedInHttpClient {
         "Content-Type": "application/json",
         "X-Restli-Method": "PARTIAL_UPDATE",
       },
-      body: data !== undefined ? JSON.stringify({ patch: { "$set": data } }) : undefined,
+      body: data !== undefined ? JSON.stringify({ patch: { $set: data } }) : undefined,
     });
   }
 
   /**
    * Make an authenticated DELETE request.
    */
-  async delete(
-    path: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async delete(path: string, context?: RequestContext): Promise<unknown> {
     const url = this.buildUrl(path);
     return this.request(url, context, { method: "DELETE" });
   }
@@ -130,7 +127,13 @@ export class LinkedInHttpClient {
     fileContentType: string,
     context?: RequestContext
   ): Promise<unknown> {
-    const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
+    const { body, contentType } = buildMultipartFormData(
+      fields,
+      fileField,
+      fileBuffer,
+      filename,
+      fileContentType
+    );
     const url = this.buildUrl(path);
     return this.request(url, context, {
       method: "POST",
@@ -166,7 +169,10 @@ export class LinkedInHttpClient {
       span.setAttribute("http.response.status_code", response.status);
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
-        throw new McpError(mapLinkedInErrorToJsonRpc(response.status), `LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
+        throw new McpError(
+          mapLinkedInErrorToJsonRpc(response.status),
+          `LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+        );
       }
     });
   }
@@ -229,5 +235,4 @@ export class LinkedInHttpClient {
       return result;
     });
   }
-
 }

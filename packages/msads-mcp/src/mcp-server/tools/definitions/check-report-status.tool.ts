@@ -16,9 +16,7 @@ Returns the canonical state and download URL when the report is ready.`;
 
 export const CheckReportStatusInputSchema = z
   .object({
-    reportRequestId: z
-      .string()
-      .describe("Report request ID from msads_submit_report"),
+    reportRequestId: z.string().describe("Report request ID from msads_submit_report"),
   })
   .describe("Parameters for checking report status");
 
@@ -39,10 +37,7 @@ export async function checkReportStatusLogic(
 ): Promise<CheckReportStatusOutput> {
   const { msadsReportingService } = resolveSessionServices(sdkContext);
 
-  const result = await msadsReportingService.checkReportStatus(
-    input.reportRequestId,
-    context
-  );
+  const result = await msadsReportingService.checkReportStatus(input.reportRequestId, context);
 
   const canonical = fromMicrosoftStatus({
     ReportRequestStatus: result.status,
@@ -58,7 +53,9 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   let text = `Report ${result.reportRequestId} state: ${result.state} (${result.rawStatus})`;
 
   if (result.downloadUrl) {

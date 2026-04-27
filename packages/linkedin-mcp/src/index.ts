@@ -7,15 +7,8 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
 import { LinkedInAccessTokenAdapter } from "./auth/linkedin-auth-adapter.js";
-import {
-  detectTransportMode,
-  createServerLogger,
-  bootstrapMcpServer,
-} from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "./services/session-services.js";
+import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
+import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
@@ -30,8 +23,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   if (!accessToken) {
     logger.warn(
-      "No LinkedIn credentials found in env vars. " +
-        "Set LINKEDIN_ACCESS_TOKEN for stdio mode."
+      "No LinkedIn credentials found in env vars. " + "Set LINKEDIN_ACCESS_TOKEN for stdio mode."
     );
     return false;
   }

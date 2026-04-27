@@ -148,7 +148,8 @@ Use \`snapchat_get_report\` or \`snapchat_get_report_breakdowns\` — these tool
 export const reportingReferenceResource: Resource = {
   uri: "reporting-reference://snapchat",
   name: "Snapchat Reporting Reference",
-  description: "Available dimensions, metrics, report types, and example configurations for Snapchat Ads reporting",
+  description:
+    "Available dimensions, metrics, report types, and example configurations for Snapchat Ads reporting",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatReportingReferenceMarkdown();

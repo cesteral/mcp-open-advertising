@@ -7,15 +7,8 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
 import { TikTokAccessTokenAdapter } from "./auth/tiktok-auth-adapter.js";
-import {
-  detectTransportMode,
-  createServerLogger,
-  bootstrapMcpServer,
-} from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "./services/session-services.js";
+import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
+import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
@@ -32,7 +25,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   if (!accessToken || !advertiserId) {
     logger.warn(
       "No TikTok credentials found in env vars. " +
-      "Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID for stdio mode."
+        "Set TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID for stdio mode."
     );
     return false;
   }

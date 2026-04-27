@@ -2,11 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import {
-  getEntityConfig,
-  type ParentIdKey,
-  type TtdEntityType,
-} from "./entity-mapping.js";
+import { getEntityConfig, type ParentIdKey, type TtdEntityType } from "./entity-mapping.js";
 
 type ParentValueMap = Partial<Record<ParentIdKey, string>>;
 
@@ -36,8 +32,7 @@ export function extractParentIds(
   const extracted: ParentValueMap = {};
   for (const parentId of Object.keys(parentPayloadFieldMap) as ParentIdKey[]) {
     extracted[parentId] =
-      normalizeString(input[parentId]) ??
-      normalizeString(data?.[parentPayloadFieldMap[parentId]]);
+      normalizeString(input[parentId]) ?? normalizeString(data?.[parentPayloadFieldMap[parentId]]);
   }
   return extracted;
 }
@@ -56,13 +51,9 @@ export function buildMissingParentIdsMessage(
   entityType: TtdEntityType,
   missing: ParentIdKey[]
 ): string {
-  const requiredFields = getRequiredParentIds(entityType).map(
-    (key) => `\`${key}\``
-  );
+  const requiredFields = getRequiredParentIds(entityType).map((key) => `\`${key}\``);
   const missingFields = missing.map((key) => `\`${key}\``);
-  const payloadHints = missing
-    .map((key) => `\`${parentPayloadFieldMap[key]}\``)
-    .join(", ");
+  const payloadHints = missing.map((key) => `\`${parentPayloadFieldMap[key]}\``).join(", ");
 
   return `Missing required parent identifier(s) for entity type "${entityType}": ${missingFields.join(", ")}. Required parent identifiers: ${requiredFields.join(", ")}. Provide these as top-level params or in \`data\` using TTD fields (${payloadHints}).`;
 }

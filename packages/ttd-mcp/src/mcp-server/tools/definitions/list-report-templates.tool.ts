@@ -4,10 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
-import {
-  MYREPORTS_TEMPLATE_ACCESS_ERROR,
-  throwIfGraphqlErrors,
-} from "../utils/graphql-errors.js";
+import { MYREPORTS_TEMPLATE_ACCESS_ERROR, throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_list_report_templates";
 const TOOL_TITLE = "List TTD Report Templates (GraphQL)";
@@ -29,17 +26,8 @@ export const ListReportTemplatesInputSchema = z
       .optional()
       .default(50)
       .describe("GraphQL page size (default 50, max 100)"),
-    after: z
-      .string()
-      .optional()
-      .describe("GraphQL end cursor from a previous call"),
-    pageSize: z
-      .number()
-      .int()
-      .min(1)
-      .max(100)
-      .optional()
-      .describe("Deprecated alias for first"),
+    after: z.string().optional().describe("GraphQL end cursor from a previous call"),
+    pageSize: z.number().int().min(1).max(100).optional().describe("Deprecated alias for first"),
     pageStartIndex: z
       .number()
       .int()

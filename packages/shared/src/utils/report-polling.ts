@@ -9,10 +9,7 @@ import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
  */
 export class ReportTimeoutError extends McpError {
   constructor(attempts: number) {
-    super(
-      JsonRpcErrorCode.InternalError,
-      `Report polling exceeded ${attempts} attempts`,
-    );
+    super(JsonRpcErrorCode.InternalError, `Report polling exceeded ${attempts} attempts`);
     this.name = "ReportTimeoutError";
   }
 }

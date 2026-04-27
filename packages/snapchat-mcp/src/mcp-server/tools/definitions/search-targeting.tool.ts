@@ -24,7 +24,15 @@ This tool fetches a documented targeting endpoint and filters the results client
 export const SearchTargetingInputSchema = z
   .object({
     targetingType: z
-      .enum(["geo_country", "geo_region", "geo_metro", "geo_postal_code", "interests_slc", "interests_vac", "interests_shp"])
+      .enum([
+        "geo_country",
+        "geo_region",
+        "geo_metro",
+        "geo_postal_code",
+        "interests_slc",
+        "interests_vac",
+        "interests_shp",
+      ])
       .describe("Documented targeting endpoint to query and filter"),
     countryCode: z
       .string()

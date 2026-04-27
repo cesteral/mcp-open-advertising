@@ -15,13 +15,7 @@
  * Assets are standalone entities linked via CampaignAsset / AdGroupAsset associations.
  */
 
-export type GAdsEntityType =
-  | "campaign"
-  | "adGroup"
-  | "ad"
-  | "keyword"
-  | "campaignBudget"
-  | "asset";
+export type GAdsEntityType = "campaign" | "adGroup" | "ad" | "keyword" | "campaignBudget" | "asset";
 
 export type ParentIdKey = "customerId" | "campaignId" | "adGroupId";
 
@@ -111,10 +105,7 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
   },
 };
 
-export function assertMutateOpSupported(
-  entityType: GAdsEntityType,
-  op: MutateOp
-): void {
+export function assertMutateOpSupported(entityType: GAdsEntityType, op: MutateOp): void {
   const config = ENTITY_CONFIGS[entityType];
   if (!config.supportedMutateOps.includes(op)) {
     throw new Error(
@@ -172,10 +163,7 @@ export function buildResourceName(
  * Build the :mutate URL path for a given entity type and customer ID.
  * e.g., "/customers/123/campaigns:mutate"
  */
-export function buildMutateUrl(
-  entityType: GAdsEntityType,
-  customerId: string
-): string {
+export function buildMutateUrl(entityType: GAdsEntityType, customerId: string): string {
   const config = getEntityConfig(entityType);
   return `/customers/${customerId}/${config.mutateEndpoint}:mutate`;
 }

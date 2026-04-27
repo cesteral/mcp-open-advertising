@@ -94,12 +94,7 @@ describe("msads_get_report_breakdowns", () => {
       { requestId: "req-1" }
     );
 
-    expect(result.appliedColumns).toEqual([
-      "CampaignName",
-      "Impressions",
-      "DeviceOS",
-      "Network",
-    ]);
+    expect(result.appliedColumns).toEqual(["CampaignName", "Impressions", "DeviceOS", "Network"]);
     expect((services.msadsReportingService.getReport as any).mock.calls[0][0].columns).toEqual([
       "CampaignName",
       "Impressions",

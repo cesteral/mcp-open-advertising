@@ -79,7 +79,6 @@ describe("GetEntityInputSchema", () => {
       );
     }
   });
-
 });
 
 describe("getEntityResponseFormatter", () => {

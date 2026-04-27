@@ -8,7 +8,10 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
 }));
 
-import { restRequestLogic, RestRequestToolInputSchema } from "../../src/mcp-server/tools/definitions/rest-request.tool.js";
+import {
+  restRequestLogic,
+  RestRequestToolInputSchema,
+} from "../../src/mcp-server/tools/definitions/rest-request.tool.js";
 import { getJobStatusLogic } from "../../src/mcp-server/tools/definitions/get-job-status.tool.js";
 import { getFirstPartyDataJobLogic } from "../../src/mcp-server/tools/definitions/get-first-party-data-job.tool.js";
 import { getThirdPartyDataJobLogic } from "../../src/mcp-server/tools/definitions/get-third-party-data-job.tool.js";
@@ -77,12 +80,16 @@ describe("ttd workflows tools", () => {
     const context = createMockContext();
     const sdkContext = createMockSdkContext();
 
-    expect((await restRequestLogic({ methodType: "GET", endpoint: "campaign/1" }, context, sdkContext)).result)
-      .toEqual({ ok: true });
-    expect((await getJobStatusLogic({ jobId: 42 }, context, sdkContext)).jobStatus)
-      .toEqual({ Status: "Complete" });
-    expect((await getCampaignVersionLogic({ campaignId: "camp1" }, context, sdkContext)).campaignVersion)
-      .toEqual({ Version: 7 });
+    expect(
+      (await restRequestLogic({ methodType: "GET", endpoint: "campaign/1" }, context, sdkContext))
+        .result
+    ).toEqual({ ok: true });
+    expect((await getJobStatusLogic({ jobId: 42 }, context, sdkContext)).jobStatus).toEqual({
+      Status: "Complete",
+    });
+    expect(
+      (await getCampaignVersionLogic({ campaignId: "camp1" }, context, sdkContext)).campaignVersion
+    ).toEqual({ Version: 7 });
   });
 
   it("passes callback inputs through first-party and third-party data jobs", async () => {
@@ -153,12 +160,19 @@ describe("ttd workflows tools", () => {
     await updateCampaignWorkflowLogic({ id: "camp1" }, context, sdkContext);
     await createCampaignsJobLogic({ input: [] }, context, sdkContext);
     await updateCampaignsJobLogic({ input: [] }, context, sdkContext);
-    await createAdGroupWorkflowLogic({ campaignId: "camp1", primaryInput: { name: "AG" } }, context, sdkContext);
+    await createAdGroupWorkflowLogic(
+      { campaignId: "camp1", primaryInput: { name: "AG" } },
+      context,
+      sdkContext
+    );
     await updateAdGroupWorkflowLogic({ id: "ag1" }, context, sdkContext);
     await createAdGroupsJobLogic({ input: [] }, context, sdkContext);
     await updateAdGroupsJobLogic({ input: [] }, context, sdkContext);
 
-    expect(mockTtdService.createCampaignWorkflow).toHaveBeenCalledWith({ primaryInput: { name: "Campaign" } }, context);
+    expect(mockTtdService.createCampaignWorkflow).toHaveBeenCalledWith(
+      { primaryInput: { name: "Campaign" } },
+      context
+    );
     expect(mockTtdService.updateCampaignWorkflow).toHaveBeenCalledWith({ id: "camp1" }, context);
     expect(mockTtdService.createCampaignsJob).toHaveBeenCalled();
     expect(mockTtdService.updateCampaignsJob).toHaveBeenCalled();

@@ -21,10 +21,7 @@ Use results to populate ad group targeting configurations.`;
 
 export const SearchTargetingInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     targetingType: z
       .string()
       .describe("Type of targeting to search (e.g., INTEREST_CATEGORY, BEHAVIOR, HASHTAG)"),

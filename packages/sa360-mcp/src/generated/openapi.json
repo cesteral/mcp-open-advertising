@@ -235,13 +235,7 @@
           "status": {
             "description": "Status of the ad group asset.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED",
-              "PAUSED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED", "PAUSED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -443,12 +437,7 @@
           "locationOwnershipType": {
             "description": "The type of location ownership. If the type is BUSINESS_OWNER, it will be served as a location extension. If the type is AFFILIATE, it will be served as an affiliate location.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "BUSINESS_OWNER",
-              "AFFILIATE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "BUSINESS_OWNER", "AFFILIATE"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -553,13 +542,7 @@
           "status": {
             "description": "The status of the ad.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "PAUSED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "PAUSED", "REMOVED"],
             "x-enumDescriptions": [
               "No value has been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -660,12 +643,7 @@
           "status": {
             "description": "Output only. Status of the product bidding category.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ACTIVE",
-              "OBSOLETE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ACTIVE", "OBSOLETE"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -703,15 +681,7 @@
           "level": {
             "description": "Output only. Level of the product bidding category.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "LEVEL1",
-              "LEVEL2",
-              "LEVEL3",
-              "LEVEL4",
-              "LEVEL5"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "LEVEL1", "LEVEL2", "LEVEL3", "LEVEL4", "LEVEL5"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -890,12 +860,7 @@
           "status": {
             "description": "Output only. The status of the customer asset set asset. Read-only.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED"],
             "x-enumDescriptions": [
               "The status has not been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -1118,13 +1083,7 @@
           "status": {
             "description": "The status of the ad group.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "PAUSED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "PAUSED", "REMOVED"],
             "x-enumDescriptions": [
               "The status has not been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -1146,12 +1105,7 @@
           "adRotationMode": {
             "description": "The ad rotation mode of the ad group.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "OPTIMIZE",
-              "ROTATE_FOREVER"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "OPTIMIZE", "ROTATE_FOREVER"],
             "x-enumDescriptions": [
               "The ad rotation mode has not been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -1191,13 +1145,7 @@
           "status": {
             "description": "Output only. Status of the campaign asset.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED",
-              "PAUSED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED", "PAUSED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -1295,13 +1243,7 @@
           "type": {
             "description": "Type of the gender.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "MALE",
-              "FEMALE",
-              "UNDETERMINED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "MALE", "FEMALE", "UNDETERMINED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -1677,14 +1619,7 @@
           "endMinute": {
             "description": "Minutes after the end hour at which this schedule ends. The schedule is exclusive of the end minute. This field is required for CREATE operations and is prohibited on UPDATE operations.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ZERO",
-              "FIFTEEN",
-              "THIRTY",
-              "FORTY_FIVE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ZERO", "FIFTEEN", "THIRTY", "FORTY_FIVE"],
             "x-enumDescriptions": [
               "Not specified.",
               "The value is unknown in this version.",
@@ -1728,14 +1663,7 @@
           "startMinute": {
             "description": "Minutes after the start hour at which this schedule starts. This field is required for CREATE operations and is prohibited on UPDATE operations.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ZERO",
-              "FIFTEEN",
-              "THIRTY",
-              "FORTY_FIVE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ZERO", "FIFTEEN", "THIRTY", "FORTY_FIVE"],
             "x-enumDescriptions": [
               "Not specified.",
               "The value is unknown in this version.",
@@ -1796,14 +1724,7 @@
           "dataDrivenModelStatus": {
             "description": "Output only. The status of the data-driven attribution model for the conversion action.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "AVAILABLE",
-              "STALE",
-              "EXPIRED",
-              "NEVER_GENERATED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "AVAILABLE", "STALE", "EXPIRED", "NEVER_GENERATED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -2251,14 +2172,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": [
-                "UNSPECIFIED",
-                "UNKNOWN",
-                "CLICK",
-                "ENGAGEMENT",
-                "VIDEO_VIEW",
-                "NONE"
-              ],
+              "enum": ["UNSPECIFIED", "UNKNOWN", "CLICK", "ENGAGEMENT", "VIDEO_VIEW", "NONE"],
               "x-enumDescriptions": [
                 "Not specified.",
                 "Used for return value only. Represents value unknown in this version.",
@@ -2337,13 +2251,7 @@
           "historicalCreativeQualityScore": {
             "description": "The creative historical quality score.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "BELOW_AVERAGE",
-              "AVERAGE",
-              "ABOVE_AVERAGE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "BELOW_AVERAGE", "AVERAGE", "ABOVE_AVERAGE"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -2522,13 +2430,7 @@
           "historicalLandingPageQualityScore": {
             "description": "The quality of historical landing page experience.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "BELOW_AVERAGE",
-              "AVERAGE",
-              "ABOVE_AVERAGE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "BELOW_AVERAGE", "AVERAGE", "ABOVE_AVERAGE"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -2665,13 +2567,7 @@
           "historicalSearchPredictedCtr": {
             "description": "The historical search predicted click through rate (CTR).",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "BELOW_AVERAGE",
-              "AVERAGE",
-              "ABOVE_AVERAGE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "BELOW_AVERAGE", "AVERAGE", "ABOVE_AVERAGE"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -3009,12 +2905,7 @@
           "distinctError": {
             "description": "The reasons for the distinct error",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "DUPLICATE_ELEMENT",
-              "DUPLICATE_TYPE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "DUPLICATE_ELEMENT", "DUPLICATE_TYPE"],
             "x-enumDescriptions": [
               "Enum unspecified.",
               "The received error code is not known in this version.",
@@ -3105,11 +2996,7 @@
           "invalidParameterError": {
             "description": "The reasons for invalid parameter errors.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "INVALID_CURRENCY_CODE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "INVALID_CURRENCY_CODE"],
             "x-enumDescriptions": [
               "Enum unspecified.",
               "The received error code is not known in this version.",
@@ -3349,14 +3236,7 @@
           "status": {
             "description": "Output only. The status of the customer.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "CANCELED",
-              "SUSPENDED",
-              "CLOSED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "CANCELED", "SUSPENDED", "CLOSED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -3477,15 +3357,7 @@
           "valueType": {
             "description": "Output only. The type of the result value of the custom column.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "STRING",
-              "INT64",
-              "DOUBLE",
-              "BOOLEAN",
-              "DATE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "STRING", "INT64", "DOUBLE", "BOOLEAN", "DATE"],
             "x-enumDescriptions": [
               "Not specified.",
               "Unknown.",
@@ -3579,13 +3451,7 @@
           "type": {
             "description": "Immutable. Type of a listing group filter node.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "SUBDIVISION",
-              "UNIT_INCLUDED",
-              "UNIT_EXCLUDED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "SUBDIVISION", "UNIT_INCLUDED", "UNIT_EXCLUDED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -3615,11 +3481,7 @@
           "vertical": {
             "description": "Immutable. The vertical the current node tree represents. All nodes in the same tree must belong to the same vertical.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "SHOPPING"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "SHOPPING"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -3843,13 +3705,7 @@
           "status": {
             "description": "The status of this conversion action for conversion event accrual.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED",
-              "HIDDEN"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED", "HIDDEN"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -3915,15 +3771,7 @@
           "level": {
             "description": "Level of the type.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "LEVEL1",
-              "LEVEL2",
-              "LEVEL3",
-              "LEVEL4",
-              "LEVEL5"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "LEVEL1", "LEVEL2", "LEVEL3", "LEVEL4", "LEVEL5"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -3943,12 +3791,7 @@
           "type": {
             "description": "Type of the listing group.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "SUBDIVISION",
-              "UNIT"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "SUBDIVISION", "UNIT"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -3994,13 +3837,7 @@
           "matchType": {
             "description": "The match type of the keyword.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "EXACT",
-              "PHRASE",
-              "BROAD"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "EXACT", "PHRASE", "BROAD"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -4026,12 +3863,7 @@
           "status": {
             "description": "Output only. The status of the campaign asset set asset. Read-only.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED"],
             "x-enumDescriptions": [
               "The status has not been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -4081,12 +3913,7 @@
           "appStore": {
             "description": "Required. The application store that distributes this specific app.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "APPLE_APP_STORE",
-              "GOOGLE_APP_STORE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "APPLE_APP_STORE", "GOOGLE_APP_STORE"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -4161,12 +3988,7 @@
           "rateScope": {
             "description": "The rate scope of the quota limit.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ACCOUNT",
-              "DEVELOPER"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ACCOUNT", "DEVELOPER"],
             "x-enumDescriptions": [
               "Unspecified enum",
               "Used for return value only. Represents value unknown in this version.",
@@ -4309,12 +4131,7 @@
           "status": {
             "description": "Output only. Status of the label. Read only.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -4350,12 +4167,7 @@
           "channel": {
             "description": "Value of the locality.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ONLINE",
-              "LOCAL"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ONLINE", "LOCAL"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -4568,12 +4380,7 @@
           "status": {
             "description": "Output only. The status of the ad group asset set. Read-only.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED"],
             "x-enumDescriptions": [
               "The status has not been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -4607,12 +4414,7 @@
           "status": {
             "description": "Output only. The status of the asset set asset. Read-only.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED"],
             "x-enumDescriptions": [
               "The status has not been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -4660,14 +4462,7 @@
           "status": {
             "description": "Output only. The status of the client customer. Read only.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "CANCELED",
-              "SUSPENDED",
-              "CLOSED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "CANCELED", "SUSPENDED", "CLOSED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -4902,13 +4697,7 @@
           "status": {
             "description": "The status of the criterion. This is the status of the ad group criterion entity, set by the client. Note: UI reports may incorporate additional information that affects whether a criterion is eligible to run. In some cases a criterion that's REMOVED in the API can still show as enabled in the UI. For example, campaigns by default show to users of all age ranges unless excluded. The UI will show each age range as \"enabled\", since they're eligible to see the ads; but AdGroupCriterion.status will show \"removed\", since no positive criterion was added.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "PAUSED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "PAUSED", "REMOVED"],
             "x-enumDescriptions": [
               "No value has been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -5069,15 +4858,7 @@
           "level": {
             "description": "Indicates the level of the category in the taxonomy.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "LEVEL1",
-              "LEVEL2",
-              "LEVEL3",
-              "LEVEL4",
-              "LEVEL5"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "LEVEL1", "LEVEL2", "LEVEL3", "LEVEL4", "LEVEL5"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -5128,15 +4909,7 @@
           "index": {
             "description": "Indicates the index of the custom attribute.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "INDEX0",
-              "INDEX1",
-              "INDEX2",
-              "INDEX3",
-              "INDEX4"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "INDEX0", "INDEX1", "INDEX2", "INDEX3", "INDEX4"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -5552,12 +5325,7 @@
           "status": {
             "description": "Output only. The status of the bidding strategy. This field is read-only.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED"],
             "x-enumDescriptions": [
               "No value has been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -5952,12 +5720,7 @@
           "productChannelExclusivity": {
             "description": "Channel exclusivity of the product.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "SINGLE_CHANNEL",
-              "MULTI_CHANNEL"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "SINGLE_CHANNEL", "MULTI_CHANNEL"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -5972,14 +5735,7 @@
           "productCondition": {
             "description": "Condition of the product.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "OLD",
-              "NEW",
-              "REFURBISHED",
-              "USED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "OLD", "NEW", "REFURBISHED", "USED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -6147,12 +5903,7 @@
           "productChannel": {
             "description": "Channel of the product.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ONLINE",
-              "LOCAL"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ONLINE", "LOCAL"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -6172,14 +5923,7 @@
           "productSoldCondition": {
             "description": "Condition of the product sold.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "OLD",
-              "NEW",
-              "REFURBISHED",
-              "USED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "OLD", "NEW", "REFURBISHED", "USED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -6239,12 +5983,7 @@
           "status": {
             "description": "Output only. Geo target constant status.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVAL_PLANNED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVAL_PLANNED"],
             "x-enumDescriptions": [
               "No value has been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -6289,13 +6028,7 @@
           "radiusUnits": {
             "description": "Unit of the radius. Miles and meters are supported for geo target constants. Milli miles and meters are supported for feed item sets. This is required and must be set in CREATE operations.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "METERS",
-              "MILES",
-              "MILLI_MILES"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "METERS", "MILES", "MILLI_MILES"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -6331,12 +6064,7 @@
           "negativeGeoTargetType": {
             "description": "The setting used for negative geotargeting in this particular campaign.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "PRESENCE_OR_INTEREST",
-              "PRESENCE"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "PRESENCE_OR_INTEREST", "PRESENCE"],
             "x-enumDescriptions": [
               "Not specified.",
               "The value is unknown in this version.",
@@ -6379,13 +6107,7 @@
           "status": {
             "description": "Status of the customer asset.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED",
-              "PAUSED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED", "PAUSED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -6427,12 +6149,7 @@
           "osType": {
             "description": "The operating system targeted by this URL. Required.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "IOS",
-              "ANDROID"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "IOS", "ANDROID"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -6541,14 +6258,7 @@
           "category": {
             "description": "Output only. The category of the artifact.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "RESOURCE",
-              "ATTRIBUTE",
-              "SEGMENT",
-              "METRIC"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "RESOURCE", "ATTRIBUTE", "SEGMENT", "METRIC"],
             "x-enumDescriptions": [
               "Unspecified",
               "Unknown",
@@ -6836,13 +6546,7 @@
           "status": {
             "description": "The status of the link between an asset and asset group.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED",
-              "PAUSED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED", "PAUSED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -6962,13 +6666,7 @@
           "status": {
             "description": "The status of the asset group.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "PAUSED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "PAUSED", "REMOVED"],
             "x-enumDescriptions": [
               "The status has not been specified.",
               "The received value is not known in this version.",
@@ -7088,13 +6786,7 @@
           "condition": {
             "description": "Value of the condition.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "NEW",
-              "REFURBISHED",
-              "USED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "NEW", "REFURBISHED", "USED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7130,13 +6822,7 @@
           "floodlightVariableType": {
             "description": "Output only. Floodlight variable type defined in Search Ads 360.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "DIMENSION",
-              "METRIC",
-              "UNSET"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "DIMENSION", "METRIC", "UNSET"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7149,12 +6835,7 @@
           "floodlightVariableDataType": {
             "description": "Output only. Floodlight variable data type defined in Search Ads 360.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "NUMBER",
-              "STRING"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "NUMBER", "STRING"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7198,12 +6879,7 @@
           "operator": {
             "description": "Operator of webpage targeting condition.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "EQUALS",
-              "CONTAINS"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "EQUALS", "CONTAINS"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7280,13 +6956,7 @@
           "status": {
             "description": "The status of the campaign. When a new campaign is added, the status defaults to ENABLED.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "PAUSED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "PAUSED", "REMOVED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7532,15 +7202,7 @@
           "servingStatus": {
             "description": "Output only. The ad serving status of the campaign.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "SERVING",
-              "NONE",
-              "ENDED",
-              "PENDING",
-              "SUSPENDED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "SERVING", "NONE", "ENDED", "PENDING", "SUSPENDED"],
             "x-enumDescriptions": [
               "No value has been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -7829,13 +7491,7 @@
           "period": {
             "description": "Immutable. Period over which to spend the budget. Defaults to DAILY if not specified.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "DAILY",
-              "FIXED_DAILY",
-              "CUSTOM_PERIOD"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "DAILY", "FIXED_DAILY", "CUSTOM_PERIOD"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7852,12 +7508,7 @@
           "deliveryMethod": {
             "description": "The delivery method that determines the rate at which the campaign budget is spent. Defaults to STANDARD if unspecified in a create operation.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "STANDARD",
-              "ACCELERATED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "STANDARD", "ACCELERATED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7903,12 +7554,7 @@
           "attributionType": {
             "description": "Output only. What the conversion is attributed to: Visit or Keyword+Ad.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "VISIT",
-              "CRITERION_AD"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "VISIT", "CRITERION_AD"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -7965,12 +7611,7 @@
           "productChannel": {
             "description": "Output only. The sales channel of the product that was clicked on: Online or Local.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ONLINE",
-              "LOCAL"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ONLINE", "LOCAL"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -8072,12 +7713,7 @@
           "status": {
             "description": "Output only. The status of the conversion, either ENABLED or REMOVED..",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "REMOVED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -8226,13 +7862,7 @@
           "status": {
             "description": "The status of the conversion custom variable for conversion event accrual.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ACTIVATION_NEEDED",
-              "ENABLED",
-              "PAUSED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ACTIVATION_NEEDED", "ENABLED", "PAUSED"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -8279,12 +7909,7 @@
           "family": {
             "description": "Output only. Family of the conversion custom variable.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "STANDARD",
-              "FLOODLIGHT"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "STANDARD", "FLOODLIGHT"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",
@@ -8523,13 +8148,7 @@
           "status": {
             "description": "The status of the criterion.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ENABLED",
-              "PAUSED",
-              "REMOVED"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ENABLED", "PAUSED", "REMOVED"],
             "x-enumDescriptions": [
               "No value has been specified.",
               "The received value is not known in this version. This is a response-only value.",
@@ -8568,12 +8187,7 @@
           "productChannel": {
             "description": "Output only. The sales channel of the product that was clicked on: Online or Local.",
             "type": "string",
-            "enum": [
-              "UNSPECIFIED",
-              "UNKNOWN",
-              "ONLINE",
-              "LOCAL"
-            ],
+            "enum": ["UNSPECIFIED", "UNKNOWN", "ONLINE", "LOCAL"],
             "x-enumDescriptions": [
               "Not specified.",
               "Used for return value only. Represents value unknown in this version.",

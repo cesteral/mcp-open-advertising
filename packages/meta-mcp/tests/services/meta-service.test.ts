@@ -163,7 +163,14 @@ describe("MetaService", () => {
     it("passes after cursor", async () => {
       httpClient.get.mockResolvedValueOnce({ data: [] });
 
-      await service.listEntities("campaign", "act_123", undefined, undefined, undefined, "cursor123");
+      await service.listEntities(
+        "campaign",
+        "act_123",
+        undefined,
+        undefined,
+        undefined,
+        "cursor123"
+      );
 
       const [, params] = httpClient.get.mock.calls[0];
       expect(params.after).toBe("cursor123");
@@ -386,11 +393,7 @@ describe("MetaService", () => {
         .mockResolvedValueOnce({ id: "c2" })
         .mockResolvedValueOnce({ id: "c3" });
 
-      const items = [
-        { name: "Campaign 1" },
-        { name: "Campaign 2" },
-        { name: "Campaign 3" },
-      ];
+      const items = [{ name: "Campaign 1" }, { name: "Campaign 2" }, { name: "Campaign 3" }];
 
       const result = await service.bulkCreateEntities("campaign", "act_123", items);
 
@@ -406,11 +409,7 @@ describe("MetaService", () => {
         .mockRejectedValueOnce(new Error("Rate limited"))
         .mockResolvedValueOnce({ id: "c3" });
 
-      const items = [
-        { name: "Campaign 1" },
-        { name: "Campaign 2" },
-        { name: "Campaign 3" },
-      ];
+      const items = [{ name: "Campaign 1" }, { name: "Campaign 2" }, { name: "Campaign 3" }];
 
       const result = await service.bulkCreateEntities("campaign", "act_123", items);
 
@@ -439,10 +438,7 @@ describe("MetaService", () => {
         .mockResolvedValueOnce({ success: true })
         .mockResolvedValueOnce({ success: true });
 
-      const result = await service.bulkUpdateStatus(
-        ["entity-1", "entity-2"],
-        "PAUSED"
-      );
+      const result = await service.bulkUpdateStatus(["entity-1", "entity-2"], "PAUSED");
 
       expect(result.results).toHaveLength(2);
       expect(result.results[0]).toEqual({ entityId: "entity-1", success: true });
@@ -452,10 +448,7 @@ describe("MetaService", () => {
     it("includes entityId in each result", async () => {
       httpClient.post.mockResolvedValue({ success: true });
 
-      const result = await service.bulkUpdateStatus(
-        ["a", "b", "c"],
-        "ACTIVE"
-      );
+      const result = await service.bulkUpdateStatus(["a", "b", "c"], "ACTIVE");
 
       expect(result.results.map((r) => r.entityId)).toEqual(["a", "b", "c"]);
     });
@@ -465,10 +458,7 @@ describe("MetaService", () => {
         .mockResolvedValueOnce({ success: true })
         .mockRejectedValueOnce(new Error("Cannot pause archived entity"));
 
-      const result = await service.bulkUpdateStatus(
-        ["entity-1", "entity-2"],
-        "PAUSED"
-      );
+      const result = await service.bulkUpdateStatus(["entity-1", "entity-2"], "PAUSED");
 
       expect(result.results[0].success).toBe(true);
       expect(result.results[1].success).toBe(false);

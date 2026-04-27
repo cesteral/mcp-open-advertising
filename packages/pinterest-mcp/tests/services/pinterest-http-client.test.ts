@@ -120,17 +120,13 @@ describe("PinterestHttpClient", () => {
     it("throws on HTTP 401 error", async () => {
       mockHttpErrorResponse(401, "Unauthorized", "Invalid access token");
 
-      await expect(client.get("/ad_accounts/549755813599/campaigns")).rejects.toThrow(
-        "401"
-      );
+      await expect(client.get("/ad_accounts/549755813599/campaigns")).rejects.toThrow("401");
     });
 
     it("throws on HTTP 400 error", async () => {
       mockHttpErrorResponse(400, "Bad Request", "Invalid parameters");
 
-      await expect(client.get("/ad_accounts/549755813599/campaigns")).rejects.toThrow(
-        "400"
-      );
+      await expect(client.get("/ad_accounts/549755813599/campaigns")).rejects.toThrow("400");
     });
   });
 
@@ -186,10 +182,9 @@ describe("PinterestHttpClient", () => {
     it("uses DELETE method and passes params as query string", async () => {
       mockPinterestSuccessResponse({});
 
-      await client.delete(
-        "/ad_accounts/549755813599/campaigns",
-        { campaign_ids: "687201361754,687201361755" }
-      );
+      await client.delete("/ad_accounts/549755813599/campaigns", {
+        campaign_ids: "687201361754,687201361755",
+      });
 
       const calledUrl = mockFetchWithTimeout.mock.calls[0][0] as string;
       const options = mockFetchWithTimeout.mock.calls[0][3] as RequestInit;

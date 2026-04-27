@@ -226,9 +226,7 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain(
-        "Update payload must contain at least one field to update"
-      );
+      expect(result.errors).toContain("Update payload must contain at least one field to update");
     });
 
     it("warns about read-only fields in update", async () => {
@@ -270,7 +268,7 @@ describe("linkedin_validate_entity tool", () => {
         valid: false,
         entityType: "campaign",
         mode: "create",
-        errors: ["Missing required field \"name\""],
+        errors: ['Missing required field "name"'],
         warnings: [],
         timestamp: "2026-03-04T00:00:00.000Z",
       };

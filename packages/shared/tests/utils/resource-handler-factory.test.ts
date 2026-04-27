@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { registerStaticResourcesFromDefinitions, type StaticResourceDefinition } from "../../src/utils/resource-handler-factory.js";
+import {
+  registerStaticResourcesFromDefinitions,
+  type StaticResourceDefinition,
+} from "../../src/utils/resource-handler-factory.js";
 import type { Logger } from "pino";
 
 function createMockServer() {

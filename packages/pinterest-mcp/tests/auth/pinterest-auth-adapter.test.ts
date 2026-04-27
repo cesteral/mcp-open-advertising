@@ -206,9 +206,9 @@ describe("parsePinterestTokenFromHeaders", () => {
   });
 
   it("throws when Authorization header has wrong scheme", () => {
-    expect(() =>
-      parsePinterestTokenFromHeaders({ authorization: "Basic abc123" })
-    ).toThrow("Authorization header must use Bearer scheme");
+    expect(() => parsePinterestTokenFromHeaders({ authorization: "Basic abc123" })).toThrow(
+      "Authorization header must use Bearer scheme"
+    );
   });
 });
 
@@ -268,12 +268,14 @@ describe("PinterestRefreshTokenAdapter", () => {
     vi.useRealTimers();
   });
 
-  function mockTokenExchangeSuccess(body = {
-    access_token: "new-access-token",
-    token_type: "bearer",
-    expires_in: 86400,
-    refresh_token: "new-refresh-token",
-  }) {
+  function mockTokenExchangeSuccess(
+    body = {
+      access_token: "new-access-token",
+      token_type: "bearer",
+      expires_in: 86400,
+      refresh_token: "new-refresh-token",
+    }
+  ) {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       json: async () => body,
@@ -386,7 +388,11 @@ describe("PinterestRefreshTokenAdapter", () => {
     it("calls POST https://api.pinterest.com/v5/oauth/token with form-encoded body and Basic auth", async () => {
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ access_token: "new_access_token", token_type: "bearer", expires_in: 2592000 }),
+        json: async () => ({
+          access_token: "new_access_token",
+          token_type: "bearer",
+          expires_in: 2592000,
+        }),
       } as unknown as Response);
 
       const adapter = new PinterestRefreshTokenAdapter(
@@ -399,7 +405,12 @@ describe("PinterestRefreshTokenAdapter", () => {
       expect(token).toBe("new_access_token");
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(1);
 
-      const [url, , , init] = mockFetchWithTimeout.mock.calls[0] as [string, number, unknown, RequestInit & { headers: Record<string, string> }];
+      const [url, , , init] = mockFetchWithTimeout.mock.calls[0] as [
+        string,
+        number,
+        unknown,
+        RequestInit & { headers: Record<string, string> },
+      ];
       expect(url).toBe("https://api.pinterest.com/v5/oauth/token");
       expect(init.headers["Content-Type"]).toBe("application/x-www-form-urlencoded");
       expect(init.headers["Authorization"]).toMatch(/^Basic /);
@@ -428,8 +439,14 @@ describe("PinterestRefreshTokenAdapter", () => {
 
     it("rotates refresh token when response includes new one", async () => {
       mockFetchWithTimeout
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t1", expires_in: 100, refresh_token: "new_rt" }) } as unknown as Response)
-        .mockResolvedValueOnce({ ok: true, json: async () => ({ access_token: "t2", expires_in: 100 }) } as unknown as Response);
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t1", expires_in: 100, refresh_token: "new_rt" }),
+        } as unknown as Response)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ access_token: "t2", expires_in: 100 }),
+        } as unknown as Response);
 
       const adapter = new PinterestRefreshTokenAdapter(
         { appId: "a", appSecret: "b", refreshToken: "old_rt" },
@@ -447,7 +464,12 @@ describe("PinterestRefreshTokenAdapter", () => {
       // Second call should use new_rt
       await adapter.getAccessToken();
 
-      const [, , , secondCallInit] = mockFetchWithTimeout.mock.calls[1] as [string, number, unknown, RequestInit & { body: string }];
+      const [, , , secondCallInit] = mockFetchWithTimeout.mock.calls[1] as [
+        string,
+        number,
+        unknown,
+        RequestInit & { body: string },
+      ];
       expect(secondCallInit.body).toContain("refresh_token=new_rt");
     });
 
@@ -466,7 +488,6 @@ describe("PinterestRefreshTokenAdapter", () => {
       await expect(adapter.getAccessToken()).rejects.toThrow("access_token");
     });
   });
-
 });
 
 describe("parsePinterestRefreshCredentialsFromHeaders", () => {

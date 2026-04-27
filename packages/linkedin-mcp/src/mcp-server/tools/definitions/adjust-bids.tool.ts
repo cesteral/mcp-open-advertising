@@ -29,9 +29,7 @@ export const AdjustBidsInputSchema = z
             .string()
             .min(1)
             .describe("The campaign URN to adjust (e.g., urn:li:sponsoredCampaign:123)"),
-          amount: z
-            .string()
-            .describe("New bid amount as a decimal string (e.g., \"10.00\")"),
+          amount: z.string().describe('New bid amount as a decimal string (e.g., "10.00")'),
           currencyCode: z
             .string()
             .length(3)
@@ -41,10 +39,7 @@ export const AdjustBidsInputSchema = z
       .min(1)
       .max(50)
       .describe("Bid adjustments to apply (max 50)"),
-    reason: z
-      .string()
-      .optional()
-      .describe("Optional reason for the bid adjustment"),
+    reason: z.string().optional().describe("Optional reason for the bid adjustment"),
   })
   .describe("Parameters for batch bid adjustment on LinkedIn campaigns");
 

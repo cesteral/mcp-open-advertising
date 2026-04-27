@@ -83,9 +83,7 @@ describe("validateRequiredFields", () => {
   });
 
   it("includes hint in missing-field error message when provided", () => {
-    const errors = validateRequiredFields({}, [
-      { field: "name", hint: "e.g. My Campaign" },
-    ]);
+    const errors = validateRequiredFields({}, [{ field: "name", hint: "e.g. My Campaign" }]);
     expect(errors[0]).toContain("(e.g. My Campaign)");
   });
 
@@ -120,18 +118,16 @@ describe("checkReadOnlyFields", () => {
   });
 
   it("returns warnings for present read-only fields", () => {
-    const warnings = checkReadOnlyFields(
-      { id: "123", name: "test", createdAt: "2025-01-01" },
-      ["id", "createdAt"]
-    );
+    const warnings = checkReadOnlyFields({ id: "123", name: "test", createdAt: "2025-01-01" }, [
+      "id",
+      "createdAt",
+    ]);
     expect(warnings).toHaveLength(2);
   });
 
   it("uses default message template", () => {
     const warnings = checkReadOnlyFields({ id: "123" }, ["id"]);
-    expect(warnings[0]).toBe(
-      'Field "id" is read-only and will be ignored by the API'
-    );
+    expect(warnings[0]).toBe('Field "id" is read-only and will be ignored by the API');
   });
 
   it("uses custom messageTemplate when provided", () => {
@@ -168,7 +164,8 @@ describe("validateEntityResponseFormatter", () => {
       valid: false,
       errors: ['Missing required field "name"', 'Field "count" should be number but got string'],
     };
-    const text = (validateEntityResponseFormatter(result)[0] as { type: string; text: string }).text;
+    const text = (validateEntityResponseFormatter(result)[0] as { type: string; text: string })
+      .text;
     expect(text).toContain("Validation failed for campaign (create):");
     expect(text).toContain('Missing required field "name"');
     expect(text).toContain("should be number but got string");
@@ -179,18 +176,21 @@ describe("validateEntityResponseFormatter", () => {
       ...baseResult,
       warnings: ['Field "id" is read-only and will be ignored by the API'],
     };
-    const text = (validateEntityResponseFormatter(result)[0] as { type: string; text: string }).text;
+    const text = (validateEntityResponseFormatter(result)[0] as { type: string; text: string })
+      .text;
     expect(text).toContain("Warnings:");
     expect(text).toContain('Field "id" is read-only');
   });
 
   it("omits warnings section when no warnings", () => {
-    const text = (validateEntityResponseFormatter(baseResult)[0] as { type: string; text: string }).text;
+    const text = (validateEntityResponseFormatter(baseResult)[0] as { type: string; text: string })
+      .text;
     expect(text).not.toContain("Warnings:");
   });
 
   it("includes timestamp", () => {
-    const text = (validateEntityResponseFormatter(baseResult)[0] as { type: string; text: string }).text;
+    const text = (validateEntityResponseFormatter(baseResult)[0] as { type: string; text: string })
+      .text;
     expect(text).toContain("Timestamp: 2025-01-15T12:00:00.000Z");
   });
 

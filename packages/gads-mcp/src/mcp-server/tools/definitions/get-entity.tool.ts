@@ -20,17 +20,9 @@ Returns all default fields for the entity type. Use \`gads_gaql_search\` for cus
 
 export const GetEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to retrieve"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to retrieve"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    entityId: z.string().min(1).describe("The entity ID to retrieve"),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(

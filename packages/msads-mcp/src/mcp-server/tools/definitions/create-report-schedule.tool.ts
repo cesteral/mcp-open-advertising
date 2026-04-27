@@ -26,26 +26,12 @@ Note: Microsoft Advertising's API has limited schedule management. Use the UI at
 
 export const CreateReportScheduleInputSchema = z
   .object({
-    accountId: z
-      .string()
-      .describe("Microsoft Ads Account ID"),
-    scheduleName: z
-      .string()
-      .min(1)
-      .describe("Name for the scheduled report"),
-    reportType: z
-      .string()
-      .describe("Report type (e.g., CampaignPerformanceReportRequest)"),
-    columns: z
-      .array(z.string())
-      .min(1)
-      .describe("Report columns to include"),
-    startDate: z
-      .string()
-      .describe("Report data start date (YYYY-MM-DD)"),
-    endDate: z
-      .string()
-      .describe("Report data end date (YYYY-MM-DD)"),
+    accountId: z.string().describe("Microsoft Ads Account ID"),
+    scheduleName: z.string().min(1).describe("Name for the scheduled report"),
+    reportType: z.string().describe("Report type (e.g., CampaignPerformanceReportRequest)"),
+    columns: z.array(z.string()).min(1).describe("Report columns to include"),
+    startDate: z.string().describe("Report data start date (YYYY-MM-DD)"),
+    endDate: z.string().describe("Report data end date (YYYY-MM-DD)"),
     aggregation: z
       .string()
       .optional()
@@ -54,9 +40,7 @@ export const CreateReportScheduleInputSchema = z
       .object({
         StartDate: z.string().describe("Schedule start date (YYYY-MM-DD)"),
         EndDate: z.string().optional().describe("Schedule end date (YYYY-MM-DD)"),
-        Frequency: z
-          .enum(["Daily", "Weekly", "Monthly"])
-          .describe("How often the report runs"),
+        Frequency: z.enum(["Daily", "Weekly", "Monthly"]).describe("How often the report runs"),
       })
       .describe("Schedule configuration"),
   })
@@ -100,7 +84,9 @@ export async function createReportScheduleLogic(
   };
 }
 
-export function createReportScheduleResponseFormatter(result: CreateReportScheduleOutput): McpTextContent[] {
+export function createReportScheduleResponseFormatter(
+  result: CreateReportScheduleOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

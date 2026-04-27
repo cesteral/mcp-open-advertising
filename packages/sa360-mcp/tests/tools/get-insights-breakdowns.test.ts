@@ -69,7 +69,14 @@ describe("GetInsightsBreakdownsInputSchema", () => {
   });
 
   it("accepts all 6 insights entity types", () => {
-    const types = ["customer", "campaign", "adGroup", "adGroupAd", "adGroupCriterion", "campaignCriterion"];
+    const types = [
+      "customer",
+      "campaign",
+      "adGroup",
+      "adGroupAd",
+      "adGroupCriterion",
+      "campaignCriterion",
+    ];
     for (const entityType of types) {
       const result = GetInsightsBreakdownsInputSchema.safeParse({ ...validInput, entityType });
       expect(result.success, `Failed for entityType: ${entityType}`).toBe(true);

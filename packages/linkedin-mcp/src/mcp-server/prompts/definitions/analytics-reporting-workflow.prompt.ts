@@ -23,7 +23,7 @@ export const linkedInAnalyticsReportingWorkflowPrompt: Prompt = {
 };
 
 export function getLinkedInAnalyticsReportingWorkflowMessage(
-  args?: Record<string, string>,
+  args?: Record<string, string>
 ): string {
   const adAccountUrn = args?.adAccountUrn || "{adAccountUrn}";
   const pivot = args?.pivot || "CAMPAIGN";

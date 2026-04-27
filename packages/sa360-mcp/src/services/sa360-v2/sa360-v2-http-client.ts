@@ -17,7 +17,9 @@ const SA360_V2_RETRY_CONFIG: RetryConfig = {
 
 function parseSA360V2Errors(body: string): string {
   try {
-    const parsed = JSON.parse(body) as { error?: { message?: string; errors?: Array<{ message?: string }> } };
+    const parsed = JSON.parse(body) as {
+      error?: { message?: string; errors?: Array<{ message?: string }> };
+    };
     if (parsed.error?.message) {
       return parsed.error.message;
     }
@@ -51,11 +53,7 @@ export class SA360V2HttpClient {
   /**
    * Make an authenticated request to the SA360 v2 API.
    */
-  async fetch(
-    path: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
+  async fetch(path: string, context?: RequestContext, options?: RequestInit): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
     const method = options?.method || "GET";
 

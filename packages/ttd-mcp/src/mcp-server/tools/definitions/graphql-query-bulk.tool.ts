@@ -42,10 +42,7 @@ const CREATE_QUERY_BULK_MUTATION = `mutation CreateQueryBulk($input: CreateQuery
 
 export const GraphqlQueryBulkInputSchema = z
   .object({
-    query: z
-      .string()
-      .min(1)
-      .describe("GraphQL query string to execute for each variable set"),
+    query: z.string().min(1).describe("GraphQL query string to execute for each variable set"),
     variables: z
       .array(z.record(z.any()))
       .min(1)
@@ -121,12 +118,9 @@ export async function graphqlQueryBulkLogic(
     },
   };
 
-  const result = (await ttdService.graphqlQuery(
-    CREATE_QUERY_BULK_MUTATION,
-    variables,
-    context,
-    { betaFeatures: input.betaFeatures }
-  )) as Record<string, any>;
+  const result = (await ttdService.graphqlQuery(CREATE_QUERY_BULK_MUTATION, variables, context, {
+    betaFeatures: input.betaFeatures,
+  })) as Record<string, any>;
 
   const job = extractBulkJobOrThrow(result, "createQueryBulk");
 
@@ -137,7 +131,9 @@ export async function graphqlQueryBulkLogic(
   };
 }
 
-export function graphqlQueryBulkResponseFormatter(result: GraphqlQueryBulkOutput): McpTextContent[] {
+export function graphqlQueryBulkResponseFormatter(
+  result: GraphqlQueryBulkOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,
@@ -162,24 +158,18 @@ export const graphqlQueryBulkTool = {
     {
       label: "Bulk query details for multiple advertisers",
       input: {
-        query: "query GetAdvertiser($id: ID!) { advertiser(id: $id) { id name status totalCampaignChannelCount } }",
-        variables: [
-          { id: "adv123abc" },
-          { id: "adv456def" },
-          { id: "adv789ghi" },
-        ],
+        query:
+          "query GetAdvertiser($id: ID!) { advertiser(id: $id) { id name status totalCampaignChannelCount } }",
+        variables: [{ id: "adv123abc" }, { id: "adv456def" }, { id: "adv789ghi" }],
         betaFeatures: "my-beta-flag",
       },
     },
     {
       label: "Bulk query campaign budget and pacing for multiple campaigns",
       input: {
-        query: "query GetCampaign($id: ID!) { campaign(id: $id) { id name budget { amount currencyCode } pacingMode availability } }",
-        variables: [
-          { id: "camp456def" },
-          { id: "camp789ghi" },
-          { id: "camp012jkl" },
-        ],
+        query:
+          "query GetCampaign($id: ID!) { campaign(id: $id) { id name budget { amount currencyCode } pacingMode availability } }",
+        variables: [{ id: "camp456def" }, { id: "camp789ghi" }, { id: "camp012jkl" }],
       },
     },
   ],

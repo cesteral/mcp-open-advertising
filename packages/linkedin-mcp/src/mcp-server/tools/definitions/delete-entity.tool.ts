@@ -20,9 +20,7 @@ const TOOL_DESCRIPTION = `Delete a LinkedIn Ads entity by URN.
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to delete"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
     entityUrn: z
       .string()
       .min(1)

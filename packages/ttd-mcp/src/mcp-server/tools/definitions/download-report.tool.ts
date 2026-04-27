@@ -38,19 +38,16 @@ After generating a report with \`ttd_get_report\`, use the returned \`downloadUr
 
 export const DownloadReportInputSchema = z
   .object({
-    downloadUrl: z
-      .string()
-      .url()
-      .describe("Report download URL from ttd_get_report"),
+    downloadUrl: z.string().url().describe("Report download URL from ttd_get_report"),
     storeRawCsv: z
       .boolean()
       .optional()
       .default(false)
       .describe(
         "Persist the full CSV body in the in-process report-csv store and return " +
-        "a `report-csv://{id}` resource URI. Use when a downstream tool/user needs " +
-        "the complete CSV but the model only needs a bounded preview. Entries " +
-        "expire after 30 minutes. Sensitive token-like values are redacted before storage."
+          "a `report-csv://{id}` resource URI. Use when a downstream tool/user needs " +
+          "the complete CSV but the model only needs a bounded preview. Entries " +
+          "expire after 30 minutes. Sensitive token-like values are redacted before storage."
       ),
   })
   .merge(ReportViewInputSchema)
@@ -96,18 +93,18 @@ function detectBinarySpreadsheet(
   const lowerUrl = downloadUrl.toLowerCase();
 
   const isZipSignature =
-    bytes.length >= 4
-    && bytes[0] === 0x50
-    && bytes[1] === 0x4b
-    && bytes[2] === 0x03
-    && bytes[3] === 0x04;
+    bytes.length >= 4 &&
+    bytes[0] === 0x50 &&
+    bytes[1] === 0x4b &&
+    bytes[2] === 0x03 &&
+    bytes[3] === 0x04;
 
   const looksLikeSpreadsheet =
-    normalizedType.includes("spreadsheetml")
-    || normalizedType.includes("application/zip")
-    || normalizedType.includes("application/octet-stream")
-    || lowerUrl.includes(".xlsx")
-    || isZipSignature;
+    normalizedType.includes("spreadsheetml") ||
+    normalizedType.includes("application/zip") ||
+    normalizedType.includes("application/octet-stream") ||
+    lowerUrl.includes(".xlsx") ||
+    isZipSignature;
 
   if (!looksLikeSpreadsheet) return null;
 
@@ -148,25 +145,14 @@ export async function downloadReportLogic(
         ? { headers: { "TTD-Auth": await authAdapter.getAccessToken() } }
         : {};
 
-      const response = await fetchWithTimeout(
-        input.downloadUrl,
-        60_000,
-        undefined,
-        requestInit,
-      );
+      const response = await fetchWithTimeout(input.downloadUrl, 60_000, undefined, requestInit);
       if (!response.ok) {
-        throw new Error(
-          `Failed to download report: ${response.status} ${response.statusText}`
-        );
+        throw new Error(`Failed to download report: ${response.status} ${response.statusText}`);
       }
 
       const bytes = new Uint8Array(await response.arrayBuffer());
       const contentType = response.headers.get("content-type");
-      const binarySpreadsheetError = detectBinarySpreadsheet(
-        bytes,
-        contentType,
-        input.downloadUrl
-      );
+      const binarySpreadsheetError = detectBinarySpreadsheet(bytes, contentType, input.downloadUrl);
       if (binarySpreadsheetError) {
         throw new Error(binarySpreadsheetError);
       }

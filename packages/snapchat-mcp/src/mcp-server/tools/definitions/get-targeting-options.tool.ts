@@ -17,7 +17,16 @@ Use this to discover valid country support, geo, and interest values before crea
 export const GetTargetingOptionsInputSchema = z
   .object({
     targetingType: z
-      .enum(["country_support", "geo_country", "geo_region", "geo_metro", "geo_postal_code", "interests_slc", "interests_vac", "interests_shp"])
+      .enum([
+        "country_support",
+        "geo_country",
+        "geo_region",
+        "geo_metro",
+        "geo_postal_code",
+        "interests_slc",
+        "interests_vac",
+        "interests_shp",
+      ])
       .optional()
       .default("country_support")
       .describe("Documented Snapchat targeting endpoint to query"),
@@ -39,7 +48,10 @@ export const GetTargetingOptionsInputSchema = z
 export const GetTargetingOptionsOutputSchema = z
   .object({
     options: z.record(z.any()).describe("Available targeting options"),
-    nextCursor: z.string().optional().describe("Next page URL when Snapchat pagination is available"),
+    nextCursor: z
+      .string()
+      .optional()
+      .describe("Next page URL when Snapchat pagination is available"),
     timestamp: z.string().datetime(),
   })
   .describe("Targeting options result");
@@ -68,7 +80,9 @@ export async function getTargetingOptionsLogic(
   };
 }
 
-export function getTargetingOptionsResponseFormatter(result: GetTargetingOptionsOutput): McpTextContent[] {
+export function getTargetingOptionsResponseFormatter(
+  result: GetTargetingOptionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

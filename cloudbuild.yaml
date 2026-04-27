@@ -19,6 +19,8 @@ steps:
       - |
         npm install -g pnpm@8.15.0
         pnpm install --frozen-lockfile
+        pnpm run check:registry
+        pnpm run check:registry-tools
         pnpm run build
         pnpm run typecheck
         pnpm run test

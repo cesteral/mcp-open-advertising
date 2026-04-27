@@ -18,9 +18,7 @@ Note: location targets are not searchable via the Microsoft Advertising REST API
 
 export const SearchTargetingInputSchema = z
   .object({
-    targetingType: z
-      .enum(["age", "gender", "device"])
-      .describe("Type of targeting to list"),
+    targetingType: z.enum(["age", "gender", "device"]).describe("Type of targeting to list"),
     maxResults: z
       .number()
       .int()

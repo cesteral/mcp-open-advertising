@@ -23,16 +23,24 @@ Uses LinkedIn's 3-step upload flow: register → upload binary → confirm.
 
 **Usage:** The returned assetUrn is referenced in creative → content → media → reference`;
 
-export const UploadImageInputSchema = z.object({
-  adAccountUrn: z.string().describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
-  filename: z.string().optional().describe("Override filename"),
-}).describe("Parameters for uploading an image to LinkedIn");
+export const UploadImageInputSchema = z
+  .object({
+    adAccountUrn: z
+      .string()
+      .describe("LinkedIn Ad Account URN (e.g., urn:li:sponsoredAccount:123456)"),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the image to upload"),
+    filename: z.string().optional().describe("Override filename"),
+  })
+  .describe("Parameters for uploading an image to LinkedIn");
 
-export const UploadImageOutputSchema = z.object({
-  assetUrn: z.string().describe("Asset URN (urn:li:digitalmediaAsset:...) for use in creative payloads"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded LinkedIn image asset");
+export const UploadImageOutputSchema = z
+  .object({
+    assetUrn: z
+      .string()
+      .describe("Asset URN (urn:li:digitalmediaAsset:...) for use in creative payloads"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded LinkedIn image asset");
 
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
@@ -58,14 +66,16 @@ export async function uploadImageLogic(
     },
   };
 
-  const registerResult = await linkedInService.client.post(
+  const registerResult = (await linkedInService.client.post(
     "/v2/assets?action=registerUpload",
     registerPayload,
     context
-  ) as LinkedInRegisterUploadResponse;
+  )) as LinkedInRegisterUploadResponse;
 
   const uploadRequest =
-    registerResult.value?.uploadMechanism?.["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"];
+    registerResult.value?.uploadMechanism?.[
+      "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"
+    ];
   const uploadUrl = uploadRequest?.uploadUrl;
   const assetUrn = registerResult.value?.asset;
 
@@ -74,11 +84,7 @@ export async function uploadImageLogic(
   }
 
   // Step 2: Download file and PUT binary
-  const { buffer, contentType } = await downloadFileToBuffer(
-    input.mediaUrl,
-    120_000,
-    context
-  );
+  const { buffer, contentType } = await downloadFileToBuffer(input.mediaUrl, 120_000, context);
 
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
   if (buffer.length > MAX_IMAGE_SIZE) {
@@ -96,10 +102,12 @@ export async function uploadImageLogic(
 }
 
 export function uploadImageResponseFormatter(result: UploadImageOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Image uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Image uploaded to LinkedIn!\n\nAsset URN: ${result.assetUrn}\n\nUse assetUrn in creative.content.media.reference for Sponsored Content.`,
+    },
+  ];
 }
 
 export const uploadImageTool = {

@@ -5,10 +5,9 @@ const { mockResolveSessionServices } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {
@@ -82,11 +81,11 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       );
 
       expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
-        undefined,         // partnerId
-        "adv-1",           // advertiserId — must be 2nd positional arg (query param)
-        undefined,         // filter
-        undefined,         // pageToken
-        100,               // pageSize
+        undefined, // partnerId
+        "adv-1", // advertiserId — must be 2nd positional arg (query param)
+        undefined, // filter
+        undefined, // pageToken
+        100, // pageSize
         expect.any(Object) // context
       );
       expect(result.algorithms).toHaveLength(2);
@@ -103,11 +102,11 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       );
 
       expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
-        "partner-1",       // partnerId — must be 1st positional arg (query param)
-        undefined,         // advertiserId
-        undefined,         // filter
-        undefined,         // pageToken
-        100,               // pageSize
+        "partner-1", // partnerId — must be 1st positional arg (query param)
+        undefined, // advertiserId
+        undefined, // filter
+        undefined, // pageToken
+        100, // pageSize
         expect.any(Object) // context
       );
     });
@@ -125,7 +124,7 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       expect(mockDv360Service.listCustomBiddingAlgorithmsEntities).toHaveBeenCalledWith(
         undefined,
         "adv-1",
-        'entityStatus="ENTITY_STATUS_ACTIVE"',  // filter passed as separate param, not combined
+        'entityStatus="ENTITY_STATUS_ACTIVE"', // filter passed as separate param, not combined
         undefined,
         100,
         expect.any(Object)
@@ -139,11 +138,7 @@ describe("dv360_list_custom_bidding_algorithms", () => {
 
     it("throws when neither partnerId nor advertiserId is provided", async () => {
       await expect(
-        listCustomBiddingAlgorithmsLogic(
-          {} as any,
-          createMockContext(),
-          createMockSdkContext()
-        )
+        listCustomBiddingAlgorithmsLogic({} as any, createMockContext(), createMockSdkContext())
       ).rejects.toThrow("Either partnerId or advertiserId must be provided");
     });
 

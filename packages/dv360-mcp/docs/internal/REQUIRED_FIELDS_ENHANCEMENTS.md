@@ -16,24 +16,23 @@ Applied production-grade enhancements to the required fields detection system ba
 **Location:** `convert-to-openapi.ts:364-368`
 
 **Before:**
+
 ```typescript
-const OUTPUT_ONLY_PATTERNS = [
-  /^name$/,
-  /^updateTime$/,
-  /^createTime$/,
-];
+const OUTPUT_ONLY_PATTERNS = [/^name$/, /^updateTime$/, /^createTime$/];
 ```
 
 **After:**
+
 ```typescript
 const OUTPUT_ONLY_PATTERNS: ReadonlyArray<RegExp> = [
-  /^name$/,        // 'name' is usually the resource name (output-only)
-  /^updateTime$/,  // updateTime is always output-only
-  /^createTime$/,  // createTime is always output-only
+  /^name$/, // 'name' is usually the resource name (output-only)
+  /^updateTime$/, // updateTime is always output-only
+  /^createTime$/, // createTime is always output-only
 ] as const;
 ```
 
 **Benefits:**
+
 - Prevents accidental array mutation
 - Stronger compile-time guarantees
 - Self-documenting inline comments
@@ -45,20 +44,22 @@ const OUTPUT_ONLY_PATTERNS: ReadonlyArray<RegExp> = [
 **Location:** `convert-to-openapi.ts:352-358`
 
 **Before:**
+
 ```typescript
-if (lowerDesc.includes('output only')) {
+if (lowerDesc.includes("output only")) {
   return true;
 }
-if (lowerDesc.includes('assigned by the system')) {
+if (lowerDesc.includes("assigned by the system")) {
   return true;
 }
 ```
 
 **After:**
+
 ```typescript
 const OUTPUT_ONLY_MARKERS = {
-  EXPLICIT: 'output only',
-  ASSIGNED: 'assigned by the system',
+  EXPLICIT: "output only",
+  ASSIGNED: "assigned by the system",
 } as const;
 
 // Usage:
@@ -68,6 +69,7 @@ const hasOutputMarker = Object.values(OUTPUT_ONLY_MARKERS).some((marker) =>
 ```
 
 **Benefits:**
+
 - Single source of truth for detection patterns
 - Easy to extend without code changes
 - More maintainable and testable
@@ -90,6 +92,7 @@ const stats = {
 ```
 
 **Sample Output:**
+
 ```
      SdfConfig: 1 required field(s) detected, 0 excluded
      Advertiser: 7 required field(s) detected, 3 excluded
@@ -100,6 +103,7 @@ const stats = {
 ```
 
 **Benefits:**
+
 - Visibility into detection effectiveness
 - Easy to spot anomalies (e.g., too many excluded fields)
 - Helps validate detection logic over time
@@ -113,7 +117,7 @@ const stats = {
 
 **Enhancement:** Added comprehensive JSDoc with examples and use cases:
 
-```typescript
+````typescript
 /**
  * Manual override registry for required fields
  *
@@ -142,9 +146,10 @@ const REQUIRED_FIELDS_OVERRIDES: Record<
   string,
   { add?: string[]; remove?: string[]; reason?: string }
 > = {};
-```
+````
 
 **Benefits:**
+
 - Clear guidance for future maintainers
 - Documents when/why to use overrides
 - Includes concrete examples
@@ -161,6 +166,7 @@ pnpm run generate:schemas
 ```
 
 **Output:**
+
 ```
 ✅ Pipeline completed successfully!
 
@@ -185,6 +191,7 @@ pnpm run build
 ### ✅ Generated Schema Validation
 
 **Sample (InsertionOrder):**
+
 ```typescript
 export const InsertionOrder = z.object({
   budget: z.lazy(() => InsertionOrderBudget),              // ✅ Required
@@ -200,6 +207,7 @@ export const InsertionOrder = z.object({
 ```
 
 **Detection Results:**
+
 - 7 required fields detected
 - 5 output-only fields excluded
 - 0 false positives
@@ -210,21 +218,25 @@ export const InsertionOrder = z.object({
 ## Code Quality Improvements
 
 ### Type Safety
+
 - ✅ Added `ReadonlyArray<RegExp>` type annotation
 - ✅ Added `as const` assertions for immutability
 - ✅ Extended override type with `reason?: string`
 
 ### Maintainability
+
 - ✅ Extracted magic strings to named constants
 - ✅ Improved documentation with examples
 - ✅ Added inline comments for patterns
 
 ### Observability
+
 - ✅ Added detection metrics logging
 - ✅ Added override activity logging
 - ✅ Statistics help validate effectiveness
 
 ### Documentation
+
 - ✅ Comprehensive JSDoc for override registry
 - ✅ Clear guidance on when to use overrides
 - ✅ Concrete examples for future maintainers
@@ -238,6 +250,7 @@ export const InsertionOrder = z.object({
 **Change:** No regression ✅
 
 **Analysis:**
+
 - Logging adds negligible overhead (~console.log per schema)
 - Type safety is compile-time only (zero runtime cost)
 - Constant extraction may improve performance slightly (fewer string allocations)
@@ -257,16 +270,16 @@ export const InsertionOrder = z.object({
 
 ## Production Readiness Assessment
 
-| Criteria | Status | Notes |
-|----------|--------|-------|
-| **Type Safety** | ✅ | Added `readonly`, `as const` annotations |
-| **Maintainability** | ✅ | Constants, documentation, examples |
-| **Observability** | ✅ | Comprehensive logging and metrics |
-| **Performance** | ✅ | No regression, negligible overhead |
-| **Testing** | ✅ | Schema generation + TypeScript build passing |
-| **Documentation** | ✅ | JSDoc, inline comments, examples |
-| **Error Handling** | ✅ | Existing error handling unchanged |
-| **Backward Compat** | ✅ | No breaking changes |
+| Criteria            | Status | Notes                                        |
+| ------------------- | ------ | -------------------------------------------- |
+| **Type Safety**     | ✅     | Added `readonly`, `as const` annotations     |
+| **Maintainability** | ✅     | Constants, documentation, examples           |
+| **Observability**   | ✅     | Comprehensive logging and metrics            |
+| **Performance**     | ✅     | No regression, negligible overhead           |
+| **Testing**         | ✅     | Schema generation + TypeScript build passing |
+| **Documentation**   | ✅     | JSDoc, inline comments, examples             |
+| **Error Handling**  | ✅     | Existing error handling unchanged            |
+| **Backward Compat** | ✅     | No breaking changes                          |
 
 **Overall Grade:** 10/10 - Production-ready ✅
 
@@ -291,15 +304,17 @@ export const InsertionOrder = z.object({
 ### Future Enhancements (Not Blocking Production)
 
 1. **Add Unit Tests** (when test infrastructure available)
+
    ```typescript
-   describe('isOutputOnlyField', () => {
+   describe("isOutputOnlyField", () => {
      it('should detect explicit "output only" marker', () => {
-       expect(isOutputOnlyField('foo', 'Output only. Description')).toBe(true);
+       expect(isOutputOnlyField("foo", "Output only. Description")).toBe(true);
      });
    });
    ```
 
 2. **Export Detection Metrics** (for monitoring)
+
    ```typescript
    interface DetectionMetrics {
      schemaName: string;

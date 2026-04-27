@@ -57,15 +57,13 @@ describe("parseMetaTokenFromHeaders", () => {
   });
 
   it("throws on missing Authorization header", () => {
-    expect(() => parseMetaTokenFromHeaders({})).toThrow(
-      "Missing required Authorization header"
-    );
+    expect(() => parseMetaTokenFromHeaders({})).toThrow("Missing required Authorization header");
   });
 
   it("throws on non-Bearer Authorization header", () => {
-    expect(() =>
-      parseMetaTokenFromHeaders({ authorization: "Basic abc123" })
-    ).toThrow("Authorization header must use Bearer scheme");
+    expect(() => parseMetaTokenFromHeaders({ authorization: "Basic abc123" })).toThrow(
+      "Authorization header must use Bearer scheme"
+    );
   });
 
   it("handles array header values (takes first)", () => {
@@ -124,10 +122,7 @@ describe("MetaAccessTokenAdapter", () => {
     });
 
     it("passes token in Authorization header, not in URL", async () => {
-      const adapter = new MetaAccessTokenAdapter(
-        "SECRET_TOKEN_123",
-        "https://graph.test/v21.0"
-      );
+      const adapter = new MetaAccessTokenAdapter("SECRET_TOKEN_123", "https://graph.test/v21.0");
 
       mockSuccessResponse();
       await adapter.validate();
@@ -138,7 +133,9 @@ describe("MetaAccessTokenAdapter", () => {
       expect(calledUrl).toBe("https://graph.test/v21.0/me?fields=id,name");
 
       // Token should be in the Authorization header
-      const calledOptions = mockFetchWithTimeout.mock.calls[0][3] as { headers: Record<string, string> };
+      const calledOptions = mockFetchWithTimeout.mock.calls[0][3] as {
+        headers: Record<string, string>;
+      };
       expect(calledOptions.headers.Authorization).toBe("Bearer SECRET_TOKEN_123");
     });
 
@@ -230,10 +227,7 @@ describe("MetaRefreshTokenAdapter", () => {
     it("returns cached token when not expired", async () => {
       vi.useFakeTimers();
 
-      const adapter = new MetaRefreshTokenAdapter(
-        "short-lived-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
       mockExchangeResponse();
 
       const first = await adapter.getAccessToken();
@@ -250,10 +244,7 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("uses the v25.0 default Graph API base URL when none is provided", async () => {
-      const adapter = new MetaRefreshTokenAdapter(
-        "short-lived-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
       mockExchangeResponse();
 
       await adapter.getAccessToken();
@@ -266,10 +257,7 @@ describe("MetaRefreshTokenAdapter", () => {
     it("re-exchanges when token approaching expiry", async () => {
       vi.useFakeTimers();
 
-      const adapter = new MetaRefreshTokenAdapter(
-        "short-lived-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
       mockExchangeResponse();
 
       const first = await adapter.getAccessToken();
@@ -290,10 +278,7 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("concurrent calls share pending exchange (mutex)", async () => {
-      const adapter = new MetaRefreshTokenAdapter(
-        "short-lived-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
 
       let resolveExchange!: (value: unknown) => void;
       mockFetchWithTimeout.mockReturnValueOnce(
@@ -320,10 +305,7 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("clears pending on failure (retry works)", async () => {
-      const adapter = new MetaRefreshTokenAdapter(
-        "short-lived-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -332,9 +314,7 @@ describe("MetaRefreshTokenAdapter", () => {
         text: async () => "Temporary failure",
       } as unknown as Response);
 
-      await expect(adapter.getAccessToken()).rejects.toThrow(
-        "Meta token exchange failed"
-      );
+      await expect(adapter.getAccessToken()).rejects.toThrow("Meta token exchange failed");
 
       // After failure, pending should be cleared so a second call retries
       mockExchangeResponse();
@@ -344,10 +324,7 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("throws on non-ok HTTP response", async () => {
-      const adapter = new MetaRefreshTokenAdapter(
-        "short-lived-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: false,
@@ -362,10 +339,7 @@ describe("MetaRefreshTokenAdapter", () => {
     });
 
     it("throws on missing access_token in response", async () => {
-      const adapter = new MetaRefreshTokenAdapter(
-        "short-lived-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("short-lived-token", MOCK_APP_CREDENTIALS);
 
       mockFetchWithTimeout.mockResolvedValueOnce({
         ok: true,
@@ -380,10 +354,7 @@ describe("MetaRefreshTokenAdapter", () => {
     it("caches system user token indefinitely (no expires_in)", async () => {
       vi.useFakeTimers();
 
-      const adapter = new MetaRefreshTokenAdapter(
-        "system-user-token",
-        MOCK_APP_CREDENTIALS
-      );
+      const adapter = new MetaRefreshTokenAdapter("system-user-token", MOCK_APP_CREDENTIALS);
 
       mockExchangeResponse({
         access_token: "system-long-lived-token",

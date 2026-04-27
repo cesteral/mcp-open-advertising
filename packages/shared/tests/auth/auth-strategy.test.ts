@@ -178,9 +178,7 @@ describe("GoogleHeadersAuthStrategy", () => {
     });
 
     const strategy = new GoogleHeadersAuthStrategy(["scope1"]);
-    await expect(strategy.verify({})).rejects.toThrow(
-      /Missing X-Google-Auth-Type header/
-    );
+    await expect(strategy.verify({})).rejects.toThrow(/Missing X-Google-Auth-Type header/);
   });
 });
 
@@ -295,9 +293,7 @@ describe("JwtBearerAuthStrategy", () => {
     });
 
     const strategy = new JwtBearerAuthStrategy("secret");
-    await expect(strategy.verify({})).rejects.toThrow(
-      /Missing Authorization header/
-    );
+    await expect(strategy.verify({})).rejects.toThrow(/Missing Authorization header/);
   });
 });
 

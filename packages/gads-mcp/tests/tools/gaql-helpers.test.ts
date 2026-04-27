@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildListQuery, buildGetByIdQuery } from "../../src/mcp-server/tools/utils/gaql-helpers.js";
+import {
+  buildListQuery,
+  buildGetByIdQuery,
+} from "../../src/mcp-server/tools/utils/gaql-helpers.js";
 
 describe("buildListQuery", () => {
   it("builds basic SELECT query without filters", () => {
@@ -92,10 +95,9 @@ describe("buildGetByIdQuery", () => {
   it("rejects non-numeric IDs for all entity types", () => {
     const invalidIds = ["abc", "1 OR 1=1", "123~456", ""];
     for (const id of invalidIds) {
-      expect(
-        () => buildGetByIdQuery("campaign", id),
-        `expected "${id}" to throw`
-      ).toThrow("Entity IDs must be numeric");
+      expect(() => buildGetByIdQuery("campaign", id), `expected "${id}" to throw`).toThrow(
+        "Entity IDs must be numeric"
+      );
     }
   });
 });

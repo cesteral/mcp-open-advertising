@@ -14,13 +14,8 @@ This is a destructive operation — entities will be permanently deleted.`;
 
 export const DeleteEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to delete"),
-    entityIds: z
-      .array(z.string())
-      .min(1)
-      .describe("Array of entity IDs to delete"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to delete"),
+    entityIds: z.array(z.string()).min(1).describe("Array of entity IDs to delete"),
     additionalParams: z
       .record(z.unknown())
       .optional()

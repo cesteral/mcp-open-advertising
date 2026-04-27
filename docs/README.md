@@ -23,14 +23,14 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 
 ### Developers
 
-| Document                                                                                 | Description                                           |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| [`repository-structure.md`](repository-structure.md)                                     | Detailed repo layout guide                            |
-| [`CROSS_SERVER_CONTRACT.md`](CROSS_SERVER_CONTRACT.md)                                   | Standards all management MCP servers must follow      |
-| [`guides/ENV-VARIABLES-GUIDE.md`](guides/ENV-VARIABLES-GUIDE.md)                         | Environment configuration reference for all servers   |
-| [`guides/platform-mapping.md`](guides/platform-mapping.md)                               | Platform-to-package mapping and naming rules          |
-| [`guides/adding-a-new-server.md`](guides/adding-a-new-server.md)                         | Step-by-step guide for adding a new MCP server        |
-| [`architecture/mcp-microservice-topology.md`](architecture/mcp-microservice-topology.md) | Service topology and inter-server access patterns     |
+| Document                                                                                 | Description                                         |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| [`repository-structure.md`](repository-structure.md)                                     | Detailed repo layout guide                          |
+| [`CROSS_SERVER_CONTRACT.md`](CROSS_SERVER_CONTRACT.md)                                   | Standards all management MCP servers must follow    |
+| [`guides/ENV-VARIABLES-GUIDE.md`](guides/ENV-VARIABLES-GUIDE.md)                         | Environment configuration reference for all servers |
+| [`guides/platform-mapping.md`](guides/platform-mapping.md)                               | Platform-to-package mapping and naming rules        |
+| [`guides/adding-a-new-server.md`](guides/adding-a-new-server.md)                         | Step-by-step guide for adding a new MCP server      |
+| [`architecture/mcp-microservice-topology.md`](architecture/mcp-microservice-topology.md) | Service topology and inter-server access patterns   |
 
 ### Contributors & Feature Design
 
@@ -45,17 +45,17 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 
 ### Operations & Governance
 
-| Document                                                                         | Description                                 |
-| -------------------------------------------------------------------------------- | ------------------------------------------- |
-| [`governance/GOVERNANCE-OVERVIEW.md`](governance/GOVERNANCE-OVERVIEW.md)         | Governance scope and operating model         |
-| [`governance/telemetry-governance.md`](governance/telemetry-governance.md)       | Telemetry contract for tool execution spans |
+| Document                                                                   | Description                                 |
+| -------------------------------------------------------------------------- | ------------------------------------------- |
+| [`governance/GOVERNANCE-OVERVIEW.md`](governance/GOVERNANCE-OVERVIEW.md)   | Governance scope and operating model        |
+| [`governance/telemetry-governance.md`](governance/telemetry-governance.md) | Telemetry contract for tool execution spans |
 
 ### Deployment & Operations
 
-| Document                                                                                   | Description                                           |
-| ------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| [`guides/deployment-instructions.md`](guides/deployment-instructions.md)                   | Self-hosting deployment guide                         |
-| [`guides/deployment-readiness-checklist.md`](guides/deployment-readiness-checklist.md)     | Pre-deployment checklist                              |
-| [`guides/secret-collection-sheet.md`](guides/secret-collection-sheet.md)                   | Secret Manager values reference                       |
+| Document                                                                               | Description                     |
+| -------------------------------------------------------------------------------------- | ------------------------------- |
+| [`guides/deployment-instructions.md`](guides/deployment-instructions.md)               | Self-hosting deployment guide   |
+| [`guides/deployment-readiness-checklist.md`](guides/deployment-readiness-checklist.md) | Pre-deployment checklist        |
+| [`guides/secret-collection-sheet.md`](guides/secret-collection-sheet.md)               | Secret Manager values reference |
 
 ---

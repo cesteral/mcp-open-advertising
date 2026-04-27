@@ -36,24 +36,27 @@ export const GetReportInputSchema = z
       .string()
       .min(1)
       .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
-    name: z
-      .string()
-      .optional()
-      .describe("Report name (optional)"),
+    name: z.string().optional().describe("Report name (optional)"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
-      .describe("Preset date range. Use this OR startDate+endDate (not both). Max 95-day lookback — LAST_90_DAYS is the longest supported preset"),
+      .describe(
+        "Preset date range. Use this OR startDate+endDate (not both). Max 95-day lookback — LAST_90_DAYS is the longest supported preset"
+      ),
     startDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
-      .describe("Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."),
+      .describe(
+        "Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."
+      ),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
-      .describe("End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."),
+      .describe(
+        "End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."
+      ),
     reportTypeId: z
       .string()
       .min(1)
@@ -75,7 +78,9 @@ export const GetReportInputSchema = z
       .string()
       .optional()
       .default("DEMAND_SIDE_PLATFORM")
-      .describe("Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"),
+      .describe(
+        "Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"
+      ),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -84,7 +89,8 @@ export const GetReportInputSchema = z
   })
   .merge(ReportViewInputSchema.omit({ columns: true }))
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for generating an Amazon DSP report");
@@ -154,27 +160,35 @@ export async function getReportLogic(
 
 function appendComputedMetricsToRows(
   headers: string[],
-  rows: string[][],
+  rows: string[][]
 ): { headers: string[]; rows: string[][] } {
-  const idx = (name: string) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
-  const costIdx = idx('totalCost');
-  const impIdx = idx('impressions');
-  const clickIdx = idx('clickThroughs');
-  const convIdx = idx('purchases14d');
+  const idx = (name: string) => headers.findIndex((h) => h.toLowerCase() === name.toLowerCase());
+  const costIdx = idx("totalCost");
+  const impIdx = idx("impressions");
+  const clickIdx = idx("clickThroughs");
+  const convIdx = idx("purchases14d");
 
-  const newHeaders = [...headers, 'computed_cpa', 'computed_roas', 'computed_cpm', 'computed_ctr', 'computed_cpc'];
-  const newRows = rows.map(row => {
+  const newHeaders = [
+    ...headers,
+    "computed_cpa",
+    "computed_roas",
+    "computed_cpm",
+    "computed_ctr",
+    "computed_cpc",
+  ];
+  const newRows = rows.map((row) => {
     const cost = costIdx >= 0 ? Number(row[costIdx] || 0) : 0;
     const impressions = impIdx >= 0 ? Number(row[impIdx] || 0) : 0;
     const clicks = clickIdx >= 0 ? Number(row[clickIdx] || 0) : 0;
     const conversions = convIdx >= 0 ? Number(row[convIdx] || 0) : 0;
     const m = computeMetrics({ cost, impressions, clicks, conversions, conversionValue: 0 });
-    return [...row,
-      m.cpa !== null ? String(m.cpa) : '',
-      m.roas !== null ? String(m.roas) : '',
-      m.cpm !== null ? String(m.cpm) : '',
-      m.ctr !== null ? String(m.ctr) : '',
-      m.cpc !== null ? String(m.cpc) : '',
+    return [
+      ...row,
+      m.cpa !== null ? String(m.cpa) : "",
+      m.roas !== null ? String(m.roas) : "",
+      m.cpm !== null ? String(m.cpm) : "",
+      m.ctr !== null ? String(m.ctr) : "",
+      m.cpc !== null ? String(m.cpc) : "",
     ];
   });
   return { headers: newHeaders, rows: newRows };

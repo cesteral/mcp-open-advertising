@@ -13,7 +13,9 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 }));
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
-  getEntityTypeEnum: vi.fn().mockReturnValue(["advertiser", "campaign", "adGroup", "creative", "conversionTracker"]),
+  getEntityTypeEnum: vi
+    .fn()
+    .mockReturnValue(["advertiser", "campaign", "adGroup", "creative", "conversionTracker"]),
 }));
 
 import {
@@ -152,8 +154,7 @@ describe("listEntitiesLogic", () => {
       createMockSdkContext()
     );
 
-    const [_entityType, _filters, pageToken, pageSize] =
-      mockTtdService.listEntities.mock.calls[0];
+    const [_entityType, _filters, pageToken, pageSize] = mockTtdService.listEntities.mock.calls[0];
     expect(pageToken).toBe("25");
     expect(pageSize).toBe(50);
   });
@@ -162,10 +163,7 @@ describe("listEntitiesLogic", () => {
 describe("listEntitiesResponseFormatter", () => {
   it("shows entity count", () => {
     const result = {
-      entities: [
-        { CampaignId: "c1" },
-        { CampaignId: "c2" },
-      ],
+      entities: [{ CampaignId: "c1" }, { CampaignId: "c2" }],
       pageCount: 2,
       timestamp: new Date().toISOString(),
     };
@@ -272,5 +270,4 @@ describe("ListEntitiesInputSchema validation", () => {
     });
     expect(result.success).toBe(true);
   });
-
 });

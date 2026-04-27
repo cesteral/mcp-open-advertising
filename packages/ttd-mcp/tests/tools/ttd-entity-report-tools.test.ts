@@ -8,12 +8,8 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
 }));
 
-import {
-  executeEntityReportLogic,
-} from "../../src/mcp-server/tools/definitions/execute-entity-report.tool.js";
-import {
-  getEntityReportTypesLogic,
-} from "../../src/mcp-server/tools/definitions/get-entity-report-types.tool.js";
+import { executeEntityReportLogic } from "../../src/mcp-server/tools/definitions/execute-entity-report.tool.js";
+import { getEntityReportTypesLogic } from "../../src/mcp-server/tools/definitions/get-entity-report-types.tool.js";
 
 function createMockContext() {
   return {

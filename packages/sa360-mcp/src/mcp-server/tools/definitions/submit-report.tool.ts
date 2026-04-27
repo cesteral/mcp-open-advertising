@@ -37,19 +37,22 @@ const FilterSchema = z.object({
   column: z.object({
     columnName: z.string().min(1),
   }),
-  operator: z.string().min(1).describe("Filter operator (e.g., 'equals', 'greaterThan', 'contains')"),
+  operator: z
+    .string()
+    .min(1)
+    .describe("Filter operator (e.g., 'equals', 'greaterThan', 'contains')"),
   values: z.array(z.string()).min(1).describe("Filter values"),
 });
 
 export const SubmitReportInputSchema = z
   .object({
     agencyId: z.string().min(1).describe("SA360 agency ID"),
-    advertiserId: z.string().optional().describe("SA360 advertiser ID (optional — omit for agency-level reports)"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe("SA360 advertiser ID (optional — omit for agency-level reports)"),
     reportType: z.enum(REPORT_TYPE_ENUM).describe("Type of report to generate"),
-    columns: z
-      .array(ColumnSchema)
-      .min(1)
-      .describe("Columns to include in the report"),
+    columns: z.array(ColumnSchema).min(1).describe("Columns to include in the report"),
     startDate: z
       .string()
       .regex(DATE_PATTERN, "startDate must be YYYY-MM-DD")
@@ -58,10 +61,7 @@ export const SubmitReportInputSchema = z
       .string()
       .regex(DATE_PATTERN, "endDate must be YYYY-MM-DD")
       .describe("Report end date (YYYY-MM-DD)"),
-    filters: z
-      .array(FilterSchema)
-      .optional()
-      .describe("Optional filters to apply to the report"),
+    filters: z.array(FilterSchema).optional().describe("Optional filters to apply to the report"),
     includeRemovedEntities: z
       .boolean()
       .optional()

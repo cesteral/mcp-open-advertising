@@ -157,16 +157,13 @@ This server uses an **entity-centric tool architecture**:
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-_Detailed pseudo-code for the architecture diagram is mirrored in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#architecture-diagram)._ 
-
+_Detailed pseudo-code for the architecture diagram is mirrored in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#architecture-diagram)._
 
 ---
 
 ## Directory Structure
 
-
 See [`REPO-STRUCTURE.md`](./REPO-STRUCTURE.md) for the up-to-date repository layout.
-
 
 ---
 
@@ -186,9 +183,7 @@ See [`REPO-STRUCTURE.md`](./REPO-STRUCTURE.md) for the up-to-date repository lay
 
 #### Session Management
 
-
 _Detailed pseudo-code for Session Management is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#session-management)._
-
 
 #### CORS Configuration
 
@@ -198,9 +193,7 @@ _Detailed pseudo-code for Session Management is available in [Phase 2 Implementa
 
 #### Authentication Middleware
 
-
 _Detailed pseudo-code for Authentication Middleware is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#authentication-middleware)._
-
 
 #### Endpoints
 
@@ -212,9 +205,7 @@ _Detailed pseudo-code for Authentication Middleware is available in [Phase 2 Imp
 
 #### Error Handling
 
-
 _Detailed pseudo-code for Error Handling is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#error-handling)._
-
 
 ---
 
@@ -228,21 +219,15 @@ These tools provide flexible, generic access to all DV360 entities using the gen
 
 **1. `dv360_list_entities`** - List entities with filtering
 
-
 _Detailed pseudo-code for Tier 1: Entity CRUD Tools (Generic, Schema-Driven) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#tier-1-entity-crud-tools-generic-schema-driven)._
-
 
 **2. `dv360_get_entity`** - Get single entity by ID
 
-
 **3. `dv360_create_entity`** - Create new entity
-
 
 **4. `dv360_update_entity`** - Update entity fields via updateMask
 
-
 **5. `dv360_delete_entity`** - Delete entity
-
 
 #### Tier 2: Workflow Tools (Domain-Specific Convenience)
 
@@ -250,15 +235,11 @@ These tools provide high-level operations for common optimization workflows with
 
 **6. `dv360_adjust_line_item_bids`** - Batch bid adjustments with reason tracking
 
-
 _Detailed pseudo-code for Tier 2: Workflow Tools (Domain-Specific Convenience) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#tier-2-workflow-tools-domain-specific-convenience)._
-
 
 **7. `dv360_bulk_update_status`** - Pause/activate multiple line items
 
-
 **8. `dv360_campaign_setup_wizard`** - Create full campaign hierarchy
-
 
 #### Entity Type Support
 
@@ -284,11 +265,12 @@ The Tier 1 tools support all DV360 entities via the `entityType` parameter:
 The entity system uses a **schema-driven approach** that eliminates manual configuration:
 
 **Minimal API Metadata** (`entityMappingDynamic.ts`):
+
 ```typescript
 const ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
   lineItem: {
-    apiPathTemplate: '/advertisers/{advertiserId}/lineItems',
-    parentResourceIds: ['advertiserId'],
+    apiPathTemplate: "/advertisers/{advertiserId}/lineItems",
+    parentResourceIds: ["advertiserId"],
     supportsFilter: true,
   },
   // Only ~5 lines per entity - everything else auto-inferred!
@@ -296,35 +278,36 @@ const ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
 ```
 
 **Auto-Inferred Capabilities:**
+
 - CRUD support (supportsCreate, supportsUpdate, supportsDelete) from `isReadOnly` flag
 - Filter fields from schema introspection (checks common fields against entity schema)
 - Required fields extracted dynamically from Zod schemas
 - API path construction with parameter interpolation
 
 **Schema Introspection** (`schemaIntrospection.ts`):
+
 - Auto-discovers all available entity schemas from `generated/schemas/zod.ts`
 - Caches schema lookups for ~30% performance improvement
 - Extracts required fields directly from schema definitions
 - Validates entity type support dynamically
 
 **DRY Utilities** (`entityIdExtraction.ts`):
+
 - `extractEntityIds()` - Single utility eliminates ~70 lines of duplicate code across tools
 - `extractParentIds()` - Extracts hierarchy identifiers from input
 - `entityIdFromInput()` - Maps entity-specific IDs (campaignId → lineItemId, etc.)
 
 **Benefits:**
+
 1. **Minimal Configuration**: ~5 lines per entity (down from ~40 lines)
 2. **Always In Sync**: Required fields and schemas pulled directly from generated schemas
 3. **Easy Extension**: Add new entity by adding 5-line API metadata entry
 4. **No Duplication**: ID extraction logic centralized in reusable utilities
 5. **Performance**: Schema caching reduces lookup overhead
 
-
 #### Tool Definition Example: `dv360_update_entity`
 
-
 _Detailed pseudo-code for Tool Definition Example: `dv360_update_entity` is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#tool-definition-example-dv360updateentity)._
-
 
 ---
 
@@ -337,10 +320,12 @@ The entity-centric tools intentionally use `Record<string, any>` for the `data` 
 #### Context Window Optimization
 
 **Problem:** Including full schemas in tool definitions would bloat context:
+
 - 62 entities × ~200 lines each = ~12,400 lines per tool definition
 - Would result in ~50KB+ context per request
 
 **Solution:** Schema discovery resources provide schemas on-demand:
+
 - Initial context: ~9KB (tool list only)
 - On-demand: +2-5KB per schema lookup (only when needed)
 - Claude caches resource responses for subsequent requests
@@ -352,42 +337,50 @@ The entity-centric tools intentionally use `Record<string, any>` for the `data` 
 ```typescript
 // Resource definition
 export const entitySchemaResource: ResourceDefinition = {
-  uri: new UriTemplate('entity-schema://{entityType}'),
-  name: 'DV360 Entity Schema',
-  description: 'Get the full JSON Schema for a DV360 entity type with field descriptions and validation rules',
+  uri: new UriTemplate("entity-schema://{entityType}"),
+  name: "DV360 Entity Schema",
+  description:
+    "Get the full JSON Schema for a DV360 entity type with field descriptions and validation rules",
 
   async read({ entityType }: { entityType: string }) {
     // Get Zod schema from generated schemas
-    const zodSchema = getEntitySchema(entityType, 'update');
+    const zodSchema = getEntitySchema(entityType, "update");
 
     // Convert to JSON Schema for AI consumption
     const jsonSchema = zodToJsonSchema(zodSchema, {
-      target: 'jsonSchema7',
-      markdownDescription: true
+      target: "jsonSchema7",
+      markdownDescription: true,
     });
 
     return {
-      contents: [{
-        uri: `entity-schema://${entityType}`,
-        mimeType: 'application/json',
-        text: JSON.stringify({
-          entityType,
-          schema: jsonSchema,
-          requiredFields: getRequiredFields(entityType, 'update'),
-          supportedOperations: {
-            list: ENTITY_TYPE_CONFIG[entityType]?.supportsFilter || false,
-            create: ENTITY_TYPE_CONFIG[entityType]?.supportsCreate || false,
-            update: ENTITY_TYPE_CONFIG[entityType]?.supportsUpdate || false,
-            delete: ENTITY_TYPE_CONFIG[entityType]?.supportsDelete || false
-          }
-        }, null, 2)
-      }]
+      contents: [
+        {
+          uri: `entity-schema://${entityType}`,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              entityType,
+              schema: jsonSchema,
+              requiredFields: getRequiredFields(entityType, "update"),
+              supportedOperations: {
+                list: ENTITY_TYPE_CONFIG[entityType]?.supportsFilter || false,
+                create: ENTITY_TYPE_CONFIG[entityType]?.supportsCreate || false,
+                update: ENTITY_TYPE_CONFIG[entityType]?.supportsUpdate || false,
+                delete: ENTITY_TYPE_CONFIG[entityType]?.supportsDelete || false,
+              },
+            },
+            null,
+            2
+          ),
+        },
+      ],
     };
-  }
+  },
 };
 ```
 
 **Example Response:**
+
 ```json
 {
   "entityType": "lineItem",
@@ -431,42 +424,50 @@ export const entitySchemaResource: ResourceDefinition = {
 ```typescript
 // Resource definition
 export const entityFieldsResource: ResourceDefinition = {
-  uri: new UriTemplate('entity-fields://{entityType}'),
-  name: 'DV360 Entity Fields',
-  description: 'Get a flat list of all fields for a DV360 entity (lightweight, for quick reference)',
+  uri: new UriTemplate("entity-fields://{entityType}"),
+  name: "DV360 Entity Fields",
+  description:
+    "Get a flat list of all fields for a DV360 entity (lightweight, for quick reference)",
 
   async read({ entityType }: { entityType: string }) {
-    const zodSchema = getEntitySchema(entityType, 'update');
+    const zodSchema = getEntitySchema(entityType, "update");
     const fields = extractFieldsFromZodSchema(zodSchema);
 
     return {
-      contents: [{
-        uri: `entity-fields://${entityType}`,
-        mimeType: 'application/json',
-        text: JSON.stringify({
-          entityType,
-          fields: fields.map(f => ({
-            path: f.path,                    // e.g., "bidStrategy.fixedBid.bidAmountMicros"
-            type: f.type,                    // e.g., "number", "string", "enum"
-            required: f.required,            // true/false
-            description: f.description,      // from .describe()
-            enum: f.enum                     // if applicable
-          })),
-          commonUpdatePaths: [
-            'entityStatus',
-            'bidStrategy.fixedBid.bidAmountMicros',
-            'displayName',
-            'flight.startDate',
-            'budget.budgetAmountMicros'
-          ]
-        }, null, 2)
-      }]
+      contents: [
+        {
+          uri: `entity-fields://${entityType}`,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              entityType,
+              fields: fields.map((f) => ({
+                path: f.path, // e.g., "bidStrategy.fixedBid.bidAmountMicros"
+                type: f.type, // e.g., "number", "string", "enum"
+                required: f.required, // true/false
+                description: f.description, // from .describe()
+                enum: f.enum, // if applicable
+              })),
+              commonUpdatePaths: [
+                "entityStatus",
+                "bidStrategy.fixedBid.bidAmountMicros",
+                "displayName",
+                "flight.startDate",
+                "budget.budgetAmountMicros",
+              ],
+            },
+            null,
+            2
+          ),
+        },
+      ],
     };
-  }
+  },
 };
 ```
 
 **Example Response:**
+
 ```json
 {
   "entityType": "lineItem",
@@ -504,89 +505,99 @@ export const entityFieldsResource: ResourceDefinition = {
 ```typescript
 // Resource definition
 export const entityExamplesResource: ResourceDefinition = {
-  uri: new UriTemplate('entity-examples://{entityType}'),
-  name: 'DV360 Entity Examples',
-  description: 'Get common update patterns and examples for a DV360 entity',
+  uri: new UriTemplate("entity-examples://{entityType}"),
+  name: "DV360 Entity Examples",
+  description: "Get common update patterns and examples for a DV360 entity",
 
   async read({ entityType }: { entityType: string }) {
     // Load curated examples for common operations
     const examples = ENTITY_EXAMPLES[entityType] || [];
 
     return {
-      contents: [{
-        uri: `entity-examples://${entityType}`,
-        mimeType: 'application/json',
-        text: JSON.stringify({
-          entityType,
-          examples: examples.map(ex => ({
-            operation: ex.operation,          // e.g., "Update bid"
-            description: ex.description,
-            data: ex.data,                    // Example data payload
-            updateMask: ex.updateMask,        // Required updateMask
-            notes: ex.notes                   // Additional guidance
-          }))
-        }, null, 2)
-      }]
+      contents: [
+        {
+          uri: `entity-examples://${entityType}`,
+          mimeType: "application/json",
+          text: JSON.stringify(
+            {
+              entityType,
+              examples: examples.map((ex) => ({
+                operation: ex.operation, // e.g., "Update bid"
+                description: ex.description,
+                data: ex.data, // Example data payload
+                updateMask: ex.updateMask, // Required updateMask
+                notes: ex.notes, // Additional guidance
+              })),
+            },
+            null,
+            2
+          ),
+        },
+      ],
     };
-  }
+  },
 };
 
 // Curated examples
 const ENTITY_EXAMPLES = {
   lineItem: [
     {
-      operation: 'Update CPM bid',
-      description: 'Change the fixed bid amount for a line item',
+      operation: "Update CPM bid",
+      description: "Change the fixed bid amount for a line item",
       data: {
         bidStrategy: {
           fixedBid: {
-            bidAmountMicros: 5000000  // $5 CPM
-          }
-        }
+            bidAmountMicros: 5000000, // $5 CPM
+          },
+        },
       },
-      updateMask: 'bidStrategy',
-      notes: 'Bid amount is in micros (1 USD = 1,000,000 micros). Only include fixedBid if using fixed bidding strategy.'
+      updateMask: "bidStrategy",
+      notes:
+        "Bid amount is in micros (1 USD = 1,000,000 micros). Only include fixedBid if using fixed bidding strategy.",
     },
     {
-      operation: 'Pause line item',
-      description: 'Set line item status to paused',
+      operation: "Pause line item",
+      description: "Set line item status to paused",
       data: {
-        entityStatus: 'ENTITY_STATUS_PAUSED'
+        entityStatus: "ENTITY_STATUS_PAUSED",
       },
-      updateMask: 'entityStatus',
-      notes: 'Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_PAUSED, ENTITY_STATUS_ARCHIVED'
+      updateMask: "entityStatus",
+      notes: "Valid statuses: ENTITY_STATUS_ACTIVE, ENTITY_STATUS_PAUSED, ENTITY_STATUS_ARCHIVED",
     },
     {
-      operation: 'Update flight dates',
-      description: 'Change line item start and end dates',
+      operation: "Update flight dates",
+      description: "Change line item start and end dates",
       data: {
         flight: {
           startDate: { year: 2025, month: 1, day: 15 },
-          endDate: { year: 2025, month: 2, day: 15 }
-        }
+          endDate: { year: 2025, month: 2, day: 15 },
+        },
       },
-      updateMask: 'flight',
-      notes: 'Dates must be in the future and end date must be after start date'
-    }
+      updateMask: "flight",
+      notes: "Dates must be in the future and end date must be after start date",
+    },
   ],
   campaign: [
     {
-      operation: 'Update budget',
-      description: 'Change campaign budget amount',
+      operation: "Update budget",
+      description: "Change campaign budget amount",
       data: {
-        campaignBudgets: [{
-          budgetAmountMicros: 100000000  // $100
-        }]
+        campaignBudgets: [
+          {
+            budgetAmountMicros: 100000000, // $100
+          },
+        ],
       },
-      updateMask: 'campaignBudgets',
-      notes: 'Budget amount is in micros. Use campaignBudgets array even for single budget.'
-    }
-  ]
+      updateMask: "campaignBudgets",
+      notes: "Budget amount is in micros. Use campaignBudgets array even for single budget.",
+    },
+  ],
   // ... examples for other entities
 };
 ```
 
 **Example Response:**
+
 ```json
 {
   "entityType": "lineItem",
@@ -682,9 +693,7 @@ src/mcp-server/resources/
 
 **Structure:**
 
-
 _Detailed pseudo-code for 4.3 DV360Service (Entity-Centric Service) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#43-dv360service-entity-centric-service)._
-
 
 **Benefits of Entity-Centric Service:**
 
@@ -712,7 +721,7 @@ _Detailed pseudo-code for 4.3 DV360Service (Entity-Centric Service) is available
 - Symbol-based tokens isolate dependencies for configuration, logging, DV360 API access, request context propagation, and rate limiting.
 - Tokens are the only contract other modules rely on—no module imports concrete classes outside the container boundary.
 
-_Detailed pseudo-code for 4.4 Dependency Injection Container is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#44-dependency-injection-container)._ 
+_Detailed pseudo-code for 4.4 Dependency Injection Container is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#44-dependency-injection-container)._
 
 **Registration Pattern:**
 
@@ -724,6 +733,7 @@ _Detailed pseudo-code for 4.4 Dependency Injection Container is available in [Ph
 
 - `composeContainer()` creates the container once during startup, executes both registration modules, and returns a frozen instance.
 - Entry points resolve the `TransportManager` and `ToolRegistry` from this container so all runtime code uses the same singleton graph.
+
 ---
 
 ### 4.5 Error Handling Architecture
@@ -732,46 +742,38 @@ _Detailed pseudo-code for 4.4 Dependency Injection Container is available in [Ph
 
 #### Layer 1: Tool Logic (Pure)
 
-
-_Detailed pseudo-code for Layer 1: Tool Logic (Pure) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#layer-1-tool-logic-pure)._ 
+_Detailed pseudo-code for Layer 1: Tool Logic (Pure) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#layer-1-tool-logic-pure)._
 
 - Tool logic focuses on business rules and DV360 API orchestration, throwing `McpError` with contextual data when a failure occurs.
 
 #### Layer 2: Tool Handler (Catches & Formats)
 
-
-_Detailed pseudo-code for Layer 2: Tool Handler (Catches & Formats) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#layer-2-tool-handler-catches-formats)._ 
-
+_Detailed pseudo-code for Layer 2: Tool Handler (Catches & Formats) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#layer-2-tool-handler-catches-formats)._
 
 - `createMcpToolHandler` centralizes telemetry, structured logging, input validation, and JSON-RPC response formatting.
 - Non-MCP errors are normalized and emitted with `InternalError` codes, keeping clients insulated from raw exceptions.
 
 #### Layer 3: HTTP Transport (Global Handler)
 
-
-_Detailed pseudo-code for Layer 3: HTTP Transport (Global Handler) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#layer-3-http-transport-global-handler)._ 
-
+_Detailed pseudo-code for Layer 3: HTTP Transport (Global Handler) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#layer-3-http-transport-global-handler)._
 
 - Hono's global error handler maps `McpError` instances to HTTP status codes and ensures every response remains JSON-RPC compliant.
 - Transport-level middleware attaches correlation IDs and request context before delegating to tool handlers.
 
 #### McpError Structure
 
-
-_Detailed pseudo-code for McpError Structure is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#mcperror-structure)._ 
-
+_Detailed pseudo-code for McpError Structure is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#mcperror-structure)._
 
 - Enumerates JSON-RPC standard and implementation-specific codes to keep tooling consistent across services.
 - Carries optional metadata (e.g., offending entity IDs, validation errors) to help clients diagnose issues quickly.
+
 ---
 
 ### 4.6 Authentication & Authorization
 
 **JWT Authentication Flow:**
 
-
 _Detailed pseudo-code for 4.6 Authentication & Authorization is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#46-authentication-authorization)._
-
 
 **Implementation:**
 
@@ -783,6 +785,7 @@ _Detailed pseudo-code for 4.6 Authentication & Authorization is available in [Ph
 
 - Coarse scopes (`dv360:read`, `dv360:write`) gate entire tool tiers, while granular scopes (e.g., `dv360:budget:write`) restrict sensitive operations.
 - `withToolAuth` reads the AsyncLocalStorage context to enforce scopes consistently without duplicating authorization logic inside tools.
+
 ---
 
 ### 4.7 RequestContext Propagation
@@ -793,7 +796,7 @@ _Detailed pseudo-code for 4.6 Authentication & Authorization is available in [Ph
 
 - The context carries request IDs, tenant IDs, auth claims, and trace/span identifiers to correlate logs and metrics across layers.
 
-_Detailed pseudo-code for 4.7 RequestContext Propagation is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#47-requestcontext-propagation)._ 
+_Detailed pseudo-code for 4.7 RequestContext Propagation is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#47-requestcontext-propagation)._
 
 **Creation & Propagation:**
 
@@ -803,6 +806,7 @@ _Detailed pseudo-code for 4.7 RequestContext Propagation is available in [Phase 
 **Usage in Tool Handler:**
 
 - Tool handlers enrich logs with context metadata, emit OpenTelemetry spans, and pass context into DV360 service calls for consistent tracing.
+
 ---
 
 ## Data Flow
@@ -813,14 +817,14 @@ _Detailed pseudo-code for 4.7 RequestContext Propagation is available in [Phase 
 - The tool handler validates input, elicits any missing fields, and delegates to `DV360Service.updateEntity`.
 - The service applies rate limiting, authenticates with DV360, and returns normalized MCP content blocks.
 
-_Detailed pseudo-code for Example: `update_line_item_bid` Tool Execution is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#example-updatelineitembid-tool-execution)._ 
+_Detailed pseudo-code for Example: `update_line_item_bid` Tool Execution is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#example-updatelineitembid-tool-execution)._
 
 ### Error Flow (if API fails)
 
 - DV360 API failures are wrapped in `McpError` objects with appropriate JSON-RPC codes and sanitized payloads.
 - Transport middleware emits structured logs and OpenTelemetry spans before returning the error response to the client.
 
-_Detailed pseudo-code for Error Flow (if API fails) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#error-flow-if-api-fails)._ 
+_Detailed pseudo-code for Error Flow (if API fails) is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#error-flow-if-api-fails)._
 
 ---
 
@@ -851,9 +855,7 @@ All configuration is centralized in `src/config/index.ts` and validated with Zod
 
 ### Configuration Schema
 
-
 _Detailed pseudo-code for Configuration Schema is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#configuration-schema)._
-
 
 ---
 
@@ -883,9 +885,7 @@ _Detailed pseudo-code for 7.1 Integration with cesteral-mcp is available in [Pha
 
 **Authentication:** Service account OAuth2
 
-
 _Detailed pseudo-code for 7.2 Integration with DV360 API is available in [Phase 2 Implementation Reference](./phase-2/IMPLEMENTATION_REFERENCE.md#72-integration-with-dv360-api)._
-
 
 **Rate Limiting:**
 
@@ -1150,15 +1150,18 @@ _Detailed pseudo-code for Contract Tests (Schema Validation) is available in [Ph
 6. **Better UX**: AI discovers schema naturally instead of parsing huge tool definitions
 
 **Alternative considered:** Include all 62 entity schemas inline in `dv360_update_entity` tool definition
+
 - Rejected: Would create ~200KB tool definition (62 entities × ~3KB each)
 - Rejected: Context window would be exhausted before agent even starts reasoning
 - Rejected: Every tool call would send full schemas even if not needed
 
 **Alternative considered:** Single resource with all schemas
+
 - Rejected: Still too large (~200KB per lookup)
 - Rejected: Agent would need to parse all 62 schemas to find one entity
 
 **Resource-based approach benefits:**
+
 - Lightweight tool definitions remain cacheable by Claude
 - Schemas fetched granularly (only the entities agent needs)
 - Example patterns help agent construct correct `updateMask` and `data` payloads

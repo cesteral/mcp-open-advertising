@@ -16,9 +16,8 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 vi.mock("../../src/utils/telemetry/tracing.js", () => ({
-  withSA360ApiSpan: vi.fn(
-    (_name: string, _path: string, fn: (span: any) => Promise<any>) =>
-      fn({ setAttribute: vi.fn() })
+  withSA360ApiSpan: vi.fn((_name: string, _path: string, fn: (span: any) => Promise<any>) =>
+    fn({ setAttribute: vi.fn() })
   ),
 }));
 
@@ -73,9 +72,7 @@ describe("SA360V2HttpClient", () => {
 
       expect(mockExecuteWithRetry).toHaveBeenCalledTimes(1);
       const retryOpts = mockExecuteWithRetry.mock.calls[0][1];
-      expect(retryOpts.url).toBe(
-        "https://www.googleapis.com/doubleclicksearch/v2/conversion"
-      );
+      expect(retryOpts.url).toBe("https://www.googleapis.com/doubleclicksearch/v2/conversion");
     });
 
     it("provides getHeaders that returns Bearer token", async () => {
@@ -119,13 +116,9 @@ describe("SA360V2HttpClient", () => {
     });
 
     it("propagates errors from executeWithRetry", async () => {
-      mockExecuteWithRetry.mockRejectedValueOnce(
-        new Error("SA360 v2 API request failed: 403")
-      );
+      mockExecuteWithRetry.mockRejectedValueOnce(new Error("SA360 v2 API request failed: 403"));
 
-      await expect(client.fetch("/conversion")).rejects.toThrow(
-        "SA360 v2 API request failed: 403"
-      );
+      await expect(client.fetch("/conversion")).rejects.toThrow("SA360 v2 API request failed: 403");
     });
 
     it("passes fetchOptions through", async () => {

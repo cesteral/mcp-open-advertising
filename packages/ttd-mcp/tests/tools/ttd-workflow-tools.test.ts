@@ -8,51 +8,21 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
   resolveSessionServices: mockResolveSessionServices,
 }));
 
-import {
-  restRequestLogic,
-} from "../../src/mcp-server/tools/definitions/rest-request.tool.js";
-import {
-  getJobStatusLogic,
-} from "../../src/mcp-server/tools/definitions/get-job-status.tool.js";
-import {
-  getFirstPartyDataJobLogic,
-} from "../../src/mcp-server/tools/definitions/get-first-party-data-job.tool.js";
-import {
-  getThirdPartyDataJobLogic,
-} from "../../src/mcp-server/tools/definitions/get-third-party-data-job.tool.js";
-import {
-  getCampaignVersionLogic,
-} from "../../src/mcp-server/tools/definitions/get-campaign-version.tool.js";
-import {
-  createCampaignWorkflowLogic,
-} from "../../src/mcp-server/tools/definitions/create-campaign-workflow.tool.js";
-import {
-  updateCampaignWorkflowLogic,
-} from "../../src/mcp-server/tools/definitions/update-campaign-workflow.tool.js";
-import {
-  createCampaignsJobLogic,
-} from "../../src/mcp-server/tools/definitions/create-campaigns-job.tool.js";
-import {
-  updateCampaignsJobLogic,
-} from "../../src/mcp-server/tools/definitions/update-campaigns-job.tool.js";
-import {
-  createAdGroupWorkflowLogic,
-} from "../../src/mcp-server/tools/definitions/create-ad-group-workflow.tool.js";
-import {
-  updateAdGroupWorkflowLogic,
-} from "../../src/mcp-server/tools/definitions/update-ad-group-workflow.tool.js";
-import {
-  createAdGroupsJobLogic,
-} from "../../src/mcp-server/tools/definitions/create-ad-groups-job.tool.js";
-import {
-  updateAdGroupsJobLogic,
-} from "../../src/mcp-server/tools/definitions/update-ad-groups-job.tool.js";
-import {
-  GraphqlQueryInputSchema,
-} from "../../src/mcp-server/tools/definitions/graphql-query.tool.js";
-import {
-  GraphqlQueryBulkInputSchema,
-} from "../../src/mcp-server/tools/definitions/graphql-query-bulk.tool.js";
+import { restRequestLogic } from "../../src/mcp-server/tools/definitions/rest-request.tool.js";
+import { getJobStatusLogic } from "../../src/mcp-server/tools/definitions/get-job-status.tool.js";
+import { getFirstPartyDataJobLogic } from "../../src/mcp-server/tools/definitions/get-first-party-data-job.tool.js";
+import { getThirdPartyDataJobLogic } from "../../src/mcp-server/tools/definitions/get-third-party-data-job.tool.js";
+import { getCampaignVersionLogic } from "../../src/mcp-server/tools/definitions/get-campaign-version.tool.js";
+import { createCampaignWorkflowLogic } from "../../src/mcp-server/tools/definitions/create-campaign-workflow.tool.js";
+import { updateCampaignWorkflowLogic } from "../../src/mcp-server/tools/definitions/update-campaign-workflow.tool.js";
+import { createCampaignsJobLogic } from "../../src/mcp-server/tools/definitions/create-campaigns-job.tool.js";
+import { updateCampaignsJobLogic } from "../../src/mcp-server/tools/definitions/update-campaigns-job.tool.js";
+import { createAdGroupWorkflowLogic } from "../../src/mcp-server/tools/definitions/create-ad-group-workflow.tool.js";
+import { updateAdGroupWorkflowLogic } from "../../src/mcp-server/tools/definitions/update-ad-group-workflow.tool.js";
+import { createAdGroupsJobLogic } from "../../src/mcp-server/tools/definitions/create-ad-groups-job.tool.js";
+import { updateAdGroupsJobLogic } from "../../src/mcp-server/tools/definitions/update-ad-groups-job.tool.js";
+import { GraphqlQueryInputSchema } from "../../src/mcp-server/tools/definitions/graphql-query.tool.js";
+import { GraphqlQueryBulkInputSchema } from "../../src/mcp-server/tools/definitions/graphql-query-bulk.tool.js";
 
 function createMockContext() {
   return {

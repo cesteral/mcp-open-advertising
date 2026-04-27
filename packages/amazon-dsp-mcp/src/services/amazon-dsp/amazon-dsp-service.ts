@@ -140,9 +140,15 @@ export class AmazonDspService {
     }
 
     await this.rateLimiter.consume("amazon_dsp:read");
-    const result = (await this.httpClient.get(config.listPath, params, context)) as AmazonDspRawListResponse;
+    const result = (await this.httpClient.get(
+      config.listPath,
+      params,
+      context
+    )) as AmazonDspRawListResponse;
 
-    const entities = ((result?.[config.responseKey] as AmazonDspEntityMap[typeof canonicalType][]) ?? []) as AmazonDspEntityMap[T][];
+    const entities = ((result?.[
+      config.responseKey
+    ] as AmazonDspEntityMap[typeof canonicalType][]) ?? []) as AmazonDspEntityMap[T][];
     const totalResults = result?.totalResults ?? 0;
 
     return {
@@ -205,7 +211,9 @@ export class AmazonDspService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    return this.httpClient.put(path, { state: "ARCHIVED" }, context) as Promise<AmazonDspEntityMap[T]>;
+    return this.httpClient.put(path, { state: "ARCHIVED" }, context) as Promise<
+      AmazonDspEntityMap[T]
+    >;
   }
 
   async updateEntityStatus<T extends AmazonDspEntityType>(
@@ -232,7 +240,11 @@ export class AmazonDspService {
       count: String(pageSize),
     };
     await this.rateLimiter.consume("amazon_dsp:read");
-    const result = (await this.httpClient.get("/dsp/advertisers", params, context)) as AmazonDspRawListResponse;
+    const result = (await this.httpClient.get(
+      "/dsp/advertisers",
+      params,
+      context
+    )) as AmazonDspRawListResponse;
 
     const entities = (result?.advertisers as AmazonDspAdvertiser[]) ?? [];
     const totalResults = result?.totalResults ?? 0;
@@ -249,10 +261,7 @@ export class AmazonDspService {
 
   // ─── Ad Previews ────────────────────────────────────────────────
 
-  async getAdPreviews(
-    creativeId: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getAdPreviews(creativeId: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume("amazon_dsp:read");
     return this.httpClient.get(`/dsp/creatives/${creativeId}/preview`, undefined, context);
   }
@@ -289,11 +298,10 @@ export class AmazonDspService {
     ];
 
     // Read source entity
-    const source = (await this.getEntity(
-      entityType,
-      entityId,
-      context
-    )) as unknown as Record<string, unknown>;
+    const source = (await this.getEntity(entityType, entityId, context)) as unknown as Record<
+      string,
+      unknown
+    >;
 
     // Strip read-only system fields
     const data: Record<string, unknown> = {};
@@ -322,8 +330,22 @@ export class AmazonDspService {
   async adjustBids(
     adjustments: Array<{ lineItemId: string; bidAmount: number }>,
     context?: RequestContext
-  ): Promise<{ results: Array<{ lineItemId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> }> {
-    const results: Array<{ lineItemId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> = [];
+  ): Promise<{
+    results: Array<{
+      lineItemId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }>;
+  }> {
+    const results: Array<{
+      lineItemId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }> = [];
 
     for (const adjustment of adjustments) {
       try {
@@ -332,12 +354,17 @@ export class AmazonDspService {
         const previousBid = entity.bidding?.bidAmount;
 
         // Preserve the current bidding mode while updating the bid amount.
-        await this.updateEntity("lineItem", adjustment.lineItemId, {
-          bidding: {
-            ...(entity.bidding ?? {}),
-            bidAmount: adjustment.bidAmount,
+        await this.updateEntity(
+          "lineItem",
+          adjustment.lineItemId,
+          {
+            bidding: {
+              ...(entity.bidding ?? {}),
+              bidAmount: adjustment.bidAmount,
+            },
           },
-        }, context);
+          context
+        );
 
         results.push({
           lineItemId: adjustment.lineItemId,
@@ -363,7 +390,9 @@ export class AmazonDspService {
     entityType: T,
     items: AmazonDspCreateEntityInputMap[T][],
     context?: RequestContext
-  ): Promise<{ results: Array<{ success: boolean; entity?: AmazonDspEntityMap[T]; error?: string }> }> {
+  ): Promise<{
+    results: Array<{ success: boolean; entity?: AmazonDspEntityMap[T]; error?: string }>;
+  }> {
     const results = await executeBulkConcurrent(items, async (data) => {
       return this.createEntity(entityType, data, context);
     });
@@ -408,5 +437,4 @@ export class AmazonDspService {
   }
 
   // ─── Internal Helpers ───────────────────────────────────────────
-
 }

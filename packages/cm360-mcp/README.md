@@ -12,6 +12,7 @@
 `cm360-mcp` is a Model Context Protocol (MCP) server that enables AI agents to manage Campaign Manager 360 campaigns, placements, ads, creatives, Floodlight activities, and generate delivery reports -- all via MCP tools.
 
 CM360 complements the existing Google stack in this monorepo:
+
 - **dbm-mcp** -- DV360 reporting (Bid Manager API v2)
 - **dv360-mcp** -- DV360 campaign management (DV360 API v4)
 - **cm360-mcp** -- Ad serving & trafficking (CM360 API v5)
@@ -94,13 +95,14 @@ curl -X POST http://localhost:3008/mcp \
 
 Three auth modes, configured via `MCP_AUTH_MODE`:
 
-| Mode | Header | Use Case |
-|------|--------|----------|
+| Mode             | Header                                    | Use Case                              |
+| ---------------- | ----------------------------------------- | ------------------------------------- |
 | `google-headers` | `X-Google-Auth-Type` + credential headers | Production (per-session Google creds) |
-| `jwt` | `Authorization: Bearer <jwt>` | Centralized or governed deployments |
-| `none` | _(no auth)_ | Local development |
+| `jwt`            | `Authorization: Bearer <jwt>`             | Centralized or governed deployments   |
+| `none`           | _(no auth)_                               | Local development                     |
 
 **Google Headers mode** -- clients pass Google OAuth2 credentials via HTTP headers on each session:
+
 - `X-Google-Auth-Type`: `service_account` or `oauth2`
 - `X-Google-Credentials`: base64-encoded service account JSON (for SA)
 - `X-Google-Client-Id` / `X-Google-Client-Secret` / `X-Google-Refresh-Token` (for OAuth2)
@@ -121,16 +123,16 @@ CM360_SERVICE_ACCOUNT_JSON=<base64-encoded-json>
 
 CM360 entities managed by this server:
 
-| Entity Type | API Collection | Supports Delete | Notes |
-|---|---|---|---|
-| `campaign` | campaigns | No | Archive via status update |
-| `placement` | placements | No | |
-| `ad` | ads | No | |
-| `creative` | creatives | No | |
-| `site` | sites | No | |
-| `advertiser` | advertisers | No | |
-| `floodlightActivity` | floodlightActivities | Yes | Conversion tracking |
-| `floodlightConfiguration` | floodlightConfigurations | No | Floodlight setup |
+| Entity Type               | API Collection           | Supports Delete | Notes                     |
+| ------------------------- | ------------------------ | --------------- | ------------------------- |
+| `campaign`                | campaigns                | No              | Archive via status update |
+| `placement`               | placements               | No              |                           |
+| `ad`                      | ads                      | No              |                           |
+| `creative`                | creatives                | No              |                           |
+| `site`                    | sites                    | No              |                           |
+| `advertiser`              | advertisers              | No              |                           |
+| `floodlightActivity`      | floodlightActivities     | Yes             | Conversion tracking       |
+| `floodlightConfiguration` | floodlightConfigurations | No              | Floodlight setup          |
 
 All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection}[/{id}]`
 
@@ -140,22 +142,22 @@ All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection
 
 ### Bootstrap
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `cm360_list_user_profiles` | List accessible CM360 user profiles | _(none)_ |
+| Tool                       | Description                         | Key Parameters |
+| -------------------------- | ----------------------------------- | -------------- |
+| `cm360_list_user_profiles` | List accessible CM360 user profiles | _(none)_       |
 
 > Call this first to discover your `profileId` -- required for all other operations.
 
 ### Core CRUD
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `cm360_list_entities` | List entities with filters/pagination | `profileId`, `entityType`, `filters?`, `pageToken?`, `maxResults?` |
-| `cm360_get_entity` | Get a single entity by ID | `profileId`, `entityType`, `entityId` |
-| `cm360_create_entity` | Create any supported entity | `profileId`, `entityType`, `data` |
-| `cm360_update_entity` | Update entity (PUT semantics -- full object required) | `profileId`, `entityType`, `entityId`, `data` |
-| `cm360_delete_entity` | Delete entity (floodlightActivity only) | `profileId`, `entityType`, `entityId` |
-| `cm360_validate_entity` | Dry-run validate payload (no API call) | `entityType`, `mode`, `data` |
+| Tool                    | Description                                           | Key Parameters                                                     |
+| ----------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
+| `cm360_list_entities`   | List entities with filters/pagination                 | `profileId`, `entityType`, `filters?`, `pageToken?`, `maxResults?` |
+| `cm360_get_entity`      | Get a single entity by ID                             | `profileId`, `entityType`, `entityId`                              |
+| `cm360_create_entity`   | Create any supported entity                           | `profileId`, `entityType`, `data`                                  |
+| `cm360_update_entity`   | Update entity (PUT semantics -- full object required) | `profileId`, `entityType`, `entityId`, `data`                      |
+| `cm360_delete_entity`   | Delete entity (floodlightActivity only)               | `profileId`, `entityType`, `entityId`                              |
+| `cm360_validate_entity` | Dry-run validate payload (no API call)                | `entityType`, `mode`, `data`                                       |
 
 **CM360 update pattern**: CM360 uses PUT (full replacement), not PATCH. Always fetch the current entity with `cm360_get_entity` first, modify the fields you need, then pass the complete object to `cm360_update_entity`.
 
@@ -164,19 +166,21 @@ All API paths follow: `GET/POST/PUT/DELETE /userprofiles/{profileId}/{collection
 CM360 reports are asynchronous. Two workflows available:
 
 **Blocking (simple):**
+
 1. `cm360_get_report` -- creates, runs, and polls until complete (30-120s)
 
 **Non-blocking (for long reports):**
+
 1. `cm360_submit_report` -- creates and runs, returns immediately
 2. `cm360_check_report_status` -- poll until `REPORT_AVAILABLE`
 3. `cm360_download_report` -- fetch and parse results
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `cm360_get_report` | Create + run + poll (blocking) | `profileId`, `name`, `type`, `criteria?` |
-| `cm360_submit_report` | Create + run (non-blocking) | `profileId`, `name`, `type`, `criteria?` |
-| `cm360_check_report_status` | Single status check | `profileId`, `reportId`, `fileId` |
-| `cm360_download_report` | Download and parse CSV results | `downloadUrl`, `mode?`, `columns?`, `offset?`, `maxRows?` (bounded report-view; `maxRows` capped at 200) |
+| Tool                        | Description                    | Key Parameters                                                                                           |
+| --------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `cm360_get_report`          | Create + run + poll (blocking) | `profileId`, `name`, `type`, `criteria?`                                                                 |
+| `cm360_submit_report`       | Create + run (non-blocking)    | `profileId`, `name`, `type`, `criteria?`                                                                 |
+| `cm360_check_report_status` | Single status check            | `profileId`, `reportId`, `fileId`                                                                        |
+| `cm360_download_report`     | Download and parse CSV results | `downloadUrl`, `mode?`, `columns?`, `offset?`, `maxRows?` (bounded report-view; `maxRows` capped at 200) |
 
 **Report types**: `STANDARD`, `REACH`, `PATH_TO_CONVERSION`, `CROSS_DIMENSION_REACH`, `FLOODLIGHT`
 
@@ -186,17 +190,17 @@ CM360 reports are asynchronous. Two workflows available:
 
 No native batch API -- bulk tools loop individual calls with rate limiting. At ~1 QPS, 50 items takes ~50 seconds.
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `cm360_bulk_update_status` | Batch status updates (up to 50) | `profileId`, `entityType`, `entityIds[]`, `status` |
-| `cm360_bulk_create_entities` | Batch entity creation (up to 50) | `profileId`, `entityType`, `items[]` |
-| `cm360_bulk_update_entities` | Batch entity updates (up to 50) | `profileId`, `entityType`, `items[]` |
+| Tool                         | Description                      | Key Parameters                                     |
+| ---------------------------- | -------------------------------- | -------------------------------------------------- |
+| `cm360_bulk_update_status`   | Batch status updates (up to 50)  | `profileId`, `entityType`, `entityIds[]`, `status` |
+| `cm360_bulk_create_entities` | Batch entity creation (up to 50) | `profileId`, `entityType`, `items[]`               |
+| `cm360_bulk_update_entities` | Batch entity updates (up to 50)  | `profileId`, `entityType`, `items[]`               |
 
 ### Specialized
 
-| Tool | Description | Key Parameters |
-|------|-------------|----------------|
-| `cm360_get_ad_preview` | Get ad details and click-through configuration | `profileId`, `adId` |
+| Tool                           | Description                                        | Key Parameters               |
+| ------------------------------ | -------------------------------------------------- | ---------------------------- |
+| `cm360_get_ad_preview`         | Get ad details and click-through configuration     | `profileId`, `adId`          |
 | `cm360_list_targeting_options` | Browse targeting options (browsers, OS, geo, etc.) | `profileId`, `targetingType` |
 
 **Targeting types**: `browsers`, `connectionTypes`, `contentCategories`, `countries`, `languages`, `metros`, `mobileCarriers`, `operatingSystemVersions`, `operatingSystems`, `platformTypes`, `postalCodes`, `regions`, `cities`
@@ -269,22 +273,22 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `CM360_MCP_PORT` | No | `3008` | HTTP server port |
-| `CM360_MCP_HOST` | No | `0.0.0.0` | HTTP server host |
-| `MCP_AUTH_MODE` | No | `google-headers` | Auth mode: `google-headers`, `jwt`, `none` |
-| `MCP_AUTH_SECRET_KEY` | If jwt | -- | JWT signing secret |
-| `CM360_API_BASE_URL` | No | `https://dfareporting.googleapis.com/dfareporting/v5` | CM360 API base URL |
-| `CM360_RATE_LIMIT_PER_MINUTE` | No | `50` | API rate limit (requests/min) |
-| `CM360_SERVICE_ACCOUNT_FILE` | Stdio | -- | Path to service account JSON |
-| `CM360_SERVICE_ACCOUNT_JSON` | Stdio | -- | Base64-encoded service account JSON |
-| `MCP_SESSION_MODE` | No | `auto` | Session mode: `stateless`, `stateful`, `auto` |
-| `MCP_STATEFUL_SESSION_TIMEOUT_MS` | No | `3600000` | Session timeout (ms) |
-| `MCP_ALLOWED_ORIGINS` | No | -- | CORS allowed origins (comma-separated) |
-| `OTEL_ENABLED` | No | `false` | Enable OpenTelemetry |
-| `OTEL_SERVICE_NAME` | No | `cm360-mcp` | OTEL service name |
-| `LOG_LEVEL` | No | `info` | Log level |
+| Variable                          | Required | Default                                               | Description                                   |
+| --------------------------------- | -------- | ----------------------------------------------------- | --------------------------------------------- |
+| `CM360_MCP_PORT`                  | No       | `3008`                                                | HTTP server port                              |
+| `CM360_MCP_HOST`                  | No       | `0.0.0.0`                                             | HTTP server host                              |
+| `MCP_AUTH_MODE`                   | No       | `google-headers`                                      | Auth mode: `google-headers`, `jwt`, `none`    |
+| `MCP_AUTH_SECRET_KEY`             | If jwt   | --                                                    | JWT signing secret                            |
+| `CM360_API_BASE_URL`              | No       | `https://dfareporting.googleapis.com/dfareporting/v5` | CM360 API base URL                            |
+| `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `50`                                                  | API rate limit (requests/min)                 |
+| `CM360_SERVICE_ACCOUNT_FILE`      | Stdio    | --                                                    | Path to service account JSON                  |
+| `CM360_SERVICE_ACCOUNT_JSON`      | Stdio    | --                                                    | Base64-encoded service account JSON           |
+| `MCP_SESSION_MODE`                | No       | `auto`                                                | Session mode: `stateless`, `stateful`, `auto` |
+| `MCP_STATEFUL_SESSION_TIMEOUT_MS` | No       | `3600000`                                             | Session timeout (ms)                          |
+| `MCP_ALLOWED_ORIGINS`             | No       | --                                                    | CORS allowed origins (comma-separated)        |
+| `OTEL_ENABLED`                    | No       | `false`                                               | Enable OpenTelemetry                          |
+| `OTEL_SERVICE_NAME`               | No       | `cm360-mcp`                                           | OTEL service name                             |
+| `LOG_LEVEL`                       | No       | `info`                                                | Log level                                     |
 
 ### Rate Limiting
 

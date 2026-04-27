@@ -23,10 +23,7 @@ Use \`snapchat_get_report\` instead for a blocking convenience shortcut.`;
 
 export const SubmitReportInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Ad Account ID"),
+    adAccountId: z.string().min(1).describe("Snapchat Ad Account ID"),
     fields: z
       .array(z.string())
       .min(1)
@@ -34,15 +31,21 @@ export const SubmitReportInputSchema = z
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
-      .describe("Preset date range. Use this OR startTime+endTime (not both). Converted to ISO 8601 timestamps automatically"),
+      .describe(
+        "Preset date range. Use this OR startTime+endTime (not both). Converted to ISO 8601 timestamps automatically"
+      ),
     startTime: z
       .string()
       .optional()
-      .describe("Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z, required if datePreset not provided)"),
+      .describe(
+        "Start time in ISO 8601 format (e.g. 2024-01-01T00:00:00Z, required if datePreset not provided)"
+      ),
     endTime: z
       .string()
       .optional()
-      .describe("End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"),
+      .describe(
+        "End time in ISO 8601 format (e.g. 2024-01-31T23:59:59Z, required if datePreset not provided)"
+      ),
     granularity: z
       .enum(["TOTAL", "DAY", "HOUR", "LIFETIME"])
       .optional()
@@ -54,7 +57,8 @@ export const SubmitReportInputSchema = z
       .describe("Entity level for stats breakdown (default: account-level aggregate)"),
   })
   .refine(
-    (data) => data.datePreset !== undefined || (data.startTime !== undefined && data.endTime !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startTime !== undefined && data.endTime !== undefined),
     { message: "Provide either datePreset or both startTime and endTime" }
   )
   .describe("Parameters for submitting a Snapchat Ads report");

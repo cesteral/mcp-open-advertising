@@ -21,30 +21,18 @@ Bid prices are in the advertiser's account currency.
 
 export const AdjustBidsInputSchema = z
   .object({
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
     adjustments: z
       .array(
         z.object({
-          adGroupId: z
-            .string()
-            .min(1)
-            .describe("The ad group ID to adjust"),
-          bidPrice: z
-            .number()
-            .positive()
-            .describe("New bid price in the advertiser's currency"),
+          adGroupId: z.string().min(1).describe("The ad group ID to adjust"),
+          bidPrice: z.number().positive().describe("New bid price in the advertiser's currency"),
         })
       )
       .min(1)
       .max(50)
       .describe("Bid adjustments to apply (max 50)"),
-    reason: z
-      .string()
-      .optional()
-      .describe("Optional reason for the bid adjustment"),
+    reason: z.string().optional().describe("Optional reason for the bid adjustment"),
   })
   .describe("Parameters for batch bid adjustment on TikTok ad groups");
 

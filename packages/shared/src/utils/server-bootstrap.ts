@@ -133,7 +133,7 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
       if (result === false) {
         throw new Error(
           "No credentials found for stdio mode. " +
-          "Check environment variables for required credentials."
+            "Check environment variables for required credentials."
         );
       }
 

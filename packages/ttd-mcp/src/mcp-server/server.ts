@@ -97,7 +97,8 @@ export async function createMcpServer(
     {
       name: "ttd-mcp",
       version: packageJson.version,
-      description: "The Trade Desk campaign management, Workflows jobs, reporting, and optimization via TTD API v3 + GraphQL. Supports first-class CRUD entities, workflow-oriented campaign/ad group operations, standard job APIs, GraphQL passthrough, and async report generation.",
+      description:
+        "The Trade Desk campaign management, Workflows jobs, reporting, and optimization via TTD API v3 + GraphQL. Supports first-class CRUD entities, workflow-oriented campaign/ad group operations, standard job APIs, GraphQL passthrough, and async report generation.",
     },
     {
       capabilities: {
@@ -159,8 +160,12 @@ export async function createMcpServer(
 
   // Register conformance fixtures (resources + prompts) when enabled
   if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import("@cesteral/shared");
-    const { ResourceTemplate: McpResourceTemplate } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
+      "@cesteral/shared"
+    );
+    const { ResourceTemplate: McpResourceTemplate } = await import(
+      "@modelcontextprotocol/sdk/server/mcp.js"
+    );
 
     registerStaticResourcesFromDefinitions({
       server,
@@ -168,7 +173,9 @@ export async function createMcpServer(
       logger,
     });
 
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, { list: undefined });
+    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
+      list: undefined,
+    });
     server.registerResource(
       "conformance_template",
       template,
@@ -180,11 +187,13 @@ export async function createMcpServer(
         const id = (variables.id as string) || "unknown";
         const content = conformanceResourceTemplate.getContent(id);
         return {
-          contents: [{
-            uri: uri.href,
-            mimeType: conformanceResourceTemplate.mimeType,
-            text: content,
-          }],
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: conformanceResourceTemplate.mimeType,
+              text: content,
+            },
+          ],
         };
       }
     );
@@ -197,13 +206,19 @@ export async function createMcpServer(
   }
 
   // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
-    name: def.prompt.name,
-    description: def.prompt.description ?? "",
-    arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-    generateMessage: def.generateMessage,
-  }));
-  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
+  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
+    (def) => ({
+      name: def.prompt.name,
+      description: def.prompt.description ?? "",
+      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
+      generateMessage: def.generateMessage,
+    })
+  );
+  registerPromptsFromDefinitions({
+    server: server as unknown as McpServerPromptLike,
+    prompts: allPrompts,
+    logger,
+  });
 
   return server;
 }

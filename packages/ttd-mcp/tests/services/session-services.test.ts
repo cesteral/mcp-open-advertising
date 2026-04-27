@@ -60,7 +60,7 @@ describe("createSessionServices", () => {
       authAdapter as any,
       { baseUrl: "https://api.thetradedesk.com/v3" },
       logger,
-      rateLimiter,
+      rateLimiter
     );
 
     expect(services.ttdService).toBeInstanceOf(TtdService);
@@ -76,7 +76,7 @@ describe("createSessionServices", () => {
       authAdapter as any,
       { baseUrl: "https://api.thetradedesk.com/v3" },
       logger,
-      rateLimiter,
+      rateLimiter
     );
 
     expect(services).toHaveProperty("ttdService");

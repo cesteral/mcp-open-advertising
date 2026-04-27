@@ -8,7 +8,10 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 import { resolveSessionServices } from "../../src/mcp-server/tools/utils/resolve-session.js";
 const mockResolveSessionServices = vi.mocked(resolveSessionServices);
 
-import { listEntitiesLogic, listEntitiesResponseFormatter } from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
+import {
+  listEntitiesLogic,
+  listEntitiesResponseFormatter,
+} from "../../src/mcp-server/tools/definitions/list-entities.tool.js";
 
 const mockLinkedInService = {
   listEntities: vi.fn(),
@@ -34,9 +37,7 @@ describe("linkedin_list_entities tool", () => {
   describe("listEntitiesLogic()", () => {
     it("lists campaigns for an ad account", async () => {
       mockLinkedInService.listEntities.mockResolvedValueOnce({
-        entities: [
-          { id: 111222333, name: "Test Campaign", status: "ACTIVE" },
-        ],
+        entities: [{ id: 111222333, name: "Test Campaign", status: "ACTIVE" }],
         total: 1,
         start: 0,
       });

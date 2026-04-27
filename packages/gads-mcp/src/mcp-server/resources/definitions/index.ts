@@ -17,17 +17,20 @@ import { entityExampleResources, entityExampleAllResource } from "./entity-examp
 import { gaqlReferenceResource } from "./gaql-reference.resource.js";
 import { insightsReferenceResource } from "./insights-reference.resource.js";
 import { allTools } from "../../tools/definitions/index.js";
-import {
-  createToolExamplesResource,
-  createServerCapabilitiesResource,
-} from "@cesteral/shared";
+import { createToolExamplesResource, createServerCapabilitiesResource } from "@cesteral/shared";
 import type { Resource } from "../types.js";
 
 const toolExamplesResource = createToolExamplesResource(allTools, "gads-mcp");
 const serverCapabilitiesResource = createServerCapabilitiesResource({
   serverName: "gads-mcp",
   toolGroups: {
-    read: ["gads_gaql_search", "gads_list_accounts", "gads_get_entity", "gads_list_entities", "gads_get_insights"],
+    read: [
+      "gads_gaql_search",
+      "gads_list_accounts",
+      "gads_get_entity",
+      "gads_list_entities",
+      "gads_get_insights",
+    ],
     write: ["gads_create_entity", "gads_update_entity", "gads_remove_entity"],
     bulk: ["gads_bulk_mutate", "gads_bulk_update_status", "gads_adjust_bids"],
     validation: ["gads_validate_entity"],

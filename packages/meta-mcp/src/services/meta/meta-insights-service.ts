@@ -58,9 +58,18 @@ export class MetaInsightsService {
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
-      "impressions", "clicks", "spend", "cpc", "cpm", "ctr",
-      "reach", "frequency", "actions", "action_values",
-      "conversions", "cost_per_action_type",
+      "impressions",
+      "clicks",
+      "spend",
+      "cpc",
+      "cpm",
+      "ctr",
+      "reach",
+      "frequency",
+      "actions",
+      "action_values",
+      "conversions",
+      "cost_per_action_type",
     ];
 
     const params: Record<string, string> = {
@@ -91,11 +100,10 @@ export class MetaInsightsService {
       params.after = options.after;
     }
 
-    const result = (await this.httpClient.get(
-      `/${entityId}/insights`,
-      params,
-      context
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.get(`/${entityId}/insights`, params, context)) as Record<
+      string,
+      unknown
+    >;
 
     const data = (result.data as unknown[]) || [];
     const paging = result.paging as Record<string, unknown> | undefined;
@@ -129,9 +137,18 @@ export class MetaInsightsService {
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
-      "impressions", "clicks", "spend", "cpc", "cpm", "ctr",
-      "reach", "frequency", "actions", "action_values",
-      "conversions", "cost_per_action_type",
+      "impressions",
+      "clicks",
+      "spend",
+      "cpc",
+      "cpm",
+      "ctr",
+      "reach",
+      "frequency",
+      "actions",
+      "action_values",
+      "conversions",
+      "cost_per_action_type",
     ];
 
     const data: Record<string, unknown> = {
@@ -159,11 +176,10 @@ export class MetaInsightsService {
       data.breakdowns = options.breakdowns.join(",");
     }
 
-    const result = (await this.httpClient.post(
-      `/${entityId}/insights`,
-      data,
-      context
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.post(`/${entityId}/insights`, data, context)) as Record<
+      string,
+      unknown
+    >;
 
     return { reportRunId: String(result.id) };
   }
@@ -198,9 +214,10 @@ export class MetaInsightsService {
     return {
       reportRunId: String(result.id ?? reportRunId),
       status: String(result.async_status ?? "Unknown"),
-      asyncPercentCompletion: result.async_percent_completion != null
-        ? Number(result.async_percent_completion)
-        : undefined,
+      asyncPercentCompletion:
+        result.async_percent_completion != null
+          ? Number(result.async_percent_completion)
+          : undefined,
       errorCode: result.error_code != null ? Number(result.error_code) : undefined,
       errorMessage: result.error_message != null ? String(result.error_message) : undefined,
       errorSubcode: result.error_subcode != null ? Number(result.error_subcode) : undefined,
@@ -290,8 +307,15 @@ export class MetaInsightsService {
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
-      "impressions", "clicks", "spend", "cpc", "cpm", "ctr",
-      "reach", "frequency", "actions",
+      "impressions",
+      "clicks",
+      "spend",
+      "cpc",
+      "cpm",
+      "ctr",
+      "reach",
+      "frequency",
+      "actions",
     ];
 
     const params: Record<string, string> = {
@@ -327,11 +351,10 @@ export class MetaInsightsService {
       params.action_attribution_windows = options.actionAttributionWindows.join(",");
     }
 
-    const result = (await this.httpClient.get(
-      `/${entityId}/insights`,
-      params,
-      context
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.get(`/${entityId}/insights`, params, context)) as Record<
+      string,
+      unknown
+    >;
 
     const data = (result.data as unknown[]) || [];
     const paging = result.paging as Record<string, unknown> | undefined;

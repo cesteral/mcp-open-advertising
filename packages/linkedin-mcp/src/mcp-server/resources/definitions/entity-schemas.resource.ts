@@ -129,9 +129,8 @@ function buildSchemaResource(entityType: string): Resource {
   };
 }
 
-export const entitySchemaResources: Resource[] = Object.keys(ENTITY_SCHEMAS).map(
-  buildSchemaResource
-);
+export const entitySchemaResources: Resource[] =
+  Object.keys(ENTITY_SCHEMAS).map(buildSchemaResource);
 
 export const entitySchemaAllResource: Resource = {
   uri: "entity-schema://linkedin/all",

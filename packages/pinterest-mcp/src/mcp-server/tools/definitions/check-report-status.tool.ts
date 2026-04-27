@@ -20,20 +20,16 @@ Pinterest raw statuses (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST) are 
 
 export const CheckReportStatusInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Ad Account ID"),
-    taskId: z
-      .string()
-      .min(1)
-      .describe("Report token/task ID from pinterest_submit_report"),
+    adAccountId: z.string().min(1).describe("Pinterest Ad Account ID"),
+    taskId: z.string().min(1).describe("Report token/task ID from pinterest_submit_report"),
   })
   .describe("Parameters for checking Pinterest report status");
 
 export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
   taskId: z.string().describe("Report token/task ID"),
-  rawStatus: z.string().describe("Raw Pinterest status (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST)"),
+  rawStatus: z
+    .string()
+    .describe("Raw Pinterest status (IN_PROGRESS/FINISHED/FAILED/EXPIRED/DOES_NOT_EXIST)"),
   isComplete: z.boolean().describe("Whether the canonical state is 'complete'"),
   timestamp: z.string().datetime(),
 }).describe("Report status check result");
@@ -48,10 +44,7 @@ export async function checkReportStatusLogic(
 ): Promise<CheckReportStatusOutput> {
   const { pinterestReportingService } = resolveSessionServices(sdkContext);
 
-  const result = await pinterestReportingService.checkReportStatus(
-    input.taskId,
-    context
-  );
+  const result = await pinterestReportingService.checkReportStatus(input.taskId, context);
 
   const canonical = fromPinterestStatus({
     status: result.status,
@@ -67,7 +60,9 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   if (result.isComplete && result.downloadUrl) {
     return [
       {

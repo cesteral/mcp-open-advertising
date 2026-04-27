@@ -72,7 +72,11 @@ describe("Async Reporting Workflow", () => {
 
     const submitResult = await service.submitReport({
       reportType: "campaign",
-      columns: [{ columnName: "campaign" }, { columnName: "impressions" }, { columnName: "clicks" }],
+      columns: [
+        { columnName: "campaign" },
+        { columnName: "impressions" },
+        { columnName: "clicks" },
+      ],
       timeRange: { startDate: "2026-01-01", endDate: "2026-01-31" },
       reportScope: { agencyId: "agency-1", advertiserId: "adv-1" },
     });
@@ -102,7 +106,8 @@ describe("Async Reporting Workflow", () => {
     expect(readyStatus.rowCount).toBe(3);
 
     // Step 4: Download report (uses fetchWithTimeout directly, not httpClient)
-    const csvData = "campaign,impressions,clicks\nCampaign A,1000,50\nCampaign B,2000,100\nCampaign C,500,25\n";
+    const csvData =
+      "campaign,impressions,clicks\nCampaign A,1000,50\nCampaign B,2000,100\nCampaign C,500,25\n";
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       text: vi.fn().mockResolvedValue(csvData),

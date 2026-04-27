@@ -5,7 +5,10 @@
  * Pinterest Entity Schema Resources
  */
 import type { Resource } from "../types.js";
-import { getSupportedEntityTypes, type PinterestEntityType } from "../../tools/utils/entity-mapping.js";
+import {
+  getSupportedEntityTypes,
+  type PinterestEntityType,
+} from "../../tools/utils/entity-mapping.js";
 
 const ENTITY_SCHEMA_CONTENT: Record<PinterestEntityType, string> = {
   campaign: `# Pinterest Campaign Schema (v5)
@@ -112,7 +115,10 @@ const ENTITY_SCHEMA_CONTENT: Record<PinterestEntityType, string> = {
 };
 
 function buildEntitySchemaMarkdown(entityType: PinterestEntityType): string {
-  return ENTITY_SCHEMA_CONTENT[entityType] ?? `# Pinterest ${entityType}\n\nNo schema information available.\n`;
+  return (
+    ENTITY_SCHEMA_CONTENT[entityType] ??
+    `# Pinterest ${entityType}\n\nNo schema information available.\n`
+  );
 }
 
 function buildAllSchemasMarkdown(): string {

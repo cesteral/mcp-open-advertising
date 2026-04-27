@@ -52,9 +52,7 @@ describe("appendComputedMetricsToRows", () => {
   });
 
   it("resolves column aliases", () => {
-    const rows = [
-      { spend: "50", imps: "5000", clicks: "100", conversions: "2", revenue: "100" },
-    ];
+    const rows = [{ spend: "50", imps: "5000", clicks: "100", conversions: "2", revenue: "100" }];
     const out = appendComputedMetricsToRows(rows, {
       cost: ["spend"],
       impressions: ["imps"],

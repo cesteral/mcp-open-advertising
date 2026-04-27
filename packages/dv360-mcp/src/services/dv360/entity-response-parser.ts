@@ -70,7 +70,7 @@ function pluralCandidates(entityType: string): string[] {
  */
 export function extractEntitiesFromListResponse(
   response: unknown,
-  entityType: string,
+  entityType: string
 ): ExtractedEntities {
   if (response === null || response === undefined || typeof response !== "object") {
     return { entities: [] };

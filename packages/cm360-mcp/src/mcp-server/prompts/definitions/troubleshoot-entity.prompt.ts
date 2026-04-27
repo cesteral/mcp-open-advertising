@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const troubleshootEntityPrompt: Prompt = {
   name: "cm360_troubleshoot_entity",
-  description:
-    "Diagnostic workflow for troubleshooting CM360 entity issues",
+  description: "Diagnostic workflow for troubleshooting CM360 entity issues",
   arguments: [
     {
       name: "entityType",
@@ -21,9 +20,7 @@ export const troubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getTroubleshootEntityMessage(
-  args?: Record<string, string>,
-): string {
+export function getTroubleshootEntityMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   return `# CM360 Troubleshooting: ${entityType} (${entityId})

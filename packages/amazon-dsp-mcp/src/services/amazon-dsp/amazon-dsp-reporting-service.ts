@@ -89,11 +89,13 @@ export class AmazonDspReportingService {
         startDate: reportConfig.startDate,
         endDate: reportConfig.endDate,
         configuration: {
-          adProduct: reportConfig.configuration.adProduct ?? AMAZON_DSP_REPORTING_CONTRACT.defaultAdProduct,
+          adProduct:
+            reportConfig.configuration.adProduct ?? AMAZON_DSP_REPORTING_CONTRACT.defaultAdProduct,
           groupBy: reportConfig.configuration.groupBy,
           columns: reportConfig.configuration.columns,
           reportTypeId: reportConfig.configuration.reportTypeId,
-          timeUnit: reportConfig.configuration.timeUnit ?? AMAZON_DSP_REPORTING_CONTRACT.defaultTimeUnit,
+          timeUnit:
+            reportConfig.configuration.timeUnit ?? AMAZON_DSP_REPORTING_CONTRACT.defaultTimeUnit,
           format: reportConfig.configuration.format ?? AMAZON_DSP_REPORTING_CONTRACT.defaultFormat,
         },
       },
@@ -112,7 +114,10 @@ export class AmazonDspReportingService {
     taskId: string,
     context?: RequestContext
   ): Promise<ReportTaskCheckData> {
-    this.logger.debug({ accountId, taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
+    this.logger.debug(
+      { accountId, taskId, maxPollAttempts: this.maxPollAttempts },
+      "Starting report poll"
+    );
 
     const path = AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate
       .replace("{accountId}", encodeURIComponent(accountId))
@@ -192,7 +197,11 @@ export class AmazonDspReportingService {
     rawCsv?: string;
     rawMimeType?: string;
   }> {
-    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
+    const response = await fetchWithTimeout(
+      downloadUrl,
+      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context
+    );
 
     if (!response.ok) {
       throw new McpError(
@@ -257,7 +266,8 @@ export class AmazonDspReportingService {
     maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const maxRows = typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
+    const maxRows =
+      typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
     const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
 
     const { taskId } = await this.submitReport(accountId, reportConfig, requestContext);
@@ -268,7 +278,10 @@ export class AmazonDspReportingService {
     }
 
     if (!taskResult.url) {
-      throw new McpError(JsonRpcErrorCode.InternalError, `Amazon DSP report task ${taskId} completed but has no download URL`);
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Amazon DSP report task ${taskId} completed but has no download URL`
+      );
     }
 
     const reportData = await this.downloadReport(taskResult.url, maxRows, requestContext);
@@ -300,5 +313,4 @@ export class AmazonDspReportingService {
 
     return this.getReport(accountId, configWithBreakdowns, maxRowsOrContext, context);
   }
-
 }

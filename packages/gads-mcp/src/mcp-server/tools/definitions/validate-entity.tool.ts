@@ -24,13 +24,8 @@ Sends the payload to the Google Ads :mutate endpoint with \`validateOnly: true\`
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
     mode: z
       .enum(["create", "update"])
       .describe("Validation mode: 'create' for new entity, 'update' for existing"),
@@ -39,10 +34,7 @@ export const ValidateEntityInputSchema = z
       .describe(
         "Entity data payload to validate (fields vary by entity type — see entity-schema resources)"
       ),
-    entityId: z
-      .string()
-      .optional()
-      .describe("Entity ID (required for update mode)"),
+    entityId: z.string().optional().describe("Entity ID (required for update mode)"),
     updateMask: z
       .string()
       .optional()

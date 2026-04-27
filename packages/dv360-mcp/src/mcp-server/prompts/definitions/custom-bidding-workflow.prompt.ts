@@ -28,9 +28,7 @@ export const customBiddingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getCustomBiddingWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getCustomBiddingWorkflowMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const algorithmType = args?.algorithmType || "script";
   const isRuleBased = algorithmType.toLowerCase() === "rules";
@@ -140,7 +138,9 @@ Save the returned \`customBiddingAlgorithmId\` — you'll need it for all subseq
 
 ## Step 3: Upload Logic
 
-${isRuleBased ? `### Upload Rules (RULE_BASED)
+${
+  isRuleBased
+    ? `### Upload Rules (RULE_BASED)
 
 \`\`\`json
 {
@@ -169,7 +169,8 @@ ${isRuleBased ? `### Upload Rules (RULE_BASED)
 
 **Rules States:**
 - \`ACCEPTED\` — Rules are ready for scoring
-- \`REJECTED\` — Rules have errors (check the \`error\` field)` : `### Upload Script (SCRIPT_BASED)
+- \`REJECTED\` — Rules have errors (check the \`error\` field)`
+    : `### Upload Script (SCRIPT_BASED)
 
 \`\`\`json
 {
@@ -214,7 +215,8 @@ After uploading, the script goes through processing:
     "action": "list"
   }
 }
-\`\`\``}
+\`\`\``
+}
 
 ⚠️ **GOTCHA**: Only one ${isRuleBased ? "rules set" : "script"} can be active at a time. New uploads automatically become active after being ACCEPTED.
 

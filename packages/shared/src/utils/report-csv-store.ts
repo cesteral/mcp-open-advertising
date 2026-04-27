@@ -71,8 +71,10 @@ export interface ReportCsvStoreOptions {
 
 const CSV_REDACTION_PATTERNS: Array<[RegExp, string]> = [
   [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
-  [/("?(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"?\s*[:=]\s*"?)[^",\s]+/gi,
-    '$1[REDACTED]'],
+  [
+    /("?(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"?\s*[:=]\s*"?)[^",\s]+/gi,
+    "$1[REDACTED]",
+  ],
 ];
 
 function redactCsv(csv: string): string {

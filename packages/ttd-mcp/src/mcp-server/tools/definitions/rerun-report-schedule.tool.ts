@@ -35,7 +35,10 @@ export const RerunReportScheduleInputSchema = z
 export const RerunReportScheduleOutputSchema = z
   .object({
     scheduleId: z.string().describe("Schedule ID echoed from input"),
-    newExecutionData: z.unknown().optional().describe("The data scalar returned by TTD for the new execution"),
+    newExecutionData: z
+      .unknown()
+      .optional()
+      .describe("The data scalar returned by TTD for the new execution"),
     errors: z
       .array(z.object({ field: z.string().optional(), message: z.string() }))
       .optional()
@@ -89,9 +92,7 @@ export async function rerunReportScheduleLogic(
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =
     (gqlData.myReportsReportScheduleCreate as Record<string, unknown> | undefined) ?? {};
-  const errors = mutationResult.errors as
-    | Array<{ field?: string; message: string }>
-    | undefined;
+  const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
   return {
     scheduleId: input.scheduleId,
@@ -111,9 +112,7 @@ export function rerunReportScheduleResponseFormatter(
         type: "text" as const,
         text:
           `Report schedule rerun failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];

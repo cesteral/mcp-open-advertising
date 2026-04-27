@@ -16,8 +16,7 @@ export const linkedInEntityUpdateWorkflowPrompt: Prompt = {
   arguments: [
     {
       name: "entityType",
-      description:
-        "Entity type to update: campaignGroup, campaign, creative, or conversionRule",
+      description: "Entity type to update: campaignGroup, campaign, creative, or conversionRule",
       required: true,
     },
     {
@@ -28,9 +27,7 @@ export const linkedInEntityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getLinkedInEntityUpdateWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getLinkedInEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityUrn = args?.entityUrn || "{entityUrn}";
 

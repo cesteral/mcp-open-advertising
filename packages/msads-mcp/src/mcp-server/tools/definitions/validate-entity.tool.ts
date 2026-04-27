@@ -2,7 +2,11 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import { getEntityTypeEnum, getEntityConfig, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import {
+  getEntityTypeEnum,
+  getEntityConfig,
+  type MsAdsEntityType,
+} from "../utils/entity-mapping.js";
 import type { RequestContext, SdkContext } from "@cesteral/shared";
 import { validateEntityResponseFormatter } from "@cesteral/shared";
 
@@ -14,15 +18,11 @@ Checks that the entity type is valid and required fields are present. Does NOT c
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
     mode: z
       .enum(["create", "update"])
       .describe("Validation mode — create requires more fields than update"),
-    data: z
-      .record(z.unknown())
-      .describe("Entity data payload to validate"),
+    data: z.record(z.unknown()).describe("Entity data payload to validate"),
   })
   .describe("Parameters for validating a Microsoft Ads entity");
 

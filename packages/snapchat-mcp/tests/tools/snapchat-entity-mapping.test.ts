@@ -106,20 +106,27 @@ describe("Snapchat entity mapping", () => {
 
   describe("interpolatePath", () => {
     it("replaces {adAccountId} placeholder", () => {
-      expect(interpolatePath("/v1/adaccounts/{adAccountId}/campaigns", { adAccountId: "acct_123" }))
-        .toBe("/v1/adaccounts/acct_123/campaigns");
+      expect(
+        interpolatePath("/v1/adaccounts/{adAccountId}/campaigns", { adAccountId: "acct_123" })
+      ).toBe("/v1/adaccounts/acct_123/campaigns");
     });
     it("replaces {entityId} placeholder", () => {
-      expect(interpolatePath("/v1/campaigns/{entityId}", { entityId: "camp_456" }))
-        .toBe("/v1/campaigns/camp_456");
+      expect(interpolatePath("/v1/campaigns/{entityId}", { entityId: "camp_456" })).toBe(
+        "/v1/campaigns/camp_456"
+      );
     });
     it("replaces multiple placeholders", () => {
-      expect(interpolatePath("/v1/campaigns/{campaignId}/adsquads/{entityId}", { campaignId: "c1", entityId: "sq1" }))
-        .toBe("/v1/campaigns/c1/adsquads/sq1");
+      expect(
+        interpolatePath("/v1/campaigns/{campaignId}/adsquads/{entityId}", {
+          campaignId: "c1",
+          entityId: "sq1",
+        })
+      ).toBe("/v1/campaigns/c1/adsquads/sq1");
     });
     it("leaves unmatched placeholders unchanged", () => {
-      expect(interpolatePath("/v1/ads/{adSquadId}/ads", { adAccountId: "x" }))
-        .toBe("/v1/ads/{adSquadId}/ads");
+      expect(interpolatePath("/v1/ads/{adSquadId}/ads", { adAccountId: "x" })).toBe(
+        "/v1/ads/{adSquadId}/ads"
+      );
     });
   });
 });

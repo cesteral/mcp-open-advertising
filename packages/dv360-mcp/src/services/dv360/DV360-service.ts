@@ -5,10 +5,7 @@ import { z } from "zod";
 import type { Logger } from "pino";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
 import { RateLimiter } from "../../utils/security/rate-limiter.js";
-import {
-  getEntityConfigDynamic,
-  getEntitySchemaForOperation,
-} from "../domain/entity-mapping.js";
+import { getEntityConfigDynamic, getEntitySchemaForOperation } from "../domain/entity-mapping.js";
 import { extractEntitiesFromListResponse } from "./entity-response-parser.js";
 import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
@@ -72,30 +69,36 @@ const ScriptErrorSchema = z.object({
   errorMessage: z.string(),
 });
 
-const CustomBiddingScriptSchema = z.object({
-  name: z.string(),
-  customBiddingAlgorithmId: z.string(),
-  customBiddingScriptId: z.string(),
-  createTime: z.string().optional(),
-  active: z.boolean().optional(),
-  state: z.enum(["PENDING", "ACCEPTED", "REJECTED"]),
-  errors: z.array(ScriptErrorSchema).optional(),
-  script: z.object({ resourceName: z.string() }).optional(),
-}).passthrough();
+const CustomBiddingScriptSchema = z
+  .object({
+    name: z.string(),
+    customBiddingAlgorithmId: z.string(),
+    customBiddingScriptId: z.string(),
+    createTime: z.string().optional(),
+    active: z.boolean().optional(),
+    state: z.enum(["PENDING", "ACCEPTED", "REJECTED"]),
+    errors: z.array(ScriptErrorSchema).optional(),
+    script: z.object({ resourceName: z.string() }).optional(),
+  })
+  .passthrough();
 
-const CustomBiddingAlgorithmRulesSchema = z.object({
-  name: z.string(),
-  customBiddingAlgorithmId: z.string(),
-  customBiddingAlgorithmRulesId: z.string(),
-  createTime: z.string().optional(),
-  active: z.boolean().optional(),
-  state: z.enum(["ACCEPTED", "REJECTED"]),
-  error: z.object({
-    errorCode: z.enum(["SYNTAX_ERROR", "CONSTRAINT_VIOLATION", "INTERNAL_ERROR"]),
-    errorMessage: z.string(),
-  }).optional(),
-  rules: z.object({ resourceName: z.string() }).optional(),
-}).passthrough();
+const CustomBiddingAlgorithmRulesSchema = z
+  .object({
+    name: z.string(),
+    customBiddingAlgorithmId: z.string(),
+    customBiddingAlgorithmRulesId: z.string(),
+    createTime: z.string().optional(),
+    active: z.boolean().optional(),
+    state: z.enum(["ACCEPTED", "REJECTED"]),
+    error: z
+      .object({
+        errorCode: z.enum(["SYNTAX_ERROR", "CONSTRAINT_VIOLATION", "INTERNAL_ERROR"]),
+        errorMessage: z.string(),
+      })
+      .optional(),
+    rules: z.object({ resourceName: z.string() }).optional(),
+  })
+  .passthrough();
 
 export type ScriptError = z.infer<typeof ScriptErrorSchema>;
 export type CustomBiddingScript = z.infer<typeof CustomBiddingScriptSchema>;
@@ -312,7 +315,9 @@ export class DV360Service {
       setSpanAttribute("dv360.updateFieldsCount", updateMask.split(",").length);
 
       // Use pre-fetched entity if provided, otherwise fetch current state
-      const current = currentEntity ?? (await this.getEntity(entityType, ids, context)) as Record<string, unknown>;
+      const current =
+        currentEntity ??
+        ((await this.getEntity(entityType, ids, context)) as Record<string, unknown>);
       const merged = deepMerge(current, data);
 
       // Validate merged entity
@@ -702,7 +707,10 @@ export class DV360Service {
     filename: string,
     contentType: string,
     context?: RequestContext
-  ): Promise<{ asset: { mediaId: string; content?: string }; assignedTargetingOptions?: unknown[] }> {
+  ): Promise<{
+    asset: { mediaId: string; content?: string };
+    assignedTargetingOptions?: unknown[];
+  }> {
     return withDV360ApiSpan("uploadAsset", advertiserId, async () => {
       setSpanAttribute("dv360.advertiserId", advertiserId);
       setSpanAttribute("dv360.filename", filename);
@@ -806,11 +814,11 @@ export class DV360Service {
 
       // Strip read-only / server-generated fields
       const readOnlyFields = [
-        "name",                     // resource name (e.g., advertisers/123/lineItems/456)
-        `${entityType}Id`,          // server-assigned ID
+        "name", // resource name (e.g., advertisers/123/lineItems/456)
+        `${entityType}Id`, // server-assigned ID
         "updateTime",
         "createTime",
-        "entityStatus",             // will default to DRAFT on creation
+        "entityStatus", // will default to DRAFT on creation
       ];
 
       const copyData: Record<string, unknown> = {};
@@ -923,40 +931,44 @@ export class DV360Service {
     pageSize?: number,
     context?: RequestContext
   ): Promise<{ entities: unknown[]; nextPageToken?: string }> {
-    return withDV360ApiSpan("listCustomBiddingAlgorithmsEntities", "customBiddingAlgorithm", async () => {
-      const params = new URLSearchParams();
-      if (partnerId) {
-        params.append("partnerId", partnerId);
-        setSpanAttribute("dv360.partnerId", partnerId);
+    return withDV360ApiSpan(
+      "listCustomBiddingAlgorithmsEntities",
+      "customBiddingAlgorithm",
+      async () => {
+        const params = new URLSearchParams();
+        if (partnerId) {
+          params.append("partnerId", partnerId);
+          setSpanAttribute("dv360.partnerId", partnerId);
+        }
+        if (advertiserId) {
+          params.append("advertiserId", advertiserId);
+          setSpanAttribute("dv360.advertiserId", advertiserId);
+        }
+        if (filter) params.append("filter", filter);
+        if (pageToken) params.append("pageToken", pageToken);
+        if (pageSize) params.append("pageSize", pageSize.toString());
+
+        const path = `/customBiddingAlgorithms${params.toString() ? `?${params}` : ""}`;
+        setSpanAttribute("dv360.apiPath", "/customBiddingAlgorithms");
+
+        if (advertiserId) {
+          await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
+        }
+
+        const response = (await this.httpClient.fetch(path, context)) as {
+          customBiddingAlgorithms?: unknown[];
+          nextPageToken?: string;
+        };
+
+        const entities = response.customBiddingAlgorithms || [];
+        setSpanAttribute("dv360.resultCount", entities.length);
+
+        return {
+          entities,
+          nextPageToken: response.nextPageToken,
+        };
       }
-      if (advertiserId) {
-        params.append("advertiserId", advertiserId);
-        setSpanAttribute("dv360.advertiserId", advertiserId);
-      }
-      if (filter) params.append("filter", filter);
-      if (pageToken) params.append("pageToken", pageToken);
-      if (pageSize) params.append("pageSize", pageSize.toString());
-
-      const path = `/customBiddingAlgorithms${params.toString() ? `?${params}` : ""}`;
-      setSpanAttribute("dv360.apiPath", "/customBiddingAlgorithms");
-
-      if (advertiserId) {
-        await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
-      }
-
-      const response = (await this.httpClient.fetch(path, context)) as {
-        customBiddingAlgorithms?: unknown[];
-        nextPageToken?: string;
-      };
-
-      const entities = response.customBiddingAlgorithms || [];
-      setSpanAttribute("dv360.resultCount", entities.length);
-
-      return {
-        entities,
-        nextPageToken: response.nextPageToken,
-      };
-    });
+    );
   }
 
   /**

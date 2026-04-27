@@ -101,7 +101,8 @@ export const entitySchemaAllResource: Resource = {
   name: "All SA360 Entity Schemas",
   description: "Combined query field schemas for all SA360 entity types",
   mimeType: "text/markdown",
-  getContent: () => getSupportedEntityTypes()
-    .map((t) => ENTITY_SCHEMAS[t])
-    .join("\n\n---\n\n"),
+  getContent: () =>
+    getSupportedEntityTypes()
+      .map((t) => ENTITY_SCHEMAS[t])
+      .join("\n\n---\n\n"),
 };

@@ -6,17 +6,13 @@ const { mockResolveSessionServices, mockEnsureRequiredFieldValue } = vi.hoisted(
   mockEnsureRequiredFieldValue: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/elicitation.js",
-  () => ({
-    ensureRequiredFieldValue: mockEnsureRequiredFieldValue,
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/elicitation.js", () => ({
+  ensureRequiredFieldValue: mockEnsureRequiredFieldValue,
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {
@@ -80,8 +76,8 @@ describe("dv360_create_custom_bidding_algorithm", () => {
     });
 
     // By default, ensureRequiredFieldValue returns the currentValue
-    mockEnsureRequiredFieldValue.mockImplementation(
-      ({ currentValue }: { currentValue?: string }) => Promise.resolve(currentValue)
+    mockEnsureRequiredFieldValue.mockImplementation(({ currentValue }: { currentValue?: string }) =>
+      Promise.resolve(currentValue)
     );
   });
 
@@ -312,9 +308,7 @@ describe("dv360_create_custom_bidding_algorithm", () => {
     });
 
     it("propagates error from createEntity", async () => {
-      mockDv360Service.createEntity.mockRejectedValueOnce(
-        new Error("Permission denied")
-      );
+      mockDv360Service.createEntity.mockRejectedValueOnce(new Error("Permission denied"));
 
       await expect(
         createCustomBiddingAlgorithmLogic(

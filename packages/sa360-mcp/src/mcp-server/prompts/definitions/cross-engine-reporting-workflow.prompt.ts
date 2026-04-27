@@ -16,9 +16,7 @@ export const crossEngineReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getCrossEngineReportingWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getCrossEngineReportingWorkflowMessage(args?: Record<string, string>): string {
   const customerId = args?.customerId || "{customerId}";
   return `# SA360 Cross-Engine Reporting Workflow
 

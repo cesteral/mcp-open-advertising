@@ -17,14 +17,13 @@ Use this to discover valid targeting values before creating or updating ad group
 
 export const GetTargetingOptionsInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     targetingType: z
       .string()
       .optional()
-      .describe("Optional objective type to filter targeting options (e.g., TRAFFIC, APP_INSTALLS)"),
+      .describe(
+        "Optional objective type to filter targeting options (e.g., TRAFFIC, APP_INSTALLS)"
+      ),
   })
   .describe("Parameters for browsing Pinterest targeting options");
 
@@ -56,7 +55,9 @@ export async function getTargetingOptionsLogic(
   };
 }
 
-export function getTargetingOptionsResponseFormatter(result: GetTargetingOptionsOutput): McpTextContent[] {
+export function getTargetingOptionsResponseFormatter(
+  result: GetTargetingOptionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

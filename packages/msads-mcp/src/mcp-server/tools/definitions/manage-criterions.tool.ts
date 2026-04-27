@@ -24,9 +24,7 @@ export const ManageCriterionsInputSchema = z
     entityLevel: z
       .enum(["campaign", "adGroup"])
       .describe("Whether targeting is at campaign or ad group level"),
-    data: z
-      .record(z.unknown())
-      .describe("Operation data (varies by operation)"),
+    data: z.record(z.unknown()).describe("Operation data (varies by operation)"),
   })
   .describe("Parameters for managing targeting criterions");
 
@@ -85,7 +83,9 @@ export async function manageCriterionsLogic(
   };
 }
 
-export function manageCriterionsResponseFormatter(result: ManageCriterionsOutput): McpTextContent[] {
+export function manageCriterionsResponseFormatter(
+  result: ManageCriterionsOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

@@ -25,17 +25,14 @@ Budget schedules allow temporary budget increases during high-demand periods
 
 export const ManageBudgetScheduleInputSchema = z
   .object({
-    operation: z
-      .enum(["create", "list"])
-      .describe("Operation to perform"),
-    campaignId: z
-      .string()
-      .min(1)
-      .describe("Campaign ID to manage budget schedules for"),
+    operation: z.enum(["create", "list"]).describe("Operation to perform"),
+    campaignId: z.string().min(1).describe("Campaign ID to manage budget schedules for"),
     data: z
       .record(z.any())
       .optional()
-      .describe("Budget schedule data (required for create: budget_value, budget_value_type, time_start, time_end)"),
+      .describe(
+        "Budget schedule data (required for create: budget_value, budget_value_type, time_start, time_end)"
+      ),
   })
   .superRefine((val, ctx) => {
     if (val.operation === "create" && !val.data) {
@@ -70,16 +67,9 @@ export async function manageBudgetScheduleLogic(
   let result: unknown;
 
   if (input.operation === "create") {
-    result = await metaService.createBudgetSchedule(
-      input.campaignId,
-      input.data!,
-      context
-    );
+    result = await metaService.createBudgetSchedule(input.campaignId, input.data!, context);
   } else {
-    result = await metaService.listBudgetSchedules(
-      input.campaignId,
-      context
-    );
+    result = await metaService.listBudgetSchedules(input.campaignId, context);
   }
 
   return {
@@ -90,10 +80,13 @@ export async function manageBudgetScheduleLogic(
   };
 }
 
-export function manageBudgetScheduleResponseFormatter(result: ManageBudgetScheduleOutput): McpTextContent[] {
-  const header = result.operation === "create"
-    ? `Budget schedule created for campaign ${result.campaignId}`
-    : `Budget schedules for campaign ${result.campaignId}`;
+export function manageBudgetScheduleResponseFormatter(
+  result: ManageBudgetScheduleOutput
+): McpTextContent[] {
+  const header =
+    result.operation === "create"
+      ? `Budget schedule created for campaign ${result.campaignId}`
+      : `Budget schedules for campaign ${result.campaignId}`;
 
   return [
     {

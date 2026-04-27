@@ -27,14 +27,8 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["ttd-token", "ttd-headers", "jwt", "none"]).default("ttd-token"),
 
   // TTD API Configuration
-  ttdApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://api.thetradedesk.com/v3"),
-  ttdGraphqlUrl: z
-    .string()
-    .url()
-    .default("https://desk.thetradedesk.com/graphql"),
+  ttdApiBaseUrl: z.string().url().default("https://api.thetradedesk.com/v3"),
+  ttdGraphqlUrl: z.string().url().default("https://desk.thetradedesk.com/graphql"),
   // Default: 60 req/min (1 req/s) — covers agentic discovery chains (partners →
   // advertisers → campaigns → ad groups) without hitting platform quotas.
   // In-memory rate limiting is per-process; multi-instance deployments should set

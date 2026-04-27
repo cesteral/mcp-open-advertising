@@ -59,7 +59,10 @@ describe("downloadReportLogic", () => {
   it("returns parsed CSV data", async () => {
     mockDownloadReport.mockResolvedValueOnce({
       headers: ["date", "impressions", "clicks"],
-      rows: [["2026-03-01", "1000", "50"], ["2026-03-02", "1200", "60"]],
+      rows: [
+        ["2026-03-01", "1000", "50"],
+        ["2026-03-02", "1200", "60"],
+      ],
       totalRows: 2,
     });
 
@@ -139,11 +142,11 @@ describe("downloadReportLogic", () => {
       { includeRawCsv: true }
     );
     expect(result.rawCsvResourceUri).toMatch(/^report-csv:\/\//);
-    expect(result.rawCsvByteLength).toBe(Buffer.byteLength("date,impressions\n2026-03-01,1000\n", "utf8"));
-
-    const { reportCsvStore } = await import(
-      "../../src/services/session-services.js"
+    expect(result.rawCsvByteLength).toBe(
+      Buffer.byteLength("date,impressions\n2026-03-01,1000\n", "utf8")
     );
+
+    const { reportCsvStore } = await import("../../src/services/session-services.js");
     const entry = reportCsvStore.getByUri(result.rawCsvResourceUri!);
     expect(entry).toBeDefined();
     expect(entry!.csv).toBe("date,impressions\n2026-03-01,1000\n");
@@ -228,7 +231,7 @@ describe("GCS spill integration", () => {
         server: "tiktok",
         reportId: "report.csv",
         rowCount: 1,
-      }),
+      })
     );
     expect(result.spill).toEqual({
       bucket: "test-bucket",
@@ -291,7 +294,10 @@ describe("downloadReportResponseFormatter", () => {
       headers: ["date", "impressions"],
       selectedColumns: ["date", "impressions"],
       mode: "rows" as const,
-      rows: [{ date: "2026-03-01", impressions: "1000" }, { date: "2026-03-02", impressions: "1200" }],
+      rows: [
+        { date: "2026-03-01", impressions: "1000" },
+        { date: "2026-03-02", impressions: "1200" },
+      ],
       nextOffset: null,
       warnings: [],
       timestamp: "2026-03-04T00:00:00.000Z",

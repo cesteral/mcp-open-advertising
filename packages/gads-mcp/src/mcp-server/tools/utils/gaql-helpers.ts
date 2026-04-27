@@ -60,12 +60,7 @@ const DEFAULT_SELECT_FIELDS: Record<GAdsEntityType, string[]> = {
     "campaign_budget.status",
     "campaign_budget.resource_name",
   ],
-  asset: [
-    "asset.id",
-    "asset.name",
-    "asset.type",
-    "asset.resource_name",
-  ],
+  asset: ["asset.id", "asset.name", "asset.type", "asset.resource_name"],
 };
 
 /**
@@ -116,10 +111,7 @@ export function buildListQuery(
 /**
  * Build a GAQL query to get a single entity by ID.
  */
-export function buildGetByIdQuery(
-  entityType: GAdsEntityType,
-  entityId: string
-): string {
+export function buildGetByIdQuery(entityType: GAdsEntityType, entityId: string): string {
   if (!/^\d+$/.test(entityId)) {
     throw new Error(`Invalid entity ID: "${entityId}". Entity IDs must be numeric.`);
   }

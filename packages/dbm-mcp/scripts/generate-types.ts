@@ -69,7 +69,9 @@ async function main() {
   const metricCount = Object.keys(reference.metrics).length;
   const reportTypeCount = Object.keys(reference.reportTypes).length;
 
-  console.log(`📊 Found ${filterCount} filters, ${metricCount} metrics, ${reportTypeCount} report types\n`);
+  console.log(
+    `📊 Found ${filterCount} filters, ${metricCount} metrics, ${reportTypeCount} report types\n`
+  );
 
   // Generate modules
   const filtersCode = generateFiltersModule(reference);

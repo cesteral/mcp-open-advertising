@@ -78,17 +78,13 @@ export class ConversionService {
       advertiserId,
     }));
 
-    const result = await this.httpClient.fetch(
-      "/conversion",
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          kind: "doubleclicksearch#conversionList",
-          conversion: conversionRows,
-        }),
-      }
-    );
+    const result = await this.httpClient.fetch("/conversion", context, {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "doubleclicksearch#conversionList",
+        conversion: conversionRows,
+      }),
+    });
 
     return result;
   }
@@ -118,17 +114,13 @@ export class ConversionService {
       advertiserId,
     }));
 
-    const result = await this.httpClient.fetch(
-      "/conversion",
-      context,
-      {
-        method: "PUT",
-        body: JSON.stringify({
-          kind: "doubleclicksearch#conversionList",
-          conversion: conversionRows,
-        }),
-      }
-    );
+    const result = await this.httpClient.fetch("/conversion", context, {
+      method: "PUT",
+      body: JSON.stringify({
+        kind: "doubleclicksearch#conversionList",
+        conversion: conversionRows,
+      }),
+    });
 
     return result;
   }

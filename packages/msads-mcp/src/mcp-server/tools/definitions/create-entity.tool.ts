@@ -16,12 +16,8 @@ Use the entity-schema and entity-examples MCP resources to discover required fie
 
 export const CreateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to create"),
-    data: z
-      .record(z.unknown())
-      .describe("Entity data payload following Microsoft Ads API format"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to create"),
+    data: z.record(z.unknown()).describe("Entity data payload following Microsoft Ads API format"),
   })
   .describe("Parameters for creating a Microsoft Ads entity");
 

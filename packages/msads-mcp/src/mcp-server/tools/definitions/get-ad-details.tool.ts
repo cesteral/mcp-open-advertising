@@ -11,13 +11,8 @@ const TOOL_DESCRIPTION = `Get the full details of one or more Microsoft Advertis
 
 export const GetAdDetailsInputSchema = z
   .object({
-    adIds: z
-      .array(z.string())
-      .min(1)
-      .describe("Ad IDs to retrieve"),
-    adGroupId: z
-      .string()
-      .describe("Ad Group ID containing the ads"),
+    adIds: z.array(z.string()).min(1).describe("Ad IDs to retrieve"),
+    adGroupId: z.string().describe("Ad Group ID containing the ads"),
   })
   .describe("Parameters for getting ad details");
 

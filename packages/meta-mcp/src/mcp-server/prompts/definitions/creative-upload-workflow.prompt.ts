@@ -5,7 +5,8 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const creativeUploadWorkflowPrompt: Prompt = {
   name: "creative_upload_workflow",
-  description: "Step-by-step guide for uploading creative assets and creating Meta Ads creatives (images and videos)",
+  description:
+    "Step-by-step guide for uploading creative assets and creating Meta Ads creatives (images and videos)",
   arguments: [
     {
       name: "adAccountId",
@@ -37,7 +38,9 @@ Meta Ads creative workflow: Upload media → Create Ad Creative → Attach to Ad
 
 ## Step 1: Upload ${creativeType === "video" ? "Video" : "Image"}
 
-${creativeType === "video" ? `
+${
+  creativeType === "video"
+    ? `
 \`\`\`json
 meta_upload_video({
   "adAccountId": "${adAccountId}",
@@ -53,7 +56,8 @@ meta_upload_video({
 - Buffered proxy upload limit applies; use moderate-size assets and chunked workflows for very large videos
 - Min resolution 120x120px
 - Feed ads: up to 240 min duration
-` : `
+`
+    : `
 \`\`\`json
 meta_upload_image({
   "adAccountId": "${adAccountId}",
@@ -69,11 +73,14 @@ meta_upload_image({
 - Max 30MB
 - Recommended: 1200x628px (1.91:1 ratio) for link ads
 - Square 1080x1080px for Stories/Reels
-`}
+`
+}
 
 ## Step 2: Create Ad Creative
 
-${creativeType === "video" ? `
+${
+  creativeType === "video"
+    ? `
 \`\`\`json
 meta_create_entity({
   "entityType": "adCreative",
@@ -94,7 +101,8 @@ meta_create_entity({
   }
 })
 \`\`\`
-` : `
+`
+    : `
 \`\`\`json
 meta_create_entity({
   "entityType": "adCreative",
@@ -116,7 +124,8 @@ meta_create_entity({
   }
 })
 \`\`\`
-`}
+`
+}
 
 ⚠️ **GOTCHA**: You must own a Facebook Page to create ads. Get page_id by calling Meta's Page API or checking your Business Manager.
 

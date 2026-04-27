@@ -64,9 +64,7 @@ export const GetInsightsInputSchema = z
       .string()
       .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
-    entityType: z
-      .enum(getInsightsEntityTypeEnum())
-      .describe("Type of entity to get insights for"),
+    entityType: z.enum(getInsightsEntityTypeEnum()).describe("Type of entity to get insights for"),
     entityId: z
       .string()
       .regex(/^\d+$/, "entityId must be numeric")
@@ -110,10 +108,7 @@ export const GetInsightsInputSchema = z
       .max(10000)
       .optional()
       .describe("Deprecated. Use maxRows for the returned row count."),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination (from previous response)"),
+    pageToken: z.string().optional().describe("Page token for pagination (from previous response)"),
   })
   .merge(ReportViewInputSchema)
   .refine(
@@ -193,9 +188,10 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
-  const viewInput = input.maxRows === undefined && input.limit !== undefined
-    ? { ...input, maxRows: input.limit }
-    : input;
+  const viewInput =
+    input.maxRows === undefined && input.limit !== undefined
+      ? { ...input, maxRows: input.limit }
+      : input;
 
   const query = buildInsightsQuery({ ...input, limit: getReportViewFetchLimit(viewInput) });
 
@@ -220,7 +216,9 @@ export async function getInsightsLogic(
       rows: results,
       totalRows: results.length + (result.nextPageToken ? 1 : 0),
       input: viewInput,
-      warnings: result.nextPageToken ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."] : [],
+      warnings: result.nextPageToken
+        ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
+        : [],
     }),
     totalResults: results.length,
     dateRange: dateRangeLabel,

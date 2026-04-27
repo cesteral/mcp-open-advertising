@@ -6,19 +6,20 @@
  * Provides list of all DV360 targeting types with descriptions and metadata
  */
 
-import type { ResourceDefinition, ResourceContent, ResourceListItem } from '../utils/types.js';
+import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
 import {
   ALL_TARGETING_TYPES,
   TARGETING_TYPE_DESCRIPTIONS,
   TARGETING_CATEGORIES,
   getSupportedTargetingParentTypes,
   type TargetingType,
-} from '../../tools/utils/targeting-metadata.js';
-import { resourceCache } from '../utils/resource-cache.js';
+} from "../../tools/utils/targeting-metadata.js";
+import { resourceCache } from "../utils/resource-cache.js";
 
-const RESOURCE_NAME = 'DV360 Targeting Types';
-const RESOURCE_DESCRIPTION = 'List of all available DV360 targeting types with descriptions and categories';
-const URI_TEMPLATE = 'targeting-types://';
+const RESOURCE_NAME = "DV360 Targeting Types";
+const RESOURCE_DESCRIPTION =
+  "List of all available DV360 targeting types with descriptions and categories";
+const URI_TEMPLATE = "targeting-types://";
 
 /**
  * Get supported parent types for a targeting type
@@ -34,10 +35,10 @@ function getSupportedParentTypes(_targetingType: TargetingType): string[] {
  * Read targeting types resource
  */
 async function readTargetingTypes(): Promise<ResourceContent> {
-  const cacheKey = 'targeting-types://';
+  const cacheKey = "targeting-types://";
   const cached = resourceCache.get(cacheKey);
   if (cached) {
-    return { uri: cacheKey, mimeType: 'application/json', text: cached };
+    return { uri: cacheKey, mimeType: "application/json", text: cached };
   }
 
   const categorizedTypes: Record<
@@ -70,14 +71,15 @@ async function readTargetingTypes(): Promise<ResourceContent> {
     categorized: categorizedTypes,
     allTypes,
     usage: {
-      listTool: 'dv360_list_assigned_targeting',
-      getTool: 'dv360_get_assigned_targeting',
-      createTool: 'dv360_create_assigned_targeting',
-      deleteTool: 'dv360_delete_assigned_targeting',
-      validateTool: 'dv360_validate_targeting_config',
+      listTool: "dv360_list_assigned_targeting",
+      getTool: "dv360_get_assigned_targeting",
+      createTool: "dv360_create_assigned_targeting",
+      deleteTool: "dv360_delete_assigned_targeting",
+      validateTool: "dv360_validate_targeting_config",
     },
-    schemaResource: 'targeting-schema://{targetingType}',
-    documentation: 'https://developers.google.com/display-video/api/reference/rest/v4/TargetingType',
+    schemaResource: "targeting-schema://{targetingType}",
+    documentation:
+      "https://developers.google.com/display-video/api/reference/rest/v4/TargetingType",
   };
 
   const text = JSON.stringify(document, null, 2);
@@ -85,7 +87,7 @@ async function readTargetingTypes(): Promise<ResourceContent> {
 
   return {
     uri: cacheKey,
-    mimeType: 'application/json',
+    mimeType: "application/json",
     text,
   };
 }
@@ -96,10 +98,10 @@ async function readTargetingTypes(): Promise<ResourceContent> {
 async function listTargetingTypes(): Promise<ResourceListItem[]> {
   return [
     {
-      uri: 'targeting-types://',
-      name: 'All DV360 Targeting Types',
+      uri: "targeting-types://",
+      name: "All DV360 Targeting Types",
       description: `Complete list of ${ALL_TARGETING_TYPES.length} targeting types with descriptions and categories`,
-      mimeType: 'application/json',
+      mimeType: "application/json",
     },
   ];
 }
@@ -111,7 +113,7 @@ export const targetingTypesResource: ResourceDefinition = {
   uriTemplate: URI_TEMPLATE,
   name: RESOURCE_NAME,
   description: RESOURCE_DESCRIPTION,
-  mimeType: 'application/json',
+  mimeType: "application/json",
   read: readTargetingTypes,
   list: listTargetingTypes,
 };

@@ -11,7 +11,10 @@ vi.mock("@cesteral/shared", async () => {
 import { resolveSessionServicesFromStore } from "@cesteral/shared";
 const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
 
-import { createEntityLogic, createEntityResponseFormatter } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
+import {
+  createEntityLogic,
+  createEntityResponseFormatter,
+} from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
 import type { SessionServices } from "../../src/services/session-services.js";
 
 function createMockServices(): SessionServices {
@@ -56,11 +59,9 @@ describe("msads_create_entity", () => {
 
     expect(result.entityType).toBe("campaign");
     expect(result.result.CampaignIds).toEqual([111, 222]);
-    expect(mockServices.msadsService.createEntity).toHaveBeenCalledWith(
-      "campaign",
-      data,
-      { requestId: "req-1" }
-    );
+    expect(mockServices.msadsService.createEntity).toHaveBeenCalledWith("campaign", data, {
+      requestId: "req-1",
+    });
   });
 
   it("formats response correctly", () => {

@@ -5,9 +5,7 @@
  * Test helper for conformance tests.
  * Extracts the shape of a Zod object schema for structural assertions.
  */
-export function getObjectShape(
-  schema: any
-): Record<string, unknown> | null {
+export function getObjectShape(schema: any): Record<string, unknown> | null {
   if (!schema?._def) return null;
   const shapeFactory = schema._def.shape;
   if (typeof shapeFactory === "function") {

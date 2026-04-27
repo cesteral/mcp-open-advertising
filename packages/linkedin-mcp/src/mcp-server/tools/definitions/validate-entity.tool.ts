@@ -44,7 +44,11 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
   ],
   campaignGroup: [
     { field: "name", expectedType: "string" },
-    { field: "account", expectedType: "string", hint: "Ad account URN (e.g., urn:li:sponsoredAccount:123)" },
+    {
+      field: "account",
+      expectedType: "string",
+      hint: "Ad account URN (e.g., urn:li:sponsoredAccount:123)",
+    },
     { field: "status", expectedType: "string", hint: "e.g., DRAFT, ACTIVE, PAUSED" },
   ],
   campaign: [
@@ -52,7 +56,11 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
     { field: "campaignGroup", expectedType: "string", hint: "Campaign group URN" },
     { field: "account", expectedType: "string", hint: "Ad account URN" },
     { field: "type", expectedType: "string", hint: "e.g., SPONSORED_UPDATES, TEXT_AD, DYNAMIC" },
-    { field: "objectiveType", expectedType: "string", hint: "e.g., BRAND_AWARENESS, WEBSITE_TRAFFIC" },
+    {
+      field: "objectiveType",
+      expectedType: "string",
+      hint: "e.g., BRAND_AWARENESS, WEBSITE_TRAFFIC",
+    },
     { field: "status", expectedType: "string", hint: "e.g., DRAFT, ACTIVE, PAUSED" },
   ],
   creative: [
@@ -62,7 +70,11 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
   ],
   conversionRule: [
     { field: "name", expectedType: "string" },
-    { field: "type", expectedType: "string", hint: "e.g., PURCHASE, ADD_TO_CART, DOWNLOAD, SIGN_UP" },
+    {
+      field: "type",
+      expectedType: "string",
+      hint: "e.g., PURCHASE, ADD_TO_CART, DOWNLOAD, SIGN_UP",
+    },
     { field: "account", expectedType: "string", hint: "Ad account URN" },
     { field: "status", expectedType: "string", hint: "e.g., ACTIVE, PAUSED" },
   ],
@@ -76,15 +88,9 @@ const READ_ONLY_FIELDS = ["id", "changeAuditStamps", "created", "lastModified", 
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
-    mode: z
-      .enum(["create", "update"])
-      .describe("Whether validating for creation or update"),
-    data: z
-      .record(z.any())
-      .describe("Entity payload to validate"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
+    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
+    data: z.record(z.any()).describe("Entity payload to validate"),
   })
   .describe("Parameters for validating a LinkedIn Ads entity payload");
 

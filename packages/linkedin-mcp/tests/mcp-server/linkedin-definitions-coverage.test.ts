@@ -18,7 +18,10 @@ const linkedInService = {
   createEntity: vi.fn(async () => ({ id: "urn:li:test:new" })),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
-  listAdAccounts: vi.fn(async () => ({ accounts: [{ id: "urn:li:sponsoredAccount:1" }], total: 1 })),
+  listAdAccounts: vi.fn(async () => ({
+    accounts: [{ id: "urn:li:sponsoredAccount:1" }],
+    total: 1,
+  })),
   bulkUpdateStatus: vi.fn(async (entityType: string, entityUrns: string[]) => ({
     results: entityUrns.map((entityUrn: string) => ({ entityUrn, success: true })),
   })),
@@ -64,7 +67,11 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
 import { allResources } from "../../src/mcp-server/resources/definitions/index.js";
-import { getAllPrompts, getPromptDefinition, promptRegistry } from "../../src/mcp-server/prompts/index.js";
+import {
+  getAllPrompts,
+  getPromptDefinition,
+  promptRegistry,
+} from "../../src/mcp-server/prompts/index.js";
 
 describe("LinkedIn MCP definitions coverage", () => {
   beforeEach(() => {
@@ -113,7 +120,9 @@ describe("LinkedIn MCP definitions coverage", () => {
     const campaignPrompt = getPromptDefinition("linkedin_campaign_setup_workflow");
     const bulkPrompt = getPromptDefinition("linkedin_bulk_operations_workflow");
 
-    expect(campaignPrompt?.generateMessage({ adAccountUrn: "urn:li:sponsoredAccount:1" })).toContain("LinkedIn");
+    expect(
+      campaignPrompt?.generateMessage({ adAccountUrn: "urn:li:sponsoredAccount:1" })
+    ).toContain("LinkedIn");
     expect(bulkPrompt?.generateMessage({ entityType: "campaign" })).toContain("bulk");
   });
 });

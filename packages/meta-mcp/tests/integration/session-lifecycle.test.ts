@@ -5,12 +5,7 @@ vi.mock("@cesteral/shared", async () => {
   return {
     ...actual,
     validateSessionReuse: vi.fn(
-      async (
-        authStrategy: any,
-        sessionServiceStore: any,
-        headers: any,
-        sessionId: string
-      ) => {
+      async (authStrategy: any, sessionServiceStore: any, headers: any, sessionId: string) => {
         const requestFingerprint = authStrategy.getCredentialFingerprint
           ? await authStrategy.getCredentialFingerprint(headers)
           : (await authStrategy.verify(headers)).credentialFingerprint;
@@ -53,9 +48,7 @@ vi.mock("../../src/auth/meta-auth-strategy.js", () => {
         };
       }
 
-      async getCredentialFingerprint(
-        headers: Record<string, string | string[] | undefined>
-      ) {
+      async getCredentialFingerprint(headers: Record<string, string | string[] | undefined>) {
         return typeof headers["x-test-fingerprint"] === "string"
           ? headers["x-test-fingerprint"]
           : "fp-test";
@@ -75,14 +68,9 @@ vi.mock("../../src/services/session-services.js", async () => {
   const fingerprints = new Map<string, string>();
   const authContexts = new Map<string, any>();
   const store = {
-    set(
-      sessionId: string,
-      sessionServices: any,
-      credentialFingerprint?: string
-    ) {
+    set(sessionId: string, sessionServices: any, credentialFingerprint?: string) {
       services.set(sessionId, sessionServices);
-      if (credentialFingerprint)
-        fingerprints.set(sessionId, credentialFingerprint);
+      if (credentialFingerprint) fingerprints.set(sessionId, credentialFingerprint);
     },
     get(sessionId: string) {
       return services.get(sessionId);
@@ -218,21 +206,14 @@ async function postMcp(
   });
 }
 
-function extractSessionId(
-  response: any,
-  bodyText: string
-): string | undefined {
+function extractSessionId(response: any, bodyText: string): string | undefined {
   let body: any = undefined;
   try {
     body = JSON.parse(bodyText);
   } catch {
     body = undefined;
   }
-  return (
-    response.headers.get("mcp-session-id") ??
-    body?.result?.sessionId ??
-    body?.sessionId
-  );
+  return response.headers.get("mcp-session-id") ?? body?.result?.sessionId ?? body?.sessionId;
 }
 
 describe("meta-mcp transport session lifecycle", () => {
@@ -256,13 +237,7 @@ describe("meta-mcp transport session lifecycle", () => {
 
   it("existing session requests succeed at capacity", async () => {
     // Create a session first while not at capacity
-    const initResponse = await postMcp(
-      app,
-      "initialize",
-      1,
-      undefined,
-      "fp-capacity"
-    );
+    const initResponse = await postMcp(app, "initialize", 1, undefined, "fp-capacity");
     const initText = await initResponse.clone().text();
     const sessionId = extractSessionId(initResponse, initText);
     expect(sessionId).toBeDefined();
@@ -284,7 +259,7 @@ describe("meta-mcp transport session lifecycle", () => {
       expect(existingResponse.status).toBe(200);
       const responseText = await existingResponse.text();
       expect(responseText.length).toBeGreaterThan(0);
-      expect(responseText).not.toContain("\"error\"");
+      expect(responseText).not.toContain('"error"');
       expect(
         logger.error.mock.calls.some((call: unknown[]) =>
           JSON.stringify(call).includes("Already connected to a transport")
@@ -299,13 +274,7 @@ describe("meta-mcp transport session lifecycle", () => {
     (sessionServiceStore as any)._forceFull = true;
 
     try {
-      const response = await postMcp(
-        app,
-        "initialize",
-        10,
-        undefined,
-        "fp-new"
-      );
+      const response = await postMcp(app, "initialize", 10, undefined, "fp-new");
       expect(response.status).toBe(503);
       const body = await response.json();
       expect(body.error).toContain("capacity");
@@ -316,13 +285,7 @@ describe("meta-mcp transport session lifecycle", () => {
 
   it("DELETE /mcp rejects credential mismatch", async () => {
     // Create a session with fingerprint "fp-owner"
-    const initResponse = await postMcp(
-      app,
-      "initialize",
-      20,
-      undefined,
-      "fp-owner"
-    );
+    const initResponse = await postMcp(app, "initialize", 20, undefined, "fp-owner");
     const initText = await initResponse.clone().text();
     const sessionId = extractSessionId(initResponse, initText);
     expect(sessionId).toBeDefined();
@@ -342,13 +305,7 @@ describe("meta-mcp transport session lifecycle", () => {
   });
 
   it("DELETE /mcp succeeds with matching credentials", async () => {
-    const initResponse = await postMcp(
-      app,
-      "initialize",
-      30,
-      undefined,
-      "fp-delete-ok"
-    );
+    const initResponse = await postMcp(app, "initialize", 30, undefined, "fp-delete-ok");
     const initText = await initResponse.clone().text();
     const sessionId = extractSessionId(initResponse, initText);
     expect(sessionId).toBeDefined();

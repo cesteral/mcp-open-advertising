@@ -23,10 +23,11 @@ export const ReportViewAggregationFnSchema = z.enum(["sum", "avg", "count", "min
 export type ReportViewAggregationFn = z.infer<typeof ReportViewAggregationFnSchema>;
 
 export const ReportViewInputSchema = z.object({
-  mode: ReportViewModeSchema
-    .optional()
+  mode: ReportViewModeSchema.optional()
     .default("summary")
-    .describe("Return mode. summary returns counts, columns, and previewRows. rows returns a bounded page of rows. Default: summary"),
+    .describe(
+      "Return mode. summary returns counts, columns, and previewRows. rows returns a bounded page of rows. Default: summary"
+    ),
   columns: z
     .array(z.string().min(1))
     .optional()
@@ -43,28 +44,42 @@ export const ReportViewInputSchema = z.object({
     .min(1)
     .max(10000)
     .optional()
-    .describe("Maximum rows to return before the server cap is applied (default: 10 for summary, 50 for rows; hard cap: 200)"),
+    .describe(
+      "Maximum rows to return before the server cap is applied (default: 10 for summary, 50 for rows; hard cap: 200)"
+    ),
   aggregateBy: z
     .array(z.string().min(1))
     .optional()
-    .describe("Group rows by these column values before pagination. Non-grouping columns are aggregated per group. totalRows reflects the post-aggregation row count."),
+    .describe(
+      "Group rows by these column values before pagination. Non-grouping columns are aggregated per group. totalRows reflects the post-aggregation row count."
+    ),
   aggregateMetrics: z
     .record(ReportViewAggregationFnSchema)
     .optional()
-    .describe("Aggregation function per non-grouping column (sum/avg/count/min/max). Columns not listed default to sum. Non-numeric values are treated as 0 with a warning."),
+    .describe(
+      "Aggregation function per non-grouping column (sum/avg/count/min/max). Columns not listed default to sum. Non-numeric values are treated as 0 with a warning."
+    ),
 });
 
 export const ReportViewOutputSchema = z.object({
   totalRows: z.number().describe("Total rows in the report"),
   returnedRows: z.number().describe("Number of rows returned in this response"),
   truncated: z.boolean().describe("Whether more rows are available"),
-  nextOffset: z.number().nullable().describe("Next offset to request, or null when there are no more rows"),
+  nextOffset: z
+    .number()
+    .nullable()
+    .describe("Next offset to request, or null when there are no more rows"),
   headers: z.array(z.string()).describe("Full column/header list"),
   selectedColumns: z.array(z.string()).describe("Columns included in returned row payloads"),
   mode: ReportViewModeSchema.describe("Return mode used for this response"),
-  previewRows: z.array(z.record(z.any())).optional().describe("Small parsed row preview for summary mode"),
+  previewRows: z
+    .array(z.record(z.any()))
+    .optional()
+    .describe("Small parsed row preview for summary mode"),
   rows: z.array(z.record(z.any())).optional().describe("Parsed data rows for rows mode"),
-  warnings: z.array(z.string()).describe("Non-fatal warnings about projection, caps, or pagination"),
+  warnings: z
+    .array(z.string())
+    .describe("Non-fatal warnings about projection, caps, or pagination"),
 });
 
 export type ReportViewInput = z.infer<typeof ReportViewInputSchema>;
@@ -118,13 +133,15 @@ export function createReportView(params: {
 }): ReportViewOutput {
   const mode = params.input?.mode ?? "summary";
   const requestedMaxRows =
-    params.input?.maxRows ?? (mode === "summary" ? REPORT_SUMMARY_DEFAULT_ROWS : REPORT_ROWS_DEFAULT_ROWS);
+    params.input?.maxRows ??
+    (mode === "summary" ? REPORT_SUMMARY_DEFAULT_ROWS : REPORT_ROWS_DEFAULT_ROWS);
   const maxRows = getReportViewPageSize(params.input);
   const offset = params.input?.offset ?? 0;
   const warnings = [...(params.warnings ?? [])];
-  const inputHeaders = params.headers && params.headers.length > 0
-    ? params.headers
-    : inferHeadersFromRows(params.rows);
+  const inputHeaders =
+    params.headers && params.headers.length > 0
+      ? params.headers
+      : inferHeadersFromRows(params.rows);
 
   let workingRows = params.rows;
   let headers = inputHeaders;
@@ -150,18 +167,22 @@ export function createReportView(params: {
   }
 
   if (requestedMaxRows > REPORT_MAX_RETURNED_ROWS) {
-    warnings.push(`maxRows capped at ${REPORT_MAX_RETURNED_ROWS} to keep the MCP response bounded.`);
+    warnings.push(
+      `maxRows capped at ${REPORT_MAX_RETURNED_ROWS} to keep the MCP response bounded.`
+    );
   }
 
   if (offset > totalRows) {
-    warnings.push(`offset ${offset} is beyond the report row count ${totalRows}; returned no rows.`);
+    warnings.push(
+      `offset ${offset} is beyond the report row count ${totalRows}; returned no rows.`
+    );
   }
 
   const selectedColumns = resolveSelectedColumns(headers, params.input?.columns, warnings);
-  const pageRows = workingRows.slice(offset, offset + maxRows).map((row) => projectRow(row, selectedColumns));
-  const nextOffset = offset + pageRows.length < totalRows
-    ? offset + pageRows.length
-    : null;
+  const pageRows = workingRows
+    .slice(offset, offset + maxRows)
+    .map((row) => projectRow(row, selectedColumns));
+  const nextOffset = offset + pageRows.length < totalRows ? offset + pageRows.length : null;
   const truncated = nextOffset !== null;
 
   if (truncated) {
@@ -284,7 +305,9 @@ function aggregateRows(
   }
 
   for (const col of nonNumericColumns) {
-    warnings.push(`Column "${col}" contained non-numeric values during aggregation; missing/non-numeric entries were excluded.`);
+    warnings.push(
+      `Column "${col}" contained non-numeric values during aggregation; missing/non-numeric entries were excluded.`
+    );
   }
 
   return { rows: aggregated, headers: [...validGroupBy, ...metricColumns] };
@@ -302,16 +325,15 @@ export function formatReportViewResponse(
   result: ReportViewOutput & { timestamp?: string },
   label = "Report data"
 ): string {
-  const rowPayload = result.mode === "summary"
-    ? result.previewRows ?? []
-    : result.rows ?? [];
+  const rowPayload = result.mode === "summary" ? (result.previewRows ?? []) : (result.rows ?? []);
   const rowLabel = result.mode === "summary" ? "Preview rows" : "Rows";
   const truncNote = result.truncated
     ? `\n\nShowing ${result.returnedRows} of ${result.totalRows} rows from this page. Next offset: ${result.nextOffset}`
     : "";
-  const warnings = result.warnings.length > 0
-    ? `\n\nWarnings:\n${result.warnings.map((warning) => `- ${warning}`).join("\n")}`
-    : "";
+  const warnings =
+    result.warnings.length > 0
+      ? `\n\nWarnings:\n${result.warnings.map((warning) => `- ${warning}`).join("\n")}`
+      : "";
   const timestamp = result.timestamp ? `\n\nTimestamp: ${result.timestamp}` : "";
 
   return `${label}: ${result.totalRows} rows, ${result.headers.length} columns\nMode: ${result.mode}\nColumns: ${result.headers.join(", ")}\nReturned columns: ${result.selectedColumns.join(", ")}${truncNote}${warnings}\n\n${rowLabel}:\n${JSON.stringify(rowPayload, null, 2)}${timestamp}`;
@@ -335,7 +357,9 @@ function resolveSelectedColumns(
   }
 
   if (selectedColumns.length === 0) {
-    warnings.push("No requested columns matched the report headers; returned row payloads are empty objects.");
+    warnings.push(
+      "No requested columns matched the report headers; returned row payloads are empty objects."
+    );
   }
 
   return selectedColumns;

@@ -122,9 +122,7 @@ export async function getReportTypeSchemaLogic(
 
   // Collect fields with pagination
   const fieldsConnection = (reportType.fields as ConnectionPage) ?? {};
-  const allFields: Array<{ id: string; name: string }> = [
-    ...(fieldsConnection.nodes ?? []),
-  ];
+  const allFields: Array<{ id: string; name: string }> = [...(fieldsConnection.nodes ?? [])];
   let fieldsHasNext = fieldsConnection.pageInfo?.hasNextPage ?? false;
   let fieldsAfter = fieldsConnection.pageInfo?.endCursor;
 
@@ -145,9 +143,7 @@ export async function getReportTypeSchemaLogic(
 
   // Collect metrics with pagination
   const metricsConnection = (reportType.metrics as ConnectionPage) ?? {};
-  const allMetrics: Array<{ id: string; name: string }> = [
-    ...(metricsConnection.nodes ?? []),
-  ];
+  const allMetrics: Array<{ id: string; name: string }> = [...(metricsConnection.nodes ?? [])];
   let metricsHasNext = metricsConnection.pageInfo?.hasNextPage ?? false;
   let metricsAfter = metricsConnection.pageInfo?.endCursor;
 

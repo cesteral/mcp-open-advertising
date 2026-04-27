@@ -5,21 +5,17 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const troubleshootEntityPrompt: Prompt = {
   name: "sa360_troubleshoot_entity",
-  description:
-    "Diagnostic workflow for troubleshooting SA360 reporting and conversion issues",
+  description: "Diagnostic workflow for troubleshooting SA360 reporting and conversion issues",
   arguments: [
     {
       name: "issue",
-      description:
-        "Issue type: missing-data, conversion-errors, query-errors, account-access",
+      description: "Issue type: missing-data, conversion-errors, query-errors, account-access",
       required: false,
     },
   ],
 };
 
-export function getTroubleshootEntityMessage(
-  args?: Record<string, string>
-): string {
+export function getTroubleshootEntityMessage(args?: Record<string, string>): string {
   const issue = args?.issue || "general";
   return `# SA360 Troubleshooting Guide
 

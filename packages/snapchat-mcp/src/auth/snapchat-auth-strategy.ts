@@ -87,9 +87,7 @@ export class SnapchatBearerAuthStrategy extends BearerAuthStrategyBase {
     return getSnapchatCredentialFingerprint(refreshCreds.appId, adAccountId);
   }
 
-  protected getTokenFingerprint(
-    headers: Record<string, string | string[] | undefined>
-  ): string {
+  protected getTokenFingerprint(headers: Record<string, string | string[] | undefined>): string {
     const token = parseSnapchatTokenFromHeaders(headers);
     const adAccountId = getSnapchatAdvertiserIdFromHeaders(headers);
     return getSnapchatCredentialFingerprint(token, adAccountId);

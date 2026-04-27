@@ -15,8 +15,12 @@ vi.mock("../../src/auth/ttd-auth-adapter.js", async () => {
     ...actual,
     TtdDirectTokenAuthAdapter: class {
       partnerId: string;
-      constructor(_token: string, partnerId = "direct-token") { this.partnerId = partnerId; }
-      async getAccessToken() { return "mock-direct-token"; }
+      constructor(_token: string, partnerId = "direct-token") {
+        this.partnerId = partnerId;
+      }
+      async getAccessToken() {
+        return "mock-direct-token";
+      }
       async validate() {}
     },
   };
@@ -131,10 +135,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -155,22 +156,19 @@ describe("mcp transport error propagation", () => {
   });
 
   it("returns an MCP tool error payload when service throws", async () => {
-    const result = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/call",
-        params: {
-          name: "ttd_create_entity",
-          arguments: {
-            entityType: "campaign",
-            advertiserId: "adv-123",
-            data: { CampaignName: "Will Fail" },
-          },
+    const result = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "ttd_create_entity",
+        arguments: {
+          entityType: "campaign",
+          advertiserId: "adv-123",
+          data: { CampaignName: "Will Fail" },
         },
-      }
-    );
+      },
+    });
 
     expect(result.response.status).toBe(200);
     expect(result.sessionId).toBeDefined();

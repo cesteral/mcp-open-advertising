@@ -15,10 +15,7 @@ Returns full entity details for the specified entity type and IDs.
 Some Microsoft Advertising query operations require parent or account context in addition to the IDs.`;
 
 const BaseGetEntitySchema = {
-  entityIds: z
-    .array(z.string())
-    .min(1)
-    .describe("Array of entity IDs to retrieve"),
+  entityIds: z.array(z.string()).min(1).describe("Array of entity IDs to retrieve"),
   additionalParams: z
     .record(z.unknown())
     .optional()

@@ -23,21 +23,19 @@ TikTok's status update API accepts an array of IDs in a single request.`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
       .max(20)
       .describe("Array of entity IDs to update (max 20)"),
-    operationStatus: z
-      .enum(["ENABLE", "DISABLE", "DELETE"])
-      .describe("Target status to apply"),
+    operationStatus: z.enum(["ENABLE", "DISABLE", "DELETE"]).describe("Target status to apply"),
   })
   .describe("Parameters for bulk status update of TikTok Ads entities");
 
@@ -67,9 +65,19 @@ export async function bulkUpdateStatusLogic(
 ): Promise<BulkUpdateStatusOutput> {
   // Elicit confirmation for irreversible DELETE operations
   if (input.operationStatus === "DELETE") {
-    const confirmed = await elicitArchiveConfirmation(input.entityIds.length, input.entityType, sdkContext);
+    const confirmed = await elicitArchiveConfirmation(
+      input.entityIds.length,
+      input.entityType,
+      sdkContext
+    );
     if (!confirmed) {
-      return { totalRequested: 0, successCount: 0, failureCount: 0, results: [], timestamp: new Date().toISOString() };
+      return {
+        totalRequested: 0,
+        successCount: 0,
+        failureCount: 0,
+        results: [],
+        timestamp: new Date().toISOString(),
+      };
     }
   }
 
@@ -93,7 +101,9 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Status updates: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

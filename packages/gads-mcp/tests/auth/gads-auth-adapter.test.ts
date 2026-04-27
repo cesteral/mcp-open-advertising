@@ -14,10 +14,7 @@ const VALID_CREDENTIALS: GAdsCredentials = {
   loginCustomerId: "1234567890",
 };
 
-function mockTokenResponse(
-  accessToken: string,
-  expiresIn: number
-): Response {
+function mockTokenResponse(accessToken: string, expiresIn: number): Response {
   return {
     ok: true,
     status: 200,
@@ -44,9 +41,7 @@ describe("GAdsRefreshTokenAuthAdapter", () => {
 
   describe("getAccessToken", () => {
     it("fetches a new access token on first call", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockTokenResponse("access-token-1", 3600)
-      );
+      globalThis.fetch = vi.fn().mockResolvedValue(mockTokenResponse("access-token-1", 3600));
 
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
       const token = await adapter.getAccessToken();
@@ -63,9 +58,7 @@ describe("GAdsRefreshTokenAuthAdapter", () => {
     });
 
     it("returns cached token on subsequent calls within expiry window", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockTokenResponse("access-token-cached", 3600)
-      );
+      globalThis.fetch = vi.fn().mockResolvedValue(mockTokenResponse("access-token-cached", 3600));
 
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
 
@@ -141,9 +134,7 @@ describe("GAdsRefreshTokenAuthAdapter", () => {
 
   describe("validate", () => {
     it("resolves when token exchange succeeds", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockTokenResponse("access-token-1", 3600)
-      );
+      globalThis.fetch = vi.fn().mockResolvedValue(mockTokenResponse("access-token-1", 3600));
 
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
 
@@ -161,15 +152,11 @@ describe("GAdsRefreshTokenAuthAdapter", () => {
 
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
 
-      await expect(adapter.validate()).rejects.toThrow(
-        "Google OAuth2 token exchange failed: 401"
-      );
+      await expect(adapter.validate()).rejects.toThrow("Google OAuth2 token exchange failed: 401");
     });
 
     it("caches token — validate + getAccessToken = 1 fetch total", async () => {
-      globalThis.fetch = vi.fn().mockResolvedValue(
-        mockTokenResponse("access-token-cached", 3600)
-      );
+      globalThis.fetch = vi.fn().mockResolvedValue(mockTokenResponse("access-token-cached", 3600));
 
       const adapter = new GAdsRefreshTokenAuthAdapter(VALID_CREDENTIALS);
 

@@ -1,8 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { z } from 'zod';
-import { resolveSessionServices } from '../utils/resolve-session.js';
+import { z } from "zod";
+import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   ALL_TARGETING_TYPES,
   type TargetingParentType,
@@ -12,13 +12,13 @@ import {
   validateTargetingInput,
   getTargetingValidationError,
   buildTargetingIds,
-} from '../utils/targeting-metadata.js';
-import { getTargetingRequiredIdInputShape } from '../utils/targeting-input-shape.js';
+} from "../utils/targeting-metadata.js";
+import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from '@cesteral/shared';
+import type { SdkContext } from "@cesteral/shared";
 
-const TOOL_NAME = 'dv360_get_assigned_targeting';
-const TOOL_TITLE = 'Get DV360 Assigned Targeting Option';
+const TOOL_NAME = "dv360_get_assigned_targeting";
+const TOOL_TITLE = "Get DV360 Assigned Targeting Option";
 
 const TOOL_DESCRIPTION = `Get a single assigned targeting option by ID.
 
@@ -33,28 +33,28 @@ export const GetAssignedTargetingInputSchema = z
   .object({
     parentType: z
       .enum(getSupportedTargetingParentTypes() as [string, ...string[]])
-      .describe('Type of parent entity'),
-    advertiserId: z.string().describe('DV360 Advertiser ID'),
+      .describe("Type of parent entity"),
+    advertiserId: z.string().describe("DV360 Advertiser ID"),
     ...TargetingRequiredIdInputShape,
     targetingType: z
       .enum(ALL_TARGETING_TYPES as unknown as [string, ...string[]])
-      .describe('Targeting type'),
-    assignedTargetingOptionId: z.string().describe('The assigned targeting option ID to retrieve'),
+      .describe("Targeting type"),
+    assignedTargetingOptionId: z.string().describe("The assigned targeting option ID to retrieve"),
   })
   .refine(validateTargetingInput, getTargetingValidationError)
-  .describe('Parameters for getting an assigned targeting option');
+  .describe("Parameters for getting an assigned targeting option");
 
 /**
  * Output schema for get assigned targeting tool
  */
 export const GetAssignedTargetingOutputSchema = z
   .object({
-    assignedTargetingOption: z.record(z.any()).describe('The assigned targeting option'),
-    parentType: z.string().describe('Parent entity type'),
-    targetingType: z.string().describe('Targeting type'),
+    assignedTargetingOption: z.record(z.any()).describe("The assigned targeting option"),
+    parentType: z.string().describe("Parent entity type"),
+    targetingType: z.string().describe("Targeting type"),
     timestamp: z.string().datetime(),
   })
-  .describe('Assigned targeting option result');
+  .describe("Assigned targeting option result");
 
 type GetAssignedTargetingInput = z.infer<typeof GetAssignedTargetingInputSchema>;
 type GetAssignedTargetingOutput = z.infer<typeof GetAssignedTargetingOutputSchema>;
@@ -91,13 +91,15 @@ export async function getAssignedTargetingLogic(
 /**
  * Format response for MCP client
  */
-export function getAssignedTargetingResponseFormatter(result: GetAssignedTargetingOutput): McpTextContent[] {
+export function getAssignedTargetingResponseFormatter(
+  result: GetAssignedTargetingOutput
+): McpTextContent[] {
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
 
   return [
     {
-      type: 'text' as const,
+      type: "text" as const,
       text: `Assigned Targeting Option (${result.targetingType})\n\nType: ${typeDesc}\nParent: ${result.parentType}\n\n${JSON.stringify(result.assignedTargetingOption, null, 2)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];

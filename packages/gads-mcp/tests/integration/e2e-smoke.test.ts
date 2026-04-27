@@ -31,7 +31,9 @@ vi.mock("../../src/auth/gads-auth-adapter.js", async () => {
         this.developerToken = creds.developerToken;
         this.loginCustomerId = creds.loginCustomerId;
       }
-      async getAccessToken() { return "mock-token"; }
+      async getAccessToken() {
+        return "mock-token";
+      }
       async validate() {}
     },
   };
@@ -46,7 +48,9 @@ vi.mock("../../src/services/session-services.js", async () => {
       services.set(sessionId, sessionServices);
       if (credentialFingerprint) fingerprints.set(sessionId, credentialFingerprint);
     },
-    get(sessionId: string) { return services.get(sessionId); },
+    get(sessionId: string) {
+      return services.get(sessionId);
+    },
     delete(sessionId: string) {
       services.delete(sessionId);
       fingerprints.delete(sessionId);
@@ -57,11 +61,21 @@ vi.mock("../../src/services/session-services.js", async () => {
       if (!stored) return true;
       return stored === credentialFingerprint;
     },
-    getFingerprint(sessionId: string) { return fingerprints.get(sessionId); },
-    setAuthContext(sessionId: string, authContext: any) { authContexts.set(sessionId, authContext); },
-    getAuthContext(sessionId: string) { return authContexts.get(sessionId); },
-    isFull() { return false; },
-    get size() { return services.size; },
+    getFingerprint(sessionId: string) {
+      return fingerprints.get(sessionId);
+    },
+    setAuthContext(sessionId: string, authContext: any) {
+      authContexts.set(sessionId, authContext);
+    },
+    getAuthContext(sessionId: string) {
+      return authContexts.get(sessionId);
+    },
+    isFull() {
+      return false;
+    },
+    get size() {
+      return services.size;
+    },
   };
   return {
     sessionServiceStore: store,
@@ -75,7 +89,11 @@ vi.mock("../../src/services/session-services.js", async () => {
 import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-http-transport.js";
 
 const logger: any = {
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
 };
 logger.child.mockReturnValue(logger);
 
@@ -119,7 +137,11 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
   });
   const text = await response.text();
   let json: any;
-  try { json = JSON.parse(text); } catch { json = undefined; }
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = undefined;
+  }
   // Parse SSE data lines if plain JSON parsing failed
   if (!json) {
     const dataLines = text.split("\n").filter((l: string) => l.startsWith("data:"));
@@ -130,15 +152,16 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
           json = candidate;
           break;
         }
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
   }
   return {
-    response, json, text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    response,
+    json,
+    text,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 

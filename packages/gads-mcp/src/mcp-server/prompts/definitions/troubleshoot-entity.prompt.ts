@@ -27,9 +27,7 @@ export const troubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getTroubleshootEntityMessage(
-  args?: Record<string, string>
-): string {
+export function getTroubleshootEntityMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const errorMessage = args?.errorMessage || "(not specified)";
 

@@ -18,10 +18,7 @@ Meta source states are mapped — "Job Completed" → \`complete\`, "Job Failed"
 
 export const CheckReportStatusInputSchema = z
   .object({
-    reportRunId: z
-      .string()
-      .min(1)
-      .describe("Report run ID from meta_submit_report"),
+    reportRunId: z.string().min(1).describe("Report run ID from meta_submit_report"),
   })
   .describe("Parameters for checking a Meta report status");
 
@@ -33,19 +30,10 @@ export const CheckReportStatusOutputSchema = ReportStatusSchema.extend({
   isComplete: z
     .boolean()
     .describe("True when canonical state is 'complete' — safe to call meta_download_report"),
-  asyncPercentCompletion: z
-    .number()
-    .optional()
-    .describe("Completion percentage (0–100)"),
+  asyncPercentCompletion: z.number().optional().describe("Completion percentage (0–100)"),
   errorCode: z.number().optional().describe("Meta error code (set when state is 'failed')"),
-  errorMessage: z
-    .string()
-    .optional()
-    .describe("Meta error message (set when state is 'failed')"),
-  errorSubcode: z
-    .number()
-    .optional()
-    .describe("Meta error subcode (set when state is 'failed')"),
+  errorMessage: z.string().optional().describe("Meta error message (set when state is 'failed')"),
+  errorSubcode: z.number().optional().describe("Meta error subcode (set when state is 'failed')"),
   errorUserTitle: z
     .string()
     .optional()
@@ -89,7 +77,9 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   const pct = result.asyncPercentCompletion != null ? ` (${result.asyncPercentCompletion}%)` : "";
   const failureDetail =
     result.state === "failed"
@@ -105,8 +95,8 @@ export function checkReportStatusResponseFormatter(result: CheckReportStatusOutp
   const next = result.isComplete
     ? `\n\nReport complete — call \`meta_download_report\` with reportRunId: "${result.reportRunId}"`
     : result.state === "failed"
-    ? `\n\nReport failed${failureDetail ? `: ${failureDetail}` : ""}. Submit a new report with \`meta_submit_report\`.`
-    : `\n\nReport in progress${pct}. Poll again in ~10 seconds.`;
+      ? `\n\nReport failed${failureDetail ? `: ${failureDetail}` : ""}. Submit a new report with \`meta_submit_report\`.`
+      : `\n\nReport in progress${pct}. Poll again in ~10 seconds.`;
 
   return [
     {

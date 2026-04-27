@@ -22,13 +22,8 @@ Amazon DSP updates each entity individually via PUT to the entity-specific path.
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    profileId: z
-      .string()
-      .min(1)
-      .describe("AmazonDsp Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    profileId: z.string().min(1).describe("AmazonDsp Advertiser ID"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
@@ -84,7 +79,9 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Status updates: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

@@ -21,6 +21,7 @@ Each task is an independent PR against `@cesteral/shared`. No server consumes th
 ### Task 1.1: `pollUntilComplete` helper
 
 **Files:**
+
 - Create: `packages/shared/src/utils/report-polling.ts`
 - Create: `packages/shared/tests/utils/report-polling.test.ts`
 - Modify: `packages/shared/src/index.ts` (add export)
@@ -61,7 +62,7 @@ describe("pollUntilComplete", () => {
         isComplete: (s) => s.state === "complete",
         isFailed: (s) => s.state === "failed",
         initialDelayMs: 1,
-      }),
+      })
     ).rejects.toBeInstanceOf(ReportFailedError);
   });
 
@@ -73,7 +74,7 @@ describe("pollUntilComplete", () => {
         isComplete: () => false,
         initialDelayMs: 1,
         maxAttempts: 3,
-      }),
+      })
     ).rejects.toBeInstanceOf(ReportTimeoutError);
     expect(fetchStatus).toHaveBeenCalledTimes(3);
   });
@@ -94,10 +95,7 @@ describe("pollUntilComplete", () => {
   it("applies exponential backoff capped by maxDelayMs", async () => {
     const delays: number[] = [];
     const origSetTimeout = globalThis.setTimeout;
-    vi.spyOn(globalThis, "setTimeout").mockImplementation(((
-      fn: () => void,
-      ms?: number,
-    ) => {
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(((fn: () => void, ms?: number) => {
       delays.push(ms ?? 0);
       return origSetTimeout(fn, 0);
     }) as typeof setTimeout);
@@ -160,9 +158,7 @@ export interface PollOptions<T> {
   signal?: AbortSignal;
 }
 
-export async function pollUntilComplete<T>(
-  opts: PollOptions<T>,
-): Promise<T> {
+export async function pollUntilComplete<T>(opts: PollOptions<T>): Promise<T> {
   const {
     fetchStatus,
     isComplete,
@@ -203,6 +199,7 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 ```
 
 Add to `packages/shared/src/index.ts`:
+
 ```ts
 export * from "./utils/report-polling.js";
 ```
@@ -226,6 +223,7 @@ git commit -m "feat(shared): add pollUntilComplete helper for report polling"
 ### Task 1.2: Consolidated CSV parser
 
 **Files:**
+
 - Modify: `packages/shared/src/utils/csv-parser.ts` (add `parseCSV` full-document function)
 - Create: `packages/shared/tests/utils/csv-parser-document.test.ts`
 
@@ -341,6 +339,7 @@ git commit -m "feat(shared): add parseCSV full-document helper"
 ### Task 1.3: Canonical computed-metrics row wrapper + flag schema
 
 **Files:**
+
 - Modify: `packages/shared/src/utils/computed-metrics.ts`
 - Create: `packages/shared/tests/utils/computed-metrics-rows.test.ts`
 
@@ -415,7 +414,7 @@ const REQUIRED = ["cost", "impressions", "clicks", "conversions", "conversionVal
 
 export function appendComputedMetricsToRows(
   rows: Record<string, string>[],
-  aliases: Partial<Record<(typeof REQUIRED)[number], string[]>> = {},
+  aliases: Partial<Record<(typeof REQUIRED)[number], string[]>> = {}
 ): Record<string, string>[] {
   if (rows.length === 0) return rows;
   const findCol = (key: (typeof REQUIRED)[number]): string | null => {
@@ -472,6 +471,7 @@ git commit -m "feat(shared): add ComputedMetricsFlagSchema and row wrapper"
 ### Task 1.4: Canonical `ReportStatusSchema` + per-platform normalizers
 
 **Files:**
+
 - Create: `packages/shared/src/schemas/report-status.ts`
 - Create: `packages/shared/tests/schemas/report-status.test.ts`
 - Modify: `packages/shared/src/index.ts`
@@ -547,7 +547,12 @@ export const ReportStatusSchema = z.object({
 });
 export type ReportStatus = z.infer<typeof ReportStatusSchema>;
 
-export function fromTtdStatus(raw: { ExecutionState?: string; ReportDownloadUrl?: string; ReportStartDateInclusive?: string; ReportEndDateExclusive?: string }): ReportStatus {
+export function fromTtdStatus(raw: {
+  ExecutionState?: string;
+  ReportDownloadUrl?: string;
+  ReportStartDateInclusive?: string;
+  ReportEndDateExclusive?: string;
+}): ReportStatus {
   const map: Record<string, ReportStatus["state"]> = {
     Pending: "pending",
     InProgress: "running",
@@ -561,15 +566,25 @@ export function fromTtdStatus(raw: { ExecutionState?: string; ReportDownloadUrl?
   };
 }
 
-export function fromMetaStatus(raw: { async_status?: string; async_percent_completion?: number }): ReportStatus {
+export function fromMetaStatus(raw: {
+  async_status?: string;
+  async_percent_completion?: number;
+}): ReportStatus {
   const s = raw.async_status ?? "";
-  const state: ReportStatus["state"] = s === "Job Completed" ? "complete"
-    : s === "Job Failed" ? "failed"
-    : s === "Job Started" || s === "Job Running" ? "running"
-    : "pending";
+  const state: ReportStatus["state"] =
+    s === "Job Completed"
+      ? "complete"
+      : s === "Job Failed"
+        ? "failed"
+        : s === "Job Started" || s === "Job Running"
+          ? "running"
+          : "pending";
   return {
     state,
-    progress: typeof raw.async_percent_completion === "number" ? raw.async_percent_completion / 100 : undefined,
+    progress:
+      typeof raw.async_percent_completion === "number"
+        ? raw.async_percent_completion / 100
+        : undefined,
   };
 }
 
@@ -578,16 +593,19 @@ export function fromGoogleStatus(raw: { done?: boolean; error?: unknown }): Repo
   return { state: raw.done ? "complete" : "running" };
 }
 
-export function fromMicrosoftStatus(raw: { ReportRequestStatus?: string; ReportDownloadUrl?: string }): ReportStatus {
+export function fromMicrosoftStatus(raw: {
+  ReportRequestStatus?: string;
+  ReportDownloadUrl?: string;
+}): ReportStatus {
   const s = raw.ReportRequestStatus ?? "";
-  const state: ReportStatus["state"] = s === "Success" ? "complete"
-    : s === "Error" ? "failed"
-    : "running";
+  const state: ReportStatus["state"] =
+    s === "Success" ? "complete" : s === "Error" ? "failed" : "running";
   return { state, downloadUrl: raw.ReportDownloadUrl };
 }
 ```
 
 Add to `packages/shared/src/index.ts`:
+
 ```ts
 export * from "./schemas/report-status.js";
 ```
@@ -611,6 +629,7 @@ git commit -m "feat(shared): add ReportStatusSchema with per-platform normalizer
 ### Task 1.5: Reporting error mapper + `ReportingError` base class
 
 **Files:**
+
 - Create: `packages/shared/src/utils/report-errors.ts`
 - Create: `packages/shared/tests/utils/report-errors.test.ts`
 - Modify: `packages/shared/src/index.ts`
@@ -632,21 +651,29 @@ describe("mapReportingError", () => {
   it("maps TTD error envelope", () => {
     const err = mapReportingError(
       { response: { status: 400, data: { ErrorCode: "InvalidArg", Message: "bad" } } },
-      "ttd",
+      "ttd"
     );
-    expect(err.data).toMatchObject({ platform: "ttd", upstreamCode: "InvalidArg", retryable: false });
+    expect(err.data).toMatchObject({
+      platform: "ttd",
+      upstreamCode: "InvalidArg",
+      retryable: false,
+    });
   });
 
   it("maps Meta FB error", () => {
     const err = mapReportingError(
       { response: { status: 400, data: { error: { code: 100, message: "Permission denied" } } } },
-      "meta",
+      "meta"
     );
     expect(err.data).toMatchObject({ platform: "meta", upstreamCode: 100, retryable: false });
   });
 
   it("preserves existing ReportingError unchanged", () => {
-    const original = new ReportingError("test", { platform: "ttd", upstreamCode: 1, retryable: false });
+    const original = new ReportingError("test", {
+      platform: "ttd",
+      upstreamCode: 1,
+      retryable: false,
+    });
     expect(mapReportingError(original, "ttd")).toBe(original);
   });
 });
@@ -664,8 +691,18 @@ Expected: FAIL — module not found.
 import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
 
 export type ReportingPlatform =
-  | "ttd" | "meta" | "google" | "dbm" | "cm360" | "sa360" | "tiktok"
-  | "linkedin" | "pinterest" | "snapchat" | "amazonDsp" | "microsoft";
+  | "ttd"
+  | "meta"
+  | "google"
+  | "dbm"
+  | "cm360"
+  | "sa360"
+  | "tiktok"
+  | "linkedin"
+  | "pinterest"
+  | "snapchat"
+  | "amazonDsp"
+  | "microsoft";
 
 export interface ReportingErrorData {
   platform: ReportingPlatform;
@@ -720,6 +757,7 @@ export function mapReportingError(err: unknown, platform: ReportingPlatform): Re
 ```
 
 Add to `packages/shared/src/index.ts`:
+
 ```ts
 export * from "./utils/report-errors.js";
 ```
@@ -787,6 +825,7 @@ For each server:
 ### Task 2.1: Migrate `ttd-mcp`
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/services/ttd/ttd-reporting-service.ts`
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/check-report-status.tool.ts`
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/download-report.tool.ts`
@@ -819,6 +858,7 @@ Expected: FAIL (current code doesn't return canonical shape).
 **Step 3: Apply the migration template**
 
 Follow steps 2–6 from the migration template above against the TTD files. Key call sites to update:
+
 - `ttd-reporting-service.ts` polling loop → `pollUntilComplete`
 - `ttd-reporting-service.ts` CSV parse → `parseCSV`
 - `check-report-status.tool.ts` → `fromTtdStatus(rawStatus)` → `ReportStatusSchema.parse(...)`
@@ -842,6 +882,7 @@ git commit -m "refactor(ttd-mcp): adopt shared reporting helpers (polling, csv, 
 ### Task 2.2: Migrate `meta-mcp`
 
 **Files:**
+
 - Modify: `packages/meta-mcp/src/services/reporting-service.ts`
 - Modify: `packages/meta-mcp/src/mcp-server/tools/definitions/{submit,check,download,get}-report.tool.ts`
 - Modify: `packages/meta-mcp/tests/fixtures/*.json`
@@ -897,6 +938,7 @@ Pinterest already uses `ReportCsvStore`; migration focuses on polling + CSV pars
 ### Task 2.10: Migrate `dbm-mcp`
 
 DBM already uses bounded view. Migration scope:
+
 - Swap any Bid Manager query polling to `pollUntilComplete`.
 - Swap CSV parse to shared `parseCSV`.
 - Normalize long-running-query status via `fromGoogleStatus`.
@@ -907,6 +949,7 @@ DBM already uses bounded view. Migration scope:
 ### Task 2.11: Migrate `gads-mcp`
 
 Synchronous GAQL — scope is narrow:
+
 - No polling.
 - Use shared `parseCSV` if any CSV is returned.
 - Error mapping: `mapReportingError(err, "google")`.
@@ -917,6 +960,7 @@ Synchronous GAQL — scope is narrow:
 ### Task 2.12: Migrate `linkedin-mcp` (bounded-view migration + shared helpers)
 
 **Files:**
+
 - Modify: `packages/linkedin-mcp/src/mcp-server/tools/definitions/get-analytics.tool.ts`
 - Modify: `packages/linkedin-mcp/src/mcp-server/tools/definitions/get-analytics-breakdowns.tool.ts`
 - Modify: `packages/linkedin-mcp/src/services/*analytics*.ts`
@@ -935,7 +979,7 @@ describe("linkedin_get_analytics bounded view", () => {
     // mock: LinkedIn API returns 3 elements
     const result = await getAnalyticsHandler(
       { accountId: "123", pivots: ["CAMPAIGN"], mode: "summary", maxRows: 10 },
-      mockCtx,
+      mockCtx
     );
     const parsed = JSON.parse(result.content[0]!.text as string);
     expect(() => ReportViewOutputSchema.parse(parsed)).not.toThrow();
@@ -976,12 +1020,14 @@ git commit -m "refactor(linkedin-mcp): adopt bounded-view contract and shared re
 **Step 1: Grep for removed duplicates**
 
 Run:
+
 ```bash
 # Should return zero matches across non-shared packages:
 grep -rn "function parseCsvLine" packages/ | grep -v "/shared/"
 grep -rn "function sleep.*Promise.*setTimeout" packages/ | grep -v "/shared/"
 grep -rn "exponential.*backoff" packages/ | grep -v "/shared/"
 ```
+
 Expected: no matches outside `packages/shared`.
 
 **Step 2: Full build + typecheck + test**
@@ -1002,6 +1048,7 @@ Phase 2 is done when Tasks 2.1–2.12 are on `main` and the grep above is clean.
 #### Task 3A.0: Shared resource handler factory
 
 **Files:**
+
 - Create: `packages/shared/src/utils/report-csv-resource.ts`
 - Create: `packages/shared/tests/utils/report-csv-resource.test.ts`
 - Modify: `packages/shared/src/index.ts`
@@ -1015,6 +1062,7 @@ Phase 2 is done when Tasks 2.1–2.12 are on `main` and the grep above is clean.
 #### Task 3A.1: Add `report-csv://` resource to `ttd-mcp`
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/download-report.tool.ts`
 - Modify: `packages/ttd-mcp/src/mcp-server/resources/index.ts`
 - Modify: `packages/ttd-mcp/src/services/session-services.ts` (add per-session `ReportCsvStore`)
@@ -1041,6 +1089,7 @@ Same 5-step pattern as 3A.1. One commit per server. Commit messages follow the P
 #### Task 3B.1: `meta_get_available_metrics`
 
 **Files:**
+
 - Create: `packages/meta-mcp/src/config/insights-catalog.json`
 - Create: `packages/meta-mcp/src/mcp-server/tools/definitions/get-available-metrics.tool.ts`
 - Modify: `packages/meta-mcp/src/mcp-server/tools/index.ts`
@@ -1059,6 +1108,7 @@ Same 5-step pattern as 3A.1. One commit per server. Commit messages follow the P
 #### Task 3B.2: `sa360_list_report_columns`
 
 **Files:**
+
 - Create: `packages/sa360-mcp/src/mcp-server/tools/definitions/list-report-columns.tool.ts`
 - Create: `packages/sa360-mcp/src/config/report-columns-catalog.json` (fallback if live endpoint unavailable)
 - Modify: `packages/sa360-mcp/src/mcp-server/tools/index.ts`
@@ -1075,6 +1125,7 @@ Commit: `feat(sa360-mcp): add sa360_list_report_columns discovery tool`
 #### Task 3C.0: `ReportScheduleSummarySchema` in `@cesteral/shared`
 
 **Files:**
+
 - Create: `packages/shared/src/schemas/report-schedule.ts`
 - Create: `packages/shared/tests/schemas/report-schedule.test.ts`
 - Modify: `packages/shared/src/index.ts`
@@ -1090,6 +1141,7 @@ Commit: `feat(shared): add ReportScheduleSummarySchema`
 Three separate commits (one per server), updating existing list/get tools to map into the summary schema.
 
 Commit messages:
+
 - `refactor(ttd-mcp): normalize schedule list/get to ReportScheduleSummarySchema`
 - `refactor(cm360-mcp): normalize schedule list/get to ReportScheduleSummarySchema`
 - `refactor(msads-mcp): normalize schedule list/get to ReportScheduleSummarySchema`
@@ -1147,6 +1199,7 @@ schedule resource.
 **Step 2:** Manually smoke-test (via `curl` MCP ping) that each new tool registers. Done when all Phase 3 tasks are green on `main`.
 
 **Phase 3 final scope (executed 2026-04-16):**
+
 - Track 3A — 6/6 tasks delivered (shared factory + 5 servers expose raw CSVs via `report-csv://{id}`).
 - Track 3B — 2/2 tasks delivered (Meta + SA360 discovery tools).
 - Track 3C — 4/6 tasks delivered (shared `ReportScheduleSummarySchema` + 3
@@ -1164,6 +1217,7 @@ upstream platform APIs, not on internal work.**
 ### Task 4.1: Shared `report-spill.ts` helper + streamed download
 
 **Files:**
+
 - Create: `packages/shared/src/utils/report-spill.ts`
 - Create: `packages/shared/src/utils/download-file-stream.ts`
 - Create: `packages/shared/tests/utils/report-spill.test.ts`
@@ -1173,6 +1227,7 @@ upstream platform APIs, not on internal work.**
 **Step 1: Write the failing test**
 
 Fixture tests mock `@google-cloud/storage` and assert:
+
 - Below threshold: spill disabled, bounded view returned only.
 - Above threshold: spill triggered, `{ bucket, objectName, bytes, rowCount, signedUrl, expiresAt }` returned.
 - Spill failure: bounded view returned with `spill.error`, no `csvResourceUri`.
@@ -1188,6 +1243,7 @@ Fixture tests mock `@google-cloud/storage` and assert:
 ### Task 4.2: Wire spill into Pinterest download tool (reference implementation)
 
 **Files:**
+
 - Modify: `packages/pinterest-mcp/src/mcp-server/tools/definitions/download-report.tool.ts`
 - Modify: `packages/pinterest-mcp/tests/download-report.test.ts`
 - Modify: `packages/pinterest-mcp/src/config/*.ts` (add `REPORT_SPILL_BUCKET`, `REPORT_SPILL_THRESHOLD_*` envs)
@@ -1209,6 +1265,7 @@ Same 5-step pattern as 4.2. One commit per server. Commit: `feat(<server>-mcp): 
 ### Task 4.8: Session cleanup hook
 
 **Files:**
+
 - Modify: `packages/shared/src/utils/session-store.ts`
 - Modify: `packages/shared/src/utils/report-spill.ts`
 
@@ -1225,6 +1282,7 @@ Same 5-step pattern as 4.2. One commit per server. Commit: `feat(<server>-mcp): 
 ### Task 4.9: Terraform bucket + lifecycle rule
 
 **Files:**
+
 - Modify: `terraform/gcs.tf` (or appropriate file in `terraform/`)
 
 **Step 1:** Add `google_storage_bucket "report_spill"` resource with a 24-hour `lifecycle_rule { condition { age = 1 } action { type = "Delete" } }`.
@@ -1237,6 +1295,7 @@ Expected: plan shows 1 resource to add, 1 lifecycle rule.
 ### Task 4.10: Document `REPORT_SPILL_*` envs in `CLAUDE.md`
 
 **Files:**
+
 - Modify: `CLAUDE.md`
 
 **Step 1:** Add a `## Report CSV Spill` section listing `REPORT_SPILL_BUCKET`, `REPORT_SPILL_THRESHOLD_BYTES`, `REPORT_SPILL_THRESHOLD_ROWS`, `REPORT_SPILL_SIGNED_URL_TTL_SECONDS` with defaults and behavior when unset.

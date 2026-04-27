@@ -40,12 +40,14 @@ describe("SnapchatReportingService", () => {
   it("submitReport sends a GET stats request with async=true and returns report_run_id", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       request_status: "SUCCESS",
-      async_stats_reports: [{
-        async_stats_report: {
-          report_run_id: "ASYNC_STATS:acct-snap-123:123",
-          async_status: "STARTED",
+      async_stats_reports: [
+        {
+          async_stats_report: {
+            report_run_id: "ASYNC_STATS:acct-snap-123:123",
+            async_status: "STARTED",
+          },
         },
-      }],
+      ],
     });
 
     const result = await service.submitReport({
@@ -71,13 +73,15 @@ describe("SnapchatReportingService", () => {
   it("pollReport normalizes COMPLETED to COMPLETE and returns the result URL", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       request_status: "SUCCESS",
-      async_stats_reports: [{
-        async_stats_report: {
-          report_run_id: "ASYNC_STATS:acct-snap-123:123",
-          async_status: "COMPLETED",
-          result: "https://example.com/report.csv",
+      async_stats_reports: [
+        {
+          async_stats_report: {
+            report_run_id: "ASYNC_STATS:acct-snap-123:123",
+            async_status: "COMPLETED",
+            result: "https://example.com/report.csv",
+          },
         },
-      }],
+      ],
     });
 
     const result = await service.pollReport("ASYNC_STATS:acct-snap-123:123");
@@ -94,12 +98,14 @@ describe("SnapchatReportingService", () => {
   it("checkReportStatus maps STARTED to RUNNING", async () => {
     mockHttpClient.get.mockResolvedValueOnce({
       request_status: "SUCCESS",
-      async_stats_reports: [{
-        async_stats_report: {
-          report_run_id: "ASYNC_STATS:acct-snap-123:456",
-          async_status: "STARTED",
+      async_stats_reports: [
+        {
+          async_stats_report: {
+            report_run_id: "ASYNC_STATS:acct-snap-123:456",
+            async_status: "STARTED",
+          },
         },
-      }],
+      ],
     });
 
     const result = await service.checkReportStatus("ASYNC_STATS:acct-snap-123:456");
@@ -129,22 +135,26 @@ describe("SnapchatReportingService", () => {
     mockHttpClient.get
       .mockResolvedValueOnce({
         request_status: "SUCCESS",
-        async_stats_reports: [{
-          async_stats_report: {
-            report_run_id: "ASYNC_STATS:acct-snap-123:xyz",
-            async_status: "STARTED",
+        async_stats_reports: [
+          {
+            async_stats_report: {
+              report_run_id: "ASYNC_STATS:acct-snap-123:xyz",
+              async_status: "STARTED",
+            },
           },
-        }],
+        ],
       })
       .mockResolvedValueOnce({
         request_status: "SUCCESS",
-        async_stats_reports: [{
-          async_stats_report: {
-            report_run_id: "ASYNC_STATS:acct-snap-123:xyz",
-            async_status: "COMPLETED",
-            result: "https://example.com/rpt-xyz.csv",
+        async_stats_reports: [
+          {
+            async_stats_report: {
+              report_run_id: "ASYNC_STATS:acct-snap-123:xyz",
+              async_status: "COMPLETED",
+              result: "https://example.com/rpt-xyz.csv",
+            },
           },
-        }],
+        ],
       });
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,

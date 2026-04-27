@@ -18,14 +18,7 @@ import type {
   MetaAdAccount,
 } from "./types.js";
 
-export type {
-  MetaCampaign,
-  MetaAdSet,
-  MetaAd,
-  MetaAdCreative,
-  MetaCustomAudience,
-  MetaAdAccount,
-};
+export type { MetaCampaign, MetaAdSet, MetaAd, MetaAdCreative, MetaCustomAudience, MetaAdAccount };
 
 interface MetaEntityMap {
   campaign: MetaCampaign;
@@ -46,7 +39,7 @@ export class MetaService {
   constructor(
     private readonly rateLimiter: RateLimiter,
     private readonly httpClient: MetaGraphApiClient,
-    private readonly logger: Logger,
+    private readonly logger: Logger
   ) {}
 
   /** Expose the underlying Graph API client for direct use (e.g., media uploads). */
@@ -97,7 +90,10 @@ export class MetaService {
     )) as Record<string, unknown>;
 
     if (result.data !== undefined && !Array.isArray(result.data)) {
-      this.logger.warn({ dataType: typeof result.data, entityType }, "Meta API returned unexpected non-array data field");
+      this.logger.warn(
+        { dataType: typeof result.data, entityType },
+        "Meta API returned unexpected non-array data field"
+      );
     }
     const entities = (Array.isArray(result.data) ? result.data : []) as MetaEntityMap[T][];
     const paging = result.paging as Record<string, unknown> | undefined;
@@ -143,7 +139,9 @@ export class MetaService {
 
     const actId = this.normalizeAccountId(adAccountId);
 
-    return this.httpClient.post(`/${actId}/${config.edge}`, data, context) as Promise<MetaEntityMap[T]>;
+    return this.httpClient.post(`/${actId}/${config.edge}`, data, context) as Promise<
+      MetaEntityMap[T]
+    >;
   }
 
   async updateEntity(
@@ -158,10 +156,7 @@ export class MetaService {
     return this.httpClient.post(`/${entityId}`, data, context);
   }
 
-  async deleteEntity(
-    entityId: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async deleteEntity(entityId: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`meta:default`, 3);
 
     return this.httpClient.delete(`/${entityId}`, context);
@@ -179,9 +174,13 @@ export class MetaService {
     items: Record<string, unknown>[],
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await executeBulkConcurrent(items, async (data) => {
-      return this.createEntity(entityType, adAccountId, data, context);
-    }, { logger: this.logger });
+    const results = await executeBulkConcurrent(
+      items,
+      async (data) => {
+        return this.createEntity(entityType, adAccountId, data, context);
+      },
+      { logger: this.logger }
+    );
     return { results };
   }
 
@@ -195,9 +194,13 @@ export class MetaService {
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
     this.logger.debug({ count: entityIds.length, status }, "Bulk status update");
-    const bulkResults = await executeBulkConcurrent(entityIds, async (entityId) => {
-      return this.updateEntity(entityId, { status }, context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      entityIds,
+      async (entityId) => {
+        return this.updateEntity(entityId, { status }, context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -216,9 +219,13 @@ export class MetaService {
     items: Array<{ entityId: string; data: Record<string, unknown> }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await executeBulkConcurrent(items, async (item) => {
-      return this.updateEntity(item.entityId, item.data, context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      items,
+      async (item) => {
+        return this.updateEntity(item.entityId, item.data, context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -258,8 +265,13 @@ export class MetaService {
     await this.rateLimiter.consume(`meta:default`);
 
     const defaultFields = [
-      "id", "name", "account_status", "currency",
-      "timezone_name", "amount_spent", "balance",
+      "id",
+      "name",
+      "account_status",
+      "currency",
+      "timezone_name",
+      "amount_spent",
+      "balance",
     ];
 
     const params: Record<string, string> = {
@@ -274,10 +286,16 @@ export class MetaService {
       params.after = after;
     }
 
-    const result = (await this.httpClient.get("/me/adaccounts", params, context)) as Record<string, unknown>;
+    const result = (await this.httpClient.get("/me/adaccounts", params, context)) as Record<
+      string,
+      unknown
+    >;
 
     if (result.data !== undefined && !Array.isArray(result.data)) {
-      this.logger.warn({ dataType: typeof result.data }, "Meta API returned unexpected non-array data field for ad accounts");
+      this.logger.warn(
+        { dataType: typeof result.data },
+        "Meta API returned unexpected non-array data field for ad accounts"
+      );
     }
     const accounts = (Array.isArray(result.data) ? result.data : []) as MetaAdAccount[];
     const paging = result.paging as Record<string, unknown> | undefined;
@@ -341,10 +359,7 @@ export class MetaService {
     return this.httpClient.post(`/${campaignId}/budget_schedules`, data, context);
   }
 
-  async listBudgetSchedules(
-    campaignId: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async listBudgetSchedules(campaignId: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`meta:default`);
 
     return this.httpClient.get(`/${campaignId}/budget_schedules`, {}, context);
@@ -352,18 +367,10 @@ export class MetaService {
 
   // ─── Ad Previews ───────────────────────────────────────────────
 
-  async getAdPreviews(
-    adId: string,
-    adFormat: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getAdPreviews(adId: string, adFormat: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`meta:default`);
 
-    return this.httpClient.get(
-      `/${adId}/previews`,
-      { ad_format: adFormat },
-      context
-    );
+    return this.httpClient.get(`/${adId}/previews`, { ad_format: adFormat }, context);
   }
 
   // ─── Internal Helpers ─────────────────────────────────────────
@@ -371,5 +378,4 @@ export class MetaService {
   private normalizeAccountId(adAccountId: string): string {
     return adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
   }
-
 }

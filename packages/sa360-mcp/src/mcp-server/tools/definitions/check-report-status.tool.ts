@@ -16,10 +16,7 @@ Poll this endpoint until \`isReportReady\` is true, then use the file URLs with 
 
 export const CheckReportStatusInputSchema = z
   .object({
-    reportId: z
-      .string()
-      .min(1)
-      .describe("Report ID returned by sa360_submit_report"),
+    reportId: z.string().min(1).describe("Report ID returned by sa360_submit_report"),
   })
   .describe("Parameters for checking report status");
 
@@ -62,9 +59,12 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   if (result.isReportReady) {
-    const fileList = result.files?.map((f, i) => `  ${i + 1}. ${f.url}`).join("\n") || "  (no files)";
+    const fileList =
+      result.files?.map((f, i) => `  ${i + 1}. ${f.url}`).join("\n") || "  (no files)";
     return [
       {
         type: "text" as const,

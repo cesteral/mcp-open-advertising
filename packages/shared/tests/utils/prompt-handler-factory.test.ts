@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { registerPromptsFromDefinitions, type PromptDefinitionForFactory } from "../../src/utils/prompt-handler-factory.js";
+import {
+  registerPromptsFromDefinitions,
+  type PromptDefinitionForFactory,
+} from "../../src/utils/prompt-handler-factory.js";
 import type { Logger } from "pino";
 
 function createMockServer() {

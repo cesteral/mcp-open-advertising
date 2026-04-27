@@ -19,28 +19,22 @@ const campaignSchema = z.object({
   campaignGoal: z.object({ performanceGoalType: z.string() }),
 });
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js",
-  () => ({
-    getSupportedEntityTypesDynamic: vi.fn().mockReturnValue(["campaign"]),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () => ({
+  getSupportedEntityTypesDynamic: vi.fn().mockReturnValue(["campaign"]),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/schema-introspection.js",
-  () => ({
-    getEntitySchemaByType: vi.fn().mockImplementation(() => campaignSchema),
-    getFieldSchemaByPath: vi.fn().mockImplementation((_schema: unknown, path: string) => {
-      if (path === "displayName") {
-        return z.string();
-      }
-      if (path === "bidStrategy.fixedBid.bidAmountMicros") {
-        return z.string();
-      }
-      return null;
-    }),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/schema-introspection.js", () => ({
+  getEntitySchemaByType: vi.fn().mockImplementation(() => campaignSchema),
+  getFieldSchemaByPath: vi.fn().mockImplementation((_schema: unknown, path: string) => {
+    if (path === "displayName") {
+      return z.string();
+    }
+    if (path === "bidStrategy.fixedBid.bidAmountMicros") {
+      return z.string();
+    }
+    return null;
+  }),
+}));
 
 import { validateEntityLogic } from "../../../../src/mcp-server/tools/definitions/validate-entity.tool.js";
 

@@ -54,20 +54,23 @@ export const GetAnalyticsBreakdownsInputSchema = z
   })
   .merge(ComputedMetricsFlagSchema)
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for getting LinkedIn Ads analytics with breakdowns");
 
 export const GetAnalyticsBreakdownsOutputSchema = z
   .object({
-    results: z.array(
-      z.object({
-        pivot: z.string(),
-        elements: z.array(z.record(z.any())),
-        count: z.number(),
-      })
-    ).describe("Analytics results per pivot"),
+    results: z
+      .array(
+        z.object({
+          pivot: z.string(),
+          elements: z.array(z.record(z.any())),
+          count: z.number(),
+        })
+      )
+      .describe("Analytics results per pivot"),
     dateRange: z.object({ start: z.string(), end: z.string() }),
     timestamp: z.string().datetime(),
   })
@@ -106,16 +109,12 @@ export async function getAnalyticsBreakdownsLogic(
       const stringRows: Record<string, string>[] = raw.map((row) => {
         const record: Record<string, string> = {};
         for (const [k, v] of Object.entries(row)) {
-          record[k] =
-            typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
+          record[k] = typeof v === "string" ? v : v == null ? "" : JSON.stringify(v);
         }
         return record;
       });
       const elements = input.includeComputedMetrics
-        ? appendComputedMetricsToRows(
-            stringRows,
-            BREAKDOWNS_COMPUTED_METRIC_ALIASES,
-          )
+        ? appendComputedMetricsToRows(stringRows, BREAKDOWNS_COMPUTED_METRIC_ALIASES)
         : stringRows;
       return {
         pivot: r.pivot,

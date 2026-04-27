@@ -80,9 +80,9 @@ describe("MsAdsService", () => {
     });
 
     it("throws for entity types without list support", async () => {
-      await expect(
-        service.listEntities("budget", {})
-      ).rejects.toThrow("Use getEntity with specific BudgetIds");
+      await expect(service.listEntities("budget", {})).rejects.toThrow(
+        "Use getEntity with specific BudgetIds"
+      );
     });
   });
 
@@ -143,11 +143,7 @@ describe("MsAdsService", () => {
       const items = Array.from({ length: 3 }, (_, i) => ({ Name: `Campaign ${i}` }));
       await service.bulkCreateEntities("campaign", items);
       expect(httpClient.post).toHaveBeenCalledOnce();
-      expect(httpClient.post).toHaveBeenCalledWith(
-        "/Campaigns",
-        { Campaigns: items },
-        undefined
-      );
+      expect(httpClient.post).toHaveBeenCalledWith("/Campaigns", { Campaigns: items }, undefined);
     });
   });
 
@@ -195,15 +191,13 @@ describe("MsAdsService", () => {
     it("reads via POST then writes the update via PUT", async () => {
       // Mock getEntity (getByIdsOperation) — read uses POST
       (httpClient.post as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-        Keywords: [{ Id: 1, Bid: { Amount: 1.50 } }],
+        Keywords: [{ Id: 1, Bid: { Amount: 1.5 } }],
       });
       (httpClient.put as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ PartialErrors: null });
 
-      await service.adjustBids(
-        "keyword",
-        [{ entityId: "1", bidField: "Bid", newBid: 2.0 }],
-        { AdGroupId: 123 }
-      );
+      await service.adjustBids("keyword", [{ entityId: "1", bidField: "Bid", newBid: 2.0 }], {
+        AdGroupId: 123,
+      });
 
       expect(httpClient.post).toHaveBeenCalledTimes(1);
       expect(httpClient.post).toHaveBeenCalledWith(

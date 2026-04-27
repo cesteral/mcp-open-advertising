@@ -27,25 +27,23 @@ export const BulkUpdateStatusInputSchema = z
     entityType: z
       .enum(getEntityTypeEnum())
       .optional()
-      .describe("Type of entities to update (optional — for informational purposes only, not used in API call)"),
-    entityIds: z
-      .array(z.string())
-      .min(1)
-      .max(50)
-      .describe("Entity IDs to update (max 50)"),
-    status: z
-      .enum(["ACTIVE", "PAUSED", "ARCHIVED"])
-      .describe("Target status"),
+      .describe(
+        "Type of entities to update (optional — for informational purposes only, not used in API call)"
+      ),
+    entityIds: z.array(z.string()).min(1).max(50).describe("Entity IDs to update (max 50)"),
+    status: z.enum(["ACTIVE", "PAUSED", "ARCHIVED"]).describe("Target status"),
   })
   .describe("Parameters for bulk status update");
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
-    results: z.array(z.object({
-      entityId: z.string(),
-      success: z.boolean(),
-      error: z.string().optional(),
-    })),
+    results: z.array(
+      z.object({
+        entityId: z.string(),
+        success: z.boolean(),
+        error: z.string().optional(),
+      })
+    ),
     successCount: z.number(),
     failureCount: z.number(),
     timestamp: z.string().datetime(),
@@ -63,7 +61,11 @@ export async function bulkUpdateStatusLogic(
   // Elicit confirmation for irreversible archive operations
   if (input.status === "ARCHIVED") {
     const entityLabel = input.entityType ?? "entity";
-    const confirmed = await elicitArchiveConfirmation(input.entityIds.length, entityLabel, sdkContext);
+    const confirmed = await elicitArchiveConfirmation(
+      input.entityIds.length,
+      entityLabel,
+      sdkContext
+    );
     if (!confirmed) {
       return { results: [], successCount: 0, failureCount: 0, timestamp: new Date().toISOString() };
     }
@@ -71,11 +73,7 @@ export async function bulkUpdateStatusLogic(
 
   const { metaService } = resolveSessionServices(sdkContext);
 
-  const result = await metaService.bulkUpdateStatus(
-    input.entityIds,
-    input.status,
-    context
-  );
+  const result = await metaService.bulkUpdateStatus(input.entityIds, input.status, context);
 
   const successCount = result.results.filter((r) => r.success).length;
 
@@ -87,7 +85,9 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

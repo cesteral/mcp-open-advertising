@@ -21,21 +21,10 @@ Max 50 items per call.`;
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Snapchat Advertiser ID"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID required when entityType is 'adGroup'"),
-    adSquadId: z
-      .string()
-      .optional()
-      .describe("Ad Squad ID required when entityType is 'ad'"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    adAccountId: z.string().min(1).describe("Snapchat Advertiser ID"),
+    campaignId: z.string().optional().describe("Campaign ID required when entityType is 'adGroup'"),
+    adSquadId: z.string().optional().describe("Ad Squad ID required when entityType is 'ad'"),
     items: z
       .array(
         z.object({
@@ -49,10 +38,18 @@ export const BulkUpdateEntitiesInputSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.entityType === "adGroup" && !data.campaignId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["campaignId"], message: "campaignId is required for adGroup updates" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["campaignId"],
+        message: "campaignId is required for adGroup updates",
+      });
     }
     if (data.entityType === "ad" && !data.adSquadId) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["adSquadId"], message: "adSquadId is required for ad updates" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["adSquadId"],
+        message: "adSquadId is required for ad updates",
+      });
     }
   })
   .describe("Parameters for bulk entity updates");
@@ -103,7 +100,9 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateEntitiesOutput): McpTextContent[] {
+export function bulkUpdateEntitiesResponseFormatter(
+  result: BulkUpdateEntitiesOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Bulk update: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

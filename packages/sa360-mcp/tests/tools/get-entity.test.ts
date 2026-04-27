@@ -43,8 +43,14 @@ describe("GetEntityInputSchema", () => {
 
   it("accepts all 8 entity types", () => {
     const types = [
-      "customer", "campaign", "adGroup", "adGroupAd",
-      "adGroupCriterion", "campaignCriterion", "biddingStrategy", "conversionAction",
+      "customer",
+      "campaign",
+      "adGroup",
+      "adGroupAd",
+      "adGroupCriterion",
+      "campaignCriterion",
+      "biddingStrategy",
+      "conversionAction",
     ];
     for (const entityType of types) {
       const result = GetEntityInputSchema.safeParse({ ...validInput, entityType });

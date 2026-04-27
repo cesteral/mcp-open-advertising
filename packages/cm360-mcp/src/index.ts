@@ -15,10 +15,7 @@ import {
   createServerLogger,
   bootstrapMcpServer,
 } from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "./services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
@@ -44,7 +41,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   if (!credentialsJson) {
     logger.warn(
       "No CM360 service account credentials found in env vars. " +
-      "Set CM360_SERVICE_ACCOUNT_JSON or CM360_SERVICE_ACCOUNT_FILE for stdio mode."
+        "Set CM360_SERVICE_ACCOUNT_JSON or CM360_SERVICE_ACCOUNT_FILE for stdio mode."
     );
     return false;
   }

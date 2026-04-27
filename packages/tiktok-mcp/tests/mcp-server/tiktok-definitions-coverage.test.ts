@@ -49,7 +49,14 @@ const tiktokService = {
     }),
     post: vi.fn(async () => ({})),
     get: vi.fn(async () => ({
-      list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
+      list: [
+        {
+          video_id: "vid-test-123",
+          video_status: "bind_success",
+          video_name: "Test Video",
+          duration: 15,
+        },
+      ],
     })),
   },
 };
@@ -86,7 +93,11 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
 import { allResources } from "../../src/mcp-server/resources/definitions/index.js";
-import { getAllPrompts, getPromptDefinition, promptRegistry } from "../../src/mcp-server/prompts/index.js";
+import {
+  getAllPrompts,
+  getPromptDefinition,
+  promptRegistry,
+} from "../../src/mcp-server/prompts/index.js";
 
 describe("TikTok MCP definitions coverage", () => {
   beforeEach(() => {

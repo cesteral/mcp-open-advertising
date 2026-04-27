@@ -36,10 +36,10 @@ const apiPath = apiMetadata.apiPathTemplate.includes("{")
 
 When parent IDs are missing, the path replacement function returns **empty strings**, creating malformed API paths:
 
-| Scenario | Template | Missing ID | Resulting Path | Status |
-|----------|----------|------------|----------------|---------|
-| Get campaign without advertiserId | `/advertisers/{advertiserId}/campaigns` | `advertiserId` | `/advertisers//campaigns/123` | ❌ Malformed |
-| Create lineItem without advertiserId | `/advertisers/{advertiserId}/lineItems` | `advertiserId` | `/advertisers//lineItems` | ❌ Malformed |
+| Scenario                                   | Template                                      | Missing ID     | Resulting Path                      | Status       |
+| ------------------------------------------ | --------------------------------------------- | -------------- | ----------------------------------- | ------------ |
+| Get campaign without advertiserId          | `/advertisers/{advertiserId}/campaigns`       | `advertiserId` | `/advertisers//campaigns/123`       | ❌ Malformed |
+| Create lineItem without advertiserId       | `/advertisers/{advertiserId}/lineItems`       | `advertiserId` | `/advertisers//lineItems`           | ❌ Malformed |
 | Update insertionOrder without advertiserId | `/advertisers/{advertiserId}/insertionOrders` | `advertiserId` | `/advertisers//insertionOrders/456` | ❌ Malformed |
 
 Notice the **double slash** `//` where the advertiserId should be.
@@ -71,6 +71,7 @@ User Request (missing advertiserId)
 ```
 
 **Problems**:
+
 - ❌ Malformed request reaches external API
 - ❌ Wastes network bandwidth
 - ❌ Poor error message (HTTP 400/404 instead of clear validation error)
@@ -104,6 +105,7 @@ User Request (missing advertiserId)
 ```
 
 **Problems**:
+
 - ❌ Malformed request reaches external API
 - ❌ Same issues as get-entity
 
@@ -130,6 +132,7 @@ User Request (missing advertiserId)
 ```
 
 **Problems**:
+
 - ❌ Malformed request reaches external API
 - ❌ Calls `getEntity()` first, which has the same issue
 
@@ -160,6 +163,7 @@ User Request (missing advertiserId)
 ```
 
 **Problems**:
+
 - ❌ Malformed request reaches external API
 - ❌ Same issues as get-entity
 
@@ -179,7 +183,7 @@ for (const requiredParentId of config.parentIds) {
   if (!ids[requiredParentId]) {
     throw new McpError(
       JsonRpcErrorCode.InvalidParams,
-      `Missing required parent ID '${requiredParentId}' for listing ${entityType} entities`,
+      `Missing required parent ID '${requiredParentId}' for listing ${entityType} entities`
       // ...
     );
   }
@@ -201,23 +205,23 @@ for (const requiredParentId of config.parentIds) {
 
 ### Without Schema-Level Validation
 
-| Impact | Severity | Description |
-|--------|----------|-------------|
-| **Malformed API Requests** | 🔴 HIGH | Invalid paths like `/advertisers//campaigns/123` reach DV360 API |
-| **Poor Error Messages** | 🟡 MEDIUM | Generic HTTP 400/404 instead of clear validation errors |
-| **Wasted Resources** | 🟡 MEDIUM | Authentication, rate limiting, network calls for invalid requests |
-| **API Quota Consumption** | 🟡 MEDIUM | May count against rate limits even though request is invalid |
-| **Debugging Difficulty** | 🟡 MEDIUM | Developers see HTTP errors instead of clear validation messages |
+| Impact                     | Severity  | Description                                                       |
+| -------------------------- | --------- | ----------------------------------------------------------------- |
+| **Malformed API Requests** | 🔴 HIGH   | Invalid paths like `/advertisers//campaigns/123` reach DV360 API  |
+| **Poor Error Messages**    | 🟡 MEDIUM | Generic HTTP 400/404 instead of clear validation errors           |
+| **Wasted Resources**       | 🟡 MEDIUM | Authentication, rate limiting, network calls for invalid requests |
+| **API Quota Consumption**  | 🟡 MEDIUM | May count against rate limits even though request is invalid      |
+| **Debugging Difficulty**   | 🟡 MEDIUM | Developers see HTTP errors instead of clear validation messages   |
 
 ### With Schema-Level Validation
 
-| Benefit | Impact | Description |
-|---------|--------|-------------|
-| **Fail-Fast** | 🟢 HIGH | Errors caught in line 83 of server.ts (before any service calls) |
-| **Clear Errors** | 🟢 HIGH | "Missing required parent ID(s) for campaign: advertiserId" |
-| **Zero API Calls** | 🟢 MEDIUM | No network traffic for invalid requests |
-| **Consistent UX** | 🟢 MEDIUM | Same error format across all tools |
-| **Performance** | 🟢 LOW | Slightly faster (no service instantiation) |
+| Benefit            | Impact    | Description                                                      |
+| ------------------ | --------- | ---------------------------------------------------------------- |
+| **Fail-Fast**      | 🟢 HIGH   | Errors caught in line 83 of server.ts (before any service calls) |
+| **Clear Errors**   | 🟢 HIGH   | "Missing required parent ID(s) for campaign: advertiserId"       |
+| **Zero API Calls** | 🟢 MEDIUM | No network traffic for invalid requests                          |
+| **Consistent UX**  | 🟢 MEDIUM | Same error format across all tools                               |
+| **Performance**    | 🟢 LOW    | Slightly faster (no service instantiation)                       |
 
 ---
 
@@ -287,6 +291,7 @@ for (const requiredParentId of config.parentIds) {
 **Time to Error**: ~1-5ms (synchronous validation only)
 
 **Improvements**:
+
 - ⚡ **100-1000x faster** error response
 - 🚫 **Zero** API calls
 - 🔐 **Zero** authentication overhead
@@ -361,12 +366,8 @@ export const GetEntityInputSchema = z
       const entityIdField = `${data.entityType}Id`;
 
       // Check which IDs are missing
-      const missingParentIds = config.parentIds.filter(
-        (id) => !data[id as keyof typeof data]
-      );
-      const missingEntityId = !data[entityIdField as keyof typeof data]
-        ? [entityIdField]
-        : [];
+      const missingParentIds = config.parentIds.filter((id) => !data[id as keyof typeof data]);
+      const missingEntityId = !data[entityIdField as keyof typeof data] ? [entityIdField] : [];
 
       const allMissingIds = [...missingParentIds, ...missingEntityId];
 
@@ -379,6 +380,7 @@ export const GetEntityInputSchema = z
 ```
 
 **Apply to**:
+
 1. ✅ `list-entities.tool.ts` (already has it)
 2. ❌ `get-entity.tool.ts` (needs it)
 3. ❌ `create-entity.tool.ts` (needs it)
@@ -397,7 +399,7 @@ const apiPath = apiMetadata.apiPathTemplate.includes("{")
       let path = apiMetadata.apiPathTemplate;
 
       // Extract required params from template
-      const requiredParams = [...path.matchAll(/\{(\w+)\}/g)].map(m => m[1]);
+      const requiredParams = [...path.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
 
       // Check all required params are present
       for (const param of requiredParams) {
@@ -418,11 +420,13 @@ const apiPath = apiMetadata.apiPathTemplate.includes("{")
 ```
 
 **Pros**:
+
 - Catches the issue at path construction time
 - Prevents malformed paths from being created
 - No changes needed to tool schemas
 
 **Cons**:
+
 - Error occurs later in the flow (after service instantiation)
 - Less clear error message location (buried in path builder)
 - Still consumes some resources before failing
@@ -436,12 +440,14 @@ const apiPath = apiMetadata.apiPathTemplate.includes("{")
 **Why**: Prevents malformed API requests from reaching DV360 API
 
 **Tools to Update**:
+
 - `get-entity.tool.ts`
 - `create-entity.tool.ts`
 - `update-entity.tool.ts`
 - `delete-entity.tool.ts`
 
 **Benefits**:
+
 - 🚨 Prevents malformed API paths
 - ⚡ Fail-fast error handling
 - 💬 Clear, actionable error messages
@@ -457,11 +463,13 @@ Add validation to `entityMappingDynamic.ts:118-124` to throw error instead of re
 ### Test Coverage
 
 Run the new test to verify the issue:
+
 ```bash
 ./tests/test-malformed-paths.cjs
 ```
 
 Expected result after fix:
+
 ```
 ✅ GOOD: Validation caught missing parent ID
    Error: Missing required ID(s) for campaign: advertiserId

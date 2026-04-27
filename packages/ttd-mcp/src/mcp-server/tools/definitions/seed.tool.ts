@@ -97,14 +97,8 @@ export const ManageSeedInputSchema = z
       .string()
       .optional()
       .describe("Required for update, get, set_default_advertiser, attach_to_campaign"),
-    advertiserId: z
-      .string()
-      .optional()
-      .describe("Required for create and set_default_advertiser"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Required for attach_to_campaign"),
+    advertiserId: z.string().optional().describe("Required for create and set_default_advertiser"),
+    campaignId: z.string().optional().describe("Required for attach_to_campaign"),
     data: z
       .record(z.any())
       .optional()
@@ -166,9 +160,7 @@ type ManageSeedOutput = z.infer<typeof ManageSeedOutputSchema>;
 
 function throwIfUserErrors(userErrors: unknown[], defaultMessage: string): void {
   if (userErrors.length === 0) return;
-  const messages = userErrors
-    .map((e: any) => e.message ?? JSON.stringify(e))
-    .join("; ");
+  const messages = userErrors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
   throw new McpError(JsonRpcErrorCode.InvalidParams, `${defaultMessage}: ${messages}`, {
     userErrors,
   });
@@ -307,7 +299,8 @@ export function manageSeedResponseFormatter(result: ManageSeedOutput): McpTextCo
       if (r.name) lines.push(`Name: ${r.name}`);
       if (r.status) lines.push(`Status: ${r.status}`);
       if (r.quality) lines.push(`Quality: ${r.quality}`);
-      if (r.activeSeedIdCount !== undefined) lines.push(`Active Seed ID Count: ${r.activeSeedIdCount}`);
+      if (r.activeSeedIdCount !== undefined)
+        lines.push(`Active Seed ID Count: ${r.activeSeedIdCount}`);
       break;
     }
     case "set_default_advertiser":

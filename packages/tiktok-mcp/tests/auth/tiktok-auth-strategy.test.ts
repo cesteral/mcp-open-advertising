@@ -8,7 +8,9 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     headers: Record<string, string | string[] | undefined>,
     name: string
   ): string | undefined => {
-    const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const key = Object.keys(headers).find(
+      (candidate) => candidate.toLowerCase() === name.toLowerCase()
+    );
     const value = key ? headers[key] : undefined;
     return Array.isArray(value) ? value[0] : value;
   };
@@ -47,10 +49,7 @@ describe("TikTokBearerAuthStrategy", () => {
         }),
       } as unknown as Response);
 
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       const result = await strategy.verify({
         authorization: "Bearer test-tiktok-token",
         "x-tiktok-advertiser-id": "1234567890",
@@ -66,23 +65,17 @@ describe("TikTokBearerAuthStrategy", () => {
     });
 
     it("throws when Authorization header is missing", async () => {
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
+      await expect(strategy.verify({ "x-tiktok-advertiser-id": "1234567890" })).rejects.toThrow(
+        "Missing required Authorization header"
       );
-      await expect(
-        strategy.verify({ "x-tiktok-advertiser-id": "1234567890" })
-      ).rejects.toThrow("Missing required Authorization header");
     });
 
     it("throws when X-TikTok-Advertiser-Id header is missing", async () => {
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
+      await expect(strategy.verify({ authorization: "Bearer test-token" })).rejects.toThrow(
+        "Missing required X-TikTok-Advertiser-Id header"
       );
-      await expect(
-        strategy.verify({ authorization: "Bearer test-token" })
-      ).rejects.toThrow("Missing required X-TikTok-Advertiser-Id header");
     });
 
     it("throws on invalid token (TikTok code != 0)", async () => {
@@ -95,10 +88,7 @@ describe("TikTokBearerAuthStrategy", () => {
         }),
       } as unknown as Response);
 
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       await expect(
         strategy.verify({
           authorization: "Bearer bad-token",
@@ -115,10 +105,7 @@ describe("TikTokBearerAuthStrategy", () => {
         text: async () => "Unauthorized",
       } as unknown as Response);
 
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       await expect(
         strategy.verify({
           authorization: "Bearer bad-token",
@@ -149,10 +136,7 @@ describe("TikTokBearerAuthStrategy", () => {
         }),
       } as unknown as Response);
 
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       const result = await strategy.verify({
         authorization: "Bearer ignored-static-token",
         "x-tiktok-advertiser-id": "1234567890",
@@ -189,10 +173,7 @@ describe("TikTokBearerAuthStrategy", () => {
         json: async () => ({ code: 0, message: "OK", data: { display_name: "User" } }),
       } as unknown as Response);
 
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       const result = await strategy.verify({
         authorization: "Bearer any-token",
         "x-tiktok-advertiser-id": "adv-1",
@@ -223,10 +204,7 @@ describe("TikTokBearerAuthStrategy", () => {
         }),
       } as unknown as Response);
 
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       const result = await strategy.verify({
         authorization: "Bearer static-token",
         "x-tiktok-advertiser-id": "1234567890",
@@ -242,10 +220,7 @@ describe("TikTokBearerAuthStrategy", () => {
 
   describe("getCredentialFingerprint()", () => {
     it("returns fingerprint without network call", async () => {
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       const fingerprint = await strategy.getCredentialFingerprint({
         authorization: "Bearer test-tiktok-token",
         "x-tiktok-advertiser-id": "1234567890",
@@ -260,10 +235,7 @@ describe("TikTokBearerAuthStrategy", () => {
     });
 
     it("returns consistent fingerprint for same token + advertiser ID", async () => {
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       const fp1 = await strategy.getCredentialFingerprint({
         authorization: "Bearer same-token",
         "x-tiktok-advertiser-id": "1234567890",
@@ -276,10 +248,7 @@ describe("TikTokBearerAuthStrategy", () => {
     });
 
     it("returns different fingerprints for different advertiser IDs", async () => {
-      const strategy = new TikTokBearerAuthStrategy(
-        "https://business-api.tiktok.com",
-        mockLogger
-      );
+      const strategy = new TikTokBearerAuthStrategy("https://business-api.tiktok.com", mockLogger);
       const fp1 = await strategy.getCredentialFingerprint({
         authorization: "Bearer same-token",
         "x-tiktok-advertiser-id": "1111111111",

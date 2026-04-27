@@ -122,16 +122,11 @@ export class GoogleHeadersAuthStrategy implements AuthStrategy {
     // Validate by attempting to get an access token
     await adapter.getAccessToken();
 
-    this.logger?.debug(
-      { credentialType: adapter.credentialType },
-      "Google credentials validated"
-    );
+    this.logger?.debug({ credentialType: adapter.credentialType }, "Google credentials validated");
 
     const fingerprint = getCredentialFingerprint(credentials);
     const clientId =
-      credentials.type === "service_account"
-        ? credentials.client_email
-        : credentials.clientId;
+      credentials.type === "service_account" ? credentials.client_email : credentials.clientId;
 
     return {
       authInfo: {
@@ -147,8 +142,9 @@ export class GoogleHeadersAuthStrategy implements AuthStrategy {
   async getCredentialFingerprint(
     headers: Record<string, string | string[] | undefined>
   ): Promise<string | undefined> {
-    const { parseCredentialsFromHeaders, getCredentialFingerprint } =
-      await import("./google-auth.js");
+    const { parseCredentialsFromHeaders, getCredentialFingerprint } = await import(
+      "./google-auth.js"
+    );
     const credentials = parseCredentialsFromHeaders(headers);
     return getCredentialFingerprint(credentials);
   }
@@ -166,11 +162,12 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
   async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
     const { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } = await import("./jwt.js");
 
-    const authHeader = typeof headers["authorization"] === "string"
-      ? headers["authorization"]
-      : Array.isArray(headers["authorization"])
-        ? headers["authorization"][0]
-        : undefined;
+    const authHeader =
+      typeof headers["authorization"] === "string"
+        ? headers["authorization"]
+        : Array.isArray(headers["authorization"])
+          ? headers["authorization"][0]
+          : undefined;
 
     const token = extractBearerToken(authHeader);
     const payload = await verifyJwt(token, this.secret);
@@ -193,14 +190,14 @@ export class JwtBearerAuthStrategy implements AuthStrategy {
   async getCredentialFingerprint(
     headers: Record<string, string | string[] | undefined>
   ): Promise<string | undefined> {
-    const { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } =
-      await import("./jwt.js");
+    const { extractBearerToken, verifyJwt, getJwtCredentialFingerprint } = await import("./jwt.js");
 
-    const authHeader = typeof headers["authorization"] === "string"
-      ? headers["authorization"]
-      : Array.isArray(headers["authorization"])
-        ? headers["authorization"][0]
-        : undefined;
+    const authHeader =
+      typeof headers["authorization"] === "string"
+        ? headers["authorization"]
+        : Array.isArray(headers["authorization"])
+          ? headers["authorization"][0]
+          : undefined;
 
     const token = extractBearerToken(authHeader);
     const payload = await verifyJwt(token, this.secret);

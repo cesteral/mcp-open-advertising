@@ -23,9 +23,7 @@ Updates are applied individually with concurrency (max 5 concurrent).
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     items: z
       .array(
         z.object({

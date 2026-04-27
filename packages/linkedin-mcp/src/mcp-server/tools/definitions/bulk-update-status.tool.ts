@@ -24,27 +24,21 @@ const TOOL_DESCRIPTION = `Batch update status for multiple LinkedIn Ads entities
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    entityUrns: z
-      .array(z.string())
-      .min(1)
-      .max(50)
-      .describe("Entity URNs to update (max 50)"),
-    status: z
-      .enum(["ACTIVE", "PAUSED", "DRAFT", "ARCHIVED", "CANCELED"])
-      .describe("Target status"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    entityUrns: z.array(z.string()).min(1).max(50).describe("Entity URNs to update (max 50)"),
+    status: z.enum(["ACTIVE", "PAUSED", "DRAFT", "ARCHIVED", "CANCELED"]).describe("Target status"),
   })
   .describe("Parameters for bulk status update");
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
-    results: z.array(z.object({
-      entityUrn: z.string(),
-      success: z.boolean(),
-      error: z.string().optional(),
-    })),
+    results: z.array(
+      z.object({
+        entityUrn: z.string(),
+        success: z.boolean(),
+        error: z.string().optional(),
+      })
+    ),
     successCount: z.number(),
     failureCount: z.number(),
     timestamp: z.string().datetime(),
@@ -61,7 +55,11 @@ export async function bulkUpdateStatusLogic(
 ): Promise<BulkUpdateStatusOutput> {
   // Elicit confirmation for irreversible archive operations
   if (input.status === "ARCHIVED") {
-    const confirmed = await elicitArchiveConfirmation(input.entityUrns.length, input.entityType, sdkContext);
+    const confirmed = await elicitArchiveConfirmation(
+      input.entityUrns.length,
+      input.entityType,
+      sdkContext
+    );
     if (!confirmed) {
       return { results: [], successCount: 0, failureCount: 0, timestamp: new Date().toISOString() };
     }
@@ -86,7 +84,9 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,
@@ -112,10 +112,7 @@ export const bulkUpdateStatusTool = {
       label: "Pause multiple campaigns",
       input: {
         entityType: "campaign",
-        entityUrns: [
-          "urn:li:sponsoredCampaign:111111111",
-          "urn:li:sponsoredCampaign:222222222",
-        ],
+        entityUrns: ["urn:li:sponsoredCampaign:111111111", "urn:li:sponsoredCampaign:222222222"],
         status: "PAUSED",
       },
     },

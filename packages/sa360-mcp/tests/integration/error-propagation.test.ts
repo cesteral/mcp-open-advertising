@@ -30,7 +30,9 @@ vi.mock("../../src/auth/sa360-auth-adapter.js", async () => {
       constructor(creds: { loginCustomerId?: string }) {
         this.loginCustomerId = creds.loginCustomerId;
       }
-      async getAccessToken() { return "mock-token"; }
+      async getAccessToken() {
+        return "mock-token";
+      }
       async validate() {}
     },
   };
@@ -146,10 +148,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -165,9 +164,7 @@ describe("SA360 MCP transport error propagation", () => {
     mockState.sa360Service.listAccessibleCustomers.mockRejectedValue(
       new Error("Injected list accounts failure")
     );
-    mockState.sa360Service.getEntity.mockRejectedValue(
-      new Error("Injected get entity failure")
-    );
+    mockState.sa360Service.getEntity.mockRejectedValue(new Error("Injected get entity failure"));
     mockState.sa360Service.listEntities.mockRejectedValue(
       new Error("Injected list entities failure")
     );

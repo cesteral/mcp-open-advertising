@@ -78,9 +78,7 @@ export class LinkedInBearerAuthStrategy extends BearerAuthStrategyBase {
     return getLinkedInCredentialFingerprint(refreshCreds.clientId);
   }
 
-  protected getTokenFingerprint(
-    headers: Record<string, string | string[] | undefined>
-  ): string {
+  protected getTokenFingerprint(headers: Record<string, string | string[] | undefined>): string {
     const token = parseLinkedInTokenFromHeaders(headers);
     return getLinkedInCredentialFingerprint(token);
   }

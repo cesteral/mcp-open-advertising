@@ -173,9 +173,7 @@ describe("ttd graphql bulk tools", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        const tokenIssue = result.error.issues.find((i) =>
-          i.message.includes("15,000")
-        );
+        const tokenIssue = result.error.issues.find((i) => i.message.includes("15,000"));
         expect(tokenIssue).toBeDefined();
       }
     });
@@ -314,11 +312,7 @@ describe("ttd graphql bulk tools", () => {
       });
 
       await expect(
-        graphqlCancelBulkJobLogic(
-          { jobId: "job-m1" },
-          createMockContext(),
-          createMockSdkContext()
-        )
+        graphqlCancelBulkJobLogic({ jobId: "job-m1" }, createMockContext(), createMockSdkContext())
       ).rejects.toThrow("Cannot cancel bulk job");
     });
 
@@ -345,26 +339,20 @@ describe("ttd graphql bulk tools", () => {
       const ctx = createMockContext();
 
       await expect(
-        graphqlQueryBulkLogic(
-          { query: "query { foo }", variables: [{ id: "1" }] },
-          ctx
-        )
+        graphqlQueryBulkLogic({ query: "query { foo }", variables: [{ id: "1" }] }, ctx)
       ).rejects.toThrow("No session ID available");
 
       await expect(
-        graphqlMutationBulkLogic(
-          { mutation: "mutation { foo }", inputs: [{ id: "1" }] },
-          ctx
-        )
+        graphqlMutationBulkLogic({ mutation: "mutation { foo }", inputs: [{ id: "1" }] }, ctx)
       ).rejects.toThrow("No session ID available");
 
-      await expect(
-        graphqlBulkJobLogic({ jobId: "job-1" }, ctx)
-      ).rejects.toThrow("No session ID available");
+      await expect(graphqlBulkJobLogic({ jobId: "job-1" }, ctx)).rejects.toThrow(
+        "No session ID available"
+      );
 
-      await expect(
-        graphqlCancelBulkJobLogic({ jobId: "job-1" }, ctx)
-      ).rejects.toThrow("No session ID available");
+      await expect(graphqlCancelBulkJobLogic({ jobId: "job-1" }, ctx)).rejects.toThrow(
+        "No session ID available"
+      );
     });
   });
 });

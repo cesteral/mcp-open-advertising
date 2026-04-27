@@ -34,7 +34,7 @@ describe("pollUntilComplete", () => {
         isComplete: (s) => s.state === "complete",
         isFailed: (s) => s.state === "failed",
         initialDelayMs: 1,
-      }),
+      })
     ).rejects.toBeInstanceOf(ReportFailedError);
   });
 
@@ -46,7 +46,7 @@ describe("pollUntilComplete", () => {
         isComplete: () => false,
         initialDelayMs: 1,
         maxAttempts: 3,
-      }),
+      })
     ).rejects.toBeInstanceOf(ReportTimeoutError);
     expect(fetchStatus).toHaveBeenCalledTimes(3);
   });
@@ -59,7 +59,7 @@ describe("pollUntilComplete", () => {
         isComplete: () => false,
         maxAttempts: 1,
         initialDelayMs: 1000,
-      }),
+      })
     ).rejects.toBeInstanceOf(ReportTimeoutError);
     expect(fetchStatus).toHaveBeenCalledTimes(1);
   });
@@ -73,7 +73,7 @@ describe("pollUntilComplete", () => {
         fetchStatus,
         isComplete: () => false,
         signal: controller.signal,
-      }),
+      })
     ).rejects.toBeInstanceOf(ReportAbortedError);
     expect(fetchStatus).not.toHaveBeenCalled();
   });
@@ -94,10 +94,7 @@ describe("pollUntilComplete", () => {
   it("applies exponential backoff capped by maxDelayMs", async () => {
     const delays: number[] = [];
     const origSetTimeout = globalThis.setTimeout;
-    vi.spyOn(globalThis, "setTimeout").mockImplementation(((
-      fn: () => void,
-      ms?: number,
-    ) => {
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(((fn: () => void, ms?: number) => {
       delays.push(ms ?? 0);
       return origSetTimeout(fn, 0);
     }) as typeof setTimeout);

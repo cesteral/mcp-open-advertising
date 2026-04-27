@@ -15,10 +15,7 @@ import {
   createServerLogger,
   bootstrapMcpServer,
 } from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "./services/session-services.js";
+import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
@@ -44,7 +41,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   if (!credentialsJson) {
     logger.warn(
       "No DV360 service account credentials found in env vars. " +
-      "Set DV360_SERVICE_ACCOUNT_JSON or DV360_SERVICE_ACCOUNT_FILE for stdio mode."
+        "Set DV360_SERVICE_ACCOUNT_JSON or DV360_SERVICE_ACCOUNT_FILE for stdio mode."
     );
     return false;
   }

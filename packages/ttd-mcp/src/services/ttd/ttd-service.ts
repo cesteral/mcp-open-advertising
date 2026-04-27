@@ -6,7 +6,10 @@ import type { TtdHttpClient } from "./ttd-http-client.js";
 import type { RateLimiter } from "../../utils/security/rate-limiter.js";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { getEntityConfig, type TtdEntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
+import {
+  getEntityConfig,
+  type TtdEntityType,
+} from "../../mcp-server/tools/utils/entity-mapping.js";
 import type {
   TtdAdvertiser,
   TtdCampaign,
@@ -15,13 +18,7 @@ import type {
   TtdConversionTracker,
 } from "./types.js";
 
-export type {
-  TtdAdvertiser,
-  TtdCampaign,
-  TtdAdGroup,
-  TtdCreative,
-  TtdConversionTracker,
-};
+export type { TtdAdvertiser, TtdCampaign, TtdAdGroup, TtdCreative, TtdConversionTracker };
 
 export interface WorkflowCallbackInput {
   callbackUrl: string;
@@ -105,16 +102,12 @@ export class TtdService {
       }
     }
 
-    body.PageStartIndex = pageToken ? (parseInt(pageToken, 10) || 0) : 0;
+    body.PageStartIndex = pageToken ? parseInt(pageToken, 10) || 0 : 0;
 
-    const result = (await this.httpClient.fetch(
-      config.queryPath,
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify(body),
-      }
-    )) as Record<string, unknown>;
+    const result = (await this.httpClient.fetch(config.queryPath, context, {
+      method: "POST",
+      body: JSON.stringify(body),
+    })) as Record<string, unknown>;
 
     // TTD returns { Result: [...], TotalCount, ResultCount }
     const entities = ((result.Result as unknown[]) || []) as TtdEntityMap[T][];
@@ -139,11 +132,9 @@ export class TtdService {
 
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    return this.httpClient.fetch(
-      `${config.apiPath}/${entityId}`,
-      context,
-      { method: "GET" }
-    ) as Promise<TtdEntityMap[T]>;
+    return this.httpClient.fetch(`${config.apiPath}/${entityId}`, context, {
+      method: "GET",
+    }) as Promise<TtdEntityMap[T]>;
   }
 
   async createEntity<T extends TtdEntityType>(
@@ -156,14 +147,10 @@ export class TtdService {
 
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    return this.httpClient.fetch(
-      config.apiPath,
-      context,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    ) as Promise<TtdEntityMap[T]>;
+    return this.httpClient.fetch(config.apiPath, context, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }) as Promise<TtdEntityMap[T]>;
   }
 
   async updateEntity<T extends TtdEntityType>(
@@ -180,14 +167,10 @@ export class TtdService {
     // TTD PUT endpoints take no ID in URL; ID must be in the request body
     const payload = { ...data, [config.idField]: entityId };
 
-    return this.httpClient.fetch(
-      config.apiPath,
-      context,
-      {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      }
-    ) as Promise<TtdEntityMap[T]>;
+    return this.httpClient.fetch(config.apiPath, context, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }) as Promise<TtdEntityMap[T]>;
   }
 
   async deleteEntity(
@@ -200,11 +183,7 @@ export class TtdService {
 
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    await this.httpClient.fetch(
-      `${config.apiPath}/${entityId}`,
-      context,
-      { method: "DELETE" }
-    );
+    await this.httpClient.fetch(`${config.apiPath}/${entityId}`, context, { method: "DELETE" });
   }
 
   // ─── Validate-Only (Dry Run) ──────────────────────────────────────
@@ -232,17 +211,15 @@ export class TtdService {
       if (mode === "update" && entityId) {
         // TTD PUT endpoints take no ID in URL; ID must be in the request body
         const payload = { ...data, [config.idField]: entityId };
-        await this.httpClient.fetch(
-          config.apiPath,
-          context,
-          { method: "PUT", body: JSON.stringify(payload) }
-        );
+        await this.httpClient.fetch(config.apiPath, context, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
       } else {
-        await this.httpClient.fetch(
-          config.apiPath,
-          context,
-          { method: "POST", body: JSON.stringify(data) }
-        );
+        await this.httpClient.fetch(config.apiPath, context, {
+          method: "POST",
+          body: JSON.stringify(data),
+        });
       }
       return { valid: true };
     } catch (error: unknown) {
@@ -255,7 +232,8 @@ export class TtdService {
       ]);
       if (error instanceof McpError && CLIENT_ERROR_CODES.has(error.code)) {
         const errorMessage = error.message ?? String(error);
-        const errorBody = (error.data as { errorBody?: string } | undefined)?.errorBody ?? errorMessage;
+        const errorBody =
+          (error.data as { errorBody?: string } | undefined)?.errorBody ?? errorMessage;
         return { valid: false, errors: [errorBody] };
       }
       throw error;
@@ -273,9 +251,13 @@ export class TtdService {
     items: Record<string, unknown>[],
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await executeBulkConcurrent(items, async (data) => {
-      return this.createEntity(entityType, data, context);
-    }, { logger: this.logger });
+    const results = await executeBulkConcurrent(
+      items,
+      async (data) => {
+        return this.createEntity(entityType, data, context);
+      },
+      { logger: this.logger }
+    );
     return { results };
   }
 
@@ -288,9 +270,13 @@ export class TtdService {
     items: Array<{ entityId: string; data: Record<string, unknown> }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ success: boolean; entity?: unknown; error?: string }> }> {
-    const results = await executeBulkConcurrent(items, async (item) => {
-      return this.updateEntity(entityType, item.entityId, item.data, context);
-    }, { logger: this.logger });
+    const results = await executeBulkConcurrent(
+      items,
+      async (item) => {
+        return this.updateEntity(entityType, item.entityId, item.data, context);
+      },
+      { logger: this.logger }
+    );
     return { results };
   }
 
@@ -305,9 +291,13 @@ export class TtdService {
     entityIds: string[],
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await executeBulkConcurrent(entityIds, async (entityId) => {
-      return this.updateAvailability(entityType, entityId, "Archived", context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      entityIds,
+      async (entityId) => {
+        return this.updateAvailability(entityType, entityId, "Archived", context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -330,9 +320,13 @@ export class TtdService {
     status: "Available" | "Paused" | "Archived",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await executeBulkConcurrent(entityIds, async (entityId) => {
-      return this.updateAvailability(entityType, entityId, status, context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      entityIds,
+      async (entityId) => {
+        return this.updateAvailability(entityType, entityId, status, context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -360,25 +354,19 @@ export class TtdService {
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
     // GET current entity (full payload)
-    const current = (await this.httpClient.fetch(
-      `${config.apiPath}/${entityId}`,
-      context,
-      { method: "GET" }
-    )) as Record<string, unknown>;
+    const current = (await this.httpClient.fetch(`${config.apiPath}/${entityId}`, context, {
+      method: "GET",
+    })) as Record<string, unknown>;
 
     // Set Availability on the full entity
     current.Availability = availability;
 
     // PUT full entity back (no ID in URL, ID already in body)
     await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch(
-      config.apiPath,
-      context,
-      {
-        method: "PUT",
-        body: JSON.stringify(current),
-      }
-    );
+    return this.httpClient.fetch(config.apiPath, context, {
+      method: "PUT",
+      body: JSON.stringify(current),
+    });
   }
 
   // ─── Bid Adjustment ───────────────────────────────────────────────
@@ -394,16 +382,24 @@ export class TtdService {
       currencyCode?: string;
     }>,
     context?: RequestContext
-  ): Promise<{ results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> }> {
+  ): Promise<{
+    results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }>;
+  }> {
     const partnerId = this.httpClient.partnerId;
 
     const adGroupConfig = getEntityConfig("adGroup");
 
     // Phase 1: Fetch all current ad group entities in parallel (concurrency=5)
-    const getResults = await executeBulkConcurrent(adjustments, async (adj) => {
-      await this.rateLimiter.consume(`ttd:${partnerId}`);
-      return this.httpClient.fetch(`${adGroupConfig.apiPath}/${adj.adGroupId}`, context, { method: "GET" });
-    }, { logger: this.logger });
+    const getResults = await executeBulkConcurrent(
+      adjustments,
+      async (adj) => {
+        await this.rateLimiter.consume(`ttd:${partnerId}`);
+        return this.httpClient.fetch(`${adGroupConfig.apiPath}/${adj.adGroupId}`, context, {
+          method: "GET",
+        });
+      },
+      { logger: this.logger }
+    );
 
     // Separate successful GETs from failed ones; build PUT inputs for successes
     type PutItem = {
@@ -413,8 +409,12 @@ export class TtdService {
     const putItems: PutItem[] = [];
     const putIndexMap: number[] = []; // maps putItems index → adjustments index
 
-    const results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }> =
-      new Array(adjustments.length);
+    const results: Array<{
+      adGroupId: string;
+      success: boolean;
+      entity?: unknown;
+      error?: string;
+    }> = new Array(adjustments.length);
 
     for (let i = 0; i < getResults.length; i++) {
       const getResult = getResults[i];
@@ -429,31 +429,40 @@ export class TtdService {
 
     // Phase 2: Apply bid adjustments and PUT all entities in parallel (concurrency=5)
     if (putItems.length > 0) {
-      const putResults = await executeBulkConcurrent(putItems, async ({ adj, current }) => {
-        const rtb = (current.RTBAttributes as Record<string, unknown>) || {};
-        const cc = adj.currencyCode || "USD";
+      const putResults = await executeBulkConcurrent(
+        putItems,
+        async ({ adj, current }) => {
+          const rtb = (current.RTBAttributes as Record<string, unknown>) || {};
+          const cc = adj.currencyCode || "USD";
 
-        if (adj.baseBidCpm !== undefined) {
-          rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
-        }
-        if (adj.maxBidCpm !== undefined) {
-          rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
-        }
+          if (adj.baseBidCpm !== undefined) {
+            rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
+          }
+          if (adj.maxBidCpm !== undefined) {
+            rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
+          }
 
-        // TTD PUT endpoints take no ID in URL; full entity with ID in body
-        await this.rateLimiter.consume(`ttd:${partnerId}`);
-        return this.httpClient.fetch(adGroupConfig.apiPath, context, {
-          method: "PUT",
-          body: JSON.stringify({ ...current, RTBAttributes: rtb }),
-        });
-      }, { logger: this.logger });
+          // TTD PUT endpoints take no ID in URL; full entity with ID in body
+          await this.rateLimiter.consume(`ttd:${partnerId}`);
+          return this.httpClient.fetch(adGroupConfig.apiPath, context, {
+            method: "PUT",
+            body: JSON.stringify({ ...current, RTBAttributes: rtb }),
+          });
+        },
+        { logger: this.logger }
+      );
 
       // Map PUT results back to the original adjustments index, preserving adGroupId
       for (let k = 0; k < putResults.length; k++) {
         const origIndex = putIndexMap[k];
         const adGroupId = adjustments[origIndex].adGroupId;
         const putResult = putResults[k];
-        results[origIndex] = { adGroupId, success: putResult.success, entity: putResult.entity, error: putResult.error };
+        results[origIndex] = {
+          adGroupId,
+          success: putResult.success,
+          entity: putResult.entity,
+          error: putResult.error,
+        };
       }
     }
 
@@ -478,25 +487,16 @@ export class TtdService {
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
     // GraphQL lives on a different host (desk.thetradedesk.com) from the REST API
-    return this.httpClient.fetchDirect(
-      this.graphqlUrl,
-      context,
-      {
-        method: "POST",
-        headers: options?.betaFeatures
-          ? { "TTD-GQL-Beta": options.betaFeatures }
-          : undefined,
-        body: JSON.stringify({ query, variables }),
-      }
-    );
+    return this.httpClient.fetchDirect(this.graphqlUrl, context, {
+      method: "POST",
+      headers: options?.betaFeatures ? { "TTD-GQL-Beta": options.betaFeatures } : undefined,
+      body: JSON.stringify({ query, variables }),
+    });
   }
 
   // ─── Workflows / Standard Jobs ───────────────────────────────────
 
-  async restRequest(
-    input: RestRequestInput,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async restRequest(input: RestRequestInput, context?: RequestContext): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
@@ -510,10 +510,7 @@ export class TtdService {
     });
   }
 
-  async getJobStatus(
-    jobId: number,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getJobStatus(jobId: number, context?: RequestContext): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
@@ -557,10 +554,7 @@ export class TtdService {
     });
   }
 
-  async getCampaignVersion(
-    campaignId: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getCampaignVersion(campaignId: string, context?: RequestContext): Promise<unknown> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
@@ -704,7 +698,10 @@ export class TtdService {
 
   // ─── Bid List CRUD ────────────────────────────────────────────────
 
-  async createBidList(data: Record<string, unknown>, context?: RequestContext): Promise<Record<string, unknown>> {
+  async createBidList(
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<Record<string, unknown>> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
     return this.httpClient.fetch("/bidlist", context, {
@@ -721,7 +718,10 @@ export class TtdService {
     }) as Promise<Record<string, unknown>>;
   }
 
-  async updateBidList(data: Record<string, unknown>, context?: RequestContext): Promise<Record<string, unknown>> {
+  async updateBidList(
+    data: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<Record<string, unknown>> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
     return this.httpClient.fetch("/bidlist", context, {
@@ -730,7 +730,10 @@ export class TtdService {
     }) as Promise<Record<string, unknown>>;
   }
 
-  async batchGetBidLists(bidListIds: string[], context?: RequestContext): Promise<Record<string, unknown>[]> {
+  async batchGetBidLists(
+    bidListIds: string[],
+    context?: RequestContext
+  ): Promise<Record<string, unknown>[]> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
     return this.httpClient.fetch("/bidlist/batch/get", context, {
@@ -739,7 +742,10 @@ export class TtdService {
     }) as Promise<Record<string, unknown>[]>;
   }
 
-  async batchUpdateBidLists(items: Record<string, unknown>[], context?: RequestContext): Promise<Record<string, unknown>[]> {
+  async batchUpdateBidLists(
+    items: Record<string, unknown>[],
+    context?: RequestContext
+  ): Promise<Record<string, unknown>[]> {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
     return this.httpClient.fetch("/bidlist/batch", context, {
@@ -777,5 +783,4 @@ export class TtdService {
       body: JSON.stringify(input),
     });
   }
-
 }

@@ -7,7 +7,11 @@ export const googleImportWorkflowPrompt: Prompt = {
   name: "msads_google_import_workflow",
   description: "Guide for importing campaigns from Google Ads into Microsoft Advertising",
   arguments: [
-    { name: "googleAccountId", description: "Google Ads customer ID (format: 123-456-7890)", required: true },
+    {
+      name: "googleAccountId",
+      description: "Google Ads customer ID (format: 123-456-7890)",
+      required: true,
+    },
   ],
 };
 

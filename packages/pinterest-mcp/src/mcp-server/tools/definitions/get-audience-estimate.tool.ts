@@ -25,10 +25,7 @@ Returns estimated reach and audience size ranges.
 
 export const GetDeliveryEstimateInputSchema = z
   .object({
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     targetingConfig: z
       .record(z.any())
       .describe("Targeting specification object with demographic and interest criteria"),
@@ -64,7 +61,9 @@ export async function getDeliveryEstimateLogic(
   };
 }
 
-export function getDeliveryEstimateResponseFormatter(result: GetDeliveryEstimateOutput): McpTextContent[] {
+export function getDeliveryEstimateResponseFormatter(
+  result: GetDeliveryEstimateOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

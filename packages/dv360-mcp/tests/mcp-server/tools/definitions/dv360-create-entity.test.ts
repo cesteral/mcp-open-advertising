@@ -6,15 +6,14 @@ const { mockResolveSessionServices } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js",
-  () => ({
-    getSupportedEntityTypesDynamic: vi.fn().mockReturnValue([
+vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () => ({
+  getSupportedEntityTypesDynamic: vi
+    .fn()
+    .mockReturnValue([
       "adGroup",
       "adGroupAd",
       "advertiser",
@@ -28,53 +27,56 @@ vi.mock(
       "locationList",
       "partner",
     ]),
-    getEntityConfigDynamic: vi.fn().mockReturnValue({
-      parentIds: ["advertiserId"],
-      filterParamIds: [],
-      queryParamIds: [],
-      supportsFilter: true,
-      supportsCreate: true,
-      supportsUpdate: true,
-      supportsDelete: true,
-      apiPath: "/advertisers/{advertiserId}/campaigns",
-      relationships: [
-        {
-          parentEntityType: "advertiser",
-          parentFieldName: "advertiserId",
-          required: true,
-          description: "Campaign must belong to an advertiser",
-        },
-      ],
-    }),
-    generateRelationshipDescription: vi.fn().mockReturnValue("campaign requires advertiserId"),
-    validateEntityRelationships: vi.fn().mockReturnValue([]),
-    getEntityHierarchyPath: vi.fn().mockReturnValue(["advertiser", "campaign"]),
-    getEntitySchemaForOperation: vi.fn().mockReturnValue(z.record(z.any())),
-    getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName", "entityStatus"]),
-  })
-);
+  getEntityConfigDynamic: vi.fn().mockReturnValue({
+    parentIds: ["advertiserId"],
+    filterParamIds: [],
+    queryParamIds: [],
+    supportsFilter: true,
+    supportsCreate: true,
+    supportsUpdate: true,
+    supportsDelete: true,
+    apiPath: "/advertisers/{advertiserId}/campaigns",
+    relationships: [
+      {
+        parentEntityType: "advertiser",
+        parentFieldName: "advertiserId",
+        required: true,
+        description: "Campaign must belong to an advertiser",
+      },
+    ],
+  }),
+  generateRelationshipDescription: vi.fn().mockReturnValue("campaign requires advertiserId"),
+  validateEntityRelationships: vi.fn().mockReturnValue([]),
+  getEntityHierarchyPath: vi.fn().mockReturnValue(["advertiser", "campaign"]),
+  getEntitySchemaForOperation: vi.fn().mockReturnValue(z.record(z.any())),
+  getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName", "entityStatus"]),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-id-extraction.js",
-  () => ({
-    extractParentIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
-      const ids: Record<string, string> = {};
-      for (const key of ["partnerId", "advertiserId", "campaignId", "insertionOrderId", "lineItemId", "adGroupId"]) {
-        if (input[key] && typeof input[key] === "string") {
-          ids[key] = input[key] as string;
-        }
+vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", () => ({
+  extractParentIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
+    const ids: Record<string, string> = {};
+    for (const key of [
+      "partnerId",
+      "advertiserId",
+      "campaignId",
+      "insertionOrderId",
+      "lineItemId",
+      "adGroupId",
+    ]) {
+      if (input[key] && typeof input[key] === "string") {
+        ids[key] = input[key] as string;
       }
-      return ids;
-    }),
-    extractEntityIds: vi.fn(),
-  })
-);
+    }
+    return ids;
+  }),
+  extractEntityIds: vi.fn(),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/parent-id-validation.js",
-  () => ({
-    addIdValidationIssues: vi.fn(),
-    mergeIdsIntoData: vi.fn().mockImplementation(
+vi.mock("../../../../src/mcp-server/tools/utils/parent-id-validation.js", () => ({
+  addIdValidationIssues: vi.fn(),
+  mergeIdsIntoData: vi
+    .fn()
+    .mockImplementation(
       (_entityType: string, data: Record<string, unknown>, input: Record<string, unknown>) => {
         const merged = { ...data };
         for (const key of ["partnerId", "advertiserId", "campaignId", "insertionOrderId"]) {
@@ -85,29 +87,34 @@ vi.mock(
         return merged;
       }
     ),
-  })
-);
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/simplified-schemas.js",
-  () => ({
-    createSimplifiedCreateEntityInputSchema: vi.fn().mockReturnValue(
-      z.object({
-        entityType: z.enum([
-          "adGroup", "adGroupAd", "advertiser", "campaign", "creative",
-          "customBiddingAlgorithm", "insertionOrder", "inventorySource",
-          "inventorySourceGroup", "lineItem", "locationList", "partner",
-        ]),
-        partnerId: z.string().optional(),
-        advertiserId: z.string().optional(),
-        campaignId: z.string().optional(),
-        insertionOrderId: z.string().optional(),
-        lineItemId: z.string().optional(),
-        data: z.record(z.any()),
-      })
-    ),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/simplified-schemas.js", () => ({
+  createSimplifiedCreateEntityInputSchema: vi.fn().mockReturnValue(
+    z.object({
+      entityType: z.enum([
+        "adGroup",
+        "adGroupAd",
+        "advertiser",
+        "campaign",
+        "creative",
+        "customBiddingAlgorithm",
+        "insertionOrder",
+        "inventorySource",
+        "inventorySourceGroup",
+        "lineItem",
+        "locationList",
+        "partner",
+      ]),
+      partnerId: z.string().optional(),
+      advertiserId: z.string().optional(),
+      campaignId: z.string().optional(),
+      insertionOrderId: z.string().optional(),
+      lineItemId: z.string().optional(),
+      data: z.record(z.any()),
+    })
+  ),
+}));
 
 vi.mock("../../../../src/utils/errors/index.js", () => ({
   McpError: class McpError extends Error {
@@ -238,9 +245,7 @@ describe("dv360_create_entity", () => {
     });
 
     it("propagates service errors", async () => {
-      mockDv360Service.createEntity.mockRejectedValueOnce(
-        new Error("API quota exceeded")
-      );
+      mockDv360Service.createEntity.mockRejectedValueOnce(new Error("API quota exceeded"));
 
       await expect(
         createEntityLogic(

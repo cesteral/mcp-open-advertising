@@ -95,10 +95,7 @@ export class TikTokReportingService {
   /**
    * Poll a report task until it is DONE or FAILED.
    */
-  async pollReport(
-    taskId: string,
-    context?: RequestContext
-  ): Promise<ReportTaskCheckData> {
+  async pollReport(taskId: string, context?: RequestContext): Promise<ReportTaskCheckData> {
     this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
 
     try {
@@ -163,7 +160,11 @@ export class TikTokReportingService {
     context?: RequestContext,
     options: { includeRawCsv?: boolean } = {}
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; rawCsv?: string }> {
-    const response = await fetchWithTimeout(downloadUrl, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS, context);
+    const response = await fetchWithTimeout(
+      downloadUrl,
+      DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+      context
+    );
 
     if (!response.ok) {
       throw new McpError(
@@ -181,7 +182,10 @@ export class TikTokReportingService {
     }
 
     const csvText = await response.text();
-    const normalizedCsvText = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").trim();
+    const normalizedCsvText = csvText
+      .replace(/^\uFEFF/, "")
+      .replace(/\r\n/g, "\n")
+      .trim();
     // Guard against BOM-only or whitespace-only bodies before delegating to
     // the shared parser — parseCSV treats a whitespace line as a header row
     // of a single empty column, which would mislead downstream bounded-view
@@ -206,9 +210,7 @@ export class TikTokReportingService {
     }
 
     const limitedRecords = rows.slice(0, maxRows);
-    const rowArrays = limitedRecords.map((record) =>
-      headers.map((h) => record[h] ?? "")
-    );
+    const rowArrays = limitedRecords.map((record) => headers.map((h) => record[h] ?? ""));
 
     return {
       rows: rowArrays,
@@ -226,7 +228,8 @@ export class TikTokReportingService {
     maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
-    const maxRows = typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
+    const maxRows =
+      typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
     const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
 
     const { task_id } = await this.submitReport(reportConfig, requestContext);
@@ -237,7 +240,10 @@ export class TikTokReportingService {
     }
 
     if (!taskResult.download_url) {
-      throw new McpError(JsonRpcErrorCode.InternalError, `TikTok report task ${task_id} completed but has no download URL`);
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `TikTok report task ${task_id} completed but has no download URL`
+      );
     }
 
     const reportData = await this.downloadReport(taskResult.download_url, maxRows, requestContext);
@@ -265,5 +271,4 @@ export class TikTokReportingService {
 
     return this.getReport(configWithBreakdowns, maxRowsOrContext, context);
   }
-
 }

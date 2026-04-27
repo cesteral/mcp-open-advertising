@@ -77,7 +77,11 @@ export function resolveDatePreset(preset: DatePreset): ResolvedDateRange {
     case "LAST_MONTH": {
       const firstOfThisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       const lastOfLastMonth = addDays(firstOfThisMonth, -1);
-      const firstOfLastMonth = new Date(lastOfLastMonth.getFullYear(), lastOfLastMonth.getMonth(), 1);
+      const firstOfLastMonth = new Date(
+        lastOfLastMonth.getFullYear(),
+        lastOfLastMonth.getMonth(),
+        1
+      );
       return {
         startDate: formatDate(firstOfLastMonth),
         endDate: formatDate(lastOfLastMonth),

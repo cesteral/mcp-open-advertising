@@ -13,17 +13,17 @@
  * 5. Clean up temp spec file
  */
 
-import { execSync } from 'child_process';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { execSync } from "child_process";
+import { promises as fs } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PACKAGE_ROOT = path.resolve(__dirname, '..');
-const DISCOVERY_URL = 'https://www.googleapis.com/discovery/v1/apis/dfareporting/v5/rest';
-const GENERATED_DIR = path.join(PACKAGE_ROOT, 'src', 'generated');
-const SPEC_PATH = path.join(GENERATED_DIR, 'cm360-openapi.json');
-const TYPES_PATH = path.join(GENERATED_DIR, 'types.ts');
+const PACKAGE_ROOT = path.resolve(__dirname, "..");
+const DISCOVERY_URL = "https://www.googleapis.com/discovery/v1/apis/dfareporting/v5/rest";
+const GENERATED_DIR = path.join(PACKAGE_ROOT, "src", "generated");
+const SPEC_PATH = path.join(GENERATED_DIR, "cm360-openapi.json");
+const TYPES_PATH = path.join(GENERATED_DIR, "types.ts");
 
 // ---------------------------------------------------------------------------
 // Types
@@ -73,7 +73,7 @@ interface OpenAPIProperty {
   properties?: Record<string, OpenAPIProperty>;
   additionalProperties?: OpenAPIProperty | boolean;
   enum?: string[];
-  'x-enumDescriptions'?: string[];
+  "x-enumDescriptions"?: string[];
   pattern?: string;
   minimum?: string | number;
   maximum?: string | number;
@@ -85,7 +85,7 @@ interface OpenAPISchema extends OpenAPIProperty {
 }
 
 interface OpenAPISpec {
-  openapi: '3.0.0';
+  openapi: "3.0.0";
   info: {
     title: string;
     version: string;
@@ -114,7 +114,7 @@ async function fetchDiscoveryDoc(): Promise<DiscoveryDocument> {
       try {
         const response = await fetch(DISCOVERY_URL, {
           signal: controller.signal,
-          headers: { Accept: 'application/json' },
+          headers: { Accept: "application/json" },
         });
 
         if (!response.ok) {
@@ -124,12 +124,12 @@ async function fetchDiscoveryDoc(): Promise<DiscoveryDocument> {
         const data = (await response.json()) as unknown;
 
         if (
-          typeof data !== 'object' ||
+          typeof data !== "object" ||
           data === null ||
-          !('schemas' in data) ||
-          typeof (data as Record<string, unknown>).schemas !== 'object'
+          !("schemas" in data) ||
+          typeof (data as Record<string, unknown>).schemas !== "object"
         ) {
-          throw new Error('Invalid Discovery document: missing or invalid schemas field');
+          throw new Error("Invalid Discovery document: missing or invalid schemas field");
         }
 
         return data as DiscoveryDocument;
@@ -138,7 +138,8 @@ async function fetchDiscoveryDoc(): Promise<DiscoveryDocument> {
       }
     } catch (error: unknown) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      const msg = lastError.name === 'AbortError' ? 'Request timed out after 30s' : lastError.message;
+      const msg =
+        lastError.name === "AbortError" ? "Request timed out after 30s" : lastError.message;
       console.warn(`  Attempt ${attempt}/${maxRetries} failed: ${msg}`);
 
       if (attempt < maxRetries) {
@@ -163,7 +164,7 @@ async function fetchDiscoveryDoc(): Promise<DiscoveryDocument> {
  * If already in OpenAPI format, return as-is.
  */
 function convertRef(ref: string): string {
-  if (ref.startsWith('#/')) {
+  if (ref.startsWith("#/")) {
     return ref;
   }
   return `#/components/schemas/${ref}`;
@@ -180,7 +181,7 @@ function convertProperty(prop: DiscoveryProperty): OpenAPIProperty {
   // Discovery "repeated" means the field is an array of this type
   if (prop.repeated) {
     const inner = convertProperty({ ...prop, repeated: false });
-    return { type: 'array', items: inner };
+    return { type: "array", items: inner };
   }
 
   const out: OpenAPIProperty = {};
@@ -200,7 +201,7 @@ function convertProperty(prop: DiscoveryProperty): OpenAPIProperty {
   if (prop.enum !== undefined) {
     out.enum = prop.enum;
     if (prop.enumDescriptions !== undefined) {
-      out['x-enumDescriptions'] = prop.enumDescriptions;
+      out["x-enumDescriptions"] = prop.enumDescriptions;
     }
   }
 
@@ -212,7 +213,7 @@ function convertProperty(prop: DiscoveryProperty): OpenAPIProperty {
   }
 
   if (prop.additionalProperties !== undefined) {
-    if (typeof prop.additionalProperties === 'object') {
+    if (typeof prop.additionalProperties === "object") {
       out.additionalProperties = convertProperty(prop.additionalProperties);
     } else {
       out.additionalProperties = prop.additionalProperties;
@@ -266,7 +267,7 @@ function convertDiscoveryToOpenApi(discoveryDoc: DiscoveryDocument): OpenAPISpec
   }
 
   return {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
       title: discoveryDoc.title ?? `${discoveryDoc.name} API`,
       version: discoveryDoc.version,
@@ -293,29 +294,29 @@ async function ensureDirectory(dirPath: string): Promise<void> {
 
 async function main(): Promise<void> {
   const startTime = Date.now();
-  console.log('Starting CM360 type generation pipeline...\n');
+  console.log("Starting CM360 type generation pipeline...\n");
 
   // Step 1: Fetch Discovery Document
-  console.log('Step 1/4: Fetching CM360 API v5 Discovery Document...');
+  console.log("Step 1/4: Fetching CM360 API v5 Discovery Document...");
   const discoveryDoc = await fetchDiscoveryDoc();
   const schemaCount = Object.keys(discoveryDoc.schemas).length;
   console.log(`  Fetched ${schemaCount} schemas from Discovery Doc\n`);
 
   // Step 2: Convert to OpenAPI 3.0
-  console.log('Step 2/4: Converting to OpenAPI 3.0...');
+  console.log("Step 2/4: Converting to OpenAPI 3.0...");
   const openApiSpec = convertDiscoveryToOpenApi(discoveryDoc);
   console.log(`  Converted ${Object.keys(openApiSpec.components.schemas).length} schemas\n`);
 
   // Step 3: Save temp OpenAPI spec
-  console.log('Step 3/4: Saving OpenAPI spec and generating TypeScript types...');
+  console.log("Step 3/4: Saving OpenAPI spec and generating TypeScript types...");
   await ensureDirectory(GENERATED_DIR);
-  await fs.writeFile(SPEC_PATH, JSON.stringify(openApiSpec, null, 2), 'utf-8');
+  await fs.writeFile(SPEC_PATH, JSON.stringify(openApiSpec, null, 2), "utf-8");
 
   // Step 4: Run openapi-typescript
   try {
     execSync(`npx openapi-typescript "${SPEC_PATH}" -o "${TYPES_PATH}"`, {
       cwd: PACKAGE_ROOT,
-      stdio: 'inherit',
+      stdio: "inherit",
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -325,7 +326,7 @@ async function main(): Promise<void> {
   // Cleanup temp spec
   try {
     await fs.unlink(SPEC_PATH);
-    console.log('\n  Cleaned up temp spec file');
+    console.log("\n  Cleaned up temp spec file");
   } catch {
     // Non-fatal — file may not exist if openapi-typescript errored before write
   }

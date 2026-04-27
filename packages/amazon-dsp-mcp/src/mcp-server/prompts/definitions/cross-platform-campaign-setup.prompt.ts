@@ -16,8 +16,7 @@ export const crossPlatformCampaignSetupPrompt: Prompt = {
   arguments: [
     {
       name: "totalBudget",
-      description:
-        "Total campaign budget across all platforms (e.g., '50000' for $50,000)",
+      description: "Total campaign budget across all platforms (e.g., '50000' for $50,000)",
       required: false,
     },
     {
@@ -29,9 +28,7 @@ export const crossPlatformCampaignSetupPrompt: Prompt = {
   ],
 };
 
-export function getCrossPlatformCampaignSetupMessage(
-  args?: Record<string, string>,
-): string {
+export function getCrossPlatformCampaignSetupMessage(args?: Record<string, string>): string {
   const totalBudget = args?.totalBudget || "{totalBudget}";
   const objective = args?.objective || "conversion";
 

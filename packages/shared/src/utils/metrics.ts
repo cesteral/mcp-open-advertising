@@ -59,9 +59,7 @@ export function recordToolExecution(
  * Register an observable gauge that tracks the current number of active sessions.
  * Call this once at server startup, passing a function that returns the current count.
  */
-export function registerActiveSessionsGauge(
-  getSessionCount: () => number
-): ObservableGauge {
+export function registerActiveSessionsGauge(getSessionCount: () => number): ObservableGauge {
   const gauge = getMeter().createObservableGauge("mcp.session.active", {
     description: "Number of active MCP sessions",
     unit: "1",
@@ -81,10 +79,7 @@ let authValidationCounter: Counter | undefined;
 /**
  * Record an authentication validation attempt.
  */
-export function recordAuthValidation(
-  authType: string,
-  result: "success" | "failure"
-): void {
+export function recordAuthValidation(authType: string, result: "success" | "failure"): void {
   if (!authValidationCounter) {
     authValidationCounter = getMeter().createCounter("mcp.auth.validation.count", {
       description: "Number of authentication validation attempts",
@@ -106,14 +101,11 @@ let sessionRehydrationsCounter: Counter | undefined;
  */
 export function recordSessionRehydration(authType: string): void {
   if (!sessionRehydrationsCounter) {
-    sessionRehydrationsCounter = getMeter().createCounter(
-      "mcp_session_rehydrated_total",
-      {
-        description:
-          "Count of MCP sessions rebuilt from auth headers on a new instance (Cloud Run scale-out rebuild path).",
-        unit: "1",
-      }
-    );
+    sessionRehydrationsCounter = getMeter().createCounter("mcp_session_rehydrated_total", {
+      description:
+        "Count of MCP sessions rebuilt from auth headers on a new instance (Cloud Run scale-out rebuild path).",
+      unit: "1",
+    });
   }
   sessionRehydrationsCounter.add(1, { auth_type: authType });
 }

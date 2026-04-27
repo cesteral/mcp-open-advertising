@@ -115,13 +115,17 @@ function buildAllExamplesMarkdown(): string {
   );
 }
 
-export const entityExampleResources: Resource[] = AMAZON_DSP_CANONICAL_ENTITY_TYPES.map((entityType) => ({
-  uri: `entity-examples://amazonDsp/${entityType}`,
-  name: `Amazon DSP ${entityType} Examples`,
-  description: `Example payloads for creating and updating Amazon DSP ${entityType} entities`,
-  mimeType: "text/markdown",
-  getContent: () => ENTITY_EXAMPLES[entityType] ?? `# Amazon DSP ${entityType} Examples\n\nNo examples available.\n`,
-}));
+export const entityExampleResources: Resource[] = AMAZON_DSP_CANONICAL_ENTITY_TYPES.map(
+  (entityType) => ({
+    uri: `entity-examples://amazonDsp/${entityType}`,
+    name: `Amazon DSP ${entityType} Examples`,
+    description: `Example payloads for creating and updating Amazon DSP ${entityType} entities`,
+    mimeType: "text/markdown",
+    getContent: () =>
+      ENTITY_EXAMPLES[entityType] ??
+      `# Amazon DSP ${entityType} Examples\n\nNo examples available.\n`,
+  })
+);
 
 export const entityExampleAllResource: Resource = {
   uri: "entity-examples://amazonDsp/all",

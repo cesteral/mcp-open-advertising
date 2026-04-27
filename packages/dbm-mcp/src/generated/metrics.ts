@@ -108,7 +108,7 @@ export const MetricTypeSchema = z.enum([
   "METRIC_UNIQUE_REACH_CLICK_REACH",
   "METRIC_UNIQUE_REACH_IMPRESSION_REACH",
   "METRIC_UNIQUE_REACH_TOTAL_REACH",
-  "METRIC_VIDEO_COMPLETION_RATE"
+  "METRIC_VIDEO_COMPLETION_RATE",
 ]);
 
 export type MetricType = z.infer<typeof MetricTypeSchema>;
@@ -132,806 +132,816 @@ export interface MetricMetadata {
  * Complete metadata for all metrics
  */
 export const METRIC_METADATA: Record<MetricType, MetricMetadata> = {
-  "METRIC_ACTIVE_VIEW_AUDIBLE_2_SEC_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_AUDIBLE_2_SEC_IMPRESSIONS: {
     displayName: "Active View: Audible (Unmuted) for 2 sec Impressions",
     reportBuilderName: "Active View: Audible (Unmuted) for 2 sec Impressions",
     category: "Viewability",
     description: "Impressions audible and unmuted for 2 seconds",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_AND_BACKGROUND_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_AUDIBLE_AND_BACKGROUND_IMPRESSIONS: {
     displayName: "Active View: Audible and Background Impressions",
     reportBuilderName: "Active View: Audible and Background Impressions",
     category: "Viewability",
     description: "Audible impressions including background",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_IMPRESSIONS": {
-    displayName: "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Impressions",
-    reportBuilderName: "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Impressions",
+  METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_IMPRESSIONS: {
+    displayName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Impressions",
+    reportBuilderName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Impressions",
     category: "Viewability",
     description: "Fully viewable audible impressions for half duration",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_MEASURABLE_IMPRESSIONS": {
-    displayName: "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Measurable Impressions",
-    reportBuilderName: "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Measurable Impressions",
+  METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_MEASURABLE_IMPRESSIONS: {
+    displayName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Measurable Impressions",
+    reportBuilderName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Measurable Impressions",
     category: "Viewability",
     description: "Measurable impressions for audible fully on-screen",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_RATE": {
+  METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_RATE: {
     displayName: "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Rate",
-    reportBuilderName: "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Rate",
+    reportBuilderName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (15 sec. cap) Rate",
     category: "Viewability",
     description: "Rate of audible fully on-screen impressions",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_TRUEVIEW_IMPRESSIONS": {
-    displayName: "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Impressions",
-    reportBuilderName: "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Impressions",
+  METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_TRUEVIEW_IMPRESSIONS: {
+    displayName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Impressions",
+    reportBuilderName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Impressions",
     category: "Viewability",
     description: "TrueView audible fully on-screen impressions",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_TRUEVIEW_MEASURABLE_IMPRESSIONS": {
-    displayName: "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Measurable Impressions",
-    reportBuilderName: "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Measurable Impressions",
+  METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_TRUEVIEW_MEASURABLE_IMPRESSIONS: {
+    displayName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Measurable Impressions",
+    reportBuilderName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Measurable Impressions",
     category: "Viewability",
     description: "TrueView measurable impressions for audible viewability",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_TRUEVIEW_RATE": {
+  METRIC_ACTIVE_VIEW_AUDIBLE_FULLY_ON_SCREEN_HALF_OF_DURATION_TRUEVIEW_RATE: {
     displayName: "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Rate",
-    reportBuilderName: "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Rate",
+    reportBuilderName:
+      "Active View: Audible & Fully On-Screen for Half of Duration (TrueView) Rate",
     category: "Viewability",
     description: "TrueView rate for audible fully on-screen",
     dataType: "percentage",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_MEASURABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_AUDIBLE_MEASURABLE_IMPRESSIONS: {
     displayName: "Active View: Audible Measurable Impressions",
     reportBuilderName: "Active View: Audible Measurable Impressions",
     category: "Viewability",
     description: "Measurable impressions for audio",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_AUDIBLE_VISIBLE_ON_COMPLETE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_AUDIBLE_VISIBLE_ON_COMPLETE_IMPRESSIONS: {
     displayName: "Active View: Impressions Audible and Visible at Completion",
     reportBuilderName: "Active View: Impressions Audible and Visible at Completion",
     category: "Viewability",
     description: "Impressions audible and visible at completion",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_AVERAGE_VIEWABLE_TIME": {
+  METRIC_ACTIVE_VIEW_AVERAGE_VIEWABLE_TIME: {
     displayName: "Active View: Average Viewable Time (Seconds)",
     reportBuilderName: "Active View: Average Viewable Time (Seconds)",
     category: "Viewability",
     description: "Average time ad was viewable",
     dataType: "decimal",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_CUSTOM_METRIC_MEASURABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_CUSTOM_METRIC_MEASURABLE_IMPRESSIONS: {
     displayName: "Active View: Custom Metric Measurable Impressions",
     reportBuilderName: "Active View: Custom Metric Measurable Impressions",
     category: "Viewability",
     description: "Custom metric measurable impressions",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_CUSTOM_METRIC_VIEWABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_CUSTOM_METRIC_VIEWABLE_IMPRESSIONS: {
     displayName: "Active View: Custom Metric Viewable Impressions",
     reportBuilderName: "Active View: Custom Metric Viewable Impressions",
     category: "Viewability",
     description: "Custom metric viewable impressions",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_CUSTOM_METRIC_VIEWABLE_RATE": {
+  METRIC_ACTIVE_VIEW_CUSTOM_METRIC_VIEWABLE_RATE: {
     displayName: "Active View: Custom Metric Viewable Rate",
     reportBuilderName: "Active View: Custom Metric Viewable Rate",
     category: "Viewability",
     description: "Custom metric viewable rate",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_DISTRIBUTION_UNMEASURABLE": {
+  METRIC_ACTIVE_VIEW_DISTRIBUTION_UNMEASURABLE: {
     displayName: "Active View: Impression Distribution (Not Measurable)",
     reportBuilderName: "Active View: Impression Distribution (Not Measurable)",
     category: "Viewability",
     description: "Distribution of unmeasurable impressions",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_DISTRIBUTION_UNVIEWABLE": {
+  METRIC_ACTIVE_VIEW_DISTRIBUTION_UNVIEWABLE: {
     displayName: "Active View: Impression Distribution (Not Viewable)",
     reportBuilderName: "Active View: Impression Distribution (Not Viewable)",
     category: "Viewability",
     description: "Distribution of not viewable impressions",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_DISTRIBUTION_VIEWABLE": {
+  METRIC_ACTIVE_VIEW_DISTRIBUTION_VIEWABLE: {
     displayName: "Active View: Impression Distribution (Viewable)",
     reportBuilderName: "Active View: Impression Distribution (Viewable)",
     category: "Viewability",
     description: "Distribution of viewable impressions",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_ELIGIBLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_ELIGIBLE_IMPRESSIONS: {
     displayName: "Active View: Eligible Impressions",
     reportBuilderName: "Active View: Eligible Impressions",
     category: "Viewability",
     description: "Impressions eligible for Active View measurement",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_MEASURABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_MEASURABLE_IMPRESSIONS: {
     displayName: "Active View: Measurable Impressions",
     reportBuilderName: "Active View: Measurable Impressions",
     category: "Viewability",
     description: "Impressions that were measurable for viewability",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PCT_MEASURABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_PCT_MEASURABLE_IMPRESSIONS: {
     displayName: "Active View: % Measurable Impressions",
     reportBuilderName: "Active View: % Measurable Impressions",
     category: "Viewability",
     description: "Percentage of impressions that were measurable",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PCT_VIEWABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_PCT_VIEWABLE_IMPRESSIONS: {
     displayName: "Active View: % Viewable Impressions",
     reportBuilderName: "Active View: % Viewable Impressions",
     category: "Viewability",
     description: "Percentage of measurable impressions that were viewable",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_2_SEC": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_2_SEC: {
     displayName: "Active View: % of Audible (Unmuted) for 2 sec Impressions",
     reportBuilderName: "Active View: % of Audible (Unmuted) for 2 sec Impressions",
     category: "Viewability",
     description: "Percent audible for 2 seconds",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_30_SEC": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_30_SEC: {
     displayName: "Active View: % of Audible (Unmuted) for 30 sec Impressions",
     reportBuilderName: "Active View: % of Audible (Unmuted) for 30 sec Impressions",
     category: "Viewability",
     description: "Percent audible for 30 seconds",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_AND_BACKGROUND": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_AND_BACKGROUND: {
     displayName: "Active View: % of Audible and Background Impressions",
     reportBuilderName: "Active View: % of Audible and Background Impressions",
     category: "Viewability",
     description: "Percent audible including background",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_IMPRESSIONS: {
     displayName: "Active View: % Audible Impressions",
     reportBuilderName: "Active View: % Audible Impressions",
     category: "Viewability",
     description: "Percent of audible impressions",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_AT_START": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_AT_START: {
     displayName: "Active View: % Audible and Visible at Start",
     reportBuilderName: "Active View: % Audible and Visible at Start",
     category: "Viewability",
     description: "Percent audible and visible at start",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_FIRST_QUAR": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_FIRST_QUAR: {
     displayName: "Active View: % Audible and Visible at First Quartile",
     reportBuilderName: "Active View: % Audible and Visible at First Quartile",
     category: "Viewability",
     description: "Percent audible and visible at first quartile",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_ON_COMPLETE": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_ON_COMPLETE: {
     displayName: "Active View: % Audible and Visible at Completion",
     reportBuilderName: "Active View: % Audible and Visible at Completion",
     category: "Viewability",
     description: "Percent audible and visible at completion",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_SECOND_QUAR": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_SECOND_QUAR: {
     displayName: "Active View: % Audible and Visible at Midpoint",
     reportBuilderName: "Active View: % Audible and Visible at Midpoint",
     category: "Viewability",
     description: "Percent audible and visible at midpoint",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_THIRD_QUAR": {
+  METRIC_ACTIVE_VIEW_PERCENT_AUDIBLE_VISIBLE_THIRD_QUAR: {
     displayName: "Active View: % Audible and Visible at Third Quartile",
     reportBuilderName: "Active View: % Audible and Visible at Third Quartile",
     category: "Viewability",
     description: "Percent audible and visible at third quartile",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_UNMEASURABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_UNMEASURABLE_IMPRESSIONS: {
     displayName: "Active View: Not Measurable Impressions",
     reportBuilderName: "Active View: Not Measurable Impressions",
     category: "Viewability",
     description: "Impressions not measurable for viewability",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_UNVIEWABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_UNVIEWABLE_IMPRESSIONS: {
     displayName: "Active View: Not Viewable Impressions",
     reportBuilderName: "Active View: Not Viewable Impressions",
     category: "Viewability",
     description: "Impressions that were not viewable",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ACTIVE_VIEW_VIEWABLE_IMPRESSIONS": {
+  METRIC_ACTIVE_VIEW_VIEWABLE_IMPRESSIONS: {
     displayName: "Active View: Viewable Impressions",
     reportBuilderName: "Active View: Viewable Impressions",
     category: "Viewability",
     description: "Impressions that were viewable (50% visible for 1 second)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_BILLABLE_COST_ADVERTISER": {
+  METRIC_BILLABLE_COST_ADVERTISER: {
     displayName: "Billable Cost (Advertiser Currency)",
     reportBuilderName: "Billable Cost (Advertiser Currency)",
     category: "Cost",
     description: "Billable cost in advertiser currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_BILLABLE_COST_PARTNER": {
+  METRIC_BILLABLE_COST_PARTNER: {
     displayName: "Billable Cost (Partner Currency)",
     reportBuilderName: "Billable Cost (Partner Currency)",
     category: "Cost",
     description: "Billable cost in partner currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_BILLABLE_COST_USD": {
+  METRIC_BILLABLE_COST_USD: {
     displayName: "Billable Cost (USD)",
     reportBuilderName: "Billable Cost (USD)",
     category: "Cost",
     description: "Billable cost in USD",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_BILLABLE_IMPRESSIONS": {
+  METRIC_BILLABLE_IMPRESSIONS: {
     displayName: "Billable Impressions",
     reportBuilderName: "Billable Impressions",
     category: "Delivery",
     description: "Number of billable impressions",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_CLICKS": {
+  METRIC_CLICKS: {
     displayName: "Clicks",
     reportBuilderName: "Clicks",
     category: "Delivery",
     description: "Total number of clicks",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_CM360_POST_CLICK_REVENUE": {
+  METRIC_CM360_POST_CLICK_REVENUE: {
     displayName: "CM360 Post-Click Revenue",
     reportBuilderName: "CM360 Post-Click Revenue",
     category: "Conversion",
     description: "Revenue from post-click conversions (CM360)",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_CM360_POST_VIEW_REVENUE": {
+  METRIC_CM360_POST_VIEW_REVENUE: {
     displayName: "CM360 Post-View Revenue",
     reportBuilderName: "CM360 Post-View Revenue",
     category: "Conversion",
     description: "Revenue from post-view conversions (CM360)",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_CTR": {
+  METRIC_CTR: {
     displayName: "Click Rate (CTR)",
     reportBuilderName: "Click Rate (CTR)",
     category: "Delivery",
     description: "Click-through rate (clicks / impressions * 100)",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ENGAGEMENTS": {
+  METRIC_ENGAGEMENTS: {
     displayName: "Engagements",
     reportBuilderName: "Engagements",
     category: "Engagement",
     description: "Total number of engagements",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_ENGAGEMENT_RATE": {
+  METRIC_ENGAGEMENT_RATE: {
     displayName: "Engagement Rate",
     reportBuilderName: "Engagement Rate",
     category: "Engagement",
     description: "Rate of engagements",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_FLOODLIGHT_IMPRESSIONS": {
+  METRIC_FLOODLIGHT_IMPRESSIONS: {
     displayName: "Floodlight Impressions",
     reportBuilderName: "Floodlight Impressions",
     category: "Conversion",
     description: "Impressions with Floodlight tracking",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT"]
+    reportTypes: ["STANDARD", "FLOODLIGHT"],
   },
-  "METRIC_IMPRESSIONS": {
+  METRIC_IMPRESSIONS: {
     displayName: "Impressions",
     reportBuilderName: "Impressions",
     category: "Delivery",
     description: "Total number of impressions served",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_LAST_CLICKS": {
+  METRIC_LAST_CLICKS: {
     displayName: "Post-Click Conversions",
     reportBuilderName: "Post-Click Conversions",
     category: "Conversion",
     description: "Conversions attributed to last click",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_LAST_IMPRESSIONS": {
+  METRIC_LAST_IMPRESSIONS: {
     displayName: "Post-View Conversions",
     reportBuilderName: "Post-View Conversions",
     category: "Conversion",
     description: "Conversions attributed to last impression",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_ADVERTISER": {
+  METRIC_MEDIA_COST_ADVERTISER: {
     displayName: "Media Cost (Advertiser Currency)",
     reportBuilderName: "Media Cost (Advertiser Currency)",
     category: "Cost",
     description: "Media cost in advertiser currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_ECPA_ADVERTISER": {
+  METRIC_MEDIA_COST_ECPA_ADVERTISER: {
     displayName: "Media Cost eCPA (Advertiser Currency)",
     reportBuilderName: "Media Cost eCPA (Advertiser Currency)",
     category: "Cost",
     description: "Effective CPA for media cost",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_ECPC_ADVERTISER": {
+  METRIC_MEDIA_COST_ECPC_ADVERTISER: {
     displayName: "Media Cost eCPC (Advertiser Currency)",
     reportBuilderName: "Media Cost eCPC (Advertiser Currency)",
     category: "Cost",
     description: "Effective CPC for media cost",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_ECPM_ADVERTISER": {
+  METRIC_MEDIA_COST_ECPM_ADVERTISER: {
     displayName: "Media Cost eCPM (Advertiser Currency)",
     reportBuilderName: "Media Cost eCPM (Advertiser Currency)",
     category: "Cost",
     description: "Effective CPM for media cost",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_ECPM_PARTNER": {
+  METRIC_MEDIA_COST_ECPM_PARTNER: {
     displayName: "Media Cost eCPM (Partner Currency)",
     reportBuilderName: "Media Cost eCPM (Partner Currency)",
     category: "Cost",
     description: "Effective CPM in partner currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_ECPM_USD": {
+  METRIC_MEDIA_COST_ECPM_USD: {
     displayName: "Media Cost eCPM (USD)",
     reportBuilderName: "Media Cost eCPM (USD)",
     category: "Cost",
     description: "Effective CPM in USD",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_PARTNER": {
+  METRIC_MEDIA_COST_PARTNER: {
     displayName: "Media Cost (Partner Currency)",
     reportBuilderName: "Media Cost (Partner Currency)",
     category: "Cost",
     description: "Media cost in partner currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_MEDIA_COST_USD": {
+  METRIC_MEDIA_COST_USD: {
     displayName: "Media Cost (USD)",
     reportBuilderName: "Media Cost (USD)",
     category: "Cost",
     description: "Media cost in USD",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_REVENUE_ADVERTISER": {
+  METRIC_REVENUE_ADVERTISER: {
     displayName: "Revenue (Advertiser Currency)",
     reportBuilderName: "Revenue (Advertiser Currency)",
     category: "Revenue",
     description: "Total revenue in advertiser currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_REVENUE_ECPA_ADVERTISER": {
+  METRIC_REVENUE_ECPA_ADVERTISER: {
     displayName: "Revenue eCPA (Advertiser Currency)",
     reportBuilderName: "Revenue eCPA (Advertiser Currency)",
     category: "Revenue",
     description: "Effective CPA for revenue",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_REVENUE_ECPC_ADVERTISER": {
+  METRIC_REVENUE_ECPC_ADVERTISER: {
     displayName: "Revenue eCPC (Advertiser Currency)",
     reportBuilderName: "Revenue eCPC (Advertiser Currency)",
     category: "Revenue",
     description: "Effective CPC for revenue",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_REVENUE_ECPM_ADVERTISER": {
+  METRIC_REVENUE_ECPM_ADVERTISER: {
     displayName: "Revenue eCPM (Advertiser Currency)",
     reportBuilderName: "Revenue eCPM (Advertiser Currency)",
     category: "Revenue",
     description: "Effective CPM for revenue",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_REVENUE_PARTNER": {
+  METRIC_REVENUE_PARTNER: {
     displayName: "Revenue (Partner Currency)",
     reportBuilderName: "Revenue (Partner Currency)",
     category: "Revenue",
     description: "Total revenue in partner currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_REVENUE_USD": {
+  METRIC_REVENUE_USD: {
     displayName: "Revenue (USD)",
     reportBuilderName: "Revenue (USD)",
     category: "Revenue",
     description: "Total revenue in USD",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_COMPLETIONS": {
+  METRIC_RICH_MEDIA_VIDEO_COMPLETIONS: {
     displayName: "Complete Views (Video)",
     reportBuilderName: "Complete Views (Video)",
     category: "Video",
     description: "Videos watched to completion (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_FIRST_QUARTILE_COMPLETES": {
+  METRIC_RICH_MEDIA_VIDEO_FIRST_QUARTILE_COMPLETES: {
     displayName: "First-Quartile Views (Video)",
     reportBuilderName: "First-Quartile Views (Video)",
     category: "Video",
     description: "Videos watched to 25% (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_FULL_SCREENS": {
+  METRIC_RICH_MEDIA_VIDEO_FULL_SCREENS: {
     displayName: "Fullscreens (Video)",
     reportBuilderName: "Fullscreens (Video)",
     category: "Video",
     description: "Video fullscreen events (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_MIDPOINTS": {
+  METRIC_RICH_MEDIA_VIDEO_MIDPOINTS: {
     displayName: "Midpoint Views (Video)",
     reportBuilderName: "Midpoint Views (Video)",
     category: "Video",
     description: "Videos watched to 50% (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_MUTES": {
+  METRIC_RICH_MEDIA_VIDEO_MUTES: {
     displayName: "Audio Mutes (Video)",
     reportBuilderName: "Audio Mutes (Video)",
     category: "Video",
     description: "Video mute events (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_PAUSES": {
+  METRIC_RICH_MEDIA_VIDEO_PAUSES: {
     displayName: "Pauses (Video)",
     reportBuilderName: "Pauses (Video)",
     category: "Video",
     description: "Video pause events (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_PLAYS": {
+  METRIC_RICH_MEDIA_VIDEO_PLAYS: {
     displayName: "Starts (Video)",
     reportBuilderName: "Starts (Video)",
     category: "Video",
     description: "Video play starts (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_SKIPS": {
+  METRIC_RICH_MEDIA_VIDEO_SKIPS: {
     displayName: "Skips (Video)",
     reportBuilderName: "Skips (Video)",
     category: "Video",
     description: "Video skips (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_RICH_MEDIA_VIDEO_THIRD_QUARTILE_COMPLETES": {
+  METRIC_RICH_MEDIA_VIDEO_THIRD_QUARTILE_COMPLETES: {
     displayName: "Third-Quartile Views (Video)",
     reportBuilderName: "Third-Quartile Views (Video)",
     category: "Video",
     description: "Videos watched to 75% (rich media)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TOTAL_CONVERSIONS": {
+  METRIC_TOTAL_CONVERSIONS: {
     displayName: "Total Conversions",
     reportBuilderName: "Total Conversions",
     category: "Conversion",
     description: "Total conversions (post-click + post-view)",
     dataType: "integer",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TOTAL_MEDIA_COST_ADVERTISER": {
+  METRIC_TOTAL_MEDIA_COST_ADVERTISER: {
     displayName: "Total Media Cost (Advertiser Currency)",
     reportBuilderName: "Total Media Cost (Advertiser Currency)",
     category: "Cost",
     description: "Total media cost in advertiser currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TOTAL_MEDIA_COST_ECPA_ADVERTISER": {
+  METRIC_TOTAL_MEDIA_COST_ECPA_ADVERTISER: {
     displayName: "Total Media Cost eCPA (Advertiser Currency)",
     reportBuilderName: "Total Media Cost eCPA (Advertiser Currency)",
     category: "Cost",
     description: "Total media cost per acquisition",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TOTAL_MEDIA_COST_ECPC_ADVERTISER": {
+  METRIC_TOTAL_MEDIA_COST_ECPC_ADVERTISER: {
     displayName: "Total Media Cost eCPC (Advertiser Currency)",
     reportBuilderName: "Total Media Cost eCPC (Advertiser Currency)",
     category: "Cost",
     description: "Total media cost per click",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TOTAL_MEDIA_COST_ECPM_ADVERTISER": {
+  METRIC_TOTAL_MEDIA_COST_ECPM_ADVERTISER: {
     displayName: "Total Media Cost eCPM (Advertiser Currency)",
     reportBuilderName: "Total Media Cost eCPM (Advertiser Currency)",
     category: "Cost",
     description: "Total media cost per thousand impressions",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TOTAL_MEDIA_COST_PARTNER": {
+  METRIC_TOTAL_MEDIA_COST_PARTNER: {
     displayName: "Total Media Cost (Partner Currency)",
     reportBuilderName: "Total Media Cost (Partner Currency)",
     category: "Cost",
     description: "Total media cost in partner currency",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TOTAL_MEDIA_COST_USD": {
+  METRIC_TOTAL_MEDIA_COST_USD: {
     displayName: "Total Media Cost (USD)",
     reportBuilderName: "Total Media Cost (USD)",
     category: "Cost",
     description: "Total media cost in USD",
     dataType: "currency",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
   },
-  "METRIC_TRUEVIEW_CONVERSION_MANY_PER_VIEW": {
+  METRIC_TRUEVIEW_CONVERSION_MANY_PER_VIEW: {
     displayName: "Conversions (TrueView)",
     reportBuilderName: "Conversions",
     category: "TrueView",
     description: "TrueView conversions (many per view)",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_CPV_ADVERTISER": {
+  METRIC_TRUEVIEW_CPV_ADVERTISER: {
     displayName: "Revenue eCPV (Advertiser Currency)",
     reportBuilderName: "Revenue eCPV (Advertiser Currency)",
     category: "TrueView",
     description: "Cost per view in advertiser currency",
     dataType: "currency",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_CPV_PARTNER": {
+  METRIC_TRUEVIEW_CPV_PARTNER: {
     displayName: "Revenue eCPV (Partner Currency)",
     reportBuilderName: "Revenue eCPV (Partner Currency)",
     category: "TrueView",
     description: "Cost per view in partner currency",
     dataType: "currency",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_CPV_USD": {
+  METRIC_TRUEVIEW_CPV_USD: {
     displayName: "Revenue eCPV (USD)",
     reportBuilderName: "Revenue eCPV (USD)",
     category: "TrueView",
     description: "Cost per view in USD",
     dataType: "currency",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_EARNED_LIKES": {
+  METRIC_TRUEVIEW_EARNED_LIKES: {
     displayName: "Earned Likes",
     reportBuilderName: "Earned Likes",
     category: "TrueView",
     description: "Organic likes from TrueView campaigns",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_EARNED_PLAYLIST_ADDITIONS": {
+  METRIC_TRUEVIEW_EARNED_PLAYLIST_ADDITIONS: {
     displayName: "Earned Playlist Additions",
     reportBuilderName: "Earned Playlist Additions",
     category: "TrueView",
     description: "Playlist additions from TrueView campaigns",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_EARNED_SHARES": {
+  METRIC_TRUEVIEW_EARNED_SHARES: {
     displayName: "Earned Shares",
     reportBuilderName: "Earned Shares",
     category: "TrueView",
     description: "Shares from TrueView campaigns",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_EARNED_SUBSCRIBERS": {
+  METRIC_TRUEVIEW_EARNED_SUBSCRIBERS: {
     displayName: "Earned Subscribers",
     reportBuilderName: "Earned Subscribers",
     category: "TrueView",
     description: "Subscribers gained from TrueView campaigns",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_EARNED_VIEWS": {
+  METRIC_TRUEVIEW_EARNED_VIEWS: {
     displayName: "Earned Views",
     reportBuilderName: "Earned Views",
     category: "TrueView",
     description: "Organic views from TrueView campaigns",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_ENGAGEMENTS": {
+  METRIC_TRUEVIEW_ENGAGEMENTS: {
     displayName: "Engagements (YouTube)",
     reportBuilderName: "Engagements (YouTube)",
     category: "TrueView",
     description: "YouTube/TrueView engagements",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_ENGAGEMENT_RATE": {
+  METRIC_TRUEVIEW_ENGAGEMENT_RATE: {
     displayName: "Engagement Rate (YouTube)",
     reportBuilderName: "Engagement Rate (YouTube)",
     category: "TrueView",
     description: "YouTube/TrueView engagement rate",
     dataType: "percentage",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_IMPRESSION_SHARE": {
+  METRIC_TRUEVIEW_IMPRESSION_SHARE: {
     displayName: "Impression Share",
     reportBuilderName: "Impression Share",
     category: "TrueView",
     description: "Share of available impressions",
     dataType: "percentage",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_LOST_IS_BUDGET": {
+  METRIC_TRUEVIEW_LOST_IS_BUDGET: {
     displayName: "Lost Impression Share (Budget)",
     reportBuilderName: "Lost Impression Share (Budget)",
     category: "TrueView",
     description: "Impression share lost due to budget",
     dataType: "percentage",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_LOST_IS_RANK": {
+  METRIC_TRUEVIEW_LOST_IS_RANK: {
     displayName: "Lost Impression Share (Rank)",
     reportBuilderName: "Lost Impression Share (Rank)",
     category: "TrueView",
     description: "Impression share lost due to rank",
     dataType: "percentage",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_UNIQUE_VIEWERS": {
+  METRIC_TRUEVIEW_UNIQUE_VIEWERS: {
     displayName: "Unique Viewers",
     reportBuilderName: "Unique Viewers",
     category: "TrueView",
     description: "Unique viewers of TrueView ads",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_VIEWS": {
+  METRIC_TRUEVIEW_VIEWS: {
     displayName: "TrueView: Views",
     reportBuilderName: "TrueView: Views",
     category: "TrueView",
     description: "TrueView video views (watched 30s or to completion)",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_VIEW_RATE": {
+  METRIC_TRUEVIEW_VIEW_RATE: {
     displayName: "TrueView: View Rate",
     reportBuilderName: "TrueView: View Rate",
     category: "TrueView",
     description: "TrueView view rate (views / impressions)",
     dataType: "percentage",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_TRUEVIEW_VIEW_THROUGH_CONVERSION": {
+  METRIC_TRUEVIEW_VIEW_THROUGH_CONVERSION: {
     displayName: "View through Conversion",
     reportBuilderName: "View through Conversion",
     category: "TrueView",
     description: "TrueView view-through conversions",
     dataType: "integer",
-    reportTypes: ["YOUTUBE"]
+    reportTypes: ["YOUTUBE"],
   },
-  "METRIC_UNIQUE_REACH_AVERAGE_IMPRESSION_FREQUENCY": {
+  METRIC_UNIQUE_REACH_AVERAGE_IMPRESSION_FREQUENCY: {
     displayName: "Unique Reach: Average Impression Frequency",
     reportBuilderName: "Unique Reach: Average Impression Frequency",
     category: "Reach",
     description: "Average impressions per unique user",
     dataType: "decimal",
-    reportTypes: ["REACH","UNIQUE_REACH_AUDIENCE"]
+    reportTypes: ["REACH", "UNIQUE_REACH_AUDIENCE"],
   },
-  "METRIC_UNIQUE_REACH_CLICK_REACH": {
+  METRIC_UNIQUE_REACH_CLICK_REACH: {
     displayName: "Unique Reach: Click Reach",
     reportBuilderName: "Unique Reach: Click Reach",
     category: "Reach",
     description: "Unique users who clicked",
     dataType: "integer",
-    reportTypes: ["REACH","UNIQUE_REACH_AUDIENCE"]
+    reportTypes: ["REACH", "UNIQUE_REACH_AUDIENCE"],
   },
-  "METRIC_UNIQUE_REACH_IMPRESSION_REACH": {
+  METRIC_UNIQUE_REACH_IMPRESSION_REACH: {
     displayName: "Unique Reach: Impression Reach",
     reportBuilderName: "Unique Reach: Impression Reach",
     category: "Reach",
     description: "Unique users reached via impressions",
     dataType: "integer",
-    reportTypes: ["REACH","UNIQUE_REACH_AUDIENCE"]
+    reportTypes: ["REACH", "UNIQUE_REACH_AUDIENCE"],
   },
-  "METRIC_UNIQUE_REACH_TOTAL_REACH": {
+  METRIC_UNIQUE_REACH_TOTAL_REACH: {
     displayName: "Unique Reach: Total Reach",
     reportBuilderName: "Unique Reach: Total Reach",
     category: "Reach",
     description: "Total unique users reached",
     dataType: "integer",
-    reportTypes: ["REACH","UNIQUE_REACH_AUDIENCE"]
+    reportTypes: ["REACH", "UNIQUE_REACH_AUDIENCE"],
   },
-  "METRIC_VIDEO_COMPLETION_RATE": {
+  METRIC_VIDEO_COMPLETION_RATE: {
     displayName: "Completion Rate (Video)",
     reportBuilderName: "Completion Rate (Video)",
     category: "Video",
     description: "Percentage of videos watched to completion",
     dataType: "percentage",
-    reportTypes: ["STANDARD","FLOODLIGHT","AUDIENCE_COMPOSITION"]
-  }
+    reportTypes: ["STANDARD", "FLOODLIGHT", "AUDIENCE_COMPOSITION"],
+  },
 };
 
 /**
@@ -946,7 +956,7 @@ export const METRIC_CATEGORIES = [
   "Reach",
   "TrueView",
   "Conversion",
-  "Engagement"
+  "Engagement",
 ] as const;
 
 export type MetricCategory = (typeof METRIC_CATEGORIES)[number];
@@ -971,18 +981,14 @@ export function isValidMetricType(value: string): value is MetricType {
  * Common metric combinations for typical use cases
  */
 export const COMMON_METRIC_SETS = {
-  delivery: [
-    "METRIC_IMPRESSIONS",
-    "METRIC_CLICKS",
-    "METRIC_CTR"
-  ] as MetricType[],
+  delivery: ["METRIC_IMPRESSIONS", "METRIC_CLICKS", "METRIC_CTR"] as MetricType[],
 
   performance: [
     "METRIC_IMPRESSIONS",
     "METRIC_CLICKS",
     "METRIC_CTR",
     "METRIC_TOTAL_CONVERSIONS",
-    "METRIC_TOTAL_MEDIA_COST_ADVERTISER"
+    "METRIC_TOTAL_MEDIA_COST_ADVERTISER",
   ] as MetricType[],
 
   video: [
@@ -991,27 +997,27 @@ export const COMMON_METRIC_SETS = {
     "METRIC_VIDEO_COMPLETION_RATE",
     "METRIC_RICH_MEDIA_VIDEO_FIRST_QUARTILE_COMPLETES",
     "METRIC_RICH_MEDIA_VIDEO_MIDPOINTS",
-    "METRIC_RICH_MEDIA_VIDEO_THIRD_QUARTILE_COMPLETES"
+    "METRIC_RICH_MEDIA_VIDEO_THIRD_QUARTILE_COMPLETES",
   ] as MetricType[],
 
   viewability: [
     "METRIC_ACTIVE_VIEW_MEASURABLE_IMPRESSIONS",
     "METRIC_ACTIVE_VIEW_VIEWABLE_IMPRESSIONS",
     "METRIC_ACTIVE_VIEW_PCT_VIEWABLE_IMPRESSIONS",
-    "METRIC_ACTIVE_VIEW_PCT_MEASURABLE_IMPRESSIONS"
+    "METRIC_ACTIVE_VIEW_PCT_MEASURABLE_IMPRESSIONS",
   ] as MetricType[],
 
   reach: [
     "METRIC_UNIQUE_REACH_IMPRESSION_REACH",
     "METRIC_UNIQUE_REACH_CLICK_REACH",
     "METRIC_UNIQUE_REACH_TOTAL_REACH",
-    "METRIC_UNIQUE_REACH_AVERAGE_IMPRESSION_FREQUENCY"
+    "METRIC_UNIQUE_REACH_AVERAGE_IMPRESSION_FREQUENCY",
   ] as MetricType[],
 
   trueview: [
     "METRIC_TRUEVIEW_VIEWS",
     "METRIC_TRUEVIEW_VIEW_RATE",
     "METRIC_TRUEVIEW_EARNED_VIEWS",
-    "METRIC_TRUEVIEW_EARNED_SUBSCRIBERS"
-  ] as MetricType[]
+    "METRIC_TRUEVIEW_EARNED_SUBSCRIBERS",
+  ] as MetricType[],
 } as const;

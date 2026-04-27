@@ -46,9 +46,7 @@ export function createSimplifiedUpdateEntityInputSchema(): z.ZodTypeAny {
     adGroupId: z.string().optional().describe("Ad Group ID (if updating ad group)"),
     adId: z.string().optional().describe("Ad ID (if updating ad)"),
     creativeId: z.string().optional().describe("Creative ID (if updating creative)"),
-    data: z
-      .record(z.any())
-      .describe("Partial payload containing only fields to update."),
+    data: z.record(z.any()).describe("Partial payload containing only fields to update."),
     updateMask: z
       .string()
       .describe("Comma-separated field paths to update (e.g. displayName,entityStatus)."),

@@ -16,8 +16,7 @@ export const entityUpdateWorkflowPrompt: Prompt = {
   arguments: [
     {
       name: "entityType",
-      description:
-        "Entity type to update: campaign, adSet, ad, adCreative, or customAudience",
+      description: "Entity type to update: campaign, adSet, ad, adCreative, or customAudience",
       required: true,
     },
     {
@@ -28,9 +27,7 @@ export const entityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getEntityUpdateWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
 

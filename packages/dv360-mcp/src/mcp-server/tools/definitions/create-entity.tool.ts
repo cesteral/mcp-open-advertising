@@ -255,7 +255,10 @@ export const createEntityTool = {
             budgetSegments: [
               {
                 budgetAmountMicros: "50000000000",
-                dateRange: { startDate: { year: 2025, month: 1, day: 15 }, endDate: { year: 2025, month: 3, day: 31 } },
+                dateRange: {
+                  startDate: { year: 2025, month: 1, day: 15 },
+                  endDate: { year: 2025, month: 3, day: 31 },
+                },
               },
             ],
           },

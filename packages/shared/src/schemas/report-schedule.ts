@@ -34,14 +34,7 @@ export const ReportScheduleSummarySchema = z.object({
     "microsoft",
   ]),
   /** Cadence. `CUSTOM` covers platform-specific cron-like constructs. */
-  frequency: z.enum([
-    "SINGLE_RUN",
-    "DAILY",
-    "WEEKLY",
-    "MONTHLY",
-    "QUARTERLY",
-    "CUSTOM",
-  ]),
+  frequency: z.enum(["SINGLE_RUN", "DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "CUSTOM"]),
   /** Lifecycle state. */
   status: z.enum(["ACTIVE", "DISABLED"]),
   /** Platform report-type identifier when the platform exposes one. */
@@ -96,9 +89,7 @@ export function fromTtdSchedule(raw: {
     platform: "ttd",
     frequency: freqMap[scheduleType] ?? "CUSTOM",
     status: raw.Enabled === false ? "DISABLED" : "ACTIVE",
-    ...(raw.ReportTemplateId !== undefined
-      ? { reportType: String(raw.ReportTemplateId) }
-      : {}),
+    ...(raw.ReportTemplateId !== undefined ? { reportType: String(raw.ReportTemplateId) } : {}),
     ...(raw.AdvertiserFilters && raw.AdvertiserFilters.length > 0
       ? { advertiserIds: raw.AdvertiserFilters }
       : {}),
@@ -139,8 +130,9 @@ export function fromCm360Schedule(raw: {
   };
   // CM360 reports with no schedule block still have a valid get endpoint; we
   // treat those as SINGLE_RUN since they fire once when `runReport` is called.
-  const frequency: ReportScheduleSummary["frequency"] =
-    !schedule.repeats ? "SINGLE_RUN" : (freqMap[repeats] ?? "CUSTOM");
+  const frequency: ReportScheduleSummary["frequency"] = !schedule.repeats
+    ? "SINGLE_RUN"
+    : (freqMap[repeats] ?? "CUSTOM");
   return {
     scheduleId: String(raw.id ?? ""),
     name: raw.name ?? "",
@@ -148,9 +140,7 @@ export function fromCm360Schedule(raw: {
     frequency,
     status: schedule.active === false ? "DISABLED" : "ACTIVE",
     ...(raw.type ? { reportType: raw.type } : {}),
-    ...(raw.accountId !== undefined
-      ? { advertiserIds: [String(raw.accountId)] }
-      : {}),
+    ...(raw.accountId !== undefined ? { advertiserIds: [String(raw.accountId)] } : {}),
     ...(schedule.startDate ? { createdAt: new Date(schedule.startDate).toISOString() } : {}),
     ...(raw.lastModifiedTime
       ? { updatedAt: new Date(Number(raw.lastModifiedTime)).toISOString() }
@@ -196,16 +186,8 @@ export function fromMsAdsSchedule(raw: {
     platform: "microsoft",
     frequency: freqMap[scheduleType] ?? "CUSTOM",
     status: raw.enabled === false ? "DISABLED" : "ACTIVE",
-    ...(raw.reportType
-      ? { reportType: raw.reportType }
-      : raw.Type
-        ? { reportType: raw.Type }
-        : {}),
-    ...(raw.accountId !== undefined
-      ? { advertiserIds: [String(raw.accountId)] }
-      : {}),
-    ...(toIso(raw.schedule?.StartDate)
-      ? { createdAt: toIso(raw.schedule?.StartDate)! }
-      : {}),
+    ...(raw.reportType ? { reportType: raw.reportType } : raw.Type ? { reportType: raw.Type } : {}),
+    ...(raw.accountId !== undefined ? { advertiserIds: [String(raw.accountId)] } : {}),
+    ...(toIso(raw.schedule?.StartDate) ? { createdAt: toIso(raw.schedule?.StartDate)! } : {}),
   };
 }

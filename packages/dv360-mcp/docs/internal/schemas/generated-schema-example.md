@@ -120,9 +120,9 @@ components:
           type: string
           description: Output only. The unique ID of the advertiser the insertion order belongs to.
         budget:
-          $ref: '#/components/schemas/InsertionOrderBudget'
+          $ref: "#/components/schemas/InsertionOrderBudget"
         pacing:
-          $ref: '#/components/schemas/Pacing'
+          $ref: "#/components/schemas/Pacing"
         entityStatus:
           type: string
           description: Required. The entity status of the insertion order.
@@ -149,7 +149,7 @@ components:
           type: array
           description: Required. The list of budget segments.
           items:
-            $ref: '#/components/schemas/InsertionOrderBudgetSegment'
+            $ref: "#/components/schemas/InsertionOrderBudgetSegment"
         automationType:
           type: string
           description: Required. The automation type of the insertion order.
@@ -185,36 +185,36 @@ export interface components {
       /** Output only. The unique ID of the advertiser the insertion order belongs to. */
       advertiserId?: string;
       /** The budget allocation settings of the insertion order. */
-      budget?: components['schemas']['InsertionOrderBudget'];
+      budget?: components["schemas"]["InsertionOrderBudget"];
       /** Required. The pacing setting of the insertion order. */
-      pacing?: components['schemas']['Pacing'];
+      pacing?: components["schemas"]["Pacing"];
       /** Required. The entity status of the insertion order. */
       entityStatus?:
-        | 'ENTITY_STATUS_UNSPECIFIED'
-        | 'ENTITY_STATUS_ACTIVE'
-        | 'ENTITY_STATUS_ARCHIVED'
-        | 'ENTITY_STATUS_DRAFT'
-        | 'ENTITY_STATUS_PAUSED'
-        | 'ENTITY_STATUS_SCHEDULED_FOR_DELETION';
+        | "ENTITY_STATUS_UNSPECIFIED"
+        | "ENTITY_STATUS_ACTIVE"
+        | "ENTITY_STATUS_ARCHIVED"
+        | "ENTITY_STATUS_DRAFT"
+        | "ENTITY_STATUS_PAUSED"
+        | "ENTITY_STATUS_SCHEDULED_FOR_DELETION";
     };
     /** Settings that control the budget of a single insertion order. */
     InsertionOrderBudget: {
       /** Required. The list of budget segments. */
-      budgetSegments?: components['schemas']['InsertionOrderBudgetSegment'][];
+      budgetSegments?: components["schemas"]["InsertionOrderBudgetSegment"][];
       /** Required. The automation type of the insertion order. */
       automationType?:
-        | 'INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED'
-        | 'INSERTION_ORDER_AUTOMATION_TYPE_NONE'
-        | 'INSERTION_ORDER_AUTOMATION_TYPE_BUDGET'
-        | 'INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET';
+        | "INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED"
+        | "INSERTION_ORDER_AUTOMATION_TYPE_NONE"
+        | "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET"
+        | "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET";
     };
     // ... additional schemas
   };
 }
 
 // Convenience type exports
-export type InsertionOrder = components['schemas']['InsertionOrder'];
-export type InsertionOrderBudget = components['schemas']['InsertionOrderBudget'];
+export type InsertionOrder = components["schemas"]["InsertionOrder"];
+export type InsertionOrderBudget = components["schemas"]["InsertionOrderBudget"];
 ```
 
 ---
@@ -229,28 +229,28 @@ export type InsertionOrderBudget = components['schemas']['InsertionOrderBudget']
  * Do not make direct changes to the file.
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Entity status enum schema
  */
 export const EntityStatusSchema = z.enum([
-  'ENTITY_STATUS_UNSPECIFIED',
-  'ENTITY_STATUS_ACTIVE',
-  'ENTITY_STATUS_ARCHIVED',
-  'ENTITY_STATUS_DRAFT',
-  'ENTITY_STATUS_PAUSED',
-  'ENTITY_STATUS_SCHEDULED_FOR_DELETION',
+  "ENTITY_STATUS_UNSPECIFIED",
+  "ENTITY_STATUS_ACTIVE",
+  "ENTITY_STATUS_ARCHIVED",
+  "ENTITY_STATUS_DRAFT",
+  "ENTITY_STATUS_PAUSED",
+  "ENTITY_STATUS_SCHEDULED_FOR_DELETION",
 ]);
 
 /**
  * Insertion order automation type enum schema
  */
 export const InsertionOrderAutomationTypeSchema = z.enum([
-  'INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED',
-  'INSERTION_ORDER_AUTOMATION_TYPE_NONE',
-  'INSERTION_ORDER_AUTOMATION_TYPE_BUDGET',
-  'INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET',
+  "INSERTION_ORDER_AUTOMATION_TYPE_UNSPECIFIED",
+  "INSERTION_ORDER_AUTOMATION_TYPE_NONE",
+  "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET",
+  "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET",
 ]);
 
 /**
@@ -292,9 +292,11 @@ export const InsertionOrderBudgetSchema = z.object({
  */
 export const PacingSchema = z.object({
   pacingPeriod: z
-    .enum(['PACING_PERIOD_UNSPECIFIED', 'PACING_PERIOD_DAILY', 'PACING_PERIOD_FLIGHT'])
+    .enum(["PACING_PERIOD_UNSPECIFIED", "PACING_PERIOD_DAILY", "PACING_PERIOD_FLIGHT"])
     .optional(),
-  pacingType: z.enum(['PACING_TYPE_UNSPECIFIED', 'PACING_TYPE_AHEAD', 'PACING_TYPE_ASAP']).optional(),
+  pacingType: z
+    .enum(["PACING_TYPE_UNSPECIFIED", "PACING_TYPE_AHEAD", "PACING_TYPE_ASAP"])
+    .optional(),
   dailyMaxMicros: z.string().optional(),
   dailyMaxImpressions: z.string().optional(),
 });
@@ -335,13 +337,13 @@ export type ListInsertionOrdersResponse = z.infer<typeof ListInsertionOrdersResp
 **File:** `src/mcp-server/tools/definitions/get-insertion-orders.tool.ts`
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 import {
   InsertionOrderSchema,
   ListInsertionOrdersResponseSchema,
   type InsertionOrder,
   type ListInsertionOrdersResponse,
-} from '@/generated/schemas/zod';
+} from "@/generated/schemas/zod";
 
 /**
  * Tool parameters schema
@@ -356,26 +358,26 @@ export const getInsertionOrdersParamsSchema = z.object({
  * Tool definition for MCP
  */
 export const getInsertionOrdersTool = {
-  name: 'get_insertion_orders',
-  description: 'Fetch insertion orders for an advertiser from DV360',
+  name: "get_insertion_orders",
+  description: "Fetch insertion orders for an advertiser from DV360",
   inputSchema: {
-    type: 'object',
+    type: "object",
     properties: {
       advertiserId: {
-        type: 'string',
-        description: 'Advertiser ID',
+        type: "string",
+        description: "Advertiser ID",
       },
       pageSize: {
-        type: 'number',
-        description: 'Number of results per page (1-200)',
+        type: "number",
+        description: "Number of results per page (1-200)",
         default: 50,
       },
       pageToken: {
-        type: 'string',
-        description: 'Optional pagination token from previous response',
+        type: "string",
+        description: "Optional pagination token from previous response",
       },
     },
-    required: ['advertiserId'],
+    required: ["advertiserId"],
   },
 };
 
@@ -415,7 +417,7 @@ export async function handleGetInsertionOrders(
   return {
     content: [
       {
-        type: 'text',
+        type: "text",
         text: JSON.stringify(
           {
             summary,
@@ -437,14 +439,16 @@ export async function handleGetInsertionOrders(
 ## Benefits Demonstrated
 
 ### 1. ✅ **Type Safety**
+
 ```typescript
 // TypeScript knows the shape of InsertionOrder
 const order: InsertionOrder = validatedResponse.insertionOrders?.[0];
 console.log(order.insertionOrderId); // ✅ Type-safe
-console.log(order.invalidField);     // ❌ Compile error
+console.log(order.invalidField); // ❌ Compile error
 ```
 
 ### 2. ✅ **Runtime Validation**
+
 ```typescript
 // Zod catches unexpected API response shapes
 try {
@@ -456,6 +460,7 @@ try {
 ```
 
 ### 3. ✅ **Auto-Complete in IDE**
+
 ```typescript
 const order: InsertionOrder = { ... };
 order. // <-- IDE shows: insertionOrderId, displayName, advertiserId, budget, pacing, entityStatus
@@ -463,14 +468,16 @@ order.budget?. // <-- IDE shows: budgetSegments, automationType
 ```
 
 ### 4. ✅ **Self-Documenting Code**
+
 ```typescript
 // Enum types from DV360 API are preserved
-const status: EntityStatus = 'ENTITY_STATUS_ACTIVE';
+const status: EntityStatus = "ENTITY_STATUS_ACTIVE";
 // ✅ Valid values auto-suggested by IDE
 // ❌ Typos caught at compile time
 ```
 
 ### 5. ✅ **Minimal Bundle Size**
+
 - Only extracted schemas are included (not entire googleapis package)
 - Tree-shakeable: unused schemas are eliminated by bundler
 - Estimated size: ~80KB (vs ~450KB for full googleapis)
@@ -480,6 +487,7 @@ const status: EntityStatus = 'ENTITY_STATUS_ACTIVE';
 ## Comparison: Before vs After
 
 ### Before (Manual Types)
+
 ```typescript
 // Manual type definition (no validation)
 interface InsertionOrder {
@@ -494,9 +502,10 @@ const order = await dv360Client.advertisers.insertionOrders.get({ ... });
 ```
 
 ### After (Generated Types + Zod)
+
 ```typescript
 // Auto-generated from Discovery Document (always up-to-date)
-import { InsertionOrderSchema, type InsertionOrder } from '@/generated/schemas/zod';
+import { InsertionOrderSchema, type InsertionOrder } from "@/generated/schemas/zod";
 
 // Runtime validation ensures API contract is upheld
 const order = InsertionOrderSchema.parse(apiResponse);

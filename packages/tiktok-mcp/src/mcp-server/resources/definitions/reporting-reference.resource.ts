@@ -165,7 +165,8 @@ Use \`tiktok_get_report\` or \`tiktok_get_report_breakdowns\` — these tools ha
 export const reportingReferenceResource: Resource = {
   uri: "reporting-reference://tiktok",
   name: "TikTok Reporting Reference",
-  description: "Available dimensions, metrics, report types, and example configurations for TikTok Ads reporting",
+  description:
+    "Available dimensions, metrics, report types, and example configurations for TikTok Ads reporting",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatReportingReferenceMarkdown();

@@ -14,55 +14,55 @@
 
 ### Working Tools (20/37 - no bugs)
 
-| Tool | Status | Notes |
-|------|--------|-------|
-| `ttd_get_context` | PASS | Cold-start discovery works perfectly |
-| `ttd_list_entities` (advertiser) | PASS | Pagination, filtering works |
-| `ttd_list_entities` (campaign) | PASS | Correct parent ID handling |
-| `ttd_list_entities` (adGroup) | PASS | Two-parent (advertiserId+campaignId) works |
-| `ttd_list_entities` (creative) | PASS | Returns audit statuses, share links |
-| `ttd_get_entity` (advertiser) | PASS | Full entity details |
-| `ttd_get_entity` (campaign) | PASS | Full campaign with flights |
-| `ttd_validate_entity` (valid) | PASS | Passes valid payloads |
-| `ttd_validate_entity` (invalid) | PASS | Catches missing fields with clear messages |
-| `ttd_graphql_query` | PASS | Passthrough works with correct GQL schemas |
-| `ttd_list_report_schedules` | PASS | Returns schedules with full details |
-| `ttd_get_report_schedule` | PASS | Single schedule retrieval works |
-| `ttd_delete_report_schedule` | PASS (untested live) | Simple DELETE, no schema issues |
-| `ttd_download_report` | PASS (untested live) | CSV parse logic, no schema issues |
-| `ttd_graphql_query_bulk` | PASS (untested live) | No schema issues in code review |
-| `ttd_graphql_mutation_bulk` | PASS (untested live) | No schema issues in code review |
-| `ttd_graphql_bulk_job` | PASS (untested live) | No schema issues in code review |
-| `ttd_graphql_cancel_bulk_job` | PASS (untested live) | No schema issues in code review |
-| `ttd_create_entity` | PASS (untested live) | Code review clean |
-| `ttd_update_entity` | PASS (untested live) | Code review clean |
+| Tool                             | Status               | Notes                                      |
+| -------------------------------- | -------------------- | ------------------------------------------ |
+| `ttd_get_context`                | PASS                 | Cold-start discovery works perfectly       |
+| `ttd_list_entities` (advertiser) | PASS                 | Pagination, filtering works                |
+| `ttd_list_entities` (campaign)   | PASS                 | Correct parent ID handling                 |
+| `ttd_list_entities` (adGroup)    | PASS                 | Two-parent (advertiserId+campaignId) works |
+| `ttd_list_entities` (creative)   | PASS                 | Returns audit statuses, share links        |
+| `ttd_get_entity` (advertiser)    | PASS                 | Full entity details                        |
+| `ttd_get_entity` (campaign)      | PASS                 | Full campaign with flights                 |
+| `ttd_validate_entity` (valid)    | PASS                 | Passes valid payloads                      |
+| `ttd_validate_entity` (invalid)  | PASS                 | Catches missing fields with clear messages |
+| `ttd_graphql_query`              | PASS                 | Passthrough works with correct GQL schemas |
+| `ttd_list_report_schedules`      | PASS                 | Returns schedules with full details        |
+| `ttd_get_report_schedule`        | PASS                 | Single schedule retrieval works            |
+| `ttd_delete_report_schedule`     | PASS (untested live) | Simple DELETE, no schema issues            |
+| `ttd_download_report`            | PASS (untested live) | CSV parse logic, no schema issues          |
+| `ttd_graphql_query_bulk`         | PASS (untested live) | No schema issues in code review            |
+| `ttd_graphql_mutation_bulk`      | PASS (untested live) | No schema issues in code review            |
+| `ttd_graphql_bulk_job`           | PASS (untested live) | No schema issues in code review            |
+| `ttd_graphql_cancel_bulk_job`    | PASS (untested live) | No schema issues in code review            |
+| `ttd_create_entity`              | PASS (untested live) | Code review clean                          |
+| `ttd_update_entity`              | PASS (untested live) | Code review clean                          |
 
 ### Buggy Tools (11/37)
 
-| Tool | Bug | Severity |
-|------|-----|----------|
-| `ttd_get_report` | Missing `ReportScheduleName` + `ReportTemplateId` | **Critical** |
-| `ttd_submit_report` | Missing `ReportScheduleName` + `ReportTemplateId` | **Critical** |
-| `ttd_create_report_schedule` | Missing `ReportScheduleName` + `ReportTemplateId` | **Critical** |
-| `ttd_check_report_status` | REST endpoint `/myreports/reportexecution/query` returns 404 | **Critical** |
-| `ttd_get_report_executions` (list mode) | Wrong GraphQL type `MyReportsReportScheduleWhereInput` | **High** |
-| `ttd_get_report_executions` (single mode) | Uses `String!` instead of `ID!` for schedule ID | **High** |
-| `ttd_rerun_report_schedule` | Missing subfield selection on `data` in GraphQL mutation | **High** |
-| `ttd_get_entity_report_types` | Output schema `schedule` expects boolean, API returns string | **Medium** |
-| `ttd_execute_entity_report` | Output validation: `reportId` required but API returns null | **Medium** |
-| `ttd_get_ad_preview` | Missing `ShareLink` extraction (only checks `PreviewUrl`) | **Medium** |
-| `ttd_list_entities` (4 phantom types) | `ad`, `siteList`, `deal`, `bidList` in schema but not in entity mapping | **Medium** |
+| Tool                                      | Bug                                                                     | Severity     |
+| ----------------------------------------- | ----------------------------------------------------------------------- | ------------ |
+| `ttd_get_report`                          | Missing `ReportScheduleName` + `ReportTemplateId`                       | **Critical** |
+| `ttd_submit_report`                       | Missing `ReportScheduleName` + `ReportTemplateId`                       | **Critical** |
+| `ttd_create_report_schedule`              | Missing `ReportScheduleName` + `ReportTemplateId`                       | **Critical** |
+| `ttd_check_report_status`                 | REST endpoint `/myreports/reportexecution/query` returns 404            | **Critical** |
+| `ttd_get_report_executions` (list mode)   | Wrong GraphQL type `MyReportsReportScheduleWhereInput`                  | **High**     |
+| `ttd_get_report_executions` (single mode) | Uses `String!` instead of `ID!` for schedule ID                         | **High**     |
+| `ttd_rerun_report_schedule`               | Missing subfield selection on `data` in GraphQL mutation                | **High**     |
+| `ttd_get_entity_report_types`             | Output schema `schedule` expects boolean, API returns string            | **Medium**   |
+| `ttd_execute_entity_report`               | Output validation: `reportId` required but API returns null             | **Medium**   |
+| `ttd_get_ad_preview`                      | Missing `ShareLink` extraction (only checks `PreviewUrl`)               | **Medium**   |
+| `ttd_list_entities` (4 phantom types)     | `ad`, `siteList`, `deal`, `bidList` in schema but not in entity mapping | **Medium**   |
 
 ### Skipped Tools (6/37 - destructive, tested via unit tests only)
 
-| Tool | Reason |
-|------|--------|
-| `ttd_delete_entity` | Destructive on live data |
-| `ttd_bulk_create_entities` | Creates live entities |
-| `ttd_bulk_update_entities` | Modifies live entities |
-| `ttd_bulk_update_status` | Modifies live entities |
-| `ttd_archive_entities` | Irreversible archive |
-| `ttd_adjust_bids` | Modifies live bids |
+| Tool                       | Reason                   |
+| -------------------------- | ------------------------ |
+| `ttd_delete_entity`        | Destructive on live data |
+| `ttd_bulk_create_entities` | Creates live entities    |
+| `ttd_bulk_update_entities` | Modifies live entities   |
+| `ttd_bulk_update_status`   | Modifies live entities   |
+| `ttd_archive_entities`     | Irreversible archive     |
+| `ttd_adjust_bids`          | Modifies live bids       |
 
 ---
 
@@ -92,6 +92,7 @@
 ### Task 1: Fix REST Reporting Field Names (Critical)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/get-report.tool.ts:73-86`
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/submit-report.tool.ts:76-89`
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/create-report-schedule.tool.ts:98-111`
@@ -169,6 +170,7 @@ git commit -m "fix(ttd-mcp): use ReportScheduleName and add ReportTemplateId for
 ### Task 2: Fix `ttd_check_report_status` 404 (Critical)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/services/ttd/ttd-reporting-service.ts:132-178`
 - Test: `packages/ttd-mcp/tests/tools/ttd-check-report-status.test.ts`
 
@@ -177,6 +179,7 @@ git commit -m "fix(ttd-mcp): use ReportScheduleName and add ReportTemplateId for
 **Step 1: Investigate the correct endpoint**
 
 Check TTD API v3 documentation. The working `runReport` polling also uses this endpoint (line 264), so if it was working before, the endpoint path may have changed. Alternatives:
+
 - `/myreports/reportexecution/query/reportschedule`
 - Use GraphQL `myReportsReportSchedule` query instead (recommended — more reliable)
 
@@ -201,6 +204,7 @@ git commit -m "fix(ttd-mcp): fix check_report_status endpoint (404)"
 ### Task 3: Fix `ttd_get_report_executions` GraphQL Types (High)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/get-report-executions.tool.ts:65,87`
 
 **Bug 1 — Line 65:** SINGLE_QUERY uses `$id: ID!` which is correct per the live error. Wait — actually the error said `Variable "$id" of type "String!" used in position expecting type "ID!"`. So the query template at line 65 says `$id: ID!` but the code passes the variable as a plain string. GraphQL should coerce this. Let me re-read...
@@ -232,6 +236,7 @@ git commit -m "fix(ttd-mcp): fix GraphQL types in get_report_executions"
 ### Task 4: Fix `ttd_rerun_report_schedule` GraphQL Mutation (High)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/rerun-report-schedule.tool.ts:50-61`
 
 **Root cause:** Line 52 selects bare `data` which is a scalar type that requires subfield selection. The TTD API error: `Field "data" of type "MyReportsReportScheduleCreatePayload" must have a selection of subfields.`
@@ -272,6 +277,7 @@ git commit -m "fix(ttd-mcp): add subfield selection to rerun_report_schedule mut
 ### Task 5: Fix `ttd_get_entity_report_types` Output Schema (Medium)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/get-entity-report-types.tool.ts:49,89`
 
 **Root cause:** Output schema declares `schedule: z.union([z.boolean(), z.string()])` (which is correct) but line 89 casts as `r.schedule as boolean` which doesn't match the union type and causes output validation failure when the API returns a string.
@@ -293,6 +299,7 @@ git commit -m "fix(ttd-mcp): fix schedule type cast in get_entity_report_types"
 ### Task 6: Fix `ttd_execute_entity_report` Output Schema (Medium)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/execute-entity-report.tool.ts:92`
 
 **Root cause:** Line 92 extracts `reportData.id as string | undefined` but the API returns `null`. The schema on line 45 correctly allows `.nullable().optional()` but the extraction doesn't convert null → undefined.
@@ -304,6 +311,7 @@ reportId: (reportData.id as string | null | undefined) ?? undefined,
 ```
 
 Or alternatively, leave it as `null` since the schema allows `.nullable()`:
+
 ```typescript
 reportId: (reportData.id as string | null) ?? null,
 ```
@@ -319,6 +327,7 @@ git commit -m "fix(ttd-mcp): handle null reportId in execute_entity_report"
 ### Task 7: Fix `ttd_get_ad_preview` Missing ShareLink (Medium)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/get-ad-preview.tool.ts:38-44,59-64`
 
 **Root cause:** TTD creative entities return `ShareLink` (confirmed in live test: `https://preview-desk.thetradedesk.com/Creatives/ClickTrackingPreview?...`) but the tool only checks `PreviewUrl` which doesn't exist on the response.
@@ -347,9 +356,10 @@ interface TTDCreativeResponse {
 return {
   previewUrl: creative.PreviewUrl || creative.ShareLink,
   creativeName: creative.CreativeName,
-  clickUrl: creative.ClickUrl
-    || creative.TradeDeskHostedVideoAttributes?.ClickthroughUrl
-    || creative.TradeDeskHostedVideoAttributes?.LandingPageUrl,
+  clickUrl:
+    creative.ClickUrl ||
+    creative.TradeDeskHostedVideoAttributes?.ClickthroughUrl ||
+    creative.TradeDeskHostedVideoAttributes?.LandingPageUrl,
   adFormat: creative.CreativeType,
   creativeId: input.creativeId,
 };
@@ -366,6 +376,7 @@ git commit -m "fix(ttd-mcp): extract ShareLink and video click URLs in ad previe
 ### Task 8: Remove Phantom Entity Types from Tool Schemas (Medium)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/list-entities.tool.ts`
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/get-entity.tool.ts`
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/definitions/create-entity.tool.ts`
@@ -384,7 +395,7 @@ Instead of hardcoding enum values in each tool file, import the canonical list:
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 
 // In schema:
-entityType: z.enum(getEntityTypeEnum()).describe("Type of entity")
+entityType: z.enum(getEntityTypeEnum()).describe("Type of entity");
 ```
 
 This ensures tool schemas always match the implemented entity types.
@@ -406,6 +417,7 @@ git commit -m "fix(ttd-mcp): remove phantom entity types from tool schemas"
 ### Task 9: Fix `conversionTracker` API Path (Medium)
 
 **Files:**
+
 - Modify: `packages/ttd-mcp/src/mcp-server/tools/utils/entity-mapping.ts:67-72`
 
 **Root cause:** The `conversionTracker` entity uses path `/trackingtag/query/advertiser` but this returned 404 in live testing. The correct path may be `/advertiserconversion/query/advertiser` or the entity may require a different query approach.
@@ -413,6 +425,7 @@ git commit -m "fix(ttd-mcp): remove phantom entity types from tool schemas"
 **Step 1: Investigate the correct TTD API path**
 
 Check TTD API v3 docs for conversion tracking endpoints. Possible paths:
+
 - `/trackingtag/query/advertiser` (current — 404)
 - `/advertiserconversion/query/advertiser`
 - `/conversion/query/advertiser`

@@ -15,21 +15,23 @@ Added MCP Prompts support to `dv360-mcp` server to provide workflow guidance for
 
 ### Context Cost Analysis
 
-| Feature | Context Cost | When Loaded |
-|---------|-------------|-------------|
-| **Tools** | ~2KB per tool (~20KB for 10 tools) | Always in context |
-| **Resources** | 0KB baseline | Only when fetched |
-| **Prompts** | 0KB baseline | Only when invoked |
+| Feature       | Context Cost                       | When Loaded       |
+| ------------- | ---------------------------------- | ----------------- |
+| **Tools**     | ~2KB per tool (~20KB for 10 tools) | Always in context |
+| **Resources** | 0KB baseline                       | Only when fetched |
+| **Prompts**   | 0KB baseline                       | Only when invoked |
 
 ### When to Use Prompts
 
 ✅ **Use Prompts For:**
+
 - Multi-step workflows with specific ordering (Campaign → IO → Line Items → Targeting)
 - Operations with platform-specific gotchas (e.g., DV360 campaigns can't be DRAFT)
 - Workflows requiring validation gates between steps
 - Troubleshooting sequences
 
 ❌ **Don't Use Prompts For:**
+
 - Simple single-tool operations (tool description is sufficient)
 - Reference documentation (use MCP Resources instead)
 - Operations AI agents can figure out from tool descriptions alone
@@ -47,6 +49,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
 ### Server Changes
 
 **Updated:** `packages/dv360-mcp/src/mcp-server/server.ts`
+
 - Enabled `prompts: {}` capability (Phase 2.2)
 - Added `prompts/list` handler
 - Added `prompts/get` handler with argument substitution
@@ -56,6 +59,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
 **Purpose:** Guide AI agents through creating a complete DV360 campaign structure
 
 **Workflow Steps:**
+
 1. Fetch required schemas (via MCP Resources)
 2. Create Campaign (PAUSED/ACTIVE status only)
 3. Create Insertion Order (DRAFT status required)
@@ -64,6 +68,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
 6. Activation workflow (IO → Line Items → Campaign)
 
 **Key Features:**
+
 - ⚠️ **GOTCHA** callouts for DV360-specific rules
 - Example tool calls with exact JSON syntax
 - Success criteria checklists
@@ -72,10 +77,12 @@ packages/dv360-mcp/src/mcp-server/prompts/
 - Integration with MCP Resources for schema discovery
 
 **Arguments:**
+
 - `advertiserId` (required): DV360 Advertiser ID
 - `includeTargeting` (optional): "true" to include targeting guidance
 
 **Message Size:**
+
 - Without targeting: ~8,859 characters
 - With targeting: ~10,645 characters
 
@@ -112,6 +119,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
 **User Request:** "Create a new DV360 campaign for advertiser 12345"
 
 **AI Agent Actions:**
+
 1. Invoke prompt: `full_campaign_setup_workflow` with `advertiserId=12345`
 2. Receive workflow guide with 6 steps
 3. Fetch Resources: `entity-schema://campaign`, `entity-schema://insertionOrder`, etc.
@@ -127,6 +135,7 @@ packages/dv360-mcp/src/mcp-server/prompts/
 ### Legacy: Monolithic Tool with Validation
 
 Your legacy code had a single `full_campaign_setup` tool with:
+
 - ✅ Comprehensive validation (great!)
 - ✅ Detailed error messages (great!)
 - ❌ Validation happens **after** AI constructs payload (inefficient)
@@ -136,6 +145,7 @@ Your legacy code had a single `full_campaign_setup` tool with:
 ### New: Prompts + Tools + Resources
 
 New approach separates concerns:
+
 - ✅ **Prompts** provide workflow guidance **before** AI acts
 - ✅ **Resources** provide schema details on-demand
 - ✅ **Tools** stay simple with focused responsibilities
@@ -151,6 +161,7 @@ npx tsx tests/test-prompt.ts
 ```
 
 **Validates:**
+
 - Prompt message generation
 - Argument substitution
 - Conditional sections (targeting)
@@ -171,18 +182,22 @@ Based on legacy code patterns and coverage gap analysis:
 Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 
 ### 1. Comprehensive Validation
+
 **Legacy:** Validated in tool handler
 **New:** Validation rules documented in prompt **before** AI acts
 
 ### 2. Helpful Error Messages
+
 **Legacy:** Contextual errors with solutions
 **New:** Pre-emptive guidance with common errors table
 
 ### 3. DV360 Gotchas
+
 **Legacy:** Code comments and validation checks
 **New:** ⚠️ **GOTCHA** callouts in prompt text
 
 ### 4. Field Requirements
+
 **Legacy:** Runtime validation errors
 **New:** Upfront documentation with examples
 
@@ -191,6 +206,7 @@ Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 **Verdict:** Prompts add **zero baseline context cost** while providing high value for complex workflows.
 
 **Best Practice:**
+
 - Keep 2-4 high-value workflow prompts per server
 - Don't create prompts for simple operations
 - Use prompts to encode business rules and best practices
@@ -206,6 +222,7 @@ Your legacy `fullCampaignSetupHandler` had excellent patterns we preserved:
 ---
 
 **Files Modified:**
+
 - `packages/dv360-mcp/src/mcp-server/server.ts` (enabled prompts capability)
 - `packages/dv360-mcp/src/mcp-server/prompts/full-campaign-setup.prompt.ts` (new)
 - `packages/dv360-mcp/src/mcp-server/prompts/index.ts` (new)

@@ -182,8 +182,5 @@ export function parseGAdsCredentialsFromHeaders(
  * Generate a fingerprint for Google Ads credentials (for session binding).
  */
 export function getGAdsCredentialFingerprint(credentials: GAdsCredentials): string {
-  return createHash("sha256")
-    .update(credentials.clientId)
-    .digest("hex")
-    .substring(0, 32);
+  return createHash("sha256").update(credentials.clientId).digest("hex").substring(0, 32);
 }

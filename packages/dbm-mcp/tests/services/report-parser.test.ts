@@ -427,9 +427,7 @@ describe("aggregateToDeliveryMetrics", () => {
   });
 
   it("handles single row", () => {
-    const rows = [
-      { impressions: 5000, clicks: 50, spend: 25, conversions: 5, revenue: 100 },
-    ];
+    const rows = [{ impressions: 5000, clicks: 50, spend: 25, conversions: 5, revenue: 100 }];
 
     const result = aggregateToDeliveryMetrics(rows);
 

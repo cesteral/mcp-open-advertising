@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -107,15 +113,10 @@ describe("checkReportStatusLogic", () => {
   });
 
   it("propagates service errors", async () => {
-    mockState.cm360ReportingService.checkReportFile.mockRejectedValue(
-      new Error("Not found")
-    );
+    mockState.cm360ReportingService.checkReportFile.mockRejectedValue(new Error("Not found"));
 
     await expect(
-      checkReportStatusLogic(
-        { profileId: "123", reportId: "r1", fileId: "f1" },
-        mockContext
-      )
+      checkReportStatusLogic({ profileId: "123", reportId: "r1", fileId: "f1" }, mockContext)
     ).rejects.toThrow("Not found");
   });
 });
@@ -171,18 +172,16 @@ describe("checkReportStatusResponseFormatter", () => {
 
 describe("CheckReportStatusInputSchema", () => {
   it("requires profileId, reportId, fileId", () => {
-    expect(
-      CheckReportStatusInputSchema.safeParse({}).success
-    ).toBe(false);
-    expect(
-      CheckReportStatusInputSchema.safeParse({ profileId: "1", reportId: "2" }).success
-    ).toBe(false);
-    expect(
-      CheckReportStatusInputSchema.safeParse({ profileId: "1", fileId: "3" }).success
-    ).toBe(false);
-    expect(
-      CheckReportStatusInputSchema.safeParse({ reportId: "2", fileId: "3" }).success
-    ).toBe(false);
+    expect(CheckReportStatusInputSchema.safeParse({}).success).toBe(false);
+    expect(CheckReportStatusInputSchema.safeParse({ profileId: "1", reportId: "2" }).success).toBe(
+      false
+    );
+    expect(CheckReportStatusInputSchema.safeParse({ profileId: "1", fileId: "3" }).success).toBe(
+      false
+    );
+    expect(CheckReportStatusInputSchema.safeParse({ reportId: "2", fileId: "3" }).success).toBe(
+      false
+    );
 
     const valid = CheckReportStatusInputSchema.safeParse({
       profileId: "1",

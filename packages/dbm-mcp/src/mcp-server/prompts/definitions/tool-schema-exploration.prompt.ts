@@ -16,8 +16,7 @@ export const toolSchemaExplorationPrompt: Prompt = {
   arguments: [
     {
       name: "serverFocus",
-      description:
-        "Server to focus on: dbm-mcp, dv360-mcp, or both (default: both)",
+      description: "Server to focus on: dbm-mcp, dv360-mcp, or both (default: both)",
       required: false,
     },
     {

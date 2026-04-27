@@ -54,7 +54,8 @@ ${AMAZON_DSP_REPORTING_CONTRACT.notes.map((note) => `- ${note}`).join("\n")}
 export const reportingReferenceResource: Resource = {
   uri: "reporting-reference://amazonDsp",
   name: "Amazon DSP Reporting Reference",
-  description: "Available dimensions, metrics, report types, and example configurations for Amazon DSP reporting",
+  description:
+    "Available dimensions, metrics, report types, and example configurations for Amazon DSP reporting",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatReportingReferenceMarkdown();

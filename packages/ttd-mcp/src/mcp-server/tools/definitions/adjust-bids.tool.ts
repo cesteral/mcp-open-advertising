@@ -23,15 +23,16 @@ export const AdjustBidsInputSchema = z
   .object({
     adjustments: z
       .array(
-        z.object({
-          adGroupId: z.string().min(1).describe("Ad group ID"),
-          baseBidCpm: z.number().positive().optional().describe("New base bid CPM amount"),
-          maxBidCpm: z.number().positive().optional().describe("New max bid CPM amount"),
-          currencyCode: z.string().optional().describe("Currency code (default: USD)"),
-        }).refine(
-          (adj) => adj.baseBidCpm !== undefined || adj.maxBidCpm !== undefined,
-          { message: "At least one of baseBidCpm or maxBidCpm must be provided" }
-        )
+        z
+          .object({
+            adGroupId: z.string().min(1).describe("Ad group ID"),
+            baseBidCpm: z.number().positive().optional().describe("New base bid CPM amount"),
+            maxBidCpm: z.number().positive().optional().describe("New max bid CPM amount"),
+            currencyCode: z.string().optional().describe("Currency code (default: USD)"),
+          })
+          .refine((adj) => adj.baseBidCpm !== undefined || adj.maxBidCpm !== undefined, {
+            message: "At least one of baseBidCpm or maxBidCpm must be provided",
+          })
       )
       .min(1)
       .max(50)
@@ -121,18 +122,16 @@ export const adjustBidsTool = {
     {
       label: "Adjust a single ad group bid",
       input: {
-        adjustments: [
-          { adGroupId: "ag789ghi", baseBidCpm: 4.50 },
-        ],
+        adjustments: [{ adGroupId: "ag789ghi", baseBidCpm: 4.5 }],
       },
     },
     {
       label: "Batch adjust multiple ad groups",
       input: {
         adjustments: [
-          { adGroupId: "ag001", baseBidCpm: 3.00, maxBidCpm: 8.00 },
-          { adGroupId: "ag002", baseBidCpm: 5.50 },
-          { adGroupId: "ag003", maxBidCpm: 12.00, currencyCode: "EUR" },
+          { adGroupId: "ag001", baseBidCpm: 3.0, maxBidCpm: 8.0 },
+          { adGroupId: "ag002", baseBidCpm: 5.5 },
+          { adGroupId: "ag003", maxBidCpm: 12.0, currencyCode: "EUR" },
         ],
       },
     },

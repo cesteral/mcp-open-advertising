@@ -17,13 +17,8 @@ const TOOL_DESCRIPTION = `Get a single Meta Ads entity by ID.
 
 export const GetEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to retrieve"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to retrieve"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
+    entityId: z.string().min(1).describe("The entity ID to retrieve"),
     fields: z
       .array(z.string())
       .optional()

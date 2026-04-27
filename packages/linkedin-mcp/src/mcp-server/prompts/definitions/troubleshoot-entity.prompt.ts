@@ -20,9 +20,7 @@ export const linkedInTroubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getLinkedInTroubleshootEntityMessage(
-  args?: Record<string, string>,
-): string {
+export function getLinkedInTroubleshootEntityMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityUrn = args?.entityUrn || "{entityUrn}";
 

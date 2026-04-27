@@ -4,10 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
-import {
-  MYREPORTS_TEMPLATE_ACCESS_ERROR,
-  throwIfGraphqlErrors,
-} from "../utils/graphql-errors.js";
+import { MYREPORTS_TEMPLATE_ACCESS_ERROR, throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_update_report_template";
 const TOOL_TITLE = "Update TTD Report Template (GraphQL)";
@@ -106,9 +103,7 @@ export async function updateReportTemplateLogic(
   const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
   const mutationResult =
     (gqlData.myReportsTemplateUpdate as Record<string, unknown> | undefined) ?? {};
-  const errors = mutationResult.errors as
-    | Array<{ field?: string; message: string }>
-    | undefined;
+  const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
   return {
     templateData: mutationResult.data,
@@ -127,9 +122,7 @@ export function updateReportTemplateResponseFormatter(
         type: "text" as const,
         text:
           `Report template update failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];

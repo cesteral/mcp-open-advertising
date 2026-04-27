@@ -17,18 +17,9 @@ be displayed on TikTok's platform.
 
 export const GetAdPreviewInputSchema = z
   .object({
-    advertiserId: z
-      .string()
-      .min(1)
-      .describe("TikTok Advertiser ID"),
-    adId: z
-      .string()
-      .min(1)
-      .describe("The ad ID to preview"),
-    adFormat: z
-      .string()
-      .optional()
-      .describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
+    advertiserId: z.string().min(1).describe("TikTok Advertiser ID"),
+    adId: z.string().min(1).describe("The ad ID to preview"),
+    adFormat: z.string().optional().describe("Ad format to preview (e.g., FEED, STORY, SPARK_ADS)"),
   })
   .describe("Parameters for getting TikTok ad preview");
 
@@ -50,11 +41,7 @@ export async function getAdPreviewLogic(
 ): Promise<GetAdPreviewOutput> {
   const { tiktokService } = resolveSessionServices(sdkContext);
 
-  const preview = await tiktokService.getAdPreviews(
-    input.adId,
-    input.adFormat,
-    context
-  );
+  const preview = await tiktokService.getAdPreviews(input.adId, input.adFormat, context);
 
   return {
     preview: preview as Record<string, unknown>,

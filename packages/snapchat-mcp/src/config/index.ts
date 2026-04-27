@@ -23,10 +23,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["snapchat-bearer", "jwt", "none"]).default("snapchat-bearer"),
 
   // Snapchat API Configuration
-  snapchatApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://adsapi.snapchat.com"),
+  snapchatApiBaseUrl: z.string().url().default("https://adsapi.snapchat.com"),
   snapchatApiVersion: z.string().default("v1"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.

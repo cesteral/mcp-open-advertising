@@ -12,6 +12,7 @@ This checklist breaks down Phase 1 (MVP) of the OpenAPI schema extraction system
 ## Week 1: Setup & Infrastructure
 
 ### 1.1 Dependencies
+
 - [ ] Install extraction dependencies
   ```bash
   cd packages/dv360-mcp
@@ -26,6 +27,7 @@ This checklist breaks down Phase 1 (MVP) of the OpenAPI schema extraction system
   ```
 
 ### 1.2 Directory Structure
+
 - [ ] Create scripts directory
   ```bash
   mkdir -p packages/dv360-mcp/scripts/lib
@@ -35,6 +37,7 @@ This checklist breaks down Phase 1 (MVP) of the OpenAPI schema extraction system
   mkdir -p packages/dv360-mcp/.tmp-specs
   ```
 - [ ] Update `.gitignore`
+
   ```
   # Temporary specs (fetched at build time)
   .tmp-specs/
@@ -45,6 +48,7 @@ This checklist breaks down Phase 1 (MVP) of the OpenAPI schema extraction system
   ```
 
 ### 1.3 Configuration Files
+
 - [x] Create `config/schema-extraction.config.ts` ✅
 - [ ] Verify configuration loads correctly
   ```bash
@@ -56,6 +60,7 @@ This checklist breaks down Phase 1 (MVP) of the OpenAPI schema extraction system
 ## Week 2: Core Extraction Logic
 
 ### 2.1 Discovery Document Fetcher
+
 **File:** `scripts/lib/fetch-discovery.ts`
 
 - [ ] Implement `fetchDiscoveryDoc()` function
@@ -70,12 +75,14 @@ This checklist breaks down Phase 1 (MVP) of the OpenAPI schema extraction system
 - [ ] Add error handling with `ExtractionError` class
 
 **Acceptance Criteria:**
+
 ```typescript
 const doc = await fetchDiscoveryDoc(config);
-console.log(doc.schemas['InsertionOrder']); // Should print schema definition
+console.log(doc.schemas["InsertionOrder"]); // Should print schema definition
 ```
 
 ### 2.2 Schema Extractor (Core Algorithm)
+
 **File:** `scripts/lib/schema-extractor.ts`
 
 - [ ] Create `SchemaExtractor` class
@@ -100,6 +107,7 @@ console.log(doc.schemas['InsertionOrder']); // Should print schema definition
   - Return `ExtractionReport` with metadata, results, dependency graph
 
 **Acceptance Criteria:**
+
 ```typescript
 const extractor = new SchemaExtractor(discoveryDoc, config);
 const { schemas, report } = await extractor.extract();
@@ -109,6 +117,7 @@ console.log(`Dependencies: ${report.results.resolvedDependencies.length}`);
 ```
 
 ### 2.3 Discovery → OpenAPI Converter
+
 **File:** `scripts/lib/convert-to-openapi.ts`
 
 - [ ] Create `convertToOpenAPI()` function
@@ -137,6 +146,7 @@ console.log(`Dependencies: ${report.results.resolvedDependencies.length}`);
   - List newly introduced schemas
 
 **Acceptance Criteria:**
+
 ```typescript
 const openApiSpec = await convertToOpenAPI(schemas, config);
 console.log(openApiSpec.openapi); // "3.0.0"
@@ -144,26 +154,28 @@ console.log(Object.keys(openApiSpec.components.schemas).length); // ~50 schemas
 ```
 
 ### 2.4 Error Handling
+
 **File:** `scripts/lib/errors.ts`
 
 - [ ] Create `ExtractionError` class
   ```typescript
   class ExtractionError extends Error {
-    constructor(message: string, code: string, details?: Record<string, any>)
+    constructor(message: string, code: string, details?: Record<string, any>);
   }
   ```
 - [ ] Define error codes
   ```typescript
   export const ErrorCodes = {
-    DISCOVERY_FETCH_FAILED: 'DISCOVERY_FETCH_FAILED',
-    SCHEMA_NOT_FOUND: 'SCHEMA_NOT_FOUND',
-    CIRCULAR_REFERENCE: 'CIRCULAR_REFERENCE',
-    MAX_DEPTH_EXCEEDED: 'MAX_DEPTH_EXCEEDED',
+    DISCOVERY_FETCH_FAILED: "DISCOVERY_FETCH_FAILED",
+    SCHEMA_NOT_FOUND: "SCHEMA_NOT_FOUND",
+    CIRCULAR_REFERENCE: "CIRCULAR_REFERENCE",
+    MAX_DEPTH_EXCEEDED: "MAX_DEPTH_EXCEEDED",
     // ...
   } as const;
   ```
 
 ### 2.5 Main Generation Script
+
 **File:** `scripts/generate-schemas.ts`
 
 - [ ] Implement main pipeline orchestration
@@ -187,6 +199,7 @@ console.log(Object.keys(openApiSpec.components.schemas).length); // ~50 schemas
 - [ ] Add summary statistics at end
 
 **Acceptance Criteria:**
+
 ```bash
 tsx scripts/generate-schemas.ts
 # Should complete successfully and generate files
@@ -197,6 +210,7 @@ tsx scripts/generate-schemas.ts
 ## Week 2: Code Generation Integration
 
 ### 3.1 TypeScript Type Generation
+
 - [ ] Configure `openapi-typescript` command
   ```bash
   openapi-typescript .tmp-specs/dv360-minimal-v4.yaml -o src/generated/schemas/types.ts
@@ -211,6 +225,7 @@ tsx scripts/generate-schemas.ts
   ```
 
 ### 3.2 Zod Schema Generation
+
 - [ ] Configure `openapi-zod-client` command
   ```bash
   openapi-zod-client .tmp-specs/dv360-minimal-v4.yaml -o src/generated/schemas/zod.ts
@@ -225,6 +240,7 @@ tsx scripts/generate-schemas.ts
   ```
 
 ### 3.3 Combined Scripts
+
 - [ ] Add unified generation script
   ```json
   "generate:schemas": "tsx scripts/generate-schemas.ts"
@@ -243,6 +259,7 @@ tsx scripts/generate-schemas.ts
 ## Week 2: Validation & Testing
 
 ### 4.1 Manual Validation
+
 - [ ] Run full pipeline and verify outputs
   ```bash
   pnpm run generate:schemas
@@ -259,33 +276,37 @@ tsx scripts/generate-schemas.ts
   ```
 
 ### 4.2 Integration Test
+
 **File:** `scripts/__tests__/generate-schemas.test.ts`
 
 - [ ] Test full pipeline execution
-  ```typescript
-  it('should generate valid TypeScript types', async () => {
-    execSync('pnpm run generate:schemas');
 
-    const typesPath = path.join(process.cwd(), 'src/generated/schemas/types.ts');
+  ```typescript
+  it("should generate valid TypeScript types", async () => {
+    execSync("pnpm run generate:schemas");
+
+    const typesPath = path.join(process.cwd(), "src/generated/schemas/types.ts");
     await expect(fs.access(typesPath)).resolves.toBeUndefined();
 
-    const typesContent = await fs.readFile(typesPath, 'utf-8');
-    expect(typesContent).toContain('export interface InsertionOrder');
+    const typesContent = await fs.readFile(typesPath, "utf-8");
+    expect(typesContent).toContain("export interface InsertionOrder");
   });
   ```
 
 ### 4.3 Schema Validation Test
+
 **File:** `scripts/__tests__/schema-validation.test.ts`
 
 - [ ] Test Zod schemas validate mock data
+
   ```typescript
-  it('should validate InsertionOrder mock data', () => {
-    const { InsertionOrderSchema } = require('../../src/generated/schemas/zod');
+  it("should validate InsertionOrder mock data", () => {
+    const { InsertionOrderSchema } = require("../../src/generated/schemas/zod");
 
     const mockData = {
-      insertionOrderId: '12345',
-      displayName: 'Test Campaign',
-      advertiserId: '67890',
+      insertionOrderId: "12345",
+      displayName: "Test Campaign",
+      advertiserId: "67890",
     };
 
     expect(() => InsertionOrderSchema.parse(mockData)).not.toThrow();
@@ -293,29 +314,31 @@ tsx scripts/generate-schemas.ts
   ```
 
 ### 4.4 Performance Benchmark
+
 - [ ] Measure pipeline execution time
   ```bash
   time pnpm run generate:schemas
   ```
 - [ ] Record baseline metrics
-  - Discovery doc fetch time: ___ms
-  - Extraction time: ___ms
-  - Conversion time: ___ms
-  - Type generation time: ___ms
-  - Zod generation time: ___ms
-  - **Total time: ___ms**
+  - Discovery doc fetch time: \_\_\_ms
+  - Extraction time: \_\_\_ms
+  - Conversion time: \_\_\_ms
+  - Type generation time: \_\_\_ms
+  - Zod generation time: \_\_\_ms
+  - **Total time: \_\_\_ms**
 - [ ] Record output sizes
-  - Discovery doc size: ___ KB
-  - Extracted spec size: ___ KB
-  - Compression ratio: ___%
-  - Generated types size: ___ KB
-  - Generated Zod size: ___ KB
+  - Discovery doc size: \_\_\_ KB
+  - Extracted spec size: \_\_\_ KB
+  - Compression ratio: \_\_\_%
+  - Generated types size: \_\_\_ KB
+  - Generated Zod size: \_\_\_ KB
 
 ---
 
 ## Definition of Done (Phase 1)
 
 ### Must Have ✅
+
 - [ ] Configuration file validates and loads correctly
 - [ ] Discovery document fetches successfully with caching
 - [ ] Schema extraction works for 5-10 root schemas
@@ -331,12 +354,14 @@ tsx scripts/generate-schemas.ts
 - [ ] At least 1 integration test passes
 
 ### Nice to Have 🎯
+
 - [ ] Extraction report includes dependency graph visualization
 - [ ] Console output has colored progress indicators
 - [ ] Generated code includes JSDoc comments from Discovery doc
 - [ ] Comparison with googleapis bundle size documented
 
 ### Out of Scope (Phase 2+) 🚫
+
 - ❌ Operation-based extraction (`operations` array)
 - ❌ Resource scope discovery (`resourceScopes`)
 - ❌ Usage trace discovery (telemetry-driven)
@@ -350,17 +375,20 @@ tsx scripts/generate-schemas.ts
 ## Key Success Metrics
 
 ### Correctness
+
 - All root schemas from config are present in output
 - All dependencies are resolved (no missing refs)
 - Generated TypeScript compiles without errors
 - Generated Zod schemas validate mock data
 
 ### Performance
+
 - Full pipeline completes in <30 seconds
 - Extracted spec is <200 KB (vs ~1.3 MB full Discovery doc)
 - Generated types are <100 KB
 
 ### Developer Experience
+
 - Single command generates all schemas: `pnpm run generate:schemas`
 - Clear error messages when extraction fails
 - Detailed report shows what was extracted and why
@@ -370,18 +398,23 @@ tsx scripts/generate-schemas.ts
 ## Risk Mitigation
 
 ### Risk: External tools break
+
 **Mitigation:** Pin exact versions of `openapi-typescript` and `openapi-zod-client` in package.json
 
 ### Risk: Circular references break code generators
+
 **Mitigation:** Fail extraction if circular refs detected (`failOnCircularRefs: true`)
 
 ### Risk: Discovery doc fetch fails in CI
+
 **Mitigation:** Cache is committed to git as fallback (if needed)
 
 ### Risk: Generated code is too large
+
 **Mitigation:** Start with minimal root schemas (5-10), expand incrementally
 
 ### Risk: Discovery format changes
+
 **Mitigation:** Version lock to DV360 v4, add integration tests
 
 ---

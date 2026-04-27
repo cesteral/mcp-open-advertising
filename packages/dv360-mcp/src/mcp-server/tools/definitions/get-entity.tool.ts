@@ -3,9 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import {
-  getSupportedEntityTypesDynamic,
-} from "../utils/entity-mapping-dynamic.js";
+import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";

@@ -26,7 +26,8 @@ export const budgetReallocationPrompt: Prompt = {
     },
     {
       name: "campaignId",
-      description: "Specific Campaign ID to rebalance (if known). If omitted, you will need to identify the campaign first.",
+      description:
+        "Specific Campaign ID to rebalance (if known). If omitted, you will need to identify the campaign first.",
       required: false,
     },
   ],
@@ -35,9 +36,7 @@ export const budgetReallocationPrompt: Prompt = {
 /**
  * Generate prompt message with budget reallocation workflow guidance
  */
-export function getBudgetReallocationPromptMessage(
-  args?: Record<string, string>,
-): string {
+export function getBudgetReallocationPromptMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const campaignId = args?.campaignId || "{campaignId}";
 

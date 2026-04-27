@@ -11,10 +11,7 @@
 export { BidManagerService } from "./BidManagerService.js";
 
 // Client types
-export {
-  type BidManagerClient,
-  type GoogleAuthClient,
-} from "./client.js";
+export { type BidManagerClient, type GoogleAuthClient } from "./client.js";
 
 // Type schemas (Zod)
 export {

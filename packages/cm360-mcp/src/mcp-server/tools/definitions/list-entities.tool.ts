@@ -17,21 +17,15 @@ All operations require a profileId (use cm360_list_user_profiles to discover you
 
 export const ListEntitiesInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
     filters: z
       .record(z.unknown())
       .optional()
-      .describe("Filter fields to pass as query parameters (e.g., advertiserId, campaignId, searchString)"),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination"),
+      .describe(
+        "Filter fields to pass as query parameters (e.g., advertiserId, campaignId, searchString)"
+      ),
+    pageToken: z.string().optional().describe("Page token for pagination"),
     maxResults: z
       .number()
       .min(1)

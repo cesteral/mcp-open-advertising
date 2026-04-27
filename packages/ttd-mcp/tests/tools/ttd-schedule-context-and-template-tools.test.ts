@@ -16,9 +16,7 @@ import {
   getAdPreviewLogic,
   getAdPreviewResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/get-ad-preview.tool.js";
-import {
-  listReportSchedulesLogic,
-} from "../../src/mcp-server/tools/definitions/list-report-schedules.tool.js";
+import { listReportSchedulesLogic } from "../../src/mcp-server/tools/definitions/list-report-schedules.tool.js";
 import {
   getReportExecutionsLogic,
   getReportExecutionsResponseFormatter,
@@ -27,29 +25,19 @@ import {
   cancelReportExecutionLogic,
   cancelReportExecutionResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/cancel-report-execution.tool.js";
-import {
-  rerunReportScheduleLogic,
-} from "../../src/mcp-server/tools/definitions/rerun-report-schedule.tool.js";
+import { rerunReportScheduleLogic } from "../../src/mcp-server/tools/definitions/rerun-report-schedule.tool.js";
 import {
   updateReportScheduleLogic,
   updateReportScheduleResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/update-report-schedule.tool.js";
-import {
-  createReportTemplateLogic,
-} from "../../src/mcp-server/tools/definitions/create-report-template.tool.js";
-import {
-  updateReportTemplateLogic,
-} from "../../src/mcp-server/tools/definitions/update-report-template.tool.js";
-import {
-  getReportTemplateLogic,
-} from "../../src/mcp-server/tools/definitions/get-report-template.tool.js";
+import { createReportTemplateLogic } from "../../src/mcp-server/tools/definitions/create-report-template.tool.js";
+import { updateReportTemplateLogic } from "../../src/mcp-server/tools/definitions/update-report-template.tool.js";
+import { getReportTemplateLogic } from "../../src/mcp-server/tools/definitions/get-report-template.tool.js";
 import {
   createTemplateScheduleLogic,
   CreateTemplateScheduleInputSchema,
 } from "../../src/mcp-server/tools/definitions/create-template-schedule.tool.js";
-import {
-  listReportTemplatesLogic,
-} from "../../src/mcp-server/tools/definitions/list-report-templates.tool.js";
+import { listReportTemplatesLogic } from "../../src/mcp-server/tools/definitions/list-report-templates.tool.js";
 
 function createMockContext() {
   return {
@@ -415,11 +403,7 @@ describe("ttd schedule/context/template tools", () => {
     mockTtdService.graphqlQuery.mockResolvedValue(unauthorizedResponse);
 
     await expect(
-      listReportTemplatesLogic(
-        { first: 10 },
-        createMockContext(),
-        createMockSdkContext()
-      )
+      listReportTemplatesLogic({ first: 10 }, createMockContext(), createMockSdkContext())
     ).rejects.toThrow("does not have access to MyReports template APIs");
 
     await expect(
@@ -461,11 +445,7 @@ describe("ttd schedule/context/template tools", () => {
     ).rejects.toThrow("does not have access to MyReports template APIs");
 
     await expect(
-      getReportTemplateLogic(
-        { id: "tpl-1" },
-        createMockContext(),
-        createMockSdkContext()
-      )
+      getReportTemplateLogic({ id: "tpl-1" }, createMockContext(), createMockSdkContext())
     ).rejects.toThrow("does not have access to MyReports template APIs");
 
     await expect(

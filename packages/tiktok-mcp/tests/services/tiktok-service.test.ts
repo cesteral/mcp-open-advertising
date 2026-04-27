@@ -88,11 +88,7 @@ describe("TikTokService", () => {
       const data = { campaign_name: "Test", objective_type: "TRAFFIC" };
       const result = await service.createEntity("campaign", data as any);
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/campaign/create/",
-        data,
-        undefined
-      );
+      expect(mockPost).toHaveBeenCalledWith("/open_api/v1.3/campaign/create/", data, undefined);
       expect(result.campaign_id).toBe("1800000001");
     });
 
@@ -102,11 +98,7 @@ describe("TikTokService", () => {
       const data = { adgroup_id: "1700000001", ad_name: "Test Ad" };
       await service.createEntity("ad", data);
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/open_api/v1.3/ad/create/",
-        data,
-        undefined
-      );
+      expect(mockPost).toHaveBeenCalledWith("/open_api/v1.3/ad/create/", data, undefined);
     });
   });
 
@@ -198,9 +190,7 @@ describe("TikTokService", () => {
         page_info: { page: 1, page_size: 1, total_number: 0, total_page: 0 },
       });
 
-      await expect(service.getEntity("campaign", "nonexistent-id")).rejects.toThrow(
-        "not found"
-      );
+      await expect(service.getEntity("campaign", "nonexistent-id")).rejects.toThrow("not found");
     });
   });
 
@@ -222,11 +212,7 @@ describe("TikTokService", () => {
     it("returns failure results when status update throws", async () => {
       mockPost.mockRejectedValueOnce(new Error("API error"));
 
-      const result = await service.bulkUpdateStatus(
-        "campaign",
-        ["1800000001"],
-        "DISABLE"
-      );
+      const result = await service.bulkUpdateStatus("campaign", ["1800000001"], "DISABLE");
 
       expect(result.results[0].success).toBe(false);
       expect(result.results[0].error).toContain("API error");
@@ -250,9 +236,7 @@ describe("TikTokService", () => {
       });
       mockPost.mockResolvedValueOnce({});
 
-      const result = await service.adjustBids([
-        { adGroupId: "1700000001", bidPrice: 2.25 },
-      ]);
+      const result = await service.adjustBids([{ adGroupId: "1700000001", bidPrice: 2.25 }]);
 
       expect(mockPost).toHaveBeenCalledWith(
         "/open_api/v1.3/adgroup/update/",
@@ -300,11 +284,7 @@ describe("TikTokService", () => {
 
       const result = await service.getTargetingOptions("LANGUAGE", {});
 
-      expect(mockGet).toHaveBeenCalledWith(
-        "/open_api/v1.3/tool/language/",
-        {},
-        undefined
-      );
+      expect(mockGet).toHaveBeenCalledWith("/open_api/v1.3/tool/language/", {}, undefined);
       expect(result).toEqual({ list: [{ code: "en", name: "English" }] });
     });
 

@@ -25,14 +25,13 @@ Returns the insights data rows from the completed report run.`;
 
 export const DownloadReportInputSchema = z
   .object({
-    reportRunId: z
-      .string()
-      .min(1)
-      .describe("Report run ID from meta_submit_report"),
+    reportRunId: z.string().min(1).describe("Report run ID from meta_submit_report"),
     cursor: z
       .string()
       .optional()
-      .describe("Meta paging cursor returned as nextCursor by a previous call. This tool pages via cursor; offset is not supported."),
+      .describe(
+        "Meta paging cursor returned as nextCursor by a previous call. This tool pages via cursor; offset is not supported."
+      ),
   })
   .merge(ReportViewInputSchema.omit({ offset: true }))
   .merge(ComputedMetricsFlagSchema)
@@ -42,8 +41,15 @@ export const DownloadReportOutputSchema = z
   .object({
     reportRunId: z.string(),
     ...ReportViewOutputSchema.shape,
-    fetchedAllRows: z.boolean().describe("Whether all available report rows were fetched. When false, totalRows is a lower bound and nextCursor should be used to continue."),
-    nextCursor: z.string().optional().describe("Cursor for additional rows when maxRows capped the result set"),
+    fetchedAllRows: z
+      .boolean()
+      .describe(
+        "Whether all available report rows were fetched. When false, totalRows is a lower bound and nextCursor should be used to continue."
+      ),
+    nextCursor: z
+      .string()
+      .optional()
+      .describe("Cursor for additional rows when maxRows capped the result set"),
     timestamp: z.string().datetime(),
   })
   .describe("Downloaded report results");
@@ -65,10 +71,7 @@ export async function downloadReportLogic(
   );
   const rawRows = result.data as Record<string, unknown>[];
   const rows = input.includeComputedMetrics
-    ? appendComputedMetricsToRows(
-        rawRows.map(stringifyRow),
-        META_COMPUTED_METRIC_ALIASES,
-      )
+    ? appendComputedMetricsToRows(rawRows.map(stringifyRow), META_COMPUTED_METRIC_ALIASES)
     : rawRows;
   const warnings = result.fetchedAllRows
     ? []

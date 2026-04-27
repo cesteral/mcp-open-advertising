@@ -6,22 +6,22 @@
  * Provides JSON Schema for specific targeting option detail types
  */
 
-import { zodToJsonSchema } from 'zod-to-json-schema';
-import type { ResourceDefinition, ResourceContent, ResourceListItem } from '../utils/types.js';
+import { zodToJsonSchema } from "zod-to-json-schema";
+import type { ResourceDefinition, ResourceContent, ResourceListItem } from "../utils/types.js";
 import {
   ALL_TARGETING_TYPES,
   TARGETING_TYPE_DESCRIPTIONS,
   getTargetingDetailSchemaName,
   isValidTargetingType,
   type TargetingType,
-} from '../../tools/utils/targeting-metadata.js';
-import { McpError, JsonRpcErrorCode } from '../../../utils/errors/index.js';
-import * as generatedSchemas from '../../../generated/schemas/zod.js';
-import { resourceCache } from '../utils/resource-cache.js';
+} from "../../tools/utils/targeting-metadata.js";
+import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import * as generatedSchemas from "../../../generated/schemas/zod.js";
+import { resourceCache } from "../utils/resource-cache.js";
 
-const RESOURCE_NAME = 'DV360 Targeting Schema';
-const RESOURCE_DESCRIPTION = 'JSON Schema for specific targeting option detail types';
-const URI_TEMPLATE = 'targeting-schema://{targetingType}';
+const RESOURCE_NAME = "DV360 Targeting Schema";
+const RESOURCE_DESCRIPTION = "JSON Schema for specific targeting option detail types";
+const URI_TEMPLATE = "targeting-schema://{targetingType}";
 
 /**
  * Get example payload for a targeting type
@@ -30,54 +30,54 @@ function getTargetingExample(targetingType: TargetingType): Record<string, any> 
   const examples: Partial<Record<TargetingType, Record<string, any>>> = {
     TARGETING_TYPE_CHANNEL: {
       channelDetails: {
-        channelId: '123456',
+        channelId: "123456",
         negative: true,
       },
     },
     TARGETING_TYPE_GEO_REGION: {
       geoRegionDetails: {
-        targetingOptionId: '2840', // US country code
+        targetingOptionId: "2840", // US country code
         negative: false,
       },
     },
     TARGETING_TYPE_KEYWORD: {
       keywordDetails: {
-        keyword: 'example keyword',
+        keyword: "example keyword",
         negative: false,
       },
     },
     TARGETING_TYPE_URL: {
       urlDetails: {
-        url: 'example.com',
+        url: "example.com",
         negative: true,
       },
     },
     TARGETING_TYPE_AGE_RANGE: {
       ageRangeDetails: {
-        ageRange: 'AGE_RANGE_25_34',
+        ageRange: "AGE_RANGE_25_34",
       },
     },
     TARGETING_TYPE_GENDER: {
       genderDetails: {
-        gender: 'GENDER_FEMALE',
+        gender: "GENDER_FEMALE",
       },
     },
     TARGETING_TYPE_DEVICE_TYPE: {
       deviceTypeDetails: {
-        deviceType: 'DEVICE_TYPE_MOBILE',
+        deviceType: "DEVICE_TYPE_MOBILE",
       },
     },
     TARGETING_TYPE_DAY_AND_TIME: {
       dayAndTimeDetails: {
-        dayOfWeek: 'MONDAY',
+        dayOfWeek: "MONDAY",
         startHour: 9,
         endHour: 17,
-        timeZoneResolution: 'TIME_ZONE_RESOLUTION_END_USER',
+        timeZoneResolution: "TIME_ZONE_RESOLUTION_END_USER",
       },
     },
     TARGETING_TYPE_LANGUAGE: {
       languageDetails: {
-        targetingOptionId: 'en', // English
+        targetingOptionId: "en", // English
         negative: false,
       },
     },
@@ -93,9 +93,13 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
   const { targetingType } = params;
 
   if (!targetingType) {
-    throw new McpError(JsonRpcErrorCode.InvalidParams, 'Missing required parameter: targetingType', {
-      availableTypes: ALL_TARGETING_TYPES,
-    });
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "Missing required parameter: targetingType",
+      {
+        availableTypes: ALL_TARGETING_TYPES,
+      }
+    );
   }
 
   if (!isValidTargetingType(targetingType)) {
@@ -108,7 +112,7 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
   const cacheKey = `targeting-schema://${targetingType}`;
   const cached = resourceCache.get(cacheKey);
   if (cached) {
-    return { uri: cacheKey, mimeType: 'application/json', text: cached };
+    return { uri: cacheKey, mimeType: "application/json", text: cached };
   }
 
   const schemaName = getTargetingDetailSchemaName(targetingType as TargetingType);
@@ -120,12 +124,12 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
   if (zodSchema) {
     try {
       jsonSchema = zodToJsonSchema(zodSchema, {
-        target: 'jsonSchema7',
+        target: "jsonSchema7",
         markdownDescription: true,
         errorMessages: true,
       });
     } catch (e) {
-      schemaError = e instanceof Error ? e.message : 'Failed to convert schema';
+      schemaError = e instanceof Error ? e.message : "Failed to convert schema";
     }
   } else {
     schemaError = `Schema ${schemaName} not found in generated schemas`;
@@ -139,7 +143,7 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
     schemaError,
     example: getTargetingExample(targetingType as TargetingType),
     usage: {
-      createTool: 'dv360_create_assigned_targeting',
+      createTool: "dv360_create_assigned_targeting",
       note: 'Pass the data payload to the "data" parameter of the create tool',
     },
     documentation: `https://developers.google.com/display-video/api/reference/rest/v4/advertisers.lineItems.targetingTypes.assignedTargetingOptions#${schemaName}`,
@@ -150,7 +154,7 @@ async function readTargetingSchema(params: Record<string, string>): Promise<Reso
 
   return {
     uri: cacheKey,
-    mimeType: 'application/json',
+    mimeType: "application/json",
     text,
   };
 }
@@ -163,7 +167,7 @@ async function listTargetingSchemas(): Promise<ResourceListItem[]> {
     uri: `targeting-schema://${targetingType}`,
     name: `${targetingType} Schema`,
     description: TARGETING_TYPE_DESCRIPTIONS[targetingType],
-    mimeType: 'application/json',
+    mimeType: "application/json",
   }));
 }
 
@@ -174,7 +178,7 @@ export const targetingSchemaResource: ResourceDefinition = {
   uriTemplate: URI_TEMPLATE,
   name: RESOURCE_NAME,
   description: RESOURCE_DESCRIPTION,
-  mimeType: 'application/json',
+  mimeType: "application/json",
   read: readTargetingSchema,
   list: listTargetingSchemas,
 };

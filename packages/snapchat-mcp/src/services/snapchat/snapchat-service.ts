@@ -17,13 +17,7 @@ import type {
   SnapchatAdAccount,
 } from "./types.js";
 
-export type {
-  SnapchatCampaign,
-  SnapchatAdSquad,
-  SnapchatAd,
-  SnapchatCreative,
-  SnapchatAdAccount,
-};
+export type { SnapchatCampaign, SnapchatAdSquad, SnapchatAd, SnapchatCreative, SnapchatAdAccount };
 
 interface SnapchatEntityMap {
   campaign: SnapchatCampaign;
@@ -53,9 +47,21 @@ interface SnapchatTargetingEndpointConfig {
 const TARGETING_ENDPOINTS: Record<string, SnapchatTargetingEndpointConfig> = {
   country_support: { path: "/v1/targeting/v1/options" },
   geo_country: { path: "/v1/targeting/geo/country", responseKey: "country" },
-  geo_region: { path: "/v1/targeting/geo/{countryCode}/region", responseKey: "region", requiresCountryCode: true },
-  geo_metro: { path: "/v1/targeting/geo/{countryCode}/metro", responseKey: "metro", requiresCountryCode: true },
-  geo_postal_code: { path: "/v1/targeting/geo/{countryCode}/postal_code", responseKey: "postal_code", requiresCountryCode: true },
+  geo_region: {
+    path: "/v1/targeting/geo/{countryCode}/region",
+    responseKey: "region",
+    requiresCountryCode: true,
+  },
+  geo_metro: {
+    path: "/v1/targeting/geo/{countryCode}/metro",
+    responseKey: "metro",
+    requiresCountryCode: true,
+  },
+  geo_postal_code: {
+    path: "/v1/targeting/geo/{countryCode}/postal_code",
+    responseKey: "postal_code",
+    requiresCountryCode: true,
+  },
   interests_slc: { path: "/v1/targeting/v1/interests/scls", responseKey: "scls" },
   interests_vac: { path: "/v1/targeting/v1/interests/vac", responseKey: "vac" },
   interests_shp: { path: "/v1/targeting/v1/interests/shp", responseKey: "shp" },
@@ -108,7 +114,8 @@ function unwrapBulkResults(
     if (status === undefined || status === "SUCCESS") {
       return { success: true, entity: item[entityKey] ?? item };
     }
-    const errorMsg = item["sub_request_error_message"] ?? item["sub_request_status"] ?? "Unknown error";
+    const errorMsg =
+      item["sub_request_error_message"] ?? item["sub_request_status"] ?? "Unknown error";
     return { success: false, error: String(errorMsg) };
   });
 }
@@ -119,7 +126,10 @@ function extractNextCursor(response: unknown): string | undefined {
   return paging?.next_link;
 }
 
-function extractTargetingDimensions(response: unknown, responseKey?: string): Record<string, unknown>[] {
+function extractTargetingDimensions(
+  response: unknown,
+  responseKey?: string
+): Record<string, unknown>[] {
   const envelope = response as Record<string, unknown>;
   const items = envelope["targeting_dimensions"];
   if (!Array.isArray(items)) return [];
@@ -171,11 +181,20 @@ export class SnapchatService {
     switch (entityType) {
       case "campaign":
       case "creative":
-        return { adAccountId: filters.adAccountId ?? String((entity as { ad_account_id?: string }).ad_account_id ?? this.adAccountId) };
+        return {
+          adAccountId:
+            filters.adAccountId ??
+            String((entity as { ad_account_id?: string }).ad_account_id ?? this.adAccountId),
+        };
       case "adGroup":
-        return { campaignId: filters.campaignId ?? String((entity as { campaign_id?: string }).campaign_id) };
+        return {
+          campaignId:
+            filters.campaignId ?? String((entity as { campaign_id?: string }).campaign_id),
+        };
       case "ad":
-        return { adSquadId: filters.adSquadId ?? String((entity as { ad_squad_id?: string }).ad_squad_id) };
+        return {
+          adSquadId: filters.adSquadId ?? String((entity as { ad_squad_id?: string }).ad_squad_id),
+        };
       default:
         return {};
     }
@@ -191,7 +210,11 @@ export class SnapchatService {
     const currentEntity = await this.getEntity(entityType, entityId, context);
     const pathParams = this.resolveUpdatePathParams(entityType, currentEntity, filters);
     return {
-      mergedItem: { ...((currentEntity as unknown) as Record<string, unknown>), ...data, id: entityId },
+      mergedItem: {
+        ...(currentEntity as unknown as Record<string, unknown>),
+        ...data,
+        id: entityId,
+      },
       pathParams,
     };
   }
@@ -224,7 +247,11 @@ export class SnapchatService {
     const response = cursor?.startsWith("http")
       ? await this.httpClient.get(cursor, {}, context)
       : await this.httpClient.get(interpolatedPath, cursor ? { cursor } : {}, context);
-    const entities = unwrapEntities(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T][];
+    const entities = unwrapEntities(
+      config.responseKey,
+      config.entityKey,
+      response
+    ) as SnapchatEntityMap[T][];
     const nextCursor = extractNextCursor(response);
 
     return { entities, nextCursor };
@@ -244,7 +271,10 @@ export class SnapchatService {
 
     const entity = unwrapSingleEntity(config.responseKey, config.entityKey, response);
     if (!entity) {
-      throw new McpError(JsonRpcErrorCode.NotFound, `${config.displayName} with ID ${entityId} not found`);
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `${config.displayName} with ID ${entityId} not found`
+      );
     }
 
     return entity as SnapchatEntityMap[T];
@@ -270,7 +300,11 @@ export class SnapchatService {
     const body = { [config.responseKey]: [data] };
     const response = await this.httpClient.post(interpolatedPath, body, context);
 
-    return unwrapSingleEntity(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T];
+    return unwrapSingleEntity(
+      config.responseKey,
+      config.entityKey,
+      response
+    ) as SnapchatEntityMap[T];
   }
 
   async updateEntity<T extends SnapchatEntityType>(
@@ -284,12 +318,22 @@ export class SnapchatService {
 
     await this.rateLimiter.consume(`snapchat:default`, 3);
 
-    const { mergedItem, pathParams } = await this.buildMergedUpdateItem(entityType, entityId, data, filters, context);
+    const { mergedItem, pathParams } = await this.buildMergedUpdateItem(
+      entityType,
+      entityId,
+      data,
+      filters,
+      context
+    );
     const interpolatedPath = interpolatePath(config.updatePath, pathParams);
     const body = { [config.responseKey]: [mergedItem] };
     const response = await this.httpClient.put(interpolatedPath, body, context);
 
-    return unwrapSingleEntity(config.responseKey, config.entityKey, response) as SnapchatEntityMap[T];
+    return unwrapSingleEntity(
+      config.responseKey,
+      config.entityKey,
+      response
+    ) as SnapchatEntityMap[T];
   }
 
   async deleteEntity(
@@ -317,10 +361,16 @@ export class SnapchatService {
 
   // ─── Advertiser Account ──────────────────────────────────────────
 
-  async listAdAccounts(context?: RequestContext): Promise<{ entities: SnapchatAdAccount[]; nextCursor?: string }> {
+  async listAdAccounts(
+    context?: RequestContext
+  ): Promise<{ entities: SnapchatAdAccount[]; nextCursor?: string }> {
     await this.rateLimiter.consume(`snapchat:default`);
 
-    const response = await this.httpClient.get(`/v1/organizations/${this.orgId}/adaccounts`, {}, context);
+    const response = await this.httpClient.get(
+      `/v1/organizations/${this.orgId}/adaccounts`,
+      {},
+      context
+    );
     const entities = unwrapEntities("adaccounts", "adaccount", response) as SnapchatAdAccount[];
     const nextCursor = extractNextCursor(response);
 
@@ -332,8 +382,22 @@ export class SnapchatService {
   async adjustBids(
     adjustments: Array<{ adGroupId: string; bidPrice: number }>,
     context?: RequestContext
-  ): Promise<{ results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> }> {
-    const results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> = [];
+  ): Promise<{
+    results: Array<{
+      adGroupId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }>;
+  }> {
+    const results: Array<{
+      adGroupId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }> = [];
 
     for (const adjustment of adjustments) {
       try {
@@ -343,9 +407,15 @@ export class SnapchatService {
 
         // Update bid — convert currency to micros (Snapchat stores bids in micro-currency)
         const bidMicro = Math.round(adjustment.bidPrice * 1_000_000);
-        await this.updateEntity("adGroup", adjustment.adGroupId, {}, {
-          bid_micro: bidMicro,
-        }, context);
+        await this.updateEntity(
+          "adGroup",
+          adjustment.adGroupId,
+          {},
+          {
+            bid_micro: bidMicro,
+          },
+          context
+        );
 
         results.push({
           adGroupId: adjustment.adGroupId,
@@ -389,8 +459,8 @@ export class SnapchatService {
     const bulkResults = unwrapBulkResults(config.responseKey, config.entityKey, response);
 
     return {
-      results: items.map((_, i) =>
-        bulkResults[i] ?? { success: false, error: `No result returned for item ${i}` }
+      results: items.map(
+        (_, i) => bulkResults[i] ?? { success: false, error: `No result returned for item ${i}` }
       ),
     };
   }
@@ -418,7 +488,10 @@ export class SnapchatService {
       })
     );
 
-    const collectionPath = interpolatePath(config.updatePath, mergedItems[0]?.pathParams ?? filters);
+    const collectionPath = interpolatePath(
+      config.updatePath,
+      mergedItems[0]?.pathParams ?? filters
+    );
     const body = {
       [config.responseKey]: mergedItems.map((item) => item.mergedItem),
     };
@@ -464,7 +537,9 @@ export class SnapchatService {
     const response = await this.getTargetingOptions(targetingType, countryCode, limit, context);
     const normalizedQuery = query?.trim().toLowerCase();
     const filteredResults = normalizedQuery
-      ? response.results.filter((item) => JSON.stringify(item).toLowerCase().includes(normalizedQuery))
+      ? response.results.filter((item) =>
+          JSON.stringify(item).toLowerCase().includes(normalizedQuery)
+        )
       : response.results;
 
     return {
@@ -483,10 +558,16 @@ export class SnapchatService {
 
     const config = TARGETING_ENDPOINTS[targetingType];
     if (!config) {
-      throw new McpError(JsonRpcErrorCode.InvalidParams, `Unsupported Snapchat targeting type: ${targetingType}`);
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Unsupported Snapchat targeting type: ${targetingType}`
+      );
     }
     if (config.requiresCountryCode && !countryCode) {
-      throw new McpError(JsonRpcErrorCode.InvalidParams, `Targeting type ${targetingType} requires countryCode`);
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Targeting type ${targetingType} requires countryCode`
+      );
     }
 
     const path = interpolatePath(config.path, {
@@ -527,17 +608,17 @@ export class SnapchatService {
     await this.rateLimiter.consume(`snapchat:default`);
 
     const effectiveAdAccountId = adAccountId ?? this.adAccountId;
-    return this.httpClient.post(`/v1/adaccounts/${effectiveAdAccountId}/audience_size_v2`, targetingConfig, context);
+    return this.httpClient.post(
+      `/v1/adaccounts/${effectiveAdAccountId}/audience_size_v2`,
+      targetingConfig,
+      context
+    );
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────
 
-  async getCreativePreview(
-    creativeId: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getCreativePreview(creativeId: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`snapchat:default`);
     return this.httpClient.get(`/v1/creatives/${creativeId}/creative_preview`, undefined, context);
   }
-
 }

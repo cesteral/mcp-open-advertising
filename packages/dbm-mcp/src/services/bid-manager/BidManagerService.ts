@@ -77,7 +77,7 @@ export class BidManagerService {
     private config: AppConfig,
     private logger: Logger,
     private client: BidManagerClient,
-    private rateLimiter?: RateLimiter,
+    private rateLimiter?: RateLimiter
   ) {}
 
   /**
@@ -123,10 +123,7 @@ export class BidManagerService {
         throw error;
       }
       this.logger.error({ error }, "Failed to create query");
-      throw new QueryCreationError(
-        error instanceof Error ? error.message : String(error),
-        error
-      );
+      throw new QueryCreationError(error instanceof Error ? error.message : String(error), error);
     }
   }
 
@@ -184,10 +181,7 @@ export class BidManagerService {
   /**
    * Calculate delay for exponential backoff
    */
-  private calculateBackoffDelay(
-    attempt: number,
-    config: ExponentialBackoffConfig
-  ): number {
+  private calculateBackoffDelay(attempt: number, config: ExponentialBackoffConfig): number {
     const delay = config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt);
     return Math.min(delay, config.maxDelayMs);
   }
@@ -209,10 +203,7 @@ export class BidManagerService {
       backoffMultiplier: options?.backoffMultiplier ?? 2,
     };
 
-    this.logger.info(
-      { queryId, reportId, config },
-      "Starting exponential backoff polling"
-    );
+    this.logger.info({ queryId, reportId, config }, "Starting exponential backoff polling");
 
     let lastStatus: string | undefined;
 
@@ -223,7 +214,13 @@ export class BidManagerService {
       await sleep(currentDelay);
 
       this.logger.debug(
-        { queryId, reportId, attempt: attempt + 1, maxRetries: config.maxRetries, delayMs: currentDelay },
+        {
+          queryId,
+          reportId,
+          attempt: attempt + 1,
+          maxRetries: config.maxRetries,
+          delayMs: currentDelay,
+        },
         "Poll attempt"
       );
 
@@ -249,18 +246,18 @@ export class BidManagerService {
         }
 
         this.logger.warn(
-          { error: error instanceof Error ? error.message : String(error), queryId, reportId, attempt: attempt + 1 },
+          {
+            error: error instanceof Error ? error.message : String(error),
+            queryId,
+            reportId,
+            attempt: attempt + 1,
+          },
           "Poll attempt failed, will retry"
         );
       }
     }
 
-    throw new ReportTimeoutError(
-      queryId,
-      reportId,
-      config.maxRetries,
-      lastStatus
-    );
+    throw new ReportTimeoutError(queryId, reportId, config.maxRetries, lastStatus);
   }
 
   /**
@@ -346,7 +343,12 @@ export class BidManagerService {
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         this.logger.info(
-          { attempt: attempt + 1, maxRetries, existingQueryId: queryId, existingReportId: reportId },
+          {
+            attempt: attempt + 1,
+            maxRetries,
+            existingQueryId: queryId,
+            existingReportId: reportId,
+          },
           "Query execution attempt"
         );
 
@@ -367,11 +369,7 @@ export class BidManagerService {
         }
 
         // Poll for completion with exponential backoff
-        const report = await this.pollForCompletion(
-          queryId,
-          reportId,
-          options?.backoffConfig
-        );
+        const report = await this.pollForCompletion(queryId, reportId, options?.backoffConfig);
 
         lastStatus = report.status.state;
 
@@ -442,17 +440,11 @@ export class BidManagerService {
       const response = await fetch(gcsPath);
 
       if (!response.ok) {
-        throw new ReportFetchError(
-          `HTTP ${response.status}: ${response.statusText}`,
-          gcsPath
-        );
+        throw new ReportFetchError(`HTTP ${response.status}: ${response.statusText}`, gcsPath);
       }
 
       const data = await response.text();
-      this.logger.info(
-        { bytes: data.length },
-        "Report data fetched successfully"
-      );
+      this.logger.info({ bytes: data.length }, "Report data fetched successfully");
 
       return data;
     } catch (error) {
@@ -539,7 +531,9 @@ export class BidManagerService {
     });
   }
 
-  private async getHistoricalMetricsInner(params: GetHistoricalMetricsInput): Promise<HistoricalDataPoint[]> {
+  private async getHistoricalMetricsInner(
+    params: GetHistoricalMetricsInput
+  ): Promise<HistoricalDataPoint[]> {
     this.logger.info(
       {
         advertiserId: params.advertiserId,
@@ -552,10 +546,10 @@ export class BidManagerService {
     // Determine groupBy based on granularity
     const timeGroupBy =
       params.granularity === "weekly"
-        ? "FILTER_WEEK" as const
+        ? ("FILTER_WEEK" as const)
         : params.granularity === "monthly"
-          ? "FILTER_MONTH" as const
-          : "FILTER_DATE" as const;
+          ? ("FILTER_MONTH" as const)
+          : ("FILTER_DATE" as const);
 
     const querySpec: QuerySpec = {
       metadata: {
@@ -760,9 +754,7 @@ export class BidManagerService {
         customEndDate: parseDateString(params.dateRange.endDate),
       };
     } else {
-      throw new BidManagerError(
-        "Invalid dateRange: provide either preset or startDate/endDate"
-      );
+      throw new BidManagerError("Invalid dateRange: provide either preset or startDate/endDate");
     }
 
     // Build query specification with user-provided parameters
@@ -825,5 +817,4 @@ export class BidManagerService {
       data: records,
     };
   }
-
 }

@@ -31,7 +31,7 @@ describe("mapReportingError", () => {
           data: { ErrorCode: "InvalidArg", Message: "bad request" },
         },
       },
-      "ttd",
+      "ttd"
     );
     expect(err.upstreamCode).toBe("InvalidArg");
     expect(err.message).toBe("bad request");
@@ -46,7 +46,7 @@ describe("mapReportingError", () => {
           data: { error: { code: 100, message: "Permission denied" } },
         },
       },
-      "meta",
+      "meta"
     );
     expect(err.upstreamCode).toBe(100);
     expect(err.message).toBe("Permission denied");
@@ -60,7 +60,7 @@ describe("mapReportingError", () => {
           data: { error: { status: "PERMISSION_DENIED", message: "nope" } },
         },
       },
-      "google",
+      "google"
     );
     expect(err.upstreamCode).toBe("PERMISSION_DENIED");
     expect(err.message).toBe("nope");
@@ -74,7 +74,7 @@ describe("mapReportingError", () => {
           data: { Errors: [{ Code: "AuthenticationTokenExpired", Message: "expired" }] },
         },
       },
-      "microsoft",
+      "microsoft"
     );
     expect(err.upstreamCode).toBe("AuthenticationTokenExpired");
     expect(err.message).toBe("expired");

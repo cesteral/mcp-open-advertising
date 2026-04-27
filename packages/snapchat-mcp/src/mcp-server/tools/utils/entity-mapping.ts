@@ -139,8 +139,5 @@ export function getEntityTypeEnum(): [string, ...string[]] {
  * → "/v1/adaccounts/123/campaigns"
  */
 export function interpolatePath(path: string, params: Record<string, string>): string {
-  return Object.entries(params).reduce(
-    (acc, [key, val]) => acc.replace(`{${key}}`, val),
-    path
-  );
+  return Object.entries(params).reduce((acc, [key, val]) => acc.replace(`{${key}}`, val), path);
 }

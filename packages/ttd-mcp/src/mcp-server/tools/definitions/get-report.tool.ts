@@ -16,9 +16,7 @@ Provide report configuration including dimensions, metrics, date range, and opti
 
 export const GetReportInputSchema = z
   .object({
-    reportName: z
-      .string()
-      .describe("Name for the report"),
+    reportName: z.string().describe("Name for the report"),
     dateRange: z
       .enum([
         "Last7Days",
@@ -40,10 +38,7 @@ export const GetReportInputSchema = z
       .array(z.string())
       .optional()
       .describe("Report metrics (e.g., ['Impressions', 'Clicks', 'TotalCost'])"),
-    advertiserIds: z
-      .array(z.string())
-      .optional()
-      .describe("Filter by advertiser IDs"),
+    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
     reportTemplateId: z
       .number()
       .optional()
@@ -93,10 +88,10 @@ export async function getReportLogic(
     ...input.additionalConfig,
   };
 
-  const result = (await ttdReportingService.runReport(
-    reportConfig,
-    context
-  )) as Record<string, unknown>;
+  const result = (await ttdReportingService.runReport(reportConfig, context)) as Record<
+    string,
+    unknown
+  >;
 
   return {
     reportScheduleId: result.reportScheduleId as string,

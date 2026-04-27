@@ -25,17 +25,13 @@ Use this tool for batch pause/resume operations across campaigns or ad groups.
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
       .max(100)
       .describe("Array of entity IDs to update (max 100)"),
-    status: z
-      .enum(["Available", "Paused", "Archived"])
-      .describe("New availability status"),
+    status: z.enum(["Available", "Paused", "Archived"]).describe("New availability status"),
   })
   .describe("Parameters for bulk status update");
 

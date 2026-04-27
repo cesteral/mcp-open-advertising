@@ -52,18 +52,11 @@ export class DV360HttpClient {
    * - Retries on 429 and 5xx with exponential backoff (respects Retry-After).
    * - Parses JSON or returns `{}` for 204 No Content.
    */
-  async fetch(
-    path: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
+  async fetch(path: string, context?: RequestContext, options?: RequestInit): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
     const method = options?.method || "GET";
 
-    this.logger.debug(
-      { url, method, requestId: context?.requestId },
-      "Making DV360 API request"
-    );
+    this.logger.debug({ url, method, requestId: context?.requestId }, "Making DV360 API request");
 
     return withDV360ApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);

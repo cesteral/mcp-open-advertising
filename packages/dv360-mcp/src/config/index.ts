@@ -30,10 +30,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["google-headers", "jwt", "none"]).default("google-headers"),
 
   // DV360 API Configuration
-  dv360ApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://displayvideo.googleapis.com/v4"),
+  dv360ApiBaseUrl: z.string().url().default("https://displayvideo.googleapis.com/v4"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via DV360_RATE_LIMIT_PER_MINUTE for different scaling profiles.

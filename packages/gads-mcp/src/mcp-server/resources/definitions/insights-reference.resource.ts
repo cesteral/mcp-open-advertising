@@ -6,7 +6,8 @@ import type { Resource } from "../types.js";
 export const insightsReferenceResource: Resource = {
   uri: "insights-reference://gads",
   name: "Google Ads Insights Reference",
-  description: "Available metrics, entity types, computed metrics, and date range options for gads_get_insights",
+  description:
+    "Available metrics, entity types, computed metrics, and date range options for gads_get_insights",
   mimeType: "text/markdown",
   getContent: () => `# Google Ads Insights Reference
 

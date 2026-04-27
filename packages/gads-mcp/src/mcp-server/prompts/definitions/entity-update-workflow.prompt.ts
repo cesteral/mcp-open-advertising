@@ -34,9 +34,7 @@ export const entityUpdateWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getEntityUpdateWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getEntityUpdateWorkflowMessage(args?: Record<string, string>): string {
   const customerId = args?.customerId || "{customerId}";
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";

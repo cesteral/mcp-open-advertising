@@ -13,6 +13,7 @@ The Cesteral MCP platform has a **strong production foundation**. All 13 servers
 **Key strengths:** Credential fingerprint binding prevents session hijacking; JWT advertiser scoping with audit trail; centralized error sanitization; exponential backoff with Retry-After; OTEL traces and metrics auto-exported to GCP.
 
 **Targeted gaps:**
+
 - P0: Cloud Build production approval gates are documented but commented out
 - P1: In-memory rate limiting doesn't account for multi-instance scaling
 - P1: CM360 and SA360 test coverage is critically low (3 and 7 test files respectively)
@@ -75,21 +76,21 @@ The Cesteral MCP platform has a **strong production foundation**. All 13 servers
 - **Metrics:** `recordRateLimitHit()` increments OTEL counter `mcp.rate_limit.hit.count` with `key_pattern` attribute (`:67`, `shared/src/utils/metrics.ts:98-108`).
 - **Per-server configurations:**
 
-| Server | Default Limit | Key Pattern | Config File |
-|--------|--------------|-------------|-------------|
-| dbm-mcp | 100/min | `bidmanager:*` | `dbm-mcp/src/config/index.ts:34` |
-| dv360-mcp | 60/min | `dv360:*` | `dv360-mcp/src/config/index.ts:34` |
-| ttd-mcp | 100/min | `ttd:*` | `ttd-mcp/src/config/index.ts:35` |
-| gads-mcp | 100/min | `gads:*` | `gads-mcp/src/config/index.ts:27` |
-| meta-mcp | 200/min | `meta:*` | `meta-mcp/src/config/index.ts:28` |
-| linkedin-mcp | 100/min | `linkedin:*` | `linkedin-mcp/src/config/index.ts:28` |
-| tiktok-mcp | 100/min | `tiktok:*` | `tiktok-mcp/src/config/index.ts:28` |
-| **cm360-mcp** | **50/min** | `cm360:*` | `cm360-mcp/src/config/index.ts:21` |
-| sa360-mcp | 100/min | `sa360:*` | `sa360-mcp/src/config/index.ts:31` |
-| pinterest-mcp | 100/min | `pinterest:*` | `pinterest-mcp/src/config/index.ts:28` |
-| snapchat-mcp | 100/min | `snapchat:*` | `snapchat-mcp/src/config/index.ts:28` |
-| amazon-dsp-mcp | 100/min | `amazon_dsp:*` | `amazon-dsp-mcp/src/config/index.ts:28` |
-| msads-mcp | 100/min | `msads:*` | `msads-mcp/src/config/index.ts:37` |
+| Server         | Default Limit | Key Pattern    | Config File                             |
+| -------------- | ------------- | -------------- | --------------------------------------- |
+| dbm-mcp        | 100/min       | `bidmanager:*` | `dbm-mcp/src/config/index.ts:34`        |
+| dv360-mcp      | 60/min        | `dv360:*`      | `dv360-mcp/src/config/index.ts:34`      |
+| ttd-mcp        | 100/min       | `ttd:*`        | `ttd-mcp/src/config/index.ts:35`        |
+| gads-mcp       | 100/min       | `gads:*`       | `gads-mcp/src/config/index.ts:27`       |
+| meta-mcp       | 200/min       | `meta:*`       | `meta-mcp/src/config/index.ts:28`       |
+| linkedin-mcp   | 100/min       | `linkedin:*`   | `linkedin-mcp/src/config/index.ts:28`   |
+| tiktok-mcp     | 100/min       | `tiktok:*`     | `tiktok-mcp/src/config/index.ts:28`     |
+| **cm360-mcp**  | **50/min**    | `cm360:*`      | `cm360-mcp/src/config/index.ts:21`      |
+| sa360-mcp      | 100/min       | `sa360:*`      | `sa360-mcp/src/config/index.ts:31`      |
+| pinterest-mcp  | 100/min       | `pinterest:*`  | `pinterest-mcp/src/config/index.ts:28`  |
+| snapchat-mcp   | 100/min       | `snapchat:*`   | `snapchat-mcp/src/config/index.ts:28`   |
+| amazon-dsp-mcp | 100/min       | `amazon_dsp:*` | `amazon-dsp-mcp/src/config/index.ts:28` |
+| msads-mcp      | 100/min       | `msads:*`      | `msads-mcp/src/config/index.ts:37`      |
 
 - **Per-advertiser granularity:** DV360 uses `dv360:${advertiserId}` keys (`dv360-mcp/src/services/dv360/DV360-service.ts:191`). Snapchat uses per-operation keys like `snapchat:reporting`.
 - **Test coverage:** `shared/tests/utils/rate-limiter.test.ts:1-225` covers sliding window, wildcard matching, multi-token consumption, reset, destroy lifecycle, and retryAfter calculation.
@@ -229,18 +230,18 @@ The Cesteral MCP platform has a **strong production foundation**. All 13 servers
 
 All 13 servers use the unified patterns from `@cesteral/shared`:
 
-| Pattern | Shared Component | Adoption |
-|---------|-----------------|----------|
-| Bootstrap | `bootstrapMcpServer()` in `server-bootstrap.ts` | 13/13 |
-| Transport | `createMcpHttpTransport()` in `mcp-http-transport-factory.ts` | 13/13 |
-| Tool factory | `registerToolsFromDefinitions()` in `tool-handler-factory.ts` | 13/13 |
-| Auth strategy | `createAuthStrategy()` / `BearerAuthStrategyBase` | 13/13 |
-| Config validation | `BaseConfigSchema` with Zod | 13/13 |
-| Error handling | `McpError` / `formatErrorForMcp()` | 13/13 |
-| Retry | `executeWithRetry()` in `retryable-fetch.ts` | 13/13 |
-| Rate limiting | `createPlatformRateLimiter()` | 13/13 |
-| Observability | `initializeOpenTelemetry()` / `otelLogMixin()` | 13/13 |
-| Session management | `SessionServiceStore` / `SessionManager` | 13/13 |
+| Pattern            | Shared Component                                              | Adoption |
+| ------------------ | ------------------------------------------------------------- | -------- |
+| Bootstrap          | `bootstrapMcpServer()` in `server-bootstrap.ts`               | 13/13    |
+| Transport          | `createMcpHttpTransport()` in `mcp-http-transport-factory.ts` | 13/13    |
+| Tool factory       | `registerToolsFromDefinitions()` in `tool-handler-factory.ts` | 13/13    |
+| Auth strategy      | `createAuthStrategy()` / `BearerAuthStrategyBase`             | 13/13    |
+| Config validation  | `BaseConfigSchema` with Zod                                   | 13/13    |
+| Error handling     | `McpError` / `formatErrorForMcp()`                            | 13/13    |
+| Retry              | `executeWithRetry()` in `retryable-fetch.ts`                  | 13/13    |
+| Rate limiting      | `createPlatformRateLimiter()`                                 | 13/13    |
+| Observability      | `initializeOpenTelemetry()` / `otelLogMixin()`                | 13/13    |
+| Session management | `SessionServiceStore` / `SessionManager`                      | 13/13    |
 
 **Gaps:**
 
@@ -250,22 +251,22 @@ All 13 servers use the unified patterns from `@cesteral/shared`:
 
 ## 3. Test Coverage Table
 
-| Package | Source Files | Test Files | Ratio | Notes |
-|---------|-------------|------------|-------|-------|
-| shared | 35 | 19 | 54.3% | Best coverage; underpins all servers |
-| gads-mcp | 53 | 23 | 43.4% | |
-| ttd-mcp | 61 | 26 | 42.6% | |
-| meta-mcp | 61 | 24 | 39.3% | |
-| dv360-mcp | 84 | 29 | 34.5% | Most source files; complex dynamic schema |
-| dbm-mcp | 54 | 15 | 27.8% | |
-| pinterest-mcp | 62 | 15 | 24.2% | |
-| snapchat-mcp | 62 | 14 | 22.6% | |
-| amazon-dsp-mcp | 60 | 13 | 21.7% | |
-| msads-mcp | 52 | 11 | 21.2% | |
-| tiktok-mcp | 62 | 13 | 21.0% | |
-| linkedin-mcp | 60 | 10 | 16.7% | |
-| **sa360-mcp** | **47** | **7** | **14.9%** | **Low coverage** |
-| **cm360-mcp** | **52** | **3** | **5.8%** | **Critically low** |
+| Package        | Source Files | Test Files | Ratio     | Notes                                     |
+| -------------- | ------------ | ---------- | --------- | ----------------------------------------- |
+| shared         | 35           | 19         | 54.3%     | Best coverage; underpins all servers      |
+| gads-mcp       | 53           | 23         | 43.4%     |                                           |
+| ttd-mcp        | 61           | 26         | 42.6%     |                                           |
+| meta-mcp       | 61           | 24         | 39.3%     |                                           |
+| dv360-mcp      | 84           | 29         | 34.5%     | Most source files; complex dynamic schema |
+| dbm-mcp        | 54           | 15         | 27.8%     |                                           |
+| pinterest-mcp  | 62           | 15         | 24.2%     |                                           |
+| snapchat-mcp   | 62           | 14         | 22.6%     |                                           |
+| amazon-dsp-mcp | 60           | 13         | 21.7%     |                                           |
+| msads-mcp      | 52           | 11         | 21.2%     |                                           |
+| tiktok-mcp     | 62           | 13         | 21.0%     |                                           |
+| linkedin-mcp   | 60           | 10         | 16.7%     |                                           |
+| **sa360-mcp**  | **47**       | **7**      | **14.9%** | **Low coverage**                          |
+| **cm360-mcp**  | **52**       | **3**      | **5.8%**  | **Critically low**                        |
 
 **Total:** 817 source files, 222 test files (27.2% overall)
 
@@ -293,13 +294,14 @@ The intent is already documented in comments. Without approval gates, `terraform
 
 In-memory rate limiting means `effective_limit = configured_limit × instance_count`. Risk matrix:
 
-| Server | Configured Limit | At 10 Instances | Platform Quota | Risk |
-|--------|-----------------|-----------------|---------------|------|
-| cm360-mcp | 50/min | 500/min | ~50/min | **High** |
-| dv360-mcp | 60/min | 600/min | Varies | Medium |
-| All others | 100-200/min | 1000-2000/min | Varies | Low-Medium |
+| Server     | Configured Limit | At 10 Instances | Platform Quota | Risk       |
+| ---------- | ---------------- | --------------- | -------------- | ---------- |
+| cm360-mcp  | 50/min           | 500/min         | ~50/min        | **High**   |
+| dv360-mcp  | 60/min           | 600/min         | Varies         | Medium     |
+| All others | 100-200/min      | 1000-2000/min   | Varies         | Low-Medium |
 
 **Options (not mutually exclusive):**
+
 - (a) Set `configured_limit = platform_quota / max_instances` as a conservative default
 - (b) Add Redis-backed rate limiter option for quota-sensitive platforms
 - (c) Pin quota-sensitive servers (CM360) to `max_instances=1` in Terraform
@@ -309,6 +311,7 @@ In-memory rate limiting means `effective_limit = configured_limit × instance_co
 CM360 has 3 test files for 52 source files; SA360 has 7 for 47. Both handle sensitive operations (campaign management, conversion tracking).
 
 **Minimum recommended coverage:**
+
 - Auth adapter and strategy tests
 - HTTP client tests (retry behavior, error mapping)
 - Critical service method tests (CRUD operations, reporting)
@@ -343,6 +346,7 @@ Add a separate Cloud Build trigger for staging that runs the full pipeline (incl
 #### 9. Document single-region decision
 
 All infrastructure targets `europe-west2` (`terraform/variables.tf:11`, `cloudbuild.yaml:6`). Write an Architecture Decision Record (ADR) capturing:
+
 - Why europe-west2 was chosen (data residency, latency to ad platform APIs, cost)
 - Criteria for when multi-region deployment becomes necessary (SLA requirements, traffic volume, regulatory changes)
 - Estimated effort and architecture changes for multi-region
@@ -351,39 +355,39 @@ All infrastructure targets `europe-west2` (`terraform/variables.tf:11`, `cloudbu
 
 ## 5. Security Posture Summary
 
-| Control | Implementation | Evidence |
-|---------|---------------|----------|
-| **Session hijacking prevention** | Credential fingerprint binding on every request | `shared/src/utils/mcp-transport-helpers.ts:137-184` |
-| **JWT advertiser scoping** | `allowedAdvertisers` claim enforced in tool handler factory | `shared/src/utils/tool-handler-factory.ts:420-471` |
-| **Audit trail on denials** | Structured log with `event: "tool_access_denied"` + all context | `shared/src/utils/tool-handler-factory.ts:442-455` |
-| **Error sanitization** | Recursive redaction of 10+ sensitive key patterns | `shared/src/utils/mcp-errors.ts:237-266` |
-| **Interaction log sanitization** | Additional patterns including `partner-id`, `authorization` | `shared/src/utils/interaction-logger.ts:77-114` |
-| **DNS rebinding protection** | Origin validation in transport factory | `shared/src/utils/mcp-http-transport-factory.ts` CORS config |
-| **Non-root containers** | `USER node` in Dockerfile | `Dockerfile:57` |
-| **Alpine base image** | `node:20-alpine` minimal attack surface | `Dockerfile:4` |
-| **Production-only deps** | Multi-stage build with `pnpm deploy --prod` | `Dockerfile:29-35` |
-| **Secret scanning** | gitleaks in CI with allowlist | `.github/workflows/ci.yml:65-74`, `.gitleaks.toml` |
-| **Vulnerability scanning** | Trivy HIGH/CRITICAL in Cloud Build | `cloudbuild.yaml:45-62` |
-| **Per-service IAM** | Dedicated service accounts with least-privilege roles | `terraform/modules/mcp-service/main.tf:19-69` |
-| **No hardcoded secrets** | All via GCP Secret Manager environment injection | `terraform/variables.tf:249-617` |
-| **Service account protection** | `prevent_destroy = true` lifecycle rule | `terraform/modules/mcp-service/main.tf:26` |
+| Control                          | Implementation                                                  | Evidence                                                     |
+| -------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Session hijacking prevention** | Credential fingerprint binding on every request                 | `shared/src/utils/mcp-transport-helpers.ts:137-184`          |
+| **JWT advertiser scoping**       | `allowedAdvertisers` claim enforced in tool handler factory     | `shared/src/utils/tool-handler-factory.ts:420-471`           |
+| **Audit trail on denials**       | Structured log with `event: "tool_access_denied"` + all context | `shared/src/utils/tool-handler-factory.ts:442-455`           |
+| **Error sanitization**           | Recursive redaction of 10+ sensitive key patterns               | `shared/src/utils/mcp-errors.ts:237-266`                     |
+| **Interaction log sanitization** | Additional patterns including `partner-id`, `authorization`     | `shared/src/utils/interaction-logger.ts:77-114`              |
+| **DNS rebinding protection**     | Origin validation in transport factory                          | `shared/src/utils/mcp-http-transport-factory.ts` CORS config |
+| **Non-root containers**          | `USER node` in Dockerfile                                       | `Dockerfile:57`                                              |
+| **Alpine base image**            | `node:20-alpine` minimal attack surface                         | `Dockerfile:4`                                               |
+| **Production-only deps**         | Multi-stage build with `pnpm deploy --prod`                     | `Dockerfile:29-35`                                           |
+| **Secret scanning**              | gitleaks in CI with allowlist                                   | `.github/workflows/ci.yml:65-74`, `.gitleaks.toml`           |
+| **Vulnerability scanning**       | Trivy HIGH/CRITICAL in Cloud Build                              | `cloudbuild.yaml:45-62`                                      |
+| **Per-service IAM**              | Dedicated service accounts with least-privilege roles           | `terraform/modules/mcp-service/main.tf:19-69`                |
+| **No hardcoded secrets**         | All via GCP Secret Manager environment injection                | `terraform/variables.tf:249-617`                             |
+| **Service account protection**   | `prevent_destroy = true` lifecycle rule                         | `terraform/modules/mcp-service/main.tf:26`                   |
 
 ---
 
 ## Appendix: Server Inventory
 
-| # | Server | Port | Auth Modes | Rate Limit | Test Files |
-|---|--------|------|-----------|------------|------------|
-| 1 | dbm-mcp | 3001 | google-headers, jwt, none | 100/min | 15 |
-| 2 | dv360-mcp | 3002 | google-headers, jwt, none | 60/min | 29 |
-| 3 | ttd-mcp | 3003 | ttd-token, jwt, none | 100/min | 26 |
-| 4 | gads-mcp | 3004 | google-headers, jwt, none | 100/min | 23 |
-| 5 | meta-mcp | 3005 | meta-bearer, jwt, none | 200/min | 24 |
-| 6 | linkedin-mcp | 3006 | linkedin-bearer, jwt, none | 100/min | 10 |
-| 7 | tiktok-mcp | 3007 | tiktok-bearer, jwt, none | 100/min | 13 |
-| 8 | cm360-mcp | 3008 | google-headers, jwt, none | 50/min | 3 |
-| 9 | snapchat-mcp | 3009 | snapchat-bearer, jwt, none | 100/min | 14 |
-| 10 | sa360-mcp | 3010 | sa360-headers, jwt, none | 100/min | 7 |
-| 11 | pinterest-mcp | 3011 | pinterest-bearer, jwt, none | 100/min | 15 |
-| 12 | amazon-dsp-mcp | 3012 | amazon-dsp-bearer, jwt, none | 100/min | 13 |
-| 13 | msads-mcp | 3013 | msads-bearer, jwt, none | 100/min | 11 |
+| #   | Server         | Port | Auth Modes                   | Rate Limit | Test Files |
+| --- | -------------- | ---- | ---------------------------- | ---------- | ---------- |
+| 1   | dbm-mcp        | 3001 | google-headers, jwt, none    | 100/min    | 15         |
+| 2   | dv360-mcp      | 3002 | google-headers, jwt, none    | 60/min     | 29         |
+| 3   | ttd-mcp        | 3003 | ttd-token, jwt, none         | 100/min    | 26         |
+| 4   | gads-mcp       | 3004 | google-headers, jwt, none    | 100/min    | 23         |
+| 5   | meta-mcp       | 3005 | meta-bearer, jwt, none       | 200/min    | 24         |
+| 6   | linkedin-mcp   | 3006 | linkedin-bearer, jwt, none   | 100/min    | 10         |
+| 7   | tiktok-mcp     | 3007 | tiktok-bearer, jwt, none     | 100/min    | 13         |
+| 8   | cm360-mcp      | 3008 | google-headers, jwt, none    | 50/min     | 3          |
+| 9   | snapchat-mcp   | 3009 | snapchat-bearer, jwt, none   | 100/min    | 14         |
+| 10  | sa360-mcp      | 3010 | sa360-headers, jwt, none     | 100/min    | 7          |
+| 11  | pinterest-mcp  | 3011 | pinterest-bearer, jwt, none  | 100/min    | 15         |
+| 12  | amazon-dsp-mcp | 3012 | amazon-dsp-bearer, jwt, none | 100/min    | 13         |
+| 13  | msads-mcp      | 3013 | msads-bearer, jwt, none      | 100/min    | 11         |

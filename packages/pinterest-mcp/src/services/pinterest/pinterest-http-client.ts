@@ -70,11 +70,7 @@ export class PinterestHttpClient {
    * Make an authenticated POST request with JSON body.
    * Body can be an object or an array (Pinterest v5 create/update use array bodies).
    */
-  async post(
-    path: string,
-    data?: unknown,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async post(path: string, data?: unknown, context?: RequestContext): Promise<unknown> {
     const url = this.buildUrl(path);
     const body = JSON.stringify(data ?? {});
 
@@ -88,11 +84,7 @@ export class PinterestHttpClient {
    * Make an authenticated PATCH request with JSON body.
    * Pinterest v5 uses PATCH for bulk updates (body is an array of partial entity objects).
    */
-  async patch(
-    path: string,
-    data?: unknown,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async patch(path: string, data?: unknown, context?: RequestContext): Promise<unknown> {
     const url = this.buildUrl(path);
     const body = JSON.stringify(data ?? {});
 
@@ -136,7 +128,13 @@ export class PinterestHttpClient {
     return withPinterestApiSpan("api.multipart.POST", path, async (span) => {
       span.setAttribute("http.request.method", "POST");
       span.setAttribute("http.url", url);
-      const { body, contentType } = buildMultipartFormData(fields, fileField, fileBuffer, filename, fileContentType);
+      const { body, contentType } = buildMultipartFormData(
+        fields,
+        fileField,
+        fileBuffer,
+        filename,
+        fileContentType
+      );
 
       const result = await executeWithRetry(PINTEREST_RETRY_CONFIG, {
         url,

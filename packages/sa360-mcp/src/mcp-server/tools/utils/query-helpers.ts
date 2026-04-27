@@ -147,10 +147,7 @@ export function buildListQuery(
 /**
  * Build an SA360 query to get a single entity by ID.
  */
-export function buildGetByIdQuery(
-  entityType: SA360EntityType,
-  entityId: string
-): string {
+export function buildGetByIdQuery(entityType: SA360EntityType, entityId: string): string {
   if (!/^\d+$/.test(entityId)) {
     throw new Error(`Invalid entity ID: "${entityId}". Entity IDs must be numeric.`);
   }

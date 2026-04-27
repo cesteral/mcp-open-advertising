@@ -7,15 +7,8 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
 import { SA360RefreshTokenAuthAdapter } from "./auth/sa360-auth-adapter.js";
-import {
-  detectTransportMode,
-  createServerLogger,
-  bootstrapMcpServer,
-} from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "./services/session-services.js";
+import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
+import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
@@ -33,7 +26,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   if (!clientId || !clientSecret || !refreshToken) {
     logger.warn(
       "No SA360 credentials found in env vars. " +
-      "Set SA360_CLIENT_ID, SA360_CLIENT_SECRET, and SA360_REFRESH_TOKEN for stdio mode."
+        "Set SA360_CLIENT_ID, SA360_CLIENT_SECRET, and SA360_REFRESH_TOKEN for stdio mode."
     );
     return false;
   }

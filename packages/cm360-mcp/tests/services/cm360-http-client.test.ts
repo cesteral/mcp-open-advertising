@@ -18,9 +18,8 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
 });
 
 vi.mock("../../src/utils/telemetry/tracing.js", () => ({
-  withCM360ApiSpan: vi.fn(
-    async (_op: string, _path: string, fn: (span: any) => Promise<any>) =>
-      fn({ setAttribute: vi.fn() })
+  withCM360ApiSpan: vi.fn(async (_op: string, _path: string, fn: (span: any) => Promise<any>) =>
+    fn({ setAttribute: vi.fn() })
   ),
 }));
 
@@ -117,9 +116,7 @@ describe("CM360HttpClient", () => {
     });
 
     it("refreshes access token on each getHeaders call", async () => {
-      authAdapter.getAccessToken
-        .mockResolvedValueOnce("token-1")
-        .mockResolvedValueOnce("token-2");
+      authAdapter.getAccessToken.mockResolvedValueOnce("token-1").mockResolvedValueOnce("token-2");
 
       mockExecuteWithRetry.mockResolvedValueOnce({});
 
@@ -142,9 +139,7 @@ describe("CM360HttpClient", () => {
     });
 
     it("propagates errors from executeWithRetry", async () => {
-      mockExecuteWithRetry.mockRejectedValueOnce(
-        new Error("CM360 API request failed: 403")
-      );
+      mockExecuteWithRetry.mockRejectedValueOnce(new Error("CM360 API request failed: 403"));
 
       await expect(client.fetch("/test")).rejects.toThrow("CM360 API request failed: 403");
     });

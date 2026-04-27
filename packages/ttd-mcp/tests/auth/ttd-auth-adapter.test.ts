@@ -11,7 +11,9 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     headers: Record<string, string | string[] | undefined>,
     name: string
   ): string | undefined => {
-    const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const key = Object.keys(headers).find(
+      (candidate) => candidate.toLowerCase() === name.toLowerCase()
+    );
     const value = key ? headers[key] : undefined;
     return Array.isArray(value) ? value[0] : value;
   };
@@ -51,9 +53,7 @@ describe("parseTtdDirectTokenFromHeaders", () => {
   });
 
   it("throws when TTD-Auth is missing", () => {
-    expect(() => parseTtdDirectTokenFromHeaders({})).toThrow(
-      "Missing required header: TTD-Auth"
-    );
+    expect(() => parseTtdDirectTokenFromHeaders({})).toThrow("Missing required header: TTD-Auth");
   });
 });
 

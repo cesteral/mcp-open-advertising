@@ -44,7 +44,8 @@ export async function createMcpServer(
     {
       name: "dbm-mcp",
       version: packageJson.version,
-      description: "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
+      description:
+        "DV360 reporting and metrics via Bid Manager API v2. Provides read-only access to campaign delivery, performance, pacing, and historical data.",
     },
     {
       capabilities: {
@@ -95,8 +96,12 @@ export async function createMcpServer(
 
   // Register conformance fixtures (resources + prompts) when enabled
   if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import("@cesteral/shared");
-    const { ResourceTemplate: McpResourceTemplate } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
+      "@cesteral/shared"
+    );
+    const { ResourceTemplate: McpResourceTemplate } = await import(
+      "@modelcontextprotocol/sdk/server/mcp.js"
+    );
 
     registerStaticResourcesFromDefinitions({
       server,
@@ -104,7 +109,9 @@ export async function createMcpServer(
       logger,
     });
 
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, { list: undefined });
+    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
+      list: undefined,
+    });
     server.registerResource(
       "conformance_template",
       template,
@@ -116,11 +123,13 @@ export async function createMcpServer(
         const id = (variables.id as string) || "unknown";
         const content = conformanceResourceTemplate.getContent(id);
         return {
-          contents: [{
-            uri: uri.href,
-            mimeType: conformanceResourceTemplate.mimeType,
-            text: content,
-          }],
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: conformanceResourceTemplate.mimeType,
+              text: content,
+            },
+          ],
         };
       }
     );
@@ -133,15 +142,21 @@ export async function createMcpServer(
   }
 
   // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
-    name: def.prompt.name,
-    description: def.prompt.description ?? "",
-    arguments: def.prompt.arguments,
-    generateMessage: def.generateMessage,
-  }));
-  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
+  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
+    (def) => ({
+      name: def.prompt.name,
+      description: def.prompt.description ?? "",
+      arguments: def.prompt.arguments,
+      generateMessage: def.generateMessage,
+    })
+  );
+  registerPromptsFromDefinitions({
+    server: server as unknown as McpServerPromptLike,
+    prompts: allPrompts,
+    logger,
+  });
 
-  // Register experimental task-based tools
+  // Register task-based tools
   registerRunCustomQueryAsyncTool(server, logger, sessionId);
 
   return server;

@@ -24,9 +24,7 @@ export async function executeBulkConcurrent<T, R = unknown>(
 
   for (let i = 0; i < items.length; i += concurrency) {
     const batch = items.slice(i, i + concurrency);
-    const batchResults = await Promise.allSettled(
-      batch.map((item) => operation(item))
-    );
+    const batchResults = await Promise.allSettled(batch.map((item) => operation(item)));
 
     for (let j = 0; j < batchResults.length; j++) {
       const result = batchResults[j];

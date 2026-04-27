@@ -15,13 +15,8 @@ Each item must include the id field (CM360 uses PUT/replace semantics). Loops in
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
     items: z
       .array(
         z.object({
@@ -39,14 +34,16 @@ export const BulkUpdateEntitiesOutputSchema = z
   .object({
     updated: z.number().describe("Number of entities updated"),
     failed: z.number().describe("Number that failed"),
-    results: z.array(
-      z.object({
-        entityId: z.string(),
-        success: z.boolean(),
-        entity: z.record(z.any()).optional(),
-        error: z.string().optional(),
-      })
-    ).describe("Per-item results"),
+    results: z
+      .array(
+        z.object({
+          entityId: z.string(),
+          success: z.boolean(),
+          entity: z.record(z.any()).optional(),
+          error: z.string().optional(),
+        })
+      )
+      .describe("Per-item results"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk update result");
@@ -74,7 +71,11 @@ export async function bulkUpdateEntitiesLogic(
         data,
         context
       );
-      results.push({ entityId: item.entityId, success: true, entity: entity as unknown as Record<string, any> });
+      results.push({
+        entityId: item.entityId,
+        success: true,
+        entity: entity as unknown as Record<string, any>,
+      });
       updated++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -91,7 +92,9 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateEntitiesOutput): McpTextContent[] {
+export function bulkUpdateEntitiesResponseFormatter(
+  result: BulkUpdateEntitiesOutput
+): McpTextContent[] {
   const summary = `Bulk update: ${result.updated} succeeded, ${result.failed} failed`;
   const failures = result.results
     .filter((r) => !r.success)

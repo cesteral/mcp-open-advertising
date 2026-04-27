@@ -116,28 +116,26 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
   }
 
   const thresholdBytes =
-    opts.thresholdBytes
-    ?? readNumericEnv(REPORT_SPILL_ENV.THRESHOLD_BYTES)
-    ?? DEFAULT_SPILL_THRESHOLD_BYTES;
+    opts.thresholdBytes ??
+    readNumericEnv(REPORT_SPILL_ENV.THRESHOLD_BYTES) ??
+    DEFAULT_SPILL_THRESHOLD_BYTES;
   const thresholdRows =
-    opts.thresholdRows
-    ?? readNumericEnv(REPORT_SPILL_ENV.THRESHOLD_ROWS)
-    ?? DEFAULT_SPILL_THRESHOLD_ROWS;
+    opts.thresholdRows ??
+    readNumericEnv(REPORT_SPILL_ENV.THRESHOLD_ROWS) ??
+    DEFAULT_SPILL_THRESHOLD_ROWS;
 
   const bytes = Buffer.byteLength(opts.csv, "utf8");
   const underByteThreshold = bytes < thresholdBytes;
-  const underRowThreshold = opts.rowCount === undefined
-    ? true
-    : opts.rowCount < thresholdRows;
+  const underRowThreshold = opts.rowCount === undefined ? true : opts.rowCount < thresholdRows;
 
   if (underByteThreshold && underRowThreshold) {
     return { disabled: true, reason: "under-threshold" };
   }
 
   const ttl =
-    opts.signedUrlTtlSeconds
-    ?? readNumericEnv(REPORT_SPILL_ENV.SIGNED_URL_TTL_SECONDS)
-    ?? DEFAULT_SIGNED_URL_TTL_SECONDS;
+    opts.signedUrlTtlSeconds ??
+    readNumericEnv(REPORT_SPILL_ENV.SIGNED_URL_TTL_SECONDS) ??
+    DEFAULT_SIGNED_URL_TTL_SECONDS;
   const objectName = buildObjectName(opts);
   const mimeType = opts.mimeType ?? "text/csv";
 
@@ -153,12 +151,9 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
         file: (path: string) => {
           save: (
             data: string | Buffer,
-            opts: { contentType?: string; resumable?: boolean },
+            opts: { contentType?: string; resumable?: boolean }
           ) => Promise<unknown>;
-          getSignedUrl: (opts: {
-            action: "read";
-            expires: number;
-          }) => Promise<[string]>;
+          getSignedUrl: (opts: { action: "read"; expires: number }) => Promise<[string]>;
         };
       };
     };
@@ -175,7 +170,7 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
     const log = opts.logger ?? defaultLogger;
     log.info(
       { bucket: bucketName, objectName, bytes, rowCount: opts.rowCount },
-      "Report CSV spilled to GCS",
+      "Report CSV spilled to GCS"
     );
 
     return {
@@ -193,7 +188,7 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
     const log = opts.logger ?? defaultLogger;
     log.warn(
       { err, bucket: bucketName, objectName },
-      "Report CSV spill to GCS failed; continuing with bounded-view only",
+      "Report CSV spill to GCS failed; continuing with bounded-view only"
     );
     return { error: message };
   }
@@ -211,7 +206,7 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
 export async function deleteSpilledObjectsForSession(
   server: string,
   sessionId: string,
-  logger?: Logger,
+  logger?: Logger
 ): Promise<number> {
   const bucketName = process.env[REPORT_SPILL_ENV.BUCKET];
   if (!bucketName) return 0;
@@ -231,16 +226,13 @@ export async function deleteSpilledObjectsForSession(
     const bucket = storage.bucket(bucketName);
     await bucket.deleteFiles({ prefix });
     const log = logger ?? defaultLogger;
-    log.info(
-      { bucket: bucketName, prefix },
-      "Spill objects for session deleted",
-    );
+    log.info({ bucket: bucketName, prefix }, "Spill objects for session deleted");
     return 1;
   } catch (err) {
     const log = logger ?? defaultLogger;
     log.warn(
       { err, bucket: bucketName, prefix },
-      "Spill cleanup failed; relying on bucket lifecycle rule",
+      "Spill cleanup failed; relying on bucket lifecycle rule"
     );
     return 0;
   }

@@ -246,14 +246,7 @@ const SCHEMA_GENERATORS: Record<string, () => string> = {
   asset: assetSchemaMarkdown,
 };
 
-const ENTITY_TYPES = [
-  "campaign",
-  "adGroup",
-  "ad",
-  "keyword",
-  "campaignBudget",
-  "asset",
-] as const;
+const ENTITY_TYPES = ["campaign", "adGroup", "ad", "keyword", "campaignBudget", "asset"] as const;
 
 function getSchemaContent(entityType: string): string {
   const key = entityType.toLowerCase();

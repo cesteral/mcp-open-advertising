@@ -23,10 +23,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["amazon-dsp-bearer", "jwt", "none"]).default("amazon-dsp-bearer"),
 
   // Amazon DSP API Configuration
-  amazonDspApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://advertising-api.amazon.com"),
+  amazonDspApiBaseUrl: z.string().url().default("https://advertising-api.amazon.com"),
   amazonDspApiVersion: z.string().default("dsp"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.

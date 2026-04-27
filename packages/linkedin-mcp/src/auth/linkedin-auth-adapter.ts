@@ -264,8 +264,5 @@ export function parseLinkedInRefreshCredentialsFromHeaders(
  * Generate a fingerprint for a LinkedIn access token (for session binding).
  */
 export function getLinkedInCredentialFingerprint(accessToken: string): string {
-  return createHash("sha256")
-    .update(accessToken.trim())
-    .digest("hex")
-    .substring(0, 32);
+  return createHash("sha256").update(accessToken.trim()).digest("hex").substring(0, 32);
 }

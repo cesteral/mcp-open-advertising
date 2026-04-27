@@ -23,10 +23,7 @@ export const GAQLSearchInputSchema = z
       .string()
       .min(1)
       .describe("Google Ads customer ID (no dashes, e.g., '1234567890')"),
-    query: z
-      .string()
-      .min(1)
-      .describe("GAQL query string (must include SELECT and FROM clauses)"),
+    query: z.string().min(1).describe("GAQL query string (must include SELECT and FROM clauses)"),
     pageSize: z
       .number()
       .min(1)
@@ -36,7 +33,9 @@ export const GAQLSearchInputSchema = z
     pageToken: z
       .string()
       .optional()
-      .describe("Page token for pagination (from previous response). This tool pages across result sets via pageToken; offset is not supported."),
+      .describe(
+        "Page token for pagination (from previous response). This tool pages across result sets via pageToken; offset is not supported."
+      ),
   })
   .merge(ReportViewInputSchema.omit({ offset: true }))
   .describe("Parameters for executing a GAQL query");
@@ -44,7 +43,12 @@ export const GAQLSearchInputSchema = z
 export const GAQLSearchOutputSchema = z
   .object({
     ...ReportViewOutputSchema.shape,
-    totalResultsCount: z.number().optional().describe("Total results available (when known; otherwise totalRows is a lower bound and nextPageToken indicates more are available)"),
+    totalResultsCount: z
+      .number()
+      .optional()
+      .describe(
+        "Total results available (when known; otherwise totalRows is a lower bound and nextPageToken indicates more are available)"
+      ),
     nextPageToken: z.string().optional().describe("Token for next page"),
     has_more: z.boolean().describe("Whether more results are available via pagination"),
     timestamp: z.string().datetime(),
@@ -60,9 +64,10 @@ export async function gaqlSearchLogic(
   sdkContext?: SdkContext
 ): Promise<GAQLSearchOutput> {
   const { gadsService } = resolveSessionServices(sdkContext);
-  const viewInput = input.maxRows === undefined && input.pageSize !== undefined
-    ? { ...input, maxRows: input.pageSize }
-    : input;
+  const viewInput =
+    input.maxRows === undefined && input.pageSize !== undefined
+      ? { ...input, maxRows: input.pageSize }
+      : input;
 
   const result = await gadsService.gaqlSearch(
     input.customerId,
@@ -78,7 +83,9 @@ export async function gaqlSearchLogic(
       rows,
       totalRows: result.totalResultsCount ?? rows.length + (result.nextPageToken ? 1 : 0),
       input: viewInput,
-      warnings: result.nextPageToken ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."] : [],
+      warnings: result.nextPageToken
+        ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
+        : [],
     }),
     totalResultsCount: result.totalResultsCount,
     nextPageToken: result.nextPageToken,
@@ -117,14 +124,16 @@ export const gaqlSearchTool = {
       label: "Campaign performance metrics",
       input: {
         customerId: "1234567890",
-        query: "SELECT campaign.id, campaign.name, metrics.impressions, metrics.clicks, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS ORDER BY metrics.impressions DESC LIMIT 50",
+        query:
+          "SELECT campaign.id, campaign.name, metrics.impressions, metrics.clicks, metrics.cost_micros FROM campaign WHERE segments.date DURING LAST_30_DAYS ORDER BY metrics.impressions DESC LIMIT 50",
       },
     },
     {
       label: "Ad group performance for a campaign",
       input: {
         customerId: "1234567890",
-        query: "SELECT ad_group.id, ad_group.name, ad_group.status, metrics.impressions, metrics.conversions FROM ad_group WHERE campaign.id = 123456789 AND segments.date DURING LAST_7_DAYS",
+        query:
+          "SELECT ad_group.id, ad_group.name, ad_group.status, metrics.impressions, metrics.conversions FROM ad_group WHERE campaign.id = 123456789 AND segments.date DURING LAST_7_DAYS",
         mode: "rows",
         maxRows: 50,
       },
@@ -133,7 +142,8 @@ export const gaqlSearchTool = {
       label: "Keyword quality scores",
       input: {
         customerId: "1234567890",
-        query: "SELECT ad_group_criterion.keyword.text, ad_group_criterion.quality_info.quality_score, ad_group_criterion.quality_info.creative_quality_score FROM keyword_view WHERE campaign.id = 123456789",
+        query:
+          "SELECT ad_group_criterion.keyword.text, ad_group_criterion.quality_info.quality_score, ad_group_criterion.quality_info.creative_quality_score FROM keyword_view WHERE campaign.id = 123456789",
       },
     },
   ],

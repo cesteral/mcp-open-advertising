@@ -306,9 +306,7 @@ describe("ttd_manage_seed tool", () => {
         data: {
           seedCreate: {
             data: null,
-            userErrors: [
-              { field: "name", message: "Name is required" },
-            ],
+            userErrors: [{ field: "name", message: "Name is required" }],
           },
         },
       });

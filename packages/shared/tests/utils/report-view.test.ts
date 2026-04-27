@@ -49,7 +49,9 @@ describe("report view utilities", () => {
   });
 
   it("caps maxRows and warns", () => {
-    const rows = Array.from({ length: REPORT_MAX_RETURNED_ROWS + 1 }, (_, i) => ({ id: String(i) }));
+    const rows = Array.from({ length: REPORT_MAX_RETURNED_ROWS + 1 }, (_, i) => ({
+      id: String(i),
+    }));
     const result = createReportView({
       headers: ["id"],
       rows,
@@ -57,7 +59,9 @@ describe("report view utilities", () => {
     });
 
     expect(result.rows).toHaveLength(REPORT_MAX_RETURNED_ROWS);
-    expect(result.warnings).toContain(`maxRows capped at ${REPORT_MAX_RETURNED_ROWS} to keep the MCP response bounded.`);
+    expect(result.warnings).toContain(
+      `maxRows capped at ${REPORT_MAX_RETURNED_ROWS} to keep the MCP response bounded.`
+    );
   });
 
   it("projects columns and warns on unknown columns", () => {
@@ -151,9 +155,7 @@ describe("aggregateBy server-side aggregation", () => {
       },
     });
 
-    expect(result.rows).toEqual([
-      { campaign: "A", impressions: 600, cpm: 7, clicks: 3 },
-    ]);
+    expect(result.rows).toEqual([{ campaign: "A", impressions: 600, cpm: 7, clicks: 3 }]);
   });
 
   it("supports min and max", () => {
@@ -198,7 +200,9 @@ describe("aggregateBy server-side aggregation", () => {
     });
 
     expect(result.warnings).toContain("Unknown aggregateBy column ignored: unknown_col");
-    expect(result.warnings).toContain("aggregateBy did not match any known columns; aggregation skipped.");
+    expect(result.warnings).toContain(
+      "aggregateBy did not match any known columns; aggregation skipped."
+    );
     expect(result.rows).toEqual([{ campaign: "A", impressions: "100" }]);
   });
 
@@ -271,9 +275,7 @@ describe("aggregateBy server-side aggregation", () => {
     });
 
     expect(
-      result.warnings.some(
-        (w) => w.includes("partial") && w.includes("1000000") && w.includes("4")
-      )
+      result.warnings.some((w) => w.includes("partial") && w.includes("1000000") && w.includes("4"))
     ).toBe(true);
     // Aggregation still runs over what we got.
     expect(result.totalRows).toBe(2);

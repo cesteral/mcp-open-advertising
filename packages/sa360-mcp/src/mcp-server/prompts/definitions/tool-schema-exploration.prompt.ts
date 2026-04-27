@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const toolSchemaExplorationPrompt: Prompt = {
   name: "sa360_tool_schema_exploration",
-  description:
-    "Guide for discovering and understanding SA360 MCP tools, resources, and schemas",
+  description: "Guide for discovering and understanding SA360 MCP tools, resources, and schemas",
   arguments: [
     {
       name: "objective",
@@ -17,9 +16,7 @@ export const toolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getToolSchemaExplorationMessage(
-  args?: Record<string, string>
-): string {
+export function getToolSchemaExplorationMessage(args?: Record<string, string>): string {
   const objective = args?.objective || "general capability discovery";
   return `# SA360 MCP Tool & Schema Exploration Guide
 

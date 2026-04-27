@@ -61,7 +61,7 @@ function isSensitiveHeader(name: string): boolean {
 }
 
 export function redactHeaders(
-  headers: Record<string, string | string[] | undefined> | Headers | undefined,
+  headers: Record<string, string | string[] | undefined> | Headers | undefined
 ): Record<string, string> {
   const out: Record<string, string> = {};
   if (!headers) return out;
@@ -91,7 +91,10 @@ export function redactHeaders(
  */
 export const MAX_CAPTURED_BODY_BYTES = 8 * 1024;
 
-export function truncateBody(input: unknown, maxBytes: number = MAX_CAPTURED_BODY_BYTES): string | undefined {
+export function truncateBody(
+  input: unknown,
+  maxBytes: number = MAX_CAPTURED_BODY_BYTES
+): string | undefined {
   if (input === undefined || input === null) return undefined;
   let text: string;
   if (typeof input === "string") {
@@ -119,8 +122,10 @@ export function truncateBody(input: unknown, maxBytes: number = MAX_CAPTURED_BOD
 
 // Crude but effective: redact common bearer-token-looking substrings in JSON bodies
 const BODY_SECRET_PATTERNS: Array<[RegExp, string]> = [
-  [/("(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"\s*:\s*")[^"]*(")/gi,
-    '$1[REDACTED]$2'],
+  [
+    /("(?:access_token|refresh_token|client_secret|api_secret|password|developer_token)"\s*:\s*")[^"]*(")/gi,
+    "$1[REDACTED]$2",
+  ],
   [/(Bearer\s+)[A-Za-z0-9._\-]+/gi, "$1[REDACTED]"],
 ];
 

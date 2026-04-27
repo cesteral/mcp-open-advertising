@@ -31,7 +31,11 @@ function createMockAdapter(): MsAdsAuthAdapter {
 }
 
 const mockLogger: any = {
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
 };
 mockLogger.child.mockReturnValue(mockLogger);
 
@@ -42,7 +46,11 @@ describe("MsAdsHttpClient", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     adapter = createMockAdapter();
-    client = new MsAdsHttpClient(adapter, "https://campaign.api.bingads.microsoft.com/CampaignManagement/v13", mockLogger);
+    client = new MsAdsHttpClient(
+      adapter,
+      "https://campaign.api.bingads.microsoft.com/CampaignManagement/v13",
+      mockLogger
+    );
   });
 
   it("sends POST with all required auth headers", async () => {

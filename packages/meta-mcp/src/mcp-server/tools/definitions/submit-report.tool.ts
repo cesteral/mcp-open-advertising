@@ -37,8 +37,14 @@ export const SubmitReportInputSchema = z
       .describe("Date preset (today, yesterday, last_7d, last_30d, etc.)"),
     timeRange: z
       .object({
-        since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").describe("Start date YYYY-MM-DD"),
-        until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format").describe("End date YYYY-MM-DD"),
+        since: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+          .describe("Start date YYYY-MM-DD"),
+        until: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+          .describe("End date YYYY-MM-DD"),
       })
       .optional()
       .describe("Custom date range (mutually exclusive with datePreset)"),

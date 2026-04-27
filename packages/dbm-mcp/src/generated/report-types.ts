@@ -15,7 +15,7 @@ export const ReportTypeSchema = z.enum([
   "STANDARD",
   "UNIQUE_REACH_AUDIENCE",
   "YOUTUBE",
-  "YOUTUBE_PROGRAMMATIC_GUARANTEED"
+  "YOUTUBE_PROGRAMMATIC_GUARANTEED",
 ]);
 
 export type ReportType = z.infer<typeof ReportTypeSchema>;
@@ -32,38 +32,38 @@ export interface ReportTypeMetadata {
  * Metadata for all report types
  */
 export const REPORT_TYPE_METADATA: Record<ReportType, ReportTypeMetadata> = {
-  "STANDARD": {
+  STANDARD: {
     displayName: "Standard",
-    description: "Standard delivery metrics - most common report type"
+    description: "Standard delivery metrics - most common report type",
   },
-  "AUDIENCE_COMPOSITION": {
+  AUDIENCE_COMPOSITION: {
     displayName: "Audience Composition",
-    description: "Audience demographic breakdowns (deprecated but functional)"
+    description: "Audience demographic breakdowns (deprecated but functional)",
   },
-  "FLOODLIGHT": {
+  FLOODLIGHT: {
     displayName: "Floodlight",
-    description: "Conversion tracking reports"
+    description: "Conversion tracking reports",
   },
-  "YOUTUBE": {
+  YOUTUBE: {
     displayName: "YouTube",
-    description: "YouTube-specific metrics"
+    description: "YouTube-specific metrics",
   },
-  "GRP": {
+  GRP: {
     displayName: "GRP",
-    description: "Gross Rating Point reports"
+    description: "Gross Rating Point reports",
   },
-  "YOUTUBE_PROGRAMMATIC_GUARANTEED": {
+  YOUTUBE_PROGRAMMATIC_GUARANTEED: {
     displayName: "YouTube Programmatic Guaranteed",
-    description: "YouTube Programmatic Guaranteed reports"
+    description: "YouTube Programmatic Guaranteed reports",
   },
-  "REACH": {
+  REACH: {
     displayName: "Reach",
-    description: "Reach and frequency reports"
+    description: "Reach and frequency reports",
   },
-  "UNIQUE_REACH_AUDIENCE": {
+  UNIQUE_REACH_AUDIENCE: {
     displayName: "Unique Reach Audience",
-    description: "Unique reach by audience"
-  }
+    description: "Unique reach by audience",
+  },
 };
 
 /**
@@ -88,7 +88,7 @@ export const DataRangeSchema = z.enum([
   "LAST_60_DAYS",
   "LAST_90_DAYS",
   "LAST_365_DAYS",
-  "ALL_TIME"
+  "ALL_TIME",
 ]);
 
 export type DataRange = z.infer<typeof DataRangeSchema>;
@@ -115,7 +115,7 @@ export const DATA_RANGE_DESCRIPTIONS: Record<DataRange, string> = {
   LAST_60_DAYS: "Last 60 days",
   LAST_90_DAYS: "Last 90 days",
   LAST_365_DAYS: "Last 365 days",
-  ALL_TIME: "All available data"
+  ALL_TIME: "All available data",
 };
 
 /**

@@ -62,8 +62,8 @@ dv360_create_entity({
   data: {
     displayName: "My IO",
     // Missing campaignId!
-  }
-})
+  },
+});
 
 // ✅ Will SUCCEED
 dv360_create_entity({
@@ -72,8 +72,8 @@ dv360_create_entity({
   data: {
     displayName: "My IO",
     campaignId: "456", // ← Required parent field
-  }
-})
+  },
+});
 ```
 
 ### 3. Dynamic Tool Descriptions
@@ -148,7 +148,7 @@ Both are required but serve different purposes:
 Returns full hierarchy path for an entity:
 
 ```typescript
-getEntityHierarchyPath('lineItem')
+getEntityHierarchyPath("lineItem");
 // → ['partner', 'advertiser', 'campaign', 'insertionOrder', 'lineItem']
 ```
 
@@ -157,13 +157,13 @@ getEntityHierarchyPath('lineItem')
 Returns array of missing required fields:
 
 ```typescript
-validateEntityRelationships('insertionOrder', { advertiserId: '123' })
+validateEntityRelationships("insertionOrder", { advertiserId: "123" });
 // → ['campaignId']
 
-validateEntityRelationships('insertionOrder', {
-  advertiserId: '123',
-  campaignId: '456'
-})
+validateEntityRelationships("insertionOrder", {
+  advertiserId: "123",
+  campaignId: "456",
+});
 // → []
 ```
 
@@ -172,7 +172,7 @@ validateEntityRelationships('insertionOrder', {
 Generates human-readable description:
 
 ```typescript
-generateRelationshipDescription('insertionOrder')
+generateRelationshipDescription("insertionOrder");
 // → "insertionOrder requires:
 //    - Must include 'advertiserId' in data to link to advertiser
 //    - Must include 'campaignId' in data to link to campaign"
@@ -183,7 +183,7 @@ generateRelationshipDescription('insertionOrder')
 Returns comprehensive create requirements:
 
 ```typescript
-getCreateRequirements('insertionOrder')
+getCreateRequirements("insertionOrder");
 // → {
 //     pathIds: ['advertiserId'],
 //     dataFields: ['advertiserId', 'campaignId'],
@@ -232,6 +232,7 @@ const ENTITY_RELATIONSHIPS = {
 ```
 
 That's it! The system automatically:
+
 - Validates relationships on create/update
 - Includes hierarchy in tool descriptions
 - Provides helpful error messages
@@ -254,8 +255,8 @@ const campaign = await dv360_create_entity({
   data: {
     advertiserId: "123",
     displayName: "Sweden Campaign",
-    entityStatus: "ENTITY_STATUS_ACTIVE"
-  }
+    entityStatus: "ENTITY_STATUS_ACTIVE",
+  },
 });
 // Returns: { campaignId: "456", ... }
 
@@ -265,9 +266,9 @@ const io = await dv360_create_entity({
   advertiserId: "123",
   data: {
     advertiserId: "123",
-    campaignId: "456",  // ← Links to campaign
-    displayName: "Sweden IO"
-  }
+    campaignId: "456", // ← Links to campaign
+    displayName: "Sweden IO",
+  },
 });
 // Returns: { insertionOrderId: "789", ... }
 
@@ -277,16 +278,17 @@ const lineItem = await dv360_create_entity({
   advertiserId: "123",
   data: {
     advertiserId: "123",
-    insertionOrderId: "789",  // ← Links to insertion order
+    insertionOrderId: "789", // ← Links to insertion order
     displayName: "Sweden Targeting",
     geoTargeting: {
-      countries: ["SE"]  // Sweden
-    }
-  }
+      countries: ["SE"], // Sweden
+    },
+  },
 });
 ```
 
 The system ensures:
+
 - Each step has the correct parent fields
 - Error messages show what's missing
 - Tool descriptions explain the hierarchy

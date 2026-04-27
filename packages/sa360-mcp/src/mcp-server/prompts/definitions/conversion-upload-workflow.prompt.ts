@@ -5,8 +5,7 @@ import type { Prompt } from "@modelcontextprotocol/sdk/types.js";
 
 export const conversionUploadWorkflowPrompt: Prompt = {
   name: "sa360_conversion_upload_workflow",
-  description:
-    "Guide for uploading offline conversions to SA360 via legacy v2 API",
+  description: "Guide for uploading offline conversions to SA360 via legacy v2 API",
   arguments: [
     {
       name: "agencyId",
@@ -21,9 +20,7 @@ export const conversionUploadWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getConversionUploadWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getConversionUploadWorkflowMessage(args?: Record<string, string>): string {
   const agencyId = args?.agencyId || "{agencyId}";
   const advertiserId = args?.advertiserId || "{advertiserId}";
   return `# SA360 Conversion Upload Workflow

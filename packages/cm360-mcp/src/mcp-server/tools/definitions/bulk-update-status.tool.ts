@@ -21,22 +21,10 @@ Supported mappings:
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    entityIds: z
-      .array(z.string().min(1))
-      .min(1)
-      .max(50)
-      .describe("Entity IDs to update (max 50)"),
-    status: z
-      .string()
-      .min(1)
-      .describe("New status value (e.g., ARCHIVED, ACTIVE, PAUSED)"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    entityIds: z.array(z.string().min(1)).min(1).max(50).describe("Entity IDs to update (max 50)"),
+    status: z.string().min(1).describe("New status value (e.g., ARCHIVED, ACTIVE, PAUSED)"),
   })
   .describe("Parameters for bulk status update");
 
@@ -44,13 +32,15 @@ export const BulkUpdateStatusOutputSchema = z
   .object({
     updated: z.number().describe("Number of entities updated"),
     failed: z.number().describe("Number of entities that failed"),
-    results: z.array(
-      z.object({
-        entityId: z.string(),
-        success: z.boolean(),
-        error: z.string().optional(),
-      })
-    ).describe("Per-entity results"),
+    results: z
+      .array(
+        z.object({
+          entityId: z.string(),
+          success: z.boolean(),
+          error: z.string().optional(),
+        })
+      )
+      .describe("Per-entity results"),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk status update result");
@@ -120,11 +110,13 @@ function applyStatusUpdate(
       if (normalizedStatus === "ARCHIVED") return { ...current, active: false, archived: true };
       break;
     case "placement":
-      if (normalizedStatus === "ACTIVE") return { ...current, activeStatus: "PLACEMENT_STATUS_ACTIVE" };
+      if (normalizedStatus === "ACTIVE")
+        return { ...current, activeStatus: "PLACEMENT_STATUS_ACTIVE" };
       if (normalizedStatus === "INACTIVE" || normalizedStatus === "PAUSED") {
         return { ...current, activeStatus: "PLACEMENT_STATUS_INACTIVE" };
       }
-      if (normalizedStatus === "ARCHIVED") return { ...current, activeStatus: "PLACEMENT_STATUS_ARCHIVED" };
+      if (normalizedStatus === "ARCHIVED")
+        return { ...current, activeStatus: "PLACEMENT_STATUS_ARCHIVED" };
       if (normalizedStatus === "PERMANENTLY_ARCHIVED") {
         return { ...current, activeStatus: "PLACEMENT_STATUS_PERMANENTLY_ARCHIVED" };
       }
@@ -142,7 +134,9 @@ function applyStatusUpdate(
   );
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   const summary = `Bulk status update: ${result.updated} succeeded, ${result.failed} failed`;
   const details = result.results
     .filter((r) => !r.success)

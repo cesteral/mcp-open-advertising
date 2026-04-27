@@ -52,8 +52,8 @@ export async function ensureRequiredFieldValue({
         [fieldName]: {
           type: "string",
           title,
-          description: description ??
-            `Enter the DV360 ${title}${entityType ? ` for the ${entityType}` : ""}.`,
+          description:
+            description ?? `Enter the DV360 ${title}${entityType ? ` for the ${entityType}` : ""}.`,
         },
       },
       required: [fieldName],

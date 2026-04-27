@@ -18,17 +18,16 @@ export const ListAdAccountsInputSchema = z
     fields: z
       .array(z.string())
       .optional()
-      .describe("Fields to return (defaults: id, name, account_status, currency, timezone_name, amount_spent, balance)"),
-    limit: z
-      .number()
-      .min(1)
-      .max(100)
-      .optional()
-      .describe("Number of accounts to return"),
+      .describe(
+        "Fields to return (defaults: id, name, account_status, currency, timezone_name, amount_spent, balance)"
+      ),
+    limit: z.number().min(1).max(100).optional().describe("Number of accounts to return"),
     after: z
       .string()
       .optional()
-      .describe("Pagination cursor — pass nextCursor from a previous response to get the next page"),
+      .describe(
+        "Pagination cursor — pass nextCursor from a previous response to get the next page"
+      ),
   })
   .describe("Parameters for listing ad accounts");
 
@@ -52,12 +51,7 @@ export async function listAdAccountsLogic(
 ): Promise<ListAdAccountsOutput> {
   const { metaService } = resolveSessionServices(sdkContext);
 
-  const result = await metaService.listAdAccounts(
-    input.fields,
-    input.limit,
-    input.after,
-    context
-  );
+  const result = await metaService.listAdAccounts(input.fields, input.limit, input.after, context);
 
   return {
     accounts: result.accounts as unknown as Record<string, unknown>[],

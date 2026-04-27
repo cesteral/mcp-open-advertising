@@ -11,7 +11,7 @@ export {
   type FilterCategory,
   getFiltersByCategory,
   getGroupByFilters,
-  isValidFilterType
+  isValidFilterType,
 } from "./filters.js";
 
 export {
@@ -23,7 +23,7 @@ export {
   type MetricCategory,
   getMetricsByCategory,
   isValidMetricType,
-  COMMON_METRIC_SETS
+  COMMON_METRIC_SETS,
 } from "./metrics.js";
 
 export {
@@ -35,7 +35,7 @@ export {
   type DataRange,
   DATA_RANGE_DESCRIPTIONS,
   isValidReportType,
-  isValidDataRange
+  isValidDataRange,
 } from "./report-types.js";
 
 // Compatibility rules (manually maintained)
@@ -47,5 +47,5 @@ export {
   GROUP_BY_ONLY_FILTERS,
   getCompatibilityWarnings,
   getMetricsForReportType,
-  BEST_PRACTICES
+  BEST_PRACTICES,
 } from "./compatibility-rules.js";

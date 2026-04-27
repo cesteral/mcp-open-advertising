@@ -106,10 +106,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -123,10 +120,10 @@ function setupFetchMock() {
 
     // Auth validation: GET /me?fields=id,name&access_token=...
     if (urlStr.includes("/me?")) {
-      return new Response(
-        JSON.stringify({ id: "user-123", name: "Test User" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ id: "user-123", name: "Test User" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // GET — entity read (contains an entity ID like camp-001)
@@ -139,17 +136,17 @@ function setupFetchMock() {
 
     // POST — entity creation (contains act_ in URL path)
     if (method === "POST" && urlStr.includes("act_12345")) {
-      return new Response(
-        JSON.stringify({ id: "camp-new" }),
-        { status: 200, headers: { "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ id: "camp-new" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
     // Default: empty success
-    return new Response(
-      JSON.stringify({}),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({}), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   });
 }
 
@@ -272,8 +269,7 @@ describe("meta-mcp e2e smoke", () => {
 
     expect(result.response.status).toBe(200);
     // The MCP SDK returns a JSON-RPC error for invalid params
-    const hasError =
-      result.json?.result?.isError === true || result.json?.error != null;
+    const hasError = result.json?.result?.isError === true || result.json?.error != null;
     expect(hasError).toBe(true);
   });
 

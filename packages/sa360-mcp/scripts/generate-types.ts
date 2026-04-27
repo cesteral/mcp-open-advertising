@@ -21,8 +21,7 @@ import { execSync } from "child_process";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
 
-const DISCOVERY_URL =
-  "https://searchads360.googleapis.com/$discovery/rest?version=v0";
+const DISCOVERY_URL = "https://searchads360.googleapis.com/$discovery/rest?version=v0";
 const OPENAPI_SPEC_PATH = path.join(PACKAGE_ROOT, "src", "generated", "openapi.json");
 const TYPES_OUTPUT_PATH = path.join(PACKAGE_ROOT, "src", "generated", "types.ts");
 
@@ -34,14 +33,10 @@ async function fetchDiscoveryDoc(): Promise<Record<string, unknown>> {
   console.log(`Fetching Discovery Document from:\n  ${DISCOVERY_URL}`);
   const res = await fetch(DISCOVERY_URL);
   if (!res.ok) {
-    throw new Error(
-      `Failed to fetch Discovery Document: ${res.status} ${res.statusText}`
-    );
+    throw new Error(`Failed to fetch Discovery Document: ${res.status} ${res.statusText}`);
   }
   const doc = (await res.json()) as Record<string, unknown>;
-  const schemaCount = Object.keys(
-    (doc.schemas as Record<string, unknown>) ?? {}
-  ).length;
+  const schemaCount = Object.keys((doc.schemas as Record<string, unknown>) ?? {}).length;
   console.log(`Fetched Discovery Document — ${schemaCount} schemas found.`);
   return doc;
 }
@@ -54,9 +49,7 @@ async function fetchDiscoveryDoc(): Promise<Record<string, unknown>> {
  * Convert a single Discovery Doc schema object into an OpenAPI 3.0 schema
  * object, normalising Google-specific fields along the way.
  */
-function convertDiscoverySchema(
-  schema: Record<string, unknown>
-): Record<string, unknown> {
+function convertDiscoverySchema(schema: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   // Passthrough description
@@ -76,9 +69,7 @@ function convertDiscoverySchema(
   if (type === "object" || schema.properties) {
     result.type = "object";
 
-    const props = schema.properties as
-      | Record<string, Record<string, unknown>>
-      | undefined;
+    const props = schema.properties as Record<string, Record<string, unknown>> | undefined;
 
     if (props) {
       const converted: Record<string, unknown> = {};
@@ -95,9 +86,7 @@ function convertDiscoverySchema(
   } else if (type === "array") {
     result.type = "array";
     if (schema.items) {
-      result.items = convertDiscoverySchema(
-        schema.items as Record<string, unknown>
-      );
+      result.items = convertDiscoverySchema(schema.items as Record<string, unknown>);
     }
   } else if (type) {
     // Primitive — map Google types to OpenAPI types
@@ -150,21 +139,16 @@ function mapGoogleTypeToPrimitive(googleType: string): string {
  * containing only the schemas component (paths left empty — we only
  * need the types).
  */
-function convertDiscoveryToOpenApi(
-  discoveryDoc: Record<string, unknown>
-): Record<string, unknown> {
+function convertDiscoveryToOpenApi(discoveryDoc: Record<string, unknown>): Record<string, unknown> {
   const schemas: Record<string, unknown> = {};
-  const discoverySchemas =
-    (discoveryDoc.schemas as Record<string, Record<string, unknown>>) ?? {};
+  const discoverySchemas = (discoveryDoc.schemas as Record<string, Record<string, unknown>>) ?? {};
 
   for (const [name, schema] of Object.entries(discoverySchemas)) {
     schemas[name] = convertDiscoverySchema(schema);
   }
 
-  const title =
-    (discoveryDoc.title as string) ?? "Search Ads 360 API";
-  const version =
-    (discoveryDoc.version as string) ?? "v0";
+  const title = (discoveryDoc.title as string) ?? "Search Ads 360 API";
+  const version = (discoveryDoc.version as string) ?? "v0";
 
   return {
     openapi: "3.0.0",
@@ -259,24 +243,15 @@ async function main(): Promise<void> {
     console.log("\nStep 2/4: Converting Discovery Document to OpenAPI 3.0...");
     const openApiSpec = convertDiscoveryToOpenApi(discoveryDoc);
     const schemaCount = Object.keys(
-      (openApiSpec.components as Record<string, unknown>)?.schemas as Record<
-        string,
-        unknown
-      >
+      (openApiSpec.components as Record<string, unknown>)?.schemas as Record<string, unknown>
     ).length;
     console.log(`  Converted ${schemaCount} schemas.`);
 
     // Step 3: Write intermediate OpenAPI JSON (required by openapi-typescript CLI)
     console.log("\nStep 3/4: Writing intermediate OpenAPI spec...");
     await ensureDirectory(path.dirname(OPENAPI_SPEC_PATH));
-    await fs.writeFile(
-      OPENAPI_SPEC_PATH,
-      JSON.stringify(openApiSpec, null, 2),
-      "utf-8"
-    );
-    const specSizeKB = Math.round(
-      (await fs.stat(OPENAPI_SPEC_PATH)).size / 1024
-    );
+    await fs.writeFile(OPENAPI_SPEC_PATH, JSON.stringify(openApiSpec, null, 2), "utf-8");
+    const specSizeKB = Math.round((await fs.stat(OPENAPI_SPEC_PATH)).size / 1024);
     console.log(
       `  Written to ${path.relative(PACKAGE_ROOT, OPENAPI_SPEC_PATH)} (${specSizeKB} KB)`
     );
@@ -286,10 +261,10 @@ async function main(): Promise<void> {
     await ensureDirectory(path.dirname(TYPES_OUTPUT_PATH));
 
     try {
-      execSync(
-        `npx openapi-typescript "${OPENAPI_SPEC_PATH}" -o "${TYPES_OUTPUT_PATH}"`,
-        { cwd: PACKAGE_ROOT, stdio: "inherit" }
-      );
+      execSync(`npx openapi-typescript "${OPENAPI_SPEC_PATH}" -o "${TYPES_OUTPUT_PATH}"`, {
+        cwd: PACKAGE_ROOT,
+        stdio: "inherit",
+      });
     } catch (err: unknown) {
       throw new Error(
         `openapi-typescript failed: ${err instanceof Error ? err.message : String(err)}`
@@ -308,10 +283,7 @@ async function main(): Promise<void> {
     console.log(`  Spec:  ${path.relative(PACKAGE_ROOT, OPENAPI_SPEC_PATH)}`);
     console.log("");
   } catch (err: unknown) {
-    console.error(
-      "\nGeneration failed:",
-      err instanceof Error ? err.message : String(err)
-    );
+    console.error("\nGeneration failed:", err instanceof Error ? err.message : String(err));
     process.exit(1);
   }
 }

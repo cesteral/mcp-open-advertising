@@ -88,12 +88,9 @@ export abstract class BearerAuthStrategyBase implements AuthStrategy {
 
   // ── Shared verify() implementation ───────────────────────────────────────
 
-  async verify(
-    headers: Record<string, string | string[] | undefined>
-  ): Promise<AuthResult> {
+  async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
     const branch =
-      (await this.resolveRefreshBranch(headers)) ??
-      (await this.resolveAccessBranch(headers));
+      (await this.resolveRefreshBranch(headers)) ?? (await this.resolveAccessBranch(headers));
 
     this.logger?.debug(
       { userId: branch.userId, authFlow: branch.authFlow, ...branch.logContext },

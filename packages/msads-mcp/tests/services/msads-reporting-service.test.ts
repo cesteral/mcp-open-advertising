@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { MsAdsReportingService, type ReportConfig } from "../../src/services/msads/msads-reporting-service.js";
+import {
+  MsAdsReportingService,
+  type ReportConfig,
+} from "../../src/services/msads/msads-reporting-service.js";
 import type { MsAdsHttpClient } from "../../src/services/msads/msads-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
 import pino from "pino";
@@ -162,12 +165,7 @@ describe("MsAdsReportingService", () => {
     });
 
     it("respects maxRows limit", async () => {
-      const csvContent = [
-        "Name,Value",
-        "A,1",
-        "B,2",
-        "C,3",
-      ].join("\n");
+      const csvContent = ["Name,Value", "A,1", "B,2", "C,3"].join("\n");
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
@@ -184,7 +182,7 @@ describe("MsAdsReportingService", () => {
         '@"Date Range"',
         "CampaignName,Impressions",
         "Test,500",
-        '© Microsoft Corporation',
+        "© Microsoft Corporation",
       ].join("\n");
 
       mockFetch.mockResolvedValueOnce({
@@ -205,9 +203,9 @@ describe("MsAdsReportingService", () => {
         statusText: "Not Found",
       } as Response);
 
-      await expect(
-        service.downloadReport("https://example.com/report.csv")
-      ).rejects.toThrow("Failed to download report");
+      await expect(service.downloadReport("https://example.com/report.csv")).rejects.toThrow(
+        "Failed to download report"
+      );
     });
   });
 

@@ -77,7 +77,7 @@ export interface DiscoveryParameter {
   type: string;
   description?: string;
   required?: boolean;
-  location?: 'query' | 'path' | 'header';
+  location?: "query" | "path" | "header";
   enum?: string[];
   enumDescriptions?: string[];
   pattern?: string;
@@ -124,7 +124,7 @@ export interface DiscoveryMethod {
  * OpenAPI 3.0 specification structure
  */
 export interface OpenAPISpec {
-  openapi: '3.0.0';
+  openapi: "3.0.0";
   info: OpenAPIInfo;
   components: {
     schemas: Record<string, OpenAPISchema>;
@@ -139,7 +139,7 @@ export interface OpenAPIInfo {
   title: string;
   version: string;
   description?: string;
-  'x-extraction-metadata'?: ExtractionMetadata;
+  "x-extraction-metadata"?: ExtractionMetadata;
 }
 
 /**
@@ -153,7 +153,7 @@ export interface OpenAPISchema {
   items?: OpenAPIProperty;
   required?: string[];
   enum?: string[];
-  'x-enumDescriptions'?: string[]; // Extension for enum descriptions
+  "x-enumDescriptions"?: string[]; // Extension for enum descriptions
   format?: string;
   pattern?: string;
   minimum?: number;
@@ -177,7 +177,7 @@ export interface OpenAPIProperty {
   properties?: Record<string, OpenAPIProperty>;
   required?: string[];
   enum?: string[];
-  'x-enumDescriptions'?: string[];
+  "x-enumDescriptions"?: string[];
   format?: string;
   pattern?: string;
   minimum?: number;
@@ -216,7 +216,7 @@ export interface OpenAPIOperation {
  */
 export interface OpenAPIParameter {
   name: string;
-  in: 'query' | 'path' | 'header' | 'cookie';
+  in: "query" | "path" | "header" | "cookie";
   description?: string;
   required?: boolean;
   schema: OpenAPIProperty;
@@ -307,7 +307,7 @@ export interface CircularReference {
 export interface ExtractionWarning {
   type: string;
   message: string;
-  severity: 'info' | 'warning' | 'error';
+  severity: "info" | "warning" | "error";
   details?: Record<string, unknown>;
 }
 
@@ -336,7 +336,7 @@ export interface ValidationResult {
 export interface ValidationError {
   code: string;
   message: string;
-  severity: 'error';
+  severity: "error";
   details?: unknown;
 }
 
@@ -346,7 +346,7 @@ export interface ValidationError {
 export interface ValidationWarning {
   code: string;
   message: string;
-  severity: 'warning' | 'info';
+  severity: "warning" | "info";
   details?: unknown;
 }
 
@@ -379,7 +379,7 @@ export interface LossyConversion {
   originalValue: unknown;
   convertedValue: unknown;
   reason: string;
-  severity: 'warning' | 'error';
+  severity: "warning" | "error";
 }
 
 /**
@@ -395,19 +395,19 @@ export interface CacheEntry {
  * Error codes used throughout extraction pipeline
  */
 export const ErrorCodes = {
-  DISCOVERY_FETCH_FAILED: 'DISCOVERY_FETCH_FAILED',
-  DISCOVERY_INVALID_FORMAT: 'DISCOVERY_INVALID_FORMAT',
-  SCHEMA_NOT_FOUND: 'SCHEMA_NOT_FOUND',
-  CIRCULAR_REFERENCE: 'CIRCULAR_REFERENCE',
-  MAX_DEPTH_EXCEEDED: 'MAX_DEPTH_EXCEEDED',
-  INVALID_CONFIG: 'INVALID_CONFIG',
-  CONVERSION_FAILED: 'CONVERSION_FAILED',
-  VALIDATION_FAILED: 'VALIDATION_FAILED',
-  SIZE_LIMIT_EXCEEDED: 'SIZE_LIMIT_EXCEEDED',
-  OPERATION_TIMEOUT: 'OPERATION_TIMEOUT',
+  DISCOVERY_FETCH_FAILED: "DISCOVERY_FETCH_FAILED",
+  DISCOVERY_INVALID_FORMAT: "DISCOVERY_INVALID_FORMAT",
+  SCHEMA_NOT_FOUND: "SCHEMA_NOT_FOUND",
+  CIRCULAR_REFERENCE: "CIRCULAR_REFERENCE",
+  MAX_DEPTH_EXCEEDED: "MAX_DEPTH_EXCEEDED",
+  INVALID_CONFIG: "INVALID_CONFIG",
+  CONVERSION_FAILED: "CONVERSION_FAILED",
+  VALIDATION_FAILED: "VALIDATION_FAILED",
+  SIZE_LIMIT_EXCEEDED: "SIZE_LIMIT_EXCEEDED",
+  OPERATION_TIMEOUT: "OPERATION_TIMEOUT",
 } as const;
 
-export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
+export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
 /**
  * Custom error class for extraction failures
@@ -419,7 +419,7 @@ export class ExtractionError extends Error {
     public readonly details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'ExtractionError';
+    this.name = "ExtractionError";
     Error.captureStackTrace?.(this, ExtractionError);
   }
 }

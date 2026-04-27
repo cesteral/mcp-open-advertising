@@ -30,9 +30,7 @@ describe("sa360_list_report_columns input schema", () => {
   });
 
   it("accepts a specific resource", () => {
-    expect(
-      ListReportColumnsInputSchema.safeParse({ resource: "campaign" }).success,
-    ).toBe(true);
+    expect(ListReportColumnsInputSchema.safeParse({ resource: "campaign" }).success).toBe(true);
   });
 
   it("defaults includeMetrics and includeSegments to true", () => {
@@ -49,11 +47,7 @@ describe("listReportColumnsLogic — catalog path", () => {
   });
 
   it("returns the full catalog when no resource is supplied", async () => {
-    const result = await listReportColumnsLogic(
-      { preferLive: false },
-      baseContext,
-      baseSdkContext,
-    );
+    const result = await listReportColumnsLogic({ preferLive: false }, baseContext, baseSdkContext);
     expect(result.source).toBe("catalog");
     expect(result.resource).toBeNull();
     expect(result.fieldGroups).toBeDefined();
@@ -67,12 +61,12 @@ describe("listReportColumnsLogic — catalog path", () => {
     const result = await listReportColumnsLogic(
       { resource: "campaign", preferLive: false },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     expect(result.source).toBe("catalog");
     expect(result.resource).toBe("campaign");
     expect(Object.keys(result.fieldGroups!)).toEqual(
-      expect.arrayContaining(["campaign", "metrics", "segments"]),
+      expect.arrayContaining(["campaign", "metrics", "segments"])
     );
   });
 
@@ -85,7 +79,7 @@ describe("listReportColumnsLogic — catalog path", () => {
         preferLive: false,
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     expect(Object.keys(result.fieldGroups!)).toEqual(["ad_group"]);
   });
@@ -94,7 +88,7 @@ describe("listReportColumnsLogic — catalog path", () => {
     const result = await listReportColumnsLogic(
       { resource: "zzz_not_a_resource", preferLive: false },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     // No scoping — returns all groups
     expect(Object.keys(result.fieldGroups!).length).toBeGreaterThan(1);
@@ -127,7 +121,7 @@ describe("listReportColumnsLogic — live path", () => {
     const result = await listReportColumnsLogic(
       { resource: "campaign" },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     expect(result.source).toBe("live");
     expect(result.resource).toBe("campaign");
@@ -148,7 +142,7 @@ describe("listReportColumnsLogic — live path", () => {
     const result = await listReportColumnsLogic(
       { resource: "campaign" },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     expect(result.source).toBe("catalog");
     expect(result.resource).toBe("campaign");
@@ -163,7 +157,7 @@ describe("listReportColumnsLogic — live path", () => {
     const result = await listReportColumnsLogic(
       { resource: "campaign" },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     expect(result.source).toBe("catalog");
   });
@@ -174,7 +168,7 @@ describe("listReportColumnsResponseFormatter", () => {
     const result = await listReportColumnsLogic(
       { resource: "campaign", preferLive: false },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     const content = listReportColumnsResponseFormatter(result);
     expect(content).toHaveLength(1);

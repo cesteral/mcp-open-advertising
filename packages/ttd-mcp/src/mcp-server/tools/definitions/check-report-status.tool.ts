@@ -19,10 +19,7 @@ Makes a single API call to check execution state. Does not poll or wait.
 
 export const CheckReportStatusInputSchema = z
   .object({
-    reportScheduleId: z
-      .string()
-      .min(1)
-      .describe("Report schedule ID from ttd_submit_report"),
+    reportScheduleId: z.string().min(1).describe("Report schedule ID from ttd_submit_report"),
   })
   .describe("Parameters for checking TTD report status");
 
@@ -43,10 +40,7 @@ export async function checkReportStatusLogic(
 ): Promise<CheckReportStatusOutput> {
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
-  const result = await ttdReportingService.checkReportExecution(
-    input.reportScheduleId,
-    context
-  );
+  const result = await ttdReportingService.checkReportExecution(input.reportScheduleId, context);
 
   const canonical = fromTtdStatus({
     ExecutionState: result.state,
@@ -62,7 +56,9 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   if (result.isComplete && result.downloadUrl) {
     return [
       {

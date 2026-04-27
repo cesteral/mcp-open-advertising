@@ -21,13 +21,8 @@ Max 50 items per call.`;
 
 export const BulkUpdateEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
     items: z
       .array(
         z.object({
@@ -83,7 +78,9 @@ export async function bulkUpdateEntitiesLogic(
   };
 }
 
-export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateEntitiesOutput): McpTextContent[] {
+export function bulkUpdateEntitiesResponseFormatter(
+  result: BulkUpdateEntitiesOutput
+): McpTextContent[] {
   const lines: string[] = [
     `Bulk update: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

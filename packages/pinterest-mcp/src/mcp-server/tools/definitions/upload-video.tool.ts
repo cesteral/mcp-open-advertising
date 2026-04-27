@@ -7,7 +7,10 @@ import { downloadFileToBuffer } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js";
-import type { PinterestMediaRegisterResponse, PinterestMediaStatusResponse } from "../utils/media-types.js";
+import type {
+  PinterestMediaRegisterResponse,
+  PinterestMediaStatusResponse,
+} from "../utils/media-types.js";
 
 const TOOL_NAME = "pinterest_upload_video";
 const TOOL_TITLE = "Upload Video to Pinterest Ads";
@@ -24,17 +27,21 @@ Polls until processing is complete (up to 10 minutes).
 
 **Usage:** The returned mediaId is used in ad creative payloads.`;
 
-export const UploadVideoInputSchema = z.object({
-  adAccountId: z.string().describe("Pinterest Ad Account ID"),
-  mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
-  videoName: z.string().optional().describe("Optional name for the video in the library"),
-}).describe("Parameters for uploading a video to Pinterest");
+export const UploadVideoInputSchema = z
+  .object({
+    adAccountId: z.string().describe("Pinterest Ad Account ID"),
+    mediaUrl: z.string().url().describe("Publicly accessible URL of the video to upload"),
+    videoName: z.string().optional().describe("Optional name for the video in the library"),
+  })
+  .describe("Parameters for uploading a video to Pinterest");
 
-export const UploadVideoOutputSchema = z.object({
-  mediaId: z.string().describe("Media ID for use in ad creative payloads"),
-  mediaStatus: z.string().optional().describe("Final media processing status"),
-  uploadedAt: z.string().datetime(),
-}).describe("Uploaded Pinterest video info");
+export const UploadVideoOutputSchema = z
+  .object({
+    mediaId: z.string().describe("Media ID for use in ad creative payloads"),
+    mediaStatus: z.string().optional().describe("Final media processing status"),
+    uploadedAt: z.string().datetime(),
+  })
+  .describe("Uploaded Pinterest video info");
 
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
@@ -57,11 +64,11 @@ export async function uploadVideoLogic(
   );
 
   // Step 1: Register the upload with Pinterest to get a pre-signed S3 URL
-  const registration = await pinterestService.client.post(
+  const registration = (await pinterestService.client.post(
     "/v5/media",
     { media_type: "video" },
     context
-  ) as PinterestMediaRegisterResponse;
+  )) as PinterestMediaRegisterResponse;
 
   const mediaId = registration.media_id;
   if (!mediaId || !registration.upload_url) {
@@ -85,11 +92,11 @@ export async function uploadVideoLogic(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(pollIntervalMs);
 
-    const statusResult = await pinterestService.client.get(
+    const statusResult = (await pinterestService.client.get(
       `/v5/media/${mediaId}`,
       undefined,
       context
-    ) as PinterestMediaStatusResponse;
+    )) as PinterestMediaStatusResponse;
 
     const status = statusResult.media_processing_record?.status ?? "processing";
 
@@ -114,10 +121,12 @@ export async function uploadVideoLogic(
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {
-  return [{
-    type: "text" as const,
-    text: `Video uploaded to Pinterest!\n\nMedia ID: ${result.mediaId}${result.mediaStatus ? `\nStatus: ${result.mediaStatus}` : ""}\n\nUse mediaId in your ad creative payload`,
-  }];
+  return [
+    {
+      type: "text" as const,
+      text: `Video uploaded to Pinterest!\n\nMedia ID: ${result.mediaId}${result.mediaStatus ? `\nStatus: ${result.mediaStatus}` : ""}\n\nUse mediaId in your ad creative payload`,
+    },
+  ];
 }
 
 export const uploadVideoTool = {

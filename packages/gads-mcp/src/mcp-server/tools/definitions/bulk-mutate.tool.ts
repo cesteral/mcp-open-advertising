@@ -28,13 +28,8 @@ Maximum: thousands of operations per call (subject to Google Ads API limits).
 
 export const BulkMutateInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to mutate"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to mutate"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
     operations: z
       .array(z.record(z.any()))
       .min(1)
@@ -116,8 +111,24 @@ export const bulkMutateTool = {
         entityType: "adGroup",
         customerId: "1234567890",
         operations: [
-          { create: { name: "Brand Terms", campaign: "customers/1234567890/campaigns/123456", type: "SEARCH_STANDARD", status: "PAUSED", cpcBidMicros: "1500000" } },
-          { create: { name: "Generic Terms", campaign: "customers/1234567890/campaigns/123456", type: "SEARCH_STANDARD", status: "PAUSED", cpcBidMicros: "2000000" } },
+          {
+            create: {
+              name: "Brand Terms",
+              campaign: "customers/1234567890/campaigns/123456",
+              type: "SEARCH_STANDARD",
+              status: "PAUSED",
+              cpcBidMicros: "1500000",
+            },
+          },
+          {
+            create: {
+              name: "Generic Terms",
+              campaign: "customers/1234567890/campaigns/123456",
+              type: "SEARCH_STANDARD",
+              status: "PAUSED",
+              cpcBidMicros: "2000000",
+            },
+          },
         ],
       },
     },
@@ -127,7 +138,13 @@ export const bulkMutateTool = {
         entityType: "campaign",
         customerId: "1234567890",
         operations: [
-          { update: { resourceName: "customers/1234567890/campaigns/111", name: "Updated Campaign Name" }, updateMask: "name" },
+          {
+            update: {
+              resourceName: "customers/1234567890/campaigns/111",
+              name: "Updated Campaign Name",
+            },
+            updateMask: "name",
+          },
           { remove: "customers/1234567890/campaigns/222" },
         ],
         partialFailure: true,

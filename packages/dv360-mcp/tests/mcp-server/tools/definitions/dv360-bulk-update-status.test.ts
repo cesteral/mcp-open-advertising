@@ -5,47 +5,37 @@ const { mockResolveSessionServices } = vi.hoisted(() => ({
   mockResolveSessionServices: vi.fn(),
 }));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/resolve-session.js",
-  () => ({ resolveSessionServices: mockResolveSessionServices })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: mockResolveSessionServices,
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-examples.js",
-  () => ({
-    getEntityExamplesByCategory: vi.fn().mockReturnValue([]),
-    getEntityTypesWithExamples: vi.fn().mockReturnValue([]),
-    getEntityExamples: vi.fn().mockReturnValue([]),
-    findMatchingExample: vi.fn().mockReturnValue(null),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/entity-examples.js", () => ({
+  getEntityExamplesByCategory: vi.fn().mockReturnValue([]),
+  getEntityTypesWithExamples: vi.fn().mockReturnValue([]),
+  getEntityExamples: vi.fn().mockReturnValue([]),
+  findMatchingExample: vi.fn().mockReturnValue(null),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js",
-  () => ({
-    getSupportedEntityTypesDynamic: vi.fn().mockReturnValue([
-      "adGroup", "campaign", "insertionOrder", "lineItem",
-    ]),
-    getEntityConfigDynamic: vi.fn().mockReturnValue({
-      parentIds: ["advertiserId"],
-      filterParamIds: [],
-      queryParamIds: [],
-      supportsFilter: true,
-      supportsCreate: true,
-      supportsUpdate: true,
-      supportsDelete: true,
-      apiPath: "/advertisers/{advertiserId}/campaigns",
-    }),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () => ({
+  getSupportedEntityTypesDynamic: vi
+    .fn()
+    .mockReturnValue(["adGroup", "campaign", "insertionOrder", "lineItem"]),
+  getEntityConfigDynamic: vi.fn().mockReturnValue({
+    parentIds: ["advertiserId"],
+    filterParamIds: [],
+    queryParamIds: [],
+    supportsFilter: true,
+    supportsCreate: true,
+    supportsUpdate: true,
+    supportsDelete: true,
+    apiPath: "/advertisers/{advertiserId}/campaigns",
+  }),
+}));
 
-vi.mock(
-  "../../../../src/mcp-server/tools/utils/parent-id-validation.js",
-  () => ({
-    addIdValidationIssues: vi.fn(),
-    mergeIdsIntoData: vi.fn(),
-  })
-);
+vi.mock("../../../../src/mcp-server/tools/utils/parent-id-validation.js", () => ({
+  addIdValidationIssues: vi.fn(),
+  mergeIdsIntoData: vi.fn(),
+}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {

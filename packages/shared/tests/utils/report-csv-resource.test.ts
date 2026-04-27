@@ -29,7 +29,7 @@ function createFakeServer() {
       name: string,
       template: unknown,
       metadata: { description?: string; mimeType?: string },
-      handler: (uri: { href: string }) => Promise<unknown>,
+      handler: (uri: { href: string }) => Promise<unknown>
     ) {
       registered.push({
         name,
@@ -137,9 +137,9 @@ describe("registerReportCsvResource", () => {
       logger,
     });
 
-    await expect(
-      registered[0]!.handler({ href: "report-csv://does-not-exist" }),
-    ).rejects.toThrow(/not found or expired/);
+    await expect(registered[0]!.handler({ href: "report-csv://does-not-exist" })).rejects.toThrow(
+      /not found or expired/
+    );
   });
 
   it("logs an info line when serving a resource", async () => {
@@ -163,7 +163,7 @@ describe("registerReportCsvResource", () => {
     });
     expect(infoSpy).toHaveBeenCalledWith(
       { uri: `report-csv://${entry.resourceId}` },
-      "Reading report CSV resource",
+      "Reading report CSV resource"
     );
   });
 });

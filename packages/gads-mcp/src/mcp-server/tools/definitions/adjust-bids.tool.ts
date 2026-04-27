@@ -27,10 +27,7 @@ Up to 50 ad groups can be adjusted in a single call.
 
 export const AdjustBidsInputSchema = z
   .object({
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
     adjustments: z
       .array(
         z
@@ -95,11 +92,7 @@ export async function adjustBidsLogic(
 ): Promise<AdjustBidsOutput> {
   const { gadsService } = resolveSessionServices(sdkContext);
 
-  const { results } = await gadsService.adjustBids(
-    input.customerId,
-    input.adjustments,
-    context
-  );
+  const { results } = await gadsService.adjustBids(input.customerId, input.adjustments, context);
 
   const succeeded = results.filter((r) => r.success).length;
 
@@ -178,9 +171,7 @@ export const adjustBidsTool = {
       label: "Single CPC adjustment",
       input: {
         customerId: "1234567890",
-        adjustments: [
-          { adGroupId: "111222333", cpcBidMicros: "1500000" },
-        ],
+        adjustments: [{ adGroupId: "111222333", cpcBidMicros: "1500000" }],
       },
     },
     {

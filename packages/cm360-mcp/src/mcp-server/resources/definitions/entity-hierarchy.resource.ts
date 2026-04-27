@@ -101,7 +101,8 @@ Uses pageToken-based pagination.
 export const entityHierarchyResource: Resource = {
   uri: "entity-hierarchy://all",
   name: "CM360 Entity Hierarchy",
-  description: "Parent-child relationships between CM360 entities, API patterns, and creation ordering",
+  description:
+    "Parent-child relationships between CM360 entities, API patterns, and creation ordering",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= formatEntityHierarchyMarkdown();

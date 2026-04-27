@@ -1,6 +1,7 @@
 # The Trade Desk GraphQL API Documentation
 
 This document contains the content from the following pages:
+
 - [GraphQL API Resource Hub](https://partner.thetradedesk.com/v3/portal/resources/doc/GqlApiHub)
 - [Queries](https://partner.thetradedesk.com/v3/portal/resources/doc/GqlApiQueries)
 - [Mutations](https://partner.thetradedesk.com/v3/portal/resources/doc/GqlApiMutations)
@@ -152,7 +153,7 @@ Most top-level fields require arguments by which to filter the results. For exam
 
 id, name, budget, total | Required | The fields (from the schema) to be returned for the ad group specified in the top-level field.
 IMPORTANT: Avoid creating too many layers of nested fields. For details, see System Errors.
-TotalBudget | Optional | 
+TotalBudget | Optional |
 
 An alias that you can use to rename the total field to make it more specific in the response.
 Filter and Refine Results
@@ -289,7 +290,7 @@ After you've identified which object to use, refer to Errors Object or UserError
 
 Errors Object
 
-To check if your request failed with the errors object, you must include the __typename field. GraphQL mutations that support the errors object in the mutation are more versatile and can return more properties than the userErrors object. To check for all possible errors, use MutationError.
+To check if your request failed with the errors object, you must include the \_\_typename field. GraphQL mutations that support the errors object in the mutation are more versatile and can return more properties than the userErrors object. To check for all possible errors, use MutationError.
 
 Catch-All Errors Object Example
 
@@ -360,9 +361,8 @@ GraphQL API Authentication
 
 To access our GraphQL API, you need the following:
 
- The Platform API credentials provided by your Account Manager.
- An authentication token that you need to generate and place in the header of your integration.
-
+The Platform API credentials provided by your Account Manager.
+An authentication token that you need to generate and place in the header of your integration.
 
 You can create and revoke your API tokens using the interactive UI experience available through Manage API Tokens.
 
@@ -424,12 +424,11 @@ Making GraphQL API Calls
 
 To make a GraphQL API call, you need the following:
 
- The Trade Desk API credentials provided by your representative at The Trade Desk.
- Your API token. For details, see Authentication.
- Your tool or method of choice for making API calls (for example, Postman or Python).
- A header (TTD-Auth) with your API token.
- The URL for the environment you want to use.
-
+The Trade Desk API credentials provided by your representative at The Trade Desk.
+Your API token. For details, see Authentication.
+Your tool or method of choice for making API calls (for example, Postman or Python).
+A header (TTD-Auth) with your API token.
+The URL for the environment you want to use.
 
 IMPORTANT: Complexity and rate limits apply to all platform GraphQL API calls. For details, see Rate Limits and System Errors.
 
@@ -539,4 +538,3 @@ System Errors
 API Gateway Errors
 Error Codes
 Error Code Examples
-

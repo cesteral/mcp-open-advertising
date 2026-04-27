@@ -17,17 +17,9 @@ CM360 uses PUT semantics — provide the full entity object including the id fie
 
 export const UpdateEntityInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
     data: z
       .record(z.any())
       .describe("Full entity data including id field (CM360 uses PUT/replace semantics)"),

@@ -15,17 +15,9 @@ const TOOL_DESCRIPTION = `Get a single Campaign Manager 360 entity by ID.
 
 export const GetEntityInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to retrieve"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to retrieve"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to retrieve"),
+    entityId: z.string().min(1).describe("The entity ID to retrieve"),
   })
   .describe("Parameters for getting a CM360 entity");
 

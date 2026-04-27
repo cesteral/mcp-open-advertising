@@ -319,17 +319,17 @@ describe("CM360Service", () => {
     });
 
     it("throws for non-deletable entity types", async () => {
-      await expect(
-        service.deleteEntity("campaign", "12345", "789")
-      ).rejects.toThrow("Delete is not supported for entity type: campaign");
+      await expect(service.deleteEntity("campaign", "12345", "789")).rejects.toThrow(
+        "Delete is not supported for entity type: campaign"
+      );
 
       expect(httpClient.fetch).not.toHaveBeenCalled();
     });
 
     it("throws for non-deletable entity types (advertiser)", async () => {
-      await expect(
-        service.deleteEntity("advertiser", "12345", "789")
-      ).rejects.toThrow("Delete is not supported for entity type: advertiser");
+      await expect(service.deleteEntity("advertiser", "12345", "789")).rejects.toThrow(
+        "Delete is not supported for entity type: advertiser"
+      );
     });
 
     it("consumes rate limiter before deletion", async () => {

@@ -18,18 +18,9 @@ When state is \`complete\`, a downloadUrl is provided. Use cm360_download_report
 
 export const CheckReportStatusInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    reportId: z
-      .string()
-      .min(1)
-      .describe("Report ID from cm360_submit_report"),
-    fileId: z
-      .string()
-      .min(1)
-      .describe("File ID from cm360_submit_report"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    reportId: z.string().min(1).describe("Report ID from cm360_submit_report"),
+    fileId: z.string().min(1).describe("File ID from cm360_submit_report"),
   })
   .describe("Parameters for checking CM360 report status");
 
@@ -77,7 +68,9 @@ export async function checkReportStatusLogic(
   };
 }
 
-export function checkReportStatusResponseFormatter(result: CheckReportStatusOutput): McpTextContent[] {
+export function checkReportStatusResponseFormatter(
+  result: CheckReportStatusOutput
+): McpTextContent[] {
   const downloadInfo = result.downloadUrl
     ? `\n\nDownload URL: ${result.downloadUrl}\nUse cm360_download_report to fetch results.`
     : "";

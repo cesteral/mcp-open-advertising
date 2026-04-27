@@ -26,10 +26,7 @@ Use this to activate a disabled schedule or disable an active one without deleti
 
 export const UpdateReportScheduleInputSchema = z
   .object({
-    scheduleId: z
-      .string()
-      .min(1)
-      .describe("ID of the report schedule to enable or disable"),
+    scheduleId: z.string().min(1).describe("ID of the report schedule to enable or disable"),
     status: z.enum(["ACTIVE", "DISABLED"]).describe("New status for the schedule"),
   })
   .describe("Parameters for updating a TTD report schedule status");
@@ -91,9 +88,7 @@ export async function updateReportScheduleLogic(
   const mutationResult =
     (gqlData.myReportsReportScheduleUpdate as Record<string, unknown> | undefined) ?? {};
   const scheduleData = (mutationResult.data as Record<string, unknown> | undefined) ?? {};
-  const errors = mutationResult.errors as
-    | Array<{ field?: string; message: string }>
-    | undefined;
+  const errors = mutationResult.errors as Array<{ field?: string; message: string }> | undefined;
 
   return {
     scheduleId: input.scheduleId,
@@ -113,9 +108,7 @@ export function updateReportScheduleResponseFormatter(
         type: "text" as const,
         text:
           `Report schedule update failed:\n\n` +
-          result.errors
-            .map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`)
-            .join("\n") +
+          result.errors.map((e) => `- ${e.field ? `${e.field}: ` : ""}${e.message}`).join("\n") +
           `\n\nTimestamp: ${result.timestamp}`,
       },
     ];

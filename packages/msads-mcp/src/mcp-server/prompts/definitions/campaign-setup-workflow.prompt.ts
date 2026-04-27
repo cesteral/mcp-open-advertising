@@ -8,7 +8,11 @@ export const campaignSetupWorkflowPrompt: Prompt = {
   description: "Step-by-step guide for creating a complete Microsoft Advertising campaign",
   arguments: [
     { name: "accountId", description: "Microsoft Ads Account ID", required: true },
-    { name: "campaignType", description: "Campaign type (Search, Shopping, Audience)", required: false },
+    {
+      name: "campaignType",
+      description: "Campaign type (Search, Shopping, Audience)",
+      required: false,
+    },
   ],
 };
 

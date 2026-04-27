@@ -15,9 +15,7 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 // fetchWithTimeout lives in the shared package — mock it directly.
 vi.mock("@cesteral/shared", async () => {
-  const actual = await vi.importActual<typeof import("@cesteral/shared")>(
-    "@cesteral/shared",
-  );
+  const actual = await vi.importActual<typeof import("@cesteral/shared")>("@cesteral/shared");
   return {
     ...actual,
     fetchWithTimeout: vi.fn(),
@@ -60,7 +58,7 @@ describe("ttd_check_report_status canonical shape", () => {
     const result = await checkReportStatusLogic(
       { reportScheduleId: "sched-1" },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
 
     // The canonical subset must validate against ReportStatusSchema.
@@ -86,7 +84,7 @@ describe("ttd_check_report_status canonical shape", () => {
     const result = await checkReportStatusLogic(
       { reportScheduleId: "sched-2" },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.state).toBe("pending");
     expect(result.isComplete).toBe(false);
@@ -106,7 +104,7 @@ describe("ttd_check_report_status canonical shape", () => {
     const result = await checkReportStatusLogic(
       { reportScheduleId: "sched-3" },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.state).toBe("failed");
   });
@@ -152,7 +150,7 @@ describe("ttd_download_report computed metrics flag", () => {
         includeComputedMetrics: false,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.headers).not.toContain("cpa");
     expect(result.headers).not.toContain("roas");
@@ -168,11 +166,9 @@ describe("ttd_download_report computed metrics flag", () => {
         includeComputedMetrics: true,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
-    expect(result.headers).toEqual(
-      expect.arrayContaining(["cpa", "roas", "cpm", "ctr", "cpc"]),
-    );
+    expect(result.headers).toEqual(expect.arrayContaining(["cpa", "roas", "cpm", "ctr", "cpc"]));
     const row = (result.rows ?? [])[0] ?? {};
     expect(row.cpa).toBe("25");
     expect(row.roas).toBe("4");
@@ -217,7 +213,7 @@ describe("ttd_download_report storeRawCsv flag", () => {
         storeRawCsv: false,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.rawCsvResourceUri).toBeUndefined();
     expect(result.rawCsvByteLength).toBeUndefined();
@@ -233,15 +229,13 @@ describe("ttd_download_report storeRawCsv flag", () => {
         storeRawCsv: true,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
     expect(result.rawCsvResourceUri).toMatch(/^report-csv:\/\//);
     expect(result.rawCsvByteLength).toBe(Buffer.byteLength(CSV, "utf8"));
 
     // The URI should resolve to the stored entry
-    const { reportCsvStore } = await import(
-      "../../src/services/session-services.js"
-    );
+    const { reportCsvStore } = await import("../../src/services/session-services.js");
     const entry = reportCsvStore.getByUri(result.rawCsvResourceUri!);
     expect(entry).toBeDefined();
     expect(entry!.csv).toBe(CSV);
@@ -286,7 +280,7 @@ describe("GCS spill integration", () => {
         storeRawCsv: false,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
 
     expect(mockSpillCsvToGcs).toHaveBeenCalledWith(
@@ -297,7 +291,7 @@ describe("GCS spill integration", () => {
         server: "ttd",
         reportId: "report.csv",
         rowCount: 1,
-      }),
+      })
     );
   });
 
@@ -323,7 +317,7 @@ describe("GCS spill integration", () => {
         storeRawCsv: false,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
 
     expect(result.spill).toEqual({
@@ -351,7 +345,7 @@ describe("GCS spill integration", () => {
         storeRawCsv: false,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
 
     expect(result.spill).toEqual({ error: "gcs unreachable" });
@@ -371,7 +365,7 @@ describe("GCS spill integration", () => {
         storeRawCsv: false,
       },
       createMockContext(),
-      createMockSdkContext(),
+      createMockSdkContext()
     );
 
     expect(result.spill).toBeUndefined();

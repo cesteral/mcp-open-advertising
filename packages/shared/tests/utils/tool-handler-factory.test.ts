@@ -13,7 +13,14 @@ vi.mock("../../src/utils/metrics.js", () => ({
   recordToolExecution: vi.fn(),
 }));
 
-import { registerToolsFromDefinitions, formatExamplesForDescription, truncateTextContent, RESPONSE_CHARACTER_LIMIT, type ToolDefinitionForFactory, type ToolInputExample } from "../../src/utils/tool-handler-factory.js";
+import {
+  registerToolsFromDefinitions,
+  formatExamplesForDescription,
+  truncateTextContent,
+  RESPONSE_CHARACTER_LIMIT,
+  type ToolDefinitionForFactory,
+  type ToolInputExample,
+} from "../../src/utils/tool-handler-factory.js";
 import { recordToolExecution } from "../../src/utils/metrics.js";
 
 function createMockLogger() {
@@ -44,7 +51,10 @@ function createMockServer() {
   };
 }
 
-function createRequestContext(params: { operation: string; additionalContext: Record<string, unknown> }) {
+function createRequestContext(params: {
+  operation: string;
+  additionalContext: Record<string, unknown>;
+}) {
   return {
     requestId: "req-123",
     timestamp: new Date().toISOString(),
@@ -236,9 +246,7 @@ describe("registerToolsFromDefinitions", () => {
   });
 
   it("uses custom responseFormatter when provided", async () => {
-    const formatter = vi.fn().mockReturnValue([
-      { type: "text", text: "Custom formatted" },
-    ]);
+    const formatter = vi.fn().mockReturnValue([{ type: "text", text: "Custom formatted" }]);
 
     registerToolsFromDefinitions({
       server,
@@ -305,11 +313,7 @@ describe("registerToolsFromDefinitions", () => {
     const handler = server.getHandler("metric_tool")!;
     await handler({});
 
-    expect(recordToolExecution).toHaveBeenCalledWith(
-      "metric_tool",
-      "success",
-      expect.any(Number)
-    );
+    expect(recordToolExecution).toHaveBeenCalledWith("metric_tool", "success", expect.any(Number));
   });
 
   it("records tool execution metrics on error", async () => {
@@ -331,11 +335,7 @@ describe("registerToolsFromDefinitions", () => {
     const handler = server.getHandler("error_tool")!;
     await handler({});
 
-    expect(recordToolExecution).toHaveBeenCalledWith(
-      "error_tool",
-      "error",
-      expect.any(Number)
-    );
+    expect(recordToolExecution).toHaveBeenCalledWith("error_tool", "error", expect.any(Number));
   });
 
   it("does not embed inputExamples into tool description (moved to Resources)", () => {
@@ -397,9 +397,7 @@ describe("formatExamplesForDescription", () => {
   });
 
   it("formats examples as markdown with JSON code blocks", () => {
-    const examples: ToolInputExample[] = [
-      { label: "Test example", input: { key: "value" } },
-    ];
+    const examples: ToolInputExample[] = [{ label: "Test example", input: { key: "value" } }];
     const result = formatExamplesForDescription(examples);
 
     expect(result).toContain("### Examples");
@@ -520,7 +518,9 @@ describe("registerToolsFromDefinitions - error format consistency", () => {
       const text = result.content[0].text;
       // Must be parseable JSON
       let parsed: any;
-      expect(() => { parsed = JSON.parse(text); }).not.toThrow();
+      expect(() => {
+        parsed = JSON.parse(text);
+      }).not.toThrow();
       // Must contain the same fields as production (error + code)
       expect(parsed).toHaveProperty("error");
       expect(parsed).toHaveProperty("code");
@@ -555,7 +555,9 @@ describe("registerToolsFromDefinitions - error format consistency", () => {
       expect(result.isError).toBe(true);
       const text = result.content[0].text;
       let parsed: any;
-      expect(() => { parsed = JSON.parse(text); }).not.toThrow();
+      expect(() => {
+        parsed = JSON.parse(text);
+      }).not.toThrow();
       expect(parsed).toHaveProperty("error");
       expect(parsed).toHaveProperty("code");
       expect(parsed.error).toContain("Tool exploded in prod");
@@ -686,7 +688,9 @@ describe("registerToolsFromDefinitions - response truncation", () => {
   });
 
   it("does not truncate structuredContent even when text content is truncated", async () => {
-    const bigResult = { items: Array.from({ length: 500 }, (_, i) => ({ id: i, name: "item-" + "x".repeat(100) })) };
+    const bigResult = {
+      items: Array.from({ length: 500 }, (_, i) => ({ id: i, name: "item-" + "x".repeat(100) })),
+    };
 
     registerToolsFromDefinitions({
       server,
@@ -828,7 +832,13 @@ describe("registerToolsFromDefinitions — upstream failure capture (stdio)", ()
         description: "x",
         inputSchema: z.object({}),
         logic: async () => {
-          recordUpstreamRequest({ method: "GET", url: "https://a", status: 500, durationMs: 1, attempt: 0 });
+          recordUpstreamRequest({
+            method: "GET",
+            url: "https://a",
+            status: 500,
+            durationMs: 1,
+            attempt: 0,
+          });
           throw new Error("first call failure");
         },
       },

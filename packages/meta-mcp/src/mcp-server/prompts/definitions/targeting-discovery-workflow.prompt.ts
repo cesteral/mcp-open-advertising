@@ -28,9 +28,7 @@ export const targetingDiscoveryWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTargetingDiscoveryWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getTargetingDiscoveryWorkflowMessage(args?: Record<string, string>): string {
   const adAccountId = args?.adAccountId || "{adAccountId}";
   const goal = args?.goal || "interests";
 

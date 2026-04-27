@@ -33,9 +33,15 @@ export const GetAdPreviewOutputSchema = z
     finalUrls: z.array(z.string()).optional().describe("Final destination URLs for the ad"),
     adId: z.string(),
     customerId: z.string(),
-    resourceName: z.string().describe("Ad resource name for use with generateAdPreview API (customers/{customerId}/ads/{adId})"),
+    resourceName: z
+      .string()
+      .describe(
+        "Ad resource name for use with generateAdPreview API (customers/{customerId}/ads/{adId})"
+      ),
   })
-  .describe("Google Ads ad entity data. Use resourceName with the Google Ads generateAdPreview API to obtain an HTML preview.");
+  .describe(
+    "Google Ads ad entity data. Use resourceName with the Google Ads generateAdPreview API to obtain an HTML preview."
+  );
 
 type GetAdPreviewInput = z.infer<typeof GetAdPreviewInputSchema>;
 type GetAdPreviewOutput = z.infer<typeof GetAdPreviewOutputSchema>;

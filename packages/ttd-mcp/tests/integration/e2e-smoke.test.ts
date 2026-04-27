@@ -19,44 +19,51 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     headers: Record<string, string | string[] | undefined>,
     name: string
   ): string | undefined => {
-    const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === name.toLowerCase());
+    const key = Object.keys(headers).find(
+      (candidate) => candidate.toLowerCase() === name.toLowerCase()
+    );
     const value = key ? headers[key] : undefined;
     return Array.isArray(value) ? value[0] : value;
   };
   return {
     ...actual,
     extractHeader,
-    fetchWithTimeout: vi.fn(async (url: string, _timeout: number, _ctx: unknown, options?: RequestInit) => {
-      const method = options?.method ?? "GET";
+    fetchWithTimeout: vi.fn(
+      async (url: string, _timeout: number, _ctx: unknown, options?: RequestInit) => {
+        const method = options?.method ?? "GET";
 
-      // GET — single entity read
-      if (url.startsWith(API_BASE) && method === "GET") {
-        return new Response(
-          JSON.stringify({ CampaignId: "cmp-001", CampaignName: "Test Campaign" }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
+        // GET — single entity read
+        if (url.startsWith(API_BASE) && method === "GET") {
+          return new Response(
+            JSON.stringify({ CampaignId: "cmp-001", CampaignName: "Test Campaign" }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // POST to query paths — list operation
+        if (url.startsWith(API_BASE) && method === "POST" && url.includes("/query/")) {
+          return new Response(
+            JSON.stringify({ Result: [{ CampaignId: "cmp-001" }], TotalCount: 1, ResultCount: 1 }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // POST to entity creation paths
+        if (url.startsWith(API_BASE) && method === "POST") {
+          const body = options?.body ? JSON.parse(options.body as string) : {};
+          return new Response(
+            JSON.stringify({ CampaignId: "cmp-new", CampaignName: body.CampaignName ?? "Created" }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+
+        // Fallback
+        return new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
       }
-
-      // POST to query paths — list operation
-      if (url.startsWith(API_BASE) && method === "POST" && url.includes("/query/")) {
-        return new Response(
-          JSON.stringify({ Result: [{ CampaignId: "cmp-001" }], TotalCount: 1, ResultCount: 1 }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-
-      // POST to entity creation paths
-      if (url.startsWith(API_BASE) && method === "POST") {
-        const body = options?.body ? JSON.parse(options.body as string) : {};
-        return new Response(
-          JSON.stringify({ CampaignId: "cmp-new", CampaignName: body.CampaignName ?? "Created" }),
-          { status: 200, headers: { "Content-Type": "application/json" } }
-        );
-      }
-
-      // Fallback
-      return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
-    }),
+    ),
   };
 });
 
@@ -66,7 +73,11 @@ import { createMcpHttpServer } from "../../src/mcp-server/transports/streamable-
 // Logger stub
 // ---------------------------------------------------------------------------
 const logger: any = {
-  info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), child: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn(),
+  child: vi.fn(),
 };
 logger.child.mockReturnValue(logger);
 
@@ -116,7 +127,11 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
   let json: any;
 
   // Try plain JSON first
-  try { json = JSON.parse(text); } catch { json = undefined; }
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = undefined;
+  }
 
   // If that failed, try parsing SSE data events
   if (!json) {
@@ -129,7 +144,9 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
           json = candidate;
           break;
         }
-      } catch { /* skip non-JSON data lines */ }
+      } catch {
+        /* skip non-JSON data lines */
+      }
     }
   }
 
@@ -137,10 +154,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 

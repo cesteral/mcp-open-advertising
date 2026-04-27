@@ -14,16 +14,9 @@ Valid statuses: Active, Paused, Deleted (varies by entity type).`;
 
 export const BulkUpdateStatusInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to update"),
-    entityIds: z
-      .array(z.string())
-      .min(1)
-      .describe("Array of entity IDs"),
-    status: z
-      .string()
-      .describe("New status (Active, Paused, Deleted)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to update"),
+    entityIds: z.array(z.string()).min(1).describe("Array of entity IDs"),
+    status: z.string().describe("New status (Active, Paused, Deleted)"),
   })
   .describe("Parameters for bulk status update");
 
@@ -74,7 +67,9 @@ export async function bulkUpdateStatusLogic(
   };
 }
 
-export function bulkUpdateStatusResponseFormatter(result: BulkUpdateStatusOutput): McpTextContent[] {
+export function bulkUpdateStatusResponseFormatter(
+  result: BulkUpdateStatusOutput
+): McpTextContent[] {
   const summary = `Bulk status update: ${result.successCount} succeeded, ${result.failureCount} failed (target status: ${result.status})`;
 
   const details = result.results

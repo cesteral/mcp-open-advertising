@@ -3,9 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import {
-  getSupportedEntityTypesDynamic,
-} from "../utils/entity-mapping-dynamic.js";
+import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { createSimplifiedUpdateEntityInputSchema } from "../utils/simplified-schemas.js";
 import {
@@ -189,7 +187,10 @@ export const updateEntityTool = {
             budgetSegments: [
               {
                 budgetAmountMicros: "75000000000",
-                dateRange: { startDate: { year: 2025, month: 1, day: 15 }, endDate: { year: 2025, month: 6, day: 30 } },
+                dateRange: {
+                  startDate: { year: 2025, month: 1, day: 15 },
+                  endDate: { year: 2025, month: 6, day: 30 },
+                },
               },
             ],
           },
@@ -198,7 +199,12 @@ export const updateEntityTool = {
       },
     },
   ],
-  annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false, idempotentHint: true },
+  annotations: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    openWorldHint: false,
+    idempotentHint: true,
+  },
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,
 };

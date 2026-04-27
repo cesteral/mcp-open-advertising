@@ -15,10 +15,7 @@ This tool logs the deletion request and returns instructions for manual removal.
 
 export const DeleteReportScheduleInputSchema = z
   .object({
-    scheduleId: z
-      .string()
-      .min(1)
-      .describe("Schedule ID returned by msads_create_report_schedule"),
+    scheduleId: z.string().min(1).describe("Schedule ID returned by msads_create_report_schedule"),
   })
   .describe("Parameters for deleting a Microsoft Ads report schedule");
 
@@ -49,7 +46,9 @@ export async function deleteReportScheduleLogic(
   };
 }
 
-export function deleteReportScheduleResponseFormatter(result: DeleteReportScheduleOutput): McpTextContent[] {
+export function deleteReportScheduleResponseFormatter(
+  result: DeleteReportScheduleOutput
+): McpTextContent[] {
   return [
     {
       type: "text" as const,

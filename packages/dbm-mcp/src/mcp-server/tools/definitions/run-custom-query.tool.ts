@@ -38,7 +38,9 @@ export const RunCustomQueryInputSchema = z
     reportType: z
       .string()
       .default("STANDARD")
-      .describe("Report type: STANDARD (default), FLOODLIGHT, YOUTUBE, GRP, REACH, UNIQUE_REACH_AUDIENCE"),
+      .describe(
+        "Report type: STANDARD (default), FLOODLIGHT, YOUTUBE, GRP, REACH, UNIQUE_REACH_AUDIENCE"
+      ),
 
     groupBys: z
       .array(z.string())
@@ -84,19 +86,25 @@ export const RunCustomQueryInputSchema = z
             .describe("End date YYYY-MM-DD"),
         }),
       ])
-      .describe("Date range: {preset: 'LAST_7_DAYS'} or {startDate: '2025-01-01', endDate: '2025-01-31'}"),
+      .describe(
+        "Date range: {preset: 'LAST_7_DAYS'} or {startDate: '2025-01-01', endDate: '2025-01-31'}"
+      ),
 
     strictValidation: z
       .boolean()
       .optional()
       .default(true)
-      .describe("If true (default), reject unknown filters/metrics. If false, pass through to API."),
+      .describe(
+        "If true (default), reject unknown filters/metrics. If false, pass through to API."
+      ),
 
     outputFormat: z
       .enum(["structured", "csv"])
       .optional()
       .default("structured")
-      .describe("Deprecated. Results are always returned as a bounded report view; csv requests add a warning."),
+      .describe(
+        "Deprecated. Results are always returned as a bounded report view; csv requests add a warning."
+      ),
   })
   .merge(ReportViewInputSchema)
   .superRefine((input, ctx) => {
@@ -166,14 +174,16 @@ export async function runCustomQueryLogic(
 
   const warningsOut = warnings.length > 0 ? [...warnings] : [];
   if (input.outputFormat === "csv") {
-    warningsOut.push("outputFormat: \"csv\" is deprecated for MCP responses; returned a bounded structured report view instead.");
+    warningsOut.push(
+      'outputFormat: "csv" is deprecated for MCP responses; returned a bounded structured report view instead.'
+    );
   }
 
-  const rows = typeof result.data === "string"
-    ? []
-    : result.data as Record<string, unknown>[];
+  const rows = typeof result.data === "string" ? [] : (result.data as Record<string, unknown>[]);
   if (typeof result.data === "string") {
-    warningsOut.push("CSV result was not embedded to avoid MCP response-size failures. Use outputFormat: \"structured\" for bounded row previews.");
+    warningsOut.push(
+      'CSV result was not embedded to avoid MCP response-size failures. Use outputFormat: "structured" for bounded row previews.'
+    );
   }
 
   return {

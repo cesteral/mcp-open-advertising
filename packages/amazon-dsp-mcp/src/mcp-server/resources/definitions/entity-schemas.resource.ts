@@ -14,7 +14,9 @@ import {
 function buildEntitySchemaMarkdown(entityType: AmazonDspCanonicalEntityType): string {
   const contract = AMAZON_DSP_ENTITY_CONTRACT[entityType];
   const requiredFields = contract.requiredOnCreate
-    .map((rule) => `- \`${rule.field}\` (${rule.expectedType})${rule.hint ? ` — ${rule.hint}` : ""}`)
+    .map(
+      (rule) => `- \`${rule.field}\` (${rule.expectedType})${rule.hint ? ` — ${rule.hint}` : ""}`
+    )
     .join("\n");
   const aliases = contract.aliases.length > 0 ? contract.aliases.join(", ") : "None";
   const notes = contract.notes.map((note) => `- ${note}`).join("\n");
@@ -49,13 +51,15 @@ function buildAllSchemasMarkdown(): string {
   return AMAZON_DSP_CANONICAL_ENTITY_TYPES.map(buildEntitySchemaMarkdown).join("\n\n---\n\n");
 }
 
-export const entitySchemaResources: Resource[] = AMAZON_DSP_CANONICAL_ENTITY_TYPES.map((entityType) => ({
-  uri: `entity-schema://amazonDsp/${entityType}`,
-  name: `Amazon DSP ${entityType} Schema`,
-  description: `Field reference for Amazon DSP ${entityType} entity including required fields, optional fields, and read-only fields`,
-  mimeType: "text/markdown",
-  getContent: () => buildEntitySchemaMarkdown(entityType),
-}));
+export const entitySchemaResources: Resource[] = AMAZON_DSP_CANONICAL_ENTITY_TYPES.map(
+  (entityType) => ({
+    uri: `entity-schema://amazonDsp/${entityType}`,
+    name: `Amazon DSP ${entityType} Schema`,
+    description: `Field reference for Amazon DSP ${entityType} entity including required fields, optional fields, and read-only fields`,
+    mimeType: "text/markdown",
+    getContent: () => buildEntitySchemaMarkdown(entityType),
+  })
+);
 
 export const entitySchemaAllResource: Resource = {
   uri: "entity-schema://amazonDsp/all",

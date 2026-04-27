@@ -28,9 +28,7 @@ export const bulkOperationsWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getBulkOperationsWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getBulkOperationsWorkflowMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const operation = args?.operation || "status";
 

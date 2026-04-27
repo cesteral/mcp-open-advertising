@@ -15,9 +15,7 @@ export const queryLanguageWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getQueryLanguageWorkflowMessage(
-  args?: Record<string, string>
-): string {
+export function getQueryLanguageWorkflowMessage(args?: Record<string, string>): string {
   const customerId = args?.customerId || "{customerId}";
   return `# SA360 Query Language Workflow
 

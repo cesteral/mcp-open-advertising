@@ -21,7 +21,10 @@ const amazonDspService = {
   createEntity: vi.fn(async () => ({ orders: [{ orderId: "ord_new" }] })),
   updateEntity: vi.fn(async () => ({})),
   deleteEntity: vi.fn(async () => ({})),
-  listAdvertisers: vi.fn(async () => ({ entities: [{ advertiserId: "adv_123", name: "Test Advertiser" }], pageInfo: { startIndex: 0, count: 25, totalResults: 1 } })),
+  listAdvertisers: vi.fn(async () => ({
+    entities: [{ advertiserId: "adv_123", name: "Test Advertiser" }],
+    pageInfo: { startIndex: 0, count: 25, totalResults: 1 },
+  })),
   bulkUpdateStatus: vi.fn(async (_entityType: string, entityIds: string[]) => ({
     results: entityIds.map((entityId) => ({ entityId, success: true })),
   })),
@@ -34,7 +37,9 @@ const amazonDspService = {
   adjustBids: vi.fn(async (adjustments: Array<{ lineItemId: string }>) => ({
     results: adjustments.map((a) => ({ lineItemId: a.lineItemId, success: true, newBid: 1 })),
   })),
-  searchAudienceSegments: vi.fn(async () => ({ audienceSegments: [{ id: "seg-1", name: "Gamers" }] })),
+  searchAudienceSegments: vi.fn(async () => ({
+    audienceSegments: [{ id: "seg-1", name: "Gamers" }],
+  })),
   duplicateEntity: vi.fn(async () => ({ orderId: "ord_copy" })),
   getAdPreviews: vi.fn(async () => ({ previews: [{ html: "<div></div>" }] })),
   client: {
@@ -45,7 +50,14 @@ const amazonDspService = {
       return { video_id: "vid-test-123", video_name: "Test Video" };
     }),
     post: vi.fn(async () => ({
-      list: [{ video_id: "vid-test-123", video_status: "bind_success", video_name: "Test Video", duration: 15 }],
+      list: [
+        {
+          video_id: "vid-test-123",
+          video_status: "bind_success",
+          video_name: "Test Video",
+          duration: 15,
+        },
+      ],
     })),
   },
 };
@@ -82,7 +94,11 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
 import { allResources } from "../../src/mcp-server/resources/definitions/index.js";
-import { getAllPrompts, getPromptDefinition, promptRegistry } from "../../src/mcp-server/prompts/index.js";
+import {
+  getAllPrompts,
+  getPromptDefinition,
+  promptRegistry,
+} from "../../src/mcp-server/prompts/index.js";
 
 describe("Amazon DSP MCP definitions coverage", () => {
   beforeEach(() => {
@@ -104,12 +120,20 @@ describe("Amazon DSP MCP definitions coverage", () => {
   });
 
   it("publishes contract-backed resources for new DSP entities and reporting v3", () => {
-    const schemaResources = allResources.filter((resource) => resource.uri.startsWith("entity-schema://amazonDsp/"));
-    const hierarchyResource = allResources.find((resource) => resource.uri === "entity-hierarchy://amazonDsp/all");
-    const reportingResource = allResources.find((resource) => resource.uri === "reporting-reference://amazonDsp");
+    const schemaResources = allResources.filter((resource) =>
+      resource.uri.startsWith("entity-schema://amazonDsp/")
+    );
+    const hierarchyResource = allResources.find(
+      (resource) => resource.uri === "entity-hierarchy://amazonDsp/all"
+    );
+    const reportingResource = allResources.find(
+      (resource) => resource.uri === "reporting-reference://amazonDsp"
+    );
 
     expect(schemaResources.some((resource) => resource.uri.endsWith("/target"))).toBe(true);
-    expect(schemaResources.some((resource) => resource.uri.endsWith("/creativeAssociation"))).toBe(true);
+    expect(schemaResources.some((resource) => resource.uri.endsWith("/creativeAssociation"))).toBe(
+      true
+    );
     expect(hierarchyResource?.getContent()).toContain("Creative Association");
     expect(reportingResource?.getContent()).toContain("POST /accounts/{accountId}/dsp/reports");
     expect(reportingResource?.getContent()).toContain("PROCESSING");

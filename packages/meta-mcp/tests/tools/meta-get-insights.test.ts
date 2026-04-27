@@ -136,11 +136,7 @@ describe("getInsightsLogic", () => {
     });
 
     await expect(
-      getInsightsLogic(
-        { entityId: "123" },
-        createMockContext(),
-        undefined
-      )
+      getInsightsLogic({ entityId: "123" }, createMockContext(), undefined)
     ).rejects.toThrow("No session ID available.");
   });
 });

@@ -77,9 +77,7 @@ export class MetaBearerAuthStrategy extends BearerAuthStrategyBase {
     return getMetaCredentialFingerprint(appCreds.appId);
   }
 
-  protected getTokenFingerprint(
-    headers: Record<string, string | string[] | undefined>
-  ): string {
+  protected getTokenFingerprint(headers: Record<string, string | string[] | undefined>): string {
     const token = parseMetaTokenFromHeaders(headers);
     return getMetaCredentialFingerprint(token);
   }

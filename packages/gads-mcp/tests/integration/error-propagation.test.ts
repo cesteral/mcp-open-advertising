@@ -20,7 +20,9 @@ vi.mock("../../src/auth/gads-auth-adapter.js", async () => {
         this.developerToken = creds.developerToken;
         this.loginCustomerId = creds.loginCustomerId;
       }
-      async getAccessToken() { return "mock-token"; }
+      async getAccessToken() {
+        return "mock-token";
+      }
       async validate() {}
     },
   };
@@ -134,10 +136,7 @@ async function postMcp(app: any, payload: unknown, sessionId?: string) {
     response,
     json,
     text,
-    sessionId:
-      response.headers.get("mcp-session-id") ??
-      json?.result?.sessionId ??
-      json?.sessionId,
+    sessionId: response.headers.get("mcp-session-id") ?? json?.result?.sessionId ?? json?.sessionId,
   };
 }
 
@@ -158,22 +157,19 @@ describe("mcp transport error propagation", () => {
   });
 
   it("returns an MCP tool error payload when service throws", async () => {
-    const result = await postMcp(
-      app,
-      {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "tools/call",
-        params: {
-          name: "gads_create_entity",
-          arguments: {
-            entityType: "campaign",
-            customerId: "1234567890",
-            data: { name: "Will Fail" },
-          },
+    const result = await postMcp(app, {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: {
+        name: "gads_create_entity",
+        arguments: {
+          entityType: "campaign",
+          customerId: "1234567890",
+          data: { name: "Will Fail" },
         },
-      }
-    );
+      },
+    });
 
     expect(result.response.status).toBe(200);
     expect(result.sessionId).toBeDefined();

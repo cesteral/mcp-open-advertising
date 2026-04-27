@@ -21,9 +21,7 @@ export const GetDeliveryForecastInputSchema = z
       .string()
       .min(1)
       .describe("The ad account URN (e.g., urn:li:sponsoredAccount:123)"),
-    targetingCriteria: z
-      .record(z.any())
-      .describe("LinkedIn targeting criteria object"),
+    targetingCriteria: z.record(z.any()).describe("LinkedIn targeting criteria object"),
     optimizationTargetType: z
       .string()
       .optional()
@@ -96,9 +94,7 @@ export const getDeliveryForecastTool = {
             and: [
               {
                 or: {
-                  "urn:li:adTargetingFacet:geos": [
-                    "urn:li:geo:103644278",
-                  ],
+                  "urn:li:adTargetingFacet:geos": ["urn:li:geo:103644278"],
                 },
               },
               {

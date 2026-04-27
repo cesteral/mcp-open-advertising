@@ -30,7 +30,10 @@ export async function createCampaignWorkflowLogic(
   sdkContext?: SdkContext
 ): Promise<CreateCampaignWorkflowToolOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const campaign = (await ttdService.createCampaignWorkflow(input, context)) as Record<string, unknown>;
+  const campaign = (await ttdService.createCampaignWorkflow(input, context)) as Record<
+    string,
+    unknown
+  >;
   return { campaign, timestamp: new Date().toISOString() };
 }
 

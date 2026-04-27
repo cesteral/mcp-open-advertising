@@ -14,15 +14,13 @@ Checks that the data object has the expected structure for the given entity type
 
 export const ValidateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to validate"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
     mode: z
       .enum(["create", "update"])
-      .describe("Validation mode — create checks for required fields, update checks for id presence"),
-    data: z
-      .record(z.any())
-      .describe("Entity data to validate"),
+      .describe(
+        "Validation mode — create checks for required fields, update checks for id presence"
+      ),
+    data: z.record(z.any()).describe("Entity data to validate"),
   })
   .describe("Parameters for validating a CM360 entity");
 
@@ -55,7 +53,12 @@ export async function validateEntityLogic(
     warnings.push("id field is typically auto-generated on create — it will be ignored");
   }
 
-  if (!input.data.name && ["campaign", "placement", "ad", "creative", "site", "floodlightActivity"].includes(input.entityType)) {
+  if (
+    !input.data.name &&
+    ["campaign", "placement", "ad", "creative", "site", "floodlightActivity"].includes(
+      input.entityType
+    )
+  ) {
     warnings.push(`name field is typically required for ${input.entityType} entities`);
   }
 

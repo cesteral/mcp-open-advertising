@@ -30,27 +30,14 @@ const TARGETING_TYPES = [
 
 export const ListTargetingOptionsInputSchema = z
   .object({
-    profileId: z
-      .string()
-      .min(1)
-      .describe("CM360 User Profile ID"),
-    targetingType: z
-      .enum(TARGETING_TYPES)
-      .describe("Type of targeting options to list"),
+    profileId: z.string().min(1).describe("CM360 User Profile ID"),
+    targetingType: z.enum(TARGETING_TYPES).describe("Type of targeting options to list"),
     filters: z
       .record(z.unknown())
       .optional()
       .describe("Optional filter parameters (e.g., countryDartIds for regions)"),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination"),
-    maxResults: z
-      .number()
-      .min(1)
-      .max(1000)
-      .optional()
-      .describe("Maximum results per page"),
+    pageToken: z.string().optional().describe("Page token for pagination"),
+    maxResults: z.number().min(1).max(1000).optional().describe("Maximum results per page"),
   })
   .describe("Parameters for listing targeting options");
 
@@ -90,7 +77,9 @@ export async function listTargetingOptionsLogic(
   };
 }
 
-export function listTargetingOptionsResponseFormatter(result: ListTargetingOptionsOutput): McpTextContent[] {
+export function listTargetingOptionsResponseFormatter(
+  result: ListTargetingOptionsOutput
+): McpTextContent[] {
   const pagination = result.nextPageToken
     ? `\n\nMore results available. Use pageToken: ${result.nextPageToken}`
     : "";

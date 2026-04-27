@@ -22,17 +22,9 @@ Note: In Google Ads, "remove" sets the entity status to REMOVED. The entity data
 
 export const RemoveEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to remove"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to remove"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to remove"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
+    entityId: z.string().min(1).describe("The entity ID to remove"),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(

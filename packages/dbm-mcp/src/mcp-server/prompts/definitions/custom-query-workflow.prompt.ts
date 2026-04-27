@@ -11,7 +11,8 @@ import type { Prompt } from "./types.js";
 
 export const customQueryWorkflowPrompt: Prompt = {
   name: "custom_query_workflow",
-  description: "Step-by-step guide for building custom Bid Manager queries with the dbm_run_custom_query tool",
+  description:
+    "Step-by-step guide for building custom Bid Manager queries with the dbm_run_custom_query tool",
   arguments: [
     {
       name: "advertiserId",
@@ -20,7 +21,8 @@ export const customQueryWorkflowPrompt: Prompt = {
     },
     {
       name: "queryGoal",
-      description: "What you want to analyze (e.g., 'campaign performance', 'device breakdown', 'video metrics')",
+      description:
+        "What you want to analyze (e.g., 'campaign performance', 'device breakdown', 'video metrics')",
       required: false,
     },
   ],

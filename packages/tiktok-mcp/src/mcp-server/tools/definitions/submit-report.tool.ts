@@ -25,7 +25,9 @@ export const SubmitReportInputSchema = z
     advertiserId: z
       .string()
       .min(1)
-      .describe("TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"),
+      .describe(
+        "TikTok Advertiser ID (informational — the session-bound advertiser from authentication is used for API calls)"
+      ),
     reportType: z
       .enum(["BASIC", "AUDIENCE", "PLAYABLE_MATERIAL"])
       .optional()
@@ -53,17 +55,12 @@ export const SubmitReportInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe("End date (YYYY-MM-DD, required if datePreset not provided)"),
-    orderField: z
-      .string()
-      .optional()
-      .describe("Field to order results by"),
-    orderType: z
-      .enum(["ASC", "DESC"])
-      .optional()
-      .describe("Sort order"),
+    orderField: z.string().optional().describe("Field to order results by"),
+    orderType: z.enum(["ASC", "DESC"]).optional().describe("Sort order"),
   })
   .refine(
-    (data) => data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
+    (data) =>
+      data.datePreset !== undefined || (data.startDate !== undefined && data.endDate !== undefined),
     { message: "Provide either datePreset or both startDate and endDate" }
   )
   .describe("Parameters for submitting a TikTok Ads report");

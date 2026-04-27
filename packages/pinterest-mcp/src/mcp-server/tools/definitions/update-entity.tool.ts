@@ -21,20 +21,10 @@ Pinterest uses POST for updates with entity ID in the body. Only provided fields
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    adAccountId: z
-      .string()
-      .min(1)
-      .describe("Pinterest Advertiser ID"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
-    data: z
-      .record(z.any())
-      .describe("Fields to update as key-value pairs"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    adAccountId: z.string().min(1).describe("Pinterest Advertiser ID"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
+    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
   })
   .describe("Parameters for updating a Pinterest Ads entity");
 

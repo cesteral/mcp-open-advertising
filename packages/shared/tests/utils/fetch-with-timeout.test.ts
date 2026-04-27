@@ -20,14 +20,13 @@ describe("fetchWithTimeout", () => {
       });
     });
 
-    const sanitizer = (url: string) =>
-      url.replace(/access_token=[^&]+/, "access_token=***");
+    const sanitizer = (url: string) => url.replace(/access_token=[^&]+/, "access_token=***");
 
     const url = "https://graph.facebook.com/v21.0/me?access_token=SECRET123";
 
-    await expect(
-      fetchWithTimeout(url, 50, undefined, undefined, sanitizer)
-    ).rejects.toThrow("access_token=***");
+    await expect(fetchWithTimeout(url, 50, undefined, undefined, sanitizer)).rejects.toThrow(
+      "access_token=***"
+    );
   });
 
   it("raw token not present in sanitized timeout error", async () => {
@@ -42,8 +41,7 @@ describe("fetchWithTimeout", () => {
       });
     });
 
-    const sanitizer = (url: string) =>
-      url.replace(/access_token=[^&]+/, "access_token=***");
+    const sanitizer = (url: string) => url.replace(/access_token=[^&]+/, "access_token=***");
 
     const url = "https://graph.facebook.com/v21.0/me?access_token=SECRET123";
 
@@ -74,9 +72,7 @@ describe("fetchWithTimeout", () => {
   });
 
   it("returns response on successful fetch", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("ok", { status: 200 })
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("ok", { status: 200 }));
 
     const response = await fetchWithTimeout("https://example.com", 5000);
     expect(response.status).toBe(200);

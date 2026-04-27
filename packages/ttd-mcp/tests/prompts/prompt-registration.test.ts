@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  promptRegistry,
-  getAllPrompts,
-} from "../../src/mcp-server/prompts/index.js";
+import { promptRegistry, getAllPrompts } from "../../src/mcp-server/prompts/index.js";
 
 const EXPECTED_COUNT = 11;
 

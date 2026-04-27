@@ -4,10 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
-import {
-  addParentValidationIssue,
-  mergeParentIdsIntoData,
-} from "../utils/parent-id-validation.js";
+import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -21,32 +18,21 @@ Uses TTD API v3 PUT endpoint. Provide the entity ID and a data object with the f
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    entityId: z
-      .string()
-      .min(1)
-      .describe("The entity ID to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    entityId: z.string().min(1).describe("The entity ID to update"),
     partnerId: z
       .string()
       .optional()
-      .describe("Partner ID (optional for advertiser updates; injected as PartnerId in the request body)"),
+      .describe(
+        "Partner ID (optional for advertiser updates; injected as PartnerId in the request body)"
+      ),
     advertiserId: z
       .string()
       .optional()
       .describe("Advertiser ID (required for most non-advertiser entities)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (required for adGroup)"),
-    adGroupId: z
-      .string()
-      .optional()
-      .describe("Ad Group ID (required for ad)"),
-    data: z
-      .record(z.any())
-      .describe("Entity data fields to update"),
+    campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
+    adGroupId: z.string().optional().describe("Ad Group ID (required for ad)"),
+    data: z.record(z.any()).describe("Entity data fields to update"),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(

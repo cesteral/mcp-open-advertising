@@ -63,9 +63,7 @@ export const GetInsightsBreakdownsInputSchema = z
       .string()
       .regex(/^\d+$/, "customerId must be numeric")
       .describe("SA360 customer ID (no dashes)"),
-    entityType: z
-      .enum(getInsightsEntityTypeEnum())
-      .describe("Type of entity to get insights for"),
+    entityType: z.enum(getInsightsEntityTypeEnum()).describe("Type of entity to get insights for"),
     entityId: z
       .string()
       .regex(/^\d+$/, "entityId must be numeric")
@@ -87,13 +85,23 @@ export const GetInsightsBreakdownsInputSchema = z
       .describe("Custom end date (YYYY-MM-DD) — requires startDate"),
     breakdowns: z
       .array(
-        z.string().regex(SEGMENT_NAME_PATTERN, "breakdowns must be segment names like 'date' or 'segments.device'")
+        z
+          .string()
+          .regex(
+            SEGMENT_NAME_PATTERN,
+            "breakdowns must be segment names like 'date' or 'segments.device'"
+          )
       )
       .min(1)
       .describe("Segment dimensions to break down by (e.g., ['segments.date', 'segments.device'])"),
     metrics: z
       .array(
-        z.string().regex(METRIC_NAME_PATTERN, "metrics must be metric names like 'clicks' or 'metrics.clicks'")
+        z
+          .string()
+          .regex(
+            METRIC_NAME_PATTERN,
+            "metrics must be metric names like 'clicks' or 'metrics.clicks'"
+          )
       )
       .optional()
       .describe("Metrics to include (defaults to impressions, clicks, cost_micros, conversions)"),
@@ -108,10 +116,7 @@ export const GetInsightsBreakdownsInputSchema = z
       .max(10000)
       .optional()
       .describe("Deprecated. Use maxRows for the returned row count."),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination (from previous response)"),
+    pageToken: z.string().optional().describe("Page token for pagination (from previous response)"),
   })
   .merge(ReportViewInputSchema)
   .refine(
@@ -153,8 +158,7 @@ function buildBreakdownQuery(input: GetInsightsBreakdownsInput): string {
   const idField = getInsightsIdField(entityType);
   const nameField = getInsightsNameField(entityType);
 
-  const rawMetrics =
-    input.metrics && input.metrics.length > 0 ? input.metrics : DEFAULT_METRICS;
+  const rawMetrics = input.metrics && input.metrics.length > 0 ? input.metrics : DEFAULT_METRICS;
   for (const m of rawMetrics) {
     if (!METRIC_NAME_PATTERN.test(m)) {
       throw new Error(`Invalid metric name: ${m}`);
@@ -194,9 +198,10 @@ export async function getInsightsBreakdownsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsBreakdownsOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
-  const viewInput = input.maxRows === undefined && input.limit !== undefined
-    ? { ...input, maxRows: input.limit }
-    : input;
+  const viewInput =
+    input.maxRows === undefined && input.limit !== undefined
+      ? { ...input, maxRows: input.limit }
+      : input;
 
   const query = buildBreakdownQuery({ ...input, limit: getReportViewFetchLimit(viewInput) });
 
@@ -221,7 +226,9 @@ export async function getInsightsBreakdownsLogic(
       rows: results,
       totalRows: results.length + (result.nextPageToken ? 1 : 0),
       input: viewInput,
-      warnings: result.nextPageToken ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."] : [],
+      warnings: result.nextPageToken
+        ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
+        : [],
     }),
     totalResults: results.length,
     dateRange: dateRangeLabel,
@@ -234,7 +241,9 @@ export async function getInsightsBreakdownsLogic(
   };
 }
 
-export function getInsightsBreakdownsResponseFormatter(result: GetInsightsBreakdownsOutput): McpTextContent[] {
+export function getInsightsBreakdownsResponseFormatter(
+  result: GetInsightsBreakdownsOutput
+): McpTextContent[] {
   const paginationNote = result.has_more
     ? ` — more pages available (use pageToken: "${result.nextPageToken}")`
     : "";

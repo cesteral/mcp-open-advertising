@@ -15,12 +15,8 @@ Only include fields you want to change — Microsoft Ads supports partial update
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
-    data: z
-      .record(z.unknown())
-      .describe("Entity data payload with Id and fields to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
+    data: z.record(z.unknown()).describe("Entity data payload with Id and fields to update"),
   })
   .describe("Parameters for updating a Microsoft Ads entity");
 

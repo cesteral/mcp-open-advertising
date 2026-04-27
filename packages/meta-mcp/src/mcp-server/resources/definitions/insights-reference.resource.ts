@@ -9,7 +9,8 @@ import type { Resource } from "../types.js";
 export const insightsReferenceResource: Resource = {
   uri: "insights-reference://all",
   name: "Meta Insights Reference",
-  description: "Metrics, breakdowns, date presets, and attribution windows for Meta Ads Insights API",
+  description:
+    "Metrics, breakdowns, date presets, and attribution windows for Meta Ads Insights API",
   mimeType: "text/markdown",
   getContent: () => `# Meta Insights API Reference
 

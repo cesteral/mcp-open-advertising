@@ -169,9 +169,9 @@ describe("Pinterest Entity Mapping", () => {
     });
 
     it("substitutes {entityId}", () => {
-      expect(
-        interpolatePath("/v5/pins/{entityId}", { entityId: "pin_456" })
-      ).toBe("/v5/pins/pin_456");
+      expect(interpolatePath("/v5/pins/{entityId}", { entityId: "pin_456" })).toBe(
+        "/v5/pins/pin_456"
+      );
     });
 
     it("substitutes multiple placeholders", () => {

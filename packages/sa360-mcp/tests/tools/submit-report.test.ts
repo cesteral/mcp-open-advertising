@@ -33,8 +33,14 @@ describe("SubmitReportInputSchema", () => {
 
   it("accepts all supported report types", () => {
     const types = [
-      "campaign", "adGroup", "keyword", "ad", "advertiser",
-      "productGroup", "floodlightActivity", "productLeadAndCrossSell",
+      "campaign",
+      "adGroup",
+      "keyword",
+      "ad",
+      "advertiser",
+      "productGroup",
+      "floodlightActivity",
+      "productLeadAndCrossSell",
     ];
     for (const reportType of types) {
       const result = SubmitReportInputSchema.safeParse({ ...validInput, reportType });
@@ -81,9 +87,7 @@ describe("SubmitReportInputSchema", () => {
   it("accepts optional filters", () => {
     const result = SubmitReportInputSchema.safeParse({
       ...validInput,
-      filters: [
-        { column: { columnName: "status" }, operator: "equals", values: ["ACTIVE"] },
-      ],
+      filters: [{ column: { columnName: "status" }, operator: "equals", values: ["ACTIVE"] }],
     });
     expect(result.success).toBe(true);
   });

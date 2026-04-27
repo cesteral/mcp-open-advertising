@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { computeMetrics, addComputedMetrics } from "../../../src/mcp-server/tools/utils/computed-metrics.js";
+import {
+  computeMetrics,
+  addComputedMetrics,
+} from "../../../src/mcp-server/tools/utils/computed-metrics.js";
 
 describe("computeMetrics", () => {
   it("calculates CPA correctly", () => {

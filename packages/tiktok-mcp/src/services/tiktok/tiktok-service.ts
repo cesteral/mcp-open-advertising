@@ -107,11 +107,9 @@ export class TikTokService {
       params.filtering = JSON.stringify(filters);
     }
 
-    const result = (await this.httpClient.get(
-      config.listPath,
-      params,
-      context
-    )) as TikTokListData<TikTokEntityMap[T]>;
+    const result = (await this.httpClient.get(config.listPath, params, context)) as TikTokListData<
+      TikTokEntityMap[T]
+    >;
 
     return {
       entities: result?.list ?? [],
@@ -140,11 +138,9 @@ export class TikTokService {
       }),
     };
 
-    const result = (await this.httpClient.get(
-      config.listPath,
-      params,
-      context
-    )) as TikTokListData<TikTokEntityMap[T]>;
+    const result = (await this.httpClient.get(config.listPath, params, context)) as TikTokListData<
+      TikTokEntityMap[T]
+    >;
 
     const list = result?.list ?? [];
     if (list.length === 0) {
@@ -200,9 +196,13 @@ export class TikTokService {
 
     await this.rateLimiter.consume(`tiktok:default`, 3);
 
-    return this.httpClient.post(config.deletePath, {
-      [config.idsField]: entityIds,
-    }, context);
+    return this.httpClient.post(
+      config.deletePath,
+      {
+        [config.idsField]: entityIds,
+      },
+      context
+    );
   }
 
   async updateEntityStatus(
@@ -214,15 +214,21 @@ export class TikTokService {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsStatusUpdate) {
-      throw new Error(`Entity type '${entityType}' does not support status updates. Use the regular update endpoint instead.`);
+      throw new Error(
+        `Entity type '${entityType}' does not support status updates. Use the regular update endpoint instead.`
+      );
     }
 
     await this.rateLimiter.consume(`tiktok:default`, 3);
 
-    return this.httpClient.post(config.statusUpdatePath, {
-      [config.idsField]: entityIds,
-      operation_status: operationStatus,
-    }, context);
+    return this.httpClient.post(
+      config.statusUpdatePath,
+      {
+        [config.idsField]: entityIds,
+        operation_status: operationStatus,
+      },
+      context
+    );
   }
 
   // ─── Advertiser Account ──────────────────────────────────────────
@@ -248,7 +254,10 @@ export class TikTokService {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsDuplicate) {
-      this.logger.debug({ entityType }, "Duplicate skipped: entity type does not support duplication");
+      this.logger.debug(
+        { entityType },
+        "Duplicate skipped: entity type does not support duplication"
+      );
       throw new Error(`Entity type ${entityType} does not support duplication`);
     }
 
@@ -272,8 +281,22 @@ export class TikTokService {
   async adjustBids(
     adjustments: Array<{ adGroupId: string; bidPrice: number }>,
     context?: RequestContext
-  ): Promise<{ results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> }> {
-    const results: Array<{ adGroupId: string; success: boolean; previousBid?: number; newBid?: number; error?: string }> = [];
+  ): Promise<{
+    results: Array<{
+      adGroupId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }>;
+  }> {
+    const results: Array<{
+      adGroupId: string;
+      success: boolean;
+      previousBid?: number;
+      newBid?: number;
+      error?: string;
+    }> = [];
 
     for (const adjustment of adjustments) {
       try {
@@ -282,9 +305,14 @@ export class TikTokService {
         const previousBid = entity.bid_price;
 
         // Update bid
-        await this.updateEntity("adGroup", adjustment.adGroupId, {
-          bid_price: adjustment.bidPrice,
-        }, context);
+        await this.updateEntity(
+          "adGroup",
+          adjustment.adGroupId,
+          {
+            bid_price: adjustment.bidPrice,
+          },
+          context
+        );
 
         results.push({
           adGroupId: adjustment.adGroupId,
@@ -310,10 +338,16 @@ export class TikTokService {
     entityType: T,
     items: TikTokCreateEntityInputMap[T][],
     context?: RequestContext
-  ): Promise<{ results: Array<{ success: boolean; entity?: TikTokEntityMap[T]; error?: string }> }> {
-    const results = await executeBulkConcurrent(items, async (data) => {
-      return this.createEntity(entityType, data, context);
-    }, { logger: this.logger });
+  ): Promise<{
+    results: Array<{ success: boolean; entity?: TikTokEntityMap[T]; error?: string }>;
+  }> {
+    const results = await executeBulkConcurrent(
+      items,
+      async (data) => {
+        return this.createEntity(entityType, data, context);
+      },
+      { logger: this.logger }
+    );
     return { results };
   }
 
@@ -322,9 +356,13 @@ export class TikTokService {
     items: Array<{ entityId: string; data: TikTokUpdateEntityInputMap[T] }>,
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    const bulkResults = await executeBulkConcurrent(items, async (item) => {
-      return this.updateEntity(entityType, item.entityId, item.data, context);
-    }, { logger: this.logger });
+    const bulkResults = await executeBulkConcurrent(
+      items,
+      async (item) => {
+        return this.updateEntity(entityType, item.entityId, item.data, context);
+      },
+      { logger: this.logger }
+    );
 
     return {
       results: bulkResults.map((r, i) => ({
@@ -341,7 +379,10 @@ export class TikTokService {
     operationStatus: "ENABLE" | "DISABLE" | "DELETE",
     context?: RequestContext
   ): Promise<{ results: Array<{ entityId: string; success: boolean; error?: string }> }> {
-    this.logger.debug({ entityType, count: entityIds.length, operationStatus }, "Bulk status update");
+    this.logger.debug(
+      { entityType, count: entityIds.length, operationStatus },
+      "Bulk status update"
+    );
 
     try {
       await this.updateEntityStatus(entityType, entityIds, operationStatus, context);
@@ -371,7 +412,11 @@ export class TikTokService {
   ): Promise<unknown> {
     await this.rateLimiter.consume(`tiktok:default`);
 
-    return this.httpClient.post(`/open_api/${this.apiVersion}/tool/targeting/search/`, criteria, context);
+    return this.httpClient.post(
+      `/open_api/${this.apiVersion}/tool/targeting/search/`,
+      criteria,
+      context
+    );
   }
 
   async getTargetingOptions(
@@ -383,21 +428,53 @@ export class TikTokService {
 
     switch (optionType) {
       case "ACTION_CATEGORY":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/action_category/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/action_category/`,
+          this.stringifyParams(params),
+          context
+        );
       case "CARRIER":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/carrier/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/carrier/`,
+          this.stringifyParams(params),
+          context
+        );
       case "DEVICE_MODEL":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/device_model/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/device_model/`,
+          this.stringifyParams(params),
+          context
+        );
       case "INTEREST_CATEGORY":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/interest_category/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/interest_category/`,
+          this.stringifyParams(params),
+          context
+        );
       case "INTEREST_KEYWORD":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/interest_keyword/recommend/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/interest_keyword/recommend/`,
+          this.stringifyParams(params),
+          context
+        );
       case "LANGUAGE":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/language/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/language/`,
+          this.stringifyParams(params),
+          context
+        );
       case "LOCATION":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/region/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/region/`,
+          this.stringifyParams(params),
+          context
+        );
       case "ISP":
-        return this.httpClient.get(`/open_api/${this.apiVersion}/tool/targeting/list/`, this.stringifyParams(params), context);
+        return this.httpClient.get(
+          `/open_api/${this.apiVersion}/tool/targeting/list/`,
+          this.stringifyParams(params),
+          context
+        );
       default:
         throw new Error(`Unsupported targeting option type: ${optionType}`);
     }
@@ -411,16 +488,16 @@ export class TikTokService {
   ): Promise<unknown> {
     await this.rateLimiter.consume(`tiktok:default`);
 
-    return this.httpClient.post(`/open_api/${this.apiVersion}/audience/estimate/`, targetingConfig, context);
+    return this.httpClient.post(
+      `/open_api/${this.apiVersion}/audience/estimate/`,
+      targetingConfig,
+      context
+    );
   }
 
   // ─── Ad Previews ────────────────────────────────────────────────
 
-  async getAdPreviews(
-    adId: string,
-    adFormat?: string,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async getAdPreviews(adId: string, adFormat?: string, context?: RequestContext): Promise<unknown> {
     await this.rateLimiter.consume(`tiktok:default`);
 
     const params: Record<string, string> = {
@@ -443,5 +520,4 @@ export class TikTokService {
         .map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)])
     );
   }
-
 }

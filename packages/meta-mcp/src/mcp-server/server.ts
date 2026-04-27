@@ -62,7 +62,8 @@ export async function createMcpServer(
     {
       name: "meta-mcp",
       version: packageJson.version,
-      description: "Meta Ads campaign management, reporting, and optimization via the configured Meta Graph API (default: v25.0). Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
+      description:
+        "Meta Ads campaign management, reporting, and optimization via the configured Meta Graph API (default: v25.0). Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights with breakdowns, bulk operations, targeting search, entity duplication, delivery estimates, and ad previews.",
     },
     {
       capabilities: {
@@ -113,8 +114,12 @@ export async function createMcpServer(
 
   // Register conformance fixtures (resources + prompts) when enabled
   if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {
-    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import("@cesteral/shared");
-    const { ResourceTemplate: McpResourceTemplate } = await import("@modelcontextprotocol/sdk/server/mcp.js");
+    const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
+      "@cesteral/shared"
+    );
+    const { ResourceTemplate: McpResourceTemplate } = await import(
+      "@modelcontextprotocol/sdk/server/mcp.js"
+    );
 
     registerStaticResourcesFromDefinitions({
       server,
@@ -122,7 +127,9 @@ export async function createMcpServer(
       logger,
     });
 
-    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, { list: undefined });
+    const template = new McpResourceTemplate(conformanceResourceTemplate.uriTemplate, {
+      list: undefined,
+    });
     server.registerResource(
       "conformance_template",
       template,
@@ -134,11 +141,13 @@ export async function createMcpServer(
         const id = (variables.id as string) || "unknown";
         const content = conformanceResourceTemplate.getContent(id);
         return {
-          contents: [{
-            uri: uri.href,
-            mimeType: conformanceResourceTemplate.mimeType,
-            text: content,
-          }],
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: conformanceResourceTemplate.mimeType,
+              text: content,
+            },
+          ],
         };
       }
     );
@@ -151,13 +160,19 @@ export async function createMcpServer(
   }
 
   // Register all prompts via shared factory
-  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map((def) => ({
-    name: def.prompt.name,
-    description: def.prompt.description ?? "",
-    arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
-    generateMessage: def.generateMessage,
-  }));
-  registerPromptsFromDefinitions({ server: server as unknown as McpServerPromptLike, prompts: allPrompts, logger });
+  const allPrompts: PromptDefinitionForFactory[] = Array.from(promptRegistry.values()).map(
+    (def) => ({
+      name: def.prompt.name,
+      description: def.prompt.description ?? "",
+      arguments: def.prompt.arguments as PromptArgumentForFactory[] | undefined,
+      generateMessage: def.generateMessage,
+    })
+  );
+  registerPromptsFromDefinitions({
+    server: server as unknown as McpServerPromptLike,
+    prompts: allPrompts,
+    logger,
+  });
 
   return server;
 }

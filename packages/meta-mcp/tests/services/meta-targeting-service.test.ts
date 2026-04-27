@@ -90,9 +90,7 @@ describe("MetaTargetingService", () => {
 
     it("returns the response from httpClient", async () => {
       const targetingResults = {
-        data: [
-          { id: "6003139266461", name: "Yoga", audience_size_lower_bound: 1000000 },
-        ],
+        data: [{ id: "6003139266461", name: "Yoga", audience_size_lower_bound: 1000000 }],
       };
       httpClient.get.mockResolvedValueOnce(targetingResults);
 
@@ -173,9 +171,7 @@ describe("MetaTargetingService", () => {
 
     it("returns the response from httpClient", async () => {
       const browseResults = {
-        data: [
-          { id: "6003139266461", name: "Sports", type: "interests" },
-        ],
+        data: [{ id: "6003139266461", name: "Sports", type: "interests" }],
       };
       httpClient.get.mockResolvedValueOnce(browseResults);
 

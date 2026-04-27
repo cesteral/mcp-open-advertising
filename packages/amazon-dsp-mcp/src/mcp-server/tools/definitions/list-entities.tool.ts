@@ -20,13 +20,8 @@ Use the entity-specific filter param: campaigns / orders filter by \`advertiserI
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
-    profileId: z
-      .string()
-      .min(1)
-      .describe("Amazon DSP Advertiser ID (used as the scope/profile)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
+    profileId: z.string().min(1).describe("Amazon DSP Advertiser ID (used as the scope/profile)"),
     filters: z
       .record(z.string())
       .optional()

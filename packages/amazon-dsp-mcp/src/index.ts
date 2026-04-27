@@ -7,15 +7,8 @@ import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
 import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
 import { AmazonDspAccessTokenAdapter } from "./auth/amazon-dsp-auth-adapter.js";
-import {
-  detectTransportMode,
-  createServerLogger,
-  bootstrapMcpServer,
-} from "@cesteral/shared";
-import {
-  createSessionServices,
-  sessionServiceStore,
-} from "./services/session-services.js";
+import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
+import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
 import { rateLimiter } from "./utils/security/rate-limiter.js";
 
 const transportMode = detectTransportMode();
@@ -32,7 +25,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
   if (!accessToken || !profileId) {
     logger.warn(
       "No AmazonDsp credentials found in env vars. " +
-      "Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID for stdio mode."
+        "Set AMAZON_DSP_ACCESS_TOKEN and AMAZON_DSP_PROFILE_ID for stdio mode."
     );
     return false;
   }

@@ -53,7 +53,7 @@ export function extractFieldsFromSchema(
   prefix = "",
   depth = 0,
   maxDepth = MAX_FIELD_DEPTH,
-  visited = new Set<z.ZodTypeAny>(),
+  visited = new Set<z.ZodTypeAny>()
 ): FieldInfo[] {
   const fields: FieldInfo[] = [];
   if (depth > maxDepth) {
@@ -84,9 +84,7 @@ export function extractFieldsFromSchema(
         format,
       });
 
-      fields.push(
-        ...extractNestedFields(fieldSchema, fieldName, depth + 1, maxDepth, visited)
-      );
+      fields.push(...extractNestedFields(fieldSchema, fieldName, depth + 1, maxDepth, visited));
     }
     visited.delete(concrete);
   }
@@ -99,7 +97,7 @@ function extractNestedFields(
   prefix: string,
   depth: number,
   maxDepth: number,
-  visited: Set<z.ZodTypeAny>,
+  visited: Set<z.ZodTypeAny>
 ): FieldInfo[] {
   const concrete = unwrapSchema(schema);
   if (depth > maxDepth) {
@@ -260,19 +258,12 @@ export function extractEnumValues(schema: z.ZodTypeAny): string[] | null {
 /**
  * Get field schema from a nested path (e.g., "bidStrategy.fixedBid.bidAmountMicros")
  */
-export function getFieldSchemaByPath(
-  schema: z.ZodTypeAny,
-  path: string
-): z.ZodTypeAny | null {
+export function getFieldSchemaByPath(schema: z.ZodTypeAny, path: string): z.ZodTypeAny | null {
   const parts = path.split(".");
   return walkSchemaPath(schema, parts, 0);
 }
 
-function walkSchemaPath(
-  schema: z.ZodTypeAny,
-  parts: string[],
-  index: number
-): z.ZodTypeAny | null {
+function walkSchemaPath(schema: z.ZodTypeAny, parts: string[], index: number): z.ZodTypeAny | null {
   if (index >= parts.length) {
     return schema;
   }

@@ -3,10 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import {
-  fromTtdSchedule,
-  ReportScheduleSummarySchema,
-} from "@cesteral/shared";
+import { fromTtdSchedule, ReportScheduleSummarySchema } from "@cesteral/shared";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_list_report_schedules";

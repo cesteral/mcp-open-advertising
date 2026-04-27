@@ -9,16 +9,19 @@ Successfully integrated the curated entity examples utility into existing MCP to
 ### 1. Enhanced Tool Descriptions ✅
 
 **Modified Files:**
+
 - `src/mcp-server/tools/definitions/update-entity.tool.ts`
 - `src/mcp-server/tools/definitions/adjust-line-item-bids.tool.ts`
 - `src/mcp-server/tools/definitions/bulk-update-status.tool.ts`
 
 **What Changed:**
+
 - Tool descriptions now dynamically include example summaries
 - AI agents see common update patterns upfront (before making tool calls)
 - Reduces trial-and-error by showing valid operations
 
 **Example - update_entity tool description:**
+
 ```
 Update a DV360 entity with flexible field updates.
 
@@ -54,14 +57,17 @@ For more examples, see entity examples utility.
 ### 2. Better Error Messages ✅
 
 **Modified Files:**
+
 - `src/mcp-server/tools/definitions/update-entity.tool.ts`
 
 **What Changed:**
+
 - When updates fail, error messages include suggestions for valid patterns
 - Shows top 3 common operations for the entity type
 - Guides users toward correct updateMask values
 
 **Example - Error with suggestions:**
+
 ```
 Error: Invalid field 'bidAmounts' in updateMask
 
@@ -74,16 +80,19 @@ Tip: Try one of these common patterns for lineItem:
 ### 3. Enhanced Response Formatting ✅
 
 **Modified Files:**
+
 - `src/mcp-server/tools/definitions/update-entity.tool.ts`
 - `src/mcp-server/tools/definitions/adjust-line-item-bids.tool.ts`
 - `src/mcp-server/tools/definitions/bulk-update-status.tool.ts`
 
 **What Changed:**
+
 - Success responses include helpful notes when known patterns are used
 - Contextual warnings (e.g., "Cannot unarchive once archived")
 - Format reminders (e.g., "Bid amounts are in micros")
 
 **Example - update_entity response:**
+
 ```
 Entity updated successfully:
 {
@@ -100,6 +109,7 @@ Note: Bid amount is in micros (1 USD = 1,000,000 micros). Only use fixedBid if t
 ```
 
 **Example - adjust_line_item_bids response:**
+
 ```
 Batch bid adjustment completed: 15/15 successful
 
@@ -112,6 +122,7 @@ Timestamp: 2025-01-14T13:30:00.000Z
 ```
 
 **Example - bulk_update_status response (pausing):**
+
 ```
 Bulk status update completed: 10/10 successful
 
@@ -124,6 +135,7 @@ Timestamp: 2025-01-14T13:30:00.000Z
 ```
 
 **Example - bulk_update_status response (archiving):**
+
 ```
 Bulk status update completed: 5/5 successful
 
@@ -150,6 +162,7 @@ From `src/mcp-server/tools/utils/entityExamples.ts`:
 ### Code Patterns
 
 #### Pattern 1: Dynamic Tool Description
+
 ```typescript
 import { getEntityTypesWithExamples, getExamplesSummary } from "../utils/entityExamples.js";
 
@@ -175,6 +188,7 @@ export const updateEntityTool = {
 ```
 
 #### Pattern 2: Error Enhancement
+
 ```typescript
 import { getEntityExamples } from "../utils/entityExamples.js";
 
@@ -197,6 +211,7 @@ try {
 ```
 
 #### Pattern 3: Response Enhancement
+
 ```typescript
 import { findMatchingExample } from "../utils/entityExamples.js";
 
@@ -204,11 +219,7 @@ export function responseFormatter(result: Output, input?: Input): any {
   let text = "Entity updated successfully:\n" + JSON.stringify(result, null, 2);
 
   if (input) {
-    const matchingExample = findMatchingExample(
-      input.entityType,
-      input.data,
-      input.updateMask
-    );
+    const matchingExample = findMatchingExample(input.entityType, input.data, input.updateMask);
 
     if (matchingExample) {
       text += `\n\n✓ Applied pattern: ${matchingExample.operation}\n`;
@@ -221,6 +232,7 @@ export function responseFormatter(result: Output, input?: Input): any {
 ```
 
 #### Pattern 4: Contextual Notes
+
 ```typescript
 let note = "";
 if (input?.status === "ENTITY_STATUS_ARCHIVED") {
@@ -233,18 +245,21 @@ if (input?.status === "ENTITY_STATUS_ARCHIVED") {
 ## Benefits Delivered
 
 ### For AI Agents
+
 - **Faster discovery** - See common patterns in tool descriptions
 - **Fewer errors** - Guided toward correct updateMask values
 - **Better understanding** - Learn format requirements (micros, date objects, etc.)
 - **Reduced trial-and-error** - Examples show correct data structure
 
 ### For Users
+
 - **Clearer feedback** - Success messages explain what was done
 - **Better error messages** - Suggestions when operations fail
 - **Proactive warnings** - Alerts about irreversible actions (archiving)
 - **Format reminders** - Notes about micros, valid enums, constraints
 
 ### For Developers
+
 - **Centralized examples** - Single source of truth for common patterns
 - **Easy maintenance** - Add examples once, used everywhere
 - **Consistent messaging** - Same notes across all tools
@@ -259,6 +274,7 @@ if (input?.status === "ENTITY_STATUS_ARCHIVED") {
 ✅ **bulk-update-status** - Enhanced description, contextual warnings
 
 **Not enhanced (read-only operations):**
+
 - list-entities
 - get-entity
 - create-entity

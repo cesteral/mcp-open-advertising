@@ -14,17 +14,14 @@ const TOOL_DESCRIPTION = `List Google Ads entities of a given type with optional
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to list"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to list"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
     filters: z
       .record(z.string())
       .optional()
-      .describe("GAQL filter conditions as field:value pairs (e.g., { 'campaign.status': '= \\'ENABLED\\'' })"),
+      .describe(
+        "GAQL filter conditions as field:value pairs (e.g., { 'campaign.status': '= \\'ENABLED\\'' })"
+      ),
     pageSize: z
       .number()
       .min(1)
@@ -32,14 +29,8 @@ export const ListEntitiesInputSchema = z
       .optional()
       .default(100)
       .describe("Number of results per page (default 100)"),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination"),
-    orderBy: z
-      .string()
-      .optional()
-      .describe("GAQL ORDER BY clause (e.g., 'campaign.name ASC')"),
+    pageToken: z.string().optional().describe("Page token for pagination"),
+    orderBy: z.string().optional().describe("GAQL ORDER BY clause (e.g., 'campaign.name ASC')"),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(

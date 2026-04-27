@@ -18,7 +18,9 @@ export const StoredReportBodyOutputSchema = z.object({
   rawCsvResourceUri: z
     .string()
     .optional()
-    .describe("MCP resource URI of the persisted raw report body (only present when storeRawCsv is true)"),
+    .describe(
+      "MCP resource URI of the persisted raw report body (only present when storeRawCsv is true)"
+    ),
   rawCsvByteLength: z
     .number()
     .optional()
@@ -40,7 +42,7 @@ export const StoredReportBodyOutputSchema = z.object({
     .describe(
       "GCS spill result. Present only when REPORT_SPILL_BUCKET is set and thresholds are exceeded. " +
         "On success carries a signed URL to the full report body; on failure carries { error } and the " +
-        "bounded-view path is still returned.",
+        "bounded-view path is still returned."
     ),
 });
 
@@ -102,9 +104,7 @@ export async function createServiceDownloadedReportView(params: {
     rows: augmented,
     totalRows: result.totalRows,
     input: params.input,
-    warnings: computedWarning
-      ? [`computed metrics: ${computedWarning}`]
-      : undefined,
+    warnings: computedWarning ? [`computed metrics: ${computedWarning}`] : undefined,
   });
 
   const extras: StoredReportBodyOutput = {};

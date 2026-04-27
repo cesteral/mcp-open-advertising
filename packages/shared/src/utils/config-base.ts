@@ -111,7 +111,10 @@ export function getBaseEnvConfig(defaultHost: string): Record<string, unknown> {
 /**
  * Parse config with a Zod schema and friendly error logging.
  */
-export function parseConfigWithSchema<T extends z.ZodTypeAny>(schema: T, raw: Record<string, unknown>): z.infer<T> {
+export function parseConfigWithSchema<T extends z.ZodTypeAny>(
+  schema: T,
+  raw: Record<string, unknown>
+): z.infer<T> {
   try {
     return schema.parse(raw);
   } catch (error) {

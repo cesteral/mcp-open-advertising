@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  buildListQuery,
-  buildGetByIdQuery,
-} from "../src/mcp-server/tools/utils/query-helpers.js";
+import { buildListQuery, buildGetByIdQuery } from "../src/mcp-server/tools/utils/query-helpers.js";
 
 describe("SA360 Query Helpers", () => {
   describe("buildListQuery", () => {
@@ -78,15 +75,15 @@ describe("SA360 Query Helpers", () => {
     });
 
     it("should reject filter field names starting with numbers", () => {
-      expect(() =>
-        buildListQuery("campaign", { "1invalid": "= 'ENABLED'" })
-      ).toThrow("Invalid filter field name");
+      expect(() => buildListQuery("campaign", { "1invalid": "= 'ENABLED'" })).toThrow(
+        "Invalid filter field name"
+      );
     });
 
     it("should reject filter field names with uppercase", () => {
-      expect(() =>
-        buildListQuery("campaign", { "Campaign.Status": "= 'ENABLED'" })
-      ).toThrow("Invalid filter field name");
+      expect(() => buildListQuery("campaign", { "Campaign.Status": "= 'ENABLED'" })).toThrow(
+        "Invalid filter field name"
+      );
     });
 
     it("should accept valid dotted filter field names", () => {
@@ -97,15 +94,15 @@ describe("SA360 Query Helpers", () => {
     });
 
     it("should reject orderBy field names with invalid characters", () => {
-      expect(() =>
-        buildListQuery("campaign", undefined, "campaign.name; DROP TABLE ASC")
-      ).toThrow("Invalid orderBy field name");
+      expect(() => buildListQuery("campaign", undefined, "campaign.name; DROP TABLE ASC")).toThrow(
+        "Invalid orderBy field name"
+      );
     });
 
     it("should reject orderBy field names starting with uppercase", () => {
-      expect(() =>
-        buildListQuery("campaign", undefined, "Campaign.name ASC")
-      ).toThrow("Invalid orderBy field name");
+      expect(() => buildListQuery("campaign", undefined, "Campaign.name ASC")).toThrow(
+        "Invalid orderBy field name"
+      );
     });
 
     it("should accept valid orderBy with direction", () => {

@@ -40,14 +40,8 @@ export const ManageCustomBiddingScriptInputSchema = z
     action: z
       .enum(["upload", "list", "get", "getActive"])
       .describe("Action to perform: upload, list, get, or getActive"),
-    scriptContent: z
-      .string()
-      .optional()
-      .describe("Script content (required for upload action)"),
-    customBiddingScriptId: z
-      .string()
-      .optional()
-      .describe("Script ID (required for get action)"),
+    scriptContent: z.string().optional().describe("Script content (required for upload action)"),
+    customBiddingScriptId: z.string().optional().describe("Script ID (required for get action)"),
   })
   .describe("Parameters for managing custom bidding scripts");
 
@@ -299,7 +293,8 @@ export const manageCustomBiddingScriptTool = {
       input: {
         customBiddingAlgorithmId: "1122334455",
         action: "upload",
-        scriptContent: "// Custom bidding script v2\nfunction bid(request) {\n  const baseBid = request.floorPrice;\n  const multiplier = request.userList ? 1.5 : 1.0;\n  return baseBid * multiplier;\n}",
+        scriptContent:
+          "// Custom bidding script v2\nfunction bid(request) {\n  const baseBid = request.floorPrice;\n  const multiplier = request.userList ? 1.5 : 1.0;\n  return baseBid * multiplier;\n}",
       },
     },
     {

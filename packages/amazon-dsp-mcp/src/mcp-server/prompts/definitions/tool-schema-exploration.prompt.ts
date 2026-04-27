@@ -17,9 +17,7 @@ export const amazonDspToolSchemaExplorationPrompt: Prompt = {
   ],
 };
 
-export function getAmazonDspToolSchemaExplorationMessage(
-  args?: Record<string, string>,
-): string {
+export function getAmazonDspToolSchemaExplorationMessage(args?: Record<string, string>): string {
   const objective = args?.objective || "general capability discovery";
 
   return `# AmazonDsp MCP Tool & Schema Exploration Guide

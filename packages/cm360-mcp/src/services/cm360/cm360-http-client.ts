@@ -22,18 +22,11 @@ export class CM360HttpClient {
     private logger: Logger
   ) {}
 
-  async fetch(
-    path: string,
-    context?: RequestContext,
-    options?: RequestInit
-  ): Promise<unknown> {
+  async fetch(path: string, context?: RequestContext, options?: RequestInit): Promise<unknown> {
     const url = `${this.baseUrl}${path}`;
     const method = options?.method || "GET";
 
-    this.logger.debug(
-      { url, method, requestId: context?.requestId },
-      "Making CM360 API request"
-    );
+    this.logger.debug({ url, method, requestId: context?.requestId }, "Making CM360 API request");
 
     return withCM360ApiSpan(`api.${method}`, path, async (span) => {
       span.setAttribute("http.request.method", method);
@@ -84,7 +77,14 @@ export class CM360HttpClient {
         if (attempt < maxRetries) {
           const delayMs = Math.min(1_000 * Math.pow(2, attempt), 10_000);
           this.logger.warn(
-            { url, method, status: response.status, attempt: attempt + 1, maxRetries, requestId: context?.requestId },
+            {
+              url,
+              method,
+              status: response.status,
+              attempt: attempt + 1,
+              maxRetries,
+              requestId: context?.requestId,
+            },
             "Retrying CM360 raw fetch after transient error"
           );
           await new Promise((resolve) => setTimeout(resolve, delayMs));

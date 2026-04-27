@@ -23,16 +23,12 @@ Uses X-Restli-Method: PARTIAL_UPDATE semantics — only provided fields are upda
 
 export const UpdateEntityInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entity to update"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to update"),
     entityUrn: z
       .string()
       .min(1)
       .describe("The entity URN to update (e.g., urn:li:sponsoredCampaign:123)"),
-    data: z
-      .record(z.any())
-      .describe("Fields to update as key-value pairs"),
+    data: z.record(z.any()).describe("Fields to update as key-value pairs"),
   })
   .describe("Parameters for updating a LinkedIn Ads entity");
 

@@ -13,33 +13,13 @@
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export type GoogleAdsCampaignStatus =
-  | "ENABLED"
-  | "PAUSED"
-  | "REMOVED"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+export type GoogleAdsCampaignStatus = "ENABLED" | "PAUSED" | "REMOVED" | "UNKNOWN" | "UNSPECIFIED";
 
-export type GoogleAdsAdGroupStatus =
-  | "ENABLED"
-  | "PAUSED"
-  | "REMOVED"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+export type GoogleAdsAdGroupStatus = "ENABLED" | "PAUSED" | "REMOVED" | "UNKNOWN" | "UNSPECIFIED";
 
-export type GoogleAdsAdStatus =
-  | "ENABLED"
-  | "PAUSED"
-  | "REMOVED"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+export type GoogleAdsAdStatus = "ENABLED" | "PAUSED" | "REMOVED" | "UNKNOWN" | "UNSPECIFIED";
 
-export type GoogleAdsCriterionStatus =
-  | "ENABLED"
-  | "PAUSED"
-  | "REMOVED"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+export type GoogleAdsCriterionStatus = "ENABLED" | "PAUSED" | "REMOVED" | "UNKNOWN" | "UNSPECIFIED";
 
 export type GoogleAdsAdvertisingChannelType =
   | "SEARCH"
@@ -76,12 +56,7 @@ export type GoogleAdsBiddingStrategyType =
   | "UNKNOWN"
   | "UNSPECIFIED";
 
-export type GoogleAdsKeywordMatchType =
-  | "BROAD"
-  | "EXACT"
-  | "PHRASE"
-  | "UNKNOWN"
-  | "UNSPECIFIED";
+export type GoogleAdsKeywordMatchType = "BROAD" | "EXACT" | "PHRASE" | "UNKNOWN" | "UNSPECIFIED";
 
 export type GoogleAdsAdType =
   | "TEXT_AD"

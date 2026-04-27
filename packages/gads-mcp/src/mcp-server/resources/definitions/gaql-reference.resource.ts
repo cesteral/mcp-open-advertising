@@ -159,7 +159,8 @@ WHERE segments.date DURING LAST_7_DAYS
 export const gaqlReferenceResource: Resource = {
   uri: "gaql-reference://syntax",
   name: "GAQL Syntax Reference",
-  description: "Google Ads Query Language syntax guide with common query patterns, operators, metrics, and segments",
+  description:
+    "Google Ads Query Language syntax guide with common query patterns, operators, metrics, and segments",
   mimeType: "text/markdown",
   getContent: () => {
     cachedContent ??= buildGaqlReferenceMarkdown();

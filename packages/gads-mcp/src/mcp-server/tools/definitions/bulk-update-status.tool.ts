@@ -28,18 +28,13 @@ export const BulkUpdateStatusInputSchema = z
     entityType: z
       .enum(getStatusCapableEntityTypeEnum())
       .describe("Type of entities to update (only types with a status field)"),
-    customerId: z
-      .string()
-      .min(1)
-      .describe("Google Ads customer ID (no dashes)"),
+    customerId: z.string().min(1).describe("Google Ads customer ID (no dashes)"),
     entityIds: z
       .array(z.string().min(1))
       .min(1)
       .max(100)
       .describe("Array of entity IDs to update (max 100)"),
-    status: z
-      .enum(["ENABLED", "PAUSED", "REMOVED"])
-      .describe("New entity status"),
+    status: z.enum(["ENABLED", "PAUSED", "REMOVED"]).describe("New entity status"),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(

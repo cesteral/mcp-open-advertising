@@ -84,7 +84,6 @@ describe("UpdateEntityInputSchema", () => {
       );
     }
   });
-
 });
 
 describe("updateEntityResponseFormatter", () => {

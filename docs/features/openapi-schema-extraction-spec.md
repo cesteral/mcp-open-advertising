@@ -143,7 +143,7 @@ export interface SchemaExtractionConfig {
      * - 'usageTrace': scan generated client usage (e.g., via telemetry logs)
      * @default 'resourceTree'
      */
-    mode: 'explicit' | 'resourceTree' | 'usageTrace';
+    mode: "explicit" | "resourceTree" | "usageTrace";
 
     /**
      * When using resourceTree mode, include recursively nested resources.
@@ -310,29 +310,29 @@ export interface SchemaExtractionConfig {
 // packages/dv360-mcp/config/schema-extraction.config.ts
 
 export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
-  apiVersion: 'v4',
+  apiVersion: "v4",
 
   // Strategy 1: Entity-based extraction
   rootSchemas: [
     // Core entities
-    'Partner',
-    'Advertiser',
-    'InsertionOrder',
-    'LineItem',
-    'AdGroup',
+    "Partner",
+    "Advertiser",
+    "InsertionOrder",
+    "LineItem",
+    "AdGroup",
 
     // Response wrappers
-    'ListPartnersResponse',
-    'ListAdvertisersResponse',
-    'ListInsertionOrdersResponse',
-    'ListLineItemsResponse',
-    'ListAdGroupsResponse',
-    'BulkListAdGroupAssignedTargetingOptionsResponse',
+    "ListPartnersResponse",
+    "ListAdvertisersResponse",
+    "ListInsertionOrdersResponse",
+    "ListLineItemsResponse",
+    "ListAdGroupsResponse",
+    "BulkListAdGroupAssignedTargetingOptionsResponse",
 
     // Common nested types (will auto-resolve dependencies)
-    'Budget',
-    'Pacing',
-    'FrequencyCap',
+    "Budget",
+    "Pacing",
+    "FrequencyCap",
   ],
 
   // Strategy 2: Operation-based extraction (alternative to rootSchemas)
@@ -349,26 +349,22 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
 
   // Strategy 3: Resource-scope discovery (recommended default)
   resourceScopes: [
-    'partners',
-    'advertisers',
-    'advertisers.insertionOrders',
-    'advertisers.lineItems',
-    'advertisers.adGroups',
+    "partners",
+    "advertisers",
+    "advertisers.insertionOrders",
+    "advertisers.lineItems",
+    "advertisers.adGroups",
   ],
 
   operationDiscovery: {
-    mode: 'resourceTree',
+    mode: "resourceTree",
     includeSubResources: true,
-    allowedMethods: ['get', 'list', 'patch', 'bulkList'],
+    allowedMethods: ["get", "list", "patch", "bulkList"],
   },
 
   includeCommonTypes: true,
 
-  excludePatterns: [
-    '*Deprecated*',
-    'Internal*',
-    '*TestOnly*',
-  ],
+  excludePatterns: ["*Deprecated*", "Internal*", "*TestOnly*"],
 
   resolution: {
     resolveDependencies: true,
@@ -378,15 +374,15 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
   },
 
   output: {
-    specPath: '.tmp-specs/dv360-minimal-v4.yaml',
-    generatedPath: 'src/generated/schemas',
+    specPath: ".tmp-specs/dv360-minimal-v4.yaml",
+    generatedPath: "src/generated/schemas",
     generateReport: true,
-    reportPath: '.tmp-specs/extraction-report.json',
+    reportPath: ".tmp-specs/extraction-report.json",
     prettyPrint: true,
   },
 
   discovery: {
-    baseUrl: 'https://displayvideo.googleapis.com/$discovery/rest',
+    baseUrl: "https://displayvideo.googleapis.com/$discovery/rest",
     timeout: 30000,
     enableCache: true,
     cacheTTL: 86400000, // 24 hours
@@ -396,7 +392,7 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
     failOnCircularRefs: false,
     failOnMissingSchemas: true,
     warnOnSizeThreshold: 500000, // 500KB
-    failOnSizeLimit: 2000000,    // 2MB
+    failOnSizeLimit: 2000000, // 2MB
   },
 };
 ```
@@ -428,31 +424,30 @@ function determineRootSchemas(
 
   // Strategy A: Explicit root schemas
   if (config.rootSchemas && config.rootSchemas.length > 0) {
-    config.rootSchemas.forEach(schema => roots.add(schema));
+    config.rootSchemas.forEach((schema) => roots.add(schema));
     console.log(`📋 Added ${config.rootSchemas.length} explicit root schemas`);
   }
 
   // Strategy B: Extract from operations
   if (config.operations && config.operations.length > 0) {
-    const operationSchemas = extractSchemasFromOperations(
-      config.operations,
-      discoveryDoc
+    const operationSchemas = extractSchemasFromOperations(config.operations, discoveryDoc);
+    operationSchemas.forEach((schema) => roots.add(schema));
+    console.log(
+      `🔍 Extracted ${operationSchemas.size} schemas from ${config.operations.length} operations`
     );
-    operationSchemas.forEach(schema => roots.add(schema));
-    console.log(`🔍 Extracted ${operationSchemas.size} schemas from ${config.operations.length} operations`);
   }
 
   // Strategy C: Auto-discover operations from resource scopes or usage traces
   if (config.operationDiscovery) {
     const discovered = discoverOperations(config, discoveryDoc);
     const autoSchemas = extractSchemasFromOperations(Array.from(discovered), discoveryDoc);
-    autoSchemas.forEach(schema => roots.add(schema));
+    autoSchemas.forEach((schema) => roots.add(schema));
     console.log(`🤖 Auto-discovered ${autoSchemas.size} schemas from dynamic operation selection`);
   }
 
   // Validation
   if (roots.size === 0) {
-    throw new Error('No root schemas specified. Provide either rootSchemas or operations.');
+    throw new Error("No root schemas specified. Provide either rootSchemas or operations.");
   }
 
   return roots;
@@ -470,7 +465,7 @@ function extractSchemasFromOperations(
 
   for (const operationPath of operations) {
     // Parse "advertisers.insertionOrders.list" -> ["advertisers", "insertionOrders", "list"]
-    const parts = operationPath.split('.');
+    const parts = operationPath.split(".");
     const method = parts.pop()!;
     const resourcePath = parts;
 
@@ -502,7 +497,7 @@ function extractSchemasFromOperations(
 
 function extractSchemaNameFromRef(ref: string): string {
   const match = ref.match(/schemas\/([^/]+)$/);
-  return match ? match[1] : '';
+  return match ? match[1] : "";
 }
 ```
 
@@ -514,17 +509,17 @@ function discoverOperations(
   discoveryDoc: DiscoveryDocument
 ): Set<string> {
   const discovered = new Set<string>();
-  const mode = config.operationDiscovery?.mode ?? 'resourceTree';
+  const mode = config.operationDiscovery?.mode ?? "resourceTree";
 
-  if (mode === 'explicit') {
-    (config.operations ?? []).forEach(op => discovered.add(op));
+  if (mode === "explicit") {
+    (config.operations ?? []).forEach((op) => discovered.add(op));
     return discovered;
   }
 
-  if (mode === 'resourceTree') {
+  if (mode === "resourceTree") {
     const scopes = config.resourceScopes ?? [];
     for (const scope of scopes) {
-      const resourceNode = resolveResourceInDiscovery(discoveryDoc, scope.split('.'));
+      const resourceNode = resolveResourceInDiscovery(discoveryDoc, scope.split("."));
       if (!resourceNode) {
         console.warn(`⚠️  Resource scope not found: ${scope}`);
         continue;
@@ -538,7 +533,7 @@ function discoverOperations(
     }
   }
 
-  if (mode === 'usageTrace') {
+  if (mode === "usageTrace") {
     const tracePaths = expandGlobs(config.operationDiscovery?.usageTraceGlobs ?? []);
     for (const tracePath of tracePaths) {
       const usage = parseUsageTrace(tracePath); // { operationId: count }
@@ -568,9 +563,7 @@ class SchemaExtractor {
   private visited = new Set<string>();
   private dependencyGraph = new Map<string, Set<string>>();
 
-  async extract(
-    configOverride?: Partial<SchemaExtractionConfig>
-  ): Promise<ExtractionResult> {
+  async extract(configOverride?: Partial<SchemaExtractionConfig>): Promise<ExtractionResult> {
     const effectiveConfig = { ...this.config, ...configOverride };
     const rootSchemas = determineRootSchemas(effectiveConfig, this.discoveryDoc);
 
@@ -584,7 +577,7 @@ class SchemaExtractor {
 
     const validation = validateExtraction(this, effectiveConfig);
     if (!validation.valid) {
-      throw new ExtractionError('Extraction validation failed', ErrorCodes.VALIDATION_FAILED, {
+      throw new ExtractionError("Extraction validation failed", ErrorCodes.VALIDATION_FAILED, {
         errors: validation.errors,
       });
     }
@@ -603,11 +596,7 @@ class SchemaExtractor {
     }
   }
 
-  private extractRecursive(
-    schemaName: string,
-    depth: number,
-    path: string[]
-  ): void {
+  private extractRecursive(schemaName: string, depth: number, path: string[]): void {
     // Guard: Check max depth
     if (depth > this.config.resolution.maxDepth) {
       console.warn(`⚠️  Max depth (${this.config.resolution.maxDepth}) reached for: ${schemaName}`);
@@ -616,7 +605,7 @@ class SchemaExtractor {
 
     // Guard: Circular reference detection
     if (path.includes(schemaName)) {
-      console.warn(`🔄 Circular reference detected: ${[...path, schemaName].join(' → ')}`);
+      console.warn(`🔄 Circular reference detected: ${[...path, schemaName].join(" → ")}`);
       this.recordCircularRef([...path, schemaName]);
       return;
     }
@@ -644,7 +633,7 @@ class SchemaExtractor {
 
     // Extract schema
     this.extracted.set(schemaName, schema);
-    console.log(`${'  '.repeat(depth)}✓ ${schemaName}`);
+    console.log(`${"  ".repeat(depth)}✓ ${schemaName}`);
 
     // Resolve dependencies
     if (this.config.resolution.resolveDependencies) {
@@ -662,7 +651,7 @@ class SchemaExtractor {
 
     // Traverse schema to find all $ref references
     this.traverseSchema(schema, (key, value) => {
-      if (key === '$ref' && typeof value === 'string') {
+      if (key === "$ref" && typeof value === "string") {
         const schemaName = this.extractSchemaNameFromRef(value);
         if (schemaName) {
           dependencies.add(schemaName);
@@ -670,7 +659,7 @@ class SchemaExtractor {
       }
 
       // Handle Discovery Document 'additionalProperties' pattern
-      if (key === 'additionalProperties' && value.$ref) {
+      if (key === "additionalProperties" && value.$ref) {
         const schemaName = this.extractSchemaNameFromRef(value.$ref);
         if (schemaName) {
           dependencies.add(schemaName);
@@ -678,7 +667,7 @@ class SchemaExtractor {
       }
 
       // Handle array items
-      if (key === 'items' && value.$ref) {
+      if (key === "items" && value.$ref) {
         const schemaName = this.extractSchemaNameFromRef(value.$ref);
         if (schemaName) {
           dependencies.add(schemaName);
@@ -689,16 +678,13 @@ class SchemaExtractor {
     return dependencies;
   }
 
-  private traverseSchema(
-    obj: any,
-    callback: (key: string, value: any) => void
-  ): void {
-    if (!obj || typeof obj !== 'object') return;
+  private traverseSchema(obj: any, callback: (key: string, value: any) => void): void {
+    if (!obj || typeof obj !== "object") return;
 
     for (const [key, value] of Object.entries(obj)) {
       callback(key, value);
 
-      if (typeof value === 'object') {
+      if (typeof value === "object") {
         this.traverseSchema(value, callback);
       }
     }
@@ -707,21 +693,19 @@ class SchemaExtractor {
   private extractSchemaNameFromRef(ref: string): string {
     // Extract "Budget" from "#/schemas/Budget" or "schemas/Budget"
     const match = ref.match(/schemas\/([^/]+)$/);
-    return match ? match[1] : '';
+    return match ? match[1] : "";
   }
 
   private shouldStopAtSchema(schemaName: string): boolean {
     if (!this.config.resolution.stopAtPatterns) return false;
 
-    return this.config.resolution.stopAtPatterns.some(pattern =>
+    return this.config.resolution.stopAtPatterns.some((pattern) =>
       this.matchesGlobPattern(schemaName, pattern)
     );
   }
 
   private matchesGlobPattern(str: string, pattern: string): boolean {
-    const regex = new RegExp(
-      '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
-    );
+    const regex = new RegExp("^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$");
     return regex.test(str);
   }
 }
@@ -809,7 +793,7 @@ components:
         advertiserId:
           type: string
         budget:
-          $ref: '#/components/schemas/InsertionOrderBudget'
+          $ref: "#/components/schemas/InsertionOrderBudget"
         # ... additional properties
 
     InsertionOrderBudget:
@@ -818,7 +802,7 @@ components:
         budgetSegments:
           type: array
           items:
-            $ref: '#/components/schemas/InsertionOrderBudgetSegment'
+            $ref: "#/components/schemas/InsertionOrderBudgetSegment"
 
     # ... additional schemas
 ```
@@ -841,7 +825,10 @@ export interface InsertionOrder {
 
 export interface InsertionOrderBudget {
   budgetSegments?: InsertionOrderBudgetSegment[];
-  automationType?: 'INSERTION_ORDER_AUTOMATION_TYPE_NONE' | 'INSERTION_ORDER_AUTOMATION_TYPE_BUDGET' | 'INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET';
+  automationType?:
+    | "INSERTION_ORDER_AUTOMATION_TYPE_NONE"
+    | "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET"
+    | "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET";
 }
 
 // ... additional types
@@ -854,32 +841,40 @@ Using `openapi-zod-client`:
 ```typescript
 // src/generated/schemas/zod.ts (auto-generated)
 
-import { z } from 'zod';
+import { z } from "zod";
 
 export const InsertionOrderBudgetSegmentSchema = z.object({
   budgetAmountMicros: z.string().optional(),
-  dateRange: z.object({
-    startDate: z.object({
-      year: z.number().int(),
-      month: z.number().int(),
-      day: z.number().int(),
-    }).optional(),
-    endDate: z.object({
-      year: z.number().int(),
-      month: z.number().int(),
-      day: z.number().int(),
-    }).optional(),
-  }).optional(),
+  dateRange: z
+    .object({
+      startDate: z
+        .object({
+          year: z.number().int(),
+          month: z.number().int(),
+          day: z.number().int(),
+        })
+        .optional(),
+      endDate: z
+        .object({
+          year: z.number().int(),
+          month: z.number().int(),
+          day: z.number().int(),
+        })
+        .optional(),
+    })
+    .optional(),
   campaignBudgetId: z.string().optional(),
 });
 
 export const InsertionOrderBudgetSchema = z.object({
   budgetSegments: z.array(InsertionOrderBudgetSegmentSchema).optional(),
-  automationType: z.enum([
-    'INSERTION_ORDER_AUTOMATION_TYPE_NONE',
-    'INSERTION_ORDER_AUTOMATION_TYPE_BUDGET',
-    'INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET',
-  ]).optional(),
+  automationType: z
+    .enum([
+      "INSERTION_ORDER_AUTOMATION_TYPE_NONE",
+      "INSERTION_ORDER_AUTOMATION_TYPE_BUDGET",
+      "INSERTION_ORDER_AUTOMATION_TYPE_BID_BUDGET",
+    ])
+    .optional(),
 });
 
 export const InsertionOrderSchema = z.object({
@@ -896,7 +891,7 @@ export type InsertionOrder = z.infer<typeof InsertionOrderSchema>;
 export type InsertionOrderBudget = z.infer<typeof InsertionOrderBudgetSchema>;
 
 // Re-export for convenience
-export * from './types';
+export * from "./types";
 ```
 
 ### 6.4 Discovery-to-OpenAPI Conversion Strategy
@@ -1042,36 +1037,33 @@ The build fails when new lossy conversions appear without an accompanying allowl
 ```typescript
 // scripts/generate-schemas.ts
 
-import { SCHEMA_EXTRACTION_CONFIG } from '../config/schema-extraction.config';
-import { fetchDiscoveryDoc } from './lib/fetch-discovery';
-import { convertToOpenAPI } from './lib/convert-to-openapi';
-import { extractSchemas } from './lib/extract-schemas';
-import { generateTypeScript } from './lib/generate-typescript';
-import { generateZod } from './lib/generate-zod';
-import { saveReport } from './lib/save-report';
-import fs from 'fs/promises';
-import path from 'path';
+import { SCHEMA_EXTRACTION_CONFIG } from "../config/schema-extraction.config";
+import { fetchDiscoveryDoc } from "./lib/fetch-discovery";
+import { convertToOpenAPI } from "./lib/convert-to-openapi";
+import { extractSchemas } from "./lib/extract-schemas";
+import { generateTypeScript } from "./lib/generate-typescript";
+import { generateZod } from "./lib/generate-zod";
+import { saveReport } from "./lib/save-report";
+import fs from "fs/promises";
+import path from "path";
 
 async function main() {
-  console.log('🚀 Starting schema generation pipeline...\n');
+  console.log("🚀 Starting schema generation pipeline...\n");
   const startTime = Date.now();
 
   try {
     // Step 1: Fetch Discovery Document
-    console.log('📥 Step 1/5: Fetching Discovery Document...');
+    console.log("📥 Step 1/5: Fetching Discovery Document...");
     const discoveryDoc = await fetchDiscoveryDoc(SCHEMA_EXTRACTION_CONFIG);
     console.log(`   ✓ Fetched ${(JSON.stringify(discoveryDoc).length / 1024).toFixed(1)} KB\n`);
 
     // Step 2: Extract Schemas
-    console.log('🔍 Step 2/5: Extracting schemas...');
-    const { schemas, report } = await extractSchemas(
-      discoveryDoc,
-      SCHEMA_EXTRACTION_CONFIG
-    );
+    console.log("🔍 Step 2/5: Extracting schemas...");
+    const { schemas, report } = await extractSchemas(discoveryDoc, SCHEMA_EXTRACTION_CONFIG);
     console.log(`   ✓ Extracted ${report.totalSchemas} schemas\n`);
 
     // Step 3: Convert to OpenAPI
-    console.log('🔄 Step 3/5: Converting to OpenAPI format...');
+    console.log("🔄 Step 3/5: Converting to OpenAPI format...");
     const openApiSpec = await convertToOpenAPI(schemas, SCHEMA_EXTRACTION_CONFIG);
 
     // Ensure output directory exists
@@ -1086,14 +1078,14 @@ async function main() {
     console.log(`   ✓ Saved to ${SCHEMA_EXTRACTION_CONFIG.output.specPath}\n`);
 
     // Step 4: Generate TypeScript & Zod
-    console.log('⚡ Step 4/5: Generating TypeScript types and Zod schemas...');
+    console.log("⚡ Step 4/5: Generating TypeScript types and Zod schemas...");
     await generateTypeScript(SCHEMA_EXTRACTION_CONFIG.output.specPath, SCHEMA_EXTRACTION_CONFIG);
     await generateZod(SCHEMA_EXTRACTION_CONFIG.output.specPath, SCHEMA_EXTRACTION_CONFIG);
     console.log(`   ✓ Generated code in ${SCHEMA_EXTRACTION_CONFIG.output.generatedPath}\n`);
 
     // Step 5: Save Report
     if (SCHEMA_EXTRACTION_CONFIG.output.generateReport) {
-      console.log('📊 Step 5/5: Generating extraction report...');
+      console.log("📊 Step 5/5: Generating extraction report...");
       await saveReport(report, SCHEMA_EXTRACTION_CONFIG);
       console.log(`   ✓ Report saved to ${SCHEMA_EXTRACTION_CONFIG.output.reportPath}\n`);
     }
@@ -1107,9 +1099,8 @@ async function main() {
     console.log(`   Excluded schemas: ${report.excludedSchemas.length}`);
     console.log(`   Size: ${(report.sizeAnalysis.extractedSpecSize / 1024).toFixed(1)} KB`);
     console.log(`   Reduction: ${(report.sizeAnalysis.compressionRatio * 100).toFixed(1)}%`);
-
   } catch (error) {
-    console.error('\n❌ Schema generation failed:');
+    console.error("\n❌ Schema generation failed:");
     console.error(error);
     process.exit(1);
   }
@@ -1141,7 +1132,7 @@ name: Update API Schemas
 on:
   schedule:
     # Run weekly on Monday at 9 AM UTC
-    - cron: '0 9 * * 1'
+    - cron: "0 9 * * 1"
   workflow_dispatch:
 
 jobs:
@@ -1157,7 +1148,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install
@@ -1176,8 +1167,8 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v5
         with:
-          commit-message: 'chore(dv360): update generated schemas from API v4'
-          title: 'Update DV360 API schemas'
+          commit-message: "chore(dv360): update generated schemas from API v4"
+          title: "Update DV360 API schemas"
           body: |
             ## Auto-generated Schema Update
 
@@ -1209,19 +1200,19 @@ export class ExtractionError extends Error {
     public readonly details?: Record<string, any>
   ) {
     super(message);
-    this.name = 'ExtractionError';
+    this.name = "ExtractionError";
   }
 }
 
 export const ErrorCodes = {
-  DISCOVERY_FETCH_FAILED: 'DISCOVERY_FETCH_FAILED',
-  SCHEMA_NOT_FOUND: 'SCHEMA_NOT_FOUND',
-  CIRCULAR_REFERENCE: 'CIRCULAR_REFERENCE',
-  MAX_DEPTH_EXCEEDED: 'MAX_DEPTH_EXCEEDED',
-  INVALID_CONFIG: 'INVALID_CONFIG',
-  CONVERSION_FAILED: 'CONVERSION_FAILED',
-  VALIDATION_FAILED: 'VALIDATION_FAILED',
-  SIZE_LIMIT_EXCEEDED: 'SIZE_LIMIT_EXCEEDED',
+  DISCOVERY_FETCH_FAILED: "DISCOVERY_FETCH_FAILED",
+  SCHEMA_NOT_FOUND: "SCHEMA_NOT_FOUND",
+  CIRCULAR_REFERENCE: "CIRCULAR_REFERENCE",
+  MAX_DEPTH_EXCEEDED: "MAX_DEPTH_EXCEEDED",
+  INVALID_CONFIG: "INVALID_CONFIG",
+  CONVERSION_FAILED: "CONVERSION_FAILED",
+  VALIDATION_FAILED: "VALIDATION_FAILED",
+  SIZE_LIMIT_EXCEEDED: "SIZE_LIMIT_EXCEEDED",
 } as const;
 ```
 
@@ -1241,8 +1232,8 @@ function validateExtraction(
     if (missing.length > 0) {
       errors.push({
         code: ErrorCodes.SCHEMA_NOT_FOUND,
-        message: `Root schemas not found: ${missing.join(', ')}`,
-        severity: 'error',
+        message: `Root schemas not found: ${missing.join(", ")}`,
+        severity: "error",
       });
     }
   }
@@ -1255,7 +1246,7 @@ function validateExtraction(
         code: ErrorCodes.CIRCULAR_REFERENCE,
         message: `Circular references detected: ${circular.length} occurrences`,
         details: circular,
-        severity: 'error',
+        severity: "error",
       });
     }
   }
@@ -1266,13 +1257,13 @@ function validateExtraction(
     errors.push({
       code: ErrorCodes.SIZE_LIMIT_EXCEEDED,
       message: `Extracted spec size (${(size / 1024).toFixed(1)} KB) exceeds limit (${(config.validation.failOnSizeLimit / 1024).toFixed(1)} KB)`,
-      severity: 'error',
+      severity: "error",
     });
   } else if (size > config.validation.warnOnSizeThreshold) {
     warnings.push({
-      code: 'SIZE_WARNING',
+      code: "SIZE_WARNING",
       message: `Extracted spec size (${(size / 1024).toFixed(1)} KB) exceeds threshold (${(config.validation.warnOnSizeThreshold / 1024).toFixed(1)} KB)`,
-      severity: 'warning',
+      severity: "warning",
     });
   }
 
@@ -1311,10 +1302,10 @@ async function fetchDiscoveryDocWithRetry(
 
   // Fallback to cache if available
   if (config.discovery.enableCache) {
-    console.log('📦 Attempting to load from cache...');
+    console.log("📦 Attempting to load from cache...");
     const cached = await loadCachedDiscoveryDoc(config);
     if (cached) {
-      console.log('✓ Loaded from cache (may be outdated)');
+      console.log("✓ Loaded from cache (may be outdated)");
       return cached;
     }
   }
@@ -1336,18 +1327,18 @@ async function fetchDiscoveryDocWithRetry(
 ```typescript
 // __tests__/schema-extractor.test.ts
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { SchemaExtractor } from '../lib/schema-extractor';
-import { mockDiscoveryDoc } from './fixtures/mock-discovery-doc';
+import { describe, it, expect, beforeEach } from "vitest";
+import { SchemaExtractor } from "../lib/schema-extractor";
+import { mockDiscoveryDoc } from "./fixtures/mock-discovery-doc";
 
-describe('SchemaExtractor', () => {
+describe("SchemaExtractor", () => {
   let extractor: SchemaExtractor;
   let config: SchemaExtractionConfig;
 
   beforeEach(() => {
     config = {
-      apiVersion: 'v4',
-      rootSchemas: ['InsertionOrder', 'LineItem'],
+      apiVersion: "v4",
+      rootSchemas: ["InsertionOrder", "LineItem"],
       resolution: {
         resolveDependencies: true,
         maxDepth: 5,
@@ -1358,46 +1349,46 @@ describe('SchemaExtractor', () => {
     extractor = new SchemaExtractor(mockDiscoveryDoc, config);
   });
 
-  describe('extractWithDependencies', () => {
-    it('should extract root schemas', async () => {
+  describe("extractWithDependencies", () => {
+    it("should extract root schemas", async () => {
       const { schemas } = await extractor.extract();
-      expect(schemas).toHaveProperty('InsertionOrder');
-      expect(schemas).toHaveProperty('LineItem');
+      expect(schemas).toHaveProperty("InsertionOrder");
+      expect(schemas).toHaveProperty("LineItem");
     });
 
-    it('should resolve dependencies recursively', async () => {
+    it("should resolve dependencies recursively", async () => {
       const { schemas } = await extractor.extract();
 
       // InsertionOrder depends on Budget
-      expect(schemas).toHaveProperty('InsertionOrderBudget');
+      expect(schemas).toHaveProperty("InsertionOrderBudget");
 
       // Budget depends on BudgetSegment
-      expect(schemas).toHaveProperty('InsertionOrderBudgetSegment');
+      expect(schemas).toHaveProperty("InsertionOrderBudgetSegment");
 
       // BudgetSegment depends on DateRange
-      expect(schemas).toHaveProperty('DateRange');
+      expect(schemas).toHaveProperty("DateRange");
 
       // DateRange depends on Date
-      expect(schemas).toHaveProperty('Date');
+      expect(schemas).toHaveProperty("Date");
     });
 
-    it('should handle circular references gracefully', async () => {
+    it("should handle circular references gracefully", async () => {
       const circularDoc = {
         schemas: {
-          A: { properties: { b: { $ref: 'schemas/B' } } },
-          B: { properties: { a: { $ref: 'schemas/A' } } },
+          A: { properties: { b: { $ref: "schemas/B" } } },
+          B: { properties: { a: { $ref: "schemas/A" } } },
         },
       };
 
       const circularExtractor = new SchemaExtractor(circularDoc, config);
       const { schemas, report } = await circularExtractor.extract();
 
-      expect(schemas).toHaveProperty('A');
-      expect(schemas).toHaveProperty('B');
+      expect(schemas).toHaveProperty("A");
+      expect(schemas).toHaveProperty("B");
       expect(report.circularRefs).toHaveLength(1);
     });
 
-    it('should respect maxDepth setting', async () => {
+    it("should respect maxDepth setting", async () => {
       config.resolution.maxDepth = 2;
       extractor = new SchemaExtractor(mockDiscoveryDoc, config);
 
@@ -1406,45 +1397,45 @@ describe('SchemaExtractor', () => {
       // Should stop before deeply nested schemas
       expect(report.warnings).toContainEqual(
         expect.objectContaining({
-          type: 'MAX_DEPTH_WARNING',
+          type: "MAX_DEPTH_WARNING",
         })
       );
     });
   });
 
-  describe('applyExclusions', () => {
-    it('should exclude schemas matching patterns', async () => {
-      config.excludePatterns = ['*Deprecated*', 'Internal*'];
+  describe("applyExclusions", () => {
+    it("should exclude schemas matching patterns", async () => {
+      config.excludePatterns = ["*Deprecated*", "Internal*"];
       extractor = new SchemaExtractor(mockDiscoveryDoc, config);
 
       const { schemas, report } = await extractor.extract();
 
-      expect(schemas).not.toHaveProperty('DeprecatedField');
-      expect(schemas).not.toHaveProperty('InternalTestType');
-      expect(report.excludedSchemas).toContain('DeprecatedField');
+      expect(schemas).not.toHaveProperty("DeprecatedField");
+      expect(schemas).not.toHaveProperty("InternalTestType");
+      expect(report.excludedSchemas).toContain("DeprecatedField");
     });
   });
 
-  describe('addCommonTypes', () => {
-    it('should add common types when enabled', async () => {
+  describe("addCommonTypes", () => {
+    it("should add common types when enabled", async () => {
       config.includeCommonTypes = true;
       extractor = new SchemaExtractor(mockDiscoveryDoc, config);
 
       const { schemas, report } = await extractor.extract();
 
-      expect(schemas).toHaveProperty('Date');
-      expect(schemas).toHaveProperty('Money');
-      expect(report.commonTypesAdded).toContain('Date');
+      expect(schemas).toHaveProperty("Date");
+      expect(schemas).toHaveProperty("Money");
+      expect(report.commonTypesAdded).toContain("Date");
     });
 
-    it('should not add common types when disabled', async () => {
+    it("should not add common types when disabled", async () => {
       config.includeCommonTypes = false;
-      config.rootSchemas = ['InsertionOrder']; // Doesn't depend on Date
+      config.rootSchemas = ["InsertionOrder"]; // Doesn't depend on Date
       extractor = new SchemaExtractor(mockDiscoveryDoc, config);
 
       const { schemas } = await extractor.extract();
 
-      expect(schemas).not.toHaveProperty('Money');
+      expect(schemas).not.toHaveProperty("Money");
     });
   });
 });
@@ -1455,59 +1446,59 @@ describe('SchemaExtractor', () => {
 ```typescript
 // __tests__/integration/full-pipeline.test.ts
 
-import { describe, it, expect } from 'vitest';
-import { execSync } from 'child_process';
-import fs from 'fs/promises';
-import path from 'path';
+import { describe, it, expect } from "vitest";
+import { execSync } from "child_process";
+import fs from "fs/promises";
+import path from "path";
 
-describe('Full Schema Generation Pipeline', () => {
-  it('should generate valid TypeScript types', async () => {
+describe("Full Schema Generation Pipeline", () => {
+  it("should generate valid TypeScript types", async () => {
     // Run full pipeline
-    execSync('pnpm run generate:schemas', { cwd: process.cwd() });
+    execSync("pnpm run generate:schemas", { cwd: process.cwd() });
 
     // Check that files were generated
-    const typesPath = path.join(process.cwd(), 'src/generated/schemas/types.ts');
-    const zodPath = path.join(process.cwd(), 'src/generated/schemas/zod.ts');
+    const typesPath = path.join(process.cwd(), "src/generated/schemas/types.ts");
+    const zodPath = path.join(process.cwd(), "src/generated/schemas/zod.ts");
 
     await expect(fs.access(typesPath)).resolves.toBeUndefined();
     await expect(fs.access(zodPath)).resolves.toBeUndefined();
 
     // Verify types file has expected exports
-    const typesContent = await fs.readFile(typesPath, 'utf-8');
-    expect(typesContent).toContain('export interface InsertionOrder');
-    expect(typesContent).toContain('export interface LineItem');
+    const typesContent = await fs.readFile(typesPath, "utf-8");
+    expect(typesContent).toContain("export interface InsertionOrder");
+    expect(typesContent).toContain("export interface LineItem");
   });
 
-  it('should generate valid Zod schemas', async () => {
-    const zodPath = path.join(process.cwd(), 'src/generated/schemas/zod.ts');
-    const zodContent = await fs.readFile(zodPath, 'utf-8');
+  it("should generate valid Zod schemas", async () => {
+    const zodPath = path.join(process.cwd(), "src/generated/schemas/zod.ts");
+    const zodContent = await fs.readFile(zodPath, "utf-8");
 
-    expect(zodContent).toContain('export const InsertionOrderSchema');
-    expect(zodContent).toContain('z.object({');
+    expect(zodContent).toContain("export const InsertionOrderSchema");
+    expect(zodContent).toContain("z.object({");
   });
 
-  it('should generate extraction report', async () => {
-    const reportPath = path.join(process.cwd(), '.tmp-specs/extraction-report.json');
-    const report = JSON.parse(await fs.readFile(reportPath, 'utf-8'));
+  it("should generate extraction report", async () => {
+    const reportPath = path.join(process.cwd(), ".tmp-specs/extraction-report.json");
+    const report = JSON.parse(await fs.readFile(reportPath, "utf-8"));
 
-    expect(report).toHaveProperty('results.totalSchemas');
-    expect(report).toHaveProperty('sizeAnalysis.compressionRatio');
+    expect(report).toHaveProperty("results.totalSchemas");
+    expect(report).toHaveProperty("sizeAnalysis.compressionRatio");
     expect(report.results.totalSchemas).toBeGreaterThan(0);
   });
 
-  it('should produce schemas that validate real API responses', async () => {
+  it("should produce schemas that validate real API responses", async () => {
     // Import generated Zod schema
-    const { InsertionOrderSchema } = await import('../../src/generated/schemas/zod');
+    const { InsertionOrderSchema } = await import("../../src/generated/schemas/zod");
 
     // Mock API response
     const mockApiResponse = {
-      insertionOrderId: '12345',
-      displayName: 'Test Campaign',
-      advertiserId: '67890',
+      insertionOrderId: "12345",
+      displayName: "Test Campaign",
+      advertiserId: "67890",
       budget: {
         budgetSegments: [
           {
-            budgetAmountMicros: '1000000000',
+            budgetAmountMicros: "1000000000",
             dateRange: {
               startDate: { year: 2025, month: 1, day: 1 },
               endDate: { year: 2025, month: 12, day: 31 },
@@ -1528,13 +1519,13 @@ describe('Full Schema Generation Pipeline', () => {
 ```typescript
 // __tests__/snapshots/extraction-output.test.ts
 
-import { describe, it, expect } from 'vitest';
-import { SchemaExtractor } from '../../lib/schema-extractor';
-import { SCHEMA_EXTRACTION_CONFIG } from '../../config/schema-extraction.config';
-import { mockDiscoveryDoc } from '../fixtures/mock-discovery-doc';
+import { describe, it, expect } from "vitest";
+import { SchemaExtractor } from "../../lib/schema-extractor";
+import { SCHEMA_EXTRACTION_CONFIG } from "../../config/schema-extraction.config";
+import { mockDiscoveryDoc } from "../fixtures/mock-discovery-doc";
 
-describe('Extraction Output Snapshots', () => {
-  it('should match extraction report snapshot', async () => {
+describe("Extraction Output Snapshots", () => {
+  it("should match extraction report snapshot", async () => {
     const extractor = new SchemaExtractor(mockDiscoveryDoc, SCHEMA_EXTRACTION_CONFIG);
     const { report } = await extractor.extract();
 
@@ -1544,7 +1535,7 @@ describe('Extraction Output Snapshots', () => {
     expect(staticReport).toMatchSnapshot();
   });
 
-  it('should match dependency graph snapshot', async () => {
+  it("should match dependency graph snapshot", async () => {
     const extractor = new SchemaExtractor(mockDiscoveryDoc, SCHEMA_EXTRACTION_CONFIG);
     const { report } = await extractor.extract();
 
@@ -1562,8 +1553,8 @@ describe('Extraction Output Snapshots', () => {
 ```typescript
 // packages/dv360-mcp/src/mcp-server/tools/definitions/get-insertion-orders.tool.ts
 
-import { z } from 'zod';
-import { InsertionOrderSchema, type InsertionOrder } from '@/generated/schemas/zod';
+import { z } from "zod";
+import { InsertionOrderSchema, type InsertionOrder } from "@/generated/schemas/zod";
 
 // Define tool parameters using generated schemas
 export const getInsertionOrdersParamsSchema = z.object({
@@ -1572,15 +1563,15 @@ export const getInsertionOrdersParamsSchema = z.object({
 });
 
 export const getInsertionOrdersTool = {
-  name: 'get_insertion_orders',
-  description: 'Fetch insertion orders for an advertiser',
+  name: "get_insertion_orders",
+  description: "Fetch insertion orders for an advertiser",
   inputSchema: {
-    type: 'object',
+    type: "object",
     properties: {
-      advertiserId: { type: 'string', description: 'Advertiser ID' },
-      pageSize: { type: 'number', description: 'Page size (1-200)', default: 50 },
+      advertiserId: { type: "string", description: "Advertiser ID" },
+      pageSize: { type: "number", description: "Page size (1-200)", default: 50 },
     },
-    required: ['advertiserId'],
+    required: ["advertiserId"],
   },
 };
 
@@ -1597,15 +1588,13 @@ export async function handleGetInsertionOrders(
   });
 
   // Runtime validation of API response using generated schema
-  const insertionOrders = z.array(InsertionOrderSchema).parse(
-    response.data.insertionOrders
-  );
+  const insertionOrders = z.array(InsertionOrderSchema).parse(response.data.insertionOrders);
 
   // Transform and return
   return {
     content: [
       {
-        type: 'text',
+        type: "text",
         text: JSON.stringify(insertionOrders, null, 2),
       },
     ],
@@ -1619,22 +1608,18 @@ export async function handleGetInsertionOrders(
 // packages/dv360-mcp/config/schema-extraction.config.ts
 
 export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
-  apiVersion: 'v4',
+  apiVersion: "v4",
 
   // Extract only schemas for read operations
   operations: [
-    'partners.list',
-    'advertisers.list',
-    'advertisers.insertionOrders.list',
-    'advertisers.lineItems.list',
+    "partners.list",
+    "advertisers.list",
+    "advertisers.insertionOrders.list",
+    "advertisers.lineItems.list",
   ],
 
   // Don't include write operation schemas
-  excludePatterns: [
-    '*CreateRequest',
-    '*UpdateRequest',
-    '*Deprecated*',
-  ],
+  excludePatterns: ["*CreateRequest", "*UpdateRequest", "*Deprecated*"],
 
   includeCommonTypes: true,
 
@@ -1644,19 +1629,19 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
     includeEnums: true,
 
     // Stop at pagination wrappers (don't extract their internals)
-    stopAtPatterns: ['PageInfo', 'PageToken'],
+    stopAtPatterns: ["PageInfo", "PageToken"],
   },
 
   output: {
-    specPath: '.tmp-specs/dv360-readonly-v4.yaml',
-    generatedPath: 'src/generated/schemas',
+    specPath: ".tmp-specs/dv360-readonly-v4.yaml",
+    generatedPath: "src/generated/schemas",
     generateReport: true,
-    reportPath: '.tmp-specs/extraction-report.json',
+    reportPath: ".tmp-specs/extraction-report.json",
     prettyPrint: true,
   },
 
   discovery: {
-    baseUrl: 'https://displayvideo.googleapis.com/$discovery/rest',
+    baseUrl: "https://displayvideo.googleapis.com/$discovery/rest",
     timeout: 30000,
     enableCache: true,
     cacheTTL: 86400000,
@@ -1665,8 +1650,8 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
   validation: {
     failOnCircularRefs: false,
     failOnMissingSchemas: true,
-    warnOnSizeThreshold: 300000,  // 300KB warning
-    failOnSizeLimit: 1000000,     // 1MB hard limit
+    warnOnSizeThreshold: 300000, // 300KB warning
+    failOnSizeLimit: 1000000, // 1MB hard limit
   },
 };
 ```
@@ -1676,11 +1661,11 @@ export const SCHEMA_EXTRACTION_CONFIG: SchemaExtractionConfig = {
 ```typescript
 // config/schema-extraction-v3.config.ts
 export const SCHEMA_EXTRACTION_CONFIG_V3: SchemaExtractionConfig = {
-  apiVersion: 'v3',
-  rootSchemas: ['InsertionOrder', 'LineItem'],
+  apiVersion: "v3",
+  rootSchemas: ["InsertionOrder", "LineItem"],
   output: {
-    specPath: '.tmp-specs/dv360-minimal-v3.yaml',
-    generatedPath: 'src/generated/schemas/v3',
+    specPath: ".tmp-specs/dv360-minimal-v3.yaml",
+    generatedPath: "src/generated/schemas/v3",
     // ...
   },
   // ...
@@ -1688,11 +1673,11 @@ export const SCHEMA_EXTRACTION_CONFIG_V3: SchemaExtractionConfig = {
 
 // config/schema-extraction-v4.config.ts
 export const SCHEMA_EXTRACTION_CONFIG_V4: SchemaExtractionConfig = {
-  apiVersion: 'v4',
-  rootSchemas: ['InsertionOrder', 'LineItem'],
+  apiVersion: "v4",
+  rootSchemas: ["InsertionOrder", "LineItem"],
   output: {
-    specPath: '.tmp-specs/dv360-minimal-v4.yaml',
-    generatedPath: 'src/generated/schemas/v4',
+    specPath: ".tmp-specs/dv360-minimal-v4.yaml",
+    generatedPath: "src/generated/schemas/v4",
     // ...
   },
   // ...
@@ -1712,24 +1697,24 @@ async function generateAllVersions() {
 ```typescript
 // __tests__/live/dv360-smoke.test.ts
 
-import { describe, it, expect, beforeAll } from 'vitest';
-import { google } from 'googleapis';
-import { InsertionOrderSchema } from '../../src/generated/schemas/zod';
-import { recordHttpInteractions } from '../utils/vcr';
+import { describe, it, expect, beforeAll } from "vitest";
+import { google } from "googleapis";
+import { InsertionOrderSchema } from "../../src/generated/schemas/zod";
+import { recordHttpInteractions } from "../utils/vcr";
 
-describe('DV360 live contract', () => {
+describe("DV360 live contract", () => {
   beforeAll(async () => {
     await recordHttpInteractions({
-      cassette: 'dv360-insertion-orders',
-      scopes: ['https://www.googleapis.com/auth/display-video'],
+      cassette: "dv360-insertion-orders",
+      scopes: ["https://www.googleapis.com/auth/display-video"],
     });
   });
 
-  it('validates list responses against generated schemas', async () => {
+  it("validates list responses against generated schemas", async () => {
     const auth = new google.auth.GoogleAuth({
-      scopes: ['https://www.googleapis.com/auth/display-video.readonly'],
+      scopes: ["https://www.googleapis.com/auth/display-video.readonly"],
     });
-    const client = google.displayvideo({ version: 'v4', auth: await auth.getClient() });
+    const client = google.displayvideo({ version: "v4", auth: await auth.getClient() });
 
     const response = await client.advertisers.insertionOrders.list({
       advertiserId: process.env.TEST_ADVERTISER_ID!,
@@ -1737,7 +1722,7 @@ describe('DV360 live contract', () => {
     });
 
     const items = response.data.insertionOrders ?? [];
-    items.forEach(order => {
+    items.forEach((order) => {
       const parsed = InsertionOrderSchema.safeParse(order);
       if (!parsed.success) {
         console.error(parsed.error.flatten());
@@ -1757,23 +1742,28 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### Phase 1: Setup Infrastructure (Week 1)
 
 **Goals:**
+
 - Install dependencies
 - Create configuration files
 - Set up basic scripts
 
 **Tasks:**
+
 1. Add npm dependencies:
+
    ```bash
    pnpm add -D openapi-typescript openapi-zod-client google-discovery-to-swagger
    ```
 
 2. Create config file:
+
    ```bash
    mkdir -p packages/dv360-mcp/config
    touch packages/dv360-mcp/config/schema-extraction.config.ts
    ```
 
 3. Create scripts directory:
+
    ```bash
    mkdir -p packages/dv360-mcp/scripts/lib
    ```
@@ -1784,6 +1774,7 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
    ```
 
 **Deliverables:**
+
 - Configuration file
 - Basic fetch script
 - Updated package.json scripts
@@ -1793,17 +1784,20 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### Phase 2: Implement Core Extraction (Week 2)
 
 **Goals:**
+
 - Build schema extraction logic
 - Implement dependency resolution
 - Generate first minimal spec
 
 **Tasks:**
+
 1. Implement `SchemaExtractor` class
 2. Implement `fetchDiscoveryDoc()` function
 3. Implement `convertToOpenAPI()` function
 4. Test extraction with 2-3 root schemas
 
 **Deliverables:**
+
 - Working extraction pipeline
 - First generated minimal spec (~100-200KB)
 - Extraction report
@@ -1813,17 +1807,20 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### Phase 3: Code Generation Integration (Week 3)
 
 **Goals:**
+
 - Generate TypeScript types
 - Generate Zod schemas
 - Integrate with build pipeline
 
 **Tasks:**
+
 1. Set up `openapi-typescript` generation
 2. Set up `openapi-zod-client` generation
 3. Add `prebuild` hook to package.json
 4. Test generated types in one tool
 
 **Deliverables:**
+
 - Generated TypeScript types
 - Generated Zod schemas
 - Build pipeline integration
@@ -1833,17 +1830,20 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### Phase 4: Migrate Existing Code (Week 4)
 
 **Goals:**
+
 - Migrate examples to use generated schemas
 - Replace googleapis types
 - Add runtime validation
 
 **Tasks:**
+
 1. Update `get-entities.ts` to use generated types
 2. Update `update-entities.ts` to use generated types
 3. Add Zod validation to API responses
 4. Remove direct googleapis dependencies where possible
 
 **Deliverables:**
+
 - Migrated example files
 - Runtime validation in place
 - Reduced googleapis coupling
@@ -1853,17 +1853,20 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### Phase 5: Testing & Validation (Week 5)
 
 **Goals:**
+
 - Write comprehensive tests
 - Validate against real API
 - Document usage patterns
 
 **Tasks:**
+
 1. Write unit tests for extraction logic
 2. Write integration tests for pipeline
 3. Test generated schemas against real API responses
 4. Create usage documentation
 
 **Deliverables:**
+
 - Test suite with >80% coverage
 - Validated against production API
 - User documentation
@@ -1873,17 +1876,20 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### Phase 6: CI/CD & Automation (Week 6)
 
 **Goals:**
+
 - Automate schema updates
 - Set up PR workflow
 - Monitor for API changes
 
 **Tasks:**
+
 1. Create GitHub Actions workflow
 2. Set up weekly schema update job
 3. Configure PR creation on changes
 4. Add schema diff reporting
 
 **Deliverables:**
+
 - Automated schema update workflow
 - PR-based review process
 - Change notifications
@@ -1895,6 +1901,7 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### 12.1 Extraction Performance
 
 **Benchmarks (DV360 v4):**
+
 - Full Discovery Doc fetch: ~500ms
 - Schema extraction (50 schemas): ~200ms
 - OpenAPI conversion: ~300ms
@@ -1905,6 +1912,7 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 **Optimization Strategies:**
 
 1. **Caching:**
+
    ```typescript
    // Cache discovery doc for 24 hours
    const cacheKey = `discovery-${apiVersion}-${date}`;
@@ -1913,11 +1921,9 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
    ```
 
 2. **Parallel Generation:**
+
    ```typescript
-   await Promise.all([
-     generateTypeScript(spec),
-     generateZod(spec),
-   ]);
+   await Promise.all([generateTypeScript(spec), generateZod(spec)]);
    ```
 
 3. **Incremental Extraction:**
@@ -1925,7 +1931,7 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
    // Only re-extract if discovery doc changed
    const currentHash = hash(discoveryDoc);
    if (currentHash === lastHash) {
-     console.log('No changes detected, skipping extraction');
+     console.log("No changes detected, skipping extraction");
      return;
    }
    ```
@@ -1933,14 +1939,17 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 ### 12.2 Build Time Impact
 
 **Before optimization:**
+
 - Clean build: ~15s
 - With schema generation: ~20s (+33%)
 
 **After optimization (with cache):**
+
 - Clean build: ~15s
 - With schema generation (cached): ~16s (+6%)
 
 **Recommendations:**
+
 - Enable caching in CI/CD
 - Only regenerate on schema config changes
 - Use separate job for schema updates
@@ -1949,13 +1958,14 @@ These smoke tests execute nightly in CI against recorded HTTP fixtures (falling 
 
 **Comparison:**
 
-| Approach | Bundle Impact | Types | Runtime Validation |
-|----------|---------------|-------|-------------------|
-| googleapis (full) | +450KB | Yes | No |
-| googleapis (tree-shaken) | +150KB | Yes | No |
-| Generated schemas | +80KB | Yes | Yes (Zod) |
+| Approach                 | Bundle Impact | Types | Runtime Validation |
+| ------------------------ | ------------- | ----- | ------------------ |
+| googleapis (full)        | +450KB        | Yes   | No                 |
+| googleapis (tree-shaken) | +150KB        | Yes   | No                 |
+| Generated schemas        | +80KB         | Yes   | Yes (Zod)          |
 
 **Benefits:**
+
 - 47% smaller than tree-shaken googleapis
 - 82% smaller than full googleapis
 - Includes runtime validation
@@ -2036,12 +2046,12 @@ With the above safeguards, this iteration provides an automated, test-backed loo
 
 ### Key Differences from OpenAPI
 
-| Feature | Discovery | OpenAPI 3.0 |
-|---------|-----------|-------------|
-| Schemas location | `schemas` | `components.schemas` |
-| References | `$ref: "SchemaName"` | `$ref: "#/components/schemas/SchemaName"` |
-| Operations | Nested in `resources` | Flat in `paths` |
-| HTTP methods | `httpMethod` field | Path keys (get, post, etc.) |
+| Feature          | Discovery             | OpenAPI 3.0                               |
+| ---------------- | --------------------- | ----------------------------------------- |
+| Schemas location | `schemas`             | `components.schemas`                      |
+| References       | `$ref: "SchemaName"`  | `$ref: "#/components/schemas/SchemaName"` |
+| Operations       | Nested in `resources` | Flat in `paths`                           |
+| HTTP methods     | `httpMethod` field    | Path keys (get, post, etc.)               |
 
 ---
 
@@ -2049,12 +2059,12 @@ With the above safeguards, this iteration provides an automated, test-backed loo
 
 ### Schema Generation Tools
 
-| Tool | Output | Runtime Validation | Bundle Size | Maintenance |
-|------|--------|-------------------|-------------|-------------|
-| **openapi-typescript** | `.d.ts` types only | ❌ No | Minimal (types only) | Active |
-| **openapi-zod-client** | Zod schemas + types | ✅ Yes | Medium (+Zod) | Active |
-| **@hey-api/openapi-ts** | Types + client | ⚠️ Optional | Large | Active |
-| **swagger-typescript-api** | Types + axios client | ❌ No | Large | Active |
+| Tool                       | Output               | Runtime Validation | Bundle Size          | Maintenance |
+| -------------------------- | -------------------- | ------------------ | -------------------- | ----------- |
+| **openapi-typescript**     | `.d.ts` types only   | ❌ No              | Minimal (types only) | Active      |
+| **openapi-zod-client**     | Zod schemas + types  | ✅ Yes             | Medium (+Zod)        | Active      |
+| **@hey-api/openapi-ts**    | Types + client       | ⚠️ Optional        | Large                | Active      |
+| **swagger-typescript-api** | Types + axios client | ❌ No              | Large                | Active      |
 
 **Recommendation:** `openapi-zod-client` for runtime validation with reasonable bundle size.
 

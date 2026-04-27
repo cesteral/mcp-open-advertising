@@ -23,9 +23,7 @@ export const GetReportExecutionsInputSchema = z
     scheduleId: z
       .string()
       .optional()
-      .describe(
-        "If provided, fetch a single schedule by ID using myReportsReportSchedule"
-      ),
+      .describe("If provided, fetch a single schedule by ID using myReportsReportSchedule"),
     lastStatusChangeAfter: z
       .string()
       .optional()
@@ -40,10 +38,7 @@ export const GetReportExecutionsInputSchema = z
       .default(10)
       .optional()
       .describe("Number of schedules to return (list mode only, default 10)"),
-    after: z
-      .string()
-      .optional()
-      .describe("Cursor for pagination (list mode only)"),
+    after: z.string().optional().describe("Cursor for pagination (list mode only)"),
   })
   .describe("Parameters for retrieving TTD report schedule executions");
 
@@ -132,8 +127,7 @@ export async function getReportExecutionsLogic(
     throwIfGraphqlErrors(raw, "GraphQL error fetching report schedule");
 
     const gqlData = (raw.data as Record<string, unknown> | undefined) ?? {};
-    const schedule =
-      (gqlData.myReportsReportSchedule as Record<string, unknown> | undefined) ?? {};
+    const schedule = (gqlData.myReportsReportSchedule as Record<string, unknown> | undefined) ?? {};
 
     return {
       mode: "single",
@@ -235,9 +229,7 @@ export function getReportExecutionsResponseFormatter(
       ];
     }
 
-    const executionsData = schedule.executions as
-      | { nodes?: ExecutionNode[] }
-      | undefined;
+    const executionsData = schedule.executions as { nodes?: ExecutionNode[] } | undefined;
     const executions = executionsData?.nodes ?? [];
     const filters = schedule.filters as Record<string, unknown> | undefined;
 
@@ -279,7 +271,9 @@ export function getReportExecutionsResponseFormatter(
         ? latest.delivery.downloadLink
         : "pending";
 
-    lines.push(`  [${i + 1}] ${(sched.name as string | undefined) ?? "(unnamed)"} — ${(sched.status as string | undefined) ?? "unknown"}`);
+    lines.push(
+      `  [${i + 1}] ${(sched.name as string | undefined) ?? "(unnamed)"} — ${(sched.status as string | undefined) ?? "unknown"}`
+    );
     lines.push(`      Latest: ${latestState} | Download: ${latestDownload}`);
     lines.push("");
   });

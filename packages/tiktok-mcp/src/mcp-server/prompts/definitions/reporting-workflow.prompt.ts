@@ -21,9 +21,7 @@ export const tiktokReportingWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getTiktokReportingWorkflowMessage(
-  args?: Record<string, string>,
-): string {
+export function getTiktokReportingWorkflowMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const reportLevel = args?.reportLevel || "AUCTION";
 

@@ -25,9 +25,7 @@ export const snapchatTroubleshootEntityPrompt: Prompt = {
   ],
 };
 
-export function getSnapchatTroubleshootEntityMessage(
-  args?: Record<string, string>,
-): string {
+export function getSnapchatTroubleshootEntityMessage(args?: Record<string, string>): string {
   const entityType = args?.entityType || "{entityType}";
   const entityId = args?.entityId || "{entityId}";
   const adAccountId = args?.adAccountId || "{adAccountId}";

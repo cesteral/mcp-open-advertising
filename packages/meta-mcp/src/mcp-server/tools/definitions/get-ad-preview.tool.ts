@@ -16,13 +16,8 @@ Returns temporary HTML iframe content showing how the ad will appear.
 
 export const GetAdPreviewInputSchema = z
   .object({
-    adId: z
-      .string()
-      .min(1)
-      .describe("Ad ID to preview"),
-    adFormat: z
-      .string()
-      .describe("Ad format (e.g., DESKTOP_FEED_STANDARD, MOBILE_FEED_STANDARD)"),
+    adId: z.string().min(1).describe("Ad ID to preview"),
+    adFormat: z.string().describe("Ad format (e.g., DESKTOP_FEED_STANDARD, MOBILE_FEED_STANDARD)"),
   })
   .describe("Parameters for getting ad preview");
 
@@ -43,13 +38,9 @@ export async function getAdPreviewLogic(
 ): Promise<GetAdPreviewOutput> {
   const { metaService } = resolveSessionServices(sdkContext);
 
-  const result = await metaService.getAdPreviews(
-    input.adId,
-    input.adFormat,
-    context
-  );
+  const result = await metaService.getAdPreviews(input.adId, input.adFormat, context);
 
-  const data = (result as Record<string, unknown>)?.data as unknown[] || [];
+  const data = ((result as Record<string, unknown>)?.data as unknown[]) || [];
 
   return {
     previews: data as Record<string, unknown>[],

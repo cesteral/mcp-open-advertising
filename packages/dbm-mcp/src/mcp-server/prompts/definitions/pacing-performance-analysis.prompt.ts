@@ -26,16 +26,13 @@ export const pacingPerformanceAnalysisPrompt: Prompt = {
     },
     {
       name: "focus",
-      description:
-        "Analysis focus: 'pacing', 'performance', or 'both' (default: both)",
+      description: "Analysis focus: 'pacing', 'performance', or 'both' (default: both)",
       required: false,
     },
   ],
 };
 
-export function getPacingPerformanceAnalysisMessage(
-  args?: Record<string, string>,
-): string {
+export function getPacingPerformanceAnalysisMessage(args?: Record<string, string>): string {
   const campaignId = args?.campaignId || "{campaignId}";
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const focus = args?.focus || "both";

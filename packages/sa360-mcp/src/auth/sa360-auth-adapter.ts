@@ -164,8 +164,5 @@ export function parseSA360CredentialsFromHeaders(
  * Generate a fingerprint for SA360 credentials (for session binding).
  */
 export function getSA360CredentialFingerprint(credentials: SA360Credentials): string {
-  return createHash("sha256")
-    .update(credentials.clientId)
-    .digest("hex")
-    .substring(0, 32);
+  return createHash("sha256").update(credentials.clientId).digest("hex").substring(0, 32);
 }

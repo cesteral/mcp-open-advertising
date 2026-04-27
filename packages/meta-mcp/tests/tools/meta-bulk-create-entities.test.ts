@@ -97,11 +97,7 @@ describe("bulkCreateEntitiesLogic", () => {
       {
         entityType: "campaign" as any,
         adAccountId: "act_123",
-        items: [
-          { name: "Camp 1" },
-          { name: "Camp 2" },
-          { name: "Camp 3" },
-        ],
+        items: [{ name: "Camp 1" }, { name: "Camp 2" }, { name: "Camp 3" }],
       },
       createMockContext(),
       createMockSdkContext()
@@ -124,8 +120,7 @@ describe("bulkCreateEntitiesLogic", () => {
     );
 
     expect(mockMetaService.bulkCreateEntities).toHaveBeenCalledOnce();
-    const [entityType, adAccountId, passedItems] =
-      mockMetaService.bulkCreateEntities.mock.calls[0];
+    const [entityType, adAccountId, passedItems] = mockMetaService.bulkCreateEntities.mock.calls[0];
     expect(entityType).toBe("ad");
     expect(adAccountId).toBe("act_789");
     expect(passedItems).toEqual(items);

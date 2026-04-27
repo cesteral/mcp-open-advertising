@@ -35,7 +35,13 @@ export function createSessionServices(
 ): SessionServices {
   const httpClient = new TtdHttpClient(authAdapter, config.baseUrl, logger);
   const ttdService = new TtdService(logger, rateLimiter, httpClient, config.graphqlUrl);
-  const ttdReportingService = new TtdReportingService(rateLimiter, httpClient, logger, config.reportPollIntervalMs, config.reportMaxPollAttempts);
+  const ttdReportingService = new TtdReportingService(
+    rateLimiter,
+    httpClient,
+    logger,
+    config.reportPollIntervalMs,
+    config.reportMaxPollAttempts
+  );
   return {
     ttdService,
     ttdReportingService,

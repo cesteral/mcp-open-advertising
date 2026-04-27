@@ -23,14 +23,8 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["sa360-headers", "jwt", "none"]).default("sa360-headers"),
 
   // SA360 API Configuration
-  sa360ApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://searchads360.googleapis.com/v0"),
-  sa360V2ApiBaseUrl: z
-    .string()
-    .url()
-    .default("https://www.googleapis.com/doubleclicksearch/v2"),
+  sa360ApiBaseUrl: z.string().url().default("https://searchads360.googleapis.com/v0"),
+  sa360V2ApiBaseUrl: z.string().url().default("https://www.googleapis.com/doubleclicksearch/v2"),
   // Conservative default: platform_quota / max_instances (10).
   // In-memory rate limiting is per-process; effective_limit = configured × instance_count.
   // Override via SA360_RATE_LIMIT_PER_MINUTE for different scaling profiles.

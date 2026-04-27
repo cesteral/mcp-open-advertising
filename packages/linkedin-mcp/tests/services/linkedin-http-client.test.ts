@@ -45,7 +45,9 @@ describe("LinkedInHttpClient", () => {
     vi.restoreAllMocks();
   });
 
-  function mockOkResponse(body: unknown = { elements: [], paging: { total: 0, count: 0, start: 0 } }) {
+  function mockOkResponse(
+    body: unknown = { elements: [], paging: { total: 0, count: 0, start: 0 } }
+  ) {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -61,7 +63,7 @@ describe("LinkedInHttpClient", () => {
     mockFetchWithTimeout.mockResolvedValueOnce({
       ok: false,
       status,
-      text: async () => errorBody ? JSON.stringify(errorBody) : "error",
+      text: async () => (errorBody ? JSON.stringify(errorBody) : "error"),
       headers: new Headers(),
     } as unknown as Response);
   }
@@ -100,7 +102,10 @@ describe("LinkedInHttpClient", () => {
     it("builds URL correctly with query params", async () => {
       mockOkResponse();
 
-      await client.get("/v2/adCampaigns", { q: "search", "accounts[0]": "urn:li:sponsoredAccount:123" });
+      await client.get("/v2/adCampaigns", {
+        q: "search",
+        "accounts[0]": "urn:li:sponsoredAccount:123",
+      });
 
       const calledUrl = mockFetchWithTimeout.mock.calls[0][0] as string;
       expect(calledUrl).toContain("/v2/adCampaigns");
@@ -110,7 +115,7 @@ describe("LinkedInHttpClient", () => {
     it("returns parsed JSON response", async () => {
       mockOkResponse({ elements: [{ id: 1, name: "Test Account" }] });
 
-      const result = await client.get("/v2/adAccounts") as Record<string, unknown>;
+      const result = (await client.get("/v2/adAccounts")) as Record<string, unknown>;
       expect(result.elements).toEqual([{ id: 1, name: "Test Account" }]);
     });
   });
@@ -175,10 +180,14 @@ describe("LinkedInHttpClient", () => {
 
   describe("retry behavior", () => {
     it("retries on 429 Too Many Requests", async () => {
-      mockErrorResponse(429, { serviceErrorCode: 429, message: "Rate limit exceeded", status: 429 });
+      mockErrorResponse(429, {
+        serviceErrorCode: 429,
+        message: "Rate limit exceeded",
+        status: 429,
+      });
       mockOkResponse({ retried: true });
 
-      const result = await client.get("/v2/adAccounts") as Record<string, unknown>;
+      const result = (await client.get("/v2/adAccounts")) as Record<string, unknown>;
       expect(result.retried).toBe(true);
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });
@@ -187,7 +196,7 @@ describe("LinkedInHttpClient", () => {
       mockErrorResponse(500, { message: "Internal Server Error", status: 500 });
       mockOkResponse({ retried: true });
 
-      const result = await client.get("/v2/adAccounts") as Record<string, unknown>;
+      const result = (await client.get("/v2/adAccounts")) as Record<string, unknown>;
       expect(result.retried).toBe(true);
       expect(mockFetchWithTimeout).toHaveBeenCalledTimes(2);
     });

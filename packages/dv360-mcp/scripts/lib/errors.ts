@@ -9,54 +9,54 @@
  */
 export const ErrorCodes = {
   // Discovery document errors
-  DISCOVERY_FETCH_FAILED: 'DISCOVERY_FETCH_FAILED',
-  DISCOVERY_PARSE_FAILED: 'DISCOVERY_PARSE_FAILED',
-  DISCOVERY_INVALID_FORMAT: 'DISCOVERY_INVALID_FORMAT',
+  DISCOVERY_FETCH_FAILED: "DISCOVERY_FETCH_FAILED",
+  DISCOVERY_PARSE_FAILED: "DISCOVERY_PARSE_FAILED",
+  DISCOVERY_INVALID_FORMAT: "DISCOVERY_INVALID_FORMAT",
 
   // Schema extraction errors
-  SCHEMA_NOT_FOUND: 'SCHEMA_NOT_FOUND',
-  CIRCULAR_REFERENCE: 'CIRCULAR_REFERENCE',
-  MAX_DEPTH_EXCEEDED: 'MAX_DEPTH_EXCEEDED',
-  INVALID_SCHEMA_REF: 'INVALID_SCHEMA_REF',
-  MISSING_REQUIRED_FIELD: 'MISSING_REQUIRED_FIELD',
+  SCHEMA_NOT_FOUND: "SCHEMA_NOT_FOUND",
+  CIRCULAR_REFERENCE: "CIRCULAR_REFERENCE",
+  MAX_DEPTH_EXCEEDED: "MAX_DEPTH_EXCEEDED",
+  INVALID_SCHEMA_REF: "INVALID_SCHEMA_REF",
+  MISSING_REQUIRED_FIELD: "MISSING_REQUIRED_FIELD",
 
   // Dependency resolution errors
-  DEPENDENCY_NOT_FOUND: 'DEPENDENCY_NOT_FOUND',
-  DEPENDENCY_CYCLE_DETECTED: 'DEPENDENCY_CYCLE_DETECTED',
+  DEPENDENCY_NOT_FOUND: "DEPENDENCY_NOT_FOUND",
+  DEPENDENCY_CYCLE_DETECTED: "DEPENDENCY_CYCLE_DETECTED",
 
   // Conversion errors
-  CONVERSION_FAILED: 'CONVERSION_FAILED',
-  UNSUPPORTED_SCHEMA_TYPE: 'UNSUPPORTED_SCHEMA_TYPE',
-  INVALID_OPENAPI_OUTPUT: 'INVALID_OPENAPI_OUTPUT',
+  CONVERSION_FAILED: "CONVERSION_FAILED",
+  UNSUPPORTED_SCHEMA_TYPE: "UNSUPPORTED_SCHEMA_TYPE",
+  INVALID_OPENAPI_OUTPUT: "INVALID_OPENAPI_OUTPUT",
 
   // File system errors
-  FILE_WRITE_FAILED: 'FILE_WRITE_FAILED',
-  FILE_READ_FAILED: 'FILE_READ_FAILED',
-  DIRECTORY_CREATE_FAILED: 'DIRECTORY_CREATE_FAILED',
+  FILE_WRITE_FAILED: "FILE_WRITE_FAILED",
+  FILE_READ_FAILED: "FILE_READ_FAILED",
+  DIRECTORY_CREATE_FAILED: "DIRECTORY_CREATE_FAILED",
 
   // Cache errors
-  CACHE_READ_FAILED: 'CACHE_READ_FAILED',
-  CACHE_WRITE_FAILED: 'CACHE_WRITE_FAILED',
-  CACHE_EXPIRED: 'CACHE_EXPIRED',
+  CACHE_READ_FAILED: "CACHE_READ_FAILED",
+  CACHE_WRITE_FAILED: "CACHE_WRITE_FAILED",
+  CACHE_EXPIRED: "CACHE_EXPIRED",
 
   // Validation errors
-  CONFIG_VALIDATION_FAILED: 'CONFIG_VALIDATION_FAILED',
-  SCHEMA_VALIDATION_FAILED: 'SCHEMA_VALIDATION_FAILED',
-  SIZE_THRESHOLD_EXCEEDED: 'SIZE_THRESHOLD_EXCEEDED',
-  SIZE_LIMIT_EXCEEDED: 'SIZE_LIMIT_EXCEEDED',
+  CONFIG_VALIDATION_FAILED: "CONFIG_VALIDATION_FAILED",
+  SCHEMA_VALIDATION_FAILED: "SCHEMA_VALIDATION_FAILED",
+  SIZE_THRESHOLD_EXCEEDED: "SIZE_THRESHOLD_EXCEEDED",
+  SIZE_LIMIT_EXCEEDED: "SIZE_LIMIT_EXCEEDED",
 
   // Code generation errors
-  CODEGEN_FAILED: 'CODEGEN_FAILED',
-  TYPESCRIPT_GENERATION_FAILED: 'TYPESCRIPT_GENERATION_FAILED',
-  ZOD_GENERATION_FAILED: 'ZOD_GENERATION_FAILED',
+  CODEGEN_FAILED: "CODEGEN_FAILED",
+  TYPESCRIPT_GENERATION_FAILED: "TYPESCRIPT_GENERATION_FAILED",
+  ZOD_GENERATION_FAILED: "ZOD_GENERATION_FAILED",
 
   // Generic errors
-  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
-  INVALID_ARGUMENT: 'INVALID_ARGUMENT',
-  OPERATION_TIMEOUT: 'OPERATION_TIMEOUT',
+  UNKNOWN_ERROR: "UNKNOWN_ERROR",
+  INVALID_ARGUMENT: "INVALID_ARGUMENT",
+  OPERATION_TIMEOUT: "OPERATION_TIMEOUT",
 } as const;
 
-export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
+export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
 /**
  * Structured error class for schema extraction operations
@@ -77,14 +77,9 @@ export class ExtractionError extends Error {
    */
   readonly cause?: Error;
 
-  constructor(
-    message: string,
-    code: ErrorCode,
-    details?: Record<string, any>,
-    cause?: Error
-  ) {
+  constructor(message: string, code: ErrorCode, details?: Record<string, any>, cause?: Error) {
     super(message);
-    this.name = 'ExtractionError';
+    this.name = "ExtractionError";
     this.code = code;
     this.details = details;
     this.cause = cause;
@@ -105,11 +100,13 @@ export class ExtractionError extends Error {
       code: this.code,
       details: this.details,
       stack: this.stack,
-      cause: this.cause ? {
-        name: this.cause.name,
-        message: this.cause.message,
-        stack: this.cause.stack,
-      } : undefined,
+      cause: this.cause
+        ? {
+            name: this.cause.name,
+            message: this.cause.message,
+            stack: this.cause.stack,
+          }
+        : undefined,
     };
   }
 
@@ -144,28 +141,16 @@ export function toExtractionError(
   }
 
   if (error instanceof Error) {
-    return new ExtractionError(
-      error.message,
-      code,
-      details,
-      error
-    );
+    return new ExtractionError(error.message, code, details, error);
   }
 
-  return new ExtractionError(
-    String(error),
-    code,
-    details
-  );
+  return new ExtractionError(String(error), code, details);
 }
 
 /**
  * Helper function to check if error is an ExtractionError with specific code
  */
-export function isExtractionError(
-  error: unknown,
-  code?: ErrorCode
-): error is ExtractionError {
+export function isExtractionError(error: unknown, code?: ErrorCode): error is ExtractionError {
   if (!(error instanceof ExtractionError)) {
     return false;
   }
@@ -208,7 +193,7 @@ export function circularReferenceError(
     {
       schemaPath,
       circularSchema,
-      pathString: schemaPath.join(' -> '),
+      pathString: schemaPath.join(" -> "),
     }
   );
 }
@@ -228,7 +213,7 @@ export function maxDepthExceededError(
       currentDepth,
       maxDepth,
       schemaPath,
-      pathString: schemaPath.join(' -> '),
+      pathString: schemaPath.join(" -> "),
     }
   );
 }
@@ -256,7 +241,7 @@ export function discoveryFetchError(
  * Helper function to create file operation error
  */
 export function fileOperationError(
-  operation: 'read' | 'write' | 'create',
+  operation: "read" | "write" | "create",
   filePath: string,
   cause?: Error
 ): ExtractionError {

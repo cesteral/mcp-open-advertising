@@ -24,8 +24,14 @@ vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
 
 vi.mock("../../src/mcp-server/tools/utils/entity-mapping.js", () => ({
   getEntityTypeEnum: () => [
-    "campaign", "placement", "ad", "creative", "site",
-    "advertiser", "floodlightActivity", "floodlightConfiguration",
+    "campaign",
+    "placement",
+    "ad",
+    "creative",
+    "site",
+    "advertiser",
+    "floodlightActivity",
+    "floodlightConfiguration",
   ],
   getDeletableEntityTypeEnum: () => ["floodlightActivity"],
 }));
@@ -190,7 +196,12 @@ describe("listEntitiesLogic", () => {
     await listEntitiesLogic(input, mockContext);
 
     expect(mockState.cm360Service.listEntities).toHaveBeenCalledWith(
-      "campaign", "123", { advertiserId: "456" }, "tok", 10, mockContext
+      "campaign",
+      "123",
+      { advertiserId: "456" },
+      "tok",
+      10,
+      mockContext
     );
   });
 
@@ -240,10 +251,7 @@ describe("listEntitiesLogic", () => {
     mockState.cm360Service.listEntities.mockRejectedValue(new Error("Service down"));
 
     await expect(
-      listEntitiesLogic(
-        { profileId: "123", entityType: "campaign" as const },
-        mockContext
-      )
+      listEntitiesLogic({ profileId: "123", entityType: "campaign" as const }, mockContext)
     ).rejects.toThrow("Service down");
   });
 });

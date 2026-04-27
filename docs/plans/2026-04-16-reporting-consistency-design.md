@@ -38,7 +38,7 @@ An audit of reporting features across every MCP server surfaced 10 distinct inco
 - `schemas/report-status.ts` — `ReportStatusSchema` with states `pending | running | complete | failed | cancelled`, plus `from{Platform}Status` normalization helpers.
 - `utils/report-errors.ts` — `ReportingError extends McpError` and `mapReportingError(err, platform)` covering TTD, Meta, Google RPC, Microsoft error envelopes.
 - `utils/report-csv-store.ts` — extended with `createSessionScopedStore(sessionId)` for deterministic cleanup.
-- `utils/report-spill.ts` *(Phase 4)* — GCS-backed spill; signed URLs; session-scoped lifecycle.
+- `utils/report-spill.ts` _(Phase 4)_ — GCS-backed spill; signed URLs; session-scoped lifecycle.
 
 Dependency direction stays linear: servers → shared.
 

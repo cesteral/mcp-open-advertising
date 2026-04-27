@@ -15,9 +15,7 @@ const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering a
 
 export const ListEntitiesInputSchema = z
   .object({
-    entityType: z
-      .enum(getEntityTypeEnum())
-      .describe("Type of entities to list"),
+    entityType: z.enum(getEntityTypeEnum()).describe("Type of entities to list"),
     partnerId: z
       .string()
       .optional()
@@ -26,22 +24,13 @@ export const ListEntitiesInputSchema = z
       .string()
       .optional()
       .describe("Advertiser ID (required for all entity types except advertiser)"),
-    campaignId: z
-      .string()
-      .optional()
-      .describe("Campaign ID (required for adGroup queries)"),
-    adGroupId: z
-      .string()
-      .optional()
-      .describe("Ad Group ID (required for ad queries)"),
+    campaignId: z.string().optional().describe("Campaign ID (required for adGroup queries)"),
+    adGroupId: z.string().optional().describe("Ad Group ID (required for ad queries)"),
     filter: z
       .record(z.unknown())
       .optional()
       .describe("Additional filter fields to pass to the TTD query endpoint"),
-    pageToken: z
-      .string()
-      .optional()
-      .describe("Page token for pagination (start index)"),
+    pageToken: z.string().optional().describe("Page token for pagination (start index)"),
     pageSize: z
       .number()
       .min(1)
@@ -69,7 +58,8 @@ export const ListEntitiesInputSchema = z
     if (data.entityType === "adGroup" && !data.campaignId) {
       ctx.addIssue({
         code: "custom",
-        message: "campaignId is required when listing adGroup entities (query is scoped to campaign)",
+        message:
+          "campaignId is required when listing adGroup entities (query is scoped to campaign)",
         path: ["campaignId"],
       });
     }

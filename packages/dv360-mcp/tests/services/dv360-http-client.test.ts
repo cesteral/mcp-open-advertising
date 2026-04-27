@@ -34,9 +34,7 @@ function createMockLogger() {
 }
 
 /** Create a mock GoogleAuthAdapter */
-function createMockAuthAdapter(
-  token = "test-token",
-): GoogleAuthAdapter {
+function createMockAuthAdapter(token = "test-token"): GoogleAuthAdapter {
   return {
     getAccessToken: vi.fn().mockResolvedValue(token),
     credentialType: "service_account" as const,
@@ -50,7 +48,7 @@ function createMockAuthAdapter(
 function fakeResponse(
   status: number,
   body: unknown = {},
-  headers: Record<string, string> = {},
+  headers: Record<string, string> = {}
 ): Response {
   const headersObj = new Headers(headers);
   return {
@@ -150,7 +148,7 @@ describe("DV360HttpClient", () => {
       // Verify the Authorization header was set
       const callOptions = mockFetchWithTimeout.mock.calls[0]![3] as RequestInit;
       expect((callOptions.headers as Record<string, string>).Authorization).toBe(
-        "Bearer test-token",
+        "Bearer test-token"
       );
     });
 
@@ -216,9 +214,7 @@ describe("DV360HttpClient", () => {
     it("respects Retry-After header on 429 responses", async () => {
       // 429 with Retry-After: 3 seconds, then 200
       mockFetchWithTimeout
-        .mockResolvedValueOnce(
-          fakeResponse(429, { error: "rate limited" }, { "Retry-After": "3" }),
-        )
+        .mockResolvedValueOnce(fakeResponse(429, { error: "rate limited" }, { "Retry-After": "3" }))
         .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
 
       const fetchPromise = client.fetch("/limited");
@@ -237,7 +233,7 @@ describe("DV360HttpClient", () => {
       // 429 with Retry-After: 60 seconds (way beyond MAX_BACKOFF_MS)
       mockFetchWithTimeout
         .mockResolvedValueOnce(
-          fakeResponse(429, { error: "rate limited" }, { "Retry-After": "60" }),
+          fakeResponse(429, { error: "rate limited" }, { "Retry-After": "60" })
         )
         .mockResolvedValueOnce(fakeResponse(200, { ok: true }));
 
@@ -261,9 +257,7 @@ describe("DV360HttpClient", () => {
     for (const status of nonRetryableStatuses) {
       it(`does NOT retry on ${status} — throws immediately`, async () => {
         // API returns non-retryable status
-        mockFetchWithTimeout.mockResolvedValueOnce(
-          fakeResponse(status, { error: "client error" }),
-        );
+        mockFetchWithTimeout.mockResolvedValueOnce(fakeResponse(status, { error: "client error" }));
 
         await expect(client.fetch("/bad")).rejects.toThrow(McpError);
 
@@ -327,7 +321,7 @@ describe("DV360HttpClient", () => {
       // Verify the call included Authorization header
       const callOptions = mockFetchWithTimeout.mock.calls[0]![3] as RequestInit;
       expect((callOptions.headers as Record<string, string>).Authorization).toBe(
-        "Bearer test-token",
+        "Bearer test-token"
       );
     });
 

@@ -21,8 +21,7 @@ export const entityDuplicationWorkflowPrompt: Prompt = {
     },
     {
       name: "entityType",
-      description:
-        "Entity type to duplicate: campaign, insertionOrder, or lineItem",
+      description: "Entity type to duplicate: campaign, insertionOrder, or lineItem",
       required: true,
     },
     {
@@ -39,9 +38,7 @@ export const entityDuplicationWorkflowPrompt: Prompt = {
   ],
 };
 
-export function getEntityDuplicationWorkflowPromptMessage(
-  args?: Record<string, string>,
-): string {
+export function getEntityDuplicationWorkflowPromptMessage(args?: Record<string, string>): string {
   const advertiserId = args?.advertiserId || "{advertiserId}";
   const entityType = args?.entityType || "{entityType}";
   const sourceEntityId = args?.sourceEntityId || "{sourceEntityId}";

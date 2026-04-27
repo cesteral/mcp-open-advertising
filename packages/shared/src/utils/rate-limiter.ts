@@ -121,9 +121,7 @@ export class RateLimiter {
     this.requests.clear();
   }
 
-  private findLimitConfig(
-    key: string
-  ): { limit: number; windowMs: number } | undefined {
+  private findLimitConfig(key: string): { limit: number; windowMs: number } | undefined {
     if (this.limits.has(key)) {
       return this.limits.get(key);
     }

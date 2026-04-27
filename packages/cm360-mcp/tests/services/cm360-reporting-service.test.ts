@@ -195,9 +195,9 @@ describe("CM360ReportingService", () => {
         .mockResolvedValueOnce({ id: "file-1" })
         .mockResolvedValueOnce({ status: "FAILED" });
 
-      await expect(
-        service.runReport("12345", { name: "Test", type: "STANDARD" })
-      ).rejects.toThrow("CM360 report failed");
+      await expect(service.runReport("12345", { name: "Test", type: "STANDARD" })).rejects.toThrow(
+        "CM360 report failed"
+      );
     });
 
     it("throws on CANCELLED status during polling", async () => {
@@ -206,9 +206,9 @@ describe("CM360ReportingService", () => {
         .mockResolvedValueOnce({ id: "file-1" })
         .mockResolvedValueOnce({ status: "CANCELLED" });
 
-      await expect(
-        service.runReport("12345", { name: "Test", type: "STANDARD" })
-      ).rejects.toThrow("CM360 report cancelled");
+      await expect(service.runReport("12345", { name: "Test", type: "STANDARD" })).rejects.toThrow(
+        "CM360 report cancelled"
+      );
     });
 
     it("throws on polling timeout", async () => {
@@ -217,9 +217,9 @@ describe("CM360ReportingService", () => {
         .mockResolvedValueOnce({ id: "file-1" })
         .mockResolvedValue({ status: "PROCESSING" }); // all polls return PROCESSING
 
-      await expect(
-        service.runReport("12345", { name: "Test", type: "STANDARD" })
-      ).rejects.toThrow(/Report polling exceeded 3 attempts/);
+      await expect(service.runReport("12345", { name: "Test", type: "STANDARD" })).rejects.toThrow(
+        /Report polling exceeded 3 attempts/
+      );
     });
   });
 

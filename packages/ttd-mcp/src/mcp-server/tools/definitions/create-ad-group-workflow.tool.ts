@@ -28,7 +28,10 @@ export async function createAdGroupWorkflowLogic(
   sdkContext?: SdkContext
 ): Promise<CreateAdGroupWorkflowToolOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-  const adGroup = (await ttdService.createAdGroupWorkflow(input, context)) as Record<string, unknown>;
+  const adGroup = (await ttdService.createAdGroupWorkflow(input, context)) as Record<
+    string,
+    unknown
+  >;
   return { adGroup, timestamp: new Date().toISOString() };
 }
 

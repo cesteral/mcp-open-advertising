@@ -86,9 +86,7 @@ export async function downloadReportLogic(
       rows: augmented,
       totalRows: rows.length,
       input,
-      warnings: computedWarning
-        ? [`computed metrics: ${computedWarning}`]
-        : undefined,
+      warnings: computedWarning ? [`computed metrics: ${computedWarning}`] : undefined,
     }),
     timestamp: new Date().toISOString(),
   };
