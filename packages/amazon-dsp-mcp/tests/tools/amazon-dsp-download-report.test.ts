@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockSpillCsvToGcs } = vi.hoisted(() => ({
-  mockSpillCsvToGcs: vi.fn(),
+const { mockSpillBodyToGcs } = vi.hoisted(() => ({
+  mockSpillBodyToGcs: vi.fn(),
 }));
 
 vi.mock("../../src/services/session-services.js", async () => {
@@ -22,7 +22,7 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   return {
     ...actual,
     resolveSessionServicesFromStore: vi.fn(),
-    spillCsvToGcs: mockSpillCsvToGcs,
+    spillBodyToGcs: mockSpillBodyToGcs,
   };
 });
 
@@ -41,8 +41,8 @@ beforeEach(() => {
   // deterministic regardless of the developer's shell.
   delete process.env.REPORT_SPILL_BUCKET;
   mockDownloadReport.mockReset();
-  mockSpillCsvToGcs.mockReset();
-  mockSpillCsvToGcs.mockResolvedValue({ disabled: true, reason: "bucket-not-set" });
+  mockSpillBodyToGcs.mockReset();
+  mockSpillBodyToGcs.mockResolvedValue({ disabled: true, reason: "bucket-not-set" });
   mockResolveSession.mockReturnValue({
     amazonDspReportingService: {
       downloadReport: mockDownloadReport,
@@ -206,7 +206,7 @@ describe("GCS spill integration", () => {
       rawCsv: "date\n2026-03-01\n",
       rawMimeType: "text/csv",
     });
-    mockSpillCsvToGcs.mockResolvedValueOnce({
+    mockSpillBodyToGcs.mockResolvedValueOnce({
       spilled: true,
       bucket: "test-bucket",
       objectName: "amazonDsp/s-1/report-ts.csv",
@@ -223,13 +223,13 @@ describe("GCS spill integration", () => {
       baseSdkContext
     );
 
-    expect(mockSpillCsvToGcs).toHaveBeenCalledWith(
+    expect(mockSpillBodyToGcs).toHaveBeenCalledWith(
       expect.objectContaining({
-        csv: "date\n2026-03-01\n",
+        body: "date\n2026-03-01\n",
         mimeType: "text/csv",
         sessionId: "test-session",
         server: "amazonDsp",
-        reportId: "report.csv",
+        objectId: "report.csv",
         rowCount: 1,
       })
     );
@@ -254,7 +254,7 @@ describe("GCS spill integration", () => {
       rawCsv: '[{"advertiser":"adv-1"}]',
       rawMimeType: "application/json",
     });
-    mockSpillCsvToGcs.mockResolvedValueOnce({
+    mockSpillBodyToGcs.mockResolvedValueOnce({
       spilled: true,
       bucket: "test-bucket",
       objectName: "amazonDsp/s-1/report-ts.json",
@@ -271,12 +271,12 @@ describe("GCS spill integration", () => {
       baseSdkContext
     );
 
-    expect(mockSpillCsvToGcs).toHaveBeenCalledWith(
+    expect(mockSpillBodyToGcs).toHaveBeenCalledWith(
       expect.objectContaining({
-        csv: '[{"advertiser":"adv-1"}]',
+        body: '[{"advertiser":"adv-1"}]',
         mimeType: "application/json",
         server: "amazonDsp",
-        reportId: "report.json",
+        objectId: "report.json",
       })
     );
     expect(result.spill).toEqual(
@@ -296,7 +296,7 @@ describe("GCS spill integration", () => {
       rawCsv: "date\n",
       rawMimeType: "text/csv",
     });
-    mockSpillCsvToGcs.mockResolvedValueOnce({ error: "gcs unreachable" });
+    mockSpillBodyToGcs.mockResolvedValueOnce({ error: "gcs unreachable" });
 
     const result = await downloadReportLogic(
       { downloadUrl: "https://example.com/report.csv" },
@@ -317,7 +317,7 @@ describe("GCS spill integration", () => {
       rawCsv: "date\n",
       rawMimeType: "text/csv",
     });
-    mockSpillCsvToGcs.mockResolvedValueOnce({ disabled: true, reason: "under-threshold" });
+    mockSpillBodyToGcs.mockResolvedValueOnce({ disabled: true, reason: "under-threshold" });
 
     const result = await downloadReportLogic(
       { downloadUrl: "https://example.com/report.csv" },

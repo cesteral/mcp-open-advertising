@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -29,8 +34,7 @@ export const ListAdAccountsInputSchema = z
 export const ListAdAccountsOutputSchema = z
   .object({
     accounts: z.array(z.record(z.any())).describe("List of ad accounts"),
-    total: z.number().optional().describe("Total number of accounts"),
-    hasMore: z.boolean().describe("Whether more accounts are available"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Ad accounts list result");
@@ -53,21 +57,27 @@ export async function listAdAccountsLogic(
   const requestedCount = input.count ?? 25;
   const hasMore =
     total !== undefined ? currentStart + pageSize < total : pageSize >= requestedCount;
+  const nextStart = currentStart + pageSize;
 
   return {
     accounts: result.accounts as unknown as Record<string, unknown>[],
-    total,
-    hasMore,
+    pagination: buildPaginationOutput({
+      nextCursor: hasMore ? String(nextStart) : null,
+      pageSize,
+      totalCount: total,
+      nextPageInputKey: "start",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listAdAccountsResponseFormatter(result: ListAdAccountsOutput): McpTextContent[] {
-  const totalInfo = result.total !== undefined ? ` (total: ${result.total})` : "";
+  const { pageSize, totalCount } = result.pagination;
+  const totalInfo = totalCount !== undefined ? ` (total: ${totalCount})` : "";
   return [
     {
       type: "text" as const,
-      text: `Found ${result.accounts.length} ad accounts${totalInfo}\n\n${JSON.stringify(result.accounts, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `Found ${pageSize} ad accounts${totalInfo}\n\n${JSON.stringify(result.accounts, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

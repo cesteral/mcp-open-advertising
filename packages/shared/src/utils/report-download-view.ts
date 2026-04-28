@@ -12,7 +12,7 @@ import {
   type ReportViewInput,
   type ReportViewOutput,
 } from "./report-view.js";
-import type { SpillCsvOptions, SpillResult } from "./report-spill.js";
+import type { SpillBodyOptions, SpillResult } from "./report-spill.js";
 
 export const StoredReportBodyOutputSchema = z.object({
   rawCsvResourceUri: z
@@ -70,7 +70,7 @@ export async function createServiceDownloadedReportView(params: {
   input: ServiceDownloadedReportInput;
   sessionId?: string;
   reportCsvStore: Pick<ReportCsvStore, "store">;
-  spillCsvToGcs: (opts: SpillCsvOptions) => Promise<SpillResult>;
+  spillBodyToGcs: (opts: SpillBodyOptions) => Promise<SpillResult>;
   spillServer: string;
   reportId: string;
   computedMetricAliases: ColumnAliases;
@@ -122,12 +122,12 @@ export async function createServiceDownloadedReportView(params: {
   }
 
   if (result.rawCsv !== undefined) {
-    const spill = await params.spillCsvToGcs({
-      csv: result.rawCsv,
+    const spill = await params.spillBodyToGcs({
+      body: result.rawCsv,
       mimeType,
       sessionId: params.sessionId,
       server: params.spillServer,
-      reportId: params.reportId,
+      objectId: params.reportId,
       rowCount: result.totalRows,
     });
     if ("spilled" in spill && spill.spilled) {

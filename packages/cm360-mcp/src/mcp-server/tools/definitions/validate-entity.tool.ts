@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
-import { validateEntityResponseFormatter } from "@cesteral/shared";
+import { validateEntityResponseFormatter, type ValidationIssue } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_validate_entity";
 const TOOL_TITLE = "Validate CM360 Entity";
@@ -24,6 +24,15 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a CM360 entity");
 
+const ValidationIssueSchema = z.object({
+  field: z.string(),
+  code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+  message: z.string(),
+  hint: z.string().optional(),
+  suggestedValues: z.array(z.string()).optional(),
+  severity: z.enum(["error", "warning"]).optional(),
+});
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the entity data is valid"),
@@ -31,6 +40,8 @@ export const ValidateEntityOutputSchema = z
     mode: z.string(),
     errors: z.array(z.string()).describe("Validation error messages"),
     warnings: z.array(z.string()).describe("Validation warnings"),
+    issues: z.array(ValidationIssueSchema),
+    nextAction: z.string().optional(),
     timestamp: z.string().datetime(),
   })
   .describe("Entity validation result");
@@ -42,15 +53,18 @@ export async function validateEntityLogic(
   input: ValidateEntityInput,
   _context: RequestContext
 ): Promise<ValidateEntityOutput> {
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
+  const err = (field: string, code: ValidationIssue["code"], message: string) =>
+    issues.push({ field, code, message, severity: "error" });
+  const warn = (field: string, code: ValidationIssue["code"], message: string) =>
+    issues.push({ field, code, message, severity: "warning" });
 
   if (input.mode === "update" && !input.data.id) {
-    errors.push("id field is required for update mode (CM360 uses PUT semantics)");
+    err("id", "missing", "id field is required for update mode (CM360 uses PUT semantics)");
   }
 
   if (input.mode === "create" && input.data.id) {
-    warnings.push("id field is typically auto-generated on create — it will be ignored");
+    warn("id", "readOnly", "id field is typically auto-generated on create — it will be ignored");
   }
 
   if (
@@ -59,42 +73,50 @@ export async function validateEntityLogic(
       input.entityType
     )
   ) {
-    warnings.push(`name field is typically required for ${input.entityType} entities`);
+    warn("name", "missing", `name field is typically required for ${input.entityType} entities`);
   }
 
   if (input.entityType === "campaign") {
     if (!input.data.advertiserId && input.mode === "create") {
-      errors.push("advertiserId is required when creating a campaign");
+      err("advertiserId", "missing", "advertiserId is required when creating a campaign");
     }
   }
 
   if (input.entityType === "placement") {
     if (!input.data.campaignId && input.mode === "create") {
-      errors.push("campaignId is required when creating a placement");
+      err("campaignId", "missing", "campaignId is required when creating a placement");
     }
     if (!input.data.siteId && input.mode === "create") {
-      warnings.push("siteId is typically required when creating a placement");
+      warn("siteId", "missing", "siteId is typically required when creating a placement");
     }
   }
 
   if (input.entityType === "ad") {
     if (!input.data.campaignId && input.mode === "create") {
-      errors.push("campaignId is required when creating an ad");
+      err("campaignId", "missing", "campaignId is required when creating an ad");
     }
   }
 
   if (input.entityType === "floodlightActivity") {
     if (!input.data.floodlightConfigurationId && input.mode === "create") {
-      errors.push("floodlightConfigurationId is required when creating a floodlight activity");
+      err(
+        "floodlightConfigurationId",
+        "missing",
+        "floodlightConfigurationId is required when creating a floodlight activity"
+      );
     }
   }
 
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType: input.entityType,
     mode: input.mode,
-    errors,
-    warnings,
+    errors: errorIssues.map((i) => i.message),
+    warnings: warningIssues.map((i) => i.message),
+    issues,
     timestamp: new Date().toISOString(),
   };
 }

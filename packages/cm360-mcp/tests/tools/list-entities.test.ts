@@ -215,10 +215,11 @@ describe("listEntitiesLogic", () => {
     );
 
     expect(result.entities).toEqual(entities);
-    expect(result.totalCount).toBe(3);
+    expect(result.pagination.pageSize).toBe(3);
+    expect(result.pagination.nextPageInputKey).toBe("pageToken");
   });
 
-  it("sets has_more to true when nextPageToken present", async () => {
+  it("sets hasMore to true when nextPageToken present", async () => {
     mockState.cm360Service.listEntities.mockResolvedValue({
       entities: [{ id: "1" }],
       nextPageToken: "next-page",
@@ -229,11 +230,11 @@ describe("listEntitiesLogic", () => {
       mockContext
     );
 
-    expect(result.has_more).toBe(true);
-    expect(result.nextPageToken).toBe("next-page");
+    expect(result.pagination.hasMore).toBe(true);
+    expect(result.pagination.nextCursor).toBe("next-page");
   });
 
-  it("sets has_more to false when nextPageToken absent", async () => {
+  it("sets hasMore to false when nextPageToken absent", async () => {
     mockState.cm360Service.listEntities.mockResolvedValue({
       entities: [{ id: "1" }],
       nextPageToken: undefined,
@@ -244,7 +245,8 @@ describe("listEntitiesLogic", () => {
       mockContext
     );
 
-    expect(result.has_more).toBe(false);
+    expect(result.pagination.hasMore).toBe(false);
+    expect(result.pagination.nextCursor).toBeNull();
   });
 
   it("propagates service errors", async () => {
@@ -257,11 +259,19 @@ describe("listEntitiesLogic", () => {
 });
 
 describe("listEntitiesResponseFormatter", () => {
+  function pagination(nextCursor: string | null, pageSize: number) {
+    return {
+      nextCursor,
+      hasMore: nextCursor !== null,
+      pageSize,
+      nextPageInputKey: "pageToken",
+    };
+  }
+
   it("includes entity count", () => {
     const result = listEntitiesResponseFormatter({
       entities: [{ id: "1" }, { id: "2" }],
-      totalCount: 2,
-      has_more: false,
+      pagination: pagination(null, 2),
       timestamp: "2026-01-01T00:00:00.000Z",
     });
     expect(result[0].text).toContain("Found 2 entities");
@@ -270,20 +280,18 @@ describe("listEntitiesResponseFormatter", () => {
   it("shows pagination hint when nextPageToken present", () => {
     const result = listEntitiesResponseFormatter({
       entities: [{ id: "1" }],
-      totalCount: 1,
-      has_more: true,
-      nextPageToken: "abc123",
+      pagination: pagination("abc123", 1),
       timestamp: "2026-01-01T00:00:00.000Z",
     });
     expect(result[0].text).toContain("More results available");
     expect(result[0].text).toContain("abc123");
+    expect(result[0].text).toContain("pageToken");
   });
 
   it("shows 'No entities found' when empty", () => {
     const result = listEntitiesResponseFormatter({
       entities: [],
-      totalCount: 0,
-      has_more: false,
+      pagination: pagination(null, 0),
       timestamp: "2026-01-01T00:00:00.000Z",
     });
     expect(result[0].text).toContain("No entities found");

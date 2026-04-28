@@ -62,7 +62,9 @@ describe("listTargetingOptionsLogic", () => {
     );
 
     expect(result.options).toEqual(options);
-    expect(result.totalCount).toBe(2);
+    expect(result.pagination.pageSize).toBe(2);
+    expect(result.pagination.nextCursor).toBeNull();
+    expect(result.pagination.nextPageInputKey).toBe("pageToken");
     expect(result.timestamp).toBeDefined();
   });
 
@@ -77,10 +79,11 @@ describe("listTargetingOptionsLogic", () => {
       mockContext
     );
 
-    expect(result.nextPageToken).toBe("abc123");
+    expect(result.pagination.nextCursor).toBe("abc123");
+    expect(result.pagination.hasMore).toBe(true);
   });
 
-  it("passes undefined nextPageToken when not present", async () => {
+  it("returns null nextCursor when no token present", async () => {
     mockState.cm360Service.listTargetingOptions.mockResolvedValue({
       options: [],
     });
@@ -90,7 +93,8 @@ describe("listTargetingOptionsLogic", () => {
       mockContext
     );
 
-    expect(result.nextPageToken).toBeUndefined();
+    expect(result.pagination.nextCursor).toBeNull();
+    expect(result.pagination.hasMore).toBe(false);
   });
 
   it("calls cm360Service.listTargetingOptions with all params", async () => {
@@ -127,10 +131,19 @@ describe("listTargetingOptionsLogic", () => {
 });
 
 describe("listTargetingOptionsResponseFormatter", () => {
+  function pagination(nextCursor: string | null, pageSize: number) {
+    return {
+      nextCursor,
+      hasMore: nextCursor !== null,
+      pageSize,
+      nextPageInputKey: "pageToken",
+    };
+  }
+
   it("shows count and options", () => {
     const result = listTargetingOptionsResponseFormatter({
       options: [{ id: "1", name: "Chrome" }],
-      totalCount: 1,
+      pagination: pagination(null, 1),
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
@@ -142,19 +155,19 @@ describe("listTargetingOptionsResponseFormatter", () => {
   it("shows pagination hint when nextPageToken present", () => {
     const result = listTargetingOptionsResponseFormatter({
       options: [{ id: "1" }],
-      nextPageToken: "next-page",
-      totalCount: 1,
+      pagination: pagination("next-page", 1),
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 
     expect(result[0].text).toContain("More results available");
     expect(result[0].text).toContain("next-page");
+    expect(result[0].text).toContain("pageToken");
   });
 
   it("shows 'No options found' when empty", () => {
     const result = listTargetingOptionsResponseFormatter({
       options: [],
-      totalCount: 0,
+      pagination: pagination(null, 0),
       timestamp: "2026-01-01T00:00:00.000Z",
     });
 

@@ -12,7 +12,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
   StoredReportBodyOutputSchema,
-  spillCsvToGcs,
+  spillBodyToGcs,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -81,7 +81,7 @@ export async function downloadReportLogic(
     input,
     sessionId: sdkContext?.sessionId,
     reportCsvStore,
-    spillCsvToGcs,
+    spillBodyToGcs,
     spillServer: "snapchat",
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: SNAPCHAT_COMPUTED_METRIC_ALIASES,

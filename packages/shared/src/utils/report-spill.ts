@@ -30,17 +30,21 @@ export const DEFAULT_SPILL_THRESHOLD_ROWS = 100_000;
 /** Default signed URL TTL: 1 hour. */
 export const DEFAULT_SIGNED_URL_TTL_SECONDS = 3600;
 
-export interface SpillCsvOptions {
-  /** Raw CSV (or JSON) body to potentially spill. */
-  csv: string;
+export interface SpillBodyOptions {
+  /** Raw body (CSV, JSON, or any text) to potentially spill. */
+  body: string;
   /** MIME type stored with the GCS object. Defaults to `text/csv`. */
   mimeType?: string;
   /** Session ID used to scope the object path — enables session-cleanup sweeps. */
   sessionId?: string;
   /** Server slug (`ttd`, `pinterest`, …). Used as the first GCS path segment. */
   server: string;
-  /** Report identifier. Used as the final GCS path segment. */
-  reportId: string;
+  /**
+   * Stable identifier — used as the final GCS path segment. For report bodies
+   * pass the reportId; for query/graphql bodies pass a query identifier or
+   * a hash of the request.
+   */
+  objectId: string;
   /** Parsed row count. When provided and >= row threshold, spill triggers. */
   rowCount?: number;
   /** Override byte threshold (default 16 MB). */
@@ -87,29 +91,29 @@ function readNumericEnv(name: string): number | undefined {
 
 /**
  * Build the GCS object path. Sessioned objects live under
- * `{server}/{sessionId}/{reportId}-{timestamp}.csv` so session-end cleanup
+ * `{server}/{sessionId}/{objectId}-{timestamp}.{ext}` so session-end cleanup
  * can delete the whole session prefix in one call.
  */
-function buildObjectName(opts: SpillCsvOptions): string {
+function buildObjectName(opts: SpillBodyOptions): string {
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
   const ext = opts.mimeType?.includes("json") ? "json" : "csv";
-  const safeReportId = opts.reportId.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeObjectId = opts.objectId.replace(/[^a-zA-Z0-9._-]/g, "_");
   const sessionSegment = opts.sessionId
     ? `${opts.sessionId.replace(/[^a-zA-Z0-9._-]/g, "_")}/`
     : "";
-  return `${opts.server}/${sessionSegment}${safeReportId}-${ts}.${ext}`;
+  return `${opts.server}/${sessionSegment}${safeObjectId}-${ts}.${ext}`;
 }
 
 /**
- * Spill a CSV body to GCS when `REPORT_SPILL_BUCKET` is set and the payload
- * exceeds one of the configured thresholds. Otherwise returns
- * `{ disabled: true, ... }` immediately with no GCS work.
+ * Spill a body (CSV, JSON, or any text) to GCS when `REPORT_SPILL_BUCKET` is
+ * set and the payload exceeds one of the configured thresholds. Otherwise
+ * returns `{ disabled: true, ... }` immediately with no GCS work.
  *
  * The helper never throws: every failure is captured as
  * `{ error: <message> }` so callers can always continue to return a
  * bounded view to the MCP client.
  */
-export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult> {
+export async function spillBodyToGcs(opts: SpillBodyOptions): Promise<SpillResult> {
   const bucketName = process.env[REPORT_SPILL_ENV.BUCKET];
   if (!bucketName) {
     return { disabled: true, reason: "bucket-not-set" };
@@ -124,7 +128,7 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
     readNumericEnv(REPORT_SPILL_ENV.THRESHOLD_ROWS) ??
     DEFAULT_SPILL_THRESHOLD_ROWS;
 
-  const bytes = Buffer.byteLength(opts.csv, "utf8");
+  const bytes = Buffer.byteLength(opts.body, "utf8");
   const underByteThreshold = bytes < thresholdBytes;
   const underRowThreshold = opts.rowCount === undefined ? true : opts.rowCount < thresholdRows;
 
@@ -159,7 +163,7 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
     };
     const bucket = storage.bucket(bucketName);
     const file = bucket.file(objectName);
-    await file.save(opts.csv, { contentType: mimeType, resumable: false });
+    await file.save(opts.body, { contentType: mimeType, resumable: false });
 
     const expiresAtMs = Date.now() + ttl * 1000;
     const [signedUrl] = await file.getSignedUrl({
@@ -170,7 +174,7 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
     const log = opts.logger ?? defaultLogger;
     log.info(
       { bucket: bucketName, objectName, bytes, rowCount: opts.rowCount },
-      "Report CSV spilled to GCS"
+      "Body spilled to GCS"
     );
 
     return {
@@ -188,10 +192,89 @@ export async function spillCsvToGcs(opts: SpillCsvOptions): Promise<SpillResult>
     const log = opts.logger ?? defaultLogger;
     log.warn(
       { err, bucket: bucketName, objectName },
-      "Report CSV spill to GCS failed; continuing with bounded-view only"
+      "Body spill to GCS failed; continuing with bounded-view only"
     );
     return { error: message };
   }
+}
+
+// ---------------------------------------------------------------------------
+// JSON convenience wrapper
+// ---------------------------------------------------------------------------
+
+export interface SpillJsonOptions extends Omit<SpillBodyOptions, "body" | "mimeType"> {
+  /** Arbitrary JSON-serializable value to potentially spill. */
+  value: unknown;
+  /** Pretty-print indent. Defaults to 2 spaces. Pass 0 for compact. */
+  jsonIndent?: number;
+}
+
+/**
+ * Spill an arbitrary JSON-serializable value. Stringifies with the configured
+ * indent and delegates to {@link spillBodyToGcs} with `mimeType="application/json"`.
+ */
+export async function spillJson(opts: SpillJsonOptions): Promise<SpillResult> {
+  const indent = opts.jsonIndent ?? 2;
+  const body = JSON.stringify(opts.value, null, indent);
+  return spillBodyToGcs({
+    ...opts,
+    body,
+    mimeType: "application/json",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Bounded-view text helper
+// ---------------------------------------------------------------------------
+
+export interface FormatBoundedTextOptions {
+  /** Full body text (e.g., pretty-printed JSON). */
+  fullText: string;
+  /** Spill outcome. When `spilled: true`, signedUrl is appended. */
+  spill: SpillResult;
+  /**
+   * Maximum number of bytes of `fullText` to inline when the body was spilled.
+   * Defaults to 4_000 (≈ ~1k tokens of context).
+   */
+  inlinePreviewBytes?: number;
+  /**
+   * Optional label for the kind of body being spilled, used in the truncation
+   * marker. Defaults to "response".
+   */
+  bodyLabel?: string;
+}
+
+/**
+ * Render a bounded text view of a body that may have been spilled to GCS.
+ *
+ * - When the body fits inline: returns the full text unchanged.
+ * - When the body was spilled: returns a truncated preview followed by a
+ *   line pointing the model at the signed URL for the full body.
+ * - When the spill failed: returns the full text plus a one-line warning.
+ *   The model still gets the data; the warning is for diagnostic visibility.
+ */
+export function formatBoundedText(opts: FormatBoundedTextOptions): string {
+  const previewBytes = opts.inlinePreviewBytes ?? 4_000;
+  const label = opts.bodyLabel ?? "response";
+
+  if ("spilled" in opts.spill && opts.spill.spilled) {
+    const truncated =
+      opts.fullText.length > previewBytes
+        ? opts.fullText.slice(0, previewBytes) + "\n... (truncated; full body in GCS)"
+        : opts.fullText;
+    return (
+      `${truncated}\n\n` +
+      `Full ${label} (${opts.spill.bytes} bytes) spilled to GCS. Fetch via signed URL ` +
+      `(expires ${opts.spill.expiresAt}):\n${opts.spill.signedUrl}`
+    );
+  }
+
+  if ("error" in opts.spill) {
+    return `${opts.fullText}\n\nNote: spill to GCS failed — ${opts.spill.error}. Body is inlined.`;
+  }
+
+  // disabled (bucket unset or under threshold)
+  return opts.fullText;
 }
 
 /**

@@ -106,8 +106,10 @@ export async function createMcpServer(
       },
       instructions:
         "The Trade Desk campaign management, workflows, and reporting server. Supports first-class CRUD entities, workflow-oriented campaign/ad group operations, standard jobs, REST/GraphQL passthrough, and MyReports reporting. " +
-        "Use ttd_list_entities for core entity discovery, workflow tools for richer campaign/ad group operations, and ttd_get_report or report schedule tools for reporting. " +
-        "See MCP Resources for hierarchy docs and report field references.",
+        "Progressive discovery: (1) start with ttd_get_context to resolve partner/advertiser IDs for the current credentials, then ttd_list_entities for entity discovery; " +
+        "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for parent/child rules, entity-examples://all for payload examples, graphql-reference://ttd for GraphQL passthrough, and report-reference://all for MyReports field semantics; " +
+        "(3) for multi-step flows use MCP Prompts: ttd_campaign_setup_workflow, ttd_targeting_discovery_workflow, ttd_entity_update_workflow, ttd_bulk_operations_workflow, ttd_entity_duplication_workflow. " +
+        "Prefer Workflows tools (ttd_create_campaign_workflow, ttd_create_ad_group_workflow, *_job variants) over raw REST for campaign/ad group writes.",
     }
   );
 

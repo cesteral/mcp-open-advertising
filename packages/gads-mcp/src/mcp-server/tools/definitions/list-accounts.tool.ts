@@ -20,9 +20,6 @@ export const ListAccountsOutputSchema = z
   .object({
     resourceNames: z.array(z.string()).describe("Account resource names (customers/{id})"),
     customerIds: z.array(z.string()).describe("Extracted customer IDs"),
-    has_more: z
-      .boolean()
-      .describe("Whether more results are available (always false for this endpoint)"),
     timestamp: z.string().datetime(),
   })
   .describe("Accessible accounts list");
@@ -48,7 +45,6 @@ export async function listAccountsLogic(
   return {
     resourceNames: result.resourceNames,
     customerIds,
-    has_more: false,
     timestamp: new Date().toISOString(),
   };
 }

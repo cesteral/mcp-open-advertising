@@ -3,7 +3,13 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { fromTtdSchedule, ReportScheduleSummarySchema } from "@cesteral/shared";
+import {
+  fromTtdSchedule,
+  ReportScheduleSummarySchema,
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_list_report_schedules";
@@ -49,9 +55,7 @@ export const ListReportSchedulesOutputSchema = z
       .array(z.record(z.unknown()))
       .optional()
       .describe("Raw TTD schedule envelopes (kept for platform-specific debugging)"),
-    totalCount: z.number().optional(),
-    pageSize: z.number(),
-    pageStartIndex: z.number(),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("List of report schedules (normalized to ReportScheduleSummary)");
@@ -89,13 +93,19 @@ export async function listReportSchedulesLogic(
   const rawSchedules = (result.Result as Array<Record<string, unknown>>) ?? [];
   const totalCount = result.TotalFilteredCount as number | undefined;
   const schedules = rawSchedules.map((r) => fromTtdSchedule(r));
+  const hasMore =
+    totalCount !== undefined ? pageStartIndex + schedules.length < totalCount : false;
+  const nextStartIndex = pageStartIndex + schedules.length;
 
   return {
     schedules,
     raw: rawSchedules,
-    totalCount,
-    pageSize,
-    pageStartIndex,
+    pagination: buildPaginationOutput({
+      nextCursor: hasMore ? String(nextStartIndex) : null,
+      pageSize: schedules.length,
+      totalCount,
+      nextPageInputKey: "pageStartIndex",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -112,13 +122,14 @@ export function listReportSchedulesResponseFormatter(
     ];
   }
 
+  const { pageSize, totalCount } = result.pagination;
   return [
     {
       type: "text" as const,
       text:
-        `Found ${result.schedules.length} report schedule(s)` +
-        (result.totalCount !== undefined ? ` (${result.totalCount} total)` : "") +
-        `:\n\n${JSON.stringify(result.schedules, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+        `Found ${pageSize} report schedule(s)` +
+        (totalCount !== undefined ? ` (${totalCount} total)` : "") +
+        `:\n\n${JSON.stringify(result.schedules, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

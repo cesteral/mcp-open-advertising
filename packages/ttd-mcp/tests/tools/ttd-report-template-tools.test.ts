@@ -199,27 +199,9 @@ describe("ttd report template tools", () => {
       expect.any(Object)
     );
     expect(result.templates).toHaveLength(1);
-    expect(result.hasNextPage).toBe(true);
-    expect(result.endCursor).toBe("cursor-2");
-  });
-
-  it("falls back to the legacy REST listing when pageStartIndex is used", async () => {
-    mockTtdReportingService.listReportTemplates.mockResolvedValueOnce({
-      Result: [{ ReportTemplateId: "tpl-legacy" }],
-      TotalFilteredCount: 1,
-    });
-
-    const result = await listReportTemplatesLogic(
-      { pageSize: 10, pageStartIndex: 10 },
-      createMockContext(),
-      createMockSdkContext()
-    );
-
-    expect(mockTtdReportingService.listReportTemplates).toHaveBeenCalledWith(
-      { PageSize: 10, PageStartIndex: 10 },
-      expect.any(Object)
-    );
-    expect(mockTtdService.graphqlQuery).not.toHaveBeenCalled();
-    expect(result.templates).toEqual([{ ReportTemplateId: "tpl-legacy" }]);
+    expect(result.pagination.hasMore).toBe(true);
+    expect(result.pagination.nextCursor).toBe("cursor-2");
+    expect(result.pagination.nextPageInputKey).toBe("after");
+    expect(result.pagination.totalCount).toBe(2);
   });
 });

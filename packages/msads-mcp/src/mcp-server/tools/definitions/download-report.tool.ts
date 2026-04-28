@@ -12,7 +12,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
   StoredReportBodyOutputSchema,
-  spillCsvToGcs,
+  spillBodyToGcs,
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
@@ -68,7 +68,7 @@ export async function downloadReportLogic(
     input,
     sessionId: sdkContext?.sessionId,
     reportCsvStore,
-    spillCsvToGcs,
+    spillBodyToGcs,
     spillServer: "microsoft",
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: MSADS_COMPUTED_METRIC_ALIASES,

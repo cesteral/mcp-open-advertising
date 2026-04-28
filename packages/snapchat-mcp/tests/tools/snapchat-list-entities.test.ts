@@ -64,12 +64,13 @@ describe("snapchat_list_entities tool", () => {
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.has_more).toBe(false);
-      expect(result.nextCursor).toBeUndefined();
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.nextCursor).toBeNull();
+      expect(result.pagination.nextPageInputKey).toBe("cursor");
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates has_more when nextCursor is present", async () => {
+    it("indicates hasMore when nextCursor is present", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [{ id: "c1" }],
         nextCursor: "cursor_abc123",
@@ -84,8 +85,8 @@ describe("snapchat_list_entities tool", () => {
         baseSdkContext
       );
 
-      expect(result.has_more).toBe(true);
-      expect(result.nextCursor).toBe("cursor_abc123");
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.nextCursor).toBe("cursor_abc123");
     });
 
     it("passes campaignId filter when provided for adGroup listing", async () => {
@@ -114,11 +115,19 @@ describe("snapchat_list_entities tool", () => {
   });
 
   describe("listEntitiesResponseFormatter()", () => {
+    function pagination(nextCursor: string | null, pageSize: number) {
+      return {
+        nextCursor,
+        hasMore: nextCursor !== null,
+        pageSize,
+        nextPageInputKey: "cursor",
+      };
+    }
+
     it("formats results with entity count", () => {
       const result = {
         entities: [{ id: "c1" }],
-        has_more: false,
-        nextCursor: undefined,
+        pagination: pagination(null, 1),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -131,8 +140,7 @@ describe("snapchat_list_entities tool", () => {
     it("indicates no entities found", () => {
       const result = {
         entities: [],
-        has_more: false,
-        nextCursor: undefined,
+        pagination: pagination(null, 0),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -140,18 +148,17 @@ describe("snapchat_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows next page hint when has_more is true", () => {
+    it("shows next page hint when hasMore is true", () => {
       const result = {
         entities: [{ id: "c1" }],
-        has_more: true,
-        nextCursor: "next_cursor_xyz",
+        pagination: pagination("next_cursor_xyz", 1),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
       const formatted = listEntitiesResponseFormatter(result);
       expect((formatted[0] as any).text).toContain("More results available");
       expect((formatted[0] as any).text).toContain("next_cursor_xyz");
-      expect((formatted[0] as any).text).toContain("next page link");
+      expect((formatted[0] as any).text).toContain("cursor");
     });
   });
 

@@ -14,8 +14,9 @@ import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapp
 import type { RequestContext } from "@cesteral/shared";
 import {
   type FieldRule,
-  validateRequiredFields,
-  checkReadOnlyFields,
+  type ValidationIssue,
+  validateRequiredFieldsStructured,
+  checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -40,17 +41,42 @@ reasons (e.g., invalid objective/placement combinations).`;
 // Required-field definitions per entity type (create mode)
 // ---------------------------------------------------------------------------
 
+const STATUS_VALUES = ["ACTIVE", "PAUSED"] as const;
+const AD_SQUAD_TYPE_VALUES = ["SNAP_ADS"] as const;
+const PLACEMENT_VALUES = ["SNAP_ADS", "CONTENT"] as const;
+const AD_TYPE_VALUES = ["SNAP_AD"] as const;
+
 const REQUIRED_FIELDS_CREATE: Record<SnapchatEntityType, FieldRule[]> = {
   campaign: [
     { field: "name", expectedType: "string" },
-    { field: "status", expectedType: "string", hint: "ACTIVE or PAUSED" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "ACTIVE or PAUSED",
+      suggestedValues: STATUS_VALUES,
+    },
   ],
   adGroup: [
     { field: "campaign_id", expectedType: "string" },
     { field: "name", expectedType: "string" },
-    { field: "status", expectedType: "string", hint: "ACTIVE or PAUSED" },
-    { field: "type", expectedType: "string", hint: "e.g. SNAP_ADS" },
-    { field: "placement", expectedType: "string", hint: "e.g. SNAP_ADS or CONTENT" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "ACTIVE or PAUSED",
+      suggestedValues: STATUS_VALUES,
+    },
+    {
+      field: "type",
+      expectedType: "string",
+      hint: "e.g. SNAP_ADS",
+      suggestedValues: AD_SQUAD_TYPE_VALUES,
+    },
+    {
+      field: "placement",
+      expectedType: "string",
+      hint: "e.g. SNAP_ADS or CONTENT",
+      suggestedValues: PLACEMENT_VALUES,
+    },
     { field: "optimization_goal", expectedType: "string" },
     { field: "targeting", expectedType: "object" },
   ],
@@ -58,8 +84,18 @@ const REQUIRED_FIELDS_CREATE: Record<SnapchatEntityType, FieldRule[]> = {
     { field: "ad_squad_id", expectedType: "string" },
     { field: "name", expectedType: "string" },
     { field: "creative_id", expectedType: "string" },
-    { field: "type", expectedType: "string", hint: "e.g. SNAP_AD" },
-    { field: "status", expectedType: "string", hint: "ACTIVE or PAUSED" },
+    {
+      field: "type",
+      expectedType: "string",
+      hint: "e.g. SNAP_AD",
+      suggestedValues: AD_TYPE_VALUES,
+    },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "ACTIVE or PAUSED",
+      suggestedValues: STATUS_VALUES,
+    },
   ],
   creative: [
     { field: "name", expectedType: "string" },
@@ -85,13 +121,33 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a Snapchat Ads entity payload");
 
+const ValidationIssueSchema = z
+  .object({
+    field: z.string(),
+    code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+    message: z.string(),
+    hint: z.string().optional(),
+    suggestedValues: z.array(z.string()).optional(),
+    severity: z.enum(["error", "warning"]).optional(),
+  })
+  .describe("Structured validation issue");
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the payload passed validation"),
     entityType: z.string(),
     mode: z.string(),
-    errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
-    warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    errors: z.array(z.string()).describe("Flat error messages (mirrors issues with severity=error)"),
+    warnings: z
+      .array(z.string())
+      .describe("Flat warning messages (mirrors issues with severity=warning)"),
+    issues: z
+      .array(ValidationIssueSchema)
+      .describe("Structured per-field issues with hints and suggested values"),
+    nextAction: z
+      .string()
+      .optional()
+      .describe("One-line guidance on what to do next when validation fails"),
     timestamp: z.string().datetime(),
   })
   .describe("Validation result");
@@ -113,46 +169,69 @@ export async function validateEntityLogic(
   _sdkContext?: SdkContext
 ): Promise<ValidateEntityOutput> {
   const { entityType, mode, data } = input;
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
 
   if (mode === "create") {
     const rules = REQUIRED_FIELDS_CREATE[entityType as SnapchatEntityType] ?? [];
-    errors.push(...validateRequiredFields(data, rules));
+    issues.push(...validateRequiredFieldsStructured(data, rules));
 
     if (
       entityType === "campaign" &&
       data.daily_budget_micro === undefined &&
       data.lifetime_spend_cap_micro === undefined
     ) {
-      errors.push(
-        'Campaign create requires either "daily_budget_micro" or "lifetime_spend_cap_micro"'
-      );
+      issues.push({
+        field: "daily_budget_micro",
+        code: "missing",
+        message:
+          'Campaign create requires either "daily_budget_micro" or "lifetime_spend_cap_micro"',
+        suggestedValues: ["daily_budget_micro", "lifetime_spend_cap_micro"],
+        severity: "error",
+      });
     }
     if (
       entityType === "adGroup" &&
       data.daily_budget_micro === undefined &&
       data.lifetime_budget_micro === undefined
     ) {
-      errors.push(
-        'Ad group create requires either "daily_budget_micro" or "lifetime_budget_micro"'
-      );
+      issues.push({
+        field: "daily_budget_micro",
+        code: "missing",
+        message: 'Ad group create requires either "daily_budget_micro" or "lifetime_budget_micro"',
+        suggestedValues: ["daily_budget_micro", "lifetime_budget_micro"],
+        severity: "error",
+      });
     }
   }
 
   if (mode === "update") {
     if (Object.keys(data).length === 0) {
-      errors.push("Update payload must contain at least one field to update");
+      issues.push({
+        field: "data",
+        code: "custom",
+        message: "Update payload must contain at least one field to update",
+        severity: "error",
+      });
     }
     if (entityType === "adGroup" && !input.campaignId) {
-      errors.push("campaignId is required to route adGroup updates");
+      issues.push({
+        field: "campaignId",
+        code: "missing",
+        message: "campaignId is required to route adGroup updates",
+        severity: "error",
+      });
     }
     if (entityType === "ad" && !input.adSquadId) {
-      errors.push("adSquadId is required to route ad updates");
+      issues.push({
+        field: "adSquadId",
+        code: "missing",
+        message: "adSquadId is required to route ad updates",
+        severity: "error",
+      });
     }
 
-    warnings.push(
-      ...checkReadOnlyFields(
+    issues.push(
+      ...checkReadOnlyFieldsStructured(
         data,
         READ_ONLY_FIELDS,
         (field) => `Field "${field}" is a system field and may be ignored by the API on update`
@@ -160,7 +239,7 @@ export async function validateEntityLogic(
     );
   }
 
-  // Budget warnings (both modes)
+  // Budget validation (both modes)
   for (const budgetField of [
     "daily_budget_micro",
     "lifetime_budget_micro",
@@ -169,16 +248,37 @@ export async function validateEntityLogic(
   ]) {
     const budgetValue = data[budgetField];
     if (budgetValue !== undefined && typeof budgetValue === "number" && budgetValue <= 0) {
-      errors.push(`Field "${budgetField}" must be a positive number`);
+      issues.push({
+        field: budgetField,
+        code: "invalidValue",
+        message: `Field "${budgetField}" must be a positive number`,
+        severity: "error",
+      });
+    }
+  }
+
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
+  let nextAction: string | undefined;
+  if (errorIssues.length > 0) {
+    if (entityType === "adGroup" && errorIssues.some((i) => i.field === "campaign_id")) {
+      nextAction =
+        "Call snapchat_list_entities with entityType='campaign' to find a campaign_id for the parent campaign.";
+    } else if (entityType === "ad" && errorIssues.some((i) => i.field === "ad_squad_id")) {
+      nextAction =
+        "Call snapchat_list_entities with entityType='adGroup' to find an ad_squad_id (ad squads are listed as adGroup entities).";
     }
   }
 
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType,
     mode,
-    errors,
-    warnings,
+    errors: errorIssues.map((i) => i.message),
+    warnings: warningIssues.map((i) => i.message),
+    issues,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

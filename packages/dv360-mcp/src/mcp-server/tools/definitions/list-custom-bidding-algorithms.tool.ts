@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -93,9 +98,7 @@ export const ListCustomBiddingAlgorithmsOutputSchema = z
         })
       )
       .describe("List of algorithms"),
-    totalCount: z.number(),
-    nextPageToken: z.string().optional(),
-    has_more: z.boolean().describe("Whether more results are available via pagination"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("List custom bidding algorithms result");
@@ -150,9 +153,11 @@ export async function listCustomBiddingAlgorithmsLogic(
 
   return {
     algorithms,
-    totalCount: algorithms.length,
-    nextPageToken,
-    has_more: !!nextPageToken,
+    pagination: buildPaginationOutput({
+      nextCursor: nextPageToken,
+      pageSize: algorithms.length,
+      nextPageInputKey: "pageToken",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -163,7 +168,7 @@ export async function listCustomBiddingAlgorithmsLogic(
 export function listCustomBiddingAlgorithmsResponseFormatter(
   result: ListCustomBiddingAlgorithmsOutput
 ): McpTextContent[] {
-  let message = `**Custom Bidding Algorithms (${result.totalCount}):**\n\n`;
+  let message = `**Custom Bidding Algorithms (${result.pagination.pageSize}):**\n\n`;
 
   if (result.algorithms.length === 0) {
     message += `No algorithms found.\n`;
@@ -194,9 +199,7 @@ export function listCustomBiddingAlgorithmsResponseFormatter(
     }
   }
 
-  if (result.nextPageToken) {
-    message += `\n> More results available. Use pageToken: "${result.nextPageToken}" to fetch next page.\n`;
-  }
+  message += formatPaginationHint(result.pagination);
 
   message += `\nTimestamp: ${result.timestamp}`;
 

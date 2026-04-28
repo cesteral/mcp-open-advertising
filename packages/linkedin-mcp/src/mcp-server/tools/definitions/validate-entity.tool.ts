@@ -13,8 +13,9 @@ import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapp
 import type { RequestContext } from "@cesteral/shared";
 import {
   type FieldRule,
-  validateRequiredFields,
-  checkReadOnlyFields,
+  type ValidationIssue,
+  validateRequiredFieldsStructured,
+  checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -94,6 +95,15 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a LinkedIn Ads entity payload");
 
+const ValidationIssueSchema = z.object({
+  field: z.string(),
+  code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+  message: z.string(),
+  hint: z.string().optional(),
+  suggestedValues: z.array(z.string()).optional(),
+  severity: z.enum(["error", "warning"]).optional(),
+});
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the payload passed validation"),
@@ -101,6 +111,8 @@ export const ValidateEntityOutputSchema = z
     mode: z.string().describe("Validation mode (create or update)"),
     errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
     warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    issues: z.array(ValidationIssueSchema),
+    nextAction: z.string().optional(),
     timestamp: z.string().datetime().describe("ISO-8601 timestamp of validation"),
   })
   .describe("Validation result");
@@ -122,31 +134,38 @@ export async function validateEntityLogic(
   _sdkContext?: SdkContext
 ): Promise<ValidateEntityOutput> {
   const { entityType, mode, data } = input;
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
 
   if (mode === "create") {
     const rules = REQUIRED_FIELDS_CREATE[entityType as LinkedInEntityType] ?? [];
-    errors.push(...validateRequiredFields(data, rules));
+    issues.push(...validateRequiredFieldsStructured(data, rules));
 
     // Validate URN format for known URN fields
     const urnFields = ["account", "campaignGroup", "campaign"];
     for (const field of urnFields) {
       const value = data[field];
       if (value && typeof value === "string" && !value.startsWith("urn:li:")) {
-        warnings.push(
-          `Field "${field}" value "${value}" doesn't look like a LinkedIn URN. Expected format: urn:li:{type}:{id}`
-        );
+        issues.push({
+          field,
+          code: "invalidValue",
+          message: `Field "${field}" value "${value}" doesn't look like a LinkedIn URN. Expected format: urn:li:{type}:{id}`,
+          severity: "warning",
+        });
       }
     }
   }
 
   if (mode === "update") {
     if (Object.keys(data).length === 0) {
-      errors.push("Update payload must contain at least one field to update");
+      issues.push({
+        field: "data",
+        code: "custom",
+        message: "Update payload must contain at least one field to update",
+        severity: "error",
+      });
     }
 
-    warnings.push(...checkReadOnlyFields(data, READ_ONLY_FIELDS));
+    issues.push(...checkReadOnlyFieldsStructured(data, READ_ONLY_FIELDS));
   }
 
   // Budget amount format warnings (both modes)
@@ -156,19 +175,26 @@ export async function validateEntityLogic(
     if (value !== undefined && typeof value === "object" && value !== null) {
       const budgetObj = value as Record<string, unknown>;
       if (!budgetObj.amount || !budgetObj.currencyCode) {
-        warnings.push(
-          `Field "${field}" should be an object with "amount" (string) and "currencyCode" (e.g., USD). Got: ${JSON.stringify(value)}`
-        );
+        issues.push({
+          field,
+          code: "wrongType",
+          message: `Field "${field}" should be an object with "amount" (string) and "currencyCode" (e.g., USD). Got: ${JSON.stringify(value)}`,
+          severity: "warning",
+        });
       }
     }
   }
 
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType,
     mode,
-    errors,
-    warnings,
+    errors: errorIssues.map((i) => i.message),
+    warnings: warningIssues.map((i) => i.message),
+    issues,
     timestamp: new Date().toISOString(),
   };
 }

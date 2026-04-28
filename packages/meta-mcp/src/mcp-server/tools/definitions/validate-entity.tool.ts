@@ -14,8 +14,9 @@ import { getEntityTypeEnum, type MetaEntityType } from "../utils/entity-mapping.
 import type { RequestContext } from "@cesteral/shared";
 import {
   type FieldRule,
-  validateRequiredFields,
-  checkReadOnlyFields,
+  type ValidationIssue,
+  validateRequiredFieldsStructured,
+  checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -38,6 +39,27 @@ business-rule reasons (e.g., invalid objective/optimization_goal combinations).`
 // Required-field definitions per entity type (create mode)
 // ---------------------------------------------------------------------------
 
+const CAMPAIGN_OBJECTIVES = [
+  "OUTCOME_AWARENESS",
+  "OUTCOME_TRAFFIC",
+  "OUTCOME_ENGAGEMENT",
+  "OUTCOME_LEADS",
+  "OUTCOME_APP_PROMOTION",
+  "OUTCOME_SALES",
+] as const;
+const STATUS_VALUES = ["ACTIVE", "PAUSED", "DELETED", "ARCHIVED"] as const;
+const ADSET_OPTIMIZATION_GOALS = [
+  "LINK_CLICKS",
+  "IMPRESSIONS",
+  "REACH",
+  "POST_ENGAGEMENT",
+  "OFFSITE_CONVERSIONS",
+  "VALUE",
+  "THRUPLAY",
+] as const;
+const ADSET_BILLING_EVENTS = ["IMPRESSIONS", "LINK_CLICKS", "THRUPLAY"] as const;
+const CUSTOM_AUDIENCE_SUBTYPES = ["CUSTOM", "LOOKALIKE", "WEBSITE", "APP", "ENGAGEMENT"] as const;
+
 const REQUIRED_FIELDS_CREATE: Record<MetaEntityType, FieldRule[]> = {
   campaign: [
     { field: "name", expectedType: "string" },
@@ -45,6 +67,7 @@ const REQUIRED_FIELDS_CREATE: Record<MetaEntityType, FieldRule[]> = {
       field: "objective",
       expectedType: "string",
       hint: "e.g., OUTCOME_AWARENESS, OUTCOME_TRAFFIC",
+      suggestedValues: CAMPAIGN_OBJECTIVES,
     },
     {
       field: "special_ad_categories",
@@ -55,21 +78,46 @@ const REQUIRED_FIELDS_CREATE: Record<MetaEntityType, FieldRule[]> = {
   adSet: [
     { field: "name", expectedType: "string" },
     { field: "campaign_id", expectedType: "string" },
-    { field: "optimization_goal", expectedType: "string", hint: "e.g., LINK_CLICKS, IMPRESSIONS" },
-    { field: "billing_event", expectedType: "string", hint: "e.g., IMPRESSIONS, LINK_CLICKS" },
+    {
+      field: "optimization_goal",
+      expectedType: "string",
+      hint: "e.g., LINK_CLICKS, IMPRESSIONS",
+      suggestedValues: ADSET_OPTIMIZATION_GOALS,
+    },
+    {
+      field: "billing_event",
+      expectedType: "string",
+      hint: "e.g., IMPRESSIONS, LINK_CLICKS",
+      suggestedValues: ADSET_BILLING_EVENTS,
+    },
     { field: "targeting", expectedType: "object", hint: "must be an object with targeting spec" },
-    { field: "status", expectedType: "string", hint: "e.g., PAUSED, ACTIVE" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "e.g., PAUSED, ACTIVE",
+      suggestedValues: STATUS_VALUES,
+    },
   ],
   ad: [
     { field: "name", expectedType: "string" },
     { field: "adset_id", expectedType: "string" },
     { field: "creative", expectedType: "object", hint: "must be an object with creative_id" },
-    { field: "status", expectedType: "string", hint: "e.g., PAUSED, ACTIVE" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "e.g., PAUSED, ACTIVE",
+      suggestedValues: STATUS_VALUES,
+    },
   ],
   adCreative: [{ field: "name", expectedType: "string" }],
   customAudience: [
     { field: "name", expectedType: "string" },
-    { field: "subtype", expectedType: "string", hint: "e.g., CUSTOM, LOOKALIKE, WEBSITE" },
+    {
+      field: "subtype",
+      expectedType: "string",
+      hint: "e.g., CUSTOM, LOOKALIKE, WEBSITE",
+      suggestedValues: CUSTOM_AUDIENCE_SUBTYPES,
+    },
   ],
 };
 
@@ -101,13 +149,33 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a Meta Ads entity payload");
 
+const ValidationIssueSchema = z
+  .object({
+    field: z.string(),
+    code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+    message: z.string(),
+    hint: z.string().optional(),
+    suggestedValues: z.array(z.string()).optional(),
+    severity: z.enum(["error", "warning"]).optional(),
+  })
+  .describe("Structured validation issue");
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the payload passed validation"),
     entityType: z.string().describe("Entity type that was validated"),
     mode: z.string().describe("Validation mode (create or update)"),
-    errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
-    warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    errors: z.array(z.string()).describe("Flat error messages (mirrors issues with severity=error)"),
+    warnings: z
+      .array(z.string())
+      .describe("Flat warning messages (mirrors issues with severity=warning)"),
+    issues: z
+      .array(ValidationIssueSchema)
+      .describe("Structured per-field issues with hints and suggested values"),
+    nextAction: z
+      .string()
+      .optional()
+      .describe("One-line guidance on what to do next when validation fails"),
     timestamp: z.string().datetime().describe("ISO-8601 timestamp of validation"),
   })
   .describe("Validation result");
@@ -129,13 +197,12 @@ export async function validateEntityLogic(
   _sdkContext?: SdkContext
 ): Promise<ValidateEntityOutput> {
   const { entityType, mode, data } = input;
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
 
   if (mode === "create") {
     // ── Required-field checks ──────────────────────────────────────────
     const rules = REQUIRED_FIELDS_CREATE[entityType as MetaEntityType] ?? [];
-    errors.push(...validateRequiredFields(data, rules));
+    issues.push(...validateRequiredFieldsStructured(data, rules));
 
     // ── Ad-specific: creative must contain creative_id ─────────────────
     if (
@@ -145,7 +212,12 @@ export async function validateEntityLogic(
       !Array.isArray(data.creative)
     ) {
       if (!(data.creative as Record<string, unknown>).creative_id) {
-        errors.push('Field "creative" object must contain "creative_id"');
+        issues.push({
+          field: "creative.creative_id",
+          code: "missing",
+          message: 'Field "creative" object must contain "creative_id"',
+          severity: "error",
+        });
       }
     }
   }
@@ -153,11 +225,16 @@ export async function validateEntityLogic(
   if (mode === "update") {
     // ── Data must not be empty ─────────────────────────────────────────
     if (Object.keys(data).length === 0) {
-      errors.push("Update payload must contain at least one field to update");
+      issues.push({
+        field: "data",
+        code: "custom",
+        message: "Update payload must contain at least one field to update",
+        severity: "error",
+      });
     }
 
     // ── Warn about read-only fields ────────────────────────────────────
-    warnings.push(...checkReadOnlyFields(data, READ_ONLY_FIELDS));
+    issues.push(...checkReadOnlyFieldsStructured(data, READ_ONLY_FIELDS));
   }
 
   // ── Budget warnings (both modes) ──────────────────────────────────────
@@ -165,19 +242,40 @@ export async function validateEntityLogic(
     const value = data[field];
     if (value !== undefined && typeof value === "number") {
       if (value > 0 && value < 100) {
-        warnings.push(
-          `Field "${field}" is ${value} — budget values are in cents (e.g., 1000 = $10 USD). Did you mean ${value * 100}?`
-        );
+        issues.push({
+          field,
+          code: "invalidValue",
+          message: `Field "${field}" is ${value} — budget values are in cents (e.g., 1000 = $10 USD). Did you mean ${value * 100}?`,
+          severity: "warning",
+        });
       }
     }
   }
 
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
+  let nextAction: string | undefined;
+  if (errorIssues.length > 0) {
+    if (entityType === "adSet" && errorIssues.some((i) => i.field === "campaign_id")) {
+      nextAction =
+        "Call meta_list_entities with entityType='campaign' to find a campaign_id for the parent campaign.";
+    } else if (entityType === "ad" && errorIssues.some((i) => i.field === "adset_id")) {
+      nextAction =
+        "Call meta_list_entities with entityType='adSet' to find an adset_id for the parent ad set.";
+    } else if (mode === "create" && !input.adAccountId) {
+      nextAction = "Call meta_list_ad_accounts to discover available adAccountId values.";
+    }
+  }
+
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType,
     mode,
-    errors,
-    warnings,
+    errors: errorIssues.map((i) => i.message),
+    warnings: warningIssues.map((i) => i.message),
+    issues,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

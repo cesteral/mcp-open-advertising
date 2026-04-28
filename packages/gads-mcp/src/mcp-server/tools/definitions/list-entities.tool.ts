@@ -5,6 +5,11 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -44,9 +49,7 @@ export const ListEntitiesInputSchema = z
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    totalResultsCount: z.number().optional(),
-    nextPageToken: z.string().optional(),
-    has_more: z.boolean().describe("Whether more results are available via pagination"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Entity listing result");
@@ -71,24 +74,29 @@ export async function listEntitiesLogic(
     context
   );
 
+  const entities = result.entities as unknown as Record<string, any>[];
   return {
-    entities: result.entities as unknown as Record<string, any>[],
-    totalResultsCount: result.totalResultsCount,
-    nextPageToken: result.nextPageToken,
-    has_more: !!result.nextPageToken,
+    entities,
+    pagination: buildPaginationOutput({
+      nextCursor: result.nextPageToken,
+      pageSize: entities.length,
+      totalCount: result.totalResultsCount,
+      nextPageInputKey: "pageToken",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.entities.length} entities${
-    result.totalResultsCount ? ` (${result.totalResultsCount} total)` : ""
-  }${result.nextPageToken ? " — more pages available" : ""}`;
+  const { pageSize, totalCount, hasMore } = result.pagination;
+  const summary = `Found ${pageSize} entities${
+    totalCount !== undefined ? ` (${totalCount} total)` : ""
+  }${hasMore ? " — more pages available" : ""}`;
 
   return [
     {
       type: "text" as const,
-      text: `${summary}\n\n${JSON.stringify(result.entities, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}\n\n${JSON.stringify(result.entities, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

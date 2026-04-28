@@ -75,17 +75,66 @@ export function mapErrorCodeToHttpStatus(code: JsonRpcErrorCode): number {
 }
 
 // ---------------------------------------------------------------------------
+// McpErrorData — well-known data fields
+// ---------------------------------------------------------------------------
+
+/**
+ * Well-known optional fields on `McpError.data`. Defining them here gives
+ * clients a stable shape they can rely on across every server, while keeping
+ * the data bag open via the index signature for platform-specific extras.
+ *
+ * The two fields that matter most for an LLM caller:
+ *   - `suggestedValues` — when an enum/oneOf field rejected: the legal values.
+ *   - `nextAction` — single-sentence "what to do" hint (e.g. "Renew the access
+ *     token at https://…", "Wait <Retry-After> seconds before retrying",
+ *     "Call linkedin_list_ad_accounts to discover valid adAccountUrn values").
+ *
+ * Both are optional. Producers populate them when there's something useful to
+ * say; consumers (formatters, error UIs) MAY surface them verbatim.
+ */
+export interface McpErrorData {
+  /** Correlation ID, when known. */
+  requestId?: string;
+  /** Upstream HTTP status when the error came from a downstream API call. */
+  httpStatus?: number;
+  /** URL that produced the error (no query secrets — those get redacted). */
+  url?: string;
+  /** HTTP method of the failing request. */
+  method?: string;
+  /** Truncated body of the upstream error response. */
+  errorBody?: string;
+  /** Attempt number (0-indexed) on which the failure occurred. */
+  attempt?: number;
+  /**
+   * Enum/oneOf values the failing field accepts. Set when the error is caused
+   * by a field whose value isn't in the allowed set, so the caller can pick
+   * one of these on the next call without re-prompting blindly.
+   */
+  suggestedValues?: string[];
+  /**
+   * One-line guidance describing the next concrete action that has the best
+   * chance of resolving the error. Examples:
+   *   - "Wait <N> seconds and retry — Retry-After header was set"
+   *   - "Renew the LinkedIn access token at https://www.linkedin.com/developers/tools/oauth/token-generator"
+   *   - "Call meta_list_ad_accounts to discover valid adAccountId values"
+   */
+  nextAction?: string;
+  /** Free-form additional context. Don't rely on the shape. */
+  [key: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
 // McpError
 // ---------------------------------------------------------------------------
 
 export class McpError extends Error {
   public readonly code: JsonRpcErrorCode;
-  public readonly data?: Record<string, unknown>;
+  public readonly data?: McpErrorData;
 
   constructor(
     code: JsonRpcErrorCode,
     message?: string,
-    data?: Record<string, unknown>,
+    data?: McpErrorData,
     options?: { cause?: unknown }
   ) {
     super(message || "An error occurred");
@@ -105,7 +154,7 @@ export class McpError extends Error {
   toJsonRpc(): {
     code: number;
     message: string;
-    data?: Record<string, unknown>;
+    data?: McpErrorData;
   } {
     return {
       code: this.code,
@@ -243,6 +292,41 @@ export class ErrorHandler {
     return new McpError(JsonRpcErrorCode.InternalError, "An unknown error occurred", {
       originalError: String(error),
     });
+  }
+
+  /**
+   * Suggest a default `nextAction` string for an HTTP status code. Returns
+   * undefined when there's no obvious generic guidance — callers should
+   * supply a domain-specific hint via `RetryConfig.tokenExpiryHint` or
+   * `buildErrorData` instead.
+   */
+  static defaultNextActionForStatus(
+    status: number,
+    options?: { retryAfterSeconds?: number; tokenExpiryHint?: string }
+  ): string | undefined {
+    if (status === 401) {
+      return options?.tokenExpiryHint
+        ? `Renew the API token. ${options.tokenExpiryHint}`
+        : "Renew the API token (401 Unauthorized).";
+    }
+    if (status === 403) {
+      return "Verify the authenticated user has permission for this resource. Some platforms require an additional scope or partner-level access.";
+    }
+    if (status === 404) {
+      return "Verify the entity ID with the corresponding list_* tool before retrying.";
+    }
+    if (status === 409) {
+      return "Re-fetch the entity, reapply your changes against the latest version, and retry.";
+    }
+    if (status === 429) {
+      return options?.retryAfterSeconds !== undefined
+        ? `Wait ${options.retryAfterSeconds} seconds (Retry-After header) before retrying.`
+        : "Back off and retry with exponential delay; reduce request rate.";
+    }
+    if (status >= 500 && status < 600) {
+      return "Upstream service error — retry with exponential backoff. If it persists, the upstream API may be experiencing an outage.";
+    }
+    return undefined;
   }
 
   static sanitizeErrorData(data?: Record<string, unknown>): Record<string, unknown> | undefined {

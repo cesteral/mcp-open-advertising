@@ -75,9 +75,11 @@ describe("listEntitiesLogic", () => {
     expect(result.entities).toHaveLength(2);
     expect(result.entities[0]).toEqual({ id: "1", name: "Campaign 1" });
     expect(result.entities[1]).toEqual({ id: "2", name: "Campaign 2" });
-    expect(result.totalCount).toBe(2);
+    expect(result.pagination.pageSize).toBe(2);
+    expect(result.pagination.nextCursor).toBeNull();
+    expect(result.pagination.hasMore).toBe(false);
+    expect(result.pagination.nextPageInputKey).toBe("after");
     expect(result.timestamp).toBeDefined();
-    expect(result.nextCursor).toBeUndefined();
   });
 
   it("passes adAccountId and entityType to service", async () => {
@@ -146,10 +148,19 @@ describe("listEntitiesLogic", () => {
 });
 
 describe("listEntitiesResponseFormatter", () => {
+  function pagination(nextCursor: string | null, pageSize: number) {
+    return {
+      nextCursor,
+      hasMore: nextCursor !== null,
+      pageSize,
+      nextPageInputKey: "after",
+    };
+  }
+
   it("shows entity count", () => {
     const result = {
       entities: [{ id: "1" }, { id: "2" }],
-      totalCount: 2,
+      pagination: pagination(null, 2),
       timestamp: new Date().toISOString(),
     };
 
@@ -163,8 +174,7 @@ describe("listEntitiesResponseFormatter", () => {
   it("shows cursor when present", () => {
     const result = {
       entities: [{ id: "1" }],
-      nextCursor: "abc_cursor",
-      totalCount: 1,
+      pagination: pagination("abc_cursor", 1),
       timestamp: new Date().toISOString(),
     };
 
@@ -172,12 +182,13 @@ describe("listEntitiesResponseFormatter", () => {
 
     expect((content[0] as any).text).toContain("More results available");
     expect((content[0] as any).text).toContain("abc_cursor");
+    expect((content[0] as any).text).toContain("after");
   });
 
   it("does not show pagination info when no cursor", () => {
     const result = {
       entities: [{ id: "1" }],
-      totalCount: 1,
+      pagination: pagination(null, 1),
       timestamp: new Date().toISOString(),
     };
 
@@ -186,10 +197,10 @@ describe("listEntitiesResponseFormatter", () => {
     expect((content[0] as any).text).not.toContain("More results available");
   });
 
-  it("shows 'No entities found' when totalCount is 0", () => {
+  it("shows 'No entities found' when there are zero entities", () => {
     const result = {
       entities: [],
-      totalCount: 0,
+      pagination: pagination(null, 0),
       timestamp: new Date().toISOString(),
     };
 

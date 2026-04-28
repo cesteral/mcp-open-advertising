@@ -8,6 +8,11 @@ import {
   getEntityConfigDynamic,
 } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -83,9 +88,7 @@ export const ListEntitiesInputSchema = z
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    nextPageToken: z.string().optional().describe("Token for next page of results"),
-    has_more: z.boolean().describe("Whether more results are available via pagination"),
-    totalCount: z.number().describe("Number of entities in this page"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -139,11 +142,14 @@ export async function listEntitiesLogic(
     context
   );
 
+  const entities = result.entities as Record<string, any>[];
   return {
-    entities: result.entities as Record<string, any>[],
-    nextPageToken: result.nextPageToken,
-    has_more: !!result.nextPageToken,
-    totalCount: result.entities.length,
+    entities,
+    pagination: buildPaginationOutput({
+      nextCursor: result.nextPageToken,
+      pageSize: entities.length,
+      nextPageInputKey: "pageToken",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -152,19 +158,17 @@ export async function listEntitiesLogic(
  * Format response for MCP client
  */
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.totalCount} entities`;
-  const pagination = result.nextPageToken
-    ? `\n\nMore results available. Use nextPageToken: ${result.nextPageToken}`
-    : "";
+  const count = result.pagination.pageSize;
+  const summary = `Found ${count} entities`;
   const entities =
-    result.totalCount > 0
+    count > 0
       ? `\n\nEntities:\n${JSON.stringify(result.entities, null, 2)}`
       : "\n\nNo entities found";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}${entities}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${entities}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

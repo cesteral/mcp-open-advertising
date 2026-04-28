@@ -53,13 +53,15 @@ describe("linkedin_list_entities tool", () => {
 
       expect(result.entities).toHaveLength(1);
       expect(result.entities[0]).toMatchObject({ name: "Test Campaign" });
-      expect(result.count).toBe(1);
-      expect(result.total).toBe(1);
-      expect(result.has_more).toBe(false);
+      expect(result.pagination.pageSize).toBe(1);
+      expect(result.pagination.totalCount).toBe(1);
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.nextCursor).toBeNull();
+      expect(result.pagination.nextPageInputKey).toBe("start");
       expect(result.timestamp).toBeDefined();
     });
 
-    it("correctly calculates has_more when total exceeds current page", async () => {
+    it("correctly calculates hasMore when total exceeds current page", async () => {
       const entities = Array.from({ length: 25 }, (_, i) => ({ id: i }));
       mockLinkedInService.listEntities.mockResolvedValueOnce({
         entities,
@@ -76,8 +78,9 @@ describe("linkedin_list_entities tool", () => {
         mockContext as any
       );
 
-      expect(result.has_more).toBe(true);
-      expect(result.count).toBe(25);
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.pageSize).toBe(25);
+      expect(result.pagination.nextCursor).toBe("25");
     });
 
     it("throws when adAccountUrn is missing for account-scoped entity types", async () => {
@@ -138,13 +141,20 @@ describe("linkedin_list_entities tool", () => {
   });
 
   describe("listEntitiesResponseFormatter()", () => {
+    function pagination(nextCursor: string | null, pageSize: number, totalCount?: number) {
+      return {
+        nextCursor,
+        hasMore: nextCursor !== null,
+        pageSize,
+        ...(totalCount !== undefined ? { totalCount } : {}),
+        nextPageInputKey: "start",
+      };
+    }
+
     it("formats results with entity count", () => {
       const result = {
         entities: [{ id: 1, name: "Campaign A" }],
-        total: 5,
-        start: 0,
-        has_more: true,
-        count: 1,
+        pagination: pagination("1", 1, 5),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -159,10 +169,7 @@ describe("linkedin_list_entities tool", () => {
     it("shows 'No entities found' when empty", () => {
       const result = {
         entities: [],
-        total: 0,
-        start: 0,
-        has_more: false,
-        count: 0,
+        pagination: pagination(null, 0, 0),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 

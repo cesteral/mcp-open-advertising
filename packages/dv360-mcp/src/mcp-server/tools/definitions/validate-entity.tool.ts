@@ -6,7 +6,7 @@ import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.
 import { getEntitySchemaByType, getFieldSchemaByPath } from "../utils/schema-introspection.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { validateEntityResponseFormatter } from "@cesteral/shared";
+import { validateEntityResponseFormatter, type ValidationIssue } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_validate_entity";
 const TOOL_TITLE = "Validate DV360 Entity (Client-Side)";
@@ -64,6 +64,15 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a DV360 entity payload (client-side)");
 
+const ValidationIssueSchema = z.object({
+  field: z.string(),
+  code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+  message: z.string(),
+  hint: z.string().optional(),
+  suggestedValues: z.array(z.string()).optional(),
+  severity: z.enum(["error", "warning"]).optional(),
+});
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the payload passed validation"),
@@ -74,6 +83,9 @@ export const ValidateEntityOutputSchema = z
       .optional()
       .describe("Validation error messages (present when valid is false)"),
     warnings: z.array(z.string()).optional().describe("Non-fatal warnings"),
+    issues: z
+      .array(ValidationIssueSchema)
+      .describe("Structured per-field issues with field path and Zod-mapped codes"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity validation result");
@@ -81,13 +93,18 @@ export const ValidateEntityOutputSchema = z
 type ValidateEntityInput = z.infer<typeof ValidateEntityInputSchema>;
 type ValidateEntityOutput = z.infer<typeof ValidateEntityOutputSchema>;
 
+function mapZodIssueCode(zodCode: string): ValidationIssue["code"] {
+  if (zodCode === "invalid_type") return "wrongType";
+  if (zodCode === "invalid_enum_value" || zodCode === "invalid_literal") return "invalidValue";
+  return "custom";
+}
+
 export async function validateEntityLogic(
   input: ValidateEntityInput,
   _context: RequestContext,
   _sdkContext?: SdkContext
 ): Promise<ValidateEntityOutput> {
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
 
   // Get the Zod schema for this entity type
   const schema = getEntitySchemaByType(input.entityType);
@@ -96,9 +113,14 @@ export async function validateEntityLogic(
   if (input.mode === "create") {
     const parseResult = schema.safeParse(input.data);
     if (!parseResult.success) {
-      for (const issue of parseResult.error.issues) {
-        const path = issue.path.join(".");
-        errors.push(`${path ? path + ": " : ""}${issue.message}`);
+      for (const zodIssue of parseResult.error.issues) {
+        const path = zodIssue.path.join(".");
+        issues.push({
+          field: path,
+          code: mapZodIssueCode(zodIssue.code),
+          message: `${path ? path + ": " : ""}${zodIssue.message}`,
+          severity: "error",
+        });
       }
     }
   }
@@ -115,13 +137,23 @@ export async function validateEntityLogic(
     );
 
     if (maskFields.length === 0) {
-      errors.push("updateMask must include at least one field path");
+      issues.push({
+        field: "updateMask",
+        code: "missing",
+        message: "updateMask must include at least one field path",
+        severity: "error",
+      });
     }
 
     for (const fieldPath of maskFields) {
       const fieldSchema = getFieldSchemaByPath(schema, fieldPath);
       if (!fieldSchema) {
-        errors.push(`Unknown updateMask field path: ${fieldPath}`);
+        issues.push({
+          field: fieldPath,
+          code: "invalidValue",
+          message: `Unknown updateMask field path: ${fieldPath}`,
+          severity: "error",
+        });
         continue;
       }
 
@@ -141,25 +173,39 @@ export async function validateEntityLogic(
       }
 
       if (!hasValue) {
-        errors.push(`updateMask field not found in data: ${fieldPath}`);
+        issues.push({
+          field: fieldPath,
+          code: "missing",
+          message: `updateMask field not found in data: ${fieldPath}`,
+          severity: "error",
+        });
         continue;
       }
 
       const fieldParse = fieldSchema.safeParse(current);
       if (!fieldParse.success) {
-        for (const issue of fieldParse.error.issues) {
-          errors.push(`${fieldPath}: ${issue.message}`);
+        for (const zodIssue of fieldParse.error.issues) {
+          issues.push({
+            field: fieldPath,
+            code: mapZodIssueCode(zodIssue.code),
+            message: `${fieldPath}: ${zodIssue.message}`,
+            severity: "error",
+          });
         }
       }
     }
   }
 
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType: input.entityType,
     mode: input.mode,
-    errors: errors.length > 0 ? errors : undefined,
-    warnings: warnings.length > 0 ? warnings : undefined,
+    errors: errorIssues.length > 0 ? errorIssues.map((i) => i.message) : undefined,
+    warnings: warningIssues.length > 0 ? warningIssues.map((i) => i.message) : undefined,
+    issues,
     timestamp: new Date().toISOString(),
   };
 }

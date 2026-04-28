@@ -70,13 +70,14 @@ describe("amazonDsp_list_entities tool", () => {
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.startIndex).toBe(0);
-      expect(result.totalResults).toBe(2);
-      expect(result.has_more).toBe(false);
+      expect(result.pagination.totalCount).toBe(2);
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.nextCursor).toBeNull();
+      expect(result.pagination.nextPageInputKey).toBe("startIndex");
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates has_more when more pages available", async () => {
+    it("indicates hasMore when more pages available", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [{ orderId: "ord_001" }],
         pageInfo: {
@@ -97,7 +98,8 @@ describe("amazonDsp_list_entities tool", () => {
         baseSdkContext
       );
 
-      expect(result.has_more).toBe(true);
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.nextCursor).toBe("1");
     });
 
     it("passes filters to service when provided", async () => {
@@ -129,13 +131,20 @@ describe("amazonDsp_list_entities tool", () => {
   });
 
   describe("listEntitiesResponseFormatter()", () => {
+    function pagination(nextCursor: string | null, pageSize: number, totalCount?: number) {
+      return {
+        nextCursor,
+        hasMore: nextCursor !== null,
+        pageSize,
+        ...(totalCount !== undefined ? { totalCount } : {}),
+        nextPageInputKey: "startIndex",
+      };
+    }
+
     it("formats results with entity count and pagination", () => {
       const result = {
         entities: [{ orderId: "ord_001" }],
-        startIndex: 0,
-        pageSize: 25,
-        totalResults: 1,
-        has_more: false,
+        pagination: pagination(null, 1, 1),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -148,10 +157,7 @@ describe("amazonDsp_list_entities tool", () => {
     it("indicates no entities found", () => {
       const result = {
         entities: [],
-        startIndex: 0,
-        pageSize: 25,
-        totalResults: 0,
-        has_more: false,
+        pagination: pagination(null, 0, 0),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -159,18 +165,16 @@ describe("amazonDsp_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows pagination hint when has_more is true", () => {
+    it("shows pagination hint when hasMore is true", () => {
       const result = {
         entities: [{ orderId: "ord_001" }],
-        startIndex: 0,
-        pageSize: 25,
-        totalResults: 50,
-        has_more: true,
+        pagination: pagination("25", 25, 50),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
       const formatted = listEntitiesResponseFormatter(result);
-      expect((formatted[0] as any).text).toContain("startIndex: 25");
+      expect((formatted[0] as any).text).toContain("startIndex");
+      expect((formatted[0] as any).text).toContain('"25"');
     });
   });
 

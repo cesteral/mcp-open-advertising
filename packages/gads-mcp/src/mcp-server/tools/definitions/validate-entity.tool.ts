@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { validateEntityResponseFormatter } from "@cesteral/shared";
+import { validateEntityResponseFormatter, type ValidationIssue } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_validate_entity";
 const TOOL_TITLE = "Google Ads Entity Validation (Dry Run)";
@@ -62,6 +62,15 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a Google Ads entity payload (dry run)");
 
+const ValidationIssueSchema = z.object({
+  field: z.string(),
+  code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+  message: z.string(),
+  hint: z.string().optional(),
+  suggestedValues: z.array(z.string()).optional(),
+  severity: z.enum(["error", "warning"]).optional(),
+});
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the payload passed validation"),
@@ -71,6 +80,9 @@ export const ValidateEntityOutputSchema = z
       .array(z.string())
       .optional()
       .describe("Validation error messages (present when valid is false)"),
+    issues: z
+      .array(ValidationIssueSchema)
+      .describe("Structured per-field issues (mirrors errors as code='custom')"),
     timestamp: z.string().datetime(),
   })
   .describe("Entity validation result");
@@ -95,11 +107,19 @@ export async function validateEntityLogic(
     context
   );
 
+  const issues: ValidationIssue[] = (result.errors ?? []).map((message) => ({
+    field: "",
+    code: "custom" as const,
+    message,
+    severity: "error" as const,
+  }));
+
   return {
     valid: result.valid,
     entityType: input.entityType,
     mode: input.mode,
     errors: result.errors,
+    issues,
     timestamp: new Date().toISOString(),
   };
 }

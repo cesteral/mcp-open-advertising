@@ -72,8 +72,9 @@ export async function createMcpServer(
       },
       instructions:
         "Snapchat Ads campaign management and reporting server. Supports campaign, ad squad, ad, creative, and audience workflows with async reporting, targeting, bid adjustments, and bulk operations via the Snap Marketing API. " +
-        "Use snapchat_list_ad_accounts to discover accounts, snapchat_list_entities to browse entities. " +
-        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
+        "Progressive discovery: (1) start with snapchat_list_ad_accounts to resolve accessible account IDs, then snapchat_list_entities to browse campaigns/adSquads/ads/creatives; " +
+        "(2) before authoring writes, read MCP Resources entity-schema://snapchat/all for field shapes, entity-hierarchy://snapchat/all for parent/child rules, entity-examples://snapchat/all for payloads, and reporting-reference://snapchat for stats fields and breakdowns; " +
+        "(3) for multi-step flows use MCP Prompts: snapchat_campaign_setup_workflow, snapchat_reporting_workflow, snapchat_targeting_discovery_workflow, creative_upload_workflow, snapchat_bulk_operations_workflow.",
     }
   );
 

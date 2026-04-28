@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -53,11 +58,7 @@ export const ListEntitiesInputSchema = z
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    page: z.number().describe("Current page number"),
-    pageSize: z.number().describe("Number of results per page"),
-    totalNumber: z.number().describe("Total number of entities"),
-    totalPage: z.number().describe("Total number of pages"),
-    has_more: z.boolean().describe("Whether more pages are available"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -81,32 +82,36 @@ export async function listEntitiesLogic(
   );
 
   const { pageInfo } = result;
+  const hasMore = pageInfo.page < pageInfo.total_page;
+  const nextPage = pageInfo.page + 1;
+  const entities = result.entities as unknown as Record<string, unknown>[];
 
   return {
-    entities: result.entities as unknown as Record<string, unknown>[],
-    page: pageInfo.page,
-    pageSize: pageInfo.page_size,
-    totalNumber: pageInfo.total_number,
-    totalPage: pageInfo.total_page,
-    has_more: pageInfo.page < pageInfo.total_page,
+    entities,
+    pagination: buildPaginationOutput({
+      nextCursor: hasMore ? String(nextPage) : null,
+      pageSize: entities.length,
+      totalCount: pageInfo.total_number,
+      nextPageInputKey: "page",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.entities.length} entities (page ${result.page}/${result.totalPage}, total ${result.totalNumber})`;
-  const pagination = result.has_more
-    ? `\n\nMore results available. Use page: ${result.page + 1}`
-    : "";
+  const { pageSize, totalCount } = result.pagination;
+  const summary = `Found ${pageSize} entities${
+    totalCount !== undefined ? ` (total ${totalCount})` : ""
+  }`;
   const entities =
-    result.entities.length > 0
+    pageSize > 0
       ? `\n\nEntities:\n${JSON.stringify(result.entities, null, 2)}`
       : "\n\nNo entities found";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}${entities}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${entities}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

@@ -132,8 +132,10 @@ describe("dv360_list_entities", () => {
 
       expect(result.entities).toHaveLength(2);
       expect(result.entities[0]).toEqual({ displayName: "Campaign 1", campaignId: "111" });
-      expect(result.totalCount).toBe(2);
-      expect(result.nextPageToken).toBeUndefined();
+      expect(result.pagination.pageSize).toBe(2);
+      expect(result.pagination.nextCursor).toBeNull();
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.nextPageInputKey).toBe("pageToken");
       expect(result.timestamp).toBeDefined();
     });
 
@@ -209,7 +211,8 @@ describe("dv360_list_entities", () => {
         createMockSdkContext()
       );
 
-      expect(result.nextPageToken).toBe("page2-token");
+      expect(result.pagination.nextCursor).toBe("page2-token");
+      expect(result.pagination.hasMore).toBe(true);
     });
 
     it("throws when session services cannot be resolved", () => {
@@ -228,10 +231,19 @@ describe("dv360_list_entities", () => {
   });
 
   describe("listEntitiesResponseFormatter", () => {
+    function pagination(nextCursor: string | null, pageSize: number) {
+      return {
+        nextCursor,
+        hasMore: nextCursor !== null,
+        pageSize,
+        nextPageInputKey: "pageToken",
+      };
+    }
+
     it("includes entity count in summary text", () => {
       const result = listEntitiesResponseFormatter({
         entities: [{ displayName: "Campaign 1" }],
-        totalCount: 1,
+        pagination: pagination(null, 1),
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -243,18 +255,18 @@ describe("dv360_list_entities", () => {
     it("includes pagination info when nextPageToken is present", () => {
       const result = listEntitiesResponseFormatter({
         entities: [{ displayName: "Campaign 1" }],
-        nextPageToken: "next-tok",
-        totalCount: 1,
+        pagination: pagination("next-tok", 1),
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
-      expect(result[0].text).toContain("nextPageToken: next-tok");
+      expect(result[0].text).toContain("pageToken");
+      expect(result[0].text).toContain("next-tok");
     });
 
     it("shows no-entities message when list is empty", () => {
       const result = listEntitiesResponseFormatter({
         entities: [],
-        totalCount: 0,
+        pagination: pagination(null, 0),
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -264,7 +276,7 @@ describe("dv360_list_entities", () => {
     it("serialises entities as JSON", () => {
       const result = listEntitiesResponseFormatter({
         entities: [{ displayName: "X" }],
-        totalCount: 1,
+        pagination: pagination(null, 1),
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 

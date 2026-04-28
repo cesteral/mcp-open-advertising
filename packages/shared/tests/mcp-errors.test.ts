@@ -225,3 +225,60 @@ describe("ErrorHandler", () => {
     });
   });
 });
+
+describe("ErrorHandler.defaultNextActionForStatus", () => {
+  it("returns a token-renewal action for 401", () => {
+    const text = ErrorHandler.defaultNextActionForStatus(401);
+    expect(text).toMatch(/Renew the API token/);
+  });
+
+  it("includes the supplied tokenExpiryHint in the 401 action", () => {
+    const text = ErrorHandler.defaultNextActionForStatus(401, {
+      tokenExpiryHint: "Visit https://example.com/token",
+    });
+    expect(text).toContain("https://example.com/token");
+  });
+
+  it("uses Retry-After seconds in the 429 action when provided", () => {
+    const text = ErrorHandler.defaultNextActionForStatus(429, { retryAfterSeconds: 30 });
+    expect(text).toContain("Wait 30 seconds");
+  });
+
+  it("falls back to a generic 429 action when Retry-After is unknown", () => {
+    const text = ErrorHandler.defaultNextActionForStatus(429);
+    expect(text).toMatch(/exponential delay/);
+  });
+
+  it("returns a verify-and-retry action for 404", () => {
+    const text = ErrorHandler.defaultNextActionForStatus(404);
+    expect(text).toMatch(/list_\* tool/);
+  });
+
+  it("returns an upstream-outage hint for 5xx", () => {
+    const text = ErrorHandler.defaultNextActionForStatus(503);
+    expect(text).toMatch(/Upstream service error/);
+  });
+
+  it("returns undefined for status codes without a generic hint", () => {
+    expect(ErrorHandler.defaultNextActionForStatus(418)).toBeUndefined();
+    expect(ErrorHandler.defaultNextActionForStatus(200)).toBeUndefined();
+  });
+});
+
+describe("McpError.data nextAction wiring", () => {
+  it("McpError carries nextAction in data when set", () => {
+    const err = new McpError(JsonRpcErrorCode.RateLimited, "Too many requests", {
+      httpStatus: 429,
+      nextAction: "Wait 30 seconds before retrying.",
+    });
+    expect(err.data?.nextAction).toBe("Wait 30 seconds before retrying.");
+    expect(err.toJsonRpc().data?.nextAction).toBe("Wait 30 seconds before retrying.");
+  });
+
+  it("McpError carries suggestedValues in data when set", () => {
+    const err = new McpError(JsonRpcErrorCode.InvalidRequest, "Invalid status", {
+      suggestedValues: ["ACTIVE", "PAUSED"],
+    });
+    expect(err.data?.suggestedValues).toEqual(["ACTIVE", "PAUSED"]);
+  });
+});

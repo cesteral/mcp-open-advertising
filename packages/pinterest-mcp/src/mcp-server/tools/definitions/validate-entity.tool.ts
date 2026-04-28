@@ -14,8 +14,9 @@ import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-map
 import type { RequestContext } from "@cesteral/shared";
 import {
   type FieldRule,
-  validateRequiredFields,
-  checkReadOnlyFields,
+  type ValidationIssue,
+  validateRequiredFieldsStructured,
+  checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -103,6 +104,15 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a Pinterest Ads entity payload");
 
+const ValidationIssueSchema = z.object({
+  field: z.string(),
+  code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+  message: z.string(),
+  hint: z.string().optional(),
+  suggestedValues: z.array(z.string()).optional(),
+  severity: z.enum(["error", "warning"]).optional(),
+});
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the payload passed validation"),
@@ -110,6 +120,8 @@ export const ValidateEntityOutputSchema = z
     mode: z.string(),
     errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
     warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    issues: z.array(ValidationIssueSchema),
+    nextAction: z.string().optional(),
     timestamp: z.string().datetime(),
   })
   .describe("Validation result");
@@ -131,28 +143,38 @@ export async function validateEntityLogic(
   _sdkContext?: SdkContext
 ): Promise<ValidateEntityOutput> {
   const { entityType, mode, data } = input;
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
 
   if (mode === "create") {
     const rules = REQUIRED_FIELDS_CREATE[entityType as PinterestEntityType] ?? [];
-    errors.push(...validateRequiredFields(data, rules));
+    issues.push(...validateRequiredFieldsStructured(data, rules));
 
     // Ad-specific: creative requires at least one of image_ids or video_id
     if (entityType === "ad") {
       if (!data.image_ids && !data.video_id) {
-        warnings.push('Ad creative requires either "image_ids" (array) or "video_id" (string)');
+        issues.push({
+          field: "image_ids",
+          code: "missing",
+          message: 'Ad creative requires either "image_ids" (array) or "video_id" (string)',
+          suggestedValues: ["image_ids", "video_id"],
+          severity: "warning",
+        });
       }
     }
   }
 
   if (mode === "update") {
     if (Object.keys(data).length === 0) {
-      errors.push("Update payload must contain at least one field to update");
+      issues.push({
+        field: "data",
+        code: "custom",
+        message: "Update payload must contain at least one field to update",
+        severity: "error",
+      });
     }
 
-    warnings.push(
-      ...checkReadOnlyFields(
+    issues.push(
+      ...checkReadOnlyFieldsStructured(
         data,
         READ_ONLY_FIELDS,
         (field) => `Field "${field}" is a system field and may be ignored by the API on update`
@@ -160,20 +182,29 @@ export async function validateEntityLogic(
     );
   }
 
-  // Budget warnings (both modes)
+  // Budget validation (both modes)
   const budgetValue = data.budget;
   if (budgetValue !== undefined && typeof budgetValue === "number") {
     if (budgetValue <= 0) {
-      errors.push('Field "budget" must be a positive number');
+      issues.push({
+        field: "budget",
+        code: "invalidValue",
+        message: 'Field "budget" must be a positive number',
+        severity: "error",
+      });
     }
   }
 
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType,
     mode,
-    errors,
-    warnings,
+    errors: errorIssues.map((i) => i.message),
+    warnings: warningIssues.map((i) => i.message),
+    issues,
     timestamp: new Date().toISOString(),
   };
 }

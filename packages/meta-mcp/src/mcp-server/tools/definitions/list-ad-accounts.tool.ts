@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -34,9 +39,7 @@ export const ListAdAccountsInputSchema = z
 export const ListAdAccountsOutputSchema = z
   .object({
     accounts: z.array(z.record(z.any())).describe("List of ad accounts"),
-    totalCount: z.number(),
-    nextCursor: z.string().optional().describe("Cursor for the next page of results"),
-    has_more: z.boolean().describe("Whether more results are available via pagination"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Ad accounts list result");
@@ -53,29 +56,30 @@ export async function listAdAccountsLogic(
 
   const result = await metaService.listAdAccounts(input.fields, input.limit, input.after, context);
 
+  const accounts = result.accounts as unknown as Record<string, unknown>[];
   return {
-    accounts: result.accounts as unknown as Record<string, unknown>[],
-    totalCount: (result.accounts as unknown[]).length,
-    nextCursor: result.nextCursor,
-    has_more: !!result.nextCursor,
+    accounts,
+    pagination: buildPaginationOutput({
+      nextCursor: result.nextCursor,
+      pageSize: accounts.length,
+      nextPageInputKey: "after",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listAdAccountsResponseFormatter(result: ListAdAccountsOutput): McpTextContent[] {
-  const summary = `Found ${result.totalCount} ad account(s)`;
-  const accounts =
-    result.totalCount > 0
+  const count = result.pagination.pageSize;
+  const summary = `Found ${count} ad account(s)`;
+  const accountsBlock =
+    count > 0
       ? `\n\n${JSON.stringify(result.accounts, null, 2)}`
       : "\n\nNo ad accounts found";
-  const pagination = result.nextCursor
-    ? `\n\nMore results available — pass after: "${result.nextCursor}" to get the next page`
-    : "";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}${accounts}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${accountsBlock}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

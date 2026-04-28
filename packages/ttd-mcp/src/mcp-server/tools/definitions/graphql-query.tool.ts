@@ -2,7 +2,9 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { createHash } from "node:crypto";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { spillJson, formatBoundedText, type SpillResult } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -39,10 +41,25 @@ export const GraphqlQueryInputSchema = z
   })
   .describe("Parameters for executing a TTD GraphQL query");
 
+const SpillSchema = z
+  .object({
+    bucket: z.string(),
+    objectName: z.string(),
+    bytes: z.number(),
+    signedUrl: z.string(),
+    expiresAt: z.string(),
+    mimeType: z.string(),
+  })
+  .partial()
+  .extend({ error: z.string().optional() });
+
 export const GraphqlQueryOutputSchema = z
   .object({
     data: z.any().describe("GraphQL response data"),
     errors: z.array(z.record(z.any())).optional().describe("GraphQL errors, if any"),
+    spill: SpillSchema.optional().describe(
+      "Spill metadata when the response was too large to inline. Set when REPORT_SPILL_BUCKET is configured and the body exceeds the byte threshold."
+    ),
     timestamp: z.string().datetime(),
   })
   .describe("GraphQL query result");
@@ -50,35 +67,80 @@ export const GraphqlQueryOutputSchema = z
 type GraphqlInput = z.infer<typeof GraphqlQueryInputSchema>;
 type GraphqlOutput = z.infer<typeof GraphqlQueryOutputSchema>;
 
+function fingerprintQuery(input: GraphqlInput): string {
+  const hash = createHash("sha256")
+    .update(input.query)
+    .update("\0")
+    .update(JSON.stringify(input.variables ?? {}))
+    .digest("hex")
+    .slice(0, 12);
+  return `gql-${hash}`;
+}
+
 export async function graphqlQueryLogic(
   input: GraphqlInput,
   context: RequestContext,
   sdkContext?: SdkContext
-): Promise<GraphqlOutput> {
+): Promise<GraphqlOutput & { _spillResult?: SpillResult; _fullText?: string }> {
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const result = (await ttdService.graphqlQuery(input.query, input.variables, context, {
     betaFeatures: input.betaFeatures,
   })) as Record<string, unknown>;
 
-  return {
-    data: result.data ?? result,
-    errors: result.errors as Record<string, any>[] | undefined,
+  const data = result.data ?? result;
+  const errors = result.errors as Record<string, any>[] | undefined;
+
+  // Try spill if bucket is configured and body exceeds threshold.
+  const spillResult = await spillJson({
+    value: { data, errors },
+    server: "ttd",
+    objectId: fingerprintQuery(input),
+    sessionId: sdkContext?.sessionId,
+  });
+
+  const out: GraphqlOutput & { _spillResult?: SpillResult; _fullText?: string } = {
+    data,
+    errors,
     timestamp: new Date().toISOString(),
   };
+  if ("spilled" in spillResult && spillResult.spilled) {
+    out.spill = {
+      bucket: spillResult.bucket,
+      objectName: spillResult.objectName,
+      bytes: spillResult.bytes,
+      signedUrl: spillResult.signedUrl,
+      expiresAt: spillResult.expiresAt,
+      mimeType: spillResult.mimeType,
+    };
+  } else if ("error" in spillResult) {
+    out.spill = { error: spillResult.error };
+  }
+
+  // Stash the spill outcome on the result object so the formatter can use it
+  // without re-running spillJson. These fields are stripped from the output
+  // schema so they never reach the client; they're a logic→formatter channel.
+  Object.defineProperty(out, "_spillResult", { value: spillResult, enumerable: false });
+  return out;
 }
 
-export function graphqlQueryResponseFormatter(result: GraphqlOutput): McpTextContent[] {
+export function graphqlQueryResponseFormatter(
+  result: GraphqlOutput & { _spillResult?: SpillResult }
+): McpTextContent[] {
   const errorInfo = result.errors?.length
     ? `\n\nGraphQL Errors:\n${JSON.stringify(result.errors, null, 2)}`
     : "";
+  const fullText = `GraphQL response:\n${JSON.stringify(result.data, null, 2)}${errorInfo}`;
 
-  return [
-    {
-      type: "text" as const,
-      text: `GraphQL response:\n${JSON.stringify(result.data, null, 2)}${errorInfo}\n\nTimestamp: ${result.timestamp}`,
-    },
-  ];
+  const spill: SpillResult = result._spillResult ?? { disabled: true, reason: "bucket-not-set" };
+  const text =
+    formatBoundedText({
+      fullText,
+      spill,
+      bodyLabel: "GraphQL response",
+    }) + `\n\nTimestamp: ${result.timestamp}`;
+
+  return [{ type: "text" as const, text }];
 }
 
 export const graphqlQueryTool = {

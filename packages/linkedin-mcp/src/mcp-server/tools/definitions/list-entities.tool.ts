@@ -8,6 +8,11 @@ import {
   isAccountScopedEntity,
   type LinkedInEntityType,
 } from "../utils/entity-mapping.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -36,10 +41,7 @@ export const ListEntitiesInputSchema = z
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    total: z.number().optional().describe("Total number of matching entities"),
-    start: z.number().optional().describe("Current offset"),
-    has_more: z.boolean().describe("Whether more results are available"),
-    count: z.number().describe("Number of entities in this page"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -73,34 +75,35 @@ export async function listEntitiesLogic(
   const total = result.total;
   const currentStart = result.start ?? 0;
   const requestedCount = input.count ?? 25;
-  const has_more =
+  const hasMore =
     total !== undefined ? currentStart + pageSize < total : pageSize >= requestedCount;
+  const nextStart = currentStart + pageSize;
 
   return {
     entities: result.entities as unknown as Record<string, unknown>[],
-    total,
-    start: currentStart,
-    has_more,
-    count: pageSize,
+    pagination: buildPaginationOutput({
+      nextCursor: hasMore ? String(nextStart) : null,
+      pageSize,
+      totalCount: total,
+      nextPageInputKey: "start",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const totalInfo = result.total !== undefined ? ` (total: ${result.total})` : "";
-  const summary = `Found ${result.count} entities${totalInfo}`;
-  const pagination = result.has_more
-    ? `\n\nMore results available. Use start: ${(result.start ?? 0) + result.count}`
-    : "";
+  const { pageSize, totalCount } = result.pagination;
+  const totalInfo = totalCount !== undefined ? ` (total: ${totalCount})` : "";
+  const summary = `Found ${pageSize} entities${totalInfo}`;
   const entities =
-    result.count > 0
+    pageSize > 0
       ? `\n\nEntities:\n${JSON.stringify(result.entities, null, 2)}`
       : "\n\nNo entities found";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}${entities}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${entities}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

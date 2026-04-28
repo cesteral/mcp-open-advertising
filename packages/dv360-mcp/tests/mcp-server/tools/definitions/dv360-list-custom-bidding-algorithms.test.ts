@@ -89,8 +89,10 @@ describe("dv360_list_custom_bidding_algorithms", () => {
         expect.any(Object) // context
       );
       expect(result.algorithms).toHaveLength(2);
-      expect(result.totalCount).toBe(2);
-      expect(result.has_more).toBe(false);
+      expect(result.pagination.pageSize).toBe(2);
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.nextCursor).toBeNull();
+      expect(result.pagination.nextPageInputKey).toBe("pageToken");
       expect(result.timestamp).toBeDefined();
     });
 
@@ -173,7 +175,7 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       );
     });
 
-    it("sets has_more to true when nextPageToken exists", async () => {
+    it("sets hasMore to true when nextPageToken exists", async () => {
       mockDv360Service.listCustomBiddingAlgorithmsEntities.mockResolvedValueOnce({
         entities: [
           {
@@ -193,8 +195,8 @@ describe("dv360_list_custom_bidding_algorithms", () => {
         createMockSdkContext()
       );
 
-      expect(result.has_more).toBe(true);
-      expect(result.nextPageToken).toBe("next-page-token");
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.nextCursor).toBe("next-page-token");
     });
 
     it("handles empty results", async () => {
@@ -210,8 +212,8 @@ describe("dv360_list_custom_bidding_algorithms", () => {
       );
 
       expect(result.algorithms).toHaveLength(0);
-      expect(result.totalCount).toBe(0);
-      expect(result.has_more).toBe(false);
+      expect(result.pagination.pageSize).toBe(0);
+      expect(result.pagination.hasMore).toBe(false);
     });
 
     it("maps algorithm fields correctly including modelDetails", async () => {
@@ -292,8 +294,12 @@ describe("dv360_list_custom_bidding_algorithms", () => {
             advertiserId: "adv-1",
           },
         ],
-        totalCount: 1,
-        has_more: false,
+        pagination: {
+          nextCursor: null,
+          hasMore: false,
+          pageSize: 1,
+          nextPageInputKey: "pageToken",
+        },
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -317,8 +323,12 @@ describe("dv360_list_custom_bidding_algorithms", () => {
             sharedAdvertiserIds: ["adv-1", "adv-2"],
           },
         ],
-        totalCount: 1,
-        has_more: false,
+        pagination: {
+          nextCursor: null,
+          hasMore: false,
+          pageSize: 1,
+          nextPageInputKey: "pageToken",
+        },
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -344,8 +354,12 @@ describe("dv360_list_custom_bidding_algorithms", () => {
             ],
           },
         ],
-        totalCount: 1,
-        has_more: false,
+        pagination: {
+          nextCursor: null,
+          hasMore: false,
+          pageSize: 1,
+          nextPageInputKey: "pageToken",
+        },
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -356,15 +370,19 @@ describe("dv360_list_custom_bidding_algorithms", () => {
     it("formats empty results", () => {
       const result = listCustomBiddingAlgorithmsResponseFormatter({
         algorithms: [],
-        totalCount: 0,
-        has_more: false,
+        pagination: {
+          nextCursor: null,
+          hasMore: false,
+          pageSize: 0,
+          nextPageInputKey: "pageToken",
+        },
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
       expect(result[0].text).toContain("No algorithms found");
     });
 
-    it("shows pagination hint when has_more is true", () => {
+    it("shows pagination hint when hasMore is true", () => {
       const result = listCustomBiddingAlgorithmsResponseFormatter({
         algorithms: [
           {
@@ -375,14 +393,18 @@ describe("dv360_list_custom_bidding_algorithms", () => {
             advertiserId: "adv-1",
           },
         ],
-        totalCount: 1,
-        nextPageToken: "next-token-abc",
-        has_more: true,
+        pagination: {
+          nextCursor: "next-token-abc",
+          hasMore: true,
+          pageSize: 1,
+          nextPageInputKey: "pageToken",
+        },
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
       expect(result[0].text).toContain("next-token-abc");
       expect(result[0].text).toContain("More results available");
+      expect(result[0].text).toContain("pageToken");
     });
   });
 

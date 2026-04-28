@@ -4,6 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+  DEFAULT_PAGE_SIZE,
+} from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -36,7 +42,8 @@ export const ListEntitiesInputSchema = z
       .min(1)
       .max(100)
       .optional()
-      .describe("Number of entities to return per page"),
+      .default(DEFAULT_PAGE_SIZE)
+      .describe(`Number of entities to return per page (default ${DEFAULT_PAGE_SIZE})`),
   })
   .superRefine((data, ctx) => {
     if (data.entityType === "advertiser" && !data.partnerId) {
@@ -69,9 +76,7 @@ export const ListEntitiesInputSchema = z
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    nextPageToken: z.string().optional().describe("Token for next page"),
-    has_more: z.boolean().describe("Whether more results are available via pagination"),
-    pageCount: z.number().describe("Number of entities in this page"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -108,29 +113,30 @@ export async function listEntitiesLogic(
     context
   );
 
+  const entities = result.entities as unknown as Record<string, any>[];
   return {
-    entities: result.entities as unknown as Record<string, any>[],
-    nextPageToken: result.nextPageToken,
-    has_more: !!result.nextPageToken,
-    pageCount: (result.entities as unknown[]).length,
+    entities,
+    pagination: buildPaginationOutput({
+      nextCursor: result.nextPageToken,
+      pageSize: entities.length,
+      nextPageInputKey: "pageToken",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.pageCount} entities`;
-  const pagination = result.nextPageToken
-    ? `\n\nMore results available. Use pageToken: ${result.nextPageToken}`
-    : "";
+  const count = result.pagination.pageSize;
+  const summary = `Found ${count} entities`;
   const entities =
-    result.pageCount > 0
+    count > 0
       ? `\n\nEntities:\n${JSON.stringify(result.entities, null, 2)}`
       : "\n\nNo entities found";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}${entities}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${entities}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

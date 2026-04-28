@@ -79,14 +79,14 @@ describe("tiktok_list_entities tool", () => {
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.page).toBe(1);
-      expect(result.totalNumber).toBe(2);
-      expect(result.totalPage).toBe(1);
-      expect(result.has_more).toBe(false);
+      expect(result.pagination.totalCount).toBe(2);
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.nextCursor).toBeNull();
+      expect(result.pagination.nextPageInputKey).toBe("page");
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates has_more when more pages available", async () => {
+    it("indicates hasMore when more pages available", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [{ campaign_id: "1800000001" }],
         pageInfo: {
@@ -108,7 +108,8 @@ describe("tiktok_list_entities tool", () => {
         baseSdkContext
       );
 
-      expect(result.has_more).toBe(true);
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.nextCursor).toBe("2");
     });
 
     it("passes filters to service when provided", async () => {
@@ -140,14 +141,20 @@ describe("tiktok_list_entities tool", () => {
   });
 
   describe("listEntitiesResponseFormatter()", () => {
-    it("formats results with entity count and pagination", () => {
+    function pagination(nextCursor: string | null, pageSize: number, totalCount?: number) {
+      return {
+        nextCursor,
+        hasMore: nextCursor !== null,
+        pageSize,
+        ...(totalCount !== undefined ? { totalCount } : {}),
+        nextPageInputKey: "page",
+      };
+    }
+
+    it("formats results with entity count", () => {
       const result = {
         entities: [{ campaign_id: "abc" }],
-        page: 1,
-        pageSize: 10,
-        totalNumber: 1,
-        totalPage: 1,
-        has_more: false,
+        pagination: pagination(null, 1, 1),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -155,17 +162,13 @@ describe("tiktok_list_entities tool", () => {
       expect(formatted).toHaveLength(1);
       expect((formatted[0] as any).type).toBe("text");
       expect((formatted[0] as any).text).toContain("Found 1 entities");
-      expect((formatted[0] as any).text).toContain("page 1/1");
+      expect((formatted[0] as any).text).toContain("total 1");
     });
 
     it("indicates no entities found", () => {
       const result = {
         entities: [],
-        page: 1,
-        pageSize: 10,
-        totalNumber: 0,
-        totalPage: 0,
-        has_more: false,
+        pagination: pagination(null, 0, 0),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -173,19 +176,16 @@ describe("tiktok_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows pagination hint when has_more is true", () => {
+    it("shows pagination hint when hasMore is true", () => {
       const result = {
         entities: [{ campaign_id: "abc" }],
-        page: 1,
-        pageSize: 1,
-        totalNumber: 3,
-        totalPage: 3,
-        has_more: true,
+        pagination: pagination("2", 1, 3),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
       const formatted = listEntitiesResponseFormatter(result);
-      expect((formatted[0] as any).text).toContain("page: 2");
+      expect((formatted[0] as any).text).toContain("page");
+      expect((formatted[0] as any).text).toContain('"2"');
     });
   });
 

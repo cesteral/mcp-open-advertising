@@ -3,6 +3,11 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -44,8 +49,7 @@ export const ListTargetingOptionsInputSchema = z
 export const ListTargetingOptionsOutputSchema = z
   .object({
     options: z.array(z.record(z.any())).describe("Targeting options"),
-    nextPageToken: z.string().optional().describe("Token for next page"),
-    totalCount: z.number().describe("Number of options in this page"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Targeting options result");
@@ -71,8 +75,11 @@ export async function listTargetingOptionsLogic(
 
   return {
     options: options as Record<string, any>[],
-    nextPageToken,
-    totalCount: options.length,
+    pagination: buildPaginationOutput({
+      nextCursor: nextPageToken,
+      pageSize: options.length,
+      nextPageInputKey: "pageToken",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -80,18 +87,16 @@ export async function listTargetingOptionsLogic(
 export function listTargetingOptionsResponseFormatter(
   result: ListTargetingOptionsOutput
 ): McpTextContent[] {
-  const pagination = result.nextPageToken
-    ? `\n\nMore results available. Use pageToken: ${result.nextPageToken}`
-    : "";
-  const options =
-    result.totalCount > 0
+  const count = result.pagination.pageSize;
+  const optionsBlock =
+    count > 0
       ? `\n\nOptions:\n${JSON.stringify(result.options, null, 2)}`
       : "\n\nNo options found";
 
   return [
     {
       type: "text" as const,
-      text: `Found ${result.totalCount} targeting options${options}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `Found ${count} targeting options${optionsBlock}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

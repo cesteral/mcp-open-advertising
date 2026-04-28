@@ -75,9 +75,11 @@ describe("listEntitiesLogic", () => {
     expect(result.entities).toHaveLength(2);
     expect(result.entities[0]).toEqual({ CampaignId: "c1", CampaignName: "Campaign 1" });
     expect(result.entities[1]).toEqual({ CampaignId: "c2", CampaignName: "Campaign 2" });
-    expect(result.pageCount).toBe(2);
+    expect(result.pagination.pageSize).toBe(2);
+    expect(result.pagination.nextCursor).toBeNull();
+    expect(result.pagination.hasMore).toBe(false);
+    expect(result.pagination.nextPageInputKey).toBe("pageToken");
     expect(result.timestamp).toBeDefined();
-    expect(result.nextPageToken).toBeUndefined();
   });
 
   it("includes advertiserId in filters when provided", async () => {
@@ -161,10 +163,19 @@ describe("listEntitiesLogic", () => {
 });
 
 describe("listEntitiesResponseFormatter", () => {
+  function pagination(nextCursor: string | null, pageSize: number) {
+    return {
+      nextCursor,
+      hasMore: nextCursor !== null,
+      pageSize,
+      nextPageInputKey: "pageToken",
+    };
+  }
+
   it("shows entity count", () => {
     const result = {
       entities: [{ CampaignId: "c1" }, { CampaignId: "c2" }],
-      pageCount: 2,
+      pagination: pagination(null, 2),
       timestamp: new Date().toISOString(),
     };
 
@@ -178,34 +189,33 @@ describe("listEntitiesResponseFormatter", () => {
   it("shows pagination info when nextPageToken is present", () => {
     const result = {
       entities: [{ CampaignId: "c1" }],
-      nextPageToken: "25",
-      pageCount: 1,
+      pagination: pagination("25", 1),
       timestamp: new Date().toISOString(),
     };
 
     const content = listEntitiesResponseFormatter(result);
 
     expect(content[0].text).toContain("More results available");
-    expect(content[0].text).toContain("pageToken: 25");
+    expect(content[0].text).toContain("pageToken");
+    expect(content[0].text).toContain('"25"');
   });
 
   it("does not show pagination info when no nextPageToken", () => {
     const result = {
       entities: [{ CampaignId: "c1" }],
-      pageCount: 1,
+      pagination: pagination(null, 1),
       timestamp: new Date().toISOString(),
     };
 
     const content = listEntitiesResponseFormatter(result);
 
     expect(content[0].text).not.toContain("More results available");
-    expect(content[0].text).not.toContain("pageToken");
   });
 
-  it("shows 'No entities found' when pageCount is 0", () => {
+  it("shows 'No entities found' when there are zero entities", () => {
     const result = {
       entities: [],
-      pageCount: 0,
+      pagination: pagination(null, 0),
       timestamp: new Date().toISOString(),
     };
 

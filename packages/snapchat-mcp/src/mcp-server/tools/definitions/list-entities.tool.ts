@@ -4,6 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -30,8 +35,7 @@ export const ListEntitiesInputSchema = z
 export const ListEntitiesOutputSchema = z
   .object({
     entities: z.array(z.record(z.any())).describe("List of entities"),
-    nextCursor: z.string().optional().describe("Next page link (undefined if no more results)"),
-    has_more: z.boolean().describe("Whether more pages are available"),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("Entity list result");
@@ -57,28 +61,30 @@ export async function listEntitiesLogic(
     context
   );
 
+  const entities = result.entities as unknown as Record<string, unknown>[];
   return {
-    entities: result.entities as unknown as Record<string, unknown>[],
-    nextCursor: result.nextCursor,
-    has_more: !!result.nextCursor,
+    entities,
+    pagination: buildPaginationOutput({
+      nextCursor: result.nextCursor,
+      pageSize: entities.length,
+      nextPageInputKey: "cursor",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
 
 export function listEntitiesResponseFormatter(result: ListEntitiesOutput): McpTextContent[] {
-  const summary = `Found ${result.entities.length} entities`;
-  const pagination = result.has_more
-    ? `\n\nMore results available. Use next page link: ${result.nextCursor}`
-    : "";
+  const count = result.pagination.pageSize;
+  const summary = `Found ${count} entities`;
   const entities =
-    result.entities.length > 0
+    count > 0
       ? `\n\nEntities:\n${JSON.stringify(result.entities, null, 2)}`
       : "\n\nNo entities found";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}${entities}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}${entities}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

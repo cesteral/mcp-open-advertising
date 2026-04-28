@@ -14,6 +14,11 @@ import {
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
 import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
+import {
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -70,9 +75,7 @@ export const ListAssignedTargetingOutputSchema = z
     assignedTargetingOptions: z
       .array(z.record(z.any()))
       .describe("List of assigned targeting options"),
-    nextPageToken: z.string().optional().describe("Token for next page of results"),
-    has_more: z.boolean().describe("Whether more results are available via pagination"),
-    totalCount: z.number().describe("Number of options in this page"),
+    pagination: PaginationOutputSchema,
     parentType: z.string().describe("Parent entity type"),
     targetingType: z.string().describe("Targeting type queried"),
     timestamp: z.string().datetime(),
@@ -104,11 +107,14 @@ export async function listAssignedTargetingLogic(
     context
   );
 
+  const assignedTargetingOptions = result.assignedTargetingOptions as Record<string, any>[];
   return {
-    assignedTargetingOptions: result.assignedTargetingOptions as Record<string, any>[],
-    nextPageToken: result.nextPageToken,
-    has_more: !!result.nextPageToken,
-    totalCount: result.assignedTargetingOptions.length,
+    assignedTargetingOptions,
+    pagination: buildPaginationOutput({
+      nextCursor: result.nextPageToken,
+      pageSize: assignedTargetingOptions.length,
+      nextPageInputKey: "pageToken",
+    }),
     parentType: input.parentType,
     targetingType: input.targetingType,
     timestamp: new Date().toISOString(),
@@ -123,20 +129,18 @@ export function listAssignedTargetingResponseFormatter(
 ): McpTextContent[] {
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
-  const summary = `Found ${result.totalCount} ${result.targetingType} targeting options for ${result.parentType}`;
-  const pagination = result.nextPageToken
-    ? `\n\nMore results available. Use nextPageToken: ${result.nextPageToken}`
-    : "";
+  const count = result.pagination.pageSize;
+  const summary = `Found ${count} ${result.targetingType} targeting options for ${result.parentType}`;
 
   const options =
-    result.totalCount > 0
+    count > 0
       ? `\n\nTargeting Options:\n${JSON.stringify(result.assignedTargetingOptions, null, 2)}`
       : "\n\nNo targeting options configured for this type";
 
   return [
     {
       type: "text" as const,
-      text: `${summary}\n\nType: ${typeDesc}${options}${pagination}\n\nTimestamp: ${result.timestamp}`,
+      text: `${summary}\n\nType: ${typeDesc}${options}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

@@ -19,8 +19,9 @@ import type { AmazonDspPublicEntityType } from "../../../services/amazon-dsp/ama
 import type { RequestContext } from "@cesteral/shared";
 import {
   type FieldRule,
-  validateRequiredFields,
-  checkReadOnlyFields,
+  type ValidationIssue,
+  validateRequiredFieldsStructured,
+  checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -65,6 +66,19 @@ export const ValidateEntityOutputSchema = z
     mode: z.string(),
     errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
     warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    issues: z
+      .array(
+        z.object({
+          field: z.string(),
+          code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+          message: z.string(),
+          hint: z.string().optional(),
+          suggestedValues: z.array(z.string()).optional(),
+          severity: z.enum(["error", "warning"]).optional(),
+        })
+      )
+      .describe("Structured per-field issues"),
+    nextAction: z.string().optional(),
     timestamp: z.string().datetime(),
   })
   .describe("Validation result");
@@ -89,28 +103,36 @@ export async function validateEntityLogic(
   const normalizedEntityType = entityType as AmazonDspPublicEntityType;
   const canonicalEntityType = getCanonicalEntityType(normalizedEntityType);
   const contract = getEntityContract(normalizedEntityType);
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
 
   if (mode === "create") {
     const rules = contract.requiredOnCreate as FieldRule[];
-    errors.push(...validateRequiredFields(data, rules));
+    issues.push(...validateRequiredFieldsStructured(data, rules));
 
-    // Creative-specific: requires clickThroughUrl
     if (canonicalEntityType === "creative") {
       if (!data.clickThroughUrl) {
-        warnings.push('Creative should include "clickThroughUrl" for click tracking');
+        issues.push({
+          field: "clickThroughUrl",
+          code: "missing",
+          message: 'Creative should include "clickThroughUrl" for click tracking',
+          severity: "warning",
+        });
       }
     }
   }
 
   if (mode === "update") {
     if (Object.keys(data).length === 0) {
-      errors.push("Update payload must contain at least one field to update");
+      issues.push({
+        field: "data",
+        code: "custom",
+        message: "Update payload must contain at least one field to update",
+        severity: "error",
+      });
     }
 
-    warnings.push(
-      ...checkReadOnlyFields(
+    issues.push(
+      ...checkReadOnlyFieldsStructured(
         data,
         contract.readOnlyFields,
         (field) => `Field "${field}" is a system field and may be ignored by the API on update`
@@ -122,31 +144,55 @@ export async function validateEntityLogic(
   const budgetValue = data.budget;
   if (budgetValue !== undefined) {
     if (typeof budgetValue === "number") {
-      // Flat number is only valid for orders
       if (canonicalEntityType === "lineItem") {
-        errors.push(
-          'Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }'
-        );
+        issues.push({
+          field: "budget",
+          code: "wrongType",
+          message:
+            'Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }',
+          suggestedValues: ["DAILY", "LIFETIME"],
+          severity: "error",
+        });
       } else if (budgetValue <= 0) {
-        errors.push('Field "budget" must be a positive number');
+        issues.push({
+          field: "budget",
+          code: "invalidValue",
+          message: 'Field "budget" must be a positive number',
+          severity: "error",
+        });
       }
     } else if (typeof budgetValue === "object" && budgetValue !== null) {
       const budgetObj = budgetValue as Record<string, unknown>;
       if (typeof budgetObj.budget !== "number" || (budgetObj.budget as number) <= 0) {
-        errors.push('Field "budget.budget" must be a positive number');
+        issues.push({
+          field: "budget.budget",
+          code: "invalidValue",
+          message: 'Field "budget.budget" must be a positive number',
+          severity: "error",
+        });
       }
       if (!budgetObj.budgetType) {
-        errors.push('Field "budget.budgetType" is required ("DAILY" or "LIFETIME")');
+        issues.push({
+          field: "budget.budgetType",
+          code: "missing",
+          message: 'Field "budget.budgetType" is required ("DAILY" or "LIFETIME")',
+          suggestedValues: ["DAILY", "LIFETIME"],
+          severity: "error",
+        });
       }
     }
   }
 
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType,
     mode,
-    errors,
-    warnings,
+    errors: errorIssues.map((i) => i.message),
+    warnings: warningIssues.map((i) => i.message),
+    issues,
     timestamp: new Date().toISOString(),
   };
 }

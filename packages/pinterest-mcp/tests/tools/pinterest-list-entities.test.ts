@@ -67,12 +67,13 @@ describe("pinterest_list_entities tool", () => {
       );
 
       expect(result.entities).toHaveLength(2);
-      expect(result.bookmark).toBeNull();
-      expect(result.has_more).toBe(false);
+      expect(result.pagination.nextCursor).toBeNull();
+      expect(result.pagination.hasMore).toBe(false);
+      expect(result.pagination.nextPageInputKey).toBe("bookmark");
       expect(result.timestamp).toBeDefined();
     });
 
-    it("indicates has_more when bookmark is present", async () => {
+    it("indicates hasMore when bookmark is present", async () => {
       mockListEntities.mockResolvedValueOnce({
         entities: [{ id: "687201361754" }],
         pageInfo: {
@@ -90,8 +91,8 @@ describe("pinterest_list_entities tool", () => {
         baseSdkContext
       );
 
-      expect(result.has_more).toBe(true);
-      expect(result.bookmark).toBe("ZmVlZDE%3D");
+      expect(result.pagination.hasMore).toBe(true);
+      expect(result.pagination.nextCursor).toBe("ZmVlZDE%3D");
     });
 
     it("passes filters object to service", async () => {
@@ -152,11 +153,19 @@ describe("pinterest_list_entities tool", () => {
   });
 
   describe("listEntitiesResponseFormatter()", () => {
+    function pagination(nextCursor: string | null, pageSize: number) {
+      return {
+        nextCursor,
+        hasMore: nextCursor !== null,
+        pageSize,
+        nextPageInputKey: "bookmark",
+      };
+    }
+
     it("formats results with entity count", () => {
       const result = {
         entities: [{ id: "687201361754" }],
-        bookmark: null,
-        has_more: false,
+        pagination: pagination(null, 1),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -169,8 +178,7 @@ describe("pinterest_list_entities tool", () => {
     it("indicates no entities found", () => {
       const result = {
         entities: [],
-        bookmark: null,
-        has_more: false,
+        pagination: pagination(null, 0),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -178,16 +186,16 @@ describe("pinterest_list_entities tool", () => {
       expect((formatted[0] as any).text).toContain("No entities found");
     });
 
-    it("shows bookmark hint when has_more is true", () => {
+    it("shows bookmark hint when hasMore is true", () => {
       const result = {
         entities: [{ id: "687201361754" }],
-        bookmark: "ZmVlZDE%3D",
-        has_more: true,
+        pagination: pagination("ZmVlZDE%3D", 1),
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
       const formatted = listEntitiesResponseFormatter(result);
-      expect((formatted[0] as any).text).toContain("bookmark: ZmVlZDE%3D");
+      expect((formatted[0] as any).text).toContain("bookmark");
+      expect((formatted[0] as any).text).toContain("ZmVlZDE%3D");
     });
   });
 

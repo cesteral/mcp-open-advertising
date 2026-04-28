@@ -71,8 +71,9 @@ export async function createMcpServer(
       },
       instructions:
         "Meta Ads campaign management server. Supports 5 entity types (campaign, adSet, ad, adCreative, customAudience), insights, targeting, and bulk operations via the configured Meta Graph API (default: v25.0). " +
-        "Use meta_list_ad_accounts to discover accounts, meta_list_entities to browse entities. " +
-        "See MCP Resources for entity schemas and MCP Prompts for workflow guidance.",
+        "Progressive discovery: (1) start with meta_list_ad_accounts to resolve accessible account IDs, then meta_list_entities to browse campaigns/adSets/ads (always pass `fields` — Graph API returns nothing by default); " +
+        "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for campaign→adSet→ad rules, entity-examples://all for payloads, targeting-reference://all for targeting spec, and insights-reference://all for metrics/breakdowns; " +
+        "(3) for multi-step flows use MCP Prompts: meta_insights_reporting_workflow, meta_targeting_discovery_workflow, meta_entity_update_workflow, meta_bulk_operations_workflow, meta_entity_duplication_workflow.",
     }
   );
 

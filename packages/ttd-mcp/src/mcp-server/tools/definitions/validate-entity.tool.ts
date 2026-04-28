@@ -14,8 +14,9 @@ import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.j
 import type { RequestContext } from "@cesteral/shared";
 import {
   type FieldRule,
-  validateRequiredFields,
-  checkReadOnlyFields,
+  type ValidationIssue,
+  validateRequiredFieldsStructured,
+  checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
@@ -103,6 +104,15 @@ export const ValidateEntityInputSchema = z
   })
   .describe("Parameters for validating a TTD entity payload");
 
+const ValidationIssueSchema = z.object({
+  field: z.string(),
+  code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
+  message: z.string(),
+  hint: z.string().optional(),
+  suggestedValues: z.array(z.string()).optional(),
+  severity: z.enum(["error", "warning"]).optional(),
+});
+
 export const ValidateEntityOutputSchema = z
   .object({
     valid: z.boolean().describe("Whether the payload passed validation"),
@@ -110,6 +120,8 @@ export const ValidateEntityOutputSchema = z
     mode: z.string().describe("Validation mode (create or update)"),
     errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
     warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    issues: z.array(ValidationIssueSchema),
+    nextAction: z.string().optional(),
     timestamp: z.string().datetime().describe("ISO-8601 timestamp of validation"),
   })
   .describe("Validation result");
@@ -133,22 +145,30 @@ export async function validateEntityLogic(
   const { entityType, mode } = input;
   // Merge top-level parent IDs into data — mirrors the create/update tool behaviour
   const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
-  const errors: string[] = [];
-  const warnings: string[] = [];
+  const issues: ValidationIssue[] = [];
 
   if (mode === "create") {
-    // Required-field checks
     const rules = REQUIRED_FIELDS_CREATE[entityType as TtdEntityType] ?? [];
-    errors.push(...validateRequiredFields(data, rules));
+    issues.push(...validateRequiredFieldsStructured(data, rules));
 
     // Campaign-specific: Budget must have Amount and CurrencyCode
     if (entityType === "campaign" && data.Budget && typeof data.Budget === "object") {
       const budget = data.Budget as Record<string, unknown>;
       if (budget.Amount === undefined) {
-        errors.push('Field "Budget.Amount" is required');
+        issues.push({
+          field: "Budget.Amount",
+          code: "missing",
+          message: 'Field "Budget.Amount" is required',
+          severity: "error",
+        });
       }
       if (!budget.CurrencyCode) {
-        errors.push('Field "Budget.CurrencyCode" is required');
+        issues.push({
+          field: "Budget.CurrencyCode",
+          code: "missing",
+          message: 'Field "Budget.CurrencyCode" is required',
+          severity: "error",
+        });
       }
     }
 
@@ -156,21 +176,36 @@ export async function validateEntityLogic(
     if (entityType === "adGroup" && data.RTBAttributes && typeof data.RTBAttributes === "object") {
       const rtb = data.RTBAttributes as Record<string, unknown>;
       if (!rtb.BudgetSettings) {
-        warnings.push('Field "RTBAttributes.BudgetSettings" is recommended for ad group creation');
+        issues.push({
+          field: "RTBAttributes.BudgetSettings",
+          code: "missing",
+          message: 'Field "RTBAttributes.BudgetSettings" is recommended for ad group creation',
+          severity: "warning",
+        });
       }
       if (!rtb.BaseBidCPM) {
-        warnings.push('Field "RTBAttributes.BaseBidCPM" is recommended for ad group creation');
+        issues.push({
+          field: "RTBAttributes.BaseBidCPM",
+          code: "missing",
+          message: 'Field "RTBAttributes.BaseBidCPM" is recommended for ad group creation',
+          severity: "warning",
+        });
       }
     }
   }
 
   if (mode === "update") {
     if (Object.keys(data).length === 0) {
-      errors.push("Update payload must contain at least one field to update");
+      issues.push({
+        field: "data",
+        code: "custom",
+        message: "Update payload must contain at least one field to update",
+        severity: "error",
+      });
     }
 
-    warnings.push(
-      ...checkReadOnlyFields(
+    issues.push(
+      ...checkReadOnlyFieldsStructured(
         data,
         READ_ONLY_FIELDS,
         (field) => `Field "${field}" is a system field and may be ignored by the API on update`
@@ -178,12 +213,17 @@ export async function validateEntityLogic(
     );
   }
 
-  // Budget warnings (both modes) — check nested Budget.Amount
+  // Budget validation (both modes) — check nested Budget.Amount
   const budgetObj = data.Budget;
   if (budgetObj && typeof budgetObj === "object") {
     const amount = (budgetObj as Record<string, unknown>).Amount;
     if (amount !== undefined && typeof amount === "number" && amount <= 0) {
-      errors.push('Field "Budget.Amount" must be a positive number');
+      issues.push({
+        field: "Budget.Amount",
+        code: "invalidValue",
+        message: 'Field "Budget.Amount" must be a positive number',
+        severity: "error",
+      });
     }
   }
 
@@ -191,16 +231,25 @@ export async function validateEntityLogic(
   for (const field of BUDGET_FIELDS) {
     const value = data[field];
     if (value !== undefined && typeof value === "number" && value <= 0) {
-      errors.push(`Field "${field}" must be a positive number`);
+      issues.push({
+        field,
+        code: "invalidValue",
+        message: `Field "${field}" must be a positive number`,
+        severity: "error",
+      });
     }
   }
 
+  const errorIssues = issues.filter((i) => i.severity !== "warning");
+  const warningIssues = issues.filter((i) => i.severity === "warning");
+
   return {
-    valid: errors.length === 0,
+    valid: errorIssues.length === 0,
     entityType,
     mode,
-    errors,
-    warnings,
+    errors: errorIssues.map((i) => i.message),
+    warnings: warningIssues.map((i) => i.message),
+    issues,
     timestamp: new Date().toISOString(),
   };
 }

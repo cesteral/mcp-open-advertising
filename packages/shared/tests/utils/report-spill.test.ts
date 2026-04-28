@@ -33,7 +33,7 @@ vi.mock("@google-cloud/storage", () => ({
 import {
   REPORT_SPILL_ENV,
   deleteSpilledObjectsForSession,
-  spillCsvToGcs,
+  spillBodyToGcs,
 } from "../../src/utils/report-spill.js";
 
 const logger = pino({ level: "silent" });
@@ -45,7 +45,7 @@ function setEnv(overrides: Record<string, string | undefined>) {
   }
 }
 
-describe("spillCsvToGcs", () => {
+describe("spillBodyToGcs", () => {
   const originalEnv: Record<string, string | undefined> = {};
 
   beforeEach(() => {
@@ -64,10 +64,10 @@ describe("spillCsvToGcs", () => {
   });
 
   it("returns disabled when REPORT_SPILL_BUCKET is not set", async () => {
-    const result = await spillCsvToGcs({
-      csv: "a,b\n1,2\n".repeat(10_000),
+    const result = await spillBodyToGcs({
+      body: "a,b\n1,2\n".repeat(10_000),
       server: "ttd",
-      reportId: "r-1",
+      objectId: "r-1",
       logger,
     });
     expect(result).toEqual({ disabled: true, reason: "bucket-not-set" });
@@ -76,10 +76,10 @@ describe("spillCsvToGcs", () => {
 
   it("returns disabled under both byte and row thresholds", async () => {
     setEnv({ [REPORT_SPILL_ENV.BUCKET]: "test-bucket" });
-    const result = await spillCsvToGcs({
-      csv: "a,b\n1,2\n",
+    const result = await spillBodyToGcs({
+      body: "a,b\n1,2\n",
       server: "ttd",
-      reportId: "r-1",
+      objectId: "r-1",
       rowCount: 1,
       logger,
     });
@@ -92,10 +92,10 @@ describe("spillCsvToGcs", () => {
       [REPORT_SPILL_ENV.BUCKET]: "test-bucket",
       [REPORT_SPILL_ENV.THRESHOLD_BYTES]: "100",
     });
-    const result = await spillCsvToGcs({
-      csv: "a,b\n1,2\n".repeat(100),
+    const result = await spillBodyToGcs({
+      body: "a,b\n1,2\n".repeat(100),
       server: "ttd",
-      reportId: "r-1",
+      objectId: "r-1",
       sessionId: "s-1",
       rowCount: 10,
       logger,
@@ -120,10 +120,10 @@ describe("spillCsvToGcs", () => {
       [REPORT_SPILL_ENV.BUCKET]: "test-bucket",
       [REPORT_SPILL_ENV.THRESHOLD_ROWS]: "50",
     });
-    const result = await spillCsvToGcs({
-      csv: "tiny\n",
+    const result = await spillBodyToGcs({
+      body: "tiny\n",
       server: "pinterest",
-      reportId: "r-2",
+      objectId: "r-2",
       rowCount: 100,
       logger,
     });
@@ -136,10 +136,10 @@ describe("spillCsvToGcs", () => {
       [REPORT_SPILL_ENV.BUCKET]: "test-bucket",
       [REPORT_SPILL_ENV.THRESHOLD_BYTES]: "1000000",
     });
-    const result = await spillCsvToGcs({
-      csv: "a,b\n1,2\n",
+    const result = await spillBodyToGcs({
+      body: "a,b\n1,2\n",
       server: "ttd",
-      reportId: "r-3",
+      objectId: "r-3",
       thresholdBytes: 5, // tiny — forces spill
       rowCount: 1,
       logger,
@@ -153,10 +153,10 @@ describe("spillCsvToGcs", () => {
       [REPORT_SPILL_ENV.THRESHOLD_BYTES]: "10",
     });
     mockSave.mockRejectedValueOnce(new Error("gcs down"));
-    const result = await spillCsvToGcs({
-      csv: "a,b\n1,2\n".repeat(100),
+    const result = await spillBodyToGcs({
+      body: "a,b\n1,2\n".repeat(100),
       server: "ttd",
-      reportId: "r-4",
+      objectId: "r-4",
       logger,
     });
     expect(result).toEqual({ error: "gcs down" });
@@ -167,11 +167,11 @@ describe("spillCsvToGcs", () => {
       [REPORT_SPILL_ENV.BUCKET]: "test-bucket",
       [REPORT_SPILL_ENV.THRESHOLD_BYTES]: "10",
     });
-    const result = await spillCsvToGcs({
-      csv: JSON.stringify({ x: 1 }).repeat(100),
+    const result = await spillBodyToGcs({
+      body: JSON.stringify({ x: 1 }).repeat(100),
       mimeType: "application/json",
       server: "amazonDsp",
-      reportId: "r-5",
+      objectId: "r-5",
       logger,
     });
     expect(mockSave).toHaveBeenCalledWith(
@@ -189,10 +189,10 @@ describe("spillCsvToGcs", () => {
       [REPORT_SPILL_ENV.THRESHOLD_BYTES]: "10",
     });
     const before = Date.now();
-    await spillCsvToGcs({
-      csv: "x".repeat(100),
+    await spillBodyToGcs({
+      body: "x".repeat(100),
       server: "ttd",
-      reportId: "r-6",
+      objectId: "r-6",
       signedUrlTtlSeconds: 120,
       logger,
     });
@@ -206,10 +206,10 @@ describe("spillCsvToGcs", () => {
       [REPORT_SPILL_ENV.BUCKET]: "test-bucket",
       [REPORT_SPILL_ENV.THRESHOLD_BYTES]: "10",
     });
-    const result = await spillCsvToGcs({
-      csv: "x".repeat(100),
+    const result = await spillBodyToGcs({
+      body: "x".repeat(100),
       server: "ttd",
-      reportId: "rep/orted?id",
+      objectId: "rep/orted?id",
       sessionId: "sess/with../slash",
       logger,
     });

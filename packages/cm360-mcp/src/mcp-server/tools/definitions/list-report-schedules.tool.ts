@@ -3,7 +3,13 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { fromCm360Schedule, ReportScheduleSummarySchema } from "@cesteral/shared";
+import {
+  fromCm360Schedule,
+  ReportScheduleSummarySchema,
+  PaginationOutputSchema,
+  buildPaginationOutput,
+  formatPaginationHint,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_list_report_schedules";
@@ -35,8 +41,7 @@ export const ListReportSchedulesOutputSchema = z
       .array(z.record(z.unknown()))
       .optional()
       .describe("Raw CM360 report envelopes (kept for platform-specific debugging)"),
-    nextPageToken: z.string().optional().describe("Token to fetch the next page"),
-    total: z.number(),
+    pagination: PaginationOutputSchema,
     timestamp: z.string().datetime(),
   })
   .describe("List of scheduled reports (normalized to ReportScheduleSummary)");
@@ -63,8 +68,11 @@ export async function listReportSchedulesLogic(
   return {
     schedules,
     raw: rawReports,
-    nextPageToken: result.nextPageToken,
-    total: schedules.length,
+    pagination: buildPaginationOutput({
+      nextCursor: result.nextPageToken,
+      pageSize: schedules.length,
+      nextPageInputKey: "pageToken",
+    }),
     timestamp: new Date().toISOString(),
   };
 }
@@ -76,7 +84,7 @@ export function listReportSchedulesResponseFormatter(
     return [
       {
         type: "text" as const,
-        text: `No scheduled reports found.${result.nextPageToken ? `\n\nnextPageToken: ${result.nextPageToken}` : ""}\n\nTimestamp: ${result.timestamp}`,
+        text: `No scheduled reports found.${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
       },
     ];
   }
@@ -84,7 +92,7 @@ export function listReportSchedulesResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `${result.total} scheduled report(s):\n\n${JSON.stringify(result.schedules, null, 2)}${result.nextPageToken ? `\n\nnextPageToken: ${result.nextPageToken}` : ""}\n\nTimestamp: ${result.timestamp}`,
+      text: `${result.pagination.pageSize} scheduled report(s):\n\n${JSON.stringify(result.schedules, null, 2)}${formatPaginationHint(result.pagination)}\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }

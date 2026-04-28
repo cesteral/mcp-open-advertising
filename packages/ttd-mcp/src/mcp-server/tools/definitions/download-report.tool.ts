@@ -14,7 +14,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
   StoredReportBodyOutputSchema,
-  spillCsvToGcs,
+  spillBodyToGcs,
   type ServiceDownloadedReport,
 } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
@@ -132,7 +132,7 @@ export async function downloadReportLogic(
     input,
     sessionId: sdkContext?.sessionId,
     reportCsvStore,
-    spillCsvToGcs,
+    spillBodyToGcs,
     spillServer: "ttd",
     reportId: extractReportIdFromUrl(input.downloadUrl),
     computedMetricAliases: TTD_COMPUTED_METRIC_ALIASES,

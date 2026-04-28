@@ -10,7 +10,7 @@
  */
 
 import type { Logger } from "pino";
-import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
+import { McpError, ErrorHandler, JsonRpcErrorCode } from "./mcp-errors.js";
 import { fetchWithTimeout } from "./fetch-with-timeout.js";
 import type { RequestContext } from "./request-context.js";
 import { setSpanAttribute } from "./telemetry.js";
@@ -333,6 +333,17 @@ export async function executeWithRetry(
       errorMessage += `\n\nAction required: ${config.tokenExpiryHint}`;
     }
 
+    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfterSeconds =
+      retryAfterHeader && !isNaN(parseInt(retryAfterHeader, 10))
+        ? parseInt(retryAfterHeader, 10)
+        : undefined;
+    const nextAction = ErrorHandler.defaultNextActionForStatus(response.status, {
+      retryAfterSeconds,
+      tokenExpiryHint: config.tokenExpiryHint,
+    });
+    const platformExtras = buildErrorData?.(response.status, errorBody);
+
     const mcpError = new McpError(errorCode, errorMessage, {
       requestId: context?.requestId,
       httpStatus: response.status,
@@ -343,7 +354,8 @@ export async function executeWithRetry(
       ...(response.status === 401 && config.tokenExpiryHint
         ? { tokenExpiryHint: config.tokenExpiryHint }
         : {}),
-      ...buildErrorData?.(response.status, errorBody),
+      ...(nextAction !== undefined ? { nextAction } : {}),
+      ...platformExtras,
     });
 
     const retryable = isRetryable
