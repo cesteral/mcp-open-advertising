@@ -16,12 +16,12 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 2   | `dv360-mcp`      | 3002 | DV360 API v4                       | advertiser, campaign, insertionOrder, lineItem, + more                                           | 25    |
 | 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 51    |
 | 4   | `gads-mcp`       | 3004 | Google Ads REST API v23            | campaign, adGroup, ad, keyword, campaignBudget, asset                                            | 15    |
-| 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 25    |
+| 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 26    |
 | 6   | `linkedin-mcp`   | 3006 | LinkedIn Marketing API v2          | adAccount, campaignGroup, campaign, creative, conversionRule                                     | 20    |
 | 7   | `tiktok-mcp`     | 3007 | TikTok Marketing API v1.3          | campaign, adGroup, ad, creative                                                                  | 23    |
 | 8   | `cm360-mcp`      | 3008 | CM360 API v5                       | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 20    |
 | 9   | `snapchat-mcp`   | 3009 | Snapchat Ads API v1                | campaign, adGroup, ad, creative                                                                  | 22    |
-| 10  | `sa360-mcp`      | 3010 | SA360 Reporting API v0 + DS v2     | _(reporting + conversions)_                                                                      | 15    |
+| 10  | `sa360-mcp`      | 3010 | SA360 Reporting API v0 + DS v2     | _(reporting + conversions)_                                                                      | 16    |
 | 11  | `pinterest-mcp`  | 3011 | Pinterest Ads API v5               | campaign, adGroup, ad, creative                                                                  | 22    |
 | 12  | `amazon-dsp-mcp` | 3012 | Amazon DSP API                     | order, lineItem, creative                                                                        | 18    |
 | 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 24    |
@@ -255,7 +255,7 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 
 Plus standard CRUD (`get_entity`, `list_entities`, `create_entity`, `update_entity`, `remove_entity`), `bulk_create_entities`, `bulk_update_status`, `adjust_bids`, `validate_entity`, `get_ad_preview`.
 
-### meta-mcp — 25 Tools (Unique: Insights, Delivery, Budget Schedules, Async Reporting, Pacing)
+### meta-mcp — 26 Tools (Unique: Insights, Delivery, Budget Schedules, Async Reporting, Pacing)
 
 Standard CRUD/bulk/targeting/media tools plus:
 
@@ -268,7 +268,7 @@ Standard CRUD/bulk/targeting/media tools plus:
 | `meta_get_delivery_estimate`   | Audience size estimation (reachestimate with delivery_estimate fallback) | `adAccountId`, `targetingSpec`                   |
 | `meta_manage_budget_schedule`  | Create/list budget schedules for high-demand periods                     | `operation`, `campaignId`, `data`                |
 
-### sa360-mcp — 15 Tools (Reporting + Conversions)
+### sa360-mcp — 16 Tools (Reporting + Conversions)
 
 | Tool                            | Description                          | Key Parameters                                          |
 | ------------------------------- | ------------------------------------ | ------------------------------------------------------- |
