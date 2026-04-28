@@ -16,6 +16,7 @@ import {
   type FieldRule,
   type ValidationIssue,
   validateRequiredFieldsStructured,
+  validateEnumFieldsStructured,
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
@@ -40,18 +41,59 @@ reasons (e.g., invalid pacing mode / budget combinations).`;
 // Required-field definitions per entity type (create mode)
 // ---------------------------------------------------------------------------
 
+// TTD REST API enum reference: https://api.thetradedesk.com/v3/portal/api/doc/
+const PACING_MODES = ["PaceEvenly", "PaceAhead", "PaceAsap"] as const;
+const AVAILABILITY = ["Available", "Archived"] as const;
+const TRACKING_TAG_TYPES = [
+  "Universal",
+  "Standard",
+  "Pixel",
+  "JavaScript",
+  "ServerToServer",
+] as const;
+const COMMON_CURRENCIES = [
+  "USD",
+  "EUR",
+  "GBP",
+  "JPY",
+  "CAD",
+  "AUD",
+  "SGD",
+  "CHF",
+  "SEK",
+  "NOK",
+  "DKK",
+  "MXN",
+  "BRL",
+  "INR",
+  "CNY",
+  "HKD",
+  "NZD",
+  "ZAR",
+] as const;
+
 const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
   advertiser: [
     { field: "PartnerId", expectedType: "string" },
     { field: "AdvertiserName", expectedType: "string" },
-    { field: "CurrencyCode", expectedType: "string", hint: "e.g., USD, EUR, GBP" },
+    {
+      field: "CurrencyCode",
+      expectedType: "string",
+      hint: "ISO 4217 currency code",
+      suggestedValues: COMMON_CURRENCIES,
+    },
   ],
   campaign: [
     { field: "AdvertiserId", expectedType: "string" },
     { field: "CampaignName", expectedType: "string" },
     { field: "Budget", expectedType: "object", hint: "{ Amount, CurrencyCode }" },
     { field: "StartDate", expectedType: "string", hint: "ISO-8601 datetime" },
-    { field: "PacingMode", expectedType: "string", hint: "e.g., PaceEvenly, PaceAhead, PaceAsap" },
+    {
+      field: "PacingMode",
+      expectedType: "string",
+      hint: "Budget pacing strategy",
+      suggestedValues: PACING_MODES,
+    },
   ],
   adGroup: [
     { field: "AdvertiserId", expectedType: "string" },
@@ -70,6 +112,43 @@ const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
   conversionTracker: [
     { field: "AdvertiserId", expectedType: "string" },
     { field: "TrackingTagName", expectedType: "string" },
+  ],
+};
+
+/** Optional enum-typed fields validated when present (write-time fields, not required). */
+const OPTIONAL_ENUM_FIELDS: Record<TtdEntityType, FieldRule[]> = {
+  advertiser: [
+    {
+      field: "Availability",
+      expectedType: "string",
+      hint: "Advertiser availability state",
+      suggestedValues: AVAILABILITY,
+    },
+  ],
+  campaign: [
+    {
+      field: "Availability",
+      expectedType: "string",
+      hint: "Campaign availability state",
+      suggestedValues: AVAILABILITY,
+    },
+  ],
+  adGroup: [
+    {
+      field: "Availability",
+      expectedType: "string",
+      hint: "Ad group availability state",
+      suggestedValues: AVAILABILITY,
+    },
+  ],
+  creative: [],
+  conversionTracker: [
+    {
+      field: "TrackingTagType",
+      expectedType: "string",
+      hint: "Conversion tracker tag type",
+      suggestedValues: TRACKING_TAG_TYPES,
+    },
   ],
 };
 
@@ -147,8 +226,14 @@ export async function validateEntityLogic(
   const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
   const issues: ValidationIssue[] = [];
 
+  const rules = REQUIRED_FIELDS_CREATE[entityType as TtdEntityType] ?? [];
+  const optionalRules = OPTIONAL_ENUM_FIELDS[entityType as TtdEntityType] ?? [];
+
+  // Enum validation runs in both modes — invalid enum values are equally
+  // invalid on update.
+  issues.push(...validateEnumFieldsStructured(data, [...rules, ...optionalRules]));
+
   if (mode === "create") {
-    const rules = REQUIRED_FIELDS_CREATE[entityType as TtdEntityType] ?? [];
     issues.push(...validateRequiredFieldsStructured(data, rules));
 
     // Campaign-specific: Budget must have Amount and CurrencyCode

@@ -16,6 +16,7 @@ import {
   type FieldRule,
   type ValidationIssue,
   validateRequiredFieldsStructured,
+  validateEnumFieldsStructured,
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
@@ -41,13 +42,36 @@ reasons (e.g., invalid objective/placement combinations).`;
 // Required-field definitions per entity type (create mode)
 // ---------------------------------------------------------------------------
 
+// TikTok Marketing API v1.3 enum reference:
+// https://business-api.tiktok.com/portal/docs?id=1739665422787074
+const OBJECTIVE_TYPES = [
+  "REACH",
+  "TRAFFIC",
+  "APP_PROMOTION",
+  "VIDEO_VIEWS",
+  "LEAD_GENERATION",
+  "WEB_CONVERSIONS",
+  "ENGAGEMENT",
+  "PRODUCT_SALES",
+  "CATALOG_SALES",
+] as const;
+const PLACEMENTS = [
+  "PLACEMENT_TIKTOK",
+  "PLACEMENT_TOPBUZZ",
+  "PLACEMENT_PANGLE",
+  "PLACEMENT_GLOBAL_APP_BUNDLE",
+] as const;
+const OPERATION_STATUSES = ["ENABLE", "DISABLE", "DELETE"] as const;
+const BUDGET_MODES = ["BUDGET_MODE_DAY", "BUDGET_MODE_TOTAL", "BUDGET_MODE_INFINITE"] as const;
+
 const REQUIRED_FIELDS_CREATE: Record<TikTokEntityType, FieldRule[]> = {
   campaign: [
     { field: "campaign_name", expectedType: "string" },
     {
       field: "objective_type",
       expectedType: "string",
-      hint: "e.g., TRAFFIC, APP_PROMOTION, WEB_CONVERSIONS",
+      hint: "Campaign optimization objective",
+      suggestedValues: OBJECTIVE_TYPES,
     },
   ],
   adGroup: [
@@ -56,7 +80,8 @@ const REQUIRED_FIELDS_CREATE: Record<TikTokEntityType, FieldRule[]> = {
     {
       field: "placements",
       expectedType: "array",
-      hint: "e.g., ['PLACEMENT_TIKTOK'] when TikTok requires placement context",
+      hint: "Inventory placements (array of placement enums)",
+      suggestedValues: PLACEMENTS,
     },
   ],
   ad: [
@@ -64,6 +89,47 @@ const REQUIRED_FIELDS_CREATE: Record<TikTokEntityType, FieldRule[]> = {
     { field: "creatives", expectedType: "array", hint: "TikTok AdCreateBody requires creatives[]" },
   ],
   creative: [{ field: "display_name", expectedType: "string" }],
+};
+
+/** Optional enum-typed fields validated when present (write-time fields, not required). */
+const OPTIONAL_ENUM_FIELDS: Record<TikTokEntityType, FieldRule[]> = {
+  campaign: [
+    {
+      field: "operation_status",
+      expectedType: "string",
+      hint: "Campaign operational state",
+      suggestedValues: OPERATION_STATUSES,
+    },
+    {
+      field: "budget_mode",
+      expectedType: "string",
+      hint: "How the campaign-level budget is interpreted",
+      suggestedValues: BUDGET_MODES,
+    },
+  ],
+  adGroup: [
+    {
+      field: "operation_status",
+      expectedType: "string",
+      hint: "Ad group operational state",
+      suggestedValues: OPERATION_STATUSES,
+    },
+    {
+      field: "budget_mode",
+      expectedType: "string",
+      hint: "How the ad-group budget is interpreted",
+      suggestedValues: BUDGET_MODES,
+    },
+  ],
+  ad: [
+    {
+      field: "operation_status",
+      expectedType: "string",
+      hint: "Ad operational state",
+      suggestedValues: OPERATION_STATUSES,
+    },
+  ],
+  creative: [],
 };
 
 /** Fields that are always read-only and cannot be set via the API. */
@@ -130,9 +196,15 @@ export async function validateEntityLogic(
   const { entityType, mode, data } = input;
   const issues: ValidationIssue[] = [];
 
+  const requiredRules = REQUIRED_FIELDS_CREATE[entityType as TikTokEntityType] ?? [];
+  const optionalRules = OPTIONAL_ENUM_FIELDS[entityType as TikTokEntityType] ?? [];
+
+  // Enum validation runs in both modes — invalid enum values are equally
+  // invalid on update.
+  issues.push(...validateEnumFieldsStructured(data, [...requiredRules, ...optionalRules]));
+
   if (mode === "create") {
-    const rules = REQUIRED_FIELDS_CREATE[entityType as TikTokEntityType] ?? [];
-    issues.push(...validateRequiredFieldsStructured(data, rules));
+    issues.push(...validateRequiredFieldsStructured(data, requiredRules));
 
     if (entityType === "ad") {
       if (!Array.isArray(data.creatives) || data.creatives.length === 0) {
@@ -140,6 +212,22 @@ export async function validateEntityLogic(
           field: "creatives",
           code: "missing",
           message: 'Field "creatives" must be a non-empty array for ad creation',
+          severity: "error",
+        });
+      }
+    }
+
+    // Validate placements array members against the placement enum when present.
+    if (Array.isArray(data.placements)) {
+      const invalid = (data.placements as unknown[]).filter(
+        (p) => typeof p === "string" && !PLACEMENTS.includes(p as (typeof PLACEMENTS)[number])
+      );
+      if (invalid.length > 0) {
+        issues.push({
+          field: "placements",
+          code: "invalidValue",
+          message: `Field "placements" contains unknown values: ${invalid.join(", ")}`,
+          suggestedValues: [...PLACEMENTS],
           severity: "error",
         });
       }

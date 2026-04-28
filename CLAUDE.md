@@ -14,7 +14,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | --- | ---------------- | ---- | ---------------------------------- | ------------------------------------------------------------------------------------------------ | ----- |
 | 1   | `dbm-mcp`        | 3001 | Bid Manager API v2                 | _(reporting only)_                                                                               | 6     |
 | 2   | `dv360-mcp`      | 3002 | DV360 API v4                       | advertiser, campaign, insertionOrder, lineItem, + more                                           | 25    |
-| 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 55    |
+| 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 51    |
 | 4   | `gads-mcp`       | 3004 | Google Ads REST API v23            | campaign, adGroup, ad, keyword, campaignBudget, asset                                            | 15    |
 | 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 25    |
 | 6   | `linkedin-mcp`   | 3006 | LinkedIn Marketing API v2          | adAccount, campaignGroup, campaign, creative, conversionRule                                     | 20    |
@@ -196,7 +196,7 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `dv360_upload_image`                    | Upload image from URL                 | `advertiserId`, `mediaUrl`, `name?`       |
 | `dv360_upload_video`                    | Upload video from URL                 | `advertiserId`, `mediaUrl`, `title?`      |
 
-### ttd-mcp — 55 Tools (Unique: Workflows API, GraphQL, Bid Lists, Seeds)
+### ttd-mcp — 51 Tools (Unique: Workflows API, GraphQL, Bid Lists, Seeds)
 
 **CRUD (5):** `ttd_get_entity`, `ttd_list_entities`, `ttd_create_entity`, `ttd_update_entity`, `ttd_delete_entity`
 
@@ -226,19 +226,15 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `ttd_list_report_templates`    | List template headers                                         |
 | `ttd_create_template_schedule` | Create a schedule from a template ID                          |
 
-**Workflows API (13):** TTD's newer workflow-aware payload API (preferred over REST for campaign/ad group writes).
+**Workflows API (9):** TTD's newer workflow-aware payload API (preferred over REST for campaign/ad group writes). Each create/update tool accepts `mode: "single"` (sync) or `mode: "batch"` (async Workflows job).
 
 | Tool                           | Description                                                |
 | ------------------------------ | ---------------------------------------------------------- |
-| `ttd_create_campaign_workflow` | Create a campaign via Workflows API                        |
-| `ttd_update_campaign_workflow` | Update a campaign (PATCH semantics)                        |
+| `ttd_create_campaigns`         | Create one (single) or many (batch job) campaigns          |
+| `ttd_update_campaigns`         | PATCH one (single) or many (batch job) campaigns           |
+| `ttd_create_ad_groups`         | Create one (single) or many (batch job) ad groups          |
+| `ttd_update_ad_groups`         | PATCH one (single) or many (batch job) ad groups           |
 | `ttd_get_campaign_version`     | Get a campaign's Workflows version payload                 |
-| `ttd_create_ad_group_workflow` | Create an ad group via Workflows API                       |
-| `ttd_update_ad_group_workflow` | Update an ad group (PATCH semantics)                       |
-| `ttd_create_campaigns_job`     | Async job: create multiple campaigns                       |
-| `ttd_update_campaigns_job`     | Async job: update multiple campaigns                       |
-| `ttd_create_ad_groups_job`     | Async job: create multiple ad groups                       |
-| `ttd_update_ad_groups_job`     | Async job: update multiple ad groups                       |
 | `ttd_get_first_party_data_job` | Async job: retrieve first-party data for an advertiser     |
 | `ttd_get_third_party_data_job` | Async job: retrieve third-party data for a partner         |
 | `ttd_get_job_status`           | Poll status of a Workflows job                             |

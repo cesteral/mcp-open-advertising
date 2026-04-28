@@ -8,7 +8,103 @@ import {
   type MsAdsEntityType,
 } from "../utils/entity-mapping.js";
 import type { RequestContext, SdkContext } from "@cesteral/shared";
-import { validateEntityResponseFormatter, type ValidationIssue } from "@cesteral/shared";
+import {
+  validateEntityResponseFormatter,
+  validateEnumFieldsStructured,
+  type FieldRule,
+  type ValidationIssue,
+} from "@cesteral/shared";
+
+// Microsoft Advertising REST API v13 enum reference:
+// https://learn.microsoft.com/en-us/advertising/campaign-management-service/
+const MSADS_ENUMS_BY_ENTITY: Record<string, FieldRule[]> = {
+  campaign: [
+    {
+      field: "Status",
+      expectedType: "string",
+      hint: "Campaign status",
+      suggestedValues: ["Active", "Paused", "BudgetPaused", "BudgetAndManualPaused", "Deleted", "Suspended"],
+    },
+    {
+      field: "BudgetType",
+      expectedType: "string",
+      hint: "Budget type",
+      suggestedValues: ["DailyBudgetStandard", "DailyBudgetAccelerated", "MonthlyBudgetSpendUntilDepleted"],
+    },
+    {
+      field: "CampaignType",
+      expectedType: "string",
+      hint: "Campaign type",
+      suggestedValues: [
+        "Search",
+        "Shopping",
+        "DynamicSearchAds",
+        "Audience",
+        "PerformanceMax",
+        "Hotel",
+        "DisplayNetwork",
+      ],
+    },
+  ],
+  adGroup: [
+    {
+      field: "Status",
+      expectedType: "string",
+      suggestedValues: ["Active", "Paused", "Deleted", "Expired"],
+    },
+    {
+      field: "Network",
+      expectedType: "string",
+      hint: "Distribution network",
+      suggestedValues: [
+        "OwnedAndOperatedAndSyndicatedSearch",
+        "OwnedAndOperatedOnly",
+        "SyndicatedSearchOnly",
+        "ContentOnly",
+      ],
+    },
+  ],
+  ad: [
+    {
+      field: "Status",
+      expectedType: "string",
+      suggestedValues: ["Active", "Paused", "Deleted", "Disapproved"],
+    },
+    {
+      field: "Type",
+      expectedType: "string",
+      suggestedValues: [
+        "Text",
+        "Product",
+        "AppInstall",
+        "ExpandedText",
+        "DynamicSearch",
+        "ResponsiveAd",
+        "ResponsiveSearch",
+      ],
+    },
+  ],
+  keyword: [
+    {
+      field: "MatchType",
+      expectedType: "string",
+      hint: "Keyword match type",
+      suggestedValues: ["Exact", "Phrase", "Broad", "Content"],
+    },
+    {
+      field: "Status",
+      expectedType: "string",
+      suggestedValues: ["Active", "Paused", "Deleted"],
+    },
+  ],
+  budget: [
+    {
+      field: "BudgetType",
+      expectedType: "string",
+      suggestedValues: ["DailyBudgetStandard", "DailyBudgetAccelerated"],
+    },
+  ],
+};
 
 const TOOL_NAME = "msads_validate_entity";
 const TOOL_TITLE = "Validate Microsoft Ads Entity";
@@ -102,6 +198,31 @@ export async function validateEntityLogic(
         message: `Expected data to contain '${config.pluralName}' array`,
         severity: "warning",
       });
+    }
+  }
+
+  // Enum validation against published Microsoft Advertising enums. Walks the
+  // `{pluralName}` array (Bulk-style payload) and runs enum checks on each item.
+  const enumRules = MSADS_ENUMS_BY_ENTITY[input.entityType] ?? [];
+  if (enumRules.length > 0) {
+    try {
+      const config = getEntityConfig(input.entityType as MsAdsEntityType);
+      const entities = input.data[config.pluralName] as Record<string, unknown>[] | undefined;
+      if (Array.isArray(entities)) {
+        entities.forEach((entity, i) => {
+          for (const issue of validateEnumFieldsStructured(entity, enumRules)) {
+            issues.push({
+              ...issue,
+              field: `${config.pluralName}[${i}].${issue.field}`,
+            });
+          }
+        });
+      } else {
+        // Fall back to single-object payload (some servers accept this shape).
+        issues.push(...validateEnumFieldsStructured(input.data, enumRules));
+      }
+    } catch {
+      // Unknown entity type — already reported above.
     }
   }
 

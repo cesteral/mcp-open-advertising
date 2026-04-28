@@ -4,7 +4,100 @@
 import { z } from "zod";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
-import { validateEntityResponseFormatter, type ValidationIssue } from "@cesteral/shared";
+import {
+  validateEntityResponseFormatter,
+  validateEnumFieldsStructured,
+  type FieldRule,
+  type ValidationIssue,
+} from "@cesteral/shared";
+
+// CM360 API v5 enum reference: https://developers.google.com/doubleclick-advertisers/rest
+const CM360_ENUMS_BY_ENTITY: Record<string, FieldRule[]> = {
+  campaign: [
+    {
+      field: "archived",
+      hint: "Archive flag (boolean — represented as string in some payloads)",
+    },
+  ],
+  placement: [
+    {
+      field: "compatibility",
+      expectedType: "string",
+      hint: "Placement compatibility platform",
+      suggestedValues: ["DISPLAY", "DISPLAY_INTERSTITIAL", "APP", "APP_INTERSTITIAL", "IN_STREAM_VIDEO", "IN_STREAM_AUDIO"],
+    },
+    {
+      field: "paymentSource",
+      expectedType: "string",
+      hint: "Who pays for this placement",
+      suggestedValues: ["PLACEMENT_AGENCY_PAID", "PLACEMENT_PUBLISHER_PAID"],
+    },
+    {
+      field: "pricingSchedule.pricingType",
+      expectedType: "string",
+      hint: "Cost structure",
+      suggestedValues: [
+        "PRICING_TYPE_CPM",
+        "PRICING_TYPE_CPC",
+        "PRICING_TYPE_CPA",
+        "PRICING_TYPE_FLAT_RATE_IMPRESSIONS",
+        "PRICING_TYPE_FLAT_RATE_CLICKS",
+        "PRICING_TYPE_CPM_ACTIVEVIEW",
+      ],
+    },
+  ],
+  ad: [
+    {
+      field: "type",
+      expectedType: "string",
+      hint: "Ad type",
+      suggestedValues: [
+        "AD_SERVING_STANDARD_AD",
+        "AD_SERVING_DEFAULT_AD",
+        "AD_SERVING_CLICK_TRACKER",
+        "AD_SERVING_TRACKING",
+        "AD_SERVING_BRAND_SAFE_AD",
+      ],
+    },
+  ],
+  creative: [
+    {
+      field: "type",
+      expectedType: "string",
+      hint: "Creative format",
+      suggestedValues: [
+        "DISPLAY",
+        "DISPLAY_IMAGE_GALLERY",
+        "FLASH_INPAGE",
+        "HTML5_BANNER",
+        "IMAGE",
+        "INSTREAM_VIDEO",
+        "INSTREAM_AUDIO",
+        "REDIRECT",
+        "RICH_MEDIA_DISPLAY_BANNER",
+        "RICH_MEDIA_DISPLAY_EXPANDING",
+        "RICH_MEDIA_INPAGE_FLOATING",
+        "VPAID_LINEAR_VIDEO",
+        "VPAID_NON_LINEAR_VIDEO",
+        "TRACKING_TEXT",
+      ],
+    },
+  ],
+  floodlightActivity: [
+    {
+      field: "countingMethod",
+      expectedType: "string",
+      hint: "How conversions are counted",
+      suggestedValues: [
+        "STANDARD_COUNTING",
+        "UNIQUE_COUNTING",
+        "SESSION_COUNTING",
+        "TRANSACTIONS_COUNTING",
+        "ITEMS_SOLD_COUNTING",
+      ],
+    },
+  ],
+};
 
 const TOOL_NAME = "cm360_validate_entity";
 const TOOL_TITLE = "Validate CM360 Entity";
@@ -58,6 +151,29 @@ export async function validateEntityLogic(
     issues.push({ field, code, message, severity: "error" });
   const warn = (field: string, code: ValidationIssue["code"], message: string) =>
     issues.push({ field, code, message, severity: "warning" });
+
+  // Check string-typed enum fields against the published CM360 v5 enums.
+  const enumRules = CM360_ENUMS_BY_ENTITY[input.entityType] ?? [];
+  if (enumRules.length > 0) {
+    issues.push(...validateEnumFieldsStructured(input.data, enumRules));
+    // Also check nested pricingSchedule.pricingType for placements.
+    if (input.entityType === "placement" && input.data.pricingSchedule) {
+      const ps = input.data.pricingSchedule as Record<string, unknown>;
+      const nestedRule = enumRules.find((r) => r.field === "pricingSchedule.pricingType");
+      if (nestedRule?.suggestedValues && typeof ps.pricingType === "string") {
+        if (!nestedRule.suggestedValues.includes(ps.pricingType)) {
+          issues.push({
+            field: "pricingSchedule.pricingType",
+            code: "invalidValue",
+            message: `Field "pricingSchedule.pricingType" value "${ps.pricingType}" is not a recognized enum value.`,
+            hint: nestedRule.hint,
+            suggestedValues: [...nestedRule.suggestedValues],
+            severity: "error",
+          });
+        }
+      }
+    }
+  }
 
   if (input.mode === "update" && !input.data.id) {
     err("id", "missing", "id field is required for update mode (CM360 uses PUT semantics)");

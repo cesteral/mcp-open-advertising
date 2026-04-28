@@ -4,11 +4,11 @@
 /**
  * Tool definitions barrel export
  *
- * 55 tools total:
+ * 51 tools total:
  *   1 context: get context (cold-start partner discovery)
  *   6 original: list, get, create, update, delete, report
  *   5 workflows utility: REST passthrough, standard job status, first-party data job, third-party data job, campaign version
- *   8 workflow entities/jobs: create/update campaign workflow, create/update ad group workflow, bulk create/update campaign jobs, bulk create/update ad group jobs
+ *   4 workflow entities (single+batch): create/update campaigns, create/update ad groups (each accepts mode=single sync or mode=batch async job)
  *   10 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report, submit report, check report status
  *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
  *   1 preview: get ad preview
@@ -30,14 +30,10 @@ export { getEntityTool } from "./get-entity.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { deleteEntityTool } from "./delete-entity.tool.js";
-export { createCampaignWorkflowTool } from "./create-campaign-workflow.tool.js";
-export { updateCampaignWorkflowTool } from "./update-campaign-workflow.tool.js";
-export { createCampaignsJobTool } from "./create-campaigns-job.tool.js";
-export { updateCampaignsJobTool } from "./update-campaigns-job.tool.js";
-export { createAdGroupWorkflowTool } from "./create-ad-group-workflow.tool.js";
-export { updateAdGroupWorkflowTool } from "./update-ad-group-workflow.tool.js";
-export { createAdGroupsJobTool } from "./create-ad-groups-job.tool.js";
-export { updateAdGroupsJobTool } from "./update-ad-groups-job.tool.js";
+export { createCampaignsTool } from "./create-campaigns.tool.js";
+export { updateCampaignsTool } from "./update-campaigns.tool.js";
+export { createAdGroupsTool } from "./create-ad-groups.tool.js";
+export { updateAdGroupsTool } from "./update-ad-groups.tool.js";
 export { getReportTool } from "./get-report.tool.js";
 export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -86,14 +82,10 @@ import { getEntityTool } from "./get-entity.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
-import { createCampaignWorkflowTool } from "./create-campaign-workflow.tool.js";
-import { updateCampaignWorkflowTool } from "./update-campaign-workflow.tool.js";
-import { createCampaignsJobTool } from "./create-campaigns-job.tool.js";
-import { updateCampaignsJobTool } from "./update-campaigns-job.tool.js";
-import { createAdGroupWorkflowTool } from "./create-ad-group-workflow.tool.js";
-import { updateAdGroupWorkflowTool } from "./update-ad-group-workflow.tool.js";
-import { createAdGroupsJobTool } from "./create-ad-groups-job.tool.js";
-import { updateAdGroupsJobTool } from "./update-ad-groups-job.tool.js";
+import { createCampaignsTool } from "./create-campaigns.tool.js";
+import { updateCampaignsTool } from "./update-campaigns.tool.js";
+import { createAdGroupsTool } from "./create-ad-groups.tool.js";
+import { updateAdGroupsTool } from "./update-ad-groups.tool.js";
 import { getReportTool } from "./get-report.tool.js";
 import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -147,14 +139,11 @@ const productionTools: ToolDefinitionForFactory[] = [
   updateEntityTool,
   deleteEntityTool,
   // ── Workflow Entity Operations ──
-  createCampaignWorkflowTool,
-  updateCampaignWorkflowTool,
-  createCampaignsJobTool,
-  updateCampaignsJobTool,
-  createAdGroupWorkflowTool,
-  updateAdGroupWorkflowTool,
-  createAdGroupsJobTool,
-  updateAdGroupsJobTool,
+  // Each tool accepts mode="single" (sync) or "batch" (async Workflows job).
+  createCampaignsTool,
+  updateCampaignsTool,
+  createAdGroupsTool,
+  updateAdGroupsTool,
   // ── Reporting ──
   getReportTool,
   downloadReportTool,

@@ -89,7 +89,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (55 tools)
+## Available Tools Summary (51 tools)
 
 ### Context
 | Tool | Purpose | Read/Write |
@@ -118,14 +118,10 @@ Inspect the output, then iterate with more specific calls.
 ### Workflow Entity Operations
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
-| \`ttd_create_campaign_workflow\` | Create campaigns with workflow-oriented payloads | Write |
-| \`ttd_update_campaign_workflow\` | PATCH campaigns with workflow-oriented payloads | Write |
-| \`ttd_create_campaigns_job\` | Submit async bulk campaign create jobs | Write |
-| \`ttd_update_campaigns_job\` | Submit async bulk campaign update jobs | Write |
-| \`ttd_create_ad_group_workflow\` | Create ad groups with workflow-oriented payloads | Write |
-| \`ttd_update_ad_group_workflow\` | PATCH ad groups with workflow-oriented payloads | Write |
-| \`ttd_create_ad_groups_job\` | Submit async bulk ad group create jobs | Write |
-| \`ttd_update_ad_groups_job\` | Submit async bulk ad group update jobs | Write |
+| \`ttd_create_campaigns\` | Create campaigns (mode=single sync, mode=batch async job) | Write |
+| \`ttd_update_campaigns\` | PATCH campaigns (mode=single sync, mode=batch async job) | Write |
+| \`ttd_create_ad_groups\` | Create ad groups (mode=single sync, mode=batch async job) | Write |
+| \`ttd_update_ad_groups\` | PATCH ad groups (mode=single sync, mode=batch async job) | Write |
 
 ### Reporting
 | Tool | Purpose | Read/Write |

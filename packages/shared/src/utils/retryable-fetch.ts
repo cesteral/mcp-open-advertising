@@ -92,6 +92,22 @@ export interface RetryableRequestOptions {
    * Useful for platform-specific error metadata (e.g., Meta error codes).
    */
   buildErrorData?: (status: number, errorBody: string) => Record<string, unknown>;
+  /**
+   * Override the `nextAction` hint on McpError.data. Receives the HTTP status,
+   * the (untruncated) error body, and the default generic hint computed from
+   * status code. Return a richer domain-specific hint, or `undefined` to clear,
+   * or simply return the default to keep generic behavior.
+   *
+   * Use this when a platform exposes structured error codes that imply a
+   * specific user action (e.g., Meta error code 100 → "field permission" hint,
+   * Google Ads `POLICY_FINDING` → "request exemption", LinkedIn `SERVICE_ERROR
+   * subcode INVALID_ACCESS_TOKEN` → "regenerate token at...").
+   */
+  buildNextAction?: (
+    status: number,
+    errorBody: string,
+    defaultNextAction: string | undefined
+  ) => string | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -177,6 +193,7 @@ export async function executeWithRetry(
     isRetryable,
     onResponse,
     buildErrorData,
+    buildNextAction,
   } = options;
   const doFetch = options.fetchFn ?? fetchWithTimeout;
 
@@ -338,10 +355,13 @@ export async function executeWithRetry(
       retryAfterHeader && !isNaN(parseInt(retryAfterHeader, 10))
         ? parseInt(retryAfterHeader, 10)
         : undefined;
-    const nextAction = ErrorHandler.defaultNextActionForStatus(response.status, {
+    const defaultNextAction = ErrorHandler.defaultNextActionForStatus(response.status, {
       retryAfterSeconds,
       tokenExpiryHint: config.tokenExpiryHint,
     });
+    const nextAction = buildNextAction
+      ? buildNextAction(response.status, errorBody, defaultNextAction)
+      : defaultNextAction;
     const platformExtras = buildErrorData?.(response.status, errorBody);
 
     const mcpError = new McpError(errorCode, errorMessage, {

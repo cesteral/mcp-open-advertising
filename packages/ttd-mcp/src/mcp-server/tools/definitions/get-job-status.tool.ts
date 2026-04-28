@@ -10,7 +10,7 @@ const TOOL_TITLE = "TTD Get Job Status";
 const TOOL_DESCRIPTION = `Get the status of a previously submitted standard Workflows job.
 
 Use this after tools like \`ttd_get_first_party_data_job\`, \`ttd_get_third_party_data_job\`,
-\`ttd_create_campaigns_job\`, or \`ttd_create_ad_groups_job\`.`;
+or any of \`ttd_create_campaigns\`/\`ttd_update_campaigns\`/\`ttd_create_ad_groups\`/\`ttd_update_ad_groups\` invoked with \`mode: "batch"\`.`;
 
 export const GetJobStatusInputSchema = z.object({
   jobId: z

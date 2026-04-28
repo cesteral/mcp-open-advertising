@@ -15,6 +15,7 @@ import {
   type FieldRule,
   type ValidationIssue,
   validateRequiredFieldsStructured,
+  validateEnumFieldsStructured,
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
@@ -37,10 +38,66 @@ The LinkedIn API may still reject payloads for business-rule reasons.`;
 // Required-field definitions per entity type (create mode)
 // ---------------------------------------------------------------------------
 
+// LinkedIn Marketing API v2 enum reference:
+// https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/
+const ACCOUNT_STATUSES = ["ACTIVE", "CANCELED", "DRAFT", "PENDING_DELETION", "REMOVED"] as const;
+const CAMPAIGN_STATUSES = [
+  "ACTIVE",
+  "PAUSED",
+  "ARCHIVED",
+  "COMPLETED",
+  "CANCELED",
+  "DRAFT",
+  "PENDING_DELETION",
+  "REMOVED",
+] as const;
+const CREATIVE_STATUSES = [
+  "ACTIVE",
+  "PAUSED",
+  "ARCHIVED",
+  "DRAFT",
+  "PENDING_DELETION",
+  "CANCELED",
+  "REMOVED",
+] as const;
+const CAMPAIGN_TYPES = [
+  "TEXT_AD",
+  "SPONSORED_UPDATES",
+  "SPONSORED_INMAILS",
+  "DYNAMIC",
+  "STANDARD_UPDATE",
+] as const;
+const OBJECTIVE_TYPES = [
+  "BRAND_AWARENESS",
+  "WEBSITE_VISIT",
+  "ENGAGEMENT",
+  "VIDEO_VIEW",
+  "LEAD_GENERATION",
+  "WEBSITE_CONVERSION",
+  "JOB_APPLICANT",
+  "TALENT_LEAD",
+] as const;
+const CONVERSION_TYPES = [
+  "ADD_TO_CART",
+  "DOWNLOAD",
+  "INSTALL",
+  "KEY_PAGE_VIEW",
+  "LEAD",
+  "PURCHASE",
+  "SIGN_UP",
+  "OTHER",
+] as const;
+const ACCOUNT_TYPES = ["BUSINESS", "ENTERPRISE"] as const;
+
 const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
   adAccount: [
     { field: "name", expectedType: "string" },
-    { field: "type", expectedType: "string", hint: "e.g., BUSINESS, ENTERPRISE" },
+    {
+      field: "type",
+      expectedType: "string",
+      hint: "Account type",
+      suggestedValues: ACCOUNT_TYPES,
+    },
     { field: "currency", expectedType: "string", hint: "ISO 4217 currency code (e.g., USD)" },
   ],
   campaignGroup: [
@@ -50,23 +107,44 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
       expectedType: "string",
       hint: "Ad account URN (e.g., urn:li:sponsoredAccount:123)",
     },
-    { field: "status", expectedType: "string", hint: "e.g., DRAFT, ACTIVE, PAUSED" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "Campaign group lifecycle status",
+      suggestedValues: ACCOUNT_STATUSES,
+    },
   ],
   campaign: [
     { field: "name", expectedType: "string" },
     { field: "campaignGroup", expectedType: "string", hint: "Campaign group URN" },
     { field: "account", expectedType: "string", hint: "Ad account URN" },
-    { field: "type", expectedType: "string", hint: "e.g., SPONSORED_UPDATES, TEXT_AD, DYNAMIC" },
+    {
+      field: "type",
+      expectedType: "string",
+      hint: "Campaign creative format",
+      suggestedValues: CAMPAIGN_TYPES,
+    },
     {
       field: "objectiveType",
       expectedType: "string",
-      hint: "e.g., BRAND_AWARENESS, WEBSITE_TRAFFIC",
+      hint: "Campaign optimization objective",
+      suggestedValues: OBJECTIVE_TYPES,
     },
-    { field: "status", expectedType: "string", hint: "e.g., DRAFT, ACTIVE, PAUSED" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "Campaign lifecycle status",
+      suggestedValues: CAMPAIGN_STATUSES,
+    },
   ],
   creative: [
     { field: "campaign", expectedType: "string", hint: "Campaign URN" },
-    { field: "status", expectedType: "string", hint: "e.g., DRAFT, ACTIVE, PAUSED" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "Creative lifecycle status",
+      suggestedValues: CREATIVE_STATUSES,
+    },
     { field: "reference", expectedType: "string", hint: "Content reference URN" },
   ],
   conversionRule: [
@@ -74,10 +152,16 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
     {
       field: "type",
       expectedType: "string",
-      hint: "e.g., PURCHASE, ADD_TO_CART, DOWNLOAD, SIGN_UP",
+      hint: "Conversion event type",
+      suggestedValues: CONVERSION_TYPES,
     },
     { field: "account", expectedType: "string", hint: "Ad account URN" },
-    { field: "status", expectedType: "string", hint: "e.g., ACTIVE, PAUSED" },
+    {
+      field: "status",
+      expectedType: "string",
+      hint: "Conversion rule status",
+      suggestedValues: ["ACTIVE", "PAUSED"],
+    },
   ],
 };
 
@@ -136,8 +220,13 @@ export async function validateEntityLogic(
   const { entityType, mode, data } = input;
   const issues: ValidationIssue[] = [];
 
+  const rules = REQUIRED_FIELDS_CREATE[entityType as LinkedInEntityType] ?? [];
+
+  // Enum validation runs in both modes — invalid enum values are equally
+  // invalid on update.
+  issues.push(...validateEnumFieldsStructured(data, rules));
+
   if (mode === "create") {
-    const rules = REQUIRED_FIELDS_CREATE[entityType as LinkedInEntityType] ?? [];
     issues.push(...validateRequiredFieldsStructured(data, rules));
 
     // Validate URN format for known URN fields

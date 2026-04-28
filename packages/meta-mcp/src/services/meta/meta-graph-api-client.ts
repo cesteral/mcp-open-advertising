@@ -47,6 +47,57 @@ function isRetryableMetaError(code: number, httpStatus: number): boolean {
   return httpStatus === 429 || httpStatus >= 500 || RATE_LIMIT_CODES.has(code);
 }
 
+/**
+ * Return Meta-specific actionable guidance for known Graph API error codes.
+ * Falls back to the generic HTTP-status hint when no domain rule applies.
+ *
+ * Code reference: https://developers.facebook.com/docs/graph-api/guides/error-handling/
+ */
+function buildMetaNextAction(
+  _status: number,
+  errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  let parsed: MetaApiError["error"] | undefined;
+  try {
+    parsed = (JSON.parse(errorBody) as MetaApiError).error;
+  } catch {
+    return defaultHint;
+  }
+  if (!parsed) return defaultHint;
+
+  const { code, error_subcode: subcode, message } = parsed;
+
+  if (code === 190) {
+    if (subcode === 463) {
+      return "Access token expired. Generate a new System User token in Meta Business Suite (Business Settings → Users → System Users) and update META_ACCESS_TOKEN.";
+    }
+    if (subcode === 467) {
+      return "Access token was revoked. Re-authenticate the System User and update META_ACCESS_TOKEN.";
+    }
+    return defaultHint;
+  }
+  if (code === 100) {
+    if (typeof message === "string" && /unknown field|nonexisting field/i.test(message)) {
+      return "Unknown or non-existent field in this request. Use meta_validate_entity to confirm field names for the entity type before retrying.";
+    }
+    if (typeof message === "string" && /permission/i.test(message)) {
+      return "The token does not have permission to read or write this field. Verify required permission with meta_validate_entity, then add the missing scope (e.g., ads_management) to the token.";
+    }
+    return "Invalid parameter. Check field names, IDs, and value formats with meta_validate_entity, then retry.";
+  }
+  if (code === 200) {
+    return "Missing permission. Add the required scope (typically ads_management or ads_read) to the access token, or grant the System User access to this ad account.";
+  }
+  if (code === 368) {
+    return "Account temporarily blocked for policy violations. Wait — Meta restores access automatically — and review the offending content in Meta Business Suite.";
+  }
+  if (code === 1487390 || code === 1487079 || code === 1487194) {
+    return "Creative or campaign rejected for policy violation. Review the policy reason in Ads Manager and revise the creative before resubmitting.";
+  }
+  return defaultHint;
+}
+
 function mapMetaErrorToJsonRpc(metaCode: number, httpStatus: number): JsonRpcErrorCode {
   if (RATE_LIMIT_CODES.has(metaCode) || httpStatus === 429) {
     return JsonRpcErrorCode.RateLimited;
@@ -206,6 +257,7 @@ export class MetaGraphApiClient {
         onResponse: (response: Response, ctx?: RequestContext) => {
           this.logRateLimitHeaders(response, ctx);
         },
+        buildNextAction: buildMetaNextAction,
         buildErrorData: (_status: number, body: string) => {
           try {
             const parsed = JSON.parse(body) as MetaApiError;

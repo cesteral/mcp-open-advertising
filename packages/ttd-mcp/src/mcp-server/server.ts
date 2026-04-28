@@ -40,14 +40,10 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_update_entity: "mcp.execute.ttd_entity_update",
   ttd_delete_entity: "mcp.execute.ttd_entity_update",
   ttd_validate_entity: "mcp.execute.ttd_entity_update",
-  ttd_create_campaign_workflow: "mcp.execute.ttd_entity_update",
-  ttd_update_campaign_workflow: "mcp.execute.ttd_entity_update",
-  ttd_create_campaigns_job: "mcp.execute.ttd_entity_update",
-  ttd_update_campaigns_job: "mcp.execute.ttd_entity_update",
-  ttd_create_ad_group_workflow: "mcp.execute.ttd_entity_update",
-  ttd_update_ad_group_workflow: "mcp.execute.ttd_entity_update",
-  ttd_create_ad_groups_job: "mcp.execute.ttd_entity_update",
-  ttd_update_ad_groups_job: "mcp.execute.ttd_entity_update",
+  ttd_create_campaigns: "mcp.execute.ttd_entity_update",
+  ttd_update_campaigns: "mcp.execute.ttd_entity_update",
+  ttd_create_ad_groups: "mcp.execute.ttd_entity_update",
+  ttd_update_ad_groups: "mcp.execute.ttd_entity_update",
   // Reporting
   ttd_get_report: "mcp.execute.ttd_reporting",
   ttd_submit_report: "mcp.execute.ttd_reporting",
@@ -109,7 +105,7 @@ export async function createMcpServer(
         "Progressive discovery: (1) start with ttd_get_context to resolve partner/advertiser IDs for the current credentials, then ttd_list_entities for entity discovery; " +
         "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for parent/child rules, entity-examples://all for payload examples, graphql-reference://ttd for GraphQL passthrough, and report-reference://all for MyReports field semantics; " +
         "(3) for multi-step flows use MCP Prompts: ttd_campaign_setup_workflow, ttd_targeting_discovery_workflow, ttd_entity_update_workflow, ttd_bulk_operations_workflow, ttd_entity_duplication_workflow. " +
-        "Prefer Workflows tools (ttd_create_campaign_workflow, ttd_create_ad_group_workflow, *_job variants) over raw REST for campaign/ad group writes.",
+        "Prefer Workflows tools (ttd_create_campaigns, ttd_update_campaigns, ttd_create_ad_groups, ttd_update_ad_groups — each accepts mode=single or batch) over raw REST for campaign/ad group writes.",
     }
   );
 

@@ -202,3 +202,79 @@ describe("executeWithRetry — buildErrorData callback", () => {
     });
   });
 });
+
+describe("executeWithRetry — buildNextAction callback", () => {
+  it("overrides nextAction with a domain-specific hint", async () => {
+    const errorBody = JSON.stringify({
+      error: { code: 100, type: "OAuthException", message: "(#100) Unknown field foo" },
+    });
+    const fetchFn = createMockFetch(400, errorBody);
+
+    await expect(
+      executeWithRetry(
+        { ...baseConfig, maxRetries: 0 },
+        {
+          url: "https://api.example.com/test",
+          logger,
+          getHeaders: async () => ({}),
+          fetchFn,
+          buildNextAction: (_status, body, defaultHint) => {
+            const parsed = JSON.parse(body);
+            if (parsed.error?.code === 100) {
+              return "Use validate_entity to confirm field names before retrying.";
+            }
+            return defaultHint;
+          },
+        }
+      )
+    ).rejects.toSatisfy((error: unknown) => {
+      const mcpError = error as McpError;
+      expect(mcpError.data?.nextAction).toBe(
+        "Use validate_entity to confirm field names before retrying."
+      );
+      return true;
+    });
+  });
+
+  it("falls back to the default nextAction when the hook returns it unchanged", async () => {
+    const fetchFn = createMockFetch(404, "not found");
+
+    await expect(
+      executeWithRetry(
+        { ...baseConfig, maxRetries: 0 },
+        {
+          url: "https://api.example.com/test",
+          logger,
+          getHeaders: async () => ({}),
+          fetchFn,
+          buildNextAction: (_status, _body, defaultHint) => defaultHint,
+        }
+      )
+    ).rejects.toSatisfy((error: unknown) => {
+      const mcpError = error as McpError;
+      expect(mcpError.data?.nextAction).toContain("Verify the entity ID");
+      return true;
+    });
+  });
+
+  it("clears nextAction when the hook returns undefined", async () => {
+    const fetchFn = createMockFetch(404, "not found");
+
+    await expect(
+      executeWithRetry(
+        { ...baseConfig, maxRetries: 0 },
+        {
+          url: "https://api.example.com/test",
+          logger,
+          getHeaders: async () => ({}),
+          fetchFn,
+          buildNextAction: () => undefined,
+        }
+      )
+    ).rejects.toSatisfy((error: unknown) => {
+      const mcpError = error as McpError;
+      expect(mcpError.data?.nextAction).toBeUndefined();
+      return true;
+    });
+  });
+});

@@ -13,14 +13,10 @@ import { getJobStatusLogic } from "../../src/mcp-server/tools/definitions/get-jo
 import { getFirstPartyDataJobLogic } from "../../src/mcp-server/tools/definitions/get-first-party-data-job.tool.js";
 import { getThirdPartyDataJobLogic } from "../../src/mcp-server/tools/definitions/get-third-party-data-job.tool.js";
 import { getCampaignVersionLogic } from "../../src/mcp-server/tools/definitions/get-campaign-version.tool.js";
-import { createCampaignWorkflowLogic } from "../../src/mcp-server/tools/definitions/create-campaign-workflow.tool.js";
-import { updateCampaignWorkflowLogic } from "../../src/mcp-server/tools/definitions/update-campaign-workflow.tool.js";
-import { createCampaignsJobLogic } from "../../src/mcp-server/tools/definitions/create-campaigns-job.tool.js";
-import { updateCampaignsJobLogic } from "../../src/mcp-server/tools/definitions/update-campaigns-job.tool.js";
-import { createAdGroupWorkflowLogic } from "../../src/mcp-server/tools/definitions/create-ad-group-workflow.tool.js";
-import { updateAdGroupWorkflowLogic } from "../../src/mcp-server/tools/definitions/update-ad-group-workflow.tool.js";
-import { createAdGroupsJobLogic } from "../../src/mcp-server/tools/definitions/create-ad-groups-job.tool.js";
-import { updateAdGroupsJobLogic } from "../../src/mcp-server/tools/definitions/update-ad-groups-job.tool.js";
+import { createCampaignsLogic } from "../../src/mcp-server/tools/definitions/create-campaigns.tool.js";
+import { updateCampaignsLogic } from "../../src/mcp-server/tools/definitions/update-campaigns.tool.js";
+import { createAdGroupsLogic } from "../../src/mcp-server/tools/definitions/create-ad-groups.tool.js";
+import { updateAdGroupsLogic } from "../../src/mcp-server/tools/definitions/update-ad-groups.tool.js";
 import { GraphqlQueryInputSchema } from "../../src/mcp-server/tools/definitions/graphql-query.tool.js";
 import { GraphqlQueryBulkInputSchema } from "../../src/mcp-server/tools/definitions/graphql-query-bulk.tool.js";
 
@@ -150,65 +146,71 @@ describe("ttd workflow tools", () => {
     expect(result.campaignVersion.Version).toBe(7);
   });
 
-  it("delegates campaign and ad group workflow operations", async () => {
+  it("delegates single-mode campaign and ad group workflow operations", async () => {
     mockTtdService.createCampaignWorkflow.mockResolvedValueOnce({ CampaignId: "c1" });
     mockTtdService.updateCampaignWorkflow.mockResolvedValueOnce({ CampaignId: "c1" });
     mockTtdService.createAdGroupWorkflow.mockResolvedValueOnce({ AdGroupId: "ag1" });
     mockTtdService.updateAdGroupWorkflow.mockResolvedValueOnce({ AdGroupId: "ag1" });
 
-    const createCampaign = await createCampaignWorkflowLogic(
-      { primaryInput: { advertiserId: "adv-1", name: "Campaign" } },
+    const createCampaign = await createCampaignsLogic(
+      { mode: "single", primaryInput: { advertiserId: "adv-1", name: "Campaign" } },
       createMockContext(),
       createMockSdkContext()
     );
-    const updateCampaign = await updateCampaignWorkflowLogic(
-      { id: "c1", primaryInput: { name: "Updated" } },
+    const updateCampaign = await updateCampaignsLogic(
+      { mode: "single", id: "c1", primaryInput: { name: "Updated" } },
       createMockContext(),
       createMockSdkContext()
     );
-    const createAdGroup = await createAdGroupWorkflowLogic(
-      { campaignId: "c1", primaryInput: { name: "AG" } },
+    const createAdGroup = await createAdGroupsLogic(
+      { mode: "single", campaignId: "c1", primaryInput: { name: "AG" } },
       createMockContext(),
       createMockSdkContext()
     );
-    const updateAdGroup = await updateAdGroupWorkflowLogic(
-      { id: "ag1", primaryInput: { name: "AG Updated" } },
+    const updateAdGroup = await updateAdGroupsLogic(
+      { mode: "single", id: "ag1", primaryInput: { name: "AG Updated" } },
       createMockContext(),
       createMockSdkContext()
     );
 
-    expect(createCampaign.campaign.CampaignId).toBe("c1");
-    expect(updateCampaign.campaign.CampaignId).toBe("c1");
-    expect(createAdGroup.adGroup.AdGroupId).toBe("ag1");
-    expect(updateAdGroup.adGroup.AdGroupId).toBe("ag1");
+    expect(createCampaign.campaign?.CampaignId).toBe("c1");
+    expect(updateCampaign.campaign?.CampaignId).toBe("c1");
+    expect(createAdGroup.adGroup?.AdGroupId).toBe("ag1");
+    expect(updateAdGroup.adGroup?.AdGroupId).toBe("ag1");
+    // The single-mode payload to the underlying service must not include the discriminator.
+    expect(mockTtdService.createCampaignWorkflow).toHaveBeenCalledWith(
+      { primaryInput: { advertiserId: "adv-1", name: "Campaign" } },
+      expect.any(Object)
+    );
   });
 
-  it("delegates bulk workflow jobs and preserves callbackInput mapping", async () => {
+  it("delegates batch-mode workflow jobs and preserves callbackInput mapping", async () => {
     mockTtdService.createCampaignsJob.mockResolvedValueOnce({ JobId: 20 });
     mockTtdService.updateCampaignsJob.mockResolvedValueOnce({ JobId: 21 });
     mockTtdService.createAdGroupsJob.mockResolvedValueOnce({ JobId: 22 });
     mockTtdService.updateAdGroupsJob.mockResolvedValueOnce({ JobId: 23 });
 
-    await createCampaignsJobLogic(
+    await createCampaignsLogic(
       {
+        mode: "batch",
         input: [{ primaryInput: { advertiserId: "adv-1", name: "Bulk 1" } }],
         callbackInput: { callbackUrl: "https://example.com/hook" },
       },
       createMockContext(),
       createMockSdkContext()
     );
-    await updateCampaignsJobLogic(
-      { input: [{ id: "c1", primaryInput: { name: "Bulk Update" } }] },
+    await updateCampaignsLogic(
+      { mode: "batch", input: [{ id: "c1", primaryInput: { name: "Bulk Update" } }] },
       createMockContext(),
       createMockSdkContext()
     );
-    await createAdGroupsJobLogic(
-      { input: [{ campaignId: "c1", primaryInput: { name: "AG Bulk" } }] },
+    await createAdGroupsLogic(
+      { mode: "batch", input: [{ campaignId: "c1", primaryInput: { name: "AG Bulk" } }] },
       createMockContext(),
       createMockSdkContext()
     );
-    await updateAdGroupsJobLogic(
-      { input: [{ id: "ag1", primaryInput: { name: "AG Bulk Update" } }] },
+    await updateAdGroupsLogic(
+      { mode: "batch", input: [{ id: "ag1", primaryInput: { name: "AG Bulk Update" } }] },
       createMockContext(),
       createMockSdkContext()
     );

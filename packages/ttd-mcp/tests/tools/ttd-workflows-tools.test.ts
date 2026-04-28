@@ -17,19 +17,15 @@ import { getFirstPartyDataJobLogic } from "../../src/mcp-server/tools/definition
 import { getThirdPartyDataJobLogic } from "../../src/mcp-server/tools/definitions/get-third-party-data-job.tool.js";
 import { getCampaignVersionLogic } from "../../src/mcp-server/tools/definitions/get-campaign-version.tool.js";
 import {
-  createCampaignWorkflowLogic,
-  CreateCampaignWorkflowToolInputSchema,
-} from "../../src/mcp-server/tools/definitions/create-campaign-workflow.tool.js";
-import { updateCampaignWorkflowLogic } from "../../src/mcp-server/tools/definitions/update-campaign-workflow.tool.js";
-import { createCampaignsJobLogic } from "../../src/mcp-server/tools/definitions/create-campaigns-job.tool.js";
-import { updateCampaignsJobLogic } from "../../src/mcp-server/tools/definitions/update-campaigns-job.tool.js";
-import { createAdGroupWorkflowLogic } from "../../src/mcp-server/tools/definitions/create-ad-group-workflow.tool.js";
-import { updateAdGroupWorkflowLogic } from "../../src/mcp-server/tools/definitions/update-ad-group-workflow.tool.js";
+  createCampaignsLogic,
+  CreateCampaignsToolInputSchema,
+} from "../../src/mcp-server/tools/definitions/create-campaigns.tool.js";
+import { updateCampaignsLogic } from "../../src/mcp-server/tools/definitions/update-campaigns.tool.js";
 import {
-  createAdGroupsJobLogic,
-  CreateAdGroupsJobToolInputSchema,
-} from "../../src/mcp-server/tools/definitions/create-ad-groups-job.tool.js";
-import { updateAdGroupsJobLogic } from "../../src/mcp-server/tools/definitions/update-ad-groups-job.tool.js";
+  createAdGroupsLogic,
+  CreateAdGroupsToolInputSchema,
+} from "../../src/mcp-server/tools/definitions/create-ad-groups.tool.js";
+import { updateAdGroupsLogic } from "../../src/mcp-server/tools/definitions/update-ad-groups.tool.js";
 import { GraphqlQueryInputSchema } from "../../src/mcp-server/tools/definitions/graphql-query.tool.js";
 import { GraphqlQueryBulkInputSchema } from "../../src/mcp-server/tools/definitions/graphql-query-bulk.tool.js";
 
@@ -143,7 +139,7 @@ describe("ttd workflows tools", () => {
     );
   });
 
-  it("passes workflow payloads through campaign/ad group workflow tools", async () => {
+  it("dispatches single vs batch mode through the collapsed workflow tools", async () => {
     mockTtdService.createCampaignWorkflow.mockResolvedValueOnce({ CampaignId: "c1" });
     mockTtdService.updateCampaignWorkflow.mockResolvedValueOnce({ CampaignId: "c1" });
     mockTtdService.createCampaignsJob.mockResolvedValueOnce({ JobId: 11 });
@@ -156,19 +152,24 @@ describe("ttd workflows tools", () => {
     const context = createMockContext();
     const sdkContext = createMockSdkContext();
 
-    await createCampaignWorkflowLogic({ primaryInput: { name: "Campaign" } }, context, sdkContext);
-    await updateCampaignWorkflowLogic({ id: "camp1" }, context, sdkContext);
-    await createCampaignsJobLogic({ input: [] }, context, sdkContext);
-    await updateCampaignsJobLogic({ input: [] }, context, sdkContext);
-    await createAdGroupWorkflowLogic(
-      { campaignId: "camp1", primaryInput: { name: "AG" } },
+    await createCampaignsLogic(
+      { mode: "single", primaryInput: { name: "Campaign" } },
       context,
       sdkContext
     );
-    await updateAdGroupWorkflowLogic({ id: "ag1" }, context, sdkContext);
-    await createAdGroupsJobLogic({ input: [] }, context, sdkContext);
-    await updateAdGroupsJobLogic({ input: [] }, context, sdkContext);
+    await updateCampaignsLogic({ mode: "single", id: "camp1" }, context, sdkContext);
+    await createCampaignsLogic({ mode: "batch", input: [] }, context, sdkContext);
+    await updateCampaignsLogic({ mode: "batch", input: [] }, context, sdkContext);
+    await createAdGroupsLogic(
+      { mode: "single", campaignId: "camp1", primaryInput: { name: "AG" } },
+      context,
+      sdkContext
+    );
+    await updateAdGroupsLogic({ mode: "single", id: "ag1" }, context, sdkContext);
+    await createAdGroupsLogic({ mode: "batch", input: [] }, context, sdkContext);
+    await updateAdGroupsLogic({ mode: "batch", input: [] }, context, sdkContext);
 
+    // Single-mode payloads must strip the discriminator before reaching the service.
     expect(mockTtdService.createCampaignWorkflow).toHaveBeenCalledWith(
       { primaryInput: { name: "Campaign" } },
       context
@@ -187,16 +188,19 @@ describe("ttd workflows tools", () => {
       RestRequestToolInputSchema.parse({ methodType: "TRACE", endpoint: "campaign/1" })
     ).toThrow();
 
-    const campaign = CreateCampaignWorkflowToolInputSchema.parse({
+    const campaign = CreateCampaignsToolInputSchema.parse({
+      mode: "single",
       primaryInput: {
         advertiserId: "adv1",
         name: "Campaign",
       },
       validateInputOnly: true,
     });
-    expect(campaign.validateInputOnly).toBe(true);
+    expect(campaign.mode).toBe("single");
+    expect((campaign as { validateInputOnly?: boolean }).validateInputOnly).toBe(true);
 
-    const adGroupsJob = CreateAdGroupsJobToolInputSchema.parse({
+    const adGroupsJob = CreateAdGroupsToolInputSchema.parse({
+      mode: "batch",
       input: [
         {
           campaignId: "camp1",
@@ -207,7 +211,10 @@ describe("ttd workflows tools", () => {
         callbackUrl: "https://example.com/webhook",
       },
     });
-    expect(adGroupsJob.callbackInput?.callbackUrl).toBe("https://example.com/webhook");
+    expect(adGroupsJob.mode).toBe("batch");
+    expect(
+      (adGroupsJob as { callbackInput?: { callbackUrl: string } }).callbackInput?.callbackUrl
+    ).toBe("https://example.com/webhook");
 
     const gql = GraphqlQueryInputSchema.parse({
       query: "query { me { id } }",

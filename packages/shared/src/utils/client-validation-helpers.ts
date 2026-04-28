@@ -125,6 +125,36 @@ export function validateRequiredFieldsStructured(
 }
 
 /**
+ * Validate that string values for fields with `suggestedValues` (treated as a
+ * closed enum) are members of that enum. Skips fields that are absent, non-string,
+ * or have no `suggestedValues` defined. Use this in addition to
+ * {@link validateRequiredFieldsStructured} to catch typos like
+ * `objective_type: "TRAFICK"` against a known set.
+ */
+export function validateEnumFieldsStructured(
+  data: Record<string, unknown>,
+  rules: FieldRule[]
+): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  for (const rule of rules) {
+    if (!rule.suggestedValues || rule.suggestedValues.length === 0) continue;
+    const value = data[rule.field];
+    if (typeof value !== "string") continue;
+    if (!rule.suggestedValues.includes(value)) {
+      issues.push({
+        field: rule.field,
+        code: "invalidValue",
+        message: `Field "${rule.field}" value "${value}" is not a recognized enum value.`,
+        ...(rule.hint ? { hint: rule.hint } : {}),
+        suggestedValues: [...rule.suggestedValues],
+        severity: "error",
+      });
+    }
+  }
+  return issues;
+}
+
+/**
  * Check a data payload against a list of required-field rules.
  * Returns an array of error strings (empty = all required fields present and typed correctly).
  *
