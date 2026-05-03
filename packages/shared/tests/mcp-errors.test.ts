@@ -4,6 +4,7 @@ import {
   JsonRpcErrorCode,
   ErrorHandler,
   mapErrorCodeToHttpStatus,
+  buildNextAction,
 } from "../src/utils/mcp-errors.js";
 
 describe("JsonRpcErrorCode", () => {
@@ -280,5 +281,59 @@ describe("McpError.data nextAction wiring", () => {
       suggestedValues: ["ACTIVE", "PAUSED"],
     });
     expect(err.data?.suggestedValues).toEqual(["ACTIVE", "PAUSED"]);
+  });
+});
+
+describe("buildNextAction", () => {
+  it("renders discover-account hints", () => {
+    expect(buildNextAction({ kind: "discover-account", tool: "meta_list_ad_accounts" })).toBe(
+      "Call meta_list_ad_accounts to discover available accounts."
+    );
+    expect(
+      buildNextAction({
+        kind: "discover-account",
+        tool: "linkedin_list_ad_accounts",
+        field: "adAccountUrn",
+      })
+    ).toBe("Call linkedin_list_ad_accounts to discover valid adAccountUrn values.");
+  });
+
+  it("renders list-entity hints with optional entityType + field", () => {
+    expect(
+      buildNextAction({
+        kind: "list-entity",
+        tool: "meta_list_entities",
+        entityType: "campaign",
+        field: "campaign_id",
+      })
+    ).toBe("Call meta_list_entities with entityType='campaign' to find a campaign_id.");
+
+    expect(buildNextAction({ kind: "list-entity", tool: "ttd_list_entities" })).toBe(
+      "Call ttd_list_entities to list available entities."
+    );
+  });
+
+  it("renders check-status, read-resource, renew-token, retry-after, conflict-refetch, check-permission", () => {
+    expect(
+      buildNextAction({
+        kind: "check-status",
+        tool: "ttd_check_report_status",
+        idField: "reportId",
+        expectedStatus: "Completed",
+      })
+    ).toBe(
+      "Poll ttd_check_report_status using the reportId until status reaches 'Completed'."
+    );
+    expect(
+      buildNextAction({ kind: "read-resource", uri: "entity-schema://campaign" })
+    ).toBe("Read MCP resource entity-schema://campaign.");
+    expect(buildNextAction({ kind: "renew-token" })).toMatch(/Renew the API token/);
+    expect(buildNextAction({ kind: "retry-after", seconds: 30 })).toBe(
+      "Wait 30 seconds (Retry-After header) before retrying."
+    );
+    expect(buildNextAction({ kind: "conflict-refetch", tool: "ttd_get_entity" })).toMatch(
+      /Re-fetch the entity via ttd_get_entity/
+    );
+    expect(buildNextAction({ kind: "check-permission" })).toMatch(/permission/);
   });
 });

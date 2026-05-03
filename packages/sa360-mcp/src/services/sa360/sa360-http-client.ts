@@ -69,6 +69,23 @@ function mapSA360StatusCode(status: number): JsonRpcErrorCode {
   return JsonRpcErrorCode.InvalidRequest;
 }
 
+function buildSA360NextAction(
+  status: number,
+  _errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  if (status === 401) {
+    return "Renew the SA360 OAuth access token. Refresh it via the configured refresh token, or re-run the OAuth consent flow if the refresh token was revoked.";
+  }
+  if (status === 403) {
+    return "Verify the authenticated user has access to this SA360 customer/agency. The login-customer-id header must reflect the SA360 manager account hierarchy.";
+  }
+  if (status === 404) {
+    return "Verify the customerId / agencyId / advertiserId with sa360_list_accounts before retrying.";
+  }
+  return defaultHint;
+}
+
 /**
  * HTTP client for SA360 Reporting API v0.
  *
@@ -118,6 +135,7 @@ export class SA360HttpClient {
         },
         mapStatusCode: (status) => mapSA360StatusCode(status),
         parseErrorBody: parseSA360Errors,
+        buildNextAction: buildSA360NextAction,
       });
       return result;
     });

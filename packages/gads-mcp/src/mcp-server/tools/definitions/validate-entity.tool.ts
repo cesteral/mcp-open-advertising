@@ -6,7 +6,11 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { validateEntityResponseFormatter, type ValidationIssue } from "@cesteral/shared";
+import {
+  validateEntityResponseFormatter,
+  buildNextAction,
+  type ValidationIssue,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "gads_validate_entity";
 const TOOL_TITLE = "Google Ads Entity Validation (Dry Run)";
@@ -83,6 +87,10 @@ export const ValidateEntityOutputSchema = z
     issues: z
       .array(ValidationIssueSchema)
       .describe("Structured per-field issues (mirrors errors as code='custom')"),
+    nextAction: z
+      .string()
+      .optional()
+      .describe("One-line guidance for resolving validation failures."),
     timestamp: z.string().datetime(),
   })
   .describe("Entity validation result");
@@ -114,12 +122,25 @@ export async function validateEntityLogic(
     severity: "error" as const,
   }));
 
+  let nextAction: string | undefined;
+  if (!result.valid) {
+    nextAction =
+      input.mode === "create" && !input.customerId
+        ? buildNextAction({ kind: "discover-account", tool: "gads_list_accounts", field: "customerId" })
+        : buildNextAction({
+            kind: "list-entity",
+            tool: "gads_list_entities",
+            entityType: input.entityType,
+          });
+  }
+
   return {
     valid: result.valid,
     entityType: input.entityType,
     mode: input.mode,
     errors: result.errors,
     issues,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

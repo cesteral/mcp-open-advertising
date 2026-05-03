@@ -19,6 +19,7 @@ import {
   validateEnumFieldsStructured,
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
+  buildNextAction,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
@@ -328,6 +329,26 @@ export async function validateEntityLogic(
   const errorIssues = issues.filter((i) => i.severity !== "warning");
   const warningIssues = issues.filter((i) => i.severity === "warning");
 
+  let nextAction: string | undefined;
+  if (errorIssues.length > 0) {
+    const parentMissing = errorIssues.find((i) =>
+      ["AdvertiserId", "CampaignId", "AdGroupId", "PartnerId"].includes(i.field)
+    );
+    if (parentMissing) {
+      nextAction = buildNextAction({
+        kind: "list-entity",
+        tool: "ttd_list_entities",
+        field: parentMissing.field,
+      });
+    } else {
+      nextAction = buildNextAction({
+        kind: "read-resource",
+        uri: `ttd-field-rules://${entityType}`,
+        purpose: `the ${entityType} required-field reference`,
+      });
+    }
+  }
+
   return {
     valid: errorIssues.length === 0,
     entityType,
@@ -335,6 +356,7 @@ export async function validateEntityLogic(
     errors: errorIssues.map((i) => i.message),
     warnings: warningIssues.map((i) => i.message),
     issues,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

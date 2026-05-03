@@ -18,6 +18,7 @@ import {
   validateRequiredFieldsStructured,
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
+  buildNextAction,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -198,6 +199,32 @@ export async function validateEntityLogic(
   const errorIssues = issues.filter((i) => i.severity !== "warning");
   const warningIssues = issues.filter((i) => i.severity === "warning");
 
+  let nextAction: string | undefined;
+  if (errorIssues.length > 0) {
+    if (errorIssues.some((i) => i.field === "ad_account_id")) {
+      nextAction = buildNextAction({
+        kind: "discover-account",
+        tool: "pinterest_list_ad_accounts",
+        field: "ad_account_id",
+      });
+    } else {
+      const parentField = errorIssues.find((i) =>
+        ["campaign_id", "ad_group_id"].includes(i.field)
+      );
+      nextAction = parentField
+        ? buildNextAction({
+            kind: "list-entity",
+            tool: "pinterest_list_entities",
+            field: parentField.field,
+          })
+        : buildNextAction({
+            kind: "list-entity",
+            tool: "pinterest_list_entities",
+            entityType,
+          });
+    }
+  }
+
   return {
     valid: errorIssues.length === 0,
     entityType,
@@ -205,6 +232,7 @@ export async function validateEntityLogic(
     errors: errorIssues.map((i) => i.message),
     warnings: warningIssues.map((i) => i.message),
     issues,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

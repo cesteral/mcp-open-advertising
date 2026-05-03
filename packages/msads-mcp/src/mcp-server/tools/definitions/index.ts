@@ -25,8 +25,9 @@ import { searchTargetingTool } from "./search-targeting.tool.js";
 import { createReportScheduleTool } from "./create-report-schedule.tool.js";
 import { listReportSchedulesTool } from "./list-report-schedules.tool.js";
 import { deleteReportScheduleTool } from "./delete-report-schedule.tool.js";
+import { createToolSearchTool, type ToolDefinitionForFactory } from "@cesteral/shared";
 
-export const productionTools = [
+export const productionTools: ToolDefinitionForFactory[] = [
   listEntitiesTool,
   getEntityTool,
   createEntityTool,
@@ -51,4 +52,5 @@ export const productionTools = [
   createReportScheduleTool,
   listReportSchedulesTool,
   deleteReportScheduleTool,
+  createToolSearchTool({ platform: "msads", getTools: () => productionTools }),
 ];

@@ -69,7 +69,11 @@ import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
 import { manageBudgetScheduleTool } from "./manage-budget-schedule.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -106,6 +110,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   getPacingStatusTool,
   // ── Validation ──
   validateEntityTool,
+  // ── Discovery ──
+  createToolSearchTool({ platform: "meta", getTools: () => allTools }),
 ];
 
 /**

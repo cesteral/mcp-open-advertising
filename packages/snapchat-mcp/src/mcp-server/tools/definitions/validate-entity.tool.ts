@@ -268,6 +268,10 @@ export async function validateEntityLogic(
     } else if (entityType === "ad" && errorIssues.some((i) => i.field === "ad_squad_id")) {
       nextAction =
         "Call snapchat_list_entities with entityType='adGroup' to find an ad_squad_id (ad squads are listed as adGroup entities).";
+    } else if (errorIssues.some((i) => i.field === "ad_account_id")) {
+      nextAction = "Call snapchat_list_ad_accounts to discover valid ad_account_id values.";
+    } else {
+      nextAction = `Call snapchat_list_entities with entityType='${entityType}' to inspect existing examples.`;
     }
   }
 

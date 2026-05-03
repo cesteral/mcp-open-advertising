@@ -61,7 +61,11 @@ import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { uploadImageTool } from "./upload-image.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -95,6 +99,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Media ──
   uploadImageTool,
   uploadVideoTool,
+  // ── Discovery ──
+  createToolSearchTool({ platform: "snapchat", getTools: () => allTools }),
 ];
 
 /**

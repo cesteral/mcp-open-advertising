@@ -124,6 +124,72 @@ export interface McpErrorData {
 }
 
 // ---------------------------------------------------------------------------
+// buildNextAction — shared next-action hint builder
+// ---------------------------------------------------------------------------
+
+/**
+ * Tagged union of recovery hints. Producers describe the kind of recovery
+ * that has the best chance of resolving the error; this helper renders it as
+ * a single short string suitable for the `McpErrorData.nextAction` and
+ * `ValidateEntityResult.nextAction` fields.
+ */
+export type NextActionInput =
+  | { kind: "discover-account"; tool: string; field?: string }
+  | { kind: "list-entity"; tool: string; entityType?: string; field?: string }
+  | { kind: "check-status"; tool: string; idField?: string; expectedStatus?: string }
+  | { kind: "read-resource"; uri: string; purpose?: string }
+  | { kind: "renew-token"; hint?: string }
+  | { kind: "retry-after"; seconds?: number }
+  | { kind: "conflict-refetch"; tool?: string }
+  | { kind: "check-permission"; hint?: string };
+
+/**
+ * Render a {@link NextActionInput} as a single-line `nextAction` string.
+ * Used by both error paths (McpError.data.nextAction) and validation paths
+ * (ValidateEntityResult.nextAction) so wording stays consistent across servers.
+ */
+export function buildNextAction(input: NextActionInput): string {
+  switch (input.kind) {
+    case "discover-account": {
+      const target = input.field ? `valid ${input.field} values` : "available accounts";
+      return `Call ${input.tool} to discover ${target}.`;
+    }
+    case "list-entity": {
+      const filter = input.entityType ? ` with entityType='${input.entityType}'` : "";
+      const target = input.field ? `find a ${input.field}` : "list available entities";
+      return `Call ${input.tool}${filter} to ${target}.`;
+    }
+    case "check-status": {
+      const idHint = input.idField ? ` using the ${input.idField}` : "";
+      const stop = input.expectedStatus
+        ? ` until status reaches '${input.expectedStatus}'`
+        : " until the job completes";
+      return `Poll ${input.tool}${idHint}${stop}.`;
+    }
+    case "read-resource": {
+      const purpose = input.purpose ? ` for ${input.purpose}` : "";
+      return `Read MCP resource ${input.uri}${purpose}.`;
+    }
+    case "renew-token":
+      return input.hint
+        ? `Renew the API token. ${input.hint}`
+        : "Renew the API token (current credentials were rejected).";
+    case "retry-after":
+      return input.seconds !== undefined
+        ? `Wait ${input.seconds} seconds (Retry-After header) before retrying.`
+        : "Back off and retry with exponential delay; reduce request rate.";
+    case "conflict-refetch":
+      return input.tool
+        ? `Re-fetch the entity via ${input.tool}, reapply your changes against the latest version, and retry.`
+        : "Re-fetch the entity, reapply your changes against the latest version, and retry.";
+    case "check-permission":
+      return input.hint
+        ? `Verify the authenticated user has permission for this resource. ${input.hint}`
+        : "Verify the authenticated user has permission for this resource.";
+  }
+}
+
+// ---------------------------------------------------------------------------
 // McpError
 // ---------------------------------------------------------------------------
 

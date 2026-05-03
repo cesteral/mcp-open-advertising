@@ -13,18 +13,18 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | #   | Server           | Port | API                                | Entity Types                                                                                     | Tools |
 | --- | ---------------- | ---- | ---------------------------------- | ------------------------------------------------------------------------------------------------ | ----- |
 | 1   | `dbm-mcp`        | 3001 | Bid Manager API v2                 | _(reporting only)_                                                                               | 6     |
-| 2   | `dv360-mcp`      | 3002 | DV360 API v4                       | advertiser, campaign, insertionOrder, lineItem, + more                                           | 25    |
-| 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 51    |
+| 2   | `dv360-mcp`      | 3002 | DV360 API v4                       | advertiser, campaign, insertionOrder, lineItem, + more                                           | 26    |
+| 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 52    |
 | 4   | `gads-mcp`       | 3004 | Google Ads REST API v23            | campaign, adGroup, ad, keyword, campaignBudget, asset                                            | 15    |
-| 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 26    |
+| 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 27    |
 | 6   | `linkedin-mcp`   | 3006 | LinkedIn Marketing API v2          | adAccount, campaignGroup, campaign, creative, conversionRule                                     | 20    |
-| 7   | `tiktok-mcp`     | 3007 | TikTok Marketing API v1.3          | campaign, adGroup, ad, creative                                                                  | 23    |
+| 7   | `tiktok-mcp`     | 3007 | TikTok Marketing API v1.3          | campaign, adGroup, ad, creative                                                                  | 24    |
 | 8   | `cm360-mcp`      | 3008 | CM360 API v5                       | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 20    |
-| 9   | `snapchat-mcp`   | 3009 | Snapchat Ads API v1                | campaign, adGroup, ad, creative                                                                  | 22    |
+| 9   | `snapchat-mcp`   | 3009 | Snapchat Ads API v1                | campaign, adGroup, ad, creative                                                                  | 23    |
 | 10  | `sa360-mcp`      | 3010 | SA360 Reporting API v0 + DS v2     | _(reporting + conversions)_                                                                      | 16    |
-| 11  | `pinterest-mcp`  | 3011 | Pinterest Ads API v5               | campaign, adGroup, ad, creative                                                                  | 22    |
+| 11  | `pinterest-mcp`  | 3011 | Pinterest Ads API v5               | campaign, adGroup, ad, creative                                                                  | 23    |
 | 12  | `amazon-dsp-mcp` | 3012 | Amazon DSP API                     | order, lineItem, creative                                                                        | 18    |
-| 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 24    |
+| 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 25    |
 
 ## Essential Commands
 
@@ -175,7 +175,7 @@ Most servers (linkedin, tiktok, cm360, pinterest, snapchat, amazon-dsp) follow t
 | `dbm_run_custom_query`        | Execute custom Bid Manager reports (blocking)  | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters`       |
 | `dbm_run_custom_query_async`  | Submit custom query (non-blocking, task-based) | `reportType`, `timeRange`, `metrics`, `dimensions`, `filters`       |
 
-### dv360-mcp — 25 Tools (Unique Tools Beyond Standard Pattern)
+### dv360-mcp — 26 Tools (Unique Tools Beyond Standard Pattern)
 
 Standard CRUD/bulk/targeting/validation/preview tools plus:
 
@@ -196,7 +196,7 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `dv360_upload_image`                    | Upload image from URL                 | `advertiserId`, `mediaUrl`, `name?`       |
 | `dv360_upload_video`                    | Upload video from URL                 | `advertiserId`, `mediaUrl`, `title?`      |
 
-### ttd-mcp — 51 Tools (Unique: Workflows API, GraphQL, Bid Lists, Seeds)
+### ttd-mcp — 52 Tools (Unique: Workflows API, GraphQL, Bid Lists, Seeds)
 
 **CRUD (5):** `ttd_get_entity`, `ttd_list_entities`, `ttd_create_entity`, `ttd_update_entity`, `ttd_delete_entity`
 
@@ -255,7 +255,7 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 
 Plus standard CRUD (`get_entity`, `list_entities`, `create_entity`, `update_entity`, `remove_entity`), `bulk_create_entities`, `bulk_update_status`, `adjust_bids`, `validate_entity`, `get_ad_preview`.
 
-### meta-mcp — 26 Tools (Unique: Insights, Delivery, Budget Schedules, Async Reporting, Pacing)
+### meta-mcp — 27 Tools (Unique: Insights, Delivery, Budget Schedules, Async Reporting, Pacing)
 
 Standard CRUD/bulk/targeting/media tools plus:
 
@@ -288,7 +288,7 @@ Standard CRUD/bulk/targeting/media tools plus:
 | `sa360_validate_conversion`     | Validate conversion payload          | `mode`, `conversion`                                    |
 | `sa360_get_change_history`      | Get change history for entities      | `customerId`, `entityType?`, `dateRange?`               |
 
-### msads-mcp — 24 Tools (Unique: Google Import, Ad Extensions, Report Scheduling)
+### msads-mcp — 25 Tools (Unique: Google Import, Ad Extensions, Report Scheduling)
 
 Standard CRUD/bulk/reporting tools plus:
 

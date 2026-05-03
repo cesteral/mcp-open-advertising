@@ -16,6 +16,23 @@ const PINTEREST_RETRY_CONFIG: RetryConfig = {
   tokenExpiryHint: "Pinterest token expired. Regenerate at developers.pinterest.com.",
 };
 
+function buildPinterestNextAction(
+  status: number,
+  _errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  if (status === 401) {
+    return "Renew the Pinterest access token. Regenerate it at https://developers.pinterest.com and update PINTEREST_ACCESS_TOKEN.";
+  }
+  if (status === 403) {
+    return "Verify the token has ads:read / ads:write scopes and the user is admin/employee on the ad account.";
+  }
+  if (status === 404) {
+    return "Verify the ad_account_id and entity IDs with pinterest_list_ad_accounts / pinterest_list_entities.";
+  }
+  return defaultHint;
+}
+
 /**
  * HTTP client for Pinterest Marketing API v5 requests.
  *
@@ -152,6 +169,7 @@ export class PinterestHttpClient {
             "Content-Type": contentType,
           };
         },
+        buildNextAction: buildPinterestNextAction,
       });
       span.setAttribute("http.response.status_code", 200);
       return result;
@@ -236,6 +254,7 @@ export class PinterestHttpClient {
           }
           return headers;
         },
+        buildNextAction: buildPinterestNextAction,
       });
     });
   }

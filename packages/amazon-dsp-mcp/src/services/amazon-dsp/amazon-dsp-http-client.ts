@@ -15,6 +15,23 @@ const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   tokenExpiryHint: "Amazon DSP token expired. Regenerate via Login with Amazon.",
 };
 
+function buildAmazonDspNextAction(
+  status: number,
+  _errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  if (status === 401) {
+    return "Renew the Amazon DSP access token via Login with Amazon (LWA) using the configured refresh token, then update AMAZON_DSP_ACCESS_TOKEN.";
+  }
+  if (status === 403) {
+    return "Verify the Amazon-Advertising-API-Scope (profileId) and ClientId headers correspond to a profile the user has access to. Use amazon_dsp_list_accounts to discover valid profileIds.";
+  }
+  if (status === 404) {
+    return "Verify the order/lineItem/creative ID with amazon_dsp_list_entities and the accountId with amazon_dsp_list_accounts.";
+  }
+  return defaultHint;
+}
+
 /**
  * HTTP client for Amazon DSP Advertising API requests.
  *
@@ -142,6 +159,7 @@ export class AmazonDspHttpClient {
           }
           return headers;
         },
+        buildNextAction: buildAmazonDspNextAction,
       });
     });
   }
