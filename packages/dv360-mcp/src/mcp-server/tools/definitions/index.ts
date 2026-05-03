@@ -72,7 +72,11 @@ import { uploadVideoTool } from "./upload-video.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { getDeliveryEstimateTool } from "./get-delivery-estimate.tool.js";
 import { getPacingStatusTool } from "./get-pacing-status.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // Tier 1: Entity CRUD (generic tools handle all entity types dynamically)
@@ -108,6 +112,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   duplicateEntityTool,
   getDeliveryEstimateTool,
   getPacingStatusTool,
+  // Tier 6: Discovery
+  createToolSearchTool({ platform: "dv360", getTools: () => allTools }),
 ];
 
 /**

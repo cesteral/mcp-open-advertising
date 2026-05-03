@@ -122,7 +122,11 @@ import { getReportExecutionsTool } from "./get-report-executions.tool.js";
 import { manageBidListTool } from "./bid-list.tool.js";
 import { bulkManageBidListsTool } from "./bid-list-bulk.tool.js";
 import { manageSeedTool } from "./seed.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Context ──
@@ -191,6 +195,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   createReportTemplateTool,
   updateReportTemplateTool,
   getReportTemplateTool,
+  // ── Discovery ──
+  createToolSearchTool({ platform: "ttd", getTools: () => allTools }),
 ];
 
 /**

@@ -78,6 +78,35 @@ These fields are strongly recommended and present in all current tool definition
 - `annotations` — Object with any combination of `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` booleans (all current tools provide all four)
 - `responseFormatter` — Function `(result, input?) => ContentBlock[]` to format the tool response; when absent, the factory serializes the result to JSON text
 
+## Tool Discovery Flow
+
+Servers with 20+ tools expose a `{prefix}_search_tools` dispatcher that ranks the server's own registry against a natural-language query. Use it to land on the right tool in one round-trip instead of paging through the full inventory.
+
+**Servers exposing the search tool:** ttd, meta, dv360, msads, tiktok, pinterest, snapchat.
+
+**Recommended discovery flow:**
+
+1. **Search** — call `{prefix}_search_tools({ query: "<what you want to do>" })` for narrowing.
+2. **Invoke** — call the matched tool with concrete arguments.
+3. **Recover** — on validation or lookup error, follow the structured `nextAction` hint in the error payload (often a `read-resource` directive pointing at an `entity-schema://` or enum resource).
+
+The search tool excludes itself from results. Returned items carry `name`, `title`, `description` (truncated to first paragraph), `score`, and `matchedTokens`. The full registry is still listable via the standard MCP `tools/list` request — search is a convenience, not a replacement.
+
+### Worked example (TTD)
+
+```jsonc
+// 1. Search
+{ "tool": "ttd_search_tools", "input": { "query": "create a campaign" } }
+// → results[0].name === "ttd_create_campaigns"
+
+// 2. Invoke
+{ "tool": "ttd_create_campaigns", "input": { "mode": "single", "campaign": { ... } } }
+
+// 3. On validation error, response includes:
+//    { "nextAction": { "kind": "read-resource", "uri": "ttd-field-rules://campaign" } }
+//    Read that resource, fix the payload, retry.
+```
+
 ## Bulk Result Conventions
 
 All bulk operation tools must return results in this format:

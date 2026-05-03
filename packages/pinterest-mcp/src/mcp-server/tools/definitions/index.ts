@@ -63,7 +63,11 @@ import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { uploadVideoTool } from "./upload-video.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -97,6 +101,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   validateEntityTool,
   // ── Media ──
   uploadVideoTool,
+  // ── Discovery ──
+  createToolSearchTool({ platform: "pinterest", getTools: () => allTools }),
 ];
 
 /**

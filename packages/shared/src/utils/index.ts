@@ -48,3 +48,4 @@ export * from "./report-errors.js";
 export * from "./report-spill.js";
 export * from "./download-file-stream.js";
 export * from "./async-task-tool.js";
+export * from "./tool-search.js";
