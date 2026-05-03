@@ -1,10 +1,11 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
+import { fieldRulesResource } from "./resources/definitions/field-rules.resource.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
@@ -13,6 +14,7 @@ import {
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
+  registerTemplatedResourcesFromDefinitions,
   InteractionLogger,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
@@ -110,6 +112,15 @@ export async function createMcpServer(
   registerStaticResourcesFromDefinitions({
     server,
     resources: allResources,
+    logger,
+  });
+
+  // Register `meta-field-rules://{entityType}` for client-side discovery of
+  // required fields and enum suggestions before write tools.
+  registerTemplatedResourcesFromDefinitions({
+    server,
+    templateBuilder: (uriTemplate, options) => new ResourceTemplate(uriTemplate, options),
+    resources: [fieldRulesResource],
     logger,
   });
 

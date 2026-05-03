@@ -13,13 +13,17 @@ import { z } from "zod";
 import { getEntityTypeEnum, type MetaEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
-  type FieldRule,
   type ValidationIssue,
   validateRequiredFieldsStructured,
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import {
+  REQUIRED_FIELDS_CREATE,
+  READ_ONLY_FIELDS,
+  BUDGET_FIELDS,
+} from "../../resources/utils/field-rules.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -33,99 +37,9 @@ const TOOL_DESCRIPTION = `Validate an entity payload against known Meta Ads requ
 
 This is a pure client-side check — it will catch missing required fields and
 obvious type errors, but the Meta API may still reject payloads for
-business-rule reasons (e.g., invalid objective/optimization_goal combinations).`;
+business-rule reasons (e.g., invalid objective/optimization_goal combinations).
 
-// ---------------------------------------------------------------------------
-// Required-field definitions per entity type (create mode)
-// ---------------------------------------------------------------------------
-
-const CAMPAIGN_OBJECTIVES = [
-  "OUTCOME_AWARENESS",
-  "OUTCOME_TRAFFIC",
-  "OUTCOME_ENGAGEMENT",
-  "OUTCOME_LEADS",
-  "OUTCOME_APP_PROMOTION",
-  "OUTCOME_SALES",
-] as const;
-const STATUS_VALUES = ["ACTIVE", "PAUSED", "DELETED", "ARCHIVED"] as const;
-const ADSET_OPTIMIZATION_GOALS = [
-  "LINK_CLICKS",
-  "IMPRESSIONS",
-  "REACH",
-  "POST_ENGAGEMENT",
-  "OFFSITE_CONVERSIONS",
-  "VALUE",
-  "THRUPLAY",
-] as const;
-const ADSET_BILLING_EVENTS = ["IMPRESSIONS", "LINK_CLICKS", "THRUPLAY"] as const;
-const CUSTOM_AUDIENCE_SUBTYPES = ["CUSTOM", "LOOKALIKE", "WEBSITE", "APP", "ENGAGEMENT"] as const;
-
-const REQUIRED_FIELDS_CREATE: Record<MetaEntityType, FieldRule[]> = {
-  campaign: [
-    { field: "name", expectedType: "string" },
-    {
-      field: "objective",
-      expectedType: "string",
-      hint: "e.g., OUTCOME_AWARENESS, OUTCOME_TRAFFIC",
-      suggestedValues: CAMPAIGN_OBJECTIVES,
-    },
-    {
-      field: "special_ad_categories",
-      expectedType: "array",
-      hint: "must be an array (can be empty [])",
-    },
-  ],
-  adSet: [
-    { field: "name", expectedType: "string" },
-    { field: "campaign_id", expectedType: "string" },
-    {
-      field: "optimization_goal",
-      expectedType: "string",
-      hint: "e.g., LINK_CLICKS, IMPRESSIONS",
-      suggestedValues: ADSET_OPTIMIZATION_GOALS,
-    },
-    {
-      field: "billing_event",
-      expectedType: "string",
-      hint: "e.g., IMPRESSIONS, LINK_CLICKS",
-      suggestedValues: ADSET_BILLING_EVENTS,
-    },
-    { field: "targeting", expectedType: "object", hint: "must be an object with targeting spec" },
-    {
-      field: "status",
-      expectedType: "string",
-      hint: "e.g., PAUSED, ACTIVE",
-      suggestedValues: STATUS_VALUES,
-    },
-  ],
-  ad: [
-    { field: "name", expectedType: "string" },
-    { field: "adset_id", expectedType: "string" },
-    { field: "creative", expectedType: "object", hint: "must be an object with creative_id" },
-    {
-      field: "status",
-      expectedType: "string",
-      hint: "e.g., PAUSED, ACTIVE",
-      suggestedValues: STATUS_VALUES,
-    },
-  ],
-  adCreative: [{ field: "name", expectedType: "string" }],
-  customAudience: [
-    { field: "name", expectedType: "string" },
-    {
-      field: "subtype",
-      expectedType: "string",
-      hint: "e.g., CUSTOM, LOOKALIKE, WEBSITE",
-      suggestedValues: CUSTOM_AUDIENCE_SUBTYPES,
-    },
-  ],
-};
-
-/** Fields that are always read-only and cannot be written via the API. */
-const READ_ONLY_FIELDS = ["id", "created_time", "updated_time", "time_created", "time_updated"];
-
-/** Fields whose values are in cents — warn if they look suspiciously low. */
-const BUDGET_FIELDS = ["daily_budget", "lifetime_budget", "bid_amount"];
+Required-field tables, enum suggestions, and read-only field lists per entity type are also exposed as MCP resources. Valid values: see resource \`meta-field-rules://{entityType}\`.`;
 
 // ---------------------------------------------------------------------------
 // Input / Output schemas
