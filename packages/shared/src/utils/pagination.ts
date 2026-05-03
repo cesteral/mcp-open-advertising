@@ -93,3 +93,101 @@ export function formatPaginationHint(p: PaginationOutput): string {
   if (!p.hasMore || p.nextCursor === null) return "";
   return `\n\nMore results available. Call again with ${p.nextPageInputKey}: ${JSON.stringify(p.nextCursor)}`;
 }
+
+/**
+ * Canonical key set every list tool's `pagination` output block must expose.
+ * `totalCount` is optional, all others are required.
+ */
+export const PAGINATION_REQUIRED_KEYS = [
+  "nextCursor",
+  "hasMore",
+  "pageSize",
+  "nextPageInputKey",
+] as const;
+export const PAGINATION_OPTIONAL_KEYS = ["totalCount"] as const;
+
+interface ToolLike {
+  name: string;
+  outputSchema?: { _def?: unknown } | unknown;
+}
+
+export interface PaginationConformanceViolation {
+  tool: string;
+  reason:
+    | "pagination-key-missing-required"
+    | "pagination-key-unexpected"
+    | "pagination-not-object";
+  details: string;
+}
+
+/**
+ * Walk a list of tool definitions and report any tool whose `outputSchema`
+ * declares a `pagination` field that does not match the canonical
+ * `PaginationOutputSchema` shape.
+ *
+ * Tools without a `pagination` field are ignored — many list endpoints
+ * legitimately return all results in one shot (account lists, user
+ * profiles) and do not paginate.
+ */
+export function findPaginationConformanceViolations(
+  tools: ReadonlyArray<ToolLike>
+): PaginationConformanceViolation[] {
+  const violations: PaginationConformanceViolation[] = [];
+
+  for (const tool of tools) {
+    const outputSchema = tool.outputSchema as { _def?: { shape?: unknown } } | undefined;
+    if (!outputSchema?._def) continue;
+
+    const shapeSrc = (outputSchema._def as { shape?: unknown }).shape;
+    const shape =
+      typeof shapeSrc === "function"
+        ? (shapeSrc as () => Record<string, unknown>)()
+        : (shapeSrc as Record<string, unknown> | undefined);
+    if (!shape || typeof shape !== "object") continue;
+
+    const paginationField = shape["pagination"] as { _def?: { shape?: unknown } } | undefined;
+    if (!paginationField) continue;
+
+    const innerSrc = paginationField._def?.shape;
+    const innerShape =
+      typeof innerSrc === "function"
+        ? (innerSrc as () => Record<string, unknown>)()
+        : (innerSrc as Record<string, unknown> | undefined);
+
+    if (!innerShape || typeof innerShape !== "object") {
+      violations.push({
+        tool: tool.name,
+        reason: "pagination-not-object",
+        details: "outputSchema.pagination is not a Zod object schema",
+      });
+      continue;
+    }
+
+    const innerKeys = new Set(Object.keys(innerShape));
+    const allowed = new Set<string>([
+      ...PAGINATION_REQUIRED_KEYS,
+      ...PAGINATION_OPTIONAL_KEYS,
+    ]);
+
+    for (const required of PAGINATION_REQUIRED_KEYS) {
+      if (!innerKeys.has(required)) {
+        violations.push({
+          tool: tool.name,
+          reason: "pagination-key-missing-required",
+          details: `pagination output is missing required key '${required}'`,
+        });
+      }
+    }
+    for (const key of innerKeys) {
+      if (!allowed.has(key)) {
+        violations.push({
+          tool: tool.name,
+          reason: "pagination-key-unexpected",
+          details: `pagination output has unexpected key '${key}' (not in canonical PaginationOutputSchema)`,
+        });
+      }
+    }
+  }
+
+  return violations;
+}
