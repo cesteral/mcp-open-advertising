@@ -79,6 +79,26 @@ function mapGAdsStatusCode(status: number): JsonRpcErrorCode {
   return JsonRpcErrorCode.InvalidRequest;
 }
 
+function buildGAdsNextAction(
+  status: number,
+  errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  if (status === 401) {
+    return "Renew the OAuth access token. Refresh tokens for Google Ads typically expire after extended inactivity — re-run the OAuth consent flow to obtain a new refresh token.";
+  }
+  if (status === 403) {
+    if (/developer.?token/i.test(errorBody)) {
+      return "The developer token is missing or not approved for production. Verify the token in the Google Ads UI (Tools & Settings → API Center) and ensure it has standard or basic access for the customer being targeted.";
+    }
+    return "Verify the authenticated user has permission for this customer ID. Use gads_list_accounts to confirm accessible customer IDs and that the login-customer-id header reflects the manager account hierarchy.";
+  }
+  if (status === 404) {
+    return "Verify the customer/entity ID with gads_list_accounts or gads_list_entities before retrying.";
+  }
+  return defaultHint;
+}
+
 /**
  * Shared HTTP client for Google Ads API requests.
  *
@@ -144,6 +164,7 @@ export class GAdsHttpClient {
         },
         mapStatusCode: (status) => mapGAdsStatusCode(status),
         parseErrorBody: parseGAdsErrors,
+        buildNextAction: buildGAdsNextAction,
       });
       return result;
     });

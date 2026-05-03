@@ -11,6 +11,7 @@
 import { z } from "zod";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
+import { buildNextAction } from "@cesteral/shared";
 
 const TOOL_NAME = "sa360_validate_conversion";
 const TOOL_TITLE = "Validate SA360 Conversion Payload";
@@ -61,6 +62,10 @@ export const ValidateConversionOutputSchema = z
     mode: z.string().describe("Validation mode (insert or update)"),
     errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
     warnings: z.array(z.string()).describe("Non-blocking warnings"),
+    nextAction: z
+      .string()
+      .optional()
+      .describe("One-line guidance for resolving validation failures."),
     timestamp: z.string().datetime().describe("ISO-8601 timestamp of validation"),
   })
   .describe("Conversion validation result");
@@ -172,11 +177,26 @@ export async function validateConversionLogic(
     );
   }
 
+  let nextAction: string | undefined;
+  if (errors.length > 0) {
+    if (mode === "update" && !conversion.conversionId) {
+      nextAction = "Use the conversionId returned by the original insert call (sa360_insert_conversions response).";
+    } else if (!conversion.segmentationName && !conversion.floodlightActivityId) {
+      nextAction = buildNextAction({
+        kind: "list-entity",
+        tool: "sa360_list_entities",
+        entityType: "floodlightActivity",
+        field: "floodlightActivityId",
+      });
+    }
+  }
+
   return {
     valid: errors.length === 0,
     mode,
     errors,
     warnings,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

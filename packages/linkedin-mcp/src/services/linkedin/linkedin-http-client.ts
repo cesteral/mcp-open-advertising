@@ -15,6 +15,26 @@ interface LinkedInApiError {
   status?: number;
 }
 
+function buildLinkedInNextAction(
+  status: number,
+  errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  if (status === 401) {
+    return "Renew the LinkedIn access token. Tokens are short-lived; regenerate at https://www.linkedin.com/developers/tools/oauth/token-generator and update LINKEDIN_ACCESS_TOKEN.";
+  }
+  if (status === 403) {
+    if (/scope/i.test(errorBody)) {
+      return "The token is missing a required scope. Marketing API needs r_ads, rw_ads, r_ads_reporting (and rw_organization_admin for company-page work). Re-authorize with the missing scope.";
+    }
+    return "Verify the authenticated user has Marketing API access for this ad account. Use linkedin_list_ad_accounts to confirm and check role assignments in Campaign Manager.";
+  }
+  if (status === 404) {
+    return "Verify the URN/ID with linkedin_list_entities or linkedin_list_ad_accounts. LinkedIn IDs are URNs (e.g., urn:li:sponsoredAccount:123) — partial numeric IDs are rejected.";
+  }
+  return defaultHint;
+}
+
 function mapLinkedInErrorToJsonRpc(httpStatus: number): JsonRpcErrorCode {
   if (httpStatus === 429) {
     return JsonRpcErrorCode.RateLimited;
@@ -231,6 +251,7 @@ export class LinkedInHttpClient {
             return body.substring(0, 500);
           }
         },
+        buildNextAction: buildLinkedInNextAction,
       });
       return result;
     });

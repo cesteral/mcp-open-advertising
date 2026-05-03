@@ -7,6 +7,7 @@ import type { RequestContext } from "@cesteral/shared";
 import {
   validateEntityResponseFormatter,
   validateEnumFieldsStructured,
+  buildNextAction,
   type FieldRule,
   type ValidationIssue,
 } from "@cesteral/shared";
@@ -226,6 +227,30 @@ export async function validateEntityLogic(
   const errorIssues = issues.filter((i) => i.severity !== "warning");
   const warningIssues = issues.filter((i) => i.severity === "warning");
 
+  let nextAction: string | undefined;
+  if (errorIssues.length > 0) {
+    if (errorIssues.some((i) => i.field === "profileId")) {
+      nextAction = buildNextAction({
+        kind: "discover-account",
+        tool: "cm360_list_user_profiles",
+        field: "profileId",
+      });
+    } else if (errorIssues.some((i) => i.field === "floodlightConfigurationId")) {
+      nextAction = buildNextAction({
+        kind: "list-entity",
+        tool: "cm360_list_entities",
+        entityType: "floodlightConfiguration",
+        field: "floodlightConfigurationId",
+      });
+    } else {
+      nextAction = buildNextAction({
+        kind: "list-entity",
+        tool: "cm360_list_entities",
+        entityType: input.entityType,
+      });
+    }
+  }
+
   return {
     valid: errorIssues.length === 0,
     entityType: input.entityType,
@@ -233,6 +258,7 @@ export async function validateEntityLogic(
     errors: errorIssues.map((i) => i.message),
     warnings: warningIssues.map((i) => i.message),
     issues,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

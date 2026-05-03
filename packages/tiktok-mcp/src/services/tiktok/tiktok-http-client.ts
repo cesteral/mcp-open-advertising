@@ -47,6 +47,39 @@ function mapTikTokErrorToJsonRpc(tiktokCode: number, httpStatus: number): JsonRp
   return JsonRpcErrorCode.InvalidRequest;
 }
 
+function buildTikTokEnvelopeNextAction(tiktokCode: number, message: string): string | undefined {
+  if (AUTH_ERROR_CODES.has(tiktokCode)) {
+    return "Renew the TikTok access token. Regenerate it in TikTok Business Center and update TIKTOK_ACCESS_TOKEN.";
+  }
+  if (RATE_LIMIT_CODES.has(tiktokCode)) {
+    return "Back off and retry with exponential delay. TikTok rate limits are per-app and per-advertiser; reduce concurrent requests.";
+  }
+  if (tiktokCode === 40105 || /advertiser/i.test(message)) {
+    return "Verify the advertiser_id with tiktok_list_advertisers; the authenticated user may not have access to this advertiser.";
+  }
+  if (tiktokCode === 40002 || /permission/i.test(message)) {
+    return "Verify the token has Ads Management scopes and the user has manager-level access in TikTok Business Center.";
+  }
+  return undefined;
+}
+
+function buildTikTokHttpNextAction(
+  status: number,
+  _errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  if (status === 401) {
+    return "Renew the TikTok access token. Regenerate it in TikTok Business Center and update TIKTOK_ACCESS_TOKEN.";
+  }
+  if (status === 403) {
+    return "Verify the user has Ads Management permission for this advertiser in TikTok Business Center.";
+  }
+  if (status === 404) {
+    return "Verify entity IDs with tiktok_list_entities; check the advertiser_id with tiktok_list_advertisers.";
+  }
+  return defaultHint;
+}
+
 /**
  * Validate the TikTok response envelope.
  * Returns `json.data` on success (code === 0).
@@ -60,11 +93,13 @@ function validateTikTokEnvelope(body: unknown): unknown {
 
   const jsonRpcCode = mapTikTokErrorToJsonRpc(json.code, 200);
   const retryable = RATE_LIMIT_CODES.has(json.code);
+  const nextAction = buildTikTokEnvelopeNextAction(json.code, json.message ?? "");
 
   throw new McpError(jsonRpcCode, json.message || `TikTok API error: code=${json.code}`, {
     tiktokCode: json.code,
     tiktokRequestId: json.request_id,
     retryable,
+    ...(nextAction ? { nextAction } : {}),
   });
 }
 
@@ -203,6 +238,7 @@ export class TikTokHttpClient {
           };
         },
         validateResponseBody: validateTikTokEnvelope,
+        buildNextAction: buildTikTokHttpNextAction,
       });
       span.setAttribute("http.response.status_code", 200);
       return result;
@@ -249,6 +285,7 @@ export class TikTokHttpClient {
           return headers;
         },
         validateResponseBody: validateTikTokEnvelope,
+        buildNextAction: buildTikTokHttpNextAction,
       });
     });
   }

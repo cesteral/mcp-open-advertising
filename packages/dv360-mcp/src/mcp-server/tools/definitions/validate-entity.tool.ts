@@ -6,7 +6,11 @@ import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.
 import { getEntitySchemaByType, getFieldSchemaByPath } from "../utils/schema-introspection.js";
 import type { RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { validateEntityResponseFormatter, type ValidationIssue } from "@cesteral/shared";
+import {
+  validateEntityResponseFormatter,
+  buildNextAction,
+  type ValidationIssue,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_validate_entity";
 const TOOL_TITLE = "Validate DV360 Entity (Client-Side)";
@@ -86,6 +90,10 @@ export const ValidateEntityOutputSchema = z
     issues: z
       .array(ValidationIssueSchema)
       .describe("Structured per-field issues with field path and Zod-mapped codes"),
+    nextAction: z
+      .string()
+      .optional()
+      .describe("One-line guidance for resolving validation failures."),
     timestamp: z.string().datetime(),
   })
   .describe("Entity validation result");
@@ -199,6 +207,26 @@ export async function validateEntityLogic(
   const errorIssues = issues.filter((i) => i.severity !== "warning");
   const warningIssues = issues.filter((i) => i.severity === "warning");
 
+  let nextAction: string | undefined;
+  if (errorIssues.length > 0) {
+    const fieldHit = errorIssues.find((i) =>
+      ["advertiserId", "campaignId", "insertionOrderId", "lineItemId"].includes(i.field)
+    );
+    if (fieldHit) {
+      nextAction = buildNextAction({
+        kind: "list-entity",
+        tool: "dv360_list_entities",
+        field: fieldHit.field,
+      });
+    } else {
+      nextAction = buildNextAction({
+        kind: "read-resource",
+        uri: `entity-schema://${input.entityType}`,
+        purpose: `the full ${input.entityType} field reference`,
+      });
+    }
+  }
+
   return {
     valid: errorIssues.length === 0,
     entityType: input.entityType,
@@ -206,6 +234,7 @@ export async function validateEntityLogic(
     errors: errorIssues.length > 0 ? errorIssues.map((i) => i.message) : undefined,
     warnings: warningIssues.length > 0 ? warningIssues.map((i) => i.message) : undefined,
     issues,
+    ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),
   };
 }

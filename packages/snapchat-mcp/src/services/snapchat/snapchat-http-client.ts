@@ -26,6 +26,37 @@ interface SnapchatEnvelope {
   [key: string]: unknown;
 }
 
+function buildSnapchatEnvelopeNextAction(message: string | undefined): string | undefined {
+  if (!message) return undefined;
+  if (/access.?token|unauthor/i.test(message)) {
+    return "Renew the Snapchat access token in Snap Business Manager and update SNAPCHAT_ACCESS_TOKEN.";
+  }
+  if (/permission|forbidden|access denied/i.test(message)) {
+    return "Verify the user has Ad Account access in Snap Business Manager and the token includes snapchat-marketing-api scope.";
+  }
+  if (/ad.?account|advertiser/i.test(message)) {
+    return "Verify the ad_account_id with snapchat_list_ad_accounts; the authenticated user may not have access.";
+  }
+  return undefined;
+}
+
+function buildSnapchatHttpNextAction(
+  status: number,
+  _errorBody: string,
+  defaultHint: string | undefined
+): string | undefined {
+  if (status === 401) {
+    return "Renew the Snapchat access token in Snap Business Manager and update SNAPCHAT_ACCESS_TOKEN.";
+  }
+  if (status === 403) {
+    return "Verify the user has Ad Account access in Snap Business Manager. The token must include snapchat-marketing-api scope.";
+  }
+  if (status === 404) {
+    return "Verify entity IDs with snapchat_list_entities or snapchat_list_ad_accounts.";
+  }
+  return defaultHint;
+}
+
 /**
  * Validate the Snapchat response envelope.
  * Returns the full envelope on success, throws McpError on FAILED status.
@@ -43,10 +74,15 @@ function validateSnapchatEnvelope(body: unknown): unknown {
     return json;
   }
 
+  const nextAction = buildSnapchatEnvelopeNextAction(json.display_message);
+
   throw new McpError(
     JsonRpcErrorCode.InvalidRequest,
     json.display_message ?? `Snapchat API error: request_status=FAILED`,
-    { errorCode: json.error_code }
+    {
+      errorCode: json.error_code,
+      ...(nextAction ? { nextAction } : {}),
+    }
   );
 }
 
@@ -156,6 +192,7 @@ export class SnapchatHttpClient {
           };
         },
         validateResponseBody: validateSnapchatEnvelope,
+        buildNextAction: buildSnapchatHttpNextAction,
       });
       span.setAttribute("http.response.status_code", 200);
       return result;
@@ -205,6 +242,7 @@ export class SnapchatHttpClient {
           return headers;
         },
         validateResponseBody: validateSnapchatEnvelope,
+        buildNextAction: buildSnapchatHttpNextAction,
       });
     });
   }
