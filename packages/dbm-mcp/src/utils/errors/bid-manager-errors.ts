@@ -35,48 +35,6 @@ export class BidManagerError extends McpError {
     this.httpStatus = options?.httpStatus;
   }
 
-  /**
-   * Create from Google API error response
-   */
-  static fromGoogleApiError(error: unknown): BidManagerError {
-    // Handle Google API error structure
-    if (error && typeof error === "object") {
-      const apiError = error as {
-        code?: number;
-        message?: string;
-        errors?: Array<{ message?: string; reason?: string }>;
-      };
-
-      const httpStatus = apiError.code;
-      const message =
-        apiError.message || apiError.errors?.[0]?.message || "Unknown Bid Manager API error";
-      const apiErrorCode = apiError.errors?.[0]?.reason;
-
-      // Map HTTP status to appropriate JSON-RPC error code
-      let jsonRpcCode = JsonRpcErrorCode.InternalError;
-      if (httpStatus === 401) {
-        jsonRpcCode = JsonRpcErrorCode.Unauthorized;
-      } else if (httpStatus === 403) {
-        jsonRpcCode = JsonRpcErrorCode.Forbidden;
-      } else if (httpStatus === 404) {
-        jsonRpcCode = JsonRpcErrorCode.NotFound;
-      } else if (httpStatus === 429) {
-        jsonRpcCode = JsonRpcErrorCode.RateLimited;
-      } else if (httpStatus === 400) {
-        jsonRpcCode = JsonRpcErrorCode.InvalidParams;
-      }
-
-      return new BidManagerError(message, {
-        code: jsonRpcCode,
-        httpStatus,
-        apiErrorCode,
-        cause: error,
-        data: { httpStatus, apiErrorCode },
-      });
-    }
-
-    return new BidManagerError(String(error), { cause: error });
-  }
 }
 
 /**
@@ -127,31 +85,6 @@ export class ReportGenerationError extends BidManagerError {
     this.queryId = queryId;
     this.reportId = reportId;
     this.failureReason = failureReason;
-  }
-}
-
-/**
- * Error when polling for report completion times out
- */
-export class ReportTimeoutError extends BidManagerError {
-  public readonly queryId: string;
-  public readonly reportId: string;
-  public readonly maxRetries: number;
-  public readonly lastStatus?: string;
-
-  constructor(queryId: string, reportId: string, maxRetries: number, lastStatus?: string) {
-    super(
-      `Report ${reportId} did not complete after ${maxRetries} poll attempts. Last status: ${lastStatus || "unknown"}`,
-      {
-        code: JsonRpcErrorCode.Timeout,
-        data: { queryId, reportId, maxRetries, lastStatus },
-      }
-    );
-    this.name = "ReportTimeoutError";
-    this.queryId = queryId;
-    this.reportId = reportId;
-    this.maxRetries = maxRetries;
-    this.lastStatus = lastStatus;
   }
 }
 

@@ -7,6 +7,7 @@ import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
+import { buildNextAction } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_adjust_line_item_bids";
 const TOOL_TITLE = "Adjust Line Item Bids";
@@ -89,6 +90,7 @@ export const AdjustLineItemBidsOutputSchema = z
           campaignId: z.string().optional(),
           insertionOrderId: z.string().optional(),
           error: z.string(),
+          nextAction: z.string().optional(),
         })
       )
       .describe("Failed adjustments with error messages"),
@@ -128,6 +130,7 @@ export async function adjustLineItemBidsLogic(
     campaignId?: string;
     insertionOrderId?: string;
     error: string;
+    nextAction?: string;
   }> = [];
 
   // Process each adjustment
@@ -215,6 +218,19 @@ export async function adjustLineItemBidsLogic(
         campaignId,
         insertionOrderId,
         error: error.message || String(error),
+        nextAction:
+          !advertiserId || !lineItemId
+            ? buildNextAction({
+                kind: "list-entity",
+                tool: "dv360_list_entities",
+                entityType: "lineItem",
+                field: !advertiserId ? "advertiserId" : "lineItemId",
+              })
+            : buildNextAction({
+                kind: "read-resource",
+                uri: "entity-schema://lineItem",
+                purpose: "line item bidStrategy fields before retrying the failed adjustment",
+              }),
       });
     }
   }

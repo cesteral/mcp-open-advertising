@@ -17,11 +17,6 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-vi.mock("../../src/utils/telemetry/tracing.js", () => ({
-  withCM360ApiSpan: vi.fn(async (_op: string, _path: string, fn: (span: any) => Promise<any>) =>
-    fn({ setAttribute: vi.fn() })
-  ),
-}));
 
 import { CM360HttpClient } from "../../src/services/cm360/cm360-http-client.js";
 import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";

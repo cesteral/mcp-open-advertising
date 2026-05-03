@@ -3,11 +3,12 @@
 
 import { z } from "zod";
 import type { Logger } from "pino";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
-import { RateLimiter } from "../../utils/security/rate-limiter.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { RateLimiter } from "@cesteral/shared";
 import { getEntityConfigDynamic, getEntitySchemaForOperation } from "../domain/entity-mapping.js";
 import { extractEntitiesFromListResponse } from "./entity-response-parser.js";
-import { withDV360ApiSpan, setSpanAttribute } from "../../utils/telemetry/index.js";
+import { withDV360ApiSpan } from "../../utils/platform.js";
+import { setSpanAttribute } from "@cesteral/shared";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360-http-client.js";
 

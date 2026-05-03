@@ -14,7 +14,7 @@ import {
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_download_report";
 const TOOL_TITLE = "Download CM360 Report";

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TtdService } from "../../src/services/ttd/ttd-service.js";
-import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 function createMockLogger() {
   return {

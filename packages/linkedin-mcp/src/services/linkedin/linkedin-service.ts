@@ -2,9 +2,9 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { LinkedInHttpClient } from "./linkedin-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   getEntityConfig,
   type LinkedInEntityType,

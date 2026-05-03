@@ -22,13 +22,6 @@ vi.mock("../../src/config/index.js", () => ({
   },
 }));
 
-vi.mock("../../src/utils/security/rate-limiter.js", () => ({
-  rateLimiter: {
-    consume: vi.fn().mockResolvedValue(undefined),
-    destroy: vi.fn(),
-  },
-  RateLimiter: vi.fn(),
-}));
 
 // Mock the resources module to avoid createToolExamplesResource calling into shared at import time
 vi.mock("../../src/mcp-server/resources/index.js", () => ({

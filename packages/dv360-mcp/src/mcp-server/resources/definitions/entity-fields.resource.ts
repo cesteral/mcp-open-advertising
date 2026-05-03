@@ -17,7 +17,7 @@ import {
   getCommonUpdateMasks,
   type FieldInfo,
 } from "../../tools/utils/schema-introspection.js";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resourceCache } from "../utils/resource-cache.js";
 
 const RESOURCE_NAME = "DV360 Entity Fields";

@@ -3,7 +3,14 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import {
+  downloadFileToBuffer,
+  McpError,
+  JsonRpcErrorCode,
+  pollUntilComplete,
+  ReportTimeoutError,
+  ReportFailedError,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import type {
@@ -46,9 +53,6 @@ export const UploadVideoOutputSchema = z
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function uploadVideoLogic(
   input: UploadVideoInput,
@@ -81,7 +85,7 @@ export async function uploadVideoLogic(
   const mediaItem = createResult.media?.[0]?.media;
   const mediaId = mediaItem?.id;
   if (!mediaId) {
-    throw new Error("Snapchat video upload failed: no media id returned from create step");
+    throw new McpError(JsonRpcErrorCode.InternalError, "Snapchat video upload failed: no media id returned from create step");
   }
 
   // Step 2: Upload the binary
@@ -96,39 +100,37 @@ export async function uploadVideoLogic(
   );
 
   // Poll for READY status
-  const maxAttempts = mcpConfig.snapchatVideoUploadMaxPollAttempts;
-  const pollIntervalMs = mcpConfig.snapchatVideoUploadPollIntervalMs;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollIntervalMs);
-
-    const statusResult = (await snapchatService.client.get(
-      `/v1/media/${mediaId}`,
-      undefined,
-      context
-    )) as SnapchatMediaGetResponse;
-
-    const statusItem = statusResult.media?.[0]?.media;
-    const mediaStatus = statusItem?.media_status ?? "PENDING";
-
-    if (mediaStatus === "READY") {
-      return {
-        mediaId,
-        mediaStatus,
-        uploadedAt: new Date().toISOString(),
-      };
+  try {
+    const finalStatus = await pollUntilComplete<string>({
+      fetchStatus: async () => {
+        const statusResult = (await snapchatService.client.get(
+          `/v1/media/${mediaId}`,
+          undefined,
+          context
+        )) as SnapchatMediaGetResponse;
+        return statusResult.media?.[0]?.media?.media_status ?? "PENDING";
+      },
+      isComplete: (s) => s === "READY",
+      isFailed: (s) => s === "FAILED",
+      initialDelayMs: mcpConfig.snapchatVideoUploadPollIntervalMs,
+      maxDelayMs: mcpConfig.snapchatVideoUploadPollIntervalMs,
+      maxAttempts: mcpConfig.snapchatVideoUploadMaxPollAttempts,
+      backoffFactor: 1,
+    });
+    return { mediaId, mediaStatus: finalStatus, uploadedAt: new Date().toISOString() };
+  } catch (error) {
+    if (error instanceof ReportFailedError) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Snapchat video processing failed: status=${String(error.status)}`
+      );
     }
-
-    if (mediaStatus === "FAILED") {
-      throw new Error(`Snapchat video processing failed: status=${mediaStatus}`);
+    if (error instanceof ReportTimeoutError) {
+      // Polling timed out — return mediaId so caller can re-check later
+      return { mediaId, uploadedAt: new Date().toISOString() };
     }
+    throw error;
   }
-
-  // Return mediaId even if polling timed out — video may still be processing
-  return {
-    mediaId,
-    uploadedAt: new Date().toISOString(),
-  };
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {

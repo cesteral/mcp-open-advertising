@@ -3,7 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import { downloadFileToBuffer,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -78,7 +81,7 @@ export async function uploadImageLogic(
 
   const imageId = result.image_id;
   if (!imageId) {
-    throw new Error("TikTok image upload failed: no image_id returned");
+    throw new McpError(JsonRpcErrorCode.InternalError, "TikTok image upload failed: no image_id returned");
   }
 
   return {

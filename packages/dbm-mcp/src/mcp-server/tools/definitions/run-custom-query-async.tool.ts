@@ -50,7 +50,12 @@ export function registerRunCustomQueryAsyncTool(
       },
       validate: (input: RunCustomQueryInput) => {
         const { errors } = validateQueryParams(input, input.strictValidation !== false);
-        return errors.map((e) => ({ message: e.message }));
+        return errors.map((e) => ({
+          message: e.message,
+          nextAction: e.resourceUri
+            ? `Read MCP resource ${e.resourceUri} for allowed values, then retry dbm_run_custom_query_async.`
+            : "Read filter-types://all, metric-types://all, or report-types://all for allowed query values, then retry dbm_run_custom_query_async.",
+        }));
       },
       execute: async (input: RunCustomQueryInput, ctx) => {
         const sdkContext = ctx.sessionId ? { sessionId: ctx.sessionId } : undefined;

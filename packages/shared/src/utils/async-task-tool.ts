@@ -78,6 +78,7 @@ interface ServerWithTasks {
 
 export interface AsyncTaskValidationError {
   message: string;
+  nextAction?: string;
 }
 
 export interface AsyncTaskToolConfig<TInput, TOutput> {
@@ -155,7 +156,12 @@ export function registerAsyncTaskTool<TInput, TOutput>(
           const errors = await config.validate(input);
           if (errors.length > 0) {
             const message = `Validation failed: ${errors.map((e) => e.message).join("; ")}`;
-            throw (invalidParams ?? ((m: string) => new Error(m)))(message);
+            const nextActions = errors
+              .map((e) => e.nextAction)
+              .filter((nextAction): nextAction is string => Boolean(nextAction));
+            const suffix =
+              nextActions.length > 0 ? ` Next action: ${[...new Set(nextActions)].join(" ")}` : "";
+            throw (invalidParams ?? ((m: string) => new Error(m)))(`${message}${suffix}`);
           }
         }
 

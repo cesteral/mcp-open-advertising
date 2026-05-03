@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { SA360AuthAdapter } from "../auth/sa360-auth-adapter.js";
-import type { RateLimiter } from "../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { SA360HttpClient } from "./sa360/sa360-http-client.js";

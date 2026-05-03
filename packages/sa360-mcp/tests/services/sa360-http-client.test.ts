@@ -16,11 +16,6 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-vi.mock("../../src/utils/telemetry/tracing.js", () => ({
-  withSA360ApiSpan: vi.fn((_name: string, _path: string, fn: (span: any) => Promise<any>) =>
-    fn({ setAttribute: vi.fn() })
-  ),
-}));
 
 import { SA360HttpClient } from "../../src/services/sa360/sa360-http-client.js";
 import { executeWithRetry } from "@cesteral/shared";

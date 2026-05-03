@@ -1,16 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 // ---------------------------------------------------------------------------
 // Mocks — must be declared before importing the module under test
 // ---------------------------------------------------------------------------
 
-vi.mock("../../src/utils/telemetry/index.js", () => ({
-  withDV360ApiSpan: vi
-    .fn()
-    .mockImplementation((_op: string, _type: string, fn: () => unknown) => fn()),
-  setSpanAttribute: vi.fn(),
-}));
 
 vi.mock("../../src/services/domain/entity-mapping.js", () => ({
   getEntityConfigDynamic: vi.fn(),

@@ -52,15 +52,15 @@ vi.mock("../../src/utils/math.js", () => ({
 
 // Import after mocks
 import { BidManagerService } from "../../src/services/bid-manager/BidManagerService.js";
+import { ReportTimeoutError, McpError } from "@cesteral/shared";
 import {
   QueryCreationError,
   QueryExecutionError,
   ReportGenerationError,
-  ReportTimeoutError,
   ReportFetchError,
   RetryExhaustedError,
   BidManagerError,
-} from "../../src/utils/errors/index.js";
+} from "../../src/utils/errors/bid-manager-errors.js";
 import {
   parseCSVToDeliveryMetrics,
   calculatePerformanceMetrics,
@@ -303,13 +303,13 @@ describe("BidManagerService", () => {
       expect(result.status.state).toBe("QUEUED");
     });
 
-    it("throws BidManagerError on API error", async () => {
+    it("throws ReportingError on API error", async () => {
       mockClient.queries.reports.get.mockRejectedValue({
-        code: 404,
+        response: { status: 404 },
         message: "Not found",
       });
 
-      await expect(service.getReportStatus("q-123", "r-456")).rejects.toThrow(BidManagerError);
+      await expect(service.getReportStatus("q-123", "r-456")).rejects.toThrow(McpError);
     });
   });
 
@@ -417,17 +417,14 @@ describe("BidManagerService", () => {
       expect(mockClient.queries.reports.get).toHaveBeenCalledTimes(3);
     });
 
-    it("retries on transient errors during polling", async () => {
-      mockClient.queries.reports.get
-        .mockRejectedValueOnce({ code: 500, message: "Server Error" })
-        .mockResolvedValueOnce({
-          data: {
-            metadata: {
-              status: { state: "DONE", format: "CSV" },
-              googleCloudStoragePath: "gs://bucket/report.csv",
-            },
-          },
-        });
+    it("propagates transport errors to the outer retry layer", async () => {
+      // pollForCompletion delegates to shared pollUntilComplete which is intentionally
+      // strict — transient/auth failures bubble up so executeQueryWithRetry can decide
+      // whether to retry. (Previously, the local loop swallowed every error as a warn.)
+      mockClient.queries.reports.get.mockRejectedValue({
+        response: { status: 500 },
+        message: "Server Error",
+      });
 
       const promise = service.pollForCompletion("q-123", "r-456", {
         maxRetries: 3,
@@ -436,15 +433,12 @@ describe("BidManagerService", () => {
         backoffMultiplier: 2,
       });
 
-      // Advance past sleep for first failed attempt
+      const assertion = expect(promise).rejects.toThrow(McpError);
       for (let i = 0; i < 5; i++) {
         await vi.advanceTimersByTimeAsync(500);
       }
-
-      const result = await promise;
-
-      expect(result.status.state).toBe("DONE");
-      expect(mockClient.queries.reports.get).toHaveBeenCalledTimes(2);
+      await assertion;
+      expect(mockClient.queries.reports.get).toHaveBeenCalledTimes(1);
     });
   });
 

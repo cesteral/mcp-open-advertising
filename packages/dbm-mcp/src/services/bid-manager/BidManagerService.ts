@@ -13,16 +13,22 @@ import type { Logger } from "pino";
 import type { AppConfig } from "../../config/index.js";
 import type { BidManagerClient } from "./client.js";
 import { csvToJson } from "./report-parser.js";
-import type { RateLimiter } from "@cesteral/shared";
+import {
+  delay,
+  pollUntilComplete,
+  ReportTimeoutError,
+  ReportFailedError,
+  mapReportingError,
+  type RateLimiter,
+} from "@cesteral/shared";
 import {
   QueryCreationError,
   QueryExecutionError,
   ReportGenerationError,
-  ReportTimeoutError,
   ReportFetchError,
   BidManagerError,
   RetryExhaustedError,
-} from "../../utils/errors/index.js";
+} from "../../utils/errors/bid-manager-errors.js";
 import {
   parseCSVToDeliveryMetrics,
   parseCSVToHistoricalData,
@@ -42,14 +48,8 @@ import type {
 } from "./types.js";
 import { safeDivide, round } from "../../utils/math.js";
 import { daysBetween } from "../../utils/date.js";
-import { withBidManagerApiSpan } from "../../utils/telemetry/tracing.js";
+import { withBidManagerApiSpan } from "../../utils/platform.js";
 
-/**
- * Sleep helper function
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Parse date string (YYYY-MM-DD) to DateObject
@@ -174,22 +174,14 @@ export class BidManagerService {
       };
     } catch (error) {
       this.logger.error({ error, queryId, reportId }, "Failed to get report status");
-      throw BidManagerError.fromGoogleApiError(error);
+      throw mapReportingError(error, "dbm");
     }
   }
 
   /**
-   * Calculate delay for exponential backoff
-   */
-  private calculateBackoffDelay(attempt: number, config: ExponentialBackoffConfig): number {
-    const delay = config.initialDelayMs * Math.pow(config.backoffMultiplier, attempt);
-    return Math.min(delay, config.maxDelayMs);
-  }
-
-  /**
-   * Poll for report completion with exponential backoff
+   * Poll for report completion with exponential backoff via shared pollUntilComplete.
    *
-   * Uses configurable exponential backoff (default: 2s initial, 2x multiplier, 60s max).
+   * Authentication or transport errors propagate immediately (no silent retries).
    */
   async pollForCompletion(
     queryId: string,
@@ -205,59 +197,26 @@ export class BidManagerService {
 
     this.logger.info({ queryId, reportId, config }, "Starting exponential backoff polling");
 
-    let lastStatus: string | undefined;
+    // Sleep before the first fetch — a report is never ready immediately.
+    await delay(config.initialDelayMs);
 
-    for (let attempt = 0; attempt < config.maxRetries; attempt++) {
-      const currentDelay = this.calculateBackoffDelay(attempt, config);
-
-      // Sleep before polling — a report is never ready immediately after submission
-      await sleep(currentDelay);
-
-      this.logger.debug(
-        {
-          queryId,
-          reportId,
-          attempt: attempt + 1,
-          maxRetries: config.maxRetries,
-          delayMs: currentDelay,
-        },
-        "Poll attempt"
-      );
-
-      try {
-        const report = await this.getReportStatus(queryId, reportId);
-        lastStatus = report.status.state;
-
-        if (report.status.state === "DONE") {
-          this.logger.info(
-            { queryId, reportId, attempts: attempt + 1 },
-            "Report completed successfully"
-          );
-          return report;
-        }
-
-        if (report.status.state === "FAILED") {
-          throw new ReportGenerationError(queryId, reportId, report.status.format);
-        }
-      } catch (error) {
-        // Re-throw terminal errors
-        if (error instanceof ReportGenerationError) {
-          throw error;
-        }
-
-        this.logger.warn(
-          {
-            error: error instanceof Error ? error.message : String(error),
-            queryId,
-            reportId,
-            attempt: attempt + 1,
-          },
-          "Poll attempt failed, will retry"
-        );
+    try {
+      return await pollUntilComplete<ReportMetadata>({
+        fetchStatus: () => this.getReportStatus(queryId, reportId),
+        isComplete: (r) => r.status.state === "DONE",
+        isFailed: (r) => r.status.state === "FAILED",
+        initialDelayMs: config.initialDelayMs,
+        maxDelayMs: config.maxDelayMs,
+        maxAttempts: config.maxRetries,
+        backoffFactor: config.backoffMultiplier,
+      });
+    } catch (error) {
+      if (error instanceof ReportFailedError) {
+        const failed = error.status as ReportMetadata;
+        throw new ReportGenerationError(queryId, reportId, failed.status.format);
       }
+      throw error;
     }
-
-    throw new ReportTimeoutError(queryId, reportId, config.maxRetries, lastStatus);
   }
 
   /**
@@ -388,7 +347,7 @@ export class BidManagerService {
 
         // Capture last status for error reporting
         if (error instanceof ReportTimeoutError) {
-          lastStatus = error.lastStatus;
+          lastStatus = "TIMEOUT";
         } else if (error instanceof ReportGenerationError) {
           lastStatus = "FAILED";
         }
@@ -411,7 +370,7 @@ export class BidManagerService {
             { cooldownMs: retryCooldownMs, nextAttempt: attempt + 2 },
             "Waiting before retry with continuation"
           );
-          await sleep(retryCooldownMs);
+          await delay(retryCooldownMs);
         }
       }
     }

@@ -6,7 +6,7 @@
 // official Pinterest OpenAPI spec (https://raw.githubusercontent.com/pinterest/api-description/main/v5/openapi.json).
 
 import type { PinterestHttpClient } from "./pinterest-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import {
   getEntityConfig,

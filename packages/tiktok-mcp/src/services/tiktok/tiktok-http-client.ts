@@ -3,10 +3,10 @@
 
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withTikTokApiSpan } from "../../utils/telemetry/tracing.js";
+import { withTikTokApiSpan } from "../../utils/platform.js";
 
 const TIKTOK_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

@@ -20,11 +20,7 @@ const ConfigSchema = BaseConfigSchema.extend({
   otelServiceName: z.string().default("ttd-mcp"),
 
   // Auth — TTD-specific modes
-  // `ttd-token` and `ttd-headers` are aliases — both expect the TTD API token
-  // via the `TTD-Auth` request header. Two names exist because prior Terraform
-  // defaults and CLAUDE.md settled on different labels; keeping both avoids
-  // breaking either call site.
-  mcpAuthMode: z.enum(["ttd-token", "ttd-headers", "jwt", "none"]).default("ttd-token"),
+  mcpAuthMode: z.enum(["ttd-token", "jwt", "none"]).default("ttd-token"),
 
   // TTD API Configuration
   ttdApiBaseUrl: z.string().url().default("https://api.thetradedesk.com/v3"),

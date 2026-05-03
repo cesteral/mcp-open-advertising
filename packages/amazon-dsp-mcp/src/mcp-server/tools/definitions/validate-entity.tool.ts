@@ -2,11 +2,10 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * amazon_dsp_validate_entity — Client-side schema validation for AmazonDsp Ads entities.
+ * amazon_dsp_validate_entity — Client-side schema validation for Amazon DSP entities.
  *
- * AmazonDsp Marketing API does not have a dry-run mode, so this tool
- * validates payloads against known required-field rules before hitting the API.
- * It is purely local — no API calls, no session services needed.
+ * Amazon DSP API does not have a dry-run mode, so this tool validates payloads
+ * against known required-field rules before hitting the API. Purely local.
  */
 
 import { z } from "zod";
@@ -16,23 +15,12 @@ import {
   getCanonicalEntityType,
 } from "../utils/entity-mapping.js";
 import type { AmazonDspPublicEntityType } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
-import type { RequestContext } from "@cesteral/shared";
-import {
-  type FieldRule,
-  type ValidationIssue,
-  validateRequiredFieldsStructured,
-  checkReadOnlyFieldsStructured,
-  validateEntityResponseFormatter,
-} from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { type FieldRule, createValidateEntityTool } from "@cesteral/shared";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const TOOL_NAME = "amazon_dsp_validate_entity";
-const TOOL_TITLE = "AmazonDsp Ads Entity Validation (Client-Side)";
-const TOOL_DESCRIPTION = `Validate an entity payload against known AmazonDsp Ads requirements without calling the API.
+export const validateEntityTool = createValidateEntityTool<AmazonDspPublicEntityType>({
+  toolName: "amazon_dsp_validate_entity",
+  toolTitle: "AmazonDsp Ads Entity Validation (Client-Side)",
+  toolDescription: `Validate an entity payload against known AmazonDsp Ads requirements without calling the API.
 
 Checks required fields, data types, and common configuration mistakes.
 
@@ -40,178 +28,69 @@ Checks required fields, data types, and common configuration mistakes.
 
 This is a pure client-side check — it catches missing required fields and
 obvious type errors. The AmazonDsp API may still reject payloads for business-rule
-reasons (e.g., invalid objective/placement combinations).`;
-
-// ---------------------------------------------------------------------------
-// Required-field definitions per entity type (create mode)
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Input / Output schemas
-// ---------------------------------------------------------------------------
-
-export const ValidateEntityInputSchema = z
-  .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
-    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
-    data: z.record(z.any()).describe("Entity payload to validate"),
+reasons (e.g., invalid objective/placement combinations).`,
+  entityTypeEnum: getEntityTypeEnum() as readonly [
+    AmazonDspPublicEntityType,
+    ...AmazonDspPublicEntityType[],
+  ],
+  getRules: (entityType) => getEntityContract(entityType).requiredOnCreate as FieldRule[],
+  getReadOnlyFields: (entityType) => getEntityContract(entityType).readOnlyFields,
+  extraInputSchema: {
     profileId: z.string().optional().describe("Advertiser ID (recommended for create mode)"),
-  })
-  .describe("Parameters for validating a AmazonDsp Ads entity payload");
+  },
+  extraValidate: ({ entityType, mode, data, issues }) => {
+    const canonical = getCanonicalEntityType(entityType);
 
-export const ValidateEntityOutputSchema = z
-  .object({
-    valid: z.boolean().describe("Whether the payload passed validation"),
-    entityType: z.string(),
-    mode: z.string(),
-    errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
-    warnings: z.array(z.string()).describe("Non-blocking warnings"),
-    issues: z
-      .array(
-        z.object({
-          field: z.string(),
-          code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
-          message: z.string(),
-          hint: z.string().optional(),
-          suggestedValues: z.array(z.string()).optional(),
-          severity: z.enum(["error", "warning"]).optional(),
-        })
-      )
-      .describe("Structured per-field issues"),
-    nextAction: z.string().optional(),
-    timestamp: z.string().datetime(),
-  })
-  .describe("Validation result");
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type ValidateEntityInput = z.infer<typeof ValidateEntityInputSchema>;
-type ValidateEntityOutput = z.infer<typeof ValidateEntityOutputSchema>;
-
-// ---------------------------------------------------------------------------
-// Logic (pure — no API calls, no session services)
-// ---------------------------------------------------------------------------
-
-export async function validateEntityLogic(
-  input: ValidateEntityInput,
-  _context: RequestContext,
-  _sdkContext?: SdkContext
-): Promise<ValidateEntityOutput> {
-  const { entityType, mode, data } = input;
-  const normalizedEntityType = entityType as AmazonDspPublicEntityType;
-  const canonicalEntityType = getCanonicalEntityType(normalizedEntityType);
-  const contract = getEntityContract(normalizedEntityType);
-  const issues: ValidationIssue[] = [];
-
-  if (mode === "create") {
-    const rules = contract.requiredOnCreate as FieldRule[];
-    issues.push(...validateRequiredFieldsStructured(data, rules));
-
-    if (canonicalEntityType === "creative") {
-      if (!data.clickThroughUrl) {
-        issues.push({
-          field: "clickThroughUrl",
-          code: "missing",
-          message: 'Creative should include "clickThroughUrl" for click tracking',
-          severity: "warning",
-        });
-      }
-    }
-  }
-
-  if (mode === "update") {
-    if (Object.keys(data).length === 0) {
+    if (mode === "create" && canonical === "creative" && !data.clickThroughUrl) {
       issues.push({
-        field: "data",
-        code: "custom",
-        message: "Update payload must contain at least one field to update",
-        severity: "error",
+        field: "clickThroughUrl",
+        code: "missing",
+        message: 'Creative should include "clickThroughUrl" for click tracking',
+        severity: "warning",
       });
     }
 
-    issues.push(
-      ...checkReadOnlyFieldsStructured(
-        data,
-        contract.readOnlyFields,
-        (field) => `Field "${field}" is a system field and may be ignored by the API on update`
-      )
-    );
-  }
-
-  // Budget validation (both modes)
-  const budgetValue = data.budget;
-  if (budgetValue !== undefined) {
-    if (typeof budgetValue === "number") {
-      if (canonicalEntityType === "lineItem") {
-        issues.push({
-          field: "budget",
-          code: "wrongType",
-          message:
-            'Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }',
-          suggestedValues: ["DAILY", "LIFETIME"],
-          severity: "error",
-        });
-      } else if (budgetValue <= 0) {
-        issues.push({
-          field: "budget",
-          code: "invalidValue",
-          message: 'Field "budget" must be a positive number',
-          severity: "error",
-        });
-      }
-    } else if (typeof budgetValue === "object" && budgetValue !== null) {
-      const budgetObj = budgetValue as Record<string, unknown>;
-      if (typeof budgetObj.budget !== "number" || (budgetObj.budget as number) <= 0) {
-        issues.push({
-          field: "budget.budget",
-          code: "invalidValue",
-          message: 'Field "budget.budget" must be a positive number',
-          severity: "error",
-        });
-      }
-      if (!budgetObj.budgetType) {
-        issues.push({
-          field: "budget.budgetType",
-          code: "missing",
-          message: 'Field "budget.budgetType" is required ("DAILY" or "LIFETIME")',
-          suggestedValues: ["DAILY", "LIFETIME"],
-          severity: "error",
-        });
+    const budgetValue = data.budget;
+    if (budgetValue !== undefined) {
+      if (typeof budgetValue === "number") {
+        if (canonical === "lineItem") {
+          issues.push({
+            field: "budget",
+            code: "wrongType",
+            message:
+              'Field "budget" for lineItem must be an object: { budgetType: "DAILY" | "LIFETIME", budget: number }',
+            suggestedValues: ["DAILY", "LIFETIME"],
+            severity: "error",
+          });
+        } else if (budgetValue <= 0) {
+          issues.push({
+            field: "budget",
+            code: "invalidValue",
+            message: 'Field "budget" must be a positive number',
+            severity: "error",
+          });
+        }
+      } else if (typeof budgetValue === "object" && budgetValue !== null) {
+        const budgetObj = budgetValue as Record<string, unknown>;
+        if (typeof budgetObj.budget !== "number" || (budgetObj.budget as number) <= 0) {
+          issues.push({
+            field: "budget.budget",
+            code: "invalidValue",
+            message: 'Field "budget.budget" must be a positive number',
+            severity: "error",
+          });
+        }
+        if (!budgetObj.budgetType) {
+          issues.push({
+            field: "budget.budgetType",
+            code: "missing",
+            message: 'Field "budget.budgetType" is required ("DAILY" or "LIFETIME")',
+            suggestedValues: ["DAILY", "LIFETIME"],
+            severity: "error",
+          });
+        }
       }
     }
-  }
-
-  const errorIssues = issues.filter((i) => i.severity !== "warning");
-  const warningIssues = issues.filter((i) => i.severity === "warning");
-
-  return {
-    valid: errorIssues.length === 0,
-    entityType,
-    mode,
-    errors: errorIssues.map((i) => i.message),
-    warnings: warningIssues.map((i) => i.message),
-    issues,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Tool definition (exported for allTools array)
-// ---------------------------------------------------------------------------
-
-export const validateEntityTool = {
-  name: TOOL_NAME,
-  title: TOOL_TITLE,
-  description: TOOL_DESCRIPTION,
-  inputSchema: ValidateEntityInputSchema,
-  outputSchema: ValidateEntityOutputSchema,
-  annotations: {
-    readOnlyHint: true,
-    idempotentHint: true,
-    openWorldHint: false,
-    destructiveHint: false,
   },
   inputExamples: [
     {
@@ -234,12 +113,12 @@ export const validateEntityTool = {
         entityType: "lineItem",
         mode: "create",
         profileId: "1234567890",
-        data: {
-          name: "Test Line Item",
-        },
+        data: { name: "Test Line Item" },
       },
     },
   ],
-  logic: validateEntityLogic,
-  responseFormatter: validateEntityResponseFormatter,
-};
+});
+
+export const ValidateEntityInputSchema = validateEntityTool.inputSchema;
+export const ValidateEntityOutputSchema = validateEntityTool.outputSchema;
+export const validateEntityLogic = validateEntityTool.logic;

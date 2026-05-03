@@ -541,3 +541,26 @@ export async function startMcpHttpServer(
 
   return { server, shutdown };
 }
+
+// ---------------------------------------------------------------------------
+// Per-server entrypoint helpers — factor out the identical wrapper pair that
+// every server's streamable-http-transport.ts used to define inline.
+// ---------------------------------------------------------------------------
+export interface TransportEntrypoints<TConfig extends TransportFactoryAppConfig> {
+  createMcpHttpServer: (
+    config: TConfig,
+    logger: Logger
+  ) => ReturnType<typeof createMcpHttpTransport>;
+  startHttpServer: (config: TConfig, logger: Logger) => Promise<McpHttpServer>;
+}
+
+export function createTransportEntrypoints<TConfig extends TransportFactoryAppConfig>(
+  buildPlatformConfig: (config: TConfig, logger: Logger) => TransportFactoryConfig
+): TransportEntrypoints<TConfig> {
+  return {
+    createMcpHttpServer: (config, logger) =>
+      createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger)),
+    startHttpServer: (config, logger) =>
+      startMcpHttpServer(config, logger, buildPlatformConfig(config, logger)),
+  };
+}

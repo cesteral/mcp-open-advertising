@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { CM360HttpClient } from "./cm360-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import type { CM360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { getEntityConfig } from "../../mcp-server/tools/utils/entity-mapping.js";

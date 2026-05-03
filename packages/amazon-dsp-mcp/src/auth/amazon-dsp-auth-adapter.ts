@@ -16,7 +16,13 @@
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  JsonRpcErrorCode,
+  McpError,
+  OAuth2RefreshAdapterBase,
+} from "@cesteral/shared";
 
 /**
  * Amazon DSP advertiser list response shape (success)
@@ -94,8 +100,7 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      throw new McpError(JsonRpcErrorCode.Unauthorized, `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
 
@@ -115,38 +120,53 @@ export interface AmazonDspRefreshCredentials {
 }
 
 /**
- * Amazon LwA (Login with Amazon) OAuth2 token response shape — flat, no wrapper.
- */
-interface AmazonDspTokenResponse {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  refresh_token?: string;
-}
-
-/**
  * Refresh token adapter — uses app credentials + refresh token to obtain
  * and auto-refresh access tokens via Amazon LwA OAuth2 endpoint.
- *
- * Amazon access tokens expire after 1 hour. This adapter caches them
- * with a 60-second expiry buffer and uses a mutex to prevent concurrent
- * token requests (same pattern as TTD's TtdCredentialExchangeAuthAdapter).
  */
-export class AmazonDspRefreshTokenAdapter implements AmazonDspAuthAdapter {
-  private cachedToken: string | null = null;
-  private tokenExpiresAt = 0;
-  private pendingAuth: Promise<string> | null = null;
+export class AmazonDspRefreshTokenAdapter
+  extends OAuth2RefreshAdapterBase<AmazonDspRefreshCredentials>
+  implements AmazonDspAuthAdapter
+{
   private _userId = "";
-  private currentRefreshToken: string;
-
-  private static readonly EXPIRY_BUFFER_MS = 60_000;
 
   constructor(
-    private readonly credentials: AmazonDspRefreshCredentials,
+    credentials: AmazonDspRefreshCredentials,
     private readonly _profileId: string,
     private readonly baseUrl: string = "https://advertising-api.amazon.com"
   ) {
-    this.currentRefreshToken = credentials.refreshToken;
+    super({
+      platformName: "AmazonDsp",
+      credentials,
+      requestToken: async (refreshToken) => {
+        const response = await fetchWithTimeout(
+          "https://api.amazon.com/auth/o2/token",
+          10_000,
+          undefined,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              grant_type: "refresh_token",
+              client_id: credentials.appId,
+              client_secret: credentials.appSecret,
+              refresh_token: refreshToken,
+            }).toString(),
+          }
+        );
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => "");
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
+            `AmazonDsp token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          );
+        }
+        return (await response.json()) as {
+          access_token?: string;
+          expires_in?: number;
+          refresh_token?: string;
+        };
+      },
+    });
   }
 
   get userId(): string {
@@ -183,75 +203,13 @@ export class AmazonDspRefreshTokenAdapter implements AmazonDspAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
+      throw new McpError(JsonRpcErrorCode.InternalError, `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
     }
 
     const data = (await response.json()) as AmazonDspAdvertiserListResponse;
     this._userId = data.advertisers?.[0]?.name ?? "unknown";
   }
 
-  async getAccessToken(): Promise<string> {
-    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
-      return this.cachedToken;
-    }
-
-    if (this.pendingAuth) {
-      return this.pendingAuth;
-    }
-
-    this.pendingAuth = this.refreshAccessToken();
-    try {
-      return await this.pendingAuth;
-    } finally {
-      this.pendingAuth = null;
-    }
-  }
-
-  private async refreshAccessToken(): Promise<string> {
-    const body = new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: this.credentials.appId,
-      client_secret: this.credentials.appSecret,
-      refresh_token: this.currentRefreshToken,
-    }).toString();
-
-    // Amazon LwA token endpoint is always on api.amazon.com, not the DSP advertising API.
-    const response = await fetchWithTimeout(
-      "https://api.amazon.com/auth/o2/token",
-      10_000,
-      undefined,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `AmazonDsp token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as AmazonDspTokenResponse;
-    if (!data.access_token) {
-      throw new Error("AmazonDsp token refresh failed: missing access_token in response");
-    }
-
-    this.cachedToken = data.access_token;
-    this.tokenExpiresAt =
-      Date.now() + data.expires_in * 1000 - AmazonDspRefreshTokenAdapter.EXPIRY_BUFFER_MS;
-
-    // Amazon may rotate the refresh token — store the new one
-    if (data.refresh_token) {
-      this.currentRefreshToken = data.refresh_token;
-    }
-
-    return this.cachedToken;
-  }
 }
 
 /**
@@ -282,12 +240,12 @@ export function parseAmazonDspTokenFromHeaders(
   const authHeader = extractHeader(headers, "authorization");
 
   if (!authHeader) {
-    throw new Error("Missing required Authorization header");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Missing required Authorization header");
   }
 
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match || !match[1]) {
-    throw new Error("Authorization header must use Bearer scheme");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Authorization header must use Bearer scheme");
   }
 
   return match[1];
@@ -305,7 +263,8 @@ export function getAmazonDspProfileIdFromHeaders(
     extractHeader(headers, "Amazon-Advertising-API-Scope");
 
   if (!profileId) {
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
       "Missing required Amazon-Advertising-API-Scope header (DSP entity ID / profile ID). " +
         "Also ensure Amazon-Advertising-API-ClientId header is set."
     );

@@ -3,7 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import { downloadFileToBuffer,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -85,7 +88,7 @@ export async function uploadImageLogic(
   const images = result.images ?? {};
   const imageEntry = Object.values(images)[0];
   if (!imageEntry) {
-    throw new Error("Meta image upload failed: no image data returned");
+    throw new McpError(JsonRpcErrorCode.InternalError, "Meta image upload failed: no image data returned");
   }
 
   return {

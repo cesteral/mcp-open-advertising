@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import {
   McpError,
   JsonRpcErrorCode,

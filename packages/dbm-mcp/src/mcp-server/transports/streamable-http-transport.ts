@@ -12,17 +12,15 @@ import type { Logger } from "pino";
 import type { AppConfig } from "../../config/index.js";
 import { createMcpServer } from "../server.js";
 import {
-  createMcpHttpTransport,
-  startMcpHttpServer,
   createAuthStrategy,
   type AuthMode,
   type GoogleAuthAdapter,
-  type McpHttpServer,
   type TransportFactoryConfig,
   buildServerCardExtras,
+  createTransportEntrypoints,
 } from "@cesteral/shared";
 import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
-import { rateLimiter } from "../../utils/security/rate-limiter.js";
+import { rateLimiter } from "../../utils/platform.js";
 
 function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   return {
@@ -77,13 +75,4 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
   };
 }
 
-export function createMcpHttpServer(
-  config: AppConfig,
-  logger: Logger
-): { app: ReturnType<typeof createMcpHttpTransport>["app"]; shutdown: () => Promise<void> } {
-  return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
-}
-
-export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
-  return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
-}
+export const { createMcpHttpServer, startHttpServer } = createTransportEntrypoints<AppConfig>(buildPlatformConfig);

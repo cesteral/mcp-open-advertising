@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { SA360V2HttpClient } from "./sa360-v2-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 
 /**

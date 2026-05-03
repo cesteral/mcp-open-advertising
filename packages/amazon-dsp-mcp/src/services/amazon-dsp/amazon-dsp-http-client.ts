@@ -4,7 +4,7 @@
 import type { AmazonDspAuthAdapter } from "../../auth/amazon-dsp-auth-adapter.js";
 import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withAmazonDspApiSpan } from "../../utils/telemetry/tracing.js";
+import { withAmazonDspApiSpan } from "../../utils/platform.js";
 
 const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

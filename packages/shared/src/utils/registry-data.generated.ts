@@ -63,7 +63,6 @@ export const REGISTRY_DATA: RegistryData = {
       "auth": {
         "modes": [
           "ttd-token",
-          "ttd-headers",
           "jwt",
           "none"
         ]

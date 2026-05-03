@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { CM360HttpClient } from "./cm360-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import {
   DEFAULT_REPORT_MAX_BACKOFF_MS,
   DEFAULT_REPORT_POLL_INTERVAL_MS,
@@ -11,7 +11,7 @@ import {
   ReportFailedError,
   type RequestContext,
 } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 export interface CM360ReportConfig {
   name: string;

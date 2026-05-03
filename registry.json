@@ -220,7 +220,6 @@
       "auth": {
         "modes": [
           "ttd-token",
-          "ttd-headers",
           "jwt",
           "none"
         ]

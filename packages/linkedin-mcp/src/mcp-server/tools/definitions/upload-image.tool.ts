@@ -3,7 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import { downloadFileToBuffer,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import type { LinkedInRegisterUploadResponse } from "../utils/media-types.js";
@@ -80,7 +83,7 @@ export async function uploadImageLogic(
   const assetUrn = registerResult.value?.asset;
 
   if (!uploadUrl || !assetUrn) {
-    throw new Error("LinkedIn register upload failed: missing uploadUrl or asset URN");
+    throw new McpError(JsonRpcErrorCode.InternalError, "LinkedIn register upload failed: missing uploadUrl or asset URN");
   }
 
   // Step 2: Download file and PUT binary
@@ -88,9 +91,7 @@ export async function uploadImageLogic(
 
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
   if (buffer.length > MAX_IMAGE_SIZE) {
-    throw new Error(
-      `Image file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds LinkedIn's 5MB limit`
-    );
+    throw new McpError(JsonRpcErrorCode.InternalError, `Image file too large: ${(buffer.length / 1024 / 1024).toFixed(1)}MB exceeds LinkedIn's 5MB limit`);
   }
 
   await linkedInService.client.putBinary(uploadUrl, buffer, contentType, context);

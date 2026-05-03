@@ -12,24 +12,20 @@ import type { Logger } from "pino";
 import type { AppConfig } from "../../config/index.js";
 import { createMcpServer } from "../server.js";
 import {
-  createMcpHttpTransport,
-  startMcpHttpServer,
   createAuthStrategy,
   type AuthMode,
-  type McpHttpServer,
   type TransportFactoryConfig,
   buildServerCardExtras,
+  createTransportEntrypoints,
 } from "@cesteral/shared";
 import { TtdTokenAuthStrategy } from "../../auth/ttd-auth-strategy.js";
 import type { TtdAuthAdapter } from "../../auth/ttd-auth-adapter.js";
 import { TtdDirectTokenAuthAdapter } from "../../auth/ttd-auth-adapter.js";
 import { createSessionServices, sessionServiceStore } from "../../services/session-services.js";
-import { rateLimiter } from "../../utils/security/rate-limiter.js";
+import { rateLimiter } from "../../utils/platform.js";
 
 function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
-  const isHeaderTokenMode =
-    config.mcpAuthMode === "ttd-token" || config.mcpAuthMode === "ttd-headers";
-  const authStrategy = isHeaderTokenMode
+  const authStrategy = config.mcpAuthMode === "ttd-token"
     ? new TtdTokenAuthStrategy(logger)
     : createAuthStrategy(config.mcpAuthMode as AuthMode, {
         jwtSecret: config.mcpAuthSecretKey,
@@ -45,7 +41,7 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
       "MCP-Protocol-Version",
       "TTD-Auth",
     ],
-    authErrorHint: isHeaderTokenMode
+    authErrorHint: config.mcpAuthMode === "ttd-token"
       ? "Provide a TTD API token via the TTD-Auth header."
       : "Provide a valid Bearer token in the Authorization header.",
     sessionServiceStore,
@@ -117,13 +113,4 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
   };
 }
 
-export function createMcpHttpServer(
-  config: AppConfig,
-  logger: Logger
-): { app: ReturnType<typeof createMcpHttpTransport>["app"]; shutdown: () => Promise<void> } {
-  return createMcpHttpTransport(config, logger, buildPlatformConfig(config, logger));
-}
-
-export async function startHttpServer(config: AppConfig, logger: Logger): Promise<McpHttpServer> {
-  return startMcpHttpServer(config, logger, buildPlatformConfig(config, logger));
-}
+export const { createMcpHttpServer, startHttpServer } = createTransportEntrypoints<AppConfig>(buildPlatformConfig);

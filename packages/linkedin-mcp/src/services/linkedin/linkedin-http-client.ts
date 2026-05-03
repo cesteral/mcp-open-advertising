@@ -3,10 +3,10 @@
 
 import type { Logger } from "pino";
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withLinkedInApiSpan } from "../../utils/telemetry/tracing.js";
+import { withLinkedInApiSpan } from "../../utils/platform.js";
 
 /** LinkedIn error response shape */
 interface LinkedInApiError {

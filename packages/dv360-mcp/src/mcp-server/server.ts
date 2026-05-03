@@ -7,13 +7,14 @@ import { allTools } from "./tools/index.js";
 import { resourceRegistry } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
-import { ErrorHandler } from "../utils/errors/index.js";
+import { ErrorHandler } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
   extractZodShape,
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   InteractionLogger,
+  isConformanceFixturesEnabled,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -220,7 +221,7 @@ export async function createMcpServer(
   }
 
   // Register conformance fixtures (resources + prompts) when enabled
-  if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {
+  if (isConformanceFixturesEnabled()) {
     const {
       conformanceResources,
       conformanceResourceTemplate,

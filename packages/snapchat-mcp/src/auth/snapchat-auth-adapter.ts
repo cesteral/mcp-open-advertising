@@ -17,7 +17,13 @@
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  JsonRpcErrorCode,
+  McpError,
+  OAuth2RefreshAdapterBase,
+} from "@cesteral/shared";
 
 /**
  * Snapchat /v1/me response shape
@@ -93,8 +99,7 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `Snapchat token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      throw new McpError(JsonRpcErrorCode.Unauthorized, `Snapchat token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
 
@@ -115,40 +120,54 @@ export interface SnapchatRefreshCredentials {
 }
 
 /**
- * Snapchat OAuth2 token response shape (flat, no data wrapper).
- */
-interface SnapchatTokenResponse {
-  access_token: string;
-  token_type?: string;
-  expires_in: number;
-  refresh_token?: string;
-  scope?: string;
-}
-
-/**
  * Refresh token adapter — uses app credentials + refresh token to obtain
  * and auto-refresh access tokens via Snapchat's OAuth2 endpoint.
- *
- * Snapchat access tokens expire. This adapter caches them with a 60-second
- * expiry buffer and uses a mutex to prevent concurrent token requests (same
- * pattern as TTD's TtdCredentialExchangeAuthAdapter).
  */
-export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
-  private cachedToken: string | null = null;
-  private tokenExpiresAt = 0;
-  private pendingAuth: Promise<string> | null = null;
+export class SnapchatRefreshTokenAdapter
+  extends OAuth2RefreshAdapterBase<SnapchatRefreshCredentials>
+  implements SnapchatAuthAdapter
+{
   private _userId = "";
-  private currentRefreshToken: string;
-
-  private static readonly EXPIRY_BUFFER_MS = 60_000;
 
   constructor(
-    private readonly credentials: SnapchatRefreshCredentials,
+    credentials: SnapchatRefreshCredentials,
     private readonly _adAccountId: string,
     private readonly baseUrl: string = "https://adsapi.snapchat.com",
     private readonly _orgId: string = ""
   ) {
-    this.currentRefreshToken = credentials.refreshToken;
+    super({
+      platformName: "Snapchat",
+      credentials,
+      requestToken: async (refreshToken) => {
+        const response = await fetchWithTimeout(
+          "https://accounts.snapchat.com/login/oauth2/access_token",
+          10_000,
+          undefined,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              grant_type: "refresh_token",
+              client_id: credentials.appId,
+              client_secret: credentials.appSecret,
+              refresh_token: refreshToken,
+            }).toString(),
+          }
+        );
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => "");
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
+            `Snapchat token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          );
+        }
+        return (await response.json()) as {
+          access_token?: string;
+          expires_in?: number;
+          refresh_token?: string;
+        };
+      },
+    });
   }
 
   get userId(): string {
@@ -178,78 +197,13 @@ export class SnapchatRefreshTokenAdapter implements SnapchatAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `Snapchat token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
+      throw new McpError(JsonRpcErrorCode.InternalError, `Snapchat token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
     }
 
     const data = (await response.json()) as SnapchatMeResponse;
     this._userId = data.me?.id ?? "unknown";
   }
 
-  async getAccessToken(): Promise<string> {
-    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
-      return this.cachedToken;
-    }
-
-    if (this.pendingAuth) {
-      return this.pendingAuth;
-    }
-
-    this.pendingAuth = this.refreshAccessToken();
-    try {
-      return await this.pendingAuth;
-    } finally {
-      this.pendingAuth = null;
-    }
-  }
-
-  private async refreshAccessToken(): Promise<string> {
-    const body = new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: this.credentials.appId,
-      client_secret: this.credentials.appSecret,
-      refresh_token: this.currentRefreshToken,
-    }).toString();
-
-    // Snapchat OAuth2 token endpoint is always on accounts.snapchat.com, regardless of this.baseUrl.
-    // this.baseUrl controls the Ads API host (adsapi.snapchat.com by default).
-    const response = await fetchWithTimeout(
-      "https://accounts.snapchat.com/login/oauth2/access_token",
-      10_000,
-      undefined,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body,
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `Snapchat token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as SnapchatTokenResponse;
-    if (!data.access_token) {
-      throw new Error(`Snapchat token refresh failed: missing access_token in response`);
-    }
-
-    this.cachedToken = data.access_token;
-    this.tokenExpiresAt =
-      Date.now() + data.expires_in * 1000 - SnapchatRefreshTokenAdapter.EXPIRY_BUFFER_MS;
-
-    // Snapchat may rotate the refresh token — store the new one
-    if (data.refresh_token) {
-      this.currentRefreshToken = data.refresh_token;
-    }
-
-    return this.cachedToken;
-  }
 }
 
 /**
@@ -280,12 +234,12 @@ export function parseSnapchatTokenFromHeaders(
   const authHeader = extractHeader(headers, "authorization");
 
   if (!authHeader) {
-    throw new Error("Missing required Authorization header");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Missing required Authorization header");
   }
 
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match || !match[1]) {
-    throw new Error("Authorization header must use Bearer scheme");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Authorization header must use Bearer scheme");
   }
 
   return match[1];
@@ -301,7 +255,7 @@ export function getSnapchatAdvertiserIdFromHeaders(
   const adAccountId = extractHeader(headers, "x-snapchat-advertiser-id");
 
   if (!adAccountId) {
-    throw new Error("Missing required X-Snapchat-Advertiser-Id header");
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, "Missing required X-Snapchat-Advertiser-Id header");
   }
 
   return adAccountId;

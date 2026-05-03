@@ -5,7 +5,7 @@ import type { Logger } from "pino";
 import type { PinterestAuthAdapter } from "../../auth/pinterest-auth-adapter.js";
 import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withPinterestApiSpan } from "../../utils/telemetry/tracing.js";
+import { withPinterestApiSpan } from "../../utils/platform.js";
 
 const PINTEREST_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

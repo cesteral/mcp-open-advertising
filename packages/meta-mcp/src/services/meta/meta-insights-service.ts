@@ -2,9 +2,9 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { MetaGraphApiClient } from "./meta-graph-api-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { Logger } from "pino";
 
 /**

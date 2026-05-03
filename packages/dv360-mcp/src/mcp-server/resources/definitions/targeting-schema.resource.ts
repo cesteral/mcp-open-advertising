@@ -15,7 +15,7 @@ import {
   isValidTargetingType,
   type TargetingType,
 } from "../../tools/utils/targeting-metadata.js";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import * as generatedSchemas from "../../../generated/schemas/zod.js";
 import { resourceCache } from "../utils/resource-cache.js";
 

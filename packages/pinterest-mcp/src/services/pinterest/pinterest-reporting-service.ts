@@ -2,7 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { PinterestHttpClient } from "./pinterest-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import {
   fetchWithTimeout,
   McpError,

@@ -14,7 +14,7 @@
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout , McpError, JsonRpcErrorCode} from "@cesteral/shared";
 
 /**
  * Contract for LinkedIn authentication adapters.
@@ -72,8 +72,7 @@ export class LinkedInAccessTokenAdapter implements LinkedInAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `LinkedIn token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      throw new McpError(JsonRpcErrorCode.Unauthorized, `LinkedIn token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
 
@@ -150,9 +149,7 @@ export class LinkedInRefreshTokenAdapter implements LinkedInAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `LinkedIn token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
+      throw new McpError(JsonRpcErrorCode.InternalError, `LinkedIn token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
     }
 
     const data = (await response.json()) as { id: string; vanityName?: string };
@@ -198,14 +195,12 @@ export class LinkedInRefreshTokenAdapter implements LinkedInAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `LinkedIn token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
+      throw new McpError(JsonRpcErrorCode.InternalError, `LinkedIn token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
     }
 
     const data = (await response.json()) as LinkedInTokenResponse;
     if (!data.access_token) {
-      throw new Error("LinkedIn token refresh returned no access_token");
+      throw new McpError(JsonRpcErrorCode.InternalError, "LinkedIn token refresh returned no access_token");
     }
 
     this.cachedToken = data.access_token;
@@ -231,12 +226,12 @@ export function parseLinkedInTokenFromHeaders(
   const authHeader = extractHeader(headers, "authorization");
 
   if (!authHeader) {
-    throw new Error("Missing required Authorization header");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Missing required Authorization header");
   }
 
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match || !match[1]) {
-    throw new Error("Authorization header must use Bearer scheme");
+    throw new McpError(JsonRpcErrorCode.Unauthorized, "Authorization header must use Bearer scheme");
   }
 
   return match[1];

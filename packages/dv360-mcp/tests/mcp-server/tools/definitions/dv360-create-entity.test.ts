@@ -116,22 +116,6 @@ vi.mock("../../../../src/mcp-server/tools/utils/simplified-schemas.js", () => ({
   ),
 }));
 
-vi.mock("../../../../src/utils/errors/index.js", () => ({
-  McpError: class McpError extends Error {
-    code: number;
-    data?: unknown;
-    constructor(code: number, message: string, data?: unknown) {
-      super(message);
-      this.name = "McpError";
-      this.code = code;
-      this.data = data;
-    }
-  },
-  JsonRpcErrorCode: {
-    InvalidParams: -32602,
-    InternalError: -32603,
-  },
-}));
 
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {

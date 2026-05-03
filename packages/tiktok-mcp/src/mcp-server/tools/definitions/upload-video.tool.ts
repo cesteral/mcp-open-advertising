@@ -3,7 +3,14 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import {
+  downloadFileToBuffer,
+  McpError,
+  JsonRpcErrorCode,
+  pollUntilComplete,
+  ReportTimeoutError,
+  ReportFailedError,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js"; // poll config only
@@ -63,9 +70,6 @@ interface TikTokVideoInfoResponse {
   list?: TikTokVideoInfoItem[];
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function uploadVideoLogic(
   input: UploadVideoInput,
@@ -95,42 +99,52 @@ export async function uploadVideoLogic(
 
   const videoId = uploadResult.video_id;
   if (!videoId) {
-    throw new Error("TikTok video upload failed: no video_id returned");
+    throw new McpError(JsonRpcErrorCode.InternalError, "TikTok video upload failed: no video_id returned");
   }
 
   // Poll for bind_success status (max 10 min, 20s intervals)
   const maxAttempts = mcpConfig.tiktokVideoUploadMaxPollAttempts;
   const pollIntervalMs = mcpConfig.tiktokVideoUploadPollIntervalMs;
 
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollIntervalMs);
-
-    const statusResult = (await tiktokService.client.get(
-      tiktokService.client.versionedPath("file/video/ad/info/"),
-      { video_ids: JSON.stringify([videoId]) },
-      context
-    )) as TikTokVideoInfoResponse;
-
-    const videoInfo = statusResult.list?.[0];
-    const videoStatus = videoInfo?.video_status ?? "processing";
-
-    if (videoStatus === "bind_success") {
-      return {
-        videoId,
-        videoName: videoInfo?.video_name ?? input.videoName,
-        duration: videoInfo?.duration,
-        uploadedAt: new Date().toISOString(),
-      };
+  try {
+    const videoInfo = await pollUntilComplete<TikTokVideoInfoItem | undefined>({
+      fetchStatus: async () => {
+        const statusResult = (await tiktokService.client.get(
+          tiktokService.client.versionedPath("file/video/ad/info/"),
+          { video_ids: JSON.stringify([videoId]) },
+          context
+        )) as TikTokVideoInfoResponse;
+        return statusResult.list?.[0];
+      },
+      isComplete: (info) => info?.video_status === "bind_success",
+      isFailed: (info) => info?.video_status === "error" || info?.video_status === "deleted",
+      initialDelayMs: pollIntervalMs,
+      maxDelayMs: pollIntervalMs,
+      maxAttempts,
+      backoffFactor: 1,
+    });
+    return {
+      videoId,
+      videoName: videoInfo?.video_name ?? input.videoName,
+      duration: videoInfo?.duration,
+      uploadedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    if (error instanceof ReportFailedError) {
+      const status = (error.status as { video_status?: string } | undefined)?.video_status ?? "unknown";
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `TikTok video processing failed: status=${status}`
+      );
     }
-
-    if (videoStatus === "error" || videoStatus === "deleted") {
-      throw new Error(`TikTok video processing failed: status=${videoStatus}`);
+    if (error instanceof ReportTimeoutError) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Video ${videoId} upload timed out: binding did not complete after ${maxAttempts} polling attempts (${(maxAttempts * pollIntervalMs) / 1000}s). The video may still be processing — check status manually.`
+      );
     }
+    throw error;
   }
-
-  throw new Error(
-    `Video ${videoId} upload timed out: binding did not complete after ${maxAttempts} polling attempts (${(maxAttempts * pollIntervalMs) / 1000}s). The video may still be processing — check status manually.`
-  );
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {

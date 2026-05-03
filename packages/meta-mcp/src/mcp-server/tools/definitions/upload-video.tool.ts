@@ -3,7 +3,16 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer, createLogger, fetchWithTimeout } from "@cesteral/shared";
+import {
+  downloadFileToBuffer,
+  createLogger,
+  fetchWithTimeout,
+  McpError,
+  JsonRpcErrorCode,
+  pollUntilComplete,
+  ReportTimeoutError,
+  ReportFailedError,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js";
@@ -80,9 +89,6 @@ async function getRemoteContentLength(
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function uploadVideoLogic(
   input: UploadVideoInput,
@@ -94,9 +100,7 @@ export async function uploadVideoLogic(
   const remoteContentLength = await getRemoteContentLength(input.mediaUrl, context);
 
   if (remoteContentLength !== undefined && remoteContentLength > maxBufferedBytes) {
-    throw new Error(
-      `Meta video upload aborted before download: remote file is ${remoteContentLength} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`
-    );
+    throw new McpError(JsonRpcErrorCode.InternalError, `Meta video upload aborted before download: remote file is ${remoteContentLength} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`);
   }
 
   const { buffer, contentType, filename } = await downloadFileToBuffer(
@@ -106,9 +110,7 @@ export async function uploadVideoLogic(
   );
 
   if (buffer.length > maxBufferedBytes) {
-    throw new Error(
-      `Meta video upload aborted after download: buffered file is ${buffer.length} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`
-    );
+    throw new McpError(JsonRpcErrorCode.InternalError, `Meta video upload aborted after download: buffered file is ${buffer.length} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`);
   }
 
   const actId = input.adAccountId.startsWith("act_")
@@ -130,57 +132,55 @@ export async function uploadVideoLogic(
 
   const videoId = uploadResult.id;
   if (!videoId) {
-    throw new Error("Meta video upload failed: no video ID returned");
+    throw new McpError(JsonRpcErrorCode.InternalError, "Meta video upload failed: no video ID returned");
   }
 
-  // Poll for processing completion
-  const maxAttempts = mcpConfig.metaVideoUploadMaxPollAttempts;
-  const pollIntervalMs = mcpConfig.metaVideoUploadPollIntervalMs;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollIntervalMs);
-
-    try {
-      const statusResult = (await metaService.graphApiClient.get(
-        `/${videoId}`,
-        { fields: "status" },
-        context
-      )) as MetaVideoStatusResponse;
-
-      const progress = statusResult.status?.processing_progress ?? 0;
-      const videoStatus = statusResult.status?.video_status ?? "processing";
-
-      if (progress >= 100 || videoStatus === "ready") {
+  // Poll for processing completion. Note: transient transport/auth failures
+  // propagate immediately — no silent retries.
+  try {
+    await pollUntilComplete<{ progress: number; videoStatus: string }>({
+      fetchStatus: async () => {
+        const statusResult = (await metaService.graphApiClient.get(
+          `/${videoId}`,
+          { fields: "status" },
+          context
+        )) as MetaVideoStatusResponse;
         return {
-          videoId,
-          title: input.title ?? uploadResult.title,
-          status: "ready",
-          uploadedAt: new Date().toISOString(),
+          progress: statusResult.status?.processing_progress ?? 0,
+          videoStatus: statusResult.status?.video_status ?? "processing",
         };
-      }
-
-      if (videoStatus === "error") {
-        throw new Error(`Meta video processing failed: status=${videoStatus}`);
-      }
-    } catch (error) {
-      // Re-throw processing errors (user-facing), but swallow transient poll failures
-      if (error instanceof Error && error.message.startsWith("Meta video processing failed")) {
-        throw error;
-      }
-      logger.warn(
-        { err: error, videoId, attempt },
-        "Transient error polling video status, will retry"
+      },
+      isComplete: ({ progress, videoStatus }) => progress >= 100 || videoStatus === "ready",
+      isFailed: ({ videoStatus }) => videoStatus === "error",
+      initialDelayMs: mcpConfig.metaVideoUploadPollIntervalMs,
+      maxDelayMs: mcpConfig.metaVideoUploadPollIntervalMs,
+      maxAttempts: mcpConfig.metaVideoUploadMaxPollAttempts,
+      backoffFactor: 1,
+    });
+    return {
+      videoId,
+      title: input.title ?? uploadResult.title,
+      status: "ready",
+      uploadedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    if (error instanceof ReportFailedError) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Meta video processing failed: status=error`
       );
     }
+    if (error instanceof ReportTimeoutError) {
+      logger.warn({ videoId }, "Meta video upload polling timed out — returning processing status");
+      return {
+        videoId,
+        title: input.title ?? uploadResult.title,
+        status: "processing",
+        uploadedAt: new Date().toISOString(),
+      };
+    }
+    throw error;
   }
-
-  // Return with processing status if poll timed out
-  return {
-    videoId,
-    title: input.title ?? uploadResult.title,
-    status: "processing",
-    uploadedAt: new Date().toISOString(),
-  };
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {

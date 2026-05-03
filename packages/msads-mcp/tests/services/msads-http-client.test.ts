@@ -10,11 +10,6 @@ vi.mock("@cesteral/shared", async () => {
   };
 });
 
-vi.mock("../../src/utils/telemetry/tracing.js", () => ({
-  withMsAdsApiSpan: (_name: string, _path: string, fn: (span: unknown) => unknown) =>
-    fn({ setAttribute: vi.fn() }),
-  setSpanAttribute: vi.fn(),
-}));
 
 import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetch = vi.mocked(fetchWithTimeout);

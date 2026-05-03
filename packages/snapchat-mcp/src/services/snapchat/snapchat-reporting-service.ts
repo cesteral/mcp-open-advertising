@@ -2,7 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { SnapchatHttpClient } from "./snapchat-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { type RequestContext, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   fetchWithTimeout,

@@ -3,7 +3,14 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import {
+  downloadFileToBuffer,
+  McpError,
+  JsonRpcErrorCode,
+  pollUntilComplete,
+  ReportTimeoutError,
+  ReportFailedError,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mcpConfig } from "../../../config/index.js";
@@ -46,9 +53,6 @@ export const UploadVideoOutputSchema = z
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 export async function uploadVideoLogic(
   input: UploadVideoInput,
@@ -72,7 +76,7 @@ export async function uploadVideoLogic(
 
   const mediaId = registration.media_id;
   if (!mediaId || !registration.upload_url) {
-    throw new Error("Pinterest video upload registration failed: missing media_id or upload_url");
+    throw new McpError(JsonRpcErrorCode.InternalError, "Pinterest video upload registration failed: missing media_id or upload_url");
   }
 
   // Step 2: Upload the file to S3 using the pre-signed URL and parameters
@@ -86,38 +90,37 @@ export async function uploadVideoLogic(
   );
 
   // Poll for processing status
-  const maxAttempts = mcpConfig.pinterestVideoUploadMaxPollAttempts;
-  const pollIntervalMs = mcpConfig.pinterestVideoUploadPollIntervalMs;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    await sleep(pollIntervalMs);
-
-    const statusResult = (await pinterestService.client.get(
-      `/v5/media/${mediaId}`,
-      undefined,
-      context
-    )) as PinterestMediaStatusResponse;
-
-    const status = statusResult.media_processing_record?.status ?? "processing";
-
-    if (status === "succeeded" || status === "SUCCEEDED") {
-      return {
-        mediaId,
-        mediaStatus: status,
-        uploadedAt: new Date().toISOString(),
-      };
+  try {
+    const finalStatus = await pollUntilComplete<string>({
+      fetchStatus: async () => {
+        const statusResult = (await pinterestService.client.get(
+          `/v5/media/${mediaId}`,
+          undefined,
+          context
+        )) as PinterestMediaStatusResponse;
+        return statusResult.media_processing_record?.status ?? "processing";
+      },
+      isComplete: (s) => s === "succeeded" || s === "SUCCEEDED",
+      isFailed: (s) => s === "failed" || s === "FAILED",
+      initialDelayMs: mcpConfig.pinterestVideoUploadPollIntervalMs,
+      maxDelayMs: mcpConfig.pinterestVideoUploadPollIntervalMs,
+      maxAttempts: mcpConfig.pinterestVideoUploadMaxPollAttempts,
+      backoffFactor: 1,
+    });
+    return { mediaId, mediaStatus: finalStatus, uploadedAt: new Date().toISOString() };
+  } catch (error) {
+    if (error instanceof ReportFailedError) {
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Pinterest video processing failed: status=${String(error.status)}`
+      );
     }
-
-    if (status === "failed" || status === "FAILED") {
-      throw new Error(`Pinterest video processing failed: status=${status}`);
+    if (error instanceof ReportTimeoutError) {
+      // Polling timed out — video may still be processing
+      return { mediaId, uploadedAt: new Date().toISOString() };
     }
+    throw error;
   }
-
-  // Return mediaId even if polling timed out — video may still be processing
-  return {
-    mediaId,
-    uploadedAt: new Date().toISOString(),
-  };
 }
 
 export function uploadVideoResponseFormatter(result: UploadVideoOutput): McpTextContent[] {

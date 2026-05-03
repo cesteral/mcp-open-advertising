@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { SA360HttpClient } from "./sa360-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import { type SA360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { buildListQuery, buildGetByIdQuery } from "../../mcp-server/tools/utils/query-helpers.js";
