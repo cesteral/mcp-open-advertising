@@ -5,6 +5,7 @@ import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mc
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { allTools } from "./tools/index.js";
 import { allResources } from "./resources/index.js";
+import { fieldRulesResource } from "./resources/definitions/field-rules.resource.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
 import { reportCsvStore, sessionServiceStore } from "../services/session-services.js";
@@ -14,6 +15,7 @@ import {
   registerToolsFromDefinitions,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
+  registerTemplatedResourcesFromDefinitions,
   InteractionLogger,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
@@ -142,6 +144,15 @@ export async function createMcpServer(
   registerStaticResourcesFromDefinitions({
     server,
     resources: allResources,
+    logger,
+  });
+
+  // Register `ttd-field-rules://{entityType}` for client-side discovery of
+  // required fields and enum suggestions before write tools.
+  registerTemplatedResourcesFromDefinitions({
+    server,
+    templateBuilder: (uriTemplate, options) => new ResourceTemplate(uriTemplate, options),
+    resources: [fieldRulesResource],
     logger,
   });
 

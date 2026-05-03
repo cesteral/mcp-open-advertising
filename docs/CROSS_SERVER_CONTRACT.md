@@ -78,6 +78,28 @@ These fields are strongly recommended and present in all current tool definition
 - `annotations` — Object with any combination of `readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint` booleans (all current tools provide all four)
 - `responseFormatter` — Function `(result, input?) => ContentBlock[]` to format the tool response; when absent, the factory serializes the result to JSON text
 
+### Description Convention for Enum-Keyed Fields
+
+Tools whose `inputSchema` accepts a field bound to a published platform enum (status, objective, optimization-goal, match-type, etc.) **must end their description** with a sentence pointing the model at the resource that lists the valid values:
+
+```
+Valid values: see resource `<uri-template-or-uri>`.
+```
+
+This keeps the registered `inputSchema` small (no inline enum tables) while preserving discoverability — the model fetches the resource on demand instead of paying the enum-listing tax on every `tools/list` round-trip.
+
+Established field-rule resources:
+
+| Server | URI template | Backed by |
+|---|---|---|
+| ttd-mcp | `ttd-field-rules://{entityType}` | `packages/ttd-mcp/src/mcp-server/resources/utils/field-rules.ts` |
+| meta-mcp | `meta-field-rules://{entityType}` | `packages/meta-mcp/src/mcp-server/resources/utils/field-rules.ts` |
+| msads-mcp | `msads-field-rules://{entityType}` | `packages/msads-mcp/src/mcp-server/resources/utils/field-rules.ts` |
+
+Each resource returns JSON `{ entityType, requiredOnCreate, optionalEnums?, readOnlyFields?, ... }` with `FieldRule[]` entries (`field`, `expectedType`, `hint?`, `suggestedValues?`). The same tables back the corresponding `{platform}_validate_entity` tool, so server-side validation and client-side discovery share a single source of truth.
+
+When adding a new templated resource, register it via `registerTemplatedResourcesFromDefinitions()` from `@cesteral/shared` (see `packages/ttd-mcp/src/mcp-server/server.ts` for the canonical wiring). Provide a `list` callback so clients can enumerate concrete URIs through the standard MCP `resources/list` flow.
+
 ## Tool Discovery Flow
 
 Servers with 20+ tools expose a `{prefix}_search_tools` dispatcher that ranks the server's own registry against a natural-language query. Use it to land on the right tool in one round-trip instead of paging through the full inventory.

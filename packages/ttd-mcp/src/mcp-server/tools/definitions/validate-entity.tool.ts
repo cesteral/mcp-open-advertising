@@ -13,7 +13,6 @@ import { z } from "zod";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext } from "@cesteral/shared";
 import {
-  type FieldRule,
   type ValidationIssue,
   validateRequiredFieldsStructured,
   validateEnumFieldsStructured,
@@ -23,6 +22,12 @@ import {
 } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
+import {
+  REQUIRED_FIELDS_CREATE,
+  OPTIONAL_ENUM_FIELDS,
+  READ_ONLY_FIELDS,
+  POSITIVE_NUMBER_FIELDS,
+} from "../../resources/utils/field-rules.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -36,128 +41,9 @@ const TOOL_DESCRIPTION = `Validate an entity payload against known TTD requireme
 
 This is a pure client-side check — it catches missing required fields and
 obvious type errors. The TTD API may still reject payloads for business-rule
-reasons (e.g., invalid pacing mode / budget combinations).`;
+reasons (e.g., invalid pacing mode / budget combinations).
 
-// ---------------------------------------------------------------------------
-// Required-field definitions per entity type (create mode)
-// ---------------------------------------------------------------------------
-
-// TTD REST API enum reference: https://api.thetradedesk.com/v3/portal/api/doc/
-const PACING_MODES = ["PaceEvenly", "PaceAhead", "PaceAsap"] as const;
-const AVAILABILITY = ["Available", "Archived"] as const;
-const TRACKING_TAG_TYPES = [
-  "Universal",
-  "Standard",
-  "Pixel",
-  "JavaScript",
-  "ServerToServer",
-] as const;
-const COMMON_CURRENCIES = [
-  "USD",
-  "EUR",
-  "GBP",
-  "JPY",
-  "CAD",
-  "AUD",
-  "SGD",
-  "CHF",
-  "SEK",
-  "NOK",
-  "DKK",
-  "MXN",
-  "BRL",
-  "INR",
-  "CNY",
-  "HKD",
-  "NZD",
-  "ZAR",
-] as const;
-
-const REQUIRED_FIELDS_CREATE: Record<TtdEntityType, FieldRule[]> = {
-  advertiser: [
-    { field: "PartnerId", expectedType: "string" },
-    { field: "AdvertiserName", expectedType: "string" },
-    {
-      field: "CurrencyCode",
-      expectedType: "string",
-      hint: "ISO 4217 currency code",
-      suggestedValues: COMMON_CURRENCIES,
-    },
-  ],
-  campaign: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "CampaignName", expectedType: "string" },
-    { field: "Budget", expectedType: "object", hint: "{ Amount, CurrencyCode }" },
-    { field: "StartDate", expectedType: "string", hint: "ISO-8601 datetime" },
-    {
-      field: "PacingMode",
-      expectedType: "string",
-      hint: "Budget pacing strategy",
-      suggestedValues: PACING_MODES,
-    },
-  ],
-  adGroup: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "CampaignId", expectedType: "string" },
-    { field: "AdGroupName", expectedType: "string" },
-    {
-      field: "RTBAttributes",
-      expectedType: "object",
-      hint: "must contain BudgetSettings and BaseBidCPM",
-    },
-  ],
-  creative: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "CreativeName", expectedType: "string" },
-  ],
-  conversionTracker: [
-    { field: "AdvertiserId", expectedType: "string" },
-    { field: "TrackingTagName", expectedType: "string" },
-  ],
-};
-
-/** Optional enum-typed fields validated when present (write-time fields, not required). */
-const OPTIONAL_ENUM_FIELDS: Record<TtdEntityType, FieldRule[]> = {
-  advertiser: [
-    {
-      field: "Availability",
-      expectedType: "string",
-      hint: "Advertiser availability state",
-      suggestedValues: AVAILABILITY,
-    },
-  ],
-  campaign: [
-    {
-      field: "Availability",
-      expectedType: "string",
-      hint: "Campaign availability state",
-      suggestedValues: AVAILABILITY,
-    },
-  ],
-  adGroup: [
-    {
-      field: "Availability",
-      expectedType: "string",
-      hint: "Ad group availability state",
-      suggestedValues: AVAILABILITY,
-    },
-  ],
-  creative: [],
-  conversionTracker: [
-    {
-      field: "TrackingTagType",
-      expectedType: "string",
-      hint: "Conversion tracker tag type",
-      suggestedValues: TRACKING_TAG_TYPES,
-    },
-  ],
-};
-
-/** Fields that are always read-only and cannot be set via the API. */
-const READ_ONLY_FIELDS = ["CreatedAtUtc", "LastUpdatedAtUtc"];
-
-/** Budget-related fields — warn if values look suspiciously low. */
-const BUDGET_FIELDS = ["Amount"];
+Required-field tables, enum suggestions, and read-only field lists per entity type are also exposed as MCP resources. Valid values: see resource \`ttd-field-rules://{entityType}\`.`;
 
 // ---------------------------------------------------------------------------
 // Input / Output schemas
@@ -314,7 +200,7 @@ export async function validateEntityLogic(
   }
 
   // Top-level Amount fields (e.g., in BaseBidCPM objects)
-  for (const field of BUDGET_FIELDS) {
+  for (const field of POSITIVE_NUMBER_FIELDS) {
     const value = data[field];
     if (value !== undefined && typeof value === "number" && value <= 0) {
       issues.push({
