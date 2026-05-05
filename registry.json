@@ -78,7 +78,8 @@
         "dv360_upload_video",
         "dv360_duplicate_entity",
         "dv360_get_delivery_estimate",
-        "dv360_get_pacing_status"
+        "dv360_get_pacing_status",
+        "dv360_search_tools"
       ],
       "resources": [
         "entity-schema://{type}",
@@ -174,7 +175,8 @@
         "ttd_create_ad_groups",
         "ttd_create_campaigns",
         "ttd_update_ad_groups",
-        "ttd_update_campaigns"
+        "ttd_update_campaigns",
+        "ttd_search_tools"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -299,7 +301,8 @@
         "meta_download_report",
         "meta_get_available_metrics",
         "meta_get_pacing_status",
-        "meta_submit_report"
+        "meta_submit_report",
+        "meta_search_tools"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -428,7 +431,8 @@
         "tiktok_get_ad_preview",
         "tiktok_validate_entity",
         "tiktok_upload_image",
-        "tiktok_upload_video"
+        "tiktok_upload_video",
+        "tiktok_search_tools"
       ],
       "resources": [
         "entity-hierarchy://tiktok/all",
@@ -547,7 +551,8 @@
         "snapchat_get_ad_preview",
         "snapchat_validate_entity",
         "snapchat_upload_image",
-        "snapchat_upload_video"
+        "snapchat_upload_video",
+        "snapchat_search_tools"
       ],
       "resources": [
         "entity-hierarchy://snapchat/all",
@@ -658,7 +663,8 @@
         "pinterest_get_delivery_estimate",
         "pinterest_get_ad_preview",
         "pinterest_validate_entity",
-        "pinterest_upload_video"
+        "pinterest_upload_video",
+        "pinterest_search_tools"
       ],
       "resources": [
         "entity-hierarchy://pinterest/all",
@@ -776,7 +782,8 @@
         "msads_delete_report_schedule",
         "msads_get_ad_details",
         "msads_get_report_breakdowns",
-        "msads_list_report_schedules"
+        "msads_list_report_schedules",
+        "msads_search_tools"
       ],
       "resources": [
         "msads://entity-hierarchy",
