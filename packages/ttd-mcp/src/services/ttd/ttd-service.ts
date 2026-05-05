@@ -505,7 +505,10 @@ export class TtdService {
     return this.httpClient.fetch(path, context, {
       method: input.methodType,
       ...(input.dataBody !== undefined
-        ? { body: typeof input.dataBody === "string" ? input.dataBody : JSON.stringify(input.dataBody) }
+        ? {
+            body:
+              typeof input.dataBody === "string" ? input.dataBody : JSON.stringify(input.dataBody),
+          }
         : {}),
     });
   }

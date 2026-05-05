@@ -15,7 +15,7 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_list_entities";
 const TOOL_TITLE = "List TTD Entities";
-const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination. Required scope IDs: advertiser (partnerId), campaign/creative/conversionTracker (advertiserId), adGroup (advertiserId+campaignId). See entity-hierarchy://ttd resource for details.
+const TOOL_DESCRIPTION = `List The Trade Desk entities with optional filtering and pagination. Required scope IDs: advertiser (partnerId), campaign/adGroup/creative/conversionTracker (advertiserId). For adGroup, optionally pass campaignId to filter to a single campaign. See entity-hierarchy://ttd resource for details.
 
 **Note:** Ads (ad group + creative associations), deals, bid lists, and publisher lists (site lists) have no REST query endpoints in TTD. Use the ttd_graphql_query tool for these entities.`;
 
@@ -30,7 +30,10 @@ export const ListEntitiesInputSchema = z
       .string()
       .optional()
       .describe("Advertiser ID (required for all entity types except advertiser)"),
-    campaignId: z.string().optional().describe("Campaign ID (optional — filters adGroup queries to a single campaign)"),
+    campaignId: z
+      .string()
+      .optional()
+      .describe("Campaign ID (optional — filters adGroup queries to a single campaign)"),
     adGroupId: z.string().optional().describe("Ad Group ID (required for ad queries)"),
     filter: z
       .record(z.unknown())
