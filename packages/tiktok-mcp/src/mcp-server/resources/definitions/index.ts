@@ -54,6 +54,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "tiktok_get_ad_preview",
     ],
     validation: ["tiktok_validate_entity"],
+    discovery: ["tiktok_search_tools"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],
   discoveryFlow: [

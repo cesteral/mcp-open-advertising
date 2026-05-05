@@ -93,7 +93,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (25 tools)
+## Available Tools Summary (26 tools)
 
 ### Entity CRUD (9 tools)
 | Tool | Purpose | Notes |
@@ -147,6 +147,11 @@ Inspect the output, then iterate with more specific calls.
 | \`dv360_duplicate_entity\` | Duplicate an IO or line item | Copy-on-read with optional rename |
 | \`dv360_get_delivery_estimate\` | Get delivery/targeting info | Line item config or defaults |
 | \`dv360_get_pacing_status\` | Real-time pacing calc for a line item | Reads delivery + budget |
+
+### Discovery (1 tool)
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| \`dv360_search_tools\` | Rank server tools by a natural-language query | Progressive discovery aid |
 
 ---
 

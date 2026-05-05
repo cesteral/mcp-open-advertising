@@ -46,7 +46,7 @@ Fetch these resources for detailed schema information:
 | \`insights-reference://all\` | Metrics, breakdowns, date presets |
 | \`targeting-reference://all\` | Targeting spec structure |
 
-## Tool Categories (26 tools)
+## Tool Categories (27 tools)
 
 ### Read Operations
 - \`meta_list_ad_accounts\` — Discover accessible accounts
@@ -89,6 +89,9 @@ Fetch these resources for detailed schema information:
 
 ### Validation
 - \`meta_validate_entity\` — Client-side entity validation
+
+### Discovery
+- \`meta_search_tools\` — Rank server tools by a natural-language query
 
 ## Workflow Prompts
 

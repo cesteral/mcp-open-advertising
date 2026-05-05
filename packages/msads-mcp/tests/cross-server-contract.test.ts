@@ -25,8 +25,8 @@ describe("msads-mcp cross-server contract", () => {
     }
   });
 
-  it("exports 24 tools", () => {
-    expect(productionTools).toHaveLength(24);
+  it("exports 25 tools", () => {
+    expect(productionTools).toHaveLength(25);
   });
 
   it("exports at least 5 prompts", () => {
