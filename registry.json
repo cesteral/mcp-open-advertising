@@ -147,10 +147,6 @@
         "ttd_get_ad_preview",
         "ttd_bulk_manage_bid_lists",
         "ttd_cancel_report_execution",
-        "ttd_create_ad_group_workflow",
-        "ttd_create_ad_groups_job",
-        "ttd_create_campaign_workflow",
-        "ttd_create_campaigns_job",
         "ttd_create_report_schedule",
         "ttd_create_report_template",
         "ttd_create_template_schedule",
@@ -173,12 +169,12 @@
         "ttd_manage_seed",
         "ttd_rerun_report_schedule",
         "ttd_rest_request",
-        "ttd_update_ad_group_workflow",
-        "ttd_update_ad_groups_job",
-        "ttd_update_campaign_workflow",
-        "ttd_update_campaigns_job",
         "ttd_update_report_schedule",
-        "ttd_update_report_template"
+        "ttd_update_report_template",
+        "ttd_create_ad_groups",
+        "ttd_create_campaigns",
+        "ttd_update_ad_groups",
+        "ttd_update_campaigns"
       ],
       "resources": [
         "entity-hierarchy://all",

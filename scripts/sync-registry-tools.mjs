@@ -52,6 +52,16 @@ function collectToolNames(packageName) {
       continue;
     }
 
+    // Tools built via factories (e.g. createValidateEntityTool) declare
+    // their tool name as a `toolName:` property on the factory options
+    // object. Match this before the generic `name:` fallback, otherwise
+    // an inputExamples `name: "..."` fixture string can win.
+    const toolNameMatch = /toolName:\s*["']([^"']+)["']/.exec(source);
+    if (toolNameMatch) {
+      names.push(toolNameMatch[1]);
+      continue;
+    }
+
     const literalMatch = /name:\s*["']([^"']+)["']/.exec(source);
     if (literalMatch) {
       names.push(literalMatch[1]);
