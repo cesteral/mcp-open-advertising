@@ -100,7 +100,9 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new McpError(JsonRpcErrorCode.Unauthorized, `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
 
@@ -203,13 +205,15 @@ export class AmazonDspRefreshTokenAdapter
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new McpError(JsonRpcErrorCode.InternalError, `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      );
     }
 
     const data = (await response.json()) as AmazonDspAdvertiserListResponse;
     this._userId = data.advertisers?.[0]?.name ?? "unknown";
   }
-
 }
 
 /**
@@ -245,7 +249,10 @@ export function parseAmazonDspTokenFromHeaders(
 
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match || !match[1]) {
-    throw new McpError(JsonRpcErrorCode.Unauthorized, "Authorization header must use Bearer scheme");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      "Authorization header must use Bearer scheme"
+    );
   }
 
   return match[1];

@@ -113,16 +113,13 @@ export function createValidateEntityTool<E extends string>(opts: ValidateEntityT
     const rules = (opts.getRules?.(entityType as E) ??
       opts.rulesByEntity?.[entityType as E] ??
       []) as FieldRule[];
-    const readOnly =
-      opts.getReadOnlyFields?.(entityType as E) ?? opts.readOnlyFields ?? [];
+    const readOnly = opts.getReadOnlyFields?.(entityType as E) ?? opts.readOnlyFields ?? [];
 
     issues.push(...validateEnumFieldsStructured(data as Record<string, unknown>, rules));
     if (mode === "create") {
       issues.push(...validateRequiredFieldsStructured(data as Record<string, unknown>, rules));
     } else if (readOnly.length > 0) {
-      issues.push(
-        ...checkReadOnlyFieldsStructured(data as Record<string, unknown>, [...readOnly])
-      );
+      issues.push(...checkReadOnlyFieldsStructured(data as Record<string, unknown>, [...readOnly]));
     }
 
     const extraResult =

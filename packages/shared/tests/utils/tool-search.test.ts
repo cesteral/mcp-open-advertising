@@ -3,11 +3,7 @@ import { z } from "zod";
 import { createToolSearchTool, searchTools } from "../../src/utils/tool-search.js";
 import type { ToolDefinitionForFactory } from "../../src/utils/tool-handler-factory.js";
 
-function makeTool(
-  name: string,
-  description: string,
-  title?: string
-): ToolDefinitionForFactory {
+function makeTool(name: string, description: string, title?: string): ToolDefinitionForFactory {
   return {
     name,
     title,

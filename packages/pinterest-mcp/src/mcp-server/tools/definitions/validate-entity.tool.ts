@@ -11,11 +11,7 @@
 
 import { z } from "zod";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
-import {
-  type FieldRule,
-  createValidateEntityTool,
-  buildNextAction,
-} from "@cesteral/shared";
+import { type FieldRule, createValidateEntityTool, buildNextAction } from "@cesteral/shared";
 
 const REQUIRED_FIELDS_CREATE: Record<PinterestEntityType, FieldRule[]> = {
   campaign: [

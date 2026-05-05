@@ -34,7 +34,6 @@ export class BidManagerError extends McpError {
     this.apiErrorCode = options?.apiErrorCode;
     this.httpStatus = options?.httpStatus;
   }
-
 }
 
 /**

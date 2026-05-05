@@ -8,19 +8,19 @@ import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/share
 
 const TOOL_NAME = "ttd_rest_request";
 const TOOL_TITLE = "TTD REST Request";
-const TOOL_DESCRIPTION = `Submit a valid REST request through The Trade Desk Workflows API.
+const TOOL_DESCRIPTION = `Execute an arbitrary TTD REST API request.
 
-This is a generic REST passthrough for valid TTD platform endpoints. Use it as an escape hatch
+This is a direct passthrough to the TTD REST API. Use it as an escape hatch
 when a dedicated MCP tool does not yet exist.
 
 Prefer first-class tools when available; use this for uncovered endpoints or rapid verification.`;
 
 export const RestRequestToolInputSchema = RestRequestInputSchema.describe(
-  "Parameters for executing a TTD Workflows REST passthrough request"
+  "Parameters for executing a direct TTD REST API request"
 );
 
 export const RestRequestToolOutputSchema = z.object({
-  result: z.record(z.unknown()).describe("Raw JSON response from the TTD Workflows REST request"),
+  result: z.record(z.unknown()).describe("Raw JSON response from the TTD REST API"),
   timestamp: z.string().datetime(),
 });
 

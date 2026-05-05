@@ -20,9 +20,7 @@ const TOOL_DESCRIPTION = `Update one or more campaigns through the TTD Workflows
 export const UpdateCampaignsToolInputSchema = z
   .discriminatedUnion("mode", [
     CampaignUpdateWorkflowInputSchema.extend({
-      mode: z
-        .literal("single")
-        .describe("Synchronous single-campaign PATCH via Workflows API"),
+      mode: z.literal("single").describe("Synchronous single-campaign PATCH via Workflows API"),
     }),
     CampaignsUpdateJobInputSchema.extend({
       mode: z.literal("batch").describe("Async bulk-update job via Workflows API"),
@@ -32,10 +30,7 @@ export const UpdateCampaignsToolInputSchema = z
 
 export const UpdateCampaignsToolOutputSchema = z.object({
   mode: z.enum(["single", "batch"]),
-  campaign: z
-    .record(z.unknown())
-    .optional()
-    .describe("Campaign workflow response (mode=single)"),
+  campaign: z.record(z.unknown()).optional().describe("Campaign workflow response (mode=single)"),
   job: z.record(z.unknown()).optional().describe("Job submission response (mode=batch)"),
   timestamp: z.string().datetime(),
 });

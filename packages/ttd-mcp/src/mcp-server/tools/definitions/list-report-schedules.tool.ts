@@ -93,8 +93,7 @@ export async function listReportSchedulesLogic(
   const rawSchedules = (result.Result as Array<Record<string, unknown>>) ?? [];
   const totalCount = result.TotalFilteredCount as number | undefined;
   const schedules = rawSchedules.map((r) => fromTtdSchedule(r));
-  const hasMore =
-    totalCount !== undefined ? pageStartIndex + schedules.length < totalCount : false;
+  const hasMore = totalCount !== undefined ? pageStartIndex + schedules.length < totalCount : false;
   const nextStartIndex = pageStartIndex + schedules.length;
 
   return {

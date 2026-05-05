@@ -5,4 +5,7 @@ import { createPlatformSpanHelper, createPlatformRateLimiter } from "@cesteral/s
 import { mcpConfig } from "../config/index.js";
 
 export const withAmazonDspApiSpan = createPlatformSpanHelper("amazon_dsp");
-export const rateLimiter = createPlatformRateLimiter("amazon_dsp", mcpConfig.amazonDspRateLimitPerMinute);
+export const rateLimiter = createPlatformRateLimiter(
+  "amazon_dsp",
+  mcpConfig.amazonDspRateLimitPerMinute
+);

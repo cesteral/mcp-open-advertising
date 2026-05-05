@@ -28,9 +28,7 @@ export interface OAuth2RefreshAdapterOptions<TCredentials extends OAuth2RefreshT
  * Platform adapters own validation and platform-specific header parsing; this
  * base owns the common "exchange refresh token for access token" lifecycle.
  */
-export abstract class OAuth2RefreshAdapterBase<
-  TCredentials extends OAuth2RefreshTokenCredentials,
-> {
+export abstract class OAuth2RefreshAdapterBase<TCredentials extends OAuth2RefreshTokenCredentials> {
   private cachedToken: string | null = null;
   private tokenExpiresAt = 0;
   private pendingAuth: Promise<string> | null = null;
@@ -71,9 +69,7 @@ export abstract class OAuth2RefreshAdapterBase<
 
     this.cachedToken = data.access_token;
     this.tokenExpiresAt =
-      Date.now() +
-      (data.expires_in ?? 3600) * 1000 -
-      (this.options.expiryBufferMs ?? 60_000);
+      Date.now() + (data.expires_in ?? 3600) * 1000 - (this.options.expiryBufferMs ?? 60_000);
 
     if (data.refresh_token) {
       this.currentRefreshToken = data.refresh_token;

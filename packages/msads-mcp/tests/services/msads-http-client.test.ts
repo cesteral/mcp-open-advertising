@@ -10,7 +10,6 @@ vi.mock("@cesteral/shared", async () => {
   };
 });
 
-
 import { fetchWithTimeout } from "@cesteral/shared";
 const mockFetch = vi.mocked(fetchWithTimeout);
 

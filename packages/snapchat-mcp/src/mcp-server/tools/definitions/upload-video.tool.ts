@@ -53,7 +53,6 @@ export const UploadVideoOutputSchema = z
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
 
-
 export async function uploadVideoLogic(
   input: UploadVideoInput,
   context: RequestContext,
@@ -85,7 +84,10 @@ export async function uploadVideoLogic(
   const mediaItem = createResult.media?.[0]?.media;
   const mediaId = mediaItem?.id;
   if (!mediaId) {
-    throw new McpError(JsonRpcErrorCode.InternalError, "Snapchat video upload failed: no media id returned from create step");
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "Snapchat video upload failed: no media id returned from create step"
+    );
   }
 
   // Step 2: Upload the binary

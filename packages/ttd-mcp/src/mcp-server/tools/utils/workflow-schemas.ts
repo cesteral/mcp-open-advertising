@@ -17,9 +17,7 @@ export const WorkflowCallbackInputSchema = z.object({
 export const RestMethodTypeSchema = z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 
 export const RestRequestInputSchema = z.object({
-  methodType: RestMethodTypeSchema.describe(
-    "HTTP method to execute through the TTD Workflows REST passthrough"
-  ),
+  methodType: RestMethodTypeSchema.describe("HTTP method for the TTD REST API request"),
   endpoint: z
     .string()
     .min(1)

@@ -116,7 +116,6 @@ vi.mock("../../../../src/mcp-server/tools/utils/simplified-schemas.js", () => ({
   ),
 }));
 
-
 // ── Import AFTER mocks ─────────────────────────────────────────────────
 import {
   createEntityLogic,

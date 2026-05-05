@@ -72,9 +72,7 @@ export function listAdAccountsResponseFormatter(result: ListAdAccountsOutput): M
   const count = result.pagination.pageSize;
   const summary = `Found ${count} ad account(s)`;
   const accountsBlock =
-    count > 0
-      ? `\n\n${JSON.stringify(result.accounts, null, 2)}`
-      : "\n\nNo ad accounts found";
+    count > 0 ? `\n\n${JSON.stringify(result.accounts, null, 2)}` : "\n\nNo ad accounts found";
 
   return [
     {

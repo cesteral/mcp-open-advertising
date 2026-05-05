@@ -90,10 +90,10 @@ This keeps the registered `inputSchema` small (no inline enum tables) while pres
 
 Established field-rule resources:
 
-| Server | URI template | Backed by |
-|---|---|---|
-| ttd-mcp | `ttd-field-rules://{entityType}` | `packages/ttd-mcp/src/mcp-server/resources/utils/field-rules.ts` |
-| meta-mcp | `meta-field-rules://{entityType}` | `packages/meta-mcp/src/mcp-server/resources/utils/field-rules.ts` |
+| Server    | URI template                       | Backed by                                                          |
+| --------- | ---------------------------------- | ------------------------------------------------------------------ |
+| ttd-mcp   | `ttd-field-rules://{entityType}`   | `packages/ttd-mcp/src/mcp-server/resources/utils/field-rules.ts`   |
+| meta-mcp  | `meta-field-rules://{entityType}`  | `packages/meta-mcp/src/mcp-server/resources/utils/field-rules.ts`  |
 | msads-mcp | `msads-field-rules://{entityType}` | `packages/msads-mcp/src/mcp-server/resources/utils/field-rules.ts` |
 
 Each resource returns JSON `{ entityType, requiredOnCreate, optionalEnums?, readOnlyFields?, ... }` with `FieldRule[]` entries (`field`, `expectedType`, `hint?`, `suggestedValues?`). The same tables back the corresponding `{platform}_validate_entity` tool, so server-side validation and client-side discovery share a single source of truth.

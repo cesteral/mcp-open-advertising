@@ -70,7 +70,6 @@ interface TikTokVideoInfoResponse {
   list?: TikTokVideoInfoItem[];
 }
 
-
 export async function uploadVideoLogic(
   input: UploadVideoInput,
   context: RequestContext,
@@ -99,7 +98,10 @@ export async function uploadVideoLogic(
 
   const videoId = uploadResult.video_id;
   if (!videoId) {
-    throw new McpError(JsonRpcErrorCode.InternalError, "TikTok video upload failed: no video_id returned");
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "TikTok video upload failed: no video_id returned"
+    );
   }
 
   // Poll for bind_success status (max 10 min, 20s intervals)
@@ -131,7 +133,8 @@ export async function uploadVideoLogic(
     };
   } catch (error) {
     if (error instanceof ReportFailedError) {
-      const status = (error.status as { video_status?: string } | undefined)?.video_status ?? "unknown";
+      const status =
+        (error.status as { video_status?: string } | undefined)?.video_status ?? "unknown";
       throw new McpError(
         JsonRpcErrorCode.InternalError,
         `TikTok video processing failed: status=${status}`

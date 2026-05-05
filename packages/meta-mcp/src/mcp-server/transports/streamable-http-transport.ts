@@ -128,4 +128,5 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
   };
 }
 
-export const { createMcpHttpServer, startHttpServer } = createTransportEntrypoints<AppConfig>(buildPlatformConfig);
+export const { createMcpHttpServer, startHttpServer } =
+  createTransportEntrypoints<AppConfig>(buildPlatformConfig);

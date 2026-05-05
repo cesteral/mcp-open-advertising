@@ -17,7 +17,6 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-
 import { CM360HttpClient } from "../../src/services/cm360/cm360-http-client.js";
 import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 

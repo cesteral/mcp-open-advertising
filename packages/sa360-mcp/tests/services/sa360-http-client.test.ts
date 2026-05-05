@@ -16,7 +16,6 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-
 import { SA360HttpClient } from "../../src/services/sa360/sa360-http-client.js";
 import { executeWithRetry } from "@cesteral/shared";
 import type { SA360AuthAdapter } from "../../src/auth/sa360-auth-adapter.js";

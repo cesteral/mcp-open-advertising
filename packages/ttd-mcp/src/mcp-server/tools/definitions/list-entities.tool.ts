@@ -30,7 +30,7 @@ export const ListEntitiesInputSchema = z
       .string()
       .optional()
       .describe("Advertiser ID (required for all entity types except advertiser)"),
-    campaignId: z.string().optional().describe("Campaign ID (required for adGroup queries)"),
+    campaignId: z.string().optional().describe("Campaign ID (optional — filters adGroup queries to a single campaign)"),
     adGroupId: z.string().optional().describe("Ad Group ID (required for ad queries)"),
     filter: z
       .record(z.unknown())
@@ -61,15 +61,7 @@ export const ListEntitiesInputSchema = z
         path: ["advertiserId"],
       });
     }
-    // adGroup queries use /adgroup/query/campaign — campaignId is required
-    if (data.entityType === "adGroup" && !data.campaignId) {
-      ctx.addIssue({
-        code: "custom",
-        message:
-          "campaignId is required when listing adGroup entities (query is scoped to campaign)",
-        path: ["campaignId"],
-      });
-    }
+    // adGroup queries use /adgroup/query/advertiser — campaignId is optional (filters by campaign when provided)
   })
   .describe("Parameters for listing TTD entities");
 

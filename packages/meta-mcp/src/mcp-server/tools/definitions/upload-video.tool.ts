@@ -89,7 +89,6 @@ async function getRemoteContentLength(
   }
 }
 
-
 export async function uploadVideoLogic(
   input: UploadVideoInput,
   context: RequestContext,
@@ -100,7 +99,10 @@ export async function uploadVideoLogic(
   const remoteContentLength = await getRemoteContentLength(input.mediaUrl, context);
 
   if (remoteContentLength !== undefined && remoteContentLength > maxBufferedBytes) {
-    throw new McpError(JsonRpcErrorCode.InternalError, `Meta video upload aborted before download: remote file is ${remoteContentLength} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`);
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `Meta video upload aborted before download: remote file is ${remoteContentLength} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`
+    );
   }
 
   const { buffer, contentType, filename } = await downloadFileToBuffer(
@@ -110,7 +112,10 @@ export async function uploadVideoLogic(
   );
 
   if (buffer.length > maxBufferedBytes) {
-    throw new McpError(JsonRpcErrorCode.InternalError, `Meta video upload aborted after download: buffered file is ${buffer.length} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`);
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `Meta video upload aborted after download: buffered file is ${buffer.length} bytes, exceeding the server's buffered upload limit of ${maxBufferedBytes} bytes. Use a smaller asset or a chunked upload workflow.`
+    );
   }
 
   const actId = input.adAccountId.startsWith("act_")
@@ -132,7 +137,10 @@ export async function uploadVideoLogic(
 
   const videoId = uploadResult.id;
   if (!videoId) {
-    throw new McpError(JsonRpcErrorCode.InternalError, "Meta video upload failed: no video ID returned");
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "Meta video upload failed: no video ID returned"
+    );
   }
 
   // Poll for processing completion. Note: transient transport/auth failures

@@ -53,7 +53,6 @@ export const UploadVideoOutputSchema = z
 type UploadVideoInput = z.infer<typeof UploadVideoInputSchema>;
 type UploadVideoOutput = z.infer<typeof UploadVideoOutputSchema>;
 
-
 export async function uploadVideoLogic(
   input: UploadVideoInput,
   context: RequestContext,
@@ -76,7 +75,10 @@ export async function uploadVideoLogic(
 
   const mediaId = registration.media_id;
   if (!mediaId || !registration.upload_url) {
-    throw new McpError(JsonRpcErrorCode.InternalError, "Pinterest video upload registration failed: missing media_id or upload_url");
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "Pinterest video upload registration failed: missing media_id or upload_url"
+    );
   }
 
   // Step 2: Upload the file to S3 using the pre-signed URL and parameters

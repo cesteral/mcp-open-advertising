@@ -86,7 +86,9 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new McpError(JsonRpcErrorCode.Unauthorized, `Pinterest token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        `Pinterest token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
 
@@ -181,14 +183,16 @@ export class PinterestRefreshTokenAdapter
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new McpError(JsonRpcErrorCode.InternalError, `Pinterest token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`);
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `Pinterest token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      );
     }
 
     const data = (await response.json()) as PinterestUserAccountResponse;
 
     this._userId = data.username ?? "unknown";
   }
-
 }
 
 /**
@@ -224,7 +228,10 @@ export function parsePinterestTokenFromHeaders(
 
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   if (!match || !match[1]) {
-    throw new McpError(JsonRpcErrorCode.Unauthorized, "Authorization header must use Bearer scheme");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      "Authorization header must use Bearer scheme"
+    );
   }
 
   return match[1];
@@ -242,7 +249,10 @@ export function getPinterestAdvertiserIdFromHeaders(
     extractHeader(headers, "X-Pinterest-Advertiser-Id");
 
   if (!adAccountId) {
-    throw new McpError(JsonRpcErrorCode.InvalidRequest, "Missing required X-Pinterest-Advertiser-Id header");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      "Missing required X-Pinterest-Advertiser-Id header"
+    );
   }
 
   return adAccountId;

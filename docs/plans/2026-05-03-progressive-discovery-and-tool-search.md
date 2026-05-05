@@ -4,6 +4,7 @@
 **Date:** 2026-05-03
 **Owner:** TBD
 **Related:**
+
 - `docs/plans/2026-04-16-reporting-consistency.md` (precedent for shared-helper rollout pattern)
 - Commit `c7a21d8` — `feat(shared): progressive-discovery, uniform pagination, structured errors`
 - Commit `e11b56e` — `refactor: collapse TTD workflow tools, enrich validate enums, add nextAction hook`
@@ -25,41 +26,41 @@ Make the 13 MCP servers easier for an LLM client to navigate by:
 
 Shared helpers already exist but adoption is uneven:
 
-| Helper | File | Adopted by | Missing from |
-|---|---|---|---|
-| `ErrorHandler` / `McpError` (with `nextAction`, `suggestedValues`) | `packages/shared/src/utils/mcp-errors.ts` | dbm, dv360, msads, cm360, ttd | gads, meta, linkedin, tiktok, sa360, pinterest, snapchat, amazon-dsp |
-| `buildPaginationOutput()` / `formatPaginationHint()` | `packages/shared/src/utils/pagination.ts` | most list tools | needs full sweep — some ad-hoc pagination remains |
-| `ValidationIssue[]` + `validateEntityResponseFormatter` | `packages/shared/src/utils/client-validation-helpers.ts` | meta, linkedin, tiktok, amazon-dsp, msads | ttd, dv360, cm360, gads, sa360, pinterest, snapchat |
-| `registerStaticResourcesFromDefinitions()` | `packages/shared/src/utils/resource-handler-factory.ts` | most servers | no URI-template variant for parameterized resources (e.g. `entity-schema://{type}`) |
-| `report-csv://` resource | `packages/shared/src/utils/report-csv-resource.ts` | ttd, tiktok, snapchat, amazon-dsp, pinterest, msads | gads (only server still missing) |
+| Helper                                                             | File                                                     | Adopted by                                          | Missing from                                                                        |
+| ------------------------------------------------------------------ | -------------------------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `ErrorHandler` / `McpError` (with `nextAction`, `suggestedValues`) | `packages/shared/src/utils/mcp-errors.ts`                | dbm, dv360, msads, cm360, ttd                       | gads, meta, linkedin, tiktok, sa360, pinterest, snapchat, amazon-dsp                |
+| `buildPaginationOutput()` / `formatPaginationHint()`               | `packages/shared/src/utils/pagination.ts`                | most list tools                                     | needs full sweep — some ad-hoc pagination remains                                   |
+| `ValidationIssue[]` + `validateEntityResponseFormatter`            | `packages/shared/src/utils/client-validation-helpers.ts` | meta, linkedin, tiktok, amazon-dsp, msads           | ttd, dv360, cm360, gads, sa360, pinterest, snapchat                                 |
+| `registerStaticResourcesFromDefinitions()`                         | `packages/shared/src/utils/resource-handler-factory.ts`  | most servers                                        | no URI-template variant for parameterized resources (e.g. `entity-schema://{type}`) |
+| `report-csv://` resource                                           | `packages/shared/src/utils/report-csv-resource.ts`       | ttd, tiktok, snapchat, amazon-dsp, pinterest, msads | gads (only server still missing)                                                    |
 
 Largest tool inputSchemas (candidates for enum extraction):
 
-| File | Lines | Issue |
-|---|---|---|
-| `packages/ttd-mcp/src/mcp-server/tools/definitions/validate-entity.tool.ts` | 387 | inline PACING_MODES, CURRENCIES, required-field rules |
-| `packages/dv360-mcp/src/mcp-server/tools/definitions/bulk-update-status.tool.ts` | 361 | inline status/targeting enums |
-| `packages/dv360-mcp/src/mcp-server/tools/definitions/create-custom-bidding-algorithm.tool.ts` | 357 | inline bidding-strategy enums |
-| `packages/meta-mcp/src/mcp-server/tools/definitions/validate-entity.tool.ts` | 327 | 8+ inline `.enum()` blocks (CAMPAIGN_OBJECTIVES, ADSET_OPTIMIZATION_GOALS, etc.) |
-| `packages/msads-mcp/src/mcp-server/tools/definitions/validate-entity.tool.ts` | 269 | inline enums + field rules |
+| File                                                                                          | Lines | Issue                                                                            |
+| --------------------------------------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------- |
+| `packages/ttd-mcp/src/mcp-server/tools/definitions/validate-entity.tool.ts`                   | 387   | inline PACING_MODES, CURRENCIES, required-field rules                            |
+| `packages/dv360-mcp/src/mcp-server/tools/definitions/bulk-update-status.tool.ts`              | 361   | inline status/targeting enums                                                    |
+| `packages/dv360-mcp/src/mcp-server/tools/definitions/create-custom-bidding-algorithm.tool.ts` | 357   | inline bidding-strategy enums                                                    |
+| `packages/meta-mcp/src/mcp-server/tools/definitions/validate-entity.tool.ts`                  | 327   | 8+ inline `.enum()` blocks (CAMPAIGN_OBJECTIVES, ADSET_OPTIMIZATION_GOALS, etc.) |
+| `packages/msads-mcp/src/mcp-server/tools/definitions/validate-entity.tool.ts`                 | 269   | inline enums + field rules                                                       |
 
 Tool count by server (relevant for tool-search):
 
-| Server | Tools | Tool-search candidate |
-|---|---|---|
-| ttd | 51 | yes — already partly collapsed |
-| meta | 26 | yes |
-| dv360 | 25 | yes |
-| msads | 24 | yes |
-| tiktok | 23 | borderline |
-| pinterest | 22 | borderline |
-| snapchat | 22 | borderline |
-| linkedin | 20 | borderline |
-| cm360 | 20 | borderline |
-| amazon-dsp | 18 | no |
-| sa360 | 16 | no |
-| gads | 15 | no |
-| dbm | 6 | no |
+| Server     | Tools | Tool-search candidate          |
+| ---------- | ----- | ------------------------------ |
+| ttd        | 51    | yes — already partly collapsed |
+| meta       | 26    | yes                            |
+| dv360      | 25    | yes                            |
+| msads      | 24    | yes                            |
+| tiktok     | 23    | borderline                     |
+| pinterest  | 22    | borderline                     |
+| snapchat   | 22    | borderline                     |
+| linkedin   | 20    | borderline                     |
+| cm360      | 20    | borderline                     |
+| amazon-dsp | 18    | no                             |
+| sa360      | 16    | no                             |
+| gads       | 15    | no                             |
+| dbm        | 6     | no                             |
 
 ## Plan
 
@@ -85,6 +86,7 @@ Four phases, ordered by leverage and risk. Each phase is independently shippable
 4. **Per-server tests**: add a unit test per server that exercises one validation failure path and asserts the error includes `nextAction`. Cheap insurance against regression.
 
 **Acceptance:**
+
 - `grep -L 'ErrorHandler' packages/*/src/mcp-server/tools/definitions/*.ts` returns nothing (modulo files that legitimately have no error path).
 - All `validate-entity` tools share the same response shape.
 
@@ -109,6 +111,7 @@ Four phases, ordered by leverage and risk. Each phase is independently shippable
 4. **Schema-size guard**: extend the existing `tests/test-schema-size.cjs` pattern (currently dv360-only) to all servers, fail the test at >256 KB serialized for a single tool. Tracks regressions.
 
 **Acceptance (revised on execution, 2026-05-03):**
+
 - Three enum-heavy validate-entity files trimmed below the target: ttd 387→295, meta 327→241, msads 269→180. (The original "<150 lines" target was unrealistic once handler logic was kept inline; the reduction was driven by enum extraction, which these three files needed.)
 - dv360's two large files (`bulk-update-status` 361, `create-custom-bidding-algorithm` 357) intentionally **not** trimmed — their size is real handler logic, not enum tables, so the resource-extraction technique does not apply. Documented in commit `34259b5`.
 - `pnpm run test` includes a per-server schema-size assertion (256 KB/tool, 1 MB aggregate) across all 13 servers.
@@ -135,6 +138,7 @@ Four phases, ordered by leverage and risk. Each phase is independently shippable
    - Negative paths covered by unit tests on the helper itself.
 
 **Acceptance — met:**
+
 - 13/13 servers have `tests/pagination-conformance.test.ts` and pass.
 - Helper unit tests cover missing-required-key and unexpected-key paths.
 
@@ -159,6 +163,7 @@ Four phases, ordered by leverage and risk. Each phase is independently shippable
    3. On validation/lookup error, follow `nextAction` (often `read-resource`) for enum/field details.
 
 **Acceptance:**
+
 - All 20+ tool servers expose `{platform}_search_tools`.
 - Discovery flow documented with one worked example per server.
 
@@ -172,12 +177,12 @@ Four phases, ordered by leverage and risk. Each phase is independently shippable
 
 ## Risks & mitigations
 
-| Risk | Mitigation |
-|---|---|
-| Tool renames break existing client configurations | Repo is pre-production (`project_pre_production.md`); document renames in commit messages, no aliases. |
-| Resource fetches add latency vs inline enums | Resources are cacheable by client; inline-enum tax was paid on every tool list anyway. |
-| Tool-search adds a new failure mode if it returns nothing useful | Phase 4 is gated on Phases 1–3 demonstrably improving discoverability; reassess before starting. |
-| Schema-size guard rejects legitimately large tools | Threshold (256 KB) is generous; current largest is ~30 KB. |
+| Risk                                                             | Mitigation                                                                                             |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Tool renames break existing client configurations                | Repo is pre-production (`project_pre_production.md`); document renames in commit messages, no aliases. |
+| Resource fetches add latency vs inline enums                     | Resources are cacheable by client; inline-enum tax was paid on every tool list anyway.                 |
+| Tool-search adds a new failure mode if it returns nothing useful | Phase 4 is gated on Phases 1–3 demonstrably improving discoverability; reassess before starting.       |
+| Schema-size guard rejects legitimately large tools               | Threshold (256 KB) is generous; current largest is ~30 KB.                                             |
 
 ## Open questions
 

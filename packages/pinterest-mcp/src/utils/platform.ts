@@ -5,4 +5,7 @@ import { createPlatformSpanHelper, createPlatformRateLimiter } from "@cesteral/s
 import { mcpConfig } from "../config/index.js";
 
 export const withPinterestApiSpan = createPlatformSpanHelper("pinterest");
-export const rateLimiter = createPlatformRateLimiter("pinterest", mcpConfig.pinterestRateLimitPerMinute);
+export const rateLimiter = createPlatformRateLimiter(
+  "pinterest",
+  mcpConfig.pinterestRateLimitPerMinute
+);

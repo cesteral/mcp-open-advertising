@@ -5,4 +5,7 @@ import { createPlatformSpanHelper, createPlatformRateLimiter } from "@cesteral/s
 import { mcpConfig } from "../config/index.js";
 
 export const withSnapchatApiSpan = createPlatformSpanHelper("snapchat");
-export const rateLimiter = createPlatformRateLimiter("snapchat", mcpConfig.snapchatRateLimitPerMinute);
+export const rateLimiter = createPlatformRateLimiter(
+  "snapchat",
+  mcpConfig.snapchatRateLimitPerMinute
+);

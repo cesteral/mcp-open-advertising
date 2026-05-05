@@ -260,8 +260,5 @@ export function registerTemplatedResourcesFromDefinitions(
     );
   }
 
-  logger.info(
-    { resourceCount: resources.length },
-    "Registered templated MCP resources"
-  );
+  logger.info({ resourceCount: resources.length }, "Registered templated MCP resources");
 }

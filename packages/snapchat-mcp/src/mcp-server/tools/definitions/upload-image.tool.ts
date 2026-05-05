@@ -52,7 +52,6 @@ export const UploadImageOutputSchema = z
 type UploadImageInput = z.infer<typeof UploadImageInputSchema>;
 type UploadImageOutput = z.infer<typeof UploadImageOutputSchema>;
 
-
 export async function uploadImageLogic(
   input: UploadImageInput,
   context: RequestContext,
@@ -84,7 +83,10 @@ export async function uploadImageLogic(
   const createdItem = createResult.media?.[0]?.media;
   const mediaId = createdItem?.id;
   if (!mediaId) {
-    throw new McpError(JsonRpcErrorCode.InternalError, "Snapchat image upload failed: no media id returned from create step");
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "Snapchat image upload failed: no media id returned from create step"
+    );
   }
 
   // Step 2: Upload the binary
@@ -130,7 +132,8 @@ export async function uploadImageLogic(
         `Snapchat image processing timed out before media reached READY status: mediaId=${mediaId}`,
         {
           mediaId,
-          nextAction: "Retry later by checking the Snapchat media status, then use the mediaId only after status is READY.",
+          nextAction:
+            "Retry later by checking the Snapchat media status, then use the mediaId only after status is READY.",
         },
         { cause: error }
       );

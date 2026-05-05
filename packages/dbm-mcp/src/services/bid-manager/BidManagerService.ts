@@ -50,7 +50,6 @@ import { safeDivide, round } from "../../utils/math.js";
 import { daysBetween } from "../../utils/date.js";
 import { withBidManagerApiSpan } from "../../utils/platform.js";
 
-
 /**
  * Parse date string (YYYY-MM-DD) to DateObject
  */

@@ -191,7 +191,9 @@ reasons (e.g., invalid objective/placement combinations).`,
       };
     }
     if (errorIssues.some((i) => i.field === "ad_account_id")) {
-      return { nextAction: "Call snapchat_list_ad_accounts to discover valid ad_account_id values." };
+      return {
+        nextAction: "Call snapchat_list_ad_accounts to discover valid ad_account_id values.",
+      };
     }
     return {
       nextAction: `Call snapchat_list_entities with entityType='${entityType}' to inspect existing examples.`,

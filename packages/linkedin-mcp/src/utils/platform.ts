@@ -5,4 +5,7 @@ import { createPlatformSpanHelper, createPlatformRateLimiter } from "@cesteral/s
 import { mcpConfig } from "../config/index.js";
 
 export const withLinkedInApiSpan = createPlatformSpanHelper("linkedin");
-export const rateLimiter = createPlatformRateLimiter("linkedin", mcpConfig.linkedinRateLimitPerMinute);
+export const rateLimiter = createPlatformRateLimiter(
+  "linkedin",
+  mcpConfig.linkedinRateLimitPerMinute
+);

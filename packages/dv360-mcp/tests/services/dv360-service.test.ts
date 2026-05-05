@@ -5,7 +5,6 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 // Mocks — must be declared before importing the module under test
 // ---------------------------------------------------------------------------
 
-
 vi.mock("../../src/services/domain/entity-mapping.js", () => ({
   getEntityConfigDynamic: vi.fn(),
   getEntitySchemaForOperation: vi.fn(),
