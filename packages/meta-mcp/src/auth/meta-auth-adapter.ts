@@ -15,7 +15,12 @@
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 
 const DEFAULT_META_GRAPH_API_BASE_URL = "https://graph.facebook.com/v25.0";
 
@@ -71,7 +76,8 @@ export class MetaAccessTokenAdapter implements MetaAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
         `Meta token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
@@ -151,7 +157,8 @@ export class MetaRefreshTokenAdapter implements MetaAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
         `Meta token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
