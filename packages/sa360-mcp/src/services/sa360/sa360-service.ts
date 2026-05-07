@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { SA360HttpClient } from "./sa360-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
-import type { RequestContext } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import { type SA360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { buildListQuery, buildGetByIdQuery } from "../../mcp-server/tools/utils/query-helpers.js";
 import type { components } from "../../generated/types.js";
@@ -104,7 +104,10 @@ export class SA360Service {
     const { results } = await this.sa360Search(customerId, query, 1, undefined, context);
 
     if (results.length === 0) {
-      throw new Error(`${entityType} with ID ${entityId} not found in customer ${customerId}`);
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `${entityType} with ID ${entityId} not found in customer ${customerId}`
+      );
     }
 
     return results[0];

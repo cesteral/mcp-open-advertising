@@ -3,7 +3,13 @@
 
 import type { Logger } from "pino";
 import type { PinterestAuthAdapter } from "../../auth/pinterest-auth-adapter.js";
-import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
+import {
+  fetchWithTimeout,
+  buildMultipartFormData,
+  executeWithRetry,
+  McpError,
+  mapHttpStatusToJsonRpc,
+} from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withPinterestApiSpan } from "../../utils/platform.js";
 
@@ -208,7 +214,8 @@ export class PinterestHttpClient {
 
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
-        throw new Error(
+        throw new McpError(
+          mapHttpStatusToJsonRpc(response.status),
           `Pinterest S3 upload failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
         );
       }

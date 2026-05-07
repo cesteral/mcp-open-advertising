@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_import_from_google";
@@ -55,7 +56,10 @@ export async function importFromGoogleLogic(
 
   const path = OPERATION_PATHS[input.operation];
   if (!path) {
-    throw new Error(`Unknown import operation: ${input.operation}`);
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Unknown import operation: ${input.operation}`
+    );
   }
 
   const result = (await msadsService.executeOperation(path, input.data, context)) as Record<

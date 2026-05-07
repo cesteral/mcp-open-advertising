@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_manage_criterions";
@@ -54,7 +55,10 @@ function getOperation(
   };
   const op = ops[operation];
   if (!op) {
-    throw new Error(`Unknown criterion operation: ${operation}`);
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Unknown criterion operation: ${operation}`
+    );
   }
   return op;
 }

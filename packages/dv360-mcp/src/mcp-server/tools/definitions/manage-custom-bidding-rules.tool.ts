@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
@@ -123,7 +124,10 @@ export async function manageCustomBiddingRulesLogic(
   switch (input.action) {
     case "upload": {
       if (!input.rulesContent) {
-        throw new Error("rulesContent is required for upload action");
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          "rulesContent is required for upload action"
+        );
       }
 
       // Step 1: Upload rules file

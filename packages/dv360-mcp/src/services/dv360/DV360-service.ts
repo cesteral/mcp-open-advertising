@@ -13,6 +13,40 @@ import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360-http-client.js";
 
 // ============================================================================
+// Response Validation
+// ============================================================================
+
+const PaginatedListEnvelopeSchema = z
+  .object({
+    nextPageToken: z.string().optional(),
+  })
+  .catchall(z.unknown());
+
+function parsePaginatedList<K extends string>(
+  value: unknown,
+  collectionKey: K,
+  endpoint: string
+): { nextPageToken?: string } & { [P in K]?: unknown[] } {
+  const result = PaginatedListEnvelopeSchema.safeParse(value);
+  if (!result.success) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `DV360 response from ${endpoint} did not match expected shape: ${result.error.message}`
+    );
+  }
+  const collection = result.data[collectionKey];
+  if (collection !== undefined && !Array.isArray(collection)) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `DV360 response from ${endpoint} has non-array "${collectionKey}" field`
+    );
+  }
+  return { nextPageToken: result.data.nextPageToken, [collectionKey]: collection } as {
+    nextPageToken?: string;
+  } & { [P in K]?: unknown[] };
+}
+
+// ============================================================================
 // Deep Merge Utility
 // ============================================================================
 
@@ -534,15 +568,14 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${params.toString() ? `?${params}` : ""}`;
 
-      const response = (await this.httpClient.fetch(path, context)) as {
-        customBiddingScripts?: CustomBiddingScript[];
-        nextPageToken?: string;
-      };
+      const raw = await this.httpClient.fetch(path, context);
+      const response = parsePaginatedList(raw, "customBiddingScripts", `GET ${path}`);
+      const scripts = (response.customBiddingScripts ?? []) as CustomBiddingScript[];
 
-      setSpanAttribute("dv360.resultCount", response.customBiddingScripts?.length ?? 0);
+      setSpanAttribute("dv360.resultCount", scripts.length);
 
       return {
-        scripts: response.customBiddingScripts || [],
+        scripts,
         nextPageToken: response.nextPageToken,
       };
     });
@@ -676,15 +709,14 @@ export class DV360Service {
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${params.toString() ? `?${params}` : ""}`;
 
-      const response = (await this.httpClient.fetch(path, context)) as {
-        customBiddingAlgorithmRules?: CustomBiddingAlgorithmRules[];
-        nextPageToken?: string;
-      };
+      const raw = await this.httpClient.fetch(path, context);
+      const response = parsePaginatedList(raw, "customBiddingAlgorithmRules", `GET ${path}`);
+      const rules = (response.customBiddingAlgorithmRules ?? []) as CustomBiddingAlgorithmRules[];
 
-      setSpanAttribute("dv360.resultCount", response.customBiddingAlgorithmRules?.length ?? 0);
+      setSpanAttribute("dv360.resultCount", rules.length);
 
       return {
-        rules: response.customBiddingAlgorithmRules || [],
+        rules,
         nextPageToken: response.nextPageToken,
       };
     });
@@ -956,12 +988,9 @@ export class DV360Service {
           await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
         }
 
-        const response = (await this.httpClient.fetch(path, context)) as {
-          customBiddingAlgorithms?: unknown[];
-          nextPageToken?: string;
-        };
-
-        const entities = response.customBiddingAlgorithms || [];
+        const raw = await this.httpClient.fetch(path, context);
+        const response = parsePaginatedList(raw, "customBiddingAlgorithms", `GET ${path}`);
+        const entities = response.customBiddingAlgorithms ?? [];
         setSpanAttribute("dv360.resultCount", entities.length);
 
         return {

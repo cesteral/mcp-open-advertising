@@ -15,6 +15,9 @@ import {
   ReportViewOutputSchema,
   StoredReportBodyOutputSchema,
   spillBodyToGcs,
+  McpError,
+  JsonRpcErrorCode,
+  mapHttpStatusToJsonRpc,
   type ServiceDownloadedReport,
 } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
@@ -123,7 +126,8 @@ export async function downloadReportLogic(
   const { authAdapter } = resolveSessionServices(sdkContext);
 
   if (!isAllowedReportUrl(input.downloadUrl)) {
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
       `Report download URL must be from *.thetradedesk.com or *.amazonaws.com. Got: ${new URL(input.downloadUrl).hostname}`
     );
   }
@@ -147,14 +151,17 @@ export async function downloadReportLogic(
 
       const response = await fetchWithTimeout(input.downloadUrl, 60_000, undefined, requestInit);
       if (!response.ok) {
-        throw new Error(`Failed to download report: ${response.status} ${response.statusText}`);
+        throw new McpError(
+          mapHttpStatusToJsonRpc(response.status),
+          `Failed to download report: ${response.status} ${response.statusText}`
+        );
       }
 
       const bytes = new Uint8Array(await response.arrayBuffer());
       const contentType = response.headers.get("content-type");
       const binarySpreadsheetError = detectBinarySpreadsheet(bytes, contentType, input.downloadUrl);
       if (binarySpreadsheetError) {
-        throw new Error(binarySpreadsheetError);
+        throw new McpError(JsonRpcErrorCode.InvalidRequest, binarySpreadsheetError);
       }
 
       const csvText = new TextDecoder("utf-8").decode(bytes);

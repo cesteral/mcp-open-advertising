@@ -458,7 +458,7 @@ describe("PinterestRefreshTokenAdapter", () => {
       await adapter.getAccessToken();
 
       // Expire the cache
-      // @ts-ignore
+      // @ts-expect-error — accessing private field for cache-expiry test
       adapter.tokenExpiresAt = 0;
 
       // Second call should use new_rt

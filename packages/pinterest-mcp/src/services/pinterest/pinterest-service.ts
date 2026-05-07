@@ -7,7 +7,12 @@
 
 import type { PinterestHttpClient } from "./pinterest-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
-import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
+import {
+  type RequestContext,
+  executeBulkConcurrent,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 import {
   getEntityConfig,
   interpolatePath,
@@ -121,7 +126,10 @@ export class PinterestService {
       const list = (result as PinterestListResponse).items ?? [];
       const entity = list.find((e) => (e as Record<string, unknown>)[config.idField] === entityId);
       if (!entity) {
-        throw new Error(`${config.displayName} with ID ${entityId} not found`);
+        throw new McpError(
+          JsonRpcErrorCode.NotFound,
+          `${config.displayName} with ID ${entityId} not found`
+        );
       }
       return entity as PinterestEntityMap[T];
     }
@@ -137,7 +145,10 @@ export class PinterestService {
     )) as PinterestListResponse;
     const list = data?.items ?? [];
     if (list.length === 0) {
-      throw new Error(`${config.displayName} with ID ${entityId} not found`);
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `${config.displayName} with ID ${entityId} not found`
+      );
     }
     return list[0] as PinterestEntityMap[T];
   }
@@ -256,7 +267,10 @@ export class PinterestService {
         { entityType },
         "Duplicate skipped: entity type does not support duplication"
       );
-      throw new Error(`Entity type ${entityType} does not support duplication`);
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Entity type ${entityType} does not support duplication`
+      );
     }
 
     // Pinterest v5 has no native copy/duplicate endpoint — implement as client-side read+create.
