@@ -52,8 +52,8 @@ interface ServerWithTasks {
         config: {
           title?: string;
           description: string;
-          inputSchema: z.ZodRawShape;
-          outputSchema?: z.ZodRawShape;
+          inputSchema: z.ZodRawShape | z.ZodTypeAny;
+          outputSchema?: z.ZodRawShape | z.ZodTypeAny;
           annotations?: ToolAnnotationsLike;
           execution?: { taskSupport: "required" | "optional" };
         },
