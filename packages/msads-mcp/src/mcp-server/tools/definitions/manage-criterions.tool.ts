@@ -55,10 +55,7 @@ function getOperation(
   };
   const op = ops[operation];
   if (!op) {
-    throw new McpError(
-      JsonRpcErrorCode.InvalidParams,
-      `Unknown criterion operation: ${operation}`
-    );
+    throw new McpError(JsonRpcErrorCode.InvalidParams, `Unknown criterion operation: ${operation}`);
   }
   return op;
 }

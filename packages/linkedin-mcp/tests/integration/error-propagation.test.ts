@@ -143,7 +143,10 @@ describe("mcp transport error propagation (LinkedIn)", () => {
 
   beforeAll(() => {
     mockState.linkedInService.getEntity.mockRejectedValue(
-      new McpError(JsonRpcErrorCode.NotFound, "Campaign with URN urn:li:sponsoredCampaign:999 not found")
+      new McpError(
+        JsonRpcErrorCode.NotFound,
+        "Campaign with URN urn:li:sponsoredCampaign:999 not found"
+      )
     );
 
     mockState.linkedInService.createEntity.mockRejectedValue(
