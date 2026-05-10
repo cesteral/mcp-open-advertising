@@ -25,7 +25,14 @@ const CM360_ENUMS_BY_ENTITY: Record<string, FieldRule[]> = {
       field: "compatibility",
       expectedType: "string",
       hint: "Placement compatibility platform",
-      suggestedValues: ["DISPLAY", "DISPLAY_INTERSTITIAL", "APP", "APP_INTERSTITIAL", "IN_STREAM_VIDEO", "IN_STREAM_AUDIO"],
+      suggestedValues: [
+        "DISPLAY",
+        "DISPLAY_INTERSTITIAL",
+        "APP",
+        "APP_INTERSTITIAL",
+        "IN_STREAM_VIDEO",
+        "IN_STREAM_AUDIO",
+      ],
     },
     {
       field: "paymentSource",

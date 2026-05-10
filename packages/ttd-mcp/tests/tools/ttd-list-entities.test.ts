@@ -236,15 +236,12 @@ describe("ListEntitiesInputSchema validation", () => {
     }
   });
 
-  it("requires campaignId for adGroup entities", () => {
+  it("allows adGroup with advertiserId only (campaignId is optional)", () => {
     const result = ListEntitiesInputSchema.safeParse({
       entityType: "adGroup",
       advertiserId: "adv-001",
     });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((i) => i.path.includes("campaignId"))).toBe(true);
-    }
+    expect(result.success).toBe(true);
   });
 
   it("allows advertiser without any parent IDs", () => {

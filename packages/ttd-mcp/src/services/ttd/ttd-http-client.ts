@@ -5,7 +5,7 @@ import type { Logger } from "pino";
 import type { TtdAuthAdapter } from "../../auth/ttd-auth-adapter.js";
 import { executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withTtdApiSpan } from "../../utils/telemetry/tracing.js";
+import { withTtdApiSpan } from "../../utils/platform.js";
 
 const TTD_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

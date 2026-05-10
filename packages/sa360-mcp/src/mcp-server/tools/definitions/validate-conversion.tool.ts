@@ -180,7 +180,8 @@ export async function validateConversionLogic(
   let nextAction: string | undefined;
   if (errors.length > 0) {
     if (mode === "update" && !conversion.conversionId) {
-      nextAction = "Use the conversionId returned by the original insert call (sa360_insert_conversions response).";
+      nextAction =
+        "Use the conversionId returned by the original insert call (sa360_insert_conversions response).";
     } else if (!conversion.segmentationName && !conversion.floodlightActivityId) {
       nextAction = buildNextAction({
         kind: "list-entity",

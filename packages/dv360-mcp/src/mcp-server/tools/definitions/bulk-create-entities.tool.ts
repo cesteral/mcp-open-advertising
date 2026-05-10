@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import { BulkOperationResultSchema } from "@cesteral/shared";
+import { BulkOperationResultSchema, buildNextAction } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -58,6 +58,7 @@ export const BulkCreateEntitiesOutputSchema = z
       .array(
         BulkOperationResultSchema.extend({
           index: z.number().describe("Index of the item in the input array"),
+          nextAction: z.string().optional().describe("Suggested recovery action for failed item"),
         })
       )
       .describe("Per-item results"),
@@ -101,6 +102,15 @@ export async function bulkCreateEntitiesLogic(
     success: r.success,
     ...(r.success ? { entity: r.entity as Record<string, any> } : {}),
     ...(r.error !== undefined ? { error: r.error } : {}),
+    ...(!r.success
+      ? {
+          nextAction: buildNextAction({
+            kind: "read-resource",
+            uri: `entity-schema://${input.entityType}`,
+            purpose: "required fields and enum values before retrying the failed item",
+          }),
+        }
+      : {}),
   }));
 
   const successCount = results.filter((r) => r.success).length;

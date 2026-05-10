@@ -5,6 +5,14 @@ import { z } from "zod";
 import * as schemas from "../../../generated/schemas/zod.js";
 import { getTransformedSchema } from "./schema-transforms.js";
 
+const generatedSchemas = schemas as unknown as Record<string, unknown>;
+
+function lookupGeneratedSchema(entityType: string): z.ZodTypeAny | undefined {
+  const entityName = entityType.charAt(0).toUpperCase() + entityType.slice(1);
+  const candidate = generatedSchemas[entityName];
+  return candidate instanceof z.ZodType ? (candidate as z.ZodTypeAny) : undefined;
+}
+
 /**
  * Schema introspection utilities
  * Provides Zod schema lookup, field extraction, and type inspection
@@ -71,7 +79,7 @@ export function extractFieldsFromSchema(
     for (const [key, value] of Object.entries(shape)) {
       const fieldName = prefix ? `${prefix}.${key}` : key;
       const { schema: fieldSchema, optional } = unwrapWithOptional(value as z.ZodTypeAny);
-      const description = (fieldSchema as any)._def?.description;
+      const description = fieldSchema.description;
       const enumValues = extractEnumValues(fieldSchema) ?? undefined;
       const format = getSchemaFormat(fieldSchema);
 
@@ -212,8 +220,7 @@ function getSchemaFormat(schema: z.ZodTypeAny): string | undefined {
  * Check if an entity type has a generated schema
  */
 export function hasGeneratedSchema(entityType: string): boolean {
-  const entityName = entityType.charAt(0).toUpperCase() + entityType.slice(1);
-  return (schemas as any)[entityName] instanceof z.ZodType;
+  return lookupGeneratedSchema(entityType) !== undefined;
 }
 
 /**
@@ -230,12 +237,8 @@ export function getEntitySchemaByType(entityType: string): z.ZodTypeAny {
   }
 
   // Fall back to generated schema
-  const entityName = entityType.charAt(0).toUpperCase() + entityType.slice(1);
-  const schema = (schemas as any)[entityName];
-
-  if (schema instanceof z.ZodType) {
-    return schema;
-  }
+  const schema = lookupGeneratedSchema(entityType);
+  if (schema) return schema;
 
   // Fallback to generic record
   return z.record(z.any());

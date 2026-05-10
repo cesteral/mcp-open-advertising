@@ -20,9 +20,7 @@ const TOOL_DESCRIPTION = `Create one or more campaigns through the TTD Workflows
 export const CreateCampaignsToolInputSchema = z
   .discriminatedUnion("mode", [
     CampaignCreateWorkflowInputSchema.extend({
-      mode: z
-        .literal("single")
-        .describe("Synchronous single-campaign create via Workflows API"),
+      mode: z.literal("single").describe("Synchronous single-campaign create via Workflows API"),
     }),
     CampaignsJobInputSchema.extend({
       mode: z.literal("batch").describe("Async bulk-create job via Workflows API"),
@@ -32,10 +30,7 @@ export const CreateCampaignsToolInputSchema = z
 
 export const CreateCampaignsToolOutputSchema = z.object({
   mode: z.enum(["single", "batch"]),
-  campaign: z
-    .record(z.unknown())
-    .optional()
-    .describe("Campaign workflow response (mode=single)"),
+  campaign: z.record(z.unknown()).optional().describe("Campaign workflow response (mode=single)"),
   job: z.record(z.unknown()).optional().describe("Job submission response (mode=batch)"),
   timestamp: z.string().datetime(),
 });

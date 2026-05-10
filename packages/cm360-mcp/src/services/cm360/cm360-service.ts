@@ -2,12 +2,33 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { Logger } from "pino";
+import { z } from "zod";
 import type { CM360HttpClient } from "./cm360-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
 import type { CM360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { getEntityConfig } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type { components } from "../../generated/types.js";
+
+const PaginatedListEnvelopeSchema = z
+  .object({
+    nextPageToken: z.string().optional(),
+  })
+  .catchall(z.unknown());
+
+function parseListEnvelope(
+  value: unknown,
+  endpoint: string
+): { nextPageToken?: string } & Record<string, unknown> {
+  const result = PaginatedListEnvelopeSchema.safeParse(value);
+  if (!result.success) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `CM360 response from ${endpoint} did not match expected shape: ${result.error.message}`
+    );
+  }
+  return result.data;
+}
 
 type CM360Campaign = components["schemas"]["Campaign"];
 type CM360Placement = components["schemas"]["Placement"];
@@ -78,7 +99,8 @@ export class CM360Service {
     const queryString = params.toString();
     const path = `/userprofiles/${profileId}/${config.apiCollection}${queryString ? `?${queryString}` : ""}`;
 
-    const result = (await this.httpClient.fetch(path, context)) as Record<string, unknown>;
+    const raw = await this.httpClient.fetch(path, context);
+    const result = parseListEnvelope(raw, `GET ${path}`);
     const rawEntities = result[config.apiCollection];
     if (rawEntities === undefined) {
       this.logger.warn(
@@ -91,10 +113,9 @@ export class CM360Service {
         `CM360 API response missing expected collection key "${config.apiCollection}" — returning empty results`
       );
     }
-    const entities = ((rawEntities as unknown[]) || []) as CM360EntityMap[T][];
-    const nextPageToken = result.nextPageToken as string | undefined;
+    const entities = (Array.isArray(rawEntities) ? rawEntities : []) as CM360EntityMap[T][];
 
-    return { entities, nextPageToken };
+    return { entities, nextPageToken: result.nextPageToken };
   }
 
   async getEntity<T extends CM360EntityType>(
@@ -165,7 +186,8 @@ export class CM360Service {
     const queryString = params.toString();
     const path = `/userprofiles/${profileId}/${targetingType}${queryString ? `?${queryString}` : ""}`;
 
-    const result = (await this.httpClient.fetch(path, context)) as Record<string, unknown>;
+    const raw = await this.httpClient.fetch(path, context);
+    const result = parseListEnvelope(raw, `GET ${path}`);
     const rawOptions = result[targetingType];
     if (rawOptions === undefined) {
       this.logger.warn(
@@ -173,10 +195,9 @@ export class CM360Service {
         `CM360 API response missing expected key "${targetingType}" — returning empty results`
       );
     }
-    const options = (rawOptions as unknown[]) || [];
-    const nextPageToken = result.nextPageToken as string | undefined;
+    const options = Array.isArray(rawOptions) ? rawOptions : [];
 
-    return { options, nextPageToken };
+    return { options, nextPageToken: result.nextPageToken };
   }
 
   async deleteEntity(

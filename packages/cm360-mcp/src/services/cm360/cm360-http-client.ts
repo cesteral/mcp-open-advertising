@@ -5,7 +5,7 @@ import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
 import { fetchWithTimeout, executeWithRetry, type RetryConfig } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
-import { withCM360ApiSpan } from "../../utils/telemetry/tracing.js";
+import { withCM360ApiSpan } from "../../utils/platform.js";
 
 const RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

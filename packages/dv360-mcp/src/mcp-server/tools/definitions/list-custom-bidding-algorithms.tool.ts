@@ -8,6 +8,7 @@ import {
   buildPaginationOutput,
   formatPaginationHint,
 } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -118,12 +119,18 @@ export async function listCustomBiddingAlgorithmsLogic(
 
   // Validate that at least one ID is provided (schema refine also checks, but guard here for safety)
   if (!input.partnerId && !input.advertiserId) {
-    throw new Error("Either partnerId or advertiserId must be provided");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "Either partnerId or advertiserId must be provided"
+    );
   }
 
   // Validate mutual exclusivity (schema refine also checks, but guard here for safety)
   if (input.partnerId && input.advertiserId) {
-    throw new Error("Only one of partnerId or advertiserId may be specified, not both");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "Only one of partnerId or advertiserId may be specified, not both"
+    );
   }
 
   // Use dedicated method that passes partnerId/advertiserId as proper query params (not filter expressions)

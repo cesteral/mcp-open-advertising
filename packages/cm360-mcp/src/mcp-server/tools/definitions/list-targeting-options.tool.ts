@@ -89,9 +89,7 @@ export function listTargetingOptionsResponseFormatter(
 ): McpTextContent[] {
   const count = result.pagination.pageSize;
   const optionsBlock =
-    count > 0
-      ? `\n\nOptions:\n${JSON.stringify(result.options, null, 2)}`
-      : "\n\nNo options found";
+    count > 0 ? `\n\nOptions:\n${JSON.stringify(result.options, null, 2)}` : "\n\nNo options found";
 
   return [
     {

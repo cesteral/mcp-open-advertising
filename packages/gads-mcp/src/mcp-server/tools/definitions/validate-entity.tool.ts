@@ -126,7 +126,11 @@ export async function validateEntityLogic(
   if (!result.valid) {
     nextAction =
       input.mode === "create" && !input.customerId
-        ? buildNextAction({ kind: "discover-account", tool: "gads_list_accounts", field: "customerId" })
+        ? buildNextAction({
+            kind: "discover-account",
+            tool: "gads_list_accounts",
+            field: "customerId",
+          })
         : buildNextAction({
             kind: "list-entity",
             tool: "gads_list_entities",

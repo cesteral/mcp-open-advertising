@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { throwIfGraphqlErrors } from "../utils/graphql-errors.js";
 
 const TOOL_NAME = "ttd_manage_seed";

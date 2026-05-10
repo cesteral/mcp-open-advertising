@@ -51,6 +51,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     budgetSchedules: ["meta_manage_budget_schedule"],
     specialized: ["meta_duplicate_entity", "meta_get_delivery_estimate", "meta_get_ad_preview"],
     validation: ["meta_validate_entity"],
+    discovery: ["meta_search_tools"],
   },
   commonWorkflows: [
     "full_campaign_setup_workflow",

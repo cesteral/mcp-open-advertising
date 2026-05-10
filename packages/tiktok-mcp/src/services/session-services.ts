@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../auth/tiktok-auth-adapter.js";
-import type { RateLimiter } from "../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import {
   deleteSpilledObjectsForSession,
   ReportCsvStore,

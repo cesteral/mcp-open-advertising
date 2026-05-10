@@ -146,7 +146,7 @@ variable "gcs_bucket_name" {
   type        = string
   default     = ""
   validation {
-    condition     = !var.enable_gcs_persistence || length(trim(var.gcs_bucket_name)) > 0
+    condition     = !var.enable_gcs_persistence || length(trimspace(var.gcs_bucket_name)) > 0
     error_message = "gcs_bucket_name must be set when enable_gcs_persistence is true."
   }
 }

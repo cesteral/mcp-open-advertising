@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { GAdsAuthAdapter } from "../auth/gads-auth-adapter.js";
-import type { RateLimiter } from "../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { SessionServiceStore } from "@cesteral/shared";
 export { SessionServiceStore } from "@cesteral/shared";
 import { GAdsHttpClient } from "./gads/gads-http-client.js";

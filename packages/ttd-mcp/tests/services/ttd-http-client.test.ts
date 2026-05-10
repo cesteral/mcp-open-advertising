@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { TtdHttpClient } from "../../src/services/ttd/ttd-http-client.js";
-import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 // ---------------------------------------------------------------------------
 // Mocks

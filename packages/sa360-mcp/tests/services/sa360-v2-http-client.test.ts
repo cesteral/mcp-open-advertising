@@ -15,12 +15,6 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
   };
 });
 
-vi.mock("../../src/utils/telemetry/tracing.js", () => ({
-  withSA360ApiSpan: vi.fn((_name: string, _path: string, fn: (span: any) => Promise<any>) =>
-    fn({ setAttribute: vi.fn() })
-  ),
-}));
-
 import { SA360V2HttpClient } from "../../src/services/sa360-v2/sa360-v2-http-client.js";
 import { executeWithRetry } from "@cesteral/shared";
 import type { SA360AuthAdapter } from "../../src/auth/sa360-auth-adapter.js";

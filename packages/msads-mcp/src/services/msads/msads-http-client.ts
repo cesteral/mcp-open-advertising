@@ -4,7 +4,7 @@
 import type { MsAdsAuthAdapter } from "../../auth/msads-auth-adapter.js";
 import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withMsAdsApiSpan } from "../../utils/telemetry/tracing.js";
+import { withMsAdsApiSpan } from "../../utils/platform.js";
 
 const MSADS_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

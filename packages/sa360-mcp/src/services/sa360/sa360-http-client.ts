@@ -5,7 +5,7 @@ import type { Logger } from "pino";
 import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
 import { JsonRpcErrorCode, executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withSA360ApiSpan } from "../../utils/telemetry/tracing.js";
+import { withSA360ApiSpan } from "../../utils/platform.js";
 
 const SA360_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

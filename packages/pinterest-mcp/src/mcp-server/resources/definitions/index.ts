@@ -50,6 +50,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "pinterest_get_ad_preview",
     ],
     validation: ["pinterest_validate_entity"],
+    discovery: ["pinterest_search_tools"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],
   startHere: "pinterest_list_ad_accounts",

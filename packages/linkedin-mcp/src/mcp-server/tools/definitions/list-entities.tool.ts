@@ -13,6 +13,7 @@ import {
   buildPaginationOutput,
   formatPaginationHint,
 } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -57,7 +58,8 @@ export async function listEntitiesLogic(
   const { linkedInService } = resolveSessionServices(sdkContext);
 
   if (isAccountScopedEntity(input.entityType as LinkedInEntityType) && !input.adAccountUrn) {
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
       `adAccountUrn is required for entityType "${input.entityType}". ` +
         "Use linkedin_list_ad_accounts to find available accounts."
     );

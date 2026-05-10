@@ -3,10 +3,10 @@
 
 import type { Logger } from "pino";
 import type { MetaAuthAdapter } from "../../auth/meta-auth-adapter.js";
-import { JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { JsonRpcErrorCode } from "@cesteral/shared";
 import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withMetaApiSpan } from "../../utils/telemetry/tracing.js";
+import { withMetaApiSpan } from "../../utils/platform.js";
 
 /** Meta error response shape */
 interface MetaApiError {

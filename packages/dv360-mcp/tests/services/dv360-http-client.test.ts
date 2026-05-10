@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DV360HttpClient } from "../../src/services/dv360/dv360-http-client.js";
-import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
 
 // ---------------------------------------------------------------------------

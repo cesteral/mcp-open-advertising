@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/conformance": "^0.1.15",
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "1.27.1",
     "@types/node": "^20.17.6",
     "@typescript-eslint/eslint-plugin": "^8.46.2",
     "@typescript-eslint/parser": "^8.46.2",

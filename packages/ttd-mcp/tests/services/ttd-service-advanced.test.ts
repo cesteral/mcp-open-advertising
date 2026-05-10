@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TtdService } from "../../src/services/ttd/ttd-service.js";
-import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 function createMockLogger() {
   return {
@@ -236,7 +236,7 @@ describe("TtdService advanced methods", () => {
   });
 
   describe("workflows endpoints", () => {
-    it("submits Workflows REST passthrough requests", async () => {
+    it("executes direct REST API requests", async () => {
       httpClient.fetch.mockResolvedValueOnce({ ok: true });
 
       await service.restRequest({
@@ -245,12 +245,23 @@ describe("TtdService advanced methods", () => {
       });
 
       const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/restrequest");
-      expect(options.method).toBe("POST");
-      expect(JSON.parse(options.body)).toEqual({
-        methodType: "GET",
-        endpoint: "campaign/c1",
+      expect(path).toBe("/campaign/c1");
+      expect(options.method).toBe("GET");
+    });
+
+    it("passes dataBody as request body for direct REST requests", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ ok: true });
+
+      await service.restRequest({
+        methodType: "POST",
+        endpoint: "adgroup",
+        dataBody: JSON.stringify({ AdvertiserId: "adv1" }),
       });
+
+      const [path, , options] = httpClient.fetch.mock.calls[0];
+      expect(path).toBe("/adgroup");
+      expect(options.method).toBe("POST");
+      expect(options.body).toBe(JSON.stringify({ AdvertiserId: "adv1" }));
     });
 
     it("fetches standard job status", async () => {

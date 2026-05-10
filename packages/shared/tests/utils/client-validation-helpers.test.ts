@@ -209,13 +209,10 @@ describe("validateEntityResponseFormatter", () => {
 
 describe("validateRequiredFieldsStructured", () => {
   it("returns empty array when all required fields are present and typed", () => {
-    const issues = validateRequiredFieldsStructured(
-      { name: "Hello", count: 5 },
-      [
-        { field: "name", expectedType: "string" },
-        { field: "count", expectedType: "number" },
-      ]
-    );
+    const issues = validateRequiredFieldsStructured({ name: "Hello", count: 5 }, [
+      { field: "name", expectedType: "string" },
+      { field: "count", expectedType: "number" },
+    ]);
     expect(issues).toEqual([]);
   });
 
@@ -240,27 +237,23 @@ describe("validateRequiredFieldsStructured", () => {
   });
 
   it("emits a 'wrongType' issue when type mismatches", () => {
-    const issues = validateRequiredFieldsStructured(
-      { count: "five" },
-      [{ field: "count", expectedType: "number" }]
-    );
+    const issues = validateRequiredFieldsStructured({ count: "five" }, [
+      { field: "count", expectedType: "number" },
+    ]);
     expect(issues).toHaveLength(1);
     expect(issues[0].code).toBe("wrongType");
     expect(issues[0].severity).toBe("error");
-    expect(issues[0].message).toContain('should be number but got string');
+    expect(issues[0].message).toContain("should be number but got string");
   });
 
   it("preserves suggestedValues on a wrongType issue too", () => {
-    const issues = validateRequiredFieldsStructured(
-      { status: 1 },
-      [
-        {
-          field: "status",
-          expectedType: "string",
-          suggestedValues: ["ACTIVE", "PAUSED"],
-        },
-      ]
-    );
+    const issues = validateRequiredFieldsStructured({ status: 1 }, [
+      {
+        field: "status",
+        expectedType: "string",
+        suggestedValues: ["ACTIVE", "PAUSED"],
+      },
+    ]);
     expect(issues[0].suggestedValues).toEqual(["ACTIVE", "PAUSED"]);
   });
 });

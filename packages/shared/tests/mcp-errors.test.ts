@@ -321,12 +321,10 @@ describe("buildNextAction", () => {
         idField: "reportId",
         expectedStatus: "Completed",
       })
-    ).toBe(
-      "Poll ttd_check_report_status using the reportId until status reaches 'Completed'."
+    ).toBe("Poll ttd_check_report_status using the reportId until status reaches 'Completed'.");
+    expect(buildNextAction({ kind: "read-resource", uri: "entity-schema://campaign" })).toBe(
+      "Read MCP resource entity-schema://campaign."
     );
-    expect(
-      buildNextAction({ kind: "read-resource", uri: "entity-schema://campaign" })
-    ).toBe("Read MCP resource entity-schema://campaign.");
     expect(buildNextAction({ kind: "renew-token" })).toMatch(/Renew the API token/);
     expect(buildNextAction({ kind: "retry-after", seconds: 30 })).toBe(
       "Wait 30 seconds (Retry-After header) before retrying."

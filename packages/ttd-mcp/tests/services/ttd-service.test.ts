@@ -79,7 +79,7 @@ describe("TtdService", () => {
       await service.listEntities("adGroup", { AdvertiserId: "adv1" });
 
       const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/adgroup/query/campaign");
+      expect(path).toBe("/adgroup/query/advertiser");
     });
 
     it("uses POST method with filters in body", async () => {

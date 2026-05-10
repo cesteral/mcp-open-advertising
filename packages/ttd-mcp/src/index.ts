@@ -5,11 +5,11 @@
 import { mcpConfig } from "./config/index.js";
 import { createMcpServer, runStdioServer } from "./mcp-server/server.js";
 import { startHttpServer } from "./mcp-server/transports/streamable-http-transport.js";
-import { initializeOpenTelemetry, otelLogMixin } from "./utils/telemetry/index.js";
+import { initializeOpenTelemetry, otelLogMixin } from "@cesteral/shared";
 import { TtdDirectTokenAuthAdapter } from "./auth/ttd-auth-adapter.js";
 import { detectTransportMode, createServerLogger, bootstrapMcpServer } from "@cesteral/shared";
 import { createSessionServices, sessionServiceStore } from "./services/session-services.js";
-import { rateLimiter } from "./utils/security/rate-limiter.js";
+import { rateLimiter } from "./utils/platform.js";
 
 const transportMode = detectTransportMode();
 const logger = createServerLogger("ttd-mcp", transportMode, otelLogMixin());

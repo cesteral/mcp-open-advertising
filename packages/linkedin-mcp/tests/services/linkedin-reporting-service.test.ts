@@ -57,6 +57,26 @@ describe("LinkedInReportingService", () => {
     expect(result.results[1].pivot).toBe("CREATIVE");
   });
 
+  it("preserves account URN and member pivot filters in analytics query params", async () => {
+    mockHttpClient.get.mockResolvedValueOnce({ elements: [] });
+
+    await service.getAnalytics(
+      "urn:li:sponsoredAccount:987654",
+      { start: "2026-04-01", end: "2026-04-30" },
+      ["impressions", "videoViews"],
+      "MEMBER_JOB_FUNCTION",
+      "MONTHLY"
+    );
+
+    const [, params] = mockHttpClient.get.mock.calls[0];
+    expect(params["accounts[0]"]).toBe("urn:li:sponsoredAccount:987654");
+    expect(params.pivot).toBe("MEMBER_JOB_FUNCTION");
+    expect(params.timeGranularity).toBe("MONTHLY");
+    expect(params.fields).toBe("impressions,videoViews");
+    expect(params["dateRange.start.month"]).toBe("4");
+    expect(params["dateRange.end.day"]).toBe("30");
+  });
+
   it("throws on invalid date format", async () => {
     await expect(
       service.getAnalytics("urn:li:sponsoredAccount:123", {

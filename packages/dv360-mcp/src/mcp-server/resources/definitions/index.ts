@@ -60,6 +60,7 @@ const sharedCapabilities = createServerCapabilitiesResource({
     preview: ["dv360_get_ad_preview"],
     specialized: ["dv360_duplicate_entity"],
     validation: ["dv360_validate_entity"],
+    discovery: ["dv360_search_tools"],
   },
   commonWorkflows: ["full_campaign_setup_workflow", "targeting_assignment", "custom_bidding_setup"],
   discoveryFlow: [

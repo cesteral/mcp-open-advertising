@@ -20,9 +20,7 @@ const TOOL_DESCRIPTION = `Create one or more ad groups through the TTD Workflows
 export const CreateAdGroupsToolInputSchema = z
   .discriminatedUnion("mode", [
     AdGroupCreateWorkflowInputSchema.extend({
-      mode: z
-        .literal("single")
-        .describe("Synchronous single-ad-group create via Workflows API"),
+      mode: z.literal("single").describe("Synchronous single-ad-group create via Workflows API"),
     }),
     AdGroupsJobInputSchema.extend({
       mode: z.literal("batch").describe("Async bulk-create job via Workflows API"),
@@ -32,10 +30,7 @@ export const CreateAdGroupsToolInputSchema = z
 
 export const CreateAdGroupsToolOutputSchema = z.object({
   mode: z.enum(["single", "batch"]),
-  adGroup: z
-    .record(z.unknown())
-    .optional()
-    .describe("Ad group workflow response (mode=single)"),
+  adGroup: z.record(z.unknown()).optional().describe("Ad group workflow response (mode=single)"),
   job: z.record(z.unknown()).optional().describe("Job submission response (mode=batch)"),
   timestamp: z.string().datetime(),
 });

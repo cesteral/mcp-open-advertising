@@ -46,6 +46,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     targeting: ["snapchat_search_targeting", "snapchat_get_targeting_options"],
     specialized: ["snapchat_get_audience_estimate", "snapchat_get_ad_preview"],
     validation: ["snapchat_validate_entity"],
+    discovery: ["snapchat_search_tools"],
   },
   commonWorkflows: ["campaign_setup", "async_reporting", "audience_targeting"],
   startHere: "snapchat_list_ad_accounts",

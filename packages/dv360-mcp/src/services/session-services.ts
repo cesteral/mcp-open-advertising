@@ -4,7 +4,7 @@
 import type { Logger } from "pino";
 import type { GoogleAuthAdapter } from "@cesteral/shared";
 import { SessionServiceStore } from "@cesteral/shared";
-import { RateLimiter } from "../utils/security/rate-limiter.js";
+import { RateLimiter } from "@cesteral/shared";
 import { DV360HttpClient } from "./dv360/dv360-http-client.js";
 import { DV360Service } from "./dv360/DV360-service.js";
 import { TargetingService } from "./targeting/targeting-service.js";

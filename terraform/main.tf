@@ -174,7 +174,7 @@ locals {
   service_auth_defaults = {
     "dbm-mcp"        = "google-headers"
     "dv360-mcp"      = "google-headers"
-    "ttd-mcp"        = "ttd-headers"
+    "ttd-mcp"        = "ttd-token"
     "gads-mcp"       = "gads-headers"
     "meta-mcp"       = "meta-bearer"
     "linkedin-mcp"   = "linkedin-bearer"

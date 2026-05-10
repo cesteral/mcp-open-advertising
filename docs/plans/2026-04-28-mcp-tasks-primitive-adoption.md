@@ -8,24 +8,24 @@
 
 Today, every async upstream API is exposed as a 2- or 3-tool chain that the LLM has to orchestrate:
 
-| Server      | Chain                                                                      |
-| ----------- | -------------------------------------------------------------------------- |
-| ttd-mcp     | `ttd_submit_report` → `ttd_check_report_status` → `ttd_download_report`    |
-| ttd-mcp     | `ttd_create_campaigns_job` → `ttd_get_job_status`                          |
-| meta-mcp    | report submit / poll / download                                            |
-| sa360-mcp   | `sa360_submit_report` → `sa360_check_report_status` → `sa360_download_report` |
-| msads-mcp   | report submit / poll / download                                            |
-| tiktok-mcp  | report submit / poll / download                                            |
-| snapchat-mcp| report submit / poll / download                                            |
-| amazon-dsp-mcp | report submit / poll / download                                         |
-| pinterest-mcp | report submit / poll / download                                          |
-| dbm-mcp     | `dbm_run_custom_query` (sync) vs `dbm_run_custom_query_async`              |
+| Server         | Chain                                                                         |
+| -------------- | ----------------------------------------------------------------------------- |
+| ttd-mcp        | `ttd_submit_report` → `ttd_check_report_status` → `ttd_download_report`       |
+| ttd-mcp        | `ttd_create_campaigns_job` → `ttd_get_job_status`                             |
+| meta-mcp       | report submit / poll / download                                               |
+| sa360-mcp      | `sa360_submit_report` → `sa360_check_report_status` → `sa360_download_report` |
+| msads-mcp      | report submit / poll / download                                               |
+| tiktok-mcp     | report submit / poll / download                                               |
+| snapchat-mcp   | report submit / poll / download                                               |
+| amazon-dsp-mcp | report submit / poll / download                                               |
+| pinterest-mcp  | report submit / poll / download                                               |
+| dbm-mcp        | `dbm_run_custom_query` (sync) vs `dbm_run_custom_query_async`                 |
 
 SEP-1686 documents the failure modes of this pattern: agents hallucinate job IDs, end their turn while "waiting," or skip polling entirely. The fix is to move polling from the model into the host application via a wire-level lifecycle.
 
 ## What it actually is on the wire
 
-The same tool serves both sync and async callers. A client opts into async by attaching task metadata to *any* `tools/call`:
+The same tool serves both sync and async callers. A client opts into async by attaching task metadata to _any_ `tools/call`:
 
 ```json
 { "method": "tools/call",
@@ -86,7 +86,7 @@ Steps:
 Definition of done:
 
 - A `tools/call` with `_meta.task` returns immediately; `tasks/get` polls; `tasks/result` returns the final payload.
-- A `tools/call` *without* `_meta.task` is byte-identical to today's behavior.
+- A `tools/call` _without_ `_meta.task` is byte-identical to today's behavior.
 - Inline comment in the handler documenting the scale-out caveat (in-memory store is per-instance; same pattern as `report-csv://`).
 
 ## Out of scope for the pilot

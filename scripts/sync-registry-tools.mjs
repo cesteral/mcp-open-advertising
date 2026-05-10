@@ -52,6 +52,16 @@ function collectToolNames(packageName) {
       continue;
     }
 
+    // Tools built via factories (e.g. createValidateEntityTool) declare
+    // their tool name as a `toolName:` property on the factory options
+    // object. Match this before the generic `name:` fallback, otherwise
+    // an inputExamples `name: "..."` fixture string can win.
+    const toolNameMatch = /toolName:\s*["']([^"']+)["']/.exec(source);
+    if (toolNameMatch) {
+      names.push(toolNameMatch[1]);
+      continue;
+    }
+
     const literalMatch = /name:\s*["']([^"']+)["']/.exec(source);
     if (literalMatch) {
       names.push(literalMatch[1]);
@@ -65,6 +75,18 @@ function collectToolNames(packageName) {
     }
 
     throw new Error(`Could not find TOOL_NAME in ${filePath}`);
+  }
+
+  // Pick up tools registered directly in the package's tools/definitions/index.ts
+  // (e.g. the shared `createToolSearchTool({ platform })` factory which produces
+  // `${platform}_search_tools` at runtime — there is no per-tool .tool.ts file).
+  const indexPath = join(definitionsDir, "index.ts");
+  if (existsSync(indexPath)) {
+    const indexSource = readFileSync(indexPath, "utf-8");
+    const searchToolRegex = /createToolSearchTool\(\s*\{[^}]*?platform:\s*["']([^"']+)["']/gs;
+    for (const match of indexSource.matchAll(searchToolRegex)) {
+      names.push(`${match[1]}_search_tools`);
+    }
   }
 
   return [...new Set(names)].sort();

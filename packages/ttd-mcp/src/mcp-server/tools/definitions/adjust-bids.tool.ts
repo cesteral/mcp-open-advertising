@@ -40,6 +40,29 @@ export const AdjustBidsInputSchema = z
   })
   .describe("Parameters for batch bid adjustment");
 
+const RtbBidSchema = z
+  .object({
+    Amount: z.union([z.number(), z.string()]).optional(),
+    CurrencyCode: z.string().optional(),
+  })
+  .partial()
+  .passthrough();
+
+const AdjustedAdGroupEntitySchema = z
+  .object({
+    RTBAttributes: z
+      .object({
+        BaseBidCPM: RtbBidSchema.optional(),
+        MaxBidCPM: RtbBidSchema.optional(),
+      })
+      .partial()
+      .passthrough()
+      .optional(),
+  })
+  .passthrough();
+
+type AdjustedAdGroupEntity = z.infer<typeof AdjustedAdGroupEntitySchema>;
+
 export const AdjustBidsOutputSchema = z
   .object({
     totalRequested: z.number(),
@@ -49,7 +72,7 @@ export const AdjustBidsOutputSchema = z
       z.object({
         adGroupId: z.string(),
         success: z.boolean(),
-        entity: z.record(z.any()).optional(),
+        entity: AdjustedAdGroupEntitySchema.optional(),
         error: z.string().optional(),
       })
     ),
@@ -78,7 +101,7 @@ export async function adjustBidsLogic(
     results: results.map((r) => ({
       adGroupId: r.adGroupId,
       success: r.success,
-      entity: r.entity as Record<string, any> | undefined,
+      entity: r.entity as AdjustedAdGroupEntity | undefined,
       error: r.error,
     })),
     timestamp: new Date().toISOString(),
@@ -89,7 +112,7 @@ export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextCo
   const summary = result.results
     .map((r) => {
       if (r.success) {
-        const rtb = (r.entity as any)?.RTBAttributes;
+        const rtb = r.entity?.RTBAttributes;
         const base = rtb?.BaseBidCPM?.Amount ?? "?";
         const max = rtb?.MaxBidCPM?.Amount ?? "?";
         return `  [OK] ${r.adGroupId}: base=$${base}, max=$${max}`;

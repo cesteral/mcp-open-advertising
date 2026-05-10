@@ -3,10 +3,10 @@
 
 import type { Logger } from "pino";
 import type { TikTokAuthAdapter } from "../../auth/tiktok-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode, mapHttpStatusToJsonRpc } from "@cesteral/shared";
 import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withTikTokApiSpan } from "../../utils/telemetry/tracing.js";
+import { withTikTokApiSpan } from "../../utils/platform.js";
 
 const TIKTOK_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
@@ -32,19 +32,16 @@ const AUTH_ERROR_CODES = new Set([40001, 40002, 40013]);
 const RATE_LIMIT_CODES = new Set([40100, 40101]);
 
 function mapTikTokErrorToJsonRpc(tiktokCode: number, httpStatus: number): JsonRpcErrorCode {
-  if (AUTH_ERROR_CODES.has(tiktokCode) || httpStatus === 401) {
+  if (AUTH_ERROR_CODES.has(tiktokCode)) {
     return JsonRpcErrorCode.Unauthorized;
   }
-  if (RATE_LIMIT_CODES.has(tiktokCode) || httpStatus === 429) {
+  if (RATE_LIMIT_CODES.has(tiktokCode)) {
     return JsonRpcErrorCode.RateLimited;
   }
-  if (httpStatus === 403) {
-    return JsonRpcErrorCode.Forbidden;
-  }
-  if (httpStatus >= 500 || tiktokCode >= 50000) {
+  if (tiktokCode >= 50000) {
     return JsonRpcErrorCode.ServiceUnavailable;
   }
-  return JsonRpcErrorCode.InvalidRequest;
+  return mapHttpStatusToJsonRpc(httpStatus);
 }
 
 function buildTikTokEnvelopeNextAction(tiktokCode: number, message: string): string | undefined {

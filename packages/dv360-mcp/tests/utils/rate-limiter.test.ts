@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { RateLimiter } from "../../src/utils/security/rate-limiter.js";
-import { McpError, JsonRpcErrorCode } from "../../src/utils/errors/index.js";
+import { RateLimiter } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 describe("RateLimiter", () => {
   let limiter: RateLimiter;

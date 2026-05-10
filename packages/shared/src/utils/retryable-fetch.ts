@@ -123,7 +123,15 @@ function isRetryableStatus(status: number): boolean {
   return status === 429 || status >= 500;
 }
 
-function defaultMapStatusCode(status: number): JsonRpcErrorCode {
+/**
+ * Default HTTP status -> JsonRpcErrorCode mapper.
+ *
+ * Platform HTTP clients should use this as a fallback after handling any
+ * platform-specific cases (custom error codes, envelope errors, etc.) so that
+ * standard HTTP semantics (404 -> NotFound, 429 -> RateLimited, etc.) stay
+ * consistent across servers.
+ */
+export function mapHttpStatusToJsonRpc(status: number): JsonRpcErrorCode {
   if (status >= 500) return JsonRpcErrorCode.ServiceUnavailable;
   if (status === 429) return JsonRpcErrorCode.RateLimited;
   if (status === 403) return JsonRpcErrorCode.Forbidden;
@@ -342,7 +350,7 @@ export async function executeWithRetry(
 
     const errorCode = mapStatusCode
       ? mapStatusCode(response.status, errorBody)
-      : defaultMapStatusCode(response.status);
+      : mapHttpStatusToJsonRpc(response.status);
     const errorSummary = parseErrorBody ? parseErrorBody(errorBody) : errorBody.substring(0, 500);
 
     let errorMessage = `${config.platformName} API request failed: ${response.status} ${response.statusText}${errorSummary ? ` — ${errorSummary}` : ""}`;

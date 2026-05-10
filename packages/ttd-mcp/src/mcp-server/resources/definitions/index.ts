@@ -87,6 +87,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     passthrough: ["ttd_rest_request"],
     preview: ["ttd_get_ad_preview"],
     validation: ["ttd_validate_entity"],
+    discovery: ["ttd_search_tools"],
   },
   commonWorkflows: [
     "campaign_setup",

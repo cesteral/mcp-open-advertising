@@ -15,7 +15,7 @@ import {
   isEntityTypeSupported,
 } from "../../tools/utils/entity-mapping-dynamic.js";
 import { getRequiredFieldsFromSchema } from "../../tools/utils/entity-mapping-dynamic.js";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { resourceCache } from "../utils/resource-cache.js";
 
 const RESOURCE_NAME = "DV360 Entity Schema";

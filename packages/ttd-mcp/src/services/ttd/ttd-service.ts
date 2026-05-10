@@ -3,9 +3,9 @@
 
 import type { Logger } from "pino";
 import type { TtdHttpClient } from "./ttd-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import {
   getEntityConfig,
   type TtdEntityType,
@@ -500,13 +500,16 @@ export class TtdService {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    return this.httpClient.fetch("/restrequest", context, {
-      method: "POST",
-      body: JSON.stringify({
-        methodType: input.methodType,
-        endpoint: input.endpoint,
-        ...(input.dataBody !== undefined ? { dataBody: input.dataBody } : {}),
-      }),
+    const path = input.endpoint ? `/${input.endpoint.replace(/^\//, "")}` : "/";
+
+    return this.httpClient.fetch(path, context, {
+      method: input.methodType,
+      ...(input.dataBody !== undefined
+        ? {
+            body:
+              typeof input.dataBody === "string" ? input.dataBody : JSON.stringify(input.dataBody),
+          }
+        : {}),
     });
   }
 

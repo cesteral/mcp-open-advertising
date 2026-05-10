@@ -56,7 +56,7 @@ const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
   },
   adGroup: {
     apiPath: "/adgroup",
-    queryPath: "/adgroup/query/campaign",
+    queryPath: "/adgroup/query/advertiser",
     parentIds: ["advertiserId", "campaignId"],
     idField: "AdGroupId",
     supportsBulk: true,

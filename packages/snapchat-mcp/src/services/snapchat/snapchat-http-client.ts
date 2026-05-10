@@ -2,10 +2,10 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { SnapchatAuthAdapter } from "../../auth/snapchat-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { fetchWithTimeout, buildMultipartFormData, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withSnapchatApiSpan } from "../../utils/telemetry/tracing.js";
+import { withSnapchatApiSpan } from "../../utils/platform.js";
 
 const SNAPCHAT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

@@ -111,7 +111,7 @@ describe("TikTok MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 29 : 23); // 23 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 30 : 24); // 23 business + 1 dynamic search_tools + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

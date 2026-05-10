@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update CM360 Entity Status";

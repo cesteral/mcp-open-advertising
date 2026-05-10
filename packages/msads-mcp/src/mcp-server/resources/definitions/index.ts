@@ -48,6 +48,7 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
     targeting: ["msads_manage_criterions", "msads_manage_ad_extensions", "msads_search_targeting"],
     specialized: ["msads_get_ad_details", "msads_import_from_google"],
     validation: ["msads_validate_entity"],
+    discovery: ["msads_search_tools"],
   },
   commonWorkflows: [
     "campaign_setup",

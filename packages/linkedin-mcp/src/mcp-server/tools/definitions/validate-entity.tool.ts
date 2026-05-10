@@ -8,38 +8,9 @@
  * Purely local — no API calls, no session services needed.
  */
 
-import { z } from "zod";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext } from "@cesteral/shared";
-import {
-  type FieldRule,
-  type ValidationIssue,
-  validateRequiredFieldsStructured,
-  validateEnumFieldsStructured,
-  checkReadOnlyFieldsStructured,
-  validateEntityResponseFormatter,
-} from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import { type FieldRule, createValidateEntityTool } from "@cesteral/shared";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const TOOL_NAME = "linkedin_validate_entity";
-const TOOL_TITLE = "LinkedIn Ads Entity Validation (Client-Side)";
-const TOOL_DESCRIPTION = `Validate an entity payload against known LinkedIn Ads requirements without calling the API.
-
-**Supported entity types:** ${getEntityTypeEnum().join(", ")}
-
-Checks required fields, data types, and common configuration mistakes.
-The LinkedIn API may still reject payloads for business-rule reasons.`;
-
-// ---------------------------------------------------------------------------
-// Required-field definitions per entity type (create mode)
-// ---------------------------------------------------------------------------
-
-// LinkedIn Marketing API v2 enum reference:
-// https://learn.microsoft.com/en-us/linkedin/marketing/integrations/ads/account-structure/
 const ACCOUNT_STATUSES = ["ACTIVE", "CANCELED", "DRAFT", "PENDING_DELETION", "REMOVED"] as const;
 const CAMPAIGN_STATUSES = [
   "ACTIVE",
@@ -92,12 +63,7 @@ const ACCOUNT_TYPES = ["BUSINESS", "ENTERPRISE"] as const;
 const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
   adAccount: [
     { field: "name", expectedType: "string" },
-    {
-      field: "type",
-      expectedType: "string",
-      hint: "Account type",
-      suggestedValues: ACCOUNT_TYPES,
-    },
+    { field: "type", expectedType: "string", hint: "Account type", suggestedValues: ACCOUNT_TYPES },
     { field: "currency", expectedType: "string", hint: "ISO 4217 currency code (e.g., USD)" },
   ],
   campaignGroup: [
@@ -167,85 +133,35 @@ const REQUIRED_FIELDS_CREATE: Record<LinkedInEntityType, FieldRule[]> = {
 
 const READ_ONLY_FIELDS = ["id", "changeAuditStamps", "created", "lastModified", "review"];
 
-// ---------------------------------------------------------------------------
-// Input / Output schemas
-// ---------------------------------------------------------------------------
+export const validateEntityTool = createValidateEntityTool<LinkedInEntityType>({
+  toolName: "linkedin_validate_entity",
+  toolTitle: "LinkedIn Ads Entity Validation (Client-Side)",
+  toolDescription: `Validate an entity payload against known LinkedIn Ads requirements without calling the API.
 
-export const ValidateEntityInputSchema = z
-  .object({
-    entityType: z.enum(getEntityTypeEnum()).describe("Type of entity to validate"),
-    mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
-    data: z.record(z.any()).describe("Entity payload to validate"),
-  })
-  .describe("Parameters for validating a LinkedIn Ads entity payload");
+**Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-const ValidationIssueSchema = z.object({
-  field: z.string(),
-  code: z.enum(["missing", "wrongType", "invalidValue", "readOnly", "custom"]),
-  message: z.string(),
-  hint: z.string().optional(),
-  suggestedValues: z.array(z.string()).optional(),
-  severity: z.enum(["error", "warning"]).optional(),
-});
-
-export const ValidateEntityOutputSchema = z
-  .object({
-    valid: z.boolean().describe("Whether the payload passed validation"),
-    entityType: z.string().describe("Entity type that was validated"),
-    mode: z.string().describe("Validation mode (create or update)"),
-    errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
-    warnings: z.array(z.string()).describe("Non-blocking warnings"),
-    issues: z.array(ValidationIssueSchema),
-    nextAction: z.string().optional(),
-    timestamp: z.string().datetime().describe("ISO-8601 timestamp of validation"),
-  })
-  .describe("Validation result");
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type ValidateEntityInput = z.infer<typeof ValidateEntityInputSchema>;
-type ValidateEntityOutput = z.infer<typeof ValidateEntityOutputSchema>;
-
-// ---------------------------------------------------------------------------
-// Logic (pure — no API calls, no session services)
-// ---------------------------------------------------------------------------
-
-export async function validateEntityLogic(
-  input: ValidateEntityInput,
-  _context: RequestContext,
-  _sdkContext?: SdkContext
-): Promise<ValidateEntityOutput> {
-  const { entityType, mode, data } = input;
-  const issues: ValidationIssue[] = [];
-
-  const rules = REQUIRED_FIELDS_CREATE[entityType as LinkedInEntityType] ?? [];
-
-  // Enum validation runs in both modes — invalid enum values are equally
-  // invalid on update.
-  issues.push(...validateEnumFieldsStructured(data, rules));
-
-  if (mode === "create") {
-    issues.push(...validateRequiredFieldsStructured(data, rules));
-
-    // Validate URN format for known URN fields
-    const urnFields = ["account", "campaignGroup", "campaign"];
-    for (const field of urnFields) {
-      const value = data[field];
-      if (value && typeof value === "string" && !value.startsWith("urn:li:")) {
-        issues.push({
-          field,
-          code: "invalidValue",
-          message: `Field "${field}" value "${value}" doesn't look like a LinkedIn URN. Expected format: urn:li:{type}:{id}`,
-          severity: "warning",
-        });
+Checks required fields, data types, and common configuration mistakes.
+The LinkedIn API may still reject payloads for business-rule reasons.`,
+  entityTypeEnum: getEntityTypeEnum() as readonly [LinkedInEntityType, ...LinkedInEntityType[]],
+  rulesByEntity: REQUIRED_FIELDS_CREATE,
+  readOnlyFields: READ_ONLY_FIELDS,
+  extraValidate: ({ mode, data, issues }) => {
+    if (mode === "create") {
+      // URN format check
+      for (const field of ["account", "campaignGroup", "campaign"]) {
+        const value = data[field];
+        if (value && typeof value === "string" && !value.startsWith("urn:li:")) {
+          issues.push({
+            field,
+            code: "invalidValue",
+            message: `Field "${field}" value "${value}" doesn't look like a LinkedIn URN. Expected format: urn:li:{type}:{id}`,
+            severity: "warning",
+          });
+        }
       }
     }
-  }
 
-  if (mode === "update") {
-    if (Object.keys(data).length === 0) {
+    if (mode === "update" && Object.keys(data).length === 0) {
       issues.push({
         field: "data",
         code: "custom",
@@ -254,55 +170,21 @@ export async function validateEntityLogic(
       });
     }
 
-    issues.push(...checkReadOnlyFieldsStructured(data, READ_ONLY_FIELDS));
-  }
-
-  // Budget amount format warnings (both modes)
-  const budgetFields = ["dailyBudget", "totalBudget", "unitCost"];
-  for (const field of budgetFields) {
-    const value = data[field];
-    if (value !== undefined && typeof value === "object" && value !== null) {
-      const budgetObj = value as Record<string, unknown>;
-      if (!budgetObj.amount || !budgetObj.currencyCode) {
-        issues.push({
-          field,
-          code: "wrongType",
-          message: `Field "${field}" should be an object with "amount" (string) and "currencyCode" (e.g., USD). Got: ${JSON.stringify(value)}`,
-          severity: "warning",
-        });
+    // Budget object format warnings (both modes)
+    for (const field of ["dailyBudget", "totalBudget", "unitCost"]) {
+      const value = data[field];
+      if (value !== undefined && typeof value === "object" && value !== null) {
+        const budgetObj = value as Record<string, unknown>;
+        if (!budgetObj.amount || !budgetObj.currencyCode) {
+          issues.push({
+            field,
+            code: "wrongType",
+            message: `Field "${field}" should be an object with "amount" (string) and "currencyCode" (e.g., USD). Got: ${JSON.stringify(value)}`,
+            severity: "warning",
+          });
+        }
       }
     }
-  }
-
-  const errorIssues = issues.filter((i) => i.severity !== "warning");
-  const warningIssues = issues.filter((i) => i.severity === "warning");
-
-  return {
-    valid: errorIssues.length === 0,
-    entityType,
-    mode,
-    errors: errorIssues.map((i) => i.message),
-    warnings: warningIssues.map((i) => i.message),
-    issues,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Tool definition (exported for allTools array)
-// ---------------------------------------------------------------------------
-
-export const validateEntityTool = {
-  name: TOOL_NAME,
-  title: TOOL_TITLE,
-  description: TOOL_DESCRIPTION,
-  inputSchema: ValidateEntityInputSchema,
-  outputSchema: ValidateEntityOutputSchema,
-  annotations: {
-    readOnlyHint: true,
-    idempotentHint: true,
-    openWorldHint: false,
-    destructiveHint: false,
   },
   inputExamples: [
     {
@@ -325,12 +207,13 @@ export const validateEntityTool = {
       input: {
         entityType: "campaignGroup",
         mode: "create",
-        data: {
-          name: "Test Campaign Group",
-        },
+        data: { name: "Test Campaign Group" },
       },
     },
   ],
-  logic: validateEntityLogic,
-  responseFormatter: validateEntityResponseFormatter,
-};
+});
+
+// Re-exports for backwards-compatible imports inside this package.
+export const ValidateEntityInputSchema = validateEntityTool.inputSchema;
+export const ValidateEntityOutputSchema = validateEntityTool.outputSchema;
+export const validateEntityLogic = validateEntityTool.logic;

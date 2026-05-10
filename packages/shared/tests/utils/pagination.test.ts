@@ -191,7 +191,8 @@ describe("findPaginationConformanceViolations", () => {
       {
         tool: "bad_extra",
         reason: "pagination-key-unexpected",
-        details: "pagination output has unexpected key 'legacyToken' (not in canonical PaginationOutputSchema)",
+        details:
+          "pagination output has unexpected key 'legacyToken' (not in canonical PaginationOutputSchema)",
       },
     ]);
   });

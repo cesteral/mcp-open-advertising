@@ -113,10 +113,7 @@ interface ToolLike {
 
 export interface PaginationConformanceViolation {
   tool: string;
-  reason:
-    | "pagination-key-missing-required"
-    | "pagination-key-unexpected"
-    | "pagination-not-object";
+  reason: "pagination-key-missing-required" | "pagination-key-unexpected" | "pagination-not-object";
   details: string;
 }
 
@@ -164,10 +161,7 @@ export function findPaginationConformanceViolations(
     }
 
     const innerKeys = new Set(Object.keys(innerShape));
-    const allowed = new Set<string>([
-      ...PAGINATION_REQUIRED_KEYS,
-      ...PAGINATION_OPTIONAL_KEYS,
-    ]);
+    const allowed = new Set<string>([...PAGINATION_REQUIRED_KEYS, ...PAGINATION_OPTIONAL_KEYS]);
 
     for (const required of PAGINATION_REQUIRED_KEYS) {
       if (!innerKeys.has(required)) {

@@ -14,7 +14,7 @@ import {
 } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode, mapHttpStatusToJsonRpc } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_download_report";
 const TOOL_TITLE = "Download CM360 Report";
@@ -59,7 +59,8 @@ export async function downloadReportLogic(
   if (!response.ok) {
     const errorBody = await response.text().catch(() => "");
     const detail = errorBody ? ` — ${errorBody.substring(0, 500)}` : "";
-    throw new Error(
+    throw new McpError(
+      mapHttpStatusToJsonRpc(response.status),
       `Failed to download report: ${response.status} ${response.statusText}${detail}`
     );
   }

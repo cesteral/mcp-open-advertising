@@ -4,8 +4,13 @@
 import type { Logger } from "pino";
 import type { SA360V2HttpClient } from "./sa360-v2-http-client.js";
 import type { SA360AuthAdapter } from "../../auth/sa360-auth-adapter.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
-import { fetchWithTimeout, DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS } from "@cesteral/shared";
+import type { RateLimiter } from "@cesteral/shared";
+import {
+  fetchWithTimeout,
+  DEFAULT_REPORT_DOWNLOAD_TIMEOUT_MS,
+  McpError,
+  mapHttpStatusToJsonRpc,
+} from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 
 /**
@@ -147,7 +152,10 @@ export class SA360ReportingService {
     );
 
     if (!response.ok) {
-      throw new Error(`Failed to download SA360 report: ${response.status} ${response.statusText}`);
+      throw new McpError(
+        mapHttpStatusToJsonRpc(response.status),
+        `Failed to download SA360 report: ${response.status} ${response.statusText}`
+      );
     }
 
     return response.text();

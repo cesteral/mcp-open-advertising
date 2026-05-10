@@ -89,7 +89,7 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (51 tools)
+## Available Tools Summary (52 tools)
 
 ### Context
 | Tool | Purpose | Read/Write |
@@ -189,6 +189,11 @@ Inspect the output, then iterate with more specific calls.
 | \`ttd_manage_bid_list\` | Create/get/update a single bid list | Read/Write |
 | \`ttd_bulk_manage_bid_lists\` | Batch get/update bid lists (up to 50) | Read/Write |
 | \`ttd_manage_seed\` | Manage audience seeds via GraphQL | Read/Write |
+
+### Discovery (1 tool)
+| Tool | Purpose | Read/Write |
+|------|---------|-----------|
+| \`ttd_search_tools\` | Rank server tools by a natural-language query | Read |
 
 ### Supported REST Entity Types (5)
 \`advertiser\`, \`campaign\`, \`adGroup\`, \`creative\`, \`conversionTracker\`

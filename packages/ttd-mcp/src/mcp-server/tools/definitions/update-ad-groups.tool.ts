@@ -20,9 +20,7 @@ const TOOL_DESCRIPTION = `Update one or more ad groups through the TTD Workflows
 export const UpdateAdGroupsToolInputSchema = z
   .discriminatedUnion("mode", [
     AdGroupUpdateWorkflowInputSchema.extend({
-      mode: z
-        .literal("single")
-        .describe("Synchronous single-ad-group PATCH via Workflows API"),
+      mode: z.literal("single").describe("Synchronous single-ad-group PATCH via Workflows API"),
     }),
     AdGroupsUpdateJobInputSchema.extend({
       mode: z.literal("batch").describe("Async bulk-update job via Workflows API"),
@@ -32,10 +30,7 @@ export const UpdateAdGroupsToolInputSchema = z
 
 export const UpdateAdGroupsToolOutputSchema = z.object({
   mode: z.enum(["single", "batch"]),
-  adGroup: z
-    .record(z.unknown())
-    .optional()
-    .describe("Ad group workflow response (mode=single)"),
+  adGroup: z.record(z.unknown()).optional().describe("Ad group workflow response (mode=single)"),
   job: z.record(z.unknown()).optional().describe("Job submission response (mode=batch)"),
   timestamp: z.string().datetime(),
 });

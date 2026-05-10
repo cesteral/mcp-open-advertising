@@ -12,7 +12,7 @@ import {
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 import { addQueryValidationIssues, validateQueryParams } from "../utils/query-validation.js";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const TOOL_NAME = "dbm_run_custom_query";
 const TOOL_TITLE = "Run Custom Query";

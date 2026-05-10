@@ -5,7 +5,7 @@ import type { Logger } from "pino";
 import type { GAdsAuthAdapter } from "../../auth/gads-auth-adapter.js";
 import { JsonRpcErrorCode, executeWithRetry, fetchWithTimeout } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
-import { withGAdsApiSpan } from "../../utils/telemetry/tracing.js";
+import { withGAdsApiSpan } from "../../utils/platform.js";
 
 const GADS_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,

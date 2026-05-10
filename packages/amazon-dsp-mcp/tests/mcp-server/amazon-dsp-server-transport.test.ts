@@ -30,8 +30,10 @@ vi.mock("@cesteral/shared", async (importOriginal) => {
     registerStaticResourcesFromDefinitions: hoisted.registerResources,
     registerPromptsFromDefinitions: hoisted.registerPrompts,
     InteractionLogger: vi.fn().mockImplementation(() => ({ kind: "logger" })),
-    createMcpHttpTransport: hoisted.createHttpTransport,
-    startMcpHttpServer: hoisted.startHttpServer,
+    createTransportEntrypoints: vi.fn(() => ({
+      createMcpHttpServer: hoisted.createHttpTransport,
+      startHttpServer: hoisted.startHttpServer,
+    })),
     createAuthStrategy: vi.fn(() => ({ authType: "jwt" })),
   };
 });

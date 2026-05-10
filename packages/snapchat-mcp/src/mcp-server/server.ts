@@ -15,6 +15,7 @@ import {
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   InteractionLogger,
+  isConformanceFixturesEnabled,
   type McpServerPromptLike,
   type PromptDefinitionForFactory,
   type PromptArgumentForFactory,
@@ -126,7 +127,7 @@ export async function createMcpServer(
   });
 
   // Register conformance fixtures (resources + prompts) when enabled
-  if (process.env.MCP_CONFORMANCE_FIXTURES === "true") {
+  if (isConformanceFixturesEnabled()) {
     const { conformanceResources, conformanceResourceTemplate, conformancePrompts } = await import(
       "@cesteral/shared"
     );

@@ -2,8 +2,9 @@
 // See LICENSE.md in the project root for full license terms.
 
 import type { Logger } from "pino";
+import { z } from "zod";
 import type { TtdHttpClient } from "./ttd-http-client.js";
-import type { RateLimiter } from "../../utils/security/rate-limiter.js";
+import type { RateLimiter } from "@cesteral/shared";
 import {
   McpError,
   JsonRpcErrorCode,
@@ -13,6 +14,48 @@ import {
   ReportFailedError,
   type RequestContext,
 } from "@cesteral/shared";
+
+const ReportDeliverySchema = z
+  .object({
+    DownloadURL: z.string().optional(),
+  })
+  .passthrough();
+
+const ReportScheduleResponseSchema = z
+  .object({
+    ReportScheduleId: z.union([z.string(), z.number()]),
+  })
+  .passthrough();
+
+const ReportScheduleDetailSchema = z
+  .object({
+    AdvertiserFilters: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+const ReportExecutionSchema = z
+  .object({
+    ReportExecutionState: z.string().optional(),
+    ReportDeliveries: z.array(ReportDeliverySchema).optional(),
+  })
+  .passthrough();
+
+const ReportExecutionQueryResponseSchema = z
+  .object({
+    Result: z.array(ReportExecutionSchema).optional(),
+  })
+  .passthrough();
+
+function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, endpoint: string): T {
+  const result = schema.safeParse(value);
+  if (!result.success) {
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `TTD response from ${endpoint} did not match expected shape: ${result.error.message}`
+    );
+  }
+  return result.data;
+}
 
 /**
  * Report configuration for TTD MyReports API.
@@ -58,10 +101,15 @@ export class TtdReportingService {
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
     // Create report schedule
-    const schedule = (await this.httpClient.fetch("/myreports/reportschedule", context, {
+    const scheduleRaw = await this.httpClient.fetch("/myreports/reportschedule", context, {
       method: "POST",
       body: JSON.stringify(config),
-    })) as Record<string, unknown>;
+    });
+    const schedule = parseOrThrow(
+      ReportScheduleResponseSchema,
+      scheduleRaw,
+      "POST /myreports/reportschedule"
+    );
 
     const reportScheduleId = String(schedule.ReportScheduleId);
 
@@ -72,19 +120,12 @@ export class TtdReportingService {
 
     // Poll for completion — reuse advertiser filters from the submitted
     // config so we do not need a second HTTP call to discover them.
-    const advertiserIds =
-      (config as unknown as { AdvertiserFilters?: string[] }).AdvertiserFilters ?? [];
+    const advertiserIds = config.AdvertiserFilters ?? [];
     const execution = await this.pollReportExecution(reportScheduleId, advertiserIds, context);
 
-    // Get the download URL and fetch results
-    const reportDeliveries = (execution as Record<string, unknown>).ReportDeliveries as
-      | Array<Record<string, unknown>>
-      | undefined;
-    if (reportDeliveries && reportDeliveries.length > 0) {
-      const deliveryUrl = reportDeliveries[0].DownloadURL as string | undefined;
-      if (deliveryUrl) {
-        return { reportScheduleId, execution, downloadUrl: deliveryUrl };
-      }
+    const downloadUrl = execution.ReportDeliveries?.[0]?.DownloadURL;
+    if (downloadUrl) {
+      return { reportScheduleId, execution, downloadUrl };
     }
 
     return { reportScheduleId, execution };
@@ -101,10 +142,15 @@ export class TtdReportingService {
     const partnerId = this.httpClient.partnerId;
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    const schedule = (await this.httpClient.fetch("/myreports/reportschedule", context, {
+    const scheduleRaw = await this.httpClient.fetch("/myreports/reportschedule", context, {
       method: "POST",
       body: JSON.stringify(config),
-    })) as Record<string, unknown>;
+    });
+    const schedule = parseOrThrow(
+      ReportScheduleResponseSchema,
+      scheduleRaw,
+      "POST /myreports/reportschedule"
+    );
 
     const reportScheduleId = String(schedule.ReportScheduleId);
 
@@ -126,7 +172,7 @@ export class TtdReportingService {
   ): Promise<{
     reportScheduleId: string;
     state: string;
-    execution: Record<string, unknown>;
+    execution: z.infer<typeof ReportExecutionSchema> | Record<string, never>;
     downloadUrl?: string;
   }> {
     const partnerId = this.httpClient.partnerId;
@@ -141,16 +187,21 @@ export class TtdReportingService {
       PageSize: 1,
     };
 
-    const result = (await this.httpClient.fetch(
+    const raw = await this.httpClient.fetch(
       "/myreports/reportexecution/query/advertisers",
       context,
       {
         method: "POST",
         body: JSON.stringify(body),
       }
-    )) as Record<string, unknown>;
+    );
+    const result = parseOrThrow(
+      ReportExecutionQueryResponseSchema,
+      raw,
+      "POST /myreports/reportexecution/query/advertisers"
+    );
 
-    const executions = (result.Result as Array<Record<string, unknown>>) || [];
+    const executions = result.Result ?? [];
 
     if (executions.length === 0) {
       return {
@@ -161,13 +212,8 @@ export class TtdReportingService {
     }
 
     const execution = executions[0];
-    const state = (execution.ReportExecutionState as string) || "Unknown";
-
-    let downloadUrl: string | undefined;
-    const deliveries = execution.ReportDeliveries as Array<Record<string, unknown>> | undefined;
-    if (deliveries && deliveries.length > 0) {
-      downloadUrl = deliveries[0].DownloadURL as string | undefined;
-    }
+    const state = execution.ReportExecutionState ?? "Unknown";
+    const downloadUrl = execution.ReportDeliveries?.[0]?.DownloadURL;
 
     return { reportScheduleId, state, execution, downloadUrl };
   }
@@ -196,11 +242,13 @@ export class TtdReportingService {
     reportScheduleId: string,
     context?: RequestContext
   ): Promise<string[]> {
-    const schedule = (await this.getReportSchedule(reportScheduleId, context)) as Record<
-      string,
-      unknown
-    >;
-    const advertiserFilters = schedule.AdvertiserFilters as string[] | undefined;
+    const raw = await this.getReportSchedule(reportScheduleId, context);
+    const schedule = parseOrThrow(
+      ReportScheduleDetailSchema,
+      raw,
+      `GET /myreports/reportschedule/${reportScheduleId}`
+    );
+    const advertiserFilters = schedule.AdvertiserFilters;
     if (!advertiserFilters || advertiserFilters.length === 0) {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
@@ -251,14 +299,14 @@ export class TtdReportingService {
     reportScheduleId: string,
     advertiserIds: string[],
     context?: RequestContext
-  ): Promise<unknown> {
+  ): Promise<z.infer<typeof ReportExecutionSchema>> {
     const partnerId = this.httpClient.partnerId;
     if (!advertiserIds || advertiserIds.length === 0) {
       advertiserIds = await this.getScheduleAdvertiserIds(reportScheduleId, context);
     }
 
     try {
-      return await pollUntilComplete<Record<string, unknown>>({
+      return await pollUntilComplete<z.infer<typeof ReportExecutionSchema>>({
         fetchStatus: async () => {
           await this.rateLimiter.consume(`ttd:${partnerId}`);
           const body = {
@@ -267,18 +315,20 @@ export class TtdReportingService {
             PageStartIndex: 0,
             PageSize: 1,
           };
-          const result = (await this.httpClient.fetch(
+          const raw = await this.httpClient.fetch(
             "/myreports/reportexecution/query/advertisers",
             context,
             { method: "POST", body: JSON.stringify(body) }
-          )) as Record<string, unknown>;
-          const executions = (result.Result as Array<Record<string, unknown>>) || [];
-          return executions[0] ?? {};
+          );
+          const result = parseOrThrow(
+            ReportExecutionQueryResponseSchema,
+            raw,
+            "POST /myreports/reportexecution/query/advertisers"
+          );
+          return result.Result?.[0] ?? {};
         },
-        isComplete: (exec) =>
-          (exec as { ReportExecutionState?: string }).ReportExecutionState === "Complete",
-        isFailed: (exec) =>
-          (exec as { ReportExecutionState?: string }).ReportExecutionState === "Failed",
+        isComplete: (exec) => exec.ReportExecutionState === "Complete",
+        isFailed: (exec) => exec.ReportExecutionState === "Failed",
         initialDelayMs: this.pollIntervalMs,
         maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
         maxAttempts: this.maxPollAttempts,

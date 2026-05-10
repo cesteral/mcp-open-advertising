@@ -314,7 +314,7 @@ export class ErrorHandler {
       // Prefer structured HTTP status codes over message substring matching.
       // Only check .statusCode and .status — NOT .code, which Node.js uses for
       // string error codes (e.g. "ECONNREFUSED") and gRPC uses for non-HTTP numerics.
-      const statusCode = (error as any).statusCode ?? (error as any).status;
+      const statusCode = getHttpStatus(error);
       if (typeof statusCode === "number" && statusCode >= 100) {
         const mapped = this.mapHttpStatusToCode(statusCode);
         if (mapped !== undefined) {
@@ -430,6 +430,20 @@ export class ErrorHandler {
 
     return sanitized;
   }
+}
+
+function hasStatusProperty(error: Error): error is Error & { status: number } {
+  return "status" in error && typeof error.status === "number";
+}
+
+function hasStatusCodeProperty(error: Error): error is Error & { statusCode: number } {
+  return "statusCode" in error && typeof error.statusCode === "number";
+}
+
+function getHttpStatus(error: Error): number | undefined {
+  if (hasStatusCodeProperty(error)) return error.statusCode;
+  if (hasStatusProperty(error)) return error.status;
+  return undefined;
 }
 
 const STRING_SECRET_PATTERNS: Array<[RegExp, string]> = [

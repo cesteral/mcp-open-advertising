@@ -125,7 +125,7 @@ describe("Pinterest MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 28 : 22); // 22 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 29 : 23); // 22 business + 1 dynamic search_tools + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

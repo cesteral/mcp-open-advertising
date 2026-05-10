@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "../../../utils/errors/index.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_graphql_query_bulk";
 const TOOL_TITLE = "TTD GraphQL Query Bulk";
