@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -61,12 +62,15 @@ export async function graphqlCancelBulkJobLogic(
   const errors = result.errors ?? result.data?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
-    throw new Error(`GraphQL error: ${messages}`);
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, `GraphQL error: ${messages}`);
   }
 
   const payload = result.data?.cancelBulkJob ?? result.cancelBulkJob;
   if (!payload) {
-    throw new Error("GraphQL response contained no cancelBulkJob data");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      "GraphQL response contained no cancelBulkJob data"
+    );
   }
 
   const payloadErrors = payload.errors;
@@ -74,12 +78,12 @@ export async function graphqlCancelBulkJobLogic(
     const messages = payloadErrors
       .map((e: any) => e.message ?? e.__typename ?? JSON.stringify(e))
       .join("; ");
-    throw new Error(`Cannot cancel bulk job: ${messages}`);
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, `Cannot cancel bulk job: ${messages}`);
   }
 
   const job = payload.data;
   if (!job) {
-    throw new Error("cancelBulkJob returned no data");
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, "cancelBulkJob returned no data");
   }
 
   return {

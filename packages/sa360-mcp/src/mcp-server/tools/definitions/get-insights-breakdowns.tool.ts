@@ -18,6 +18,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -161,14 +162,14 @@ function buildBreakdownQuery(input: GetInsightsBreakdownsInput): string {
   const rawMetrics = input.metrics && input.metrics.length > 0 ? input.metrics : DEFAULT_METRICS;
   for (const m of rawMetrics) {
     if (!METRIC_NAME_PATTERN.test(m)) {
-      throw new Error(`Invalid metric name: ${m}`);
+      throw new McpError(JsonRpcErrorCode.InvalidParams, `Invalid metric name: ${m}`);
     }
   }
   const metricFields = rawMetrics.map((m) => (m.startsWith("metrics.") ? m : `metrics.${m}`));
 
   for (const b of input.breakdowns) {
     if (!SEGMENT_NAME_PATTERN.test(b)) {
-      throw new Error(`Invalid segment name: ${b}`);
+      throw new McpError(JsonRpcErrorCode.InvalidParams, `Invalid segment name: ${b}`);
     }
   }
   const segmentFields = input.breakdowns.map((b) =>

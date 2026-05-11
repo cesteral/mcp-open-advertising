@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getArchiveSupportedEntityTypes, type TtdEntityType } from "../utils/entity-mapping.js";
+import { elicitArchiveConfirmation } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -33,6 +34,8 @@ export const ArchiveEntitiesInputSchema = z
 
 export const ArchiveEntitiesOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     entityType: z.string(),
     totalRequested: z.number(),
     successCount: z.number(),
@@ -56,6 +59,24 @@ export async function archiveEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ArchiveOutput> {
+  const confirmed = await elicitArchiveConfirmation(
+    input.entityIds.length,
+    input.entityType,
+    sdkContext
+  );
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      entityType: input.entityType,
+      totalRequested: input.entityIds.length,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const { results } = await ttdService.archiveEntities(
@@ -67,6 +88,7 @@ export async function archiveEntitiesLogic(
   const succeeded = results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     entityType: input.entityType,
     totalRequested: input.entityIds.length,
     successCount: succeeded,
@@ -77,6 +99,14 @@ export async function archiveEntitiesLogic(
 }
 
 export function archiveEntitiesResponseFormatter(result: ArchiveOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Archive of ${result.totalRequested} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

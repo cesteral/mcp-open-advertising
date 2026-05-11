@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { elicitBulkMutationConfirmation, hasSensitiveBulkField } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_bulk_update_entities";
@@ -24,6 +25,8 @@ export const BulkUpdateEntitiesInputSchema = z
 
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     results: z.array(z.record(z.any())),
     entityType: z.string(),
     totalItems: z.number(),
@@ -39,6 +42,28 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateEntitiesOutput> {
+  // MSAds items are flat records (e.g. { Id: 123, DailyBudget: 100 }) — the
+  // whole row IS the payload, no .data wrapper.
+  const items = input.items as Array<Record<string, unknown>>;
+  const confirmed = await elicitBulkMutationConfirmation({
+    count: items.length,
+    entityLabel: input.entityType,
+    summary: "Applying field updates across multiple Microsoft Ads entities.",
+    hasSensitiveFieldChange: hasSensitiveBulkField(items),
+    impactPreview: items.map((it) => String(it.Id ?? it.id ?? "(unknown)")),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      results: [],
+      entityType: input.entityType,
+      totalItems: items.length,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { msadsService } = resolveSessionServices(sdkContext);
 
   const results = await msadsService.bulkUpdateEntities(
@@ -48,6 +73,7 @@ export async function bulkUpdateEntitiesLogic(
   );
 
   return {
+    confirmed: true,
     results: results as Record<string, unknown>[],
     entityType: input.entityType,
     totalItems: input.items.length,
@@ -58,6 +84,14 @@ export async function bulkUpdateEntitiesLogic(
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk update of ${result.totalItems} ${result.entityType} entities cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

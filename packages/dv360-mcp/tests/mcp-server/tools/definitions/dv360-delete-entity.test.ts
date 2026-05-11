@@ -230,6 +230,7 @@ describe("dv360_delete_entity", () => {
   describe("deleteEntityResponseFormatter", () => {
     it("includes the deleted entity data in the response", () => {
       const result = deleteEntityResponseFormatter({
+        confirmed: true,
         success: true,
         deletedEntity: {
           displayName: "Deleted Campaign",
@@ -246,6 +247,7 @@ describe("dv360_delete_entity", () => {
 
     it("serialises entity as JSON", () => {
       const result = deleteEntityResponseFormatter({
+        confirmed: true,
         success: true,
         deletedEntity: {
           entityStatus: "ENTITY_STATUS_PAUSED",

@@ -4,7 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
-import { BulkOperationResultSchema } from "@cesteral/shared";
+import {
+  BulkOperationResultSchema,
+  elicitBulkMutationConfirmation,
+  hasSensitiveBulkField,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -56,6 +60,8 @@ export const BulkUpdateEntitiesInputSchema = z
 
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     totalRequested: z.number(),
     successCount: z.number(),
     failureCount: z.number(),
@@ -76,6 +82,27 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateEntitiesOutput> {
+  const payloads = input.items.map((it) => it.data ?? {});
+  const confirmed = await elicitBulkMutationConfirmation({
+    count: input.items.length,
+    entityLabel: input.entityType,
+    summary: "Applying field updates across multiple Snapchat Ads entities.",
+    hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
+    impactPreview: input.items.map((it) => it.entityId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      totalRequested: input.items.length,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { snapchatService } = resolveSessionServices(sdkContext);
 
   const bulkResult = await snapchatService.bulkUpdateEntities(
@@ -92,6 +119,7 @@ export async function bulkUpdateEntitiesLogic(
   const totalSucceeded = bulkResult.results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     totalRequested: input.items.length,
     successCount: totalSucceeded,
     failureCount: input.items.length - totalSucceeded,
@@ -103,6 +131,14 @@ export async function bulkUpdateEntitiesLogic(
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk update of ${result.totalRequested} entities cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const lines: string[] = [
     `Bulk update: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

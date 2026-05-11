@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type SnapchatEntityType } from "../utils/entity-mapping.js";
+import { elicitBulkStatusChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -50,6 +51,8 @@ export const BulkUpdateStatusInputSchema = z
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     totalRequested: z.number(),
     successCount: z.number(),
     failureCount: z.number(),
@@ -72,6 +75,25 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
+  const confirmed = await elicitBulkStatusChangeConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    targetStatus: input.operationStatus,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      totalRequested: input.entityIds.length,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { snapchatService } = resolveSessionServices(sdkContext);
 
   const result = await snapchatService.bulkUpdateStatus(
@@ -89,6 +111,7 @@ export async function bulkUpdateStatusLogic(
   const successCount = result.results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     totalRequested: input.entityIds.length,
     successCount,
     failureCount: input.entityIds.length - successCount,
@@ -100,6 +123,14 @@ export async function bulkUpdateStatusLogic(
 export function bulkUpdateStatusResponseFormatter(
   result: BulkUpdateStatusOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk status update cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const lines: string[] = [
     `Status updates: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`,
     "",

@@ -12,7 +12,7 @@ importers:
         specifier: ^0.1.15
         version: 0.1.15
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       '@types/node':
         specifier: ^20.17.6
@@ -54,7 +54,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -82,7 +82,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -113,7 +113,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       googleapis:
         specifier: ^166.0.0
@@ -144,7 +144,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -190,7 +190,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -218,7 +218,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -246,7 +246,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -274,7 +274,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -302,7 +302,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -333,7 +333,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -434,7 +434,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -462,7 +462,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0
@@ -490,7 +490,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
-        specifier: ^1.27.1
+        specifier: 1.27.1
         version: 1.27.1(zod@3.25.76)
       pino:
         specifier: ^10.1.0

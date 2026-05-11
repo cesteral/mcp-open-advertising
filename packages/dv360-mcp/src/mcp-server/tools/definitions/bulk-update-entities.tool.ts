@@ -6,7 +6,11 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import { BulkOperationResultSchema } from "@cesteral/shared";
+import {
+  BulkOperationResultSchema,
+  elicitBulkMutationConfirmation,
+  hasSensitiveBulkField,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -58,6 +62,8 @@ export const BulkUpdateEntitiesInputSchema = z
  */
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     entityType: z.string().describe("Type of entities updated"),
     totalRequested: z.number().describe("Total items requested"),
     successCount: z.number().describe("Total items successfully updated"),
@@ -85,6 +91,28 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateEntitiesOutput> {
+  const payloads = input.items.map((it) => it.data ?? {});
+  const confirmed = await elicitBulkMutationConfirmation({
+    count: input.items.length,
+    entityLabel: input.entityType,
+    summary: "Applying field updates across multiple entities.",
+    hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
+    impactPreview: input.items.map((it) => it.entityId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      entityType: input.entityType,
+      totalRequested: input.items.length,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   const results: BulkUpdateEntitiesOutput["results"] = [];
@@ -141,6 +169,7 @@ export async function bulkUpdateEntitiesLogic(
   }
 
   return {
+    confirmed: true,
     entityType: input.entityType,
     totalRequested: input.items.length,
     successCount,
@@ -156,6 +185,14 @@ export async function bulkUpdateEntitiesLogic(
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk update of ${result.totalRequested} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const summary = `Bulk update ${result.entityType}: ${result.successCount}/${result.totalRequested} succeeded, ${result.failureCount} failed`;
 
   const successResults = result.results.filter((r) => r.success);

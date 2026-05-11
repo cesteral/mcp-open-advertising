@@ -40,7 +40,12 @@ export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    // Token is provided directly — no exchange needed.
+    if (!this.token || this.token.trim().length === 0) {
+      throw new Error("TTD token is empty");
+    }
+    if (this.token !== this.token.trim()) {
+      throw new Error("TTD token has leading or trailing whitespace");
+    }
   }
 }
 

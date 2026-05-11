@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+
 export type AmazonDspCanonicalEntityType =
   | "order"
   | "lineItem"
@@ -221,7 +223,10 @@ export function normalizeAmazonDspEntityType(
     return aliased;
   }
 
-  throw new Error(`Unknown Amazon DSP entity type: ${entityType}`);
+  throw new McpError(
+    JsonRpcErrorCode.InvalidParams,
+    `Unknown Amazon DSP entity type: ${entityType}`
+  );
 }
 
 export function getAmazonDspEntityContract(

@@ -137,6 +137,7 @@ describe("bulkUpdateEntitiesLogic", () => {
 describe("bulkUpdateEntitiesResponseFormatter", () => {
   it("shows success/failure counts", () => {
     const result = bulkUpdateEntitiesResponseFormatter({
+      confirmed: true,
       updated: 3,
       failed: 1,
       results: [
@@ -154,6 +155,7 @@ describe("bulkUpdateEntitiesResponseFormatter", () => {
 
   it("shows entityId in failure details", () => {
     const result = bulkUpdateEntitiesResponseFormatter({
+      confirmed: true,
       updated: 0,
       failed: 1,
       results: [{ entityId: "failing-entity", success: false, error: "API error" }],

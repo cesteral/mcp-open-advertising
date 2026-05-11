@@ -114,6 +114,7 @@ describe("deleteEntityLogic", () => {
 describe("deleteEntityResponseFormatter", () => {
   it("shows success message", () => {
     const result = {
+      confirmed: true,
       success: true,
       entityId: "123",
       entityType: "campaign",
@@ -129,6 +130,7 @@ describe("deleteEntityResponseFormatter", () => {
 
   it("shows unexpected response message on failure", () => {
     const result = {
+      confirmed: true,
       success: false,
       entityId: "123",
       entityType: "campaign",

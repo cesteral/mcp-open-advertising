@@ -7,7 +7,7 @@ import { allTools } from "./tools/index.js";
 import { resourceRegistry } from "./resources/index.js";
 import { promptRegistry } from "./prompts/index.js";
 import { createOperationContext } from "@cesteral/shared";
-import { ErrorHandler } from "@cesteral/shared";
+import { ErrorHandler, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import { sessionServiceStore } from "../services/session-services.js";
 import {
   extractZodShape,
@@ -152,7 +152,7 @@ export async function createMcpServer(
         logger.info({ uri: uri.href, variables }, "Reading parameterized resource");
         const match = resourceRegistry.findResourceByUri(uri.href);
         if (!match) {
-          throw new Error(`Resource not found: ${uri.href}`);
+          throw new McpError(JsonRpcErrorCode.NotFound, `Resource not found: ${uri.href}`);
         }
         try {
           const content = await match.resource.read(match.params);
@@ -174,12 +174,11 @@ export async function createMcpServer(
           };
         } catch (error) {
           logger.error({ uri: uri.href, error }, "Failed to read resource");
-          const mcpError = ErrorHandler.handleError(
+          throw ErrorHandler.handleError(
             error,
             { operation: "resource:read", context: { uri: uri.href } },
             logger
           );
-          throw new Error(`Failed to read resource: ${mcpError.message}`);
         }
       });
     } else {
@@ -187,7 +186,7 @@ export async function createMcpServer(
         logger.info({ uri: uri.href }, "Reading static resource");
         const match = resourceRegistry.findResourceByUri(uri.href);
         if (!match) {
-          throw new Error(`Resource not found: ${uri.href}`);
+          throw new McpError(JsonRpcErrorCode.NotFound, `Resource not found: ${uri.href}`);
         }
         try {
           const content = await match.resource.read(match.params);
@@ -209,12 +208,11 @@ export async function createMcpServer(
           };
         } catch (error) {
           logger.error({ uri: uri.href, error }, "Failed to read resource");
-          const mcpError = ErrorHandler.handleError(
+          throw ErrorHandler.handleError(
             error,
             { operation: "resource:read", context: { uri: uri.href } },
             logger
           );
-          throw new Error(`Failed to read resource: ${mcpError.message}`);
         }
       });
     }

@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { elicitBulkStatusChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_bulk_update_status";
@@ -22,6 +23,8 @@ export const BulkUpdateStatusInputSchema = z
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     results: z.array(
       z.object({
         entityId: z.string(),
@@ -45,6 +48,26 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
+  const confirmed = await elicitBulkStatusChangeConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    targetStatus: input.status,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      results: [],
+      entityType: input.entityType,
+      successCount: 0,
+      failureCount: 0,
+      status: input.status,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { msadsService } = resolveSessionServices(sdkContext);
 
   const { results } = await msadsService.bulkUpdateStatus(
@@ -58,6 +81,7 @@ export async function bulkUpdateStatusLogic(
   const failureCount = results.length - successCount;
 
   return {
+    confirmed: true,
     results,
     entityType: input.entityType,
     successCount,
@@ -70,6 +94,14 @@ export async function bulkUpdateStatusLogic(
 export function bulkUpdateStatusResponseFormatter(
   result: BulkUpdateStatusOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk status update of ${result.entityType} entities cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const summary = `Bulk status update: ${result.successCount} succeeded, ${result.failureCount} failed (target status: ${result.status})`;
 
   const details = result.results

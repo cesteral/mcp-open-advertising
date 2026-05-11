@@ -8,6 +8,7 @@ import {
   CampaignsJobInputSchema,
   toWorkflowCallbackInput,
 } from "../utils/workflow-schemas.js";
+import { elicitBulkMutationConfirmation } from "@cesteral/shared";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_create_campaigns";
@@ -29,6 +30,8 @@ export const CreateCampaignsToolInputSchema = z
   .describe("Parameters for creating campaigns via the TTD Workflows API");
 
 export const CreateCampaignsToolOutputSchema = z.object({
+  confirmed: z.boolean(),
+  declineReason: z.string().optional(),
   mode: z.enum(["single", "batch"]),
   campaign: z.record(z.unknown()).optional().describe("Campaign workflow response (mode=single)"),
   job: z.record(z.unknown()).optional().describe("Job submission response (mode=batch)"),
@@ -43,8 +46,32 @@ export async function createCampaignsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateCampaignsToolOutput> {
-  const { ttdService } = resolveSessionServices(sdkContext);
   const timestamp = new Date().toISOString();
+
+  if (input.mode === "batch") {
+    // Batch jobs create N campaigns asynchronously — always gate, since the
+    // blast radius is high regardless of count and validateInputOnly mode is
+    // already non-destructive.
+    if (!input.validateInputOnly) {
+      const confirmed = await elicitBulkMutationConfirmation({
+        count: input.input?.length ?? 0,
+        entityLabel: "campaign",
+        summary: "Submitting an async Workflows job to create multiple campaigns.",
+        hasSensitiveFieldChange: true,
+        sdkContext,
+      });
+      if (!confirmed) {
+        return {
+          confirmed: false,
+          declineReason: "user_declined",
+          mode: "batch",
+          timestamp,
+        };
+      }
+    }
+  }
+
+  const { ttdService } = resolveSessionServices(sdkContext);
 
   if (input.mode === "single") {
     const { mode: _mode, ...payload } = input;
@@ -52,7 +79,7 @@ export async function createCampaignsLogic(
       string,
       unknown
     >;
-    return { mode: "single", campaign, timestamp };
+    return { confirmed: true, mode: "single", campaign, timestamp };
   }
 
   const job = (await ttdService.createCampaignsJob(
@@ -67,12 +94,20 @@ export async function createCampaignsLogic(
     },
     context
   )) as Record<string, unknown>;
-  return { mode: "batch", job, timestamp };
+  return { confirmed: true, mode: "batch", job, timestamp };
 }
 
 export function createCampaignsResponseFormatter(
   result: CreateCampaignsToolOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Batch campaign create cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const body =
     result.mode === "single"
       ? `Campaign workflow response:\n\n${JSON.stringify(result.campaign, null, 2)}`

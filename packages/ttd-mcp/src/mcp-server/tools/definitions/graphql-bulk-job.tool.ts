@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -75,12 +76,15 @@ export async function graphqlBulkJobLogic(
   const errors = result.errors ?? result.data?.errors;
   if (Array.isArray(errors) && errors.length > 0) {
     const messages = errors.map((e: any) => e.message ?? JSON.stringify(e)).join("; ");
-    throw new Error(`GraphQL error: ${messages}`);
+    throw new McpError(JsonRpcErrorCode.InvalidRequest, `GraphQL error: ${messages}`);
   }
 
   const job = result.data?.bulkJob ?? result.bulkJob;
   if (!job) {
-    throw new Error("GraphQL response contained no bulkJob data");
+    throw new McpError(
+      JsonRpcErrorCode.InvalidRequest,
+      "GraphQL response contained no bulkJob data"
+    );
   }
 
   return {
