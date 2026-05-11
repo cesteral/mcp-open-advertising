@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -30,6 +31,8 @@ export const DeleteEntityInputSchema = z
 
 export const DeleteEntityOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     success: z.boolean(),
     entityUrn: z.string(),
     entityType: z.string(),
@@ -45,6 +48,22 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: input.entityType,
+    entityId: input.entityUrn,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      success: false,
+      entityUrn: input.entityUrn,
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { linkedInService } = resolveSessionServices(sdkContext);
 
   await linkedInService.deleteEntity(
@@ -54,6 +73,7 @@ export async function deleteEntityLogic(
   );
 
   return {
+    confirmed: true,
     success: true,
     entityUrn: input.entityUrn,
     entityType: input.entityType,
@@ -62,6 +82,14 @@ export async function deleteEntityLogic(
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Deletion of ${result.entityType} ${result.entityUrn} cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
+import { elicitBulkDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -30,6 +31,8 @@ export const DeleteEntityInputSchema = z
 
 export const DeleteEntityOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     entityType: z.string(),
     totalRequested: z.number(),
     totalSucceeded: z.number(),
@@ -53,6 +56,25 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
+  const confirmed = await elicitBulkDeleteConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      entityType: input.entityType,
+      totalRequested: input.entityIds.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
   const results: Array<{ entityId: string; success: boolean; error?: string }> = [];
@@ -78,6 +100,7 @@ export async function deleteEntityLogic(
   const totalSucceeded = results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     entityType: input.entityType,
     totalRequested: input.entityIds.length,
     totalSucceeded,
@@ -88,6 +111,14 @@ export async function deleteEntityLogic(
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk archive of ${result.totalRequested} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const lines: string[] = [
     `${result.entityType} deletions: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
     "",

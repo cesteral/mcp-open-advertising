@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitConversionUploadConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -54,6 +55,8 @@ export const InsertConversionsInputSchema = z
 
 export const InsertConversionsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     result: z.record(z.any()).describe("API response with inserted conversion details"),
     insertedCount: z.number().describe("Number of conversions submitted"),
     timestamp: z.string().datetime(),
@@ -68,6 +71,24 @@ export async function insertConversionsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<InsertConversionsOutput> {
+  const confirmed = await elicitConversionUploadConfirmation({
+    count: input.conversions.length,
+    operation: "insert",
+    impactPreview: input.conversions.map(
+      (c) => c.clickId ?? c.gclid ?? c.segmentationName ?? "(unidentified)"
+    ),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      result: {},
+      insertedCount: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { conversionService } = resolveSessionServices(sdkContext);
 
   const result = await conversionService.insertConversions(
@@ -78,6 +99,7 @@ export async function insertConversionsLogic(
   );
 
   return {
+    confirmed: true,
     result: result as Record<string, any>,
     insertedCount: input.conversions.length,
     timestamp: new Date().toISOString(),
@@ -87,6 +109,14 @@ export async function insertConversionsLogic(
 export function insertConversionsResponseFormatter(
   result: InsertConversionsOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Conversion insert cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

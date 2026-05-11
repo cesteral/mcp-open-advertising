@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitBidChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -38,6 +39,8 @@ export const AdjustBidsInputSchema = z
 
 export const AdjustBidsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     totalRequested: z.number(),
     totalSucceeded: z.number(),
     totalFailed: z.number(),
@@ -63,6 +66,26 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  const confirmed = await elicitBidChangeConfirmation({
+    count: input.adjustments.length,
+    entityLabel: "line item",
+    summary: input.reason ?? "Applying bidAmount changes.",
+    impactPreview: input.adjustments.map((a) => a.lineItemId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      totalRequested: input.adjustments.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      reason: input.reason,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
   const result = await amazonDspService.adjustBids(
@@ -76,6 +99,7 @@ export async function adjustBidsLogic(
   const totalSucceeded = result.results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     totalRequested: input.adjustments.length,
     totalSucceeded,
     totalFailed: input.adjustments.length - totalSucceeded,
@@ -86,6 +110,14 @@ export async function adjustBidsLogic(
 }
 
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bid adjustments cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const lines: string[] = [
     `Bid adjustments: ${result.totalSucceeded}/${result.totalRequested} succeeded, ${result.totalFailed} failed`,
   ];

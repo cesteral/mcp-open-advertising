@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
+import { elicitBulkDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -30,6 +31,8 @@ export const DeleteEntityInputSchema = z
 
 export const DeleteEntityOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     deleted: z.boolean(),
     entityType: z.string(),
     entityIds: z.array(z.string()),
@@ -45,11 +48,29 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
+  const confirmed = await elicitBulkDeleteConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      deleted: false,
+      entityType: input.entityType,
+      entityIds: input.entityIds,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { tiktokService } = resolveSessionServices(sdkContext);
 
   await tiktokService.deleteEntity(input.entityType as TikTokEntityType, input.entityIds, context);
 
   return {
+    confirmed: true,
     deleted: true,
     entityType: input.entityType,
     entityIds: input.entityIds,
@@ -58,6 +79,14 @@ export async function deleteEntityLogic(
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk deletion of ${result.entityIds.length} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

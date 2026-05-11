@@ -4,7 +4,11 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type LinkedInEntityType } from "../utils/entity-mapping.js";
-import { BulkOperationResultSchema } from "@cesteral/shared";
+import {
+  BulkOperationResultSchema,
+  elicitBulkMutationConfirmation,
+  hasSensitiveBulkField,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -39,6 +43,8 @@ export const BulkUpdateEntitiesInputSchema = z
 
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     results: z.array(
       BulkOperationResultSchema.extend({
         entityUrn: z.string(),
@@ -58,6 +64,26 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateEntitiesOutput> {
+  const payloads = input.items.map((it) => it.data ?? {});
+  const confirmed = await elicitBulkMutationConfirmation({
+    count: input.items.length,
+    entityLabel: input.entityType,
+    summary: "Applying field updates across multiple LinkedIn Ads entities.",
+    hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
+    impactPreview: input.items.map((it) => it.entityUrn),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      results: [],
+      successCount: 0,
+      failureCount: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { linkedInService } = resolveSessionServices(sdkContext);
 
   const result = await linkedInService.bulkUpdateEntities(
@@ -69,6 +95,7 @@ export async function bulkUpdateEntitiesLogic(
   const successCount = result.results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     results: result.results,
     successCount,
     failureCount: result.results.length - successCount,
@@ -79,6 +106,14 @@ export async function bulkUpdateEntitiesLogic(
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk update cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitBidChangeConfirmation } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -65,6 +66,8 @@ type AdjustedAdGroupEntity = z.infer<typeof AdjustedAdGroupEntitySchema>;
 
 export const AdjustBidsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     totalRequested: z.number(),
     totalSucceeded: z.number(),
     totalFailed: z.number(),
@@ -88,6 +91,25 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  const confirmed = await elicitBidChangeConfirmation({
+    count: input.adjustments.length,
+    entityLabel: "ad group",
+    summary: "Applying BaseBidCPM/MaxBidCPM changes via read-modify-write PUT.",
+    impactPreview: input.adjustments.map((a) => a.adGroupId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      totalRequested: input.adjustments.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const { results } = await ttdService.adjustBids(input.adjustments, context);
@@ -95,6 +117,7 @@ export async function adjustBidsLogic(
   const succeeded = results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     totalRequested: input.adjustments.length,
     totalSucceeded: succeeded,
     totalFailed: input.adjustments.length - succeeded,
@@ -109,6 +132,14 @@ export async function adjustBidsLogic(
 }
 
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bid adjustments cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const summary = result.results
     .map((r) => {
       if (r.success) {

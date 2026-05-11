@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { elicitBidChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_adjust_bids";
@@ -44,6 +45,8 @@ export const AdjustBidsInputSchema = z
 
 export const AdjustBidsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     result: z.record(z.any()),
     entityType: z.string(),
     adjustmentCount: z.number(),
@@ -59,6 +62,24 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  const confirmed = await elicitBidChangeConfirmation({
+    count: input.adjustments.length,
+    entityLabel: input.entityType,
+    summary: "Applying bid changes via read-modify-write.",
+    impactPreview: input.adjustments.map((a) => a.entityId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      result: {},
+      entityType: input.entityType,
+      adjustmentCount: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { msadsService } = resolveSessionServices(sdkContext);
   const queryParams: Record<string, unknown> = {};
 
@@ -77,6 +98,7 @@ export async function adjustBidsLogic(
   )) as Record<string, unknown>;
 
   return {
+    confirmed: true,
     result,
     entityType: input.entityType,
     adjustmentCount: input.adjustments.length,
@@ -85,6 +107,14 @@ export async function adjustBidsLogic(
 }
 
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bid adjustments cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

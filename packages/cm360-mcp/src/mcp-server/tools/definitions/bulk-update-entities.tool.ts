@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { elicitBulkMutationConfirmation, hasSensitiveBulkField } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -32,6 +33,8 @@ export const BulkUpdateEntitiesInputSchema = z
 
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     updated: z.number().describe("Number of entities updated"),
     failed: z.number().describe("Number that failed"),
     results: z
@@ -56,6 +59,26 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateEntitiesOutput> {
+  const payloads = input.items.map((it) => it.data ?? {});
+  const confirmed = await elicitBulkMutationConfirmation({
+    count: input.items.length,
+    entityLabel: input.entityType,
+    summary: "Applying field updates across multiple CM360 entities (PUT/replace semantics).",
+    hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
+    impactPreview: input.items.map((it) => it.entityId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      updated: 0,
+      failed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { cm360Service } = resolveSessionServices(sdkContext);
 
   const results: BulkUpdateEntitiesOutput["results"] = [];
@@ -85,6 +108,7 @@ export async function bulkUpdateEntitiesLogic(
   }
 
   return {
+    confirmed: true,
     updated,
     failed,
     results,
@@ -95,6 +119,14 @@ export async function bulkUpdateEntitiesLogic(
 export function bulkUpdateEntitiesResponseFormatter(
   result: BulkUpdateEntitiesOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk update cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const summary = `Bulk update: ${result.updated} succeeded, ${result.failed} failed`;
   const failures = result.results
     .filter((r) => !r.success)

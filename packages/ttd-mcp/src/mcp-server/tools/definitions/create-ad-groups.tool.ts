@@ -8,6 +8,7 @@ import {
   AdGroupsJobInputSchema,
   toWorkflowCallbackInput,
 } from "../utils/workflow-schemas.js";
+import { elicitBulkMutationConfirmation } from "@cesteral/shared";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_create_ad_groups";
@@ -29,6 +30,8 @@ export const CreateAdGroupsToolInputSchema = z
   .describe("Parameters for creating ad groups via the TTD Workflows API");
 
 export const CreateAdGroupsToolOutputSchema = z.object({
+  confirmed: z.boolean(),
+  declineReason: z.string().optional(),
   mode: z.enum(["single", "batch"]),
   adGroup: z.record(z.unknown()).optional().describe("Ad group workflow response (mode=single)"),
   job: z.record(z.unknown()).optional().describe("Job submission response (mode=batch)"),
@@ -43,8 +46,27 @@ export async function createAdGroupsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<CreateAdGroupsToolOutput> {
-  const { ttdService } = resolveSessionServices(sdkContext);
   const timestamp = new Date().toISOString();
+
+  if (input.mode === "batch" && !input.validateInputOnly) {
+    const confirmed = await elicitBulkMutationConfirmation({
+      count: input.input?.length ?? 0,
+      entityLabel: "ad group",
+      summary: "Submitting an async Workflows job to create multiple ad groups.",
+      hasSensitiveFieldChange: true,
+      sdkContext,
+    });
+    if (!confirmed) {
+      return {
+        confirmed: false,
+        declineReason: "user_declined",
+        mode: "batch",
+        timestamp,
+      };
+    }
+  }
+
+  const { ttdService } = resolveSessionServices(sdkContext);
 
   if (input.mode === "single") {
     const { mode: _mode, ...payload } = input;
@@ -52,7 +74,7 @@ export async function createAdGroupsLogic(
       string,
       unknown
     >;
-    return { mode: "single", adGroup, timestamp };
+    return { confirmed: true, mode: "single", adGroup, timestamp };
   }
 
   const job = (await ttdService.createAdGroupsJob(
@@ -67,12 +89,20 @@ export async function createAdGroupsLogic(
     },
     context
   )) as Record<string, unknown>;
-  return { mode: "batch", job, timestamp };
+  return { confirmed: true, mode: "batch", job, timestamp };
 }
 
 export function createAdGroupsResponseFormatter(
   result: CreateAdGroupsToolOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Batch ad group create cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const body =
     result.mode === "single"
       ? `Ad group workflow response:\n\n${JSON.stringify(result.adGroup, null, 2)}`

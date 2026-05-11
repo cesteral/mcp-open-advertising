@@ -126,6 +126,9 @@ for SERVER in "${SERVERS[@]}"; do
       SERVER_PASS=$((SERVER_PASS + 1))
     else
       echo "    FAIL"
+      # Print enough of the captured output to diagnose CI-only failures
+      # without uploading the whole JSON as an artifact.
+      echo "$SCENARIO_OUTPUT" | tail -20 | sed 's/^/      /'
       SERVER_FAIL=$((SERVER_FAIL + 1))
       if $CI_MODE; then
         OVERALL_EXIT=1

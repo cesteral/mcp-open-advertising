@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import { elicitArchiveConfirmation } from "@cesteral/shared";
+import { elicitBulkStatusChangeConfirmation } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "meta_bulk_update_status";
@@ -37,6 +37,8 @@ export const BulkUpdateStatusInputSchema = z
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     results: z.array(
       z.object({
         entityId: z.string(),
@@ -58,17 +60,22 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
-  // Elicit confirmation for irreversible archive operations
-  if (input.status === "ARCHIVED") {
-    const entityLabel = input.entityType ?? "entity";
-    const confirmed = await elicitArchiveConfirmation(
-      input.entityIds.length,
-      entityLabel,
-      sdkContext
-    );
-    if (!confirmed) {
-      return { results: [], successCount: 0, failureCount: 0, timestamp: new Date().toISOString() };
-    }
+  const confirmed = await elicitBulkStatusChangeConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType ?? "entity",
+    targetStatus: input.status,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      results: [],
+      successCount: 0,
+      failureCount: 0,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   const { metaService } = resolveSessionServices(sdkContext);
@@ -78,6 +85,7 @@ export async function bulkUpdateStatusLogic(
   const successCount = result.results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     results: result.results,
     successCount,
     failureCount: result.results.length - successCount,
@@ -88,6 +96,14 @@ export async function bulkUpdateStatusLogic(
 export function bulkUpdateStatusResponseFormatter(
   result: BulkUpdateStatusOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk status update cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
