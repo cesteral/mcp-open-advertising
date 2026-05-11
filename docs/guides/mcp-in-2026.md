@@ -50,72 +50,107 @@ Stop mechanically wrapping REST APIs as MCP servers. Design for how a human woul
 
 ## Cesteral implications
 
-### 1. Promote Tasks from experiment to shared infrastructure
+Status legend: ✅ done · 🟡 partial · ⬜ not started.
 
-The repo already has one task-based implementation: `dbm_run_custom_query_async`. It still uses SDK task imports from the SDK's `experimental` namespace, but the protocol primitive itself is Final. The next step is to define a shared task abstraction in `@cesteral/shared` and apply it first to long-running report flows:
+### 1. Adopt the shared Tasks helper across long-running flows 🟡
 
-- `*_submit_report` / `*_check_report_status` / `*_download_report`
-- TTD workflow jobs and GraphQL bulk jobs
+The shared abstraction already exists: `@cesteral/shared` exposes `async-task-tool.ts`, which wraps `server.experimental.tasks.registerToolTask()` so servers only supply the tool name, schemas, and work function. The protocol primitive (SEP-1686) is Final; the SDK side remains under the `experimental` namespace, which is the actual gate on broader rollout — not the lack of an abstraction.
+
+Today only `dbm_run_custom_query_async` consumes the helper. Adoption targets, in priority order:
+
+- every `*_submit_report` / `*_check_report_status` / `*_download_report` trio (TTD, TikTok, Snapchat, Amazon DSP, Pinterest, MSADS, SA360) — these are the largest concentration of polling boilerplate in the repo
+- TTD Workflows API batch jobs (`ttd_create_campaigns` / `ttd_update_campaigns` / `ttd_create_ad_groups` / `ttd_update_ad_groups` in `mode: "batch"`) plus `ttd_get_job_status`
+- TTD GraphQL bulk jobs (`ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job`)
 - any blocking `*_get_report` tool that currently polls inside the server
 
 Keep the existing split tools as compatibility wrappers until client support is broad enough to rely on Tasks everywhere.
 
-### 2. Harden Streamable HTTP for horizontal scaling
+### 2. Harden Streamable HTTP for horizontal scaling ✅ (with two known gaps)
 
-The shared HTTP transport already rebuilds session services on cache miss, which is the right direction for Cloud Run and other multi-instance deployments. The improvement path is:
+The shared HTTP transport rebuilds session services on cache miss, and `MCP_SESSION_MODE` was removed as dead plumbing. The remaining work is concrete:
 
-- add explicit tests for session rehydration across simulated instances
-- document the behavior as the default remote-server contract
-- ensure auth fingerprints and audit logs remain stable after rehydration
-- keep watching the transport/session SEPs before changing endpoint shape
+- **Rate limiter counters are per-instance.** `RateLimiter` lives in process memory, so the same caller can exceed the intended budget after a scale-out event. Either back it with Redis/Memorystore or document the soft guarantee.
+- **`report-csv://` resources are per-instance.** A second-instance follow-up read of an in-memory resource will miss. Today this is mitigated by GCS spill (`REPORT_SPILL_BUCKET`); the path forward is to make the GCS-backed resource the canonical handle and stop holding bodies in memory.
+- Add explicit tests for session rehydration across simulated instances and assert that auth fingerprints and audit logs stay stable.
 
-### 3. Treat discovery metadata as product surface
+### 3. Treat discovery metadata as product surface 🟡
 
-The repo has generated `server.json` manifests, a canonical `registry.json`, and runtime server cards at `/.well-known/mcp/server-card.json`. These should converge:
+`/.well-known/mcp/server-card.json` ships in every auth mode on every server (per `project_server_card.md`). The remaining work is convergence:
 
-- keep protocol versions current
-- generate tool/resource/prompt counts from definitions instead of hand-maintaining them
-- fail CI when registry metadata drifts from registered tools
-- align the runtime server-card response with the final SEP-2127 schema when it lands
+- single source of truth across `server.json` manifests, the canonical `registry.json`, and the runtime server-card response — generate counts from tool/resource/prompt definitions
+- CI check that fails when registry metadata drifts from the registered tool list (recent commits already moved this direction; tighten until drift is impossible)
+- align the runtime server-card schema with SEP-2127 when it goes Final
 
-This matters because discovery and marketplaces are becoming the first interaction clients have with an MCP server.
+### 4. Progressive discovery: ship grouped capabilities next ✅ for tool search, ⬜ for capability groups
 
-### 4. Add progressive discovery before adding more tools
+`{platform}_search_tools` is wired into all servers (recent commits `27c16f29`, `c4ea6f50`, `b4a63ba2`, `653d6aaa`), backed by the shared `tool-search.ts` factory. `server-capabilities://{server}/overview` and on-demand `tool-examples://...` resources also exist. The next layer is grouped capability surfaces, because TTD alone is 52 tools and Meta is 27:
 
-TTD alone now exposes more than 50 tools. The repo has started this through `server-capabilities://{server}/overview` resources and on-demand `tool-examples://...` resources. Before adding more platform coverage, continue moving discovery into compact capability surfaces:
+- grouped capability summaries — reporting, campaign setup, targeting, creative upload, bulk mutations, diagnostics — exposed as resources or as a `capability_groups://{server}` index
+- schema/resource lazy-loading only after a capability group is selected (the DV360 dynamic schema pattern is the local precedent)
+- a small evaluation: do clients actually use `_search_tools` in practice, or do they prefer reading the overview resource? That answer should drive whether the active-search surface stays as a tool
 
-- richer `server-capabilities://.../overview` resources for each server
-- a shared `capability_search` or `tool_search` tool/resource when client support needs active search instead of passive resource reads
-- grouped capability summaries such as reporting, campaign setup, targeting, creative upload, bulk mutations, and diagnostics
-- schema/resource loading only after a capability is selected
+### 5. Lean further into elicitations before MCP Apps 🟡
 
-The DV360 dynamic schema/resource pattern is a good local precedent.
+Elicitations are already in production for archive confirmations (`linkedin-mcp`, `tiktok-mcp` via the shared `elicitArchiveConfirmation` helper) and the transport advertises the capability by default. Given the write-side risk on 13 ad platforms — bulk mutations, budget changes, campaign deletes, conversion uploads — extending elicitation coverage is a higher-value, lower-cost step than building an MCP App:
 
-### 5. Prototype one MCP App where UI is clearly better than text
+- `*_bulk_update_status` (delete/archive paths), `*_delete_entity`, `*_bulk_update_entities` write paths
+- budget changes (`meta_manage_budget_schedule`, line-item budget edits)
+- conversion uploads (`sa360_insert_conversions` / `sa360_update_conversions`)
+- destructive Workflows batch jobs (`ttd_update_campaigns` `mode: "batch"`)
 
-Good candidates:
+Elicitation gates also pair naturally with the upcoming MCP Apps work — confirmations become richer UI in clients that support Apps, plain prompts in clients that don't.
 
-- reporting dashboard: filter, sort, chart, and export rows returned by report tools
-- bulk-change review: show proposed entity mutations before execution
-- pacing diagnostics: visualize budget, spend, remaining days, and risk level
-- campaign setup wizard: collect validated inputs with platform-specific dependencies
+### 6. Prototype one MCP App where UI is clearly better than text ⬜
 
-Start with a read-only reporting/pacing UI to avoid coupling the first UI prototype to write approval semantics.
+Good candidates, in order of risk:
 
-### 6. Explore code mode only for very large API surfaces
+- pacing diagnostics: visualize budget, spend, remaining days, and risk level (read-only)
+- reporting dashboard: filter, sort, chart, and export rows returned by report tools (read-only)
+- bulk-change review: show proposed entity mutations before execution (write — pair with elicitation)
+- campaign setup wizard: collect validated inputs with platform-specific dependencies (write — most complex)
 
-Cloudflare's Code Mode pattern is relevant, but it should be constrained. Do not replace high-value first-class tools. Consider a `search` + `execute` style pattern only for:
+Start with pacing or reporting to keep the first UI prototype off the write path.
+
+### 7. Explore code mode only for very large API surfaces ⬜
+
+Cloudflare's Code Mode pattern is relevant, but constrained. Do not replace high-value first-class tools. Consider a `search` + `execute` pattern only for:
 
 - uncovered endpoints
 - diagnostic read paths
 - APIs with too many endpoints to expose cleanly
 - power-user workflows where typed composition beats dozens of narrow tools
 
-TTD already has `ttd_rest_request`, GraphQL tools, and workflow-specific tools, so it is the natural place to evaluate this pattern.
+TTD is the natural place to evaluate — it already has `ttd_rest_request`, GraphQL tools, and Workflows-specific tools. The repo's existing structured output coverage (every tool definition ships an `outputSchema`) gives the model the type information Cloudflare argues makes code-mode work.
+
+### 8. Get ready for Cross App Access (XAA) ⬜
+
+Every server today has its own bespoke header strategy (`google-headers`, `ttd-token`, `meta-bearer`, `linkedin-bearer`, …) — exactly the static-credential model XAA is meant to replace. Concrete prep work:
+
+- design a `MCP_AUTH_MODE=xaa` (or equivalent) that accepts ID-JAG short-lived tokens and exchanges them for the underlying platform credential
+- decide where the IdP-token-to-platform-credential mapping lives (per-session services, or a shared exchange utility in `@cesteral/shared`)
+- audit which platforms actually publish XAA support — adoption will be uneven for years
+- document non-readiness explicitly until the first platform integration ships
+
+This is forward-looking, but XAA is the auth lever enterprise buyers will ask about, and the existing per-platform header strategies are the most credibility-relevant gap.
+
+### 9. Treat prompts as the local precursor to "skills over MCP" ✅
+
+The repo already ships workflow prompts (`full_campaign_setup_workflow` in dv360-mcp, `msads_import_from_google` in msads-mcp). When the formal "skills over MCP" SEP lands, these are the migration anchors. Action: keep adding prompts for genuinely cross-tool workflows (pacing-fix, conversion backfill, cross-platform import) rather than per-tool guidance, so the migration surface stays coherent.
+
+### 10. Surface tool-failure observability as a 2026 differentiator ✅
+
+`InteractionLogger` captures every failed tool invocation with the full redacted upstream HTTP trail (method, URL, status, request/response bodies, per-attempt durations). `INTERACTION_LOG_MODE=file|gcs|stdout` covers self-host and hosted deployments, and the BigQuery external-table query in `CLAUDE.md` makes the data immediately useful. This is exactly the auditability story the 2026 enterprise framing demands — XAA gives short-lived tokens, this gives the audit trail of what was done with them. Document it more prominently in the public README and server cards rather than only in `CLAUDE.md`.
 
 ## Bottom line
 
-The high-level direction checks out: 2026 is about full agent connectivity, not just tool wrappers. For this repo, the highest-value work is not adding more REST-shaped tools. It is making the existing server fleet easier to discover, safer to scale, better at long-running work, and more useful to humans through Apps and workflow-level abstractions.
+2026 is about full agent connectivity, not tool wrappers. For this repo, the highest-value work is not adding more REST-shaped tools. The four levers, in priority order:
+
+1. **Adopt Tasks across the report and Workflows trios** — the helper exists, only one tool uses it.
+2. **Extend elicitations across destructive write paths** — biggest safety win for the smallest investment.
+3. **Ship grouped capability surfaces** — `_search_tools` covers passive search; clients still need a coherent map of 20–50-tool servers.
+4. **Prepare for XAA** — every server's bespoke header strategy is the credibility gap enterprise buyers will name first.
+
+MCP Apps and code mode are real, but each is one rung up the ladder from where today's gaps actually are.
 
 ## Sources
 

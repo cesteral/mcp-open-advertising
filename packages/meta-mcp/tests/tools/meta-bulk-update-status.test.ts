@@ -142,6 +142,7 @@ describe("bulkUpdateStatusLogic", () => {
 describe("bulkUpdateStatusResponseFormatter", () => {
   it("shows success and failure counts", () => {
     const result = {
+      confirmed: true,
       results: [
         { entityId: "1", success: true },
         { entityId: "2", success: false, error: "Failed" },
@@ -161,6 +162,7 @@ describe("bulkUpdateStatusResponseFormatter", () => {
 
   it("shows all successes when no failures", () => {
     const result = {
+      confirmed: true,
       results: [
         { entityId: "1", success: true },
         { entityId: "2", success: true },

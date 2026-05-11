@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_delete_report_schedule";
@@ -21,6 +22,8 @@ export const DeleteReportScheduleInputSchema = z
 
 export const DeleteReportScheduleOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     scheduleId: z.string(),
     note: z.string().describe("Instructions for completing deletion"),
     timestamp: z.string().datetime(),
@@ -35,11 +38,27 @@ export async function deleteReportScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteReportScheduleOutput> {
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: "report schedule",
+    entityId: input.scheduleId,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      scheduleId: input.scheduleId,
+      note: "Deletion cancelled by user.",
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { msadsReportingService } = resolveSessionServices(sdkContext);
 
   await msadsReportingService.deleteReportSchedule(input.scheduleId, context);
 
   return {
+    confirmed: true,
     scheduleId: input.scheduleId,
     note: `To delete schedule ${input.scheduleId}: visit app.ads.microsoft.com → Reports → Scheduled Reports and remove the report manually. The Microsoft Advertising REST API does not provide a programmatic delete endpoint.`,
     timestamp: new Date().toISOString(),
@@ -49,6 +68,14 @@ export async function deleteReportScheduleLogic(
 export function deleteReportScheduleResponseFormatter(
   result: DeleteReportScheduleOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Deletion of report schedule ${result.scheduleId} cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

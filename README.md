@@ -7,7 +7,7 @@ and infrastructure you control. Use **Cesteral Intelligence** when your team nee
 approvals before spend commits, credential brokering, auditability, and
 cross-platform execution from one governed environment.
 
-[**Self-host a flagship connector**](docs/guides/quickstart.md) | [**Compare OSS vs Cesteral Intelligence**](https://cesteral.com/compare?utm_source=github&utm_medium=readme&utm_campaign=hero) | [**Book a workflow demo**](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Cesteral%20MCP%20Servers)
+[**Try Meta Ads MCP locally (~10 min)**](docs/guides/quickstart.md#path-a-meta-ads-recommended) | [**Compare OSS vs Cesteral Intelligence**](https://cesteral.com/compare?utm_source=github&utm_medium=readme&utm_campaign=hero) | [**Book a workflow demo**](mailto:sales@cesteral.com?subject=Workflow%20demo%20-%20Cesteral%20MCP%20Servers)
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)

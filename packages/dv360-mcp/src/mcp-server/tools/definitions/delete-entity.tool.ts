@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -34,6 +35,8 @@ export const DeleteEntityInputSchema = z
   });
 
 export const DeleteEntityOutputSchema = z.object({
+  confirmed: z.boolean(),
+  declineReason: z.string().optional(),
   success: z.boolean(),
   deletedEntity: z.record(z.any()),
   timestamp: z.string().datetime(),
@@ -47,8 +50,25 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
-  const { dv360Service } = resolveSessionServices(sdkContext);
   const entityIds = extractEntityIds(input, input.entityType);
+  const primaryId = entityIds[`${input.entityType}Id`] ?? Object.values(entityIds).pop() ?? "(unknown)";
+
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: input.entityType,
+    entityId: primaryId,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      success: false,
+      deletedEntity: {},
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  const { dv360Service } = resolveSessionServices(sdkContext);
   const entityBeforeDeletion = (await dv360Service.getEntity(
     input.entityType,
     entityIds,
@@ -56,6 +76,7 @@ export async function deleteEntityLogic(
   )) as Record<string, any>;
   await dv360Service.deleteEntity(input.entityType, entityIds, context);
   return {
+    confirmed: true,
     success: true,
     deletedEntity: entityBeforeDeletion,
     timestamp: new Date().toISOString(),
@@ -63,6 +84,14 @@ export async function deleteEntityLogic(
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Deletion cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

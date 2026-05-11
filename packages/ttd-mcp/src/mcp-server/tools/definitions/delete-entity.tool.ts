@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -42,6 +43,8 @@ export const DeleteEntityInputSchema = z
 
 export const DeleteEntityOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     success: z.boolean(),
     entityType: z.string(),
     entityId: z.string(),
@@ -57,11 +60,28 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: input.entityType,
+    entityId: input.entityId,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      success: false,
+      entityType: input.entityType,
+      entityId: input.entityId,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   await ttdService.deleteEntity(input.entityType as TtdEntityType, input.entityId, context);
 
   return {
+    confirmed: true,
     success: true,
     entityType: input.entityType,
     entityId: input.entityId,
@@ -70,6 +90,14 @@ export async function deleteEntityLogic(
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Deletion of ${result.entityType} ${result.entityId} cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

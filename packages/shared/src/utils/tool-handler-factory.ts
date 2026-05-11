@@ -506,12 +506,27 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
               }
             }
 
+            // Only expose elicitInput when the connected client advertises the
+            // elicitation capability — gating here means the duck-typed
+            // `!sdkContext.elicitInput` fallback in @cesteral/shared's
+            // elicitation-helpers triggers cleanly for stdio / unsupported
+            // clients, instead of letting the SDK reject the request and
+            // bubble through tool handlers.
+            const capabilityGetter = (
+              server.server as unknown as {
+                getClientCapabilities?: () => { elicitation?: unknown } | undefined;
+              }
+            ).getClientCapabilities;
+            const clientSupportsElicitation = Boolean(capabilityGetter?.call(server.server)?.elicitation);
+
             const sdkContext: ToolSdkContext = {
               requestId: context.requestId,
               sessionId,
-              elicitInput: async (params) => {
-                return server.server.elicitInput(params);
-              },
+              elicitInput: clientSupportsElicitation
+                ? async (params) => {
+                    return server.server.elicitInput(params);
+                  }
+                : undefined,
               sendLoggingMessage: async (params) => {
                 return server.sendLoggingMessage(params);
               },

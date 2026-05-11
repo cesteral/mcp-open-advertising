@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { McpTextContent, RequestContext, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_delete_report_schedule";
@@ -22,8 +23,10 @@ export const DeleteReportScheduleInputSchema = z
 
 export const DeleteReportScheduleOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     scheduleId: z.string().describe("ID of the deleted schedule"),
-    deleted: z.literal(true),
+    deleted: z.boolean(),
     timestamp: z.string().datetime(),
   })
   .describe("Deletion confirmation");
@@ -36,11 +39,27 @@ export async function deleteReportScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteReportScheduleOutput> {
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: "report schedule",
+    entityId: input.scheduleId,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      scheduleId: input.scheduleId,
+      deleted: false,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
   await ttdReportingService.deleteReportSchedule(input.scheduleId, context);
 
   return {
+    confirmed: true,
     scheduleId: input.scheduleId,
     deleted: true,
     timestamp: new Date().toISOString(),
@@ -50,6 +69,14 @@ export async function deleteReportScheduleLogic(
 export function deleteReportScheduleResponseFormatter(
   result: DeleteReportScheduleOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Deletion of report schedule ${result.scheduleId} cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

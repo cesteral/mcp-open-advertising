@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode, elicitBulkStatusChangeConfirmation } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_bulk_update_status";
 const TOOL_TITLE = "Bulk Update CM360 Entity Status";
@@ -30,6 +30,8 @@ export const BulkUpdateStatusInputSchema = z
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     updated: z.number().describe("Number of entities updated"),
     failed: z.number().describe("Number of entities that failed"),
     results: z
@@ -53,6 +55,24 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
+  const confirmed = await elicitBulkStatusChangeConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    targetStatus: input.status,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      updated: 0,
+      failed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { cm360Service } = resolveSessionServices(sdkContext);
 
   const results: BulkUpdateStatusOutput["results"] = [];
@@ -85,6 +105,7 @@ export async function bulkUpdateStatusLogic(
   }
 
   return {
+    confirmed: true,
     updated,
     failed,
     results,
@@ -137,6 +158,14 @@ function applyStatusUpdate(
 export function bulkUpdateStatusResponseFormatter(
   result: BulkUpdateStatusOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk status update cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const summary = `Bulk status update: ${result.updated} succeeded, ${result.failed} failed`;
   const details = result.results
     .filter((r) => !r.success)

@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitBidChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -46,6 +47,8 @@ export const AdjustBidsInputSchema = z
 
 export const AdjustBidsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     totalRequested: z.number(),
     totalSucceeded: z.number(),
     totalFailed: z.number(),
@@ -86,6 +89,25 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  const confirmed = await elicitBidChangeConfirmation({
+    count: input.adjustments.length,
+    entityLabel: "ad set",
+    summary: input.reason ?? "Applying bid amount changes (manual-bid ad sets only).",
+    impactPreview: input.adjustments.map((a) => a.adSetId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      totalRequested: input.adjustments.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { metaService } = resolveSessionServices(sdkContext);
 
   const results: AdjustBidsResult[] = [];
@@ -138,6 +160,7 @@ export async function adjustBidsLogic(
   const totalSucceeded = results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     totalRequested: input.adjustments.length,
     totalSucceeded,
     totalFailed: input.adjustments.length - totalSucceeded,
@@ -149,6 +172,14 @@ export async function adjustBidsLogic(
 // ─── Response Formatter ─────────────────────────────────────────────
 
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bid adjustments cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const lines: string[] = [];
 
   lines.push(

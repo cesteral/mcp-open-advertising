@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitBudgetChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -47,6 +48,8 @@ export const ManageBudgetScheduleInputSchema = z
 
 export const ManageBudgetScheduleOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     operation: z.string(),
     campaignId: z.string(),
     result: z.record(z.any()).describe("API response data"),
@@ -62,6 +65,30 @@ export async function manageBudgetScheduleLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ManageBudgetScheduleOutput> {
+  if (input.operation === "create") {
+    const data = input.data ?? {};
+    const budget = data.budget_value ?? "(unspecified)";
+    const valueType = data.budget_value_type ?? "ABSOLUTE";
+    const start = data.time_start ?? "";
+    const end = data.time_end ?? "";
+    const confirmed = await elicitBudgetChangeConfirmation({
+      entityLabel: "campaign",
+      entityId: input.campaignId,
+      summary: `Creating budget schedule: ${valueType} budget=${budget} cents from ${start} to ${end}.`,
+      sdkContext,
+    });
+    if (!confirmed) {
+      return {
+        confirmed: false,
+        declineReason: "user_declined",
+        operation: input.operation,
+        campaignId: input.campaignId,
+        result: {},
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
   const { metaService } = resolveSessionServices(sdkContext);
 
   let result: unknown;
@@ -73,6 +100,7 @@ export async function manageBudgetScheduleLogic(
   }
 
   return {
+    confirmed: true,
     operation: input.operation,
     campaignId: input.campaignId,
     result: result as Record<string, unknown>,
@@ -83,6 +111,14 @@ export async function manageBudgetScheduleLogic(
 export function manageBudgetScheduleResponseFormatter(
   result: ManageBudgetScheduleOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Budget schedule creation cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const header =
     result.operation === "create"
       ? `Budget schedule created for campaign ${result.campaignId}`

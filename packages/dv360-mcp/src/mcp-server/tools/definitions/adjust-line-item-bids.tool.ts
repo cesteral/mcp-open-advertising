@@ -7,7 +7,7 @@ import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 import { ensureRequiredFieldValue } from "../utils/elicitation.js";
-import { buildNextAction } from "@cesteral/shared";
+import { buildNextAction, elicitBidChangeConfirmation } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_adjust_line_item_bids";
 const TOOL_TITLE = "Adjust Line Item Bids";
@@ -68,6 +68,8 @@ export const AdjustLineItemBidsInputSchema = z
  */
 export const AdjustLineItemBidsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     successful: z
       .array(
         z.object({
@@ -112,6 +114,26 @@ export async function adjustLineItemBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustLineItemBidsOutput> {
+  const confirmed = await elicitBidChangeConfirmation({
+    count: input.adjustments.length,
+    entityLabel: "line item",
+    summary: "Applying fixedBid micros changes (1 USD = 1,000,000 micros).",
+    impactPreview: input.adjustments.map((a) => a.lineItemId ?? "(to elicit)"),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      successful: [],
+      failed: [],
+      totalRequested: input.adjustments.length,
+      totalSuccessful: 0,
+      totalFailed: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { dv360Service } = resolveSessionServices(sdkContext);
 
   const successful: Array<{
@@ -236,6 +258,7 @@ export async function adjustLineItemBidsLogic(
   }
 
   return {
+    confirmed: true,
     successful,
     failed,
     totalRequested: input.adjustments.length,
@@ -251,6 +274,14 @@ export async function adjustLineItemBidsLogic(
 export function adjustLineItemBidsResponseFormatter(
   result: AdjustLineItemBidsOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bid adjustments cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const summary = `Batch bid adjustment completed: ${result.totalSuccessful}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0

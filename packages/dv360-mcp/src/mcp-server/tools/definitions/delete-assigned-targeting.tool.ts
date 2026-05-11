@@ -14,6 +14,7 @@ import {
   buildTargetingIds,
 } from "../utils/targeting-metadata.js";
 import { getTargetingRequiredIdInputShape } from "../utils/targeting-input-shape.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -51,6 +52,8 @@ export const DeleteAssignedTargetingInputSchema = z
  */
 export const DeleteAssignedTargetingOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     success: z.boolean().describe("Whether deletion was successful"),
     deletedTargetingOptionId: z.string().describe("ID of the deleted targeting option"),
     parentType: z.string().describe("Parent entity type"),
@@ -70,6 +73,23 @@ export async function deleteAssignedTargetingLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteAssignedTargetingOutput> {
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: `${input.targetingType} targeting on ${input.parentType}`,
+    entityId: input.assignedTargetingOptionId,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      success: false,
+      deletedTargetingOptionId: input.assignedTargetingOptionId,
+      parentType: input.parentType,
+      targetingType: input.targetingType,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { targetingService } = resolveSessionServices(sdkContext);
 
   // Build IDs object using config-driven helper
@@ -84,6 +104,7 @@ export async function deleteAssignedTargetingLogic(
   );
 
   return {
+    confirmed: true,
     success: true,
     deletedTargetingOptionId: input.assignedTargetingOptionId,
     parentType: input.parentType,
@@ -98,6 +119,14 @@ export async function deleteAssignedTargetingLogic(
 export function deleteAssignedTargetingResponseFormatter(
   result: DeleteAssignedTargetingOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Deletion of targeting option ${result.deletedTargetingOptionId} cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const typeDesc =
     TARGETING_TYPE_DESCRIPTIONS[result.targetingType as TargetingType] || result.targetingType;
 

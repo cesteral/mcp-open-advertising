@@ -5,7 +5,11 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getBulkEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue, mergeParentIdsIntoData } from "../utils/parent-id-validation.js";
-import { BulkOperationResultSchema } from "@cesteral/shared";
+import {
+  BulkOperationResultSchema,
+  elicitBulkMutationConfirmation,
+  hasSensitiveBulkField,
+} from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -55,6 +59,8 @@ export const BulkUpdateEntitiesInputSchema = z
 
 export const BulkUpdateEntitiesOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     entityType: z.string(),
     totalRequested: z.number(),
     successCount: z.number(),
@@ -72,6 +78,28 @@ export async function bulkUpdateEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateOutput> {
+  const payloads = input.items.map((it) => it.data ?? {});
+  const confirmed = await elicitBulkMutationConfirmation({
+    count: input.items.length,
+    entityLabel: input.entityType,
+    summary: "Applying field updates across multiple entities (TTD uses PUT semantics).",
+    hasSensitiveFieldChange: hasSensitiveBulkField(payloads),
+    impactPreview: input.items.map((it) => it.entityId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      entityType: input.entityType,
+      totalRequested: input.items.length,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
   const items = input.items.map((item) => ({
     ...item,
@@ -87,6 +115,7 @@ export async function bulkUpdateEntitiesLogic(
   const succeeded = results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     entityType: input.entityType,
     totalRequested: items.length,
     successCount: succeeded,
@@ -101,6 +130,14 @@ export async function bulkUpdateEntitiesLogic(
 }
 
 export function bulkUpdateEntitiesResponseFormatter(result: BulkUpdateOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk update of ${result.totalRequested} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

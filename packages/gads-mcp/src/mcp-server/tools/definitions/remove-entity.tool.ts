@@ -5,6 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -39,6 +40,8 @@ export const RemoveEntityInputSchema = z
 
 export const RemoveEntityOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     mutateResult: z.record(z.any()).describe("Mutate operation result"),
     entityType: z.string(),
     entityId: z.string(),
@@ -54,6 +57,22 @@ export async function removeEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<RemoveEntityOutput> {
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: input.entityType,
+    entityId: input.entityId,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      mutateResult: {},
+      entityType: input.entityType,
+      entityId: input.entityId,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { gadsService } = resolveSessionServices(sdkContext);
 
   const result = await gadsService.removeEntity(
@@ -64,6 +83,7 @@ export async function removeEntityLogic(
   );
 
   return {
+    confirmed: true,
     mutateResult: result as Record<string, any>,
     entityType: input.entityType,
     entityId: input.entityId,
@@ -72,6 +92,14 @@ export async function removeEntityLogic(
 }
 
 export function removeEntityResponseFormatter(result: RemoveEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Removal of ${result.entityType} ${result.entityId} cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
