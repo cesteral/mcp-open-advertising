@@ -139,7 +139,9 @@ The repo already ships workflow prompts (`full_campaign_setup_workflow` in dv360
 
 ### 10. Surface tool-failure observability as a 2026 differentiator ✅
 
-`InteractionLogger` captures every failed tool invocation with the full redacted upstream HTTP trail (method, URL, status, request/response bodies, per-attempt durations). `INTERACTION_LOG_MODE=file|gcs|stdout` covers self-host and hosted deployments, and the BigQuery external-table query in `CLAUDE.md` makes the data immediately useful. This is exactly the auditability story the 2026 enterprise framing demands — XAA gives short-lived tokens, this gives the audit trail of what was done with them. Document it more prominently in the public README and server cards rather than only in `CLAUDE.md`.
+`InteractionLogger` captures every failed tool invocation with the full redacted upstream HTTP trail (method, URL, status, request/response bodies, per-attempt durations). `INTERACTION_LOG_MODE=file|gcs|stdout` covers self-host and hosted deployments, and the BigQuery external-table queries make the data immediately useful. This is exactly the auditability story the 2026 enterprise framing demands — XAA gives short-lived tokens, this gives the audit trail of what was done with them.
+
+Public surface now: [docs/guides/observability.md](./observability.md) — a marketing-flavored guide with the JSON record shape, four ready-to-paste BigQuery queries, redaction posture, and the trust statement for security review. The README "Built for Production" section links here so it's the first thing a prospect sees after the fleet table.
 
 ## Bottom line
 

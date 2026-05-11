@@ -78,11 +78,14 @@ validation via DV360 API v4.
 
 ## When You Need Cesteral Intelligence
 
+The OSS connectors give you per-server tool execution + audit logs. Cesteral
+Intelligence layers governance and orchestration on top:
+
 - **Credential brokering** -- keep platform secrets out of local operator workflows
 - **Approval workflows** -- require human review before destructive or high-spend changes
-- **Audit trail** -- preserve action history, provenance, and compliance evidence
+- **Aggregated audit** -- unified, cross-server activity feed with provenance, tied to operator identity
 - **Cross-platform orchestration** -- coordinate governed execution across multiple connectors
-- **Team operations** -- support shared workflows, tenant isolation, and operator visibility
+- **Team operations** -- shared workflows, tenant isolation, and operator visibility
 
 [Compare OSS connectors vs Cesteral Intelligence](https://cesteral.com/compare?utm_source=github&utm_medium=readme&utm_campaign=why-managed)
 
@@ -105,6 +108,30 @@ validation via DV360 API v4.
 | [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API                    | 18    | Bearer token                    |
 | [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 25    | Access token + developer token  |
 | [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 6     | Google OAuth2                   |
+
+---
+
+## Built for Production
+
+Self-hosting an AI agent that touches live ad spend is a trust problem first
+and a capability problem second. Two things make this fleet shippable to
+production without hand-rolling guardrails:
+
+- **Audit-grade observability**. Every tool call is captured as append-only
+  JSONL. Failures additionally capture the full upstream HTTP trail — every
+  request, every retry, every response — with secrets redacted at the source.
+  Query it directly in BigQuery for hosted deployments, or pipe stdout to
+  your existing log stack for self-host.
+  [Read the observability guide](docs/guides/observability.md).
+- **Destructive-action elicitation gates**. 53 destructive tools across all
+  12 servers prompt the user before deletes, bulk status changes, bid
+  adjustments, budget changes, conversion uploads, and async Workflows
+  batch jobs. Stdio and clients without elicitation support fall back to a
+  documented non-interactive contract. Bulk mutations under 10 items skip
+  the prompt unless they touch a sensitive field (status / budget / bid).
+
+If your security review needs evidence — the redaction list, the field
+schema, the upstream capture path — all of it is in this repository.
 
 ---
 
