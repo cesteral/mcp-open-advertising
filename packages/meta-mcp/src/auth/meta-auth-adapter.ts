@@ -15,12 +15,7 @@
  */
 
 import { createHash } from "crypto";
-import {
-  extractHeader,
-  fetchWithTimeout,
-  McpError,
-  JsonRpcErrorCode,
-} from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const DEFAULT_META_GRAPH_API_BASE_URL = "https://graph.facebook.com/v25.0";
 

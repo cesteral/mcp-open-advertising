@@ -54,7 +54,11 @@ describe("TtdDirectTokenAuthAdapter", () => {
   });
 
   it("returns the provided token", async () => {
-    const adapter = new TtdDirectTokenAuthAdapter("direct-token-123", "direct-token", TEST_GRAPHQL_URL);
+    const adapter = new TtdDirectTokenAuthAdapter(
+      "direct-token-123",
+      "direct-token",
+      TEST_GRAPHQL_URL
+    );
     await expect(adapter.getAccessToken()).resolves.toBe("direct-token-123");
   });
 
@@ -65,7 +69,11 @@ describe("TtdDirectTokenAuthAdapter", () => {
 
   it("validates by issuing a GraphQL query and memoizes the result", async () => {
     fetchWithTimeoutMock.mockResolvedValueOnce(okResponse());
-    const adapter = new TtdDirectTokenAuthAdapter("direct-token-123", "direct-token", TEST_GRAPHQL_URL);
+    const adapter = new TtdDirectTokenAuthAdapter(
+      "direct-token-123",
+      "direct-token",
+      TEST_GRAPHQL_URL
+    );
 
     await adapter.validate();
     await adapter.validate();
@@ -102,7 +110,9 @@ describe("TtdDirectTokenAuthAdapter", () => {
 
   it("throws Unauthorized McpError on GraphQL UNAUTHENTICATED error", async () => {
     fetchWithTimeoutMock.mockResolvedValueOnce(
-      okResponse({ errors: [{ message: "not authenticated", extensions: { code: "UNAUTHENTICATED" } }] })
+      okResponse({
+        errors: [{ message: "not authenticated", extensions: { code: "UNAUTHENTICATED" } }],
+      })
     );
     const adapter = new TtdDirectTokenAuthAdapter("invalid", "direct-token", TEST_GRAPHQL_URL);
 

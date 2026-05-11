@@ -9,12 +9,7 @@
  */
 
 import { createHash } from "crypto";
-import {
-  extractHeader,
-  fetchWithTimeout,
-  McpError,
-  JsonRpcErrorCode,
-} from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const DEFAULT_TTD_GRAPHQL_URL = "https://desk.thetradedesk.com/graphql";
 
@@ -98,24 +93,26 @@ export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
     }
 
     // GraphQL endpoints return 200 even for auth errors — inspect the body.
-    const data = (await response.json().catch(() => null)) as
-      | { data?: unknown; errors?: Array<{ message?: string; extensions?: { code?: string } }> }
-      | null;
+    const data = (await response.json().catch(() => null)) as {
+      data?: unknown;
+      errors?: Array<{ message?: string; extensions?: { code?: string } }>;
+    } | null;
 
     if (data?.errors && data.errors.length > 0) {
       const first = data.errors[0];
       const code = first?.extensions?.code;
       const message = first?.message ?? "unknown GraphQL error";
-      if (code === "UNAUTHENTICATED" || code === "FORBIDDEN" || /auth|token|unauthor/i.test(message)) {
+      if (
+        code === "UNAUTHENTICATED" ||
+        code === "FORBIDDEN" ||
+        /auth|token|unauthor/i.test(message)
+      ) {
         throw new McpError(
           JsonRpcErrorCode.Unauthorized,
           `TTD token validation failed: ${message}`
         );
       }
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        `TTD token validation failed: ${message}`
-      );
+      throw new McpError(JsonRpcErrorCode.InternalError, `TTD token validation failed: ${message}`);
     }
 
     this.validated = true;

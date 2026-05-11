@@ -15,12 +15,7 @@
  */
 
 import { createHash } from "crypto";
-import {
-  extractHeader,
-  fetchWithTimeout,
-  McpError,
-  JsonRpcErrorCode,
-} from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 /**
  * TikTok API response shape (success)
