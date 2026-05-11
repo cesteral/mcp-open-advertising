@@ -517,7 +517,9 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
                 getClientCapabilities?: () => { elicitation?: unknown } | undefined;
               }
             ).getClientCapabilities;
-            const clientSupportsElicitation = Boolean(capabilityGetter?.call(server.server)?.elicitation);
+            const clientSupportsElicitation = Boolean(
+              capabilityGetter?.call(server.server)?.elicitation
+            );
 
             const sdkContext: ToolSdkContext = {
               requestId: context.requestId,

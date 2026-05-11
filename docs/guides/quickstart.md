@@ -13,11 +13,11 @@ Choose based on how much credential setup you can do in this session. The
 build, configure, and run steps are the same in every path -- only the
 credential acquisition is different.
 
-| Path                       | Credential time                                                | When to pick it                                                  |
-| -------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Path                         | Credential time                                                         | When to pick it                                                  |
+| ---------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | **Meta Ads** _(recommended)_ | ~2 min _if_ you have Graph API Explorer access + ad-account permissions | Fastest evaluation. Token from Graph API Explorer.               |
-| **DV360**                  | ~15 min                                                        | You already have a GCP project and can create a service account. |
-| **Google Ads**             | Hours to days                                                  | You've already been approved for a Google Ads developer token.   |
+| **DV360**                    | ~15 min                                                                 | You already have a GCP project and can create a service account. |
+| **Google Ads**               | Hours to days                                                           | You've already been approved for a Google Ads developer token.   |
 
 If you don't have any of these credentials yet and just want to see the server
 work, jump to [No-credential evaluation](#no-credential-evaluation).
@@ -64,9 +64,9 @@ cp .env.example .env
 
 Set this in `.env`:
 
-| Variable             | Description                       |
-| -------------------- | --------------------------------- |
-| `META_ACCESS_TOKEN`  | The token from Graph API Explorer |
+| Variable            | Description                       |
+| ------------------- | --------------------------------- |
+| `META_ACCESS_TOKEN` | The token from Graph API Explorer |
 
 All packages share one root `.env` file -- no per-package config needed.
 
@@ -128,9 +128,9 @@ cp .env.example .env
 
 Set this in `.env`:
 
-| Variable                     | Description                                       |
-| ---------------------------- | ------------------------------------------------- |
-| `DV360_SERVICE_ACCOUNT_JSON` | Contents of the service account JSON key file.    |
+| Variable                     | Description                                    |
+| ---------------------------- | ---------------------------------------------- |
+| `DV360_SERVICE_ACCOUNT_JSON` | Contents of the service account JSON key file. |
 
 ### 4. Start and connect
 

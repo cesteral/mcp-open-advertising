@@ -245,9 +245,9 @@ describe("hasSensitiveBulkField", () => {
   });
 
   it("returns false when no payload mentions status/budget/bid keys", () => {
-    expect(
-      hasSensitiveBulkField([{ displayName: "x" }, { name: "y", description: "z" }])
-    ).toBe(false);
+    expect(hasSensitiveBulkField([{ displayName: "x" }, { name: "y", description: "z" }])).toBe(
+      false
+    );
   });
 
   it.each([

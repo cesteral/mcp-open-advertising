@@ -51,7 +51,8 @@ export async function deleteEntityLogic(
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
   const entityIds = extractEntityIds(input, input.entityType);
-  const primaryId = entityIds[`${input.entityType}Id`] ?? Object.values(entityIds).pop() ?? "(unknown)";
+  const primaryId =
+    entityIds[`${input.entityType}Id`] ?? Object.values(entityIds).pop() ?? "(unknown)";
 
   const confirmed = await elicitDeleteConfirmation({
     entityLabel: input.entityType,

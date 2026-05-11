@@ -204,8 +204,7 @@ export async function elicitArchiveConfirmation(
 ): Promise<boolean> {
   return confirmDestructive({
     action: `You are about to archive ${count} ${entityLabel}(s).`,
-    consequence:
-      "This action is irreversible — archived entities cannot be reactivated.",
+    consequence: "This action is irreversible — archived entities cannot be reactivated.",
     confirmTitle: "Confirm archive",
     confirmDescription: `Archive ${count} ${entityLabel}(s) permanently`,
     sdkContext,
@@ -213,14 +212,12 @@ export async function elicitArchiveConfirmation(
 }
 
 /** Confirm a hard delete (single entity). */
-export async function elicitDeleteConfirmation(
-  opts: {
-    entityLabel: string;
-    entityId: string;
-    entityName?: string;
-    sdkContext?: ElicitContext;
-  }
-): Promise<boolean> {
+export async function elicitDeleteConfirmation(opts: {
+  entityLabel: string;
+  entityId: string;
+  entityName?: string;
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   const display = opts.entityName ? `${opts.entityId} (${opts.entityName})` : opts.entityId;
   return confirmDestructive({
     action: `You are about to delete ${opts.entityLabel} ${display}.`,
@@ -232,14 +229,12 @@ export async function elicitDeleteConfirmation(
 }
 
 /** Confirm a bulk hard delete (array of entity IDs). */
-export async function elicitBulkDeleteConfirmation(
-  opts: {
-    count: number;
-    entityLabel: string;
-    impactPreview?: string[];
-    sdkContext?: ElicitContext;
-  }
-): Promise<boolean> {
+export async function elicitBulkDeleteConfirmation(opts: {
+  count: number;
+  entityLabel: string;
+  impactPreview?: string[];
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   return confirmDestructive({
     action: `You are about to delete ${opts.count} ${opts.entityLabel}(s).`,
     consequence: "Hard delete is irreversible and removes the entities permanently.",
@@ -255,15 +250,13 @@ export async function elicitBulkDeleteConfirmation(
  * any bulk status change elicits, because status transitions are the highest-
  * risk class of bulk mutation.
  */
-export async function elicitBulkStatusChangeConfirmation(
-  opts: {
-    count: number;
-    entityLabel: string;
-    targetStatus: string;
-    impactPreview?: string[];
-    sdkContext?: ElicitContext;
-  }
-): Promise<boolean> {
+export async function elicitBulkStatusChangeConfirmation(opts: {
+  count: number;
+  entityLabel: string;
+  targetStatus: string;
+  impactPreview?: string[];
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   return confirmDestructive({
     action: `You are about to set status='${opts.targetStatus}' on ${opts.count} ${opts.entityLabel}(s).`,
     consequence:
@@ -279,17 +272,15 @@ export async function elicitBulkStatusChangeConfirmation(
  * Confirm a bulk entity mutation. Skips elicitation when count is below the
  * threshold AND no sensitive field (status/budget/bid) is being changed.
  */
-export async function elicitBulkMutationConfirmation(
-  opts: {
-    count: number;
-    entityLabel: string;
-    summary: string;
-    hasSensitiveFieldChange?: boolean;
-    threshold?: number;
-    impactPreview?: string[];
-    sdkContext?: ElicitContext;
-  }
-): Promise<boolean> {
+export async function elicitBulkMutationConfirmation(opts: {
+  count: number;
+  entityLabel: string;
+  summary: string;
+  hasSensitiveFieldChange?: boolean;
+  threshold?: number;
+  impactPreview?: string[];
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   const threshold = opts.threshold ?? DEFAULT_BULK_THRESHOLD;
   if (opts.count < threshold && !opts.hasSensitiveFieldChange) return true;
 
@@ -304,15 +295,13 @@ export async function elicitBulkMutationConfirmation(
 }
 
 /** Confirm a batch of bid adjustments. */
-export async function elicitBidChangeConfirmation(
-  opts: {
-    count: number;
-    entityLabel: string;
-    summary: string;
-    impactPreview?: string[];
-    sdkContext?: ElicitContext;
-  }
-): Promise<boolean> {
+export async function elicitBidChangeConfirmation(opts: {
+  count: number;
+  entityLabel: string;
+  summary: string;
+  impactPreview?: string[];
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   return confirmDestructive({
     action: `You are about to adjust bids on ${opts.count} ${opts.entityLabel}(s).`,
     consequence: `${opts.summary} Bid changes take effect on the next auction and can shift spend immediately.`,
@@ -324,14 +313,12 @@ export async function elicitBidChangeConfirmation(
 }
 
 /** Confirm a budget change (single or scheduled). */
-export async function elicitBudgetChangeConfirmation(
-  opts: {
-    entityLabel: string;
-    entityId: string;
-    summary: string;
-    sdkContext?: ElicitContext;
-  }
-): Promise<boolean> {
+export async function elicitBudgetChangeConfirmation(opts: {
+  entityLabel: string;
+  entityId: string;
+  summary: string;
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   return confirmDestructive({
     action: `You are about to change the budget on ${opts.entityLabel} ${opts.entityId}.`,
     consequence: `${opts.summary} Budget changes take effect immediately and directly affect spend.`,
@@ -342,14 +329,12 @@ export async function elicitBudgetChangeConfirmation(
 }
 
 /** Confirm an offline conversion upload. */
-export async function elicitConversionUploadConfirmation(
-  opts: {
-    count: number;
-    operation: "insert" | "update";
-    impactPreview?: string[];
-    sdkContext?: ElicitContext;
-  }
-): Promise<boolean> {
+export async function elicitConversionUploadConfirmation(opts: {
+  count: number;
+  operation: "insert" | "update";
+  impactPreview?: string[];
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   const verb = opts.operation === "insert" ? "insert" : "update";
   return confirmDestructive({
     action: `You are about to ${verb} ${opts.count} offline conversion(s).`,

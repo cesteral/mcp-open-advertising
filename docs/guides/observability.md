@@ -132,11 +132,11 @@ credentials, add it to the redactor — that's the single place to extend.
 
 Pick one mode by setting `INTERACTION_LOG_MODE`:
 
-| Mode     | When to use                                                  | Storage                                                  |
-| -------- | ------------------------------------------------------------ | -------------------------------------------------------- |
-| `gcs`    | Hosted (Cloud Run, GKE) — the default when `GCS_BUCKET_NAME` is set | Instance-unique JSONL in GCS, flushed every 5s           |
-| `file`   | Self-host default                                            | Rotating JSONL at `~/.cesteral/interactions/`            |
-| `stdout` | Self-host with an existing log pipeline (Datadog, Loki, etc.) | One Pino line per entry — ship via any stdout log agent  |
+| Mode     | When to use                                                         | Storage                                                 |
+| -------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
+| `gcs`    | Hosted (Cloud Run, GKE) — the default when `GCS_BUCKET_NAME` is set | Instance-unique JSONL in GCS, flushed every 5s          |
+| `file`   | Self-host default                                                   | Rotating JSONL at `~/.cesteral/interactions/`           |
+| `stdout` | Self-host with an existing log pipeline (Datadog, Loki, etc.)       | One Pino line per entry — ship via any stdout log agent |
 
 For hosted mode, attach BigQuery as an external table once:
 
