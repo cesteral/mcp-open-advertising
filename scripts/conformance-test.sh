@@ -126,6 +126,12 @@ for SERVER in "${SERVERS[@]}"; do
       SERVER_PASS=$((SERVER_PASS + 1))
     else
       echo "    FAIL"
+      # Dump the captured scenario output so CI logs surface the actual
+      # error instead of just "FAIL". The JSON file ($SERVER_RESULTS_DIR
+      # path above) is not uploaded as an artifact.
+      echo "----- $SCENARIO output -----"
+      echo "$SCENARIO_OUTPUT" | head -120
+      echo "----- end $SCENARIO -----"
       SERVER_FAIL=$((SERVER_FAIL + 1))
       if $CI_MODE; then
         OVERALL_EXIT=1
