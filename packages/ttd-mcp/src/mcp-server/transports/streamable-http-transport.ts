@@ -27,7 +27,7 @@ import { rateLimiter } from "../../utils/platform.js";
 function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactoryConfig {
   const authStrategy =
     config.mcpAuthMode === "ttd-token"
-      ? new TtdTokenAuthStrategy(logger)
+      ? new TtdTokenAuthStrategy(config.ttdGraphqlUrl, logger)
       : createAuthStrategy(config.mcpAuthMode as AuthMode, {
           jwtSecret: config.mcpAuthSecretKey,
           logger,
@@ -75,7 +75,11 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
         (ttdConfig.mcpAuthMode === "none" || ttdConfig.mcpAuthMode === "jwt") &&
         ttdConfig.ttdApiToken
       ) {
-        const envAdapter = new TtdDirectTokenAuthAdapter(ttdConfig.ttdApiToken, "env-direct-token");
+        const envAdapter = new TtdDirectTokenAuthAdapter(
+          ttdConfig.ttdApiToken,
+          "env-direct-token",
+          ttdConfig.ttdGraphqlUrl
+        );
         await envAdapter.validate();
         const services = createSessionServices(
           envAdapter,

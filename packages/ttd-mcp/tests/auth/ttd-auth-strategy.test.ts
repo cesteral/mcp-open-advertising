@@ -55,8 +55,10 @@ describe("TtdTokenAuthStrategy", () => {
     vi.restoreAllMocks();
   });
 
+  const TEST_URL = "https://desk.thetradedesk.com/graphql";
+
   it("parses TTD-Auth from request headers", async () => {
-    const strategy = new TtdTokenAuthStrategy(mockLogger);
+    const strategy = new TtdTokenAuthStrategy(TEST_URL, mockLogger);
     const headers = { "ttd-auth": "direct-token-123" };
 
     await strategy.verify(headers);
@@ -65,11 +67,15 @@ describe("TtdTokenAuthStrategy", () => {
   });
 
   it("creates a direct-token adapter and validates it", async () => {
-    const strategy = new TtdTokenAuthStrategy(mockLogger);
+    const strategy = new TtdTokenAuthStrategy(TEST_URL, mockLogger);
 
     const result = await strategy.verify({ "ttd-auth": "direct-token-123" });
 
-    expect(TtdDirectTokenAuthAdapter).toHaveBeenCalledWith("direct-token-123");
+    expect(TtdDirectTokenAuthAdapter).toHaveBeenCalledWith(
+      "direct-token-123",
+      "direct-token",
+      TEST_URL
+    );
     expect(mockAdapterInstance.validate).toHaveBeenCalledTimes(1);
     expect(result.authInfo).toMatchObject({
       clientId: "ttd-direct-token",
@@ -80,7 +86,7 @@ describe("TtdTokenAuthStrategy", () => {
   });
 
   it("returns the direct-token fingerprint for session reuse checks", async () => {
-    const strategy = new TtdTokenAuthStrategy(mockLogger);
+    const strategy = new TtdTokenAuthStrategy(TEST_URL, mockLogger);
 
     const fingerprint = await strategy.getCredentialFingerprint({
       "ttd-auth": "direct-token-123",
@@ -99,7 +105,7 @@ describe("TtdTokenAuthStrategy", () => {
       }
     );
 
-    const strategy = new TtdTokenAuthStrategy(mockLogger);
+    const strategy = new TtdTokenAuthStrategy(TEST_URL, mockLogger);
 
     await expect(strategy.verify({})).rejects.toThrow("Missing required header: TTD-Auth");
   });

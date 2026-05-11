@@ -26,7 +26,11 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
     return false;
   }
 
-  const authAdapter = new TtdDirectTokenAuthAdapter(directToken);
+  const authAdapter = new TtdDirectTokenAuthAdapter(
+    directToken,
+    "direct-token",
+    mcpConfig.ttdGraphqlUrl
+  );
 
   // Validate credentials at startup to fail fast on invalid credentials
   await authAdapter.validate();
