@@ -192,6 +192,7 @@ describe("bulkUpdateStatusLogic", () => {
 describe("bulkUpdateStatusResponseFormatter", () => {
   it("shows success and failure counts", () => {
     const output = bulkUpdateStatusResponseFormatter({
+      confirmed: true,
       updated: 2,
       failed: 1,
       results: [
@@ -208,6 +209,7 @@ describe("bulkUpdateStatusResponseFormatter", () => {
 
   it("shows entityId in failure details", () => {
     const output = bulkUpdateStatusResponseFormatter({
+      confirmed: true,
       updated: 0,
       failed: 1,
       results: [{ entityId: "abc-123", success: false, error: "Not found" }],
@@ -220,6 +222,7 @@ describe("bulkUpdateStatusResponseFormatter", () => {
 
   it("no failure section when all succeed", () => {
     const output = bulkUpdateStatusResponseFormatter({
+      confirmed: true,
       updated: 2,
       failed: 0,
       results: [

@@ -94,7 +94,7 @@ export function createValidateEntityTool<E extends string>(opts: ValidateEntityT
   const baseShape = {
     entityType: z.enum(opts.entityTypeEnum).describe("Type of entity to validate"),
     mode: z.enum(["create", "update"]).describe("Whether validating for creation or update"),
-    data: z.record(z.any()).describe("Entity payload to validate"),
+    data: z.record(z.unknown()).describe("Entity payload to validate"),
     ...(opts.extraInputSchema ?? {}),
   };
   const InputSchema = z

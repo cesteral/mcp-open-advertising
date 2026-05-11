@@ -3,7 +3,7 @@
 
 import type { Logger } from "pino";
 import type { LinkedInAuthAdapter } from "../../auth/linkedin-auth-adapter.js";
-import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import { McpError, mapHttpStatusToJsonRpc } from "@cesteral/shared";
 import { executeWithRetry, fetchWithTimeout, buildMultipartFormData } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withLinkedInApiSpan } from "../../utils/platform.js";
@@ -33,22 +33,6 @@ function buildLinkedInNextAction(
     return "Verify the URN/ID with linkedin_list_entities or linkedin_list_ad_accounts. LinkedIn IDs are URNs (e.g., urn:li:sponsoredAccount:123) — partial numeric IDs are rejected.";
   }
   return defaultHint;
-}
-
-function mapLinkedInErrorToJsonRpc(httpStatus: number): JsonRpcErrorCode {
-  if (httpStatus === 429) {
-    return JsonRpcErrorCode.RateLimited;
-  }
-  if (httpStatus === 401) {
-    return JsonRpcErrorCode.Unauthorized;
-  }
-  if (httpStatus === 403) {
-    return JsonRpcErrorCode.Forbidden;
-  }
-  if (httpStatus >= 500) {
-    return JsonRpcErrorCode.ServiceUnavailable;
-  }
-  return JsonRpcErrorCode.InvalidRequest;
 }
 
 const LINKEDIN_RETRY_CONFIG: RetryConfig = {
@@ -190,7 +174,7 @@ export class LinkedInHttpClient {
       if (!response.ok) {
         const errorBody = await response.text().catch(() => "");
         throw new McpError(
-          mapLinkedInErrorToJsonRpc(response.status),
+          mapHttpStatusToJsonRpc(response.status),
           `LinkedIn binary PUT failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
         );
       }
@@ -242,7 +226,7 @@ export class LinkedInHttpClient {
             "X-Restli-Protocol-Version": "2.0.0",
           };
         },
-        mapStatusCode: (status: number, _body: string) => mapLinkedInErrorToJsonRpc(status),
+        mapStatusCode: (status: number, _body: string) => mapHttpStatusToJsonRpc(status),
         parseErrorBody: (body: string) => {
           try {
             const parsed = JSON.parse(body) as LinkedInApiError;

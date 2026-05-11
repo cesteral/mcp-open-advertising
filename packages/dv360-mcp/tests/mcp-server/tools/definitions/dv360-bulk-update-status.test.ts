@@ -334,6 +334,7 @@ describe("dv360_bulk_update_status", () => {
   describe("bulkUpdateStatusResponseFormatter", () => {
     it("shows summary with success count", () => {
       const result = bulkUpdateStatusResponseFormatter({
+        confirmed: true,
         results: [],
         successful: [
           {
@@ -359,6 +360,7 @@ describe("dv360_bulk_update_status", () => {
 
     it("shows failed updates when present", () => {
       const result = bulkUpdateStatusResponseFormatter({
+        confirmed: true,
         results: [],
         successful: [],
         failed: [
@@ -382,6 +384,7 @@ describe("dv360_bulk_update_status", () => {
     it("shows archive warning for ENTITY_STATUS_ARCHIVED", () => {
       const result = bulkUpdateStatusResponseFormatter(
         {
+          confirmed: true,
           results: [],
           successful: [],
           failed: [],
@@ -404,6 +407,7 @@ describe("dv360_bulk_update_status", () => {
     it("shows pause note for ENTITY_STATUS_PAUSED", () => {
       const result = bulkUpdateStatusResponseFormatter(
         {
+          confirmed: true,
           results: [],
           successful: [],
           failed: [],

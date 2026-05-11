@@ -80,6 +80,7 @@ describe("DeleteEntityInputSchema", () => {
 describe("deleteEntityResponseFormatter", () => {
   it("renders delete confirmation", () => {
     const text = deleteEntityResponseFormatter({
+      confirmed: true,
       success: true,
       entityType: "campaign",
       entityId: "cmp-001",

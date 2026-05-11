@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitConversionUploadConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -55,6 +56,8 @@ export const UpdateConversionsInputSchema = z
 
 export const UpdateConversionsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     result: z.record(z.any()).describe("API response with updated conversion details"),
     updatedCount: z.number().describe("Number of conversions submitted for update"),
     timestamp: z.string().datetime(),
@@ -69,6 +72,22 @@ export async function updateConversionsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<UpdateConversionsOutput> {
+  const confirmed = await elicitConversionUploadConfirmation({
+    count: input.conversions.length,
+    operation: "update",
+    impactPreview: input.conversions.map((c) => c.conversionId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      result: {},
+      updatedCount: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { conversionService } = resolveSessionServices(sdkContext);
 
   const result = await conversionService.updateConversions(
@@ -79,6 +98,7 @@ export async function updateConversionsLogic(
   );
 
   return {
+    confirmed: true,
     result: result as Record<string, any>,
     updatedCount: input.conversions.length,
     timestamp: new Date().toISOString(),
@@ -88,6 +108,14 @@ export async function updateConversionsLogic(
 export function updateConversionsResponseFormatter(
   result: UpdateConversionsOutput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Conversion update cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

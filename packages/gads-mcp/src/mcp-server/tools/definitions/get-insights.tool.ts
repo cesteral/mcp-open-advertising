@@ -11,6 +11,7 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -176,7 +177,7 @@ function buildGaqlQuery(input: GetInsightsInput): string {
     input.metrics && input.metrics.length > 0
       ? input.metrics.map((m) => {
           if (!METRIC_NAME_PATTERN.test(m)) {
-            throw new Error(`Invalid metric name: ${m}`);
+            throw new McpError(JsonRpcErrorCode.InvalidParams, `Invalid metric name: ${m}`);
           }
           return m.startsWith("metrics.") ? m : `metrics.${m}`;
         })
@@ -194,7 +195,7 @@ function buildGaqlQuery(input: GetInsightsInput): string {
 
   if (input.entityId) {
     if (!/^\d+$/.test(input.entityId)) {
-      throw new Error("entityId must be numeric");
+      throw new McpError(JsonRpcErrorCode.InvalidParams, "entityId must be numeric");
     }
     whereClauses.push(`${idField} = ${input.entityId}`);
   }

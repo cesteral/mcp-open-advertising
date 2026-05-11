@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getDeletableEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
+import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -25,6 +26,8 @@ export const DeleteEntityInputSchema = z
 
 export const DeleteEntityOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     deleted: z.boolean().describe("Whether the entity was deleted"),
     entityId: z.string().describe("ID of the deleted entity"),
     timestamp: z.string().datetime(),
@@ -39,6 +42,21 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
+  const confirmed = await elicitDeleteConfirmation({
+    entityLabel: input.entityType,
+    entityId: input.entityId,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      deleted: false,
+      entityId: input.entityId,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { cm360Service } = resolveSessionServices(sdkContext);
 
   await cm360Service.deleteEntity(
@@ -49,6 +67,7 @@ export async function deleteEntityLogic(
   );
 
   return {
+    confirmed: true,
     deleted: true,
     entityId: input.entityId,
     timestamp: new Date().toISOString(),
@@ -56,6 +75,14 @@ export async function deleteEntityLogic(
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Deletion of ${result.entityId} cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

@@ -4,6 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MsAdsEntityType } from "../utils/entity-mapping.js";
+import { elicitBulkDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_delete_entity";
@@ -25,6 +26,8 @@ export const DeleteEntityInputSchema = z
 
 export const DeleteEntityOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     result: z.record(z.any()),
     entityType: z.string(),
     deletedCount: z.number(),
@@ -40,6 +43,23 @@ export async function deleteEntityLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<DeleteEntityOutput> {
+  const confirmed = await elicitBulkDeleteConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      result: {},
+      entityType: input.entityType,
+      deletedCount: 0,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { msadsService } = resolveSessionServices(sdkContext);
 
   const result = (await msadsService.deleteEntity(
@@ -50,6 +70,7 @@ export async function deleteEntityLogic(
   )) as Record<string, unknown>;
 
   return {
+    confirmed: true,
     result,
     entityType: input.entityType,
     deletedCount: input.entityIds.length,
@@ -58,6 +79,14 @@ export async function deleteEntityLogic(
 }
 
 export function deleteEntityResponseFormatter(result: DeleteEntityOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk deletion of ${result.entityType} entities cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,

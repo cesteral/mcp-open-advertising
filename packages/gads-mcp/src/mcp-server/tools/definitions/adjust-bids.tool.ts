@@ -3,6 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
+import { elicitBidChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -63,6 +64,8 @@ export const AdjustBidsInputSchema = z
 
 export const AdjustBidsOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     totalRequested: z.number(),
     totalSucceeded: z.number(),
     totalFailed: z.number(),
@@ -90,6 +93,25 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  const confirmed = await elicitBidChangeConfirmation({
+    count: input.adjustments.length,
+    entityLabel: "ad group",
+    summary: input.reason ?? "Applying CPC/CPM bid changes.",
+    impactPreview: input.adjustments.map((a) => a.adGroupId),
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      totalRequested: input.adjustments.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { gadsService } = resolveSessionServices(sdkContext);
 
   const { results } = await gadsService.adjustBids(input.customerId, input.adjustments, context);
@@ -97,6 +119,7 @@ export async function adjustBidsLogic(
   const succeeded = results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     totalRequested: input.adjustments.length,
     totalSucceeded: succeeded,
     totalFailed: input.adjustments.length - succeeded,
@@ -122,6 +145,14 @@ function formatMicrosAsDollars(micros?: string): string {
 }
 
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bid adjustments cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const lines = result.results.map((r) => {
     if (r.success) {
       const parts: string[] = [];

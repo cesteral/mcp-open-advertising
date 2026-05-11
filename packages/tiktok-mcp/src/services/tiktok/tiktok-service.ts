@@ -3,7 +3,12 @@
 
 import type { TikTokHttpClient } from "./tiktok-http-client.js";
 import type { RateLimiter } from "@cesteral/shared";
-import { type RequestContext, executeBulkConcurrent } from "@cesteral/shared";
+import {
+  type RequestContext,
+  executeBulkConcurrent,
+  McpError,
+  JsonRpcErrorCode,
+} from "@cesteral/shared";
 import {
   getEntityConfig,
   type TikTokEntityType,
@@ -144,7 +149,10 @@ export class TikTokService {
 
     const list = result?.list ?? [];
     if (list.length === 0) {
-      throw new Error(`${config.displayName} with ID ${entityId} not found`);
+      throw new McpError(
+        JsonRpcErrorCode.NotFound,
+        `${config.displayName} with ID ${entityId} not found`
+      );
     }
 
     return list[0];
@@ -214,7 +222,8 @@ export class TikTokService {
     const config = getEntityConfig(entityType);
 
     if (!config.supportsStatusUpdate) {
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
         `Entity type '${entityType}' does not support status updates. Use the regular update endpoint instead.`
       );
     }
@@ -258,7 +267,10 @@ export class TikTokService {
         { entityType },
         "Duplicate skipped: entity type does not support duplication"
       );
-      throw new Error(`Entity type ${entityType} does not support duplication`);
+      throw new McpError(
+        JsonRpcErrorCode.InvalidParams,
+        `Entity type ${entityType} does not support duplication`
+      );
     }
 
     await this.rateLimiter.consume(`tiktok:default`, 3);
@@ -476,7 +488,10 @@ export class TikTokService {
           context
         );
       default:
-        throw new Error(`Unsupported targeting option type: ${optionType}`);
+        throw new McpError(
+          JsonRpcErrorCode.InvalidParams,
+          `Unsupported targeting option type: ${optionType}`
+        );
     }
   }
 

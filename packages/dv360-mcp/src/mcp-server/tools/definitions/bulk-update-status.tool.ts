@@ -6,6 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityExamplesByCategory } from "../utils/entity-examples.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import { BulkOperationResultSchema } from "@cesteral/shared";
+import { elicitBulkStatusChangeConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -73,6 +74,8 @@ export const BulkUpdateStatusInputSchema = z
  */
 export const BulkUpdateStatusOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     results: z
       .array(
         BulkOperationResultSchema.extend({
@@ -128,34 +131,25 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkUpdateStatusOutput> {
-  // Elicit confirmation for irreversible archive operations
-  if (input.status === "ENTITY_STATUS_ARCHIVED" && sdkContext?.elicitInput) {
-    const elicitResult = await sdkContext.elicitInput({
-      message: `You are about to archive ${input.entityIds.length} ${input.entityType}(s). This action is irreversible — archived entities cannot be reactivated. Proceed?`,
-      requestedSchema: {
-        type: "object" as const,
-        properties: {
-          confirm: {
-            type: "boolean" as const,
-            title: "Confirm archive",
-            description: `Archive ${input.entityIds.length} ${input.entityType}(s) permanently`,
-            default: false,
-          },
-        },
-      },
-    });
-
-    if (elicitResult.action !== "accept" || !elicitResult.content?.confirm) {
-      return {
-        results: [],
-        successful: [],
-        failed: [],
-        totalRequested: input.entityIds.length,
-        successCount: 0,
-        failureCount: 0,
-        timestamp: new Date().toISOString(),
-      };
-    }
+  const confirmed = await elicitBulkStatusChangeConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    targetStatus: input.status,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      results: [],
+      successful: [],
+      failed: [],
+      totalRequested: input.entityIds.length,
+      successCount: 0,
+      failureCount: 0,
+      timestamp: new Date().toISOString(),
+    };
   }
 
   const { dv360Service } = resolveSessionServices(sdkContext);
@@ -247,6 +241,7 @@ export async function bulkUpdateStatusLogic(
   }
 
   return {
+    confirmed: true,
     results: [
       ...successful.map((item) => ({
         entityId: item.entityId,
@@ -283,6 +278,14 @@ export function bulkUpdateStatusResponseFormatter(
   result: BulkUpdateStatusOutput,
   input?: BulkUpdateStatusInput
 ): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk status update cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   const summary = `Bulk status update completed: ${result.successCount}/${result.totalRequested} successful`;
   const successList =
     result.successful.length > 0

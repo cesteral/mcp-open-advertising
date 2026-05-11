@@ -106,6 +106,7 @@ describe("deleteEntityLogic", () => {
 describe("deleteEntityResponseFormatter", () => {
   it("includes entityId in success message", () => {
     const result = deleteEntityResponseFormatter({
+      confirmed: true,
       deleted: true,
       entityId: "entity-42",
       timestamp: "2026-01-01T00:00:00.000Z",

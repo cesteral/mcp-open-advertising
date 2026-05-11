@@ -266,6 +266,7 @@ describe("dv360_adjust_line_item_bids", () => {
   describe("adjustLineItemBidsResponseFormatter", () => {
     it("shows summary with success count", () => {
       const result = adjustLineItemBidsResponseFormatter({
+        confirmed: true,
         successful: [
           {
             advertiserId: "adv-1",
@@ -288,6 +289,7 @@ describe("dv360_adjust_line_item_bids", () => {
 
     it("shows failed adjustments when present", () => {
       const result = adjustLineItemBidsResponseFormatter({
+        confirmed: true,
         successful: [],
         failed: [
           {
@@ -309,6 +311,7 @@ describe("dv360_adjust_line_item_bids", () => {
 
     it("includes the bid micros reminder note", () => {
       const result = adjustLineItemBidsResponseFormatter({
+        confirmed: true,
         successful: [],
         failed: [],
         totalRequested: 0,

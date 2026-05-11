@@ -14,6 +14,7 @@ import {
 import { extractParentIds } from "../utils/entity-id-extraction.js";
 import { createSimplifiedCreateEntityInputSchema } from "../utils/simplified-schemas.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -84,7 +85,10 @@ function createInputSchema(): z.ZodTypeAny {
   );
 
   if (variants.length === 0) {
-    throw new Error("No DV360 entity types are configured for create operation");
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      "No DV360 entity types are configured for create operation"
+    );
   }
 
   if (variants.length === 1) {

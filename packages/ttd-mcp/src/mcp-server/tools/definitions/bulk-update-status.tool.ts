@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
-import { BulkOperationResultSchema } from "@cesteral/shared";
+import { BulkOperationResultSchema, elicitBulkStatusChangeConfirmation } from "@cesteral/shared";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -37,6 +37,8 @@ export const BulkUpdateStatusInputSchema = z
 
 export const BulkUpdateStatusOutputSchema = z
   .object({
+    confirmed: z.boolean(),
+    declineReason: z.string().optional(),
     entityType: z.string(),
     targetStatus: z.string(),
     totalRequested: z.number(),
@@ -59,6 +61,27 @@ export async function bulkUpdateStatusLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<BulkStatusOutput> {
+  const confirmed = await elicitBulkStatusChangeConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    targetStatus: input.status,
+    impactPreview: input.entityIds,
+    sdkContext,
+  });
+  if (!confirmed) {
+    return {
+      confirmed: false,
+      declineReason: "user_declined",
+      entityType: input.entityType,
+      targetStatus: input.status,
+      totalRequested: input.entityIds.length,
+      successCount: 0,
+      failureCount: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   const { ttdService } = resolveSessionServices(sdkContext);
 
   const { results } = await ttdService.bulkUpdateStatus(
@@ -71,6 +94,7 @@ export async function bulkUpdateStatusLogic(
   const succeeded = results.filter((r) => r.success).length;
 
   return {
+    confirmed: true,
     entityType: input.entityType,
     targetStatus: input.status,
     totalRequested: input.entityIds.length,
@@ -82,6 +106,14 @@ export async function bulkUpdateStatusLogic(
 }
 
 export function bulkUpdateStatusResponseFormatter(result: BulkStatusOutput): McpTextContent[] {
+  if (!result.confirmed) {
+    return [
+      {
+        type: "text" as const,
+        text: `Bulk status update of ${result.totalRequested} ${result.entityType}(s) cancelled by user.\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
