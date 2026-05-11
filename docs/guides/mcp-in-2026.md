@@ -73,12 +73,19 @@ The shared HTTP transport rebuilds session services on cache miss, and `MCP_SESS
 - **`report-csv://` resources are per-instance.** A second-instance follow-up read of an in-memory resource will miss. Today this is mitigated by GCS spill (`REPORT_SPILL_BUCKET`); the path forward is to make the GCS-backed resource the canonical handle and stop holding bodies in memory.
 - Add explicit tests for session rehydration across simulated instances and assert that auth fingerprints and audit logs stay stable.
 
-### 3. Treat discovery metadata as product surface 🟡
+### 3. Treat discovery metadata as product surface ✅
 
-`/.well-known/mcp/server-card.json` ships in every auth mode on every server (per `project_server_card.md`). The remaining work is convergence:
+`/.well-known/mcp/server-card.json` ships in every auth mode on every server (per `project_server_card.md`), and `registry.json` is the canonical source feeding both the per-package `server.json` manifests and the runtime server-card response. Drift is gated by four CI checks:
 
-- single source of truth across `server.json` manifests, the canonical `registry.json`, and the runtime server-card response — generate counts from tool/resource/prompt definitions
-- CI check that fails when registry metadata drifts from the registered tool list (recent commits already moved this direction; tighten until drift is impossible)
+- **`check:registry`** — per-package `server.json` matches `registry.json`
+- **`check:registry-tools`** — `registry.json` tool lists match source `*.tool.ts` definitions (catches static registrations)
+- **`check:registry-runtime`** — live MCP `tools/list` + `prompts/list` match registry (catches dynamic registrations through factories like `registerAsyncTaskTool`)
+- **`check:doc-tool-counts`** — README and `CLAUDE.md` tool-count columns match `registry.json` (catches stale marketing copy)
+
+All four run in `.github/workflows/ci.yml` before the build step, so a PR that drifts the registry from source code, the docs from the registry, or the live advertisement from any of the above gets blocked at CI.
+
+Remaining work is small and depends on external SEPs:
+
 - align the runtime server-card schema with SEP-2127 when it goes Final
 
 ### 4. Progressive discovery: ship grouped capabilities next ✅ for tool search, ⬜ for capability groups

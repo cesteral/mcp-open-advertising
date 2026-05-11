@@ -37,6 +37,9 @@ jobs:
       - name: Check registry → tools list (registry tools match source definitions)
         run: pnpm run check:registry-tools
 
+      - name: Check registry → docs (README + CLAUDE.md tool counts match registry.json)
+        run: pnpm run check:doc-tool-counts
+
       - name: Build
         run: pnpm run build
 

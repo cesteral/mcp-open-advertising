@@ -26,7 +26,8 @@
     "sync:registry-tools": "node scripts/sync-registry-tools.mjs",
     "check:registry-tools": "node scripts/sync-registry-tools.mjs --check",
     "sync:registry-data": "node scripts/sync-registry-data.mjs",
-    "check:registry-runtime": "node scripts/check-registry-runtime.mjs"
+    "check:registry-runtime": "node scripts/check-registry-runtime.mjs",
+    "check:doc-tool-counts": "node scripts/check-doc-tool-counts.mjs"
   },
   "devDependencies": {
     "@modelcontextprotocol/conformance": "^0.1.15",
