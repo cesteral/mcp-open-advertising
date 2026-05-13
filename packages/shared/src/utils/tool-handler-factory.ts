@@ -227,6 +227,7 @@ interface ToolRegistrationConfig {
 interface McpServerLike {
   server: {
     elicitInput: (params: any) => Promise<any>;
+    getClientCapabilities?: () => { elicitation?: unknown } | undefined;
   };
   sendLoggingMessage(params: { level: string; logger?: string; data?: unknown }): Promise<void>;
   registerTool(
@@ -507,18 +508,11 @@ export function registerToolsFromDefinitions(opts: RegisterToolsOptions): void {
             }
 
             // Only expose elicitInput when the connected client advertises the
-            // elicitation capability — gating here means the duck-typed
-            // `!sdkContext.elicitInput` fallback in @cesteral/shared's
-            // elicitation-helpers triggers cleanly for stdio / unsupported
-            // clients, instead of letting the SDK reject the request and
-            // bubble through tool handlers.
-            const capabilityGetter = (
-              server.server as unknown as {
-                getClientCapabilities?: () => { elicitation?: unknown } | undefined;
-              }
-            ).getClientCapabilities;
+            // elicitation capability. Gating here means the `!sdkContext.elicitInput`
+            // fallback in shared elicitation-helpers triggers cleanly for stdio /
+            // unsupported clients, instead of the SDK rejecting downstream.
             const clientSupportsElicitation = Boolean(
-              capabilityGetter?.call(server.server)?.elicitation
+              server.server.getClientCapabilities?.()?.elicitation
             );
 
             const sdkContext: ToolSdkContext = {

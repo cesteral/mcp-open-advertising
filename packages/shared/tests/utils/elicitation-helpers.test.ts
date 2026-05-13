@@ -3,7 +3,6 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
-  __resetElicitModeCache,
   elicitArchiveConfirmation,
   elicitBidChangeConfirmation,
   elicitBudgetChangeConfirmation,
@@ -46,7 +45,6 @@ const originalEnv = process.env[ENV_KEY];
 
 beforeEach(() => {
   delete process.env[ENV_KEY];
-  __resetElicitModeCache();
 });
 
 afterEach(() => {
@@ -55,42 +53,55 @@ afterEach(() => {
   } else {
     process.env[ENV_KEY] = originalEnv;
   }
-  __resetElicitModeCache();
   vi.restoreAllMocks();
 });
 
 describe("confirmDestructive (via elicitArchiveConfirmation)", () => {
   it("returns true when sdkContext has no elicitInput (stdio fallback)", async () => {
-    const result = await elicitArchiveConfirmation(3, "campaign", undefined);
+    const result = await elicitArchiveConfirmation({ count: 3, entityLabel: "campaign" });
     expect(result).toBe(true);
   });
 
   it("returns true when sdkContext is provided but elicitInput is absent", async () => {
-    const result = await elicitArchiveConfirmation(3, "campaign", {});
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: {},
+    });
     expect(result).toBe(true);
   });
 
   it("returns true when user accepts and confirms", async () => {
     const { ctx } = makeAcceptingContext();
-    const result = await elicitArchiveConfirmation(3, "campaign", ctx);
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: ctx,
+    });
     expect(result).toBe(true);
   });
 
   it("returns false when user declines", async () => {
-    const ctx = makeDecliningContext();
-    const result = await elicitArchiveConfirmation(3, "campaign", ctx);
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: makeDecliningContext(),
+    });
     expect(result).toBe(false);
   });
 
   it("returns false when user accepts the form but does not check confirm", async () => {
-    const ctx = makeAcceptedButUncheckedContext();
-    const result = await elicitArchiveConfirmation(3, "campaign", ctx);
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: makeAcceptedButUncheckedContext(),
+    });
     expect(result).toBe(false);
   });
 
-  it("preserves backwards-compatible (count, entityLabel, sdkContext) signature", async () => {
+  it("renders the count and entity label into the prompt message", async () => {
     const { ctx, calls } = makeAcceptingContext();
-    await elicitArchiveConfirmation(7, "ad set", ctx);
+    await elicitArchiveConfirmation({ count: 7, entityLabel: "ad set", sdkContext: ctx });
     expect(calls).toHaveLength(1);
     const message = calls[0]!.message as string;
     expect(message).toContain("7 ad set(s)");
@@ -98,32 +109,8 @@ describe("confirmDestructive (via elicitArchiveConfirmation)", () => {
   });
 });
 
-describe("client without elicitation support", () => {
-  it("allows the operation when SDK rejects with 'does not support elicitation' (client capability missing)", async () => {
-    const ctx: ElicitContext = {
-      elicitInput: async () => {
-        throw new Error("Client does not support elicitation (required for elicitation/create)");
-      },
-    };
-    const result = await elicitArchiveConfirmation(3, "campaign", ctx);
-    expect(result).toBe(true);
-  });
-
-  it("allows when SDK rejects with 'does not support form elicitation'", async () => {
-    const ctx: ElicitContext = {
-      elicitInput: async () => {
-        throw new Error("Client does not support form elicitation.");
-      },
-    };
-    const result = await elicitDeleteConfirmation({
-      entityLabel: "campaign",
-      entityId: "1",
-      sdkContext: ctx,
-    });
-    expect(result).toBe(true);
-  });
-
-  it("re-throws non-unsupported errors (real transport failure must not silently allow deletion)", async () => {
+describe("elicitInput error propagation", () => {
+  it("propagates SDK errors instead of swallowing them", async () => {
     const ctx: ElicitContext = {
       elicitInput: async () => {
         throw new Error("ECONNRESET");
@@ -141,13 +128,21 @@ describe("client without elicitation support", () => {
 
 describe("MCP_ELICIT_DESTRUCTIVE env", () => {
   it("default (unset) requires elicitation — declined user gets false", async () => {
-    const result = await elicitArchiveConfirmation(3, "campaign", makeDecliningContext());
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: makeDecliningContext(),
+    });
     expect(result).toBe(false);
   });
 
   it("explicit 'require' behaves the same as unset", async () => {
     process.env[ENV_KEY] = "require";
-    const result = await elicitArchiveConfirmation(3, "campaign", makeDecliningContext());
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: makeDecliningContext(),
+    });
     expect(result).toBe(false);
   });
 
@@ -155,27 +150,42 @@ describe("MCP_ELICIT_DESTRUCTIVE env", () => {
     process.env[ENV_KEY] = "skip";
     const ctx = makeDecliningContext();
     const elicitSpy = vi.spyOn(ctx, "elicitInput");
-    const result = await elicitArchiveConfirmation(3, "campaign", ctx);
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: ctx,
+    });
     expect(result).toBe(true);
     expect(elicitSpy).not.toHaveBeenCalled();
   });
 
   it("unknown values fall back to 'require' and emit a warning", async () => {
     process.env[ENV_KEY] = "garbage";
-    const ctx = makeDecliningContext();
-    const result = await elicitArchiveConfirmation(3, "campaign", ctx);
-    // Falls back to require — declining user → false (proves elicitation ran).
+    const result = await elicitArchiveConfirmation({
+      count: 3,
+      entityLabel: "campaign",
+      sdkContext: makeDecliningContext(),
+    });
     expect(result).toBe(false);
   });
 
-  it("env value is read once and memoized", async () => {
+  it("env is re-read on every call (no stale cache)", async () => {
     process.env[ENV_KEY] = "skip";
-    expect(await elicitArchiveConfirmation(1, "ad", makeDecliningContext())).toBe(true);
-    // Change env without resetting cache — should still see 'skip' until reset.
+    expect(
+      await elicitArchiveConfirmation({
+        count: 1,
+        entityLabel: "ad",
+        sdkContext: makeDecliningContext(),
+      })
+    ).toBe(true);
     process.env[ENV_KEY] = "require";
-    expect(await elicitArchiveConfirmation(1, "ad", makeDecliningContext())).toBe(true);
-    __resetElicitModeCache();
-    expect(await elicitArchiveConfirmation(1, "ad", makeDecliningContext())).toBe(false);
+    expect(
+      await elicitArchiveConfirmation({
+        count: 1,
+        entityLabel: "ad",
+        sdkContext: makeDecliningContext(),
+      })
+    ).toBe(false);
   });
 });
 
