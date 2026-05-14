@@ -2,11 +2,9 @@
 // See LICENSE.md in the project root for full license terms.
 
 /**
- * elicitation-helpers — shared MCP elicitation patterns for destructive write paths.
- *
- * Provides a small family of named confirmation helpers that all funnel through
- * a single internal `confirmDestructive` so message shape, decline handling,
- * and the `MCP_ELICIT_DESTRUCTIVE` env knob stay uniform across servers.
+ * Shared MCP elicitation patterns for destructive write paths. All named
+ * helpers funnel through `confirmDestructive` so prompt shape, decline
+ * handling, and the `MCP_ELICIT_DESTRUCTIVE` env knob stay uniform.
  */
 
 import { createLogger } from "./logger.js";
@@ -24,35 +22,18 @@ interface ElicitInputResult {
 }
 
 /**
- * Default bulk threshold: bulk mutations under this count skip elicitation
- * unless they touch a sensitive field (status / budget / bid). Chosen to keep
- * everyday small-batch operator fixes friction-free while still gating
- * meaningful blast radius.
+ * Bulk mutations under this count skip elicitation unless they touch a
+ * sensitive field — small-batch operator fixes stay friction-free while
+ * meaningful blast radius is still gated.
  */
 const DEFAULT_BULK_THRESHOLD = 10;
 
 /**
- * Field-name patterns that indicate a bulk mutation is touching spend-impacting
- * or lifecycle-altering fields. The exact spelling differs by platform
- * (entityStatus, dailyBudget, daily_budget, cpcBid, bidAmount, bid_amount, …)
- * so this matches case-insensitively on substrings rather than exact keys.
- *
- * The pattern is intentionally permissive — false positives only cost the user
- * one extra confirmation, while false negatives let spend changes through
- * without gating.
+ * Permissive on purpose — false positives only cost one extra confirmation,
+ * but false negatives let spend changes through ungated.
  */
 const SENSITIVE_FIELD_PATTERN = /(status|archived|active|budget|bid|cpc|cpm|spend|cap|pacing)/i;
 
-/**
- * Scan an array of payload objects and return `true` if any payload contains a
- * key matching {@link SENSITIVE_FIELD_PATTERN}. Used by tools that wrap
- * {@link elicitBulkMutationConfirmation} to decide whether to gate
- * sub-threshold mutations.
- *
- * Pass the inner mutation payloads (e.g. `input.items.map(i => i.data)`), not
- * the wrapping request object — the wrapper usually contains parent IDs
- * (advertiserId, profileId) that should not trigger the heuristic.
- */
 export function hasSensitiveBulkField(
   payloads: ReadonlyArray<Record<string, unknown> | undefined> | undefined
 ): boolean {
@@ -68,40 +49,16 @@ export function hasSensitiveBulkField(
 
 const ELICIT_ENV_VAR = "MCP_ELICIT_DESTRUCTIVE";
 
-type ElicitMode = "require" | "skip";
-
-let cachedElicitMode: ElicitMode | undefined;
-
-/**
- * Read MCP_ELICIT_DESTRUCTIVE once. Default `require`. Unknown values fall
- * back to `require` and emit a one-time warning.
- *
- * Test seam: the cache lets tests reset by reassigning `process.env` and
- * calling `__resetElicitModeCache()`.
- */
-function readElicitMode(): ElicitMode {
-  if (cachedElicitMode !== undefined) return cachedElicitMode;
-
+function shouldSkipElicitation(): boolean {
   const raw = process.env[ELICIT_ENV_VAR];
-  if (raw === undefined || raw === "") {
-    cachedElicitMode = "require";
-    return cachedElicitMode;
-  }
-  if (raw === "require" || raw === "skip") {
-    cachedElicitMode = raw;
-    return cachedElicitMode;
-  }
+  if (!raw) return false;
+  if (raw === "skip") return true;
+  if (raw === "require") return false;
   logger.warn(
     { env: ELICIT_ENV_VAR, value: raw },
     `Unknown ${ELICIT_ENV_VAR} value; treating as 'require'. Accepted values: require | skip.`
   );
-  cachedElicitMode = "require";
-  return cachedElicitMode;
-}
-
-/** Test-only: reset the memoized env read so a test can change `process.env` between cases. */
-export function __resetElicitModeCache(): void {
-  cachedElicitMode = undefined;
+  return false;
 }
 
 interface ConfirmDestructiveOpts {
@@ -120,23 +77,14 @@ interface ConfirmDestructiveOpts {
 const IMPACT_PREVIEW_CAP = 5;
 
 /**
- * Internal: present a destructive-action confirmation and return whether the
- * user accepted.
- *
- * Returns `true` (allow) when:
- *  - the SDK context has no `elicitInput` (e.g. stdio transport — non-interactive
- *    sessions cannot block), or
- *  - `MCP_ELICIT_DESTRUCTIVE=skip` is set explicitly, or
- *  - the user accepts the elicitation.
- *
- * Returns `false` only when the user actively declines.
+ * Returns `true` (allow) when the SDK context has no `elicitInput` (stdio /
+ * client lacks elicitation capability — gated by tool-handler-factory),
+ * when `MCP_ELICIT_DESTRUCTIVE=skip` is set, or when the user accepts.
+ * Returns `false` only when the user actively declines. SDK errors propagate.
  */
 async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean> {
-  // Stdio fallback: non-interactive transport cannot prompt — allow.
   if (!opts.sdkContext?.elicitInput) return true;
-
-  // Explicit operator opt-out for automation pipelines.
-  if (readElicitMode() === "skip") return true;
+  if (shouldSkipElicitation()) return true;
 
   const previewLines =
     opts.impactPreview && opts.impactPreview.length > 0
@@ -152,62 +100,38 @@ async function confirmDestructive(opts: ConfirmDestructiveOpts): Promise<boolean
 
   const message = `${opts.action}\n\n${opts.consequence}${previewLines}`;
 
-  let result: ElicitInputResult;
-  try {
-    result = (await opts.sdkContext.elicitInput({
-      message,
-      requestedSchema: {
-        type: "object",
-        properties: {
-          confirm: {
-            type: "boolean",
-            title: opts.confirmTitle,
-            description: opts.confirmDescription,
-            default: false,
-          },
+  const result = (await opts.sdkContext.elicitInput({
+    message,
+    requestedSchema: {
+      type: "object",
+      properties: {
+        confirm: {
+          type: "boolean",
+          title: opts.confirmTitle,
+          description: opts.confirmDescription,
+          default: false,
         },
       },
-    })) as ElicitInputResult;
-  } catch (err) {
-    // The MCP SDK throws when the connected client does not advertise the
-    // elicitation capability (e.g. older clients, custom transports). The
-    // factory in tool-handler-factory.ts already gates `elicitInput` on the
-    // declared client capability, but defend in depth: if the call still
-    // rejects with an unsupported-elicitation shape, fall back to the
-    // non-interactive contract (allow) instead of blocking the tool.
-    // Any other error re-throws so real transport failures surface.
-    const errMessage = err instanceof Error ? err.message : String(err);
-    if (/does not support .*elicitation|elicitation.*not supported/i.test(errMessage)) {
-      logger.warn(
-        { error: errMessage },
-        "Elicitation unavailable on this client — allowing destructive operation under non-interactive contract."
-      );
-      return true;
-    }
-    throw err;
-  }
+    },
+  })) as ElicitInputResult;
 
   return result.action === "accept" && result.content?.confirm === true;
 }
 
-/**
- * Confirm an archive operation (soft delete that cannot be reactivated on most
- * platforms).
- *
- * Signature preserved for backwards compatibility with existing callers in
- * meta-mcp, linkedin-mcp, tiktok-mcp.
- */
-export async function elicitArchiveConfirmation(
-  count: number,
-  entityLabel: string,
-  sdkContext?: ElicitContext
-): Promise<boolean> {
+/** Confirm an archive operation (soft delete that cannot be reactivated on most platforms). */
+export async function elicitArchiveConfirmation(opts: {
+  count: number;
+  entityLabel: string;
+  impactPreview?: string[];
+  sdkContext?: ElicitContext;
+}): Promise<boolean> {
   return confirmDestructive({
-    action: `You are about to archive ${count} ${entityLabel}(s).`,
+    action: `You are about to archive ${opts.count} ${opts.entityLabel}(s).`,
     consequence: "This action is irreversible — archived entities cannot be reactivated.",
+    impactPreview: opts.impactPreview,
     confirmTitle: "Confirm archive",
-    confirmDescription: `Archive ${count} ${entityLabel}(s) permanently`,
-    sdkContext,
+    confirmDescription: `Archive ${opts.count} ${opts.entityLabel}(s) permanently`,
+    sdkContext: opts.sdkContext,
   });
 }
 
@@ -246,9 +170,8 @@ export async function elicitBulkDeleteConfirmation(opts: {
 }
 
 /**
- * Confirm a bulk status change (pause, resume, archive, delete). No threshold —
- * any bulk status change elicits, because status transitions are the highest-
- * risk class of bulk mutation.
+ * Confirm a bulk status change. No threshold — any bulk status change elicits,
+ * because status transitions are the highest-risk class of bulk mutation.
  */
 export async function elicitBulkStatusChangeConfirmation(opts: {
   count: number;

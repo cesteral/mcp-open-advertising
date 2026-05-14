@@ -59,11 +59,11 @@ export async function archiveEntitiesLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<ArchiveOutput> {
-  const confirmed = await elicitArchiveConfirmation(
-    input.entityIds.length,
-    input.entityType,
-    sdkContext
-  );
+  const confirmed = await elicitArchiveConfirmation({
+    count: input.entityIds.length,
+    entityLabel: input.entityType,
+    sdkContext,
+  });
   if (!confirmed) {
     return {
       confirmed: false,
