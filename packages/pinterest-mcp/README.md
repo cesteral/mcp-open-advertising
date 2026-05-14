@@ -294,7 +294,7 @@ pnpm run typecheck
 
 ## Environment Variables
 
-- `PINTEREST_MCP_PORT`: Server port (default: 3007)
+- `PINTEREST_MCP_PORT`: Server port (default: 3011)
 - `PINTEREST_MCP_HOST`: Server host (default: `127.0.0.1` in development, `0.0.0.0` in production)
 - `MCP_AUTH_MODE`: Authentication mode - `pinterest-bearer` (default), `jwt`, or `none`
 - `MCP_AUTH_SECRET_KEY`: Required when `MCP_AUTH_MODE=jwt`

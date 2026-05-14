@@ -95,7 +95,7 @@ Builds Docker images for all servers and deploys infrastructure using Terraform.
 
 **What it does:**
 
-- Builds Docker images for `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, and `tiktok-mcp`
+- Builds Docker images for all 13 servers: `dbm-mcp`, `dv360-mcp`, `ttd-mcp`, `gads-mcp`, `meta-mcp`, `linkedin-mcp`, `tiktok-mcp`, `cm360-mcp`, `sa360-mcp`, `pinterest-mcp`, `snapchat-mcp`, `amazon-dsp-mcp`, and `msads-mcp`
 - Pushes images to Artifact Registry
 - Initializes Terraform with environment-specific backend
 - Runs Terraform plan
