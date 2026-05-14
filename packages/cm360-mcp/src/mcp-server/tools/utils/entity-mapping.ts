@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
+
 export type CM360EntityType =
   | "campaign"
   | "placement"
@@ -63,7 +65,7 @@ const ENTITY_CONFIGS: Record<CM360EntityType, CM360EntityConfig> = {
 export function getEntityConfig(entityType: CM360EntityType): CM360EntityConfig {
   const config = ENTITY_CONFIGS[entityType];
   if (!config) {
-    throw new Error(`Unknown CM360 entity type: ${entityType}`);
+    throw new McpError(JsonRpcErrorCode.InvalidParams, `Unknown CM360 entity type: ${entityType}`);
   }
   return config;
 }

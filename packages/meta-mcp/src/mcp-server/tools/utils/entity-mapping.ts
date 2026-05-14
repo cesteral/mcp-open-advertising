@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
+
 /**
  * Meta Entity Mapping
  *
@@ -142,7 +144,7 @@ const ENTITY_CONFIGS: Record<MetaEntityType, MetaEntityConfig> = {
 export function getEntityConfig(entityType: MetaEntityType): MetaEntityConfig {
   const config = ENTITY_CONFIGS[entityType];
   if (!config) {
-    throw new Error(`Unknown Meta entity type: ${entityType}`);
+    throw new McpError(JsonRpcErrorCode.InvalidParams, `Unknown Meta entity type: ${entityType}`);
   }
   return config;
 }

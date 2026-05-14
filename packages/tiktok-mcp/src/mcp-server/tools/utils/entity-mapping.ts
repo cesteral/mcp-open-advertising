@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
+
 /**
  * TikTok Entity Mapping
  *
@@ -144,7 +146,7 @@ export function getEntityConfig(entityType: TikTokEntityType): TikTokEntityConfi
   const configs = buildEntityConfigs();
   const config = configs[entityType];
   if (!config) {
-    throw new Error(`Unknown TikTok entity type: ${entityType}`);
+    throw new McpError(JsonRpcErrorCode.InvalidParams, `Unknown TikTok entity type: ${entityType}`);
   }
   return config;
 }

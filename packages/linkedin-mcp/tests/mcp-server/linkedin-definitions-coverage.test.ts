@@ -80,7 +80,7 @@ describe("LinkedIn MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 26 : 20); // 20 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 27 : 21); // 21 business (20 + linkedin_search_tools) + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

@@ -53,7 +53,11 @@ import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { listTargetingOptionsTool } from "./list-targeting-options.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -81,6 +85,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Specialized ──
   getAdPreviewTool,
   listTargetingOptionsTool,
+  // ── Discovery ──
+  createToolSearchTool({ platform: "cm360", getTools: () => allTools }),
 ];
 
 /**

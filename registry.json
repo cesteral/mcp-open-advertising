@@ -369,7 +369,8 @@
         "linkedin_get_ad_preview",
         "linkedin_validate_entity",
         "linkedin_upload_image",
-        "linkedin_upload_video"
+        "linkedin_upload_video",
+        "linkedin_search_tools"
       ],
       "resources": [
         "entity-hierarchy://linkedin/all",
@@ -491,7 +492,8 @@
         "cm360_create_report_schedule",
         "cm360_delete_report_schedule",
         "cm360_get_report_breakdowns",
-        "cm360_list_report_schedules"
+        "cm360_list_report_schedules",
+        "cm360_search_tools"
       ],
       "resources": [
         "entity-hierarchy://all",
@@ -720,7 +722,8 @@
         "amazon_dsp_adjust_bids",
         "amazon_dsp_duplicate_entity",
         "amazon_dsp_get_ad_preview",
-        "amazon_dsp_validate_entity"
+        "amazon_dsp_validate_entity",
+        "amazon_dsp_search_tools"
       ],
       "resources": [
         "entity-hierarchy://amazonDsp/all",

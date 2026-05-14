@@ -112,7 +112,7 @@ describe("Amazon DSP MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 24 : 18); // 18 business + 6 conformance when enabled
+    expect(allTools).toHaveLength(conformanceEnabled ? 25 : 19); // 19 business (18 + amazon_dsp_search_tools) + 6 conformance when enabled
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);

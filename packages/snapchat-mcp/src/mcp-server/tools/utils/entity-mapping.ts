@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
+
 /**
  * Snapchat Entity Mapping
  *
@@ -119,7 +121,10 @@ const ENTITY_CONFIGS: Record<SnapchatEntityType, SnapchatEntityConfig> = {
 export function getEntityConfig(entityType: SnapchatEntityType): SnapchatEntityConfig {
   const config = ENTITY_CONFIGS[entityType];
   if (!config) {
-    throw new Error(`Unknown Snapchat entity type: ${entityType}`);
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Unknown Snapchat entity type: ${entityType}`
+    );
   }
   return config;
 }
