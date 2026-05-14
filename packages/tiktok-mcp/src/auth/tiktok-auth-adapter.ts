@@ -15,7 +15,7 @@
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 /**
  * TikTok API response shape (success)
@@ -89,7 +89,8 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
         `TikTok token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
@@ -97,7 +98,10 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
     const data = (await response.json()) as TikTokUserInfoResponse;
 
     if (data.code !== 0) {
-      throw new Error(`TikTok token validation failed: code=${data.code} message=${data.message}`);
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        `TikTok token validation failed: code=${data.code} message=${data.message}`
+      );
     }
 
     this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
@@ -180,14 +184,18 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => "");
-      throw new Error(
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
         `TikTok token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
       );
     }
 
     const data = (await response.json()) as TikTokUserInfoResponse;
     if (data.code !== 0) {
-      throw new Error(`TikTok token validation failed: code=${data.code} message=${data.message}`);
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        `TikTok token validation failed: code=${data.code} message=${data.message}`
+      );
     }
 
     this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";

@@ -9,7 +9,9 @@
  */
 
 import { createHash } from "crypto";
-import { extractHeader } from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+
+const DEFAULT_TTD_GRAPHQL_URL = "https://desk.thetradedesk.com/graphql";
 
 export interface TtdDirectTokenCredentials {
   token: string;
@@ -24,11 +26,18 @@ export interface TtdAuthAdapter {
 /**
  * Direct token adapter — accepts a pre-existing TTD API token and returns it
  * as-is without performing any token exchange.
+ *
+ * Validates the token on first use by issuing a minimal GraphQL query
+ * (`{ __typename }`) so invalid tokens fail fast at session creation rather
+ * than on first tool call. Result is memoized.
  */
 export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
+  private validated = false;
+
   constructor(
     private readonly token: string,
-    private readonly _partnerId: string = "direct-token"
+    private readonly _partnerId: string = "direct-token",
+    private readonly graphqlUrl: string = DEFAULT_TTD_GRAPHQL_URL
   ) {}
 
   get partnerId(): string {
@@ -40,12 +49,73 @@ export class TtdDirectTokenAuthAdapter implements TtdAuthAdapter {
   }
 
   async validate(): Promise<void> {
-    if (!this.token || this.token.trim().length === 0) {
-      throw new Error("TTD token is empty");
+    if (this.validated) {
+      return;
     }
-    if (this.token !== this.token.trim()) {
-      throw new Error("TTD token has leading or trailing whitespace");
+
+    // Fast-path structural checks before the network call.
+    if (!this.token || this.token.length === 0) {
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        "TTD token validation failed: token is empty"
+      );
     }
+    if (/\s/.test(this.token)) {
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        "TTD token validation failed: token contains whitespace"
+      );
+    }
+
+    const response = await fetchWithTimeout(this.graphqlUrl, 10_000, undefined, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "TTD-Auth": this.token,
+      },
+      body: JSON.stringify({ query: "{ __typename }" }),
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      const errorBody = await response.text().catch(() => "");
+      throw new McpError(
+        JsonRpcErrorCode.Unauthorized,
+        `TTD token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      );
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      throw new McpError(
+        JsonRpcErrorCode.InternalError,
+        `TTD token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+      );
+    }
+
+    // GraphQL endpoints return 200 even for auth errors — inspect the body.
+    const data = (await response.json().catch(() => null)) as {
+      data?: unknown;
+      errors?: Array<{ message?: string; extensions?: { code?: string } }>;
+    } | null;
+
+    if (data?.errors && data.errors.length > 0) {
+      const first = data.errors[0];
+      const code = first?.extensions?.code;
+      const message = first?.message ?? "unknown GraphQL error";
+      if (
+        code === "UNAUTHENTICATED" ||
+        code === "FORBIDDEN" ||
+        /auth|token|unauthor/i.test(message)
+      ) {
+        throw new McpError(
+          JsonRpcErrorCode.Unauthorized,
+          `TTD token validation failed: ${message}`
+        );
+      }
+      throw new McpError(JsonRpcErrorCode.InternalError, `TTD token validation failed: ${message}`);
+    }
+
+    this.validated = true;
   }
 }
 

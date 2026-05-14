@@ -10,11 +10,18 @@ import {
 } from "./ttd-auth-adapter.js";
 
 export class TtdTokenAuthStrategy implements AuthStrategy {
-  constructor(private readonly logger?: Logger) {}
+  constructor(
+    private readonly graphqlUrl: string,
+    private readonly logger?: Logger
+  ) {}
 
   async verify(headers: Record<string, string | string[] | undefined>): Promise<AuthResult> {
     const credentials = parseTtdDirectTokenFromHeaders(headers);
-    const adapter = new TtdDirectTokenAuthAdapter(credentials.token);
+    const adapter = new TtdDirectTokenAuthAdapter(
+      credentials.token,
+      "direct-token",
+      this.graphqlUrl
+    );
     await adapter.validate();
 
     this.logger?.debug("TTD direct API token accepted");
