@@ -154,7 +154,7 @@ After reviewing and customizing the copy:
     "entityType": "${entityType}",
     "adAccountId": "${adAccountId}",
     "entityIds": ["{newEntityId}"],
-    "operationStatus": "ENABLE"
+    "operationStatus": "ACTIVE"
   }
 }
 \`\`\`

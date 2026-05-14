@@ -97,7 +97,7 @@ amazon_dsp_create_entity({
     "advertiserId": "ADVERTISER_ID",
     "clickThroughUrl": "https://example.com/landing",
     "creativeType": "STANDARD_DISPLAY",
-    "state": "ACTIVE"
+    "state": "ENABLED"
   }
 })
 \`\`\`

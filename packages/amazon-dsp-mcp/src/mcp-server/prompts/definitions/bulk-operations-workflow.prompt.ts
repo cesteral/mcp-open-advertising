@@ -41,14 +41,14 @@ amazon_dsp_bulk_update_status({
   "entityType": "${entityType}",
   "profileId": "${profileId}",
   "entityIds": ["ID_1", "ID_2", "ID_3"],
-  "operationStatus": "DISABLE"
+  "operationStatus": "PAUSED"
 })
 \`\`\`
 
 **Operation status values:**
-- \`ENABLE\` — Activate entities
-- \`DISABLE\` — Pause entities
-- \`DELETE\` — Permanently delete (irreversible!)
+- \`ENABLED\` — Activate entities
+- \`PAUSED\` — Pause entities
+- \`ARCHIVED\` — Soft delete (Amazon DSP has no hard delete)
 
 ---
 
