@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
+
 /**
  * Google Ads Entity Mapping
  *
@@ -108,7 +110,8 @@ const ENTITY_CONFIGS: Record<GAdsEntityType, GAdsEntityConfig> = {
 export function assertMutateOpSupported(entityType: GAdsEntityType, op: MutateOp): void {
   const config = ENTITY_CONFIGS[entityType];
   if (!config.supportedMutateOps.includes(op)) {
-    throw new Error(
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
       `Google Ads API does not support ${op} on ${entityType} entities (supported: ${config.supportedMutateOps.join(", ")})`
     );
   }
@@ -117,7 +120,10 @@ export function assertMutateOpSupported(entityType: GAdsEntityType, op: MutateOp
 export function getEntityConfig(entityType: GAdsEntityType): GAdsEntityConfig {
   const config = ENTITY_CONFIGS[entityType];
   if (!config) {
-    throw new Error(`Unknown Google Ads entity type: ${entityType}`);
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      `Unknown Google Ads entity type: ${entityType}`
+    );
   }
   return config;
 }

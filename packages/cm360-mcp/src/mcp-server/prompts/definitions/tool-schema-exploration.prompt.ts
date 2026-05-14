@@ -86,6 +86,9 @@ Fetch these resources for detailed schema information:
 ### Validation
 - \`cm360_validate_entity\` — Client-side entity validation (no API call)
 
+### Discovery
+- \`cm360_search_tools\` — Rank server tools by a natural-language query
+
 ## Workflow Prompts
 
 | Task | Prompt |

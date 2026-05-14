@@ -17,13 +17,13 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 52    |
 | 4   | `gads-mcp`       | 3004 | Google Ads REST API v23            | campaign, adGroup, ad, keyword, campaignBudget, asset                                            | 15    |
 | 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 27    |
-| 6   | `linkedin-mcp`   | 3006 | LinkedIn Marketing API v2          | adAccount, campaignGroup, campaign, creative, conversionRule                                     | 20    |
+| 6   | `linkedin-mcp`   | 3006 | LinkedIn Marketing API v2          | adAccount, campaignGroup, campaign, creative, conversionRule                                     | 21    |
 | 7   | `tiktok-mcp`     | 3007 | TikTok Marketing API v1.3          | campaign, adGroup, ad, creative                                                                  | 24    |
-| 8   | `cm360-mcp`      | 3008 | CM360 API v5                       | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 20    |
+| 8   | `cm360-mcp`      | 3008 | CM360 API v5                       | campaign, placement, ad, creative, site, advertiser, floodlightActivity, floodlightConfiguration | 21    |
 | 9   | `snapchat-mcp`   | 3009 | Snapchat Ads API v1                | campaign, adGroup, ad, creative                                                                  | 23    |
 | 10  | `sa360-mcp`      | 3010 | SA360 Reporting API v0 + DS v2     | _(reporting + conversions)_                                                                      | 16    |
 | 11  | `pinterest-mcp`  | 3011 | Pinterest Ads API v5               | campaign, adGroup, ad, creative                                                                  | 23    |
-| 12  | `amazon-dsp-mcp` | 3012 | Amazon DSP API                     | order, lineItem, creative                                                                        | 18    |
+| 12  | `amazon-dsp-mcp` | 3012 | Amazon DSP API                     | order, lineItem, creative                                                                        | 19    |
 | 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 25    |
 
 ## Essential Commands
@@ -305,12 +305,12 @@ Standard CRUD/bulk/reporting tools plus:
 
 ### Server-Specific Notes
 
-- **linkedin-mcp** (20 tools): URN-based entity IDs, `LinkedIn-Version: 202409` header, analytics via `/v2/adAnalytics` with pivot breakdowns
+- **linkedin-mcp** (21 tools): URN-based entity IDs, `LinkedIn-Version: 202409` header, analytics via `/v2/adAnalytics` with pivot breakdowns
 - **tiktok-mcp** (23 tools): `X-TikTok-Advertiser-Id` header in HTTP mode, image/video upload
-- **cm360-mcp** (20 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting; scheduling via `create/list/delete_report_schedule`
+- **cm360-mcp** (21 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting; scheduling via `create/list/delete_report_schedule`
 - **pinterest-mcp** (22 tools): cursor-based pagination via `bookmark` tokens. Video upload via `/v5/media`; image creatives reference URLs directly (Pinterest's `/v5/media` endpoint only supports `media_type="video"`)
 - **snapchat-mcp** (22 tools): Ad Squads (adGroups), cursor-based pagination
-- **amazon-dsp-mcp** (18 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status). Reporting v3 is scoped by `accountId` (DSP entity ID) in the URL path, distinct from the profile header.
+- **amazon-dsp-mcp** (19 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status). Reporting v3 is scoped by `accountId` (DSP entity ID) in the URL path, distinct from the profile header.
 
 ### How the Servers Work Together
 

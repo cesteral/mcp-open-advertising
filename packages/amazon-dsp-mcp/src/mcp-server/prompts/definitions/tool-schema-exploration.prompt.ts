@@ -79,6 +79,9 @@ Fetch these resources for detailed schema information:
 ### Validation
 - \`amazon_dsp_validate_entity\` — Client-side entity validation
 
+### Discovery
+- \`amazon_dsp_search_tools\` — Rank server tools by a natural-language query
+
 ## Workflow Prompts
 
 | Task | Prompt |

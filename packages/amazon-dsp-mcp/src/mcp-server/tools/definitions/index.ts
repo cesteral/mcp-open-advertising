@@ -52,7 +52,11 @@ import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
-import { conformanceTools, type ToolDefinitionForFactory } from "@cesteral/shared";
+import {
+  conformanceTools,
+  createToolSearchTool,
+  type ToolDefinitionForFactory,
+} from "@cesteral/shared";
 
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Core CRUD ──
@@ -80,6 +84,8 @@ const productionTools: ToolDefinitionForFactory[] = [
   duplicateEntityTool,
   // ── Validation ──
   validateEntityTool,
+  // ── Discovery ──
+  createToolSearchTool({ platform: "amazon_dsp", getTools: () => allTools }),
 ];
 
 /**

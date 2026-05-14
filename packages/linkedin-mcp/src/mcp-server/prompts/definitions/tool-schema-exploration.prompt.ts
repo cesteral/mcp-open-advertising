@@ -80,6 +80,9 @@ Fetch these resources for detailed schema information:
 ### Validation
 - \`linkedin_validate_entity\` — Client-side entity validation
 
+### Discovery
+- \`linkedin_search_tools\` — Rank server tools by a natural-language query
+
 ## Workflow Prompts
 
 | Task | Prompt |

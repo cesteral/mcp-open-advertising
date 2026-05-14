@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import { JsonRpcErrorCode, McpError } from "@cesteral/shared";
+
 /**
  * TTD Entity Mapping
  *
@@ -79,7 +81,7 @@ const ENTITY_CONFIGS: Record<TtdEntityType, TtdEntityConfig> = {
 export function getEntityConfig(entityType: TtdEntityType): TtdEntityConfig {
   const config = ENTITY_CONFIGS[entityType];
   if (!config) {
-    throw new Error(`Unknown TTD entity type: ${entityType}`);
+    throw new McpError(JsonRpcErrorCode.InvalidParams, `Unknown TTD entity type: ${entityType}`);
   }
   return config;
 }
