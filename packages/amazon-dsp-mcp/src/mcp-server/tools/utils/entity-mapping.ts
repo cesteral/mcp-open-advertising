@@ -30,6 +30,10 @@ export interface AmazonDspEntityConfig {
   createPath: string;
   /** API path for update (PUT) */
   updatePath: string;
+  /** Vendor Content-Type for POST {createPath}. See contract notes. */
+  createMediaType?: string;
+  /** Vendor Content-Type for PUT {updatePath}. See contract notes. */
+  updateMediaType?: string;
   /** Primary ID field name in the response */
   idField: string;
   /** Response array key (e.g., "orders") */
@@ -53,6 +57,8 @@ const ENTITY_CONFIGS: Record<AmazonDspCanonicalEntityType, AmazonDspEntityConfig
           getPath: contract.getPath,
           createPath: contract.createPath,
           updatePath: contract.updatePath,
+          createMediaType: contract.createMediaType,
+          updateMediaType: contract.updateMediaType,
           idField: contract.idField,
           responseKey: contract.responseKey,
           listFilterParam: contract.listFilterParam,

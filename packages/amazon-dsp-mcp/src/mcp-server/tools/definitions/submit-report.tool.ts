@@ -28,7 +28,6 @@ export const SubmitReportInputSchema = z
       .string()
       .min(1)
       .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
-    name: z.string().optional().describe("Report name (optional)"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -109,7 +108,6 @@ export async function submitReportLogic(
   const result = await amazonDspReportingService.submitReport(
     input.accountId,
     {
-      name: input.name,
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
       configuration: {

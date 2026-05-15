@@ -179,11 +179,15 @@ export class AmazonDspService {
   ): Promise<AmazonDspEntityMap[T]> {
     const config = getEntityConfig(entityType);
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    // Amazon DSP create expects a single object body
+    // Amazon DSP create expects a single object body. The vendor Content-Type
+    // (e.g. application/vnd.dsporders.v2.2+json) is required — without it the
+    // gateway falls through to SigV4 and returns 403.
     return this.httpClient.post(
       config.createPath,
       data as unknown as Record<string, unknown>,
-      context
+      context,
+      undefined,
+      config.createMediaType
     ) as Promise<AmazonDspEntityMap[T]>;
   }
 
@@ -196,7 +200,12 @@ export class AmazonDspService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    return this.httpClient.put(path, data, context) as Promise<AmazonDspEntityMap[T]>;
+    return this.httpClient.put(
+      path,
+      data as Record<string, unknown>,
+      context,
+      config.updateMediaType
+    ) as Promise<AmazonDspEntityMap[T]>;
   }
 
   /**
@@ -211,9 +220,12 @@ export class AmazonDspService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    return this.httpClient.put(path, { state: "ARCHIVED" }, context) as Promise<
-      AmazonDspEntityMap[T]
-    >;
+    return this.httpClient.put(
+      path,
+      { state: "ARCHIVED" },
+      context,
+      config.updateMediaType
+    ) as Promise<AmazonDspEntityMap[T]>;
   }
 
   async updateEntityStatus<T extends AmazonDspEntityType>(
@@ -225,7 +237,9 @@ export class AmazonDspService {
     const config = getEntityConfig(entityType);
     const path = interpolatePath(config.updatePath, { entityId });
     await this.rateLimiter.consume("amazon_dsp:write", 3);
-    return this.httpClient.put(path, { state }, context) as Promise<AmazonDspEntityMap[T]>;
+    return this.httpClient.put(path, { state }, context, config.updateMediaType) as Promise<
+      AmazonDspEntityMap[T]
+    >;
   }
 
   // ─── Advertiser Account ──────────────────────────────────────────

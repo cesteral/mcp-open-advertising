@@ -25,6 +25,17 @@ export interface AmazonDspEntityContract {
   getPath: string;
   createPath: string;
   updatePath: string;
+  /**
+   * Vendor media type required on POST {createPath}. Amazon's API gateway routes
+   * Bearer-authenticated writes via Content-Type negotiation; sending plain
+   * `application/json` falls through to the SigV4 auth path and returns
+   * 403 "Invalid key=value pair (missing equal-sign) in Authorization header".
+   * Undefined for endpoints whose canonical path is not directly writable
+   * (e.g. /dsp/creatives — writes go to subtype-specific paths).
+   */
+  createMediaType?: string;
+  /** Vendor media type required on PUT {updatePath}. See createMediaType. */
+  updateMediaType?: string;
   idField: string;
   responseKey: string;
   listFilterParam: string;
@@ -50,6 +61,8 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     getPath: "/dsp/orders/{entityId}",
     createPath: "/dsp/orders",
     updatePath: "/dsp/orders/{entityId}",
+    createMediaType: "application/vnd.dsporders.v2.2+json",
+    updateMediaType: "application/vnd.dsporders.v2.2+json",
     idField: "orderId",
     responseKey: "orders",
     listFilterParam: "advertiserId",
@@ -74,6 +87,8 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     getPath: "/dsp/lineItems/{entityId}",
     createPath: "/dsp/lineItems",
     updatePath: "/dsp/lineItems/{entityId}",
+    createMediaType: "application/vnd.dsplineitems.v3.1+json",
+    updateMediaType: "application/vnd.dsplineitems.v3.1+json",
     idField: "lineItemId",
     responseKey: "lineItems",
     listFilterParam: "orderId",
@@ -130,6 +145,7 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     notes: [
       "Creative creation depends on the underlying format and may require additional assets or subtype-specific fields.",
       "Creative association to line items is modeled separately from creative asset creation.",
+      "Amazon DSP has no plain POST /dsp/creatives endpoint — writes are subtype-routed (/dsp/creatives/image, /video, /thirdParty, /rec) with their own vendor media types. The createPath/updatePath above are for read-side aggregation only; create/update via this service will not work until subtype routing is added.",
     ],
   },
   target: {

@@ -35,7 +35,6 @@ export const GetReportBreakdownsInputSchema = z
       .string()
       .min(1)
       .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
-    name: z.string().optional().describe("Report name (optional)"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -128,7 +127,6 @@ export async function getReportBreakdownsLogic(
   const result = await amazonDspReportingService.getReportBreakdowns(
     input.accountId,
     {
-      name: input.name,
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
       configuration: {

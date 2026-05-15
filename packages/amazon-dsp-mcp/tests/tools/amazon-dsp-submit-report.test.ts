@@ -66,7 +66,6 @@ describe("submitReportLogic", () => {
     await submitReportLogic(
       {
         accountId: "1234567890",
-        name: "My Test Report",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         reportTypeId: "dspOrder",
@@ -82,7 +81,6 @@ describe("submitReportLogic", () => {
     expect(mockSubmitReport).toHaveBeenCalledWith(
       "1234567890",
       expect.objectContaining({
-        name: "My Test Report",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
         configuration: expect.objectContaining({
