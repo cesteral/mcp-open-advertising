@@ -14,28 +14,24 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
+import { AMAZON_DSP_REPORTING_CONTRACT } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_get_report";
 const TOOL_TITLE = "Get Amazon DSP Report";
-const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP performance report.
+const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP performance report (legacy /dsp/reports API).
 
-Follows the async polling pattern: submit task → poll until COMPLETED → download data.
-This may take 30s–5 minutes depending on the data volume.
+Follows the async polling pattern: submit task → poll until SUCCESS → download data. This may take 30s–5 minutes depending on the data volume.
 
-**Report type IDs:** dspLineItem, dspOrder, dspCreative, dspAudience
-**Common columns:** impressions, clickThroughs, totalCost, dpv14d, purchases14d
-**Common groupBy:** order, lineItem, creative, audience, date
+**Allowed \`type\`:** CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE.
+**CAMPAIGN \`dimensions\`:** ORDER, LINE_ITEM, CREATIVE.
+**Common metrics:** impressions, totalCost, viewableImpressions, viewabilityRate (Amazon returns an authoritative invalid-list for unknown names).
 
 Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is supported; avoid custom ranges beyond 95 days.`;
 
 export const GetReportInputSchema = z
   .object({
-    accountId: z
-      .string()
-      .min(1)
-      .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -47,39 +43,31 @@ export const GetReportInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."
+        "Start date (YYYY-MM-DD format). Max 95-day lookback. Required if datePreset not provided. Converted to YYYYMMDD upstream."
       ),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
+      .describe("End date (YYYY-MM-DD format). Required if datePreset not provided."),
+    type: z
+      .enum(AMAZON_DSP_REPORTING_CONTRACT.reportTypes)
       .describe(
-        "End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."
+        `Report category. One of: ${AMAZON_DSP_REPORTING_CONTRACT.reportTypes.join(", ")}.`
       ),
-    reportTypeId: z
-      .string()
-      .min(1)
-      .describe("Report type ID (e.g. dspLineItem, dspOrder, dspCreative)"),
-    groupBy: z
+    dimensions: z
       .array(z.string())
-      .min(1)
-      .describe("Dimensions to group by (e.g. ['order', 'lineItem'])"),
-    columns: z
+      .optional()
+      .describe("Grouping dimensions (CAMPAIGN: ORDER, LINE_ITEM, CREATIVE)."),
+    metrics: z
       .array(z.string())
-      .min(1)
-      .describe("Metrics/columns to include (e.g. ['impressions', 'clickThroughs', 'totalCost'])"),
+      .optional()
+      .describe("Metric names. Joined to comma-string upstream."),
     timeUnit: z
       .enum(["DAILY", "SUMMARY"])
       .optional()
       .default("DAILY")
       .describe("Time unit for the report (default: DAILY)"),
-    adProduct: z
-      .string()
-      .optional()
-      .default("DEMAND_SIDE_PLATFORM")
-      .describe(
-        "Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"
-      ),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -121,17 +109,13 @@ export async function getReportLogic(
   }
 
   const result = await amazonDspReportingService.getReport(
-    input.accountId,
     {
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
-      configuration: {
-        adProduct: input.adProduct,
-        groupBy: input.groupBy,
-        columns: input.columns,
-        reportTypeId: input.reportTypeId,
-        timeUnit: input.timeUnit,
-      },
+      type: input.type,
+      dimensions: input.dimensions,
+      metrics: input.metrics,
+      timeUnit: input.timeUnit,
     },
     getReportViewFetchLimit(input),
     context
@@ -215,25 +199,23 @@ export const getReportTool = {
   },
   inputExamples: [
     {
-      label: "Line item delivery report for last 7 days",
+      label: "Daily line-item-level CAMPAIGN report for last 7 days",
       input: {
-        accountId: "1234567890",
         datePreset: "LAST_7_DAYS",
-        reportTypeId: "dspLineItem",
-        groupBy: ["order", "lineItem"],
-        columns: ["impressions", "clickThroughs", "totalCost"],
+        type: "CAMPAIGN",
+        dimensions: ["ORDER", "LINE_ITEM"],
+        metrics: ["impressions", "totalCost"],
         timeUnit: "DAILY",
       },
     },
     {
-      label: "Order performance report",
+      label: "Order-level CAMPAIGN summary for a custom range",
       input: {
-        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        reportTypeId: "dspOrder",
-        groupBy: ["order"],
-        columns: ["impressions", "clickThroughs", "totalCost", "dpv14d", "purchases14d"],
+        type: "CAMPAIGN",
+        dimensions: ["ORDER"],
+        metrics: ["impressions", "totalCost", "viewableImpressions"],
         timeUnit: "SUMMARY",
       },
     },

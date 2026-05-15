@@ -14,27 +14,23 @@ import {
   ReportViewInputSchema,
   ReportViewOutputSchema,
 } from "@cesteral/shared";
+import { AMAZON_DSP_REPORTING_CONTRACT } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_get_report_breakdowns";
 const TOOL_TITLE = "Get Amazon DSP Report with Breakdowns";
-const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP report with additional breakdown groupBy dimensions.
+const TOOL_DESCRIPTION = `Submit and retrieve an async Amazon DSP report (legacy /dsp/reports API) with additional breakdown dimensions appended to the base set.
 
-Like \`amazon_dsp_get_report\` but adds extra breakdown dimensions for more granular data.
+Like \`amazon_dsp_get_report\` but the \`breakdowns\` array is concatenated onto \`dimensions\` before submitting — convenient when iterating "show me X also broken down by Y".
 
-**Common breakdown groupBy:** date, geography, device, creative
+**Allowed \`type\`:** CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE.
+**CAMPAIGN \`dimensions\` (base + breakdowns):** ORDER, LINE_ITEM, CREATIVE.
 
-Results include metrics broken down by the additional groupBy dimensions.
-
-Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is the longest supported preset.`;
+Note: Amazon DSP has a maximum 95-day lookback.`;
 
 export const GetReportBreakdownsInputSchema = z
   .object({
-    accountId: z
-      .string()
-      .min(1)
-      .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -45,44 +41,36 @@ export const GetReportBreakdownsInputSchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
-      .describe(
-        "Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."
-      ),
+      .describe("Start date (YYYY-MM-DD format). Required if datePreset not provided."),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
+      .describe("End date (YYYY-MM-DD format). Required if datePreset not provided."),
+    type: z
+      .enum(AMAZON_DSP_REPORTING_CONTRACT.reportTypes)
       .describe(
-        "End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."
+        `Report category. One of: ${AMAZON_DSP_REPORTING_CONTRACT.reportTypes.join(", ")}.`
       ),
-    reportTypeId: z
-      .string()
-      .min(1)
-      .describe("Report type ID (e.g. dspLineItem, dspOrder, dspCreative)"),
-    groupBy: z
+    dimensions: z
       .array(z.string())
-      .min(1)
-      .describe("Base dimensions to group by (e.g. ['order', 'lineItem'])"),
+      .optional()
+      .describe("Base grouping dimensions (CAMPAIGN: ORDER, LINE_ITEM, CREATIVE)."),
     breakdowns: z
       .array(z.string())
       .min(1)
-      .describe("Additional breakdown groupBy dimensions (e.g. ['date', 'geography'])"),
-    columns: z
+      .describe(
+        "Additional dimensions appended to `dimensions` before submitting. Same allowed values as `dimensions`."
+      ),
+    metrics: z
       .array(z.string())
-      .min(1)
-      .describe("Metrics/columns to include (e.g. ['impressions', 'clickThroughs', 'totalCost'])"),
+      .optional()
+      .describe("Metric names. Joined to comma-string upstream."),
     timeUnit: z
       .enum(["DAILY", "SUMMARY"])
       .optional()
       .default("DAILY")
       .describe("Time unit for the report (default: DAILY)"),
-    adProduct: z
-      .string()
-      .optional()
-      .default("DEMAND_SIDE_PLATFORM")
-      .describe(
-        "Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"
-      ),
     includeComputedMetrics: z
       .boolean()
       .optional()
@@ -101,7 +89,9 @@ export const GetReportBreakdownsOutputSchema = z
   .object({
     taskId: z.string().describe("Report task ID"),
     ...ReportViewOutputSchema.shape,
-    appliedGroupBy: z.array(z.string()).describe("All groupBy dimensions used (base + breakdowns)"),
+    appliedDimensions: z
+      .array(z.string())
+      .describe("All dimensions used (base + breakdowns)"),
     timestamp: z.string().datetime(),
   })
   .describe("Report with breakdowns result");
@@ -125,17 +115,13 @@ export async function getReportBreakdownsLogic(
   }
 
   const result = await amazonDspReportingService.getReportBreakdowns(
-    input.accountId,
     {
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
-      configuration: {
-        adProduct: input.adProduct,
-        groupBy: input.groupBy,
-        columns: input.columns,
-        reportTypeId: input.reportTypeId,
-        timeUnit: input.timeUnit,
-      },
+      type: input.type,
+      dimensions: input.dimensions,
+      metrics: input.metrics,
+      timeUnit: input.timeUnit,
     },
     input.breakdowns,
     getReportViewFetchLimit(input),
@@ -155,9 +141,9 @@ export async function getReportBreakdownsLogic(
       headers,
       rows: arrayRowsToRecords(headers, rows),
       totalRows: result.totalRows,
-      input: { ...input, columns: input.columns },
+      input: { ...input, columns: input.metrics ?? [] },
     }),
-    appliedGroupBy: [...input.groupBy, ...input.breakdowns],
+    appliedDimensions: [...(input.dimensions ?? []), ...input.breakdowns],
     timestamp: new Date().toISOString(),
   };
 }
@@ -204,7 +190,7 @@ export function getReportBreakdownsResponseFormatter(
   return [
     {
       type: "text" as const,
-      text: `Report task: ${result.taskId}\nApplied groupBy: ${result.appliedGroupBy.join(", ")}\n\n${formatReportViewResponse(result, "Report data")}`,
+      text: `Report task: ${result.taskId}\nApplied dimensions: ${result.appliedDimensions.join(", ")}\n\n${formatReportViewResponse(result, "Report data")}`,
     },
   ];
 }
@@ -223,27 +209,25 @@ export const getReportBreakdownsTool = {
   },
   inputExamples: [
     {
-      label: "Line item report broken down by geography",
+      label: "ORDER-level CAMPAIGN report broken down by CREATIVE",
       input: {
-        accountId: "1234567890",
         datePreset: "LAST_7_DAYS",
-        reportTypeId: "dspLineItem",
-        groupBy: ["order", "lineItem"],
-        breakdowns: ["geography"],
-        columns: ["impressions", "clickThroughs", "totalCost"],
+        type: "CAMPAIGN",
+        dimensions: ["ORDER"],
+        breakdowns: ["CREATIVE"],
+        metrics: ["impressions", "totalCost"],
         timeUnit: "DAILY",
       },
     },
     {
-      label: "Order report broken down by device",
+      label: "ORDER-level CAMPAIGN summary broken down by LINE_ITEM",
       input: {
-        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        reportTypeId: "dspOrder",
-        groupBy: ["order"],
-        breakdowns: ["device"],
-        columns: ["impressions", "clickThroughs", "totalCost"],
+        type: "CAMPAIGN",
+        dimensions: ["ORDER"],
+        breakdowns: ["LINE_ITEM"],
+        metrics: ["impressions", "totalCost", "viewableImpressions"],
         timeUnit: "SUMMARY",
       },
     },

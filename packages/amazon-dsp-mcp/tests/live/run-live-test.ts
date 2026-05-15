@@ -256,26 +256,25 @@ async function main() {
 
   // 6. submit_report → check_report_status → download_report → get_report_breakdowns
   {
-    const accountId = advertiserId ?? profileId;
     const r = await call(client, "amazon_dsp_submit_report", {
-      accountId,
       datePreset: "LAST_7_DAYS",
-      reportTypeId: "dspOrder",
-      groupBy: ["order"],
-      columns: ["impressions", "clicks", "totalCost"],
+      type: "CAMPAIGN",
+      dimensions: ["ORDER"],
+      metrics: ["impressions", "totalCost"],
+      timeUnit: "DAILY",
     });
     if (r.ok) {
       reportTaskId = (r.parsed as { taskId?: string })?.taskId;
       record({
         tool: "amazon_dsp_submit_report",
-        scenario: "dspOrder LAST_7_DAYS",
+        scenario: "CAMPAIGN+ORDER LAST_7_DAYS",
         status: "PASS",
         notes: `taskId=${reportTaskId}`,
       });
     } else {
       record({
         tool: "amazon_dsp_submit_report",
-        scenario: "dspOrder LAST_7_DAYS",
+        scenario: "CAMPAIGN+ORDER LAST_7_DAYS",
         status: "FAIL",
         errorMessage: r.error,
       });
@@ -283,12 +282,10 @@ async function main() {
   }
 
   if (reportTaskId) {
-    const accountId = advertiserId ?? profileId;
     // poll up to 12x with 5s interval
     let finalStatus: string | undefined;
     for (let i = 0; i < 12; i++) {
       const r = await call(client, "amazon_dsp_check_report_status", {
-        accountId,
         taskId: reportTaskId,
       });
       if (!r.ok) {
@@ -300,15 +297,29 @@ async function main() {
         });
         break;
       }
-      const p = r.parsed as { status?: string; downloadUrl?: string };
-      finalStatus = p.status;
-      if (p.status && /COMPLET|SUCCESS|DONE/i.test(p.status)) {
+      const p = r.parsed as {
+        state?: string;
+        rawStatus?: string;
+        isComplete?: boolean;
+        downloadUrl?: string;
+      };
+      finalStatus = p.rawStatus ?? p.state;
+      if (p.isComplete && p.downloadUrl) {
         reportDownloadUrl = p.downloadUrl;
         record({
           tool: "amazon_dsp_check_report_status",
           scenario: "poll",
           status: "PASS",
-          notes: `status=${p.status} after ${i + 1} polls`,
+          notes: `rawStatus=${p.rawStatus} after ${i + 1} polls`,
+        });
+        break;
+      }
+      if (p.state === "failed") {
+        record({
+          tool: "amazon_dsp_check_report_status",
+          scenario: "poll",
+          status: "FAIL",
+          notes: `rawStatus=${p.rawStatus} state=failed`,
         });
         break;
       }
@@ -331,40 +342,37 @@ async function main() {
     });
   }
 
-  if (reportTaskId) {
-    const accountId = advertiserId ?? profileId;
+  if (reportTaskId && reportDownloadUrl) {
     const r = await call(client, "amazon_dsp_download_report", {
-      accountId,
-      taskId: reportTaskId,
+      downloadUrl: reportDownloadUrl,
     });
     record({
       tool: "amazon_dsp_download_report",
-      scenario: "after submit",
+      scenario: "after submit + poll",
       status: r.ok ? "PASS" : "FAIL",
       errorMessage: r.ok ? undefined : r.error,
     });
   } else {
     record({
       tool: "amazon_dsp_download_report",
-      scenario: "after submit",
+      scenario: "after submit + poll",
       status: "SKIP",
-      notes: "no taskId",
+      notes: reportTaskId ? "polled but did not reach SUCCESS" : "no taskId",
     });
   }
 
   // get_report (blocking) — separate small report
   {
-    const accountId = advertiserId ?? profileId;
     const r = await call(client, "amazon_dsp_get_report", {
-      accountId,
       datePreset: "LAST_7_DAYS",
-      reportTypeId: "dspOrder",
-      groupBy: ["order"],
-      columns: ["impressions"],
+      type: "CAMPAIGN",
+      dimensions: ["ORDER"],
+      metrics: ["impressions"],
+      timeUnit: "DAILY",
     });
     record({
       tool: "amazon_dsp_get_report",
-      scenario: "blocking dspOrder",
+      scenario: "blocking CAMPAIGN+ORDER",
       status: r.ok ? "PASS" : "FAIL",
       errorMessage: r.ok ? undefined : r.error,
     });
@@ -372,18 +380,17 @@ async function main() {
 
   // get_report_breakdowns
   {
-    const accountId = advertiserId ?? profileId;
     const r = await call(client, "amazon_dsp_get_report_breakdowns", {
-      accountId,
       datePreset: "LAST_7_DAYS",
-      reportTypeId: "dspOrder",
-      groupBy: ["order", "creative"],
-      breakdowns: ["creative"],
-      columns: ["impressions", "clicks"],
+      type: "CAMPAIGN",
+      dimensions: ["ORDER"],
+      breakdowns: ["LINE_ITEM"],
+      metrics: ["impressions", "totalCost"],
+      timeUnit: "DAILY",
     });
     record({
       tool: "amazon_dsp_get_report_breakdowns",
-      scenario: "creative breakdown",
+      scenario: "ORDER × LINE_ITEM",
       status: r.ok ? "PASS" : "FAIL",
       errorMessage: r.ok ? undefined : r.error,
     });

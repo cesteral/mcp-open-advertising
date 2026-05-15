@@ -157,19 +157,24 @@ export function fromSnapchatStatus(raw: { status?: string; downloadUrl?: string 
 }
 
 /**
- * Normalize an Amazon DSP report status (`PENDING`/`PROCESSING`/`COMPLETED`/
- * `FAILED`) to {@link ReportStatus}.
+ * Normalize an Amazon DSP report status to {@link ReportStatus}.
+ *
+ * The legacy `/dsp/reports` API returns `IN_PROGRESS` / `SUCCESS` / `FAILURE`;
+ * the Sponsored-Ads v3 reporting API (`/reporting/reports`) returns
+ * `PENDING` / `PROCESSING` / `COMPLETED` / `FAILED`. Both vocabularies are
+ * accepted here so the mapper stays correct regardless of which DSP-flavored
+ * endpoint produced the value.
  */
 export function fromAmazonDspStatus(raw: { status?: string; downloadUrl?: string }): ReportStatus {
   const s = (raw.status ?? "").toUpperCase();
   const state: ReportStatus["state"] =
     s === "COMPLETED" || s === "SUCCESS"
       ? "complete"
-      : s === "FAILED"
+      : s === "FAILED" || s === "FAILURE"
         ? "failed"
         : s === "CANCELLED"
           ? "cancelled"
-          : s === "PROCESSING" || s === "RUNNING"
+          : s === "PROCESSING" || s === "RUNNING" || s === "IN_PROGRESS"
             ? "running"
             : "pending";
   return {
