@@ -47,11 +47,7 @@ describe("checkReportStatusLogic", () => {
       downloadUrl: "https://example.com/report.json",
     });
 
-    const result = await checkReportStatusLogic(
-      { taskId: "rpt-1" },
-      baseContext,
-      baseSdkContext
-    );
+    const result = await checkReportStatusLogic({ taskId: "rpt-1" }, baseContext, baseSdkContext);
 
     expect(result.taskId).toBe("rpt-1");
     expect(result.state).toBe("complete");
@@ -66,11 +62,7 @@ describe("checkReportStatusLogic", () => {
       status: "IN_PROGRESS",
     });
 
-    const result = await checkReportStatusLogic(
-      { taskId: "rpt-2" },
-      baseContext,
-      baseSdkContext
-    );
+    const result = await checkReportStatusLogic({ taskId: "rpt-2" }, baseContext, baseSdkContext);
 
     expect(result.state).toBe("running");
     expect(result.rawStatus).toBe("IN_PROGRESS");
@@ -84,11 +76,7 @@ describe("checkReportStatusLogic", () => {
       status: "IN_PROGRESS",
     });
 
-    await checkReportStatusLogic(
-      { taskId: "rpt-xyz" },
-      baseContext,
-      baseSdkContext
-    );
+    await checkReportStatusLogic({ taskId: "rpt-xyz" }, baseContext, baseSdkContext);
 
     expect(mockCheckReportStatus).toHaveBeenCalledWith("rpt-xyz", baseContext);
   });

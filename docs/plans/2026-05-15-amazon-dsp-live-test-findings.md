@@ -8,11 +8,11 @@ Live verification of all 19 amazon-dsp-mcp tools against the production Amazon D
 
 ## Summary (after fixes #1 + #3)
 
-| Status | Count | Tools                                                                                              |
-| ------ | ----- | -------------------------------------------------------------------------------------------------- |
+| Status | Count | Tools                                                                                                                                                                                       |
+| ------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | PASS   | 7     | `list_advertisers`, `validate_entity`, `submit_report`, `check_report_status` (polled SUCCESS), `download_report`, `get_report`, `get_report_breakdowns`, `bulk_create_entities` (envelope) |
-| FAIL   | 2     | `list_entities[order]` (#2 Amazon rate-limit), `create_entity` (#4 Amazon LwA enrollment)         |
-| SKIP   | 13    | Downstream of failed discovery, plus `adjust_bids` (out of authorized scope), entity-write cleanup |
+| FAIL   | 2     | `list_entities[order]` (#2 Amazon rate-limit), `create_entity` (#4 Amazon LwA enrollment)                                                                                                   |
+| SKIP   | 13    | Downstream of failed discovery, plus `adjust_bids` (out of authorized scope), entity-write cleanup                                                                                          |
 
 All 5 reporting tools now exercise end-to-end against the real Amazon DSP API (submit → poll to SUCCESS → download real campaign performance data). Run-3 driver output: 7 PASS / 2 FAIL / 13 SKIP.
 
@@ -39,6 +39,7 @@ Verified live: `list_advertisers` now returns 51 advertisers; interaction log co
 **Partial fix:** Dropped `name` from the request body and `AmazonDspReportConfig` (and from the three tool input schemas that referenced it). After the rebuild, `submit_report` POSTs `{startDate, endDate, configuration:{…}}` → 400 `Unrecognized field "configuration"`.
 
 **Remaining work (#3b — still failing):** the entire `configuration` wrapper and its fields (`adProduct`, `groupBy`, `columns`, `reportTypeId`, `timeUnit`, `format`) must be removed from the request body too — or this endpoint isn't the one the tool's rich input schema was designed for. Two options:
+
 1. Strip `configuration` from `submitReport()` and accept that this endpoint produces a fixed CAMPAIGN/JSON report — narrow the tool input schemas accordingly.
 2. Find the correct configurable-reports endpoint (likely a different path/version/media-type — the tool's schema clearly was built against a different contract). Amazon's DSP Reporting docs at advertising.amazon.com/API/docs/en-us/dsp-reports may have the answer.
 
@@ -93,14 +94,14 @@ The reporting tools' `accountId` input description says "Amazon DSP account (ent
 
 ## Skipped Tools
 
-| Tool                   | Reason                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| `list_entities[lineItem]`, `list_entities[creative]` | No orderId discoverable due to #2                       |
-| `get_entity` × 3       | No entity IDs discoverable due to #2                                                  |
-| `get_ad_preview`       | No creativeId (same reason)                                                            |
-| `update_entity`, `duplicate_entity`, `bulk_update_entities`, `bulk_update_status`, `delete_entity` × 2 | No disposable order created — blocked by #4 |
-| `check_report_status`, `download_report` | No taskId from `submit_report` (#3)                                  |
-| `adjust_bids`          | Explicit out-of-scope: requires provisioning disposable lineItem + creative           |
+| Tool                                                                                                   | Reason                                                                      |
+| ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| `list_entities[lineItem]`, `list_entities[creative]`                                                   | No orderId discoverable due to #2                                           |
+| `get_entity` × 3                                                                                       | No entity IDs discoverable due to #2                                        |
+| `get_ad_preview`                                                                                       | No creativeId (same reason)                                                 |
+| `update_entity`, `duplicate_entity`, `bulk_update_entities`, `bulk_update_status`, `delete_entity` × 2 | No disposable order created — blocked by #4                                 |
+| `check_report_status`, `download_report`                                                               | No taskId from `submit_report` (#3)                                         |
+| `adjust_bids`                                                                                          | Explicit out-of-scope: requires provisioning disposable lineItem + creative |
 
 ---
 

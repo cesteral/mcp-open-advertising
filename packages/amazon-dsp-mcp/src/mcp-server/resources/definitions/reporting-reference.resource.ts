@@ -24,7 +24,10 @@ ${AMAZON_DSP_REPORTING_CONTRACT.reportTypes.map((id) => `- \`${id}\``).join("\n"
 
 ## Allowed \`dimensions\` (per type, where known)
 ${Object.entries(AMAZON_DSP_REPORTING_CONTRACT.dimensionsByType)
-  .map(([type, dims]) => `- \`${type}\`: ${(dims as readonly string[]).map((d) => `\`${d}\``).join(", ")}`)
+  .map(
+    ([type, dims]) =>
+      `- \`${type}\`: ${(dims as readonly string[]).map((d) => `\`${d}\``).join(", ")}`
+  )
   .join("\n")}
 
 ## Known Metric Names (incomplete — the API returns an authoritative invalid-list in 422 errors)

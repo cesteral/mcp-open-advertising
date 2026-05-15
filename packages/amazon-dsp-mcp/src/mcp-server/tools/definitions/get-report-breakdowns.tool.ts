@@ -89,9 +89,7 @@ export const GetReportBreakdownsOutputSchema = z
   .object({
     taskId: z.string().describe("Report task ID"),
     ...ReportViewOutputSchema.shape,
-    appliedDimensions: z
-      .array(z.string())
-      .describe("All dimensions used (base + breakdowns)"),
+    appliedDimensions: z.array(z.string()).describe("All dimensions used (base + breakdowns)"),
     timestamp: z.string().datetime(),
   })
   .describe("Report with breakdowns result");
