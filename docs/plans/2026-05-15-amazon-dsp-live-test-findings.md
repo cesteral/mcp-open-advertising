@@ -6,13 +6,15 @@ Live verification of all 19 amazon-dsp-mcp tools against the production Amazon D
 **Driver:** `packages/amazon-dsp-mcp/tests/live/run-live-test.ts` (stdio MCP client, no vitest)
 **Run output:** `packages/amazon-dsp-mcp/tests/live/last-run.json`
 
-## Summary (after fixes)
+## Summary (after fixes #1 + #3)
 
-| Status | Count | Tools                                                                                     |
-| ------ | ----- | ----------------------------------------------------------------------------------------- |
-| PASS   | 3     | `list_advertisers` (51 advertisers, scope+clientId headers correct), `validate_entity`, `bulk_create_entities` (envelope only — every per-item POST inside fails via #4) |
-| FAIL   | 5     | `list_entities[order]` (#2 rate-limit), `submit_report`, `get_report`, `get_report_breakdowns` (#3), `create_entity` (#4) |
-| SKIP   | 15    | Downstream of failed discovery, plus `adjust_bids` (out of authorized scope), cleanup     |
+| Status | Count | Tools                                                                                              |
+| ------ | ----- | -------------------------------------------------------------------------------------------------- |
+| PASS   | 7     | `list_advertisers`, `validate_entity`, `submit_report`, `check_report_status` (polled SUCCESS), `download_report`, `get_report`, `get_report_breakdowns`, `bulk_create_entities` (envelope) |
+| FAIL   | 2     | `list_entities[order]` (#2 Amazon rate-limit), `create_entity` (#4 Amazon LwA enrollment)         |
+| SKIP   | 13    | Downstream of failed discovery, plus `adjust_bids` (out of authorized scope), entity-write cleanup |
+
+All 5 reporting tools now exercise end-to-end against the real Amazon DSP API (submit → poll to SUCCESS → download real campaign performance data). Run-3 driver output: 7 PASS / 2 FAIL / 13 SKIP.
 
 ## Fixes Landed in This Branch
 
