@@ -55,7 +55,10 @@ export const GetReportInputSchema = z
       .array(z.string())
       .optional()
       .describe("(legacy/ignored when ReportTemplateId is set)"),
-    metrics: z.array(z.string()).optional().describe("(legacy/ignored when ReportTemplateId is set)"),
+    metrics: z
+      .array(z.string())
+      .optional()
+      .describe("(legacy/ignored when ReportTemplateId is set)"),
     additionalConfig: z
       .record(z.any())
       .optional()
@@ -82,8 +85,7 @@ export async function getReportLogic(
 ): Promise<GetReportOutput> {
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
-  const startDate =
-    input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
+  const startDate = input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
 
   const reportConfig = {
     ReportScheduleName: input.reportName,

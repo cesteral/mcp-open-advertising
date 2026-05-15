@@ -42,14 +42,24 @@ export const BidListBulkInputSchema = z
       .optional()
       .describe('GraphQL selection set on returned BidList. Default: "id name"'),
   })
-  .refine((val) => (val.operation === "batch_get" ? Array.isArray(val.bidListIds) && val.bidListIds.length > 0 : true), {
-    message: "bidListIds is required for batch_get",
-    path: ["bidListIds"],
-  })
-  .refine((val) => (val.operation === "batch_update" ? Array.isArray(val.items) && val.items.length > 0 : true), {
-    message: "items is required for batch_update",
-    path: ["items"],
-  })
+  .refine(
+    (val) =>
+      val.operation === "batch_get"
+        ? Array.isArray(val.bidListIds) && val.bidListIds.length > 0
+        : true,
+    {
+      message: "bidListIds is required for batch_get",
+      path: ["bidListIds"],
+    }
+  )
+  .refine(
+    (val) =>
+      val.operation === "batch_update" ? Array.isArray(val.items) && val.items.length > 0 : true,
+    {
+      message: "items is required for batch_update",
+      path: ["items"],
+    }
+  )
   .describe("Parameters for bulk bid list operations via GraphQL");
 
 export const BidListBulkOutputSchema = z
@@ -141,7 +151,9 @@ export const bulkManageBidListsTool = {
         items: [
           {
             id: "bl-abc123",
-            linesToAdd: [{ dimensionValues: [{ dimension: "Site", value: "nytimes.com" }], adjustment: 1.5 }],
+            linesToAdd: [
+              { dimensionValues: [{ dimension: "Site", value: "nytimes.com" }], adjustment: 1.5 },
+            ],
           },
           {
             id: "bl-def456",

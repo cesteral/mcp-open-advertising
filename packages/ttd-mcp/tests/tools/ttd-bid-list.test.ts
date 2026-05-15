@@ -59,7 +59,10 @@ describe("ttd bid list tools", () => {
       mockTtdService.createBidList.mockResolvedValueOnce(mockResult);
 
       const result = await bidListLogic(
-        { operation: "create", data: { owner: { type: "Advertiser", id: "adv1" }, name: "T", lines: [] } },
+        {
+          operation: "create",
+          data: { owner: { type: "Advertiser", id: "adv1" }, name: "T", lines: [] },
+        },
         createMockContext(),
         createMockSdkContext()
       );
@@ -118,7 +121,9 @@ describe("ttd bid list tools", () => {
     });
 
     it("set: forwards full GraphQL input to ttdService.setBidList", async () => {
-      mockTtdService.setBidList.mockResolvedValueOnce({ data: { bidListSet: { data: { id: "bl-001" } } } });
+      mockTtdService.setBidList.mockResolvedValueOnce({
+        data: { bidListSet: { data: { id: "bl-001" } } },
+      });
       const result = await bidListLogic(
         { operation: "set", bidListId: "bl-001", data: { id: "bl-001", lines: [] } },
         createMockContext(),
@@ -133,14 +138,19 @@ describe("ttd bid list tools", () => {
     });
 
     it("delete: forwards GraphQL input to ttdService.deleteBidList", async () => {
-      mockTtdService.deleteBidList.mockResolvedValueOnce({ data: { bidListDelete: { errors: [] } } });
+      mockTtdService.deleteBidList.mockResolvedValueOnce({
+        data: { bidListDelete: { errors: [] } },
+      });
       const result = await bidListLogic(
         { operation: "delete", data: { id: "bl-001" } },
         createMockContext(),
         createMockSdkContext()
       );
       expect(result.operation).toBe("delete");
-      expect(mockTtdService.deleteBidList).toHaveBeenCalledWith({ id: "bl-001" }, expect.any(Object));
+      expect(mockTtdService.deleteBidList).toHaveBeenCalledWith(
+        { id: "bl-001" },
+        expect.any(Object)
+      );
     });
 
     it("Zod validation: get without bidListId fails schema validation", () => {
@@ -224,7 +234,11 @@ describe("ttd bid list tools", () => {
       expect(result.totalItems).toBe(2);
       expect(result.succeeded).toBe(1);
       expect(result.failed).toBe(1);
-      expect(mockTtdService.batchUpdateBidLists).toHaveBeenCalledWith(items, expect.any(Object), "id name");
+      expect(mockTtdService.batchUpdateBidLists).toHaveBeenCalledWith(
+        items,
+        expect.any(Object),
+        "id name"
+      );
     });
 
     it("Zod validation: bidListIds > 50 fails validation", () => {
