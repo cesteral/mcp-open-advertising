@@ -98,7 +98,7 @@ Intelligence layers governance and orchestration on top:
 | [gads-mcp](packages/gads-mcp)             | Google Ads REST API v23           | 15    | OAuth2 refresh token            |
 | [meta-mcp](packages/meta-mcp)             | Meta Marketing API v25.0          | 27    | Bearer token                    |
 | [dv360-mcp](packages/dv360-mcp)           | DV360 API v4                      | 26    | Google OAuth2 / service account |
-| [ttd-mcp](packages/ttd-mcp)               | The Trade Desk REST + GraphQL API | 52    | User token (TTD-Auth header)    |
+| [ttd-mcp](packages/ttd-mcp)               | The Trade Desk REST + GraphQL API | 43    | User token (TTD-Auth header)    |
 | [linkedin-mcp](packages/linkedin-mcp)     | LinkedIn Marketing API v2         | 21    | Bearer token                    |
 | [tiktok-mcp](packages/tiktok-mcp)         | TikTok Marketing API v1.3         | 24    | Bearer token + advertiser ID    |
 | [cm360-mcp](packages/cm360-mcp)           | CM360 API v5                      | 21    | Google OAuth2                   |
