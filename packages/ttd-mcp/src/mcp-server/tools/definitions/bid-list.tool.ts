@@ -45,12 +45,18 @@ export const BidListInputSchema = z
       ),
   })
   .refine(
-    (val) => (val.operation === "get" ? typeof val.bidListId === "string" && val.bidListId.length > 0 : true),
+    (val) =>
+      val.operation === "get"
+        ? typeof val.bidListId === "string" && val.bidListId.length > 0
+        : true,
     { message: "bidListId is required for get", path: ["bidListId"] }
   )
   .refine(
     (val) =>
-      val.operation === "create" || val.operation === "update" || val.operation === "set" || val.operation === "delete"
+      val.operation === "create" ||
+      val.operation === "update" ||
+      val.operation === "set" ||
+      val.operation === "delete"
         ? val.data !== undefined && val.data !== null
         : true,
     { message: "data is required for create/update/set/delete", path: ["data"] }
@@ -80,27 +86,46 @@ export async function bidListLogic(
 
   switch (input.operation) {
     case "create": {
-      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for create");
-      const result = (await ttdService.createBidList(input.data, context, selection)) as Record<string, unknown>;
+      if (!input.data)
+        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for create");
+      const result = (await ttdService.createBidList(input.data, context, selection)) as Record<
+        string,
+        unknown
+      >;
       return { operation: "create", result, timestamp: now() };
     }
     case "get": {
-      const result = (await ttdService.getBidList(input.bidListId!, context, selection)) as Record<string, unknown>;
+      const result = (await ttdService.getBidList(input.bidListId!, context, selection)) as Record<
+        string,
+        unknown
+      >;
       return { operation: "get", bidListId: input.bidListId, result, timestamp: now() };
     }
     case "update": {
-      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for update");
-      const result = (await ttdService.updateBidList(input.data, context, selection)) as Record<string, unknown>;
+      if (!input.data)
+        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for update");
+      const result = (await ttdService.updateBidList(input.data, context, selection)) as Record<
+        string,
+        unknown
+      >;
       return { operation: "update", bidListId: input.bidListId, result, timestamp: now() };
     }
     case "set": {
-      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for set");
-      const result = (await ttdService.setBidList(input.data, context, selection)) as Record<string, unknown>;
+      if (!input.data)
+        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for set");
+      const result = (await ttdService.setBidList(input.data, context, selection)) as Record<
+        string,
+        unknown
+      >;
       return { operation: "set", bidListId: input.bidListId, result, timestamp: now() };
     }
     case "delete": {
-      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for delete");
-      const result = (await ttdService.deleteBidList(input.data, context)) as Record<string, unknown>;
+      if (!input.data)
+        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for delete");
+      const result = (await ttdService.deleteBidList(input.data, context)) as Record<
+        string,
+        unknown
+      >;
       return { operation: "delete", bidListId: input.bidListId, result, timestamp: now() };
     }
   }
@@ -147,7 +172,8 @@ export const manageBidListTool = {
       input: {
         operation: "get",
         bidListId: "bl-abc123def",
-        selection: "id name adjustmentType lines { dimensionValues { dimension value } adjustment }",
+        selection:
+          "id name adjustmentType lines { dimensionValues { dimension value } adjustment }",
       },
     },
     {
@@ -156,7 +182,9 @@ export const manageBidListTool = {
         operation: "set",
         data: {
           id: "bl-abc123def",
-          lines: [{ dimensionValues: [{ dimension: "Site", value: "nytimes.com" }], adjustment: 1.8 }],
+          lines: [
+            { dimensionValues: [{ dimension: "Site", value: "nytimes.com" }], adjustment: 1.8 },
+          ],
         },
       },
     },
@@ -166,7 +194,9 @@ export const manageBidListTool = {
         operation: "update",
         data: {
           id: "bl-abc123def",
-          linesToAdd: [{ dimensionValues: [{ dimension: "Site", value: "ft.com" }], adjustment: 1.4 }],
+          linesToAdd: [
+            { dimensionValues: [{ dimension: "Site", value: "ft.com" }], adjustment: 1.4 },
+          ],
           linesToRemove: [{ dimensionValues: [{ dimension: "Site", value: "wsj.com" }] }],
         },
       },

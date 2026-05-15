@@ -92,8 +92,7 @@ export async function submitReportLogic(
 ): Promise<SubmitReportOutput> {
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
-  const startDate =
-    input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
+  const startDate = input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
 
   const reportConfig = {
     ReportScheduleName: input.reportName,

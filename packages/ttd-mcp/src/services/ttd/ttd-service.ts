@@ -374,8 +374,10 @@ export class TtdService {
       async (adj) => {
         const cc = adj.currencyCode || "USD";
         const rtb: Record<string, unknown> = {};
-        if (adj.baseBidCpm !== undefined) rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
-        if (adj.maxBidCpm !== undefined) rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
+        if (adj.baseBidCpm !== undefined)
+          rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
+        if (adj.maxBidCpm !== undefined)
+          rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
 
         await this.rateLimiter.consume(`ttd:${partnerId}`);
         return this.httpClient.fetch(adGroupConfig.apiPath, context, {
@@ -577,10 +579,7 @@ export class TtdService {
     return this.bidListGraphql({ query, variables: { input } }, context);
   }
 
-  async deleteBidList(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async deleteBidList(input: Record<string, unknown>, context?: RequestContext): Promise<unknown> {
     // BidListDeletePayload only exposes __typename — TTD returns the payload
     // type as a 200-OK confirmation that the deletion was processed.
     const query = `mutation BidListDelete($input: BidListDeleteInput!) {
@@ -635,5 +634,4 @@ export class TtdService {
       error: r.error,
     }));
   }
-
 }

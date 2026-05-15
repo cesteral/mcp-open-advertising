@@ -217,5 +217,4 @@ describe("TtdService advanced methods", () => {
       expect(options.headers).toEqual({ "TTD-GQL-Beta": "my-beta-flag" });
     });
   });
-
 });

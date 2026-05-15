@@ -33,11 +33,11 @@ Whether you're an advertiser, provider, or seller, The Trade Desk APIs give you 
 
 The Trade Desk platform serves three fundamentally different roles in the programmatic advertising ecosystem, and each role interacts with the platform in a distinct way.
 
-| User Group | Description | Example Tasks | Example Users |
-|---|---|---|---|
-| **Advertiser** | A brand or agency that runs campaigns, creatives, and reports for purchasing media on the Open Internet. | Upload first-party data. Manage campaigns and drive KPIs. Run reports. | Brand, agency, holding company, DSP |
-| **Provider** | A third party that provides targeting or measurement data, lift studies, or partner-specific integrations. | Onboard third-party data and make it available in the DMP. Upload first-party data on behalf of an advertiser. Monetize audience and sales data. | Audience, contextual, geo, or measurement data provider; retailer (merchant), lift study or MMM provider, integrated partner, data onboarder |
-| **Seller** | An inventory source or path that supplies ad space on the Open Internet to sell to advertisers. | Propose deals to advertisers and manage live deal performance. Create direct connections to supply through OpenPath. | Supply vendor, publisher, SSP, intermediary |
+| User Group     | Description                                                                                                | Example Tasks                                                                                                                                    | Example Users                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Advertiser** | A brand or agency that runs campaigns, creatives, and reports for purchasing media on the Open Internet.   | Upload first-party data. Manage campaigns and drive KPIs. Run reports.                                                                           | Brand, agency, holding company, DSP                                                                                                          |
+| **Provider**   | A third party that provides targeting or measurement data, lift studies, or partner-specific integrations. | Onboard third-party data and make it available in the DMP. Upload first-party data on behalf of an advertiser. Monetize audience and sales data. | Audience, contextual, geo, or measurement data provider; retailer (merchant), lift study or MMM provider, integrated partner, data onboarder |
+| **Seller**     | An inventory source or path that supplies ad space on the Open Internet to sell to advertisers.            | Propose deals to advertisers and manage live deal performance. Create direct connections to supply through OpenPath.                             | Supply vendor, publisher, SSP, intermediary                                                                                                  |
 
 ### Our APIs
 
@@ -45,11 +45,11 @@ The Trade Desk offers three API suites built around distinct platform activities
 
 > **NOTE:** Your user role determines which APIs you'll primarily work with, though some Data and Platform API endpoints might overlap across advertiser and provider workflows.
 
-| API | Technology | Description | Intended User Group | Authentication | Notes |
-|---|---|---|---|---|---|
-| **Data API** | REST | Onboard large-scale data into The Trade Desk's servers for data integration, and ID deletion and opt-out management. | Provider, advertiser | API Token Signature Header | Some data workflows require selecting a target data center. |
-| **Platform API** | REST and GraphQL | Manage campaigns, creatives, audiences, bid lists, and retrieve performance reports. | Advertiser, provider | API Token | Providers can use the API to manage taxonomies and data rates for third-party data, and to run reports. |
-| **PDP API** (Price Discovery and Provisioning) | GraphQL | Create and manage deals and provisioning data between sellers and buyers. | Seller | API Token | Access is restricted. Contact your Technical Account Manager to enable access. |
+| API                                            | Technology       | Description                                                                                                          | Intended User Group  | Authentication             | Notes                                                                                                   |
+| ---------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------- | -------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Data API**                                   | REST             | Onboard large-scale data into The Trade Desk's servers for data integration, and ID deletion and opt-out management. | Provider, advertiser | API Token Signature Header | Some data workflows require selecting a target data center.                                             |
+| **Platform API**                               | REST and GraphQL | Manage campaigns, creatives, audiences, bid lists, and retrieve performance reports.                                 | Advertiser, provider | API Token                  | Providers can use the API to manage taxonomies and data rates for third-party data, and to run reports. |
+| **PDP API** (Price Discovery and Provisioning) | GraphQL          | Create and manage deals and provisioning data between sellers and buyers.                                            | Seller               | API Token                  | Access is restricted. Contact your Technical Account Manager to enable access.                          |
 
 ---
 
@@ -60,6 +60,7 @@ The Trade Desk offers three API suites built around distinct platform activities
 To authenticate your requests to the REST or GraphQL API, you must generate access tokens in the UI. These tokens have a lifetime from one week to one year.
 
 To access the REST and GraphQL API, you need the following:
+
 - The API credentials provided by your Account Manager.
 - An authentication token that you need to generate and place in the header of your integration.
 
@@ -107,6 +108,7 @@ Contact your Technical Account Manager for assistance.
 
 **What if I need a token that lasts for less than one week?**
 You can create a short-lived token that lasts for up to 24 hours. For details, see Short-Lived API tokens.
+
 > **NOTE:** This feature is not available for PDP or OpenPath tokens.
 
 ---
@@ -118,6 +120,7 @@ You can create a short-lived token that lasts for up to 24 hours. For details, s
 The User Management Platform (UMP) allows its administrators to manage their own access and permissions, get detailed user insights, and oversee access and permissions for their team members.
 
 Key points about the UMP:
+
 - As an administrator, you're granted either view-only or full editing permissions.
 - You can quickly configure permissions through bulk editing or assigning users to access groups.
 - For more granular control, you can nest access groups so that each group inherits permission settings from its parent group.
@@ -128,6 +131,7 @@ Key points about the UMP:
 ### Get Started
 
 Before you start, make sure you meet the following requirements:
+
 - You belong to an enrolled organization.
 - You have user-management permissions.
 - You are assigned to at least one access group.
@@ -135,40 +139,41 @@ Before you start, make sure you meet the following requirements:
 
 ### Group Relationships
 
-| Group Type | Description |
-|---|---|
-| **Organization** | A primary ownership boundary for user management, such as a brand or agency. |
+| Group Type            | Description                                                                                                                      |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| **Organization**      | A primary ownership boundary for user management, such as a brand or agency.                                                     |
 | **Root access group** | A special system-defined access group that every organization has exactly one of, and that all other access groups are based on. |
-| **Access group** | A unit of access control for permissions and scope is assigned to users within an organization. |
+| **Access group**      | A unit of access control for permissions and scope is assigned to users within an organization.                                  |
 
 ### Brand vs. Agency Access
 
 In a brand‑owned, agency‑operated setup, the brand and agency maintain separate organizations while collaborating through shared access. The brand retains full ownership and control, while granting the agency the ability to manage access for day‑to‑day operations.
 
-| Area | Brand User Manager | Agency User Manager |
-|---|---|---|
-| Organization | Owns and manages brand organization and brand-managed access groups. | Owns and manages agency organization and agency-managed access groups. |
-| User management | Full view and editing access to all brand users. | Full view and editing access to all agency users. |
-| Visibility | Limited visibility into invited agency users (profiles and limited assignments). | No direct management of brand users. |
-| Ownership | Retains full ownership and final control. | Operates within permissions granted by the brand. |
+| Area            | Brand User Manager                                                               | Agency User Manager                                                    |
+| --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Organization    | Owns and manages brand organization and brand-managed access groups.             | Owns and manages agency organization and agency-managed access groups. |
+| User management | Full view and editing access to all brand users.                                 | Full view and editing access to all agency users.                      |
+| Visibility      | Limited visibility into invited agency users (profiles and limited assignments). | No direct management of brand users.                                   |
+| Ownership       | Retains full ownership and final control.                                        | Operates within permissions granted by the brand.                      |
 
 ### Roles
 
-| Role | Description |
-|---|---|
-| Campaign Manager (View-Only) | View partner, advertiser, and campaign details. |
-| Campaign Manager (View/Edit) | View and update partner, advertiser, and campaign details. |
-| Reporting Manager (View-Only) | View and download user-defined reports. |
-| Reporting Manager (View/Edit) | Create, view, and download user-defined reports. |
-| PMP Manager (View-Only) | View first-party deals and commitments. |
-| PMP Manager (View/Edit) | Create and manage first-party deals and commitments. |
-| DMP Manager | Create and manage audiences under Data Marketplace. |
-| User Manager (View-Only) | View user details, roles, and access groups. |
-| User Manager (View/Edit) | Add and update user details, roles, and access groups. Can also make bulk edits. |
+| Role                          | Description                                                                      |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| Campaign Manager (View-Only)  | View partner, advertiser, and campaign details.                                  |
+| Campaign Manager (View/Edit)  | View and update partner, advertiser, and campaign details.                       |
+| Reporting Manager (View-Only) | View and download user-defined reports.                                          |
+| Reporting Manager (View/Edit) | Create, view, and download user-defined reports.                                 |
+| PMP Manager (View-Only)       | View first-party deals and commitments.                                          |
+| PMP Manager (View/Edit)       | Create and manage first-party deals and commitments.                             |
+| DMP Manager                   | Create and manage audiences under Data Marketplace.                              |
+| User Manager (View-Only)      | View user details, roles, and access groups.                                     |
+| User Manager (View/Edit)      | Add and update user details, roles, and access groups. Can also make bulk edits. |
 
 ### Manage Users
 
 If you have the **User Manager (View/Edit)** role, you can:
+
 - View user details.
 - Add a user.
 - Update user roles and permissions, either individually or in bulk.
@@ -223,11 +228,11 @@ Near the Edit button at the top-right corner, click the menu button then select 
 
 ### Troubleshooting
 
-| Problem | Resolution |
-|---|---|
-| Adding a user from another organization. | Admins only manage users within their own organizations. Contact your Technical Account Manager. |
+| Problem                                                                       | Resolution                                                                                                                            |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Adding a user from another organization.                                      | Admins only manage users within their own organizations. Contact your Technical Account Manager.                                      |
 | Assigning an admin with the User Management role directly to an organization. | These admins must belong to an access group. Remove any admin access to partners and advertisers, and instead assign an access group. |
-| Assigning certain restricted user types to an access group. | Determine if a different, eligible external admin can be used instead. Contact your Technical Account Manager. |
+| Assigning certain restricted user types to an access group.                   | Determine if a different, eligible external admin can be used instead. Contact your Technical Account Manager.                        |
 
 ### FAQs
 
@@ -258,6 +263,7 @@ A company-wide SSO solution provides a uniform interface for all employees in a 
 ### Types of SSO Supported
 
 The Trade Desk uses SAML to support all major identity providers, including:
+
 - Okta
 - Microsoft Entra (formerly Azure Active Directory)
 - Ping Identity
@@ -272,6 +278,7 @@ The Trade Desk uses SAML to support all major identity providers, including:
 ### Before You Start
 
 Answer the following questions before setting up SSO:
+
 - What is your motivation for integrating your single sign-on solution with The Trade Desk platform?
 - How do you currently authenticate users—which identity provider do you use?
 - Do you have approval from your legal and security teams to integrate your SSO?
@@ -279,13 +286,13 @@ Answer the following questions before setting up SSO:
 
 ### Setup Process
 
-| Step | Description | Responsible Party |
-|---|---|---|
-| 1 | Establish a trust relationship between identity providers. | You and The Trade Desk |
-| 2 | Test the functionality. | You and The Trade Desk |
-| 3 | Test with a small working group. | You and The Trade Desk |
-| 4 | Make final migrations and configuration with mapping spreadsheet. | You and The Trade Desk |
-| 5 | Final signoff on integration. | You |
+| Step | Description                                                       | Responsible Party      |
+| ---- | ----------------------------------------------------------------- | ---------------------- |
+| 1    | Establish a trust relationship between identity providers.        | You and The Trade Desk |
+| 2    | Test the functionality.                                           | You and The Trade Desk |
+| 3    | Test with a small working group.                                  | You and The Trade Desk |
+| 4    | Make final migrations and configuration with mapping spreadsheet. | You and The Trade Desk |
+| 5    | Final signoff on integration.                                     | You                    |
 
 #### Step 1: Establish Trust Relationship Between Identity Providers
 
@@ -352,6 +359,7 @@ Send details to: platform.auth@thetradedesk.com.
 The Partner Sandbox is an isolated environment for testing features of the Platform API without impacting your production data or billing cycle. The Partner Sandbox environment contains a clone of your production data that refreshes on a regular weekly basis.
 
 Key facts about the sandbox:
+
 - No real spend from campaigns or ad groups occurs in the Partner Sandbox.
 - Your Partner Sandbox partner ID, provider ID, and brand IDs are the same as your production IDs.
 - Data is copied from your production environment on a weekly cadence, every Thursday night, and is ready for use by Friday morning in North America.
@@ -361,15 +369,16 @@ Key facts about the sandbox:
 ### Setup
 
 Before using the Partner Sandbox, be sure to:
+
 - Verify that the data you are testing on has been synced with the Partner Sandbox.
 - Have an existing API token or equivalent production key. For details, see API token authentication.
 - If you need access to any hidden endpoints, contact your Technical Account Manager.
 
 ### Partner Sandbox Endpoints
 
-| API | Root URL | Description |
-|---|---|---|
-| REST | https://ext-api.sb.thetradedesk.com/v3/ | The root URL for all REST Partner Sandbox requests. |
+| API     | Root URL                                    | Description                                            |
+| ------- | ------------------------------------------- | ------------------------------------------------------ |
+| REST    | https://ext-api.sb.thetradedesk.com/v3/     | The root URL for all REST Partner Sandbox requests.    |
 | GraphQL | https://ext-api.sb.thetradedesk.com/graphql | The root URL for all GraphQL Partner Sandbox requests. |
 
 > **TIP:** In the Platform UI, you can view the results of your API calls at https://ext-desk.sb.thetradedesk.com.
@@ -396,10 +405,10 @@ None of the `/v3/study` endpoints related to lift studies are supported.
 
 The Trade Desk uses both Representational State Transfer (REST) and GraphQL for designing our Platform APIs. The choice between REST and GraphQL often depends on factors such as the complexity of data requirements, your preferences, and the task at hand. You can also leverage both technologies concurrently.
 
-| API | When to Use |
-|---|---|
-| **REST API** | Use it to access any features available on the platform, including campaign creation and budget management. The only exception is brand-new, Kokai-only features and bulk operations, which are available exclusively through GraphQL. |
-| **GraphQL API** | Use it to access Kokai-only features or when you need a flexible way to query specific data, download dimension-specific reports, create seeds or campaigns, or perform bulk operations. |
+| API             | When to Use                                                                                                                                                                                                                            |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **REST API**    | Use it to access any features available on the platform, including campaign creation and budget management. The only exception is brand-new, Kokai-only features and bulk operations, which are available exclusively through GraphQL. |
+| **GraphQL API** | Use it to access Kokai-only features or when you need a flexible way to query specific data, download dimension-specific reports, create seeds or campaigns, or perform bulk operations.                                               |
 
 ### FAQs
 
@@ -416,6 +425,7 @@ Currently, the GraphQL API is an augmentative feature within the platform API in
 **URL:** https://open.thetradedesk.com/advertiser/docsApp/Foundations/resources/doc/GqlApiCallsPlatform
 
 To make a GraphQL API call, you need the following:
+
 - The Trade Desk Platform API credentials provided by your Account Manager.
 - Your API token. For details, see Authentication.
 - Your tool or method of choice for making API calls (for example, Postman or Python).
@@ -424,10 +434,10 @@ To make a GraphQL API call, you need the following:
 
 ### Environment URLs
 
-| Environment | URL | Note |
-|---|---|---|
-| Production | https://api.thetradedesk.com/graphql | Build and deploy on production for professional use. |
-| Sandbox | https://ext-api.sb.thetradedesk.com/graphql | Use the sandbox environment to test platform API integrations without breaking changes. |
+| Environment | URL                                         | Note                                                                                    |
+| ----------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Production  | https://api.thetradedesk.com/graphql        | Build and deploy on production for professional use.                                    |
+| Sandbox     | https://ext-api.sb.thetradedesk.com/graphql | Use the sandbox environment to test platform API integrations without breaking changes. |
 
 > **IMPORTANT:** Complexity and rate limits apply to all platform GraphQL API calls.
 
@@ -446,10 +456,10 @@ Use the `requests` library (e.g., the GraphQL Python library on GitHub). Replace
 
 ### Platform GraphQL API Resources
 
-| Resource | Description |
-|---|---|
+| Resource                 | Description                                                                                                                                              |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GraphQL API Resource Hub | A high-level introduction to GraphQL concepts, query and mutation anatomy, best practices, response errors, and other non-platform-specific information. |
-| Partner Sandbox | A testing environment for workflows before implementing changes in production. |
+| Partner Sandbox          | A testing environment for workflows before implementing changes in production.                                                                           |
 
 ---
 
@@ -461,10 +471,10 @@ Use the `requests` library (e.g., the GraphQL Python library on GitHub). Replace
 
 To specify which production environment to make calls to, use the root URL that corresponds to your platform:
 
-| Platform | Root URL |
-|---|---|
+| Platform       | Root URL                         |
+| -------------- | -------------------------------- |
 | The Trade Desk | https://api.thetradedesk.com/v3/ |
-| Walmart DSP | https://api.dsp.walmart.com/v3/ |
+| Walmart DSP    | https://api.dsp.walmart.com/v3/  |
 
 For details on generating authentication tokens, see Authentication.
 
@@ -483,6 +493,7 @@ When a request is successful, the API returns an HTTP response with a **200** st
 ### Partial Object Updates
 
 The API differentiates between:
+
 - **Required properties**, which must be present in a request.
 - **Nullable properties**, which, if present, may be set to null.
 
@@ -549,6 +560,7 @@ The Trade Desk offers a Platform API endpoint to allow enterprise clients to bui
 **URL:** https://open.thetradedesk.com/advertiser/docsApp/Foundations/resources/doc/StrictMode
 
 Strict mode is an API feature that performs additional checks to highlight unrecognized elements in the API call. When enabled, strict mode returns an error response if either of the following conditions is true:
+
 - The request body contains an unrecognized property.
 - The request body specifies a value for a read-only property.
 
@@ -562,15 +574,16 @@ When a request attempts to assign a value to a read-only property, the API norma
 
 ### How the API Manages Read-Only Properties
 
-| Read-Only Type | Description | Field Example |
-|---|---|---|
-| **Always Read-Only** | These are always read-only. Any values entered will be ignored. | CreatedAtUTC |
-| **Read-Only On Create** | These are read-only on create but may be required for updates. | AdGroupId, CampaignId, BidListId |
-| **Read-Only On Update** | These can be set when an entity is created but cannot be modified after. | IsHighFillRate |
+| Read-Only Type          | Description                                                              | Field Example                    |
+| ----------------------- | ------------------------------------------------------------------------ | -------------------------------- |
+| **Always Read-Only**    | These are always read-only. Any values entered will be ignored.          | CreatedAtUTC                     |
+| **Read-Only On Create** | These are read-only on create but may be required for updates.           | AdGroupId, CampaignId, BidListId |
+| **Read-Only On Update** | These can be set when an entity is created but cannot be modified after. | IsHighFillRate                   |
 
 ### Enable Strict Mode
 
 To enable strict mode when creating an API request, set the following values in the header:
+
 - Enter `TTD-Strict-Mode` as a new key value.
 - Set the `TTD-Strict-Mode` value to `true`.
 
@@ -598,19 +611,19 @@ The default setting for strict mode is **off**. If you want to enable strict mod
 
 The REST API supports the following HTTP response codes to indicate the request status.
 
-| Numeric Code | Message | Description |
-|---|---|---|
-| 200 | OK | The request was successful. |
-| 240 | No Content | The request was successful, but there is no content to return. |
-| 400 | Bad Request | The request did not contain all required input, had malformed syntax, or the included input failed validation. |
-| 401 | Unauthorized | The user does not have valid authentication credentials to access the requested resource. |
-| 403 | Forbidden | The user does not have access to this endpoint or the entity for which they made the call; or the endpoint or entity does not exist. |
-| 404 | Not Found | The requested resource has not been found. |
-| 409 | Conflict | The request conflicts with the current state of the server. |
-| 410 | Gone | The request uses a deprecated endpoint or property. |
-| 429 | Too Many Requests | The number of sent requests to the endpoint has exceeded the rate limit. |
-| 500 | Internal Server Error | The server encountered an unexpected condition, which prevented it from fulfilling the request. |
-| 503 | Service Unavailable | The server was unable to handle the request due to a temporary overload. Use the 'Retry-After' header as guidance on when to retry your request. |
+| Numeric Code | Message               | Description                                                                                                                                      |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 200          | OK                    | The request was successful.                                                                                                                      |
+| 240          | No Content            | The request was successful, but there is no content to return.                                                                                   |
+| 400          | Bad Request           | The request did not contain all required input, had malformed syntax, or the included input failed validation.                                   |
+| 401          | Unauthorized          | The user does not have valid authentication credentials to access the requested resource.                                                        |
+| 403          | Forbidden             | The user does not have access to this endpoint or the entity for which they made the call; or the endpoint or entity does not exist.             |
+| 404          | Not Found             | The requested resource has not been found.                                                                                                       |
+| 409          | Conflict              | The request conflicts with the current state of the server.                                                                                      |
+| 410          | Gone                  | The request uses a deprecated endpoint or property.                                                                                              |
+| 429          | Too Many Requests     | The number of sent requests to the endpoint has exceeded the rate limit.                                                                         |
+| 500          | Internal Server Error | The server encountered an unexpected condition, which prevented it from fulfilling the request.                                                  |
+| 503          | Service Unavailable   | The server was unable to handle the request due to a temporary overload. Use the 'Retry-After' header as guidance on when to retry your request. |
 
 See also the HTTP status codes RFC.
 
@@ -631,12 +644,14 @@ When the rate limit for an API endpoint is exceeded, the endpoint returns an HTT
 
 **How can I avoid exceeding rate limits?**
 Your code should be able to handle 429 errors and retry after waiting a reasonable amount of time. If you receive the 429 status code too often, consider:
+
 - Limit concurrency to four callers per endpoint.
 - Cache data that does not change frequently.
 - Utilize delta endpoints that reduce execution times and call frequency. For details, see Platform synchronization.
 
 **How should I handle 429 responses?**
 Implement one of the following solutions:
+
 - A fixed delay between calls or wait 1 minute after a failed call before retry.
 - An exponential backoff policy: `Delay = Min(max_delay, base_delay * 2 ^ retrycount)`
 - Inspect the `retry-after` header in the HTTP response and extract the value (in seconds).
@@ -645,12 +660,12 @@ Implement one of the following solutions:
 
 The following table explains how to maximize performance when using the `POST /v3/dmp/thirdparty/advertiser` endpoint:
 
-| Scenario | Guidance | Impact |
-|---|---|---|
-| You don't utilize TotalFilteredCount or TotalUnfilteredCount. | Set `ExcludeTotalCounts` to `true` in your request. | Improves performance and reduces likelihood of timeout. |
-| You perform searches with wide-open filters. | Reduce the scope of the query by utilizing `BrandIds` in your request. | Improving performance. |
-| You refresh third-party data by querying all records. | Use `ThirdPartyDataIds` to refresh information for specific IDs. | Improves performance. |
-| You use a PageSize greater than 1000. | Consider using a PageSize of around 1000. | Improves performance and reduces likelihood of timeout. |
+| Scenario                                                      | Guidance                                                               | Impact                                                  |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------- |
+| You don't utilize TotalFilteredCount or TotalUnfilteredCount. | Set `ExcludeTotalCounts` to `true` in your request.                    | Improves performance and reduces likelihood of timeout. |
+| You perform searches with wide-open filters.                  | Reduce the scope of the query by utilizing `BrandIds` in your request. | Improving performance.                                  |
+| You refresh third-party data by querying all records.         | Use `ThirdPartyDataIds` to refresh information for specific IDs.       | Improves performance.                                   |
+| You use a PageSize greater than 1000.                         | Consider using a PageSize of around 1000.                              | Improves performance and reduces likelihood of timeout. |
 
 ### Additional Resources
 
@@ -672,15 +687,15 @@ GraphQL offers a query language and runtime that enables you to request exactly 
 
 ### Foundational Concepts
 
-| Concept | Description |
-|---|---|
-| **Schemas** | Define the structure and capabilities of the GraphQL API, including data types and relationships. |
-| **Queries** | Request specific data from a single endpoint. You can customize queries to return specific fields across multiple entities, reducing complexity and response times. |
-| **Mutations** | Create and update values in the schema. GraphQL mutations function similarly to POST, PUT, and DELETE requests. |
-| **Bulk operation** | Run large-scale GraphQL operations without relying on spreadsheets or tedious manual pagination. |
-| **Fields and Aliases** | Fields represent pieces of data requested in a query. Aliases let you rename fields in the response. |
-| **Arguments and Filters** | Allow parameters to be passed to fields or mutations, enabling filters and sorting. |
-| **Introspective** | Schema self-discovery allows clients to explore the schema programmatically. |
+| Concept                   | Description                                                                                                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Schemas**               | Define the structure and capabilities of the GraphQL API, including data types and relationships.                                                                   |
+| **Queries**               | Request specific data from a single endpoint. You can customize queries to return specific fields across multiple entities, reducing complexity and response times. |
+| **Mutations**             | Create and update values in the schema. GraphQL mutations function similarly to POST, PUT, and DELETE requests.                                                     |
+| **Bulk operation**        | Run large-scale GraphQL operations without relying on spreadsheets or tedious manual pagination.                                                                    |
+| **Fields and Aliases**    | Fields represent pieces of data requested in a query. Aliases let you rename fields in the response.                                                                |
+| **Arguments and Filters** | Allow parameters to be passed to fields or mutations, enabling filters and sorting.                                                                                 |
+| **Introspective**         | Schema self-discovery allows clients to explore the schema programmatically.                                                                                        |
 
 ### Key Tasks You Can Master
 
@@ -693,15 +708,15 @@ GraphQL offers a query language and runtime that enables you to request exactly 
 
 ### REST vs. GraphQL Comparison
 
-| Comparison Aspect | REST API | GraphQL API |
-|---|---|---|
-| Architecture | Is an architectural style. | Is a query language. |
-| Communication | Uses HTTP methods (GET, POST, PUT, DELETE). | Sends queries to a single endpoint with the POST HTTP method. |
-| Data Fetching | Provides a fixed data structure per endpoint. Can lead to over-fetching or under-fetching. | You can specify exactly what data you need. Eliminates over-fetching and under-fetching. |
-| Data Retrieval | Requires additional requests for additional data. | Retrieve multiple resources and related data in one request. |
-| Schema | Has no formal schema; endpoints represent resources. | Requires a defined schema specifying capabilities and available data types. |
-| Flexibility | Fixed structure. | Flexible; you specify data needs in the query. |
-| Developer Experience | Simplicity and scalability. | Efficiency and ability to optimize data fetching for your needs. |
+| Comparison Aspect    | REST API                                                                                   | GraphQL API                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Architecture         | Is an architectural style.                                                                 | Is a query language.                                                                     |
+| Communication        | Uses HTTP methods (GET, POST, PUT, DELETE).                                                | Sends queries to a single endpoint with the POST HTTP method.                            |
+| Data Fetching        | Provides a fixed data structure per endpoint. Can lead to over-fetching or under-fetching. | You can specify exactly what data you need. Eliminates over-fetching and under-fetching. |
+| Data Retrieval       | Requires additional requests for additional data.                                          | Retrieve multiple resources and related data in one request.                             |
+| Schema               | Has no formal schema; endpoints represent resources.                                       | Requires a defined schema specifying capabilities and available data types.              |
+| Flexibility          | Fixed structure.                                                                           | Flexible; you specify data needs in the query.                                           |
+| Developer Experience | Simplicity and scalability.                                                                | Efficiency and ability to optimize data fetching for your needs.                         |
 
 ### FAQs
 
@@ -727,9 +742,9 @@ The Trade Desk is committed to supporting a transparent programmatic ecosystem. 
 
 > **NOTE:** The list of relevant articles may not be exhaustive. Some pages may require access permissions. If you can't access a page, try logging in or contact your Technical Account Manager.
 
-| Policy or Regulation | Description | Affected Features |
-|---|---|---|
+| Policy or Regulation                          | Description                                                                                                                                                                                                                       | Affected Features                                                                                                                                                                                               |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **General Data Protection Regulation (GDPR)** | A comprehensive data privacy and protection law that imposes obligations onto organizations worldwide if they target or collect data related to people in the EU and EEA. Supported via Transparency and Consent Framework (TCF). | Pass Users' Choices in Static Tracking Tags; Universal Pixel Data Processing Options; REDS Data Practices; Cookie Mapping; Real-Time Conversion Events; POST /providerapi/offlineconversion; Geofence Targeting |
-| **Global Privacy Platform (GPP)** | A protocol designed by IAB Tech Lab to streamline the transmission of privacy, consent, and consumer choice signals from sites and apps to ad tech providers. Supports CCPA, CPRA, CPA, and others. | Universal Pixel Workflow with CMP Integration; Pass Users' Choices in Static Tracking Tags; Real-Time Conversion Events; REDS Data Practices; POST /providerapi/offlineconversion; Geofence Targeting |
-| **Limited Data Use (LDU)** | An alternative to an IAB-compliant CMP or the GPP framework to signal user opt-out choices under US state privacy laws using data processing option strings. | Universal Pixel Data Processing Options; Pass Users' Choices in Static Tracking Tags; Real-Time Conversion Events; Passing User Choices via Limited Data Use Strings |
-| **The Digital Services Act (DSA)** | A set of regulations for the EU that requires online platforms to ensure that users in the EU have real-time access to certain information about any ad shown to them. | DSA Advertiser Properties |
+| **Global Privacy Platform (GPP)**             | A protocol designed by IAB Tech Lab to streamline the transmission of privacy, consent, and consumer choice signals from sites and apps to ad tech providers. Supports CCPA, CPRA, CPA, and others.                               | Universal Pixel Workflow with CMP Integration; Pass Users' Choices in Static Tracking Tags; Real-Time Conversion Events; REDS Data Practices; POST /providerapi/offlineconversion; Geofence Targeting           |
+| **Limited Data Use (LDU)**                    | An alternative to an IAB-compliant CMP or the GPP framework to signal user opt-out choices under US state privacy laws using data processing option strings.                                                                      | Universal Pixel Data Processing Options; Pass Users' Choices in Static Tracking Tags; Real-Time Conversion Events; Passing User Choices via Limited Data Use Strings                                            |
+| **The Digital Services Act (DSA)**            | A set of regulations for the EU that requires online platforms to ensure that users in the EU have real-time access to certain information about any ad shown to them.                                                            | DSA Advertiser Properties                                                                                                                                                                                       |

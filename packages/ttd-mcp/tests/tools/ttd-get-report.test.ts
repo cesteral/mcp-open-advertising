@@ -75,7 +75,12 @@ describe("getReportLogic", () => {
 
   it("builds report config with correct fields", async () => {
     await getReportLogic(
-      { reportName: "Daily Report", dateRange: "Yesterday", reportTemplateId: 16353, fileFormat: "CSV" },
+      {
+        reportName: "Daily Report",
+        dateRange: "Yesterday",
+        reportTemplateId: 16353,
+        fileFormat: "CSV",
+      },
       createMockContext(),
       createMockSdkContext()
     );
@@ -156,7 +161,11 @@ describe("getReportLogic", () => {
     });
 
     await expect(
-      getReportLogic({ reportName: "Test", dateRange: "Last7Days", reportTemplateId: 1, fileFormat: "CSV" }, createMockContext(), undefined)
+      getReportLogic(
+        { reportName: "Test", dateRange: "Last7Days", reportTemplateId: 1, fileFormat: "CSV" },
+        createMockContext(),
+        undefined
+      )
     ).rejects.toThrow("No session ID available.");
   });
 

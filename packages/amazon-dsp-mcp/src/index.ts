@@ -44,11 +44,7 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
 
   let authAdapter: AmazonDspAuthAdapter;
 
-  if (
-    mcpConfig.amazonDspAppId &&
-    mcpConfig.amazonDspAppSecret &&
-    mcpConfig.amazonDspRefreshToken
-  ) {
+  if (mcpConfig.amazonDspAppId && mcpConfig.amazonDspAppSecret && mcpConfig.amazonDspRefreshToken) {
     authAdapter = new AmazonDspRefreshTokenAdapter(
       {
         appId: mcpConfig.amazonDspAppId,
