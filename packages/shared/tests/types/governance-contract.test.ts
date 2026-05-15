@@ -6,6 +6,7 @@ import { z } from "zod";
 import type {
   CesteralToolAnnotations,
   NormalizedEntitySnapshot,
+  CanonicalEntityKind,
   DryRunResult,
   ToolDefinition,
 } from "../../src/index.js";
@@ -47,10 +48,21 @@ describe("CesteralToolAnnotations", () => {
     >();
   });
 
-  it("constrains entityKinds to the canonical union", () => {
-    expectTypeOf<CesteralToolAnnotations["entityKinds"][number]>().toEqualTypeOf<
-      "campaign" | "ad_set" | "line_item" | "ad_group" | "ad"
-    >();
+  it("reuses CanonicalEntityKind from the snapshot module so annotations and snapshots stay in lockstep", () => {
+    expectTypeOf<CesteralToolAnnotations["entityKinds"][number]>().toEqualTypeOf<CanonicalEntityKind>();
+  });
+
+  it("accepts insertion_order so DV360 InsertionOrder writes can be annotated without weakening the type", () => {
+    const value: CesteralToolAnnotations = {
+      platform: "dv360",
+      operation: "update_budget",
+      entityKinds: ["insertion_order"],
+      entityIdArgs: ["insertionOrderId"],
+      readPartner: { toolName: "dv360_get_entity", argMap: { insertionOrderId: "entityId" } },
+      schemaVersion: 1,
+      contractId: "dv360.insertion_order.update_budget.v1",
+    };
+    expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
 });
 

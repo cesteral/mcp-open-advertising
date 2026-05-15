@@ -1,6 +1,8 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
+import type { CanonicalEntityKind } from "./normalized-entity-snapshot.js";
+
 /**
  * `cesteral.*` annotation namespace declared on governed write/read tools.
  *
@@ -18,8 +20,13 @@ export interface CesteralToolAnnotations {
   /** Canonical operation key. */
   operation: "update_budget" | "pause" | "resume" | "update_status" | "create" | "update";
 
-  /** Entity types this tool can write or read. */
-  entityKinds: Array<"campaign" | "ad_set" | "line_item" | "ad_group" | "ad">;
+  /**
+   * Entity types this tool can write or read. Reuses the snapshot's
+   * `CanonicalEntityKind` so annotations and snapshots stay in lockstep
+   * (DV360 InsertionOrder, DBM line items, etc. all annotate without
+   * weakening the type).
+   */
+  entityKinds: CanonicalEntityKind[];
 
   /** Names of input args that carry platform entity IDs (used to build read-partner calls). */
   entityIdArgs: string[];
