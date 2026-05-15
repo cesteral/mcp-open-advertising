@@ -7,6 +7,11 @@ export * from "./auth/index.js";
 export * from "./constants/index.js";
 export * from "./schemas/report-status.js";
 export * from "./schemas/report-schedule.js";
+export {
+  DryRunResultSchema,
+  DryRunValidationErrorSchema,
+  NormalizedEntitySnapshotSchema,
+} from "./schemas/dry-run-result.js";
 export type {
   ToolDefinition,
   ResourceDefinition,

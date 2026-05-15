@@ -34,7 +34,7 @@ describe("dv360-mcp cesteral.* annotations (round 1)", () => {
       insertionOrderId: "insertionOrderId",
       lineItemId: "lineItemId",
     });
-    expect(cesteral.supportsDryRun).toBe(false);
+    expect(cesteral.supportsDryRun).toBe(true);
     expect(cesteral.supportsBeforeAfterSnapshot).toBe(false);
   });
 
