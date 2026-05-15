@@ -5,6 +5,8 @@ import { describe, it, expectTypeOf } from "vitest";
 import { z } from "zod";
 import type {
   CesteralToolAnnotations,
+  CesteralWriteToolAnnotations,
+  CesteralReadToolAnnotations,
   NormalizedEntitySnapshot,
   CanonicalEntityKind,
   DryRunResult,
@@ -12,40 +14,57 @@ import type {
 } from "../../src/index.js";
 
 describe("CesteralToolAnnotations", () => {
-  it("accepts a minimal valid value with only required fields", () => {
+  it("accepts a minimal valid write value with only required fields", () => {
     const value: CesteralToolAnnotations = {
+      kind: "write",
       platform: "meta_ads",
-      operation: "pause",
+      operation: ["pause"],
       entityKinds: ["campaign"],
       entityIdArgs: ["entityId"],
+      readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
       schemaVersion: 1,
       contractId: "meta.campaign.pause.v1",
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
 
-  it("accepts a fully-populated value with optional fields", () => {
+  it("accepts a multi-operation write tool that dispatches by input args", () => {
     const value: CesteralToolAnnotations = {
+      kind: "write",
       platform: "meta_ads",
-      operation: "update_budget",
-      entityKinds: ["campaign", "ad_set"],
+      operation: ["update_budget", "pause", "resume", "update_status", "update"],
+      entityKinds: ["campaign", "ad_set", "ad"],
       entityIdArgs: ["entityId"],
-      readPartner: {
-        toolName: "meta_get_entity",
-        argMap: { entityId: "entityId" },
-      },
+      readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
       schemaVersion: 1,
-      contractId: "meta.campaign.update_budget.v1",
-      supportsDryRun: true,
-      supportsBeforeAfterSnapshot: true,
+      contractId: "meta.update_entity.v1",
+      supportsDryRun: false,
+      supportsBeforeAfterSnapshot: false,
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
 
-  it("constrains operation to the canonical union", () => {
-    expectTypeOf<CesteralToolAnnotations["operation"]>().toEqualTypeOf<
+  it("accepts a read tool with no operation or readPartner", () => {
+    const value: CesteralToolAnnotations = {
+      kind: "read",
+      platform: "meta_ads",
+      entityKinds: ["campaign", "ad_set", "ad"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "meta.get_entity.v1",
+    };
+    expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
+  });
+
+  it("constrains write operations to the canonical union", () => {
+    expectTypeOf<CesteralWriteToolAnnotations["operation"][number]>().toEqualTypeOf<
       "update_budget" | "pause" | "resume" | "update_status" | "create" | "update"
     >();
+  });
+
+  it("read annotations carry no operation field", () => {
+    expectTypeOf<CesteralReadToolAnnotations>().not.toHaveProperty("operation");
+    expectTypeOf<CesteralReadToolAnnotations>().not.toHaveProperty("readPartner");
   });
 
   it("reuses CanonicalEntityKind from the snapshot module so annotations and snapshots stay in lockstep", () => {
@@ -56,13 +75,22 @@ describe("CesteralToolAnnotations", () => {
 
   it("accepts insertion_order so DV360 InsertionOrder writes can be annotated without weakening the type", () => {
     const value: CesteralToolAnnotations = {
+      kind: "write",
       platform: "dv360",
-      operation: "update_budget",
-      entityKinds: ["insertion_order"],
-      entityIdArgs: ["insertionOrderId"],
-      readPartner: { toolName: "dv360_get_entity", argMap: { insertionOrderId: "entityId" } },
+      operation: ["update_budget", "pause", "resume", "update_status", "update"],
+      entityKinds: ["insertion_order", "line_item", "campaign"],
+      entityIdArgs: ["insertionOrderId", "lineItemId", "campaignId", "advertiserId"],
+      readPartner: {
+        toolName: "dv360_get_entity",
+        argMap: {
+          insertionOrderId: "insertionOrderId",
+          lineItemId: "lineItemId",
+          campaignId: "campaignId",
+          advertiserId: "advertiserId",
+        },
+      },
       schemaVersion: 1,
-      contractId: "dv360.insertion_order.update_budget.v1",
+      contractId: "dv360.update_entity.v1",
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
@@ -188,8 +216,9 @@ describe("ToolDefinition.cesteral", () => {
         destructiveHint: true,
         idempotentHint: true,
         cesteral: {
+          kind: "write",
           platform: "meta_ads",
-          operation: "pause",
+          operation: ["pause"],
           entityKinds: ["campaign", "ad_set"],
           entityIdArgs: ["entityId"],
           readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },

@@ -7,8 +7,12 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  CesteralReadToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_get_entity";
 const TOOL_TITLE = "Get DV360 Entity";
@@ -133,6 +137,21 @@ export const getEntityTool = {
     destructiveHint: false,
     openWorldHint: false,
     idempotentHint: true,
+    cesteral: {
+      kind: "read",
+      platform: "dv360",
+      // Mirror `dv360_update_entity`'s round-1 entity coverage so the writer
+      // can resolve this as its read partner for pre/post snapshot capture.
+      entityKinds: ["campaign", "insertion_order", "line_item"],
+      entityIdArgs: [
+        "advertiserId",
+        "campaignId",
+        "insertionOrderId",
+        "lineItemId",
+      ],
+      schemaVersion: 1,
+      contractId: "dv360.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   logic: getEntityLogic,
   responseFormatter: getEntityResponseFormatter,

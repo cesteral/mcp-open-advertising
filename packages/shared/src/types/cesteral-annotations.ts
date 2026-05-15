@@ -12,13 +12,22 @@ import type { CanonicalEntityKind } from "./normalized-entity-snapshot.js";
  * maintaining an out-of-band registry. See
  * `docs/plans/2026-05-13-mcp-server-write-contract-declaration.md` in
  * `cesteral-intelligence` for the full design.
+ *
+ * Discriminated by `kind`:
+ * - `"write"` — governed mutation; carries `operation` and a `readPartner`
+ *   pointer so consumers can capture pre/post snapshots.
+ * - `"read"` — read partner exposed for governance discovery; no operation
+ *   or readPartner. Cesteral consumers list these to verify a write tool's
+ *   declared `readPartner.toolName` resolves to a real, contract-tagged tool.
  */
-export interface CesteralToolAnnotations {
+export type CesteralToolAnnotations =
+  | CesteralWriteToolAnnotations
+  | CesteralReadToolAnnotations;
+
+/** Fields shared by every governed tool, regardless of read/write kind. */
+interface CesteralToolAnnotationsBase {
   /** Canonical platform key (e.g. "meta_ads", "dv360", "google_ads"). */
   platform: string;
-
-  /** Canonical operation key. */
-  operation: "update_budget" | "pause" | "resume" | "update_status" | "create" | "update";
 
   /**
    * Entity types this tool can write or read. Reuses the snapshot's
@@ -28,18 +37,8 @@ export interface CesteralToolAnnotations {
    */
   entityKinds: CanonicalEntityKind[];
 
-  /** Names of input args that carry platform entity IDs (used to build read-partner calls). */
+  /** Names of input args that carry platform entity IDs. */
   entityIdArgs: string[];
-
-  /**
-   * Read tool that returns the canonical pre/post snapshot for this entity.
-   * Required for write tools; omitted on read tools.
-   */
-  readPartner?: {
-    toolName: string;
-    /** Mapping from this tool's arg name to the read tool's arg name. */
-    argMap: Record<string, string>;
-  };
 
   /**
    * Bumped on breaking changes to the canonical contract surface. Pinned by
@@ -47,12 +46,51 @@ export interface CesteralToolAnnotations {
    */
   schemaVersion: number;
 
-  /** Stable cross-release identifier consumers can reference (e.g. "meta.campaign.update_budget.v1"). */
+  /** Stable cross-release identifier consumers can reference (e.g. "meta.update_entity.v1"). */
   contractId: string;
+}
+
+/**
+ * Governed write tool. A single tool may dispatch to several canonical
+ * operations based on its input args (e.g. Meta `update_entity` covers
+ * `update_budget`, `pause`, `resume`, `update_status`); declare the union
+ * and let consumers decide the effective operation per-call from the args.
+ */
+export interface CesteralWriteToolAnnotations extends CesteralToolAnnotationsBase {
+  kind: "write";
+
+  /**
+   * Canonical operations this tool can perform. The catch-all `"update"` is
+   * appropriate for multi-operation dispatchers (e.g. an `update_entity` tool
+   * that switches behavior on `data.status` vs `data.daily_budget`).
+   */
+  operation: Array<
+    "update_budget" | "pause" | "resume" | "update_status" | "create" | "update"
+  >;
+
+  /**
+   * Read tool that returns the canonical pre/post snapshot for this entity.
+   * Required for write tools so the control plane can capture before/after
+   * state without maintaining an out-of-band pairing.
+   */
+  readPartner: {
+    toolName: string;
+    /** Mapping from this write tool's arg name to the read tool's arg name. */
+    argMap: Record<string, string>;
+  };
 
   /** Declares the tool honors the `dry_run` input flag and returns a `DryRunResult`. */
   supportsDryRun?: boolean;
 
   /** Declares the tool returns canonical `before` / `after` snapshots in its output. */
   supportsBeforeAfterSnapshot?: boolean;
+}
+
+/**
+ * Read tool exposed for governance. Has no `operation` and no `readPartner`;
+ * its purpose is discovery — consumers traverse `write.readPartner.toolName`
+ * to find these and confirm they carry a matching contract id.
+ */
+export interface CesteralReadToolAnnotations extends CesteralToolAnnotationsBase {
+  kind: "read";
 }

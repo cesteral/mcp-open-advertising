@@ -13,7 +13,11 @@ export type {
   SdkContext,
   ElicitResultLike,
 } from "./types/tool-types.js";
-export type { CesteralToolAnnotations } from "./types/cesteral-annotations.js";
+export type {
+  CesteralToolAnnotations,
+  CesteralWriteToolAnnotations,
+  CesteralReadToolAnnotations,
+} from "./types/cesteral-annotations.js";
 export type {
   NormalizedEntitySnapshot,
   CanonicalEntityKind,
