@@ -106,7 +106,10 @@ export const deleteEntityTool = {
   title: "Delete Entity",
   description:
     "Delete a DV360 entity. Supported types: advertiser, campaign, insertionOrder, lineItem, adGroup, creative, customBiddingAlgorithm, inventorySource, inventorySourceGroup, locationList. " +
-    "Most entities are hard-deleted via the API. To archive instead (reversible), use dv360_update_entity to set entityStatus to ENTITY_STATUS_ARCHIVED.",
+    "Most entities are hard-deleted via the API (subsequent get returns 404). " +
+    "**Line items must be in ENTITY_STATUS_ARCHIVED before delete** — DV360 returns 400 (`LINE_ITEM must be archived before being deleted`) otherwise. " +
+    "Use dv360_bulk_update_status with status=ENTITY_STATUS_ARCHIVED first, then call this tool. " +
+    "For reversible removal of any entity, use dv360_update_entity to set entityStatus to ENTITY_STATUS_ARCHIVED.",
   inputSchema: DeleteEntityInputSchema,
   outputSchema: DeleteEntityOutputSchema,
   inputExamples: [

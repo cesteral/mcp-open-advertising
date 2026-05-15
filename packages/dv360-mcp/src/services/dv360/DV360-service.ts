@@ -845,13 +845,14 @@ export class DV360Service {
       // Fetch the source entity
       const source = (await this.getEntity(entityType, ids, context)) as Record<string, unknown>;
 
-      // Strip read-only / server-generated fields
+      // Strip read-only / server-generated fields. entityStatus stays because
+      // DV360's create schemas require it; we force PAUSED below so duplicates
+      // never start spending without explicit re-activation.
       const readOnlyFields = [
         "name", // resource name (e.g., advertisers/123/lineItems/456)
         `${entityType}Id`, // server-assigned ID
         "updateTime",
         "createTime",
-        "entityStatus", // will default to DRAFT on creation
       ];
 
       const copyData: Record<string, unknown> = {};
@@ -860,6 +861,12 @@ export class DV360Service {
           copyData[key] = value;
         }
       }
+
+      // Safety: duplicates always land in a non-running state. Caller must
+      // re-activate after review. DV360 accepts different initial statuses per
+      // entity — line items must start as DRAFT; campaigns/IOs accept PAUSED.
+      copyData.entityStatus =
+        entityType === "lineItem" ? "ENTITY_STATUS_DRAFT" : "ENTITY_STATUS_PAUSED";
 
       // Override display name if provided
       if (displayName) {

@@ -295,7 +295,7 @@ Standard CRUD/bulk/reporting tools plus:
 
 ### Server-Specific Notes
 
-- **dv360-mcp** (26 tools): `dv360_delete_entity` performs a **hard delete** on most entities (verified live for `campaign`: subsequent `get_entity` returns 404). Use `dv360_update_entity` with `entityStatus=ENTITY_STATUS_ARCHIVED` for reversible removal — archiving is itself irreversible (cannot unarchive). `inventorySource` / `inventorySourceGroup` list calls require either `partnerId` or `advertiserId` (validated client-side).
+- **dv360-mcp** (26 tools): `dv360_delete_entity` performs a **hard delete** on most entities (verified live for `campaign`: subsequent `get_entity` returns 404). **Line items must be archived first** (`bulk_update_status` → `ENTITY_STATUS_ARCHIVED`) before delete — DV360 returns 400 otherwise. Use `dv360_update_entity` with `entityStatus=ENTITY_STATUS_ARCHIVED` for reversible removal on other entity types — archiving is itself irreversible (cannot unarchive). `dv360_duplicate_entity` always lands the copy in a non-running state (lineItem → `DRAFT`, others → `PAUSED`) — DV360's create endpoints don't accept the same statuses across entity types. `inventorySource` / `inventorySourceGroup` list calls require either `partnerId` or `advertiserId` (validated client-side).
 - **linkedin-mcp** (21 tools): URN-based entity IDs, `LinkedIn-Version: 202409` header, analytics via `/v2/adAnalytics` with pivot breakdowns
 - **tiktok-mcp** (23 tools): `X-TikTok-Advertiser-Id` header in HTTP mode, image/video upload
 - **cm360-mcp** (21 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting; scheduling via `create/list/delete_report_schedule`
