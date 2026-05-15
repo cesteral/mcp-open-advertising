@@ -41,9 +41,7 @@ function createMockHttpClient() {
   return {
     fetch: vi.fn(),
     fetchRaw: vi.fn(),
-    getUploadBaseUrl: vi
-      .fn()
-      .mockReturnValue("https://displayvideo.googleapis.com/upload/v4"),
+    getUploadBaseUrl: vi.fn().mockReturnValue("https://displayvideo.googleapis.com/upload/v4"),
   } as any;
 }
 
@@ -523,14 +521,16 @@ describe("DV360Service", () => {
       };
       httpClient.fetchRaw.mockResolvedValue(responseObj);
 
-      await expect(service.uploadCustomBiddingScript("algo-42", "bad content", { advertiserId: "adv-1" })).rejects.toThrow(
-        McpError
-      );
+      await expect(
+        service.uploadCustomBiddingScript("algo-42", "bad content", { advertiserId: "adv-1" })
+      ).rejects.toThrow(McpError);
 
       try {
         // Reset mock for second call
         httpClient.fetchRaw.mockResolvedValue(responseObj);
-        await service.uploadCustomBiddingScript("algo-42", "bad content", { advertiserId: "adv-1" });
+        await service.uploadCustomBiddingScript("algo-42", "bad content", {
+          advertiserId: "adv-1",
+        });
       } catch (err) {
         expect((err as McpError).code).toBe(JsonRpcErrorCode.InvalidRequest);
         expect((err as McpError).message).toContain("Failed to upload custom bidding script");
@@ -548,7 +548,9 @@ describe("DV360Service", () => {
       httpClient.fetchRaw.mockResolvedValue(responseObj);
 
       try {
-        await service.uploadCustomBiddingScript("algo-42", "some script", { advertiserId: "adv-1" });
+        await service.uploadCustomBiddingScript("algo-42", "some script", {
+          advertiserId: "adv-1",
+        });
         expect.unreachable("should have thrown");
       } catch (err) {
         expect(err).toBeInstanceOf(McpError);
@@ -573,7 +575,9 @@ describe("DV360Service", () => {
       };
       httpClient.fetch.mockResolvedValue(scriptResource);
 
-      const result = await service.createCustomBiddingScript("algo-42", "media/abc123", { advertiserId: "adv-1" });
+      const result = await service.createCustomBiddingScript("algo-42", "media/abc123", {
+        advertiserId: "adv-1",
+      });
 
       expect(result).toEqual(scriptResource);
       expect(httpClient.fetch).toHaveBeenCalledWith(
@@ -604,7 +608,9 @@ describe("DV360Service", () => {
         nextPageToken: "next",
       });
 
-      const result = await service.listCustomBiddingScripts("algo-42", undefined, 10, { advertiserId: "adv-1" });
+      const result = await service.listCustomBiddingScripts("algo-42", undefined, 10, {
+        advertiserId: "adv-1",
+      });
 
       expect(result.scripts).toEqual(scripts);
       expect(result.nextPageToken).toBe("next");
@@ -617,7 +623,9 @@ describe("DV360Service", () => {
     it("returns empty scripts array when response has no scripts", async () => {
       httpClient.fetch.mockResolvedValue({});
 
-      const result = await service.listCustomBiddingScripts("algo-42", undefined, undefined, { advertiserId: "adv-1" });
+      const result = await service.listCustomBiddingScripts("algo-42", undefined, undefined, {
+        advertiserId: "adv-1",
+      });
 
       expect(result.scripts).toEqual([]);
       expect(result.nextPageToken).toBeUndefined();
@@ -639,7 +647,9 @@ describe("DV360Service", () => {
       };
       httpClient.fetchRaw.mockResolvedValue(responseObj);
 
-      const result = await service.uploadCustomBiddingRules("algo-42", '{"rules": []}', { advertiserId: "adv-1" });
+      const result = await service.uploadCustomBiddingRules("algo-42", '{"rules": []}', {
+        advertiserId: "adv-1",
+      });
 
       expect(result).toEqual({ resourceName: "media/rules-456" });
 
@@ -688,7 +698,9 @@ describe("DV360Service", () => {
       };
       httpClient.fetch.mockResolvedValue(rulesResource);
 
-      const result = await service.createCustomBiddingRules("algo-42", "media/rules-456", { advertiserId: "adv-1" });
+      const result = await service.createCustomBiddingRules("algo-42", "media/rules-456", {
+        advertiserId: "adv-1",
+      });
 
       expect(result).toEqual(rulesResource);
       expect(httpClient.fetch).toHaveBeenCalledWith(
@@ -718,7 +730,9 @@ describe("DV360Service", () => {
       };
       httpClient.fetch.mockResolvedValue(script);
 
-      const result = await service.getCustomBiddingScript("algo-42", "s-7", { advertiserId: "adv-1" });
+      const result = await service.getCustomBiddingScript("algo-42", "s-7", {
+        advertiserId: "adv-1",
+      });
 
       expect(result).toEqual(script);
       expect(httpClient.fetch).toHaveBeenCalledWith(
@@ -738,7 +752,9 @@ describe("DV360Service", () => {
       };
       httpClient.fetch.mockResolvedValue(rules);
 
-      const result = await service.getCustomBiddingRules("algo-42", "r-9", { advertiserId: "adv-1" });
+      const result = await service.getCustomBiddingRules("algo-42", "r-9", {
+        advertiserId: "adv-1",
+      });
 
       expect(result).toEqual(rules);
       expect(httpClient.fetch).toHaveBeenCalledWith(

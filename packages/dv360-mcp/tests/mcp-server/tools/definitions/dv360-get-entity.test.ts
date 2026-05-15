@@ -45,25 +45,25 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", async 
   return {
     ...actual,
     extractEntityIds: vi
-    .fn()
-    .mockImplementation((input: Record<string, unknown>, _entityType: string) => {
-      const ids: Record<string, string> = {};
-      for (const key of [
-        "partnerId",
-        "advertiserId",
-        "campaignId",
-        "insertionOrderId",
-        "lineItemId",
-        "adGroupId",
-        "adId",
-        "creativeId",
-      ]) {
-        if (input[key] && typeof input[key] === "string") {
-          ids[key] = input[key] as string;
+      .fn()
+      .mockImplementation((input: Record<string, unknown>, _entityType: string) => {
+        const ids: Record<string, string> = {};
+        for (const key of [
+          "partnerId",
+          "advertiserId",
+          "campaignId",
+          "insertionOrderId",
+          "lineItemId",
+          "adGroupId",
+          "adId",
+          "creativeId",
+        ]) {
+          if (input[key] && typeof input[key] === "string") {
+            ids[key] = input[key] as string;
+          }
         }
-      }
-      return ids;
-    }),
+        return ids;
+      }),
     extractParentIds: vi.fn(),
   };
 });

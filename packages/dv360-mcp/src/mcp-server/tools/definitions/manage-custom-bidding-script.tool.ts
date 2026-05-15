@@ -209,7 +209,12 @@ export async function manageCustomBiddingScriptLogic(
         currentValue: input.customBiddingScriptId,
       });
 
-      const script = await dv360Service.getCustomBiddingScript(algorithmId, scriptId, scope, context);
+      const script = await dv360Service.getCustomBiddingScript(
+        algorithmId,
+        scriptId,
+        scope,
+        context
+      );
 
       result.script = {
         customBiddingScriptId: script.customBiddingScriptId,

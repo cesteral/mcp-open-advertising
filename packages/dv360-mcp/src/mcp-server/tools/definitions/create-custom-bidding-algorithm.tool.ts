@@ -198,8 +198,7 @@ export async function createCustomBiddingAlgorithmLogic(
 
   // Scope sub-resource calls to the algorithm's owner — DV360 requires this
   // query param on every scripts/rules endpoint.
-  const scope =
-    ownerType === "advertiser" ? { advertiserId: ownerId } : { partnerId: ownerId };
+  const scope = ownerType === "advertiser" ? { advertiserId: ownerId } : { partnerId: ownerId };
 
   // Upload initial script if provided (for SCRIPT_BASED algorithms)
   if (input.initialScript && input.algorithmType === "SCRIPT_BASED") {

@@ -131,7 +131,7 @@ describe("dv360_manage_custom_bidding_script", () => {
           manageCustomBiddingScriptLogic(
             {
               customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+              advertiserId: "adv-1",
               action: "upload",
             },
             createMockContext(),
@@ -181,7 +181,7 @@ describe("dv360_manage_custom_bidding_script", () => {
           manageCustomBiddingScriptLogic(
             {
               customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+              advertiserId: "adv-1",
               action: "upload",
               scriptContent: "function bid() {}",
             },
@@ -410,7 +410,7 @@ describe("dv360_manage_custom_bidding_script", () => {
       const result = manageCustomBiddingScriptResponseFormatter({
         action: "upload",
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         script: {
           customBiddingScriptId: "script-1",
           createTime: "2025-01-01T00:00:00Z",
@@ -432,7 +432,7 @@ describe("dv360_manage_custom_bidding_script", () => {
       const result = manageCustomBiddingScriptResponseFormatter({
         action: "get",
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         script: {
           customBiddingScriptId: "script-err",
           createTime: "2025-01-01T00:00:00Z",
@@ -459,7 +459,7 @@ describe("dv360_manage_custom_bidding_script", () => {
       const result = manageCustomBiddingScriptResponseFormatter({
         action: "list",
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         scripts: [
           {
             customBiddingScriptId: "script-1",
@@ -487,7 +487,7 @@ describe("dv360_manage_custom_bidding_script", () => {
       const result = manageCustomBiddingScriptResponseFormatter({
         action: "list",
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         scripts: [],
         timestamp: "2025-01-01T00:00:00.000Z",
       });
@@ -499,7 +499,7 @@ describe("dv360_manage_custom_bidding_script", () => {
       const result = manageCustomBiddingScriptResponseFormatter({
         action: "getActive",
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -511,7 +511,7 @@ describe("dv360_manage_custom_bidding_script", () => {
     it("accepts valid upload input", () => {
       const parsed = ManageCustomBiddingScriptInputSchema.safeParse({
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         action: "upload",
         scriptContent: "function bid() {}",
       });
@@ -528,7 +528,7 @@ describe("dv360_manage_custom_bidding_script", () => {
     it("accepts get action with script ID", () => {
       const parsed = ManageCustomBiddingScriptInputSchema.safeParse({
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         action: "get",
         customBiddingScriptId: "script-1",
       });
@@ -538,7 +538,7 @@ describe("dv360_manage_custom_bidding_script", () => {
     it("rejects invalid action", () => {
       const parsed = ManageCustomBiddingScriptInputSchema.safeParse({
         customBiddingAlgorithmId: "algo-1",
-            advertiserId: "adv-1",
+        advertiserId: "adv-1",
         action: "delete",
       });
       expect(parsed.success).toBe(false);
