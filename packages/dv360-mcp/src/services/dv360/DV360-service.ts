@@ -762,7 +762,9 @@ export class DV360Service {
 
       await this.rateLimiter.consume(`dv360:${advertiserId}`, 1);
 
-      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/advertisers/${advertiserId}/assets`;
+      // Google media-upload endpoints require uploadType in the query string —
+      // multipart sends the JSON metadata + file bytes together in one POST.
+      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/advertisers/${advertiserId}/assets?uploadType=multipart`;
 
       // DV360 asset upload uses multipart/related:
       // Part 1: JSON metadata

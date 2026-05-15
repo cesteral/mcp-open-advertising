@@ -91,6 +91,20 @@ function extractFilename(
 }
 
 /**
+ * If `filename` already has an extension, return it unchanged. Otherwise
+ * append the extension derived from `contentType` (or `.bin` if unknown).
+ *
+ * Some upstream APIs (e.g. DV360's asset upload) reject filenames without an
+ * extension with `ASSET_UNKNOWN_FILE_EXTENSION`, so MCP upload tools that
+ * accept a user-supplied display name need to coerce one in.
+ */
+export function ensureFilenameExtension(filename: string, contentType: string): string {
+  if (path.extname(filename)) return filename;
+  const ext = contentTypeToExtension(contentType);
+  return `${filename}${ext || ".bin"}`;
+}
+
+/**
  * Map common content types to file extensions.
  */
 function contentTypeToExtension(contentType: string): string {

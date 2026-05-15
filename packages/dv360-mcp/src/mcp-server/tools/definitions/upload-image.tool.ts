@@ -3,7 +3,7 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { downloadFileToBuffer } from "@cesteral/shared";
+import { downloadFileToBuffer, ensureFilenameExtension } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
@@ -52,7 +52,10 @@ export async function uploadImageLogic(
     context
   );
 
-  const effectiveName = input.name ?? filename;
+  // DV360 rejects uploads when the filename lacks an extension
+  // (ASSET_UNKNOWN_FILE_EXTENSION). If the caller supplied a friendly name,
+  // borrow an extension from the response content-type.
+  const effectiveName = ensureFilenameExtension(input.name ?? filename, contentType);
 
   const result = await dv360Service.uploadAsset(
     input.advertiserId,
