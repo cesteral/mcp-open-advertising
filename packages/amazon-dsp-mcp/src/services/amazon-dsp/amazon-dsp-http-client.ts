@@ -62,8 +62,7 @@ export class AmazonDspHttpClient {
     private readonly authAdapter: AmazonDspAuthAdapter,
     private readonly profileId: string,
     private readonly baseUrl: string,
-    private readonly logger: import("pino").Logger,
-    private readonly clientId?: string
+    private readonly logger: import("pino").Logger
   ) {}
 
   /**
@@ -166,8 +165,9 @@ export class AmazonDspHttpClient {
           if (options?.body && !headers["Content-Type"]) {
             headers["Content-Type"] = "application/json";
           }
-          if (this.clientId) {
-            headers["Amazon-Advertising-API-ClientId"] = this.clientId;
+          const clientId = this.authAdapter.clientId;
+          if (clientId) {
+            headers["Amazon-Advertising-API-ClientId"] = clientId;
           }
           return headers;
         },
