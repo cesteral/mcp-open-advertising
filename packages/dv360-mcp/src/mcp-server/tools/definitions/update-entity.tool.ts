@@ -212,12 +212,7 @@ export const updateEntityTool = {
       // the tool itself accepts more DV360 types (creatives, ad groups, etc.)
       // but those land with later rounds as canonical-snapshot coverage grows.
       entityKinds: ["campaign", "insertion_order", "line_item"],
-      entityIdArgs: [
-        "advertiserId",
-        "campaignId",
-        "insertionOrderId",
-        "lineItemId",
-      ],
+      entityIdArgs: ["advertiserId", "campaignId", "insertionOrderId", "lineItemId"],
       readPartner: {
         toolName: "dv360_get_entity",
         argMap: {

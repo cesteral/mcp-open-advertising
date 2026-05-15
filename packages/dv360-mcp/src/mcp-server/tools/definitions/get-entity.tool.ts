@@ -143,12 +143,7 @@ export const getEntityTool = {
       // Mirror `dv360_update_entity`'s round-1 entity coverage so the writer
       // can resolve this as its read partner for pre/post snapshot capture.
       entityKinds: ["campaign", "insertion_order", "line_item"],
-      entityIdArgs: [
-        "advertiserId",
-        "campaignId",
-        "insertionOrderId",
-        "lineItemId",
-      ],
+      entityIdArgs: ["advertiserId", "campaignId", "insertionOrderId", "lineItemId"],
       schemaVersion: 1,
       contractId: "dv360.get_entity.v1",
     } satisfies CesteralReadToolAnnotations,

@@ -20,9 +20,7 @@ import type { CanonicalEntityKind } from "./normalized-entity-snapshot.js";
  *   or readPartner. Cesteral consumers list these to verify a write tool's
  *   declared `readPartner.toolName` resolves to a real, contract-tagged tool.
  */
-export type CesteralToolAnnotations =
-  | CesteralWriteToolAnnotations
-  | CesteralReadToolAnnotations;
+export type CesteralToolAnnotations = CesteralWriteToolAnnotations | CesteralReadToolAnnotations;
 
 /** Fields shared by every governed tool, regardless of read/write kind. */
 interface CesteralToolAnnotationsBase {
@@ -64,9 +62,7 @@ export interface CesteralWriteToolAnnotations extends CesteralToolAnnotationsBas
    * appropriate for multi-operation dispatchers (e.g. an `update_entity` tool
    * that switches behavior on `data.status` vs `data.daily_budget`).
    */
-  operation: Array<
-    "update_budget" | "pause" | "resume" | "update_status" | "create" | "update"
-  >;
+  operation: Array<"update_budget" | "pause" | "resume" | "update_status" | "create" | "update">;
 
   /**
    * Read tool that returns the canonical pre/post snapshot for this entity.

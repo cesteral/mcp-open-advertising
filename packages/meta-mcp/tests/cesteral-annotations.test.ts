@@ -44,7 +44,8 @@ describe("meta-mcp cesteral.* annotations (round 1)", () => {
 
   it("write tool's readPartner.toolName resolves to the annotated read tool", () => {
     const writeCesteral = updateEntityTool.annotations?.cesteral;
-    if (!writeCesteral || writeCesteral.kind !== "write") throw new Error("expected write annotations");
+    if (!writeCesteral || writeCesteral.kind !== "write")
+      throw new Error("expected write annotations");
     expect(writeCesteral.readPartner.toolName).toBe(getEntityTool.name);
   });
 });
