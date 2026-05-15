@@ -19,7 +19,7 @@ describe("AmazonDspAccessTokenAdapter", () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        advertisers: [{ advertiserId: "adv_1", name: "Test Advertiser" }],
+        response: [{ advertiserId: "adv_1", name: "Test Advertiser" }],
         totalResults: 1,
       }),
     });
@@ -42,7 +42,7 @@ describe("AmazonDspAccessTokenAdapter", () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
-        advertisers: [{ advertiserId: "adv_1", name: "Advertiser" }],
+        response: [{ advertiserId: "adv_1", name: "Advertiser" }],
         totalResults: 1,
       }),
     });
@@ -82,7 +82,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ advertisers: [{ name: "Advertiser" }], totalResults: 1 }),
+        json: async () => ({ response: [{ name: "Advertiser" }], totalResults: 1 }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "client_id", appSecret: "client_secret", refreshToken: "amz_rt" },
@@ -101,7 +101,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ advertisers: [{ name: "A" }], totalResults: 1 }),
+        json: async () => ({ response: [{ name: "A" }], totalResults: 1 }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "my_client_id", appSecret: "my_secret", refreshToken: "my_rt" },
@@ -124,7 +124,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ advertisers: [{ name: "A" }], totalResults: 1 }),
+        json: async () => ({ response: [{ name: "A" }], totalResults: 1 }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "a", appSecret: "b", refreshToken: "c" },
@@ -154,7 +154,7 @@ describe("AmazonDspRefreshTokenAdapter", () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ advertisers: [{ name: "A" }], totalResults: 1 }),
+        json: async () => ({ response: [{ name: "A" }], totalResults: 1 }),
       });
     const adapter = new AmazonDspRefreshTokenAdapter(
       { appId: "my_client", appSecret: "s", refreshToken: "r" },

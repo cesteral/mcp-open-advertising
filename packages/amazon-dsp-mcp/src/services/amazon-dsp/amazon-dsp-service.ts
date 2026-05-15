@@ -246,7 +246,7 @@ export class AmazonDspService {
       context
     )) as AmazonDspRawListResponse;
 
-    const entities = (result?.advertisers as AmazonDspAdvertiser[]) ?? [];
+    const entities = (result?.response as AmazonDspAdvertiser[]) ?? [];
     const totalResults = result?.totalResults ?? 0;
 
     return {
