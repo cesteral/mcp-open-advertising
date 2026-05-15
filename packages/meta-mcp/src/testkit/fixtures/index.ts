@@ -50,8 +50,7 @@ export const updateBudgetIncreaseCampaign: MetaWriteFixture = {
     },
     schedule: { startAt: null, endAt: null },
   },
-  description:
-    "update_budget: campaign daily budget increase from $100 → $150 USD (cents)",
+  description: "update_budget: campaign daily budget increase from $100 → $150 USD (cents)",
 };
 
 /**
@@ -87,8 +86,7 @@ export const updateBudgetDecreaseAdSet: MetaWriteFixture = {
     },
     schedule: { startAt: null, endAt: null },
   },
-  description:
-    "update_budget: ad set daily budget decrease from $120 → $75 USD (cents)",
+  description: "update_budget: ad set daily budget decrease from $120 → $75 USD (cents)",
 };
 
 /**

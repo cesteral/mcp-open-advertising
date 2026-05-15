@@ -18,10 +18,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  assertContract,
-  getFixtures,
-} from "../../src/testkit/index.js";
+import { assertContract, getFixtures } from "../../src/testkit/index.js";
 // Smoke import: must resolve via package.json exports map.
 import * as publicTestkit from "@cesteral/meta-mcp/testkit";
 
@@ -40,13 +37,10 @@ describe("meta-mcp testkit conformance", () => {
     expect(pairs).toContain("resume::adSet");
   });
 
-  it.each(fixtures.map((fx) => [fx.description, fx]))(
-    "assertContract green: %s",
-    (_desc, fx) => {
-      // Should not throw.
-      assertContract(fx.operation, fx.entityKind, fx);
-    }
-  );
+  it.each(fixtures.map((fx) => [fx.description, fx]))("assertContract green: %s", (_desc, fx) => {
+    // Should not throw.
+    assertContract(fx.operation, fx.entityKind, fx);
+  });
 
   it("getFixtures filters by operation", () => {
     const pauses = getFixtures("pause");

@@ -23,10 +23,7 @@ import type {
   NormalizedEntitySnapshot,
   RequestContext,
 } from "@cesteral/shared";
-import {
-  buildDv360Snapshot,
-  type Dv360ServiceLike,
-} from "./capture-snapshot.js";
+import { buildDv360Snapshot, type Dv360ServiceLike } from "./capture-snapshot.js";
 
 export type { Dv360ServiceLike };
 

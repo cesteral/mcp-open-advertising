@@ -24,11 +24,7 @@ import type {
   NormalizedEntitySnapshot,
   RequestContext,
 } from "@cesteral/shared";
-import {
-  buildMetaSnapshot,
-  ENTITY_KIND_MAP,
-  type MetaServiceLike,
-} from "./capture-snapshot.js";
+import { buildMetaSnapshot, ENTITY_KIND_MAP, type MetaServiceLike } from "./capture-snapshot.js";
 
 export type { MetaServiceLike };
 

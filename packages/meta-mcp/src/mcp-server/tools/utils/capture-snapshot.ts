@@ -125,12 +125,9 @@ export async function captureMetaSnapshot(
 ): Promise<NormalizedEntitySnapshot | undefined> {
   if (!entityType || !ENTITY_KIND_MAP[entityType] || !metaService.getEntity) return undefined;
   try {
-    const current = (await metaService.getEntity(
-      entityType,
-      entityId,
-      undefined,
-      context
-    )) as Record<string, unknown> | undefined;
+    const current = (await metaService.getEntity(entityType, entityId, undefined, context)) as
+      | Record<string, unknown>
+      | undefined;
     if (!current || typeof current !== "object") return undefined;
     const snapshot = buildMetaSnapshot(entityType, entityId, current, {});
     return snapshot ?? undefined;

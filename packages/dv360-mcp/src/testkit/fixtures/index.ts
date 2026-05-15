@@ -84,8 +84,7 @@ export const updateBudgetIncreaseInsertionOrder: Dv360WriteFixture = {
     },
     schedule: { startAt: null, endAt: null },
   },
-  description:
-    "update_budget: insertion-order single-segment budget increase $50 → $75",
+  description: "update_budget: insertion-order single-segment budget increase $50 → $75",
 };
 
 /** update_budget: line-item budget decrease ($50 → $30). */

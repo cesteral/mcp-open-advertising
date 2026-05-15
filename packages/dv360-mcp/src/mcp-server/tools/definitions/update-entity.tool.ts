@@ -164,11 +164,7 @@ export async function updateEntityLogic(
     }
     // PR-D: normalize pre-state from the same `current` we already read for
     // previousValues — no extra round-trip.
-    const before = snapshotFromDv360Entity(
-      validatedInput.entityType,
-      entityIds,
-      current ?? {}
-    );
+    const before = snapshotFromDv360Entity(validatedInput.entityType, entityIds, current ?? {});
 
     const updated = await dv360Service.updateEntity(
       validatedInput.entityType,

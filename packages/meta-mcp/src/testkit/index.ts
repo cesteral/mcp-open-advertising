@@ -20,11 +20,7 @@
  */
 
 import { applyMetaPatch } from "../mcp-server/tools/utils/dry-run.js";
-import type {
-  MetaEntityKindKey,
-  MetaOperation,
-  MetaWriteFixture,
-} from "./types.js";
+import type { MetaEntityKindKey, MetaOperation, MetaWriteFixture } from "./types.js";
 import { allFixtures } from "./fixtures/index.js";
 
 export type {
@@ -80,9 +76,7 @@ export function assertContract(
     fixture.args.data
   );
   if (got == null) {
-    throw new Error(
-      `assertContract(${fixture.description}): symbolic apply returned undefined`
-    );
+    throw new Error(`assertContract(${fixture.description}): symbolic apply returned undefined`);
   }
   // Stable JSON deep-equal — keeps the assertion test-runner-agnostic.
   const a = JSON.stringify(got);

@@ -13,11 +13,7 @@
  */
 
 import { applyDv360Patch } from "../mcp-server/tools/utils/dry-run.js";
-import type {
-  Dv360EntityKindKey,
-  Dv360Operation,
-  Dv360WriteFixture,
-} from "./types.js";
+import type { Dv360EntityKindKey, Dv360Operation, Dv360WriteFixture } from "./types.js";
 import { allFixtures } from "./fixtures/index.js";
 
 export type {
@@ -63,9 +59,7 @@ export function assertContract(
     fixture.args.updateMask
   );
   if (got == null) {
-    throw new Error(
-      `assertContract(${fixture.description}): symbolic apply returned undefined`
-    );
+    throw new Error(`assertContract(${fixture.description}): symbolic apply returned undefined`);
   }
   const a = JSON.stringify(got);
   const b = JSON.stringify(fixture.expectedPostState);
