@@ -83,7 +83,6 @@ async function setupStdioCredentials(sessionId: string): Promise<boolean> {
       baseUrl: mcpConfig.amazonDspApiBaseUrl,
       reportPollIntervalMs: mcpConfig.amazonDspReportPollIntervalMs,
       reportMaxPollAttempts: mcpConfig.amazonDspReportMaxPollAttempts,
-      clientId: mcpConfig.amazonDspClientId,
     },
     logger,
     rateLimiter

@@ -60,7 +60,6 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
             baseUrl: cfg.amazonDspApiBaseUrl,
             reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs,
             reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts,
-            clientId: adapter.clientId || cfg.amazonDspClientId,
           },
           log,
           rateLimiter
@@ -100,7 +99,6 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
               baseUrl: cfg.amazonDspApiBaseUrl,
               reportPollIntervalMs: cfg.amazonDspReportPollIntervalMs,
               reportMaxPollAttempts: cfg.amazonDspReportMaxPollAttempts,
-              clientId: cfg.amazonDspClientId,
             },
             log,
             rateLimiter
@@ -128,7 +126,6 @@ function buildPlatformConfig(config: AppConfig, logger: Logger): TransportFactor
               baseUrl: cfgFallback.amazonDspApiBaseUrl,
               reportPollIntervalMs: cfgFallback.amazonDspReportPollIntervalMs,
               reportMaxPollAttempts: cfgFallback.amazonDspReportMaxPollAttempts,
-              clientId: cfgFallback.amazonDspClientId,
             },
             log,
             rateLimiter

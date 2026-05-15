@@ -21,42 +21,54 @@ import {
 import type { Logger } from "pino";
 import { AMAZON_DSP_REPORTING_CONTRACT } from "./amazon-dsp-api-contract.js";
 
-/** Amazon DSP report task status values (per Reporting v3 OpenAPI spec) */
+/** Amazon DSP report task status values (legacy /dsp/reports shape). */
 export type ReportTaskStatus = (typeof AMAZON_DSP_REPORTING_CONTRACT.statuses)[number];
 
-/** Amazon DSP report task check response */
+/** Amazon DSP report task status response shape (legacy /dsp/reports). */
 interface ReportTaskCheckData {
   reportId: string;
   status: ReportTaskStatus;
-  url?: string;
-  fileSize?: number;
+  /** Presigned S3 URL — populated once status === "SUCCESS". */
+  location?: string;
+  /** Report type (echoed from submit). */
+  type?: string;
+  /** Output format (JSON for legacy DSP reports). */
+  format?: string;
+  statusDetails?: string;
+  expiration?: number;
 }
 
-/** Amazon DSP report configuration (per Reporting v3 OpenAPI spec) */
+/** Amazon DSP report config (legacy /dsp/reports body shape). */
 export interface AmazonDspReportConfig {
-  name?: string;
-  /** Start date in YYYY-MM-DD format */
+  /** Start date in YYYY-MM-DD format (converted to YYYYMMDD upstream). */
   startDate: string;
-  /** End date in YYYY-MM-DD format */
+  /** End date in YYYY-MM-DD format (converted to YYYYMMDD upstream). */
   endDate: string;
-  configuration: {
-    /** Ad product (e.g. DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS) */
-    adProduct?: string;
-    groupBy: string[];
-    columns: string[];
-    reportTypeId: string;
-    timeUnit?: "DAILY" | "SUMMARY";
-    format?: "GZIP_JSON";
-  };
+  /** Report type — one of AMAZON_DSP_REPORTING_CONTRACT.reportTypes. */
+  type: string;
+  /** Optional grouping dimensions (type-specific allowed values). */
+  dimensions?: string[];
+  /** Metric names. Sent to Amazon as a single comma-separated string. */
+  metrics?: string[];
+  /** Time unit (legacy API accepts "DAILY" or "SUMMARY"). */
+  timeUnit?: "DAILY" | "SUMMARY";
+}
+
+function toCompactDate(isoDate: string): string {
+  // Accept YYYY-MM-DD and convert to YYYYMMDD; pass through if already compact.
+  return /^\d{8}$/.test(isoDate) ? isoDate : isoDate.replace(/-/g, "");
 }
 
 /**
- * AmazonDsp Reporting Service — Handles async reporting via Amazon DSP Reporting v3 API.
+ * AmazonDsp Reporting Service — async reporting via the legacy /dsp/reports API.
  *
- * Amazon DSP reporting uses an async polling pattern:
- * 1. POST /accounts/{accountId}/dsp/reports → get reportId
- * 2. GET /accounts/{accountId}/dsp/reports/{reportId} → poll until COMPLETED or FAILURE
- * 3. GET url (presigned) to retrieve report data
+ * Async polling flow:
+ * 1. POST /dsp/reports → 202 with reportId
+ * 2. GET /dsp/reports/{reportId} → poll until status === "SUCCESS" or "FAILURE"
+ * 3. GET location (presigned S3 URL) to retrieve report body (JSON)
+ *
+ * The endpoint is NOT account-scoped in the URL — the
+ * Amazon-Advertising-API-Scope header still identifies the profile.
  */
 export class AmazonDspReportingService {
   constructor(
@@ -68,74 +80,56 @@ export class AmazonDspReportingService {
   ) {}
 
   /**
-   * Submit a report task.
+   * Submit a report task to /dsp/reports.
    * Returns the reportId for polling.
    */
   async submitReport(
-    accountId: string,
     reportConfig: AmazonDspReportConfig,
     context?: RequestContext
   ): Promise<{ taskId: string }> {
     await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
-    const path = AMAZON_DSP_REPORTING_CONTRACT.submitPathTemplate.replace(
-      "{accountId}",
-      encodeURIComponent(accountId)
-    );
+    const body: Record<string, unknown> = {
+      startDate: toCompactDate(reportConfig.startDate),
+      endDate: toCompactDate(reportConfig.endDate),
+      type: reportConfig.type,
+      timeUnit: reportConfig.timeUnit ?? AMAZON_DSP_REPORTING_CONTRACT.defaultTimeUnit,
+    };
+    if (reportConfig.dimensions && reportConfig.dimensions.length > 0) {
+      body.dimensions = reportConfig.dimensions;
+    }
+    if (reportConfig.metrics && reportConfig.metrics.length > 0) {
+      body.metrics = reportConfig.metrics.join(",");
+    }
+
     const result = (await this.httpClient.post(
-      path,
-      {
-        name: reportConfig.name ?? "MCP Report",
-        startDate: reportConfig.startDate,
-        endDate: reportConfig.endDate,
-        configuration: {
-          adProduct:
-            reportConfig.configuration.adProduct ?? AMAZON_DSP_REPORTING_CONTRACT.defaultAdProduct,
-          groupBy: reportConfig.configuration.groupBy,
-          columns: reportConfig.configuration.columns,
-          reportTypeId: reportConfig.configuration.reportTypeId,
-          timeUnit:
-            reportConfig.configuration.timeUnit ?? AMAZON_DSP_REPORTING_CONTRACT.defaultTimeUnit,
-          format: reportConfig.configuration.format ?? AMAZON_DSP_REPORTING_CONTRACT.defaultFormat,
-        },
-      },
-      context,
-      AMAZON_DSP_REPORTING_CONTRACT.submitAcceptMediaType
+      AMAZON_DSP_REPORTING_CONTRACT.submitPathTemplate,
+      body,
+      context
     )) as { reportId: string; status: string };
 
     return { taskId: result.reportId };
   }
 
   /**
-   * Poll a report task until it is COMPLETED or FAILURE.
+   * Poll a report task until it is SUCCESS or FAILURE.
    */
-  async pollReport(
-    accountId: string,
-    taskId: string,
-    context?: RequestContext
-  ): Promise<ReportTaskCheckData> {
-    this.logger.debug(
-      { accountId, taskId, maxPollAttempts: this.maxPollAttempts },
-      "Starting report poll"
-    );
+  async pollReport(taskId: string, context?: RequestContext): Promise<ReportTaskCheckData> {
+    this.logger.debug({ taskId, maxPollAttempts: this.maxPollAttempts }, "Starting report poll");
 
-    const path = AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate
-      .replace("{accountId}", encodeURIComponent(accountId))
-      .replace("{reportId}", encodeURIComponent(taskId));
+    const path = AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate.replace(
+      "{reportId}",
+      encodeURIComponent(taskId)
+    );
 
     try {
       return await pollUntilComplete<ReportTaskCheckData>({
         fetchStatus: async () => {
           await this.rateLimiter.consume(`amazon_dsp:reporting`);
-          return (await this.httpClient.get(
-            path,
-            undefined,
-            context,
-            AMAZON_DSP_REPORTING_CONTRACT.statusAcceptMediaType
-          )) as ReportTaskCheckData;
+          return (await this.httpClient.get(path, undefined, context)) as ReportTaskCheckData;
         },
-        isComplete: (r) => r.status === "COMPLETED",
-        isFailed: (r) => r.status === "FAILED",
+        isComplete: (r) => r.status === "SUCCESS",
+        isFailed: (r) => r.status === "FAILURE",
         initialDelayMs: this.pollIntervalMs,
         maxDelayMs: DEFAULT_REPORT_MAX_BACKOFF_MS,
         maxAttempts: this.maxPollAttempts,
@@ -150,30 +144,25 @@ export class AmazonDspReportingService {
 
   /**
    * Single status check for a report task. No polling, no sleep.
-   * Returns current status and download URL if COMPLETED.
+   * Returns current status and download URL if SUCCESS.
    */
   async checkReportStatus(
-    accountId: string,
     taskId: string,
     context?: RequestContext
   ): Promise<{ taskId: string; status: ReportTaskStatus; downloadUrl?: string }> {
     await this.rateLimiter.consume(`amazon_dsp:reporting`);
 
-    const path = AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate
-      .replace("{accountId}", encodeURIComponent(accountId))
-      .replace("{reportId}", encodeURIComponent(taskId));
+    const path = AMAZON_DSP_REPORTING_CONTRACT.statusPathTemplate.replace(
+      "{reportId}",
+      encodeURIComponent(taskId)
+    );
 
-    const result = (await this.httpClient.get(
-      path,
-      undefined,
-      context,
-      AMAZON_DSP_REPORTING_CONTRACT.statusAcceptMediaType
-    )) as ReportTaskCheckData;
+    const result = (await this.httpClient.get(path, undefined, context)) as ReportTaskCheckData;
 
     return {
       taskId: result.reportId,
       status: result.status,
-      downloadUrl: result.url,
+      downloadUrl: result.location,
     };
   }
 
@@ -261,7 +250,6 @@ export class AmazonDspReportingService {
    * Full async report flow: submit → poll → download.
    */
   async getReport(
-    accountId: string,
     reportConfig: AmazonDspReportConfig,
     maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
     context?: RequestContext
@@ -270,21 +258,21 @@ export class AmazonDspReportingService {
       typeof maxRowsOrContext === "number" ? maxRowsOrContext : DEFAULT_REPORT_MAX_ROWS;
     const requestContext = typeof maxRowsOrContext === "number" ? context : maxRowsOrContext;
 
-    const { taskId } = await this.submitReport(accountId, reportConfig, requestContext);
-    const taskResult = await this.pollReport(accountId, taskId, requestContext);
+    const { taskId } = await this.submitReport(reportConfig, requestContext);
+    const taskResult = await this.pollReport(taskId, requestContext);
 
-    if (taskResult.status === "FAILED") {
+    if (taskResult.status === "FAILURE") {
       throw new McpError(JsonRpcErrorCode.InternalError, `Amazon DSP report task ${taskId} failed`);
     }
 
-    if (!taskResult.url) {
+    if (!taskResult.location) {
       throw new McpError(
         JsonRpcErrorCode.InternalError,
         `Amazon DSP report task ${taskId} completed but has no download URL`
       );
     }
 
-    const reportData = await this.downloadReport(taskResult.url, maxRows, requestContext);
+    const reportData = await this.downloadReport(taskResult.location, maxRows, requestContext);
 
     return {
       ...reportData,
@@ -293,11 +281,10 @@ export class AmazonDspReportingService {
   }
 
   /**
-   * Get report with dimensional breakdowns.
-   * Adds breakdown groupBy dimensions to the report config.
+   * Get report with additional dimensional breakdowns.
+   * Adds breakdown values to the existing `dimensions` array on the config.
    */
   async getReportBreakdowns(
-    accountId: string,
     reportConfig: AmazonDspReportConfig,
     breakdowns: string[],
     maxRowsOrContext: number | RequestContext = DEFAULT_REPORT_MAX_ROWS,
@@ -305,12 +292,9 @@ export class AmazonDspReportingService {
   ): Promise<{ rows: string[][]; headers: string[]; totalRows: number; taskId: string }> {
     const configWithBreakdowns: AmazonDspReportConfig = {
       ...reportConfig,
-      configuration: {
-        ...reportConfig.configuration,
-        groupBy: [...reportConfig.configuration.groupBy, ...breakdowns],
-      },
+      dimensions: [...(reportConfig.dimensions ?? []), ...breakdowns],
     };
 
-    return this.getReport(accountId, configWithBreakdowns, maxRowsOrContext, context);
+    return this.getReport(configWithBreakdowns, maxRowsOrContext, context);
   }
 }

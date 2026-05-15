@@ -4,31 +4,29 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { resolveDatePreset, DATE_PRESET_VALUES } from "@cesteral/shared";
+import { AMAZON_DSP_REPORTING_CONTRACT } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_submit_report";
 const TOOL_TITLE = "Submit Amazon DSP Report";
-const TOOL_DESCRIPTION = `Submit an Amazon DSP report task without waiting for completion.
+const TOOL_DESCRIPTION = `Submit an Amazon DSP report (legacy /dsp/reports API) without waiting for completion.
 
-Returns a \`taskId\` immediately. Use \`amazon_dsp_check_report_status\` to poll for completion, then \`amazon_dsp_download_report\` to fetch results.
+Returns a \`taskId\` immediately. Use \`amazon_dsp_check_report_status\` to poll for completion (\`SUCCESS\` or \`FAILURE\`), then \`amazon_dsp_download_report\` to fetch results.
 
 **Non-blocking workflow:**
 1. \`amazon_dsp_submit_report\` → get \`taskId\`
-2. \`amazon_dsp_check_report_status\` (repeat every 10s) → wait for "COMPLETED"
-3. \`amazon_dsp_download_report\` with the \`downloadUrl\` → get parsed data
+2. \`amazon_dsp_check_report_status\` (repeat every 10s) → wait for \`SUCCESS\`
+3. \`amazon_dsp_download_report\` with the \`downloadUrl\` → parsed data
 
 Use \`amazon_dsp_get_report\` instead for a blocking convenience shortcut.
+
+**Report shape:** each \`type\` (CAMPAIGN, INVENTORY, AUDIENCE, PRODUCTS, TECHNOLOGY, GEOGRAPHY, CONVERSION_SOURCE) is a fixed report category. CAMPAIGN supports breaking down by \`ORDER | LINE_ITEM | CREATIVE\` via \`dimensions\`. \`metrics\` is the list of metric names (impressions, totalCost, viewableImpressions, viewabilityRate, …) — sent to Amazon as a comma-separated string.
 
 Note: Amazon DSP has a maximum 95-day lookback. LAST_90_DAYS is the longest supported preset.`;
 
 export const SubmitReportInputSchema = z
   .object({
-    accountId: z
-      .string()
-      .min(1)
-      .describe("Amazon DSP account (entity) ID used in the reporting URL path"),
-    name: z.string().optional().describe("Report name (optional)"),
     datePreset: z
       .enum(DATE_PRESET_VALUES)
       .optional()
@@ -40,39 +38,37 @@ export const SubmitReportInputSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "Start date (YYYY-MM-DD format, e.g. 2024-01-01). Max 95-day lookback. Required if datePreset not provided."
+        "Start date (YYYY-MM-DD format, e.g. 2026-05-01). Max 95-day lookback. Required if datePreset not provided. Converted to YYYYMMDD for the upstream API."
       ),
     endDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .describe(
-        "End date (YYYY-MM-DD format, e.g. 2024-01-31). Required if datePreset not provided."
+        "End date (YYYY-MM-DD format). Required if datePreset not provided. Converted to YYYYMMDD for the upstream API."
       ),
-    reportTypeId: z
-      .string()
-      .min(1)
-      .describe("Report type ID (e.g. dspLineItem, dspOrder, dspCreative)"),
-    groupBy: z
+    type: z
+      .enum(AMAZON_DSP_REPORTING_CONTRACT.reportTypes)
+      .describe(
+        `Report category. One of: ${AMAZON_DSP_REPORTING_CONTRACT.reportTypes.join(", ")}.`
+      ),
+    dimensions: z
       .array(z.string())
-      .min(1)
-      .describe("Dimensions to group by (e.g. ['order', 'lineItem'])"),
-    columns: z
+      .optional()
+      .describe(
+        "Optional grouping dimensions (type-specific). CAMPAIGN supports ORDER, LINE_ITEM, CREATIVE."
+      ),
+    metrics: z
       .array(z.string())
-      .min(1)
-      .describe("Metrics/columns to include (e.g. ['impressions', 'clickThroughs', 'totalCost'])"),
+      .optional()
+      .describe(
+        "Metric names to include (e.g. ['impressions', 'totalCost']). Joined to a comma-separated string upstream. Amazon will 422 with the authoritative invalid-list if any name is unknown."
+      ),
     timeUnit: z
       .enum(["DAILY", "SUMMARY"])
       .optional()
       .default("DAILY")
       .describe("Time unit for the report (default: DAILY)"),
-    adProduct: z
-      .string()
-      .optional()
-      .default("DEMAND_SIDE_PLATFORM")
-      .describe(
-        "Ad product (default: DEMAND_SIDE_PLATFORM). Options: DEMAND_SIDE_PLATFORM, SPONSORED_PRODUCTS, SPONSORED_BRANDS, SPONSORED_DISPLAY, SPONSORED_TELEVISION, ALL"
-      ),
   })
   .refine(
     (data) =>
@@ -107,18 +103,13 @@ export async function submitReportLogic(
   }
 
   const result = await amazonDspReportingService.submitReport(
-    input.accountId,
     {
-      name: input.name,
       startDate: resolvedStartDate!,
       endDate: resolvedEndDate!,
-      configuration: {
-        adProduct: input.adProduct,
-        groupBy: input.groupBy,
-        columns: input.columns,
-        reportTypeId: input.reportTypeId,
-        timeUnit: input.timeUnit,
-      },
+      type: input.type,
+      dimensions: input.dimensions,
+      metrics: input.metrics,
+      timeUnit: input.timeUnit,
     },
     context
   );
@@ -152,13 +143,12 @@ export const submitReportTool = {
   },
   inputExamples: [
     {
-      label: "Submit line item performance report",
+      label: "Daily order-level CAMPAIGN report, last 7 days",
       input: {
-        accountId: "1234567890",
         datePreset: "LAST_7_DAYS",
-        reportTypeId: "dspLineItem",
-        groupBy: ["order", "lineItem"],
-        columns: ["impressions", "clickThroughs", "totalCost"],
+        type: "CAMPAIGN",
+        dimensions: ["ORDER"],
+        metrics: ["impressions", "totalCost"],
         timeUnit: "DAILY",
       },
     },

@@ -79,7 +79,9 @@ describe("AmazonDspService", () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         "/dsp/orders",
         { name: "New", advertiserId: "adv_1" },
-        undefined
+        undefined,
+        undefined,
+        "application/vnd.dsporders.v2.2+json"
       );
       expect(result.orderId).toBe("new_order");
     });
@@ -90,6 +92,8 @@ describe("AmazonDspService", () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         "/dsp/targets",
         { lineItemId: "li_1" },
+        undefined,
+        undefined,
         undefined
       );
       expect((result as any).targetId).toBe("t_123");
@@ -103,7 +107,8 @@ describe("AmazonDspService", () => {
       expect(mockHttpClient.put).toHaveBeenCalledWith(
         "/dsp/orders/o1",
         { name: "Updated" },
-        undefined
+        undefined,
+        "application/vnd.dsporders.v2.2+json"
       );
     });
   });
@@ -115,7 +120,8 @@ describe("AmazonDspService", () => {
       expect(mockHttpClient.put).toHaveBeenCalledWith(
         "/dsp/orders/o1",
         { state: "ARCHIVED" },
-        undefined
+        undefined,
+        "application/vnd.dsporders.v2.2+json"
       );
       expect(mockHttpClient.delete).not.toHaveBeenCalled();
     });
@@ -128,7 +134,8 @@ describe("AmazonDspService", () => {
       expect(mockHttpClient.put).toHaveBeenCalledWith(
         "/dsp/orders/o1",
         { state: "PAUSED" },
-        undefined
+        undefined,
+        "application/vnd.dsporders.v2.2+json"
       );
     });
   });
@@ -156,7 +163,8 @@ describe("AmazonDspService", () => {
             bidAmount: 2.5,
           },
         },
-        undefined
+        undefined,
+        "application/vnd.dsplineitems.v3.1+json"
       );
       expect(result.results[0]).toEqual({
         lineItemId: "li1",

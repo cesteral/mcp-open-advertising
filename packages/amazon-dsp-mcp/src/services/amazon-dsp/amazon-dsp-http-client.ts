@@ -62,8 +62,7 @@ export class AmazonDspHttpClient {
     private readonly authAdapter: AmazonDspAuthAdapter,
     private readonly profileId: string,
     private readonly baseUrl: string,
-    private readonly logger: import("pino").Logger,
-    private readonly clientId?: string
+    private readonly logger: import("pino").Logger
   ) {}
 
   /**
@@ -83,21 +82,36 @@ export class AmazonDspHttpClient {
 
   /**
    * Make an authenticated POST request with JSON body.
-   * @param accept - Override Accept header (e.g. for DSP Reporting v3 vendor media types)
+   *
+   * Amazon's API gateway routes Bearer-authenticated DSP writes via
+   * Content-Type negotiation. Sending plain `application/json` on
+   * /dsp/orders, /dsp/lineItems, /dsp/creatives/* falls through to the
+   * SigV4 auth path and returns 403 "Invalid key=value pair in
+   * Authorization header". Each entity endpoint has a vendor media type
+   * (e.g. application/vnd.dsporders.v2.2+json) that MUST be passed as
+   * `contentType` for the request to land on the Bearer path.
+   *
+   * @param contentType - Override Content-Type. Defaults to application/json
+   *                       (safe for non-DSP-entity paths like reporting).
+   * @param accept      - Override Accept header. Defaults to contentType
+   *                       (Amazon expects matching Accept on entity writes).
    */
   async post(
     path: string,
     data?: Record<string, unknown>,
     context?: RequestContext,
-    accept?: string
+    accept?: string,
+    contentType?: string
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     const body = JSON.stringify(data ?? {});
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
+      "Content-Type": contentType ?? "application/json",
     };
     if (accept) {
       headers.Accept = accept;
+    } else if (contentType) {
+      headers.Accept = contentType;
     }
 
     return this.executeRequest(url, context, {
@@ -109,21 +123,27 @@ export class AmazonDspHttpClient {
 
   /**
    * Make an authenticated PUT request with JSON body.
-   * Used for updates and archive-based deletes.
+   * Used for updates and archive-based deletes. See `post` for the
+   * Content-Type / SigV4 gateway routing background.
    */
   async put(
     path: string,
     data?: Record<string, unknown>,
-    context?: RequestContext
+    context?: RequestContext,
+    contentType?: string
   ): Promise<unknown> {
     const url = this.buildUrl(path);
     const body = JSON.stringify(data ?? {});
+    const headers: Record<string, string> = {
+      "Content-Type": contentType ?? "application/json",
+    };
+    if (contentType) {
+      headers.Accept = contentType;
+    }
 
     return this.executeRequest(url, context, {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers,
       body,
     });
   }
@@ -166,8 +186,9 @@ export class AmazonDspHttpClient {
           if (options?.body && !headers["Content-Type"]) {
             headers["Content-Type"] = "application/json";
           }
-          if (this.clientId) {
-            headers["Amazon-Advertising-API-ClientId"] = this.clientId;
+          const clientId = this.authAdapter.clientId;
+          if (clientId) {
+            headers["Amazon-Advertising-API-ClientId"] = clientId;
           }
           return headers;
         },

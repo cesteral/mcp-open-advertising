@@ -45,12 +45,12 @@ describe("submitReportLogic", () => {
 
     const result = await submitReportLogic(
       {
-        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        reportTypeId: "dspLineItem",
-        groupBy: ["order", "lineItem"],
-        columns: ["impressions", "clickThroughs", "totalCost"],
+        type: "CAMPAIGN",
+        dimensions: ["ORDER", "LINE_ITEM"],
+        metrics: ["impressions", "totalCost"],
+        timeUnit: "DAILY",
       },
       baseContext,
       baseSdkContext
@@ -60,53 +60,46 @@ describe("submitReportLogic", () => {
     expect(result.timestamp).toBeDefined();
   });
 
-  it("passes report config to submitReport", async () => {
+  it("passes the flat /dsp/reports config shape to submitReport", async () => {
     mockSubmitReport.mockResolvedValueOnce({ taskId: "rpt-cfg" });
 
     await submitReportLogic(
       {
-        accountId: "1234567890",
-        name: "My Test Report",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        reportTypeId: "dspOrder",
-        groupBy: ["order"],
-        columns: ["impressions", "clickThroughs"],
+        type: "CAMPAIGN",
+        dimensions: ["ORDER"],
+        metrics: ["impressions", "totalCost"],
         timeUnit: "SUMMARY",
-        adProduct: "DEMAND_SIDE_PLATFORM",
       },
       baseContext,
       baseSdkContext
     );
 
     expect(mockSubmitReport).toHaveBeenCalledWith(
-      "1234567890",
       expect.objectContaining({
-        name: "My Test Report",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        configuration: expect.objectContaining({
-          reportTypeId: "dspOrder",
-          groupBy: ["order"],
-          columns: ["impressions", "clickThroughs"],
-          timeUnit: "SUMMARY",
-        }),
+        type: "CAMPAIGN",
+        dimensions: ["ORDER"],
+        metrics: ["impressions", "totalCost"],
+        timeUnit: "SUMMARY",
       }),
       baseContext
     );
   });
 
-  it("calls submitReport, not getReport", async () => {
+  it("calls submitReport once, not getReport", async () => {
     mockSubmitReport.mockResolvedValueOnce({ taskId: "rpt-sub" });
 
     await submitReportLogic(
       {
-        accountId: "1234567890",
         startDate: "2026-03-01",
         endDate: "2026-03-04",
-        reportTypeId: "dspLineItem",
-        groupBy: ["lineItem"],
-        columns: ["impressions"],
+        type: "CAMPAIGN",
+        dimensions: ["LINE_ITEM"],
+        metrics: ["impressions"],
+        timeUnit: "DAILY",
       },
       baseContext,
       baseSdkContext

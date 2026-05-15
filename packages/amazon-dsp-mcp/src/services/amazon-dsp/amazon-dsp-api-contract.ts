@@ -25,6 +25,17 @@ export interface AmazonDspEntityContract {
   getPath: string;
   createPath: string;
   updatePath: string;
+  /**
+   * Vendor media type required on POST {createPath}. Amazon's API gateway routes
+   * Bearer-authenticated writes via Content-Type negotiation; sending plain
+   * `application/json` falls through to the SigV4 auth path and returns
+   * 403 "Invalid key=value pair (missing equal-sign) in Authorization header".
+   * Undefined for endpoints whose canonical path is not directly writable
+   * (e.g. /dsp/creatives — writes go to subtype-specific paths).
+   */
+  createMediaType?: string;
+  /** Vendor media type required on PUT {updatePath}. See createMediaType. */
+  updateMediaType?: string;
   idField: string;
   responseKey: string;
   listFilterParam: string;
@@ -50,6 +61,8 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     getPath: "/dsp/orders/{entityId}",
     createPath: "/dsp/orders",
     updatePath: "/dsp/orders/{entityId}",
+    createMediaType: "application/vnd.dsporders.v2.2+json",
+    updateMediaType: "application/vnd.dsporders.v2.2+json",
     idField: "orderId",
     responseKey: "orders",
     listFilterParam: "advertiserId",
@@ -74,6 +87,8 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     getPath: "/dsp/lineItems/{entityId}",
     createPath: "/dsp/lineItems",
     updatePath: "/dsp/lineItems/{entityId}",
+    createMediaType: "application/vnd.dsplineitems.v3.1+json",
+    updateMediaType: "application/vnd.dsplineitems.v3.1+json",
     idField: "lineItemId",
     responseKey: "lineItems",
     listFilterParam: "orderId",
@@ -130,6 +145,7 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
     notes: [
       "Creative creation depends on the underlying format and may require additional assets or subtype-specific fields.",
       "Creative association to line items is modeled separately from creative asset creation.",
+      "Amazon DSP has no plain POST /dsp/creatives endpoint — writes are subtype-routed (/dsp/creatives/image, /video, /thirdParty, /rec) with their own vendor media types. The createPath/updatePath above are for read-side aggregation only; create/update via this service will not work until subtype routing is added.",
     ],
   },
   target: {
@@ -191,23 +207,52 @@ export const AMAZON_DSP_PUBLIC_ENTITY_TYPES = [
   "adGroup",
 ] as const satisfies readonly AmazonDspPublicEntityType[];
 
+/**
+ * Amazon DSP Reporting API contract (the legacy `/dsp/reports` surface).
+ *
+ * NOT to be confused with the Sponsored Ads v3 Reporting API at
+ * `/reporting/reports` — that endpoint uses a `configuration{adProduct,
+ * reportTypeId, groupBy, columns, format}` envelope and does NOT accept DSP
+ * report types. The DSP equivalent at `/dsp/reports` has a completely
+ * different request shape (flat body, `type`+`dimensions`+`metrics`,
+ * `YYYYMMDD` dates, plain `application/json`).
+ *
+ * Discovered empirically on 2026-05-15 — see
+ * `docs/plans/2026-05-15-amazon-dsp-live-test-findings.md` for the full probe
+ * trail. The previous contract here targeted the Sponsored Ads v3 endpoint
+ * and never worked against a live DSP account.
+ */
 export const AMAZON_DSP_REPORTING_CONTRACT = {
-  submitPathTemplate: "/accounts/{accountId}/dsp/reports",
-  statusPathTemplate: "/accounts/{accountId}/dsp/reports/{reportId}",
-  submitAcceptMediaType: "application/vnd.dspcreatereports.v3+json",
-  statusAcceptMediaType: "application/vnd.dspgetreports.v3+json",
-  statuses: ["PENDING", "PROCESSING", "COMPLETED", "FAILED"] as const,
-  defaultAdProduct: "DEMAND_SIDE_PLATFORM",
+  submitPathTemplate: "/dsp/reports",
+  statusPathTemplate: "/dsp/reports/{reportId}",
+  /** Status values the live API actually returns (legacy DSP shape). */
+  statuses: ["IN_PROGRESS", "SUCCESS", "FAILURE"] as const,
   defaultTimeUnit: "DAILY" as const,
-  defaultFormat: "GZIP_JSON" as const,
-  commonReportTypeIds: ["dspLineItem", "dspOrder", "dspCreative", "dspAudience"],
-  commonGroupBy: ["order", "lineItem", "creative", "audience", "date"],
-  commonColumns: ["impressions", "clickThroughs", "totalCost", "dpv14d", "purchases14d"],
+  /** Allowed `type` values for /dsp/reports (discovered via 422 error message). */
+  reportTypes: [
+    "CAMPAIGN",
+    "INVENTORY",
+    "AUDIENCE",
+    "PRODUCTS",
+    "TECHNOLOGY",
+    "GEOGRAPHY",
+    "CONVERSION_SOURCE",
+  ] as const,
+  /** Allowed `dimensions` values per report type (incomplete — extend as discovered). */
+  dimensionsByType: {
+    CAMPAIGN: ["ORDER", "LINE_ITEM", "CREATIVE"] as const,
+  },
+  /**
+   * Confirmed-valid metric names (4 sampled live for CAMPAIGN type — the API
+   * surfaces an authoritative invalid-list in 422 errors, so use that for
+   * runtime validation rather than hardcoding the full catalog here).
+   */
+  knownMetrics: ["impressions", "totalCost", "viewableImpressions", "viewabilityRate"],
   notes: [
-    "Amazon DSP reporting v3 is asynchronous and uses POST /accounts/{accountId}/dsp/reports followed by GET /accounts/{accountId}/dsp/reports/{reportId}.",
-    "The accountId is the DSP account (entity) identifier and appears in the URL path; it is separate from the Amazon-Advertising-API-Scope profile header.",
-    "POST requires Accept: application/vnd.dspcreatereports.v3+json; status GET requires Accept: application/vnd.dspgetreports.v3+json.",
-    "Completed reports expose a presigned download URL for the compressed report output.",
+    "POST /dsp/reports body shape: { startDate (YYYYMMDD), endDate (YYYYMMDD), type (one of reportTypes), dimensions?: string[], metrics?: string (comma-separated), timeUnit?: 'DAILY' }.",
+    "Returns 202 with { reportId, type, format, status:'IN_PROGRESS', location:'', expiration } — poll GET /dsp/reports/{reportId} until status === 'SUCCESS' (returns presigned S3 download `location`) or 'FAILURE'.",
+    "Plain application/json Content-Type works — no vendor media type required (unlike entity writes).",
+    "Endpoint is NOT account-scoped — `accountId` is not part of the URL path. The Amazon-Advertising-API-Scope header still identifies the profile.",
   ],
 } as const;
 
