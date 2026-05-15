@@ -107,7 +107,8 @@ function buildSnapshot(
 
   const merged = applied as Record<string, any>;
   const currency =
-    (typeof merged?.budget?.budgetUnit === "string" && merged.budget.budgetUnit) === "BUDGET_UNIT_CURRENCY"
+    (typeof merged?.budget?.budgetUnit === "string" && merged.budget.budgetUnit) ===
+    "BUDGET_UNIT_CURRENCY"
       ? "USD" // currency isn't carried on the entity directly; advertiser scope. Default to USD for round-1.
       : "USD";
 
@@ -125,8 +126,12 @@ function buildSnapshot(
       if (amountMinor == null) continue;
       const start = seg?.dateRange?.startDate;
       const end = seg?.dateRange?.endDate;
-      const startAt = start ? `${start.year}-${String(start.month).padStart(2, "0")}-${String(start.day).padStart(2, "0")}` : null;
-      const endAt = end ? `${end.year}-${String(end.month).padStart(2, "0")}-${String(end.day).padStart(2, "0")}` : null;
+      const startAt = start
+        ? `${start.year}-${String(start.month).padStart(2, "0")}-${String(start.day).padStart(2, "0")}`
+        : null;
+      const endAt = end
+        ? `${end.year}-${String(end.month).padStart(2, "0")}-${String(end.day).padStart(2, "0")}`
+        : null;
       segments.push({ amountMinor, currency, startAt, endAt });
     }
   }
@@ -172,7 +177,10 @@ export async function runDv360UpdateDryRun(
   context: RequestContext,
   // Optional injected validator so callers can pass the Zod schema produced
   // by `getEntitySchemaForOperation`. The tool always supplies it.
-  validateOperation?: (entityType: string, merged: Record<string, unknown>) => DryRunValidationError[]
+  validateOperation?: (
+    entityType: string,
+    merged: Record<string, unknown>
+  ) => DryRunValidationError[]
 ): Promise<DryRunResult> {
   let validationErrors: DryRunValidationError[] = [];
   let current: Record<string, any> | undefined;
@@ -193,7 +201,10 @@ export async function runDv360UpdateDryRun(
   // current. If we have no current we still build a partial overlay so the
   // validator sees the shape, but we will not emit a snapshot.
   const applied: Record<string, any> = current ? deepClone(current) : {};
-  const maskFields = input.updateMask.split(",").map((f) => f.trim()).filter(Boolean);
+  const maskFields = input.updateMask
+    .split(",")
+    .map((f) => f.trim())
+    .filter(Boolean);
   for (const field of maskFields) {
     const v = getPath(input.data, field);
     if (v !== undefined) {

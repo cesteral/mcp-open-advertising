@@ -57,7 +57,10 @@ function normalizeStatus(raw: unknown): { canonical: CanonicalStatus; platformRa
   return { canonical: STATUS_MAP[platformRaw] ?? "unknown", platformRaw };
 }
 
-function toMoney(amount: unknown, currency: string): { amountMinor: number; currency: string } | undefined {
+function toMoney(
+  amount: unknown,
+  currency: string
+): { amountMinor: number; currency: string } | undefined {
   if (amount == null) return undefined;
   const n = typeof amount === "string" ? Number.parseInt(amount, 10) : Number(amount);
   if (!Number.isFinite(n)) return undefined;
@@ -110,7 +113,10 @@ function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[
   const errors: DryRunValidationError[] = [];
   if ("status" in data) {
     const status = data.status;
-    if (typeof status !== "string" || !["ACTIVE", "PAUSED", "ARCHIVED", "DELETED"].includes(status)) {
+    if (
+      typeof status !== "string" ||
+      !["ACTIVE", "PAUSED", "ARCHIVED", "DELETED"].includes(status)
+    ) {
       errors.push({
         code: "INVALID_STATUS",
         message: `status must be one of ACTIVE, PAUSED, ARCHIVED, DELETED — got ${String(status)}`,
