@@ -6,14 +6,23 @@ import { fetchWithTimeout, executeWithRetry } from "@cesteral/shared";
 import type { RequestContext, RetryConfig } from "@cesteral/shared";
 import { withAmazonDspApiSpan } from "../../utils/platform.js";
 
+// Amazon DSP returns bare `{"message":"Too Many Requests"}` on 429 with NO
+// Retry-After header, so blind exponential retries just deepen the per-LwA-app
+// quota burn (observed: a single 429 → 3 retries at 2s/4s/8s pushed the
+// /dsp/orders endpoint into a multi-hour penalty window). Retry only on 5xx;
+// surface 429 to the caller so the LLM agent can space requests out.
 const AMAZON_DSP_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
+  maxRetries: 2,
   initialBackoffMs: 2_000,
   maxBackoffMs: 30_000,
   timeoutMs: 30_000,
   platformName: "AmazonDsp",
   tokenExpiryHint: "Amazon DSP token expired. Regenerate via Login with Amazon.",
 };
+
+function isAmazonDspRetryable(status: number, _errorBody: string): boolean {
+  return status >= 500;
+}
 
 function buildAmazonDspNextAction(
   status: number,
@@ -28,6 +37,9 @@ function buildAmazonDspNextAction(
   }
   if (status === 404) {
     return "Verify the order/lineItem/creative ID with amazon_dsp_list_entities and the accountId with amazon_dsp_list_accounts.";
+  }
+  if (status === 429) {
+    return "Amazon DSP per-LwA-app quota tripped. Amazon does not send Retry-After; wait at least 5 minutes before retrying, and reduce request rate. /dsp/orders, /dsp/lineItems, /dsp/creatives have particularly tight rolling-window limits.";
   }
   return defaultHint;
 }
@@ -160,6 +172,7 @@ export class AmazonDspHttpClient {
           return headers;
         },
         buildNextAction: buildAmazonDspNextAction,
+        isRetryable: isAmazonDspRetryable,
       });
     });
   }
