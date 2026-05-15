@@ -49,7 +49,9 @@ describe("CesteralToolAnnotations", () => {
   });
 
   it("reuses CanonicalEntityKind from the snapshot module so annotations and snapshots stay in lockstep", () => {
-    expectTypeOf<CesteralToolAnnotations["entityKinds"][number]>().toEqualTypeOf<CanonicalEntityKind>();
+    expectTypeOf<
+      CesteralToolAnnotations["entityKinds"][number]
+    >().toEqualTypeOf<CanonicalEntityKind>();
   });
 
   it("accepts insertion_order so DV360 InsertionOrder writes can be annotated without weakening the type", () => {
@@ -157,7 +159,11 @@ describe("DryRunResult", () => {
     const result: DryRunResult = {
       wouldSucceed: false,
       validationErrors: [
-        { code: "BUDGET_BELOW_MIN", message: "Daily budget must be at least 100 cents", field: "dailyBudget" },
+        {
+          code: "BUDGET_BELOW_MIN",
+          message: "Daily budget must be at least 100 cents",
+          field: "dailyBudget",
+        },
       ],
       validationSource: "symbolic",
       expectedStateSource: "none",
@@ -168,7 +174,10 @@ describe("DryRunResult", () => {
 
 describe("ToolDefinition.cesteral", () => {
   it("accepts an optional cesteral annotation block", () => {
-    const def: ToolDefinition<z.ZodObject<{ entityId: z.ZodString }>, z.ZodObject<{ ok: z.ZodBoolean }>> = {
+    const def: ToolDefinition<
+      z.ZodObject<{ entityId: z.ZodString }>,
+      z.ZodObject<{ ok: z.ZodBoolean }>
+    > = {
       name: "meta_pause_entity",
       title: "Pause Meta entity",
       description: "Pause a campaign or ad set.",
@@ -196,7 +205,10 @@ describe("ToolDefinition.cesteral", () => {
   });
 
   it("permits annotations without cesteral (back-compat)", () => {
-    const def: ToolDefinition<z.ZodObject<Record<string, never>>, z.ZodObject<Record<string, never>>> = {
+    const def: ToolDefinition<
+      z.ZodObject<Record<string, never>>,
+      z.ZodObject<Record<string, never>>
+    > = {
       name: "noop",
       title: "Noop",
       description: "",
