@@ -88,3 +88,6 @@ credentials.json
 # Terraform local config (use *.example files as templates)
 terraform/*.tfvars
 terraform/backend-*.conf
+
+# Live-test outputs (per-server, runtime artifacts)
+packages/*/tests/live/last-run.json
