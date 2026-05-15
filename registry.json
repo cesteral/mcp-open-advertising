@@ -41,9 +41,19 @@
         "cross_platform_campaign_setup"
       ],
       "auth": {
-        "modes": ["google-headers", "jwt", "none"]
+        "modes": [
+          "google-headers",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "reporting", "dv360", "bid-manager", "google"]
+      "tags": [
+        "advertising",
+        "reporting",
+        "dv360",
+        "bid-manager",
+        "google"
+      ]
     },
     {
       "package": "dv360-mcp",
@@ -105,7 +115,11 @@
         "creative_setup_workflow"
       ],
       "auth": {
-        "modes": ["google-headers", "jwt", "none"]
+        "modes": [
+          "google-headers",
+          "jwt",
+          "none"
+        ]
       },
       "tags": [
         "advertising",
@@ -153,29 +167,20 @@
         "ttd_create_template_schedule",
         "ttd_delete_report_schedule",
         "ttd_execute_entity_report",
-        "ttd_get_campaign_version",
         "ttd_get_context",
         "ttd_get_entity_report_types",
-        "ttd_get_first_party_data_job",
-        "ttd_get_job_status",
         "ttd_get_report_executions",
         "ttd_get_report_schedule",
         "ttd_get_report_template",
         "ttd_get_report_type_schema",
-        "ttd_get_third_party_data_job",
         "ttd_list_report_schedules",
         "ttd_list_report_templates",
         "ttd_list_report_types",
         "ttd_manage_bid_list",
         "ttd_manage_seed",
         "ttd_rerun_report_schedule",
-        "ttd_rest_request",
         "ttd_update_report_schedule",
         "ttd_update_report_template",
-        "ttd_create_ad_groups",
-        "ttd_create_campaigns",
-        "ttd_update_ad_groups",
-        "ttd_update_campaigns",
         "ttd_search_tools"
       ],
       "resources": [
@@ -202,7 +207,11 @@
         "creative_setup_workflow"
       ],
       "auth": {
-        "modes": ["ttd-token", "jwt", "none"]
+        "modes": [
+          "ttd-token",
+          "jwt",
+          "none"
+        ]
       },
       "tags": [
         "advertising",
@@ -263,9 +272,20 @@
         "creative_setup_workflow"
       ],
       "auth": {
-        "modes": ["gads-headers", "jwt", "none"]
+        "modes": [
+          "gads-headers",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "google-ads", "campaign-management", "gaql", "search", "self-hosted"]
+      "tags": [
+        "advertising",
+        "google-ads",
+        "campaign-management",
+        "gaql",
+        "search",
+        "self-hosted"
+      ]
     },
     {
       "package": "meta-mcp",
@@ -329,7 +349,11 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["meta-bearer", "jwt", "none"]
+        "modes": [
+          "meta-bearer",
+          "jwt",
+          "none"
+        ]
       },
       "tags": [
         "advertising",
@@ -397,9 +421,19 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["linkedin-bearer", "jwt", "none"]
+        "modes": [
+          "linkedin-bearer",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "linkedin", "campaign-management", "social", "b2b"]
+      "tags": [
+        "advertising",
+        "linkedin",
+        "campaign-management",
+        "social",
+        "b2b"
+      ]
     },
     {
       "package": "tiktok-mcp",
@@ -460,9 +494,19 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["tiktok-bearer", "jwt", "none"]
+        "modes": [
+          "tiktok-bearer",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "tiktok", "campaign-management", "social", "video"]
+      "tags": [
+        "advertising",
+        "tiktok",
+        "campaign-management",
+        "social",
+        "video"
+      ]
     },
     {
       "package": "cm360-mcp",
@@ -519,9 +563,19 @@
         "cm360_floodlight_workflow"
       ],
       "auth": {
-        "modes": ["google-headers", "jwt", "none"]
+        "modes": [
+          "google-headers",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "cm360", "google", "campaign-management", "ad-serving"]
+      "tags": [
+        "advertising",
+        "cm360",
+        "google",
+        "campaign-management",
+        "ad-serving"
+      ]
     },
     {
       "package": "snapchat-mcp",
@@ -579,9 +633,19 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["snapchat-bearer", "jwt", "none"]
+        "modes": [
+          "snapchat-bearer",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "snapchat", "campaign-management", "social", "video"]
+      "tags": [
+        "advertising",
+        "snapchat",
+        "campaign-management",
+        "social",
+        "video"
+      ]
     },
     {
       "package": "sa360-mcp",
@@ -631,9 +695,20 @@
         "sa360_conversion_upload_workflow"
       ],
       "auth": {
-        "modes": ["sa360-headers", "jwt", "none"]
+        "modes": [
+          "sa360-headers",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "sa360", "google", "search", "conversions", "reporting"]
+      "tags": [
+        "advertising",
+        "sa360",
+        "google",
+        "search",
+        "conversions",
+        "reporting"
+      ]
     },
     {
       "package": "pinterest-mcp",
@@ -692,9 +767,19 @@
         "creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["pinterest-bearer", "jwt", "none"]
+        "modes": [
+          "pinterest-bearer",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "pinterest", "campaign-management", "social", "visual"]
+      "tags": [
+        "advertising",
+        "pinterest",
+        "campaign-management",
+        "social",
+        "visual"
+      ]
     },
     {
       "package": "amazon-dsp-mcp",
@@ -749,9 +834,20 @@
         "amazon_dsp_creative_upload_workflow"
       ],
       "auth": {
-        "modes": ["amazon-dsp-bearer", "jwt", "none"]
+        "modes": [
+          "amazon-dsp-bearer",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "amazon", "dsp", "campaign-management", "programmatic", "ecommerce"]
+      "tags": [
+        "advertising",
+        "amazon",
+        "dsp",
+        "campaign-management",
+        "programmatic",
+        "ecommerce"
+      ]
     },
     {
       "package": "msads-mcp",
@@ -805,9 +901,20 @@
         "msads_troubleshoot_entity"
       ],
       "auth": {
-        "modes": ["msads-bearer", "jwt", "none"]
+        "modes": [
+          "msads-bearer",
+          "jwt",
+          "none"
+        ]
       },
-      "tags": ["advertising", "microsoft", "bing", "campaign-management", "search", "import"]
+      "tags": [
+        "advertising",
+        "microsoft",
+        "bing",
+        "campaign-management",
+        "search",
+        "import"
+      ]
     }
   ]
 }
