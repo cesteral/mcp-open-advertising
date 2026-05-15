@@ -10,6 +10,7 @@
  *   --check   Validate registry.json tool lists match source definitions.
  */
 
+import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -152,6 +153,13 @@ function main() {
 
   if (changed) {
     writeFileSync(REGISTRY_PATH, `${JSON.stringify(registry, null, 2)}\n`);
+    // JSON.stringify expands every array onto separate lines; prettier
+    // collapses short ones. Run prettier here so the next `format:check`
+    // stays green without a follow-up commit.
+    execFileSync("npx", ["prettier", "--write", REGISTRY_PATH], {
+      cwd: ROOT,
+      stdio: "inherit",
+    });
     console.log("Updated registry.json tool lists.");
   } else {
     console.log("registry.json tool lists are already in sync.");
