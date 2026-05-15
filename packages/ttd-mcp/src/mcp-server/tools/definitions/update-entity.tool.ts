@@ -33,6 +33,12 @@ export const UpdateEntityInputSchema = z
     campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
     adGroupId: z.string().optional().describe("Ad Group ID (required for ad)"),
     data: z.record(z.any()).describe("Entity data fields to update"),
+    strictMode: z
+      .boolean()
+      .optional()
+      .describe(
+        "Set TTD-Strict-Mode header — TTD returns 400 on unrecognized properties or read-only field assignments. Recommended for development/CI; avoid in production (per TTD Foundations §10)."
+      ),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(
@@ -66,7 +72,8 @@ export async function updateEntityLogic(
     input.entityType as TtdEntityType,
     input.entityId,
     data,
-    context
+    context,
+    { strictMode: input.strictMode }
   );
 
   return {

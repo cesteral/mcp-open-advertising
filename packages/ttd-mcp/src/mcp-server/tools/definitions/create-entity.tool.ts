@@ -30,6 +30,12 @@ export const CreateEntityInputSchema = z
     campaignId: z.string().optional().describe("Campaign ID (required for adGroup)"),
     adGroupId: z.string().optional().describe("Ad Group ID (required for ad)"),
     data: z.record(z.any()).describe("Entity data to create (fields vary by entity type)"),
+    strictMode: z
+      .boolean()
+      .optional()
+      .describe(
+        "Set TTD-Strict-Mode header — TTD returns 400 on unrecognized properties or read-only field assignments. Recommended for development/CI; avoid in production where harmless extra fields would otherwise succeed (per TTD Foundations §10)."
+      ),
   })
   .superRefine((input, ctx) => {
     const topLevelPartnerId =
@@ -72,7 +78,9 @@ export async function createEntityLogic(
 
   const data = mergeParentIdsIntoData(input.data, input as Record<string, unknown>);
 
-  const entity = await ttdService.createEntity(input.entityType as TtdEntityType, data, context);
+  const entity = await ttdService.createEntity(input.entityType as TtdEntityType, data, context, {
+    strictMode: input.strictMode,
+  });
 
   return {
     entity: entity as unknown as Record<string, any>,
@@ -123,7 +131,7 @@ export const createEntityTool = {
           Budget: { Amount: 50000, CurrencyCode: "USD" },
           StartDate: "2025-01-15T00:00:00Z",
           EndDate: "2025-03-31T23:59:59Z",
-          PacingMode: "PaceEvenly",
+          PacingMode: "PaceAhead",
         },
       },
     },

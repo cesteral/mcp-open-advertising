@@ -42,6 +42,8 @@ describe("ttd bid list tools", () => {
       createBidList: vi.fn(),
       getBidList: vi.fn(),
       updateBidList: vi.fn(),
+      setBidList: vi.fn(),
+      deleteBidList: vi.fn(),
       batchGetBidLists: vi.fn(),
       batchUpdateBidLists: vi.fn(),
     };
@@ -52,31 +54,31 @@ describe("ttd bid list tools", () => {
   // ── ttd_manage_bid_list ──
 
   describe("bidListLogic", () => {
-    it("create: calls ttdService.createBidList with data and returns result", async () => {
-      const mockResult = { BidListId: "bl-001", Name: "Test Bid List", Bids: [] };
+    it("create: forwards GraphQL input + selection to ttdService.createBidList", async () => {
+      const mockResult = { data: { bidListCreate: { data: { id: "bl-001", name: "T" } } } };
       mockTtdService.createBidList.mockResolvedValueOnce(mockResult);
 
       const result = await bidListLogic(
-        { operation: "create", data: { Name: "Test Bid List", Bids: [] } },
+        { operation: "create", data: { owner: { type: "Advertiser", id: "adv1" }, name: "T", lines: [] } },
         createMockContext(),
         createMockSdkContext()
       );
 
       expect(result.operation).toBe("create");
       expect(result.result).toEqual(mockResult);
-      expect(result.timestamp).toBeDefined();
       expect(mockTtdService.createBidList).toHaveBeenCalledWith(
-        { Name: "Test Bid List", Bids: [] },
-        expect.any(Object)
+        { owner: { type: "Advertiser", id: "adv1" }, name: "T", lines: [] },
+        expect.any(Object),
+        "id name"
       );
     });
 
-    it("get: calls ttdService.getBidList with bidListId and returns result", async () => {
-      const mockResult = { BidListId: "bl-001", Name: "Test Bid List", Bids: [] };
+    it("get: forwards bidListId + selection to ttdService.getBidList", async () => {
+      const mockResult = { data: { bidList: { id: "bl-001", name: "T" } } };
       mockTtdService.getBidList.mockResolvedValueOnce(mockResult);
 
       const result = await bidListLogic(
-        { operation: "get", bidListId: "bl-001" },
+        { operation: "get", bidListId: "bl-001", selection: "id name adjustmentType" },
         createMockContext(),
         createMockSdkContext()
       );
@@ -84,19 +86,22 @@ describe("ttd bid list tools", () => {
       expect(result.operation).toBe("get");
       expect(result.bidListId).toBe("bl-001");
       expect(result.result).toEqual(mockResult);
-      expect(result.timestamp).toBeDefined();
-      expect(mockTtdService.getBidList).toHaveBeenCalledWith("bl-001", expect.any(Object));
+      expect(mockTtdService.getBidList).toHaveBeenCalledWith(
+        "bl-001",
+        expect.any(Object),
+        "id name adjustmentType"
+      );
     });
 
-    it("update: calls ttdService.updateBidList with data + BidListId merged and returns result", async () => {
-      const mockResult = { BidListId: "bl-001", Name: "Updated Bid List", Bids: [] };
+    it("update: forwards full GraphQL input (no BidListId merge — tests deltas not REST shape)", async () => {
+      const mockResult = { data: { bidListUpdate: { data: { id: "bl-001" } } } };
       mockTtdService.updateBidList.mockResolvedValueOnce(mockResult);
 
       const result = await bidListLogic(
         {
           operation: "update",
           bidListId: "bl-001",
-          data: { Name: "Updated Bid List", Bids: [] },
+          data: { id: "bl-001", linesToAdd: [], linesToRemove: [] },
         },
         createMockContext(),
         createMockSdkContext()
@@ -105,11 +110,37 @@ describe("ttd bid list tools", () => {
       expect(result.operation).toBe("update");
       expect(result.bidListId).toBe("bl-001");
       expect(result.result).toEqual(mockResult);
-      expect(result.timestamp).toBeDefined();
       expect(mockTtdService.updateBidList).toHaveBeenCalledWith(
-        { Name: "Updated Bid List", Bids: [], BidListId: "bl-001" },
-        expect.any(Object)
+        { id: "bl-001", linesToAdd: [], linesToRemove: [] },
+        expect.any(Object),
+        "id name"
       );
+    });
+
+    it("set: forwards full GraphQL input to ttdService.setBidList", async () => {
+      mockTtdService.setBidList.mockResolvedValueOnce({ data: { bidListSet: { data: { id: "bl-001" } } } });
+      const result = await bidListLogic(
+        { operation: "set", bidListId: "bl-001", data: { id: "bl-001", lines: [] } },
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(result.operation).toBe("set");
+      expect(mockTtdService.setBidList).toHaveBeenCalledWith(
+        { id: "bl-001", lines: [] },
+        expect.any(Object),
+        "id name"
+      );
+    });
+
+    it("delete: forwards GraphQL input to ttdService.deleteBidList", async () => {
+      mockTtdService.deleteBidList.mockResolvedValueOnce({ data: { bidListDelete: { errors: [] } } });
+      const result = await bidListLogic(
+        { operation: "delete", data: { id: "bl-001" } },
+        createMockContext(),
+        createMockSdkContext()
+      );
+      expect(result.operation).toBe("delete");
+      expect(mockTtdService.deleteBidList).toHaveBeenCalledWith({ id: "bl-001" }, expect.any(Object));
     });
 
     it("Zod validation: get without bidListId fails schema validation", () => {
@@ -147,10 +178,10 @@ describe("ttd bid list tools", () => {
   // ── ttd_bulk_manage_bid_lists ──
 
   describe("bidListBulkLogic", () => {
-    it("batch_get: calls ttdService.batchGetBidLists with ids array and returns results", async () => {
+    it("batch_get: forwards ids + selection to ttdService.batchGetBidLists", async () => {
       const mockResults = [
-        { BidListId: "bl-001", Name: "Bid List 1" },
-        { BidListId: "bl-002", Name: "Bid List 2" },
+        { bidListId: "bl-001", success: true, data: { id: "bl-001" } },
+        { bidListId: "bl-002", success: true, data: { id: "bl-002" } },
       ];
       mockTtdService.batchGetBidLists.mockResolvedValueOnce(mockResults);
 
@@ -161,25 +192,26 @@ describe("ttd bid list tools", () => {
       );
 
       expect(result.operation).toBe("batch_get");
-      expect(result.count).toBe(2);
-      expect(result.results).toEqual(mockResults);
-      expect(result.timestamp).toBeDefined();
+      expect(result.totalItems).toBe(2);
+      expect(result.succeeded).toBe(2);
+      expect(result.failed).toBe(0);
       expect(mockTtdService.batchGetBidLists).toHaveBeenCalledWith(
         ["bl-001", "bl-002"],
-        expect.any(Object)
+        expect.any(Object),
+        "id name"
       );
     });
 
-    it("batch_update: calls ttdService.batchUpdateBidLists with items array and returns results", async () => {
+    it("batch_update: forwards items + selection to ttdService.batchUpdateBidLists", async () => {
       const mockResults = [
-        { BidListId: "bl-001", Name: "Updated 1" },
-        { BidListId: "bl-002", Name: "Updated 2" },
+        { index: 0, success: true, data: { id: "bl-001" } },
+        { index: 1, success: false, error: "validation" },
       ];
       mockTtdService.batchUpdateBidLists.mockResolvedValueOnce(mockResults);
 
       const items = [
-        { BidListId: "bl-001", Name: "Updated 1" },
-        { BidListId: "bl-002", Name: "Updated 2" },
+        { id: "bl-001", linesToAdd: [] },
+        { id: "bl-002", linesToAdd: [] },
       ];
 
       const result = await bidListBulkLogic(
@@ -189,10 +221,10 @@ describe("ttd bid list tools", () => {
       );
 
       expect(result.operation).toBe("batch_update");
-      expect(result.count).toBe(2);
-      expect(result.results).toEqual(mockResults);
-      expect(result.timestamp).toBeDefined();
-      expect(mockTtdService.batchUpdateBidLists).toHaveBeenCalledWith(items, expect.any(Object));
+      expect(result.totalItems).toBe(2);
+      expect(result.succeeded).toBe(1);
+      expect(result.failed).toBe(1);
+      expect(mockTtdService.batchUpdateBidLists).toHaveBeenCalledWith(items, expect.any(Object), "id name");
     });
 
     it("Zod validation: bidListIds > 50 fails validation", () => {

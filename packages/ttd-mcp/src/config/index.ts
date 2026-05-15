@@ -23,6 +23,10 @@ const ConfigSchema = BaseConfigSchema.extend({
   mcpAuthMode: z.enum(["ttd-token", "jwt", "none"]).default("ttd-token"),
 
   // TTD API Configuration
+  // When `TTD_USE_SANDBOX=true`, the API/GraphQL base URLs default to TTD's
+  // Partner Sandbox endpoints (per Foundations §5). Sandbox data is a weekly
+  // clone of production — no real spend, no production-side impact.
+  ttdUseSandbox: z.boolean().default(false),
   ttdApiBaseUrl: z.string().url().default("https://api.thetradedesk.com/v3"),
   ttdGraphqlUrl: z.string().url().default("https://desk.thetradedesk.com/graphql"),
   // Default: 60 req/min (1 req/s) — covers agentic discovery chains (partners →
@@ -53,8 +57,17 @@ export function parseConfig(): AppConfig {
     host: process.env.TTD_MCP_HOST || defaultHost,
 
     // TTD API
-    ttdApiBaseUrl: process.env.TTD_API_BASE_URL,
-    ttdGraphqlUrl: process.env.TTD_GRAPHQL_URL,
+    ttdUseSandbox: process.env.TTD_USE_SANDBOX === "true",
+    ttdApiBaseUrl:
+      process.env.TTD_API_BASE_URL ||
+      (process.env.TTD_USE_SANDBOX === "true"
+        ? "https://ext-api.sb.thetradedesk.com/v3"
+        : undefined),
+    ttdGraphqlUrl:
+      process.env.TTD_GRAPHQL_URL ||
+      (process.env.TTD_USE_SANDBOX === "true"
+        ? "https://ext-api.sb.thetradedesk.com/graphql"
+        : undefined),
     ttdRateLimitPerMinute: process.env.TTD_RATE_LIMIT_PER_MINUTE
       ? Number(process.env.TTD_RATE_LIMIT_PER_MINUTE)
       : undefined,

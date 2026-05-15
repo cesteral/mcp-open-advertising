@@ -33,14 +33,6 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "ttd_update_entity",
       "ttd_delete_entity",
     ],
-    campaignWorkflows: [
-      "ttd_create_campaigns",
-      "ttd_update_campaigns",
-      "ttd_create_ad_groups",
-      "ttd_update_ad_groups",
-      "ttd_get_job_status",
-      "ttd_get_campaign_version",
-    ],
     reporting: [
       "ttd_get_report",
       "ttd_download_report",
@@ -83,8 +75,6 @@ const serverCapabilitiesResource = createServerCapabilitiesResource({
       "ttd_graphql_cancel_bulk_job",
     ],
     bidListsAndSeeds: ["ttd_manage_bid_list", "ttd_bulk_manage_bid_lists", "ttd_manage_seed"],
-    dataJobs: ["ttd_get_first_party_data_job", "ttd_get_third_party_data_job"],
-    passthrough: ["ttd_rest_request"],
     preview: ["ttd_get_ad_preview"],
     validation: ["ttd_validate_entity"],
     discovery: ["ttd_search_tools"],

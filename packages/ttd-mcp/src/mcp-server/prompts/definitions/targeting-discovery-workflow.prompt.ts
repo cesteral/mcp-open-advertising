@@ -248,7 +248,7 @@ Input: {
     "RTBAttributes": {
       "BudgetSettings": {
         "DailyBudget": { "Amount": 500, "CurrencyCode": "USD" },
-        "PacingMode": "PaceEvenly"
+        "PacingMode": "PaceAhead"
       },
       "BaseBidCPM": { "Amount": 5.00, "CurrencyCode": "USD" },
       "MaxBidCPM": { "Amount": 12.00, "CurrencyCode": "USD" },

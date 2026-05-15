@@ -64,7 +64,8 @@ describe("updateEntityLogic", () => {
         AdvertiserId: "adv-123",
         CampaignId: "cmp-001",
       },
-      expect.any(Object)
+      expect.any(Object),
+      { strictMode: undefined }
     );
   });
 });

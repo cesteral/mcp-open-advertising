@@ -86,7 +86,7 @@ function campaignExamplesMarkdown(): string {
     },
     "StartDate": "2025-03-01T00:00:00",
     "EndDate": "2025-03-31T23:59:59",
-    "PacingMode": "PaceEvenly"
+    "PacingMode": "PaceAhead"
   }
 }
 \`\`\`
@@ -179,7 +179,7 @@ function adGroupExamplesMarkdown(): string {
           "Amount": 500,
           "CurrencyCode": "USD"
         },
-        "PacingMode": "PaceEvenly"
+        "PacingMode": "PaceAhead"
       },
       "BaseBidCPM": {
         "Amount": 5.00,
@@ -210,7 +210,7 @@ function adGroupExamplesMarkdown(): string {
           "Amount": 5000,
           "CurrencyCode": "USD"
         },
-        "PacingMode": "PaceEvenly"
+        "PacingMode": "PaceAhead"
       },
       "BaseBidCPM": {
         "Amount": 8.00,

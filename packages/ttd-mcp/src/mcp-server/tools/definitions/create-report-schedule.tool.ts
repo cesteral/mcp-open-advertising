@@ -33,21 +33,34 @@ export const CreateReportScheduleInputSchema = z
   .object({
     reportName: z.string().min(1).describe("Name for the report schedule"),
     scheduleType: z
-      .enum(["Once", "Daily", "Weekly", "Monthly"])
-      .describe("How often the report runs"),
+      .enum(["Once", "Daily", "Weekly", "Monthly", "Quarterly"])
+      .describe("How often the report runs (per TTD MyReports reportschedule/facets)"),
     dateRange: z
       .enum([
+        "Yesterday",
         "Last7Days",
         "Last14Days",
         "Last30Days",
-        "Yesterday",
-        "Custom",
+        "LastXDays",
         "MonthToDate",
         "LastMonth",
         "QuarterToDate",
-        "Lifetime",
+        "LastQuarter",
+        "YearToDate",
+        "Custom",
       ])
       .describe("Date range for the report data"),
+    fileFormat: z
+      .enum(["CSV", "TSV", "ExcelPivot"])
+      .optional()
+      .default("CSV")
+      .describe(
+        "Report file format. Must match the template's format. Use ExcelPivot for Excel-shaped templates."
+      ),
+    scheduleStartDate: z
+      .string()
+      .optional()
+      .describe("ISO datetime; defaults to today UTC at 00:00. Required by TTD."),
     dimensions: z
       .array(z.string())
       .optional()
@@ -68,9 +81,8 @@ export const CreateReportScheduleInputSchema = z
       .describe("Filter report to specific advertiser IDs"),
     reportTemplateId: z
       .number()
-      .optional()
       .describe(
-        "TTD report template ID. Find IDs via ttd_list_report_templates or the TTD UI. Required by the TTD API for report schedule creation."
+        "TTD report template ID — REQUIRED by TTD. Find IDs via ttd_list_report_templates or the TTD UI."
       ),
     additionalConfig: z
       .record(z.unknown())
@@ -101,17 +113,20 @@ export async function createReportScheduleLogic(
 ): Promise<CreateReportScheduleOutput> {
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
+  const startDate =
+    input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
+
   const config = {
     ReportScheduleName: input.reportName,
-    ReportScheduleType: input.scheduleType,
+    ReportTemplateId: input.reportTemplateId,
+    ReportFileFormat: input.fileFormat,
     ReportDateRange: input.dateRange,
     ReportFrequency: input.scheduleType,
+    ScheduleStartDate: startDate,
     TimeZone: "UTC",
     ReportDateFormat: "Sortable",
     ReportNumericFormat: "US",
-    ReportFileFormat: "CSV",
     IncludeHeaders: true,
-    ...(input.reportTemplateId && { ReportTemplateId: input.reportTemplateId }),
     ...(input.dimensions && { ReportDimensions: input.dimensions }),
     ...(input.metrics && { ReportMetrics: input.metrics }),
     ...(input.advertiserIds && { AdvertiserFilters: input.advertiserIds }),

@@ -63,7 +63,7 @@ Input: {
     "Budget": { "Amount": 50000, "CurrencyCode": "USD" },
     "StartDate": "2025-03-01T00:00:00",
     "EndDate": "2025-03-31T23:59:59",
-    "PacingMode": "PaceEvenly"
+    "PacingMode": "PaceAhead"
   }
 }
 \`\`\`
@@ -75,7 +75,7 @@ Input: {
 ### Common Gotchas
 - \`StartDate\` must be in the future
 - \`Budget.Amount\` is **lifetime** budget, not daily
-- \`PacingMode\` defaults to \`Off\` if omitted — usually you want \`PaceEvenly\`
+- \`PacingMode\` defaults to \`Off\` if omitted — usually you want \`PaceAhead\`
 
 ---
 
@@ -96,7 +96,7 @@ Input: {
       "BudgetSettings": {
         "Budget": { "Amount": 10000, "CurrencyCode": "USD" },
         "DailyBudget": { "Amount": 500, "CurrencyCode": "USD" },
-        "PacingMode": "PaceEvenly"
+        "PacingMode": "PaceAhead"
       },
       "BaseBidCPM": { "Amount": 5.00, "CurrencyCode": "USD" },
       "MaxBidCPM": { "Amount": 12.00, "CurrencyCode": "USD" }

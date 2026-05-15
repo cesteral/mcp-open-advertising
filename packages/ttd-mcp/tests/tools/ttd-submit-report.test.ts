@@ -48,6 +48,8 @@ describe("submitReportLogic", () => {
       {
         reportName: "Test Report",
         dateRange: "Last30Days",
+        reportTemplateId: 16353,
+        fileFormat: "CSV",
         dimensions: ["CampaignId"],
         metrics: ["Impressions"],
         advertiserIds: ["adv-1"],
@@ -58,16 +60,20 @@ describe("submitReportLogic", () => {
 
     const [config] = mockTtdReportingService.createReportSchedule.mock.calls[0];
     expect(config.ReportScheduleName).toBe("Test Report");
-    expect(config.ReportScheduleType).toBe("Once");
+    expect(config.ReportTemplateId).toBe(16353);
+    expect(config.ReportFileFormat).toBe("CSV");
+    expect(config.ReportFrequency).toBe("Once");
+    expect(config.ScheduleStartDate).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00$/);
     expect(config.ReportDateRange).toBe("Last30Days");
     expect(config.ReportDimensions).toEqual(["CampaignId"]);
     expect(config.ReportMetrics).toEqual(["Impressions"]);
     expect(config.AdvertiserFilters).toEqual(["adv-1"]);
+    expect(config.ReportScheduleType).toBeUndefined();
   });
 
   it("calls createReportSchedule, not runReport", async () => {
     await submitReportLogic(
-      { reportName: "Test", dateRange: "Yesterday" },
+      { reportName: "Test", dateRange: "Yesterday", reportTemplateId: 16353, fileFormat: "CSV" },
       createMockContext(),
       createMockSdkContext()
     );

@@ -9,50 +9,59 @@ import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_manage_bid_list";
 const TOOL_TITLE = "TTD Manage Bid List";
-const TOOL_DESCRIPTION = `Create, retrieve, or update a single TTD bid list.
+const TOOL_DESCRIPTION = `Create, retrieve, update, replace, or delete a single TTD bid list via GraphQL.
 
-Bid lists define price floors or ceilings for specific inventory targets (domains, apps, deal IDs, etc.) and are attached to ad groups.
+Bid lists define price floors/ceilings or block rules for specific inventory targets (domains, apps, deal IDs, etc.) and are attached to ad groups or advertisers.
 
 ### Operations
-- **create** — Create a new bid list with the provided payload
-- **get** — Retrieve a bid list by its ID
-- **update** — Replace a bid list (full payload required; BidListId is merged from \`bidListId\` parameter)
+- **create** — \`bidListCreate(input: BidListCreateInput!)\` — create a new bid list
+- **get** — \`bidList(id: ID!)\` — retrieve a bid list by ID
+- **update** — \`bidListUpdate(input: BidListUpdateInput!)\` — incremental change (add/remove specific lines without restating the entire list)
+- **set** — \`bidListSet(input: BidListSetInput!)\` — atomic full-replace of all lines with the supplied set
+- **delete** — \`bidListDelete(input: BidListDeleteInput!)\` — remove the bid list
 
 ### Notes
-- For **update**, the \`BidListId\` field is automatically merged into the body from the \`bidListId\` parameter
-- To manage multiple bid lists at once, use \`ttd_bulk_manage_bid_lists\``;
+- TTD's \`/v3/bidlist*\` REST endpoints are deprecated — this tool uses the GraphQL replacements documented in ttd-api-reference-part2.md.
+- For \`get\`, the \`bidListId\` you pass is forwarded as the GraphQL \`id\`.
+- For \`create\`/\`update\`/\`set\`/\`delete\`, pass the full GraphQL input object via \`data\`. TTD's input shape (not the old REST shape) is what's expected.
+- Optional \`selection\` lets you override the GraphQL selection set on the returned \`BidList\` (default: \`"id name"\`).
+- To manage multiple bid lists at once, use \`ttd_bulk_manage_bid_lists\`.`;
 
 export const BidListInputSchema = z
   .object({
-    operation: z.enum(["create", "get", "update"]).describe("Operation to perform"),
-    bidListId: z.string().optional().describe("Required for get and update operations"),
-    data: z.record(z.any()).optional().describe("Bid list payload for create and update"),
+    operation: z.enum(["create", "get", "update", "set", "delete"]).describe("GraphQL operation"),
+    bidListId: z.string().optional().describe("Required for get"),
+    data: z
+      .record(z.any())
+      .optional()
+      .describe(
+        "GraphQL input object — required for create/update/set/delete. Must match TTD's BidList{Create,Update,Set,Delete}Input shape."
+      ),
+    selection: z
+      .string()
+      .optional()
+      .describe(
+        'GraphQL selection set on the returned BidList. Default: "id name". Use "id name lines { ... }" for richer responses.'
+      ),
   })
   .refine(
-    (val) => {
-      if (val.operation === "get" || val.operation === "update") {
-        return typeof val.bidListId === "string" && val.bidListId.length > 0;
-      }
-      return true;
-    },
-    { message: "bidListId is required for get and update", path: ["bidListId"] }
+    (val) => (val.operation === "get" ? typeof val.bidListId === "string" && val.bidListId.length > 0 : true),
+    { message: "bidListId is required for get", path: ["bidListId"] }
   )
   .refine(
-    (val) => {
-      if (val.operation === "create" || val.operation === "update") {
-        return val.data !== undefined && val.data !== null;
-      }
-      return true;
-    },
-    { message: "data is required for create and update", path: ["data"] }
+    (val) =>
+      val.operation === "create" || val.operation === "update" || val.operation === "set" || val.operation === "delete"
+        ? val.data !== undefined && val.data !== null
+        : true,
+    { message: "data is required for create/update/set/delete", path: ["data"] }
   )
-  .describe("Parameters for managing a single TTD bid list");
+  .describe("Parameters for managing a single TTD bid list via GraphQL");
 
 export const BidListOutputSchema = z
   .object({
     operation: z.string().describe("The operation that was performed"),
     bidListId: z.string().optional().describe("The bid list ID if applicable"),
-    result: z.record(z.any()).describe("Bid list data returned by the API"),
+    result: z.record(z.any()).describe("Raw GraphQL response"),
     timestamp: z.string().datetime(),
   })
   .describe("Bid list operation result");
@@ -66,61 +75,42 @@ export async function bidListLogic(
   sdkContext?: SdkContext
 ): Promise<BidListOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
-
-  let result: Record<string, unknown>;
+  const selection = input.selection ?? "id name";
+  const now = () => new Date().toISOString();
 
   switch (input.operation) {
     case "create": {
-      if (!input.data) {
-        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for create operation");
-      }
-      result = await ttdService.createBidList(input.data, context);
-      return {
-        operation: "create",
-        result,
-        timestamp: new Date().toISOString(),
-      };
+      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for create");
+      const result = (await ttdService.createBidList(input.data, context, selection)) as Record<string, unknown>;
+      return { operation: "create", result, timestamp: now() };
     }
     case "get": {
-      result = await ttdService.getBidList(input.bidListId!, context);
-      return {
-        operation: "get",
-        bidListId: input.bidListId,
-        result,
-        timestamp: new Date().toISOString(),
-      };
+      const result = (await ttdService.getBidList(input.bidListId!, context, selection)) as Record<string, unknown>;
+      return { operation: "get", bidListId: input.bidListId, result, timestamp: now() };
     }
     case "update": {
-      if (!input.data) {
-        throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for update operation");
-      }
-      const payload = { ...input.data, BidListId: input.bidListId };
-      result = await ttdService.updateBidList(payload, context);
-      return {
-        operation: "update",
-        bidListId: input.bidListId,
-        result,
-        timestamp: new Date().toISOString(),
-      };
+      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for update");
+      const result = (await ttdService.updateBidList(input.data, context, selection)) as Record<string, unknown>;
+      return { operation: "update", bidListId: input.bidListId, result, timestamp: now() };
+    }
+    case "set": {
+      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for set");
+      const result = (await ttdService.setBidList(input.data, context, selection)) as Record<string, unknown>;
+      return { operation: "set", bidListId: input.bidListId, result, timestamp: now() };
+    }
+    case "delete": {
+      if (!input.data) throw new McpError(JsonRpcErrorCode.InvalidParams, "data is required for delete");
+      const result = (await ttdService.deleteBidList(input.data, context)) as Record<string, unknown>;
+      return { operation: "delete", bidListId: input.bidListId, result, timestamp: now() };
     }
   }
 }
 
 export function bidListResponseFormatter(result: BidListOutput): McpTextContent[] {
-  const lines: string[] = [`Bid list ${result.operation} successful.`, ""];
-
-  if (result.bidListId) {
-    lines.push(`Bid List ID: ${result.bidListId}`);
-  }
-
-  const bidListId = result.result["BidListId"] as string | undefined;
-  if (bidListId && bidListId !== result.bidListId) {
-    lines.push(`Bid List ID: ${bidListId}`);
-  }
-
+  const lines: string[] = [`Bid list ${result.operation} via GraphQL.`, ""];
+  if (result.bidListId) lines.push(`Bid List ID: ${result.bidListId}`);
   lines.push(`Result: ${JSON.stringify(result.result, null, 2)}`);
   lines.push(`Timestamp: ${result.timestamp}`);
-
   return [{ type: "text" as const, text: lines.join("\n") }];
 }
 
@@ -138,16 +128,16 @@ export const manageBidListTool = {
   },
   inputExamples: [
     {
-      label: "Create a bid list targeting specific domains",
+      label: "Create a bid list",
       input: {
         operation: "create",
         data: {
-          AdvertiserId: "adv123abc",
-          Name: "Premium News Domains",
-          BidListType: "BidAdjustmentByDomain",
-          Bids: [
-            { Domain: "nytimes.com", Adjustment: 1.5 },
-            { Domain: "wsj.com", Adjustment: 1.3 },
+          owner: { type: "Advertiser", id: "adv123abc" },
+          name: "Premium News Domains",
+          adjustmentType: "BidMultiplier",
+          lines: [
+            { dimensionValues: [{ dimension: "Site", value: "nytimes.com" }], adjustment: 1.5 },
+            { dimensionValues: [{ dimension: "Site", value: "wsj.com" }], adjustment: 1.3 },
           ],
         },
       },
@@ -157,22 +147,35 @@ export const manageBidListTool = {
       input: {
         operation: "get",
         bidListId: "bl-abc123def",
+        selection: "id name adjustmentType lines { dimensionValues { dimension value } adjustment }",
       },
     },
     {
-      label: "Update a bid list's name and bids",
+      label: "Atomically replace all lines (bidListSet)",
+      input: {
+        operation: "set",
+        data: {
+          id: "bl-abc123def",
+          lines: [{ dimensionValues: [{ dimension: "Site", value: "nytimes.com" }], adjustment: 1.8 }],
+        },
+      },
+    },
+    {
+      label: "Incrementally add/remove lines (bidListUpdate)",
       input: {
         operation: "update",
-        bidListId: "bl-abc123def",
         data: {
-          AdvertiserId: "adv123abc",
-          Name: "Premium News Domains - Updated",
-          BidListType: "BidAdjustmentByDomain",
-          Bids: [
-            { Domain: "nytimes.com", Adjustment: 1.8 },
-            { Domain: "wsj.com", Adjustment: 1.5 },
-          ],
+          id: "bl-abc123def",
+          linesToAdd: [{ dimensionValues: [{ dimension: "Site", value: "ft.com" }], adjustment: 1.4 }],
+          linesToRemove: [{ dimensionValues: [{ dimension: "Site", value: "wsj.com" }] }],
         },
+      },
+    },
+    {
+      label: "Delete a bid list",
+      input: {
+        operation: "delete",
+        data: { id: "bl-abc123def" },
       },
     },
   ],

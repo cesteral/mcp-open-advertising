@@ -16,7 +16,10 @@
 import type { FieldRule } from "@cesteral/shared";
 import type { TtdEntityType } from "../../tools/utils/entity-mapping.js";
 
-export const PACING_MODES = ["PaceEvenly", "PaceAhead", "PaceAsap"] as const;
+// TTD's live PacingMode enum (probed against the live API 2026-05-15).
+// `PaceEvenly` and `PaceAsap` are no longer accepted; only `Off` and
+// `PaceAhead` round-trip cleanly. Production campaigns use `Off` by default.
+export const PACING_MODES = ["Off", "PaceAhead"] as const;
 export const AVAILABILITY = ["Available", "Archived"] as const;
 export const TRACKING_TAG_TYPES = [
   "Universal",

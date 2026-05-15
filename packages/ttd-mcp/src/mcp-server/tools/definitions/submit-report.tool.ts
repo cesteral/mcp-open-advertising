@@ -24,36 +24,54 @@ export const SubmitReportInputSchema = z
     reportName: z.string().describe("Name for the report"),
     dateRange: z
       .enum([
+        "Yesterday",
         "Last7Days",
         "Last14Days",
         "Last30Days",
-        "Yesterday",
-        "Custom",
+        "LastXDays",
         "MonthToDate",
         "LastMonth",
         "QuarterToDate",
-        "Lifetime",
+        "LastQuarter",
+        "YearToDate",
+        "Custom",
       ])
-      .describe("Date range for the report"),
+      .describe("Date range for the report (per TTD MyReports reportschedule/facets)"),
+    reportTemplateId: z
+      .number()
+      .describe(
+        "TTD report template ID — REQUIRED by TTD. Find IDs via ttd_list_report_templates or the TTD UI."
+      ),
+    fileFormat: z
+      .enum(["CSV", "TSV", "ExcelPivot"])
+      .optional()
+      .default("CSV")
+      .describe(
+        "Report file format. Must match the template's format: CSV/TSV templates accept CSV or TSV; Excel-shaped templates require `ExcelPivot`. CSV download parsing only works with CSV/TSV outputs."
+      ),
+    scheduleStartDate: z
+      .string()
+      .optional()
+      .describe(
+        "ISO date or datetime when the schedule should first run. Defaults to today UTC at 00:00. Required by TTD for one-time schedules."
+      ),
+    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
     dimensions: z
       .array(z.string())
       .optional()
-      .describe("Report dimensions (e.g., ['AdvertiserId', 'CampaignId'])"),
+      .describe(
+        "(legacy/ignored when ReportTemplateId is set) Report dimensions — TTD now requires a template."
+      ),
     metrics: z
       .array(z.string())
       .optional()
-      .describe("Report metrics (e.g., ['Impressions', 'Clicks', 'TotalCost'])"),
-    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
-    reportTemplateId: z
-      .number()
-      .optional()
       .describe(
-        "TTD report template ID. Find IDs via ttd_list_report_templates or the TTD UI. Required by the TTD API for report schedule creation."
+        "(legacy/ignored when ReportTemplateId is set) Report metrics — TTD now requires a template."
       ),
     additionalConfig: z
       .record(z.any())
       .optional()
-      .describe("Additional report configuration fields"),
+      .describe("Additional report configuration fields (merged last)"),
   })
   .describe("Parameters for submitting a TTD report");
 
@@ -74,17 +92,20 @@ export async function submitReportLogic(
 ): Promise<SubmitReportOutput> {
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
+  const startDate =
+    input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
+
   const reportConfig = {
     ReportScheduleName: input.reportName,
-    ReportScheduleType: "Once" as const,
+    ReportTemplateId: input.reportTemplateId,
+    ReportFileFormat: input.fileFormat,
     ReportDateRange: input.dateRange,
     ReportFrequency: "Once" as const,
+    ScheduleStartDate: startDate,
     TimeZone: "UTC",
     ReportDateFormat: "Sortable",
     ReportNumericFormat: "US",
-    ReportFileFormat: "CSV",
     IncludeHeaders: true,
-    ...(input.reportTemplateId && { ReportTemplateId: input.reportTemplateId }),
     ...(input.dimensions && { ReportDimensions: input.dimensions }),
     ...(input.metrics && { ReportMetrics: input.metrics }),
     ...(input.advertiserIds && { AdvertiserFilters: input.advertiserIds }),
@@ -122,12 +143,22 @@ export const submitReportTool = {
   },
   inputExamples: [
     {
-      label: "Submit campaign performance report",
+      label: "Submit Yesterday report (Excel template)",
       input: {
-        reportName: "Campaign Performance - Last 7 Days",
+        reportName: "Daily Performance",
+        dateRange: "Yesterday",
+        reportTemplateId: 16353,
+        fileFormat: "ExcelPivot",
+        advertiserIds: ["adv123abc"],
+      },
+    },
+    {
+      label: "Submit Last 7 Days report (CSV template)",
+      input: {
+        reportName: "Weekly Performance",
         dateRange: "Last7Days",
-        dimensions: ["AdvertiserId", "CampaignId", "CampaignName"],
-        metrics: ["Impressions", "Clicks", "TotalCost", "CTR", "CPM"],
+        reportTemplateId: 12345,
+        fileFormat: "CSV",
         advertiserIds: ["adv123abc"],
       },
     },

@@ -400,14 +400,16 @@ describe("TtdService", () => {
   // ==========================================================================
 
   describe("deleteEntity", () => {
-    it("calls httpClient.fetch with DELETE", async () => {
+    it("delegates to archive (Availability=Archived) — TTD has no REST hard-delete", async () => {
       httpClient.fetch.mockResolvedValueOnce({});
 
       await service.deleteEntity("campaign", "c1");
 
       const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/campaign/c1");
-      expect(options.method).toBe("DELETE");
+      expect(path).toBe("/campaign");
+      expect(options.method).toBe("PUT");
+      const body = JSON.parse(options.body);
+      expect(body).toEqual({ CampaignId: "c1", Availability: "Archived" });
     });
 
     it("calls rateLimiter.consume", async () => {

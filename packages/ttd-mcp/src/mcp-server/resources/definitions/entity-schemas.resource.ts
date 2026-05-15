@@ -54,7 +54,7 @@ function campaignSchemaMarkdown(): string {
 | \`StartDate\` | string | **Yes** | ISO 8601 date (\`YYYY-MM-DDTHH:mm:ss\`) |
 | \`EndDate\` | string | No | ISO 8601 date (omit for evergreen) |
 | \`CampaignConversionReportingColumns\` | string[] | No | Conversion columns for reporting |
-| \`PacingMode\` | string | No | \`PaceAhead\`, \`PaceEvenly\`, \`Off\` |
+| \`PacingMode\` | string | No | \`Off\`, \`PaceAhead\` |
 | \`DailyBudgetInAdvertiserCurrency\` | number | No | Daily budget cap |
 | \`Availability\` | string | No | \`Available\`, \`Paused\`, \`Archived\` |
 | \`FrequencyConfig\` | object | No | Frequency capping settings |
@@ -128,7 +128,7 @@ function adGroupSchemaMarkdown(): string {
 |-------|------|-------------|
 | \`Budget\` | object | \`{ Amount, CurrencyCode }\` |
 | \`DailyBudget\` | object | \`{ Amount, CurrencyCode }\` |
-| \`PacingMode\` | string | \`PaceAhead\`, \`PaceEvenly\`, \`Off\` |
+| \`PacingMode\` | string | \`Off\`, \`PaceAhead\` |
 
 ## BaseBidCPM / MaxBidCPM Object
 

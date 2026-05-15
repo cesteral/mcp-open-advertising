@@ -11,11 +11,13 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_delete_entity";
 const TOOL_TITLE = "Delete TTD Entity";
-const TOOL_DESCRIPTION = `Delete a The Trade Desk entity by ID.
+const TOOL_DESCRIPTION = `Retire a The Trade Desk entity by ID (sets Availability="Archived").
 
 **Supported entity types:** ${getEntityTypeEnum().join(", ")}
 
-Warning: This is a destructive operation that cannot be undone.`;
+TTD's Platform API has no REST hard-delete for these entity types — the data model uses Availability="Archived" as the end-state for retired entities. This tool delegates to the same archive operation as \`ttd_archive_entities\` for a single ID. Archived entities are hidden from default queries but historical reporting still resolves their IDs.
+
+Warning: Archive is the platform's final state; in practice it cannot be reversed via this server.`;
 
 export const DeleteEntityInputSchema = z
   .object({

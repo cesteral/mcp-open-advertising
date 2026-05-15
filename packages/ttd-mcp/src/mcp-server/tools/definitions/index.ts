@@ -4,36 +4,37 @@
 /**
  * Tool definitions barrel export
  *
- * 51 tools total:
- *   1 context: get context (cold-start partner discovery)
- *   6 original: list, get, create, update, delete, report
- *   5 workflows utility: REST passthrough, standard job status, first-party data job, third-party data job, campaign version
- *   4 workflow entities (single+batch): create/update campaigns, create/update ad groups (each accepts mode=single sync or mode=batch async job)
- *   10 bulk/advanced: bulk create, bulk update, archive, GraphQL, bulk status, adjust bids, validate, download report, submit report, check report status
- *   4 GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
- *   1 preview: get ad preview
- *   9 report schedule management: create, update, list, get, delete schedule + list templates + cancel execution + rerun schedule + get executions
- *   2 GQL entity reports: execute entity report, get entity report types
- *   3 report template management: create, update, get template
- *   2 report type discovery: list report types, get report type schema
- *   1 template schedule: create template schedule
+ * TTD's documented public Platform API surface is REST + GraphQL only
+ * (TTD Foundations §1 "Our Users and APIs", §6 "REST and GraphQL").
+ * The Speakeasy `/workflows/...` SDK endpoint is a language-specific
+ * convenience layer (Python/Go/Java) wrapping the same backend; it has
+ * no TypeScript SDK and is gated behind a User-Agent check. We expose
+ * Platform API operations directly via REST + GraphQL instead.
+ *
+ * 43 tools total:
+ *   1  context: get context (cold-start partner discovery)
+ *   5  core CRUD: list, get, create, update, delete
+ *   4  reporting (REST async): get report (blocking), submit, check status, download
+ *   5  bulk: bulk create, bulk update, bulk update status, archive, adjust bids
+ *   2  bid lists: single + bulk
+ *   1  seeds (GraphQL Kokai-only): manage seed
+ *   2  advanced: graphql query, validate entity
+ *   4  GraphQL bulk: query bulk, mutation bulk, bulk job status, cancel bulk job
+ *   1  preview: get ad preview
+ *   10 report schedule management: create, update, list, get, delete, list templates,
+ *      create template schedule, cancel execution, rerun schedule, get executions
+ *   2  GQL entity reports: execute, get types
+ *   2  report type discovery: list, get schema
+ *   3  report template management: create, update, get
+ *   1  discovery: tool-search
  */
 
 export { getContextTool } from "./get-context.tool.js";
-export { restRequestTool } from "./rest-request.tool.js";
-export { getJobStatusTool } from "./get-job-status.tool.js";
-export { getFirstPartyDataJobTool } from "./get-first-party-data-job.tool.js";
-export { getThirdPartyDataJobTool } from "./get-third-party-data-job.tool.js";
-export { getCampaignVersionTool } from "./get-campaign-version.tool.js";
 export { listEntitiesTool } from "./list-entities.tool.js";
 export { getEntityTool } from "./get-entity.tool.js";
 export { createEntityTool } from "./create-entity.tool.js";
 export { updateEntityTool } from "./update-entity.tool.js";
 export { deleteEntityTool } from "./delete-entity.tool.js";
-export { createCampaignsTool } from "./create-campaigns.tool.js";
-export { updateCampaignsTool } from "./update-campaigns.tool.js";
-export { createAdGroupsTool } from "./create-ad-groups.tool.js";
-export { updateAdGroupsTool } from "./update-ad-groups.tool.js";
 export { getReportTool } from "./get-report.tool.js";
 export { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 export { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -72,20 +73,11 @@ export { bulkManageBidListsTool } from "./bid-list-bulk.tool.js";
 export { manageSeedTool } from "./seed.tool.js";
 
 import { getContextTool } from "./get-context.tool.js";
-import { restRequestTool } from "./rest-request.tool.js";
-import { getJobStatusTool } from "./get-job-status.tool.js";
-import { getFirstPartyDataJobTool } from "./get-first-party-data-job.tool.js";
-import { getThirdPartyDataJobTool } from "./get-third-party-data-job.tool.js";
-import { getCampaignVersionTool } from "./get-campaign-version.tool.js";
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
 import { createEntityTool } from "./create-entity.tool.js";
 import { updateEntityTool } from "./update-entity.tool.js";
 import { deleteEntityTool } from "./delete-entity.tool.js";
-import { createCampaignsTool } from "./create-campaigns.tool.js";
-import { updateCampaignsTool } from "./update-campaigns.tool.js";
-import { createAdGroupsTool } from "./create-ad-groups.tool.js";
-import { updateAdGroupsTool } from "./update-ad-groups.tool.js";
 import { getReportTool } from "./get-report.tool.js";
 import { bulkCreateEntitiesTool } from "./bulk-create-entities.tool.js";
 import { bulkUpdateEntitiesTool } from "./bulk-update-entities.tool.js";
@@ -131,24 +123,13 @@ import {
 const productionTools: ToolDefinitionForFactory[] = [
   // ── Context ──
   getContextTool,
-  restRequestTool,
-  getJobStatusTool,
-  getFirstPartyDataJobTool,
-  getThirdPartyDataJobTool,
-  getCampaignVersionTool,
-  // ── Core CRUD ──
+  // ── Core CRUD (REST) ──
   listEntitiesTool,
   getEntityTool,
   createEntityTool,
   updateEntityTool,
   deleteEntityTool,
-  // ── Workflow Entity Operations ──
-  // Each tool accepts mode="single" (sync) or "batch" (async Workflows job).
-  createCampaignsTool,
-  updateCampaignsTool,
-  createAdGroupsTool,
-  updateAdGroupsTool,
-  // ── Reporting ──
+  // ── Reporting (REST async) ──
   getReportTool,
   downloadReportTool,
   submitReportTool,
@@ -162,12 +143,12 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── Bid Lists ──
   manageBidListTool,
   bulkManageBidListsTool,
-  // ── Audience / Seeds ──
+  // ── Audience / Seeds (GraphQL Kokai-only) ──
   manageSeedTool,
   // ── Advanced ──
   graphqlQueryTool,
   validateEntityTool,
-  // ── GraphQL Bulk ──
+  // ── GraphQL Bulk (TTD's documented path for >100-record operations) ──
   graphqlQueryBulkTool,
   graphqlMutationBulkTool,
   graphqlBulkJobTool,

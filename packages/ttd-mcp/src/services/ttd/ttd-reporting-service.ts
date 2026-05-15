@@ -17,7 +17,7 @@ import {
 
 const ReportDeliverySchema = z
   .object({
-    DownloadURL: z.string().optional(),
+    DownloadURL: z.string().nullish(),
   })
   .passthrough();
 
@@ -62,10 +62,15 @@ function parseOrThrow<T>(schema: z.ZodType<T>, value: unknown, endpoint: string)
  */
 export interface TtdReportConfig {
   ReportScheduleName: string;
-  ReportScheduleType: "Once" | "Daily" | "Weekly" | "Monthly";
+  ReportTemplateId: number;
+  ReportFileFormat: "CSV" | "TSV" | "ExcelPivot";
   ReportDateRange: string;
-  ReportTemplateId?: number;
+  ReportFrequency: "Once" | "Daily" | "Weekly" | "Monthly" | "Quarterly";
+  ScheduleStartDate: string;
+  TimeZone?: string;
+  ReportDateFormat?: string;
   ReportNumericFormat?: string;
+  IncludeHeaders?: boolean;
   ReportFilters?: Array<{
     Type: string;
     Value: string;
@@ -213,7 +218,7 @@ export class TtdReportingService {
 
     const execution = executions[0];
     const state = execution.ReportExecutionState ?? "Unknown";
-    const downloadUrl = execution.ReportDeliveries?.[0]?.DownloadURL;
+    const downloadUrl = execution.ReportDeliveries?.[0]?.DownloadURL ?? undefined;
 
     return { reportScheduleId, state, execution, downloadUrl };
   }

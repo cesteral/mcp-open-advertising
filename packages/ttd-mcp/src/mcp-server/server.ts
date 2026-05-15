@@ -31,11 +31,6 @@ const TTD_PLATFORM = "ttd";
 const ttdWorkflowIdByToolName: Record<string, string> = {
   // Read operations
   ttd_get_context: "mcp.execute.ttd_entity_read",
-  ttd_rest_request: "mcp.execute.ttd_entity_read",
-  ttd_get_job_status: "mcp.execute.ttd_entity_read",
-  ttd_get_first_party_data_job: "mcp.execute.ttd_entity_read",
-  ttd_get_third_party_data_job: "mcp.execute.ttd_entity_read",
-  ttd_get_campaign_version: "mcp.execute.ttd_entity_read",
   ttd_list_entities: "mcp.execute.ttd_entity_read",
   ttd_get_entity: "mcp.execute.ttd_entity_read",
   // Write operations
@@ -43,10 +38,6 @@ const ttdWorkflowIdByToolName: Record<string, string> = {
   ttd_update_entity: "mcp.execute.ttd_entity_update",
   ttd_delete_entity: "mcp.execute.ttd_entity_update",
   ttd_validate_entity: "mcp.execute.ttd_entity_update",
-  ttd_create_campaigns: "mcp.execute.ttd_entity_update",
-  ttd_update_campaigns: "mcp.execute.ttd_entity_update",
-  ttd_create_ad_groups: "mcp.execute.ttd_entity_update",
-  ttd_update_ad_groups: "mcp.execute.ttd_entity_update",
   // Reporting
   ttd_get_report: "mcp.execute.ttd_reporting",
   ttd_submit_report: "mcp.execute.ttd_reporting",
@@ -97,18 +88,18 @@ export async function createMcpServer(
       name: "ttd-mcp",
       version: packageJson.version,
       description:
-        "The Trade Desk campaign management, Workflows jobs, reporting, and optimization via TTD API v3 + GraphQL. Supports first-class CRUD entities, workflow-oriented campaign/ad group operations, standard job APIs, GraphQL passthrough, and async report generation.",
+        "The Trade Desk campaign management, reporting, and optimization via TTD's documented Platform API (REST v3 + GraphQL). Supports first-class CRUD entities, GraphQL bulk operations for >100-record writes, and async report generation.",
     },
     {
       capabilities: {
         logging: {},
       },
       instructions:
-        "The Trade Desk campaign management, workflows, and reporting server. Supports first-class CRUD entities, workflow-oriented campaign/ad group operations, standard jobs, REST/GraphQL passthrough, and MyReports reporting. " +
+        "The Trade Desk campaign management and reporting server. Surfaces TTD's documented Platform API only (REST + GraphQL per TTD Foundations §1, §6). " +
         "Progressive discovery: (1) start with ttd_get_context to resolve partner/advertiser IDs for the current credentials, then ttd_list_entities for entity discovery; " +
         "(2) before authoring writes, read MCP Resources entity-schema://all for field shapes, entity-hierarchy://all for parent/child rules, entity-examples://all for payload examples, graphql-reference://ttd for GraphQL passthrough, and report-reference://all for MyReports field semantics; " +
         "(3) for multi-step flows use MCP Prompts: ttd_campaign_setup_workflow, ttd_targeting_discovery_workflow, ttd_entity_update_workflow, ttd_bulk_operations_workflow, ttd_entity_duplication_workflow. " +
-        "Prefer Workflows tools (ttd_create_campaigns, ttd_update_campaigns, ttd_create_ad_groups, ttd_update_ad_groups — each accepts mode=single or batch) over raw REST for campaign/ad group writes.",
+        "For single-record writes use ttd_create_entity / ttd_update_entity (REST). For >100-record batch writes use ttd_graphql_mutation_bulk (TTD's documented bulk path).",
     }
   );
 

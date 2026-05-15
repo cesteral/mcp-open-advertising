@@ -20,30 +20,6 @@ import type {
 
 export type { TtdAdvertiser, TtdCampaign, TtdAdGroup, TtdCreative, TtdConversionTracker };
 
-export interface WorkflowCallbackInput {
-  callbackUrl: string;
-  callbackHeaders?: Record<string, string> | null;
-}
-
-export interface RestRequestInput {
-  methodType: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-  endpoint: string | null;
-  dataBody?: string | null;
-}
-
-export interface FirstPartyDataJobInput {
-  advertiserId: string;
-  nameFilter?: string | null;
-  queryShape?: string | null;
-  callbackInput?: WorkflowCallbackInput | null;
-}
-
-export interface ThirdPartyDataJobInput {
-  partnerId: string;
-  queryShape?: string | null;
-  callbackInput?: WorkflowCallbackInput | null;
-}
-
 interface GraphqlQueryOptions {
   betaFeatures?: string;
 }
@@ -140,7 +116,8 @@ export class TtdService {
   async createEntity<T extends TtdEntityType>(
     entityType: T,
     data: Record<string, unknown>,
-    context?: RequestContext
+    context?: RequestContext,
+    options?: { strictMode?: boolean }
   ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const partnerId = this.httpClient.partnerId;
@@ -150,6 +127,7 @@ export class TtdService {
     return this.httpClient.fetch(config.apiPath, context, {
       method: "POST",
       body: JSON.stringify(data),
+      ...(options?.strictMode ? { headers: { "TTD-Strict-Mode": "true" } } : {}),
     }) as Promise<TtdEntityMap[T]>;
   }
 
@@ -157,7 +135,8 @@ export class TtdService {
     entityType: T,
     entityId: string,
     data: Record<string, unknown>,
-    context?: RequestContext
+    context?: RequestContext,
+    options?: { strictMode?: boolean }
   ): Promise<TtdEntityMap[T]> {
     const config = getEntityConfig(entityType);
     const partnerId = this.httpClient.partnerId;
@@ -170,6 +149,7 @@ export class TtdService {
     return this.httpClient.fetch(config.apiPath, context, {
       method: "PUT",
       body: JSON.stringify(payload),
+      ...(options?.strictMode ? { headers: { "TTD-Strict-Mode": "true" } } : {}),
     }) as Promise<TtdEntityMap[T]>;
   }
 
@@ -178,12 +158,12 @@ export class TtdService {
     entityId: string,
     context?: RequestContext
   ): Promise<void> {
-    const config = getEntityConfig(entityType);
-    const partnerId = this.httpClient.partnerId;
-
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    await this.httpClient.fetch(`${config.apiPath}/${entityId}`, context, { method: "DELETE" });
+    // TTD's Platform API does not expose REST DELETE for advertiser, campaign,
+    // adGroup, creative, or conversionTracker (returns 405 Method Not Allowed).
+    // The platform's data model uses Availability="Archived" as soft-delete —
+    // this is TTD's documented end-state for retired entities. We delegate to
+    // updateAvailability so callers get the semantic they expect without a 405.
+    await this.updateAvailability(entityType, entityId, "Archived", context);
   }
 
   // ─── Validate-Only (Dry Run) ──────────────────────────────────────
@@ -353,19 +333,14 @@ export class TtdService {
 
     await this.rateLimiter.consume(`ttd:${partnerId}`);
 
-    // GET current entity (full payload)
-    const current = (await this.httpClient.fetch(`${config.apiPath}/${entityId}`, context, {
-      method: "GET",
-    })) as Record<string, unknown>;
-
-    // Set Availability on the full entity
-    current.Availability = availability;
-
-    // PUT full entity back (no ID in URL, ID already in body)
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    // Partial PUT — only the ID + Availability field. Per TTD Foundations §8
+    // best practices: "avoid copying GET payloads to PUT requests" — round-tripping
+    // the full entity is fragile (TTD deprecates fields silently and rejects them
+    // on PUT, e.g. 410 Gone for CtvTargetingAndAttribution). Single-call write is
+    // also half the API budget.
     return this.httpClient.fetch(config.apiPath, context, {
       method: "PUT",
-      body: JSON.stringify(current),
+      body: JSON.stringify({ [config.idField]: entityId, Availability: availability }),
     });
   }
 
@@ -386,87 +361,39 @@ export class TtdService {
     results: Array<{ adGroupId: string; success: boolean; entity?: unknown; error?: string }>;
   }> {
     const partnerId = this.httpClient.partnerId;
-
     const adGroupConfig = getEntityConfig("adGroup");
 
-    // Phase 1: Fetch all current ad group entities in parallel (concurrency=5)
-    const getResults = await executeBulkConcurrent(
+    // Partial PUTs only. Round-tripping the full entity is fragile under TTD —
+    // deprecated fields (e.g. AdBrainHouseholdCrossDeviceEnabled, retired
+    // 2026-01-12) come back from GET but TTD rejects them on PUT with 410 Gone.
+    // Per TTD Foundations §8: "avoid copying GET payloads to PUT requests".
+    // Sending only {AdGroupId, RTBAttributes:{BaseBidCPM, MaxBidCPM}} also
+    // halves the API budget per adjustment.
+    const putResults = await executeBulkConcurrent(
       adjustments,
       async (adj) => {
+        const cc = adj.currencyCode || "USD";
+        const rtb: Record<string, unknown> = {};
+        if (adj.baseBidCpm !== undefined) rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
+        if (adj.maxBidCpm !== undefined) rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
+
         await this.rateLimiter.consume(`ttd:${partnerId}`);
-        return this.httpClient.fetch(`${adGroupConfig.apiPath}/${adj.adGroupId}`, context, {
-          method: "GET",
+        return this.httpClient.fetch(adGroupConfig.apiPath, context, {
+          method: "PUT",
+          body: JSON.stringify({ AdGroupId: adj.adGroupId, RTBAttributes: rtb }),
         });
       },
       { logger: this.logger }
     );
 
-    // Separate successful GETs from failed ones; build PUT inputs for successes
-    type PutItem = {
-      adj: (typeof adjustments)[number];
-      current: Record<string, unknown>;
+    return {
+      results: putResults.map((r, i) => ({
+        adGroupId: adjustments[i].adGroupId,
+        success: r.success,
+        entity: r.entity,
+        error: r.error,
+      })),
     };
-    const putItems: PutItem[] = [];
-    const putIndexMap: number[] = []; // maps putItems index → adjustments index
-
-    const results: Array<{
-      adGroupId: string;
-      success: boolean;
-      entity?: unknown;
-      error?: string;
-    }> = new Array(adjustments.length);
-
-    for (let i = 0; i < getResults.length; i++) {
-      const getResult = getResults[i];
-      const adj = adjustments[i];
-      if (!getResult.success) {
-        results[i] = { adGroupId: adj.adGroupId, success: false, error: getResult.error };
-      } else {
-        putItems.push({ adj, current: getResult.entity as Record<string, unknown> });
-        putIndexMap.push(i);
-      }
-    }
-
-    // Phase 2: Apply bid adjustments and PUT all entities in parallel (concurrency=5)
-    if (putItems.length > 0) {
-      const putResults = await executeBulkConcurrent(
-        putItems,
-        async ({ adj, current }) => {
-          const rtb = (current.RTBAttributes as Record<string, unknown>) || {};
-          const cc = adj.currencyCode || "USD";
-
-          if (adj.baseBidCpm !== undefined) {
-            rtb.BaseBidCPM = { Amount: adj.baseBidCpm, CurrencyCode: cc };
-          }
-          if (adj.maxBidCpm !== undefined) {
-            rtb.MaxBidCPM = { Amount: adj.maxBidCpm, CurrencyCode: cc };
-          }
-
-          // TTD PUT endpoints take no ID in URL; full entity with ID in body
-          await this.rateLimiter.consume(`ttd:${partnerId}`);
-          return this.httpClient.fetch(adGroupConfig.apiPath, context, {
-            method: "PUT",
-            body: JSON.stringify({ ...current, RTBAttributes: rtb }),
-          });
-        },
-        { logger: this.logger }
-      );
-
-      // Map PUT results back to the original adjustments index, preserving adGroupId
-      for (let k = 0; k < putResults.length; k++) {
-        const origIndex = putIndexMap[k];
-        const adGroupId = adjustments[origIndex].adGroupId;
-        const putResult = putResults[k];
-        results[origIndex] = {
-          adGroupId,
-          success: putResult.success,
-          entity: putResult.entity,
-          error: putResult.error,
-        };
-      }
-    }
-
-    return { results };
   }
 
   // ─── GraphQL Passthrough ──────────────────────────────────────────
@@ -492,134 +419,6 @@ export class TtdService {
       headers: options?.betaFeatures ? { "TTD-GQL-Beta": options.betaFeatures } : undefined,
       body: JSON.stringify({ query, variables }),
     });
-  }
-
-  // ─── Workflows / Standard Jobs ───────────────────────────────────
-
-  async restRequest(input: RestRequestInput, context?: RequestContext): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    const path = input.endpoint ? `/${input.endpoint.replace(/^\//, "")}` : "/";
-
-    return this.httpClient.fetch(path, context, {
-      method: input.methodType,
-      ...(input.dataBody !== undefined
-        ? {
-            body:
-              typeof input.dataBody === "string" ? input.dataBody : JSON.stringify(input.dataBody),
-          }
-        : {}),
-    });
-  }
-
-  async getJobStatus(jobId: number, context?: RequestContext): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    return this.httpClient.fetch(`/standardjob/${jobId}/status`, context, {
-      method: "GET",
-    });
-  }
-
-  async getFirstPartyDataJob(
-    input: FirstPartyDataJobInput,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    return this.httpClient.fetch("/standardjob/firstpartydata", context, {
-      method: "POST",
-      body: JSON.stringify({
-        advertiserId: input.advertiserId,
-        ...(input.nameFilter !== undefined ? { nameFilter: input.nameFilter } : {}),
-        ...(input.queryShape !== undefined ? { queryShape: input.queryShape } : {}),
-        ...(input.callbackInput ? { callbackInput: input.callbackInput } : {}),
-      }),
-    });
-  }
-
-  async getThirdPartyDataJob(
-    input: ThirdPartyDataJobInput,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    return this.httpClient.fetch("/standardjob/thirdpartydata", context, {
-      method: "POST",
-      body: JSON.stringify({
-        partnerId: input.partnerId,
-        ...(input.queryShape !== undefined ? { queryShape: input.queryShape } : {}),
-        ...(input.callbackInput ? { callbackInput: input.callbackInput } : {}),
-      }),
-    });
-  }
-
-  async getCampaignVersion(campaignId: string, context?: RequestContext): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    return this.httpClient.fetch(`/campaign/${campaignId}/version`, context, {
-      method: "GET",
-    });
-  }
-
-  async createCampaignWorkflow(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.postWorkflow("/campaign", input, context);
-  }
-
-  async updateCampaignWorkflow(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.patchWorkflow("/campaign", input, context);
-  }
-
-  async createCampaignsJob(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.postWorkflow("/standardjob/campaign/bulk", input, context);
-  }
-
-  async updateCampaignsJob(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.patchWorkflow("/standardjob/campaign/bulk", input, context);
-  }
-
-  async createAdGroupWorkflow(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.postWorkflow("/adgroup", input, context);
-  }
-
-  async updateAdGroupWorkflow(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.patchWorkflow("/adgroup", input, context);
-  }
-
-  async createAdGroupsJob(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.postWorkflow("/standardjob/adgroup/bulk", input, context);
-  }
-
-  async updateAdGroupsJob(
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.patchWorkflow("/standardjob/adgroup/bulk", input, context);
   }
 
   /**
@@ -699,91 +498,142 @@ export class TtdService {
     });
   }
 
-  // ─── Bid List CRUD ────────────────────────────────────────────────
+  // ─── Bid Lists (GraphQL) ──────────────────────────────────────────
+  //
+  // All `/v3/bidlist*` REST endpoints are deprecated per TTD docs
+  // (docs/api/ttd-api-reference-part2.md:176-200). These methods route to
+  // the documented replacements: `bidList` query + `bidListCreate` /
+  // `bidListUpdate` / `bidListSet` / `bidListDelete` mutations.
+  //
+  // The query selection is intentionally narrow (`id name`) so callers can
+  // extend it via the `selection` parameter when they need richer payloads.
+
+  private async bidListGraphql(
+    body: { query: string; variables: Record<string, unknown> },
+    context?: RequestContext
+  ): Promise<unknown> {
+    const partnerId = this.httpClient.partnerId;
+    await this.rateLimiter.consume(`ttd:${partnerId}`);
+    return this.httpClient.fetchDirect(this.graphqlUrl, context, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  }
 
   async createBidList(
-    data: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<Record<string, unknown>> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch("/bidlist", context, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }) as Promise<Record<string, unknown>>;
+    input: Record<string, unknown>,
+    context?: RequestContext,
+    selection = "id name"
+  ): Promise<unknown> {
+    const query = `mutation BidListCreate($input: BidListCreateInput!) {
+      bidListCreate(input: $input) {
+        data { ${selection} }
+      }
+    }`;
+    return this.bidListGraphql({ query, variables: { input } }, context);
   }
 
-  async getBidList(bidListId: string, context?: RequestContext): Promise<Record<string, unknown>> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch(`/bidlist/${bidListId}`, context, {
-      method: "GET",
-    }) as Promise<Record<string, unknown>>;
+  async getBidList(
+    bidListId: string,
+    context?: RequestContext,
+    selection = "id name"
+  ): Promise<unknown> {
+    const query = `query BidListGet($id: ID!) {
+      bidList(id: $id) { ${selection} }
+    }`;
+    return this.bidListGraphql({ query, variables: { id: bidListId } }, context);
   }
 
+  /**
+   * `bidListUpdate` — add and/or remove specific lines without restating the entire list.
+   * Use this when you know the deltas (per TTD: "set lines to add and lines to remove").
+   */
   async updateBidList(
-    data: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<Record<string, unknown>> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch("/bidlist", context, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }) as Promise<Record<string, unknown>>;
+    input: Record<string, unknown>,
+    context?: RequestContext,
+    selection = "id name"
+  ): Promise<unknown> {
+    const query = `mutation BidListUpdate($input: BidListUpdateInput!) {
+      bidListUpdate(input: $input) {
+        data { ${selection} }
+      }
+    }`;
+    return this.bidListGraphql({ query, variables: { input } }, context);
   }
 
+  /**
+   * `bidListSet` — replace ALL lines with the supplied set (atomic full-replace).
+   */
+  async setBidList(
+    input: Record<string, unknown>,
+    context?: RequestContext,
+    selection = "id name"
+  ): Promise<unknown> {
+    const query = `mutation BidListSet($input: BidListSetInput!) {
+      bidListSet(input: $input) {
+        data { ${selection} }
+      }
+    }`;
+    return this.bidListGraphql({ query, variables: { input } }, context);
+  }
+
+  async deleteBidList(
+    input: Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<unknown> {
+    // BidListDeletePayload only exposes __typename — TTD returns the payload
+    // type as a 200-OK confirmation that the deletion was processed.
+    const query = `mutation BidListDelete($input: BidListDeleteInput!) {
+      bidListDelete(input: $input) {
+        __typename
+      }
+    }`;
+    return this.bidListGraphql({ query, variables: { input } }, context);
+  }
+
+  /**
+   * Batch get: fans out `bidList(id:)` queries in parallel.
+   * (TTD's GraphQL has no native multi-id bidList query.)
+   */
   async batchGetBidLists(
     bidListIds: string[],
-    context?: RequestContext
-  ): Promise<Record<string, unknown>[]> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch("/bidlist/batch/get", context, {
-      method: "POST",
-      body: JSON.stringify({ BidListIds: bidListIds }),
-    }) as Promise<Record<string, unknown>[]>;
+    context?: RequestContext,
+    selection = "id name"
+  ): Promise<Array<{ bidListId: string; success: boolean; data?: unknown; error?: string }>> {
+    const results = await executeBulkConcurrent(
+      bidListIds,
+      async (id) => this.getBidList(id, context, selection),
+      { logger: this.logger }
+    );
+    return results.map((r, i) => ({
+      bidListId: bidListIds[i],
+      success: r.success,
+      data: r.entity,
+      error: r.error,
+    }));
   }
 
+  /**
+   * Batch update: fans out `bidListUpdate` mutations in parallel.
+   * Each item must be a complete `BidListUpdateInput` (TTD's GraphQL has no
+   * native multi-input update for bid lists).
+   */
   async batchUpdateBidLists(
     items: Record<string, unknown>[],
-    context?: RequestContext
-  ): Promise<Record<string, unknown>[]> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-    return this.httpClient.fetch("/bidlist/batch", context, {
-      method: "PUT",
-      body: JSON.stringify(items),
-    }) as Promise<Record<string, unknown>[]>;
+    context?: RequestContext,
+    selection = "id name"
+  ): Promise<Array<{ index: number; success: boolean; data?: unknown; error?: string }>> {
+    const results = await executeBulkConcurrent(
+      items,
+      async (input) => this.updateBidList(input, context, selection),
+      { logger: this.logger }
+    );
+    return results.map((r, i) => ({
+      index: i,
+      success: r.success,
+      data: r.entity,
+      error: r.error,
+    }));
   }
 
-  // ─── Internal Helpers ─────────────────────────────────────────────
-
-  private async postWorkflow(
-    path: string,
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    return this.httpClient.fetch(path, context, {
-      method: "POST",
-      body: JSON.stringify(input),
-    });
-  }
-
-  private async patchWorkflow(
-    path: string,
-    input: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    const partnerId = this.httpClient.partnerId;
-    await this.rateLimiter.consume(`ttd:${partnerId}`);
-
-    return this.httpClient.fetch(path, context, {
-      method: "PATCH",
-      body: JSON.stringify(input),
-    });
-  }
 }

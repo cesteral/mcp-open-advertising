@@ -275,7 +275,7 @@ export const validateEntityTool = {
           Budget: { Amount: 50000, CurrencyCode: "USD" },
           StartDate: "2025-01-01T00:00:00Z",
           EndDate: "2025-03-31T23:59:59Z",
-          PacingMode: "PaceEvenly",
+          PacingMode: "PaceAhead",
         },
       },
     },

@@ -75,7 +75,7 @@ describe("getReportLogic", () => {
 
   it("builds report config with correct fields", async () => {
     await getReportLogic(
-      { reportName: "Daily Report", dateRange: "Yesterday" },
+      { reportName: "Daily Report", dateRange: "Yesterday", reportTemplateId: 16353, fileFormat: "CSV" },
       createMockContext(),
       createMockSdkContext()
     );
@@ -83,8 +83,12 @@ describe("getReportLogic", () => {
     expect(mockTtdReportingService.runReport).toHaveBeenCalledOnce();
     const [reportConfig] = mockTtdReportingService.runReport.mock.calls[0];
     expect(reportConfig.ReportScheduleName).toBe("Daily Report");
-    expect(reportConfig.ReportScheduleType).toBe("Once");
+    expect(reportConfig.ReportTemplateId).toBe(16353);
+    expect(reportConfig.ReportFileFormat).toBe("CSV");
+    expect(reportConfig.ReportFrequency).toBe("Once");
+    expect(reportConfig.ScheduleStartDate).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00$/);
     expect(reportConfig.ReportDateRange).toBe("Yesterday");
+    expect(reportConfig.ReportScheduleType).toBeUndefined();
   });
 
   it("includes optional dimensions and metrics", async () => {
@@ -92,6 +96,8 @@ describe("getReportLogic", () => {
       {
         reportName: "Detailed Report",
         dateRange: "Last30Days",
+        reportTemplateId: 16353,
+        fileFormat: "CSV",
         dimensions: ["AdvertiserId", "CampaignId"],
         metrics: ["Impressions", "Clicks", "TotalCost"],
       },
@@ -109,6 +115,8 @@ describe("getReportLogic", () => {
       {
         reportName: "Filtered Report",
         dateRange: "Last7Days",
+        reportTemplateId: 16353,
+        fileFormat: "CSV",
         advertiserIds: ["adv-001", "adv-002"],
       },
       createMockContext(),
@@ -124,6 +132,8 @@ describe("getReportLogic", () => {
       {
         reportName: "Custom Report",
         dateRange: "Custom",
+        reportTemplateId: 16353,
+        fileFormat: "CSV",
         additionalConfig: {
           ReportStartDateUtc: "2025-01-01",
           ReportEndDateUtc: "2025-01-31",
@@ -146,7 +156,7 @@ describe("getReportLogic", () => {
     });
 
     await expect(
-      getReportLogic({ reportName: "Test", dateRange: "Last7Days" }, createMockContext(), undefined)
+      getReportLogic({ reportName: "Test", dateRange: "Last7Days", reportTemplateId: 1, fileFormat: "CSV" }, createMockContext(), undefined)
     ).rejects.toThrow("No session ID available.");
   });
 

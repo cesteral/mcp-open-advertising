@@ -89,21 +89,14 @@ Inspect the output, then iterate with more specific calls.
 
 ---
 
-## Available Tools Summary (52 tools)
+## Available Tools Summary (43 tools)
+
+This server surfaces TTD's documented Platform API (REST + GraphQL) per TTD Foundations §1, §6. For single-record writes use \`ttd_create_entity\` / \`ttd_update_entity\` (REST). For >100-record batch writes use \`ttd_graphql_mutation_bulk\` (GraphQL bulk — TTD's documented bulk path).
 
 ### Context
 | Tool | Purpose | Read/Write |
 |------|---------|-----------|
 | \`ttd_get_context\` | Get partner IDs accessible with current credentials (cold-start) | Read |
-
-### Workflows Utility
-| Tool | Purpose | Read/Write |
-|------|---------|-----------|
-| \`ttd_rest_request\` | Execute generic Workflows REST requests | Read/Write |
-| \`ttd_get_job_status\` | Check a standard Workflows job status | Read |
-| \`ttd_get_first_party_data_job\` | Submit advertiser first-party data jobs | Write |
-| \`ttd_get_third_party_data_job\` | Submit partner third-party data jobs | Write |
-| \`ttd_get_campaign_version\` | Fetch a campaign's workflow version payload | Read |
 
 ### Core CRUD
 | Tool | Purpose | Read/Write |
@@ -114,14 +107,6 @@ Inspect the output, then iterate with more specific calls.
 | \`ttd_update_entity\` | Update an entity (PUT) | Write |
 | \`ttd_delete_entity\` | Delete an entity | Write |
 | \`ttd_validate_entity\` | Dry-run entity validation | Read/Write |
-
-### Workflow Entity Operations
-| Tool | Purpose | Read/Write |
-|------|---------|-----------|
-| \`ttd_create_campaigns\` | Create campaigns (mode=single sync, mode=batch async job) | Write |
-| \`ttd_update_campaigns\` | PATCH campaigns (mode=single sync, mode=batch async job) | Write |
-| \`ttd_create_ad_groups\` | Create ad groups (mode=single sync, mode=batch async job) | Write |
-| \`ttd_update_ad_groups\` | PATCH ad groups (mode=single sync, mode=batch async job) | Write |
 
 ### Reporting
 | Tool | Purpose | Read/Write |

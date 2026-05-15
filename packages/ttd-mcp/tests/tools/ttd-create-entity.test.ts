@@ -60,7 +60,8 @@ describe("createEntityLogic", () => {
         CampaignName: "Test Campaign",
         AdvertiserId: "adv-123",
       },
-      expect.any(Object)
+      expect.any(Object),
+      { strictMode: undefined }
     );
   });
 

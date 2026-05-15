@@ -91,7 +91,7 @@ Input: {
     "Budget": { "Amount": 50000, "CurrencyCode": "USD" },
     "StartDate": "2025-04-01T00:00:00",
     "EndDate": "2025-06-30T23:59:59",
-    "PacingMode": "PaceEvenly"
+    "PacingMode": "PaceAhead"
   }
 }
 \`\`\`
@@ -110,7 +110,7 @@ Input: {
       "BudgetSettings": {
         "Budget": { "Amount": 10000, "CurrencyCode": "USD" },
         "DailyBudget": { "Amount": 500, "CurrencyCode": "USD" },
-        "PacingMode": "PaceEvenly"
+        "PacingMode": "PaceAhead"
       },
       "BaseBidCPM": { "Amount": 5.00, "CurrencyCode": "USD" },
       "MaxBidCPM": { "Amount": 12.00, "CurrencyCode": "USD" }

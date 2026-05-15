@@ -126,68 +126,47 @@ describe("TtdService advanced methods", () => {
   });
 
   describe("archiveEntities", () => {
-    it("uses read-modify-write: GET entity, set Availability=Archived, PUT full entity", async () => {
-      // Single entity to keep assertion ordering simple
-      httpClient.fetch
-        .mockResolvedValueOnce({
-          CampaignId: "c1",
-          CampaignName: "Camp1",
-          Availability: "Available",
-        }) // GET
-        .mockResolvedValueOnce({}); // PUT result
+    it("partial PUT only: sends {idField, Availability:'Archived'} — no GET round-trip", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
 
       const result = await service.archiveEntities("campaign", ["c1"]);
 
       expect(result.results).toEqual([{ entityId: "c1", success: true }]);
 
-      // GET then PUT
-      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
-      expect(httpClient.fetch.mock.calls[0][0]).toBe("/campaign/c1");
-      expect(httpClient.fetch.mock.calls[0][2].method).toBe("GET");
-      expect(httpClient.fetch.mock.calls[1][0]).toBe("/campaign");
-      expect(httpClient.fetch.mock.calls[1][2].method).toBe("PUT");
-      const putBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
-      expect(putBody.Availability).toBe("Archived");
-      expect(putBody.CampaignName).toBe("Camp1"); // preserves other fields
+      // Single call — partial PUT, no GET (TTD deprecates fields silently;
+      // round-tripping the full entity causes 410 Gone).
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/campaign");
+      expect(httpClient.fetch.mock.calls[0][2].method).toBe("PUT");
+      const putBody = JSON.parse(httpClient.fetch.mock.calls[0][2].body);
+      expect(putBody).toEqual({ CampaignId: "c1", Availability: "Archived" });
     });
   });
 
   describe("bulkUpdateStatus", () => {
-    it("uses read-modify-write: GET entity, set Availability, PUT full entity", async () => {
-      // GET returns full entity
-      httpClient.fetch
-        .mockResolvedValueOnce({ AdGroupId: "ag1", AdGroupName: "AG1", Availability: "Available" })
-        .mockResolvedValueOnce({}); // PUT result
+    it("partial PUT only: sends {idField, Availability}", async () => {
+      httpClient.fetch.mockResolvedValueOnce({});
 
       const result = await service.bulkUpdateStatus("adGroup", ["ag1"], "Paused");
 
       expect(result.results).toEqual([{ entityId: "ag1", success: true }]);
-      // GET
-      expect(httpClient.fetch.mock.calls[0][0]).toBe("/adgroup/ag1");
-      expect(httpClient.fetch.mock.calls[0][2].method).toBe("GET");
-      // PUT (no ID in URL)
-      expect(httpClient.fetch.mock.calls[1][0]).toBe("/adgroup");
-      expect(httpClient.fetch.mock.calls[1][2].method).toBe("PUT");
-      const putBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
-      expect(putBody.Availability).toBe("Paused");
-      expect(putBody.AdGroupName).toBe("AG1"); // preserves other fields
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/adgroup");
+      expect(httpClient.fetch.mock.calls[0][2].method).toBe("PUT");
+      const putBody = JSON.parse(httpClient.fetch.mock.calls[0][2].body);
+      expect(putBody).toEqual({ AdGroupId: "ag1", Availability: "Paused" });
     });
   });
 
   describe("adjustBids", () => {
-    it("does read-modify-write for each adGroup", async () => {
-      httpClient.fetch
-        .mockResolvedValueOnce({
-          AdGroupId: "ag1",
-          RTBAttributes: { BaseBidCPM: { Amount: 1, CurrencyCode: "USD" } },
-        })
-        .mockResolvedValueOnce({
-          AdGroupId: "ag1",
-          RTBAttributes: {
-            BaseBidCPM: { Amount: 2.5, CurrencyCode: "USD" },
-            MaxBidCPM: { Amount: 5.0, CurrencyCode: "USD" },
-          },
-        });
+    it("partial PUT only: sends {AdGroupId, RTBAttributes:{BaseBidCPM, MaxBidCPM}} — no GET round-trip", async () => {
+      httpClient.fetch.mockResolvedValueOnce({
+        AdGroupId: "ag1",
+        RTBAttributes: {
+          BaseBidCPM: { Amount: 2.5, CurrencyCode: "USD" },
+          MaxBidCPM: { Amount: 5.0, CurrencyCode: "USD" },
+        },
+      });
 
       const result = await service.adjustBids([
         { adGroupId: "ag1", baseBidCpm: 2.5, maxBidCpm: 5.0 },
@@ -195,15 +174,19 @@ describe("TtdService advanced methods", () => {
 
       expect(result.results).toHaveLength(1);
       expect(result.results[0].success).toBe(true);
-      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
-      expect(httpClient.fetch.mock.calls[0][0]).toBe("/adgroup/ag1");
-      expect(httpClient.fetch.mock.calls[0][2].method).toBe("GET");
-      // TTD PUT: no ID in URL
-      expect(httpClient.fetch.mock.calls[1][0]).toBe("/adgroup");
-      expect(httpClient.fetch.mock.calls[1][2].method).toBe("PUT");
-      const putBody = JSON.parse(httpClient.fetch.mock.calls[1][2].body);
-      expect(putBody.RTBAttributes.BaseBidCPM.Amount).toBe(2.5);
-      expect(putBody.RTBAttributes.MaxBidCPM.Amount).toBe(5);
+      // Single call — partial PUT (round-tripping the full entity surfaces 410 Gone
+      // when TTD-deprecated fields like AdBrainHouseholdCrossDeviceEnabled come back from GET).
+      expect(httpClient.fetch).toHaveBeenCalledTimes(1);
+      expect(httpClient.fetch.mock.calls[0][0]).toBe("/adgroup");
+      expect(httpClient.fetch.mock.calls[0][2].method).toBe("PUT");
+      const putBody = JSON.parse(httpClient.fetch.mock.calls[0][2].body);
+      expect(putBody).toEqual({
+        AdGroupId: "ag1",
+        RTBAttributes: {
+          BaseBidCPM: { Amount: 2.5, CurrencyCode: "USD" },
+          MaxBidCPM: { Amount: 5.0, CurrencyCode: "USD" },
+        },
+      });
     });
   });
 
@@ -235,137 +218,4 @@ describe("TtdService advanced methods", () => {
     });
   });
 
-  describe("workflows endpoints", () => {
-    it("executes direct REST API requests", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ ok: true });
-
-      await service.restRequest({
-        methodType: "GET",
-        endpoint: "campaign/c1",
-      });
-
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/campaign/c1");
-      expect(options.method).toBe("GET");
-    });
-
-    it("passes dataBody as request body for direct REST requests", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ ok: true });
-
-      await service.restRequest({
-        methodType: "POST",
-        endpoint: "adgroup",
-        dataBody: JSON.stringify({ AdvertiserId: "adv1" }),
-      });
-
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/adgroup");
-      expect(options.method).toBe("POST");
-      expect(options.body).toBe(JSON.stringify({ AdvertiserId: "adv1" }));
-    });
-
-    it("fetches standard job status", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ JobId: 1, Status: "Complete" });
-
-      await service.getJobStatus(1);
-
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/standardjob/1/status");
-      expect(options.method).toBe("GET");
-    });
-
-    it("submits first-party data jobs", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ JobId: 42 });
-
-      await service.getFirstPartyDataJob({
-        advertiserId: "adv-1",
-        queryShape: "nodes { id name }",
-        callbackInput: {
-          callbackUrl: "https://example.com/callback",
-          callbackHeaders: { Authorization: "Bearer token" },
-        },
-      });
-
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/standardjob/firstpartydata");
-      expect(options.method).toBe("POST");
-      expect(JSON.parse(options.body)).toEqual({
-        advertiserId: "adv-1",
-        queryShape: "nodes { id name }",
-        callbackInput: {
-          callbackUrl: "https://example.com/callback",
-          callbackHeaders: { Authorization: "Bearer token" },
-        },
-      });
-    });
-
-    it("submits third-party data jobs", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ JobId: 43 });
-
-      await service.getThirdPartyDataJob({
-        partnerId: "partner-1",
-        queryShape: "nodes { id name }",
-      });
-
-      const [path] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/standardjob/thirdpartydata");
-    });
-
-    it("fetches campaign version", async () => {
-      httpClient.fetch.mockResolvedValueOnce({ CampaignVersion: 7 });
-
-      await service.getCampaignVersion("camp-1");
-
-      const [path, , options] = httpClient.fetch.mock.calls[0];
-      expect(path).toBe("/campaign/camp-1/version");
-      expect(options.method).toBe("GET");
-    });
-
-    it("uses workflow POST/PATCH endpoints for campaign and ad group workflows", async () => {
-      httpClient.fetch
-        .mockResolvedValueOnce({ CampaignId: "camp-1" })
-        .mockResolvedValueOnce({ CampaignId: "camp-1" })
-        .mockResolvedValueOnce({ AdGroupId: "ag-1" })
-        .mockResolvedValueOnce({ AdGroupId: "ag-1" });
-
-      await service.createCampaignWorkflow({ primaryInput: { name: "Campaign" } });
-      await service.updateCampaignWorkflow({ id: "camp-1", primaryInput: { name: "Updated" } });
-      await service.createAdGroupWorkflow({
-        campaignId: "camp-1",
-        primaryInput: { name: "Ad Group" },
-      });
-      await service.updateAdGroupWorkflow({ id: "ag-1", primaryInput: { name: "Updated AG" } });
-
-      expect(httpClient.fetch.mock.calls[0][0]).toBe("/campaign");
-      expect(httpClient.fetch.mock.calls[0][2].method).toBe("POST");
-      expect(httpClient.fetch.mock.calls[1][0]).toBe("/campaign");
-      expect(httpClient.fetch.mock.calls[1][2].method).toBe("PATCH");
-      expect(httpClient.fetch.mock.calls[2][0]).toBe("/adgroup");
-      expect(httpClient.fetch.mock.calls[2][2].method).toBe("POST");
-      expect(httpClient.fetch.mock.calls[3][0]).toBe("/adgroup");
-      expect(httpClient.fetch.mock.calls[3][2].method).toBe("PATCH");
-    });
-
-    it("uses workflow standard-job bulk endpoints for campaign and ad group jobs", async () => {
-      httpClient.fetch
-        .mockResolvedValueOnce({ JobId: 10 })
-        .mockResolvedValueOnce({ JobId: 11 })
-        .mockResolvedValueOnce({ JobId: 12 })
-        .mockResolvedValueOnce({ JobId: 13 });
-
-      await service.createCampaignsJob({ input: [] });
-      await service.updateCampaignsJob({ input: [] });
-      await service.createAdGroupsJob({ input: [] });
-      await service.updateAdGroupsJob({ input: [] });
-
-      expect(httpClient.fetch.mock.calls[0][0]).toBe("/standardjob/campaign/bulk");
-      expect(httpClient.fetch.mock.calls[0][2].method).toBe("POST");
-      expect(httpClient.fetch.mock.calls[1][0]).toBe("/standardjob/campaign/bulk");
-      expect(httpClient.fetch.mock.calls[1][2].method).toBe("PATCH");
-      expect(httpClient.fetch.mock.calls[2][0]).toBe("/standardjob/adgroup/bulk");
-      expect(httpClient.fetch.mock.calls[2][2].method).toBe("POST");
-      expect(httpClient.fetch.mock.calls[3][0]).toBe("/standardjob/adgroup/bulk");
-      expect(httpClient.fetch.mock.calls[3][2].method).toBe("PATCH");
-    });
-  });
 });

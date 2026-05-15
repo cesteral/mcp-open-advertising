@@ -8,15 +8,19 @@ import type { SdkContext } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_bulk_manage_bid_lists";
 const TOOL_TITLE = "TTD Bulk Manage Bid Lists";
-const TOOL_DESCRIPTION = `Batch get or batch update multiple TTD bid lists in a single call.
+const TOOL_DESCRIPTION = `Batch get or batch update multiple TTD bid lists via GraphQL.
+
+TTD's GraphQL has no native multi-id bid-list query or multi-input update mutation — this tool fans out individual \`bidList(id:)\` queries and \`bidListUpdate(input:)\` mutations in parallel (concurrency=5) and aggregates the per-item results.
 
 ### Operations
 - **batch_get** — Retrieve up to 50 bid lists by their IDs
-- **batch_update** — Update up to 50 bid lists; each item in \`items\` must include a \`BidListId\` field
+- **batch_update** — Update up to 50 bid lists; each item must be a complete \`BidListUpdateInput\`
 
 ### Notes
-- For **batch_update**, each item in the array must include \`BidListId\` in the payload
-- To manage a single bid list (create/get/update), use \`ttd_manage_bid_list\``;
+- TTD's \`/v3/bidlist/batch*\` REST endpoints are deprecated; this tool uses GraphQL.
+- Per-item failures are surfaced in the response without aborting other items.
+- Optional \`selection\` lets you override the GraphQL selection set (default: \`"id name"\`).
+- For single bid list operations including create/set/delete, use \`ttd_manage_bid_list\`.`;
 
 export const BidListBulkInputSchema = z
   .object({
@@ -32,33 +36,29 @@ export const BidListBulkInputSchema = z
       .min(1)
       .max(50)
       .optional()
-      .describe("Required for batch_update; each must include BidListId (max 50)"),
+      .describe("Required for batch_update; each must be a complete BidListUpdateInput (max 50)"),
+    selection: z
+      .string()
+      .optional()
+      .describe('GraphQL selection set on returned BidList. Default: "id name"'),
   })
-  .refine(
-    (val) => {
-      if (val.operation === "batch_get") {
-        return Array.isArray(val.bidListIds) && val.bidListIds.length > 0;
-      }
-      return true;
-    },
-    { message: "bidListIds is required for batch_get", path: ["bidListIds"] }
-  )
-  .refine(
-    (val) => {
-      if (val.operation === "batch_update") {
-        return Array.isArray(val.items) && val.items.length > 0;
-      }
-      return true;
-    },
-    { message: "items is required for batch_update", path: ["items"] }
-  )
-  .describe("Parameters for batch get or update of TTD bid lists");
+  .refine((val) => (val.operation === "batch_get" ? Array.isArray(val.bidListIds) && val.bidListIds.length > 0 : true), {
+    message: "bidListIds is required for batch_get",
+    path: ["bidListIds"],
+  })
+  .refine((val) => (val.operation === "batch_update" ? Array.isArray(val.items) && val.items.length > 0 : true), {
+    message: "items is required for batch_update",
+    path: ["items"],
+  })
+  .describe("Parameters for bulk bid list operations via GraphQL");
 
 export const BidListBulkOutputSchema = z
   .object({
-    operation: z.string().describe("The operation that was performed"),
-    count: z.number().describe("Number of bid lists in the result"),
-    results: z.array(z.record(z.any())).describe("Array of bid list objects returned by the API"),
+    operation: z.string(),
+    totalItems: z.number(),
+    succeeded: z.number(),
+    failed: z.number(),
+    results: z.array(z.record(z.any())),
     timestamp: z.string().datetime(),
   })
   .describe("Bulk bid list operation result");
@@ -72,41 +72,45 @@ export async function bidListBulkLogic(
   sdkContext?: SdkContext
 ): Promise<BidListBulkOutput> {
   const { ttdService } = resolveSessionServices(sdkContext);
+  const selection = input.selection ?? "id name";
+  const ts = new Date().toISOString();
 
-  let results: Record<string, unknown>[];
-
-  switch (input.operation) {
-    case "batch_get": {
-      results = await ttdService.batchGetBidLists(input.bidListIds!, context);
-      return {
-        operation: "batch_get",
-        count: results.length,
-        results,
-        timestamp: new Date().toISOString(),
-      };
-    }
-    case "batch_update": {
-      results = await ttdService.batchUpdateBidLists(input.items!, context);
-      return {
-        operation: "batch_update",
-        count: results.length,
-        results,
-        timestamp: new Date().toISOString(),
-      };
-    }
+  if (input.operation === "batch_get") {
+    const results = await ttdService.batchGetBidLists(input.bidListIds!, context, selection);
+    return {
+      operation: "batch_get",
+      totalItems: results.length,
+      succeeded: results.filter((r) => r.success).length,
+      failed: results.filter((r) => !r.success).length,
+      results: results as unknown as Record<string, unknown>[],
+      timestamp: ts,
+    };
   }
+
+  const results = await ttdService.batchUpdateBidLists(input.items!, context, selection);
+  return {
+    operation: "batch_update",
+    totalItems: results.length,
+    succeeded: results.filter((r) => r.success).length,
+    failed: results.filter((r) => !r.success).length,
+    results: results as unknown as Record<string, unknown>[],
+    timestamp: ts,
+  };
 }
 
 export function bidListBulkResponseFormatter(result: BidListBulkOutput): McpTextContent[] {
-  const operationLabel = result.operation === "batch_get" ? "Batch get" : "Batch update";
-  const lines: string[] = [
-    `${operationLabel} successful. ${result.count} bid list(s) returned.`,
-    "",
-    `Results: ${JSON.stringify(result.results, null, 2)}`,
-    `Timestamp: ${result.timestamp}`,
+  const label = result.operation === "batch_get" ? "Batch get" : "Batch update";
+  return [
+    {
+      type: "text" as const,
+      text: [
+        `${label} via GraphQL: ${result.succeeded}/${result.totalItems} succeeded, ${result.failed} failed`,
+        "",
+        `Results: ${JSON.stringify(result.results, null, 2)}`,
+        `Timestamp: ${result.timestamp}`,
+      ].join("\n"),
+    },
   ];
-
-  return [{ type: "text" as const, text: lines.join("\n") }];
 }
 
 export const bulkManageBidListsTool = {
@@ -123,30 +127,25 @@ export const bulkManageBidListsTool = {
   },
   inputExamples: [
     {
-      label: "Batch get multiple bid lists by IDs",
+      label: "Batch get bid lists by IDs",
       input: {
         operation: "batch_get",
         bidListIds: ["bl-abc123", "bl-def456", "bl-ghi789"],
+        selection: "id name adjustmentType",
       },
     },
     {
-      label: "Batch update bid list names",
+      label: "Batch incremental updates",
       input: {
         operation: "batch_update",
         items: [
           {
-            BidListId: "bl-abc123",
-            AdvertiserId: "adv123abc",
-            Name: "Premium Domains - Q2",
-            BidListType: "BidAdjustmentByDomain",
-            Bids: [{ Domain: "nytimes.com", Adjustment: 1.5 }],
+            id: "bl-abc123",
+            linesToAdd: [{ dimensionValues: [{ dimension: "Site", value: "nytimes.com" }], adjustment: 1.5 }],
           },
           {
-            BidListId: "bl-def456",
-            AdvertiserId: "adv123abc",
-            Name: "Blocklist - Sensitive Content",
-            BidListType: "BlockDomain",
-            Bids: [{ Domain: "example-bad.com", Adjustment: 0 }],
+            id: "bl-def456",
+            linesToRemove: [{ dimensionValues: [{ dimension: "Site", value: "example-bad.com" }] }],
           },
         ],
       },

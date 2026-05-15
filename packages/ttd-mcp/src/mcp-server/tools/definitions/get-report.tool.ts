@@ -19,36 +19,47 @@ export const GetReportInputSchema = z
     reportName: z.string().describe("Name for the report"),
     dateRange: z
       .enum([
+        "Yesterday",
         "Last7Days",
         "Last14Days",
         "Last30Days",
-        "Yesterday",
-        "Custom",
+        "LastXDays",
         "MonthToDate",
         "LastMonth",
         "QuarterToDate",
-        "Lifetime",
+        "LastQuarter",
+        "YearToDate",
+        "Custom",
       ])
-      .describe("Date range for the report"),
+      .describe("Date range for the report (per TTD MyReports reportschedule/facets)"),
+    reportTemplateId: z
+      .number()
+      .describe(
+        "TTD report template ID — REQUIRED by TTD. Find IDs via ttd_list_report_templates or the TTD UI."
+      ),
+    fileFormat: z
+      .enum(["CSV", "TSV", "ExcelPivot"])
+      .optional()
+      .default("CSV")
+      .describe(
+        "Report file format. Must match the template's format. Use ExcelPivot for Excel-shaped templates. CSV-only output is parseable by ttd_download_report."
+      ),
+    scheduleStartDate: z
+      .string()
+      .optional()
+      .describe(
+        "ISO date or datetime when the schedule should first run. Defaults to today UTC at 00:00."
+      ),
+    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
     dimensions: z
       .array(z.string())
       .optional()
-      .describe("Report dimensions (e.g., ['AdvertiserId', 'CampaignId'])"),
-    metrics: z
-      .array(z.string())
-      .optional()
-      .describe("Report metrics (e.g., ['Impressions', 'Clicks', 'TotalCost'])"),
-    advertiserIds: z.array(z.string()).optional().describe("Filter by advertiser IDs"),
-    reportTemplateId: z
-      .number()
-      .optional()
-      .describe(
-        "TTD report template ID. Find IDs via ttd_list_report_templates or the TTD UI. Required by the TTD API for report schedule creation."
-      ),
+      .describe("(legacy/ignored when ReportTemplateId is set)"),
+    metrics: z.array(z.string()).optional().describe("(legacy/ignored when ReportTemplateId is set)"),
     additionalConfig: z
       .record(z.any())
       .optional()
-      .describe("Additional report configuration fields"),
+      .describe("Additional report configuration fields (merged last)"),
   })
   .describe("Parameters for generating a TTD report");
 
@@ -71,17 +82,20 @@ export async function getReportLogic(
 ): Promise<GetReportOutput> {
   const { ttdReportingService } = resolveSessionServices(sdkContext);
 
+  const startDate =
+    input.scheduleStartDate ?? new Date().toISOString().slice(0, 10) + "T00:00:00";
+
   const reportConfig = {
     ReportScheduleName: input.reportName,
-    ReportScheduleType: "Once" as const,
+    ReportTemplateId: input.reportTemplateId,
+    ReportFileFormat: input.fileFormat,
     ReportDateRange: input.dateRange,
     ReportFrequency: "Once" as const,
+    ScheduleStartDate: startDate,
     TimeZone: "UTC",
     ReportDateFormat: "Sortable",
     ReportNumericFormat: "US",
-    ReportFileFormat: "CSV",
     IncludeHeaders: true,
-    ...(input.reportTemplateId && { ReportTemplateId: input.reportTemplateId }),
     ...(input.dimensions && { ReportDimensions: input.dimensions }),
     ...(input.metrics && { ReportMetrics: input.metrics }),
     ...(input.advertiserIds && { AdvertiserFilters: input.advertiserIds }),
@@ -128,32 +142,23 @@ export const getReportTool = {
   },
   inputExamples: [
     {
-      label: "Campaign performance report for last 7 days",
+      label: "Campaign performance report for last 7 days (CSV template)",
       input: {
         reportName: "Campaign Performance - Last 7 Days",
         dateRange: "Last7Days",
-        dimensions: ["AdvertiserId", "CampaignId", "CampaignName"],
-        metrics: ["Impressions", "Clicks", "TotalCost", "CTR", "CPM"],
+        reportTemplateId: 16353,
+        fileFormat: "ExcelPivot",
         advertiserIds: ["adv123abc"],
       },
     },
     {
-      label: "Conversion report for last 30 days",
+      label: "Yesterday report with explicit CSV template",
       input: {
-        reportName: "Conversion Report - Last 30 Days",
-        dateRange: "Last30Days",
-        dimensions: ["AdvertiserId", "CampaignId", "AdGroupId", "ConversionTrackerName"],
-        metrics: ["Impressions", "Clicks", "TotalConversions", "TotalCost", "CPA"],
-        advertiserIds: ["adv123abc", "adv456def"],
-      },
-    },
-    {
-      label: "Month-to-date ad group pacing report",
-      input: {
-        reportName: "Ad Group Pacing MTD",
-        dateRange: "MonthToDate",
-        dimensions: ["CampaignId", "AdGroupId", "AdGroupName"],
-        metrics: ["Impressions", "TotalCost", "AdvertiserCost"],
+        reportName: "Daily Summary",
+        dateRange: "Yesterday",
+        reportTemplateId: 12345,
+        fileFormat: "CSV",
+        advertiserIds: ["adv123abc"],
       },
     },
   ],
