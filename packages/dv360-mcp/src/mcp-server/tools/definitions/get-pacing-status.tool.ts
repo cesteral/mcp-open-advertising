@@ -7,9 +7,10 @@ import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, ToolDefinition } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_get_pacing_status";
-const TOOL_TITLE = "Get Pacing Status";
+const TOOL_TITLE = "Calculate Campaign Pacing (Client-Side)";
 const TOOL_DESCRIPTION =
-  "Calculate real-time pacing status for a DV360 campaign (actual vs expected delivery). Requires budget, spend to date, and flight dates as inputs.";
+  "Client-side pacing calculator — does NOT call the DV360 API. Computes actual vs expected delivery given caller-supplied budget, spend-to-date, and flight dates. " +
+  "To populate spend, first call `dbm_get_performance_metrics` (Bid Manager API); to populate budget and flight dates, first call `dv360_get_entity` for the campaign.";
 
 /**
  * Input schema

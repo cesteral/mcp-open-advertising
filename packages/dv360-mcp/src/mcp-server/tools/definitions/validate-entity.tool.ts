@@ -19,11 +19,13 @@ function generateToolDescription(): string {
   const entityTypes = getSupportedEntityTypesDynamic().join(", ");
   return `Client-side validation of a DV360 entity payload against generated schemas. No API call is made.
 
+**Required params:** \`entityType\`, \`mode\`, \`data\`. \`mode=create\` also requires \`advertiserId\`; \`mode=update\` also requires \`updateMask\`.
+
 **Supported entity types:** ${entityTypes}
 
 **Modes:**
-- **create**: Validates required fields are present
-- **update**: Validates updateMask fields exist in data
+- **create**: Validates required fields are present (needs \`advertiserId\` for context)
+- **update**: Validates updateMask fields exist in data (needs \`updateMask\`, e.g. \`"entityStatus,displayName"\`)
 
 Use \`entity-schema://{entityType}\` to inspect the full schema before constructing payloads.`;
 }

@@ -109,13 +109,17 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     supportsFilter: true,
   },
   inventorySource: {
+    // DV360 requires partnerId OR advertiserId as a top-level query param;
+    // we validate that at least one is provided in the list-entities refine.
     apiPathTemplate: "/inventorySources",
     parentResourceIds: [],
+    queryParamIds: ["partnerId", "advertiserId"],
     supportsFilter: true,
   },
   inventorySourceGroup: {
     apiPathTemplate: "/inventorySourceGroups",
     parentResourceIds: [],
+    queryParamIds: ["partnerId", "advertiserId"],
     supportsFilter: true,
   },
   locationList: {

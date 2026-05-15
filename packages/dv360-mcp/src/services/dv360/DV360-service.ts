@@ -911,9 +911,11 @@ export class DV360Service {
           context
         )) as Record<string, unknown>;
 
-        // Fetch targeting assigned to this line item
+        // Fetch targeting assigned to this line item.
+        // The v4 method is on the lineItems collection, not the resource:
+        // GET /advertisers/{advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds={id}
         const targeting = (await this.httpClient.fetch(
-          `/advertisers/${advertiserId}/lineItems/${lineItemId}:bulkListAssignedTargetingOptions`,
+          `/advertisers/${advertiserId}/lineItems:bulkListAssignedTargetingOptions?lineItemIds=${encodeURIComponent(lineItemId)}`,
           context
         )) as Record<string, unknown>;
 

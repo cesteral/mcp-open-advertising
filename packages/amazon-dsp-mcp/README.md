@@ -29,13 +29,27 @@ The `amazon_dsp_get_report`, `amazon_dsp_get_report_breakdowns`, and `amazon_dsp
 
 ## Auth And Headers
 
-All requests use:
+All upstream requests carry:
 
 - `Authorization: Bearer <access token>`
 - `Amazon-Advertising-API-Scope: <profile id>`
-- `Amazon-Advertising-API-ClientId: <client id>` when available
+- `Amazon-Advertising-API-ClientId: <client id>`
 
-The MCP server does not inject profile IDs into request bodies. Scope is conveyed through Amazon’s required headers.
+The MCP server does not inject profile IDs into request bodies — scope is conveyed through Amazon's required headers.
+
+### Auth flows
+
+Amazon access tokens expire after **60 minutes** (hard limit, per [Amazon Ads API docs](https://advertising.amazon.com/API/docs/en-us/guides/get-started/retrieve-access-token)). Refresh tokens **do not expire** unless revoked. The server supports two flows:
+
+**Flow A — LwA refresh-token (recommended).** Provide `AMAZON_DSP_APP_ID` + `AMAZON_DSP_APP_SECRET` + `AMAZON_DSP_REFRESH_TOKEN` + `AMAZON_DSP_PROFILE_ID`. The adapter mints access tokens via `POST https://api.amazon.com/auth/o2/token` and auto-refreshes them before the 60-minute expiry. In HTTP mode, pass these as `X-AmazonDsp-App-Id` / `-App-Secret` / `-Refresh-Token` headers plus `Amazon-Advertising-API-Scope`.
+
+**Flow B — static access token (CI / short sessions).** Provide `AMAZON_DSP_ACCESS_TOKEN` + `AMAZON_DSP_PROFILE_ID` (+ optional `AMAZON_DSP_CLIENT_ID`). Server starts returning 401 after 60 minutes — re-mint manually. In HTTP mode, use a standard `Authorization: Bearer …` header.
+
+Stdio prefers Flow A when its three env vars are set, falling back to Flow B.
+
+### Producing a refresh token
+
+The fastest path is Amazon's [Postman collection](https://github.com/amzn/ads-advanced-tools-docs) — its auth scripts walk through the OAuth grant flow, exchange the auth code, and store the resulting refresh token in environment variables. Alternatively follow steps 1–2 of the [official getting-started guide](https://advertising.amazon.com/API/docs/en-us/guides/get-started/overview) with `curl`.
 
 ## Notes
 

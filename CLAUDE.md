@@ -14,7 +14,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | --- | ---------------- | ---- | ---------------------------------- | ------------------------------------------------------------------------------------------------ | ----- |
 | 1   | `dbm-mcp`        | 3001 | Bid Manager API v2                 | _(reporting only)_                                                                               | 6     |
 | 2   | `dv360-mcp`      | 3002 | DV360 API v4                       | advertiser, campaign, insertionOrder, lineItem, + more                                           | 26    |
-| 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 52    |
+| 3   | `ttd-mcp`        | 3003 | TTD REST + GraphQL API             | advertiser, campaign, adGroup, creative, conversionTracker, bidList, seed                        | 43    |
 | 4   | `gads-mcp`       | 3004 | Google Ads REST API v23            | campaign, adGroup, ad, keyword, campaignBudget, asset                                            | 15    |
 | 5   | `meta-mcp`       | 3005 | Meta Marketing API v25.0           | campaign, adSet, ad, adCreative, customAudience                                                  | 27    |
 | 6   | `linkedin-mcp`   | 3006 | LinkedIn Marketing API v2          | adAccount, campaignGroup, campaign, creative, conversionRule                                     | 21    |
@@ -197,7 +197,11 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `dv360_upload_image`                    | Upload image from URL                 | `advertiserId`, `mediaUrl`, `name?`       |
 | `dv360_upload_video`                    | Upload video from URL                 | `advertiserId`, `mediaUrl`, `title?`      |
 
-### ttd-mcp — 52 Tools (Unique: Workflows API, GraphQL, Bid Lists, Seeds)
+### ttd-mcp — 43 Tools (REST + GraphQL only, per TTD Foundations)
+
+**Design note:** This server surfaces TTD's documented Platform API only — REST (`/v3/...`) and GraphQL (`/graphql`). Per TTD Foundations §1 "Our Users and APIs", TTD's three public API suites are **Data API, Platform API (REST + GraphQL), and PDP API** — there is no "Workflows API" suite. The Speakeasy `/workflows/...` SDK endpoint (Python/Go/Java only, no TS) is a language-specific convenience layer wrapping the same Platform API; we expose those operations directly. Per Foundations §6, REST covers the full platform except Kokai-only and bulk operations, which go via GraphQL — both surfaces are first-class and coexisting.
+
+**Sandbox:** Set `TTD_USE_SANDBOX=true` (env or `.env.local`) to route REST + GraphQL traffic at TTD's Partner Sandbox (`ext-api.sb.thetradedesk.com`). Sandbox data is a weekly clone of production — same partner/advertiser/brand IDs, same API token, **no real spend**. Use this for mutation testing (Phase 3). Per Foundations §5: refreshes Thursday night, ready Friday morning North America. Note: audience uploads (Data API) and `/v3/study` endpoints are not supported in sandbox.
 
 **CRUD (5):** `ttd_get_entity`, `ttd_list_entities`, `ttd_create_entity`, `ttd_update_entity`, `ttd_delete_entity`
 
@@ -227,21 +231,7 @@ Standard CRUD/bulk/targeting/validation/preview tools plus:
 | `ttd_list_report_templates`    | List template headers                                         |
 | `ttd_create_template_schedule` | Create a schedule from a template ID                          |
 
-**Workflows API (9):** TTD's newer workflow-aware payload API (preferred over REST for campaign/ad group writes). Each create/update tool accepts `mode: "single"` (sync) or `mode: "batch"` (async Workflows job).
-
-| Tool                           | Description                                                |
-| ------------------------------ | ---------------------------------------------------------- |
-| `ttd_create_campaigns`         | Create one (single) or many (batch job) campaigns          |
-| `ttd_update_campaigns`         | PATCH one (single) or many (batch job) campaigns           |
-| `ttd_create_ad_groups`         | Create one (single) or many (batch job) ad groups          |
-| `ttd_update_ad_groups`         | PATCH one (single) or many (batch job) ad groups           |
-| `ttd_get_campaign_version`     | Get a campaign's Workflows version payload                 |
-| `ttd_get_first_party_data_job` | Async job: retrieve first-party data for an advertiser     |
-| `ttd_get_third_party_data_job` | Async job: retrieve third-party data for a partner         |
-| `ttd_get_job_status`           | Poll status of a Workflows job                             |
-| `ttd_rest_request`             | Escape hatch: arbitrary REST request through Workflows API |
-
-**GraphQL (5):** `ttd_graphql_query`, `ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job` (status), `ttd_graphql_cancel_bulk_job`
+**GraphQL (5):** `ttd_graphql_query`, `ttd_graphql_query_bulk`, `ttd_graphql_mutation_bulk`, `ttd_graphql_bulk_job` (status), `ttd_graphql_cancel_bulk_job`. **Use `ttd_graphql_mutation_bulk` for >100-record campaign/ad group creates and updates** — per TTD Foundations §6, bulk operations are only available through GraphQL.
 
 **Bid Lists & Seeds (3):** `ttd_manage_bid_list` (create/get/update single), `ttd_bulk_manage_bid_lists` (batch up to 50), `ttd_manage_seed` (audience seeds via GraphQL)
 
@@ -305,12 +295,13 @@ Standard CRUD/bulk/reporting tools plus:
 
 ### Server-Specific Notes
 
+- **dv360-mcp** (26 tools): `dv360_delete_entity` performs a **hard delete** on most entities (verified live for `campaign`: subsequent `get_entity` returns 404). Use `dv360_update_entity` with `entityStatus=ENTITY_STATUS_ARCHIVED` for reversible removal — archiving is itself irreversible (cannot unarchive). `inventorySource` / `inventorySourceGroup` list calls require either `partnerId` or `advertiserId` (validated client-side).
 - **linkedin-mcp** (21 tools): URN-based entity IDs, `LinkedIn-Version: 202409` header, analytics via `/v2/adAnalytics` with pivot breakdowns
 - **tiktok-mcp** (23 tools): `X-TikTok-Advertiser-Id` header in HTTP mode, image/video upload
 - **cm360-mcp** (21 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting; scheduling via `create/list/delete_report_schedule`
 - **pinterest-mcp** (22 tools): cursor-based pagination via `bookmark` tokens. Video upload via `/v5/media`; image creatives reference URLs directly (Pinterest's `/v5/media` endpoint only supports `media_type="video"`)
 - **snapchat-mcp** (22 tools): Ad Squads (adGroups), cursor-based pagination
-- **amazon-dsp-mcp** (19 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status). Reporting v3 is scoped by `accountId` (DSP entity ID) in the URL path, distinct from the profile header.
+- **amazon-dsp-mcp** (19 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status). Reporting v3 is scoped by `accountId` (DSP entity ID) in the URL path, distinct from the profile header. **Stdio auth prefers the LwA refresh-token flow** (`AMAZON_DSP_APP_ID` + `_APP_SECRET` + `_REFRESH_TOKEN` + `_PROFILE_ID`) — auto-refreshes the 60-min access token. Falls back to static `AMAZON_DSP_ACCESS_TOKEN` for short CI runs.
 
 ### How the Servers Work Together
 

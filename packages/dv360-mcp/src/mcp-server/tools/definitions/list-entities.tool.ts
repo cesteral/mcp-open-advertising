@@ -55,31 +55,31 @@ export const ListEntitiesInputSchema = z
     pageToken: z.string().optional().describe("Page token for pagination"),
     pageSize: z.number().min(1).max(100).optional().describe("Number of entities to return"),
   })
-  .refine(
-    (data) => {
-      // Get entity configuration to check required parent IDs
-      const config = getEntityConfigDynamic(data.entityType);
+  .superRefine((data, ctx) => {
+    const config = getEntityConfigDynamic(data.entityType);
 
-      // Validate all required parent IDs are present
-      for (const requiredParentId of config.parentIds) {
-        if (!data[requiredParentId as keyof typeof data]) {
-          return false;
-        }
+    // All required parent IDs (e.g. advertiserId for campaigns) must be present.
+    for (const requiredParentId of config.parentIds) {
+      if (!data[requiredParentId as keyof typeof data]) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Missing required parent ID '${requiredParentId}' for entity type '${data.entityType}'. Required: ${config.parentIds.join(", ")}`,
+          path: [requiredParentId],
+        });
       }
-
-      return true;
-    },
-    (data) => {
-      // Generate helpful error message with specific missing IDs
-      const config = getEntityConfigDynamic(data.entityType);
-      const missingIds = config.parentIds.filter((id) => !data[id as keyof typeof data]);
-
-      return {
-        message: `Missing required parent ID(s) for entity type '${data.entityType}': ${missingIds.join(", ")}. Required: ${config.parentIds.join(", ")}`,
-        path: missingIds,
-      };
     }
-  )
+
+    // Entities like inventorySource accept partnerId OR advertiserId as a query
+    // param; the DV360 API rejects calls without either, so require at least one.
+    const scopedQueryParamEntities = new Set(["inventorySource", "inventorySourceGroup"]);
+    if (scopedQueryParamEntities.has(data.entityType) && !data.partnerId && !data.advertiserId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Listing '${data.entityType}' requires either partnerId or advertiserId as a query parameter`,
+        path: ["partnerId"],
+      });
+    }
+  })
   .describe("Parameters for listing DV360 entities");
 
 /**
