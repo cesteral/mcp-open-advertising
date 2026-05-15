@@ -14,10 +14,12 @@ const TOOL_TITLE = "Manage Custom Bidding Script";
 const TOOL_DESCRIPTION = `Upload and manage scripts for SCRIPT_BASED custom bidding algorithms (Tier 2 workflow tool).
 
 **Actions:**
-- upload: Upload a new script version to the algorithm
+- upload: Upload a new script version to the algorithm (currently broken — see below)
 - list: List all scripts for an algorithm
 - get: Get details of a specific script
 - getActive: Get the currently active script
+
+**Required scope:** Pass \`advertiserId\` (algorithm is advertiser-owned) OR \`partnerId\` (algorithm is partner-owned). DV360 returns 403 'permission for partner 0' otherwise.
 
 **Script States:**
 - PENDING: Script is being processed by backend
@@ -27,7 +29,8 @@ const TOOL_DESCRIPTION = `Upload and manage scripts for SCRIPT_BASED custom bidd
 **Important Notes:**
 - Only one script can be active at a time per algorithm
 - New uploads automatically become active after ACCEPTED
-- Scripts cannot be deleted, only replaced with new versions`;
+- Scripts cannot be deleted, only replaced with new versions
+- **Known limitation:** the \`upload\` action does not currently work. The DV360 v4 upload protocol is a two-step flow (\`GET :uploadScript\` → returns a Google Cloud Storage resourceName → upload bytes via separate PUT to that URI → \`scripts.create\`), and the simple POST currently used returns 404. Tracking issue: revisit before production use.`;
 
 /**
  * Input schema for manage custom bidding script tool
@@ -43,6 +46,17 @@ export const ManageCustomBiddingScriptInputSchema = z
       .describe("Action to perform: upload, list, get, or getActive"),
     scriptContent: z.string().optional().describe("Script content (required for upload action)"),
     customBiddingScriptId: z.string().optional().describe("Script ID (required for get action)"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe(
+        "Advertiser scope (required if the algorithm is advertiser-owned). " +
+          "DV360 returns 403 'permission for partner 0' when neither this nor partnerId is supplied."
+      ),
+    partnerId: z
+      .string()
+      .optional()
+      .describe("Partner scope (required if the algorithm is partner-owned). See advertiserId."),
   })
   .describe("Parameters for managing custom bidding scripts");
 
@@ -111,6 +125,16 @@ export async function manageCustomBiddingScriptLogic(
     currentValue: input.customBiddingAlgorithmId,
   });
 
+  // DV360's scripts sub-resources require the algorithm's owner scope as a
+  // query param. Without it Google defaults to partner 0 and returns 403.
+  if (!input.advertiserId && !input.partnerId) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "Either advertiserId or partnerId is required to scope script operations to the algorithm's owner."
+    );
+  }
+  const scope = { advertiserId: input.advertiserId, partnerId: input.partnerId };
+
   const result: ManageCustomBiddingScriptOutput = {
     action: input.action,
     customBiddingAlgorithmId: algorithmId,
@@ -130,6 +154,7 @@ export async function manageCustomBiddingScriptLogic(
       const uploadResult = await dv360Service.uploadCustomBiddingScript(
         algorithmId,
         input.scriptContent,
+        scope,
         context
       );
 
@@ -137,6 +162,7 @@ export async function manageCustomBiddingScriptLogic(
       const script = await dv360Service.createCustomBiddingScript(
         algorithmId,
         uploadResult.resourceName,
+        scope,
         context
       );
 
@@ -160,6 +186,7 @@ export async function manageCustomBiddingScriptLogic(
         algorithmId,
         undefined,
         undefined,
+        scope,
         context
       );
 
@@ -182,7 +209,12 @@ export async function manageCustomBiddingScriptLogic(
         currentValue: input.customBiddingScriptId,
       });
 
-      const script = await dv360Service.getCustomBiddingScript(algorithmId, scriptId, context);
+      const script = await dv360Service.getCustomBiddingScript(
+        algorithmId,
+        scriptId,
+        scope,
+        context
+      );
 
       result.script = {
         customBiddingScriptId: script.customBiddingScriptId,
@@ -204,6 +236,7 @@ export async function manageCustomBiddingScriptLogic(
         algorithmId,
         undefined,
         undefined,
+        scope,
         context
       );
 

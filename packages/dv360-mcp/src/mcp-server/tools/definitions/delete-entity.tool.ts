@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
-import { extractEntityIds } from "../utils/entity-id-extraction.js";
+import { extractEntityIds, EntityIdFieldsSchema } from "../utils/entity-id-extraction.js";
 import { addIdValidationIssues } from "../utils/parent-id-validation.js";
 import { elicitDeleteConfirmation } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
@@ -15,14 +15,7 @@ const TOOL_NAME = "dv360_delete_entity";
 export const DeleteEntityInputSchema = z
   .object({
     entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
-    partnerId: z.string().optional(),
-    advertiserId: z.string().optional(),
-    campaignId: z.string().optional(),
-    insertionOrderId: z.string().optional(),
-    lineItemId: z.string().optional(),
-    adGroupId: z.string().optional(),
-    adId: z.string().optional(),
-    creativeId: z.string().optional(),
+    ...EntityIdFieldsSchema,
     reason: z.string().optional(),
   })
   .superRefine((input, ctx) => {

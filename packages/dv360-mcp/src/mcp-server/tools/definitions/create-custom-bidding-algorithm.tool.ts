@@ -196,6 +196,10 @@ export async function createCustomBiddingAlgorithmLogic(
     timestamp: new Date().toISOString(),
   };
 
+  // Scope sub-resource calls to the algorithm's owner — DV360 requires this
+  // query param on every scripts/rules endpoint.
+  const scope = ownerType === "advertiser" ? { advertiserId: ownerId } : { partnerId: ownerId };
+
   // Upload initial script if provided (for SCRIPT_BASED algorithms)
   if (input.initialScript && input.algorithmType === "SCRIPT_BASED") {
     try {
@@ -203,6 +207,7 @@ export async function createCustomBiddingAlgorithmLogic(
       const uploadResult = await dv360Service.uploadCustomBiddingScript(
         algorithmId,
         input.initialScript,
+        scope,
         context
       );
 
@@ -210,6 +215,7 @@ export async function createCustomBiddingAlgorithmLogic(
       const script = await dv360Service.createCustomBiddingScript(
         algorithmId,
         uploadResult.resourceName,
+        scope,
         context
       );
 
@@ -233,6 +239,7 @@ export async function createCustomBiddingAlgorithmLogic(
       const uploadResult = await dv360Service.uploadCustomBiddingRules(
         algorithmId,
         input.initialRules,
+        scope,
         context
       );
 
@@ -240,6 +247,7 @@ export async function createCustomBiddingAlgorithmLogic(
       const rules = await dv360Service.createCustomBiddingRules(
         algorithmId,
         uploadResult.resourceName,
+        scope,
         context
       );
 

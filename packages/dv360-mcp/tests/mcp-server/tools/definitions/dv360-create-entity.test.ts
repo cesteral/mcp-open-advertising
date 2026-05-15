@@ -52,25 +52,31 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () =
   getRequiredFieldsFromSchema: vi.fn().mockReturnValue(["displayName", "entityStatus"]),
 }));
 
-vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", () => ({
-  extractParentIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
-    const ids: Record<string, string> = {};
-    for (const key of [
-      "partnerId",
-      "advertiserId",
-      "campaignId",
-      "insertionOrderId",
-      "lineItemId",
-      "adGroupId",
-    ]) {
-      if (input[key] && typeof input[key] === "string") {
-        ids[key] = input[key] as string;
+vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../../../src/mcp-server/tools/utils/entity-id-extraction.js")
+  >("../../../../src/mcp-server/tools/utils/entity-id-extraction.js");
+  return {
+    ...actual,
+    extractParentIds: vi.fn().mockImplementation((input: Record<string, unknown>) => {
+      const ids: Record<string, string> = {};
+      for (const key of [
+        "partnerId",
+        "advertiserId",
+        "campaignId",
+        "insertionOrderId",
+        "lineItemId",
+        "adGroupId",
+      ]) {
+        if (input[key] && typeof input[key] === "string") {
+          ids[key] = input[key] as string;
+        }
       }
-    }
-    return ids;
-  }),
-  extractEntityIds: vi.fn(),
-}));
+      return ids;
+    }),
+    extractEntityIds: vi.fn(),
+  };
+});
 
 vi.mock("../../../../src/mcp-server/tools/utils/parent-id-validation.js", () => ({
   addIdValidationIssues: vi.fn(),

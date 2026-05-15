@@ -29,7 +29,9 @@ is not allowlisted, you will receive an error when trying to use this feature.
 **Important Notes:**
 - Only one rules set can be active at a time per algorithm
 - New uploads automatically become active after ACCEPTED
-- Rules cannot be deleted, only replaced with new versions`;
+- Rules cannot be deleted, only replaced with new versions
+- **Required scope:** pass \`advertiserId\` (algorithm is advertiser-owned) OR \`partnerId\` (algorithm is partner-owned). DV360 returns 403 'permission for partner 0' otherwise.
+- **Known limitation:** the \`upload\` action does not currently work. Same root cause as script upload — the DV360 v4 upload protocol is a two-step flow that the simple POST currently used does not implement.`;
 
 /**
  * Input schema for manage custom bidding rules tool
@@ -51,6 +53,17 @@ export const ManageCustomBiddingRulesInputSchema = z
       .string()
       .optional()
       .describe("Rules ID (required for get action)"),
+    advertiserId: z
+      .string()
+      .optional()
+      .describe(
+        "Advertiser scope (required if the algorithm is advertiser-owned). " +
+          "DV360 returns 403 'permission for partner 0' when neither this nor partnerId is supplied."
+      ),
+    partnerId: z
+      .string()
+      .optional()
+      .describe("Partner scope (required if the algorithm is partner-owned). See advertiserId."),
   })
   .describe("Parameters for managing custom bidding rules");
 
@@ -115,6 +128,16 @@ export async function manageCustomBiddingRulesLogic(
     currentValue: input.customBiddingAlgorithmId,
   });
 
+  // DV360's rules sub-resources require the algorithm's owner scope as a
+  // query param. Without it Google defaults to partner 0 and returns 403.
+  if (!input.advertiserId && !input.partnerId) {
+    throw new McpError(
+      JsonRpcErrorCode.InvalidParams,
+      "Either advertiserId or partnerId is required to scope rules operations to the algorithm's owner."
+    );
+  }
+  const scope = { advertiserId: input.advertiserId, partnerId: input.partnerId };
+
   const result: ManageCustomBiddingRulesOutput = {
     action: input.action,
     customBiddingAlgorithmId: algorithmId,
@@ -134,6 +157,7 @@ export async function manageCustomBiddingRulesLogic(
       const uploadResult = await dv360Service.uploadCustomBiddingRules(
         algorithmId,
         input.rulesContent,
+        scope,
         context
       );
 
@@ -141,6 +165,7 @@ export async function manageCustomBiddingRulesLogic(
       const rules = await dv360Service.createCustomBiddingRules(
         algorithmId,
         uploadResult.resourceName,
+        scope,
         context
       );
 
@@ -164,6 +189,7 @@ export async function manageCustomBiddingRulesLogic(
         algorithmId,
         undefined,
         undefined,
+        scope,
         context
       );
 
@@ -186,7 +212,7 @@ export async function manageCustomBiddingRulesLogic(
         currentValue: input.customBiddingAlgorithmRulesId,
       });
 
-      const rules = await dv360Service.getCustomBiddingRules(algorithmId, rulesId, context);
+      const rules = await dv360Service.getCustomBiddingRules(algorithmId, rulesId, scope, context);
 
       result.rules = {
         customBiddingAlgorithmRulesId: rules.customBiddingAlgorithmRulesId,
@@ -208,6 +234,7 @@ export async function manageCustomBiddingRulesLogic(
         algorithmId,
         undefined,
         undefined,
+        scope,
         context
       );
 

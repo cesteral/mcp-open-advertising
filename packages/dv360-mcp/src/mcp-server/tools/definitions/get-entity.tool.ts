@@ -2,6 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
+import { EntityIdFieldsSchema } from "../utils/entity-id-extraction.js";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds } from "../utils/entity-id-extraction.js";
@@ -32,17 +33,7 @@ export const GetEntityInputSchema = z
     entityType: z
       .enum(getSupportedEntityTypesDynamic() as [string, ...string[]])
       .describe("Type of entity to retrieve"),
-    partnerId: z.string().optional().describe("Partner ID (if required for entity type)"),
-    advertiserId: z.string().optional().describe("Advertiser ID (if required for entity type)"),
-    campaignId: z.string().optional().describe("Campaign ID (if entity type is campaign)"),
-    insertionOrderId: z
-      .string()
-      .optional()
-      .describe("Insertion Order ID (if entity type is insertionOrder)"),
-    lineItemId: z.string().optional().describe("Line Item ID (if entity type is lineItem)"),
-    adGroupId: z.string().optional().describe("Ad Group ID (if entity type is adGroup)"),
-    adId: z.string().optional().describe("Ad ID (if entity type is ad)"),
-    creativeId: z.string().optional().describe("Creative ID (if entity type is creative)"),
+    ...EntityIdFieldsSchema,
   })
   .superRefine((input, ctx) => {
     addIdValidationIssues(ctx, {
