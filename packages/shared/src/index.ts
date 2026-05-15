@@ -13,3 +13,15 @@ export type {
   SdkContext,
   ElicitResultLike,
 } from "./types/tool-types.js";
+export type { CesteralToolAnnotations } from "./types/cesteral-annotations.js";
+export type {
+  NormalizedEntitySnapshot,
+  CanonicalEntityKind,
+  CanonicalStatus,
+  StatusSnapshot,
+  ScheduleSnapshot,
+  BudgetSnapshot,
+  BudgetSegmentSnapshot,
+  MoneyAmount,
+} from "./types/normalized-entity-snapshot.js";
+export type { DryRunResult, DryRunValidationError } from "./types/dry-run-result.js";
