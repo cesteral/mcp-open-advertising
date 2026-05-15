@@ -34,7 +34,6 @@ interface ReportTaskCheckData {
 
 /** Amazon DSP report configuration (per Reporting v3 OpenAPI spec) */
 export interface AmazonDspReportConfig {
-  name?: string;
   /** Start date in YYYY-MM-DD format */
   startDate: string;
   /** End date in YYYY-MM-DD format */
@@ -85,7 +84,6 @@ export class AmazonDspReportingService {
     const result = (await this.httpClient.post(
       path,
       {
-        name: reportConfig.name ?? "MCP Report",
         startDate: reportConfig.startDate,
         endDate: reportConfig.endDate,
         configuration: {
