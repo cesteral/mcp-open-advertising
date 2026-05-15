@@ -28,7 +28,7 @@ import {
  * Amazon DSP advertiser list response shape (success)
  */
 interface AmazonDspAdvertiserListResponse {
-  advertisers: Array<{ advertiserId: string; name: string }>;
+  response: Array<{ advertiserId: string; name: string }>;
   totalResults: number;
 }
 
@@ -107,7 +107,7 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
     }
 
     const data = (await response.json()) as AmazonDspAdvertiserListResponse;
-    this._userId = data.advertisers?.[0]?.name ?? "unknown";
+    this._userId = data.response?.[0]?.name ?? "unknown";
     this.validated = true;
   }
 }
@@ -212,7 +212,7 @@ export class AmazonDspRefreshTokenAdapter
     }
 
     const data = (await response.json()) as AmazonDspAdvertiserListResponse;
-    this._userId = data.advertisers?.[0]?.name ?? "unknown";
+    this._userId = data.response?.[0]?.name ?? "unknown";
   }
 }
 
