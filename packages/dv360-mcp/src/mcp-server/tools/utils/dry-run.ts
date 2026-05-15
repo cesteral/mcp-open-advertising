@@ -21,44 +21,20 @@ import type {
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
-  CanonicalEntityKind,
-  CanonicalStatus,
   RequestContext,
 } from "@cesteral/shared";
+import {
+  buildDv360Snapshot,
+  type Dv360ServiceLike,
+} from "./capture-snapshot.js";
 
-interface Dv360ServiceLike {
-  getEntity?: (
-    entityType: string,
-    ids: Record<string, string>,
-    context?: RequestContext
-  ) => Promise<unknown>;
-}
-
-const ENTITY_KIND_MAP: Record<string, CanonicalEntityKind> = {
-  campaign: "campaign",
-  insertionOrder: "insertion_order",
-  lineItem: "line_item",
-};
-
-const STATUS_MAP: Record<string, CanonicalStatus> = {
-  ENTITY_STATUS_ACTIVE: "active",
-  ENTITY_STATUS_PAUSED: "paused",
-  ENTITY_STATUS_ARCHIVED: "archived",
-  ENTITY_STATUS_DELETED: "deleted",
-  ENTITY_STATUS_DRAFT: "unknown",
-  ENTITY_STATUS_SCHEDULED_FOR_DELETION: "deleted",
-};
-
-function normalizeStatus(raw: unknown): { canonical: CanonicalStatus; platformRaw: string } {
-  const platformRaw = typeof raw === "string" ? raw : "";
-  return { canonical: STATUS_MAP[platformRaw] ?? "unknown", platformRaw };
-}
+export type { Dv360ServiceLike };
 
 /**
  * Apply a dotted-path overlay onto a base object. Mutates `out` in place
  * for the path; non-leaf segments are created when missing.
  */
-function setPath(out: Record<string, any>, path: string, value: unknown): void {
+export function setPath(out: Record<string, any>, path: string, value: unknown): void {
   const parts = path.split(".");
   let cursor: Record<string, any> = out;
   for (let i = 0; i < parts.length - 1; i++) {
@@ -71,7 +47,7 @@ function setPath(out: Record<string, any>, path: string, value: unknown): void {
   cursor[parts[parts.length - 1]] = value;
 }
 
-function getPath(obj: Record<string, any>, path: string): unknown {
+export function getPath(obj: Record<string, any>, path: string): unknown {
   const parts = path.split(".");
   let cursor: any = obj;
   for (const part of parts) {
@@ -81,87 +57,35 @@ function getPath(obj: Record<string, any>, path: string): unknown {
   return cursor;
 }
 
-function deepClone<T>(v: T): T {
+export function deepClone<T>(v: T): T {
   return JSON.parse(JSON.stringify(v));
 }
 
-function microsToMinor(micros: unknown): number | undefined {
-  if (micros == null) return undefined;
-  const n = typeof micros === "string" ? Number(micros) : Number(micros);
-  if (!Number.isFinite(n)) return undefined;
-  // micros → minor units (cents). 1,000,000 micros = $1.00 = 100 cents.
-  return Math.round(n / 10000);
-}
-
-function buildSnapshot(
+/**
+ * Symbolic apply: overlay patch fields named in updateMask onto a clone of
+ * `preState`, then normalize. Pure (no I/O). Used by the testkit's
+ * `assertContract` against fixture pairs and also by the dry-run handler.
+ */
+export function applyDv360Patch(
   entityType: string,
   ids: Record<string, string>,
-  current: Record<string, unknown>,
-  applied: Record<string, unknown>
-): NormalizedEntitySnapshot | null {
-  const entityKind = ENTITY_KIND_MAP[entityType];
-  if (!entityKind) return null;
-
-  const platformEntityId =
-    ids.lineItemId ?? ids.insertionOrderId ?? ids.campaignId ?? ids.advertiserId ?? "";
-
-  const merged = applied as Record<string, any>;
-  const currency =
-    (typeof merged?.budget?.budgetUnit === "string" && merged.budget.budgetUnit) ===
-    "BUDGET_UNIT_CURRENCY"
-      ? "USD" // currency isn't carried on the entity directly; advertiser scope. Default to USD for round-1.
-      : "USD";
-
-  // Aggregate budget segments if present.
-  const segments: Array<{
-    amountMinor: number;
-    currency: string;
-    startAt: string | null;
-    endAt: string | null;
-  }> = [];
-  const segArr = merged?.budget?.budgetSegments;
-  if (Array.isArray(segArr)) {
-    for (const seg of segArr) {
-      const amountMinor = microsToMinor(seg?.budgetAmountMicros);
-      if (amountMinor == null) continue;
-      const start = seg?.dateRange?.startDate;
-      const end = seg?.dateRange?.endDate;
-      const startAt = start
-        ? `${start.year}-${String(start.month).padStart(2, "0")}-${String(start.day).padStart(2, "0")}`
-        : null;
-      const endAt = end
-        ? `${end.year}-${String(end.month).padStart(2, "0")}-${String(end.day).padStart(2, "0")}`
-        : null;
-      segments.push({ amountMinor, currency, startAt, endAt });
+  preState: Record<string, unknown>,
+  data: Record<string, unknown>,
+  updateMask: string
+): NormalizedEntitySnapshot | undefined {
+  const applied: Record<string, any> = deepClone(preState);
+  const maskFields = updateMask
+    .split(",")
+    .map((f) => f.trim())
+    .filter(Boolean);
+  for (const field of maskFields) {
+    const v = getPath(data as Record<string, any>, field);
+    if (v !== undefined) {
+      setPath(applied, field, v);
     }
   }
-  const lifetimeMinor = segments.reduce((sum, s) => sum + s.amountMinor, 0);
-
-  const flightStart = merged?.flight?.dateRange?.startDate;
-  const flightEnd = merged?.flight?.dateRange?.endDate;
-
-  return {
-    schemaVersion: 1,
-    platform: "dv360",
-    entityKind,
-    platformEntityId,
-    displayName: typeof merged.displayName === "string" ? merged.displayName : null,
-    accountId: typeof ids.advertiserId === "string" ? ids.advertiserId : null,
-    status: normalizeStatus(merged.entityStatus ?? current.entityStatus),
-    budget: {
-      daily: null,
-      lifetime: lifetimeMinor > 0 ? { amountMinor: lifetimeMinor, currency } : null,
-      segments: segments.length > 0 ? segments : null,
-    },
-    schedule: {
-      startAt: flightStart
-        ? `${flightStart.year}-${String(flightStart.month).padStart(2, "0")}-${String(flightStart.day).padStart(2, "0")}`
-        : null,
-      endAt: flightEnd
-        ? `${flightEnd.year}-${String(flightEnd.month).padStart(2, "0")}-${String(flightEnd.day).padStart(2, "0")}`
-        : null,
-    },
-  };
+  const snapshot = buildDv360Snapshot(entityType, ids, preState, applied);
+  return snapshot ?? undefined;
 }
 
 export interface Dv360DryRunArgs {
@@ -219,7 +143,7 @@ export async function runDv360UpdateDryRun(
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
   if (current) {
-    const snapshot = buildSnapshot(input.entityType, input.ids, current, applied);
+    const snapshot = buildDv360Snapshot(input.entityType, input.ids, current, applied);
     if (snapshot) {
       expectedPostState = snapshot;
       expectedStateSource = "server_symbolic_apply";

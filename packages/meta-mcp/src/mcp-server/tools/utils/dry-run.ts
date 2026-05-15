@@ -22,92 +22,15 @@ import type {
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
-  CanonicalEntityKind,
-  CanonicalStatus,
   RequestContext,
 } from "@cesteral/shared";
+import {
+  buildMetaSnapshot,
+  ENTITY_KIND_MAP,
+  type MetaServiceLike,
+} from "./capture-snapshot.js";
 
-interface MetaServiceLike {
-  // Loosened from `MetaService.getEntity` (which is typed against the
-  // `MetaEntityType` union) so we can accept arbitrary `entityType` strings
-  // here without leaking the platform-specific union into the dry-run helper.
-  getEntity?: (
-    entityType: any,
-    entityId: string,
-    fields?: string[] | undefined,
-    context?: RequestContext
-  ) => Promise<unknown>;
-}
-
-const STATUS_MAP: Record<string, CanonicalStatus> = {
-  ACTIVE: "active",
-  PAUSED: "paused",
-  ARCHIVED: "archived",
-  DELETED: "deleted",
-};
-
-const ENTITY_KIND_MAP: Record<string, CanonicalEntityKind> = {
-  campaign: "campaign",
-  adSet: "ad_set",
-  ad: "ad",
-};
-
-function normalizeStatus(raw: unknown): { canonical: CanonicalStatus; platformRaw: string } {
-  const platformRaw = typeof raw === "string" ? raw : "";
-  return { canonical: STATUS_MAP[platformRaw] ?? "unknown", platformRaw };
-}
-
-function toMoney(
-  amount: unknown,
-  currency: string
-): { amountMinor: number; currency: string } | undefined {
-  if (amount == null) return undefined;
-  const n = typeof amount === "string" ? Number.parseInt(amount, 10) : Number(amount);
-  if (!Number.isFinite(n)) return undefined;
-  return { amountMinor: n, currency };
-}
-
-function buildSnapshot(
-  entityType: string,
-  entityId: string,
-  current: Record<string, unknown>,
-  patch: Record<string, unknown>
-): NormalizedEntitySnapshot | null {
-  const entityKind = ENTITY_KIND_MAP[entityType];
-  if (!entityKind) return null;
-
-  const merged: Record<string, unknown> = { ...current, ...patch };
-  const currency =
-    (typeof current.currency === "string" && current.currency) ||
-    (typeof current.account_currency === "string" && current.account_currency) ||
-    "USD";
-
-  const daily = toMoney(merged.daily_budget, currency);
-  const lifetime = toMoney(merged.lifetime_budget, currency);
-
-  return {
-    schemaVersion: 1,
-    platform: "meta_ads",
-    entityKind,
-    platformEntityId: entityId,
-    displayName: typeof merged.name === "string" ? merged.name : null,
-    accountId:
-      typeof current.account_id === "string"
-        ? current.account_id
-        : typeof current.adAccountId === "string"
-          ? current.adAccountId
-          : null,
-    status: normalizeStatus(merged.status ?? current.status),
-    budget: {
-      daily: daily ?? null,
-      lifetime: lifetime ?? null,
-    },
-    schedule: {
-      startAt: typeof merged.start_time === "string" ? merged.start_time : null,
-      endAt: typeof merged.end_time === "string" ? merged.end_time : null,
-    },
-  };
-}
+export type { MetaServiceLike };
 
 function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
   const errors: DryRunValidationError[] = [];
@@ -140,6 +63,21 @@ function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[
   return errors;
 }
 
+/**
+ * Symbolic apply: shallow-merge `data` into `preState`, then normalize. Pure
+ * (no I/O). Used by the testkit's `assertContract` against fixture pairs and
+ * mirrors what the dry-run handler does in-tool.
+ */
+export function applyMetaPatch(
+  entityType: string,
+  entityId: string,
+  preState: Record<string, unknown>,
+  data: Record<string, unknown>
+): NormalizedEntitySnapshot | undefined {
+  const snapshot = buildMetaSnapshot(entityType, entityId, preState, data);
+  return snapshot ?? undefined;
+}
+
 export interface MetaDryRunArgs {
   entityType: string | undefined;
   entityId: string;
@@ -165,7 +103,7 @@ export async function runMetaUpdateDryRun(
         context
       )) as Record<string, unknown> | undefined;
       if (current && typeof current === "object") {
-        const snapshot = buildSnapshot(input.entityType, input.entityId, current, input.data);
+        const snapshot = buildMetaSnapshot(input.entityType, input.entityId, current, input.data);
         if (snapshot) {
           expectedPostState = snapshot;
           expectedStateSource = "server_symbolic_apply";

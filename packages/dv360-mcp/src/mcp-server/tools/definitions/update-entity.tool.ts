@@ -16,7 +16,8 @@ import {
 } from "../utils/entity-examples.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
 import { runDv360UpdateDryRun } from "../utils/dry-run.js";
-import { DryRunResultSchema } from "@cesteral/shared";
+import { snapshotFromDv360Entity, captureDv360Snapshot } from "../utils/capture-snapshot.js";
+import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
@@ -76,6 +77,12 @@ export const UpdateEntityOutputSchema = z.object({
   timestamp: z.string().datetime(),
   dryRun: DryRunResultSchema.optional().describe(
     "Present only when the request was made with `dry_run: true`. The mutation was NOT applied; `entity` reflects the symbolic post-state and `previousValues` is empty."
+  ),
+  before: NormalizedEntitySnapshotSchema.optional().describe(
+    "Pre-write canonical snapshot of the entity, captured at the start of the handler. Populated when the entity type is in canonical scope (campaign, insertionOrder, lineItem) and the read partner returns the entity. Undefined for out-of-scope types or when the pre-read fails."
+  ),
+  after: NormalizedEntitySnapshotSchema.optional().describe(
+    "Post-write canonical snapshot of the entity. Captured by normalizing the patched resource that the DV360 PATCH call returns. Undefined when the entity type is out of canonical scope."
   ),
 });
 
@@ -155,6 +162,14 @@ export async function updateEntityLogic(
       }
       previousValues[field] = value;
     }
+    // PR-D: normalize pre-state from the same `current` we already read for
+    // previousValues — no extra round-trip.
+    const before = snapshotFromDv360Entity(
+      validatedInput.entityType,
+      entityIds,
+      current ?? {}
+    );
+
     const updated = await dv360Service.updateEntity(
       validatedInput.entityType,
       entityIds,
@@ -163,10 +178,28 @@ export async function updateEntityLogic(
       context,
       current
     );
+    // PR-D: DV360 PATCH returns the patched resource directly. If the SDK
+    // shape is unexpected (e.g. wrapped), fall back to a re-read so `after`
+    // is still populated.
+    let after = snapshotFromDv360Entity(
+      validatedInput.entityType,
+      entityIds,
+      (updated as Record<string, unknown>) ?? {}
+    );
+    if (!after) {
+      after = await captureDv360Snapshot(
+        dv360Service,
+        validatedInput.entityType,
+        entityIds,
+        context
+      );
+    }
     return {
       entity: updated as Record<string, any>,
       previousValues,
       timestamp: new Date().toISOString(),
+      ...(before ? { before } : {}),
+      ...(after ? { after } : {}),
     };
   } catch (error: any) {
     // Enhance error message with example suggestions
@@ -276,9 +309,10 @@ export const updateEntityTool = {
       schemaVersion: 1,
       contractId: "dv360.update_entity.v1",
       // PR-C wires `dry_run` (symbolic Zod validator + symbolic apply via the
-      // read partner). before/after on real writes still ships in PR-D.
+      // read partner). PR-D normalizes the pre-read entity into `before` and
+      // the patched resource returned by the PATCH call into `after`.
       supportsDryRun: true,
-      supportsBeforeAfterSnapshot: false,
+      supportsBeforeAfterSnapshot: true,
     } satisfies CesteralWriteToolAnnotations,
   },
   logic: updateEntityLogic,

@@ -5,7 +5,8 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
 import { runMetaUpdateDryRun } from "../utils/dry-run.js";
-import { DryRunResultSchema } from "@cesteral/shared";
+import { captureMetaSnapshot } from "../utils/capture-snapshot.js";
+import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
@@ -57,6 +58,12 @@ export const UpdateEntityOutputSchema = z
     dryRun: DryRunResultSchema.optional().describe(
       "Present only when the request was made with `dry_run: true`. The mutation was NOT applied."
     ),
+    before: NormalizedEntitySnapshotSchema.optional().describe(
+      "Pre-write canonical snapshot of the entity, captured at the start of the handler. Populated when the entity type is in canonical scope (campaign, ad_set, ad) and the read partner returns the entity. Undefined for out-of-scope types or when the pre-read fails."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-write canonical snapshot of the entity. Captured by re-reading after the write because Meta's update endpoint returns only `{ success: true }`. Undefined when the post-read fails or the entity type is out of canonical scope."
+    ),
   })
   .describe("Entity update result");
 
@@ -85,15 +92,28 @@ export async function updateEntityLogic(
     };
   }
 
+  // PR-D: capture pre-state before mutating. Best-effort — out-of-scope entity
+  // types and read failures leave `before` undefined and consumers fall back
+  // to the read-partner round-trip.
+  const before = await captureMetaSnapshot(metaService, input.entityType, input.entityId, context);
+
   const result = await metaService.updateEntity(input.entityId, input.data, context);
 
   const success = (result as Record<string, unknown>)?.success === true;
+
+  // PR-D: Meta's update endpoint returns only `{ success: true }`, so we
+  // re-read to populate `after`. Same best-effort semantics as `before`.
+  const after = success
+    ? await captureMetaSnapshot(metaService, input.entityType, input.entityId, context)
+    : undefined;
 
   return {
     success,
     entityId: input.entityId,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
+    ...(before ? { before } : {}),
+    ...(after ? { after } : {}),
   };
 }
 
@@ -135,9 +155,11 @@ export const updateEntityTool = {
       schemaVersion: 1,
       contractId: "meta.update_entity.v1",
       // PR-C wires `dry_run` (symbolic validator + symbolic apply via the
-      // read partner). before/after on real writes still ships in PR-D.
+      // read partner). PR-D captures `before`/`after` snapshots on real
+      // writes via the read partner (Meta's update endpoint returns only
+      // `{ success: true }`).
       supportsDryRun: true,
-      supportsBeforeAfterSnapshot: false,
+      supportsBeforeAfterSnapshot: true,
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
