@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
-import { extractEntityIds } from "../utils/entity-id-extraction.js";
+import { extractEntityIds, EntityIdFieldsSchema } from "../utils/entity-id-extraction.js";
 import { createSimplifiedUpdateEntityInputSchema } from "../utils/simplified-schemas.js";
 import {
   getEntityTypesWithExamples,
@@ -34,14 +34,7 @@ function generateToolDescription(): string {
 const FullUpdateEntityInputSchema = z
   .object({
     entityType: z.enum(getSupportedEntityTypesDynamic() as [string, ...string[]]),
-    partnerId: z.string().optional(),
-    advertiserId: z.string().optional(),
-    campaignId: z.string().optional(),
-    insertionOrderId: z.string().optional(),
-    lineItemId: z.string().optional(),
-    adGroupId: z.string().optional(),
-    adId: z.string().optional(),
-    creativeId: z.string().optional(),
+    ...EntityIdFieldsSchema,
     data: z.record(z.any()),
     updateMask: z.string().min(1),
     reason: z.string().optional(),

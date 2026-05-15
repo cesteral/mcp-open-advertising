@@ -140,6 +140,40 @@ export type CustomBiddingScript = z.infer<typeof CustomBiddingScriptSchema>;
 export type CustomBiddingAlgorithmRules = z.infer<typeof CustomBiddingAlgorithmRulesSchema>;
 
 /**
+ * Scope for custom-bidding sub-resource calls. DV360 requires either
+ * partnerId or advertiserId on every scripts/rules endpoint (including the
+ * upload variants) — otherwise it defaults to partner 0 and returns 403.
+ */
+export interface CustomBiddingOwnerScope {
+  advertiserId?: string;
+  partnerId?: string;
+}
+
+/** Build the `?advertiserId=…` / `?partnerId=…` suffix (no leading separator). */
+function ownerScopeQueryParams(scope: CustomBiddingOwnerScope): string {
+  const params = new URLSearchParams();
+  if (scope.advertiserId) params.append("advertiserId", scope.advertiserId);
+  if (scope.partnerId) params.append("partnerId", scope.partnerId);
+  return params.toString();
+}
+
+/**
+ * Build the query-param suffix for an entity type's `queryParamIds` (e.g.
+ * `inventorySource` + `customBiddingAlgorithm` need scope IDs in the URL).
+ * Returns the params string without a leading `?` / `&`.
+ */
+function entityScopeQueryParams(
+  ids: Record<string, string>,
+  queryParamIds: readonly string[]
+): string {
+  const params = new URLSearchParams();
+  for (const key of queryParamIds) {
+    if (ids[key]) params.append(key, ids[key]);
+  }
+  return params.toString();
+}
+
+/**
  * Service for interacting with DV360 API
  * Provides generic entity operations (list, get, create, update, delete)
  */
@@ -257,7 +291,8 @@ export class DV360Service {
         );
       }
 
-      const path = `${basePath}/${entityId}`;
+      const scopeQs = entityScopeQueryParams(ids, config.queryParamIds);
+      const path = `${basePath}/${entityId}${scopeQs ? `?${scopeQs}` : ""}`;
 
       // Rate limit by advertiser
       if (ids.advertiserId) {
@@ -371,6 +406,8 @@ export class DV360Service {
       }
 
       setSpanAttribute("dv360.entityId", entityId);
+      // Note: queryParamIds (e.g. partnerId/advertiserId for customBiddingAlgorithm)
+      // are list/get-only — DV360's patch endpoint rejects them with 400.
       const path = `${basePath}/${entityId}?updateMask=${encodeURIComponent(updateMask)}`;
 
       // Rate limit by advertiser
@@ -444,6 +481,9 @@ export class DV360Service {
         );
       }
 
+      // Note: queryParamIds are list/get-only — DV360's delete (where it exists)
+      // doesn't take scope query params, and customBiddingAlgorithm has no
+      // delete endpoint at all (archive via patch with entityStatus=ARCHIVED).
       const path = `${basePath}/${entityId}`;
       setSpanAttribute("dv360.entityId", entityId);
 
@@ -471,14 +511,17 @@ export class DV360Service {
   async uploadCustomBiddingScript(
     customBiddingAlgorithmId: string,
     scriptContent: string,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<{ resourceName: string }> {
     return withDV360ApiSpan("uploadCustomBiddingScript", customBiddingAlgorithmId, async () => {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.scriptLength", scriptContent.length);
 
-      // Upload endpoint is different from main API — derive from configured base URL
-      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript`;
+      // Google media-upload protocol: uploadType=media for a simple raw body.
+      // Owner scope (advertiserId or partnerId) is required to authorize the call.
+      const queryParts = ["uploadType=media", ownerScopeQueryParams(scope)].filter(Boolean);
+      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadScript?${queryParts.join("&")}`;
 
       this.logger.debug(
         { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
@@ -526,12 +569,14 @@ export class DV360Service {
   async createCustomBiddingScript(
     customBiddingAlgorithmId: string,
     scriptResourceName: string,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<CustomBiddingScript> {
     return withDV360ApiSpan("createCustomBiddingScript", customBiddingAlgorithmId, async () => {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
 
-      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts`;
+      const scopeQs = ownerScopeQueryParams(scope);
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${scopeQs ? `?${scopeQs}` : ""}`;
 
       const response = await this.httpClient.fetch(path, context, {
         method: "POST",
@@ -555,8 +600,9 @@ export class DV360Service {
    */
   async listCustomBiddingScripts(
     customBiddingAlgorithmId: string,
-    pageToken?: string,
-    pageSize?: number,
+    pageToken: string | undefined,
+    pageSize: number | undefined,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<{ scripts: CustomBiddingScript[]; nextPageToken?: string }> {
     return withDV360ApiSpan("listCustomBiddingScripts", customBiddingAlgorithmId, async () => {
@@ -565,6 +611,8 @@ export class DV360Service {
       const params = new URLSearchParams();
       if (pageToken) params.append("pageToken", pageToken);
       if (pageSize) params.append("pageSize", pageSize.toString());
+      if (scope.advertiserId) params.append("advertiserId", scope.advertiserId);
+      if (scope.partnerId) params.append("partnerId", scope.partnerId);
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts${params.toString() ? `?${params}` : ""}`;
 
@@ -591,13 +639,15 @@ export class DV360Service {
   async getCustomBiddingScript(
     customBiddingAlgorithmId: string,
     customBiddingScriptId: string,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<CustomBiddingScript> {
     return withDV360ApiSpan("getCustomBiddingScript", customBiddingAlgorithmId, async () => {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.customBiddingScriptId", customBiddingScriptId);
 
-      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts/${customBiddingScriptId}`;
+      const scopeQs = ownerScopeQueryParams(scope);
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/scripts/${customBiddingScriptId}${scopeQs ? `?${scopeQs}` : ""}`;
 
       return CustomBiddingScriptSchema.parse(await this.httpClient.fetch(path, context));
     });
@@ -613,13 +663,15 @@ export class DV360Service {
   async uploadCustomBiddingRules(
     customBiddingAlgorithmId: string,
     rulesContent: string,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<{ resourceName: string }> {
     return withDV360ApiSpan("uploadCustomBiddingRules", customBiddingAlgorithmId, async () => {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.rulesLength", rulesContent.length);
 
-      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules`;
+      const queryParts = ["uploadType=media", ownerScopeQueryParams(scope)].filter(Boolean);
+      const uploadUrl = `${this.httpClient.getUploadBaseUrl()}/customBiddingAlgorithms/${customBiddingAlgorithmId}:uploadRules?${queryParts.join("&")}`;
 
       this.logger.debug(
         { uploadUrl, algorithmId: customBiddingAlgorithmId, requestId: context?.requestId },
@@ -667,12 +719,14 @@ export class DV360Service {
   async createCustomBiddingRules(
     customBiddingAlgorithmId: string,
     rulesResourceName: string,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<CustomBiddingAlgorithmRules> {
     return withDV360ApiSpan("createCustomBiddingRules", customBiddingAlgorithmId, async () => {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
 
-      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules`;
+      const scopeQs = ownerScopeQueryParams(scope);
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${scopeQs ? `?${scopeQs}` : ""}`;
 
       const response = await this.httpClient.fetch(path, context, {
         method: "POST",
@@ -696,8 +750,9 @@ export class DV360Service {
    */
   async listCustomBiddingRules(
     customBiddingAlgorithmId: string,
-    pageToken?: string,
-    pageSize?: number,
+    pageToken: string | undefined,
+    pageSize: number | undefined,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<{ rules: CustomBiddingAlgorithmRules[]; nextPageToken?: string }> {
     return withDV360ApiSpan("listCustomBiddingRules", customBiddingAlgorithmId, async () => {
@@ -706,6 +761,8 @@ export class DV360Service {
       const params = new URLSearchParams();
       if (pageToken) params.append("pageToken", pageToken);
       if (pageSize) params.append("pageSize", pageSize.toString());
+      if (scope.advertiserId) params.append("advertiserId", scope.advertiserId);
+      if (scope.partnerId) params.append("partnerId", scope.partnerId);
 
       const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules${params.toString() ? `?${params}` : ""}`;
 
@@ -1022,13 +1079,15 @@ export class DV360Service {
   async getCustomBiddingRules(
     customBiddingAlgorithmId: string,
     customBiddingAlgorithmRulesId: string,
+    scope: CustomBiddingOwnerScope,
     context?: RequestContext
   ): Promise<CustomBiddingAlgorithmRules> {
     return withDV360ApiSpan("getCustomBiddingRules", customBiddingAlgorithmId, async () => {
       setSpanAttribute("dv360.customBiddingAlgorithmId", customBiddingAlgorithmId);
       setSpanAttribute("dv360.customBiddingAlgorithmRulesId", customBiddingAlgorithmRulesId);
 
-      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules/${customBiddingAlgorithmRulesId}`;
+      const scopeQs = ownerScopeQueryParams(scope);
+      const path = `/customBiddingAlgorithms/${customBiddingAlgorithmId}/rules/${customBiddingAlgorithmRulesId}${scopeQs ? `?${scopeQs}` : ""}`;
 
       return CustomBiddingAlgorithmRulesSchema.parse(await this.httpClient.fetch(path, context));
     });

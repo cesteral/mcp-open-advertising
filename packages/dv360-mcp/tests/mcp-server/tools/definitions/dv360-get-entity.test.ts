@@ -38,8 +38,13 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-mapping-dynamic.js", () =
   }),
 }));
 
-vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", () => ({
-  extractEntityIds: vi
+vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../../../src/mcp-server/tools/utils/entity-id-extraction.js")
+  >("../../../../src/mcp-server/tools/utils/entity-id-extraction.js");
+  return {
+    ...actual,
+    extractEntityIds: vi
     .fn()
     .mockImplementation((input: Record<string, unknown>, _entityType: string) => {
       const ids: Record<string, string> = {};
@@ -59,8 +64,9 @@ vi.mock("../../../../src/mcp-server/tools/utils/entity-id-extraction.js", () => 
       }
       return ids;
     }),
-  extractParentIds: vi.fn(),
-}));
+    extractParentIds: vi.fn(),
+  };
+});
 
 vi.mock("../../../../src/mcp-server/tools/utils/parent-id-validation.js", () => ({
   addIdValidationIssues: vi.fn(),

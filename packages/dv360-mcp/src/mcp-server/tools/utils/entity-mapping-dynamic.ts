@@ -104,8 +104,12 @@ export const STATIC_ENTITY_API_METADATA: Record<string, EntityApiMetadata> = {
     supportsFilter: true,
   },
   customBiddingAlgorithm: {
+    // DV360 requires partnerId OR advertiserId on every customBiddingAlgorithm
+    // call (the algorithm is owned by exactly one of them); list-entities + the
+    // generic get/update/delete service helpers append these as query params.
     apiPathTemplate: "/customBiddingAlgorithms",
     parentResourceIds: [],
+    queryParamIds: ["partnerId", "advertiserId"],
     supportsFilter: true,
   },
   inventorySource: {

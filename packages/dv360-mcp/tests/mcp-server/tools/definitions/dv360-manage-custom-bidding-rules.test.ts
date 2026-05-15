@@ -95,6 +95,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "upload",
             rulesContent: '{"rules": []}',
           },
@@ -105,11 +106,13 @@ describe("dv360_manage_custom_bidding_rules", () => {
         expect(mockDv360Service.uploadCustomBiddingRules).toHaveBeenCalledWith(
           "algo-1",
           '{"rules": []}',
+          expect.objectContaining({ advertiserId: "adv-1" }),
           expect.any(Object)
         );
         expect(mockDv360Service.createCustomBiddingRules).toHaveBeenCalledWith(
           "algo-1",
           "rules/upload-1",
+          expect.objectContaining({ advertiserId: "adv-1" }),
           expect.any(Object)
         );
         expect(result.action).toBe("upload");
@@ -128,6 +131,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
           manageCustomBiddingRulesLogic(
             {
               customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
               action: "upload",
             },
             createMockContext(),
@@ -151,6 +155,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "upload",
             rulesContent: "bad rules",
           },
@@ -172,6 +177,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
           manageCustomBiddingRulesLogic(
             {
               customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
               action: "upload",
               rulesContent: '{"rules": []}',
             },
@@ -187,6 +193,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "list",
           },
           createMockContext(),
@@ -197,6 +204,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
           "algo-1",
           undefined,
           undefined,
+          expect.objectContaining({ advertiserId: "adv-1" }),
           expect.any(Object)
         );
         expect(result.action).toBe("list");
@@ -213,6 +221,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "list",
           },
           createMockContext(),
@@ -228,6 +237,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "get",
             customBiddingAlgorithmRulesId: "rules-1",
           },
@@ -238,6 +248,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         expect(mockDv360Service.getCustomBiddingRules).toHaveBeenCalledWith(
           "algo-1",
           "rules-1",
+          expect.objectContaining({ advertiserId: "adv-1" }),
           expect.any(Object)
         );
         expect(result.rules).toEqual(
@@ -261,6 +272,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "get",
           },
           createMockContext(),
@@ -270,6 +282,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         expect(mockDv360Service.getCustomBiddingRules).toHaveBeenCalledWith(
           "algo-1",
           "elicited-rules-id",
+          expect.objectContaining({ advertiserId: "adv-1" }),
           expect.any(Object)
         );
       });
@@ -289,6 +302,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "get",
             customBiddingAlgorithmRulesId: "rules-err",
           },
@@ -308,6 +322,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "getActive",
           },
           createMockContext(),
@@ -338,6 +353,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "getActive",
           },
           createMockContext(),
@@ -355,6 +371,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "getActive",
           },
           createMockContext(),
@@ -383,6 +400,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         const result = await manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "getActive",
           },
           createMockContext(),
@@ -409,6 +427,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
       const result = await manageCustomBiddingRulesLogic(
         {
           action: "list",
+          advertiserId: "adv-1",
         },
         createMockContext(),
         createMockSdkContext()
@@ -419,6 +438,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         "elicited-algo-id",
         undefined,
         undefined,
+        expect.objectContaining({ advertiserId: "adv-1" }),
         expect.any(Object)
       );
     });
@@ -432,6 +452,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
         manageCustomBiddingRulesLogic(
           {
             customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
             action: "list",
           },
           createMockContext(),
@@ -446,6 +467,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
       const result = manageCustomBiddingRulesResponseFormatter({
         action: "upload",
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         rules: {
           customBiddingAlgorithmRulesId: "rules-1",
           createTime: "2025-01-01T00:00:00Z",
@@ -466,6 +488,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
       const result = manageCustomBiddingRulesResponseFormatter({
         action: "get",
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         rules: {
           customBiddingAlgorithmRulesId: "rules-err",
           createTime: "2025-01-01T00:00:00Z",
@@ -488,6 +511,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
       const result = manageCustomBiddingRulesResponseFormatter({
         action: "list",
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         rulesList: [
           {
             customBiddingAlgorithmRulesId: "rules-1",
@@ -514,6 +538,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
       const result = manageCustomBiddingRulesResponseFormatter({
         action: "list",
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         rulesList: [],
         timestamp: "2025-01-01T00:00:00.000Z",
       });
@@ -525,6 +550,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
       const result = manageCustomBiddingRulesResponseFormatter({
         action: "getActive",
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         timestamp: "2025-01-01T00:00:00.000Z",
       });
 
@@ -536,6 +562,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
     it("accepts valid upload input", () => {
       const parsed = ManageCustomBiddingRulesInputSchema.safeParse({
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         action: "upload",
         rulesContent: '{"rules": []}',
       });
@@ -552,6 +579,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
     it("accepts get action with rules ID", () => {
       const parsed = ManageCustomBiddingRulesInputSchema.safeParse({
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         action: "get",
         customBiddingAlgorithmRulesId: "rules-1",
       });
@@ -561,6 +589,7 @@ describe("dv360_manage_custom_bidding_rules", () => {
     it("rejects invalid action", () => {
       const parsed = ManageCustomBiddingRulesInputSchema.safeParse({
         customBiddingAlgorithmId: "algo-1",
+            advertiserId: "adv-1",
         action: "delete",
       });
       expect(parsed.success).toBe(false);

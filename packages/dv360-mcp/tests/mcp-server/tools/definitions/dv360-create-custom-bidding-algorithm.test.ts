@@ -167,11 +167,13 @@ describe("dv360_create_custom_bidding_algorithm", () => {
       expect(mockDv360Service.uploadCustomBiddingScript).toHaveBeenCalledWith(
         "algo-123",
         "function bid(request) { return 1.0; }",
+        expect.any(Object),
         expect.any(Object)
       );
       expect(mockDv360Service.createCustomBiddingScript).toHaveBeenCalledWith(
         "algo-123",
         "scripts/upload-456",
+        expect.any(Object),
         expect.any(Object)
       );
       expect(result.scriptUpload).toEqual({
@@ -205,11 +207,13 @@ describe("dv360_create_custom_bidding_algorithm", () => {
       expect(mockDv360Service.uploadCustomBiddingRules).toHaveBeenCalledWith(
         "algo-rules-1",
         '{"rules": []}',
+        expect.any(Object),
         expect.any(Object)
       );
       expect(mockDv360Service.createCustomBiddingRules).toHaveBeenCalledWith(
         "algo-rules-1",
         "rules/upload-456",
+        expect.any(Object),
         expect.any(Object)
       );
       expect(result.rulesUpload).toEqual({
