@@ -91,3 +91,6 @@ terraform/backend-*.conf
 
 # Live-test outputs (per-server, runtime artifacts)
 packages/*/tests/live/last-run.json
+
+# Sibling worktrees created by Claude Code (each has its own branch)
+.claude/worktrees/
