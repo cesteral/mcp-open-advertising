@@ -4,6 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
+import { runMetaUpdateDryRun } from "../utils/dry-run.js";
+import { DryRunResultSchema } from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
@@ -36,6 +38,13 @@ export const UpdateEntityInputSchema = z
       ),
     entityId: z.string().min(1).describe("The entity ID to update"),
     data: z.record(z.any()).describe("Fields to update as key-value pairs"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the proposed mutation and returns a DryRunResult under `dryRun` without invoking the Meta Graph API. The underlying entity is never mutated."
+      ),
   })
   .describe("Parameters for updating a Meta Ads entity");
 
@@ -45,6 +54,9 @@ export const UpdateEntityOutputSchema = z
     entityId: z.string(),
     entityType: z.string().optional(),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. The mutation was NOT applied."
+    ),
   })
   .describe("Entity update result");
 
@@ -57,6 +69,21 @@ export async function updateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
   const { metaService } = resolveSessionServices(sdkContext);
+
+  if (input.dry_run === true) {
+    const dryRun = await runMetaUpdateDryRun(
+      { entityType: input.entityType, entityId: input.entityId, data: input.data },
+      metaService,
+      context
+    );
+    return {
+      success: dryRun.wouldSucceed,
+      entityId: input.entityId,
+      entityType: input.entityType,
+      timestamp: new Date().toISOString(),
+      dryRun,
+    };
+  }
 
   const result = await metaService.updateEntity(input.entityId, input.data, context);
 
@@ -107,8 +134,9 @@ export const updateEntityTool = {
       },
       schemaVersion: 1,
       contractId: "meta.update_entity.v1",
-      // PR-B is annotation-only. Dry-run lands in PR-C, before/after in PR-D.
-      supportsDryRun: false,
+      // PR-C wires `dry_run` (symbolic validator + symbolic apply via the
+      // read partner). before/after on real writes still ships in PR-D.
+      supportsDryRun: true,
       supportsBeforeAfterSnapshot: false,
     } satisfies CesteralWriteToolAnnotations,
   },

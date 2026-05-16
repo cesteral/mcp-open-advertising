@@ -38,6 +38,13 @@ export function createSimplifiedUpdateEntityInputSchema(): z.ZodTypeAny {
       .string()
       .describe("Comma-separated field paths to update (e.g. displayName,entityStatus)."),
     reason: z.string().optional().describe("Optional reason for audit trail"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the proposed mutation against the entity schema and returns a DryRunResult under `dryRun` without invoking the DV360 API. The underlying entity is never mutated."
+      ),
   });
 }
 

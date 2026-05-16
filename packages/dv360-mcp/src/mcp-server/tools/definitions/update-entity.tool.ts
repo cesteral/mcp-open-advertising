@@ -3,7 +3,10 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { getSupportedEntityTypesDynamic } from "../utils/entity-mapping-dynamic.js";
+import {
+  getSupportedEntityTypesDynamic,
+  getEntitySchemaForOperation,
+} from "../utils/entity-mapping-dynamic.js";
 import { extractEntityIds, EntityIdFieldsSchema } from "../utils/entity-id-extraction.js";
 import { createSimplifiedUpdateEntityInputSchema } from "../utils/simplified-schemas.js";
 import {
@@ -12,11 +15,14 @@ import {
   findMatchingExample,
 } from "../utils/entity-examples.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
+import { runDv360UpdateDryRun } from "../utils/dry-run.js";
+import { DryRunResultSchema } from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
   SdkContext,
   CesteralWriteToolAnnotations,
+  DryRunValidationError,
 } from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_update_entity";
@@ -42,6 +48,7 @@ const FullUpdateEntityInputSchema = z
     data: z.record(z.any()),
     updateMask: z.string().min(1),
     reason: z.string().optional(),
+    dry_run: z.boolean().optional().default(false),
   })
   .superRefine((input, ctx) => {
     const mergedData = mergeIdsIntoData(
@@ -67,6 +74,9 @@ export const UpdateEntityOutputSchema = z.object({
   entity: z.record(z.any()),
   previousValues: z.record(z.any()).optional(),
   timestamp: z.string().datetime(),
+  dryRun: DryRunResultSchema.optional().describe(
+    "Present only when the request was made with `dry_run: true`. The mutation was NOT applied; `entity` reflects the symbolic post-state and `previousValues` is empty."
+  ),
 });
 
 type UpdateEntityInput = z.infer<typeof UpdateEntityInputSchema>;
@@ -87,6 +97,47 @@ export async function updateEntityLogic(
 
   const { dv360Service } = resolveSessionServices(sdkContext);
   const entityIds = extractEntityIds(validatedInput, validatedInput.entityType);
+
+  if (validatedInput.dry_run === true) {
+    const dryRun = await runDv360UpdateDryRun(
+      {
+        entityType: validatedInput.entityType,
+        ids: entityIds,
+        data: mergedData,
+        updateMask: validatedInput.updateMask,
+      },
+      dv360Service,
+      context,
+      (entityType, applied) => {
+        const errors: DryRunValidationError[] = [];
+        try {
+          const schema = getEntitySchemaForOperation(entityType, "update");
+          schema.parse(applied);
+        } catch (err: any) {
+          if (err?.issues && Array.isArray(err.issues)) {
+            for (const issue of err.issues) {
+              errors.push({
+                code: issue.code ?? "ZOD",
+                message: issue.message ?? String(err),
+                field: Array.isArray(issue.path) ? issue.path.join(".") : undefined,
+              });
+            }
+          } else {
+            errors.push({ code: "ZOD", message: err?.message ?? String(err) });
+          }
+        }
+        return errors;
+      }
+    );
+    return {
+      entity: dryRun.expectedPostState
+        ? (dryRun.expectedPostState as unknown as Record<string, any>)
+        : {},
+      previousValues: {},
+      timestamp: new Date().toISOString(),
+      dryRun,
+    };
+  }
 
   try {
     const current = (await dv360Service.getEntity(
@@ -224,8 +275,9 @@ export const updateEntityTool = {
       },
       schemaVersion: 1,
       contractId: "dv360.update_entity.v1",
-      // PR-B is annotation-only. Dry-run lands in PR-C, before/after in PR-D.
-      supportsDryRun: false,
+      // PR-C wires `dry_run` (symbolic Zod validator + symbolic apply via the
+      // read partner). before/after on real writes still ships in PR-D.
+      supportsDryRun: true,
       supportsBeforeAfterSnapshot: false,
     } satisfies CesteralWriteToolAnnotations,
   },
