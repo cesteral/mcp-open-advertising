@@ -35,7 +35,7 @@ describe("dv360-mcp cesteral.* annotations (round 1)", () => {
       lineItemId: "lineItemId",
     });
     expect(cesteral.supportsDryRun).toBe(true);
-    expect(cesteral.supportsBeforeAfterSnapshot).toBe(false);
+    expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);
   });
 
   it("annotates dv360_get_entity as a read contract", () => {
