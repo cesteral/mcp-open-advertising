@@ -4,8 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type MetaEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  CesteralReadToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "meta_get_entity";
 const TOOL_TITLE = "Get Meta Ads Entity";
@@ -76,6 +80,17 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
+    cesteral: {
+      kind: "read",
+      platform: "meta_ads",
+      // Mirror `meta_update_entity`'s entity coverage so a write tool
+      // declaring this as its read partner can capture pre/post snapshots
+      // for any entity the writer can mutate.
+      entityKinds: ["campaign", "ad_set", "ad"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "meta.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {

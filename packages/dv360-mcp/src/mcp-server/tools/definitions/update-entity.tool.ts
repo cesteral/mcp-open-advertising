@@ -12,8 +12,12 @@ import {
   findMatchingExample,
 } from "../utils/entity-examples.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "dv360_update_entity";
 
@@ -197,6 +201,33 @@ export const updateEntityTool = {
     destructiveHint: true,
     openWorldHint: false,
     idempotentHint: true,
+    cesteral: {
+      kind: "write",
+      platform: "dv360",
+      // `dv360_update_entity` dispatches to budget, status, and arbitrary
+      // field updates via the `data` + `updateMask` payload, so it advertises
+      // every canonical op it can express.
+      operation: ["update_budget", "pause", "resume", "update_status", "update"],
+      // Round-1 governance scope is campaign / insertion_order / line_item;
+      // the tool itself accepts more DV360 types (creatives, ad groups, etc.)
+      // but those land with later rounds as canonical-snapshot coverage grows.
+      entityKinds: ["campaign", "insertion_order", "line_item"],
+      entityIdArgs: ["advertiserId", "campaignId", "insertionOrderId", "lineItemId"],
+      readPartner: {
+        toolName: "dv360_get_entity",
+        argMap: {
+          advertiserId: "advertiserId",
+          campaignId: "campaignId",
+          insertionOrderId: "insertionOrderId",
+          lineItemId: "lineItemId",
+        },
+      },
+      schemaVersion: 1,
+      contractId: "dv360.update_entity.v1",
+      // PR-B is annotation-only. Dry-run lands in PR-C, before/after in PR-D.
+      supportsDryRun: false,
+      supportsBeforeAfterSnapshot: false,
+    } satisfies CesteralWriteToolAnnotations,
   },
   logic: updateEntityLogic,
   responseFormatter: updateEntityResponseFormatter,

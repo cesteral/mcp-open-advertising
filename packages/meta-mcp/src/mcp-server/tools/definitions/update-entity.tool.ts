@@ -4,8 +4,12 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type {
+  RequestContext,
+  McpTextContent,
+  SdkContext,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "meta_update_entity";
 const TOOL_TITLE = "Update Meta Ads Entity";
@@ -88,6 +92,25 @@ export const updateEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: true,
+    cesteral: {
+      kind: "write",
+      platform: "meta_ads",
+      // `meta_update_entity` is a multi-operation dispatcher: callers update
+      // budget, status, schedule, targeting, etc. via the `data` payload, so
+      // the contract advertises every canonical op it can express.
+      operation: ["update_budget", "pause", "resume", "update_status", "update"],
+      entityKinds: ["campaign", "ad_set", "ad"],
+      entityIdArgs: ["entityId"],
+      readPartner: {
+        toolName: "meta_get_entity",
+        argMap: { entityId: "entityId" },
+      },
+      schemaVersion: 1,
+      contractId: "meta.update_entity.v1",
+      // PR-B is annotation-only. Dry-run lands in PR-C, before/after in PR-D.
+      supportsDryRun: false,
+      supportsBeforeAfterSnapshot: false,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
