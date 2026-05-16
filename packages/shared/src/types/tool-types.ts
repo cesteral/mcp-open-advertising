@@ -11,6 +11,7 @@
 import type { z } from "zod";
 import type { RequestContext } from "../utils/request-context.js";
 import type { ToolInputExample } from "../utils/tool-handler-factory.js";
+import type { CesteralToolAnnotations } from "./cesteral-annotations.js";
 
 /**
  * Structural subset of ElicitResult from the MCP SDK.
@@ -48,6 +49,11 @@ export interface ToolDefinition<
     destructiveHint?: boolean;
     idempotentHint?: boolean;
     openWorldHint?: boolean;
+    /**
+     * Optional Cesteral governance metadata. Coexists with standard MCP hints;
+     * non-Cesteral clients ignore unknown namespaces.
+     */
+    cesteral?: CesteralToolAnnotations;
   };
   inputExamples?: ToolInputExample[];
   logic: (
