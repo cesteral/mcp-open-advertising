@@ -47,16 +47,12 @@ export interface ValidateEntityResult {
   valid: boolean;
   entityType: string;
   mode: string;
-  /** Legacy flat string errors. New code should populate `issues` instead. */
-  errors?: string[];
-  /** Legacy flat string warnings. New code should populate `issues` with `severity="warning"`. */
-  warnings?: string[];
   /**
-   * Structured issues (errors + warnings together). When present, the formatter
-   * renders these and ignores `errors`/`warnings`. Carries hint + suggestedValues
-   * so clients can offer corrections rather than re-prompting blindly.
+   * Structured issues (errors + warnings together). Each carries an optional
+   * hint + suggestedValues so clients can offer corrections rather than
+   * re-prompting blindly.
    */
-  issues?: ValidationIssue[];
+  issues: ValidationIssue[];
   /**
    * Optional one-line next-action hint when validation fails (e.g. "Call
    * snapchat_list_advertisers first to discover available adAccountId values.")
@@ -219,60 +215,27 @@ function renderIssue(issue: ValidationIssue): string[] {
 /**
  * Format a validation result as an MCP text content block.
  * Shared across all servers with validate-entity tools.
- *
- * Prefers `result.issues` when present (renders hints + suggestedValues per issue),
- * falls back to legacy flat `result.errors`/`result.warnings` arrays otherwise.
  */
 export function validateEntityResponseFormatter(result: ValidateEntityResult): McpTextContent[] {
   const lines: string[] = [];
 
-  // Partition structured issues by severity if present; else fall back to legacy arrays.
-  let errorMessages: string[] = [];
-  let warningMessages: string[] = [];
-  let errorIssues: ValidationIssue[] = [];
-  let warningIssues: ValidationIssue[] = [];
+  const errorIssues = result.issues.filter((i) => i.severity !== "warning");
+  const warningIssues = result.issues.filter((i) => i.severity === "warning");
 
-  if (result.issues && result.issues.length > 0) {
-    for (const issue of result.issues) {
-      if (issue.severity === "warning") {
-        warningIssues.push(issue);
-      } else {
-        errorIssues.push(issue);
-      }
-    }
-    errorMessages = errorIssues.map((i) => i.message);
-    warningMessages = warningIssues.map((i) => i.message);
-  } else {
-    errorMessages = result.errors ?? [];
-    warningMessages = result.warnings ?? [];
-  }
-
-  if (result.valid && errorMessages.length === 0) {
+  if (result.valid && errorIssues.length === 0) {
     lines.push(`Validation passed for ${result.entityType} (${result.mode})`);
   } else {
     lines.push(`Validation failed for ${result.entityType} (${result.mode}):`);
-    if (errorIssues.length > 0) {
-      for (const issue of errorIssues) {
-        lines.push(...renderIssue(issue));
-      }
-    } else {
-      for (const err of errorMessages) {
-        lines.push(`  - ${err}`);
-      }
+    for (const issue of errorIssues) {
+      lines.push(...renderIssue(issue));
     }
   }
 
-  if (warningMessages.length > 0) {
+  if (warningIssues.length > 0) {
     lines.push("");
     lines.push("Warnings:");
-    if (warningIssues.length > 0) {
-      for (const issue of warningIssues) {
-        lines.push(...renderIssue(issue));
-      }
-    } else {
-      for (const warn of warningMessages) {
-        lines.push(`  - ${warn}`);
-      }
+    for (const issue of warningIssues) {
+      lines.push(...renderIssue(issue));
     }
   }
 

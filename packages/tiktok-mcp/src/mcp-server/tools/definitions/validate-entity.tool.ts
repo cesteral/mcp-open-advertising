@@ -169,8 +169,6 @@ export const ValidateEntityOutputSchema = z
     valid: z.boolean().describe("Whether the payload passed validation"),
     entityType: z.string(),
     mode: z.string(),
-    errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
-    warnings: z.array(z.string()).describe("Non-blocking warnings"),
     issues: z.array(ValidationIssueSchema),
     nextAction: z.string().optional(),
     timestamp: z.string().datetime(),
@@ -267,14 +265,11 @@ export async function validateEntityLogic(
   }
 
   const errorIssues = issues.filter((i) => i.severity !== "warning");
-  const warningIssues = issues.filter((i) => i.severity === "warning");
 
   return {
     valid: errorIssues.length === 0,
     entityType,
     mode,
-    errors: errorIssues.map((i) => i.message),
-    warnings: warningIssues.map((i) => i.message),
     issues,
     timestamp: new Date().toISOString(),
   };

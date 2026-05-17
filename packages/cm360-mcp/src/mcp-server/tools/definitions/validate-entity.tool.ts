@@ -139,8 +139,6 @@ export const ValidateEntityOutputSchema = z
     valid: z.boolean().describe("Whether the entity data is valid"),
     entityType: z.string(),
     mode: z.string(),
-    errors: z.array(z.string()).describe("Validation error messages"),
-    warnings: z.array(z.string()).describe("Validation warnings"),
     issues: z.array(ValidationIssueSchema),
     nextAction: z.string().optional(),
     timestamp: z.string().datetime(),
@@ -232,7 +230,6 @@ export async function validateEntityLogic(
   }
 
   const errorIssues = issues.filter((i) => i.severity !== "warning");
-  const warningIssues = issues.filter((i) => i.severity === "warning");
 
   let nextAction: string | undefined;
   if (errorIssues.length > 0) {
@@ -262,8 +259,6 @@ export async function validateEntityLogic(
     valid: errorIssues.length === 0,
     entityType: input.entityType,
     mode: input.mode,
-    errors: errorIssues.map((i) => i.message),
-    warnings: warningIssues.map((i) => i.message),
     issues,
     ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),

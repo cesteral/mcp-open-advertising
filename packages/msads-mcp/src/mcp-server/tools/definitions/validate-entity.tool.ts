@@ -47,8 +47,6 @@ export const ValidateEntityOutputSchema = z
     valid: z.boolean(),
     entityType: z.string(),
     mode: z.string(),
-    errors: z.array(z.string()),
-    warnings: z.array(z.string()),
     issues: z.array(ValidationIssueSchema),
     nextAction: z.string().optional(),
     timestamp: z.string().datetime(),
@@ -138,14 +136,11 @@ export async function validateEntityLogic(
   }
 
   const errorIssues = issues.filter((i) => i.severity !== "warning");
-  const warningIssues = issues.filter((i) => i.severity === "warning");
 
   return {
     valid: errorIssues.length === 0,
     entityType: input.entityType,
     mode: input.mode,
-    errors: errorIssues.map((i) => i.message),
-    warnings: warningIssues.map((i) => i.message),
     issues,
     timestamp: new Date().toISOString(),
   };

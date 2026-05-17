@@ -37,8 +37,6 @@ const ValidateEntityOutputSchema = z
     valid: z.boolean().describe("Whether the payload passed validation"),
     entityType: z.string().describe("Entity type that was validated"),
     mode: z.string().describe("Validation mode (create or update)"),
-    errors: z.array(z.string()).describe("Validation errors (empty if valid)"),
-    warnings: z.array(z.string()).describe("Non-blocking warnings"),
     issues: z.array(ValidationIssueSchema),
     nextAction: z.string().optional(),
     timestamp: z.string().datetime().describe("ISO-8601 timestamp of validation"),
@@ -132,14 +130,11 @@ export function createValidateEntityTool<E extends string>(opts: ValidateEntityT
       }) ?? undefined;
 
     const errorIssues = issues.filter((i) => i.severity !== "warning");
-    const warningIssues = issues.filter((i) => i.severity === "warning");
 
     return {
       valid: errorIssues.length === 0,
       entityType: entityType as string,
       mode: mode as string,
-      errors: errorIssues.map((i) => i.message),
-      warnings: warningIssues.map((i) => i.message),
       issues,
       ...(extraResult?.nextAction ? { nextAction: extraResult.nextAction } : {}),
       timestamp: new Date().toISOString(),

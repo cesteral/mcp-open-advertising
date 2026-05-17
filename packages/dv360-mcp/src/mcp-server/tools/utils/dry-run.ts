@@ -55,7 +55,7 @@ export function getPath(obj: Record<string, any>, path: string): unknown {
 }
 
 export function deepClone<T>(v: T): T {
-  return JSON.parse(JSON.stringify(v));
+  return structuredClone(v);
 }
 
 /**
