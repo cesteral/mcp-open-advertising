@@ -2,11 +2,11 @@
 
 Cesteral MCP servers ship to **three independent registries**, each with a distinct purpose. This guide is the single overview — see the deeper guides linked below for each target.
 
-| Registry                                   | What we ship                            | Audience                               | Required for       | Deeper guide                                                  |
-| ------------------------------------------ | --------------------------------------- | -------------------------------------- | ------------------ | ------------------------------------------------------------- |
-| **GCP Artifact Registry** (`europe-west2`) | Docker images (one per server)          | Cloud Run (us) and self-hosters on GCP | Hosted deployments | [`deployment-instructions.md`](./deployment-instructions.md)  |
-| **npm** (`@cesteral/*`)                    | TypeScript packages (stdio entry point) | Local installs (Claude Desktop, CI)    | MCP Registry       | This doc                                                      |
-| **MCP Registry** (`io.github.cesteral/*`)  | Server manifests (`server.json`)        | LLM clients discovering servers        | Public discovery   | [`mcp-registry-publishing.md`](./mcp-registry-publishing.md)  |
+| Registry                                   | What we ship                            | Audience                               | Required for       | Deeper guide                                                 |
+| ------------------------------------------ | --------------------------------------- | -------------------------------------- | ------------------ | ------------------------------------------------------------ |
+| **GCP Artifact Registry** (`europe-west2`) | Docker images (one per server)          | Cloud Run (us) and self-hosters on GCP | Hosted deployments | [`deployment-instructions.md`](./deployment-instructions.md) |
+| **npm** (`@cesteral/*`)                    | TypeScript packages (stdio entry point) | Local installs (Claude Desktop, CI)    | MCP Registry       | This doc                                                     |
+| **MCP Registry** (`io.github.cesteral/*`)  | Server manifests (`server.json`)        | LLM clients discovering servers        | Public discovery   | [`mcp-registry-publishing.md`](./mcp-registry-publishing.md) |
 
 The three are **independent** — you can ship to any one without the others. In practice the release order is:
 
@@ -18,13 +18,13 @@ build → npm publish → MCP Registry publish     ← discoverable stdio instal
 
 ## When to publish to which
 
-| Change                                              | Artifact Registry | npm  | MCP Registry |
-| --------------------------------------------------- | ----------------- | ---- | ------------ |
-| Code change to a server's tools                     | ✓                 | ✓    | (only if metadata changed) |
-| New tool added / renamed                            | ✓                 | ✓    | ✓ (regenerate `server.json` first) |
-| Auth-mode change, new transport, new prompt/resource | ✓                | ✓    | ✓            |
-| Infra-only change (Terraform, secrets)              | —                 | —    | —            |
-| README / docs / non-shipping files                  | —                 | —    | —            |
+| Change                                               | Artifact Registry | npm | MCP Registry                       |
+| ---------------------------------------------------- | ----------------- | --- | ---------------------------------- |
+| Code change to a server's tools                      | ✓                 | ✓   | (only if metadata changed)         |
+| New tool added / renamed                             | ✓                 | ✓   | ✓ (regenerate `server.json` first) |
+| Auth-mode change, new transport, new prompt/resource | ✓                 | ✓   | ✓                                  |
+| Infra-only change (Terraform, secrets)               | —                 | —   | —                                  |
+| README / docs / non-shipping files                   | —                 | —   | —                                  |
 
 `package.json` `files` arrays already exclude tests and config from the published tarball — you don't need to gate every doc tweak.
 
@@ -33,6 +33,7 @@ build → npm publish → MCP Registry publish     ← discoverable stdio instal
 **Repo:** `europe-west2-docker.pkg.dev/{PROJECT_ID}/cesteral`
 **Provisioned by:** initial creation in `./scripts/init-gcp-project.sh <dev|prod>` (idempotent); steady-state managed by `google_artifact_registry_repository.container_repo` in `terraform/main.tf` (cleanup policies, labels).
 **Image tags:**
+
 - `deploy.sh` (and Cloud Build): `{server}:{git-sha}` + `{server}:latest`. Cloud Run revisions pin to the SHA; `:latest` is for humans inspecting recent builds.
 - `cloudbuild-manual.yaml`: `{server}:{env}-latest` (env-scoped rolling tag). Used only for the standalone image-build flow.
 
