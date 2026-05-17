@@ -4,8 +4,13 @@
 import type { Logger } from "pino";
 import { z } from "zod";
 import type { CM360HttpClient } from "./cm360-http-client.js";
-import type { RateLimiter } from "@cesteral/shared";
-import { McpError, JsonRpcErrorCode, type RequestContext } from "@cesteral/shared";
+import type { BulkResult, RateLimiter } from "@cesteral/shared";
+import {
+  McpError,
+  JsonRpcErrorCode,
+  executeBulkConcurrent,
+  type RequestContext,
+} from "@cesteral/shared";
 import type { CM360EntityType } from "../../mcp-server/tools/utils/entity-mapping.js";
 import { getEntityConfig } from "../../mcp-server/tools/utils/entity-mapping.js";
 import type { components } from "../../generated/types.js";
@@ -216,5 +221,79 @@ export class CM360Service {
     }
     const path = `/userprofiles/${profileId}/${config.apiCollection}/${entityId}`;
     return this.httpClient.fetch(path, context, { method: "DELETE" });
+  }
+
+  // ─── Bulk Operations ──────────────────────────────────────────────
+  //
+  // CM360 has no native bulk endpoint, so each tool fan-outs to per-entity
+  // CRUD calls. Concurrency is bounded by `executeBulkConcurrent` (default 5)
+  // and individual failures are recorded without aborting the batch.
+
+  async bulkCreateEntities<T extends CM360EntityType>(
+    entityType: T,
+    profileId: string,
+    items: Record<string, unknown>[],
+    context?: RequestContext
+  ): Promise<BulkResult<CM360EntityMap[T]>[]> {
+    return executeBulkConcurrent(
+      items,
+      (item) => this.createEntity(entityType, profileId, item, context),
+      { logger: this.logger }
+    );
+  }
+
+  async bulkUpdateEntities<T extends CM360EntityType>(
+    entityType: T,
+    profileId: string,
+    items: Array<{ entityId: string; data: Record<string, unknown> }>,
+    context?: RequestContext
+  ): Promise<
+    Array<{ entityId: string; success: boolean; entity?: CM360EntityMap[T]; error?: string }>
+  > {
+    const bulkResults = await executeBulkConcurrent(
+      items,
+      (item) =>
+        this.updateEntity(entityType, profileId, { ...item.data, id: item.entityId }, context),
+      { logger: this.logger }
+    );
+    return bulkResults.map((r, i) => ({
+      entityId: items[i]!.entityId,
+      success: r.success,
+      entity: r.entity,
+      error: r.error,
+    }));
+  }
+
+  /**
+   * Read-modify-write status update. CM360's PUT semantics replace the entire
+   * resource, so each status flip needs a fresh GET to avoid clobbering other
+   * fields. The caller provides the per-entity-type status mapping via the
+   * `applyStatus` transform.
+   */
+  async bulkUpdateStatus<T extends CM360EntityType>(
+    entityType: T,
+    profileId: string,
+    entityIds: string[],
+    status: string,
+    applyStatus: (current: Record<string, unknown>, status: string) => Record<string, unknown>,
+    context?: RequestContext
+  ): Promise<Array<{ entityId: string; success: boolean; error?: string }>> {
+    const bulkResults = await executeBulkConcurrent(
+      entityIds,
+      async (entityId) => {
+        const current = (await this.getEntity(entityType, profileId, entityId, context)) as Record<
+          string,
+          unknown
+        >;
+        await this.updateEntity(entityType, profileId, applyStatus(current, status), context);
+        return entityId;
+      },
+      { logger: this.logger }
+    );
+    return bulkResults.map((r, i) => ({
+      entityId: entityIds[i]!,
+      success: r.success,
+      error: r.error,
+    }));
   }
 }

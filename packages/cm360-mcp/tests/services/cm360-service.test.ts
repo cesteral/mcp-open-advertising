@@ -400,4 +400,127 @@ describe("CM360Service", () => {
       expect(rateLimiter.consume).toHaveBeenCalledWith("cm360");
     });
   });
+
+  // ==========================================================================
+  // bulkCreateEntities
+  // ==========================================================================
+
+  describe("bulkCreateEntities", () => {
+    it("returns one BulkResult per input item, indexed by position", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ id: "1" }).mockResolvedValueOnce({ id: "2" });
+
+      const result = await service.bulkCreateEntities("campaign", "p1", [
+        { name: "A" },
+        { name: "B" },
+      ]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ success: true, entity: { id: "1" } });
+      expect(result[1]).toEqual({ success: true, entity: { id: "2" } });
+    });
+
+    it("records per-item failure without aborting the batch", async () => {
+      httpClient.fetch
+        .mockResolvedValueOnce({ id: "1" })
+        .mockRejectedValueOnce(new Error("API error"))
+        .mockResolvedValueOnce({ id: "3" });
+
+      const result = await service.bulkCreateEntities("campaign", "p1", [
+        { name: "A" },
+        { name: "B" },
+        { name: "C" },
+      ]);
+
+      expect(result[0].success).toBe(true);
+      expect(result[1].success).toBe(false);
+      expect(result[1].error).toBe("API error");
+      expect(result[2].success).toBe(true);
+    });
+
+    it("invokes the underlying create path once per item", async () => {
+      httpClient.fetch.mockResolvedValue({ id: "x" });
+
+      await service.bulkCreateEntities("placement", "p1", [{ name: "First" }, { name: "Second" }]);
+
+      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+      // Each call goes to the placements collection
+      for (const call of httpClient.fetch.mock.calls) {
+        expect(call[0]).toBe("/userprofiles/p1/placements");
+        expect(call[2].method).toBe("POST");
+      }
+    });
+  });
+
+  // ==========================================================================
+  // bulkUpdateEntities
+  // ==========================================================================
+
+  describe("bulkUpdateEntities", () => {
+    it("merges entityId into the PUT body for each item", async () => {
+      httpClient.fetch.mockResolvedValue({ id: "ok" });
+
+      await service.bulkUpdateEntities("campaign", "p1", [
+        { entityId: "c-1", data: { name: "new-1" } },
+        { entityId: "c-2", data: { name: "new-2" } },
+      ]);
+
+      expect(httpClient.fetch).toHaveBeenCalledTimes(2);
+      const bodies = httpClient.fetch.mock.calls.map((c: any[]) => JSON.parse(c[2].body));
+      expect(bodies[0]).toEqual({ name: "new-1", id: "c-1" });
+      expect(bodies[1]).toEqual({ name: "new-2", id: "c-2" });
+    });
+
+    it("collects partial failures with the entityId carried through", async () => {
+      httpClient.fetch.mockResolvedValueOnce({ id: "c-1" }).mockRejectedValueOnce(new Error("403"));
+
+      const result = await service.bulkUpdateEntities("campaign", "p1", [
+        { entityId: "c-1", data: {} },
+        { entityId: "c-2", data: {} },
+      ]);
+
+      expect(result[0]).toMatchObject({ entityId: "c-1", success: true });
+      expect(result[1]).toMatchObject({ entityId: "c-2", success: false, error: "403" });
+    });
+  });
+
+  // ==========================================================================
+  // bulkUpdateStatus
+  // ==========================================================================
+
+  describe("bulkUpdateStatus", () => {
+    it("performs read-modify-write per entity (GET then PUT)", async () => {
+      // 2 entities × (GET current + PUT updated) = 4 calls
+      httpClient.fetch
+        .mockResolvedValueOnce({ id: "c-1", name: "X" })
+        .mockResolvedValueOnce({ id: "c-1", name: "X" })
+        .mockResolvedValueOnce({ id: "c-2", name: "Y" })
+        .mockResolvedValueOnce({ id: "c-2", name: "Y" });
+
+      const result = await service.bulkUpdateStatus(
+        "campaign",
+        "p1",
+        ["c-1", "c-2"],
+        "PAUSED",
+        (current, status) => ({ ...current, archived: status === "PAUSED" })
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toMatchObject({ entityId: "c-1", success: true });
+      expect(result[1]).toMatchObject({ entityId: "c-2", success: true });
+    });
+
+    it("reports failure if the GET step throws", async () => {
+      httpClient.fetch.mockRejectedValueOnce(new Error("404"));
+
+      const result = await service.bulkUpdateStatus(
+        "campaign",
+        "p1",
+        ["c-missing"],
+        "PAUSED",
+        (current) => current
+      );
+
+      expect(result[0]).toMatchObject({ entityId: "c-missing", success: false, error: "404" });
+    });
+  });
 });

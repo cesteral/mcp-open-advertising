@@ -9,6 +9,9 @@ const mockState = vi.hoisted(() => ({
     listEntities: vi.fn(),
     listUserProfiles: vi.fn(),
     listTargetingOptions: vi.fn(),
+    bulkCreateEntities: vi.fn(),
+    bulkUpdateEntities: vi.fn(),
+    bulkUpdateStatus: vi.fn(),
   },
   cm360ReportingService: {
     runReport: vi.fn(),
@@ -46,6 +49,45 @@ const mockContext = { requestId: "test-req" } as any;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Passthrough: simulate the service's read-modify-write by calling the
+  // existing getEntity / updateEntity mocks. The tool supplies the per-entity
+  // status transform via the `applyStatus` callback.
+  mockState.cm360Service.bulkUpdateStatus.mockImplementation(
+    async (
+      entityType: any,
+      profileId: any,
+      entityIds: any[],
+      status: any,
+      applyStatus: any,
+      context: any
+    ) => {
+      const out: any[] = [];
+      for (const entityId of entityIds) {
+        try {
+          const current = await mockState.cm360Service.getEntity(
+            entityType,
+            profileId,
+            entityId,
+            context
+          );
+          await mockState.cm360Service.updateEntity(
+            entityType,
+            profileId,
+            applyStatus(current as any, status),
+            context
+          );
+          out.push({ entityId, success: true });
+        } catch (error) {
+          out.push({
+            entityId,
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      return out;
+    }
+  );
 });
 
 describe("bulkUpdateStatusLogic", () => {
