@@ -48,9 +48,7 @@ describe("redactHeaders", () => {
 
 describe("redactUrl", () => {
   it("redacts sensitive query parameters", () => {
-    const out = redactUrl(
-      "https://graph.facebook.com/v24.0/me?access_token=EAABwzLix&fields=name"
-    );
+    const out = redactUrl("https://graph.facebook.com/v24.0/me?access_token=EAABwzLix&fields=name");
     expect(out).not.toContain("EAABwzLix");
     expect(out).toContain("access_token=%5BREDACTED%5D");
     expect(out).toContain("fields=name");
