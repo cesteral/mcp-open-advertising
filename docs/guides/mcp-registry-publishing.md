@@ -107,18 +107,4 @@ done
 
 ## Current Servers
 
-| Server           | mcpName                             | Tools |
-| ---------------- | ----------------------------------- | ----- |
-| `dbm-mcp`        | `io.github.cesteral/dbm-mcp`        | 6     |
-| `dv360-mcp`      | `io.github.cesteral/dv360-mcp`      | 25    |
-| `ttd-mcp`        | `io.github.cesteral/ttd-mcp`        | 55    |
-| `gads-mcp`       | `io.github.cesteral/gads-mcp`       | 15    |
-| `meta-mcp`       | `io.github.cesteral/meta-mcp`       | 26    |
-| `linkedin-mcp`   | `io.github.cesteral/linkedin-mcp`   | 20    |
-| `tiktok-mcp`     | `io.github.cesteral/tiktok-mcp`     | 23    |
-| `cm360-mcp`      | `io.github.cesteral/cm360-mcp`      | 20    |
-| `sa360-mcp`      | `io.github.cesteral/sa360-mcp`      | 16    |
-| `pinterest-mcp`  | `io.github.cesteral/pinterest-mcp`  | 22    |
-| `snapchat-mcp`   | `io.github.cesteral/snapchat-mcp`   | 22    |
-| `amazon-dsp-mcp` | `io.github.cesteral/amazon-dsp-mcp` | 18    |
-| `msads-mcp`      | `io.github.cesteral/msads-mcp`      | 24    |
+All 13 servers publish under the `io.github.cesteral/` namespace (e.g. `io.github.cesteral/dv360-mcp`). For the authoritative, always-current view of each server's tool list, consult `registry.json` directly or run `pnpm run check:registry-tools` — they're the source of truth that `server.json` manifests are generated from.
