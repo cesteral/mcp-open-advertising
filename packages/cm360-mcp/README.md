@@ -283,7 +283,6 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 | `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `50`                                                  | API rate limit (requests/min)                 |
 | `CM360_SERVICE_ACCOUNT_FILE`      | Stdio    | --                                                    | Path to service account JSON                  |
 | `CM360_SERVICE_ACCOUNT_JSON`      | Stdio    | --                                                    | Base64-encoded service account JSON           |
-| `MCP_SESSION_MODE`                | No       | `auto`                                                | Session mode: `stateless`, `stateful`, `auto` |
 | `MCP_STATEFUL_SESSION_TIMEOUT_MS` | No       | `3600000`                                             | Session timeout (ms)                          |
 | `MCP_ALLOWED_ORIGINS`             | No       | --                                                    | CORS allowed origins (comma-separated)        |
 | `OTEL_ENABLED`                    | No       | `false`                                               | Enable OpenTelemetry                          |

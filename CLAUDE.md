@@ -24,7 +24,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 10  | `sa360-mcp`      | 3010 | SA360 Reporting API v0 + DS v2     | _(reporting + conversions)_                                                                      | 16    |
 | 11  | `pinterest-mcp`  | 3011 | Pinterest Ads API v5               | campaign, adGroup, ad, creative                                                                  | 23    |
 | 12  | `amazon-dsp-mcp` | 3012 | Amazon DSP API                     | order, lineItem, creative                                                                        | 19    |
-| 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 25    |
+| 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 24    |
 
 ## Essential Commands
 
@@ -106,7 +106,10 @@ Full discriminated union schemas exceed ~1MB (EPIPE on stdio). Solution: simplif
 
 On-demand workflow guidance for complex multi-step operations. Located in `src/mcp-server/prompts/`. Register in `prompts/index.ts` via `promptRegistry` Map.
 
-Available: `full_campaign_setup_workflow` (dv360-mcp), `msads_import_from_google` (msads-mcp)
+Available:
+
+- **dv360-mcp** (13): `full_campaign_setup_workflow`, `troubleshoot_underdelivery`, `budget_reallocation_workflow`, `entity_update_execution_workflow`, `dv360_tool_schema_exploration`, `targeting_management_workflow`, `bulk_operations_workflow`, `cross_platform_performance_comparison`, `entity_activation_workflow`, `cross_platform_campaign_setup`, `custom_bidding_workflow`, `entity_duplication_workflow`, `creative_setup_workflow`
+- **msads-mcp** (5): `msads_campaign_setup_workflow`, `msads_bulk_operations_workflow`, `msads_reporting_workflow`, `msads_google_import_workflow`, `msads_troubleshoot_entity`
 
 ## Auth Mode Configuration
 
@@ -279,7 +282,7 @@ Standard CRUD/bulk/targeting/media tools plus:
 | `sa360_validate_conversion`     | Validate conversion payload          | `mode`, `conversion`                                    |
 | `sa360_get_change_history`      | Get change history for entities      | `customerId`, `entityType?`, `dateRange?`               |
 
-### msads-mcp — 25 Tools (Unique: Google Import, Ad Extensions, Report Scheduling)
+### msads-mcp — 24 Tools (Unique: Google Import, Ad Extensions, Report Scheduling)
 
 Standard CRUD/bulk/reporting tools plus:
 
@@ -299,7 +302,7 @@ Standard CRUD/bulk/reporting tools plus:
 - **linkedin-mcp** (21 tools): URN-based entity IDs, `LinkedIn-Version: 202409` header, analytics via `/v2/adAnalytics` with pivot breakdowns
 - **tiktok-mcp** (23 tools): `X-TikTok-Advertiser-Id` header in HTTP mode, image/video upload
 - **cm360-mcp** (21 tools): `profileId` required on all calls, `list_user_profiles` for profile discovery, `list_targeting_options` for targeting; scheduling via `create/list/delete_report_schedule`
-- **pinterest-mcp** (22 tools): cursor-based pagination via `bookmark` tokens. Video upload via `/v5/media`; image creatives reference URLs directly (Pinterest's `/v5/media` endpoint only supports `media_type="video"`)
+- **pinterest-mcp** (23 tools): cursor-based pagination via `bookmark` tokens. Video upload via `/v5/media`; image creatives reference URLs directly (Pinterest's `/v5/media` endpoint only supports `media_type="video"`)
 - **snapchat-mcp** (22 tools): Ad Squads (adGroups), cursor-based pagination
 - **amazon-dsp-mcp** (19 tools): Orders (campaigns), Line Items (ad groups), no hard delete (archive via status). Reporting v3 is scoped by `accountId` (DSP entity ID) in the URL path, distinct from the profile header. **Stdio auth prefers the LwA refresh-token flow** (`AMAZON_DSP_APP_ID` + `_APP_SECRET` + `_REFRESH_TOKEN` + `_PROFILE_ID`) — auto-refreshes the 60-min access token. Falls back to static `AMAZON_DSP_ACCESS_TOKEN` for short CI runs.
 

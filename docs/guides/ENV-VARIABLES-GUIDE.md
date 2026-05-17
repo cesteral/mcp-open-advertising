@@ -125,7 +125,6 @@ MCP_AUTH_MODE=none                              # none | jwt | google-headers | 
 MCP_AUTH_SECRET_KEY=
 
 # MCP Session Management
-MCP_SESSION_MODE=auto                           # auto | stateless | stateful
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000         # 1 hour
 MCP_ALLOWED_ORIGINS=*                           # CSV of allowed origins
 
@@ -161,7 +160,6 @@ DV360_SERVICE_ACCOUNT_JSON=
 DV360_RATE_LIMIT_PER_MINUTE=60
 
 # MCP Session
-MCP_SESSION_MODE=auto
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000
 MCP_ALLOWED_ORIGINS=*
 
@@ -491,7 +489,6 @@ MCP_AUTH_MODE=none                           # none | jwt | google-headers | ttd
 MCP_AUTH_SECRET_KEY=                         # Required if MCP_AUTH_MODE=jwt (32+ chars)
 
 # MCP Session Management
-MCP_SESSION_MODE=auto                        # auto | stateless | stateful
 MCP_STATEFUL_SESSION_TIMEOUT_MS=3600000     # 1 hour
 MCP_ALLOWED_ORIGINS=*                        # CSV of allowed origins
 

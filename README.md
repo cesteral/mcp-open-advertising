@@ -106,7 +106,7 @@ Intelligence layers governance and orchestration on top:
 | [pinterest-mcp](packages/pinterest-mcp)   | Pinterest Ads API v5              | 23    | Bearer token                    |
 | [snapchat-mcp](packages/snapchat-mcp)     | Snapchat Ads API v1               | 23    | Bearer token                    |
 | [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API                    | 19    | Bearer token                    |
-| [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 25    | Access token + developer token  |
+| [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 24    | Access token + developer token  |
 | [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 6     | Google OAuth2                   |
 
 ---
@@ -124,7 +124,7 @@ production without hand-rolling guardrails:
   your existing log stack for self-host.
   [Read the observability guide](docs/guides/observability.md).
 - **Destructive-action elicitation gates**. 53 destructive tools across all
-  12 servers prompt the user before deletes, bulk status changes, bid
+  13 servers prompt the user before deletes, bulk status changes, bid
   adjustments, budget changes, conversion uploads, and async Workflows
   batch jobs. Stdio and clients without elicitation support fall back to a
   documented non-interactive contract. Bulk mutations under 10 items skip

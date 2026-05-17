@@ -841,7 +841,6 @@ All configuration is centralized in `src/config/index.ts` and validated with Zod
 | `NODE_ENV`                            | enum    | `development`                            | Environment: `development`, `production`, `test`         |
 | `MCP_AUTH_MODE`                       | enum    | `none`                                   | Auth mode: `none`, `jwt`, `oauth`                        |
 | `MCP_AUTH_SECRET_KEY`                 | string  | _(required for jwt)_                     | JWT secret (32+ chars)                                   |
-| `MCP_SESSION_MODE`                    | enum    | `auto`                                   | Session mode: `stateless`, `stateful`, `auto`            |
 | `MCP_STATEFUL_SESSION_TIMEOUT_MS`     | number  | `3600000`                                | Session timeout (1 hour)                                 |
 | `MCP_ALLOWED_ORIGINS`                 | string  | `*`                                      | CORS origins (CSV)                                       |
 | `MCP_LOG_LEVEL`                       | enum    | `debug`                                  | Log level: `debug`, `info`, `notice`, `warning`, `error` |
