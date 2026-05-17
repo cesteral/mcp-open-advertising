@@ -13,12 +13,19 @@
  *  2. Developer token (static 22-char string, per company)
  *  3. Login customer ID (optional, for manager account access)
  *
- * Same caching pattern as TtdCredentialExchangeAuthAdapter: tokens are cached with a 60s
- * expiry buffer, and a pending-auth mutex prevents concurrent token requests.
+ * Caching + single-flight refresh live in OAuth2RefreshAdapterBase; this
+ * subclass owns the Google-specific exchange request and exposes the
+ * developer-token / login-customer-id carrier fields.
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  JsonRpcErrorCode,
+  McpError,
+  OAuth2RefreshAdapterBase,
+} from "@cesteral/shared";
 
 /**
  * Google Ads credentials parsed from HTTP headers or environment variables.
@@ -47,97 +54,75 @@ export interface GAdsAuthAdapter {
 }
 
 /**
- * Google OAuth2 token response shape.
- */
-interface TokenResponse {
-  access_token: string;
-  expires_in: number;
-  token_type: string;
-  scope?: string;
-}
-
-/**
  * Token exchange adapter that authenticates via Google's OAuth2 endpoint.
  * Caches tokens until they're within 60s of expiry.
  */
-export class GAdsRefreshTokenAuthAdapter implements GAdsAuthAdapter {
-  private cachedToken: string | null = null;
-  private tokenExpiresAt = 0;
-  private pendingAuth: Promise<string> | null = null;
-
-  private static readonly EXPIRY_BUFFER_MS = 60_000;
+export class GAdsRefreshTokenAuthAdapter
+  extends OAuth2RefreshAdapterBase<{ appId: string; appSecret: string; refreshToken: string }>
+  implements GAdsAuthAdapter
+{
   private static readonly TOKEN_URL = "https://oauth2.googleapis.com/token";
   private static readonly TOKEN_TIMEOUT_MS = 10_000;
 
-  constructor(private readonly credentials: GAdsCredentials) {}
+  private readonly _developerToken: string;
+  private readonly _loginCustomerId: string | undefined;
+
+  constructor(credentials: GAdsCredentials) {
+    super({
+      platformName: "Google Ads",
+      credentials: {
+        appId: credentials.clientId,
+        appSecret: credentials.clientSecret,
+        refreshToken: credentials.refreshToken,
+      },
+      requestToken: async (refreshToken) => {
+        const body = new URLSearchParams({
+          client_id: credentials.clientId,
+          client_secret: credentials.clientSecret,
+          refresh_token: refreshToken,
+          grant_type: "refresh_token",
+        });
+
+        const response = await fetchWithTimeout(
+          GAdsRefreshTokenAuthAdapter.TOKEN_URL,
+          GAdsRefreshTokenAuthAdapter.TOKEN_TIMEOUT_MS,
+          undefined,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: body.toString(),
+          }
+        );
+
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => "");
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
+            `Google OAuth2 token exchange failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          );
+        }
+
+        return (await response.json()) as {
+          access_token?: string;
+          expires_in?: number;
+          refresh_token?: string;
+        };
+      },
+    });
+    this._developerToken = credentials.developerToken;
+    this._loginCustomerId = credentials.loginCustomerId;
+  }
 
   get developerToken(): string {
-    return this.credentials.developerToken;
+    return this._developerToken;
   }
 
   get loginCustomerId(): string | undefined {
-    return this.credentials.loginCustomerId;
+    return this._loginCustomerId;
   }
 
   async validate(): Promise<void> {
     await this.getAccessToken();
-  }
-
-  async getAccessToken(): Promise<string> {
-    // Return cached token if still valid
-    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
-      return this.cachedToken;
-    }
-
-    // Mutex: if a token request is already in flight, wait for it
-    if (this.pendingAuth) {
-      return this.pendingAuth;
-    }
-
-    this.pendingAuth = this.exchangeToken();
-    try {
-      const token = await this.pendingAuth;
-      return token;
-    } finally {
-      this.pendingAuth = null;
-    }
-  }
-
-  private async exchangeToken(): Promise<string> {
-    const body = new URLSearchParams({
-      client_id: this.credentials.clientId,
-      client_secret: this.credentials.clientSecret,
-      refresh_token: this.credentials.refreshToken,
-      grant_type: "refresh_token",
-    });
-
-    const response = await fetchWithTimeout(
-      GAdsRefreshTokenAuthAdapter.TOKEN_URL,
-      GAdsRefreshTokenAuthAdapter.TOKEN_TIMEOUT_MS,
-      undefined,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: body.toString(),
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `Google OAuth2 token exchange failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as TokenResponse;
-
-    this.cachedToken = data.access_token;
-    this.tokenExpiresAt =
-      Date.now() + data.expires_in * 1000 - GAdsRefreshTokenAuthAdapter.EXPIRY_BUFFER_MS;
-
-    return this.cachedToken;
   }
 }
 

@@ -7,8 +7,8 @@
  * Two adapter implementations:
  * 1. SnapchatAccessTokenAdapter — holds a pre-generated static access token.
  * 2. SnapchatRefreshTokenAdapter — uses app credentials + refresh token to
- *    auto-refresh access tokens. Same caching + mutex pattern as TTD's
- *    TtdCredentialExchangeAuthAdapter.
+ *    auto-refresh access tokens. Caching + single-flight refresh come from
+ *    OAuth2RefreshAdapterBase in @cesteral/shared.
  *
  * Validates tokens by calling GET /v1/me on the Snapchat Ads API.
  * Token refresh uses POST https://accounts.snapchat.com/login/oauth2/access_token

@@ -10,9 +10,11 @@ import {
 
 /**
  * Minimal concrete subclass for testing the base directly. The real adapters
- * (TtdCredentialExchangeAuthAdapter, AmazonDspRefreshTokenAdapter, etc.) add
- * platform-specific validation but rely on the base for caching, single-flight,
- * expiry math, and refresh-token rotation — exactly the surface this tests.
+ * (AmazonDspRefreshTokenAdapter, MetaRefreshTokenAdapter, LinkedInRefreshTokenAdapter,
+ * TikTokRefreshTokenAdapter, PinterestRefreshTokenAdapter, SnapchatRefreshTokenAdapter,
+ * GAdsRefreshTokenAuthAdapter) add platform-specific validation but rely on the base
+ * for caching, single-flight, expiry math, and refresh-token rotation — exactly the
+ * surface this tests.
  */
 class TestAdapter extends OAuth2RefreshAdapterBase<OAuth2RefreshTokenCredentials> {
   constructor(

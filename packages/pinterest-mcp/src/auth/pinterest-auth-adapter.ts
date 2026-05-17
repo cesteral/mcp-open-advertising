@@ -7,8 +7,8 @@
  * Two adapter implementations:
  * 1. PinterestAccessTokenAdapter — holds a pre-generated static access token.
  * 2. PinterestRefreshTokenAdapter — uses app credentials + refresh token to
- *    auto-refresh access tokens (24h expiry). Same caching + mutex pattern
- *    as TTD's TtdCredentialExchangeAuthAdapter.
+ *    auto-refresh access tokens (24h expiry). Caching + single-flight refresh
+ *    come from OAuth2RefreshAdapterBase in @cesteral/shared.
  *
  * Validates tokens by calling GET /v5/user_account.
  * Token is passed via Authorization: Bearer <token> header.

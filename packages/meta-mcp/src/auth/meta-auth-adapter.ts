@@ -15,7 +15,13 @@
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  JsonRpcErrorCode,
+  McpError,
+  OAuth2RefreshAdapterBase,
+} from "@cesteral/shared";
 
 const DEFAULT_META_GRAPH_API_BASE_URL = "https://graph.facebook.com/v25.0";
 
@@ -92,15 +98,6 @@ export interface MetaAppCredentials {
 }
 
 /**
- * Meta token exchange response shape.
- */
-interface MetaTokenExchangeResponse {
-  access_token: string;
-  token_type: string;
-  expires_in?: number; // seconds — present for long-lived tokens (typically 5184000 = 60 days)
-}
-
-/**
  * Refresh token adapter — uses app credentials to exchange short-lived tokens
  * for long-lived tokens and refresh them before expiry.
  *
@@ -109,14 +106,15 @@ interface MetaTokenExchangeResponse {
  * - Long-lived tokens: ~60 days (from server-side exchange)
  * - System User tokens: never expire (no refresh needed)
  *
- * This adapter exchanges the initial token for a long-lived one and caches it.
- * If the long-lived token approaches expiry (within 24h), it exchanges it for
- * a new long-lived token. Uses same mutex pattern as TTD/TikTok adapters.
+ * Subsequent exchanges use the most recently obtained long-lived token (not
+ * the initial token), which Meta's fb_exchange_token grant accepts as input.
+ * That rotation is driven by returning the new access_token in the base's
+ * `refresh_token` slot so OAuth2RefreshAdapterBase carries it forward.
  */
-export class MetaRefreshTokenAdapter implements MetaAuthAdapter {
-  private cachedToken: string | null = null;
-  private tokenExpiresAt = 0;
-  private pendingExchange: Promise<string> | null = null;
+export class MetaRefreshTokenAdapter
+  extends OAuth2RefreshAdapterBase<{ appId: string; appSecret: string; refreshToken: string }>
+  implements MetaAuthAdapter
+{
   private _userId = "";
 
   /**
@@ -126,11 +124,77 @@ export class MetaRefreshTokenAdapter implements MetaAuthAdapter {
    */
   private static readonly EXPIRY_BUFFER_MS = 24 * 60 * 60 * 1000;
 
+  /** ~100 years — used when Meta returns no expires_in (system-user tokens). */
+  private static readonly INDEFINITE_EXPIRES_IN_SECONDS = 100 * 365 * 24 * 60 * 60;
+
   constructor(
-    private readonly initialToken: string,
-    private readonly appCredentials: MetaAppCredentials,
+    initialToken: string,
+    appCredentials: MetaAppCredentials,
     private readonly baseUrl: string = DEFAULT_META_GRAPH_API_BASE_URL
-  ) {}
+  ) {
+    super({
+      platformName: "Meta",
+      credentials: {
+        appId: appCredentials.appId,
+        appSecret: appCredentials.appSecret,
+        refreshToken: initialToken,
+      },
+      expiryBufferMs: MetaRefreshTokenAdapter.EXPIRY_BUFFER_MS,
+      requestToken: async (tokenToExchange) => {
+        // POST with form-encoded body keeps client_secret out of URLs
+        // (URLs can leak through load balancer / CDN / proxy access logs)
+        const params = new URLSearchParams({
+          grant_type: "fb_exchange_token",
+          client_id: appCredentials.appId,
+          client_secret: appCredentials.appSecret,
+          fb_exchange_token: tokenToExchange,
+        });
+
+        const response = await fetchWithTimeout(
+          `${baseUrl}/oauth/access_token`,
+          10_000,
+          undefined,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: params.toString(),
+          }
+        );
+
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => "");
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
+            `Meta token exchange failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          );
+        }
+
+        const data = (await response.json()) as {
+          access_token?: string;
+          token_type?: string;
+          expires_in?: number;
+        };
+
+        if (!data.access_token) {
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
+            "Meta token exchange returned no access_token"
+          );
+        }
+
+        // Meta's exchange returns the new long-lived token as `access_token`
+        // with no `refresh_token`. Echo it into the refresh_token slot so the
+        // base rotates `currentRefreshToken` and the next exchange uses the
+        // freshest token instead of the (possibly expired) initial one.
+        // System-user tokens lack expires_in — fall back to a multi-decade TTL.
+        return {
+          access_token: data.access_token,
+          expires_in: data.expires_in ?? MetaRefreshTokenAdapter.INDEFINITE_EXPIRES_IN_SECONDS,
+          refresh_token: data.access_token,
+        };
+      },
+    });
+  }
 
   get userId(): string {
     return this._userId;
@@ -160,74 +224,6 @@ export class MetaRefreshTokenAdapter implements MetaAuthAdapter {
 
     const data = (await response.json()) as { id: string; name: string };
     this._userId = data.id;
-  }
-
-  async getAccessToken(): Promise<string> {
-    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
-      return this.cachedToken;
-    }
-
-    if (this.pendingExchange) {
-      return this.pendingExchange;
-    }
-
-    this.pendingExchange = this.exchangeForLongLivedToken();
-    try {
-      return await this.pendingExchange;
-    } finally {
-      this.pendingExchange = null;
-    }
-  }
-
-  private async exchangeForLongLivedToken(): Promise<string> {
-    // Use the current cached token if available (for refresh), otherwise the initial token
-    const tokenToExchange = this.cachedToken ?? this.initialToken;
-
-    // POST with form-encoded body keeps client_secret out of URLs
-    // (URLs can leak through load balancer / CDN / proxy access logs)
-    const params = new URLSearchParams({
-      grant_type: "fb_exchange_token",
-      client_id: this.appCredentials.appId,
-      client_secret: this.appCredentials.appSecret,
-      fb_exchange_token: tokenToExchange,
-    });
-
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/oauth/access_token`,
-      10_000,
-      undefined,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: params.toString(),
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `Meta token exchange failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as MetaTokenExchangeResponse;
-    if (!data.access_token) {
-      throw new Error("Meta token exchange returned no access_token");
-    }
-
-    this.cachedToken = data.access_token;
-
-    if (data.expires_in) {
-      this.tokenExpiresAt =
-        Date.now() + data.expires_in * 1000 - MetaRefreshTokenAdapter.EXPIRY_BUFFER_MS;
-    } else {
-      // System User tokens have no expiry — cache indefinitely
-      this.tokenExpiresAt = Number.MAX_SAFE_INTEGER;
-    }
-
-    return this.cachedToken;
   }
 }
 
