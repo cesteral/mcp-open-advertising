@@ -99,7 +99,10 @@ export function registerReportCsvResource(opts: RegisterReportCsvResourceOptions
     },
     async (uri) => {
       logger.info({ uri: uri.href }, "Reading report CSV resource");
-      const entry = store.getByUri(uri.href);
+      // getRemoteByUri falls back to the GCS mirror when the local store has
+      // no entry — handles Cloud Run scale-out, where a follow-up read can
+      // land on an instance that didn't produce the URI.
+      const entry = await store.getRemoteByUri(uri.href);
       if (!entry) {
         throw new Error(`Report CSV resource not found or expired: ${uri.href}`);
       }

@@ -162,3 +162,181 @@ describe("ReportCsvStore", () => {
     expect(entries[0]!.resourceId).toBe("id-2");
   });
 });
+
+describe("ReportCsvStore — cross-instance mirroring", () => {
+  function makeMirrorPair(opts: { ttlMs?: number } = {}) {
+    // Shared backing map simulates a GCS bucket — both stores see the same
+    // objects, modelling a Cloud Run scale-out event where the user lands on
+    // a different instance than the one that produced the resource.
+    const bucket = new Map<string, string>();
+    const bucketFactory = (_name: string) => ({
+      file: (path: string) => ({
+        download: async () => {
+          const v = bucket.get(path);
+          if (v === undefined) {
+            const err: any = new Error("Not Found");
+            err.code = 404;
+            throw err;
+          }
+          return [Buffer.from(v)];
+        },
+        save: async (content: string) => {
+          bucket.set(path, content);
+        },
+      }),
+    });
+
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+      trace: () => {},
+      fatal: () => {},
+      child() {
+        return this;
+      },
+      level: "debug",
+    } as any;
+
+    let counter = 0;
+    const now = 1_000_000;
+    const make = () =>
+      new ReportCsvStore({
+        ttlMs: opts.ttlMs,
+        now: () => now,
+        generateId: () => `id-${++counter}`,
+        mirror: {
+          bucketResolver: () => "test-bucket",
+          bucketFactory,
+          pathPrefix: "csv-index",
+          logger,
+        },
+      });
+
+    return { instanceA: make(), instanceB: make(), bucket };
+  }
+
+  it("mirrors stored entries to GCS at csv-index/{resourceId}.json", async () => {
+    const { instanceA, bucket } = makeMirrorPair();
+    const entry = instanceA.store({ csv: "a,b\n1,2\n" });
+
+    await instanceA.flushMirror();
+
+    expect(bucket.has(`csv-index/${entry.resourceId}.json`)).toBe(true);
+    const stored = JSON.parse(bucket.get(`csv-index/${entry.resourceId}.json`)!);
+    expect(stored.csv).toBe("a,b\n1,2\n");
+    expect(stored.resourceId).toBe(entry.resourceId);
+  });
+
+  it("a second instance hydrates an entry from GCS on cache miss via getRemote()", async () => {
+    const { instanceA, instanceB } = makeMirrorPair();
+    const entry = instanceA.store({ csv: "rows" });
+    await instanceA.flushMirror();
+
+    // instanceB never saw the store() call — simulates the scale-out scenario.
+    const result = await instanceB.getRemote(entry.resourceId);
+    expect(result?.csv).toBe("rows");
+    expect(result?.resourceId).toBe(entry.resourceId);
+  });
+
+  it("returns undefined from getRemote() when the entry has expired (TTL check survives the round-trip)", async () => {
+    const { instanceA, instanceB } = makeMirrorPair({ ttlMs: 1000 });
+    const entry = instanceA.store({ csv: "rows" });
+    await instanceA.flushMirror();
+
+    // Move instanceB's clock past the original expiresAt.
+    (instanceB as any).now = () => 2_000_000;
+    const result = await instanceB.getRemote(entry.resourceId);
+    expect(result).toBeUndefined();
+  });
+
+  it("getRemoteByUri() resolves a URI via the GCS fallback", async () => {
+    const { instanceA, instanceB } = makeMirrorPair();
+    const entry = instanceA.store({ csv: "rows" });
+    await instanceA.flushMirror();
+
+    const result = await instanceB.getRemoteByUri(buildReportCsvUri(entry.resourceId));
+    expect(result?.csv).toBe("rows");
+  });
+
+  it("getRemote() returns the in-memory entry without hitting GCS on a hit", async () => {
+    let getCalls = 0;
+    const bucketFactory = (_n: string) => ({
+      file: (_p: string) => ({
+        download: async () => {
+          getCalls++;
+          const err: any = new Error("Not Found");
+          err.code = 404;
+          throw err;
+        },
+        save: async () => undefined,
+      }),
+    });
+    const store = new ReportCsvStore({
+      now: () => 1_000_000,
+      generateId: () => "id-1",
+      mirror: {
+        bucketResolver: () => "test-bucket",
+        bucketFactory,
+        pathPrefix: "csv-index",
+      },
+    });
+    store.store({ csv: "local" });
+    const result = await store.getRemote("id-1");
+    expect(result?.csv).toBe("local");
+    expect(getCalls).toBe(0);
+  });
+
+  it("does not mirror or fall back when no bucket is configured", async () => {
+    const store = new ReportCsvStore({
+      now: () => 1_000_000,
+      generateId: () => "id-1",
+      mirror: { bucketResolver: () => undefined },
+    });
+    store.store({ csv: "local" });
+    expect(await store.getRemote("id-1")).toBeDefined(); // in-memory hit
+    expect(await store.getRemote("nonexistent")).toBeUndefined(); // miss, no GCS
+  });
+
+  it("returns the entry even if the mirror write throws (fire-and-forget)", async () => {
+    const bucketFactory = (_n: string) => ({
+      file: (_p: string) => ({
+        download: async () => {
+          throw new Error("perm denied");
+        },
+        save: async () => {
+          throw new Error("quota exceeded");
+        },
+      }),
+    });
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+      trace: () => {},
+      fatal: () => {},
+      child() {
+        return this;
+      },
+      level: "debug",
+    } as any;
+
+    const store = new ReportCsvStore({
+      now: () => 1_000_000,
+      generateId: () => "id-1",
+      mirror: {
+        bucketResolver: () => "test-bucket",
+        bucketFactory,
+        pathPrefix: "csv-index",
+        logger,
+      },
+    });
+    const entry = store.store({ csv: "rows" });
+    await store.flushMirror();
+    // The store call still succeeded and returned the entry. Local hit works.
+    expect(entry.resourceId).toBe("id-1");
+    expect(await store.getRemote("id-1")).toBeDefined();
+  });
+});

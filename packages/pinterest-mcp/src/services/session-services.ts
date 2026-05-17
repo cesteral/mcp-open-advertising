@@ -71,4 +71,8 @@ sessionServiceStore.onDelete((sessionId) => {
  * store is a module-level singleton. Sessions can opt into scoped cleanup by
  * passing their sessionId when storing.
  */
-export const reportCsvStore = new ReportCsvStore();
+export const reportCsvStore = new ReportCsvStore({
+  // Mirror entries to GCS so the report-csv:// URI survives Cloud Run scale-out.
+  // Reuses REPORT_SPILL_BUCKET; no-op when unset.
+  mirror: { bucketResolver: () => process.env.REPORT_SPILL_BUCKET },
+});
