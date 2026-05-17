@@ -247,7 +247,9 @@ export class CM360Service {
     profileId: string,
     items: Array<{ entityId: string; data: Record<string, unknown> }>,
     context?: RequestContext
-  ): Promise<Array<{ entityId: string; success: boolean; entity?: CM360EntityMap[T]; error?: string }>> {
+  ): Promise<
+    Array<{ entityId: string; success: boolean; entity?: CM360EntityMap[T]; error?: string }>
+  > {
     const bulkResults = await executeBulkConcurrent(
       items,
       (item) =>
@@ -279,12 +281,10 @@ export class CM360Service {
     const bulkResults = await executeBulkConcurrent(
       entityIds,
       async (entityId) => {
-        const current = (await this.getEntity(
-          entityType,
-          profileId,
-          entityId,
-          context
-        )) as Record<string, unknown>;
+        const current = (await this.getEntity(entityType, profileId, entityId, context)) as Record<
+          string,
+          unknown
+        >;
         await this.updateEntity(entityType, profileId, applyStatus(current, status), context);
         return entityId;
       },

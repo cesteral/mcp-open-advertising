@@ -407,9 +407,7 @@ describe("CM360Service", () => {
 
   describe("bulkCreateEntities", () => {
     it("returns one BulkResult per input item, indexed by position", async () => {
-      httpClient.fetch
-        .mockResolvedValueOnce({ id: "1" })
-        .mockResolvedValueOnce({ id: "2" });
+      httpClient.fetch.mockResolvedValueOnce({ id: "1" }).mockResolvedValueOnce({ id: "2" });
 
       const result = await service.bulkCreateEntities("campaign", "p1", [
         { name: "A" },
@@ -442,10 +440,7 @@ describe("CM360Service", () => {
     it("invokes the underlying create path once per item", async () => {
       httpClient.fetch.mockResolvedValue({ id: "x" });
 
-      await service.bulkCreateEntities("placement", "p1", [
-        { name: "First" },
-        { name: "Second" },
-      ]);
+      await service.bulkCreateEntities("placement", "p1", [{ name: "First" }, { name: "Second" }]);
 
       expect(httpClient.fetch).toHaveBeenCalledTimes(2);
       // Each call goes to the placements collection
@@ -476,9 +471,7 @@ describe("CM360Service", () => {
     });
 
     it("collects partial failures with the entityId carried through", async () => {
-      httpClient.fetch
-        .mockResolvedValueOnce({ id: "c-1" })
-        .mockRejectedValueOnce(new Error("403"));
+      httpClient.fetch.mockResolvedValueOnce({ id: "c-1" }).mockRejectedValueOnce(new Error("403"));
 
       const result = await service.bulkUpdateEntities("campaign", "p1", [
         { entityId: "c-1", data: {} },

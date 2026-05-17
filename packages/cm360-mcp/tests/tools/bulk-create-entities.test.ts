@@ -64,7 +64,10 @@ beforeEach(() => {
           );
           out.push({ success: true, entity });
         } catch (error) {
-          out.push({ success: false, error: error instanceof Error ? error.message : String(error) });
+          out.push({
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
       }
       return out;
