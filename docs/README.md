@@ -54,8 +54,10 @@ Navigation index for the `docs/` directory. For day-to-day development, the prim
 
 | Document                                                                               | Description                     |
 | -------------------------------------------------------------------------------------- | ------------------------------- |
+| [`guides/publishing.md`](guides/publishing.md)                                         | Overview of all three publishing targets (Artifact Registry, npm, MCP Registry) |
 | [`guides/deployment-instructions.md`](guides/deployment-instructions.md)               | Self-hosting deployment guide   |
 | [`guides/deployment-readiness-checklist.md`](guides/deployment-readiness-checklist.md) | Pre-deployment checklist        |
+| [`guides/mcp-registry-publishing.md`](guides/mcp-registry-publishing.md)               | MCP Registry manifest generation and publish flow |
 | [`guides/secret-collection-sheet.md`](guides/secret-collection-sheet.md)               | Secret Manager values reference |
 
 ---
