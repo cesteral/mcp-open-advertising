@@ -24,7 +24,7 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 | 10  | `sa360-mcp`      | 3010 | SA360 Reporting API v0 + DS v2     | _(reporting + conversions)_                                                                      | 16    |
 | 11  | `pinterest-mcp`  | 3011 | Pinterest Ads API v5               | campaign, adGroup, ad, creative                                                                  | 23    |
 | 12  | `amazon-dsp-mcp` | 3012 | Amazon DSP API                     | order, lineItem, creative                                                                        | 19    |
-| 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 24    |
+| 13  | `msads-mcp`      | 3013 | Microsoft Advertising REST API v13 | campaign, adGroup, ad, keyword, budget, adExtension, audience, label                             | 25    |
 
 ## Essential Commands
 
@@ -282,7 +282,7 @@ Standard CRUD/bulk/targeting/media tools plus:
 | `sa360_validate_conversion`     | Validate conversion payload          | `mode`, `conversion`                                    |
 | `sa360_get_change_history`      | Get change history for entities      | `customerId`, `entityType?`, `dateRange?`               |
 
-### msads-mcp — 24 Tools (Unique: Google Import, Ad Extensions, Report Scheduling)
+### msads-mcp — 25 Tools (Unique: Google Import, Ad Extensions, Report Scheduling)
 
 Standard CRUD/bulk/reporting tools plus:
 
