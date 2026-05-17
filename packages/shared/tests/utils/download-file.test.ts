@@ -2,10 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { describe, it, expect, vi, afterEach } from "vitest";
-import {
-  downloadFileToBuffer,
-  ensureFilenameExtension,
-} from "../../src/utils/download-file.js";
+import { downloadFileToBuffer, ensureFilenameExtension } from "../../src/utils/download-file.js";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -90,9 +87,7 @@ describe("downloadFileToBuffer", () => {
 
   it("throws with status info when the response is not OK", async () => {
     mockFetchOnce({ status: 404, body: "not found" });
-    await expect(
-      downloadFileToBuffer("https://example.com/missing")
-    ).rejects.toThrow(/HTTP 404/);
+    await expect(downloadFileToBuffer("https://example.com/missing")).rejects.toThrow(/HTTP 404/);
   });
 
   it("returns a Buffer holding the raw response bytes", async () => {

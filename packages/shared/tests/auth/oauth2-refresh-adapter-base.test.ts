@@ -74,9 +74,7 @@ describe("OAuth2RefreshAdapterBase", () => {
     const pending = new Promise<OAuth2TokenResponse>((r) => {
       resolve = r;
     });
-    const requestToken = vi
-      .fn<[string], Promise<OAuth2TokenResponse>>()
-      .mockReturnValue(pending);
+    const requestToken = vi.fn<[string], Promise<OAuth2TokenResponse>>().mockReturnValue(pending);
     const adapter = new TestAdapter(baseCreds, requestToken);
 
     const p1 = adapter.getAccessToken();

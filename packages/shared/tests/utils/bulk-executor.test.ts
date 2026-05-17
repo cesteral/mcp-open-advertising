@@ -59,15 +59,7 @@ describe("executeBulkConcurrent", () => {
     );
 
     expect(results).toHaveLength(7);
-    expect(results.map((r) => r.success)).toEqual([
-      false,
-      true,
-      true,
-      true,
-      false,
-      true,
-      false,
-    ]);
+    expect(results.map((r) => r.success)).toEqual([false, true, true, true, false, true, false]);
     expect(results[0].error).toBe("fail-0");
     expect(results[4].error).toBe("fail-4");
     expect(results[6].error).toBe("fail-6");
