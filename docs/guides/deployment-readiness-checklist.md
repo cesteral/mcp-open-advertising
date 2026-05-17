@@ -4,11 +4,9 @@ Use this checklist before promoting any environment.
 
 ## Environment Baseline
 
-- Confirm the target GCP project exists and matches your environment mapping:
-  - `dev` -> `YOUR_GCP_PROJECT_DEV`
-  - `prod` -> `YOUR_GCP_PROJECT_PROD`
-- Confirm the Terraform backend bucket exists for the environment.
-- Confirm Artifact Registry repository `YOUR_REGISTRY` exists in your chosen region.
+- Confirm the target GCP project exists and matches your environment mapping (`dev` and `prod` are independent `{PROJECT_ID}` values — see `terraform/dev.tfvars.example` / `terraform/prod.tfvars.example` for the variable names you must supply locally).
+- Confirm the Terraform backend bucket `{PROJECT_ID}-terraform-state` exists for the environment.
+- Confirm Artifact Registry repository `cesteral` exists in `europe-west2` (provisioned by `scripts/init-gcp-project.sh`).
 - Confirm required APIs are enabled: Cloud Run, Secret Manager, Artifact Registry, Compute Engine, VPC Access, Logging, Monitoring, Trace, Cloud Build, IAM, Resource Manager, Storage.
 
 ## Per-Service Rollout
