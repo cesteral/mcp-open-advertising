@@ -6,8 +6,6 @@ This repository contains the **open-source connector layer** for Cesteral: thirt
 
 The proprietary hosted product, `Cesteral Intelligence`, is intentionally **not** implemented in this repository. It sits above this connector layer and adds tenancy, managed credential configuration, orchestration, approvals, audit, and hosted operations.
 
-See [architecture/oss-vs-intelligence-boundary.md](architecture/oss-vs-intelligence-boundary.md) for the canonical boundary.
-
 ## Repository Layout
 
 ```text

@@ -1947,7 +1947,6 @@ export function parseConfig(): AppConfig {
     nodeEnv: process.env.NODE_ENV,
     mcpAuthMode: process.env.MCP_AUTH_MODE,
     mcpAuthSecretKey: process.env.MCP_AUTH_SECRET_KEY,
-    mcpSessionMode: process.env.MCP_SESSION_MODE,
     mcpStatefulSessionTimeoutMs: process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS
       ? Number(process.env.MCP_STATEFUL_SESSION_TIMEOUT_MS)
       : undefined,

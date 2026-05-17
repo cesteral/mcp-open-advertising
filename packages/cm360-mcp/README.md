@@ -273,22 +273,21 @@ No native batch API -- bulk tools loop individual calls with rate limiting. At ~
 
 ### Environment Variables
 
-| Variable                          | Required | Default                                               | Description                                   |
-| --------------------------------- | -------- | ----------------------------------------------------- | --------------------------------------------- |
-| `CM360_MCP_PORT`                  | No       | `3008`                                                | HTTP server port                              |
-| `CM360_MCP_HOST`                  | No       | `0.0.0.0`                                             | HTTP server host                              |
-| `MCP_AUTH_MODE`                   | No       | `google-headers`                                      | Auth mode: `google-headers`, `jwt`, `none`    |
-| `MCP_AUTH_SECRET_KEY`             | If jwt   | --                                                    | JWT signing secret                            |
-| `CM360_API_BASE_URL`              | No       | `https://dfareporting.googleapis.com/dfareporting/v5` | CM360 API base URL                            |
-| `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `50`                                                  | API rate limit (requests/min)                 |
-| `CM360_SERVICE_ACCOUNT_FILE`      | Stdio    | --                                                    | Path to service account JSON                  |
-| `CM360_SERVICE_ACCOUNT_JSON`      | Stdio    | --                                                    | Base64-encoded service account JSON           |
-| `MCP_SESSION_MODE`                | No       | `auto`                                                | Session mode: `stateless`, `stateful`, `auto` |
-| `MCP_STATEFUL_SESSION_TIMEOUT_MS` | No       | `3600000`                                             | Session timeout (ms)                          |
-| `MCP_ALLOWED_ORIGINS`             | No       | --                                                    | CORS allowed origins (comma-separated)        |
-| `OTEL_ENABLED`                    | No       | `false`                                               | Enable OpenTelemetry                          |
-| `OTEL_SERVICE_NAME`               | No       | `cm360-mcp`                                           | OTEL service name                             |
-| `LOG_LEVEL`                       | No       | `info`                                                | Log level                                     |
+| Variable                          | Required | Default                                               | Description                                |
+| --------------------------------- | -------- | ----------------------------------------------------- | ------------------------------------------ |
+| `CM360_MCP_PORT`                  | No       | `3008`                                                | HTTP server port                           |
+| `CM360_MCP_HOST`                  | No       | `0.0.0.0`                                             | HTTP server host                           |
+| `MCP_AUTH_MODE`                   | No       | `google-headers`                                      | Auth mode: `google-headers`, `jwt`, `none` |
+| `MCP_AUTH_SECRET_KEY`             | If jwt   | --                                                    | JWT signing secret                         |
+| `CM360_API_BASE_URL`              | No       | `https://dfareporting.googleapis.com/dfareporting/v5` | CM360 API base URL                         |
+| `CM360_RATE_LIMIT_PER_MINUTE`     | No       | `50`                                                  | API rate limit (requests/min)              |
+| `CM360_SERVICE_ACCOUNT_FILE`      | Stdio    | --                                                    | Path to service account JSON               |
+| `CM360_SERVICE_ACCOUNT_JSON`      | Stdio    | --                                                    | Base64-encoded service account JSON        |
+| `MCP_STATEFUL_SESSION_TIMEOUT_MS` | No       | `3600000`                                             | Session timeout (ms)                       |
+| `MCP_ALLOWED_ORIGINS`             | No       | --                                                    | CORS allowed origins (comma-separated)     |
+| `OTEL_ENABLED`                    | No       | `false`                                               | Enable OpenTelemetry                       |
+| `OTEL_SERVICE_NAME`               | No       | `cm360-mcp`                                           | OTEL service name                          |
+| `LOG_LEVEL`                       | No       | `info`                                                | Log level                                  |
 
 ### Rate Limiting
 

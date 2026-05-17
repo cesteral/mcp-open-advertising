@@ -124,7 +124,7 @@ production without hand-rolling guardrails:
   your existing log stack for self-host.
   [Read the observability guide](docs/guides/observability.md).
 - **Destructive-action elicitation gates**. 53 destructive tools across all
-  12 servers prompt the user before deletes, bulk status changes, bid
+  13 servers prompt the user before deletes, bulk status changes, bid
   adjustments, budget changes, conversion uploads, and async Workflows
   batch jobs. Stdio and clients without elicitation support fall back to a
   documented non-interactive contract. Bulk mutations under 10 items skip
