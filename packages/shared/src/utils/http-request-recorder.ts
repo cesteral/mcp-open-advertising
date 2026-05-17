@@ -137,6 +137,51 @@ function redactBodyString(text: string): string {
   return out;
 }
 
+// Query-param names whose values are stripped from recorded URLs. Matches by
+// substring, case-insensitive — narrower than the header patterns to avoid
+// redacting benign params (header "key" patterns would clobber `?key=primary`).
+const SENSITIVE_URL_PARAM_PATTERNS = [
+  "token",
+  "secret",
+  "password",
+  "credential",
+  "signature",
+  "authorization",
+  "api_key",
+  "apikey",
+  "api-key",
+];
+
+function isSensitiveUrlParam(name: string): boolean {
+  const lower = name.toLowerCase();
+  return SENSITIVE_URL_PARAM_PATTERNS.some((p) => lower.includes(p));
+}
+
+/**
+ * Strip values of known-sensitive query parameters from a URL string. Used
+ * before persisting URLs to the upstream-request log so credentials accidentally
+ * placed in query strings (e.g. Meta Graph API `access_token=…`) don't leak.
+ *
+ * Unparseable inputs are returned unchanged.
+ */
+export function redactUrl(url: string): string {
+  if (!url) return url;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+  let mutated = false;
+  for (const [name] of [...parsed.searchParams.entries()]) {
+    if (isSensitiveUrlParam(name)) {
+      parsed.searchParams.set(name, "[REDACTED]");
+      mutated = true;
+    }
+  }
+  return mutated ? parsed.toString() : url;
+}
+
 // ---------------------------------------------------------------------------
 // Recording API
 // ---------------------------------------------------------------------------
@@ -157,7 +202,8 @@ export function recordUpstreamRequest(entry: UpstreamHttpRecord): void {
   const ctx = requestContextStorage.getStore() as MutableContext | undefined;
   if (!ctx) return;
   if (!ctx.upstreamRequests) ctx.upstreamRequests = [];
-  ctx.upstreamRequests.push(entry);
+  const safe = entry.url ? { ...entry, url: redactUrl(entry.url) } : entry;
+  ctx.upstreamRequests.push(safe);
   // Bound memory: keep only the most recent 20 attempts per tool invocation
   if (ctx.upstreamRequests.length > 20) {
     ctx.upstreamRequests.splice(0, ctx.upstreamRequests.length - 20);

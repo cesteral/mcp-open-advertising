@@ -8,6 +8,7 @@ import {
   getRecordedUpstreamRequests,
   clearRecordedUpstreamRequests,
   redactHeaders,
+  redactUrl,
   truncateBody,
   MAX_CAPTURED_BODY_BYTES,
 } from "../../src/utils/http-request-recorder.js";
@@ -42,6 +43,39 @@ describe("redactHeaders", () => {
 
   it("returns empty object for undefined", () => {
     expect(redactHeaders(undefined)).toEqual({});
+  });
+});
+
+describe("redactUrl", () => {
+  it("redacts sensitive query parameters", () => {
+    const out = redactUrl(
+      "https://graph.facebook.com/v24.0/me?access_token=EAABwzLix&fields=name"
+    );
+    expect(out).not.toContain("EAABwzLix");
+    expect(out).toContain("access_token=%5BREDACTED%5D");
+    expect(out).toContain("fields=name");
+  });
+
+  it("redacts common token / secret / signature param names case-insensitively", () => {
+    const out = redactUrl(
+      "https://api.example.com/x?api_key=k&Signature=s&refresh_token=r&password=p&safe=ok"
+    );
+    expect(out).not.toContain("k&");
+    expect(out).not.toMatch(/Signature=s(?!\w)/);
+    expect(out).not.toContain("refresh_token=r");
+    expect(out).not.toContain("password=p");
+    expect(out).toContain("safe=ok");
+  });
+
+  it("leaves URLs without sensitive params unchanged", () => {
+    expect(redactUrl("https://api.example.com/x?foo=1&bar=2")).toBe(
+      "https://api.example.com/x?foo=1&bar=2"
+    );
+  });
+
+  it("returns the input unchanged when it isn't a parseable URL", () => {
+    expect(redactUrl("not a url")).toBe("not a url");
+    expect(redactUrl("")).toBe("");
   });
 });
 
@@ -88,6 +122,19 @@ describe("recordUpstreamRequest / ALS scoping", () => {
       const entries = getRecordedUpstreamRequests();
       expect(entries).toHaveLength(2);
       expect(entries[1]!.status).toBe(400);
+    });
+  });
+
+  it("redacts sensitive query params on the recorded url", () => {
+    runWithRequestContext({ requestId: "r1", timestamp: new Date().toISOString() }, () => {
+      recordUpstreamRequest({
+        method: "GET",
+        url: "https://graph.facebook.com/v24.0/me?access_token=EAABwzLix&fields=id",
+        durationMs: 1,
+      });
+      const entries = getRecordedUpstreamRequests();
+      expect(entries[0]!.url).not.toContain("EAABwzLix");
+      expect(entries[0]!.url).toContain("fields=id");
     });
   });
 
