@@ -10,6 +10,7 @@
 
 import pino from "pino";
 import type { Logger } from "pino";
+import { closeAllInteractionLoggers } from "./interaction-logger.js";
 import { shutdownOpenTelemetry } from "./telemetry.js";
 
 // ---------------------------------------------------------------------------
@@ -149,6 +150,7 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
         } catch (err: unknown) {
           logger.error({ err }, "Error closing MCP server");
         }
+        await closeAllInteractionLoggers();
         await shutdownOpenTelemetry(logger);
         process.exit(0);
       };
@@ -181,10 +183,15 @@ export async function bootstrapMcpServer<TConfig, TServer extends { close(): Pro
         await shutdown();
         opts.onShutdown?.();
 
-        // 3. Flush pending OTEL traces/metrics before exiting
+        // 3. Drain buffered interaction-log entries (GCS mode would otherwise
+        //    lose anything in the in-memory buffer between the last 5s flush
+        //    and SIGTERM).
+        await closeAllInteractionLoggers();
+
+        // 4. Flush pending OTEL traces/metrics before exiting
         await shutdownOpenTelemetry(logger);
 
-        // 4. Allow brief window for in-flight requests to complete, then exit
+        // 5. Allow brief window for in-flight requests to complete, then exit
         setTimeout(() => {
           logger.info("Shutdown complete – exiting");
           process.exit(0);

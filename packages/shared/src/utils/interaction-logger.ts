@@ -155,6 +155,26 @@ export function sanitizeParams(input: unknown, depth = 0): unknown {
 }
 
 // ---------------------------------------------------------------------------
+// Module-level registry
+// ---------------------------------------------------------------------------
+
+// Tracks every InteractionLogger constructed in this process so the bootstrap
+// shutdown sequence can drain GCS-buffered entries on SIGTERM. Without this,
+// the 5-second flush timer is unref'd and any buffered failure records between
+// the last flush and exit are silently dropped on Cloud Run cold-stop.
+const liveLoggers = new Set<InteractionLogger>();
+
+/**
+ * Close every live InteractionLogger. Idempotent and safe to call multiple
+ * times — each `close()` removes its instance from the registry. Failures in
+ * one logger don't block the others.
+ */
+export async function closeAllInteractionLoggers(): Promise<void> {
+  const snapshot = Array.from(liveLoggers);
+  await Promise.allSettled(snapshot.map((l) => l.close()));
+}
+
+// ---------------------------------------------------------------------------
 // InteractionLogger
 // ---------------------------------------------------------------------------
 
@@ -210,6 +230,8 @@ export class InteractionLogger {
       // Unref so the timer doesn't keep the process alive
       if (this.flushTimer.unref) this.flushTimer.unref();
     }
+
+    liveLoggers.add(this);
   }
 
   /**
@@ -273,6 +295,8 @@ export class InteractionLogger {
    * Flush and close the underlying write stream or GCS buffer.
    */
   async close(): Promise<void> {
+    liveLoggers.delete(this);
+
     if (this.flushTimer) {
       clearInterval(this.flushTimer);
       this.flushTimer = null;

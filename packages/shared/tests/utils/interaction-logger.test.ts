@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   InteractionLogger,
+  closeAllInteractionLoggers,
   generateEntryId,
   sanitizeParams,
 } from "../../src/utils/interaction-logger.js";
@@ -280,5 +281,81 @@ describe("InteractionLogger", () => {
       .map((line) => JSON.parse(line) as { id: string });
     expect(lines).toHaveLength(2);
     expect(lines[0].id).not.toBe(lines[1].id);
+  });
+});
+
+describe("closeAllInteractionLoggers", () => {
+  it("flushes buffered GCS entries from every live logger", async () => {
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+      level: "debug",
+    } as any;
+
+    const a = new InteractionLogger({
+      serverName: "server-a",
+      logger,
+      gcsBucket: "test-bucket",
+      flushIntervalMs: 60_000, // long enough that only close() can drain
+    });
+    const b = new InteractionLogger({
+      serverName: "server-b",
+      logger,
+      gcsBucket: "test-bucket",
+      flushIntervalMs: 60_000,
+    });
+
+    a.append({
+      ts: "2026-02-19T21:00:00.000Z",
+      sessionId: "session-1",
+      tool: "tool_a",
+      params: {},
+      success: true,
+      durationMs: 1,
+    });
+    b.append({
+      ts: "2026-02-19T21:00:01.000Z",
+      sessionId: "session-2",
+      tool: "tool_b",
+      params: {},
+      success: true,
+      durationMs: 1,
+    });
+
+    await closeAllInteractionLoggers();
+
+    const paths = Array.from(gcsFiles.keys()).sort();
+    expect(paths).toHaveLength(2);
+    expect(paths[0]).toMatch(/^server-a\/interactions\/server-a-/);
+    expect(paths[1]).toMatch(/^server-b\/interactions\/server-b-/);
+  });
+
+  it("removes loggers from the registry on individual close", async () => {
+    const logger = {
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn(),
+      child: vi.fn().mockReturnThis(),
+      level: "debug",
+    } as any;
+
+    const a = new InteractionLogger({
+      serverName: "server-c",
+      logger,
+      gcsBucket: "test-bucket",
+      flushIntervalMs: 60_000,
+    });
+    await a.close();
+
+    // closeAll after a was already closed should be a no-op and not throw
+    await expect(closeAllInteractionLoggers()).resolves.toBeUndefined();
   });
 });
