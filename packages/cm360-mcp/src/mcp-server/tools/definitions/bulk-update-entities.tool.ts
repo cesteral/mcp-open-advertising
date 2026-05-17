@@ -81,31 +81,27 @@ export async function bulkUpdateEntitiesLogic(
 
   const { cm360Service } = resolveSessionServices(sdkContext);
 
-  const results: BulkUpdateEntitiesOutput["results"] = [];
+  const bulkResults = await cm360Service.bulkUpdateEntities(
+    input.entityType as CM360EntityType,
+    input.profileId,
+    input.items,
+    context
+  );
+
   let updated = 0;
   let failed = 0;
-
-  for (const item of input.items) {
-    try {
-      const data = { ...item.data, id: item.entityId };
-      const entity = await cm360Service.updateEntity(
-        input.entityType as CM360EntityType,
-        input.profileId,
-        data,
-        context
-      );
-      results.push({
-        entityId: item.entityId,
-        success: true,
-        entity: entity as unknown as Record<string, any>,
-      });
+  const results: BulkUpdateEntitiesOutput["results"] = bulkResults.map((r) => {
+    if (r.success) {
       updated++;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      results.push({ entityId: item.entityId, success: false, error: message });
-      failed++;
+      return {
+        entityId: r.entityId,
+        success: true,
+        entity: r.entity as unknown as Record<string, any>,
+      };
     }
-  }
+    failed++;
+    return { entityId: r.entityId, success: false, error: r.error };
+  });
 
   return {
     confirmed: true,

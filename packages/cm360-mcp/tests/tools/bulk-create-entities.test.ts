@@ -9,6 +9,9 @@ const mockState = vi.hoisted(() => ({
     listEntities: vi.fn(),
     listUserProfiles: vi.fn(),
     listTargetingOptions: vi.fn(),
+    bulkCreateEntities: vi.fn(),
+    bulkUpdateEntities: vi.fn(),
+    bulkUpdateStatus: vi.fn(),
   },
   cm360ReportingService: {
     runReport: vi.fn(),
@@ -46,6 +49,27 @@ const mockContext = { requestId: "test-req" } as any;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Passthrough: service layer delegates to per-entity CRUD, so tests that
+  // mock createEntity / updateEntity / getEntity still drive the bulk path.
+  mockState.cm360Service.bulkCreateEntities.mockImplementation(
+    async (entityType: any, profileId: any, items: any[], context: any) => {
+      const out: any[] = [];
+      for (const item of items) {
+        try {
+          const entity = await mockState.cm360Service.createEntity(
+            entityType,
+            profileId,
+            item,
+            context
+          );
+          out.push({ success: true, entity });
+        } catch (error) {
+          out.push({ success: false, error: error instanceof Error ? error.message : String(error) });
+        }
+      }
+      return out;
+    }
+  );
 });
 
 describe("bulkCreateEntitiesLogic", () => {

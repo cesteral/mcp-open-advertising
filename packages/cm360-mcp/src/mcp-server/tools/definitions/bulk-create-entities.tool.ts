@@ -53,26 +53,23 @@ export async function bulkCreateEntitiesLogic(
 ): Promise<BulkCreateEntitiesOutput> {
   const { cm360Service } = resolveSessionServices(sdkContext);
 
-  const results: BulkCreateEntitiesOutput["results"] = [];
+  const bulkResults = await cm360Service.bulkCreateEntities(
+    input.entityType as CM360EntityType,
+    input.profileId,
+    input.items,
+    context
+  );
+
   let created = 0;
   let failed = 0;
-
-  for (let i = 0; i < input.items.length; i++) {
-    try {
-      const entity = await cm360Service.createEntity(
-        input.entityType as CM360EntityType,
-        input.profileId,
-        input.items[i],
-        context
-      );
-      results.push({ index: i, success: true, entity: entity as unknown as Record<string, any> });
+  const results = bulkResults.map((r, i) => {
+    if (r.success) {
       created++;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      results.push({ index: i, success: false, error: message });
-      failed++;
+      return { index: i, success: true, entity: r.entity as unknown as Record<string, any> };
     }
-  }
+    failed++;
+    return { index: i, success: false, error: r.error };
+  });
 
   return {
     created,

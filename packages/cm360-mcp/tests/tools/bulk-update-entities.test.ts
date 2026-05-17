@@ -9,6 +9,9 @@ const mockState = vi.hoisted(() => ({
     listEntities: vi.fn(),
     listUserProfiles: vi.fn(),
     listTargetingOptions: vi.fn(),
+    bulkCreateEntities: vi.fn(),
+    bulkUpdateEntities: vi.fn(),
+    bulkUpdateStatus: vi.fn(),
   },
   cm360ReportingService: {
     runReport: vi.fn(),
@@ -47,6 +50,29 @@ const mockContext = { requestId: "test-req" } as any;
 describe("bulkUpdateEntitiesLogic", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockState.cm360Service.bulkUpdateEntities.mockImplementation(
+      async (entityType: any, profileId: any, items: any[], context: any) => {
+        const out: any[] = [];
+        for (const item of items) {
+          try {
+            const entity = await mockState.cm360Service.updateEntity(
+              entityType,
+              profileId,
+              { ...item.data, id: item.entityId },
+              context
+            );
+            out.push({ entityId: item.entityId, success: true, entity });
+          } catch (error) {
+            out.push({
+              entityId: item.entityId,
+              success: false,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+        return out;
+      }
+    );
   });
 
   it("all succeed: updated === items.length, failed === 0", async () => {
