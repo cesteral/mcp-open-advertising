@@ -80,13 +80,7 @@ export const ValidateEntityOutputSchema = z
     valid: z.boolean().describe("Whether the payload passed validation"),
     entityType: z.string(),
     mode: z.string(),
-    errors: z
-      .array(z.string())
-      .optional()
-      .describe("Validation error messages (present when valid is false)"),
-    issues: z
-      .array(ValidationIssueSchema)
-      .describe("Structured per-field issues (mirrors errors as code='custom')"),
+    issues: z.array(ValidationIssueSchema).describe("Structured per-field issues"),
     nextAction: z
       .string()
       .optional()
@@ -142,7 +136,6 @@ export async function validateEntityLogic(
     valid: result.valid,
     entityType: input.entityType,
     mode: input.mode,
-    errors: result.errors,
     issues,
     ...(nextAction ? { nextAction } : {}),
     timestamp: new Date().toISOString(),

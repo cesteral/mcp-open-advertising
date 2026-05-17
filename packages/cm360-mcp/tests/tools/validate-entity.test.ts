@@ -6,6 +6,11 @@ import {
 
 const mockContext = { requestId: "test-req" } as any;
 
+const errorMessages = (result: { issues: { message: string; severity?: string }[] }): string[] =>
+  result.issues.filter((i) => i.severity !== "warning").map((i) => i.message);
+const warningMessages = (result: { issues: { message: string; severity?: string }[] }): string[] =>
+  result.issues.filter((i) => i.severity === "warning").map((i) => i.message);
+
 describe("validateEntityLogic", () => {
   it("update mode without id returns error", async () => {
     const result = await validateEntityLogic(
@@ -13,7 +18,7 @@ describe("validateEntityLogic", () => {
       mockContext
     );
     expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(
+    expect(errorMessages(result)).toContainEqual(
       expect.stringContaining("id field is required for update mode")
     );
   });
@@ -27,7 +32,7 @@ describe("validateEntityLogic", () => {
       },
       mockContext
     );
-    expect(result.warnings).toContainEqual(
+    expect(warningMessages(result)).toContainEqual(
       expect.stringContaining("id field is typically auto-generated")
     );
   });
@@ -38,7 +43,9 @@ describe("validateEntityLogic", () => {
       mockContext
     );
     expect(result.valid).toBe(false);
-    expect(result.errors).toContainEqual(expect.stringContaining("advertiserId is required"));
+    expect(errorMessages(result)).toContainEqual(
+      expect.stringContaining("advertiserId is required")
+    );
   });
 
   it("campaign create with advertiserId is valid", async () => {
@@ -54,7 +61,7 @@ describe("validateEntityLogic", () => {
       { entityType: "placement", mode: "create", data: { name: "Test", siteId: "1" } },
       mockContext
     );
-    expect(result.errors).toContainEqual(expect.stringContaining("campaignId is required"));
+    expect(errorMessages(result)).toContainEqual(expect.stringContaining("campaignId is required"));
   });
 
   it("placement create without siteId returns warning", async () => {
@@ -62,7 +69,9 @@ describe("validateEntityLogic", () => {
       { entityType: "placement", mode: "create", data: { name: "Test", campaignId: "1" } },
       mockContext
     );
-    expect(result.warnings).toContainEqual(expect.stringContaining("siteId is typically required"));
+    expect(warningMessages(result)).toContainEqual(
+      expect.stringContaining("siteId is typically required")
+    );
   });
 
   it("ad create without campaignId returns error", async () => {
@@ -70,7 +79,7 @@ describe("validateEntityLogic", () => {
       { entityType: "ad", mode: "create", data: { name: "Test" } },
       mockContext
     );
-    expect(result.errors).toContainEqual(expect.stringContaining("campaignId is required"));
+    expect(errorMessages(result)).toContainEqual(expect.stringContaining("campaignId is required"));
   });
 
   it("floodlightActivity create without floodlightConfigurationId returns error", async () => {
@@ -78,7 +87,7 @@ describe("validateEntityLogic", () => {
       { entityType: "floodlightActivity", mode: "create", data: { name: "Test" } },
       mockContext
     );
-    expect(result.errors).toContainEqual(
+    expect(errorMessages(result)).toContainEqual(
       expect.stringContaining("floodlightConfigurationId is required")
     );
   });
@@ -98,13 +107,13 @@ describe("validateEntityLogic", () => {
         { entityType, mode: "update", data: { id: "1" } },
         mockContext
       );
-      expect(result.warnings).toContainEqual(
+      expect(warningMessages(result)).toContainEqual(
         expect.stringContaining("name field is typically required")
       );
     }
   });
 
-  it("valid payload returns no errors or warnings", async () => {
+  it("valid payload returns no issues", async () => {
     const result = await validateEntityLogic(
       {
         entityType: "campaign",
@@ -114,8 +123,7 @@ describe("validateEntityLogic", () => {
       mockContext
     );
     expect(result.valid).toBe(true);
-    expect(result.errors).toEqual([]);
-    expect(result.warnings).toEqual([]);
+    expect(result.issues).toEqual([]);
   });
 
   it("result includes entityType and mode fields", async () => {

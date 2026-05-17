@@ -148,7 +148,7 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      expect(result.issues.filter((i) => i.severity !== "warning")).toHaveLength(0);
     });
 
     it("fails validation for campaign missing required fields", async () => {
@@ -164,9 +164,10 @@ describe("linkedin_validate_entity tool", () => {
         mockContext as any
       );
 
+      const errors = result.issues.filter((i) => i.severity !== "warning").map((i) => i.message);
       expect(result.valid).toBe(false);
-      expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some((e) => e.includes("campaignGroup"))).toBe(true);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.includes("campaignGroup"))).toBe(true);
     });
 
     it("warns about incorrect URN format", async () => {
@@ -187,7 +188,8 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       // campaignGroup is present but not a URN — should warn
-      expect(result.warnings.some((w) => w.includes("campaignGroup"))).toBe(true);
+      const warnings = result.issues.filter((i) => i.severity === "warning").map((i) => i.message);
+      expect(warnings.some((w) => w.includes("campaignGroup"))).toBe(true);
     });
 
     it("warns about missing budget format for budget fields", async () => {
@@ -226,7 +228,8 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain("Update payload must contain at least one field to update");
+      const errors = result.issues.filter((i) => i.severity !== "warning").map((i) => i.message);
+      expect(errors).toContain("Update payload must contain at least one field to update");
     });
 
     it("warns about read-only fields in update", async () => {
@@ -243,7 +246,8 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       expect(result.valid).toBe(true);
-      expect(result.warnings.some((w) => w.includes('"id"'))).toBe(true);
+      const warnings = result.issues.filter((i) => i.severity === "warning").map((i) => i.message);
+      expect(warnings.some((w) => w.includes('"id"'))).toBe(true);
     });
   });
 
@@ -253,8 +257,7 @@ describe("linkedin_validate_entity tool", () => {
         valid: true,
         entityType: "campaign",
         mode: "create",
-        errors: [],
-        warnings: [],
+        issues: [],
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 
@@ -268,8 +271,14 @@ describe("linkedin_validate_entity tool", () => {
         valid: false,
         entityType: "campaign",
         mode: "create",
-        errors: ['Missing required field "name"'],
-        warnings: [],
+        issues: [
+          {
+            field: "name",
+            code: "missing" as const,
+            message: 'Missing required field "name"',
+            severity: "error" as const,
+          },
+        ],
         timestamp: "2026-03-04T00:00:00.000Z",
       };
 

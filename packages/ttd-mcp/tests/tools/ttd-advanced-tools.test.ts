@@ -235,8 +235,9 @@ describe("ttd advanced tools", () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.errors.length).toBeGreaterThan(0);
-    expect(result.warnings).toBeDefined();
+    const errorIssues = result.issues.filter((i) => i.severity !== "warning");
+    expect(errorIssues.length).toBeGreaterThan(0);
+    expect(result.issues).toBeDefined();
   });
 
   it("validateEntityResponseFormatter shows success and failure variants", () => {
@@ -244,8 +245,7 @@ describe("ttd advanced tools", () => {
       valid: true,
       entityType: "campaign",
       mode: "create",
-      errors: [],
-      warnings: [],
+      issues: [],
       timestamp: new Date().toISOString(),
     })[0].text;
     expect(okText).toContain("Validation passed");
@@ -254,8 +254,14 @@ describe("ttd advanced tools", () => {
       valid: false,
       entityType: "campaign",
       mode: "create",
-      errors: ["Bad payload"],
-      warnings: [],
+      issues: [
+        {
+          field: "name",
+          code: "custom",
+          message: "Bad payload",
+          severity: "error",
+        },
+      ],
       timestamp: new Date().toISOString(),
     })[0].text;
     expect(badText).toContain("Validation failed");

@@ -38,6 +38,9 @@ vi.mock("../../../../src/mcp-server/tools/utils/schema-introspection.js", () => 
 
 import { validateEntityLogic } from "../../../../src/mcp-server/tools/definitions/validate-entity.tool.js";
 
+const errorMessages = (result: { issues: { message: string; severity?: string }[] }): string[] =>
+  result.issues.filter((i) => i.severity !== "warning").map((i) => i.message);
+
 describe("dv360_validate_entity", () => {
   it("accepts minimal patch update without requiring full entity payload", async () => {
     const result = await validateEntityLogic(
@@ -52,7 +55,7 @@ describe("dv360_validate_entity", () => {
     );
 
     expect(result.valid).toBe(true);
-    expect(result.errors).toBeUndefined();
+    expect(errorMessages(result)).toEqual([]);
   });
 
   it("fails when updateMask path does not exist in schema", async () => {
@@ -68,7 +71,7 @@ describe("dv360_validate_entity", () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(
+    expect(errorMessages(result)).toEqual(
       expect.arrayContaining(["Unknown updateMask field path: does.notExist"])
     );
   });
@@ -86,7 +89,7 @@ describe("dv360_validate_entity", () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(
+    expect(errorMessages(result)).toEqual(
       expect.arrayContaining(["updateMask field not found in data: displayName"])
     );
   });
@@ -104,7 +107,7 @@ describe("dv360_validate_entity", () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(
+    expect(errorMessages(result)).toEqual(
       expect.arrayContaining(["updateMask must include at least one field path"])
     );
   });
@@ -128,6 +131,6 @@ describe("dv360_validate_entity", () => {
     );
 
     expect(result.valid).toBe(false);
-    expect(result.errors?.some((e) => e.includes("Expected string"))).toBe(true);
+    expect(errorMessages(result).some((e) => e.includes("Expected string"))).toBe(true);
   });
 });

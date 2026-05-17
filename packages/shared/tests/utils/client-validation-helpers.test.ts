@@ -7,7 +7,6 @@ import {
   checkReadOnlyFieldsStructured,
   validateEntityResponseFormatter,
   type ValidateEntityResult,
-  type ValidationIssue,
 } from "../../src/utils/client-validation-helpers.js";
 
 // ---------------------------------------------------------------------------
@@ -149,10 +148,13 @@ describe("validateEntityResponseFormatter", () => {
     valid: true,
     entityType: "campaign",
     mode: "create",
-    errors: [],
-    warnings: [],
+    issues: [],
     timestamp: "2025-01-15T12:00:00.000Z",
   };
+
+  function getText(result: ValidateEntityResult): string {
+    return (validateEntityResponseFormatter(result)[0] as { type: string; text: string }).text;
+  }
 
   it("formats passing validation result", () => {
     const content = validateEntityResponseFormatter(baseResult);
@@ -161,45 +163,123 @@ describe("validateEntityResponseFormatter", () => {
     expect(text).toContain("Validation passed for campaign (create)");
   });
 
-  it("formats failing result with errors", () => {
-    const result: ValidateEntityResult = {
+  it("formats failing result with structured error issues", () => {
+    const text = getText({
       ...baseResult,
       valid: false,
-      errors: ['Missing required field "name"', 'Field "count" should be number but got string'],
-    };
-    const text = (validateEntityResponseFormatter(result)[0] as { type: string; text: string })
-      .text;
+      issues: [
+        {
+          field: "name",
+          code: "missing",
+          message: 'Missing required field "name"',
+          severity: "error",
+        },
+        {
+          field: "count",
+          code: "wrongType",
+          message: 'Field "count" should be number but got string',
+          severity: "error",
+        },
+      ],
+    });
     expect(text).toContain("Validation failed for campaign (create):");
     expect(text).toContain('Missing required field "name"');
     expect(text).toContain("should be number but got string");
   });
 
-  it("includes warnings section when warnings present", () => {
-    const result: ValidateEntityResult = {
+  it("includes warnings section when warning-severity issues present", () => {
+    const text = getText({
       ...baseResult,
-      warnings: ['Field "id" is read-only and will be ignored by the API'],
-    };
-    const text = (validateEntityResponseFormatter(result)[0] as { type: string; text: string })
-      .text;
+      issues: [
+        {
+          field: "id",
+          code: "readOnly",
+          message: 'Field "id" is read-only and will be ignored by the API',
+          severity: "warning",
+        },
+      ],
+    });
     expect(text).toContain("Warnings:");
     expect(text).toContain('Field "id" is read-only');
   });
 
   it("omits warnings section when no warnings", () => {
-    const text = (validateEntityResponseFormatter(baseResult)[0] as { type: string; text: string })
-      .text;
+    const text = getText(baseResult);
     expect(text).not.toContain("Warnings:");
   });
 
   it("includes timestamp", () => {
-    const text = (validateEntityResponseFormatter(baseResult)[0] as { type: string; text: string })
-      .text;
+    const text = getText(baseResult);
     expect(text).toContain("Timestamp: 2025-01-15T12:00:00.000Z");
   });
 
   it("returns content block with type 'text'", () => {
     const content = validateEntityResponseFormatter(baseResult);
     expect((content[0] as { type: string }).type).toBe("text");
+  });
+
+  it("renders suggestedValues on a 'Suggested values:' line under the issue", () => {
+    const text = getText({
+      ...baseResult,
+      valid: false,
+      issues: [
+        {
+          field: "status",
+          code: "missing",
+          message: 'Missing required field "status"',
+          suggestedValues: ["ACTIVE", "PAUSED"],
+          severity: "error",
+        },
+      ],
+    });
+    expect(text).toContain('Missing required field "status"');
+    expect(text).toContain("Suggested values: ACTIVE, PAUSED");
+  });
+
+  it("partitions issues by severity into errors and warnings sections", () => {
+    const text = getText({
+      valid: false,
+      entityType: "ad",
+      mode: "update",
+      issues: [
+        {
+          field: "name",
+          code: "missing",
+          message: 'Missing "name"',
+          severity: "error",
+        },
+        {
+          field: "created_at",
+          code: "readOnly",
+          message: 'Field "created_at" is read-only',
+          severity: "warning",
+        },
+      ],
+      timestamp: "2025-01-15T12:00:00.000Z",
+    });
+    expect(text).toContain("Validation failed");
+    expect(text).toContain('Missing "name"');
+    expect(text).toContain("Warnings:");
+    expect(text).toContain('Field "created_at" is read-only');
+  });
+
+  it("renders nextAction when set", () => {
+    const text = getText({
+      valid: false,
+      entityType: "adGroup",
+      mode: "create",
+      issues: [
+        {
+          field: "campaign_id",
+          code: "missing",
+          message: 'Missing required field "campaign_id"',
+          severity: "error",
+        },
+      ],
+      nextAction: "Call snapchat_list_entities with entityType='campaign' to find a campaign_id",
+      timestamp: "2025-01-15T12:00:00.000Z",
+    });
+    expect(text).toContain("Next action: Call snapchat_list_entities");
   });
 });
 
@@ -287,116 +367,5 @@ describe("checkReadOnlyFieldsStructured", () => {
       (f) => `Skip ${f}`
     );
     expect(issues[0].message).toBe("Skip created_at");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// validateEntityResponseFormatter — structured `issues` rendering
-// ---------------------------------------------------------------------------
-
-describe("validateEntityResponseFormatter (structured issues)", () => {
-  function getText(result: ValidateEntityResult): string {
-    return (validateEntityResponseFormatter(result)[0] as { type: string; text: string }).text;
-  }
-
-  it("renders suggestedValues on a 'Suggested values:' line under the issue", () => {
-    const text = getText({
-      valid: false,
-      entityType: "campaign",
-      mode: "create",
-      issues: [
-        {
-          field: "status",
-          code: "missing",
-          message: 'Missing required field "status"',
-          suggestedValues: ["ACTIVE", "PAUSED"],
-          severity: "error",
-        },
-      ],
-      timestamp: "2025-01-15T12:00:00.000Z",
-    });
-    expect(text).toContain('Missing required field "status"');
-    expect(text).toContain("Suggested values: ACTIVE, PAUSED");
-  });
-
-  it("partitions issues by severity into errors and warnings sections", () => {
-    const text = getText({
-      valid: false,
-      entityType: "ad",
-      mode: "update",
-      issues: [
-        {
-          field: "name",
-          code: "missing",
-          message: 'Missing "name"',
-          severity: "error",
-        },
-        {
-          field: "created_at",
-          code: "readOnly",
-          message: 'Field "created_at" is read-only',
-          severity: "warning",
-        },
-      ],
-      timestamp: "2025-01-15T12:00:00.000Z",
-    });
-    expect(text).toContain("Validation failed");
-    expect(text).toContain('Missing "name"');
-    expect(text).toContain("Warnings:");
-    expect(text).toContain('Field "created_at" is read-only');
-  });
-
-  it("renders nextAction when set", () => {
-    const text = getText({
-      valid: false,
-      entityType: "adGroup",
-      mode: "create",
-      issues: [
-        {
-          field: "campaign_id",
-          code: "missing",
-          message: 'Missing required field "campaign_id"',
-          severity: "error",
-        },
-      ],
-      nextAction: "Call snapchat_list_entities with entityType='campaign' to find a campaign_id",
-      timestamp: "2025-01-15T12:00:00.000Z",
-    });
-    expect(text).toContain("Next action: Call snapchat_list_entities");
-  });
-
-  it("falls back to legacy errors[]/warnings[] when issues is absent", () => {
-    const text = getText({
-      valid: false,
-      entityType: "campaign",
-      mode: "create",
-      errors: ['Missing required field "status"'],
-      warnings: ['Field "created_at" is read-only'],
-      timestamp: "2025-01-15T12:00:00.000Z",
-    });
-    expect(text).toContain('Missing required field "status"');
-    expect(text).toContain("Warnings:");
-    expect(text).toContain('Field "created_at" is read-only');
-    expect(text).not.toContain("Suggested values");
-  });
-
-  it("prefers issues over legacy errors when both are present", () => {
-    const text = getText({
-      valid: false,
-      entityType: "campaign",
-      mode: "create",
-      errors: ["legacy error string"],
-      issues: [
-        {
-          field: "name",
-          code: "missing",
-          message: "structured issue message",
-          severity: "error",
-        },
-      ],
-      timestamp: "2025-01-15T12:00:00.000Z",
-    });
-    expect(text).toContain("structured issue message");
-    expect(text).not.toContain("legacy error string");
   });
 });

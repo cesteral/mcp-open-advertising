@@ -11,6 +11,9 @@
 import { McpError, JsonRpcErrorCode } from "./mcp-errors.js";
 import { recordRateLimitHit } from "./metrics.js";
 
+const CLEANUP_INTERVAL_MS = 300_000;
+const TIMESTAMP_GC_AGE_MS = 3_600_000;
+
 /**
  * Sliding window rate limiter with automatic cleanup.
  */
@@ -21,7 +24,7 @@ export class RateLimiter {
   private cleanupInterval?: NodeJS.Timeout;
 
   constructor() {
-    this.cleanupInterval = setInterval(() => this.cleanup(), 300000);
+    this.cleanupInterval = setInterval(() => this.cleanup(), CLEANUP_INTERVAL_MS);
     this.cleanupInterval.unref();
   }
 
@@ -158,10 +161,9 @@ export class RateLimiter {
 
   private cleanup(): void {
     const now = Date.now();
-    const maxAge = 3600000;
 
     for (const [key, timestamps] of this.requests.entries()) {
-      const filtered = timestamps.filter((ts) => now - ts < maxAge);
+      const filtered = timestamps.filter((ts) => now - ts < TIMESTAMP_GC_AGE_MS);
 
       if (filtered.length === 0) {
         this.requests.delete(key);
