@@ -59,6 +59,36 @@ export interface StoreReportCsvOptions {
   sessionId?: string;
 }
 
+/**
+ * Structural subset of a GCS bucket we need for cross-instance mirroring —
+ * declared here so the shared package doesn't take a hard dependency on
+ * `@google-cloud/storage`. The default factory dynamically imports the SDK
+ * only when a bucket name is resolved.
+ */
+export interface ReportCsvMirrorBucket {
+  file(path: string): {
+    download(): Promise<[Buffer]>;
+    save(content: string): Promise<unknown>;
+  };
+}
+
+/**
+ * Optional GCS-backed mirror of in-memory entries. Lets a `report-csv://`
+ * URI survive a Cloud Run scale-out event: when the user lands on a different
+ * instance than the one that produced the URI, `getRemote()` reconstructs the
+ * entry from the bucket instead of returning "resource not found".
+ */
+export interface ReportCsvMirrorOptions {
+  /** Resolved each call; returns the bucket name (e.g. `REPORT_SPILL_BUCKET`). */
+  bucketResolver: () => string | undefined;
+  /** Factory for the bucket handle. Defaults to a lazy `@google-cloud/storage` import. */
+  bucketFactory?: (name: string) => ReportCsvMirrorBucket | Promise<ReportCsvMirrorBucket>;
+  /** Object-path prefix. Defaults to `"csv-index"`. */
+  pathPrefix?: string;
+  /** Logger for fire-and-forget mirror-write failures. */
+  logger?: { warn: (...args: unknown[]) => void };
+}
+
 export interface ReportCsvStoreOptions {
   ttlMs?: number;
   maxEntries?: number;
@@ -67,6 +97,8 @@ export interface ReportCsvStoreOptions {
   now?: () => number;
   /** Override `randomUUID` for tests. */
   generateId?: () => string;
+  /** Optional GCS-backed mirror for cross-instance resource reads. */
+  mirror?: ReportCsvMirrorOptions;
 }
 
 const CSV_REDACTION_PATTERNS: Array<[RegExp, string]> = [
@@ -113,6 +145,9 @@ export class ReportCsvStore {
   private readonly maxBytes: number;
   private readonly now: () => number;
   private readonly generateId: () => string;
+  private readonly mirror?: ReportCsvMirrorOptions;
+  private readonly pendingMirrorWrites = new Set<Promise<void>>();
+  private cachedBucket?: Promise<ReportCsvMirrorBucket>;
 
   constructor(opts: ReportCsvStoreOptions = {}) {
     this.ttlMs = opts.ttlMs ?? REPORT_CSV_DEFAULT_TTL_MS;
@@ -120,6 +155,7 @@ export class ReportCsvStore {
     this.maxBytes = opts.maxBytes ?? REPORT_CSV_DEFAULT_MAX_BYTES;
     this.now = opts.now ?? (() => Date.now());
     this.generateId = opts.generateId ?? (() => randomUUID());
+    this.mirror = opts.mirror;
   }
 
   store(opts: StoreReportCsvOptions): ReportCsvEntry {
@@ -168,7 +204,37 @@ export class ReportCsvStore {
     };
 
     this.entries.set(resourceId, entry);
+    this.startMirrorWrite(entry);
     return entry;
+  }
+
+  /**
+   * Cross-instance read. Same fast path as `get()` for in-memory hits; on a
+   * miss, falls back to fetching the mirrored entry from GCS when a mirror is
+   * configured. Returns `undefined` if the entry doesn't exist, has expired,
+   * or no mirror is configured to fall back to.
+   */
+  async getRemote(resourceId: string): Promise<ReportCsvEntry | undefined> {
+    const local = this.get(resourceId);
+    if (local) return local;
+    return this.fetchFromMirror(resourceId);
+  }
+
+  /** Resolve by full URI, with cross-instance fallback. */
+  async getRemoteByUri(uri: string): Promise<ReportCsvEntry | undefined> {
+    const id = parseReportCsvUri(uri);
+    if (!id) return undefined;
+    return this.getRemote(id);
+  }
+
+  /**
+   * Wait for all in-flight mirror writes to complete. Used by tests and
+   * graceful shutdown paths; production callers don't need to await this —
+   * mirror writes are fire-and-forget by design.
+   */
+  async flushMirror(): Promise<void> {
+    if (this.pendingMirrorWrites.size === 0) return;
+    await Promise.allSettled(Array.from(this.pendingMirrorWrites));
   }
 
   get(resourceId: string): ReportCsvEntry | undefined {
@@ -226,5 +292,79 @@ export class ReportCsvStore {
       }
     }
     if (oldestId) this.entries.delete(oldestId);
+  }
+
+  // ── Mirror ───────────────────────────────────────────────────────────────
+
+  private mirrorPath(resourceId: string): string {
+    const prefix = this.mirror?.pathPrefix ?? "csv-index";
+    return `${prefix}/${resourceId}.json`;
+  }
+
+  private async resolveBucket(): Promise<ReportCsvMirrorBucket | undefined> {
+    if (!this.mirror) return undefined;
+    const bucketName = this.mirror.bucketResolver();
+    if (!bucketName) return undefined;
+    if (!this.cachedBucket) {
+      const factory =
+        this.mirror.bucketFactory ?? (async (name: string) => this.defaultBucketFactory(name));
+      this.cachedBucket = Promise.resolve(factory(bucketName));
+    }
+    return this.cachedBucket;
+  }
+
+  private async defaultBucketFactory(name: string): Promise<ReportCsvMirrorBucket> {
+    const moduleName = "@google-cloud/storage";
+    const mod = await import(moduleName);
+    const StorageCtor = (mod as { Storage: new () => { bucket: (n: string) => ReportCsvMirrorBucket } }).Storage;
+    return new StorageCtor().bucket(name);
+  }
+
+  private startMirrorWrite(entry: ReportCsvEntry): void {
+    if (!this.mirror) return;
+    const promise = (async () => {
+      try {
+        const bucket = await this.resolveBucket();
+        if (!bucket) return;
+        await bucket.file(this.mirrorPath(entry.resourceId)).save(JSON.stringify(entry));
+      } catch (error) {
+        this.mirror?.logger?.warn(
+          { error, resourceId: entry.resourceId },
+          "ReportCsvStore: mirror write failed"
+        );
+      }
+    })();
+    this.pendingMirrorWrites.add(promise);
+    promise.finally(() => this.pendingMirrorWrites.delete(promise));
+  }
+
+  private async fetchFromMirror(resourceId: string): Promise<ReportCsvEntry | undefined> {
+    if (!this.mirror) return undefined;
+    let bucket: ReportCsvMirrorBucket | undefined;
+    try {
+      bucket = await this.resolveBucket();
+    } catch (error) {
+      this.mirror.logger?.warn(
+        { error, resourceId },
+        "ReportCsvStore: mirror bucket resolution failed"
+      );
+      return undefined;
+    }
+    if (!bucket) return undefined;
+
+    try {
+      const [data] = await bucket.file(this.mirrorPath(resourceId)).download();
+      const entry = JSON.parse(data.toString("utf-8")) as ReportCsvEntry;
+      if (this.now() >= entry.expiresAt) return undefined;
+      return entry;
+    } catch (error: unknown) {
+      const code = (error as { code?: number })?.code;
+      if (code === 404) return undefined;
+      this.mirror.logger?.warn(
+        { error, resourceId },
+        "ReportCsvStore: mirror fetch failed"
+      );
+      return undefined;
+    }
   }
 }

@@ -57,7 +57,11 @@ export const sessionServiceStore = new SessionServiceStore<SessionServices>();
  * `report-csv://{id}` MCP resource template. Entries expire after 30 minutes
  * (see ReportCsvStore default TTL).
  */
-export const reportCsvStore = new ReportCsvStore();
+export const reportCsvStore = new ReportCsvStore({
+  // Mirror entries to GCS so the report-csv:// URI survives Cloud Run scale-out.
+  // Reuses REPORT_SPILL_BUCKET; no-op when unset.
+  mirror: { bucketResolver: () => process.env.REPORT_SPILL_BUCKET },
+});
 
 // On session close, sweep this session's GCS spill objects and clear its
 // in-memory report-csv store entries. Belt-and-braces alongside the 24h
