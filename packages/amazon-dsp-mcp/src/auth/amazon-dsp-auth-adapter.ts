@@ -7,8 +7,8 @@
  * Two adapter implementations:
  * 1. AmazonDspAccessTokenAdapter — holds a pre-generated static access token.
  * 2. AmazonDspRefreshTokenAdapter — uses app credentials + refresh token to
- *    auto-refresh access tokens via Amazon LwA endpoint. Same caching + mutex
- *    pattern as TTD's TtdCredentialExchangeAuthAdapter.
+ *    auto-refresh access tokens via Amazon LwA endpoint. Caching + single-flight
+ *    refresh come from OAuth2RefreshAdapterBase in @cesteral/shared.
  *
  * Validates tokens by calling GET /dsp/advertisers?startIndex=0&count=1.
  * Token refresh uses POST https://api.amazon.com/auth/o2/token (form-encoded).

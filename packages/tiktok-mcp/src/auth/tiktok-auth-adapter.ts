@@ -7,15 +7,21 @@
  * Two adapter implementations:
  * 1. TikTokAccessTokenAdapter — holds a pre-generated static access token.
  * 2. TikTokRefreshTokenAdapter — uses app credentials + refresh token to
- *    auto-refresh access tokens (24h expiry). Same caching + mutex pattern
- *    as TTD's TtdCredentialExchangeAuthAdapter.
+ *    auto-refresh access tokens (24h expiry). Caching + single-flight refresh
+ *    come from OAuth2RefreshAdapterBase in @cesteral/shared.
  *
  * Validates tokens by calling GET /open_api/{version}/user/info/.
  * Token is passed via Authorization: Bearer <token> header.
  */
 
 import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  JsonRpcErrorCode,
+  McpError,
+  OAuth2RefreshAdapterBase,
+} from "@cesteral/shared";
 
 /**
  * TikTok API response shape (success)
@@ -119,7 +125,7 @@ export interface TikTokRefreshCredentials {
 }
 
 /**
- * TikTok OAuth2 token response shape.
+ * TikTok wraps OAuth2 responses in a code+message envelope around `data`.
  */
 interface TikTokTokenResponse {
   code: number;
@@ -135,26 +141,65 @@ interface TikTokTokenResponse {
  * Refresh token adapter — uses app credentials + refresh token to obtain
  * and auto-refresh access tokens via TikTok's OAuth2 endpoint.
  *
- * TikTok access tokens expire after 24 hours. This adapter caches them
- * with a 60-second expiry buffer and uses a mutex to prevent concurrent
- * token requests (same pattern as TTD's TtdCredentialExchangeAuthAdapter).
+ * TikTok access tokens expire after 24 hours. Caching + single-flight refresh
+ * live in OAuth2RefreshAdapterBase; this subclass unwraps TikTok's code+message
+ * envelope and forwards the inner OAuth2 response to the base.
  */
-export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
-  private cachedToken: string | null = null;
-  private tokenExpiresAt = 0;
-  private pendingAuth: Promise<string> | null = null;
+export class TikTokRefreshTokenAdapter
+  extends OAuth2RefreshAdapterBase<TikTokRefreshCredentials>
+  implements TikTokAuthAdapter
+{
   private _userId = "";
-  private currentRefreshToken: string;
-
-  private static readonly EXPIRY_BUFFER_MS = 60_000;
 
   constructor(
-    private readonly credentials: TikTokRefreshCredentials,
+    credentials: TikTokRefreshCredentials,
     private readonly _advertiserId: string,
     private readonly baseUrl: string = "https://business-api.tiktok.com",
     private readonly apiVersion: string = "v1.3"
   ) {
-    this.currentRefreshToken = credentials.refreshToken;
+    super({
+      platformName: "TikTok",
+      credentials,
+      requestToken: async (refreshToken) => {
+        const response = await fetchWithTimeout(
+          `${baseUrl}/open_api/${apiVersion}/oauth2/access_token/`,
+          10_000,
+          undefined,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              app_id: credentials.appId,
+              secret: credentials.appSecret,
+              grant_type: "refresh_token",
+              refresh_token: refreshToken,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorBody = await response.text().catch(() => "");
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
+            `TikTok token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+          );
+        }
+
+        const data = (await response.json()) as TikTokTokenResponse;
+        if (data.code !== 0 || !data.data?.access_token) {
+          throw new McpError(
+            JsonRpcErrorCode.InternalError,
+            `TikTok token refresh failed: code=${data.code} message=${data.message}`
+          );
+        }
+
+        return {
+          access_token: data.data.access_token,
+          expires_in: data.data.expires_in,
+          refresh_token: data.data.refresh_token,
+        };
+      },
+    });
   }
 
   get userId(): string {
@@ -199,64 +244,6 @@ export class TikTokRefreshTokenAdapter implements TikTokAuthAdapter {
     }
 
     this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
-  }
-
-  async getAccessToken(): Promise<string> {
-    if (this.cachedToken && Date.now() < this.tokenExpiresAt) {
-      return this.cachedToken;
-    }
-
-    if (this.pendingAuth) {
-      return this.pendingAuth;
-    }
-
-    this.pendingAuth = this.refreshAccessToken();
-    try {
-      return await this.pendingAuth;
-    } finally {
-      this.pendingAuth = null;
-    }
-  }
-
-  private async refreshAccessToken(): Promise<string> {
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/${this.apiVersion}/oauth2/access_token/`,
-      10_000,
-      undefined,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          app_id: this.credentials.appId,
-          secret: this.credentials.appSecret,
-          grant_type: "refresh_token",
-          refresh_token: this.currentRefreshToken,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new Error(
-        `TikTok token refresh failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as TikTokTokenResponse;
-    if (data.code !== 0 || !data.data?.access_token) {
-      throw new Error(`TikTok token refresh failed: code=${data.code} message=${data.message}`);
-    }
-
-    this.cachedToken = data.data.access_token;
-    this.tokenExpiresAt =
-      Date.now() + data.data.expires_in * 1000 - TikTokRefreshTokenAdapter.EXPIRY_BUFFER_MS;
-
-    // TikTok may rotate the refresh token — store the new one
-    if (data.data.refresh_token) {
-      this.currentRefreshToken = data.data.refresh_token;
-    }
-
-    return this.cachedToken;
   }
 }
 
