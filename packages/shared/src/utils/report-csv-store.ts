@@ -316,7 +316,9 @@ export class ReportCsvStore {
   private async defaultBucketFactory(name: string): Promise<ReportCsvMirrorBucket> {
     const moduleName = "@google-cloud/storage";
     const mod = await import(moduleName);
-    const StorageCtor = (mod as { Storage: new () => { bucket: (n: string) => ReportCsvMirrorBucket } }).Storage;
+    const StorageCtor = (
+      mod as { Storage: new () => { bucket: (n: string) => ReportCsvMirrorBucket } }
+    ).Storage;
     return new StorageCtor().bucket(name);
   }
 
@@ -360,10 +362,7 @@ export class ReportCsvStore {
     } catch (error: unknown) {
       const code = (error as { code?: number })?.code;
       if (code === 404) return undefined;
-      this.mirror.logger?.warn(
-        { error, resourceId },
-        "ReportCsvStore: mirror fetch failed"
-      );
+      this.mirror.logger?.warn({ error, resourceId }, "ReportCsvStore: mirror fetch failed");
       return undefined;
     }
   }
