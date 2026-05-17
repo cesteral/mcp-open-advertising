@@ -43,7 +43,9 @@ describe("validateEntityLogic", () => {
       mockContext
     );
     expect(result.valid).toBe(false);
-    expect(errorMessages(result)).toContainEqual(expect.stringContaining("advertiserId is required"));
+    expect(errorMessages(result)).toContainEqual(
+      expect.stringContaining("advertiserId is required")
+    );
   });
 
   it("campaign create with advertiserId is valid", async () => {

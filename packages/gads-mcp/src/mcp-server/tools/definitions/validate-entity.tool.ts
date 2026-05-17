@@ -80,9 +80,7 @@ export const ValidateEntityOutputSchema = z
     valid: z.boolean().describe("Whether the payload passed validation"),
     entityType: z.string(),
     mode: z.string(),
-    issues: z
-      .array(ValidationIssueSchema)
-      .describe("Structured per-field issues"),
+    issues: z.array(ValidationIssueSchema).describe("Structured per-field issues"),
     nextAction: z
       .string()
       .optional()

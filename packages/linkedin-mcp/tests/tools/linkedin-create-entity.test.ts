@@ -164,9 +164,7 @@ describe("linkedin_validate_entity tool", () => {
         mockContext as any
       );
 
-      const errors = result.issues
-        .filter((i) => i.severity !== "warning")
-        .map((i) => i.message);
+      const errors = result.issues.filter((i) => i.severity !== "warning").map((i) => i.message);
       expect(result.valid).toBe(false);
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some((e) => e.includes("campaignGroup"))).toBe(true);
@@ -190,9 +188,7 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       // campaignGroup is present but not a URN — should warn
-      const warnings = result.issues
-        .filter((i) => i.severity === "warning")
-        .map((i) => i.message);
+      const warnings = result.issues.filter((i) => i.severity === "warning").map((i) => i.message);
       expect(warnings.some((w) => w.includes("campaignGroup"))).toBe(true);
     });
 
@@ -232,9 +228,7 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       expect(result.valid).toBe(false);
-      const errors = result.issues
-        .filter((i) => i.severity !== "warning")
-        .map((i) => i.message);
+      const errors = result.issues.filter((i) => i.severity !== "warning").map((i) => i.message);
       expect(errors).toContain("Update payload must contain at least one field to update");
     });
 
@@ -252,9 +246,7 @@ describe("linkedin_validate_entity tool", () => {
       );
 
       expect(result.valid).toBe(true);
-      const warnings = result.issues
-        .filter((i) => i.severity === "warning")
-        .map((i) => i.message);
+      const warnings = result.issues.filter((i) => i.severity === "warning").map((i) => i.message);
       expect(warnings.some((w) => w.includes('"id"'))).toBe(true);
     });
   });
