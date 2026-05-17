@@ -449,7 +449,7 @@ export class BidManagerService {
       },
       params: {
         type: "STANDARD",
-        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN"],
+        groupBys: ["FILTER_DATE", "FILTER_MEDIA_PLAN", "FILTER_ADVERTISER_CURRENCY"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_CLICKS",
@@ -521,7 +521,7 @@ export class BidManagerService {
       },
       params: {
         type: "STANDARD",
-        groupBys: [timeGroupBy, "FILTER_MEDIA_PLAN"],
+        groupBys: [timeGroupBy, "FILTER_MEDIA_PLAN", "FILTER_ADVERTISER_CURRENCY"],
         metrics: [
           "METRIC_IMPRESSIONS",
           "METRIC_CLICKS",
