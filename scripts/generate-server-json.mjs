@@ -34,6 +34,15 @@ function loadPackageJson(packageName) {
 }
 
 function buildServerJson(serverEntry, packageJson, registry) {
+  // The {server} marker in registry.remoteUrlTemplate is substituted at
+  // generation time with the package name so each server gets a unique
+  // URL string in the MCP Registry. {host} stays as a deployment-time
+  // variable that operators fill in when wiring up their own instance.
+  const remoteUrl = registry.remoteUrlTemplate.replace(
+    "{server}",
+    serverEntry.package
+  );
+
   const serverJson = {
     $schema: SCHEMA_URL,
     name: packageJson.mcpName,
@@ -47,7 +56,7 @@ function buildServerJson(serverEntry, packageJson, registry) {
     remotes: [
       {
         type: "streamable-http",
-        url: registry.remoteUrlTemplate,
+        url: remoteUrl,
         variables: {
           host: {
             description: `Hostname of your deployed server instance (e.g., my-${serverEntry.package}-abc123.run.app)`,
