@@ -68,8 +68,34 @@ The `terraform-deployer` SA has `roles/artifactregistry.admin` (granted by `init
 
 **Scope:** `@cesteral/*` — public, scoped packages requiring `--access public` on every publish.
 **Publisher:** `pnpm publish`, not `npm publish`. Server packages depend on `@cesteral/shared` via `"workspace:*"`; `pnpm publish` rewrites this to the resolved version at publish time, `npm publish` does not (the literal `workspace:*` string would ship and break consumers).
-**Auth:** interactive (`npm login`) for manual runs; `NPM_TOKEN` env var for CI.
 **Source of truth for version:** each package's `package.json` `version` field. Bump per release.
+
+### Auth setup (first time on a new machine)
+
+The `@cesteral` org enforces **2FA on publish**. `npm login` alone is **not sufficient** — its session token doesn't bypass 2FA at publish time, and the script publishes 14 packages back-to-back, which makes per-publish OTP prompts impractical (OTPs expire in 30s). You need a token that bypasses 2FA. Two paths:
+
+1. **Granular Access Token (recommended).** npmjs.com → Profile → Access Tokens → "Generate New Token" → "Granular Access Token". Required settings:
+   - **Permissions on the `cesteral` organization:** Read and write. This is a separate grant from per-user packages — without it, publishes to `@cesteral/*` are rejected with the misleading message "Two-factor authentication or granular access token with bypass 2fa enabled is required" (the underlying issue is missing org access, not the bypass-2FA flag).
+   - **"Allow this token to bypass 2FA":** **checked**. Defaults to off.
+   - **Expiration:** short (7–30 days) since this is a high-privilege token.
+
+2. **Classic Automation Token.** Same dashboard → "Classic Token" → type **Automation**. Automation tokens bypass 2FA by design and inherit your org memberships, so no separate org-access grant is needed.
+
+Install the token in `~/.npmrc` (note the leading `//` and trailing `:` in the key — without them, the value is silently ignored):
+
+```bash
+npm config set //registry.npmjs.org/:_authToken="npm_PASTE_TOKEN_HERE"
+# Watch out for smart quotes from rich-text terminal apps — they break shell parsing.
+# Verify:
+npm whoami    # should print your npm username
+```
+
+**Revoke after publish.** Bypass-2FA tokens are sensitive. After a release lands, either:
+
+- Run `npm token revoke <id>` (find the id with `npm token list`) and strip `_authToken` lines from `~/.npmrc`, or
+- Delete the token via the npmjs.com dashboard.
+
+For CI, set `NPM_TOKEN` in the build environment with the same kind of token; the npm CLI picks it up automatically.
 
 ### One-shot publish (all servers + shared)
 
@@ -120,8 +146,8 @@ For automated npm publish from CI, set `NPM_TOKEN` in the build environment. The
 See [`mcp-registry-publishing.md`](./mcp-registry-publishing.md) for the full generator workflow, `registry.json` ↔ `server.json` ownership boundary, and validation checks. The short version:
 
 ```bash
-brew install mcp-publisher                # one-time
-mcp-publisher login github                # one-time per shell
+brew install mcp-publisher                # one-time; alternative: curl install in ~/.local/bin
+mcp-publisher login github                # one-time per shell — but see JWT expiry note below
 
 # After bumping versions in package.json:
 pnpm run sync:registry-tools              # refresh tool lists in registry.json
@@ -134,6 +160,24 @@ for dir in packages/*-mcp; do (cd "$dir" && mcp-publisher publish); done
 
 **Prerequisite:** the corresponding npm package version must already be live on npm, because the registry resolves the npm tarball during publish.
 
+### Registry constraints (enforced server-side)
+
+These are non-obvious from the schema docs and have rejected real publishes — keep them in mind when editing `registry.json`:
+
+- **`description` ≤ 100 chars.** The registry rejects longer values with HTTP 422 `expected length <= 100`. `pnpm run generate:registry` does not pre-validate this; if you'd like a local guard, add a length check to the generator or rely on the first publish-time error.
+- **`remotes[].url` must be globally unique across all publishers on the registry.** The registry stores the literal template string (e.g. `https://{host}/dbm-mcp/mcp`) as a unique key — `{host}` is **not** resolved before comparison. Our generator embeds each server's package name into the path via a `{server}` marker substituted at write time, which guarantees uniqueness across our 13 servers and avoids collisions with other publishers' templates. If you change `remoteUrlTemplate` in `registry.json`, keep the `{server}` marker.
+
+### JWT expiry mid-run
+
+`mcp-publisher login github` issues a short-lived JWT (observed ~10 minute lifetime). For a fresh `./scripts/publish-all.sh` run that does all 13 servers, the JWT can expire partway through the loop — surfacing as:
+
+```
+Error: publish failed: server returned status 401:
+  "Invalid or expired Registry JWT token"
+```
+
+When this happens: the npm side is unaffected (it uses a different token), and the script's MCP Registry loop records each per-server failure and reports them at the end. Re-run `mcp-publisher login github`, then `./scripts/publish-all.sh` again — already-published packages are tolerated by the conflict regex on the npm side, and unpublished servers are picked up cleanly on the second pass. The full flow is idempotent.
+
 ## Release flow (recommended ordering)
 
 For a routine cross-cutting release that touches multiple servers:
@@ -142,19 +186,65 @@ For a routine cross-cutting release that touches multiple servers:
 2. **Bump versions** in affected `package.json` files
 3. **Sync metadata** — `pnpm run sync:registry-tools && pnpm run generate:registry`
 4. **Commit** the version + manifest changes; merge to `main`
-5. **Tag the release** in git (e.g. `v1.1.0`) so the published artifacts are traceable
-6. **Publish stdio path:** `./scripts/publish-all.sh` (npm → MCP Registry)
-7. **Publish hosted path:** `./scripts/deploy.sh dev` → verify → `./scripts/deploy.sh prod`
-8. **Smoke-test hosted:** `./scripts/smoke-test.sh prod`
+5. **Tag the release** in git (e.g. `git tag -a v1.1.0 -m "..."`) so the published artifacts are traceable. After publish, promote to a GitHub Release: `gh release create v1.1.0 --notes-file <notes>` (the tag page becomes a permalink that npm and the MCP Registry can link to).
+6. **Refresh auth** — make sure `npm whoami` resolves and `mcp-publisher login github` was run recently (its JWT is ~10 min, so for first-publish-of-the-day, log in right before step 7).
+7. **Publish stdio path:** `./scripts/publish-all.sh` (npm → MCP Registry). The script's pack-and-inspect gate validates every tarball before any publish; conflict-regex tolerance makes re-runs idempotent if anything partial lands.
+8. **Publish hosted path:** `./scripts/deploy.sh dev` → verify → `./scripts/deploy.sh prod`
+9. **Smoke-test hosted:** `./scripts/smoke-test.sh prod`
 
-Steps 6 and 7 are independent and can run in parallel.
+Steps 7 and 8 are independent and can run in parallel.
 
 ## Troubleshooting
 
-### `npm publish` returns 403
+### `npm publish` returns 403 — `cannot publish over the previously published versions`
 
-- The version already exists on npm — bump `version` in `package.json` and retry. The script's "may already be published" warning is the same condition.
-- Token lacks publish scope — re-issue with **Automation** rights on `@cesteral`.
+The version already exists on npm — bump `version` in `package.json` and retry. `./scripts/publish-all.sh` matches this specific message via its conflict regex and tolerates it (logs `already published at this version — continuing`); a hard retry is safe.
+
+### `npm publish` returns 403 — `Two-factor authentication or granular access token with bypass 2fa enabled is required`
+
+The token used for the publish doesn't bypass 2FA. Several distinct causes give this same error message:
+
+1. **No `_authToken` in `~/.npmrc` at all.** `npm login` alone doesn't write a bypass-2FA token. See [Auth setup](#auth-setup-first-time-on-a-new-machine).
+2. **Granular token without the "Allow this token to bypass 2FA" checkbox.** The checkbox defaults to off when generating. Either regenerate with it checked, or switch to a Classic Automation Token (those bypass by design).
+3. **Granular token without org access.** The "Packages and scopes: read and write access" grant only covers user-owned packages — `@cesteral/*` is org-owned. The token's **Organizations** section must include `cesteral` with Read and write access. Look at the token detail page on npmjs.com; if it says "This token has no access to organizations," that's the cause.
+4. **Org-level 2FA-on-write policy set to "All writes"** (not "All writes except CI/CD tokens"). At that policy level, _no_ token bypass works. Check npmjs.com → `@cesteral` org → Settings.
+
+### `npm publish` looks successful but `npm view` returns 404 for that package
+
+Observed once during the 1.0.0 publish for `@cesteral/gads-mcp`: `pnpm publish` exited 0 but no tarball landed on the registry. Cause was not isolated. On retry, the second attempt published cleanly. Diagnosis path:
+
+```bash
+# Verify the gap is real (not stale cache)
+npm view @cesteral/<pkg> --registry=https://registry.npmjs.org/
+
+# Re-publish just that package
+cd packages/<pkg> && pnpm publish --access public --no-git-checks
+```
+
+The publish loop is idempotent — `./scripts/publish-all.sh` can be re-run safely; the conflict regex will tolerate the 13 packages already live and only attempt the missing one.
+
+### `mcp-publisher publish` fails with 422 `expected length <= 100`
+
+A `description` in `registry.json` (and thus the generated `server.json`) exceeds 100 chars. Trim the description and regenerate:
+
+```bash
+# In registry.json, shorten the description for the offending server.
+pnpm run generate:registry
+pnpm run check:registry
+```
+
+### `mcp-publisher publish` fails with 400 `remote URL <url> is already used by server <other>`
+
+The MCP Registry treats `remotes[].url` as a globally unique string across all publishers. The template — including unresolved `{host}` placeholders — must be unique. Our `remoteUrlTemplate` embeds `{server}` to encode the package name in the URL path; if you change the template, preserve that marker. See [Registry constraints](#registry-constraints-enforced-server-side).
+
+### `mcp-publisher publish` fails with 401 `Invalid or expired Registry JWT token`
+
+The GitHub-issued JWT has expired (observed ~10 min lifetime). Re-login and re-run:
+
+```bash
+mcp-publisher login github
+./scripts/publish-all.sh   # idempotent; tolerates already-published packages
+```
 
 ### `mcp-publisher publish` fails with "name mismatch"
 

@@ -80,8 +80,16 @@ done
 Install the `mcp-publisher` CLI:
 
 ```bash
+# Option 1: Homebrew
 brew install mcp-publisher
-# or: curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
+
+# Option 2: curl install to /usr/local/bin (requires sudo)
+curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
+  | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
+
+# Option 3: curl install to ~/.local/bin (no sudo, if dir is on PATH)
+curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
+  | tar xz mcp-publisher && mv mcp-publisher ~/.local/bin/
 ```
 
 Authenticate and publish each server:
@@ -101,9 +109,17 @@ done
 
 ### Prerequisites
 
-- npm packages must be published first (`npm publish --access public`)
-- Each `package.json` must have `mcpName` matching `name` in `server.json`
-- GitHub auth requires `mcpName` starting with `io.github.cesteral/`
+- npm packages must be published first (`pnpm publish --access public`) — the registry resolves the npm tarball during publish.
+- Each `package.json` must have `mcpName` matching `name` in `server.json`.
+- GitHub auth requires `mcpName` starting with `io.github.cesteral/`.
+
+### Server-side constraints (non-obvious)
+
+These are enforced by the registry at publish time, not by the local generator:
+
+- **`description` ≤ 100 chars.** HTTP 422 `expected length <= 100` on violation. Trim and re-run `pnpm run generate:registry`.
+- **`remotes[].url` must be globally unique across all publishers.** The registry stores the literal template string (including unresolved `{host}`) as a unique key. Our `remoteUrlTemplate` in `registry.json` embeds a `{server}` marker that the generator substitutes with each package's name at write time, producing 13 distinct URL strings (`https://{host}/<server>/mcp`). Preserve the `{server}` marker if you change the template.
+- **JWT expiry.** `mcp-publisher login github` issues a short-lived JWT (observed ~10 minute lifetime). Long publish loops can outlast it and start failing mid-run with `401 Invalid or expired Registry JWT token`. Re-run `mcp-publisher login github`, then re-invoke the publish — already-landed servers are tolerated.
 
 ## Current Servers
 
