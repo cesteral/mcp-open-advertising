@@ -11,7 +11,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://{host}/mcp",
+      "url": "https://{host}/msads-mcp/mcp",
       "variables": {
         "host": {
           "description": "Hostname of your deployed server instance (e.g., my-msads-mcp-abc123.run.app)",

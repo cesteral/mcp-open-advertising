@@ -11,7 +11,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://{host}/mcp",
+      "url": "https://{host}/gads-mcp/mcp",
       "variables": {
         "host": {
           "description": "Hostname of your deployed server instance (e.g., my-gads-mcp-abc123.run.app)",
