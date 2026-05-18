@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.cesteral/sa360-mcp",
   "title": "Search Ads 360 MCP Server",
-  "description": "Search Ads 360 reporting and conversion management — query language, insights, and offline conversions",
+  "description": "Search Ads 360 — reporting via query language, insights, and offline conversion upload",
   "repository": {
     "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"

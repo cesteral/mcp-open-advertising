@@ -48,7 +48,7 @@
     {
       "package": "dv360-mcp",
       "title": "DV360 MCP Server",
-      "description": "Self-hostable DV360 MCP connector for campaign writes, targeting, custom bidding, previews, and media operations",
+      "description": "DV360 campaign management — writes, targeting, custom bidding, previews, and media uploads",
       "runtime_description": "Display & Video 360 campaign, line item, creative, and targeting management.",
       "platform": "Google Display & Video 360",
       "platform_display_name": "DV360",
@@ -119,7 +119,7 @@
     {
       "package": "ttd-mcp",
       "title": "The Trade Desk MCP Server",
-      "description": "The Trade Desk campaign management and reporting — CRUD, GraphQL, bulk ops, and async reports",
+      "description": "The Trade Desk management — CRUD, GraphQL, bulk ops, and async reports",
       "runtime_description": "The Trade Desk REST + GraphQL + Workflows API: campaigns, ad groups, creatives, bid lists, seeds, reporting.",
       "platform": "The Trade Desk",
       "platform_display_name": "TTD",
@@ -207,7 +207,7 @@
     {
       "package": "gads-mcp",
       "title": "Google Ads MCP Server",
-      "description": "Self-hostable Google Ads MCP connector for campaign writes, GAQL reporting, bulk mutate, validation, and previews",
+      "description": "Google Ads management — campaign writes, GAQL reporting, bulk mutate, validation, and previews",
       "runtime_description": "Google Ads search, display, and shopping campaign management with GAQL queries.",
       "platform": "Google Ads",
       "platform_display_name": "Google Ads",
@@ -261,7 +261,7 @@
     {
       "package": "meta-mcp",
       "title": "Meta Ads MCP Server",
-      "description": "Self-hostable Meta Ads MCP connector for campaign writes, insights, targeting, delivery estimates, previews, and media operations",
+      "description": "Meta Ads management — writes, insights, targeting, delivery estimates, previews, and media uploads",
       "runtime_description": "Meta Marketing API: Facebook/Instagram campaigns, ad sets, ads, audiences, insights.",
       "platform": "Meta (Facebook/Instagram)",
       "platform_display_name": "Meta",
@@ -335,7 +335,7 @@
     {
       "package": "linkedin-mcp",
       "title": "LinkedIn Ads MCP Server",
-      "description": "LinkedIn Ads campaign management and analytics — CRUD, targeting, delivery forecasts, and media upload",
+      "description": "LinkedIn Ads management and analytics — CRUD, targeting, delivery forecasts, and media uploads",
       "runtime_description": "LinkedIn Marketing API: campaigns, creatives, audiences, conversions, analytics.",
       "platform": "LinkedIn Ads",
       "platform_display_name": "LinkedIn",
@@ -395,7 +395,7 @@
     {
       "package": "tiktok-mcp",
       "title": "TikTok Ads MCP Server",
-      "description": "TikTok Ads campaign management and reporting — CRUD, async reports, targeting, and media upload",
+      "description": "TikTok Ads management — CRUD, async reports, targeting, and media uploads",
       "runtime_description": "TikTok Marketing API: campaigns, ad groups, ads, creatives, reporting.",
       "platform": "TikTok Ads",
       "platform_display_name": "TikTok",
@@ -517,7 +517,7 @@
     {
       "package": "snapchat-mcp",
       "title": "Snapchat Ads MCP Server",
-      "description": "Snapchat Ads campaign management and reporting — CRUD, async reports, targeting, and audience estimates",
+      "description": "Snapchat Ads management — CRUD, async reports, targeting, and audience estimates",
       "runtime_description": "Snapchat Ads API: campaigns, ad squads, ads, creatives, reporting.",
       "platform": "Snapchat Ads",
       "platform_display_name": "Snapchat",
@@ -577,7 +577,7 @@
     {
       "package": "sa360-mcp",
       "title": "Search Ads 360 MCP Server",
-      "description": "Search Ads 360 reporting and conversion management — query language, insights, and offline conversions",
+      "description": "Search Ads 360 — reporting via query language, insights, and offline conversion upload",
       "runtime_description": "Search Ads 360 reporting and offline conversion uploads.",
       "platform": "Google Search Ads 360",
       "platform_display_name": "Search Ads 360",
@@ -629,7 +629,7 @@
     {
       "package": "pinterest-mcp",
       "title": "Pinterest Ads MCP Server",
-      "description": "Pinterest Ads campaign management and reporting — CRUD, async reports, targeting, and audience estimates",
+      "description": "Pinterest Ads management — CRUD, async reports, targeting, and audience estimates",
       "runtime_description": "Pinterest Ads API: campaigns, ad groups, ads, creatives, reporting.",
       "platform": "Pinterest Ads",
       "platform_display_name": "Pinterest",
@@ -690,7 +690,7 @@
     {
       "package": "amazon-dsp-mcp",
       "title": "Amazon DSP MCP Server",
-      "description": "Amazon DSP campaign management and reporting — CRUD, async reports, targeting, and audience management",
+      "description": "Amazon DSP management — CRUD, async reports, targeting, and audience management",
       "runtime_description": "Amazon DSP: orders, line items, creatives, reporting.",
       "platform": "Amazon DSP",
       "platform_display_name": "Amazon DSP",
@@ -747,7 +747,7 @@
     {
       "package": "msads-mcp",
       "title": "Microsoft Advertising MCP Server",
-      "description": "Microsoft Advertising campaign management and reporting — CRUD, Google Ads import, ad extensions, and async reports",
+      "description": "Microsoft Ads management — CRUD, Google Ads import, ad extensions, and async reports",
       "runtime_description": "Microsoft Advertising: campaigns, ad groups, ads, keywords, ad extensions, reporting, Google Ads import.",
       "platform": "Microsoft Advertising",
       "platform_display_name": "Microsoft Ads",
