@@ -18,10 +18,10 @@
  * developer-token / login-customer-id carrier fields.
  */
 
-import { createHash } from "crypto";
 import {
   extractHeader,
   fetchWithTimeout,
+  fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
   OAuth2RefreshAdapterBase,
@@ -167,5 +167,5 @@ export function parseGAdsCredentialsFromHeaders(
  * Generate a fingerprint for Google Ads credentials (for session binding).
  */
 export function getGAdsCredentialFingerprint(credentials: GAdsCredentials): string {
-  return createHash("sha256").update(credentials.clientId).digest("hex").substring(0, 32);
+  return fingerprintCredentials(credentials.clientId);
 }

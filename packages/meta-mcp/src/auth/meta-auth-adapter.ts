@@ -14,10 +14,10 @@
  * Tokens passed via Authorization: Bearer header (not query param).
  */
 
-import { createHash } from "crypto";
 import {
   extractHeader,
   fetchWithTimeout,
+  fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
   OAuth2RefreshAdapterBase,
@@ -32,6 +32,27 @@ export interface MetaAuthAdapter {
   getAccessToken(): Promise<string>;
   validate(): Promise<void>;
   readonly userId: string;
+}
+
+/**
+ * Validate a Meta access token against GET /me and return the authenticated
+ * user's id. Throws Unauthorized on any non-2xx response.
+ */
+async function fetchMetaUserId(token: string, baseUrl: string): Promise<string> {
+  const response = await fetchWithTimeout(`${baseUrl}/me?fields=id,name`, 10_000, undefined, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      `Meta token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+    );
+  }
+
+  const data = (await response.json()) as { id: string; name: string };
+  return data.id;
 }
 
 /**
@@ -55,36 +76,9 @@ export class MetaAccessTokenAdapter implements MetaAuthAdapter {
     return this.accessToken;
   }
 
-  /**
-   * Validate the access token by calling GET /me.
-   * Must be called before the adapter is used.
-   */
   async validate(): Promise<void> {
-    if (this.validated) {
-      return;
-    }
-
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/me?fields=id,name`,
-      10_000,
-      undefined,
-      {
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `Meta token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as { id: string; name: string };
-    this._userId = data.id;
+    if (this.validated) return;
+    this._userId = await fetchMetaUserId(this.accessToken, this.baseUrl);
     this.validated = true;
   }
 }
@@ -202,28 +196,7 @@ export class MetaRefreshTokenAdapter
 
   async validate(): Promise<void> {
     const token = await this.getAccessToken();
-
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/me?fields=id,name`,
-      10_000,
-      undefined,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `Meta token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as { id: string; name: string };
-    this._userId = data.id;
+    this._userId = await fetchMetaUserId(token, this.baseUrl);
   }
 }
 
@@ -269,5 +242,5 @@ export function parseMetaAppCredentialsFromHeaders(
  * Generate a fingerprint for a Meta access token (for session binding).
  */
 export function getMetaCredentialFingerprint(accessToken: string): string {
-  return createHash("sha256").update(accessToken.trim()).digest("hex").substring(0, 32);
+  return fingerprintCredentials(accessToken);
 }

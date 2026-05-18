@@ -14,10 +14,10 @@
  * Token is passed via Authorization: Bearer <token> header.
  */
 
-import { createHash } from "crypto";
 import {
   extractHeader,
   fetchWithTimeout,
+  fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
   OAuth2RefreshAdapterBase,
@@ -39,6 +39,31 @@ export interface PinterestAuthAdapter {
   validate(): Promise<void>;
   readonly userId: string;
   readonly adAccountId: string;
+}
+
+/**
+ * Validate a Pinterest access token against GET /v5/user_account and return
+ * the authenticated user's username. Throws Unauthorized on any non-2xx response.
+ */
+async function fetchPinterestUserId(token: string, baseUrl: string): Promise<string> {
+  const response = await fetchWithTimeout(`${baseUrl}/v5/user_account`, 10_000, undefined, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      `Pinterest token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+    );
+  }
+
+  const data = (await response.json()) as PinterestUserAccountResponse;
+  return data.username ?? "unknown";
 }
 
 /**
@@ -67,34 +92,9 @@ export class PinterestAccessTokenAdapter implements PinterestAuthAdapter {
     return this.accessToken;
   }
 
-  /**
-   * Validate the access token by calling GET /v5/user_account.
-   * Must be called before the adapter is used.
-   */
   async validate(): Promise<void> {
-    if (this.validated) {
-      return;
-    }
-
-    const response = await fetchWithTimeout(`${this.baseUrl}/v5/user_account`, 10_000, undefined, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `Pinterest token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as PinterestUserAccountResponse;
-
-    this._userId = data.username ?? "unknown";
+    if (this.validated) return;
+    this._userId = await fetchPinterestUserId(this.accessToken, this.baseUrl);
     this.validated = true;
   }
 }
@@ -171,27 +171,7 @@ export class PinterestRefreshTokenAdapter
   async validate(): Promise<void> {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
-
-    // Validate the token against the Pinterest v5 user account endpoint
-    const response = await fetchWithTimeout(`${this.baseUrl}/v5/user_account`, 10_000, undefined, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        `Pinterest token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as PinterestUserAccountResponse;
-
-    this._userId = data.username ?? "unknown";
+    this._userId = await fetchPinterestUserId(token, this.baseUrl);
   }
 }
 
@@ -265,8 +245,5 @@ export function getPinterestCredentialFingerprint(
   accessToken: string,
   adAccountId: string
 ): string {
-  return createHash("sha256")
-    .update(`${accessToken.trim()}:${adAccountId.trim()}`)
-    .digest("hex")
-    .substring(0, 32);
+  return fingerprintCredentials(accessToken, adAccountId);
 }

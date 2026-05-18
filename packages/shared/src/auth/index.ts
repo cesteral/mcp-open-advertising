@@ -6,3 +6,4 @@ export * from "./google-auth.js";
 export * from "./auth-strategy.js";
 export * from "./bearer-auth-strategy-base.js";
 export * from "./oauth2-refresh-adapter-base.js";
+export * from "./fingerprint.js";
