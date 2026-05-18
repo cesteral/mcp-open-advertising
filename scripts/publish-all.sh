@@ -150,7 +150,11 @@ publish_to_npm() {
     return 0
   fi
 
-  if echo "$out" | grep -qE 'cannot publish over the previously published|EPUBLISHCONFLICT'; then
+  # Here-string instead of `echo "$out" | grep` so we don't run a pipeline:
+  # under `set -o pipefail`, a fast grep -q that exits 0 on first match can
+  # leave the upstream `echo` still writing into a closed pipe, and the
+  # SIGPIPE-induced non-zero from `echo` would clobber grep's success status.
+  if grep -qE 'cannot publish over the previously published|EPUBLISHCONFLICT' <<<"$out"; then
     log "  Note: $pkg_label already published at this version — continuing."
     return 0
   fi
@@ -164,8 +168,19 @@ publish_to_npm() {
 # pnpm publish (not npm publish) rewrites workspace:* deps to the actual
 # resolved version of the workspace package at publish time. npm publish does
 # not — it ships the literal "workspace:*" string and breaks consumers.
+#
+# Abort immediately if shared fails: server tarballs have @cesteral/shared
+# rewritten to the resolved version, so publishing them when shared did not
+# land would leave the registry in a broken state (servers referencing a
+# version of shared that doesn't exist).
 log "Publishing @cesteral/shared to npm..."
 publish_to_npm "packages/shared" "@cesteral/shared"
+
+if [ "${#NPM_PUBLISH_FAILURES[@]}" -gt 0 ]; then
+  echo "" >&2
+  echo "@cesteral/shared publish failed; refusing to publish servers that depend on it." >&2
+  err "Fix the shared publish failure above and re-run."
+fi
 
 # --- Publish each server to npm ---
 for server in "${SERVERS[@]}"; do
