@@ -91,6 +91,7 @@ npm whoami    # should print your npm username
 ```
 
 **Revoke after publish.** Bypass-2FA tokens are sensitive. After a release lands, either:
+
 - Run `npm token revoke <id>` (find the id with `npm token list`) and strip `_authToken` lines from `~/.npmrc`, or
 - Delete the token via the npmjs.com dashboard.
 
@@ -206,7 +207,7 @@ The token used for the publish doesn't bypass 2FA. Several distinct causes give 
 1. **No `_authToken` in `~/.npmrc` at all.** `npm login` alone doesn't write a bypass-2FA token. See [Auth setup](#auth-setup-first-time-on-a-new-machine).
 2. **Granular token without the "Allow this token to bypass 2FA" checkbox.** The checkbox defaults to off when generating. Either regenerate with it checked, or switch to a Classic Automation Token (those bypass by design).
 3. **Granular token without org access.** The "Packages and scopes: read and write access" grant only covers user-owned packages — `@cesteral/*` is org-owned. The token's **Organizations** section must include `cesteral` with Read and write access. Look at the token detail page on npmjs.com; if it says "This token has no access to organizations," that's the cause.
-4. **Org-level 2FA-on-write policy set to "All writes"** (not "All writes except CI/CD tokens"). At that policy level, *no* token bypass works. Check npmjs.com → `@cesteral` org → Settings.
+4. **Org-level 2FA-on-write policy set to "All writes"** (not "All writes except CI/CD tokens"). At that policy level, _no_ token bypass works. Check npmjs.com → `@cesteral` org → Settings.
 
 ### `npm publish` looks successful but `npm view` returns 404 for that package
 
