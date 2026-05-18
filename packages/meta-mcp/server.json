@@ -4,7 +4,7 @@
   "title": "Meta Ads MCP Server",
   "description": "Self-hostable Meta Ads MCP connector for campaign writes, insights, targeting, delivery estimates, previews, and media operations",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "version": "1.0.0",

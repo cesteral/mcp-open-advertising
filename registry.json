@@ -1,6 +1,6 @@
 {
   "$comment": "Canonical metadata for all Cesteral MCP servers. Used to generate official MCP Registry server.json files via scripts/generate-server-json.mjs",
-  "repository": "https://github.com/cesteral/cesteral-mcp-servers",
+  "repository": "https://github.com/cesteral/mcp-open-advertising",
   "license": "Apache-2.0",
   "protocol_version": "2025-11-25",
   "remoteUrlTemplate": "https://{host}/mcp",

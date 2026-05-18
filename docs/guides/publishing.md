@@ -66,13 +66,14 @@ The `terraform-deployer` SA has `roles/artifactregistry.admin` (granted by `init
 
 ## Target 2: npm
 
-**Scope:** `@cesteral/*` — public, scoped packages requiring `--access public` on every `npm publish`.
+**Scope:** `@cesteral/*` — public, scoped packages requiring `--access public` on every publish.
+**Publisher:** `pnpm publish`, not `npm publish`. Server packages depend on `@cesteral/shared` via `"workspace:*"`; `pnpm publish` rewrites this to the resolved version at publish time, `npm publish` does not (the literal `workspace:*` string would ship and break consumers).
 **Auth:** interactive (`npm login`) for manual runs; `NPM_TOKEN` env var for CI.
 **Source of truth for version:** each package's `package.json` `version` field. Bump per release.
 
 ### One-shot publish (all servers + shared)
 
-The repo ships a single script that publishes `@cesteral/shared` first (servers depend on it) and then each server in parallel-safe order. It also handles MCP Registry as a follow-up step.
+The repo ships a single script that publishes `@cesteral/shared` first (servers depend on it) and then each server in dependency order. It also handles MCP Registry as a follow-up step.
 
 ```bash
 ./scripts/publish-all.sh                  # npm + MCP Registry
@@ -82,17 +83,19 @@ The repo ships a single script that publishes `@cesteral/shared` first (servers 
 
 Re-publishing the same version is non-fatal — the script warns and continues, so you can rerun safely after a partial failure.
 
+**Preflight gate:** before any publish, the script packs every package into a temp dir and inspects each tarball's `package.json` and file list. It refuses to publish if any tarball still contains a `workspace:` dependency range or is missing `LICENSE.md`. This catches the two failure modes that have actually bitten first publishes — silent `workspace:*` leakage from a misconfigured publisher, and `files` arrays that reference a per-package LICENSE that does not exist on disk.
+
 ### Manual publish for one package
 
 ```bash
 cd packages/<server-name>
 pnpm run build                            # ensure dist/ is fresh
-npm publish --access public
+pnpm publish --access public              # rewrites workspace:* deps
 ```
 
 ### What goes in the tarball
 
-Each `package.json` has `"files": ["dist/", "README.md", "LICENSE"]`. Tests, fixtures, and source TS are excluded.
+Each `package.json` has `"files": ["dist/", "README.md", "LICENSE.md"]`. Tests, fixtures, and source TS are excluded. `LICENSE.md` in each package is a symlink to the repo-root `LICENSE.md` so the Apache-2.0 grant ships with every tarball without duplicating the file 14 times in git.
 
 ### Version bumping
 

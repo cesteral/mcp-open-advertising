@@ -5,10 +5,10 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
+    "url": "https://github.com/cesteral/mcp-open-advertising.git",
     "directory": "packages/shared"
   },
-  "homepage": "https://github.com/cesteral/cesteral-mcp-servers#readme",
+  "homepage": "https://github.com/cesteral/mcp-open-advertising#readme",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -19,7 +19,7 @@
   "files": [
     "dist/",
     "README.md",
-    "LICENSE"
+    "LICENSE.md"
   ],
   "publishConfig": {
     "access": "public"

@@ -1489,7 +1489,7 @@ export default defineConfig({
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cesteral/cesteral-mcp-servers.git",
+    "url": "https://github.com/cesteral/mcp-open-advertising.git",
     "directory": "packages/{platform}-mcp"
   },
   "keywords": ["mcp", "model-context-protocol", "advertising", "{platform}-ads"],

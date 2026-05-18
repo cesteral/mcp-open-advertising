@@ -24,7 +24,7 @@ This is a living document and may change based on community feedback, platform A
 
 ## Help Wanted
 
-We welcome contributions in these areas. Look for issues labeled [`good first issue`](https://github.com/cesteral/cesteral-mcp-servers/labels/good%20first%20issue) on GitHub:
+We welcome contributions in these areas. Look for issues labeled [`good first issue`](https://github.com/cesteral/mcp-open-advertising/labels/good%20first%20issue) on GitHub:
 
 - **Documentation**: JSDoc coverage, README improvements, troubleshooting guides
 - **Test coverage**: Edge case tests, input validation tests, rate limiter and session store tests
