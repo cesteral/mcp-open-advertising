@@ -8,8 +8,13 @@
  * header or `TTD_API_TOKEN` environment variable.
  */
 
-import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  fingerprintCredentials,
+  JsonRpcErrorCode,
+  McpError,
+} from "@cesteral/shared";
 
 const DEFAULT_TTD_GRAPHQL_URL = "https://desk.thetradedesk.com/graphql";
 
@@ -139,5 +144,5 @@ export function parseTtdDirectTokenFromHeaders(
  * Generate a fingerprint for direct TTD API tokens (for session binding).
  */
 export function getTtdDirectTokenFingerprint(credentials: TtdDirectTokenCredentials): string {
-  return createHash("sha256").update(credentials.token).digest("hex").substring(0, 32);
+  return fingerprintCredentials(credentials.token);
 }

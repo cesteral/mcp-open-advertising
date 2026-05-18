@@ -13,10 +13,10 @@
  * Validates tokens by hitting GET /v2/me?projection=(id,vanityName) on the API.
  */
 
-import { createHash } from "crypto";
 import {
   extractHeader,
   fetchWithTimeout,
+  fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
   OAuth2RefreshAdapterBase,
@@ -29,6 +29,40 @@ export interface LinkedInAuthAdapter {
   getAccessToken(): Promise<string>;
   validate(): Promise<void>;
   readonly personId: string;
+}
+
+/**
+ * Validate a LinkedIn access token against GET /v2/me and return the
+ * authenticated person's id. Throws Unauthorized on any non-2xx response.
+ */
+async function fetchLinkedInPersonId(
+  token: string,
+  baseUrl: string,
+  apiVersion: string
+): Promise<string> {
+  const response = await fetchWithTimeout(
+    `${baseUrl}/v2/me?projection=(id,vanityName)`,
+    10_000,
+    undefined,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "LinkedIn-Version": apiVersion,
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      `LinkedIn token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+    );
+  }
+
+  const data = (await response.json()) as { id: string; vanityName?: string };
+  return data.id;
 }
 
 /**
@@ -53,39 +87,9 @@ export class LinkedInAccessTokenAdapter implements LinkedInAuthAdapter {
     return this.accessToken;
   }
 
-  /**
-   * Validate the access token by calling GET /v2/me.
-   * Must be called before the adapter is used.
-   */
   async validate(): Promise<void> {
-    if (this.validated) {
-      return;
-    }
-
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/v2/me?projection=(id,vanityName)`,
-      10_000,
-      undefined,
-      {
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "LinkedIn-Version": this.apiVersion,
-          "X-Restli-Protocol-Version": "2.0.0",
-        },
-      },
-      undefined
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `LinkedIn token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as { id: string; vanityName?: string };
-    this._personId = data.id;
+    if (this.validated) return;
+    this._personId = await fetchLinkedInPersonId(this.accessToken, this.baseUrl, this.apiVersion);
     this.validated = true;
   }
 }
@@ -176,31 +180,7 @@ export class LinkedInRefreshTokenAdapter
 
   async validate(): Promise<void> {
     const token = await this.getAccessToken();
-
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/v2/me?projection=(id,vanityName)`,
-      10_000,
-      undefined,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "LinkedIn-Version": this.apiVersion,
-          "X-Restli-Protocol-Version": "2.0.0",
-        },
-      },
-      undefined
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        `LinkedIn token validation failed: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as { id: string; vanityName?: string };
-    this._personId = data.id;
+    this._personId = await fetchLinkedInPersonId(token, this.baseUrl, this.apiVersion);
   }
 }
 
@@ -250,5 +230,5 @@ export function parseLinkedInRefreshCredentialsFromHeaders(
  * Generate a fingerprint for a LinkedIn access token (for session binding).
  */
 export function getLinkedInCredentialFingerprint(accessToken: string): string {
-  return createHash("sha256").update(accessToken.trim()).digest("hex").substring(0, 32);
+  return fingerprintCredentials(accessToken);
 }

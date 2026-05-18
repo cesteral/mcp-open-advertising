@@ -15,10 +15,10 @@
  * Token is passed via Authorization: Bearer <token> header.
  */
 
-import { createHash } from "crypto";
 import {
   extractHeader,
   fetchWithTimeout,
+  fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
   OAuth2RefreshAdapterBase,
@@ -41,6 +41,44 @@ export interface AmazonDspAuthAdapter {
   readonly userId: string;
   readonly profileId: string;
   readonly clientId: string;
+}
+
+/**
+ * Validate an Amazon DSP access token against GET /dsp/advertisers and return
+ * the first advertiser name (used as the user-id surrogate). Throws
+ * Unauthorized on any non-2xx response.
+ */
+async function fetchAmazonDspUserId(
+  token: string,
+  baseUrl: string,
+  profileId: string,
+  clientId: string
+): Promise<string> {
+  const response = await fetchWithTimeout(
+    `${baseUrl}/dsp/advertisers?startIndex=0&count=1`,
+    10_000,
+    undefined,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...(clientId && { "Amazon-Advertising-API-ClientId": clientId }),
+        "Amazon-Advertising-API-Scope": profileId,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+    );
+  }
+
+  const data = (await response.json()) as AmazonDspAdvertiserListResponse;
+  return data.response?.[0]?.name ?? "unknown";
 }
 
 /**
@@ -74,40 +112,14 @@ export class AmazonDspAccessTokenAdapter implements AmazonDspAuthAdapter {
     return this.accessToken;
   }
 
-  /**
-   * Validate the access token by calling GET /dsp/advertisers?startIndex=0&count=1.
-   * Must be called before the adapter is used.
-   */
   async validate(): Promise<void> {
-    if (this.validated) {
-      return;
-    }
-
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/dsp/advertisers?startIndex=0&count=1`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-          ...(this._clientId && { "Amazon-Advertising-API-ClientId": this._clientId }),
-          "Amazon-Advertising-API-Scope": this._profileId,
-        },
-      }
+    if (this.validated) return;
+    this._userId = await fetchAmazonDspUserId(
+      this.accessToken,
+      this.baseUrl,
+      this._profileId,
+      this._clientId
     );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as AmazonDspAdvertiserListResponse;
-    this._userId = data.response?.[0]?.name ?? "unknown";
     this.validated = true;
   }
 }
@@ -186,33 +198,12 @@ export class AmazonDspRefreshTokenAdapter
   async validate(): Promise<void> {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
-
-    // Validate the token against the DSP advertisers endpoint
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/dsp/advertisers?startIndex=0&count=1`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-          "Amazon-Advertising-API-ClientId": this.credentials.appId,
-          "Amazon-Advertising-API-Scope": this._profileId,
-        },
-      }
+    this._userId = await fetchAmazonDspUserId(
+      token,
+      this.baseUrl,
+      this._profileId,
+      this.credentials.appId
     );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        `AmazonDsp token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as AmazonDspAdvertiserListResponse;
-    this._userId = data.response?.[0]?.name ?? "unknown";
   }
 }
 
@@ -284,8 +275,5 @@ export function getAmazonDspProfileIdFromHeaders(
  * Generate a fingerprint for a AmazonDsp access token + advertiser ID pair (for session binding).
  */
 export function getAmazonDspCredentialFingerprint(accessToken: string, profileId: string): string {
-  return createHash("sha256")
-    .update(`${accessToken.trim()}:${profileId.trim()}`)
-    .digest("hex")
-    .substring(0, 32);
+  return fingerprintCredentials(accessToken, profileId);
 }

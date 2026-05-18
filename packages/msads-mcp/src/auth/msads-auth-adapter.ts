@@ -1,8 +1,13 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout, McpError, JsonRpcErrorCode } from "@cesteral/shared";
+import {
+  extractHeader,
+  fetchWithTimeout,
+  fingerprintCredentials,
+  JsonRpcErrorCode,
+  McpError,
+} from "@cesteral/shared";
 
 /**
  * Contract for Microsoft Advertising authentication adapters.
@@ -149,8 +154,5 @@ export function getMsAdsCredentialFingerprint(
   developerToken: string,
   accountId: string
 ): string {
-  return createHash("sha256")
-    .update(`${accessToken.trim()}:${developerToken.trim()}:${accountId.trim()}`)
-    .digest("hex")
-    .substring(0, 32);
+  return fingerprintCredentials(accessToken, developerToken, accountId);
 }

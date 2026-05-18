@@ -16,10 +16,10 @@
  * Token is passed via Authorization: Bearer <token> header.
  */
 
-import { createHash } from "crypto";
 import {
   extractHeader,
   fetchWithTimeout,
+  fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
   OAuth2RefreshAdapterBase,
@@ -47,6 +47,31 @@ export interface SnapchatAuthAdapter {
   readonly adAccountId: string;
   /** Snapchat organization ID — required for /v1/organizations/{orgId}/adaccounts */
   readonly orgId: string;
+}
+
+/**
+ * Validate a Snapchat access token against GET /v1/me and return the
+ * authenticated user's id. Throws Unauthorized on any non-2xx response.
+ */
+async function fetchSnapchatUserId(token: string, baseUrl: string): Promise<string> {
+  const response = await fetchWithTimeout(`${baseUrl}/v1/me`, 10_000, undefined, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      `Snapchat token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+    );
+  }
+
+  const data = (await response.json()) as SnapchatMeResponse;
+  return data.me?.id ?? "unknown";
 }
 
 /**
@@ -80,34 +105,9 @@ export class SnapchatAccessTokenAdapter implements SnapchatAuthAdapter {
     return this.accessToken;
   }
 
-  /**
-   * Validate the access token by calling GET /v1/me.
-   * Must be called before the adapter is used.
-   */
   async validate(): Promise<void> {
-    if (this.validated) {
-      return;
-    }
-
-    const response = await fetchWithTimeout(`${this.baseUrl}/v1/me`, 10_000, undefined, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${this.accessToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `Snapchat token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as SnapchatMeResponse;
-
-    this._userId = data.me?.id ?? "unknown";
+    if (this.validated) return;
+    this._userId = await fetchSnapchatUserId(this.accessToken, this.baseUrl);
     this.validated = true;
   }
 }
@@ -187,26 +187,7 @@ export class SnapchatRefreshTokenAdapter
   async validate(): Promise<void> {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
-
-    // Validate the token against the Snapchat /v1/me endpoint
-    const response = await fetchWithTimeout(`${this.baseUrl}/v1/me`, 10_000, undefined, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.InternalError,
-        `Snapchat token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as SnapchatMeResponse;
-    this._userId = data.me?.id ?? "unknown";
+    this._userId = await fetchSnapchatUserId(token, this.baseUrl);
   }
 }
 
@@ -285,8 +266,5 @@ export function getSnapchatOrgIdFromHeaders(
  * Generate a fingerprint for a Snapchat access token + advertiser ID pair (for session binding).
  */
 export function getSnapchatCredentialFingerprint(accessToken: string, adAccountId: string): string {
-  return createHash("sha256")
-    .update(`${accessToken.trim()}:${adAccountId.trim()}`)
-    .digest("hex")
-    .substring(0, 32);
+  return fingerprintCredentials(accessToken, adAccountId);
 }

@@ -12,8 +12,7 @@
  * Scope: https://www.googleapis.com/auth/doubleclicksearch
  */
 
-import { createHash } from "crypto";
-import { extractHeader, fetchWithTimeout } from "@cesteral/shared";
+import { extractHeader, fetchWithTimeout, fingerprintCredentials } from "@cesteral/shared";
 
 /**
  * SA360 credentials parsed from HTTP headers or environment variables.
@@ -164,5 +163,5 @@ export function parseSA360CredentialsFromHeaders(
  * Generate a fingerprint for SA360 credentials (for session binding).
  */
 export function getSA360CredentialFingerprint(credentials: SA360Credentials): string {
-  return createHash("sha256").update(credentials.clientId).digest("hex").substring(0, 32);
+  return fingerprintCredentials(credentials.clientId);
 }

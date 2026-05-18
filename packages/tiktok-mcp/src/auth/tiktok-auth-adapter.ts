@@ -14,10 +14,10 @@
  * Token is passed via Authorization: Bearer <token> header.
  */
 
-import { createHash } from "crypto";
 import {
   extractHeader,
   fetchWithTimeout,
+  fingerprintCredentials,
   JsonRpcErrorCode,
   McpError,
   OAuth2RefreshAdapterBase,
@@ -43,6 +43,46 @@ export interface TikTokAuthAdapter {
   validate(): Promise<void>;
   readonly userId: string;
   readonly advertiserId: string;
+}
+
+/**
+ * Validate a TikTok access token against GET /open_api/{version}/user/info/
+ * and return the authenticated user's display name (falling back to email or
+ * "unknown"). Throws Unauthorized on HTTP failure or non-zero TikTok code.
+ */
+async function fetchTikTokUserId(
+  token: string,
+  baseUrl: string,
+  apiVersion: string
+): Promise<string> {
+  const response = await fetchWithTimeout(
+    `${baseUrl}/open_api/${apiVersion}/user/info/`,
+    10_000,
+    undefined,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${token}` },
+    }
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => "");
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      `TikTok token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
+    );
+  }
+
+  const data = (await response.json()) as TikTokUserInfoResponse;
+
+  if (data.code !== 0) {
+    throw new McpError(
+      JsonRpcErrorCode.Unauthorized,
+      `TikTok token validation failed: code=${data.code} message=${data.message}`
+    );
+  }
+
+  return data.data?.display_name ?? data.data?.email ?? "unknown";
 }
 
 /**
@@ -72,45 +112,9 @@ export class TikTokAccessTokenAdapter implements TikTokAuthAdapter {
     return this.accessToken;
   }
 
-  /**
-   * Validate the access token by calling GET /open_api/{version}/user/info/.
-   * Must be called before the adapter is used.
-   */
   async validate(): Promise<void> {
-    if (this.validated) {
-      return;
-    }
-
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/${this.apiVersion}/user/info/`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `TikTok token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as TikTokUserInfoResponse;
-
-    if (data.code !== 0) {
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `TikTok token validation failed: code=${data.code} message=${data.message}`
-      );
-    }
-
-    this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
+    if (this.validated) return;
+    this._userId = await fetchTikTokUserId(this.accessToken, this.baseUrl, this.apiVersion);
     this.validated = true;
   }
 }
@@ -213,37 +217,7 @@ export class TikTokRefreshTokenAdapter
   async validate(): Promise<void> {
     // Force a token exchange to validate credentials
     const token = await this.getAccessToken();
-
-    // Validate the token against user info endpoint
-    const response = await fetchWithTimeout(
-      `${this.baseUrl}/open_api/${this.apiVersion}/user/info/`,
-      10_000,
-      undefined,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `TikTok token validation HTTP error: ${response.status} ${response.statusText}. ${errorBody.substring(0, 200)}`
-      );
-    }
-
-    const data = (await response.json()) as TikTokUserInfoResponse;
-    if (data.code !== 0) {
-      throw new McpError(
-        JsonRpcErrorCode.Unauthorized,
-        `TikTok token validation failed: code=${data.code} message=${data.message}`
-      );
-    }
-
-    this._userId = data.data?.display_name ?? data.data?.email ?? "unknown";
+    this._userId = await fetchTikTokUserId(token, this.baseUrl, this.apiVersion);
   }
 }
 
@@ -306,8 +280,5 @@ export function getTikTokAdvertiserIdFromHeaders(
  * Generate a fingerprint for a TikTok access token + advertiser ID pair (for session binding).
  */
 export function getTikTokCredentialFingerprint(accessToken: string, advertiserId: string): string {
-  return createHash("sha256")
-    .update(`${accessToken.trim()}:${advertiserId.trim()}`)
-    .digest("hex")
-    .substring(0, 32);
+  return fingerprintCredentials(accessToken, advertiserId);
 }
