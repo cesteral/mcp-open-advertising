@@ -5,7 +5,7 @@
   "description": "Microsoft Advertising campaign management and reporting — CRUD, Google Ads import, ad extensions, and async reports",
   "version": "1.0.0",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "packages": [

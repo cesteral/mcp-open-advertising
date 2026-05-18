@@ -9,7 +9,7 @@ The proprietary hosted product, `Cesteral Intelligence`, is intentionally **not*
 ## Repository Layout
 
 ```text
-cesteral-mcp-servers/
+mcp-open-advertising/
 ├── packages/
 │   ├── dbm-mcp/
 │   ├── dv360-mcp/

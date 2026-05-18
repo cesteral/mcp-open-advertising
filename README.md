@@ -149,8 +149,8 @@ For a guided walkthrough, see the [10-minute quickstart](docs/guides/quickstart.
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/cesteral/cesteral-mcp-servers.git
-cd cesteral-mcp-servers
+git clone https://github.com/cesteral/mcp-open-advertising.git
+cd mcp-open-advertising
 pnpm install
 ```
 
@@ -221,7 +221,7 @@ Cesteral uses a **GCP-native architecture** with thirteen independently deployab
 ### Repository Structure
 
 ```
-cesteral-mcp-servers/
+mcp-open-advertising/
 ├── packages/
 │   ├── gads-mcp/          # Google Ads
 │   ├── meta-mcp/          # Meta Ads

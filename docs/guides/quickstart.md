@@ -50,8 +50,8 @@ fall back to [No-credential evaluation](#no-credential-evaluation).
 ### 2. Clone, install, build
 
 ```bash
-git clone https://github.com/cesteral/cesteral-mcp-servers.git
-cd cesteral-mcp-servers
+git clone https://github.com/cesteral/mcp-open-advertising.git
+cd mcp-open-advertising
 pnpm install
 pnpm --filter @cesteral/meta-mcp build
 ```
@@ -114,8 +114,8 @@ Ask Claude:
 ### 2. Clone, install, build
 
 ```bash
-git clone https://github.com/cesteral/cesteral-mcp-servers.git
-cd cesteral-mcp-servers
+git clone https://github.com/cesteral/mcp-open-advertising.git
+cd mcp-open-advertising
 pnpm install
 pnpm --filter @cesteral/dv360-mcp build
 ```
@@ -166,8 +166,8 @@ value comes from. You need:
 ### 2. Clone, install, build
 
 ```bash
-git clone https://github.com/cesteral/cesteral-mcp-servers.git
-cd cesteral-mcp-servers
+git clone https://github.com/cesteral/mcp-open-advertising.git
+cd mcp-open-advertising
 pnpm install
 pnpm --filter @cesteral/gads-mcp build
 ```
@@ -193,8 +193,8 @@ connector returns real data -- platform tool calls will still fail at runtime
 without credentials.
 
 ```bash
-git clone https://github.com/cesteral/cesteral-mcp-servers.git
-cd cesteral-mcp-servers
+git clone https://github.com/cesteral/mcp-open-advertising.git
+cd mcp-open-advertising
 pnpm install
 pnpm --filter @cesteral/meta-mcp build
 MCP_AUTH_MODE=none pnpm --filter @cesteral/meta-mcp dev:http

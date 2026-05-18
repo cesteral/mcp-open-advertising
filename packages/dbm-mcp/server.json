@@ -4,7 +4,7 @@
   "title": "Bid Manager MCP Server",
   "description": "Bid Manager reporting and query workflows for DV360 campaign performance analysis",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "version": "1.0.0",

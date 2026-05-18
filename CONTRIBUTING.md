@@ -19,7 +19,7 @@ This project is licensed under the [Apache License 2.0](LICENSE.md). Unless you 
 
 ### Reporting Issues
 
-Issues are always welcome. We provide [issue templates](https://github.com/cesteral/cesteral-mcp-servers/issues/new/choose) for common scenarios:
+Issues are always welcome. We provide [issue templates](https://github.com/cesteral/mcp-open-advertising/issues/new/choose) for common scenarios:
 
 - **Bug reports**: Include the server name, steps to reproduce, expected vs actual behavior, and relevant logs
 - **Feature requests**: Describe the use case, not just the desired solution. Explain what you're trying to accomplish

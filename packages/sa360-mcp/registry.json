@@ -5,7 +5,7 @@
   "description": "Search Ads 360 reporting and conversion management — query language, insights, and offline conversions",
   "version": "1.0.0",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "packages": [

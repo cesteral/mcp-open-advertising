@@ -4,7 +4,7 @@
   "title": "TikTok Ads MCP Server",
   "description": "TikTok Ads campaign management and reporting — CRUD, async reports, targeting, and media upload",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "version": "1.0.0",

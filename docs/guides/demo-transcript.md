@@ -15,8 +15,8 @@ IDs.
 [Full quickstart](quickstart.md#path-a-meta-ads-recommended) — three commands:
 
 ```bash
-git clone https://github.com/cesteral/cesteral-mcp-servers.git
-cd cesteral-mcp-servers
+git clone https://github.com/cesteral/mcp-open-advertising.git
+cd mcp-open-advertising
 pnpm install
 META_ACCESS_TOKEN="..." pnpm --filter @cesteral/meta-mcp dev:http
 ```

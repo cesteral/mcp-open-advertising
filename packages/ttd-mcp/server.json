@@ -4,7 +4,7 @@
   "title": "The Trade Desk MCP Server",
   "description": "The Trade Desk campaign management and reporting — CRUD, GraphQL, bulk ops, and async reports",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "version": "1.0.0",

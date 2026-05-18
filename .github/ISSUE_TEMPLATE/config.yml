@@ -4,5 +4,5 @@ contact_links:
     url: mailto:security@cesteral.com
     about: Report security vulnerabilities via email (do not open a public issue)
   - name: Contributing Guide
-    url: https://github.com/cesteral/cesteral-mcp-servers/blob/main/CONTRIBUTING.md
+    url: https://github.com/cesteral/mcp-open-advertising/blob/main/CONTRIBUTING.md
     about: Read our contributing guidelines before opening an issue

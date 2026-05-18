@@ -5,7 +5,7 @@
   "description": "LinkedIn Ads campaign management and analytics — CRUD, targeting, delivery forecasts, and media upload",
   "version": "1.0.0",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "packages": [

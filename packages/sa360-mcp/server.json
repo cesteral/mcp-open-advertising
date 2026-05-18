@@ -4,7 +4,7 @@
   "title": "Search Ads 360 MCP Server",
   "description": "Search Ads 360 reporting and conversion management — query language, insights, and offline conversions",
   "repository": {
-    "url": "https://github.com/cesteral/cesteral-mcp-servers",
+    "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
   "version": "1.0.0",

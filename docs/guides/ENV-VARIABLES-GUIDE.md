@@ -11,7 +11,7 @@
 ### How It Works
 
 ```
-cesteral-mcp-servers/
+mcp-open-advertising/
 ├── .env.example          # Template (committed)
 ├── .env                  # Local values (gitignored)
 └── packages/
@@ -85,7 +85,7 @@ cesteral-mcp-servers/
 ## Recommended Structure (Current Setup)
 
 ```
-cesteral-mcp-servers/
+mcp-open-advertising/
 ├── .env.example          ← COMMITTED: Template with all variables
 ├── .env                  ← GITIGNORED: Your local values
 ├── .gitignore            ← Includes .env, .env.*, !.env.example
@@ -239,8 +239,8 @@ If you want package-specific documentation, create lightweight `.env.example` fi
 
 ```bash
 # Clone repo
-git clone https://github.com/your-org/cesteral-mcp-servers.git
-cd cesteral-mcp-servers
+git clone https://github.com/your-org/mcp-open-advertising.git
+cd mcp-open-advertising
 
 # Create local .env from template
 cp .env.example .env

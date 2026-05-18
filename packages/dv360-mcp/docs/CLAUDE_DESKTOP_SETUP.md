@@ -46,8 +46,8 @@ Add the following to your `claude_desktop_config.json`:
   "mcpServers": {
     "dv360-mcp-local": {
       "command": "node",
-      "args": ["/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp/dist/index.js"],
-      "cwd": "/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp",
+      "args": ["/absolute/path/to/mcp-open-advertising/packages/dv360-mcp/dist/index.js"],
+      "cwd": "/absolute/path/to/mcp-open-advertising/packages/dv360-mcp",
       "env": {
         "NODE_ENV": "development",
         "DV360_SERVICE_ACCOUNT_FILE": "/absolute/path/to/your/service-account.json",
@@ -61,7 +61,7 @@ Add the following to your `claude_desktop_config.json`:
 
 **Replace:**
 
-- `/absolute/path/to/cesteral-mcp-servers/...` with your actual project path
+- `/absolute/path/to/mcp-open-advertising/...` with your actual project path
 - `/absolute/path/to/your/service-account.json` with the path to your DV360 service account JSON file
 
 **Why this approach?**
@@ -80,8 +80,8 @@ If you prefer to embed credentials directly (e.g., for CI/CD):
   "mcpServers": {
     "dv360-mcp-local": {
       "command": "node",
-      "args": ["/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp/dist/index.js"],
-      "cwd": "/absolute/path/to/cesteral-mcp-servers/packages/dv360-mcp",
+      "args": ["/absolute/path/to/mcp-open-advertising/packages/dv360-mcp/dist/index.js"],
+      "cwd": "/absolute/path/to/mcp-open-advertising/packages/dv360-mcp",
       "env": {
         "NODE_ENV": "development",
         "DV360_SERVICE_ACCOUNT_JSON": "BASE64_ENCODED_SERVICE_ACCOUNT_JSON",
