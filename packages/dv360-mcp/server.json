@@ -7,7 +7,7 @@
     "url": "https://github.com/cesteral/mcp-open-advertising",
     "source": "github"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "remotes": [
     {
       "type": "streamable-http",
@@ -24,7 +24,7 @@
     {
       "registryType": "npm",
       "identifier": "@cesteral/dv360-mcp",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "transport": {
         "type": "stdio"
       }
