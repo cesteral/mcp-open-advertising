@@ -24,11 +24,7 @@ import type {
   NormalizedEntitySnapshot,
   RequestContext,
 } from "@cesteral/shared";
-import {
-  buildTtdSnapshot,
-  ENTITY_KIND_MAP,
-  type TtdServiceLike,
-} from "./capture-snapshot.js";
+import { buildTtdSnapshot, ENTITY_KIND_MAP, type TtdServiceLike } from "./capture-snapshot.js";
 
 export type { TtdServiceLike };
 
@@ -52,8 +48,7 @@ function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[
   for (const field of ["Budget", "DailyBudget"] as const) {
     if (field in data && data[field] != null) {
       const raw = data[field];
-      const amount =
-        raw && typeof raw === "object" ? (raw as Record<string, unknown>).Amount : raw;
+      const amount = raw && typeof raw === "object" ? (raw as Record<string, unknown>).Amount : raw;
       const n = typeof amount === "string" ? Number(amount) : Number(amount);
       if (!Number.isFinite(n) || n < 0) {
         errors.push({
@@ -137,12 +132,7 @@ export async function runTtdUpdateDryRun(
       | Record<string, unknown>
       | undefined;
     if (current && typeof current === "object") {
-      const snapshot = buildTtdSnapshot(
-        input.entityType,
-        input.entityId,
-        current,
-        input.data
-      );
+      const snapshot = buildTtdSnapshot(input.entityType, input.entityId, current, input.data);
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

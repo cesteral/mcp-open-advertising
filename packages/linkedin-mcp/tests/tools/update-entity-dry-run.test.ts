@@ -46,7 +46,11 @@ function fakeService(entity: Record<string, unknown>): LinkedInServiceLike {
 describe("runLinkedInUpdateDryRun", () => {
   it("symbolically validates + applies a valid pause on a campaign", async () => {
     const result = await runLinkedInUpdateDryRun(
-      { entityType: "campaign", entityUrn: "urn:li:sponsoredCampaign:1", data: { status: "PAUSED" } },
+      {
+        entityType: "campaign",
+        entityUrn: "urn:li:sponsoredCampaign:1",
+        data: { status: "PAUSED" },
+      },
       fakeService(campaignEntity()),
       ctx
     );
@@ -69,7 +73,11 @@ describe("runLinkedInUpdateDryRun", () => {
 
   it("rejects an invalid status value", async () => {
     const result = await runLinkedInUpdateDryRun(
-      { entityType: "campaign", entityUrn: "urn:li:sponsoredCampaign:1", data: { status: "BOGUS" } },
+      {
+        entityType: "campaign",
+        entityUrn: "urn:li:sponsoredCampaign:1",
+        data: { status: "BOGUS" },
+      },
       fakeService(campaignEntity()),
       ctx
     );
@@ -115,7 +123,11 @@ describe("runLinkedInUpdateDryRun", () => {
 
   it("converts the runSchedule epoch-millis to ISO strings", async () => {
     const result = await runLinkedInUpdateDryRun(
-      { entityType: "campaign", entityUrn: "urn:li:sponsoredCampaign:1", data: { status: "PAUSED" } },
+      {
+        entityType: "campaign",
+        entityUrn: "urn:li:sponsoredCampaign:1",
+        data: { status: "PAUSED" },
+      },
       fakeService(campaignEntity()),
       ctx
     );
@@ -131,7 +143,11 @@ describe("runLinkedInUpdateDryRun", () => {
     // expectedStateSource:"none" payload the governance layer would reject.
     await expect(
       runLinkedInUpdateDryRun(
-        { entityType: "campaign", entityUrn: "urn:li:sponsoredCampaign:1", data: { status: "PAUSED" } },
+        {
+          entityType: "campaign",
+          entityUrn: "urn:li:sponsoredCampaign:1",
+          data: { status: "PAUSED" },
+        },
         {
           getEntity: async () => {
             throw new Error("campaign not found");
@@ -195,12 +211,16 @@ describe("applyLinkedInPatch", () => {
 
 describe("buildLinkedInSnapshot / snapshotFromLinkedInEntity", () => {
   it("returns null for an out-of-scope entity type", () => {
-    expect(buildLinkedInSnapshot("campaignGroup", "urn:li:sponsoredCampaignGroup:1", {}, {})).toBeNull();
+    expect(
+      buildLinkedInSnapshot("campaignGroup", "urn:li:sponsoredCampaignGroup:1", {}, {})
+    ).toBeNull();
     expect(buildLinkedInSnapshot("creative", "urn:li:sponsoredCreative:1", {}, {})).toBeNull();
   });
 
   it("snapshotFromLinkedInEntity returns undefined for an empty entity", () => {
-    expect(snapshotFromLinkedInEntity("campaign", "urn:li:sponsoredCampaign:1", {})).toBeUndefined();
+    expect(
+      snapshotFromLinkedInEntity("campaign", "urn:li:sponsoredCampaign:1", {})
+    ).toBeUndefined();
   });
 
   it("snapshotFromLinkedInEntity normalizes the entity a partial update returns", () => {

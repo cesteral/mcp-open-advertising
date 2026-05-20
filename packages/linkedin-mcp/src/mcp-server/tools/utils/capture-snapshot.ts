@@ -69,9 +69,7 @@ function toMinor(amount: unknown): number | undefined {
  * Normalize a LinkedIn budget object (`{ amount, currencyCode }`) into the
  * canonical `{ amountMinor, currency }` money shape.
  */
-function normalizeMoney(
-  budget: unknown
-): { amountMinor: number; currency: string } | null {
+function normalizeMoney(budget: unknown): { amountMinor: number; currency: string } | null {
   if (!budget || typeof budget !== "object") return null;
   const b = budget as Record<string, unknown>;
   const amountMinor = toMinor(b.amount);

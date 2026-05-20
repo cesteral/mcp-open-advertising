@@ -114,7 +114,8 @@ export function buildTtdSnapshot(
       lifetime,
     },
     schedule: {
-      startAt: typeof merged.StartDateInclusiveUTC === "string" ? merged.StartDateInclusiveUTC : null,
+      startAt:
+        typeof merged.StartDateInclusiveUTC === "string" ? merged.StartDateInclusiveUTC : null,
       endAt: typeof merged.EndDateExclusiveUTC === "string" ? merged.EndDateExclusiveUTC : null,
     },
   };

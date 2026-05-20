@@ -4,14 +4,8 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
-import {
-  runTiktokUpdateDryRun,
-  resolveTiktokDispatchedCapability,
-} from "../utils/dry-run.js";
-import {
-  captureTiktokSnapshot,
-  snapshotFromTiktokEntity,
-} from "../utils/capture-snapshot.js";
+import { runTiktokUpdateDryRun, resolveTiktokDispatchedCapability } from "../utils/dry-run.js";
+import { captureTiktokSnapshot, snapshotFromTiktokEntity } from "../utils/capture-snapshot.js";
 import {
   DryRunResultSchema,
   NormalizedEntitySnapshotSchema,
@@ -123,12 +117,7 @@ export async function updateEntityLogic(
     (updated as unknown as Record<string, unknown>) ?? {}
   );
   if (!after) {
-    after = await captureTiktokSnapshot(
-      tiktokService,
-      input.entityType,
-      input.entityId,
-      context
-    );
+    after = await captureTiktokSnapshot(tiktokService, input.entityType, input.entityId, context);
   }
 
   return {

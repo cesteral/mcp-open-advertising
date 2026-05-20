@@ -219,12 +219,7 @@ describe("buildTtdSnapshot / snapshotFromTtdEntity", () => {
 
 describe("captureTtdSnapshot", () => {
   it("normalizes a captured entity", async () => {
-    const snapshot = await captureTtdSnapshot(
-      fakeService(adGroupEntity()),
-      "adGroup",
-      "ag_1",
-      ctx
-    );
+    const snapshot = await captureTtdSnapshot(fakeService(adGroupEntity()), "adGroup", "ag_1", ctx);
     expect(snapshot!.entityKind).toBe("ad_group");
     expect(snapshot!.status.canonical).toBe("active");
   });

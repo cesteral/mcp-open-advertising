@@ -144,12 +144,7 @@ export async function runTiktokUpdateDryRun(
       | Record<string, unknown>
       | undefined;
     if (current && typeof current === "object") {
-      const snapshot = buildTiktokSnapshot(
-        input.entityType,
-        input.entityId,
-        current,
-        input.data
-      );
+      const snapshot = buildTiktokSnapshot(input.entityType, input.entityId, current, input.data);
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

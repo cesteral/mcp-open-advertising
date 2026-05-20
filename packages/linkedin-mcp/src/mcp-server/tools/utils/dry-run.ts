@@ -61,10 +61,7 @@ function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[
   for (const key of ["dailyBudget", "totalBudget"] as const) {
     if (key in data && data[key] != null) {
       const budget = data[key];
-      const raw =
-        typeof budget === "object"
-          ? (budget as Record<string, unknown>).amount
-          : budget;
+      const raw = typeof budget === "object" ? (budget as Record<string, unknown>).amount : budget;
       const n = Number(raw);
       if (!Number.isFinite(n) || n < 0) {
         errors.push({

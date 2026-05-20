@@ -19,12 +19,7 @@ import { applyTtdPatch } from "../mcp-server/tools/utils/dry-run.js";
 import type { TtdEntityKindKey, TtdOperation, TtdWriteFixture } from "./types.js";
 import { allFixtures } from "./fixtures/index.js";
 
-export type {
-  TtdEntityKindKey,
-  TtdFixtureArgs,
-  TtdOperation,
-  TtdWriteFixture,
-} from "./types.js";
+export type { TtdEntityKindKey, TtdFixtureArgs, TtdOperation, TtdWriteFixture } from "./types.js";
 
 export { applyTtdPatch } from "../mcp-server/tools/utils/dry-run.js";
 
