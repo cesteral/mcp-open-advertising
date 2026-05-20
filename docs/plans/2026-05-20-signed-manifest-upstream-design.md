@@ -97,18 +97,34 @@ in-repo manifest generator (a build-time script) and the external
 
 ### 2. Manifest generator — `scripts/generate-manifests.mjs`
 
-**Hashing the wire format.** `definitionHash` must be bit-identical to what
-governance computes over the *cached MCP tool* — the JSON object a client
-receives from `tools/list`. The generator therefore boots each server
-in-process and hashes the live wire tool objects, reusing the harness
-`scripts/check-registry-runtime.mjs` already uses: an in-memory MCP
-`Client`/`Server` pair, `createMcpServer(SILENT_LOGGER)`, credential-free
-`tools/list`. Hashing the source Zod definitions instead would require
-replicating the transport's Zod→JSON-Schema conversion exactly; any drift
-there silently breaks every hash match. The boot logic is extracted into a
-shared `scripts/lib/boot-server.mjs` so `check-registry-runtime.mjs` and the
-generator use one harness (the existing script collects tool *names* only;
-the generator needs full tool objects).
+**Hashing the raw `tools/list` result.** `definitionHash` must be
+bit-identical to what governance computes over the *cached MCP tool*.
+Governance (`cesteral-intelligence`,
+`lib/features/mcp-connections/client.ts`) issues a raw `tools/list` request,
+stores the unmodified tool in `mcp_connection_tools.raw_tool`, and
+`computeDefinitionHash` hashes that — `annotations` **including the
+`cesteral` namespace** (verified in `tool-cache.ts` /
+`drift-detection.ts`). The generator must hash the same representation.
+
+One subtlety drives the implementation. The server emits the full
+`cesteral` block inside `annotations` on the wire — verified by
+intercepting the raw JSON-RPC `tools/list` result — but the **stock MCP SDK
+`Client.listTools()` strips it**: the SDK's `ToolAnnotationsSchema` is a
+non-passthrough `z.object`, so Zod drops the unknown `cesteral` key during
+client-side result parsing. The generator therefore must NOT use
+`client.listTools()`. It boots each server in-process (in-memory
+`Client`/`Server` pair, `createMcpServer(SILENT_LOGGER)`, credential-free)
+and issues a paginated `tools/list` via `client.request(..., schema)` with
+an **identity result schema** (`{ parse: (v) => v }`), so the raw tool
+objects — `cesteral` intact — come through unstripped. Hashing the source
+Zod definitions instead would require replicating the transport's
+Zod→JSON-Schema conversion exactly; any drift there silently breaks every
+hash match.
+
+The boot + raw-list logic lives in a shared `scripts/lib/boot-server.mjs`
+(`withServerClient`, `listRawTools`); `check-registry-runtime.mjs` is
+refactored onto the same `withServerClient` boot helper (it keeps the stock
+client for name-only listing — annotation stripping does not affect names).
 
 **Per package:** for every tool whose wire `annotations.cesteral` is present
 (both `write` and `read` kind — governance blesses read partners too), emit a
@@ -210,9 +226,11 @@ The generator's output must satisfy governance's already-merged
 ## Risks & cross-repo coordination
 
 - **Hash divergence is the one catastrophic failure** — it is silent: every
-  attestation simply stops matching. Mitigated by hashing the live wire
-  output (so the generator hashes exactly what governance receives) and by
-  shared golden hash vectors pinned in both repos' test suites.
+  attestation simply stops matching. Mitigated by hashing the raw
+  `tools/list` result with the `cesteral` namespace intact (the exact
+  representation governance ingests and hashes — not the SDK-stripped
+  `client.listTools()` output) and by shared golden hash vectors pinned in
+  both repos' test suites.
 - **Manifest schema coupling.** The generator's output is pinned to
   governance's `manifest-schema.ts`. The inline `zod` copy in the generator
   carries a pointer comment; any change to the manifest contract is a
