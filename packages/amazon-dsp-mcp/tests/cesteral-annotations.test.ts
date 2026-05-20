@@ -11,7 +11,7 @@ describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("write");
     expect(cesteral!.platform).toBe("amazon_dsp");
-    expect(cesteral!.contractId).toBe("amazon_dsp.update_entity.v1");
+    expect(cesteral!.contractId).toBe("amazon-dsp.update_entity.v1");
     expect(cesteral!.schemaVersion).toBe(1);
 
     if (cesteral!.kind !== "write") throw new Error("expected write kind");
@@ -38,7 +38,7 @@ describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("read");
     expect(cesteral!.platform).toBe("amazon_dsp");
-    expect(cesteral!.contractId).toBe("amazon_dsp.get_entity.v1");
+    expect(cesteral!.contractId).toBe("amazon-dsp.get_entity.v1");
     expect(cesteral!.schemaVersion).toBe(1);
     expect(cesteral!.entityKinds).toEqual(["order", "line_item"]);
     expect(cesteral!.entityIdArgs).toEqual(["entityId"]);

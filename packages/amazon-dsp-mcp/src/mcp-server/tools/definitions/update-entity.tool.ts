@@ -178,7 +178,7 @@ export const updateEntityTool = {
         argMap: { profileId: "profileId", entityId: "entityId" },
       },
       schemaVersion: 1,
-      contractId: "amazon_dsp.update_entity.v1",
+      contractId: "amazon-dsp.update_entity.v1",
       // R2-U4: `dry_run` is symbolic apply — Amazon DSP exposes no native
       // validate / preview / draft mode. Validation runs symbolic business
       // rules; expected post-state is the read-partner snapshot shallow-merged

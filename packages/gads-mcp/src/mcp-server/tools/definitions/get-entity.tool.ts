@@ -93,7 +93,7 @@ export const getEntityTool = {
       entityKinds: ["campaign", "ad_group", "campaign_budget"],
       entityIdArgs: ["customerId", "entityId"],
       schemaVersion: 1,
-      contractId: "google_ads.get_entity.v1",
+      contractId: "google-ads.get_entity.v1",
     } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [

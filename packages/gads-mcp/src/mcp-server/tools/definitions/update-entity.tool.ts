@@ -190,7 +190,7 @@ export const updateEntityTool = {
         argMap: { customerId: "customerId", entityId: "entityId" },
       },
       schemaVersion: 1,
-      contractId: "google_ads.update_entity.v1",
+      contractId: "google-ads.update_entity.v1",
       // R2-U3: `dry_run` is wired via the Google Ads native `validateOnly`
       // flag (validation) plus symbolic apply over the read partner (expected
       // post-state). `before` / `after` are captured by reading the entity

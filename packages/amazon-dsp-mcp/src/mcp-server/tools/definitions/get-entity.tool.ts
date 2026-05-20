@@ -80,7 +80,7 @@ export const getEntityTool = {
       entityKinds: ["order", "line_item"],
       entityIdArgs: ["entityId"],
       schemaVersion: 1,
-      contractId: "amazon_dsp.get_entity.v1",
+      contractId: "amazon-dsp.get_entity.v1",
     } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
