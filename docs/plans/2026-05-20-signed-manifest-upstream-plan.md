@@ -26,6 +26,7 @@
 ### Task 1: Scaffold the `@cesteral/contract-hash` package
 
 **Files:**
+
 - Create: `packages/contract-hash/package.json`
 - Create: `packages/contract-hash/tsconfig.json`
 - Create: `packages/contract-hash/vitest.config.ts`
@@ -98,7 +99,7 @@ Copy `packages/shared/vitest.config.ts` verbatim (same test defaults).
 
 **Step 4: Create `packages/contract-hash/README.md`**
 
-```markdown
+````markdown
 # @cesteral/contract-hash
 
 The canonical tool-definition hash for the Cesteral MCP ecosystem.
@@ -116,14 +117,16 @@ import { computeDefinitionHash } from "@cesteral/contract-hash";
 
 const hash = computeDefinitionHash({ name: "meta_update_entity", inputSchema, annotations });
 ```
-```
+````
+
+````
 
 **Step 5: Create the `LICENSE.md` symlink and the `src/` directory**
 
 ```bash
 ln -s ../../LICENSE.md packages/contract-hash/LICENSE.md
 mkdir -p packages/contract-hash/src packages/contract-hash/tests
-```
+````
 
 **Step 6: Add root devDependencies for the generator script**
 
@@ -159,6 +162,7 @@ git commit -m "feat(contract-hash): scaffold @cesteral/contract-hash package"
 ### Task 2: Implement `computeDefinitionHash` (TDD)
 
 **Files:**
+
 - Test: `packages/contract-hash/tests/contract-hash.test.ts`
 - Create: `packages/contract-hash/src/index.ts`
 
@@ -333,6 +337,7 @@ git commit -m "feat(contract-hash): implement computeDefinitionHash with golden-
 ### Task 3: Shared server-boot helper + refactor `check-registry-runtime.mjs`
 
 **Files:**
+
 - Create: `scripts/lib/boot-server.mjs`
 - Modify: `scripts/check-registry-runtime.mjs` (refactor onto the helper)
 
@@ -455,7 +460,7 @@ async function bootAndIntrospect(packageName) {
 }
 ```
 
-`listAll`, `diff`, and `main` are unchanged. `check-registry-runtime.mjs` keeps the stock `client.listTools()`/`listPrompts()` in `listAll` — annotation stripping does not affect tool *names*, which is all this script needs.
+`listAll`, `diff`, and `main` are unchanged. `check-registry-runtime.mjs` keeps the stock `client.listTools()`/`listPrompts()` in `listAll` — annotation stripping does not affect tool _names_, which is all this script needs.
 
 **Step 3: Verify nothing regressed**
 
@@ -476,6 +481,7 @@ git commit -m "refactor(scripts): extract shared MCP server-boot harness"
 The orchestration script (Task 5) auto-runs on import, so the testable pure logic lives in a separate module. Scripts are tested with a root-level vitest config (the repo's `check:*` scripts are CI-invocation-tested; the manifest derivation needs explicit negative-case coverage that a happy-path CI run cannot give).
 
 **Files:**
+
 - Create: `vitest.config.scripts.ts` (root)
 - Modify: `package.json` (root — add `test:scripts` script)
 - Test: `scripts/lib/manifest.test.mjs`
@@ -542,7 +548,10 @@ describe("toManifestEntry", () => {
   });
 
   it("throws on a malformed contractId", () => {
-    const bad = { ...writeTool, annotations: { cesteral: { contractId: "nope", schemaVersion: 1 } } };
+    const bad = {
+      ...writeTool,
+      annotations: { cesteral: { contractId: "nope", schemaVersion: 1 } },
+    };
     expect(() => toManifestEntry(bad)).toThrow(/contractId/);
   });
 
@@ -586,7 +595,9 @@ describe("validateManifest", () => {
   });
 
   it("rejects a packageName that is not an @cesteral/*-mcp package", () => {
-    expect(() => validateManifest({ ...valid, packageName: "@cesteral/shared" })).toThrow(/packageName/);
+    expect(() => validateManifest({ ...valid, packageName: "@cesteral/shared" })).toThrow(
+      /packageName/
+    );
   });
 });
 ```
@@ -704,6 +715,7 @@ git commit -m "feat(scripts): manifest entry derivation + validation with tests"
 ### Task 5: Manifest generator — `scripts/generate-manifests.mjs`
 
 **Files:**
+
 - Create: `scripts/generate-manifests.mjs`
 
 **Step 1: Create `scripts/generate-manifests.mjs`**
@@ -731,9 +743,7 @@ import { toManifestEntry, validateManifest } from "./lib/manifest.mjs";
 const REGISTRY = JSON.parse(readFileSync(join(ROOT, "registry.json"), "utf-8"));
 
 async function generateForPackage(packageDir) {
-  const pkg = JSON.parse(
-    readFileSync(join(ROOT, "packages", packageDir, "package.json"), "utf-8")
-  );
+  const pkg = JSON.parse(readFileSync(join(ROOT, "packages", packageDir, "package.json"), "utf-8"));
   const manifestPath = join(ROOT, "packages", packageDir, "dist", "cesteral-manifest.json");
 
   const tools = await withServerClient(packageDir, listRawTools);
@@ -800,6 +810,7 @@ git commit -m "feat(scripts): generate dist/cesteral-manifest.json for governed 
 ### Task 6: Wire the generator + script tests into CI
 
 **Files:**
+
 - Modify: `.github/workflows/ci.yml`
 
 **Step 1: Add two steps to the `build-and-test` job**
@@ -807,11 +818,11 @@ git commit -m "feat(scripts): generate dist/cesteral-manifest.json for governed 
 In `.github/workflows/ci.yml`, in the `build-and-test` job, immediately **after** the `Build` step (`run: pnpm run build`) and before `Check registry → live MCP advertisement`, insert:
 
 ```yaml
-      - name: Test repo scripts
-        run: pnpm run test:scripts
+- name: Test repo scripts
+  run: pnpm run test:scripts
 
-      - name: Generate + validate attestation manifests
-        run: node scripts/generate-manifests.mjs
+- name: Generate + validate attestation manifests
+  run: node scripts/generate-manifests.mjs
 ```
 
 `test:scripts` and the generator both need `@cesteral/contract-hash` and the servers built, so they must run after `Build`.
@@ -835,6 +846,7 @@ git commit -m "ci: run script tests and validate attestation manifests on every 
 ### Task 7: Extend `publish-all.sh` — provenance, contract-hash, manifest generation
 
 **Files:**
+
 - Modify: `scripts/publish-all.sh`
 
 **Step 1: Add `--provenance` argument parsing**
@@ -886,7 +898,7 @@ publish_to_npm "packages/contract-hash" "@cesteral/contract-hash"
 
 **Step 5: Rework `publish_to_npm` — `pnpm pack` + `npm publish --provenance`**
 
-`pnpm@8.15.0` has **no provenance support** (verified: `pnpm publish --help` lists no `--provenance`; pnpm gained provenance only in pnpm 9.x). `npm@10.x` *does* support `--provenance` (verified). Rather than a repo-wide, risky pnpm major-version bump (lockfile format change, install-resolution churn), publish via `pnpm pack` — which rewrites `workspace:*` into the tarball, the exact reason the repo avoided plain `npm publish` of a source dir — followed by `npm publish <tarball> --provenance`. npm signs the provenance attestation; it does not care that pnpm built the tarball.
+`pnpm@8.15.0` has **no provenance support** (verified: `pnpm publish --help` lists no `--provenance`; pnpm gained provenance only in pnpm 9.x). `npm@10.x` _does_ support `--provenance` (verified). Rather than a repo-wide, risky pnpm major-version bump (lockfile format change, install-resolution churn), publish via `pnpm pack` — which rewrites `workspace:*` into the tarball, the exact reason the repo avoided plain `npm publish` of a source dir — followed by `npm publish <tarball> --provenance`. npm signs the provenance attestation; it does not care that pnpm built the tarball.
 
 Replace the entire `publish_to_npm` function with:
 
@@ -961,6 +973,7 @@ git commit -m "feat(publish): manifest generation, contract-hash, and --provenan
 ### Task 8: Create `release.yml`
 
 **Files:**
+
 - Create: `.github/workflows/release.yml`
 
 **Step 1: Create `.github/workflows/release.yml`**
@@ -1037,6 +1050,7 @@ Run: `node -e "require('node:fs').readFileSync('.github/workflows/release.yml','
 Expected: `file readable`. If `actionlint` is installed, run it on the file and expect no errors.
 
 **Verification notes (confirm before relying on a real release):**
+
 - `mcp-publisher login github-oidc` is the CI/OIDC auth subcommand — confirm against `mcp-publisher --help` and `docs/guides/mcp-registry-publishing.md`; the interactive flow is `login github`.
 - The `NPM_TOKEN` repository secret must exist with **Automation** publish rights on the `@cesteral` npm org (see `docs/guides/publishing.md` § Auth setup).
 - npm provenance requires every published `package.json` to carry a `repository` field — the `-mcp` packages and `@cesteral/contract-hash` already do; `@cesteral/shared` does too. No action needed, but re-confirm if a new package is added.
@@ -1053,6 +1067,7 @@ git commit -m "ci: add tag-triggered release workflow with npm provenance"
 ### Task 9: Documentation
 
 **Files:**
+
 - Modify: `docs/guides/publishing.md`
 - Modify: `CLAUDE.md`
 - Modify: `README.md`

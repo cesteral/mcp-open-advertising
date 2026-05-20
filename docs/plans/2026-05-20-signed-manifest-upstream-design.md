@@ -73,7 +73,7 @@ A new workspace package at `packages/contract-hash/`.
   copied **verbatim** from governance's
   `lib/features/governance/write-preview/canonical-hash.ts`: SHA-256 over the
   sorted-key JSON projection of `{ name, description, inputSchema,
-  outputSchema, annotations }`, lowercase hex, no `sha256:` prefix.
+outputSchema, annotations }`, lowercase hex, no `sha256:` prefix.
 - The zero-dependency constraint is deliberate: governance imports this as a
   lightweight dependency. The manifest **schema** (which needs `zod`) stays
   out of this package for that reason.
@@ -98,7 +98,7 @@ in-repo manifest generator (a build-time script) and the external
 ### 2. Manifest generator — `scripts/generate-manifests.mjs`
 
 **Hashing the raw `tools/list` result.** `definitionHash` must be
-bit-identical to what governance computes over the *cached MCP tool*.
+bit-identical to what governance computes over the _cached MCP tool_.
 Governance (`cesteral-intelligence`,
 `lib/features/mcp-connections/client.ts`) issues a raw `tools/list` request,
 stores the unmodified tool in `mcp_connection_tools.raw_tool`, and
@@ -172,9 +172,9 @@ Pipeline:
 
 There is no version/tag-equality assertion: the repo uses per-package
 semver ("bump affected packages"), `publish-all.sh` already tolerates
-already-published versions, and npm provenance binds to the tag *ref*
+already-published versions, and npm provenance binds to the tag _ref_
 pattern, not to package-version equality. Manifest generation lives
-*inside* `publish-all.sh` (after its build step) so a break-glass manual
+_inside_ `publish-all.sh` (after its build step) so a break-glass manual
 run produces manifests too.
 
 **Publish engine: reuse `scripts/publish-all.sh`.** The script is extended

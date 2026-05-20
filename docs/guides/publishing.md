@@ -67,7 +67,7 @@ The `terraform-deployer` SA has `roles/artifactregistry.admin` (granted by `init
 ## Target 2: npm
 
 **Scope:** `@cesteral/*` — public, scoped packages requiring `--access public` on every publish.
-**Publisher:** `pnpm publish`, not `npm publish`. Server packages depend on `@cesteral/shared` via `"workspace:*"`; `pnpm publish` rewrites this to the resolved version at publish time, `npm publish` does not (the literal `workspace:*` string would ship and break consumers).
+**Publisher:** `scripts/publish-all.sh` packs each package with `pnpm pack`, then publishes the resulting tarball with `npm publish <tarball>`. `pnpm pack` rewrites `@cesteral/shared`'s `"workspace:*"` dependency range to the resolved version _inside_ the tarball (a plain `npm publish` of a source directory would ship the literal `workspace:*` string and break consumers); `npm publish` then uploads that tarball and — in CI — attaches the provenance attestation. This split exists because the pinned `pnpm` (8.15) has no provenance support while `npm` (10.x) does.
 **Source of truth for version:** each package's `package.json` `version` field. Bump per release.
 
 Release builds from `release.yml` attach **npm provenance** to every published tarball, and each governed `@cesteral/<server>-mcp` tarball additionally ships a `dist/cesteral-manifest.json` attestation manifest (consumed by the downstream governance system to verify provenance and bless tool hashes).
