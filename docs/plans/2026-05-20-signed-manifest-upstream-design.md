@@ -162,12 +162,20 @@ tag push. Permissions: `contents: write` (GitHub Release) and
 Pipeline:
 
 1. Checkout, pnpm + Node 22 setup, `pnpm install --frozen-lockfile`.
-2. **Assert every `package.json` version equals the tag** — catches a tag
-   pushed without the version bump.
-3. `pnpm build`, then `pnpm typecheck && pnpm test` as a release gate.
-4. `node scripts/generate-manifests.mjs` — writes manifests into `dist/`.
-5. Publish via `scripts/publish-all.sh` (see below).
-6. `gh release create vX.Y.Z`.
+2. `pnpm build`, `pnpm typecheck`, `pnpm test`, `pnpm test:scripts` —
+   the release gate.
+3. Install + GitHub-OIDC-authenticate `mcp-publisher`.
+4. `./scripts/publish-all.sh --provenance` — the publish engine. It
+   rebuilds (incremental), runs the manifest generator, inspects every
+   tarball, then publishes to npm (with provenance) and the MCP Registry.
+5. `gh release create vX.Y.Z`.
+
+There is no version/tag-equality assertion: the repo uses per-package
+semver ("bump affected packages"), `publish-all.sh` already tolerates
+already-published versions, and npm provenance binds to the tag *ref*
+pattern, not to package-version equality. Manifest generation lives
+*inside* `publish-all.sh` (after its build step) so a break-glass manual
+run produces manifests too.
 
 **Publish engine: reuse `scripts/publish-all.sh`.** The script is extended
 with a `--provenance` pass-through (forwarded to `pnpm publish`) and confirmed
