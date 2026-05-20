@@ -5,8 +5,9 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
+import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_update_entity";
 const TOOL_TITLE = "Update Google Ads Entity";
@@ -47,6 +48,15 @@ export const UpdateEntityOutputSchema = z
   .object({
     mutateResult: z.record(z.any()).describe("Mutate operation result"),
     timestamp: z.string().datetime(),
+    dryRun: DryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. The mutation was NOT applied; `mutateResult` is empty."
+    ),
+    before: NormalizedEntitySnapshotSchema.optional().describe(
+      "Pre-write canonical snapshot of the entity, captured at the start of the handler. Populated when the entity type is in canonical scope (campaign, ad_group, campaign_budget) and the read partner returns the entity. Undefined for out-of-scope types or when the pre-read fails."
+    ),
+    after: NormalizedEntitySnapshotSchema.optional().describe(
+      "Post-write canonical snapshot of the entity. Captured by re-reading after the write because the Google Ads :mutate endpoint returns only a resourceName. Undefined when the post-read fails or the entity type is out of canonical scope."
+    ),
   })
   .describe("Entity update result");
 
@@ -95,6 +105,30 @@ export const updateEntityTool = {
     openWorldHint: false,
     destructiveHint: true,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      platform: "google_ads",
+      // `gads_update_entity` is a multi-operation dispatcher: callers change
+      // status, budget, name, etc. via the `data` + `updateMask` payload, so
+      // the contract advertises every canonical op it can express.
+      operation: ["update_budget", "pause", "resume", "update_status", "update"],
+      // Governed scope is campaign / ad_group / campaign_budget — the kinds
+      // that round-trip cleanly through the read partner and carry a canonical
+      // status/budget snapshot. `ad` and `keyword` use composite IDs
+      // (`{adGroupId}~{adId}`) that the read partner's simple-ID GAQL lookup
+      // cannot resolve, and `asset` is create-only with no canonical kind;
+      // all three are intentionally out of governed scope.
+      entityKinds: ["campaign", "ad_group", "campaign_budget"],
+      entityIdArgs: ["customerId", "entityId"],
+      readPartner: {
+        toolName: "gads_get_entity",
+        argMap: { customerId: "customerId", entityId: "entityId" },
+      },
+      schemaVersion: 1,
+      contractId: "google_ads.update_entity.v1",
+      // `supportsDryRun` / `supportsBeforeAfterSnapshot` are wired in Task
+      // R2-U3 (native `validateOnly` + before/after capture) and set there.
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
