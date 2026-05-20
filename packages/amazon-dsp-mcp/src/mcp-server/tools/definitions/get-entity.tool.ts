@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "amazon_dsp_get_entity";
 const TOOL_TITLE = "Get AmazonDsp Ads Entity";
@@ -70,6 +70,18 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
+    cesteral: {
+      kind: "read",
+      platform: "amazon_dsp",
+      // Mirror `amazon_dsp_update_entity`'s governed entity coverage so a
+      // write tool declaring this as its read partner can capture pre/post
+      // snapshots. Governed scope is order / lineItem; creative / target /
+      // creativeAssociation have no canonical kind and are out of scope.
+      entityKinds: ["order", "line_item"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "amazon_dsp.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {
