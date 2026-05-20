@@ -5,6 +5,8 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
+import { runGAdsUpdateDryRun } from "../utils/dry-run.js";
+import { captureGAdsSnapshot } from "../utils/capture-snapshot.js";
 import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
@@ -32,6 +34,13 @@ export const UpdateEntityInputSchema = z
       .string()
       .min(1)
       .describe("Comma-separated list of fields to update (e.g., 'name,status')"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the proposed mutation via the Google Ads native `validateOnly` flag and returns a DryRunResult under `dryRun` without applying the mutation. The underlying entity is never modified."
+      ),
   })
   .superRefine((input, ctx) => {
     addParentValidationIssue(
@@ -70,6 +79,36 @@ export async function updateEntityLogic(
 ): Promise<UpdateEntityOutput> {
   const { gadsService } = resolveSessionServices(sdkContext);
 
+  if (input.dry_run === true) {
+    const dryRun = await runGAdsUpdateDryRun(
+      {
+        entityType: input.entityType,
+        customerId: input.customerId,
+        entityId: input.entityId,
+        data: input.data,
+        updateMask: input.updateMask,
+      },
+      gadsService,
+      context
+    );
+    return {
+      mutateResult: {},
+      timestamp: new Date().toISOString(),
+      dryRun,
+    };
+  }
+
+  // R2-U3: capture pre-state before mutating. Best-effort — out-of-scope
+  // entity types and read failures leave `before` undefined and consumers
+  // fall back to the read-partner round-trip.
+  const before = await captureGAdsSnapshot(
+    gadsService,
+    input.entityType,
+    input.customerId,
+    input.entityId,
+    context
+  );
+
   const result = await gadsService.updateEntity(
     input.entityType as GAdsEntityType,
     input.customerId,
@@ -79,13 +118,39 @@ export async function updateEntityLogic(
     context
   );
 
+  // R2-U3: the Google Ads :mutate endpoint returns only a resourceName, so we
+  // re-read to populate `after`. Same best-effort semantics as `before`.
+  const after = await captureGAdsSnapshot(
+    gadsService,
+    input.entityType,
+    input.customerId,
+    input.entityId,
+    context
+  );
+
   return {
     mutateResult: result as Record<string, any>,
     timestamp: new Date().toISOString(),
+    ...(before ? { before } : {}),
+    ...(after ? { after } : {}),
   };
 }
 
 export function updateEntityResponseFormatter(result: UpdateEntityOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errorLines = validationErrors.length
+      ? "\n" + validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n")
+      : "";
+    return [
+      {
+        type: "text" as const,
+        text: `Dry run: mutation ${verdict} (validation: ${validationSource}, expected-state: ${expectedStateSource}). The entity was NOT modified.${errorLines}\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   return [
     {
       type: "text" as const,
@@ -126,8 +191,13 @@ export const updateEntityTool = {
       },
       schemaVersion: 1,
       contractId: "google_ads.update_entity.v1",
-      // `supportsDryRun` / `supportsBeforeAfterSnapshot` are wired in Task
-      // R2-U3 (native `validateOnly` + before/after capture) and set there.
+      // R2-U3: `dry_run` is wired via the Google Ads native `validateOnly`
+      // flag (validation) plus symbolic apply over the read partner (expected
+      // post-state). `before` / `after` are captured by reading the entity
+      // pre-write and re-reading post-write (the :mutate endpoint returns
+      // only a resourceName).
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: true,
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
