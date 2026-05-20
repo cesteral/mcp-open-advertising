@@ -14,15 +14,18 @@ cd "$REPO_ROOT"
 
 DRY_RUN=false
 NPM_ONLY=false
+PROVENANCE=false
 
 for arg in "$@"; do
   case "$arg" in
-    --dry-run)  DRY_RUN=true ;;
-    --npm-only) NPM_ONLY=true ;;
+    --dry-run)    DRY_RUN=true ;;
+    --npm-only)   NPM_ONLY=true ;;
+    --provenance) PROVENANCE=true ;;
     --help|-h)
-      echo "Usage: $0 [--dry-run] [--npm-only]"
-      echo "  --dry-run   Show what would be published without doing it"
-      echo "  --npm-only  Skip MCP Registry publishing"
+      echo "Usage: $0 [--dry-run] [--npm-only] [--provenance]"
+      echo "  --dry-run     Show what would be published without doing it"
+      echo "  --npm-only    Skip MCP Registry publishing"
+      echo "  --provenance  Publish npm packages with build provenance attestation"
       exit 0
       ;;
     *)
@@ -71,11 +74,21 @@ else
   pnpm run build
 fi
 
+# --- Generate attestation manifests ---
+# Writes dist/cesteral-manifest.json into each governed package so it ships
+# inside the tarball. Runs after build, before pack-and-inspect.
+log "Generating attestation manifests..."
+if [ "$DRY_RUN" = true ]; then
+  echo "  (dry-run) pnpm run generate:manifests"
+else
+  pnpm run generate:manifests
+fi
+
 # --- Pack-and-inspect preflight ---
 # Catches the two things that have bitten first publishes in practice:
-#  1. workspace:* deps surviving into the published tarball (pnpm publish
-#     rewrites them, but if anyone swaps the publisher tool back to npm or
-#     forgets a flag, this gate fails loudly).
+#  1. workspace:* deps surviving into the published tarball (`pnpm pack`
+#     rewrites them, but if anyone swaps the packer tool or forgets a flag,
+#     this gate fails loudly).
 #  2. LICENSE.md missing from the tarball even though `files` claims it ships.
 # Delegates per-tarball validation to scripts/inspect-tarball.mjs which exits
 # non-zero on failure; we check exit status explicitly so a broken inspector
@@ -92,7 +105,9 @@ inspect_package() {
   # its path from the last line of pnpm's stdout (pnpm prints the absolute
   # path of the tarball it just produced).
   local tarball
+  set +e
   tarball="$(cd "$pkg_dir" && pnpm pack --pack-destination "$PACK_TMP" 2>/dev/null | tail -n1)"
+  set -e
   if [ ! -f "$tarball" ]; then
     echo "  FAIL $pkg_dir: pack produced no tarball" >&2
     PACK_OK=false
@@ -105,6 +120,7 @@ inspect_package() {
 }
 
 inspect_package "packages/shared"
+inspect_package "packages/contract-hash"
 for server in "${SERVERS[@]}"; do
   inspect_package "packages/$server"
 done
@@ -115,7 +131,12 @@ fi
 log "  OK — all tarballs have resolved deps and LICENSE.md."
 
 # --- npm publish helper ---
-# Wraps `pnpm publish` so we can distinguish a tolerable "version already
+# Packs each package with `pnpm pack` (which rewrites workspace:* deps into
+# the tarball) and publishes the resulting artifact with `npm publish
+# <tarball>` so we can pass --provenance — the pinned pnpm 8.15 has no
+# provenance support, npm 10.x does.
+#
+# Wraps the publish so we can distinguish a tolerable "version already
 # published" 403 from every other failure mode (auth, OTP, network, cache
 # permission, schema validation, etc.). Previous versions of this script
 # downgraded ANY non-zero exit to a warning, which meant a totally failed
@@ -123,7 +144,7 @@ log "  OK — all tarballs have resolved deps and LICENSE.md."
 # positively-identified "already published" error gets recorded as a hard
 # failure and aborts the run after the loop completes.
 #
-# pnpm publish proxies npm publish, which returns this body on republish:
+# npm publish returns this body on republish:
 #   "You cannot publish over the previously published versions: X.Y.Z."
 # Older npm versions returned the code EPUBLISHCONFLICT for the same case.
 # Matching either string is the safe positive-identification.
@@ -133,14 +154,31 @@ publish_to_npm() {
   local pkg_dir="$1"
   local pkg_label="$2"
 
+  local prov_flag=""
+  if [ "$PROVENANCE" = true ]; then prov_flag="--provenance"; fi
+
   if [ "$DRY_RUN" = true ]; then
-    echo "  (dry-run) cd $pkg_dir && pnpm publish --access public --no-git-checks"
+    echo "  (dry-run) pnpm pack $pkg_dir && npm publish <tarball> --access public $prov_flag"
+    return 0
+  fi
+
+  # pnpm 8.15 has no provenance support; npm does. `pnpm pack` rewrites
+  # workspace:* deps into the tarball (the literal range would otherwise
+  # ship and break consumers); `npm publish <tarball>` publishes that exact
+  # artifact and, with --provenance, attaches the build attestation.
+  local tarball
+  set +e
+  tarball="$(cd "$pkg_dir" && pnpm pack --pack-destination "$PACK_TMP" 2>/dev/null | tail -n1)"
+  set -e
+  if [ ! -f "$tarball" ]; then
+    echo "  FAIL $pkg_label: pnpm pack produced no tarball" >&2
+    NPM_PUBLISH_FAILURES+=("$pkg_label")
     return 0
   fi
 
   local out exit_code
   set +e
-  out=$(cd "$pkg_dir" && pnpm publish --access public --no-git-checks 2>&1)
+  out=$(npm publish "$tarball" --access public $prov_flag 2>&1)
   exit_code=$?
   set -e
 
@@ -150,24 +188,22 @@ publish_to_npm() {
     return 0
   fi
 
-  # Here-string instead of `echo "$out" | grep` so we don't run a pipeline:
-  # under `set -o pipefail`, a fast grep -q that exits 0 on first match can
-  # leave the upstream `echo` still writing into a closed pipe, and the
-  # SIGPIPE-induced non-zero from `echo` would clobber grep's success status.
+  # Here-string (not a pipe) so a fast grep cannot SIGPIPE the upstream echo.
   if grep -qE 'cannot publish over the previously published|EPUBLISHCONFLICT' <<<"$out"; then
     log "  Note: $pkg_label already published at this version — continuing."
     return 0
   fi
 
-  echo "  FAIL $pkg_label: pnpm publish exited $exit_code (not an 'already published' error)" >&2
+  echo "  FAIL $pkg_label: npm publish exited $exit_code (not an 'already published' error)" >&2
   NPM_PUBLISH_FAILURES+=("$pkg_label")
-  return 0  # don't abort the loop; we report all failures at the end
+  return 0  # don't abort the loop; failures are reported after the loop
 }
 
 # --- Publish @cesteral/shared first ---
-# pnpm publish (not npm publish) rewrites workspace:* deps to the actual
-# resolved version of the workspace package at publish time. npm publish does
-# not — it ships the literal "workspace:*" string and breaks consumers.
+# `pnpm pack` rewrites workspace:* deps to the actual resolved version of the
+# workspace package, so the tarball `npm publish` uploads carries real version
+# ranges rather than the literal "workspace:*" string that would break
+# consumers.
 #
 # Abort immediately if shared fails: server tarballs have @cesteral/shared
 # rewritten to the resolved version, so publishing them when shared did not
@@ -181,6 +217,14 @@ if [ "${#NPM_PUBLISH_FAILURES[@]}" -gt 0 ]; then
   echo "@cesteral/shared publish failed; refusing to publish servers that depend on it." >&2
   err "Fix the shared publish failure above and re-run."
 fi
+
+# --- Publish @cesteral/contract-hash ---
+# A standalone, zero-dependency library consumed by cesteral-intelligence
+# governance. No server package depends on it, so a failure here is recorded
+# (NPM_PUBLISH_FAILURES) and reported after the server loop rather than
+# aborting the server publishes.
+log "Publishing @cesteral/contract-hash to npm..."
+publish_to_npm "packages/contract-hash" "@cesteral/contract-hash"
 
 # --- Publish each server to npm ---
 for server in "${SERVERS[@]}"; do
