@@ -23,6 +23,7 @@
     "test:conformance": "./scripts/conformance-test.sh",
     "test:conformance:ci": "./scripts/conformance-test.sh --ci",
     "generate:registry": "node scripts/generate-server-json.mjs",
+    "generate:manifests": "node scripts/generate-manifests.mjs",
     "check:registry": "node scripts/generate-server-json.mjs --check",
     "sync:registry-tools": "node scripts/sync-registry-tools.mjs",
     "check:registry-tools": "node scripts/sync-registry-tools.mjs --check",
