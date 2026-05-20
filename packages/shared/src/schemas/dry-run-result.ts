@@ -77,3 +77,14 @@ export const DryRunResultSchema = z.object({
   expectedStateSource: z.enum(["native_simulator", "server_symbolic_apply", "none"]),
   expectedPostState: NormalizedEntitySnapshotSchema.optional(),
 });
+
+/**
+ * Zod mirror of the {@link DispatchedCapability} interface in
+ * `../types/dry-run-result.ts`. Governed write tools place this on every
+ * structured-content response; the governance layer parses it with the same
+ * shape (`{ operation, canonicalEntityKind }`, both non-empty strings).
+ */
+export const DispatchedCapabilitySchema = z.object({
+  operation: z.string().min(1),
+  canonicalEntityKind: z.string().min(1),
+});

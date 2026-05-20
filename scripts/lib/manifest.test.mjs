@@ -28,6 +28,24 @@ describe("toManifestEntry", () => {
     });
   });
 
+  it("derives a manifest entry from an underscore-slug platform contractId", () => {
+    const gadsTool = {
+      ...writeTool,
+      name: "gads_update_entity",
+      annotations: {
+        cesteral: {
+          kind: "write",
+          platform: "google_ads",
+          contractId: "google_ads.update_entity.v1",
+          schemaVersion: 1,
+        },
+      },
+    };
+    const entry = toManifestEntry(gadsTool);
+    expect(entry.contractPlatformSlug).toBe("google_ads");
+    expect(entry.contractToolSlug).toBe("update_entity");
+  });
+
   it("returns null for a tool with no cesteral annotation", () => {
     expect(toManifestEntry({ name: "meta_list_entities", annotations: {} })).toBeNull();
     expect(toManifestEntry({ name: "meta_list_entities" })).toBeNull();

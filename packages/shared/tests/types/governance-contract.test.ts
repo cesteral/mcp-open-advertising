@@ -18,12 +18,16 @@ describe("CesteralToolAnnotations", () => {
     const value: CesteralToolAnnotations = {
       kind: "write",
       platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "update_entity",
       operation: ["pause"],
       entityKinds: ["campaign"],
       entityIdArgs: ["entityId"],
       readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
       schemaVersion: 1,
-      contractId: "meta.campaign.pause.v1",
+      contractId: "meta.update_entity.v1",
+      requiresValidation: true,
+      requiresSimulation: true,
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
@@ -32,6 +36,8 @@ describe("CesteralToolAnnotations", () => {
     const value: CesteralToolAnnotations = {
       kind: "write",
       platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "update_entity",
       operation: ["update_budget", "pause", "resume", "update_status", "update"],
       entityKinds: ["campaign", "ad_set", "ad"],
       entityIdArgs: ["entityId"],
@@ -40,6 +46,8 @@ describe("CesteralToolAnnotations", () => {
       contractId: "meta.update_entity.v1",
       supportsDryRun: false,
       supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
@@ -48,6 +56,8 @@ describe("CesteralToolAnnotations", () => {
     const value: CesteralToolAnnotations = {
       kind: "read",
       platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "get_entity",
       entityKinds: ["campaign", "ad_set", "ad"],
       entityIdArgs: ["entityId"],
       schemaVersion: 1,
@@ -77,6 +87,8 @@ describe("CesteralToolAnnotations", () => {
     const value: CesteralToolAnnotations = {
       kind: "write",
       platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "update_entity",
       operation: ["update_budget", "pause", "resume", "update_status", "update"],
       entityKinds: ["insertion_order", "line_item", "campaign"],
       entityIdArgs: ["insertionOrderId", "lineItemId", "campaignId", "advertiserId"],
@@ -91,6 +103,8 @@ describe("CesteralToolAnnotations", () => {
       },
       schemaVersion: 1,
       contractId: "dv360.update_entity.v1",
+      requiresValidation: true,
+      requiresSimulation: true,
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
@@ -218,14 +232,18 @@ describe("ToolDefinition.cesteral", () => {
         cesteral: {
           kind: "write",
           platform: "meta_ads",
+          contractPlatformSlug: "meta",
+          contractToolSlug: "update_entity",
           operation: ["pause"],
           entityKinds: ["campaign", "ad_set"],
           entityIdArgs: ["entityId"],
           readPartner: { toolName: "meta_get_entity", argMap: { entityId: "entityId" } },
           schemaVersion: 1,
-          contractId: "meta.campaign.pause.v1",
+          contractId: "meta.update_entity.v1",
           supportsDryRun: true,
           supportsBeforeAfterSnapshot: true,
+          requiresValidation: true,
+          requiresSimulation: true,
         },
       },
       logic: async () => ({ ok: true }),

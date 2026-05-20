@@ -11,6 +11,7 @@ export {
   DryRunResultSchema,
   DryRunValidationErrorSchema,
   NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
 } from "./schemas/dry-run-result.js";
 export type {
   ToolDefinition,
@@ -33,4 +34,8 @@ export type {
   BudgetSegmentSnapshot,
   MoneyAmount,
 } from "./types/normalized-entity-snapshot.js";
-export type { DryRunResult, DryRunValidationError } from "./types/dry-run-result.js";
+export type {
+  DryRunResult,
+  DryRunValidationError,
+  DispatchedCapability,
+} from "./types/dry-run-result.js";

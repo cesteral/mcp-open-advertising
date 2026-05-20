@@ -28,6 +28,19 @@ interface CesteralToolAnnotationsBase {
   platform: string;
 
   /**
+   * Platform component of `contractId`. A slug matching `/^[a-z0-9_]{1,40}$/`
+   * — lowercase, digits, underscores; no hyphens. May differ from `platform`
+   * (e.g. platform "meta_ads" pairs with the slug "meta"). The governance
+   * admission layer parses the annotation against this exact slug shape.
+   */
+  contractPlatformSlug: string;
+
+  /**
+   * Tool component of `contractId`. Same slug shape as `contractPlatformSlug`.
+   */
+  contractToolSlug: string;
+
+  /**
    * Entity types this tool can write or read. Reuses the snapshot's
    * `CanonicalEntityKind` so annotations and snapshots stay in lockstep
    * (DV360 InsertionOrder, DBM line items, etc. all annotate without
@@ -44,7 +57,11 @@ interface CesteralToolAnnotationsBase {
    */
   schemaVersion: number;
 
-  /** Stable cross-release identifier consumers can reference (e.g. "meta.update_entity.v1"). */
+  /**
+   * Stable cross-release identifier. MUST equal
+   * `${contractPlatformSlug}.${contractToolSlug}.v${schemaVersion}` — the
+   * governance admission layer rejects any divergence.
+   */
   contractId: string;
 }
 
@@ -80,6 +97,21 @@ export interface CesteralWriteToolAnnotations extends CesteralToolAnnotationsBas
 
   /** Declares the tool returns canonical `before` / `after` snapshots in its output. */
   supportsBeforeAfterSnapshot?: boolean;
+
+  /**
+   * Contract promise: every governed call validates the proposed mutation
+   * (native validator or symbolic) and never returns `validationSource:
+   * "none"`. Always `true` for a governed write tool — the governance
+   * admission layer rejects the tool otherwise.
+   */
+  requiresValidation: true;
+
+  /**
+   * Contract promise: every governed call produces an expected post-state
+   * (native simulator or symbolic apply) and never returns
+   * `expectedStateSource: "none"`. Always `true` for a governed write tool.
+   */
+  requiresSimulation: true;
 }
 
 /**

@@ -9,9 +9,11 @@ import { z } from "zod";
 import { computeDefinitionHash } from "@cesteral/contract-hash";
 
 // contractId is `<platformSlug>.<toolSlug>.v<schemaVersion>` — see
-// @cesteral/shared CesteralToolAnnotations. The tool slug may itself contain
-// dots, so anchor on the leading platform segment and trailing version.
-const CONTRACT_ID_RE = /^([a-z0-9-]+)\.(.+)\.v(\d+)$/;
+// @cesteral/shared CesteralToolAnnotations. Both slugs match the governance
+// slug shape `/^[a-z0-9_]{1,40}$/` (lowercase, digits, underscores — no
+// hyphens). The tool slug may itself contain dots, so anchor on the leading
+// platform segment and trailing version.
+const CONTRACT_ID_RE = /^([a-z0-9_]+)\.(.+)\.v(\d+)$/;
 
 // Byte-for-byte mirror of governance's CesteralManifestSchema —
 // cesteral-intelligence/lib/features/governance/attestation/manifest-schema.ts.
