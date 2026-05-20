@@ -1,7 +1,7 @@
 {
   "name": "@cesteral/meta-mcp",
   "mcpName": "io.github.cesteral/meta-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Meta Ads MCP Server - Campaign entity management and reporting via the configured Meta Graph API (default: v25.0)",
   "license": "Apache-2.0",
   "repository": {
