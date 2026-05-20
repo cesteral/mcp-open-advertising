@@ -15,6 +15,7 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/) (
 - **pinterest-mcp** — Added 22nd tool rounding out reporting coverage.
 - **gads-mcp** — Added 15th tool; GAQL queries now pass `omit_unselected_resource_names=true`.
 - Reporting gap closure across 11 servers (single pass to align breakdowns, dimensions, metrics).
+- **Release attestation** — new `@cesteral/contract-hash` package (canonical tool-definition hash) and a tag-triggered `release.yml` that publishes to npm with build provenance and ships a `dist/cesteral-manifest.json` attestation manifest inside every governed package's tarball.
 
 ### Changed
 
