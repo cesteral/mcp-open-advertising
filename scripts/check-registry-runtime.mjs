@@ -22,26 +22,11 @@
  * Usage: node scripts/check-registry-runtime.mjs
  */
 
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { ROOT, withServerClient } from "./lib/boot-server.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..");
 const REGISTRY_PATH = join(ROOT, "registry.json");
-
-const SILENT_LOGGER = new Proxy(
-  {},
-  {
-    get: (_target, prop) => {
-      if (prop === "child") return () => SILENT_LOGGER;
-      if (prop === "level") return "silent";
-      return () => {};
-    },
-  }
-);
 
 async function listAll(client, method) {
   const names = [];
@@ -59,37 +44,13 @@ async function listAll(client, method) {
 }
 
 async function bootAndIntrospect(packageName) {
-  const distServerPath = join(ROOT, "packages", packageName, "dist", "mcp-server", "server.js");
-  if (!existsSync(distServerPath)) {
-    throw new Error(
-      `Built server not found: ${distServerPath}. Run \`pnpm run build\` before this script.`
-    );
-  }
-
-  const mod = await import(pathToFileURL(distServerPath).href);
-  if (typeof mod.createMcpServer !== "function") {
-    throw new Error(`${packageName} does not export createMcpServer from server.js`);
-  }
-
-  const server = await mod.createMcpServer(SILENT_LOGGER);
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const client = new Client(
-    { name: "registry-runtime-check", version: "0.0.0" },
-    { capabilities: {} }
-  );
-
-  await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
-
-  try {
+  return withServerClient(packageName, async (client) => {
     const [tools, prompts] = await Promise.all([
       listAll(client, "listTools"),
       listAll(client, "listPrompts").catch(() => []),
     ]);
     return { tools, prompts };
-  } finally {
-    await client.close().catch(() => {});
-    await server.close().catch(() => {});
-  }
+  });
 }
 
 function diff(label, expected, actual) {
