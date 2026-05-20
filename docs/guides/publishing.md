@@ -67,8 +67,10 @@ The `terraform-deployer` SA has `roles/artifactregistry.admin` (granted by `init
 ## Target 2: npm
 
 **Scope:** `@cesteral/*` — public, scoped packages requiring `--access public` on every publish.
-**Publisher:** `pnpm publish`, not `npm publish`. Server packages depend on `@cesteral/shared` via `"workspace:*"`; `pnpm publish` rewrites this to the resolved version at publish time, `npm publish` does not (the literal `workspace:*` string would ship and break consumers).
+**Publisher:** `scripts/publish-all.sh` packs each package with `pnpm pack`, then publishes the resulting tarball with `npm publish <tarball>`. `pnpm pack` rewrites `@cesteral/shared`'s `"workspace:*"` dependency range to the resolved version _inside_ the tarball (a plain `npm publish` of a source directory would ship the literal `workspace:*` string and break consumers); `npm publish` then uploads that tarball and — in CI — attaches the provenance attestation. This split exists because the pinned `pnpm` (8.15) has no provenance support while `npm` (10.x) does.
 **Source of truth for version:** each package's `package.json` `version` field. Bump per release.
+
+Release builds from `release.yml` attach **npm provenance** to every published tarball, and each governed `@cesteral/<server>-mcp` tarball additionally ships a `dist/cesteral-manifest.json` attestation manifest (consumed by the downstream governance system to verify provenance and bless tool hashes).
 
 ### Auth setup (first time on a new machine)
 
@@ -180,19 +182,18 @@ When this happens: the npm side is unaffected (it uses a different token), and t
 
 ## Release flow (recommended ordering)
 
-For a routine cross-cutting release that touches multiple servers:
+The **routine release path is now the tag-triggered `.github/workflows/release.yml`**: pushing a `vX.Y.Z` git tag runs build + gate + attestation-manifest generation + `./scripts/publish-all.sh --provenance` (npm with provenance + MCP Registry publish) + `gh release create`. For a routine cross-cutting release that touches multiple servers, the local steps are:
 
 1. **Verify clean** — `pnpm run build && pnpm run typecheck && pnpm run test`
 2. **Bump versions** in affected `package.json` files
 3. **Sync metadata** — `pnpm run sync:registry-tools && pnpm run generate:registry`
 4. **Commit** the version + manifest changes; merge to `main`
-5. **Tag the release** in git (e.g. `git tag -a v1.1.0 -m "..."`) so the published artifacts are traceable. After publish, promote to a GitHub Release: `gh release create v1.1.0 --notes-file <notes>` (the tag page becomes a permalink that npm and the MCP Registry can link to).
-6. **Refresh auth** — make sure `npm whoami` resolves and `mcp-publisher login github` was run recently (its JWT is ~10 min, so for first-publish-of-the-day, log in right before step 7).
-7. **Publish stdio path:** `./scripts/publish-all.sh` (npm → MCP Registry). The script's pack-and-inspect gate validates every tarball before any publish; conflict-regex tolerance makes re-runs idempotent if anything partial lands.
-8. **Publish hosted path:** `./scripts/deploy.sh dev` → verify → `./scripts/deploy.sh prod`
-9. **Smoke-test hosted:** `./scripts/smoke-test.sh prod`
+5. **Tag the release** — push a `vX.Y.Z` git tag; `release.yml` picks it up and runs the rest of the pipeline.
+6. **Smoke-test hosted:** `./scripts/deploy.sh dev` → verify → `./scripts/deploy.sh prod` → `./scripts/smoke-test.sh prod`
 
-Steps 7 and 8 are independent and can run in parallel.
+`./scripts/publish-all.sh` remains supported as a manual **break-glass** fallback — a manual run still generates manifests, but only a CI run from `release.yml` produces npm provenance attestations. When running it by hand: refresh auth first (`npm whoami` resolves, `mcp-publisher login github` run recently — its JWT is ~10 min), then `./scripts/publish-all.sh` (npm → MCP Registry). The script's pack-and-inspect gate validates every tarball before any publish; conflict-regex tolerance makes re-runs idempotent if anything partial lands.
+
+The tag-triggered `release.yml` run (npm + MCP Registry publish) and the manual hosted deploy are independent — an operator does not need to wait for `release.yml` to finish before running `./scripts/deploy.sh`.
 
 ## Troubleshooting
 

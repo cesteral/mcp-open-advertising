@@ -43,6 +43,12 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      - name: Test repo scripts
+        run: pnpm run test:scripts
+
+      - name: Generate + validate attestation manifests
+        run: pnpm run generate:manifests
+
       - name: Check registry → live MCP advertisement (tools/list + prompts/list match registry)
         run: pnpm run check:registry-runtime
 

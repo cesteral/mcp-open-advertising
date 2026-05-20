@@ -33,7 +33,7 @@ cd packages/<server-name> && pnpm run typecheck
 
 ## Monorepo Architecture
 
-**pnpm workspace** monorepo managed by **Turborepo**. Workspace: `@cesteral/shared` (types, utilities, auth) + one package per MCP server.
+**pnpm workspace** monorepo managed by **Turborepo**. Workspace: `@cesteral/shared` (types, utilities, auth) + `@cesteral/contract-hash` (canonical tool-definition hash) + one package per MCP server.
 
 - Build pipeline: `build` → `^build` (deps first), `typecheck`/`test` depend on `^build`
 - ES modules, Target: ES2022, moduleResolution: bundler
@@ -145,6 +145,10 @@ curl http://localhost:<port>/health
 # View logs
 gcloud run services logs tail <server-name> --region=europe-west2
 ```
+
+### Release Attestation Manifest
+
+`scripts/generate-manifests.mjs` (run via `pnpm run generate:manifests`) boots each MCP server, reads its raw `tools/list`, and writes `dist/cesteral-manifest.json` for every package that has governed tools — tools carrying an `annotations.cesteral` block. The per-tool `definitionHash` is a canonical SHA-256 computed by the shared `@cesteral/contract-hash` package (kept bit-identical with the downstream `cesteral-intelligence` governance repo). The tag-triggered `release.yml` publishes to npm with build provenance, so the manifest is signed transitively inside the tarball; the downstream governance system verifies provenance and treats the manifest's tool hashes as blessed, promoting matching tools to `attested` trust.
 
 ## Key Design Principles
 

@@ -236,6 +236,7 @@ mcp-open-advertising/
 │   ├── amazon-dsp-mcp/    # Amazon DSP
 │   ├── msads-mcp/         # Microsoft Ads
 │   ├── dbm-mcp/           # Bid Manager (reporting)
+│   ├── contract-hash/     # Shared library -- canonical tool-definition hash
 │   └── shared/            # Shared auth, telemetry, utilities
 ├── terraform/             # Infrastructure as Code
 ├── scripts/               # Deployment and dev automation

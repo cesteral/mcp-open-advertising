@@ -1,0 +1,69 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+# id-token: npm provenance attestation + mcp-publisher GitHub OIDC login.
+# contents: write: creating the GitHub Release.
+permissions:
+  contents: write
+  id-token: write
+
+# Serialize releases: a second tag pushed mid-release queues rather than
+# racing the first. Never cancel an in-progress publish.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Test repo scripts
+        run: pnpm run test:scripts
+
+      - name: Install mcp-publisher
+        run: |
+          set -eo pipefail
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
+            | tar xz mcp-publisher && sudo mv mcp-publisher /usr/local/bin/
+          mcp-publisher --help > /dev/null
+
+      - name: Authenticate mcp-publisher (GitHub OIDC)
+        run: mcp-publisher login github-oidc
+
+      - name: Publish (npm with provenance + MCP Registry)
+        run: ./scripts/publish-all.sh --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        run: gh release create "${{ github.ref_name }}" --generate-notes --verify-tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

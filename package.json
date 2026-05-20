@@ -14,6 +14,7 @@
     "dev": "turbo run dev --parallel",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
+    "test:scripts": "vitest run --config vitest.config.scripts.ts",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -22,6 +23,7 @@
     "test:conformance": "./scripts/conformance-test.sh",
     "test:conformance:ci": "./scripts/conformance-test.sh --ci",
     "generate:registry": "node scripts/generate-server-json.mjs",
+    "generate:manifests": "node scripts/generate-manifests.mjs",
     "check:registry": "node scripts/generate-server-json.mjs --check",
     "sync:registry-tools": "node scripts/sync-registry-tools.mjs",
     "check:registry-tools": "node scripts/sync-registry-tools.mjs --check",
@@ -30,6 +32,7 @@
     "check:doc-tool-counts": "node scripts/check-doc-tool-counts.mjs"
   },
   "devDependencies": {
+    "@cesteral/contract-hash": "workspace:*",
     "@modelcontextprotocol/conformance": "^0.1.15",
     "@modelcontextprotocol/sdk": "1.27.1",
     "@types/node": "^20.17.6",
@@ -42,7 +45,8 @@
     "turbo": "^2.3.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.2",
-    "vitest": "^1.6.0"
+    "vitest": "^1.6.0",
+    "zod": "3.25.76"
   },
   "packageManager": "pnpm@8.15.0",
   "workspaces": [
