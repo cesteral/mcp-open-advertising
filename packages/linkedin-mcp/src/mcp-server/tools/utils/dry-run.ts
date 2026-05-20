@@ -1,0 +1,174 @@
+// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
+// See LICENSE.md in the project root for full license terms.
+
+/**
+ * Dry-run helpers for the LinkedIn `update_entity` tool. R3-U3 wiring.
+ *
+ * LinkedIn exposes NO native validate / preview / draft mode for entity
+ * mutations — `/v2/adCampaigns/{urn}` is a plain partial-update endpoint. So
+ * both axes here are SYMBOLIC:
+ *
+ * - **Validation** runs a small set of business rules (status enum, budget
+ *   non-negativity) against the requested patch. `validationSource: "symbolic"`.
+ * - **Expected post-state** reads the current entity through the read partner
+ *   and shallow-merges the patch (LinkedIn `$set` partial-update replaces
+ *   provided fields), then normalizes.
+ *   `expectedStateSource: "server_symbolic_apply"`.
+ */
+
+import { assertGovernedDryRunResult } from "@cesteral/shared";
+import type {
+  DispatchedCapability,
+  DryRunResult,
+  DryRunValidationError,
+  NormalizedEntitySnapshot,
+  RequestContext,
+} from "@cesteral/shared";
+import {
+  buildLinkedInSnapshot,
+  ENTITY_KIND_MAP,
+  type LinkedInServiceLike,
+} from "./capture-snapshot.js";
+
+export type { LinkedInServiceLike };
+
+const VALID_STATUSES = [
+  "ACTIVE",
+  "PAUSED",
+  "ARCHIVED",
+  "COMPLETED",
+  "CANCELED",
+  "DRAFT",
+  "PENDING_DELETION",
+  "REMOVED",
+];
+
+/** Symbolic validation of the requested patch. Pure (no I/O). */
+function symbolicValidate(data: Record<string, unknown>): DryRunValidationError[] {
+  const errors: DryRunValidationError[] = [];
+
+  if ("status" in data) {
+    const status = data.status;
+    if (typeof status !== "string" || !VALID_STATUSES.includes(status)) {
+      errors.push({
+        code: "INVALID_STATUS",
+        message: `status must be one of ${VALID_STATUSES.join(", ")} — got ${String(status)}`,
+        field: "data.status",
+      });
+    }
+  }
+
+  for (const key of ["dailyBudget", "totalBudget"] as const) {
+    if (key in data && data[key] != null) {
+      const budget = data[key];
+      const raw =
+        typeof budget === "object"
+          ? (budget as Record<string, unknown>).amount
+          : budget;
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        errors.push({
+          code: "INVALID_BUDGET",
+          message: `${key}.amount must be a non-negative number (major-units decimal string)`,
+          field: `data.${key}`,
+        });
+      }
+    }
+  }
+
+  return errors;
+}
+
+/**
+ * Symbolic apply: shallow-merge `data` into `preState`, then normalize. Pure
+ * (no I/O). Used by the testkit's `assertContract` against fixture pairs and
+ * mirrors what the dry-run handler does in-tool.
+ */
+export function applyLinkedInPatch(
+  entityType: string,
+  entityUrn: string,
+  preState: Record<string, unknown>,
+  data: Record<string, unknown>
+): NormalizedEntitySnapshot | undefined {
+  const snapshot = buildLinkedInSnapshot(entityType, entityUrn, preState, data);
+  return snapshot ?? undefined;
+}
+
+/**
+ * Resolve the concrete `(operation, entityKind)` a `linkedin_update_entity`
+ * call dispatches to, from its `data` payload. The tool is a multi-operation
+ * dispatcher; governance requires every response to name the capability the
+ * call exercised. Pure (no I/O).
+ */
+export function resolveLinkedInDispatchedCapability(
+  entityType: string,
+  data: Record<string, unknown>
+): DispatchedCapability {
+  const status = typeof data.status === "string" ? data.status : undefined;
+  let operation: string;
+  if (status === "ACTIVE") {
+    operation = "resume";
+  } else if (status === "PAUSED") {
+    operation = "pause";
+  } else if (status) {
+    // ARCHIVED and any other status transition.
+    operation = "update_status";
+  } else if ("dailyBudget" in data || "totalBudget" in data) {
+    operation = "update_budget";
+  } else {
+    operation = "update";
+  }
+  return {
+    operation,
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? entityType ?? "unknown",
+  };
+}
+
+export interface LinkedInDryRunArgs {
+  entityType: string;
+  entityUrn: string;
+  data: Record<string, unknown>;
+}
+
+export async function runLinkedInUpdateDryRun(
+  input: LinkedInDryRunArgs,
+  service: LinkedInServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(input.data);
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  // A read failure propagates: a governed dry-run that cannot simulate must
+  // fail the call (see assertGovernedDryRunResult below), not swallow the
+  // error and return an incomplete payload the governance layer would reject.
+  if (ENTITY_KIND_MAP[input.entityType] && service.getEntity) {
+    const current = (await service.getEntity(input.entityType, input.entityUrn, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (current && typeof current === "object") {
+      const snapshot = buildLinkedInSnapshot(
+        input.entityType,
+        input.entityUrn,
+        current,
+        input.data
+      );
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "linkedin_update_entity"
+  );
+}
