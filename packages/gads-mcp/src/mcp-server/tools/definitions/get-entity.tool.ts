@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "gads_get_entity";
 const TOOL_TITLE = "Get Google Ads Entity";
@@ -83,6 +83,20 @@ export const getEntityTool = {
     openWorldHint: false,
     destructiveHint: false,
     idempotentHint: true,
+    cesteral: {
+      kind: "read",
+      platform: "google_ads",
+      contractPlatformSlug: "google_ads",
+      contractToolSlug: "get_entity",
+      // Mirror `gads_update_entity`'s governed entity coverage so a write tool
+      // declaring this as its read partner can capture pre/post snapshots for
+      // any entity the writer can mutate. `ad` / `keyword` / `asset` are out of
+      // governed scope (see the write tool) and intentionally omitted.
+      entityKinds: ["campaign", "ad_group", "campaign_budget"],
+      entityIdArgs: ["customerId", "entityId"],
+      schemaVersion: 1,
+      contractId: "google_ads.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {

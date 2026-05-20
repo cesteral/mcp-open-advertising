@@ -14,11 +14,18 @@
  * - **Expected post-state** is produced by reading the current entity through
  *   the existing `metaService.getEntity` path and applying the requested
  *   field changes in memory. We only normalize the canonical shape for the
- *   handful of fields PR-C and round-1 govern (status, daily_budget,
- *   lifetime_budget, name). Anything else returns `expectedStateSource: "none"`.
+ *   handful of fields round-1 governs (status, daily_budget, lifetime_budget,
+ *   name).
+ *
+ * A governed dry-run must never emit a `"none"` source: when validation or
+ * expected-state production cannot complete (read-partner failure, entity
+ * outside canonical scope), `assertGovernedDryRunResult` fails the call
+ * instead — see `@cesteral/shared`.
  */
 
+import { assertGovernedDryRunResult } from "@cesteral/shared";
 import type {
+  DispatchedCapability,
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
@@ -74,6 +81,36 @@ export function applyMetaPatch(
   return snapshot ?? undefined;
 }
 
+/**
+ * Resolve the concrete `(operation, entityKind)` a `meta_update_entity` call
+ * dispatches to, from its `data` payload. The tool is a multi-operation
+ * dispatcher; governance requires every response to name the capability the
+ * call exercised. Pure (no I/O).
+ */
+export function resolveMetaDispatchedCapability(
+  entityType: string | undefined,
+  data: Record<string, unknown>
+): DispatchedCapability {
+  const status = typeof data.status === "string" ? data.status : undefined;
+  let operation: string;
+  if (status === "PAUSED") {
+    operation = "pause";
+  } else if (status === "ACTIVE") {
+    operation = "resume";
+  } else if (status) {
+    // ARCHIVED / DELETED and any other status transition.
+    operation = "update_status";
+  } else if ("daily_budget" in data || "lifetime_budget" in data) {
+    operation = "update_budget";
+  } else {
+    operation = "update";
+  }
+  return {
+    operation,
+    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || entityType || "unknown",
+  };
+}
+
 export interface MetaDryRunArgs {
   entityType: string | undefined;
   entityId: string;
@@ -90,32 +127,34 @@ export async function runMetaUpdateDryRun(
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
 
+  // Expected post-state via symbolic apply over the read partner. A read
+  // failure propagates: a governed dry-run that cannot simulate must fail the
+  // call (see assertGovernedDryRunResult below), not swallow the error and
+  // return an incomplete payload the governance layer would reject.
   if (input.entityType && ENTITY_KIND_MAP[input.entityType] && metaService.getEntity) {
-    try {
-      const current = (await metaService.getEntity(
-        input.entityType,
-        input.entityId,
-        undefined,
-        context
-      )) as Record<string, unknown> | undefined;
-      if (current && typeof current === "object") {
-        const snapshot = buildMetaSnapshot(input.entityType, input.entityId, current, input.data);
-        if (snapshot) {
-          expectedPostState = snapshot;
-          expectedStateSource = "server_symbolic_apply";
-        }
+    const current = (await metaService.getEntity(
+      input.entityType,
+      input.entityId,
+      undefined,
+      context
+    )) as Record<string, unknown> | undefined;
+    if (current && typeof current === "object") {
+      const snapshot = buildMetaSnapshot(input.entityType, input.entityId, current, input.data);
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
       }
-    } catch {
-      // Symbolic apply is best-effort; if the read fails we leave
-      // expectedStateSource: "none". Validation result is still meaningful.
     }
   }
 
-  return {
-    wouldSucceed: validationErrors.length === 0,
-    validationErrors,
-    validationSource: "symbolic",
-    expectedStateSource,
-    ...(expectedPostState ? { expectedPostState } : {}),
-  };
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "meta_update_entity"
+  );
 }

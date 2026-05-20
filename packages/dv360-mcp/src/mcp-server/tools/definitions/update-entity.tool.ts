@@ -15,9 +15,13 @@ import {
   findMatchingExample,
 } from "../utils/entity-examples.js";
 import { addIdValidationIssues, mergeIdsIntoData } from "../utils/parent-id-validation.js";
-import { runDv360UpdateDryRun } from "../utils/dry-run.js";
+import { runDv360UpdateDryRun, resolveDv360DispatchedCapability } from "../utils/dry-run.js";
 import { snapshotFromDv360Entity, captureDv360Snapshot } from "../utils/capture-snapshot.js";
-import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
@@ -84,6 +88,9 @@ export const UpdateEntityOutputSchema = z.object({
   after: NormalizedEntitySnapshotSchema.optional().describe(
     "Post-write canonical snapshot of the entity. Captured by normalizing the patched resource that the DV360 PATCH call returns. Undefined when the entity type is out of canonical scope."
   ),
+  dispatchedCapability: DispatchedCapabilitySchema.describe(
+    "The concrete (operation, entityKind) this call resolved to, derived from the `data` + `updateMask` payload. Present on every response — dry-run and real write alike."
+  ),
 });
 
 type UpdateEntityInput = z.infer<typeof UpdateEntityInputSchema>;
@@ -104,6 +111,13 @@ export async function updateEntityLogic(
 
   const { dv360Service } = resolveSessionServices(sdkContext);
   const entityIds = extractEntityIds(validatedInput, validatedInput.entityType);
+
+  // The (operation, entityKind) this call resolves to — derived from the
+  // `data` payload. Required on every governed response.
+  const dispatchedCapability = resolveDv360DispatchedCapability(
+    validatedInput.entityType,
+    mergedData
+  );
 
   if (validatedInput.dry_run === true) {
     const dryRun = await runDv360UpdateDryRun(
@@ -143,6 +157,7 @@ export async function updateEntityLogic(
       previousValues: {},
       timestamp: new Date().toISOString(),
       dryRun,
+      dispatchedCapability,
     };
   }
 
@@ -196,6 +211,7 @@ export async function updateEntityLogic(
       timestamp: new Date().toISOString(),
       ...(before ? { before } : {}),
       ...(after ? { after } : {}),
+      dispatchedCapability,
     };
   } catch (error: any) {
     // Enhance error message with example suggestions
@@ -284,6 +300,8 @@ export const updateEntityTool = {
     cesteral: {
       kind: "write",
       platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "update_entity",
       // `dv360_update_entity` dispatches to budget, status, and arbitrary
       // field updates via the `data` + `updateMask` payload, so it advertises
       // every canonical op it can express.
@@ -309,6 +327,9 @@ export const updateEntityTool = {
       // the patched resource returned by the PATCH call into `after`.
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,
+      // Contract promises the governance admission layer requires.
+      requiresValidation: true,
+      requiresSimulation: true,
     } satisfies CesteralWriteToolAnnotations,
   },
   logic: updateEntityLogic,

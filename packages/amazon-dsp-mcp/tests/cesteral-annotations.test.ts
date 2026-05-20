@@ -5,30 +5,35 @@ import { describe, expect, it } from "vitest";
 import { updateEntityTool } from "../src/mcp-server/tools/definitions/update-entity.tool.js";
 import { getEntityTool } from "../src/mcp-server/tools/definitions/get-entity.tool.js";
 
-describe("meta-mcp cesteral.* annotations (round 1)", () => {
-  it("annotates meta_update_entity as a write contract with the canonical fields", () => {
+describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
+  it("annotates amazon_dsp_update_entity as a write contract with the canonical fields", () => {
     const cesteral = updateEntityTool.annotations?.cesteral;
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("write");
-    expect(cesteral!.platform).toBe("meta_ads");
-    expect(cesteral!.contractPlatformSlug).toBe("meta");
+    expect(cesteral!.platform).toBe("amazon_dsp");
+    expect(cesteral!.contractPlatformSlug).toBe("amazon_dsp");
     expect(cesteral!.contractToolSlug).toBe("update_entity");
-    expect(cesteral!.contractId).toBe("meta.update_entity.v1");
+    expect(cesteral!.contractId).toBe("amazon_dsp.update_entity.v1");
     expect(cesteral!.contractId).toBe(
       `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`
     );
     expect(cesteral!.schemaVersion).toBe(1);
 
     if (cesteral!.kind !== "write") throw new Error("expected write kind");
-    // Multi-operation dispatcher: declares every canonical op the tool can express.
+    // Multi-operation dispatcher: every value is in the contract-schema
+    // writeOperationSchema enum.
     expect(cesteral.operation).toEqual(
       expect.arrayContaining(["update_budget", "pause", "resume", "update_status", "update"])
     );
-    expect(cesteral.entityKinds).toEqual(["campaign", "ad_set", "ad"]);
+    // order (campaign-equivalent) + line_item (ad-group-equivalent).
+    expect(cesteral.entityKinds).toEqual(["order", "line_item"]);
     expect(cesteral.entityIdArgs).toEqual(["entityId"]);
-    expect(cesteral.readPartner.toolName).toBe("meta_get_entity");
-    expect(cesteral.readPartner.argMap).toEqual({ entityId: "entityId" });
-    // PR-C wires dry_run; PR-D wires before/after via the read partner.
+    expect(cesteral.readPartner.toolName).toBe("amazon_dsp_get_entity");
+    expect(cesteral.readPartner.argMap).toEqual({
+      profileId: "profileId",
+      entityId: "entityId",
+    });
+    // R2-U4: symbolic-apply dry-run + before/after capture.
     expect(cesteral.supportsDryRun).toBe(true);
     expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);
     // Contract promises required by the governance admission layer.
@@ -36,18 +41,17 @@ describe("meta-mcp cesteral.* annotations (round 1)", () => {
     expect(cesteral.requiresSimulation).toBe(true);
   });
 
-  it("annotates meta_get_entity as a read contract with no operation/readPartner", () => {
+  it("annotates amazon_dsp_get_entity as a read contract with no operation/readPartner", () => {
     const cesteral = getEntityTool.annotations?.cesteral;
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("read");
-    expect(cesteral!.platform).toBe("meta_ads");
-    expect(cesteral!.contractPlatformSlug).toBe("meta");
+    expect(cesteral!.platform).toBe("amazon_dsp");
+    expect(cesteral!.contractPlatformSlug).toBe("amazon_dsp");
     expect(cesteral!.contractToolSlug).toBe("get_entity");
-    expect(cesteral!.contractId).toBe("meta.get_entity.v1");
+    expect(cesteral!.contractId).toBe("amazon_dsp.get_entity.v1");
     expect(cesteral!.schemaVersion).toBe(1);
-    expect(cesteral!.entityKinds).toEqual(["campaign", "ad_set", "ad"]);
+    expect(cesteral!.entityKinds).toEqual(["order", "line_item"]);
     expect(cesteral!.entityIdArgs).toEqual(["entityId"]);
-    // Read kind has no operation/readPartner (TypeScript discriminator + runtime guard).
     expect(cesteral as unknown as { operation?: unknown }).not.toHaveProperty("operation");
     expect(cesteral as unknown as { readPartner?: unknown }).not.toHaveProperty("readPartner");
   });
@@ -57,5 +61,12 @@ describe("meta-mcp cesteral.* annotations (round 1)", () => {
     if (!writeCesteral || writeCesteral.kind !== "write")
       throw new Error("expected write annotations");
     expect(writeCesteral.readPartner.toolName).toBe(getEntityTool.name);
+  });
+
+  it("declares dryRun / before / after on the write tool's outputSchema", () => {
+    const shape = (updateEntityTool.outputSchema as { shape: Record<string, unknown> }).shape;
+    expect(shape).toHaveProperty("dryRun");
+    expect(shape).toHaveProperty("before");
+    expect(shape).toHaveProperty("after");
   });
 });

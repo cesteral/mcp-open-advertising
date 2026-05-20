@@ -140,6 +140,8 @@ export const getEntityTool = {
     cesteral: {
       kind: "read",
       platform: "dv360",
+      contractPlatformSlug: "dv360",
+      contractToolSlug: "get_entity",
       // Mirror `dv360_update_entity`'s round-1 entity coverage so the writer
       // can resolve this as its read partner for pre/post snapshot capture.
       entityKinds: ["campaign", "insertion_order", "line_item"],

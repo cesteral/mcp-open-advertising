@@ -14,16 +14,23 @@
  * - **Expected post-state** reads the current entity through `dv360Service.getEntity`
  *   and overlays the patch fields named in `updateMask`, producing a
  *   {@link NormalizedEntitySnapshot} for `lineItem`, `insertionOrder`, and
- *   `campaign`. Other entity types return `expectedStateSource: "none"`.
+ *   `campaign`.
+ *
+ * A governed dry-run must never emit a `"none"` source: when validation or
+ * expected-state production cannot complete (read-partner failure, entity
+ * outside canonical scope), `assertGovernedDryRunResult` fails the call
+ * instead — see `@cesteral/shared`.
  */
 
+import { assertGovernedDryRunResult } from "@cesteral/shared";
 import type {
+  DispatchedCapability,
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
   RequestContext,
 } from "@cesteral/shared";
-import { buildDv360Snapshot, type Dv360ServiceLike } from "./capture-snapshot.js";
+import { buildDv360Snapshot, ENTITY_KIND_MAP, type Dv360ServiceLike } from "./capture-snapshot.js";
 
 export type { Dv360ServiceLike };
 
@@ -85,6 +92,36 @@ export function applyDv360Patch(
   return snapshot ?? undefined;
 }
 
+/**
+ * Resolve the concrete `(operation, entityKind)` a `dv360_update_entity` call
+ * dispatches to, from its `data` payload. The tool is a multi-operation
+ * dispatcher; governance requires every response to name the capability the
+ * call exercised. Pure (no I/O).
+ */
+export function resolveDv360DispatchedCapability(
+  entityType: string,
+  data: Record<string, unknown>
+): DispatchedCapability {
+  const status = typeof data.entityStatus === "string" ? data.entityStatus : undefined;
+  let operation: string;
+  if (status === "ENTITY_STATUS_ACTIVE") {
+    operation = "resume";
+  } else if (status === "ENTITY_STATUS_PAUSED") {
+    operation = "pause";
+  } else if (status) {
+    // ARCHIVED / DRAFT / SCHEDULED_FOR_DELETION and any other transition.
+    operation = "update_status";
+  } else if ("budget" in data) {
+    operation = "update_budget";
+  } else {
+    operation = "update";
+  }
+  return {
+    operation,
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] || entityType || "unknown",
+  };
+}
+
 export interface Dv360DryRunArgs {
   entityType: string;
   ids: Record<string, string>;
@@ -106,16 +143,14 @@ export async function runDv360UpdateDryRun(
   let validationErrors: DryRunValidationError[] = [];
   let current: Record<string, any> | undefined;
 
+  // A read failure propagates: a governed dry-run that cannot simulate must
+  // fail the call (see assertGovernedDryRunResult below), not swallow the
+  // error and return an incomplete payload the governance layer would reject.
   if (dv360Service.getEntity) {
-    try {
-      current = (await dv360Service.getEntity(input.entityType, input.ids, context)) as Record<
-        string,
-        any
-      >;
-    } catch {
-      // Read failed — we can still validate the patch standalone, but we
-      // cannot produce an expectedPostState.
-    }
+    current = (await dv360Service.getEntity(input.entityType, input.ids, context)) as Record<
+      string,
+      any
+    >;
   }
 
   // Symbolic apply: overlay each field named in updateMask onto a clone of
@@ -147,11 +182,14 @@ export async function runDv360UpdateDryRun(
     }
   }
 
-  return {
-    wouldSucceed: validationErrors.length === 0,
-    validationErrors,
-    validationSource: "symbolic",
-    expectedStateSource,
-    ...(expectedPostState ? { expectedPostState } : {}),
-  };
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "dv360_update_entity"
+  );
 }

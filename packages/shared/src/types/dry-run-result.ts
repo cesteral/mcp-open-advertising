@@ -32,3 +32,23 @@ export interface DryRunResult {
   /** Optional — present only when `expectedStateSource !== "none"`. */
   expectedPostState?: NormalizedEntitySnapshot;
 }
+
+/**
+ * The concrete `(operation, entityKind)` a single governed write call
+ * resolved to. A governed write tool is a multi-operation dispatcher —
+ * `dispatchedCapability` reports which capability a given call actually
+ * exercised, derived from the call's input args.
+ *
+ * Required on every governed structured-content response in BOTH dry-run and
+ * execute modes: the governance layer matches it against the tool's admitted
+ * capability set on every call.
+ */
+export interface DispatchedCapability {
+  /**
+   * Canonical write operation the call dispatched to — one of the values in
+   * the {@link CesteralWriteToolAnnotations.operation} union.
+   */
+  operation: string;
+  /** Canonical entity kind the call targeted (snake_case `CanonicalEntityKind`). */
+  canonicalEntityKind: string;
+}

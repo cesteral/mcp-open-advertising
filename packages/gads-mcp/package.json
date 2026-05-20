@@ -1,7 +1,7 @@
 {
   "name": "@cesteral/gads-mcp",
   "mcpName": "io.github.cesteral/gads-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Google Ads MCP Server - Campaign entity management and reporting via Google Ads REST API v23",
   "license": "Apache-2.0",
   "repository": {
@@ -25,6 +25,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./testkit": {
+      "types": "./dist/testkit/index.d.ts",
+      "import": "./dist/testkit/index.js"
+    }
+  },
   "bin": {
     "gads-mcp": "./dist/index.js"
   },

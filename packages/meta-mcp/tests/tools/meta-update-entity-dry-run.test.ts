@@ -64,6 +64,8 @@ describe("meta_update_entity dry_run", () => {
       success: true,
       entityId: "999",
       timestamp: new Date().toISOString(),
+      // dispatchedCapability is required on every response; dryRun is optional.
+      dispatchedCapability: { operation: "update", canonicalEntityKind: "campaign" },
     });
     expect(ok.success).toBe(true);
   });
@@ -126,22 +128,24 @@ describe("meta_update_entity dry_run", () => {
     expect(result.success).toBe(false);
   });
 
-  it("falls back to expectedStateSource: 'none' when read partner fails", async () => {
+  it("fails the call when the read partner cannot resolve the entity", async () => {
+    // The tool declares requiresSimulation:true — a dry-run that cannot
+    // produce an expected post-state must fail the call, not return an
+    // expectedStateSource:"none" payload the governance layer would reject.
     metaService.getEntity.mockRejectedValueOnce(new Error("not found"));
-    const result = await updateEntityLogic(
-      {
-        entityType: "campaign" as any,
-        entityId: "999",
-        data: { status: "PAUSED" },
-        dry_run: true,
-      },
-      ctx(),
-      { sessionId: "s" } as any
-    );
-    expect(result.dryRun!.expectedStateSource).toBe("none");
-    expect(result.dryRun!.expectedPostState).toBeUndefined();
-    expect(result.dryRun!.validationSource).toBe("symbolic");
-    expect(result.dryRun!.wouldSucceed).toBe(true);
+    await expect(
+      updateEntityLogic(
+        {
+          entityType: "campaign" as any,
+          entityId: "999",
+          data: { status: "PAUSED" },
+          dry_run: true,
+        },
+        ctx(),
+        { sessionId: "s" } as any
+      )
+    ).rejects.toThrow(/not found/);
+    expect(metaService.updateEntity).not.toHaveBeenCalled();
   });
 
   it("default (dry_run unset) preserves existing write behavior", async () => {

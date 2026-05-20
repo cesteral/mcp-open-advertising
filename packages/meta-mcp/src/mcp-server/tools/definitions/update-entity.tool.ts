@@ -4,9 +4,13 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum } from "../utils/entity-mapping.js";
-import { runMetaUpdateDryRun } from "../utils/dry-run.js";
+import { runMetaUpdateDryRun, resolveMetaDispatchedCapability } from "../utils/dry-run.js";
 import { captureMetaSnapshot } from "../utils/capture-snapshot.js";
-import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
 import type {
   RequestContext,
   McpTextContent,
@@ -64,6 +68,9 @@ export const UpdateEntityOutputSchema = z
     after: NormalizedEntitySnapshotSchema.optional().describe(
       "Post-write canonical snapshot of the entity. Captured by re-reading after the write because Meta's update endpoint returns only `{ success: true }`. Undefined when the post-read fails or the entity type is out of canonical scope."
     ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to, derived from the `data` payload. Present on every response — dry-run and real write alike."
+    ),
   })
   .describe("Entity update result");
 
@@ -77,6 +84,10 @@ export async function updateEntityLogic(
 ): Promise<UpdateEntityOutput> {
   const { metaService } = resolveSessionServices(sdkContext);
 
+  // The (operation, entityKind) this call resolves to — derived from the
+  // `data` payload. Required on every governed response.
+  const dispatchedCapability = resolveMetaDispatchedCapability(input.entityType, input.data);
+
   if (input.dry_run === true) {
     const dryRun = await runMetaUpdateDryRun(
       { entityType: input.entityType, entityId: input.entityId, data: input.data },
@@ -89,6 +100,7 @@ export async function updateEntityLogic(
       entityType: input.entityType,
       timestamp: new Date().toISOString(),
       dryRun,
+      dispatchedCapability,
     };
   }
 
@@ -114,6 +126,7 @@ export async function updateEntityLogic(
     timestamp: new Date().toISOString(),
     ...(before ? { before } : {}),
     ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
@@ -142,6 +155,8 @@ export const updateEntityTool = {
     cesteral: {
       kind: "write",
       platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "update_entity",
       // `meta_update_entity` is a multi-operation dispatcher: callers update
       // budget, status, schedule, targeting, etc. via the `data` payload, so
       // the contract advertises every canonical op it can express.
@@ -160,6 +175,11 @@ export const updateEntityTool = {
       // `{ success: true }`).
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,
+      // Contract promises the governance admission layer requires: every
+      // governed call validates the mutation and produces an expected
+      // post-state (never `validationSource`/`expectedStateSource` "none").
+      requiresValidation: true,
+      requiresSimulation: true,
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
