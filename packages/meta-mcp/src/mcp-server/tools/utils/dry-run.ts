@@ -14,8 +14,13 @@
  * - **Expected post-state** is produced by reading the current entity through
  *   the existing `metaService.getEntity` path and applying the requested
  *   field changes in memory. We only normalize the canonical shape for the
- *   handful of fields PR-C and round-1 govern (status, daily_budget,
- *   lifetime_budget, name). Anything else returns `expectedStateSource: "none"`.
+ *   handful of fields round-1 governs (status, daily_budget, lifetime_budget,
+ *   name).
+ *
+ * A governed dry-run must never emit a `"none"` source: when validation or
+ * expected-state production cannot complete (read-partner failure, entity
+ * outside canonical scope), `assertGovernedDryRunResult` fails the call
+ * instead — see `@cesteral/shared`.
  */
 
 import { assertGovernedDryRunResult } from "@cesteral/shared";

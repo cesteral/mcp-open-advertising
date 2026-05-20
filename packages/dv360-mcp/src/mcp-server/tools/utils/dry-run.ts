@@ -14,7 +14,12 @@
  * - **Expected post-state** reads the current entity through `dv360Service.getEntity`
  *   and overlays the patch fields named in `updateMask`, producing a
  *   {@link NormalizedEntitySnapshot} for `lineItem`, `insertionOrder`, and
- *   `campaign`. Other entity types return `expectedStateSource: "none"`.
+ *   `campaign`.
+ *
+ * A governed dry-run must never emit a `"none"` source: when validation or
+ * expected-state production cannot complete (read-partner failure, entity
+ * outside canonical scope), `assertGovernedDryRunResult` fails the call
+ * instead — see `@cesteral/shared`.
  */
 
 import { assertGovernedDryRunResult } from "@cesteral/shared";
