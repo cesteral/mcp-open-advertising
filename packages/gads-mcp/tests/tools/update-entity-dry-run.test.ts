@@ -197,9 +197,9 @@ describe("resolveGAdsDispatchedCapability", () => {
   });
 
   it("maps a campaignBudget amountMicros change to update_budget", () => {
-    expect(
-      resolveGAdsDispatchedCapability("campaignBudget", { amountMicros: "75000000" })
-    ).toEqual({ operation: "update_budget", canonicalEntityKind: "campaign_budget" });
+    expect(resolveGAdsDispatchedCapability("campaignBudget", { amountMicros: "75000000" })).toEqual(
+      { operation: "update_budget", canonicalEntityKind: "campaign_budget" }
+    );
   });
 
   it("falls back to update for a non-status, non-budget patch", () => {

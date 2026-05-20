@@ -16,11 +16,7 @@
  */
 
 import { applyAmazonDspPatch } from "../mcp-server/tools/utils/dry-run.js";
-import type {
-  AmazonDspEntityKindKey,
-  AmazonDspOperation,
-  AmazonDspWriteFixture,
-} from "./types.js";
+import type { AmazonDspEntityKindKey, AmazonDspOperation, AmazonDspWriteFixture } from "./types.js";
 import { allFixtures } from "./fixtures/index.js";
 
 export type {

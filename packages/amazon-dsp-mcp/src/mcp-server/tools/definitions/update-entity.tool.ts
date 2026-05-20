@@ -81,10 +81,7 @@ export async function updateEntityLogic(
 
   // The (operation, entityKind) this call resolves to — derived from the
   // `data` payload. Required on every governed response.
-  const dispatchedCapability = resolveAmazonDspDispatchedCapability(
-    input.entityType,
-    input.data
-  );
+  const dispatchedCapability = resolveAmazonDspDispatchedCapability(input.entityType, input.data);
 
   if (input.dry_run === true) {
     const dryRun = await runAmazonDspUpdateDryRun(
@@ -147,8 +144,7 @@ export async function updateEntityLogic(
 
 export function updateEntityResponseFormatter(result: UpdateEntityOutput): McpTextContent[] {
   if (result.dryRun) {
-    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } =
-      result.dryRun;
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
     const verdict = wouldSucceed ? "would succeed" : "would FAIL";
     const errorLines = validationErrors.length
       ? "\n" + validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n")

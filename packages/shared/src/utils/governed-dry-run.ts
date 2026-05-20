@@ -23,10 +23,7 @@ import type { DryRunResult } from "../types/dry-run-result.js";
  *
  * Call this on the result of every governed `dry_run` path.
  */
-export function assertGovernedDryRunResult(
-  result: DryRunResult,
-  toolLabel: string
-): DryRunResult {
+export function assertGovernedDryRunResult(result: DryRunResult, toolLabel: string): DryRunResult {
   if (result.validationSource === "none") {
     throw new McpError(
       JsonRpcErrorCode.InternalError,

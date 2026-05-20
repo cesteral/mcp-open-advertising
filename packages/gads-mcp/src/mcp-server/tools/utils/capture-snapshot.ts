@@ -113,9 +113,7 @@ export function buildGAdsSnapshot(
   // Budget lives only on the campaignBudget entity (`amountMicros`, a daily
   // budget). campaign / adGroup rows carry no budget field.
   const dailyMinor =
-    entityKind === "campaign_budget"
-      ? microsToMinor(r.amountMicros ?? r.amount_micros)
-      : undefined;
+    entityKind === "campaign_budget" ? microsToMinor(r.amountMicros ?? r.amount_micros) : undefined;
 
   const startAt = r.startDate ?? r.start_date;
   const endAt = r.endDate ?? r.end_date;

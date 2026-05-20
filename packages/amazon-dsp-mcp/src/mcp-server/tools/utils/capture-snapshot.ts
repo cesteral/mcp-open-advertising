@@ -161,10 +161,7 @@ export function snapshotFromAmazonDspEntity(
   entity: Record<string, unknown>
 ): NormalizedEntitySnapshot | undefined {
   if (!ENTITY_KIND_MAP[entityType]) return undefined;
-  if (
-    !entity ||
-    (entity.state == null && entity.name == null && entity.budget == null)
-  ) {
+  if (!entity || (entity.state == null && entity.name == null && entity.budget == null)) {
     return undefined;
   }
   const snapshot = buildAmazonDspSnapshot(entityType, entityId, entity, {});

@@ -169,7 +169,9 @@ describe("resolveAmazonDspDispatchedCapability", () => {
       canonicalEntityKind: "order",
     });
     expect(
-      resolveAmazonDspDispatchedCapability("adGroup", { budget: { budgetType: "DAILY", budget: 100 } })
+      resolveAmazonDspDispatchedCapability("adGroup", {
+        budget: { budgetType: "DAILY", budget: 100 },
+      })
     ).toEqual({ operation: "update_budget", canonicalEntityKind: "line_item" });
   });
 

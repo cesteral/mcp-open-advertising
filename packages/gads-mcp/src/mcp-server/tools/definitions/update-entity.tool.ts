@@ -151,8 +151,7 @@ export async function updateEntityLogic(
 
 export function updateEntityResponseFormatter(result: UpdateEntityOutput): McpTextContent[] {
   if (result.dryRun) {
-    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } =
-      result.dryRun;
+    const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;
     const verdict = wouldSucceed ? "would succeed" : "would FAIL";
     const errorLines = validationErrors.length
       ? "\n" + validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n")
