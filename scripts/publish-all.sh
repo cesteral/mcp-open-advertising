@@ -242,6 +242,16 @@ fi
 # --- Publish to MCP Registry ---
 # mcp-publisher resolves the npm tarball during publish, so we only reach
 # this step once every npm publish above either succeeded or was tolerable.
+#
+# Like the npm side, a "version already published" response is tolerable, not
+# a failure: only servers whose version changed have anything to publish, so a
+# routine release re-runs the whole loop and most servers are already live.
+# The MCP Registry returns HTTP 400 with `cannot publish duplicate version`
+# for that case — positively identify it (mirroring the npm conflict regex)
+# and continue. Every other non-zero exit (expired JWT, network, validation)
+# stays a hard failure. Without this, the first release after the initial
+# publish always exits non-zero on the unchanged servers — defeating the
+# documented idempotency of a re-run.
 MCP_REGISTRY_FAILURES=()
 
 if [ "$NPM_ONLY" = true ]; then
@@ -254,10 +264,15 @@ else
       echo "  (dry-run) cd packages/$server && mcp-publisher publish"
     else
       set +e
-      (cd "packages/$server" && mcp-publisher publish)
+      mcp_out=$(cd "packages/$server" && mcp-publisher publish 2>&1)
       mcp_exit=$?
       set -e
-      if [ "$mcp_exit" -ne 0 ]; then
+      echo "$mcp_out"
+      if [ "$mcp_exit" -eq 0 ]; then
+        : # published cleanly
+      elif grep -qF 'cannot publish duplicate version' <<<"$mcp_out"; then
+        log "  Note: @cesteral/$server already published at this version — continuing."
+      else
         echo "  FAIL @cesteral/$server: mcp-publisher exited $mcp_exit" >&2
         MCP_REGISTRY_FAILURES+=("@cesteral/$server")
       fi
