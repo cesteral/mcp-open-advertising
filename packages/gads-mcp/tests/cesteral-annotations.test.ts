@@ -11,7 +11,12 @@ describe("gads-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("write");
     expect(cesteral!.platform).toBe("google_ads");
-    expect(cesteral!.contractId).toBe("google-ads.update_entity.v1");
+    expect(cesteral!.contractPlatformSlug).toBe("google_ads");
+    expect(cesteral!.contractToolSlug).toBe("update_entity");
+    expect(cesteral!.contractId).toBe("google_ads.update_entity.v1");
+    expect(cesteral!.contractId).toBe(
+      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`
+    );
     expect(cesteral!.schemaVersion).toBe(1);
 
     if (cesteral!.kind !== "write") throw new Error("expected write kind");
@@ -32,6 +37,9 @@ describe("gads-mcp cesteral.* annotations (round 2)", () => {
     // R2-U3: native validateOnly dry-run + before/after capture.
     expect(cesteral.supportsDryRun).toBe(true);
     expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);
+    // Contract promises required by the governance admission layer.
+    expect(cesteral.requiresValidation).toBe(true);
+    expect(cesteral.requiresSimulation).toBe(true);
   });
 
   it("annotates gads_get_entity as a read contract with no operation/readPartner", () => {
@@ -39,7 +47,9 @@ describe("gads-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("read");
     expect(cesteral!.platform).toBe("google_ads");
-    expect(cesteral!.contractId).toBe("google-ads.get_entity.v1");
+    expect(cesteral!.contractPlatformSlug).toBe("google_ads");
+    expect(cesteral!.contractToolSlug).toBe("get_entity");
+    expect(cesteral!.contractId).toBe("google_ads.get_entity.v1");
     expect(cesteral!.schemaVersion).toBe(1);
     expect(cesteral!.entityKinds).toEqual(["campaign", "ad_group", "campaign_budget"]);
     expect(cesteral!.entityIdArgs).toEqual(["customerId", "entityId"]);

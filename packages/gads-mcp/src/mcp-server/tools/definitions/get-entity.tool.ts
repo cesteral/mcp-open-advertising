@@ -86,6 +86,8 @@ export const getEntityTool = {
     cesteral: {
       kind: "read",
       platform: "google_ads",
+      contractPlatformSlug: "google_ads",
+      contractToolSlug: "get_entity",
       // Mirror `gads_update_entity`'s governed entity coverage so a write tool
       // declaring this as its read partner can capture pre/post snapshots for
       // any entity the writer can mutate. `ad` / `keyword` / `asset` are out of
@@ -93,7 +95,7 @@ export const getEntityTool = {
       entityKinds: ["campaign", "ad_group", "campaign_budget"],
       entityIdArgs: ["customerId", "entityId"],
       schemaVersion: 1,
-      contractId: "google-ads.get_entity.v1",
+      contractId: "google_ads.get_entity.v1",
     } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [

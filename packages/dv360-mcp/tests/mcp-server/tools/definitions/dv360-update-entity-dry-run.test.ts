@@ -123,6 +123,8 @@ describe("dv360_update_entity dry_run", () => {
     const ok = UpdateEntityOutputSchema.safeParse({
       entity: {},
       timestamp: new Date().toISOString(),
+      // dispatchedCapability is required on every response; dryRun is optional.
+      dispatchedCapability: { operation: "update", canonicalEntityKind: "line_item" },
     });
     expect(ok.success).toBe(true);
   });

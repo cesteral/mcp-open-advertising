@@ -73,6 +73,8 @@ export const getEntityTool = {
     cesteral: {
       kind: "read",
       platform: "amazon_dsp",
+      contractPlatformSlug: "amazon_dsp",
+      contractToolSlug: "get_entity",
       // Mirror `amazon_dsp_update_entity`'s governed entity coverage so a
       // write tool declaring this as its read partner can capture pre/post
       // snapshots. Governed scope is order / lineItem; creative / target /
@@ -80,7 +82,7 @@ export const getEntityTool = {
       entityKinds: ["order", "line_item"],
       entityIdArgs: ["entityId"],
       schemaVersion: 1,
-      contractId: "amazon-dsp.get_entity.v1",
+      contractId: "amazon_dsp.get_entity.v1",
     } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [

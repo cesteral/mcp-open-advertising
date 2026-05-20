@@ -110,6 +110,8 @@ describe("meta_update_entity before/after capture (PR-D)", () => {
       success: true,
       entityId: "1",
       timestamp: new Date().toISOString(),
+      // dispatchedCapability is required on every response; before/after are optional.
+      dispatchedCapability: { operation: "update", canonicalEntityKind: "campaign" },
     });
     expect(ok.success).toBe(true);
   });

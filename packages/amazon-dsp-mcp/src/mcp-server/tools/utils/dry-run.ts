@@ -17,6 +17,7 @@
  */
 
 import type {
+  DispatchedCapability,
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
@@ -79,6 +80,36 @@ export function applyAmazonDspPatch(
 ): NormalizedEntitySnapshot | undefined {
   const snapshot = buildAmazonDspSnapshot(entityType, entityId, preState, data);
   return snapshot ?? undefined;
+}
+
+/**
+ * Resolve the concrete `(operation, entityKind)` an `amazon_dsp_update_entity`
+ * call dispatches to, from its `data` payload. The tool is a multi-operation
+ * dispatcher; governance requires every response to name the capability the
+ * call exercised. Pure (no I/O).
+ */
+export function resolveAmazonDspDispatchedCapability(
+  entityType: string,
+  data: Record<string, unknown>
+): DispatchedCapability {
+  const state = typeof data.state === "string" ? data.state : undefined;
+  let operation: string;
+  if (state === "ENABLED") {
+    operation = "resume";
+  } else if (state === "PAUSED") {
+    operation = "pause";
+  } else if (state) {
+    // ARCHIVED and any other state transition.
+    operation = "update_status";
+  } else if ("budget" in data) {
+    operation = "update_budget";
+  } else {
+    operation = "update";
+  }
+  return {
+    operation,
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] || entityType || "unknown",
+  };
 }
 
 export interface AmazonDspDryRunArgs {

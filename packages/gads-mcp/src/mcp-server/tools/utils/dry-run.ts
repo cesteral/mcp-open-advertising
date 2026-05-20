@@ -18,6 +18,7 @@
  */
 
 import type {
+  DispatchedCapability,
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
@@ -76,6 +77,37 @@ export function applyGAdsPatch(
   }
   const snapshot = buildGAdsSnapshot(entityType, customerId, entityId, applied);
   return snapshot ?? undefined;
+}
+
+/**
+ * Resolve the concrete `(operation, entityKind)` a `gads_update_entity` call
+ * dispatches to, from its `data` payload. The tool is a multi-operation
+ * dispatcher; governance requires every response to name the capability the
+ * call exercised. Pure (no I/O).
+ */
+export function resolveGAdsDispatchedCapability(
+  entityType: string,
+  data: Record<string, unknown>
+): DispatchedCapability {
+  const status = typeof data.status === "string" ? data.status : undefined;
+  let operation: string;
+  if (status === "ENABLED") {
+    operation = "resume";
+  } else if (status === "PAUSED") {
+    operation = "pause";
+  } else if (status) {
+    // REMOVED and any other status transition.
+    operation = "update_status";
+  } else if ("amountMicros" in data) {
+    // Budget lives on the campaignBudget entity (`amountMicros`).
+    operation = "update_budget";
+  } else {
+    operation = "update";
+  }
+  return {
+    operation,
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] || entityType || "unknown",
+  };
 }
 
 export interface GAdsDryRunArgs {

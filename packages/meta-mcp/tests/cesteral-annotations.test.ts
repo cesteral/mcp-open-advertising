@@ -11,7 +11,12 @@ describe("meta-mcp cesteral.* annotations (round 1)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("write");
     expect(cesteral!.platform).toBe("meta_ads");
+    expect(cesteral!.contractPlatformSlug).toBe("meta");
+    expect(cesteral!.contractToolSlug).toBe("update_entity");
     expect(cesteral!.contractId).toBe("meta.update_entity.v1");
+    expect(cesteral!.contractId).toBe(
+      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`
+    );
     expect(cesteral!.schemaVersion).toBe(1);
 
     if (cesteral!.kind !== "write") throw new Error("expected write kind");
@@ -26,6 +31,9 @@ describe("meta-mcp cesteral.* annotations (round 1)", () => {
     // PR-C wires dry_run; PR-D wires before/after via the read partner.
     expect(cesteral.supportsDryRun).toBe(true);
     expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);
+    // Contract promises required by the governance admission layer.
+    expect(cesteral.requiresValidation).toBe(true);
+    expect(cesteral.requiresSimulation).toBe(true);
   });
 
   it("annotates meta_get_entity as a read contract with no operation/readPartner", () => {
@@ -33,6 +41,8 @@ describe("meta-mcp cesteral.* annotations (round 1)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("read");
     expect(cesteral!.platform).toBe("meta_ads");
+    expect(cesteral!.contractPlatformSlug).toBe("meta");
+    expect(cesteral!.contractToolSlug).toBe("get_entity");
     expect(cesteral!.contractId).toBe("meta.get_entity.v1");
     expect(cesteral!.schemaVersion).toBe(1);
     expect(cesteral!.entityKinds).toEqual(["campaign", "ad_set", "ad"]);

@@ -4,12 +4,19 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type AmazonDspEntityType } from "../utils/entity-mapping.js";
-import { runAmazonDspUpdateDryRun } from "../utils/dry-run.js";
+import {
+  runAmazonDspUpdateDryRun,
+  resolveAmazonDspDispatchedCapability,
+} from "../utils/dry-run.js";
 import {
   captureAmazonDspSnapshot,
   snapshotFromAmazonDspEntity,
 } from "../utils/capture-snapshot.js";
-import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
 
@@ -56,6 +63,9 @@ export const UpdateEntityOutputSchema = z
     after: NormalizedEntitySnapshotSchema.optional().describe(
       "Post-write canonical snapshot of the entity, normalized from the entity the Amazon DSP PUT returns (re-read fallback). Undefined when the entity type is out of canonical scope or both reads fail."
     ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to, derived from the `data` payload. Present on every response — dry-run and real write alike."
+    ),
   })
   .describe("Entity update result");
 
@@ -69,6 +79,13 @@ export async function updateEntityLogic(
 ): Promise<UpdateEntityOutput> {
   const { amazonDspService } = resolveSessionServices(sdkContext);
 
+  // The (operation, entityKind) this call resolves to — derived from the
+  // `data` payload. Required on every governed response.
+  const dispatchedCapability = resolveAmazonDspDispatchedCapability(
+    input.entityType,
+    input.data
+  );
+
   if (input.dry_run === true) {
     const dryRun = await runAmazonDspUpdateDryRun(
       { entityType: input.entityType, entityId: input.entityId, data: input.data },
@@ -81,6 +98,7 @@ export async function updateEntityLogic(
       updated: false,
       timestamp: new Date().toISOString(),
       dryRun,
+      dispatchedCapability,
     };
   }
 
@@ -123,6 +141,7 @@ export async function updateEntityLogic(
     timestamp: new Date().toISOString(),
     ...(before ? { before } : {}),
     ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
@@ -163,6 +182,8 @@ export const updateEntityTool = {
     cesteral: {
       kind: "write",
       platform: "amazon_dsp",
+      contractPlatformSlug: "amazon_dsp",
+      contractToolSlug: "update_entity",
       // `amazon_dsp_update_entity` is a multi-operation dispatcher: callers
       // change status, budget, name, schedule, etc. via the `data` payload,
       // so the contract advertises every canonical op it can express.
@@ -178,7 +199,7 @@ export const updateEntityTool = {
         argMap: { profileId: "profileId", entityId: "entityId" },
       },
       schemaVersion: 1,
-      contractId: "amazon-dsp.update_entity.v1",
+      contractId: "amazon_dsp.update_entity.v1",
       // R2-U4: `dry_run` is symbolic apply — Amazon DSP exposes no native
       // validate / preview / draft mode. Validation runs symbolic business
       // rules; expected post-state is the read-partner snapshot shallow-merged
@@ -186,6 +207,9 @@ export const updateEntityTool = {
       // entity the PUT returns.
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,
+      // Contract promises the governance admission layer requires.
+      requiresValidation: true,
+      requiresSimulation: true,
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [

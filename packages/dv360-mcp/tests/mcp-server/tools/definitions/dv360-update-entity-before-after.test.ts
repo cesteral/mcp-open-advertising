@@ -174,6 +174,8 @@ describe("dv360_update_entity before/after capture (PR-D)", () => {
     const ok = UpdateEntityOutputSchema.safeParse({
       entity: {},
       timestamp: new Date().toISOString(),
+      // dispatchedCapability is required on every response; before/after are optional.
+      dispatchedCapability: { operation: "update", canonicalEntityKind: "line_item" },
     });
     expect(ok.success).toBe(true);
   });

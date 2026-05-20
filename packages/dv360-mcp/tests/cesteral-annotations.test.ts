@@ -11,7 +11,12 @@ describe("dv360-mcp cesteral.* annotations (round 1)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("write");
     expect(cesteral!.platform).toBe("dv360");
+    expect(cesteral!.contractPlatformSlug).toBe("dv360");
+    expect(cesteral!.contractToolSlug).toBe("update_entity");
     expect(cesteral!.contractId).toBe("dv360.update_entity.v1");
+    expect(cesteral!.contractId).toBe(
+      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`
+    );
     expect(cesteral!.schemaVersion).toBe(1);
 
     if (cesteral!.kind !== "write") throw new Error("expected write kind");
@@ -36,6 +41,9 @@ describe("dv360-mcp cesteral.* annotations (round 1)", () => {
     });
     expect(cesteral.supportsDryRun).toBe(true);
     expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);
+    // Contract promises required by the governance admission layer.
+    expect(cesteral.requiresValidation).toBe(true);
+    expect(cesteral.requiresSimulation).toBe(true);
   });
 
   it("annotates dv360_get_entity as a read contract", () => {
@@ -43,6 +51,8 @@ describe("dv360-mcp cesteral.* annotations (round 1)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("read");
     expect(cesteral!.platform).toBe("dv360");
+    expect(cesteral!.contractPlatformSlug).toBe("dv360");
+    expect(cesteral!.contractToolSlug).toBe("get_entity");
     expect(cesteral!.contractId).toBe("dv360.get_entity.v1");
     expect(cesteral!.schemaVersion).toBe(1);
     expect(cesteral!.entityKinds).toEqual(["campaign", "insertion_order", "line_item"]);

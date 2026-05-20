@@ -11,7 +11,12 @@ describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("write");
     expect(cesteral!.platform).toBe("amazon_dsp");
-    expect(cesteral!.contractId).toBe("amazon-dsp.update_entity.v1");
+    expect(cesteral!.contractPlatformSlug).toBe("amazon_dsp");
+    expect(cesteral!.contractToolSlug).toBe("update_entity");
+    expect(cesteral!.contractId).toBe("amazon_dsp.update_entity.v1");
+    expect(cesteral!.contractId).toBe(
+      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`
+    );
     expect(cesteral!.schemaVersion).toBe(1);
 
     if (cesteral!.kind !== "write") throw new Error("expected write kind");
@@ -31,6 +36,9 @@ describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
     // R2-U4: symbolic-apply dry-run + before/after capture.
     expect(cesteral.supportsDryRun).toBe(true);
     expect(cesteral.supportsBeforeAfterSnapshot).toBe(true);
+    // Contract promises required by the governance admission layer.
+    expect(cesteral.requiresValidation).toBe(true);
+    expect(cesteral.requiresSimulation).toBe(true);
   });
 
   it("annotates amazon_dsp_get_entity as a read contract with no operation/readPartner", () => {
@@ -38,7 +46,9 @@ describe("amazon-dsp-mcp cesteral.* annotations (round 2)", () => {
     expect(cesteral).toBeDefined();
     expect(cesteral!.kind).toBe("read");
     expect(cesteral!.platform).toBe("amazon_dsp");
-    expect(cesteral!.contractId).toBe("amazon-dsp.get_entity.v1");
+    expect(cesteral!.contractPlatformSlug).toBe("amazon_dsp");
+    expect(cesteral!.contractToolSlug).toBe("get_entity");
+    expect(cesteral!.contractId).toBe("amazon_dsp.get_entity.v1");
     expect(cesteral!.schemaVersion).toBe(1);
     expect(cesteral!.entityKinds).toEqual(["order", "line_item"]);
     expect(cesteral!.entityIdArgs).toEqual(["entityId"]);

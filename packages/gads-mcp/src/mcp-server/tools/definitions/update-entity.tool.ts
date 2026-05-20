@@ -5,9 +5,13 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type GAdsEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
-import { runGAdsUpdateDryRun } from "../utils/dry-run.js";
+import { runGAdsUpdateDryRun, resolveGAdsDispatchedCapability } from "../utils/dry-run.js";
 import { captureGAdsSnapshot } from "../utils/capture-snapshot.js";
-import { DryRunResultSchema, NormalizedEntitySnapshotSchema } from "@cesteral/shared";
+import {
+  DryRunResultSchema,
+  NormalizedEntitySnapshotSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
 import type { SdkContext, CesteralWriteToolAnnotations } from "@cesteral/shared";
 
@@ -66,6 +70,9 @@ export const UpdateEntityOutputSchema = z
     after: NormalizedEntitySnapshotSchema.optional().describe(
       "Post-write canonical snapshot of the entity. Captured by re-reading after the write because the Google Ads :mutate endpoint returns only a resourceName. Undefined when the post-read fails or the entity type is out of canonical scope."
     ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to, derived from the `data` payload. Present on every response — dry-run and real write alike."
+    ),
   })
   .describe("Entity update result");
 
@@ -78,6 +85,10 @@ export async function updateEntityLogic(
   sdkContext?: SdkContext
 ): Promise<UpdateEntityOutput> {
   const { gadsService } = resolveSessionServices(sdkContext);
+
+  // The (operation, entityKind) this call resolves to — derived from the
+  // `data` payload. Required on every governed response.
+  const dispatchedCapability = resolveGAdsDispatchedCapability(input.entityType, input.data);
 
   if (input.dry_run === true) {
     const dryRun = await runGAdsUpdateDryRun(
@@ -95,6 +106,7 @@ export async function updateEntityLogic(
       mutateResult: {},
       timestamp: new Date().toISOString(),
       dryRun,
+      dispatchedCapability,
     };
   }
 
@@ -133,6 +145,7 @@ export async function updateEntityLogic(
     timestamp: new Date().toISOString(),
     ...(before ? { before } : {}),
     ...(after ? { after } : {}),
+    dispatchedCapability,
   };
 }
 
@@ -173,6 +186,8 @@ export const updateEntityTool = {
     cesteral: {
       kind: "write",
       platform: "google_ads",
+      contractPlatformSlug: "google_ads",
+      contractToolSlug: "update_entity",
       // `gads_update_entity` is a multi-operation dispatcher: callers change
       // status, budget, name, etc. via the `data` + `updateMask` payload, so
       // the contract advertises every canonical op it can express.
@@ -190,7 +205,7 @@ export const updateEntityTool = {
         argMap: { customerId: "customerId", entityId: "entityId" },
       },
       schemaVersion: 1,
-      contractId: "google-ads.update_entity.v1",
+      contractId: "google_ads.update_entity.v1",
       // R2-U3: `dry_run` is wired via the Google Ads native `validateOnly`
       // flag (validation) plus symbolic apply over the read partner (expected
       // post-state). `before` / `after` are captured by reading the entity
@@ -198,6 +213,9 @@ export const updateEntityTool = {
       // only a resourceName).
       supportsDryRun: true,
       supportsBeforeAfterSnapshot: true,
+      // Contract promises the governance admission layer requires.
+      requiresValidation: true,
+      requiresSimulation: true,
     } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [

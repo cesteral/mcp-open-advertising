@@ -64,6 +64,8 @@ describe("meta_update_entity dry_run", () => {
       success: true,
       entityId: "999",
       timestamp: new Date().toISOString(),
+      // dispatchedCapability is required on every response; dryRun is optional.
+      dispatchedCapability: { operation: "update", canonicalEntityKind: "campaign" },
     });
     expect(ok.success).toBe(true);
   });

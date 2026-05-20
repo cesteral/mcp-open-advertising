@@ -11,6 +11,7 @@ import type { RequestContext } from "@cesteral/shared";
 import {
   runAmazonDspUpdateDryRun,
   applyAmazonDspPatch,
+  resolveAmazonDspDispatchedCapability,
   type AmazonDspServiceLike,
 } from "../../src/mcp-server/tools/utils/dry-run.js";
 import {
@@ -125,6 +126,40 @@ describe("runAmazonDspUpdateDryRun", () => {
     expect(result.expectedPostState!.budget.daily).toEqual({
       amountMinor: 100_000,
       currency: "USD",
+    });
+  });
+});
+
+describe("resolveAmazonDspDispatchedCapability", () => {
+  it("maps state transitions to pause / resume / update_status", () => {
+    expect(resolveAmazonDspDispatchedCapability("order", { state: "PAUSED" })).toEqual({
+      operation: "pause",
+      canonicalEntityKind: "order",
+    });
+    expect(resolveAmazonDspDispatchedCapability("lineItem", { state: "ENABLED" })).toEqual({
+      operation: "resume",
+      canonicalEntityKind: "line_item",
+    });
+    expect(resolveAmazonDspDispatchedCapability("order", { state: "ARCHIVED" })).toEqual({
+      operation: "update_status",
+      canonicalEntityKind: "order",
+    });
+  });
+
+  it("maps a budget change to update_budget and resolves the campaign/adGroup aliases", () => {
+    expect(resolveAmazonDspDispatchedCapability("campaign", { budget: 50000 })).toEqual({
+      operation: "update_budget",
+      canonicalEntityKind: "order",
+    });
+    expect(
+      resolveAmazonDspDispatchedCapability("adGroup", { budget: { budgetType: "DAILY", budget: 100 } })
+    ).toEqual({ operation: "update_budget", canonicalEntityKind: "line_item" });
+  });
+
+  it("falls back to update for a non-state, non-budget patch", () => {
+    expect(resolveAmazonDspDispatchedCapability("order", { name: "Renamed" })).toEqual({
+      operation: "update",
+      canonicalEntityKind: "order",
     });
   });
 });

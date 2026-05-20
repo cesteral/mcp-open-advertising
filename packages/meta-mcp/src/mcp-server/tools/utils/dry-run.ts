@@ -19,6 +19,7 @@
  */
 
 import type {
+  DispatchedCapability,
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
@@ -72,6 +73,36 @@ export function applyMetaPatch(
 ): NormalizedEntitySnapshot | undefined {
   const snapshot = buildMetaSnapshot(entityType, entityId, preState, data);
   return snapshot ?? undefined;
+}
+
+/**
+ * Resolve the concrete `(operation, entityKind)` a `meta_update_entity` call
+ * dispatches to, from its `data` payload. The tool is a multi-operation
+ * dispatcher; governance requires every response to name the capability the
+ * call exercised. Pure (no I/O).
+ */
+export function resolveMetaDispatchedCapability(
+  entityType: string | undefined,
+  data: Record<string, unknown>
+): DispatchedCapability {
+  const status = typeof data.status === "string" ? data.status : undefined;
+  let operation: string;
+  if (status === "PAUSED") {
+    operation = "pause";
+  } else if (status === "ACTIVE") {
+    operation = "resume";
+  } else if (status) {
+    // ARCHIVED / DELETED and any other status transition.
+    operation = "update_status";
+  } else if ("daily_budget" in data || "lifetime_budget" in data) {
+    operation = "update_budget";
+  } else {
+    operation = "update";
+  }
+  return {
+    operation,
+    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || entityType || "unknown",
+  };
 }
 
 export interface MetaDryRunArgs {

@@ -83,6 +83,8 @@ export const getEntityTool = {
     cesteral: {
       kind: "read",
       platform: "meta_ads",
+      contractPlatformSlug: "meta",
+      contractToolSlug: "get_entity",
       // Mirror `meta_update_entity`'s entity coverage so a write tool
       // declaring this as its read partner can capture pre/post snapshots
       // for any entity the writer can mutate.

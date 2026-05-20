@@ -11,6 +11,7 @@ import type { RequestContext } from "@cesteral/shared";
 import {
   runGAdsUpdateDryRun,
   applyGAdsPatch,
+  resolveGAdsDispatchedCapability,
   type GAdsDryRunServiceLike,
 } from "../../src/mcp-server/tools/utils/dry-run.js";
 import {
@@ -155,6 +156,36 @@ describe("runGAdsUpdateDryRun", () => {
     expect(result.validationErrors[0].code).toBe("VALIDATION_UNAVAILABLE");
     // The read still succeeds, so the expected post-state is still produced.
     expect(result.expectedStateSource).toBe("server_symbolic_apply");
+  });
+});
+
+describe("resolveGAdsDispatchedCapability", () => {
+  it("maps status transitions to pause / resume / update_status", () => {
+    expect(resolveGAdsDispatchedCapability("campaign", { status: "PAUSED" })).toEqual({
+      operation: "pause",
+      canonicalEntityKind: "campaign",
+    });
+    expect(resolveGAdsDispatchedCapability("campaign", { status: "ENABLED" })).toEqual({
+      operation: "resume",
+      canonicalEntityKind: "campaign",
+    });
+    expect(resolveGAdsDispatchedCapability("adGroup", { status: "REMOVED" })).toEqual({
+      operation: "update_status",
+      canonicalEntityKind: "ad_group",
+    });
+  });
+
+  it("maps a campaignBudget amountMicros change to update_budget", () => {
+    expect(
+      resolveGAdsDispatchedCapability("campaignBudget", { amountMicros: "75000000" })
+    ).toEqual({ operation: "update_budget", canonicalEntityKind: "campaign_budget" });
+  });
+
+  it("falls back to update for a non-status, non-budget patch", () => {
+    expect(resolveGAdsDispatchedCapability("campaign", { name: "Renamed" })).toEqual({
+      operation: "update",
+      canonicalEntityKind: "campaign",
+    });
   });
 });
 

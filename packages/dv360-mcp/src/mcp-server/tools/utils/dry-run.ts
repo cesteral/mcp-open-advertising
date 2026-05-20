@@ -18,12 +18,13 @@
  */
 
 import type {
+  DispatchedCapability,
   DryRunResult,
   DryRunValidationError,
   NormalizedEntitySnapshot,
   RequestContext,
 } from "@cesteral/shared";
-import { buildDv360Snapshot, type Dv360ServiceLike } from "./capture-snapshot.js";
+import { buildDv360Snapshot, ENTITY_KIND_MAP, type Dv360ServiceLike } from "./capture-snapshot.js";
 
 export type { Dv360ServiceLike };
 
@@ -83,6 +84,36 @@ export function applyDv360Patch(
   }
   const snapshot = buildDv360Snapshot(entityType, ids, preState, applied);
   return snapshot ?? undefined;
+}
+
+/**
+ * Resolve the concrete `(operation, entityKind)` a `dv360_update_entity` call
+ * dispatches to, from its `data` payload. The tool is a multi-operation
+ * dispatcher; governance requires every response to name the capability the
+ * call exercised. Pure (no I/O).
+ */
+export function resolveDv360DispatchedCapability(
+  entityType: string,
+  data: Record<string, unknown>
+): DispatchedCapability {
+  const status = typeof data.entityStatus === "string" ? data.entityStatus : undefined;
+  let operation: string;
+  if (status === "ENTITY_STATUS_ACTIVE") {
+    operation = "resume";
+  } else if (status === "ENTITY_STATUS_PAUSED") {
+    operation = "pause";
+  } else if (status) {
+    // ARCHIVED / DRAFT / SCHEDULED_FOR_DELETION and any other transition.
+    operation = "update_status";
+  } else if ("budget" in data) {
+    operation = "update_budget";
+  } else {
+    operation = "update";
+  }
+  return {
+    operation,
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] || entityType || "unknown",
+  };
 }
 
 export interface Dv360DryRunArgs {
