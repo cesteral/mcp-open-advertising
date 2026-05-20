@@ -1,0 +1,37 @@
+{
+  "name": "@cesteral/contract-hash",
+  "version": "1.0.0",
+  "description": "Canonical MCP tool-definition hash shared by Cesteral MCP servers and governance",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cesteral/mcp-open-advertising.git",
+    "directory": "packages/contract-hash"
+  },
+  "homepage": "https://github.com/cesteral/mcp-open-advertising#readme",
+  "keywords": ["mcp", "model-context-protocol", "hash", "attestation", "governance"],
+  "files": ["dist/", "README.md", "LICENSE.md"],
+  "publishConfig": { "access": "public" },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "typescript": "^5.9.3",
+    "vitest": "^1.6.0"
+  }
+}

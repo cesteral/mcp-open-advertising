@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@cesteral/contract-hash':
+        specifier: workspace:*
+        version: link:packages/contract-hash
       '@modelcontextprotocol/conformance':
         specifier: ^0.1.15
         version: 0.1.15
@@ -47,6 +50,9 @@ importers:
       vitest:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.24)
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
 
   packages/amazon-dsp-mcp:
     dependencies:
@@ -100,6 +106,18 @@ importers:
       tsx:
         specifier: ^4.20.6
         version: 4.20.6
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^1.6.0
+        version: 1.6.1(@types/node@20.19.24)
+
+  packages/contract-hash:
+    devDependencies:
+      '@types/node':
+        specifier: ^20.17.6
+        version: 20.19.24
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
