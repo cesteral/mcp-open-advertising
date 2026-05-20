@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TikTokEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "tiktok_get_entity";
 const TOOL_TITLE = "Get TikTok Ads Entity";
@@ -70,6 +70,20 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
+    cesteral: {
+      kind: "read",
+      platform: "tiktok",
+      contractPlatformSlug: "tiktok",
+      contractToolSlug: "get_entity",
+      // Mirror `tiktok_update_entity`'s governed entity coverage so a write
+      // tool declaring this as its read partner can capture pre/post
+      // snapshots. Governed scope is campaign / adGroup / ad; creative has no
+      // canonical kind and is out of scope.
+      entityKinds: ["campaign", "ad_group", "ad"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "tiktok.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {

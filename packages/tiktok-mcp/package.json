@@ -1,7 +1,7 @@
 {
   "name": "@cesteral/tiktok-mcp",
   "mcpName": "io.github.cesteral/tiktok-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "TikTok Ads MCP Server - Campaign entity management and reporting via TikTok Marketing API v1.3",
   "license": "Apache-2.0",
   "repository": {
@@ -24,6 +24,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./testkit": {
+      "types": "./dist/testkit/index.d.ts",
+      "import": "./dist/testkit/index.js"
+    }
+  },
   "bin": {
     "tiktok-mcp": "./dist/index.js"
   },
