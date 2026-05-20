@@ -22,7 +22,7 @@ The governance attestation system (`cesteral-intelligence`, Phase 1, already
 merged) promotes a tool's `definitionTrust` to `attested` when the tool's
 `definitionHash` matches a "blessed" hash published by upstream. Blessed hashes
 come from a per-package `dist/cesteral-manifest.json` shipped inside the npm
-tarball; npm provenance (`pnpm publish --provenance` from a tag-triggered
+tarball; npm provenance (`npm publish --provenance` from a tag-triggered
 release workflow) signs the tarball, and therefore the manifest, transitively.
 
 This repo currently produces **no manifest** and has **no release workflow** —
@@ -178,7 +178,7 @@ pattern, not to package-version equality. Manifest generation lives
 run produces manifests too.
 
 **Publish engine: reuse `scripts/publish-all.sh`.** The script is extended
-with a `--provenance` pass-through (forwarded to `pnpm publish`) and confirmed
+with a `--provenance` flag (gating the `npm publish` step) and confirmed
 CI-safe (it is already non-interactive). `release.yml` handles environment
 setup — `NPM_TOKEN` for npm auth, `mcp-publisher` install + GitHub-OIDC login
 for the MCP Registry — then calls the script. This keeps one source of publish
@@ -188,12 +188,17 @@ manual fallback; `release.yml` becomes the routine path.
 
 Publishing notes:
 
-- Publishing stays `pnpm publish` (not `npm publish`) — pnpm rewrites
-  `workspace:*` ranges to resolved versions; `npm publish` would ship the
-  literal string.
-- Provenance: `pnpm publish --provenance`. pnpm is pinned at `8.15.0`; verify
-  `--provenance` support and fall back to the `NPM_CONFIG_PROVENANCE=true`
-  environment variable (also honored by pnpm) if needed.
+- **Provenance mechanism: `pnpm pack` + `npm publish --provenance`.** pnpm is
+  pinned at `8.15.0`, which has no provenance support at all (verified —
+  provenance landed only in pnpm 9.x). npm `10.x` does. Rather than a
+  repo-wide pnpm major-version bump, each package is packed with `pnpm pack`
+  (which still rewrites `workspace:*` ranges to resolved versions — a plain
+  `npm publish` of a source dir would ship the literal string) and the
+  resulting tarball is published with `npm publish <tarball> --provenance`.
+  npm signs the attestation regardless of which tool built the tarball.
+- npm provenance requires a `repository` field in each `package.json`. The
+  `-mcp` packages and `@cesteral/shared` already have one; the new
+  `@cesteral/contract-hash` adds it.
 - npm provenance requires a `repository` field in each `package.json`. The
   `-mcp` packages already have one; verify all packages (including the new
   `@cesteral/contract-hash`) carry it.

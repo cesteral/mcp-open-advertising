@@ -6,7 +6,7 @@
 
 **Architecture:** A new zero-dependency `@cesteral/contract-hash` package holds the canonical SHA-256 tool-definition hash, shared bit-identically with `cesteral-intelligence` governance. A build-time generator boots each MCP server in-process, reads the raw `tools/list` output (the stock SDK client strips the `cesteral` annotation namespace, so an identity result schema is used), and writes a schema-valid manifest for every package with governed tools. `release.yml` reuses the existing `publish-all.sh` (extended with `--provenance`) as its publish engine.
 
-**Tech Stack:** TypeScript, pnpm workspace + Turborepo, vitest, `@modelcontextprotocol/sdk` (in-memory transport), GitHub Actions, npm provenance (`pnpm publish --provenance`).
+**Tech Stack:** TypeScript, pnpm workspace + Turborepo, vitest, `@modelcontextprotocol/sdk` (in-memory transport), GitHub Actions, npm provenance (`pnpm pack` + `npm publish --provenance` — pnpm 8.15 has no provenance support).
 
 **Design doc:** `docs/plans/2026-05-20-signed-manifest-upstream-design.md`
 
@@ -125,23 +125,27 @@ ln -s ../../LICENSE.md packages/contract-hash/LICENSE.md
 mkdir -p packages/contract-hash/src packages/contract-hash/tests
 ```
 
-**Step 6: Add the package as a root devDependency**
+**Step 6: Add root devDependencies for the generator script**
 
-In the root `package.json`, add to `devDependencies` (keep alphabetical order — it sorts first):
+The generator script (Tasks 4–5) imports `@cesteral/contract-hash` (the hash) and `zod` (manifest validation), so both must resolve from the repo root. In the root `package.json` `devDependencies`, add (keep keys sorted):
 
 ```json
     "@cesteral/contract-hash": "workspace:*",
+    "zod": "3.25.76",
 ```
 
-This makes `@cesteral/contract-hash` resolvable from the root-level generator script.
+`zod` is pinned to `3.25.76` to match `@cesteral/shared` (one zod version across the repo). `@cesteral/contract-hash` sorts first among the keys; `zod` sorts last.
 
-**Step 7: Install and verify the workspace link**
+**Step 7: Install and verify resolution**
 
 Run: `pnpm install`
 Expected: completes without error; `pnpm-lock.yaml` updated.
 
 Run: `ls -la node_modules/@cesteral/contract-hash`
 Expected: a symlink pointing to `../../packages/contract-hash`.
+
+Run: `node -e "import('zod').then(() => console.log('zod resolves from root'))"`
+Expected: prints `zod resolves from root`.
 
 **Step 8: Commit**
 
@@ -573,7 +577,7 @@ describe("validateManifest", () => {
   });
 
   it("rejects an empty tools array", () => {
-    expect(() => validateManifest({ ...valid, tools: [] })).toThrow(/non-empty/);
+    expect(() => validateManifest({ ...valid, tools: [] })).toThrow(/tools/);
   });
 
   it("rejects a non-hex definitionHash", () => {
@@ -602,14 +606,35 @@ Expected: FAIL — cannot resolve `./manifest.mjs`.
 // CesteralManifestSchema. Kept import-side-effect-free so it is unit-testable
 // (the orchestration script generate-manifests.mjs auto-runs on import).
 
+import { z } from "zod";
 import { computeDefinitionHash } from "@cesteral/contract-hash";
 
 // contractId is `<platformSlug>.<toolSlug>.v<schemaVersion>` — see
 // @cesteral/shared CesteralToolAnnotations. The tool slug may itself contain
 // dots, so anchor on the leading platform segment and trailing version.
 const CONTRACT_ID_RE = /^([a-z0-9-]+)\.(.+)\.v(\d+)$/;
-const HEX64_RE = /^[0-9a-f]{64}$/;
-const PACKAGE_NAME_RE = /^@cesteral\/[a-z0-9-]+-mcp$/;
+
+// Byte-for-byte mirror of governance's CesteralManifestSchema —
+// cesteral-intelligence/lib/features/governance/attestation/manifest-schema.ts.
+// Keep these in lockstep: a divergence silently accepts manifests governance
+// will reject (or vice versa).
+const CesteralManifestSchema = z.object({
+  manifestVersion: z.literal(1),
+  packageName: z.string().regex(/^@cesteral\/[a-z0-9-]+-mcp$/),
+  packageVersion: z.string(),
+  generatedAt: z.string().datetime(),
+  tools: z
+    .array(
+      z.object({
+        toolName: z.string(),
+        contractPlatformSlug: z.string(),
+        contractToolSlug: z.string(),
+        schemaVersion: z.string(),
+        definitionHash: z.string().regex(/^[0-9a-f]{64}$/),
+      })
+    )
+    .min(1),
+});
 
 /**
  * Builds a manifest tool entry from a raw wire tool, or returns null if the
@@ -647,33 +672,17 @@ export function toManifestEntry(tool) {
 }
 
 /**
- * Validates a manifest object against governance's CesteralManifestSchema
- * (cesteral-intelligence/lib/features/governance/attestation/manifest-schema.ts).
- * Throws an Error listing every violation; returns nothing on success.
+ * Validates a manifest object against the CesteralManifestSchema mirror
+ * above. Throws an Error listing every violation (path + message); returns
+ * nothing on success.
  */
 export function validateManifest(manifest) {
-  const errs = [];
-  if (manifest.manifestVersion !== 1) errs.push("manifestVersion must be the literal 1");
-  if (!PACKAGE_NAME_RE.test(manifest.packageName ?? ""))
-    errs.push(`packageName ${JSON.stringify(manifest.packageName)} fails the @cesteral/*-mcp pattern`);
-  if (typeof manifest.packageVersion !== "string" || manifest.packageVersion === "")
-    errs.push("packageVersion must be a non-empty string");
-  if (typeof manifest.generatedAt !== "string" || Number.isNaN(Date.parse(manifest.generatedAt)))
-    errs.push("generatedAt must be an ISO-8601 datetime string");
-  if (!Array.isArray(manifest.tools) || manifest.tools.length === 0) {
-    errs.push("tools must be a non-empty array");
-  } else {
-    for (const t of manifest.tools) {
-      for (const f of ["toolName", "contractPlatformSlug", "contractToolSlug", "schemaVersion"]) {
-        if (typeof t[f] !== "string" || t[f] === "")
-          errs.push(`tool ${t.toolName}: ${f} must be a non-empty string`);
-      }
-      if (!HEX64_RE.test(t.definitionHash ?? ""))
-        errs.push(`tool ${t.toolName}: definitionHash must be 64 lowercase hex characters`);
-    }
-  }
-  if (errs.length > 0) {
-    throw new Error(`Invalid manifest for ${manifest.packageName}:\n  - ${errs.join("\n  - ")}`);
+  const result = CesteralManifestSchema.safeParse(manifest);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((issue) => `  - ${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("\n");
+    throw new Error(`Invalid manifest for ${manifest?.packageName}:\n${issues}`);
   }
 }
 ```
@@ -875,24 +884,70 @@ log "Publishing @cesteral/contract-hash to npm..."
 publish_to_npm "packages/contract-hash" "@cesteral/contract-hash"
 ```
 
-**Step 5: Pass `--provenance` through to `pnpm publish`**
+**Step 5: Rework `publish_to_npm` — `pnpm pack` + `npm publish --provenance`**
 
-In `publish_to_npm`, build a provenance flag and append it to both the dry-run echo and the real publish command:
+`pnpm@8.15.0` has **no provenance support** (verified: `pnpm publish --help` lists no `--provenance`; pnpm gained provenance only in pnpm 9.x). `npm@10.x` *does* support `--provenance` (verified). Rather than a repo-wide, risky pnpm major-version bump (lockfile format change, install-resolution churn), publish via `pnpm pack` — which rewrites `workspace:*` into the tarball, the exact reason the repo avoided plain `npm publish` of a source dir — followed by `npm publish <tarball> --provenance`. npm signs the provenance attestation; it does not care that pnpm built the tarball.
+
+Replace the entire `publish_to_npm` function with:
 
 ```bash
+publish_to_npm() {
+  local pkg_dir="$1"
+  local pkg_label="$2"
+
   local prov_flag=""
   if [ "$PROVENANCE" = true ]; then prov_flag="--provenance"; fi
+
+  if [ "$DRY_RUN" = true ]; then
+    echo "  (dry-run) pnpm pack $pkg_dir && npm publish <tarball> --access public $prov_flag"
+    return 0
+  fi
+
+  # pnpm 8.15 has no provenance support; npm does. `pnpm pack` rewrites
+  # workspace:* deps into the tarball (the literal range would otherwise
+  # ship and break consumers); `npm publish <tarball>` publishes that exact
+  # artifact and, with --provenance, attaches the build attestation.
+  local tarball
+  tarball="$(cd "$pkg_dir" && pnpm pack --pack-destination "$PACK_TMP" 2>/dev/null | tail -n1)"
+  if [ ! -f "$tarball" ]; then
+    echo "  FAIL $pkg_label: pnpm pack produced no tarball" >&2
+    NPM_PUBLISH_FAILURES+=("$pkg_label")
+    return 0
+  fi
+
+  local out exit_code
+  set +e
+  out=$(npm publish "$tarball" --access public $prov_flag 2>&1)
+  exit_code=$?
+  set -e
+
+  echo "$out"
+
+  if [ "$exit_code" -eq 0 ]; then
+    return 0
+  fi
+
+  # Here-string (not a pipe) so a fast grep cannot SIGPIPE the upstream echo.
+  if grep -qE 'cannot publish over the previously published|EPUBLISHCONFLICT' <<<"$out"; then
+    log "  Note: $pkg_label already published at this version — continuing."
+    return 0
+  fi
+
+  echo "  FAIL $pkg_label: npm publish exited $exit_code (not an 'already published' error)" >&2
+  NPM_PUBLISH_FAILURES+=("$pkg_label")
+  return 0  # don't abort the loop; failures are reported after the loop
+}
 ```
 
-- Dry-run echo line becomes: `echo "  (dry-run) cd $pkg_dir && pnpm publish --access public --no-git-checks $prov_flag"`
-- Real publish line becomes: `out=$(cd "$pkg_dir" && pnpm publish --access public --no-git-checks $prov_flag 2>&1)`
+`PACK_TMP` is the script-scoped temp dir already created (and `trap`-cleaned) by the pack-and-inspect preflight. Also update the now-stale block comments above `publish_to_npm` and above the `@cesteral/shared` publish so they describe the `pnpm pack` → `npm publish` flow rather than `pnpm publish`.
 
 **Step 6: Verify with a dry run**
 
-Run: `./scripts/publish-all.sh --dry-run --provenance --npm-only`
-Expected: prints `(dry-run) node scripts/generate-manifests.mjs`, and every `(dry-run) ... pnpm publish` line includes `--provenance`, and `@cesteral/contract-hash` appears in the publish list.
+Run: `pnpm run build && ./scripts/publish-all.sh --dry-run --provenance --npm-only`
+Expected: prints `(dry-run) node scripts/generate-manifests.mjs`; every `(dry-run) ... npm publish` line includes `--provenance`; `@cesteral/contract-hash` appears in the publish list.
 
-> Provenance support: `pnpm publish --provenance` must be accepted by the pinned pnpm (`packageManager: pnpm@8.15.0`). Confirm with `pnpm publish --help | grep -i provenance`. If unsupported, bump the `packageManager` pin to a pnpm version that supports it and update `pnpm-lock.yaml` accordingly.
+Run: `npm publish --help 2>&1 | grep -q provenance && echo "npm provenance available"`
+Expected: `npm provenance available`.
 
 **Step 7: Commit**
 
@@ -1009,7 +1064,7 @@ In the "Release flow (recommended ordering)" section, add a note at the top that
 
 **Step 2: Update `CLAUDE.md`**
 
-In the "Monorepo Architecture" section, note the workspace is `@cesteral/shared` + `@cesteral/contract-hash` + one package per MCP server. Add a short subsection (near "Deployment & Infrastructure" or "Publishing") describing the attestation manifest: `scripts/generate-manifests.mjs` writes `dist/cesteral-manifest.json` for packages with governed tools (tools carrying `annotations.cesteral`); the hash comes from `@cesteral/contract-hash`; `release.yml` publishes with `npm`/`pnpm` provenance.
+In the "Monorepo Architecture" section, note the workspace is `@cesteral/shared` + `@cesteral/contract-hash` + one package per MCP server. Add a short subsection (near "Deployment & Infrastructure" or "Publishing") describing the attestation manifest: `scripts/generate-manifests.mjs` writes `dist/cesteral-manifest.json` for packages with governed tools (tools carrying `annotations.cesteral`); the hash comes from `@cesteral/contract-hash`; `release.yml` publishes with npm provenance.
 
 **Step 3: Update `README.md`**
 
@@ -1053,6 +1108,6 @@ pnpm run format:check
 ./scripts/publish-all.sh --dry-run --provenance
 ```
 
-Expected: every command exits 0; `generate-manifests.mjs` writes manifests for `meta-mcp` and `dv360-mcp` only; the dry-run lists `@cesteral/contract-hash` and shows `--provenance` on every `pnpm publish` line.
+Expected: every command exits 0; `generate-manifests.mjs` writes manifests for `meta-mcp` and `dv360-mcp` only; the dry-run lists `@cesteral/contract-hash` and shows `--provenance` on every `npm publish` line.
 
 Then use @superpowers:finishing-a-development-branch to open a PR. The PR description should call out the cross-repo follow-up: governance's `canonical-hash.ts` becoming a re-export of `@cesteral/contract-hash`, with the two golden hash vectors pinned in governance's tests.
