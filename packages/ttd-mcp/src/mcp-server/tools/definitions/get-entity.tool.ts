@@ -6,7 +6,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type TtdEntityType } from "../utils/entity-mapping.js";
 import { addParentValidationIssue } from "../utils/parent-id-validation.js";
 import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_get_entity";
 const TOOL_TITLE = "Get TTD Entity";
@@ -83,6 +83,20 @@ export const getEntityTool = {
     openWorldHint: false,
     destructiveHint: false,
     idempotentHint: true,
+    cesteral: {
+      kind: "read",
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "get_entity",
+      // Mirror `ttd_update_entity`'s governed entity coverage so a write tool
+      // declaring this as its read partner can capture pre/post snapshots.
+      // Governed scope is campaign / ad_group; advertiser / creative /
+      // conversionTracker have no canonical kind and are out of scope.
+      entityKinds: ["campaign", "ad_group"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "ttd.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {
