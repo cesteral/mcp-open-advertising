@@ -16,6 +16,7 @@
  *   then normalizes. `expectedStateSource: "server_symbolic_apply"`.
  */
 
+import { assertGovernedDryRunResult } from "@cesteral/shared";
 import type {
   DispatchedCapability,
   DryRunResult,
@@ -128,34 +129,35 @@ export async function runAmazonDspUpdateDryRun(
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
 
+  // A read failure propagates: a governed dry-run that cannot simulate must
+  // fail the call (see assertGovernedDryRunResult below), not swallow the
+  // error and return an incomplete payload the governance layer would reject.
   if (ENTITY_KIND_MAP[input.entityType] && service.getEntity) {
-    try {
-      const current = (await service.getEntity(input.entityType, input.entityId, context)) as
-        | Record<string, unknown>
-        | undefined;
-      if (current && typeof current === "object") {
-        const snapshot = buildAmazonDspSnapshot(
-          input.entityType,
-          input.entityId,
-          current,
-          input.data
-        );
-        if (snapshot) {
-          expectedPostState = snapshot;
-          expectedStateSource = "server_symbolic_apply";
-        }
+    const current = (await service.getEntity(input.entityType, input.entityId, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (current && typeof current === "object") {
+      const snapshot = buildAmazonDspSnapshot(
+        input.entityType,
+        input.entityId,
+        current,
+        input.data
+      );
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
       }
-    } catch {
-      // Symbolic apply is best-effort; if the read fails we leave
-      // expectedStateSource "none". The validation result still stands.
     }
   }
 
-  return {
-    wouldSucceed: validationErrors.length === 0,
-    validationErrors,
-    validationSource: "symbolic",
-    expectedStateSource,
-    ...(expectedPostState ? { expectedPostState } : {}),
-  };
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "amazon_dsp_update_entity"
+  );
 }

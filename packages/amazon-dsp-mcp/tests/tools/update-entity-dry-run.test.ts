@@ -128,6 +128,23 @@ describe("runAmazonDspUpdateDryRun", () => {
       currency: "USD",
     });
   });
+
+  it("fails the call when the read partner cannot resolve the entity", async () => {
+    // The tool declares requiresSimulation:true — a dry-run that cannot
+    // produce an expected post-state must fail the call, not return an
+    // expectedStateSource:"none" payload the governance layer would reject.
+    await expect(
+      runAmazonDspUpdateDryRun(
+        { entityType: "order", entityId: "ord_1", data: { state: "PAUSED" } },
+        {
+          getEntity: async () => {
+            throw new Error("order not found");
+          },
+        },
+        ctx
+      )
+    ).rejects.toThrow(/order not found/);
+  });
 });
 
 describe("resolveAmazonDspDispatchedCapability", () => {

@@ -17,6 +17,7 @@
  *   `campaign`. Other entity types return `expectedStateSource: "none"`.
  */
 
+import { assertGovernedDryRunResult } from "@cesteral/shared";
 import type {
   DispatchedCapability,
   DryRunResult,
@@ -137,16 +138,14 @@ export async function runDv360UpdateDryRun(
   let validationErrors: DryRunValidationError[] = [];
   let current: Record<string, any> | undefined;
 
+  // A read failure propagates: a governed dry-run that cannot simulate must
+  // fail the call (see assertGovernedDryRunResult below), not swallow the
+  // error and return an incomplete payload the governance layer would reject.
   if (dv360Service.getEntity) {
-    try {
-      current = (await dv360Service.getEntity(input.entityType, input.ids, context)) as Record<
-        string,
-        any
-      >;
-    } catch {
-      // Read failed — we can still validate the patch standalone, but we
-      // cannot produce an expectedPostState.
-    }
+    current = (await dv360Service.getEntity(input.entityType, input.ids, context)) as Record<
+      string,
+      any
+    >;
   }
 
   // Symbolic apply: overlay each field named in updateMask onto a clone of
@@ -178,11 +177,14 @@ export async function runDv360UpdateDryRun(
     }
   }
 
-  return {
-    wouldSucceed: validationErrors.length === 0,
-    validationErrors,
-    validationSource: "symbolic",
-    expectedStateSource,
-    ...(expectedPostState ? { expectedPostState } : {}),
-  };
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "dv360_update_entity"
+  );
 }

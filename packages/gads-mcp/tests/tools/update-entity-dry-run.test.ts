@@ -138,24 +138,45 @@ describe("runGAdsUpdateDryRun", () => {
     });
   });
 
-  it("reports validation unavailable (source none) when the native call throws", async () => {
-    const result = await runGAdsUpdateDryRun(
-      {
-        entityType: "campaign",
-        customerId: "111",
-        entityId: "222",
-        data: { status: "PAUSED" },
-        updateMask: "status",
-      },
-      fakeService({ validateThrows: true }),
-      ctx
-    );
+  it("fails the call when the native validateOnly request itself throws", async () => {
+    // The tool declares requiresValidation:true — a dry-run that cannot
+    // validate must fail the call, not return a validationSource:"none"
+    // payload the governance layer would treat as a contract violation.
+    await expect(
+      runGAdsUpdateDryRun(
+        {
+          entityType: "campaign",
+          customerId: "111",
+          entityId: "222",
+          data: { status: "PAUSED" },
+          updateMask: "status",
+        },
+        fakeService({ validateThrows: true }),
+        ctx
+      )
+    ).rejects.toThrow(/network down/);
+  });
 
-    expect(result.validationSource).toBe("none");
-    expect(result.wouldSucceed).toBe(false);
-    expect(result.validationErrors[0].code).toBe("VALIDATION_UNAVAILABLE");
-    // The read still succeeds, so the expected post-state is still produced.
-    expect(result.expectedStateSource).toBe("server_symbolic_apply");
+  it("fails the call when the read partner cannot resolve the entity", async () => {
+    // requiresSimulation:true — no expected post-state means fail the call.
+    await expect(
+      runGAdsUpdateDryRun(
+        {
+          entityType: "campaign",
+          customerId: "111",
+          entityId: "222",
+          data: { status: "PAUSED" },
+          updateMask: "status",
+        },
+        {
+          validateEntity: async () => ({ valid: true }),
+          getEntity: async () => {
+            throw new Error("entity not found");
+          },
+        },
+        ctx
+      )
+    ).rejects.toThrow(/entity not found/);
   });
 });
 

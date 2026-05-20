@@ -194,22 +194,26 @@ describe("dv360_update_entity dry_run", () => {
     expect(result.dryRun!.validationErrors[0].field).toBe("entityStatus");
   });
 
-  it("falls back to expectedStateSource: 'none' when read partner fails", async () => {
+  it("fails the call when the read partner cannot resolve the entity", async () => {
+    // The tool declares requiresSimulation:true — a dry-run that cannot
+    // produce an expected post-state must fail the call, not return an
+    // expectedStateSource:"none" payload the governance layer would reject.
     dv360Service.getEntity.mockRejectedValueOnce(new Error("404"));
-    const result = await updateEntityLogic(
-      {
-        entityType: "lineItem",
-        advertiserId: "adv-1",
-        lineItemId: "li-1",
-        data: { entityStatus: "ENTITY_STATUS_PAUSED" },
-        updateMask: "entityStatus",
-        dry_run: true,
-      } as any,
-      ctx(),
-      { sessionId: "s" } as any
-    );
-    expect(result.dryRun!.expectedStateSource).toBe("none");
-    expect(result.dryRun!.expectedPostState).toBeUndefined();
+    await expect(
+      updateEntityLogic(
+        {
+          entityType: "lineItem",
+          advertiserId: "adv-1",
+          lineItemId: "li-1",
+          data: { entityStatus: "ENTITY_STATUS_PAUSED" },
+          updateMask: "entityStatus",
+          dry_run: true,
+        } as any,
+        ctx(),
+        { sessionId: "s" } as any
+      )
+    ).rejects.toThrow(/404/);
+    expect(dv360Service.updateEntity).not.toHaveBeenCalled();
   });
 
   it("default (dry_run unset) preserves existing write behavior", async () => {

@@ -17,6 +17,7 @@
  *   masked patch fields. `expectedStateSource: "server_symbolic_apply"`.
  */
 
+import { assertGovernedDryRunResult } from "@cesteral/shared";
 import type {
   DispatchedCapability,
   DryRunResult,
@@ -124,80 +125,71 @@ export async function runGAdsUpdateDryRun(
   context: RequestContext
 ): Promise<DryRunResult> {
   // ── Validation: native Google Ads `validateOnly` on the :mutate endpoint ──
+  // A failed validateOnly *verdict* (`{ valid: false }`) is a normal, contract-
+  // honoring dry-run result. A *thrown* validateOnly call (network / auth /
+  // rate limit) means validation could not run at all — it propagates, failing
+  // the call, because a governed dry-run must never report validationSource
+  // "none" (see assertGovernedDryRunResult below).
   let validationErrors: DryRunValidationError[] = [];
   let validationSource: DryRunResult["validationSource"] = "none";
   if (gadsService.validateEntity) {
-    try {
-      const verdict = await gadsService.validateEntity(
-        input.entityType,
-        input.customerId,
-        input.data,
-        "update",
-        input.entityId,
-        input.updateMask,
-        context
-      );
-      validationSource = "native_validator";
-      if (!verdict.valid) {
-        validationErrors = (
-          verdict.errors && verdict.errors.length > 0
-            ? verdict.errors
-            : ["Google Ads rejected the mutation"]
-        ).map((message) => ({ code: "GOOGLE_ADS_VALIDATION", message }));
-      }
-    } catch (err) {
-      // The validateOnly call itself failed (network / auth / rate limit).
-      // Report it honestly rather than fabricating a verdict — leave the
-      // source "none" so consumers know validation did not run.
-      validationSource = "none";
-      validationErrors = [
-        {
-          code: "VALIDATION_UNAVAILABLE",
-          message: err instanceof Error ? err.message : String(err),
-        },
-      ];
+    const verdict = await gadsService.validateEntity(
+      input.entityType,
+      input.customerId,
+      input.data,
+      "update",
+      input.entityId,
+      input.updateMask,
+      context
+    );
+    validationSource = "native_validator";
+    if (!verdict.valid) {
+      validationErrors = (
+        verdict.errors && verdict.errors.length > 0
+          ? verdict.errors
+          : ["Google Ads rejected the mutation"]
+      ).map((message) => ({ code: "GOOGLE_ADS_VALIDATION", message }));
     }
   }
 
   // ── Expected post-state: symbolic apply over the read-partner snapshot ──
+  // A read failure propagates for the same reason.
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
   if (ENTITY_KIND_MAP[input.entityType] && gadsService.getEntity) {
-    try {
-      const row = (await gadsService.getEntity(
-        input.entityType,
-        input.customerId,
-        input.entityId,
-        context
-      )) as Record<string, unknown> | undefined;
-      if (row && typeof row === "object") {
-        const resource = unwrapResource(input.entityType, row);
-        if (resource) {
-          const snapshot = applyGAdsPatch(
-            input.entityType,
-            input.customerId,
-            input.entityId,
-            resource,
-            input.data,
-            input.updateMask
-          );
-          if (snapshot) {
-            expectedPostState = snapshot;
-            expectedStateSource = "server_symbolic_apply";
-          }
+    const row = (await gadsService.getEntity(
+      input.entityType,
+      input.customerId,
+      input.entityId,
+      context
+    )) as Record<string, unknown> | undefined;
+    if (row && typeof row === "object") {
+      const resource = unwrapResource(input.entityType, row);
+      if (resource) {
+        const snapshot = applyGAdsPatch(
+          input.entityType,
+          input.customerId,
+          input.entityId,
+          resource,
+          input.data,
+          input.updateMask
+        );
+        if (snapshot) {
+          expectedPostState = snapshot;
+          expectedStateSource = "server_symbolic_apply";
         }
       }
-    } catch {
-      // Symbolic apply is best-effort; if the read fails we leave
-      // expectedStateSource "none". The native validation result still stands.
     }
   }
 
-  return {
-    wouldSucceed: validationErrors.length === 0,
-    validationErrors,
-    validationSource,
-    expectedStateSource,
-    ...(expectedPostState ? { expectedPostState } : {}),
-  };
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource,
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "gads_update_entity"
+  );
 }

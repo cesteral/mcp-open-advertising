@@ -6,6 +6,7 @@ export * from "./download-file.js";
 export * from "./multipart-form.js";
 export * from "./logger.js";
 export * from "./mcp-errors.js";
+export * from "./governed-dry-run.js";
 export * from "./request-context.js";
 export * from "./telemetry.js";
 export * from "./metrics.js";

@@ -18,6 +18,7 @@
  *   lifetime_budget, name). Anything else returns `expectedStateSource: "none"`.
  */
 
+import { assertGovernedDryRunResult } from "@cesteral/shared";
 import type {
   DispatchedCapability,
   DryRunResult,
@@ -121,32 +122,34 @@ export async function runMetaUpdateDryRun(
   let expectedPostState: NormalizedEntitySnapshot | undefined;
   let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
 
+  // Expected post-state via symbolic apply over the read partner. A read
+  // failure propagates: a governed dry-run that cannot simulate must fail the
+  // call (see assertGovernedDryRunResult below), not swallow the error and
+  // return an incomplete payload the governance layer would reject.
   if (input.entityType && ENTITY_KIND_MAP[input.entityType] && metaService.getEntity) {
-    try {
-      const current = (await metaService.getEntity(
-        input.entityType,
-        input.entityId,
-        undefined,
-        context
-      )) as Record<string, unknown> | undefined;
-      if (current && typeof current === "object") {
-        const snapshot = buildMetaSnapshot(input.entityType, input.entityId, current, input.data);
-        if (snapshot) {
-          expectedPostState = snapshot;
-          expectedStateSource = "server_symbolic_apply";
-        }
+    const current = (await metaService.getEntity(
+      input.entityType,
+      input.entityId,
+      undefined,
+      context
+    )) as Record<string, unknown> | undefined;
+    if (current && typeof current === "object") {
+      const snapshot = buildMetaSnapshot(input.entityType, input.entityId, current, input.data);
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
       }
-    } catch {
-      // Symbolic apply is best-effort; if the read fails we leave
-      // expectedStateSource: "none". Validation result is still meaningful.
     }
   }
 
-  return {
-    wouldSucceed: validationErrors.length === 0,
-    validationErrors,
-    validationSource: "symbolic",
-    expectedStateSource,
-    ...(expectedPostState ? { expectedPostState } : {}),
-  };
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "meta_update_entity"
+  );
 }
