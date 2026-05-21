@@ -13,11 +13,11 @@ import {
   getEntityContract,
   getEntityTypeEnum,
   getCanonicalEntityType,
+  type AmazonDspEntityType,
 } from "../utils/entity-mapping.js";
-import type { AmazonDspPublicEntityType } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 import { type FieldRule, createValidateEntityTool } from "@cesteral/shared";
 
-export const validateEntityTool = createValidateEntityTool<AmazonDspPublicEntityType>({
+export const validateEntityTool = createValidateEntityTool<AmazonDspEntityType>({
   toolName: "amazon_dsp_validate_entity",
   toolTitle: "AmazonDsp Ads Entity Validation (Client-Side)",
   toolDescription: `Validate an entity payload against known AmazonDsp Ads requirements without calling the API.
@@ -30,8 +30,8 @@ This is a pure client-side check — it catches missing required fields and
 obvious type errors. The AmazonDsp API may still reject payloads for business-rule
 reasons (e.g., invalid objective/placement combinations).`,
   entityTypeEnum: getEntityTypeEnum() as readonly [
-    AmazonDspPublicEntityType,
-    ...AmazonDspPublicEntityType[],
+    AmazonDspEntityType,
+    ...AmazonDspEntityType[],
   ],
   getRules: (entityType) => getEntityContract(entityType).requiredOnCreate as FieldRule[],
   getReadOnlyFields: (entityType) => getEntityContract(entityType).readOnlyFields,
@@ -96,7 +96,7 @@ reasons (e.g., invalid objective/placement combinations).`,
     {
       label: "Valid order create",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         mode: "create",
         profileId: "1234567890",
         data: {
@@ -118,7 +118,3 @@ reasons (e.g., invalid objective/placement combinations).`,
     },
   ],
 });
-
-export const ValidateEntityInputSchema = validateEntityTool.inputSchema;
-export const ValidateEntityOutputSchema = validateEntityTool.outputSchema;
-export const validateEntityLogic = validateEntityTool.logic;

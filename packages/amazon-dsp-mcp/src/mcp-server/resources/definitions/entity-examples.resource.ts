@@ -8,12 +8,12 @@ import type { Resource } from "../types.js";
 import { AMAZON_DSP_CANONICAL_ENTITY_TYPES } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
 const ENTITY_EXAMPLES: Record<string, string> = {
-  order: `# Amazon DSP Campaign / Order Examples
+  order: `# Amazon DSP Order Examples
 
-## Create a Campaign
+## Create an Order
 \`\`\`json
 {
-  "entityType": "campaign",
+  "entityType": "order",
   "profileId": "1234567890",
   "data": {
     "name": "Q3 Brand Campaign",
@@ -39,12 +39,12 @@ const ENTITY_EXAMPLES: Record<string, string> = {
 }
 \`\`\`
 `,
-  lineItem: `# Amazon DSP Ad Group / Line Item Examples
+  lineItem: `# Amazon DSP Line Item Examples
 
-## Create an Ad Group
+## Create a Line Item
 \`\`\`json
 {
-  "entityType": "adGroup",
+  "entityType": "lineItem",
   "profileId": "1234567890",
   "data": {
     "name": "Display Retargeting",

@@ -212,8 +212,3 @@ The LinkedIn API may still reject payloads for business-rule reasons.`,
     },
   ],
 });
-
-// Re-exports for backwards-compatible imports inside this package.
-export const ValidateEntityInputSchema = validateEntityTool.inputSchema;
-export const ValidateEntityOutputSchema = validateEntityTool.outputSchema;
-export const validateEntityLogic = validateEntityTool.logic;

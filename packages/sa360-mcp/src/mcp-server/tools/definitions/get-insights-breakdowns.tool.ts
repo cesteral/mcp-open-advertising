@@ -111,12 +111,6 @@ export const GetInsightsBreakdownsInputSchema = z
       .optional()
       .default(false)
       .describe("Include computed CPA, ROAS, CPM derived from raw metrics"),
-    limit: z
-      .number()
-      .min(1)
-      .max(10000)
-      .optional()
-      .describe("Deprecated. Use maxRows for the returned row count."),
     pageToken: z.string().optional().describe("Page token for pagination (from previous response)"),
   })
   .merge(ReportViewInputSchema)
@@ -153,7 +147,7 @@ export const GetInsightsBreakdownsOutputSchema = z
 type GetInsightsBreakdownsInput = z.infer<typeof GetInsightsBreakdownsInputSchema>;
 type GetInsightsBreakdownsOutput = z.infer<typeof GetInsightsBreakdownsOutputSchema>;
 
-function buildBreakdownQuery(input: GetInsightsBreakdownsInput): string {
+function buildBreakdownQuery(input: GetInsightsBreakdownsInput, fetchLimit: number): string {
   const entityType = input.entityType as SA360InsightsEntityType;
   const resource = getInsightsQueryResource(entityType);
   const idField = getInsightsIdField(entityType);
@@ -190,7 +184,7 @@ function buildBreakdownQuery(input: GetInsightsBreakdownsInput): string {
     whereClauses.push(`${idField} = ${input.entityId}`);
   }
 
-  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClauses.join(" AND ")} ORDER BY metrics.impressions DESC LIMIT ${input.limit}`;
+  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClauses.join(" AND ")} ORDER BY metrics.impressions DESC LIMIT ${fetchLimit}`;
 }
 
 export async function getInsightsBreakdownsLogic(
@@ -199,17 +193,14 @@ export async function getInsightsBreakdownsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsBreakdownsOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
-  const viewInput =
-    input.maxRows === undefined && input.limit !== undefined
-      ? { ...input, maxRows: input.limit }
-      : input;
+  const fetchLimit = getReportViewFetchLimit(input);
 
-  const query = buildBreakdownQuery({ ...input, limit: getReportViewFetchLimit(viewInput) });
+  const query = buildBreakdownQuery(input, fetchLimit);
 
   const result = await sa360Service.sa360Search(
     input.customerId,
     query,
-    getReportViewFetchLimit(viewInput),
+    fetchLimit,
     input.pageToken,
     context
   );
@@ -226,7 +217,7 @@ export async function getInsightsBreakdownsLogic(
     ...createReportView({
       rows: results,
       totalRows: results.length + (result.nextPageToken ? 1 : 0),
-      input: viewInput,
+      input,
       warnings: result.nextPageToken
         ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
         : [],

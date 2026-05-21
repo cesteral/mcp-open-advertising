@@ -43,13 +43,10 @@ export interface ParsedRow {
  * handling), then applies the DBM-specific "drop any row where a non-nullable
  * field is empty" filter that discards Bid Manager's summary/footer rows.
  *
- * Note: the `delimiter` parameter is retained for API compatibility but is
- * ignored — Bid Manager reports are always comma-delimited, and the shared
- * parser is comma-only.
+ * Bid Manager reports are always comma-delimited, matching the shared parser.
  */
 export function csvToJson(
   csv: string,
-  _delimiter: string = ",",
   nullableFields: string[] = []
 ): Record<string, string>[] {
   const { headers, rows } = sharedParseCSV(csv);

@@ -23,7 +23,7 @@ export const bulkOperationsWorkflowPrompt: Prompt = {
 
 export function getBulkOperationsWorkflowMessage(args?: Record<string, string>): string {
   const profileId = args?.profileId || "{profileId}";
-  const entityType = args?.entityType || "campaign";
+  const entityType = args?.entityType || "order";
 
   return `# AmazonDsp Bulk Operations Workflow
 

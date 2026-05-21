@@ -163,13 +163,13 @@ describe("resolveAmazonDspDispatchedCapability", () => {
     });
   });
 
-  it("maps a budget change to update_budget and resolves the campaign/adGroup aliases", () => {
-    expect(resolveAmazonDspDispatchedCapability("campaign", { budget: 50000 })).toEqual({
+  it("maps a budget change to update_budget", () => {
+    expect(resolveAmazonDspDispatchedCapability("order", { budget: 50000 })).toEqual({
       operation: "update_budget",
       canonicalEntityKind: "order",
     });
     expect(
-      resolveAmazonDspDispatchedCapability("adGroup", {
+      resolveAmazonDspDispatchedCapability("lineItem", {
         budget: { budgetType: "DAILY", budget: 100 },
       })
     ).toEqual({ operation: "update_budget", canonicalEntityKind: "line_item" });

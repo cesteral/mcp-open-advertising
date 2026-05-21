@@ -10,12 +10,11 @@ describe("SA360SearchInputSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("defaults to summary mode without a legacy pageSize", () => {
+  it("defaults to summary mode", () => {
     const result = SA360SearchInputSchema.parse({
       customerId: "1234567890",
       query: "SELECT campaign.id FROM campaign",
     });
-    expect(result.pageSize).toBeUndefined();
     expect(result.mode).toBe("summary");
   });
 
@@ -35,24 +34,6 @@ describe("SA360SearchInputSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects pageSize over 10000", () => {
-    const result = SA360SearchInputSchema.safeParse({
-      customerId: "1234567890",
-      query: "SELECT campaign.id FROM campaign",
-      pageSize: 10001,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects pageSize less than 1", () => {
-    const result = SA360SearchInputSchema.safeParse({
-      customerId: "1234567890",
-      query: "SELECT campaign.id FROM campaign",
-      pageSize: 0,
-    });
-    expect(result.success).toBe(false);
-  });
-
   it("accepts pageToken for pagination", () => {
     const result = SA360SearchInputSchema.safeParse({
       customerId: "1234567890",
@@ -60,15 +41,6 @@ describe("SA360SearchInputSchema", () => {
       pageToken: "abc123",
     });
     expect(result.success).toBe(true);
-  });
-
-  it("accepts custom pageSize within range", () => {
-    const result = SA360SearchInputSchema.parse({
-      customerId: "1234567890",
-      query: "SELECT campaign.id FROM campaign",
-      pageSize: 500,
-    });
-    expect(result.pageSize).toBe(500);
   });
 
   it("rejects missing customerId", () => {

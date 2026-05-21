@@ -86,7 +86,7 @@ describe("csvToJson", () => {
 
   it("allows empty values for nullable fields", () => {
     const csv = "A,B\n1,2\n3,\n5,6";
-    const result = csvToJson(csv, ",", ["B"]);
+    const result = csvToJson(csv, ["B"]);
 
     expect(result).toEqual([
       { A: "1", B: "2" },

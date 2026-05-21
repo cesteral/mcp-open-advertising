@@ -27,11 +27,8 @@ import type { UpstreamHttpRecord } from "./http-request-recorder.js";
 // ---------------------------------------------------------------------------
 
 export interface InteractionLogEntry {
-  /**
-   * Record type discriminator. Omitted for legacy writers (treated as
-   * "tool_call" by consumers).
-   */
-  type?: "tool_call" | "tool_failure";
+  /** Record type discriminator. */
+  type: "tool_call" | "tool_failure";
   id?: string;
   ts: string;
   sessionId: string;
@@ -254,7 +251,7 @@ export class InteractionLogger {
         const level = entry.type === "tool_failure" || entry.success === false ? "error" : "info";
         this.logger[level](
           { event: "mcp.interaction", interaction: entry },
-          `mcp.interaction ${entry.type ?? "tool_call"} ${entry.tool}`
+          `mcp.interaction ${entry.type} ${entry.tool}`
         );
         return;
       }

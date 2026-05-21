@@ -24,12 +24,6 @@ export const GAQLSearchInputSchema = z
       .min(1)
       .describe("Google Ads customer ID (no dashes, e.g., '1234567890')"),
     query: z.string().min(1).describe("GAQL query string (must include SELECT and FROM clauses)"),
-    pageSize: z
-      .number()
-      .min(1)
-      .max(10000)
-      .optional()
-      .describe("Deprecated. Use maxRows for the returned row count."),
     pageToken: z
       .string()
       .optional()
@@ -64,15 +58,11 @@ export async function gaqlSearchLogic(
   sdkContext?: SdkContext
 ): Promise<GAQLSearchOutput> {
   const { gadsService } = resolveSessionServices(sdkContext);
-  const viewInput =
-    input.maxRows === undefined && input.pageSize !== undefined
-      ? { ...input, maxRows: input.pageSize }
-      : input;
 
   const result = await gadsService.gaqlSearch(
     input.customerId,
     input.query,
-    getReportViewFetchLimit(viewInput),
+    getReportViewFetchLimit(input),
     input.pageToken,
     context
   );
@@ -82,7 +72,7 @@ export async function gaqlSearchLogic(
     ...createReportView({
       rows,
       totalRows: result.totalResultsCount ?? rows.length + (result.nextPageToken ? 1 : 0),
-      input: viewInput,
+      input,
       warnings: result.nextPageToken
         ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
         : [],

@@ -23,12 +23,6 @@ export const SA360SearchInputSchema = z
   .object({
     customerId: z.string().min(1).describe("SA360 customer ID (no dashes, e.g., '1234567890')"),
     query: z.string().min(1).describe("SA360 query string (must include SELECT and FROM clauses)"),
-    pageSize: z
-      .number()
-      .min(1)
-      .max(10000)
-      .optional()
-      .describe("Deprecated. Use maxRows for the returned row count."),
     pageToken: z.string().optional().describe("Page token for pagination (from previous response)"),
   })
   .merge(ReportViewInputSchema)
@@ -53,15 +47,11 @@ export async function sa360SearchLogic(
   sdkContext?: SdkContext
 ): Promise<SA360SearchOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
-  const viewInput =
-    input.maxRows === undefined && input.pageSize !== undefined
-      ? { ...input, maxRows: input.pageSize }
-      : input;
 
   const result = await sa360Service.sa360Search(
     input.customerId,
     input.query,
-    getReportViewFetchLimit(viewInput),
+    getReportViewFetchLimit(input),
     input.pageToken,
     context
   );
@@ -71,7 +61,7 @@ export async function sa360SearchLogic(
     ...createReportView({
       rows,
       totalRows: result.totalResultsCount ?? rows.length + (result.nextPageToken ? 1 : 0),
-      input: viewInput,
+      input,
       warnings: result.nextPageToken
         ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
         : [],

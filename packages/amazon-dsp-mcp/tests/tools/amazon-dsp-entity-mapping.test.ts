@@ -7,7 +7,7 @@ import {
 } from "../../src/mcp-server/tools/utils/entity-mapping.js";
 
 describe("Amazon DSP entity mapping", () => {
-  describe("order (campaign) paths", () => {
+  describe("order paths", () => {
     it("listPath is /dsp/orders", () => {
       expect(getEntityConfig("order").listPath).toBe("/dsp/orders");
     });
@@ -31,7 +31,7 @@ describe("Amazon DSP entity mapping", () => {
     });
   });
 
-  describe("lineItem (adGroup) paths", () => {
+  describe("lineItem paths", () => {
     it("listPath is /dsp/lineItems", () => {
       expect(getEntityConfig("lineItem").listPath).toBe("/dsp/lineItems");
     });
@@ -72,25 +72,20 @@ describe("Amazon DSP entity mapping", () => {
   });
 
   describe("getSupportedEntityTypes", () => {
-    it("includes canonical types and compatibility aliases", () => {
+    it("returns all canonical entity types", () => {
       const types = getSupportedEntityTypes();
-      expect(types).toContain("order");
-      expect(types).toContain("campaign");
-      expect(types).toContain("lineItem");
-      expect(types).toContain("adGroup");
-      expect(types).toContain("creative");
-      expect(types).toContain("target");
-      expect(types).toContain("creativeAssociation");
+      expect(types).toEqual(["order", "lineItem", "creative", "target", "creativeAssociation"]);
     });
   });
 
   describe("getCanonicalEntityType", () => {
-    it("normalizes campaign to order", () => {
-      expect(getCanonicalEntityType("campaign")).toBe("order");
+    it("returns the entity type for a valid input", () => {
+      expect(getCanonicalEntityType("order")).toBe("order");
+      expect(getCanonicalEntityType("lineItem")).toBe("lineItem");
     });
 
-    it("normalizes adGroup to lineItem", () => {
-      expect(getCanonicalEntityType("adGroup")).toBe("lineItem");
+    it("throws on an unknown entity type", () => {
+      expect(() => getCanonicalEntityType("campaign" as never)).toThrow();
     });
   });
 

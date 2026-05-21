@@ -657,14 +657,13 @@ export class BidManagerService {
     metrics: string[];
     filters?: Array<{ type: string; value: string }>;
     dateRange: { preset?: string; startDate?: string; endDate?: string };
-    outputFormat?: "structured" | "csv";
   }): Promise<{
     queryId: string;
     reportId: string;
     status: string;
     rowCount: number;
     columns: string[];
-    data: Record<string, unknown>[] | string;
+    data: Record<string, unknown>[];
   }> {
     return withBidManagerApiSpan("executeCustomQuery", undefined, async () => {
       return this.executeCustomQueryInner(params_);
@@ -677,14 +676,13 @@ export class BidManagerService {
     metrics: string[];
     filters?: Array<{ type: string; value: string }>;
     dateRange: { preset?: string; startDate?: string; endDate?: string };
-    outputFormat?: "structured" | "csv";
   }): Promise<{
     queryId: string;
     reportId: string;
     status: string;
     rowCount: number;
     columns: string[];
-    data: Record<string, unknown>[] | string;
+    data: Record<string, unknown>[];
   }> {
     this.logger.info(
       {
@@ -736,34 +734,12 @@ export class BidManagerService {
     const queryResult = await this.executeQueryWithRetry(querySpec);
     const csvData = await this.fetchReportData(queryResult.gcsPath);
 
-    // Parse results based on output format
-    if (params.outputFormat === "csv") {
-      // Return raw CSV — use csvToJson to extract column names safely (handles quoted fields)
-      const csvRecords = csvToJson(csvData);
-      const columns = csvRecords.length > 0 ? Object.keys(csvRecords[0]) : [];
-      const rowCount = csvRecords.length;
-
-      this.logger.info(
-        { rowCount, columnsCount: columns.length },
-        "Custom query completed (CSV format)"
-      );
-
-      return {
-        queryId: queryResult.queryId,
-        reportId: queryResult.reportId,
-        status: "DONE",
-        rowCount,
-        columns,
-        data: csvData,
-      };
-    }
-
     // Parse CSV to structured data
     const records = csvToJson(csvData);
 
     this.logger.info(
       { rowCount: records.length, columnsCount: Object.keys(records[0] || {}).length },
-      "Custom query completed (structured format)"
+      "Custom query completed"
     );
 
     return {

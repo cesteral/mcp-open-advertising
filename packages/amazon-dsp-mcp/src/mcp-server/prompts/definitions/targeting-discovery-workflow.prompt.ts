@@ -179,7 +179,7 @@ Use the targeting when creating or updating an ad group:
 {
   "tool": "amazon_dsp_create_entity",
   "params": {
-    "entityType": "adGroup",
+    "entityType": "lineItem",
     "profileId": "${profileId}",
     "data": {
       "campaign_id": "{campaignId}",

@@ -103,12 +103,6 @@ export const GetInsightsInputSchema = z
       .optional()
       .default(false)
       .describe("Include computed CPA, ROAS, CPM derived from raw metrics"),
-    limit: z
-      .number()
-      .min(1)
-      .max(10000)
-      .optional()
-      .describe("Deprecated. Use maxRows for the returned row count."),
     pageToken: z.string().optional().describe("Page token for pagination (from previous response)"),
   })
   .merge(ReportViewInputSchema)
@@ -145,7 +139,7 @@ export const GetInsightsOutputSchema = z
 type GetInsightsInput = z.infer<typeof GetInsightsInputSchema>;
 type GetInsightsOutput = z.infer<typeof GetInsightsOutputSchema>;
 
-function buildInsightsQuery(input: GetInsightsInput): string {
+function buildInsightsQuery(input: GetInsightsInput, fetchLimit: number): string {
   const entityType = input.entityType as SA360InsightsEntityType;
   const resource = getInsightsQueryResource(entityType);
   const idField = getInsightsIdField(entityType);
@@ -180,7 +174,7 @@ function buildInsightsQuery(input: GetInsightsInput): string {
 
   const whereClause = whereClauses.join(" AND ");
 
-  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClause} ORDER BY metrics.impressions DESC LIMIT ${input.limit}`;
+  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClause} ORDER BY metrics.impressions DESC LIMIT ${fetchLimit}`;
 }
 
 export async function getInsightsLogic(
@@ -189,17 +183,14 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { sa360Service } = resolveSessionServices(sdkContext);
-  const viewInput =
-    input.maxRows === undefined && input.limit !== undefined
-      ? { ...input, maxRows: input.limit }
-      : input;
+  const fetchLimit = getReportViewFetchLimit(input);
 
-  const query = buildInsightsQuery({ ...input, limit: getReportViewFetchLimit(viewInput) });
+  const query = buildInsightsQuery(input, fetchLimit);
 
   const result = await sa360Service.sa360Search(
     input.customerId,
     query,
-    getReportViewFetchLimit(viewInput),
+    fetchLimit,
     input.pageToken,
     context
   );
@@ -216,7 +207,7 @@ export async function getInsightsLogic(
     ...createReportView({
       rows: results,
       totalRows: results.length + (result.nextPageToken ? 1 : 0),
-      input: viewInput,
+      input,
       warnings: result.nextPageToken
         ? ["More rows are available. Call again with pageToken set to nextPageToken to continue."]
         : [],

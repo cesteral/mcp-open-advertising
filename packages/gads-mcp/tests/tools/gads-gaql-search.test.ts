@@ -10,12 +10,11 @@ describe("GAQLSearchInputSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("defaults to summary mode without a legacy pageSize", () => {
+  it("defaults to summary mode", () => {
     const result = GAQLSearchInputSchema.parse({
       customerId: "1234567890",
       query: "SELECT campaign.id FROM campaign",
     });
-    expect(result.pageSize).toBeUndefined();
     expect(result.mode).toBe("summary");
   });
 
@@ -31,15 +30,6 @@ describe("GAQLSearchInputSchema", () => {
     const result = GAQLSearchInputSchema.safeParse({
       customerId: "1234567890",
       query: "",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects pageSize over 10000", () => {
-    const result = GAQLSearchInputSchema.safeParse({
-      customerId: "1234567890",
-      query: "SELECT campaign.id FROM campaign",
-      pageSize: 10001,
     });
     expect(result.success).toBe(false);
   });

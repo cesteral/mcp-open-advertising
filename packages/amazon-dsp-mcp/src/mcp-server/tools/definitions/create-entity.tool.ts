@@ -89,7 +89,7 @@ export const createEntityTool = {
     {
       label: "Create an order (campaign)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         data: {
           name: "Summer Sale 2026",
@@ -102,7 +102,7 @@ export const createEntityTool = {
     {
       label: "Create a line item (ad group)",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
         data: {
           name: "US Display — Retargeting",

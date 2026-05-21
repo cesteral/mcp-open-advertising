@@ -18,14 +18,12 @@ function buildEntitySchemaMarkdown(entityType: AmazonDspCanonicalEntityType): st
       (rule) => `- \`${rule.field}\` (${rule.expectedType})${rule.hint ? ` — ${rule.hint}` : ""}`
     )
     .join("\n");
-  const aliases = contract.aliases.length > 0 ? contract.aliases.join(", ") : "None";
   const notes = contract.notes.map((note) => `- ${note}`).join("\n");
 
   return `# Amazon DSP ${contract.displayName} Schema
 
 ## Entity Names
 - Canonical MCP type: \`${contract.canonicalType}\`
-- Accepted aliases: ${aliases}
 
 ## Endpoint Contract
 - List: \`GET ${contract.listPath}\`

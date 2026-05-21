@@ -221,7 +221,6 @@ describe("gads_get_insights", () => {
         entityType: "campaign",
         dateRange: "LAST_30_DAYS",
         includeComputedMetrics: true,
-        limit: 50,
       } as any,
       {} as any,
       { sessionId: "test-session" } as any
@@ -250,7 +249,6 @@ describe("gads_get_insights", () => {
         entityType: "campaign",
         dateRange: "LAST_30_DAYS",
         includeComputedMetrics: false,
-        limit: 50,
       } as any,
       {} as any,
       { sessionId: "test-session" } as any
@@ -268,7 +266,6 @@ describe("gads_get_insights", () => {
         entityType: "campaign",
         startDate: "2026-01-01",
         endDate: "2026-01-31",
-        limit: 50,
       } as any,
       {} as any,
       { sessionId: "test-session" } as any

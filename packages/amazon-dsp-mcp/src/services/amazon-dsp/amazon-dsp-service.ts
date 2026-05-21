@@ -64,9 +64,7 @@ export type {
 
 interface AmazonDspEntityMap {
   order: AmazonDspOrder;
-  campaign: AmazonDspOrder;
   lineItem: AmazonDspLineItem;
-  adGroup: AmazonDspLineItem;
   creative: AmazonDspCreative;
   target: AmazonDspTarget;
   creativeAssociation: AmazonDspCreativeAssociation;
@@ -74,9 +72,7 @@ interface AmazonDspEntityMap {
 
 type AmazonDspCreateEntityInputMap = {
   order: CreateAmazonDspOrderRequest;
-  campaign: CreateAmazonDspOrderRequest;
   lineItem: CreateAmazonDspLineItemRequest;
-  adGroup: CreateAmazonDspLineItemRequest;
   creative: Record<string, unknown>;
   target: CreateAmazonDspTargetRequest;
   creativeAssociation: CreateAmazonDspCreativeAssociationRequest;
@@ -296,9 +292,7 @@ export class AmazonDspService {
     // Map entity type to its own primary-key field (foreign keys are kept)
     const ENTITY_ID_FIELD: Record<AmazonDspEntityType, string> = {
       order: "orderId",
-      campaign: "orderId",
       lineItem: "lineItemId",
-      adGroup: "lineItemId",
       creative: "creativeId",
       target: "targetId",
       creativeAssociation: "creativeAssociationId",

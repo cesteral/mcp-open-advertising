@@ -147,7 +147,7 @@ export const bulkUpdateStatusTool = {
     {
       label: "Pause multiple orders (campaigns)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         entityIds: ["ord_111111", "ord_222222"],
         operationStatus: "PAUSED",
@@ -156,7 +156,7 @@ export const bulkUpdateStatusTool = {
     {
       label: "Resume multiple line items",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
         entityIds: ["li_111111"],
         operationStatus: "ENABLED",

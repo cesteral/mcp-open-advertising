@@ -82,7 +82,8 @@ describe("getInsightsLogic", () => {
         datePreset: "last_7d",
         timeIncrement: "1",
         level: "campaign",
-        limit: 100,
+        mode: "rows",
+        maxRows: 100,
         after: "cursor_abc",
       },
       createMockContext(),
@@ -222,7 +223,6 @@ describe("GetInsightsInputSchema validation", () => {
       datePreset: "last_7d",
       timeIncrement: "1",
       level: "campaign",
-      limit: 100,
       after: "cursor",
     });
     expect(result.success).toBe(true);
@@ -234,13 +234,5 @@ describe("GetInsightsInputSchema validation", () => {
       timeRange: { since: "2026-01-01", until: "2026-01-31" },
     });
     expect(result.success).toBe(true);
-  });
-
-  it("rejects limit above 500", () => {
-    const result = GetInsightsInputSchema.safeParse({
-      entityId: "123",
-      limit: 501,
-    });
-    expect(result.success).toBe(false);
   });
 });

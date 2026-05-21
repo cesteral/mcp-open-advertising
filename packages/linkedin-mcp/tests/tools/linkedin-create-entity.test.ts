@@ -13,7 +13,7 @@ import {
   createEntityResponseFormatter,
 } from "../../src/mcp-server/tools/definitions/create-entity.tool.js";
 
-import { validateEntityLogic } from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
+import { validateEntityTool } from "../../src/mcp-server/tools/definitions/validate-entity.tool.js";
 import { validateEntityResponseFormatter } from "@cesteral/shared";
 
 const mockLinkedInService = {
@@ -129,9 +129,9 @@ describe("linkedin_create_entity tool", () => {
 });
 
 describe("linkedin_validate_entity tool", () => {
-  describe("validateEntityLogic()", () => {
+  describe("validateEntityTool.logic()", () => {
     it("passes validation for valid campaign create", async () => {
-      const result = await validateEntityLogic(
+      const result = await validateEntityTool.logic(
         {
           entityType: "campaign",
           mode: "create",
@@ -152,7 +152,7 @@ describe("linkedin_validate_entity tool", () => {
     });
 
     it("fails validation for campaign missing required fields", async () => {
-      const result = await validateEntityLogic(
+      const result = await validateEntityTool.logic(
         {
           entityType: "campaign",
           mode: "create",
@@ -171,7 +171,7 @@ describe("linkedin_validate_entity tool", () => {
     });
 
     it("warns about incorrect URN format", async () => {
-      const result = await validateEntityLogic(
+      const result = await validateEntityTool.logic(
         {
           entityType: "campaign",
           mode: "create",
@@ -193,7 +193,7 @@ describe("linkedin_validate_entity tool", () => {
     });
 
     it("warns about missing budget format for budget fields", async () => {
-      const result = await validateEntityLogic(
+      const result = await validateEntityTool.logic(
         {
           entityType: "campaign",
           mode: "create",
@@ -218,7 +218,7 @@ describe("linkedin_validate_entity tool", () => {
     });
 
     it("fails validation for empty update payload", async () => {
-      const result = await validateEntityLogic(
+      const result = await validateEntityTool.logic(
         {
           entityType: "campaign",
           mode: "update",
@@ -233,7 +233,7 @@ describe("linkedin_validate_entity tool", () => {
     });
 
     it("warns about read-only fields in update", async () => {
-      const result = await validateEntityLogic(
+      const result = await validateEntityTool.logic(
         {
           entityType: "campaign",
           mode: "update",
