@@ -34,15 +34,12 @@ export interface AmazonDspServiceLike {
 }
 
 /**
- * Public `entityType` input (including the `campaign` / `adGroup` aliases) →
- * canonical kind. Amazon DSP's `order` is the campaign-level object and
- * `lineItem` the ad-group-level object.
+ * `entityType` input → canonical kind. Amazon DSP's `order` is the
+ * campaign-level object and `lineItem` the ad-group-level object.
  */
 export const ENTITY_KIND_MAP: Record<string, CanonicalEntityKind> = {
   order: "order",
-  campaign: "order",
   lineItem: "line_item",
-  adGroup: "line_item",
 };
 
 const STATUS_MAP: Record<string, CanonicalStatus> = {

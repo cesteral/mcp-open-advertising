@@ -66,12 +66,6 @@ export const GetInsightsInputSchema = z
       .string()
       .optional()
       .describe("Aggregation level: 'account', 'campaign', 'adset', 'ad'"),
-    limit: z
-      .number()
-      .min(1)
-      .max(500)
-      .optional()
-      .describe("Deprecated. Use maxRows for the returned row count."),
     after: z.string().optional().describe("Cursor for next page"),
     includeComputedMetrics: z
       .boolean()
@@ -102,10 +96,6 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { metaInsightsService } = resolveSessionServices(sdkContext);
-  const viewInput =
-    input.maxRows === undefined && input.limit !== undefined
-      ? { ...input, maxRows: input.limit }
-      : input;
 
   const result = await metaInsightsService.getInsights(
     input.entityId,
@@ -115,7 +105,7 @@ export async function getInsightsLogic(
       timeRange: input.timeRange,
       timeIncrement: input.timeIncrement,
       level: input.level,
-      limit: getReportViewFetchLimit(viewInput),
+      limit: getReportViewFetchLimit(input),
       after: input.after,
     },
     context
@@ -161,7 +151,7 @@ export async function getInsightsLogic(
     ...createReportView({
       rows,
       totalRows: rows.length + (result.nextCursor ? 1 : 0),
-      input: viewInput,
+      input,
       warnings: result.nextCursor
         ? ["More rows are available. Call again with after set to nextCursor to continue."]
         : [],

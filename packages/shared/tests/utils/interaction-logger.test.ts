@@ -97,6 +97,7 @@ describe("InteractionLogger", () => {
 
     const ts = "2026-02-19T21:00:00.000Z";
     interactionLogger.append({
+      type: "tool_call",
       ts,
       sessionId: "session-1",
       tool: "ttd_update_entity",
@@ -105,6 +106,7 @@ describe("InteractionLogger", () => {
       durationMs: 1,
     });
     interactionLogger.append({
+      type: "tool_call",
       ts,
       sessionId: "session-1",
       tool: "ttd_update_entity",
@@ -250,6 +252,7 @@ describe("InteractionLogger", () => {
     });
 
     interactionLogger.append({
+      type: "tool_call",
       ts: "2026-02-19T21:00:00.000Z",
       sessionId: "session-1",
       tool: "ttd_update_entity",
@@ -258,6 +261,7 @@ describe("InteractionLogger", () => {
       durationMs: 1,
     });
     interactionLogger.append({
+      type: "tool_call",
       ts: "2026-02-19T21:00:01.000Z",
       sessionId: "session-1",
       tool: "ttd_update_entity",
@@ -311,6 +315,7 @@ describe("closeAllInteractionLoggers", () => {
     });
 
     a.append({
+      type: "tool_call",
       ts: "2026-02-19T21:00:00.000Z",
       sessionId: "session-1",
       tool: "tool_a",
@@ -319,6 +324,7 @@ describe("closeAllInteractionLoggers", () => {
       durationMs: 1,
     });
     b.append({
+      type: "tool_call",
       ts: "2026-02-19T21:00:01.000Z",
       sessionId: "session-2",
       tool: "tool_b",

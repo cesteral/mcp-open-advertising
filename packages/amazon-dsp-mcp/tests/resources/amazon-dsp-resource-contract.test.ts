@@ -12,8 +12,6 @@ describe("Amazon DSP resource contract", () => {
 
     expect(content).toContain("Canonical MCP type: `target`");
     expect(content).toContain("Canonical MCP type: `creativeAssociation`");
-    expect(content).toContain("Accepted aliases: campaign");
-    expect(content).toContain("Accepted aliases: adGroup");
   });
 
   it("entity hierarchy reflects the expanded management surface", () => {

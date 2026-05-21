@@ -51,7 +51,7 @@ describe("amazonDsp_create_entity tool", () => {
 
       const result = await createEntityLogic(
         {
-          entityType: "campaign",
+          entityType: "order",
           profileId: "1234567890",
           data: {
             name: "Test Order",
@@ -64,10 +64,10 @@ describe("amazonDsp_create_entity tool", () => {
         baseSdkContext
       );
 
-      expect(result.entityType).toBe("campaign");
+      expect(result.entityType).toBe("order");
       expect(result.timestamp).toBeDefined();
       expect(mockCreateEntity).toHaveBeenCalledWith(
-        "campaign",
+        "order",
         {
           name: "Test Order",
           advertiserId: "adv_123",
@@ -84,7 +84,7 @@ describe("amazonDsp_create_entity tool", () => {
 
       const result = await createEntityLogic(
         {
-          entityType: "adGroup",
+          entityType: "lineItem",
           profileId: "1234567890",
           data: {
             name: "Test Line Item",
@@ -97,7 +97,7 @@ describe("amazonDsp_create_entity tool", () => {
         baseSdkContext
       );
 
-      expect(result.entityType).toBe("adGroup");
+      expect(result.entityType).toBe("lineItem");
     });
 
     it("propagates errors from the service", async () => {
@@ -135,7 +135,7 @@ describe("amazonDsp_create_entity tool", () => {
   describe("input schema validation", () => {
     it("accepts valid order creation payload", () => {
       const result = CreateEntityInputSchema.safeParse({
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         data: {
           name: "Test",

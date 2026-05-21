@@ -118,12 +118,6 @@ export const GetInsightsInputSchema = z
       .optional()
       .default(false)
       .describe("Include computed CPA, ROAS, CPM derived from raw metrics"),
-    limit: z
-      .number()
-      .min(1)
-      .max(10000)
-      .optional()
-      .describe("Deprecated. Use maxRows for the returned row count."),
   })
   .merge(ReportViewInputSchema)
   .refine(
@@ -168,7 +162,7 @@ export const GetInsightsOutputSchema = z
 type GetInsightsInput = z.infer<typeof GetInsightsInputSchema>;
 type GetInsightsOutput = z.infer<typeof GetInsightsOutputSchema>;
 
-function buildGaqlQuery(input: GetInsightsInput): string {
+function buildGaqlQuery(input: GetInsightsInput, fetchLimit: number): string {
   const resource = GAQL_RESOURCE_MAP[input.entityType];
   const idField = ENTITY_ID_FIELD_MAP[input.entityType];
   const nameField = ENTITY_NAME_FIELD_MAP[input.entityType];
@@ -202,7 +196,7 @@ function buildGaqlQuery(input: GetInsightsInput): string {
 
   const whereClause = whereClauses.join(" AND ");
 
-  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClause} ORDER BY metrics.impressions DESC LIMIT ${input.limit} PARAMETERS omit_unselected_resource_names=true`;
+  return `SELECT ${selectFields} FROM ${resource} WHERE ${whereClause} ORDER BY metrics.impressions DESC LIMIT ${fetchLimit} PARAMETERS omit_unselected_resource_names=true`;
 }
 
 export async function getInsightsLogic(
@@ -211,17 +205,14 @@ export async function getInsightsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsOutput> {
   const { gadsService } = resolveSessionServices(sdkContext);
-  const viewInput =
-    input.maxRows === undefined && input.limit !== undefined
-      ? { ...input, maxRows: input.limit }
-      : input;
+  const fetchLimit = getReportViewFetchLimit(input);
 
-  const query = buildGaqlQuery({ ...input, limit: getReportViewFetchLimit(viewInput) });
+  const query = buildGaqlQuery(input, fetchLimit);
 
   const result = await gadsService.gaqlSearch(
     input.customerId,
     query,
-    getReportViewFetchLimit(viewInput),
+    fetchLimit,
     undefined,
     context
   );
@@ -238,7 +229,7 @@ export async function getInsightsLogic(
     ...createReportView({
       rows: results,
       totalRows: results.length + (result.nextPageToken ? 1 : 0),
-      input: viewInput,
+      input,
       warnings: result.nextPageToken
         ? [
             "More rows are available. Use gads_gaql_search with the returned page token to continue.",
@@ -289,7 +280,8 @@ export const getInsightsTool = {
         customerId: "1234567890",
         entityType: "adGroup",
         dateRange: "LAST_7_DAYS",
-        limit: 100,
+        mode: "rows",
+        maxRows: 100,
       },
     },
     {

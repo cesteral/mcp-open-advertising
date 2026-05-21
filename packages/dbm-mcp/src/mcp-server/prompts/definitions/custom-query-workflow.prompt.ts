@@ -150,13 +150,6 @@ Example query for ${queryGoal}:
 
 ---
 
-## Output Options
-
-- \`outputFormat: "structured"\` (default) - Returns JSON array of records
-- \`outputFormat: "csv"\` - Returns raw CSV string
-
----
-
 ## Common Errors
 
 | Error | Solution |

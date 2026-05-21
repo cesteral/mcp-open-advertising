@@ -4,22 +4,19 @@
 import {
   AMAZON_DSP_CANONICAL_ENTITY_TYPES,
   AMAZON_DSP_ENTITY_CONTRACT,
-  AMAZON_DSP_PUBLIC_ENTITY_TYPES,
   getAmazonDspEntityContract,
   normalizeAmazonDspEntityType,
   type AmazonDspCanonicalEntityType,
-  type AmazonDspPublicEntityType,
 } from "../../../services/amazon-dsp/amazon-dsp-api-contract.js";
 
 /**
  * Amazon DSP Entity Mapping
  *
- * MCP keeps backward-compatible support for the original `order` / `lineItem`
- * names while also accepting the Amazon-style `campaign` / `adGroup` aliases.
+ * Entity types use Amazon's native object names — `order`, `lineItem`,
+ * `creative`, `target`, `creativeAssociation`.
  */
 
-export type AmazonDspEntityType = AmazonDspPublicEntityType;
-export type CanonicalAmazonDspEntityType = AmazonDspCanonicalEntityType;
+export type AmazonDspEntityType = AmazonDspCanonicalEntityType;
 
 export interface AmazonDspEntityConfig {
   /** API path for list (GET with query params) */
@@ -74,10 +71,6 @@ export function getEntityConfig(entityType: AmazonDspEntityType): AmazonDspEntit
 }
 
 export function getSupportedEntityTypes(): AmazonDspEntityType[] {
-  return [...AMAZON_DSP_PUBLIC_ENTITY_TYPES];
-}
-
-export function getCanonicalEntityTypes(): AmazonDspCanonicalEntityType[] {
   return [...AMAZON_DSP_CANONICAL_ENTITY_TYPES];
 }
 

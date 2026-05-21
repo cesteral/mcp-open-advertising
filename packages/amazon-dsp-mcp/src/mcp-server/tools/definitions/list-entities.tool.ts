@@ -125,7 +125,7 @@ export const listEntitiesTool = {
     {
       label: "List active orders (campaigns)",
       input: {
-        entityType: "campaign",
+        entityType: "order",
         profileId: "1234567890",
         filters: { advertiserId: "adv_123" },
         startIndex: 0,
@@ -135,7 +135,7 @@ export const listEntitiesTool = {
     {
       label: "List line items for an order",
       input: {
-        entityType: "adGroup",
+        entityType: "lineItem",
         profileId: "1234567890",
         filters: { orderId: "ord_456" },
       },

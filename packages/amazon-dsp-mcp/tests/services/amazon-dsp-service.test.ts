@@ -64,12 +64,6 @@ describe("AmazonDspService", () => {
       expect(mockHttpClient.get).toHaveBeenCalledWith("/dsp/orders/o1", undefined, undefined);
       expect(result.orderId).toBe("o1");
     });
-
-    it("normalizes campaign alias to order endpoints", async () => {
-      mockHttpClient.get.mockResolvedValueOnce({ orderId: "o1", name: "Test" });
-      await service.getEntity("campaign", "o1");
-      expect(mockHttpClient.get).toHaveBeenCalledWith("/dsp/orders/o1", undefined, undefined);
-    });
   });
 
   describe("createEntity", () => {

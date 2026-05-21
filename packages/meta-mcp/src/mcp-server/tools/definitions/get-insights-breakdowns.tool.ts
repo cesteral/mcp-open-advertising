@@ -27,7 +27,7 @@ const TOOL_DESCRIPTION = `Get performance insights broken down by dimension (age
 **Gotchas:**
 - Not all breakdown combinations are valid.
 - Some breakdowns dramatically increase result volume.
-- Use \`limit\` to control page size.`;
+- Use \`maxRows\` to control how many rows are returned.`;
 
 export const GetInsightsBreakdownsInputSchema = z
   .object({
@@ -51,12 +51,6 @@ export const GetInsightsBreakdownsInputSchema = z
       .array(z.string())
       .optional()
       .describe("Attribution windows (e.g., ['1d_click', '7d_click'])"),
-    limit: z
-      .number()
-      .min(1)
-      .max(500)
-      .optional()
-      .describe("Deprecated. Use maxRows for the returned row count."),
     after: z.string().optional().describe("Cursor for next page"),
     includeComputedMetrics: z
       .boolean()
@@ -86,10 +80,6 @@ export async function getInsightsBreakdownsLogic(
   sdkContext?: SdkContext
 ): Promise<GetInsightsBreakdownsOutput> {
   const { metaInsightsService } = resolveSessionServices(sdkContext);
-  const viewInput =
-    input.maxRows === undefined && input.limit !== undefined
-      ? { ...input, maxRows: input.limit }
-      : input;
 
   const result = await metaInsightsService.getInsightsBreakdowns(
     input.entityId,
@@ -101,7 +91,7 @@ export async function getInsightsBreakdownsLogic(
       timeIncrement: input.timeIncrement,
       level: input.level,
       actionAttributionWindows: input.actionAttributionWindows,
-      limit: getReportViewFetchLimit(viewInput),
+      limit: getReportViewFetchLimit(input),
       after: input.after,
     },
     context
@@ -145,7 +135,7 @@ export async function getInsightsBreakdownsLogic(
     ...createReportView({
       rows,
       totalRows: rows.length + (result.nextCursor ? 1 : 0),
-      input: viewInput,
+      input,
       warnings: result.nextCursor
         ? ["More rows are available. Call again with after set to nextCursor to continue."]
         : [],

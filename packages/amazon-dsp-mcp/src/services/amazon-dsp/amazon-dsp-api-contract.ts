@@ -10,8 +10,6 @@ export type AmazonDspCanonicalEntityType =
   | "target"
   | "creativeAssociation";
 
-export type AmazonDspPublicEntityType = AmazonDspCanonicalEntityType | "campaign" | "adGroup";
-
 export interface AmazonDspContractFieldRule {
   field: string;
   expectedType: "string" | "number" | "object";
@@ -20,7 +18,6 @@ export interface AmazonDspContractFieldRule {
 
 export interface AmazonDspEntityContract {
   canonicalType: AmazonDspCanonicalEntityType;
-  aliases: string[];
   listPath: string;
   getPath: string;
   createPath: string;
@@ -45,18 +42,12 @@ export interface AmazonDspEntityContract {
   notes: string[];
 }
 
-export const AMAZON_DSP_ENTITY_ALIASES: Record<string, AmazonDspCanonicalEntityType> = {
-  campaign: "order",
-  adGroup: "lineItem",
-};
-
 export const AMAZON_DSP_ENTITY_CONTRACT: Record<
   AmazonDspCanonicalEntityType,
   AmazonDspEntityContract
 > = {
   order: {
     canonicalType: "order",
-    aliases: ["campaign"],
     listPath: "/dsp/orders",
     getPath: "/dsp/orders/{entityId}",
     createPath: "/dsp/orders",
@@ -82,7 +73,6 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
   },
   lineItem: {
     canonicalType: "lineItem",
-    aliases: ["adGroup"],
     listPath: "/dsp/lineItems",
     getPath: "/dsp/lineItems/{entityId}",
     createPath: "/dsp/lineItems",
@@ -117,7 +107,6 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
   },
   creative: {
     canonicalType: "creative",
-    aliases: [],
     listPath: "/dsp/creatives",
     getPath: "/dsp/creatives/{entityId}",
     createPath: "/dsp/creatives",
@@ -150,7 +139,6 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
   },
   target: {
     canonicalType: "target",
-    aliases: [],
     listPath: "/dsp/targets",
     getPath: "/dsp/targets/{entityId}",
     createPath: "/dsp/targets",
@@ -170,7 +158,6 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
   },
   creativeAssociation: {
     canonicalType: "creativeAssociation",
-    aliases: [],
     listPath: "/dsp/creativeAssociations",
     getPath: "/dsp/creativeAssociations/{entityId}",
     createPath: "/dsp/creativeAssociations",
@@ -200,12 +187,6 @@ export const AMAZON_DSP_ENTITY_CONTRACT: Record<
 export const AMAZON_DSP_CANONICAL_ENTITY_TYPES = Object.keys(
   AMAZON_DSP_ENTITY_CONTRACT
 ) as AmazonDspCanonicalEntityType[];
-
-export const AMAZON_DSP_PUBLIC_ENTITY_TYPES = [
-  ...AMAZON_DSP_CANONICAL_ENTITY_TYPES,
-  "campaign",
-  "adGroup",
-] as const satisfies readonly AmazonDspPublicEntityType[];
 
 /**
  * Amazon DSP Reporting API contract (the legacy `/dsp/reports` surface).
@@ -257,15 +238,10 @@ export const AMAZON_DSP_REPORTING_CONTRACT = {
 } as const;
 
 export function normalizeAmazonDspEntityType(
-  entityType: AmazonDspPublicEntityType | string
+  entityType: AmazonDspCanonicalEntityType | string
 ): AmazonDspCanonicalEntityType {
   if (entityType in AMAZON_DSP_ENTITY_CONTRACT) {
     return entityType as AmazonDspCanonicalEntityType;
-  }
-
-  const aliased = AMAZON_DSP_ENTITY_ALIASES[entityType];
-  if (aliased) {
-    return aliased;
   }
 
   throw new McpError(
@@ -275,7 +251,7 @@ export function normalizeAmazonDspEntityType(
 }
 
 export function getAmazonDspEntityContract(
-  entityType: AmazonDspPublicEntityType | string
+  entityType: AmazonDspCanonicalEntityType | string
 ): AmazonDspEntityContract {
   return AMAZON_DSP_ENTITY_CONTRACT[normalizeAmazonDspEntityType(entityType)];
 }

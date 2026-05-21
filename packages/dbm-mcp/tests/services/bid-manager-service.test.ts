@@ -1041,7 +1041,7 @@ describe("BidManagerService", () => {
       ).rejects.toThrow(BidManagerError);
     });
 
-    it("returns CSV format correctly", async () => {
+    it("returns parsed structured data", async () => {
       const csvContent = "impressions,clicks\n1000,50\n2000,100";
       vi.stubGlobal(
         "fetch",
@@ -1057,33 +1057,6 @@ describe("BidManagerService", () => {
           groupBys: ["FILTER_DATE"],
           metrics: ["METRIC_IMPRESSIONS"],
           dateRange: { preset: "LAST_7_DAYS" },
-          outputFormat: "csv",
-        })
-      );
-
-      expect(result.status).toBe("DONE");
-      expect(result.data).toBe(csvContent);
-      expect(result.columns).toEqual(["impressions", "clicks"]);
-      expect(result.rowCount).toBe(2);
-    });
-
-    it("returns structured format correctly", async () => {
-      const csvContent = "impressions,clicks\n1000,50\n2000,100";
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue({
-          ok: true,
-          text: async () => csvContent,
-        })
-      );
-
-      const result = await withAdvancedTimers(() =>
-        service.executeCustomQuery({
-          reportType: "STANDARD",
-          groupBys: ["FILTER_DATE"],
-          metrics: ["METRIC_IMPRESSIONS"],
-          dateRange: { preset: "LAST_7_DAYS" },
-          outputFormat: "structured",
         })
       );
 

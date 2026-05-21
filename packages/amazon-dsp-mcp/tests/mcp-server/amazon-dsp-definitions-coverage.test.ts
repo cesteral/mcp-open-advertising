@@ -177,6 +177,6 @@ describe("Amazon DSP MCP definitions coverage", () => {
     const bulkPrompt = getPromptDefinition("amazon_dsp_bulk_operations_workflow");
 
     expect(campaignPrompt?.generateMessage({ profileId: "123" })).toContain("Amazon DSP");
-    expect(bulkPrompt?.generateMessage({ entityType: "campaign" })).toContain("bulk");
+    expect(bulkPrompt?.generateMessage({ entityType: "order" })).toContain("bulk");
   });
 });

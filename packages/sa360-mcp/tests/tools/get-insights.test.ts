@@ -220,26 +220,6 @@ describe("GetInsightsInputSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects limit over 10000", () => {
-    const result = GetInsightsInputSchema.safeParse({
-      customerId: "1234567890",
-      entityType: "campaign",
-      dateRange: "LAST_30_DAYS",
-      limit: 10001,
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects limit less than 1", () => {
-    const result = GetInsightsInputSchema.safeParse({
-      customerId: "1234567890",
-      entityType: "campaign",
-      dateRange: "LAST_30_DAYS",
-      limit: 0,
-    });
-    expect(result.success).toBe(false);
-  });
-
   it("accepts includeComputedMetrics flag", () => {
     const result = GetInsightsInputSchema.safeParse({
       customerId: "1234567890",

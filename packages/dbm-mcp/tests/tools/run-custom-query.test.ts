@@ -30,15 +30,7 @@ function makeStructuredRows(count: number): Record<string, unknown>[] {
   }));
 }
 
-function createMockBidManagerService(
-  rowCount: number,
-  dataMode: "structured" | "csv" = "structured"
-) {
-  const data: Record<string, unknown>[] | string =
-    dataMode === "csv"
-      ? "Date,Impressions,Clicks\n2026-01-01,1000,50\n"
-      : makeStructuredRows(rowCount);
-
+function createMockBidManagerService(rowCount: number) {
   return {
     executeCustomQuery: vi.fn().mockImplementation(async (req: any) => ({
       queryId: "q-1",
@@ -46,7 +38,7 @@ function createMockBidManagerService(
       status: "DONE",
       rowCount,
       columns: ["Date", "Impressions", "Clicks"],
-      data,
+      data: makeStructuredRows(rowCount),
       __req: req,
     })),
   };
@@ -58,7 +50,6 @@ const baseInput: RunCustomQueryInput = {
   metrics: ["METRIC_IMPRESSIONS", "METRIC_CLICKS"],
   dateRange: { preset: "LAST_7_DAYS" },
   strictValidation: false,
-  outputFormat: "structured",
 } as any;
 
 describe("RunCustomQueryInputSchema", () => {
@@ -166,20 +157,5 @@ describe("runCustomQueryLogic", () => {
 
     expect(result.returnedRows).toBe(200);
     expect(result.warnings.some((w) => w.includes("200"))).toBe(true);
-  });
-
-  it("warns when csv outputFormat is requested but returns a structured bounded view", async () => {
-    const service = createMockBidManagerService(5, "csv");
-    mockResolveSessionServices.mockReturnValue({ bidManagerService: service });
-
-    const result = await runCustomQueryLogic(
-      { ...baseInput, outputFormat: "csv" } as RunCustomQueryInput,
-      createMockContext(),
-      { sessionId: "s-1" } as any
-    );
-
-    expect(result.warnings.some((w) => w.includes("csv"))).toBe(true);
-    expect(result.warnings.some((w) => w.includes("CSV result was not embedded"))).toBe(true);
-    expect(result.previewRows).toEqual([]);
   });
 });

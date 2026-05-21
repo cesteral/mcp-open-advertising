@@ -63,9 +63,9 @@ amazon_dsp_get_report({
 If ad group or ad, check parent entity status:
 \`\`\`json
 amazon_dsp_get_entity({
-  "entityType": "campaign",
+  "entityType": "order",
   "profileId": "${profileId}",
-  "entityId": "{parentCampaignId}"
+  "entityId": "{parentOrderId}"
 })
 \`\`\`
 

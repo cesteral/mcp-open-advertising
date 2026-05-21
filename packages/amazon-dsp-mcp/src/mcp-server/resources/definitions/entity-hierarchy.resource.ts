@@ -52,8 +52,7 @@ ${rows}
 ${pathRows}
 
 ## Key Notes
-- MCP accepts both \`campaign\` and \`order\` as the same entity type.
-- MCP accepts both \`adGroup\` and \`lineItem\` as the same entity type.
+- An Amazon DSP \`order\` is the campaign-level object; a \`lineItem\` is the ad-group-level object.
 - Amazon DSP reporting v3 uses \`POST /reporting/reports\` and \`GET /reporting/reports/{reportId}\`.
 - List responses are modeled as JSON objects containing the entity-specific response key plus \`totalResults\`.
 - Entity support in this MCP is intentionally narrower than the full Amazon Ads surface; Guidance, Quick Actions, and newer targeting APIs remain follow-up work.

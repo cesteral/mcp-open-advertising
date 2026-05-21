@@ -98,13 +98,6 @@ export const RunCustomQueryInputSchema = z
         "If true (default), reject unknown filters/metrics. If false, pass through to API."
       ),
 
-    outputFormat: z
-      .enum(["structured", "csv"])
-      .optional()
-      .default("structured")
-      .describe(
-        "Deprecated. Results are always returned as a bounded report view; csv requests add a warning."
-      ),
   })
   .merge(ReportViewInputSchema)
   .superRefine((input, ctx) => {
@@ -169,22 +162,10 @@ export async function runCustomQueryLogic(
     metrics: input.metrics,
     filters: input.filters,
     dateRange: input.dateRange,
-    outputFormat: input.outputFormat,
   });
 
   const warningsOut = warnings.length > 0 ? [...warnings] : [];
-  if (input.outputFormat === "csv") {
-    warningsOut.push(
-      'outputFormat: "csv" is deprecated for MCP responses; returned a bounded structured report view instead.'
-    );
-  }
-
-  const rows = typeof result.data === "string" ? [] : (result.data as Record<string, unknown>[]);
-  if (typeof result.data === "string") {
-    warningsOut.push(
-      'CSV result was not embedded to avoid MCP response-size failures. Use outputFormat: "structured" for bounded row previews.'
-    );
-  }
+  const rows = result.data;
 
   return {
     queryId: result.queryId,
@@ -273,13 +254,12 @@ export const runCustomQueryTool: ToolDefinition<
       },
     },
     {
-      label: "YouTube report with CSV output",
+      label: "YouTube report",
       input: {
         reportType: "YOUTUBE",
         groupBys: ["FILTER_DATE", "FILTER_LINE_ITEM"],
         metrics: ["METRIC_TRUEVIEW_VIEWS", "METRIC_TRUEVIEW_VIEW_RATE"],
         dateRange: { preset: "LAST_30_DAYS" },
-        outputFormat: "csv",
       },
     },
   ],
