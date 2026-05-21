@@ -249,7 +249,10 @@ describe("mcp transport CRUD integration (CM360)", () => {
     expect(deleteResult.json?.error).toBeUndefined();
 
     expect(mockState.cm360Service.createEntity).toHaveBeenCalledOnce();
-    expect(mockState.cm360Service.getEntity).toHaveBeenCalledOnce();
+    // getEntity is called twice: once for the explicit cm360_get_entity step,
+    // and once inside cm360_update_entity to capture the governed pre-write
+    // `before` snapshot (campaign is a governed entity kind).
+    expect(mockState.cm360Service.getEntity).toHaveBeenCalledTimes(2);
     expect(mockState.cm360Service.updateEntity).toHaveBeenCalledOnce();
     expect(mockState.cm360Service.deleteEntity).toHaveBeenCalledOnce();
   });

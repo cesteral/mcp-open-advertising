@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type PinterestEntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "pinterest_get_entity";
 const TOOL_TITLE = "Get Pinterest Ads Entity";
@@ -71,6 +71,20 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
+    cesteral: {
+      kind: "read",
+      platform: "pinterest",
+      contractPlatformSlug: "pinterest",
+      contractToolSlug: "get_entity",
+      // Mirror `pinterest_update_entity`'s governed entity coverage so a write
+      // tool declaring this as its read partner can capture pre/post
+      // snapshots. Governed scope is campaign / ad_group / ad; creative (Pin)
+      // has no canonical kind and is out of scope.
+      entityKinds: ["campaign", "ad_group", "ad"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "pinterest.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {

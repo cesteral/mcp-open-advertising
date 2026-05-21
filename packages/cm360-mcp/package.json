@@ -1,7 +1,7 @@
 {
   "name": "@cesteral/cm360-mcp",
   "mcpName": "io.github.cesteral/cm360-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CM360 MCP Server - Campaign Manager 360 ad serving and trafficking management",
   "license": "Apache-2.0",
   "repository": {
@@ -25,6 +25,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./testkit": {
+      "types": "./dist/testkit/index.d.ts",
+      "import": "./dist/testkit/index.js"
+    }
+  },
   "bin": {
     "cm360-mcp": "./dist/index.js"
   },

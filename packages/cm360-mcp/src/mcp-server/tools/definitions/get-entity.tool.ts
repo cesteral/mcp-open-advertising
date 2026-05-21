@@ -5,7 +5,7 @@ import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import { getEntityTypeEnum, type CM360EntityType } from "../utils/entity-mapping.js";
 import type { RequestContext, McpTextContent } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "cm360_get_entity";
 const TOOL_TITLE = "Get CM360 Entity";
@@ -71,6 +71,20 @@ export const getEntityTool = {
     openWorldHint: true,
     destructiveHint: false,
     idempotentHint: true,
+    cesteral: {
+      kind: "read",
+      platform: "cm360",
+      contractPlatformSlug: "cm360",
+      contractToolSlug: "get_entity",
+      // Mirror `cm360_update_entity`'s governed entity coverage so a write
+      // tool declaring this as its read partner can capture pre/post
+      // snapshots. Governed scope is campaign / ad; placement / advertiser /
+      // creative have no canonical kind and are out of scope.
+      entityKinds: ["campaign", "ad"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "cm360.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {
