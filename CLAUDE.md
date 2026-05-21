@@ -1,8 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-The public fleet overview — server list, ports, API versions, and tool counts — lives in [README.md](README.md). This file focuses on **how the repo is structured and how to work in it**: architecture patterns, conventions, gotchas, and cross-cutting subsystems.
+Guidance for Claude Code (claude.ai/code) when working in this repository. The public fleet overview — server list, ports, API versions, tool counts — lives in [README.md](README.md). This file covers **how the repo is structured and how to work in it**: architecture patterns, conventions, gotchas, and cross-cutting subsystems.
 
 ## Project Overview
 
@@ -11,25 +9,18 @@ Cesteral is an AI-native programmatic advertising optimization platform built on
 ## Essential Commands
 
 ```bash
-pnpm install                          # Install dependencies
-pnpm run build                        # Build all packages (Turborepo)
-pnpm run typecheck                    # Type check all packages
-pnpm run test                         # Run all tests
-pnpm run clean                        # Clean build artifacts
+pnpm install        # Install dependencies
+pnpm run build      # Build all packages (Turborepo, dependency-ordered)
+pnpm run typecheck  # Type check all packages
+pnpm run test       # Run all tests
+pnpm run clean      # Clean build artifacts
 
-# Run any server locally (uses correct port automatically)
-./scripts/dev-server.sh <server-name> # e.g. ./scripts/dev-server.sh dv360-mcp
-
-# Or run directly
-cd packages/<server-name> && pnpm run dev:http
-
-# Build/test/typecheck single package
-cd packages/<server-name> && pnpm run build
-cd packages/<server-name> && pnpm run test
-cd packages/<server-name> && pnpm run typecheck
+./scripts/dev-server.sh <server-name>            # Run a server locally on its correct port (e.g. dv360-mcp)
+cd packages/<server-name> && pnpm run dev:http   # Or run directly
+# Single package: cd packages/<server-name> && pnpm run <build|test|typecheck>
 ```
 
-**Critical**: When modifying `@cesteral/shared`, rebuild all packages with `pnpm run build`.
+**Critical**: When modifying `@cesteral/shared`, rebuild all packages with `pnpm run build` — Turborepo handles dependency order and the `workspace:*` protocol propagates the changes.
 
 ## Monorepo Architecture
 
@@ -61,9 +52,7 @@ Each tool is a single file in `src/mcp-server/tools/definitions/` exporting thre
 2. **Tool metadata** object with `name`, `description`, `inputSchema`
 3. **Handler function** that returns `{ content: [{ type: "text", text: ... }] }`
 
-Register by importing the tool definition in `tools/definitions/index.ts` and adding to the `allTools` array. `registerToolsFromDefinitions()` picks it up automatically — no switch statements or transport changes.
-
-Tool handlers should focus on business logic; errors propagate to the factory's try/catch wrapper.
+Register by importing the tool definition in `tools/definitions/index.ts` and adding to the `allTools` array. `registerToolsFromDefinitions()` picks it up automatically — no switch statements or transport changes. Handlers focus on business logic; errors propagate to the factory's try/catch wrapper.
 
 Most servers also include an auto-generated `*_search_tools` discovery tool registered via `createToolSearchTool({ platform, getTools })` in the same array.
 
@@ -88,7 +77,7 @@ Full discriminated union schemas exceed ~1MB (EPIPE on stdio). Solution: simplif
 
 ### MCP Prompts
 
-On-demand workflow guidance for complex multi-step operations. Located in `src/mcp-server/prompts/`. Register in `prompts/index.ts` via the `promptRegistry` Map. Each entry pairs a `Prompt` metadata object with a `generateMessage(args)` function that returns the prompt body.
+On-demand workflow guidance for complex multi-step operations. Located in `src/mcp-server/prompts/`. Register in `prompts/index.ts` via the `promptRegistry` Map — each entry pairs a `Prompt` metadata object with a `generateMessage(args)` function that returns the prompt body.
 
 ## Auth Mode Configuration
 
@@ -148,7 +137,7 @@ gcloud run services logs tail <server-name> --region=europe-west2
 
 ### Release Attestation Manifest
 
-`scripts/generate-manifests.mjs` (run via `pnpm run generate:manifests`) boots each MCP server, reads its raw `tools/list`, and writes `dist/cesteral-manifest.json` for every package that has governed tools — tools carrying an `annotations.cesteral` block. The per-tool `definitionHash` is a canonical SHA-256 computed by the shared `@cesteral/contract-hash` package (kept bit-identical with the downstream `cesteral-intelligence` governance repo). The tag-triggered `release.yml` publishes to npm with build provenance, so the manifest is signed transitively inside the tarball; the downstream governance system verifies provenance and treats the manifest's tool hashes as blessed, promoting matching tools to `attested` trust.
+`scripts/generate-manifests.mjs` (`pnpm run generate:manifests`) boots each server, reads its raw `tools/list`, and writes `dist/cesteral-manifest.json` for every package with governed tools (those carrying an `annotations.cesteral` block). Each tool's `definitionHash` is a canonical SHA-256 from `@cesteral/contract-hash` — kept bit-identical with the downstream `cesteral-intelligence` governance repo. The tag-triggered `release.yml` publishes to npm with build provenance, signing the manifest transitively inside the tarball; the governance system verifies that provenance and promotes matching tools to `attested` trust.
 
 ## Key Design Principles
 
@@ -156,21 +145,13 @@ gcloud run services logs tail <server-name> --region=europe-west2
 2. **Stateless**: No persistent state between requests
 3. **Type Safety**: Zod for runtime, TypeScript for compile-time
 4. **Observability**: OTEL traces + metrics, Pino structured logs, InteractionLogger for tool-call + tool-failure persistence
-5. **Scale-out-safe sessions**: the streamable-HTTP transport factory rebuilds session services on cache miss. A follow-up request whose `Mcp-Session-Id` is unknown to the receiving Cloud Run instance triggers a re-auth + `createSessionForAuth` using the client-supplied session ID. The existing credential fingerprint check runs on every call, so rebuild does not weaken session binding. Per-instance state that is _not_ reconstructible from credentials (rate-limiter counters, in-memory `report-csv://` resources) may behave slightly differently after a scale-out event — documented inline in each subsystem.
+5. **Scale-out-safe sessions**: the streamable-HTTP transport factory rebuilds session services on cache miss — a request with an `Mcp-Session-Id` unknown to the receiving Cloud Run instance triggers re-auth + `createSessionForAuth` using the client-supplied ID. The per-call credential fingerprint check still runs, so rebuild does not weaken session binding. Per-instance state not reconstructible from credentials (rate-limiter counters, in-memory `report-csv://` resources) may behave slightly differently after a scale-out event — documented inline in each subsystem.
 
 ## Tool Failure Logging
 
-Every tool invocation is captured by `InteractionLogger` (`packages/shared/src/utils/interaction-logger.ts`). On failure, the entry includes the captured upstream HTTP trail (method, URL, status, redacted request/response bodies, per-attempt durations) recorded by `executeWithRetry` via `http-request-recorder.ts`.
+Every tool invocation is captured by `InteractionLogger` (`packages/shared/src/utils/interaction-logger.ts`). On failure, the entry adds the upstream HTTP trail (method, URL, status, redacted request/response bodies, per-attempt durations) recorded by `executeWithRetry` via `http-request-recorder.ts`.
 
-Record shape (JSONL):
-
-```
-{ "type": "tool_failure", "ts", "sessionId", "requestId", "tool", "platform",
-  "params" (redacted), "errorCode", "errorMessage", "errorData",
-  "upstream": [ { "method", "url", "status", "attempt", "durationMs",
-                  "requestBodyRedacted", "responseBodyRedacted",
-                  "requestHeadersRedacted", "responseHeadersRedacted" } ] }
-```
+Record shape (JSONL): `{ type: "tool_failure", ts, sessionId, requestId, tool, platform, params (redacted), errorCode, errorMessage, errorData, upstream: [{ method, url, status, attempt, durationMs, requestBodyRedacted, responseBodyRedacted, requestHeadersRedacted, responseHeadersRedacted }] }`
 
 Destination is chosen by `INTERACTION_LOG_MODE`:
 
@@ -180,19 +161,7 @@ Destination is chosen by `INTERACTION_LOG_MODE`:
 | `file`   | Self-host default                                        | Rotating JSONL at `~/.cesteral/interactions/`                      |
 | `stdout` | Self-host with external log pipeline                     | Pino `info`/`error` line per entry — ship via any stdout log agent |
 
-Query hosted data in BigQuery via an external table:
-
-```sql
-CREATE EXTERNAL TABLE mcp_interactions
-OPTIONS (format='JSON',
-         uris=['gs://<bucket>/<server-name>/interactions/*.jsonl']);
-
--- Top failing tools by platform in the last 7 days
-SELECT tool, platform, JSON_VALUE(upstream[OFFSET(0)].status) AS status, COUNT(*) AS n
-FROM mcp_interactions
-WHERE type = 'tool_failure' AND ts > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 7 DAY)
-GROUP BY 1,2,3 ORDER BY n DESC LIMIT 50;
-```
+Hosted data is queryable in BigQuery via a JSON external table over `gs://<bucket>/<server-name>/interactions/*.jsonl`.
 
 Redaction lives in `http-request-recorder.ts` (headers: Authorization, TTD-Auth, DeveloperToken, etc.; body: bearer tokens, `access_token`/`refresh_token`/`client_secret`/`password` JSON fields). Response bodies are truncated at 8 KB.
 
@@ -207,11 +176,9 @@ Large report CSVs (TTD, TikTok, Snapchat, Amazon DSP, Pinterest, MSADS) can be s
 | `REPORT_SPILL_THRESHOLD_ROWS`         | `100000`           | Minimum parsed row count that triggers a spill (OR'd with the byte threshold — either can fire).                                                                    |
 | `REPORT_SPILL_SIGNED_URL_TTL_SECONDS` | `3600` (1h)        | Expiry on the V4 signed URL returned in `spill.signedUrl`.                                                                                                          |
 
-**Object path:** `{server}/{sessionId?}/{reportId}-{timestamp}.{csv\|json}`. Sessioned prefixes enable per-session cleanup sweeps via `SessionServiceStore.onDelete` hooks (wired in each server's `session-services.ts`). A 24-hour GCS lifecycle rule on the `report_spill` bucket (provisioned in `terraform/main.tf`) is the primary cost control; the session hook is a belt-and-braces deletion that runs earlier when possible.
+**Object path:** `{server}/{sessionId?}/{reportId}-{timestamp}.{csv\|json}`. Sessioned prefixes enable per-session cleanup sweeps via `SessionServiceStore.onDelete` hooks (wired in each server's `session-services.ts`). A 24-hour GCS lifecycle rule on the `report_spill` bucket (provisioned in `terraform/main.tf`) is the primary cost control; the session hook is a belt-and-braces deletion that runs earlier when possible. Terraform variables `enable_report_spill` + `report_spill_bucket_name` gate the bucket provisioning.
 
 **Failure modes never break the response.** If spill is enabled but the GCS write fails (permissions, quota, network), the download tool returns `{ spill: { error } }` plus a bounded-view warning, not an error — callers always get their summary/rows.
-
-Terraform variables `enable_report_spill` + `report_spill_bucket_name` gate the bucket provisioning.
 
 ## TypeScript Build Issues
 
@@ -220,9 +187,3 @@ If you encounter "The inferred type cannot be named" errors, add explicit return
 ```typescript
 export function createMcpHttpServer(): express.Application { ... }
 ```
-
-## Working with Multiple Packages
-
-1. Make changes to `@cesteral/shared`
-2. Build from root: `pnpm run build` (Turborepo handles dependency order)
-3. Changes automatically available via workspace protocol (`workspace:*`)
