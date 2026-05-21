@@ -1,7 +1,7 @@
 {
   "name": "@cesteral/msads-mcp",
   "mcpName": "io.github.cesteral/msads-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Microsoft Advertising MCP Server - campaign management and reporting via Microsoft Advertising API v13 JSON endpoints",
   "license": "Apache-2.0",
   "repository": {
@@ -25,6 +25,16 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./testkit": {
+      "types": "./dist/testkit/index.d.ts",
+      "import": "./dist/testkit/index.js"
+    }
+  },
   "bin": {
     "msads-mcp": "./dist/index.js"
   },

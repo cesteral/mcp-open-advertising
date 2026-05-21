@@ -24,7 +24,7 @@ export function getMsAdsTroubleshootEntityMessage(args?: Record<string, string>)
 
 ## Step 1: Fetch Entity Details
 \`\`\`json
-msads_get_entity({ "entityType": "${entityType}", "entityIds": ["${entityId}"] })
+msads_get_entity({ "entityType": "${entityType}", "entityId": "${entityId}" })
 \`\`\`
 
 ## Step 2: Check Status

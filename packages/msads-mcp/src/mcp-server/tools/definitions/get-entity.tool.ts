@@ -4,70 +4,78 @@
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import type { MsAdsEntityType } from "../utils/entity-mapping.js";
-import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
+import type { RequestContext, McpTextContent } from "@cesteral/shared";
+import type { SdkContext, CesteralReadToolAnnotations } from "@cesteral/shared";
 
 const TOOL_NAME = "msads_get_entity";
 const TOOL_TITLE = "Get Microsoft Ads Entity";
-const TOOL_DESCRIPTION = `Retrieve one or more Microsoft Advertising entities by their IDs.
+const TOOL_DESCRIPTION = `Retrieve a single Microsoft Advertising entity by its ID.
 
-Returns full entity details for the specified entity type and IDs.
+Returns full entity details for the specified entity type and ID.
 
-Some Microsoft Advertising query operations require parent or account context in addition to the IDs.`;
+Some Microsoft Advertising query operations require parent or account context in
+addition to the ID (campaign needs accountId, adGroup needs campaignId, etc.).`;
 
-const BaseGetEntitySchema = {
-  entityIds: z.array(z.string()).min(1).describe("Array of entity IDs to retrieve"),
-  additionalParams: z
-    .record(z.unknown())
-    .optional()
-    .describe("Additional parameters such as ReturnAdditionalFields"),
-};
+const idField = z.string().min(1).describe("The entity ID to retrieve");
+const additionalParamsField = z
+  .record(z.unknown())
+  .optional()
+  .describe("Additional parameters such as ReturnAdditionalFields");
 
 export const GetEntityInputSchema = z
   .discriminatedUnion("entityType", [
     z.object({
       entityType: z.literal("campaign"),
+      entityId: idField,
       accountId: z.string().describe("AccountId required by GetCampaignsByIds"),
-      ...BaseGetEntitySchema,
+      additionalParams: additionalParamsField,
     }),
     z.object({
       entityType: z.literal("adGroup"),
+      entityId: idField,
       campaignId: z.string().describe("CampaignId required by GetAdGroupsByIds"),
-      ...BaseGetEntitySchema,
+      additionalParams: additionalParamsField,
     }),
     z.object({
       entityType: z.literal("ad"),
+      entityId: idField,
       adGroupId: z.string().describe("AdGroupId required by GetAdsByIds"),
-      ...BaseGetEntitySchema,
+      additionalParams: additionalParamsField,
     }),
     z.object({
       entityType: z.literal("keyword"),
+      entityId: idField,
       adGroupId: z.string().describe("AdGroupId required by GetKeywordsByIds"),
-      ...BaseGetEntitySchema,
+      additionalParams: additionalParamsField,
     }),
     z.object({
       entityType: z.literal("adExtension"),
+      entityId: idField,
       accountId: z.string().describe("AccountId required by GetAdExtensionsByIds"),
       adExtensionType: z.string().describe("AdExtensionType required by GetAdExtensionsByIds"),
-      ...BaseGetEntitySchema,
+      additionalParams: additionalParamsField,
     }),
     z.object({
       entityType: z.literal("budget"),
-      ...BaseGetEntitySchema,
+      entityId: idField,
+      additionalParams: additionalParamsField,
     }),
     z.object({
       entityType: z.literal("audience"),
-      ...BaseGetEntitySchema,
+      entityId: idField,
+      additionalParams: additionalParamsField,
     }),
     z.object({
       entityType: z.literal("label"),
-      ...BaseGetEntitySchema,
+      entityId: idField,
+      additionalParams: additionalParamsField,
     }),
   ])
-  .describe("Parameters for getting Microsoft Ads entities by ID");
+  .describe("Parameters for getting a Microsoft Ads entity by ID");
 
 export const GetEntityOutputSchema = z
   .object({
-    entities: z.array(z.record(z.any())),
+    entity: z.record(z.any()).nullable().describe("Retrieved entity data, or null if not found"),
     entityType: z.string(),
     timestamp: z.string().datetime(),
   })
@@ -102,15 +110,15 @@ export async function getEntityLogic(
 
   const { entities: rawEntities } = await msadsService.getEntity(
     input.entityType as MsAdsEntityType,
-    input.entityIds,
+    [input.entityId],
     additionalParams,
     context
   );
 
-  const entities = rawEntities as unknown as Record<string, unknown>[];
+  const entity = (rawEntities[0] as unknown as Record<string, unknown>) ?? null;
 
   return {
-    entities,
+    entity,
     entityType: input.entityType,
     timestamp: new Date().toISOString(),
   };
@@ -120,7 +128,9 @@ export function getEntityResponseFormatter(result: GetEntityOutput): McpTextCont
   return [
     {
       type: "text" as const,
-      text: `Retrieved ${result.entities.length} ${result.entityType} entities\n\n${JSON.stringify(result.entities, null, 2)}\n\nTimestamp: ${result.timestamp}`,
+      text: result.entity
+        ? `Retrieved ${result.entityType} entity\n\n${JSON.stringify(result.entity, null, 2)}\n\nTimestamp: ${result.timestamp}`
+        : `No ${result.entityType} entity found\n\nTimestamp: ${result.timestamp}`,
     },
   ];
 }
@@ -136,11 +146,30 @@ export const getEntityTool = {
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
+    cesteral: {
+      kind: "read",
+      platform: "msads",
+      contractPlatformSlug: "msads",
+      contractToolSlug: "get_entity",
+      // Mirror `msads_update_entity`'s governed entity coverage so a write tool
+      // declaring this as its read partner can capture pre/post snapshots.
+      // Governed scope is campaign / adGroup / ad / budget; keyword /
+      // adExtension / audience / label have no canonical kind and are out of
+      // scope.
+      entityKinds: ["campaign", "ad_group", "ad", "campaign_budget"],
+      entityIdArgs: ["entityId"],
+      schemaVersion: 1,
+      contractId: "msads.get_entity.v1",
+    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {
       label: "Get a campaign by ID",
-      input: { entityType: "campaign", entityIds: ["123456"], accountId: "789012" },
+      input: { entityType: "campaign", entityId: "123456", accountId: "789012" },
+    },
+    {
+      label: "Get a shared budget by ID",
+      input: { entityType: "budget", entityId: "555000" },
     },
   ],
   logic: getEntityLogic,
