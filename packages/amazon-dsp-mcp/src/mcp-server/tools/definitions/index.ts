@@ -37,6 +37,7 @@ export { listCommitmentsTool } from "./list-commitments.tool.js";
 export { getCommitmentsTool } from "./get-commitments.tool.js";
 export { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
 export { getCommitmentSpendTool } from "./get-commitment-spend.tool.js";
+export { getCommitmentTool } from "./get-commitment.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -60,6 +61,7 @@ import { listCommitmentsTool } from "./list-commitments.tool.js";
 import { getCommitmentsTool } from "./get-commitments.tool.js";
 import { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
 import { getCommitmentSpendTool } from "./get-commitment-spend.tool.js";
+import { getCommitmentTool } from "./get-commitment.tool.js";
 import {
   conformanceTools,
   createToolSearchTool,
@@ -95,6 +97,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── v1 Commitments ──
   listCommitmentsTool,
   getCommitmentsTool,
+  getCommitmentTool,
   getCampaignForecastTool,
   getCommitmentSpendTool,
   // ── Discovery ──
