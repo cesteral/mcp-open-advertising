@@ -2,9 +2,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Extend `amazon-dsp-mcp` with 6 new tools wrapping the Amazon Ads API v1 DSP endpoints: commitments CRUD, campaign forecasts, commitment spends.
+**Goal:** Extend `amazon-dsp-mcp` with 7 new tools wrapping the Amazon Ads API v1 DSP endpoints: `list_commitments`, `get_commitments` (batch read), `get_commitment` (singular read — read partner for the governed update), `create_commitment` (ungoverned single write), `update_commitment` (governed single write), `get_campaign_forecast`, `get_commitment_spend`. Plus one small additive change in `@cesteral/shared` covering both the TS union and the Zod enum for `CanonicalEntityKind`.
 
-**Architecture:** New v1 sub-surface alongside the existing `/dsp/*` surface. Shared `AmazonDspHttpClient` and session services; separate `AmazonDspV1Service` and per-endpoint paths contract. Tools follow the existing `*.tool.ts` shape. Schema generator (parallel to dv360-mcp's pipeline) produces `src/generated/v1/{types,zod}.ts` filtered to the 6 endpoints' transitive closure. Two write tools are governed with per-item symbolic dry-run (no native dry-run on Amazon's side).
+**Architecture:** New v1 sub-surface alongside the existing `/dsp/*` surface. Shared `AmazonDspHttpClient` and session services; separate `AmazonDspV1Service` (Zod-parses responses internally) and per-endpoint paths contract. Write tools are single-commitment-per-call matching every other package's `update-entity.tool.ts` pattern. `update_commitment` carries the full governed-write contract (conforming to `CesteralWriteToolAnnotations` verbatim); `create_commitment` is ungoverned (matching every existing `create-entity.tool.ts`). Schema generator (parallel to dv360-mcp's pipeline) produces `src/generated/v1/{types,zod}.ts`; output is committed and CI does NOT run the generator.
 
 **Tech Stack:** TypeScript, Zod, Vitest, `openapi-typescript`, `openapi-zod-client`, `tsx`. Design doc: `docs/plans/2026-05-28-amazon-dsp-v1-commitments-design.md`.
 
@@ -12,13 +12,13 @@
 
 ## Prerequisites
 
-Before starting Task 1, place the Amazon Ads API v1 OpenAPI spec at:
+Before starting Phase 1, place the Amazon Ads API v1 OpenAPI spec at:
 
 ```
 packages/amazon-dsp-mcp/docs/openapi.json
 ```
 
-The file is gitignored (716 KB, no stable Amazon URL). Without it the generator will fail with an actionable error in Task 5. Confirm the file exists:
+The file is gitignored (716 KB, no stable Amazon URL). Without it the generator will fail with an actionable error. Confirm the file exists:
 
 ```bash
 ls -lh packages/amazon-dsp-mcp/docs/openapi.json
@@ -27,9 +27,127 @@ ls -lh packages/amazon-dsp-mcp/docs/openapi.json
 
 ---
 
-## Phase 1 — Schema generator infrastructure
+## Phase 0 — Shared package: add `commitment` canonical kind
 
-### Task 1: Add codegen devDependencies
+### Task 1: Add `commitment` to both the TS union and the Zod enum, extend parity test
+
+**Files:**
+- Modify: `packages/shared/src/types/normalized-entity-snapshot.ts:53` (the TypeScript `CanonicalEntityKind` union)
+- Modify: `packages/shared/src/schemas/dry-run-result.ts:50` (the Zod `CanonicalEntityKindSchema`)
+- Modify: `packages/shared/tests/types/governance-contract.test.ts` (existing parity test — locate line ~80 where the union is asserted)
+
+The TS and Zod versions are mirrored and the parity test at `governance-contract.test.ts:80` enforces it via `expectTypeOf` equality. Touching only one will fail typecheck or the test.
+
+**Step 1: Read current state**
+
+```bash
+sed -n '48,65p' packages/shared/src/types/normalized-entity-snapshot.ts
+sed -n '48,60p' packages/shared/src/schemas/dry-run-result.ts
+grep -n "CanonicalEntityKind\|commitment\|entityKind:" packages/shared/tests/types/governance-contract.test.ts
+```
+
+**Step 2: Add failing parity-test cases**
+
+In `packages/shared/tests/types/governance-contract.test.ts`, add (placement near the existing kind-related cases — e.g. next to the existing "accepts insertion_order…" test at ~line 86):
+
+```ts
+it("accepts commitment so Amazon DSP commitment writes can be annotated and snapshotted", () => {
+  // Type-level: a write annotation may declare commitment as a target kind.
+  // (The parity test at the top of this file already enforces the union ↔ schema match.)
+  const annotation: CesteralWriteToolAnnotations = {
+    // ...minimal fields the existing tests use, plus:
+    operation: ["update"],
+    // entityKinds: ["commitment"],     // only if your annotation tests use entityKinds
+  } as never;
+
+  // Runtime: a NormalizedEntitySnapshot with entityKind: "commitment" round-trips.
+  const snapshot = {
+    schemaVersion: 1,
+    platform: "amazon_dsp",
+    entityKind: "commitment",
+    platformEntityId: "c-1",
+    displayName: "Q3 Upfront",
+    accountId: "profile-1",
+    status: { canonical: "active", platformRaw: "ACTIVE" },
+    budget: /* whatever the existing tests use for budget */ null,
+    schedule: { startAt: null, endAt: null },
+  };
+  expect(() => NormalizedEntitySnapshotSchema.parse(snapshot)).not.toThrow();
+});
+```
+
+Adapt to the exact import / fixture conventions in that test file — open it first and copy the structure of an existing case.
+
+Run:
+
+```bash
+cd packages/shared
+pnpm vitest run tests/types/governance-contract.test.ts
+# expected: this new test FAILS — "commitment" not in either enum
+```
+
+**Step 3: Add `"commitment"` to BOTH enums**
+
+In `packages/shared/src/types/normalized-entity-snapshot.ts:53` extend the union (additive only):
+
+```ts
+export type CanonicalEntityKind =
+  | "campaign"
+  | "ad_set"
+  | "insertion_order"
+  | "line_item"
+  | "ad_group"
+  | "ad"
+  | "campaign_budget"
+  | "order"
+  | "commitment";
+```
+
+In `packages/shared/src/schemas/dry-run-result.ts:50` extend the Zod enum (additive only):
+
+```ts
+const CanonicalEntityKindSchema = z.enum([
+  "campaign",
+  "ad_set",
+  "insertion_order",
+  "line_item",
+  "ad_group",
+  "ad",
+  "campaign_budget",
+  "order",
+  "commitment",
+]);
+```
+
+**Step 4: Tests pass**
+
+```bash
+pnpm vitest run
+# expected: all shared tests green, including the parity assertion
+```
+
+**Step 5: Verify no downstream package breaks**
+
+```bash
+cd ../..
+pnpm run typecheck
+# expected: no errors anywhere
+pnpm run test
+# expected: all green across every package
+```
+
+**Step 6: Commit**
+
+```bash
+git add packages/shared/src/types/normalized-entity-snapshot.ts packages/shared/src/schemas/dry-run-result.ts packages/shared/tests/types/governance-contract.test.ts
+git commit -m "feat(shared): add commitment canonical entity kind (TS + Zod + parity test)"
+```
+
+---
+
+## Phase 1 — Schema generator infrastructure (contributor-only, NOT wired to prebuild)
+
+### Task 2: Add codegen devDependencies
 
 **Files:**
 - Modify: `packages/amazon-dsp-mcp/package.json`
@@ -57,7 +175,7 @@ git commit -m "chore(amazon-dsp-mcp): add codegen devDependencies for v1 schemas
 
 ---
 
-### Task 2: Add v1 schema-extraction config
+### Task 3: Add v1 schema-extraction config
 
 **Files:**
 - Create: `packages/amazon-dsp-mcp/config/v1-schema-extraction.config.ts`
@@ -107,7 +225,7 @@ git commit -m "feat(amazon-dsp-mcp): add v1 schema-extraction config"
 
 ---
 
-### Task 3: Write the schema generator script
+### Task 4: Write the schema generator script
 
 **Files:**
 - Create: `packages/amazon-dsp-mcp/scripts/generate-schemas.ts`
@@ -188,17 +306,15 @@ export function filterSpecByOperationIds(
     }
   }
 
-  const missing = [...wantedOps].filter((id) => {
-    return !Object.values(keptPaths).some((item) =>
-      Object.values(item).some(
-        (op) =>
-          op !== null &&
-          typeof op === "object" &&
-          "operationId" in op &&
-          (op as { operationId: string }).operationId === id
-      )
-    );
-  });
+  const found = new Set<string>();
+  for (const item of Object.values(keptPaths)) {
+    for (const op of Object.values(item)) {
+      if (op && typeof op === "object" && "operationId" in op) {
+        found.add((op as { operationId: string }).operationId);
+      }
+    }
+  }
+  const missing = [...wantedOps].filter((id) => !found.has(id));
   if (missing.length > 0) {
     throw new Error(`Root operations not found in spec: ${missing.join(", ")}`);
   }
@@ -276,8 +392,9 @@ async function main(): Promise<void> {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") {
       throw new Error(
         `OpenAPI spec not found at ${cfg.inputSpecPath}.\n` +
-          `This file is gitignored — place a copy of the Amazon Ads API v1 spec there before building.\n` +
-          `See docs/plans/2026-05-28-amazon-dsp-v1-commitments-design.md §5.`
+          `This file is gitignored — place a copy of the Amazon Ads API v1 spec there before running this generator.\n` +
+          `See docs/plans/2026-05-28-amazon-dsp-v1-commitments-design.md §5.\n` +
+          `Note: this generator is contributor-only and is NOT run by CI; CI builds against the committed src/generated/v1/* output.`
       );
     }
     throw e;
@@ -331,40 +448,37 @@ git commit -m "feat(amazon-dsp-mcp): add v1 schema generator script"
 
 ---
 
-### Task 4: Wire generator into package.json
+### Task 5: Wire `generate:schemas` into package.json (NOT prebuild)
 
 **Files:**
 - Modify: `packages/amazon-dsp-mcp/package.json`
 
-**Step 1: Add the scripts**
+**Step 1: Add the script**
 
-Edit `packages/amazon-dsp-mcp/package.json` and add to the `"scripts"` block:
+Edit `packages/amazon-dsp-mcp/package.json` and add the `"generate:schemas"` script. **Do not add `prebuild`** — the script is contributor-only because the spec is gitignored. Extend `clean` to include `.tmp-specs`:
 
 ```json
-"prebuild": "pnpm run generate:schemas",
 "generate:schemas": "tsx scripts/generate-schemas.ts",
 "clean": "rm -rf dist *.tsbuildinfo .tmp-specs"
 ```
 
-If `clean` already exists, only extend it to include `.tmp-specs`.
-
-**Step 2: Verify**
+**Step 2: Verify there is no `prebuild` entry**
 
 ```bash
-jq '.scripts' packages/amazon-dsp-mcp/package.json
-# expected to show prebuild, generate:schemas, clean (with .tmp-specs)
+jq '.scripts | keys' packages/amazon-dsp-mcp/package.json
+# expected: prebuild is NOT in the list. generate:schemas IS.
 ```
 
 **Step 3: Commit**
 
 ```bash
 git add packages/amazon-dsp-mcp/package.json
-git commit -m "chore(amazon-dsp-mcp): wire generate:schemas into prebuild"
+git commit -m "chore(amazon-dsp-mcp): add generate:schemas script (contributor-only, not wired to prebuild)"
 ```
 
 ---
 
-### Task 5: Run the generator and verify output
+### Task 6: Run the generator and commit the output
 
 **Files:**
 - Generated: `packages/amazon-dsp-mcp/src/generated/v1/types.ts`
@@ -379,13 +493,13 @@ pnpm run generate:schemas
 
 Expected output: `Filtered spec: 6 paths, <100 schemas (from 1101)` then `Generated: src/generated/v1/types.ts, src/generated/v1/zod.ts`.
 
-If you see `OpenAPI spec not found`, satisfy the Prerequisites step at the top of this plan.
+If you see `OpenAPI spec not found`, satisfy the Prerequisites section at the top of this plan.
 
 **Step 2: Sanity-check the output**
 
 ```bash
 wc -l src/generated/v1/types.ts src/generated/v1/zod.ts
-# expected: both files non-trivial (hundreds to low thousands of lines), under ~200KB each
+# expected: both files non-trivial; well under ~200 KB each
 
 grep -c "DSPCommitment\b" src/generated/v1/zod.ts
 # expected: > 0
@@ -393,7 +507,7 @@ grep -c "DSPCommitment\b" src/generated/v1/zod.ts
 
 **Step 3: Confirm gitignore stance**
 
-`src/generated/v1/` IS tracked (committed for IDE / CI parity, same as dv360). `.tmp-specs/` is gitignored at the repo root already.
+`src/generated/v1/` IS tracked (committed for IDE / CI parity, same as dv360 commits `src/generated/schemas/`). `.tmp-specs/` is gitignored at the repo root already.
 
 ```bash
 git status
@@ -411,7 +525,7 @@ git commit -m "feat(amazon-dsp-mcp): generate v1 schemas (commitments, forecasts
 
 ## Phase 2 — Paths contract + service
 
-### Task 6: Add v1 paths contract
+### Task 7: Add v1 paths contract
 
 **Files:**
 - Create: `packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-v1-api-contract.ts`
@@ -443,19 +557,19 @@ git commit -m "feat(amazon-dsp-mcp): add v1 paths contract"
 
 ---
 
-### Task 7: Write failing service tests
+### Task 8: Write failing service tests
 
 **Files:**
 - Create: `packages/amazon-dsp-mcp/tests/services/amazon-dsp-v1-service.test.ts`
 
 **Step 1: Write the test file**
 
-Cover one happy-path call per endpoint, asserting:
-- HTTP path matches `AMAZON_DSP_V1_PATHS.<name>`
-- HTTP method matches the spec (GET for list, POST for the rest)
-- Request body for POSTs is forwarded verbatim
-- Response Zod-parses without throwing
-- Content-Type is `application/json` (NOT a vendor media type)
+Cover:
+- list/retrieve calls hit the right path with `application/json` (NOT a vendor media type)
+- Batch reads (`retrieveCommitments`, `retrieveCampaignForecast`, `retrieveCommitmentSpend`) Zod-parse the multi-status response and return it
+- `createCommitment` wraps input into `{ commitments: [input] }` on send AND unwraps `success[0]` from the multi-status on response
+- `createCommitment` throws `McpError` when the response has `error[0]` (per-item Amazon error)
+- `updateCommitment` does the same wrap/unwrap
 
 ```ts
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
@@ -488,10 +602,31 @@ describe("AmazonDspV1Service", () => {
     );
   });
 
-  it("retrieveCommitments posts to /adsApi/v1/retrieve/commitments/dsp", async () => {
-    const client = makeClient({ success: [], error: [] });
+  it("getCommitment wraps the id into a 1-element batch and unwraps success[0]", async () => {
+    const found = { commitmentId: "c1", commitmentName: "X", committedSpend: 1, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" };
+    const client = makeClient({ success: [found], error: [] });
     const svc = new AmazonDspV1Service(client as never, logger);
-    await svc.retrieveCommitments({ commitmentIds: ["c1"] });
+    const result = await svc.getCommitment("c1");
+    expect(client.post).toHaveBeenCalledWith(
+      AMAZON_DSP_V1_PATHS.retrieveCommitments,
+      { commitmentIds: ["c1"] },
+      undefined
+    );
+    expect(result).toEqual(found);
+  });
+
+  it("getCommitment throws McpError when Amazon returns the id in error[]", async () => {
+    const client = makeClient({ success: [], error: [{ commitmentId: "missing", code: "NOT_FOUND", message: "not found" }] });
+    const svc = new AmazonDspV1Service(client as never, logger);
+    await expect(svc.getCommitment("missing")).rejects.toMatchObject({ message: expect.stringContaining("not found") });
+  });
+
+  it("retrieveCommitments posts to /adsApi/v1/retrieve/commitments/dsp and parses multi-status", async () => {
+    const body = { success: [{ commitmentId: "c1", commitmentName: "X", committedSpend: 1, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" }], error: [] };
+    const client = makeClient(body);
+    const svc = new AmazonDspV1Service(client as never, logger);
+    const result = await svc.retrieveCommitments({ commitmentIds: ["c1"] });
+    expect(result).toEqual(body);
     expect(client.post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.retrieveCommitments,
       { commitmentIds: ["c1"] },
@@ -499,82 +634,83 @@ describe("AmazonDspV1Service", () => {
     );
   });
 
-  it("createCommitments posts with plain application/json (no vendor media type)", async () => {
-    const client = makeClient({ success: [], error: [] });
+  it("createCommitment wraps input into a 1-element batch and unwraps success[0]", async () => {
+    const created = { commitmentId: "c-new", commitmentName: "X", committedSpend: 100, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" };
+    const client = makeClient({ success: [created], error: [] });
     const svc = new AmazonDspV1Service(client as never, logger);
-    await svc.createCommitments({ commitments: [] });
-    const call = client.post.mock.calls[0];
-    expect(call[0]).toBe(AMAZON_DSP_V1_PATHS.createCommitments);
-    // 4th + 5th positional args (accept, contentType) must be undefined
-    expect(call[3]).toBeUndefined();
-    expect(call[4]).toBeUndefined();
-  });
-
-  it("updateCommitments hits the update path", async () => {
-    const client = makeClient({ success: [], error: [] });
-    const svc = new AmazonDspV1Service(client as never, logger);
-    await svc.updateCommitments({ commitments: [{ commitmentId: "c1" }] });
+    const input = { commitmentName: "X", committedSpend: 100, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" } as never;
+    const result = await svc.createCommitment(input);
     expect(client.post).toHaveBeenCalledWith(
-      AMAZON_DSP_V1_PATHS.updateCommitments,
-      expect.objectContaining({ commitments: expect.any(Array) }),
+      AMAZON_DSP_V1_PATHS.createCommitments,
+      { commitments: [input] },
       undefined
     );
+    expect(result).toEqual(created);
   });
 
-  it("retrieveCampaignForecast hits the forecast path", async () => {
+  it("createCommitment throws McpError when Amazon returns the item in error[]", async () => {
+    const client = makeClient({ success: [], error: [{ commitmentId: null, code: "INVALID", message: "Overlapping dates" }] });
+    const svc = new AmazonDspV1Service(client as never, logger);
+    await expect(svc.createCommitment({} as never)).rejects.toMatchObject({ message: expect.stringContaining("Overlapping dates") });
+  });
+
+  it("updateCommitment wraps + unwraps the same way", async () => {
+    const updated = { commitmentId: "c1", commitmentName: "X", committedSpend: 200, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" };
+    const client = makeClient({ success: [updated], error: [] });
+    const svc = new AmazonDspV1Service(client as never, logger);
+    const input = { commitmentId: "c1", committedSpend: 200 } as never;
+    const result = await svc.updateCommitment(input);
+    expect(client.post).toHaveBeenCalledWith(
+      AMAZON_DSP_V1_PATHS.updateCommitments,
+      { commitments: [input] },
+      undefined
+    );
+    expect(result).toEqual(updated);
+  });
+
+  it("retrieveCampaignForecast + retrieveCommitmentSpend hit their respective paths", async () => {
     const client = makeClient({ success: [], error: [] });
     const svc = new AmazonDspV1Service(client as never, logger);
     await svc.retrieveCampaignForecast({} as never);
-    expect(client.post).toHaveBeenCalledWith(
-      AMAZON_DSP_V1_PATHS.retrieveCampaignForecast,
-      expect.any(Object),
-      undefined
-    );
-  });
-
-  it("retrieveCommitmentSpend hits the spend path", async () => {
-    const client = makeClient({ success: [], error: [] });
-    const svc = new AmazonDspV1Service(client as never, logger);
+    expect(client.post).toHaveBeenCalledWith(AMAZON_DSP_V1_PATHS.retrieveCampaignForecast, expect.any(Object), undefined);
     await svc.retrieveCommitmentSpend({} as never);
-    expect(client.post).toHaveBeenCalledWith(
-      AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend,
-      expect.any(Object),
-      undefined
-    );
+    expect(client.post).toHaveBeenCalledWith(AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend, expect.any(Object), undefined);
   });
 });
 ```
 
-**Step 2: Run to confirm failure**
+**Step 2: Run → FAIL**
 
 ```bash
 cd packages/amazon-dsp-mcp
 pnpm vitest run tests/services/amazon-dsp-v1-service.test.ts
-# expected: FAIL (Cannot find module 'amazon-dsp-v1-service.js')
+# expected: FAIL (Cannot find module)
 ```
 
 ---
 
-### Task 8: Implement AmazonDspV1Service
+### Task 9: Implement `AmazonDspV1Service`
 
 **Files:**
 - Create: `packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-v1-service.ts`
 
 **Step 1: Write the service**
 
+Use the generated Zod schemas (`DSPCommitmentSchema`, `DSPCommitmentMultiStatusResponseSchema`, etc.) from `src/generated/v1/zod.ts`. Exact schema-export names depend on `openapi-zod-client` output — check `src/generated/v1/zod.ts` first.
+
+Skeleton:
+
 ```ts
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
 import type { Logger } from "pino";
+import { McpError, JsonRpcErrorCode } from "@cesteral/shared";
 import type { RequestContext } from "@cesteral/shared";
 import type { AmazonDspHttpClient } from "./amazon-dsp-http-client.js";
 import { AMAZON_DSP_V1_PATHS } from "./amazon-dsp-v1-api-contract.js";
-
-// NOTE: request/response types are imported from the generated zod module
-// once the impl needs strict shapes. The service signatures here are
-// intentionally permissive (Record<string, unknown> / unknown) so tools
-// can layer Zod parse at the boundary.
+// import { DSPCommitmentMultiStatusResponseSchema, DSPCommitmentSuccessResponseSchema, ... } from "../../generated/v1/zod.js";
+// import type { DSPCommitment, DSPCommitmentCreate, DSPCommitmentUpdate, ... } from "../../generated/v1/zod.js";
 
 export interface ListCommitmentsParams {
   nextToken?: string;
@@ -587,52 +723,92 @@ export class AmazonDspV1Service {
     private readonly logger: Logger
   ) {}
 
-  async listCommitments(
-    params: ListCommitmentsParams,
-    context?: RequestContext
-  ): Promise<unknown> {
+  async listCommitments(params: ListCommitmentsParams, context?: RequestContext) {
     const query: Record<string, string> = {};
     if (params.nextToken !== undefined) query.nextToken = params.nextToken;
     if (params.maxResults !== undefined) query.maxResults = String(params.maxResults);
-    return this.client.get(AMAZON_DSP_V1_PATHS.listCommitments, query, context);
+    const raw = await this.client.get(AMAZON_DSP_V1_PATHS.listCommitments, query, context);
+    return DSPCommitmentSuccessResponseSchema.parse(raw);
   }
 
-  async retrieveCommitments(
-    body: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.client.post(AMAZON_DSP_V1_PATHS.retrieveCommitments, body, context);
+  async retrieveCommitments(body: { commitmentIds: string[] }, context?: RequestContext) {
+    const raw = await this.client.post(AMAZON_DSP_V1_PATHS.retrieveCommitments, body, context);
+    return DSPCommitmentMultiStatusResponseSchema.parse(raw);
   }
 
-  async createCommitments(
-    body: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.client.post(AMAZON_DSP_V1_PATHS.createCommitments, body, context);
+  // Single-commitment read — used as readPartner for amazon_dsp_update_commitment.
+  // Wraps retrieveCommitments with a 1-element array; throws McpError(NotFound) on per-item error.
+  async getCommitment(commitmentId: string, context?: RequestContext): Promise<DSPCommitment> {
+    const parsed = await this.retrieveCommitments({ commitmentIds: [commitmentId] }, context);
+    if (parsed.success?.length === 1 && (!parsed.error || parsed.error.length === 0)) {
+      return parsed.success[0];
+    }
+    if (parsed.error?.length === 1) {
+      const err = parsed.error[0];
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `Amazon DSP could not retrieve commitment ${commitmentId}: ${err.message ?? "not found"}`,
+        { code: err.code, raw: err }
+      );
+    }
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `Amazon DSP returned unexpected multi-status shape for single getCommitment: success=${parsed.success?.length ?? 0}, error=${parsed.error?.length ?? 0}`,
+      { raw: parsed }
+    );
   }
 
-  async updateCommitments(
-    body: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.client.post(AMAZON_DSP_V1_PATHS.updateCommitments, body, context);
+  async createCommitment(commitment: DSPCommitmentCreate, context?: RequestContext): Promise<DSPCommitment> {
+    const raw = await this.client.post(
+      AMAZON_DSP_V1_PATHS.createCommitments,
+      { commitments: [commitment] },
+      context
+    );
+    return this.unwrapSingleResult(raw, "create");
   }
 
-  async retrieveCampaignForecast(
-    body: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.client.post(AMAZON_DSP_V1_PATHS.retrieveCampaignForecast, body, context);
+  async updateCommitment(commitment: DSPCommitmentUpdate, context?: RequestContext): Promise<DSPCommitment> {
+    const raw = await this.client.post(
+      AMAZON_DSP_V1_PATHS.updateCommitments,
+      { commitments: [commitment] },
+      context
+    );
+    return this.unwrapSingleResult(raw, "update");
   }
 
-  async retrieveCommitmentSpend(
-    body: Record<string, unknown>,
-    context?: RequestContext
-  ): Promise<unknown> {
-    return this.client.post(AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend, body, context);
+  async retrieveCampaignForecast(body: Record<string, unknown>, context?: RequestContext) {
+    const raw = await this.client.post(AMAZON_DSP_V1_PATHS.retrieveCampaignForecast, body, context);
+    return DSPCampaignForecastMultiStatusResponseSchema.parse(raw);
+  }
+
+  async retrieveCommitmentSpend(body: Record<string, unknown>, context?: RequestContext) {
+    const raw = await this.client.post(AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend, body, context);
+    return DSPCommitmentSpendMultiStatusResponseSchema.parse(raw);
+  }
+
+  private unwrapSingleResult(raw: unknown, op: "create" | "update"): DSPCommitment {
+    const parsed = DSPCommitmentMultiStatusResponseSchema.parse(raw);
+    if (parsed.success?.length === 1 && (!parsed.error || parsed.error.length === 0)) {
+      return parsed.success[0];
+    }
+    if (parsed.error?.length === 1) {
+      const err = parsed.error[0];
+      throw new McpError(
+        JsonRpcErrorCode.InvalidRequest,
+        `Amazon DSP rejected the ${op} commitment request: ${err.message ?? "unknown"}`,
+        { code: err.code, raw: err }
+      );
+    }
+    throw new McpError(
+      JsonRpcErrorCode.InternalError,
+      `Amazon DSP returned unexpected multi-status shape for single-item ${op}: success=${parsed.success?.length ?? 0}, error=${parsed.error?.length ?? 0}`,
+      { raw }
+    );
   }
 }
 ```
+
+Adjust schema names + type names to match what `src/generated/v1/zod.ts` actually exports.
 
 **Step 2: Run tests pass**
 
@@ -645,62 +821,56 @@ pnpm vitest run tests/services/amazon-dsp-v1-service.test.ts
 
 ```bash
 git add src/services/amazon-dsp/amazon-dsp-v1-service.ts tests/services/amazon-dsp-v1-service.test.ts
-git commit -m "feat(amazon-dsp-mcp): add AmazonDspV1Service with 6 endpoint methods"
+git commit -m "feat(amazon-dsp-mcp): add AmazonDspV1Service with wrap/unwrap for single-item writes"
 ```
 
 ---
 
 ## Phase 3 — Session wiring
 
-### Task 9: Extend SessionServices
+### Task 10: Add `amazonDspV1Service` to `SessionServices`
 
 **Files:**
 - Modify: `packages/amazon-dsp-mcp/src/services/session-services.ts`
-- Modify: `packages/amazon-dsp-mcp/tests/mcp-server/amazon-dsp-server-transport.test.ts` (only if existing assertions enumerate SessionServices keys)
 
-**Step 1: Read the current SessionServices definition**
+**Step 1: Read current shape**
 
 ```bash
-grep -n "interface SessionServices\|amazonDspService\b" packages/amazon-dsp-mcp/src/services/session-services.ts
+sed -n '1,80p' packages/amazon-dsp-mcp/src/services/session-services.ts
+# expect: SessionServices currently has amazonDspService + amazonDspReportingService only
 ```
 
-**Step 2: Add `amazonDspV1Service`**
+**Step 2: Add the field**
 
-In `session-services.ts`, add to the `SessionServices` interface:
+In the `SessionServices` interface add:
 
 ```ts
 amazonDspV1Service: AmazonDspV1Service;
 ```
 
-In the `createSessionServices` function, construct it using the SAME `AmazonDspHttpClient` instance already built for `amazonDspService`:
+In `createSessionServices`, construct it using the SAME `httpClient` already built for the other services:
 
 ```ts
 const amazonDspV1Service = new AmazonDspV1Service(httpClient, logger);
-return { amazonDspService, amazonDspV1Service, authAdapter, profileId };
+return { amazonDspService, amazonDspReportingService, amazonDspV1Service };
 ```
 
-Add the import at the top:
+Add the import:
 
 ```ts
 import { AmazonDspV1Service } from "./amazon-dsp/amazon-dsp-v1-service.js";
 ```
 
-**Step 3: Typecheck**
+**Step 3: Typecheck + tests**
 
 ```bash
 cd packages/amazon-dsp-mcp
 pnpm run typecheck
-# expected: no errors
-```
-
-**Step 4: Existing tests still pass**
-
-```bash
 pnpm vitest run
 # expected: all green
 ```
 
-**Step 5: Commit**
+**Step 4: Commit**
 
 ```bash
 git add src/services/session-services.ts
@@ -711,326 +881,276 @@ git commit -m "feat(amazon-dsp-mcp): expose AmazonDspV1Service through session s
 
 ## Phase 4 — Read tools (4 tools)
 
-Each read tool follows the same pattern: write failing test → write tool → register in `allTools` → run tests → commit. We do this in 4 sub-phases, one tool at a time, so each commit is independently verifiable.
+Each follows: failing test → tool file → register → run tests → commit. None carry the governed-write `cesteral` block; they're either standard reads (`kind: "read"` on `cesteral` for governance discovery) or carry no `cesteral` block at all — match the existing read-tool convention in `packages/amazon-dsp-mcp/src/mcp-server/tools/definitions/get-entity.tool.ts:68` for read-side annotation shape.
 
-The `entityIdArgs` / `entityKinds` annotations for governed reads are intentionally omitted for these — they're not partners to governed writes.
-
-### Task 10: `amazon_dsp_list_commitments`
+### Task 11: `amazon_dsp_list_commitments`
 
 **Files:**
-- Create: `packages/amazon-dsp-mcp/tests/tools/amazon-dsp-list-commitments.test.ts`
-- Create: `packages/amazon-dsp-mcp/src/mcp-server/tools/definitions/list-commitments.tool.ts`
-- Modify: `packages/amazon-dsp-mcp/src/mcp-server/tools/definitions/index.ts`
+- Create: `tests/tools/amazon-dsp-list-commitments.test.ts`
+- Create: `src/mcp-server/tools/definitions/list-commitments.tool.ts`
+- Modify: `src/mcp-server/tools/definitions/index.ts` (register tool)
 
 **Step 1: Failing test**
 
-Assert:
-- Tool name = `amazon_dsp_list_commitments`
-- Input accepts `profileId`, `nextToken?`, `maxResults?` (11–50)
-- Logic calls `amazonDspV1Service.listCommitments`
-- Output schema has `{ commitments, nextToken? }`
-- `cesteral.kind === "read"`, `contractId === "amazon_dsp.list_commitments.v1"`
+Assert tool name, input accepts `profileId`+`nextToken?`+`maxResults?`(11–50), logic calls `amazonDspV1Service.listCommitments`, output has `{ commitments, nextToken? }`. Mock `resolveSessionServices` to return a stub.
 
-Mock `resolveSessionServices` to return a stub with `amazonDspV1Service.listCommitments` returning `{ commitments: [{ commitmentId: "c1", commitmentName: "X" }], nextToken: "abc" }`.
+**Step 2: Tool file**
 
-**Step 2: Run test → FAIL**
+Mirror `get-entity.tool.ts`. `cesteral.kind: "read"` (no `entityKinds`, no `entityIdArgs` since this is a list endpoint, not a read partner). `contractToolSlug: "list_commitments"`, `contractId: "amazon_dsp.list_commitments.v1"`.
 
-```bash
-pnpm vitest run tests/tools/amazon-dsp-list-commitments.test.ts
-```
+**Step 3: Register in `tools/definitions/index.ts`**
 
-**Step 3: Write the tool**
+**Step 4: Tests pass**
 
-Mirror the shape of `src/mcp-server/tools/definitions/get-entity.tool.ts`. Input schema:
-
-```ts
-export const ListCommitmentsInputSchema = z.object({
-  profileId: z.string().min(1).describe("Amazon DSP Profile ID"),
-  nextToken: z.string().optional().describe("Pagination cursor from a prior page"),
-  maxResults: z
-    .number()
-    .int()
-    .min(11)
-    .max(50)
-    .default(50)
-    .optional()
-    .describe("Page size (11–50, default 50; Amazon spec constraint)"),
-});
-```
-
-Annotation:
-
-```ts
-cesteral: {
-  kind: "read",
-  platform: "amazon_dsp",
-  contractPlatformSlug: "amazon_dsp",
-  contractToolSlug: "list_commitments",
-  contractId: "amazon_dsp.list_commitments.v1",
-  schemaVersion: 1,
-} satisfies CesteralReadToolAnnotations,
-```
-
-**Step 4: Register in `tools/definitions/index.ts`**
-
-Add `listCommitmentsTool` to the `allTools` array.
-
-**Step 5: Tests pass**
-
-```bash
-pnpm vitest run tests/tools/amazon-dsp-list-commitments.test.ts
-```
-
-**Step 6: Commit**
-
-```bash
-git add src/mcp-server/tools/definitions/list-commitments.tool.ts src/mcp-server/tools/definitions/index.ts tests/tools/amazon-dsp-list-commitments.test.ts
-git commit -m "feat(amazon-dsp-mcp): add amazon_dsp_list_commitments tool"
-```
+**Step 5: Commit** — `feat(amazon-dsp-mcp): add amazon_dsp_list_commitments tool`
 
 ---
 
-### Task 11: `amazon_dsp_get_commitments`
+### Task 12: `amazon_dsp_get_commitments` (batch read)
 
-Same shape as Task 10. Differences:
+Same shape. Input: `{ profileId, commitmentIds: z.array(z.string().min(1)).min(1).max(1000) }`. Output: verbatim `DSPCommitmentMultiStatusResponseSchema`. `responseFormatter` prepends `"<S> succeeded, <E> failed"`. `contractToolSlug: "get_commitments"`.
 
-- Input: `{ profileId, commitmentIds: z.array(z.string().min(1)).min(1).max(1000) }`
-- Output: verbatim multi-status — `{ success: z.array(...), error: z.array(...) }` (use the generated Zod schema `DSPCommitmentMultiStatusResponseSchema` from `src/generated/v1/zod.ts`).
-- `responseFormatter` prepends `"<S> succeeded, <E> failed"` to the JSON.
-- `contractToolSlug: "get_commitments"`, `contractId: "amazon_dsp.get_commitments.v1"`.
-
-Commit message: `feat(amazon-dsp-mcp): add amazon_dsp_get_commitments tool`
+Commit: `feat(amazon-dsp-mcp): add amazon_dsp_get_commitments tool`
 
 ---
 
-### Task 12: `amazon_dsp_get_campaign_forecast`
+### Task 13: `amazon_dsp_get_campaign_forecast`
 
-Same shape. Differences:
-
-- Input: thin wrapper around `DSPRetrieveCampaignForecastRequest` from generated zod, plus `profileId`.
-- Output: `DSPCampaignForecastMultiStatusResponseSchema`.
-- `responseFormatter` mentions warning count: `"<S> succeeded (<W> with warnings), <E> failed"`.
-- `contractToolSlug: "get_campaign_forecast"`.
+Same shape. Input: thin wrapper around `DSPRetrieveCampaignForecastRequest` + `profileId`. Output: `DSPCampaignForecastMultiStatusResponseSchema`. Formatter includes warning count: `"<S> succeeded (<W> with warnings), <E> failed"`. `contractToolSlug: "get_campaign_forecast"`.
 
 Commit: `feat(amazon-dsp-mcp): add amazon_dsp_get_campaign_forecast tool`
 
 ---
 
-### Task 13: `amazon_dsp_get_commitment_spend`
+### Task 14: `amazon_dsp_get_commitment_spend`
 
-Same shape. Differences:
-
-- Input: `DSPRetrieveCommitmentSpendRequest` wrapper + `profileId`.
-- Output: `DSPCommitmentSpendMultiStatusResponseSchema`.
-- `responseFormatter` includes warning count.
-- `contractToolSlug: "get_commitment_spend"`.
+Same shape. Input: `DSPRetrieveCommitmentSpendRequest` wrapper + `profileId`. Output: `DSPCommitmentSpendMultiStatusResponseSchema`. Formatter includes warning count. `contractToolSlug: "get_commitment_spend"`.
 
 Commit: `feat(amazon-dsp-mcp): add amazon_dsp_get_commitment_spend tool`
 
 ---
 
-## Phase 5 — Governed write tools (2 tools + shared dry-run helper)
-
-### Task 14: Add `commitment` to the entity-kind enum
+### Task 15: `amazon_dsp_get_commitment` (single read — read partner for governed update)
 
 **Files:**
-- Modify: `packages/amazon-dsp-mcp/src/mcp-server/tools/utils/entity-mapping.ts` (or wherever `ENTITY_KIND_MAP` lives — confirmed at `src/mcp-server/tools/utils/dry-run.ts:112`)
+- Create: `tests/tools/amazon-dsp-get-commitment.test.ts`
+- Create: `src/mcp-server/tools/definitions/get-commitment.tool.ts`
+- Modify: `src/mcp-server/tools/definitions/index.ts`
 
-**Step 1: Locate the enum**
-
-```bash
-grep -rn "ENTITY_KIND_MAP\b" packages/amazon-dsp-mcp/src/ | head
-```
-
-**Step 2: Add `commitment` mapping**
-
-Update `ENTITY_KIND_MAP` to add `commitment: "commitment"` (or the actual key shape used — match the existing entries). If no canonical map exists for the v1 surface, just inline the kind in the new tool's annotations — don't shoehorn into the v2 enum.
-
-**Step 3: Commit**
-
-```bash
-git add <modified files>
-git commit -m "feat(amazon-dsp-mcp): register commitment canonical entity kind"
-```
-
----
-
-### Task 15: Write per-item dry-run helper for commitments
-
-**Files:**
-- Create: `packages/amazon-dsp-mcp/src/mcp-server/tools/utils/commitment-dry-run.ts`
-- Create: `packages/amazon-dsp-mcp/tests/tools/commitment-dry-run.test.ts`
+**Why this tool exists.** The governance contract's `readPartner.argMap` maps top-level argument names 1:1 — it cannot reference `commitmentIds[0]` or transform a scalar into an array. The governed `update_commitment` tool takes `commitmentId: string` at the top level, so its read partner must accept the same scalar. This tool wraps the batch endpoint with a 1-element array internally and unwraps the multi-status response — identical to the singular pattern on the service layer.
 
 **Step 1: Failing test**
 
-Test cases:
-- `runCreateCommitmentsDryRun` with a valid input → `wouldSucceed: true`, `validationSource: "symbolic"`, `expectedStateSource: "synthetic"`, one expected-post-state row per input item.
-- `runCreateCommitmentsDryRun` with input missing `committedSpend` → `wouldSucceed: false`, validation error references the missing field.
-- `runUpdateCommitmentsDryRun` with input + a stub service whose `retrieveCommitments` returns 2 existing commitments → `expectedStateSource: "server_symbolic_apply"`, projected post-state merges patch over current.
+Mock `amazonDspV1Service.getCommitment` to return a `DSPCommitment`. Assert:
+- Tool name `amazon_dsp_get_commitment`
+- Input shape `{ profileId, commitmentId: string }`
+- Output `{ commitment: DSPCommitment, timestamp }`
+- `cesteral.kind === "read"`, `contractToolSlug: "get_commitment"`, `contractId: "amazon_dsp.get_commitment.v1"`
+- Second test: service throwing `McpError(NotFound)` propagates as a tool failure
 
-**Step 2: Run → FAIL**
+**Step 2: Tool file**
 
-**Step 3: Implement the helper**
-
-Re-use the existing `assertGovernedDryRunResult` from `@cesteral/shared`. Use the generated `DSPCommitmentCreateSchema` / `DSPCommitmentUpdateSchema` from `src/generated/v1/zod.ts` for symbolic validation.
+Mirror `get-entity.tool.ts`. Read-side `cesteral` block (no `readPartner`, no `entityKinds`):
 
 ```ts
-// Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
-// See LICENSE.md in the project root for full license terms.
-
-import { assertGovernedDryRunResult, type DryRunResult } from "@cesteral/shared";
-import type { AmazonDspV1Service } from "../../../services/amazon-dsp/amazon-dsp-v1-service.js";
-import type { RequestContext } from "@cesteral/shared";
-
-export async function runCreateCommitmentsDryRun(
-  items: Array<Record<string, unknown>>,
-  _service: AmazonDspV1Service,
-  _context: RequestContext
-): Promise<DryRunResult> {
-  // per-item symbolic validation (use generated DSPCommitmentCreateSchema)
-  // expectedPostState rows built directly from input (synthetic — no commitmentId yet)
-  // ...
-  return assertGovernedDryRunResult(
-    { /* ... */ },
-    "amazon_dsp_create_commitments"
-  );
-}
-
-export async function runUpdateCommitmentsDryRun(
-  items: Array<Record<string, unknown>>,
-  service: AmazonDspV1Service,
-  context: RequestContext
-): Promise<DryRunResult> {
-  // per-item symbolic validation (generated DSPCommitmentUpdateSchema)
-  // For each item: service.retrieveCommitments({ commitmentIds: [it.commitmentId] })
-  // → merge patch over current → expectedPostState row.
-  // expectedStateSource: "server_symbolic_apply"
-  // ...
-  return assertGovernedDryRunResult(
-    { /* ... */ },
-    "amazon_dsp_update_commitments"
-  );
-}
+cesteral: {
+  kind: "read",
+  contractPlatformSlug: "amazon_dsp",
+  contractToolSlug: "get_commitment",
+  contractId: "amazon_dsp.get_commitment.v1",
+  schemaVersion: 1,
+} satisfies CesteralReadToolAnnotations,
 ```
+
+Logic: `await amazonDspV1Service.getCommitment(input.commitmentId, context)`.
+
+**Step 3: Register in `index.ts`**
 
 **Step 4: Tests pass**
 
-**Step 5: Commit**
-
-```bash
-git add src/mcp-server/tools/utils/commitment-dry-run.ts tests/tools/commitment-dry-run.test.ts
-git commit -m "feat(amazon-dsp-mcp): add per-item dry-run helper for commitment writes"
-```
+**Step 5: Commit** — `feat(amazon-dsp-mcp): add amazon_dsp_get_commitment tool (singular read partner)`
 
 ---
 
-### Task 16: `amazon_dsp_create_commitments`
+## Phase 5 — Write tools
+
+### Task 16: `amazon_dsp_create_commitment` (ungoverned, single)
 
 **Files:**
-- Create: `packages/amazon-dsp-mcp/tests/tools/amazon-dsp-create-commitments.test.ts`
-- Create: `packages/amazon-dsp-mcp/tests/tools/amazon-dsp-create-commitments-dry-run.test.ts`
-- Create: `packages/amazon-dsp-mcp/src/mcp-server/tools/definitions/create-commitments.tool.ts`
-- Modify: `packages/amazon-dsp-mcp/src/mcp-server/tools/definitions/index.ts`
+- Create: `tests/tools/amazon-dsp-create-commitment.test.ts`
+- Create: `src/mcp-server/tools/definitions/create-commitment.tool.ts`
+- Modify: `src/mcp-server/tools/definitions/index.ts`
 
-**Step 1: Failing tests**
+**Step 1: Failing test**
 
-Wet-run test asserts:
-- Tool name `amazon_dsp_create_commitments`
-- `dispatchedCapability` block: `{ platform: "amazon_dsp", capability: "create_commitments", targetIds: ["<id from success[].commitmentId>"] }`
-- `cesteral.kind === "write"`, `requiresValidation: true`, `requiresSimulation: true`
-- Multi-status with one success + one error: output preserves both verbatim
+Mock `amazonDspV1Service.createCommitment` to return a created `DSPCommitment`. Assert:
+- Tool name `amazon_dsp_create_commitment`
+- Input shape `{ profileId, data: <DSPCommitmentCreate fields> }`
+- Output includes the unwrapped `commitment` and a `timestamp`
+- **No** `cesteral` block in annotations (matches `create-entity.tool.ts`)
+- `destructiveHint: true`, `openWorldHint: false`
+- A second test: service throwing `McpError` (per-item Amazon rejection) propagates as a tool failure with the error code preserved
 
-Dry-run test asserts:
-- `dry_run: true` → no HTTP call to client.post
-- Returns shape `{ dryRun: { validationSource: "symbolic", expectedStateSource: "synthetic", ... } }`
-- Symbolic catch of missing required field (e.g. `committedSpend`)
+**Step 2: Tool file**
 
-**Step 2: Run → FAIL**
-
-**Step 3: Implement the tool**
-
-Input:
+Match `create-entity.tool.ts:76-119` shape. Input schema:
 
 ```ts
-export const CreateCommitmentsInputSchema = z.object({
-  profileId: z.string().min(1),
-  commitments: z.array(/* generated DSPCommitmentCreateSchema */).min(1).max(1000),
-  dry_run: z.boolean().optional().default(false),
+export const CreateCommitmentInputSchema = z.object({
+  profileId: z.string().min(1).describe("Amazon DSP Profile ID"),
+  data: /* generated DSPCommitmentCreateSchema */.describe("Commitment definition"),
 });
 ```
 
 Output:
 
 ```ts
-export const CreateCommitmentsOutputSchema = z.object({
-  result: /* DSPCommitmentMultiStatusResponseSchema */.optional(),
-  dryRun: z.unknown().optional(),
-  dispatchedCapability: z.object({
-    platform: z.literal("amazon_dsp"),
-    capability: z.literal("create_commitments"),
-    targetIds: z.array(z.string()),
-  }),
+export const CreateCommitmentOutputSchema = z.object({
+  commitment: /* generated DSPCommitmentSchema */,
+  timestamp: z.string().datetime(),
 });
 ```
 
 Logic:
 
 ```ts
-const dispatchedCapability = {
-  platform: "amazon_dsp" as const,
-  capability: "create_commitments" as const,
-  targetIds: [] as string[],
-};
-
-if (input.dry_run) {
-  const dryRun = await runCreateCommitmentsDryRun(input.commitments, v1Service, context);
-  return { dryRun, dispatchedCapability };
-}
-
-const result = await v1Service.createCommitments({ commitments: input.commitments }, context);
-const parsed = DSPCommitmentMultiStatusResponseSchema.parse(result);
-dispatchedCapability.targetIds = parsed.success.map((s) => s.commitmentId).filter(Boolean);
-return { result: parsed, dispatchedCapability };
+const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+const commitment = await amazonDspV1Service.createCommitment(input.data, context);
+return { commitment, timestamp: new Date().toISOString() };
 ```
 
-Annotation:
+Annotations:
 
 ```ts
-cesteral: {
-  kind: "write",
-  platform: "amazon_dsp",
-  contractPlatformSlug: "amazon_dsp",
-  contractToolSlug: "create_commitments",
-  contractId: "amazon_dsp.create_commitments.v1",
-  schemaVersion: 1,
-  entityKinds: ["commitment"],
-  requiresValidation: true,
-  requiresSimulation: true,
-} satisfies CesteralWriteToolAnnotations,
-destructiveHint: false,
+annotations: {
+  destructiveHint: true,
+  openWorldHint: false,
+  idempotentHint: false,
+  readOnlyHint: false,
+  // No `cesteral` block — matches existing create-entity.tool.ts:82
+},
 ```
 
-**Step 4: Register in `index.ts`**
+**Step 3: Register in `index.ts`**
 
-**Step 5: Tests pass**
+**Step 4: Tests pass**
 
-**Step 6: Commit**
-
-```bash
-git commit -m "feat(amazon-dsp-mcp): add amazon_dsp_create_commitments (governed write)"
-```
+**Step 5: Commit** — `feat(amazon-dsp-mcp): add amazon_dsp_create_commitment (ungoverned)`
 
 ---
 
-### Task 17: `amazon_dsp_update_commitments`
+### Task 17: `amazon_dsp_update_commitment` (governed, single)
 
-Same shape as Task 16. Differences:
+**Files:**
+- Create: `tests/tools/amazon-dsp-update-commitment.test.ts`
+- Create: `tests/tools/amazon-dsp-update-commitment-dry-run.test.ts`
+- Create: `src/mcp-server/tools/definitions/update-commitment.tool.ts`
+- Possibly modify: `src/mcp-server/tools/utils/dry-run.ts` (add a helper) — OR inline the logic in the tool file
+- Modify: `src/mcp-server/tools/definitions/index.ts`
 
-- Input items use generated `DSPCommitmentUpdateSchema` (requires `commitmentId`).
-- Dry-run uses `runUpdateCommitmentsDryRun` (server-symbolic-apply).
-- `contractToolSlug: "update_commitments"`, `contractId: "amazon_dsp.update_commitments.v1"`, `capability: "update_commitments"`.
+**Step 1: Failing tests**
 
-Commit: `feat(amazon-dsp-mcp): add amazon_dsp_update_commitments (governed write)`
+Wet-run test asserts:
+- Tool name `amazon_dsp_update_commitment`
+- Input shape `{ profileId, commitmentId, data: <DSPCommitmentUpdate fields>, dry_run? }`
+- Output includes `commitment`, `before`, `after`, `dispatchedCapability: { operation: "update", canonicalEntityKind: "commitment" }`, `timestamp`
+- Annotation: `cesteral.kind === "write"`, `operation: ["update"]`, `readPartner.toolName === "amazon_dsp_get_commitment"` (singular), `readPartner.argMap.commitmentId === "commitmentId"`, `requiresValidation: true`, `requiresSimulation: true`, `supportsDryRun: true`, `contractId === "amazon_dsp.update_commitment.v1"`
+- Service throw (per-item Amazon error) propagates
+
+Dry-run test asserts:
+- `dry_run: true` → no write HTTP call to `updateCommitment`
+- Service `getCommitment` IS called for current state (mock to return a `DSPCommitment` with the matching id)
+- Output `dryRun: { wouldSucceed, validationErrors, validationSource: "symbolic", expectedStateSource: "server_symbolic_apply", expectedPostState }`
+- `expectedPostState.entityKind === "commitment"`, `entityKind` parses through shared `CanonicalEntityKindSchema` (Phase 0 prerequisite)
+- Symbolic validation catches an invalid patch (e.g. negative `committedSpend`)
+
+**Step 2: Tool file**
+
+Modeled on `update-entity.tool.ts:75-143` verbatim — same `dispatchedCapability` + `before`/`after` snapshot capture pattern. Differences: no `entityType` arg (only commitments here), service method is `updateCommitment` (single-item).
+
+Sketch:
+
+```ts
+export async function updateCommitmentLogic(input, context, sdkContext) {
+  const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+
+  const dispatchedCapability = { operation: "update", canonicalEntityKind: "commitment" };
+
+  if (input.dry_run === true) {
+    const dryRun = await runCommitmentUpdateDryRun(input, amazonDspV1Service, context);
+    return {
+      commitmentId: input.commitmentId,
+      updated: false,
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
+  // Capture pre-state via the singular read partner (best-effort, per existing update-entity pattern).
+  const before = await captureCommitmentSnapshot(amazonDspV1Service, input.commitmentId, context);
+  // captureCommitmentSnapshot internally calls amazonDspV1Service.getCommitment(commitmentId).
+
+  const updated = await amazonDspV1Service.updateCommitment(
+    { commitmentId: input.commitmentId, ...input.data },
+    context
+  );
+
+  const after = snapshotFromCommitment(updated);
+
+  return {
+    commitmentId: input.commitmentId,
+    updated: true,
+    commitment: updated,
+    timestamp: new Date().toISOString(),
+    ...(before ? { before } : {}),
+    ...(after ? { after } : {}),
+    dispatchedCapability,
+  };
+}
+```
+
+`runCommitmentUpdateDryRun`, `captureCommitmentSnapshot`, `snapshotFromCommitment`: define them in a sibling file `src/mcp-server/tools/utils/commitment-dry-run.ts` (parallel to existing `dry-run.ts`). Use `assertGovernedDryRunResult` from `@cesteral/shared`. `expectedPostState.entityKind` is the literal string `"commitment"` (now valid per Phase 0 Task 1).
+
+Annotations (CRITICAL — conform to `CesteralWriteToolAnnotations` verbatim):
+
+```ts
+annotations: {
+  destructiveHint: false,
+  idempotentHint: true,
+  readOnlyHint: false,
+  openWorldHint: false,
+  cesteral: {
+    kind: "write",
+    operation: ["update"],
+    contractPlatformSlug: "amazon_dsp",
+    contractToolSlug: "update_commitment",
+    contractId: "amazon_dsp.update_commitment.v1",
+    schemaVersion: 1,
+    readPartner: {
+      toolName: "amazon_dsp_get_commitment",
+      argMap: { commitmentId: "commitmentId" },
+    },
+    requiresValidation: true,
+    requiresSimulation: true,
+    supportsDryRun: true,
+    supportsBeforeAfterSnapshot: true,
+  } satisfies CesteralWriteToolAnnotations,
+},
+```
+
+OutputSchema includes `dispatchedCapability: DispatchedCapabilitySchema` (imported from `@cesteral/shared`) — NOT a custom shape.
+
+**Step 3: Register in `index.ts`**
+
+**Step 4: Tests pass**
+
+```bash
+pnpm vitest run tests/tools/amazon-dsp-update-commitment.test.ts tests/tools/amazon-dsp-update-commitment-dry-run.test.ts
+# expected: PASS
+```
+
+**Step 5: Commit** — `feat(amazon-dsp-mcp): add amazon_dsp_update_commitment (governed write, single-entity)`
 
 ---
 
@@ -1042,12 +1162,11 @@ Commit: `feat(amazon-dsp-mcp): add amazon_dsp_update_commitments (governed write
 - Modify: `packages/amazon-dsp-mcp/tests/cesteral-annotations.test.ts`
 
 Add assertions:
-- 4 read tools (`list_commitments`, `get_commitments`, `get_campaign_forecast`, `get_commitment_spend`) have `cesteral.kind === "read"`.
-- 2 write tools have full governed-write block: `requiresValidation: true`, `requiresSimulation: true`, `entityKinds: ["commitment"]`, `dispatchedCapability` on `outputSchema`.
+- 5 read tools (`list_commitments`, `get_commitments`, `get_commitment`, `get_campaign_forecast`, `get_commitment_spend`) have `cesteral.kind === "read"` (or no `cesteral` block — match what was actually written for each).
+- `amazon_dsp_create_commitment` has **no** `cesteral` block (matches `create-entity.tool.ts`).
+- `amazon_dsp_update_commitment` has the full governed-write block; specifically `readPartner.toolName === "amazon_dsp_get_commitment"` (singular) and `readPartner.argMap.commitmentId === "commitmentId"`. Annotation parses cleanly through `CesteralWriteToolAnnotationsSchema` / `DispatchedCapabilitySchema` from `@cesteral/shared`.
 
-Run: `pnpm vitest run tests/cesteral-annotations.test.ts` → PASS.
-
-Commit: `test(amazon-dsp-mcp): assert v1 commitment-tool annotations`
+Run + commit: `test(amazon-dsp-mcp): assert v1 commitment-tool annotations`
 
 ---
 
@@ -1056,13 +1175,9 @@ Commit: `test(amazon-dsp-mcp): assert v1 commitment-tool annotations`
 **Files:**
 - Modify: `packages/amazon-dsp-mcp/tests/mcp-server/amazon-dsp-definitions-coverage.test.ts`
 
-Add assertion that the 6 new tool slugs are present in `allTools` and that all v1 tool names start with `amazon_dsp_`.
+Add assertion that the 7 new tool slugs are present and `update_commitment` carries `contractId: "amazon_dsp.update_commitment.v1"`. Bump any expected-count constant by 7.
 
-If the existing test enumerates expected tool counts, bump the expected count by 6.
-
-Run: `pnpm vitest run tests/mcp-server/amazon-dsp-definitions-coverage.test.ts` → PASS.
-
-Commit: `test(amazon-dsp-mcp): cover v1 commitment tools in definitions coverage`
+Run + commit: `test(amazon-dsp-mcp): cover v1 commitment tools in definitions coverage`
 
 ---
 
@@ -1071,15 +1186,9 @@ Commit: `test(amazon-dsp-mcp): cover v1 commitment tools in definitions coverage
 **Files:**
 - Modify: `packages/amazon-dsp-mcp/tests/schema-size.test.ts`
 
-Add assertions that:
-- `src/generated/v1/types.ts` is < 200 KB
-- `src/generated/v1/zod.ts` is < 200 KB
+Add assertions: `src/generated/v1/types.ts` < 200 KB, `src/generated/v1/zod.ts` < 200 KB. Trip = signal that root-set filter widened.
 
-If either threshold trips later, that's a signal that the root-set filter is too wide and pulled in unrelated schemas.
-
-Run: `pnpm vitest run tests/schema-size.test.ts` → PASS.
-
-Commit: `test(amazon-dsp-mcp): assert v1 generated schema size budget`
+Run + commit: `test(amazon-dsp-mcp): assert v1 generated schema size budget`
 
 ---
 
@@ -1093,7 +1202,7 @@ Commit: `test(amazon-dsp-mcp): assert v1 generated schema size budget`
 cd packages/amazon-dsp-mcp
 pnpm run clean
 pnpm run build
-# expected: prebuild runs generate:schemas, then tsc succeeds
+# expected: tsc succeeds. NOTE: prebuild is NOT wired, so the spec is not required for this step.
 ```
 
 **Step 2: Typecheck the whole repo**
@@ -1101,14 +1210,14 @@ pnpm run build
 ```bash
 cd ../..
 pnpm run typecheck
-# expected: no errors anywhere
+# expected: no errors anywhere (including shared package consumers of CanonicalEntityKindSchema)
 ```
 
 **Step 3: Run full test suite**
 
 ```bash
 pnpm run test
-# expected: all green
+# expected: all green across shared + every package
 ```
 
 **Step 4: Spot-check the resulting tool list**
@@ -1123,16 +1232,26 @@ curl -s -X POST http://localhost:3012/mcp -H "Content-Type: application/json" \
 # expected output (any order):
 #   "amazon_dsp_list_commitments"
 #   "amazon_dsp_get_commitments"
-#   "amazon_dsp_create_commitments"
-#   "amazon_dsp_update_commitments"
+#   "amazon_dsp_get_commitment"
+#   "amazon_dsp_create_commitment"
+#   "amazon_dsp_update_commitment"
 #   "amazon_dsp_get_campaign_forecast"
 #   "amazon_dsp_get_commitment_spend"
 kill %1
 ```
 
-**Step 5: Final commit (only if anything stragglers)**
+**Step 5: Verify the governance contract one more time**
 
-If everything is already committed, skip. Otherwise commit any test-fix bits with a focused message.
+```bash
+curl -s -X POST http://localhost:3012/mcp -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' \
+  | jq '.result.tools[] | select(.name == "amazon_dsp_update_commitment") | .annotations.cesteral'
+# expected: object with kind:"write", operation:["update"], contractId:"amazon_dsp.update_commitment.v1",
+# readPartner:{ toolName:"amazon_dsp_get_commitment", argMap:{ commitmentId:"commitmentId" } },
+# requiresValidation:true, requiresSimulation:true, supportsDryRun:true
+```
+
+If everything is already committed, no final commit needed.
 
 ---
 
@@ -1142,3 +1261,5 @@ If everything is already committed, skip. Otherwise commit any test-fix bits wit
 - `cesteral-intelligence` upstream addition of `commitment` to its slug schema (additive, non-blocking).
 - CI fetch path for the gitignored `openapi.json` (currently contributor-local).
 - Sponsored Ads (`/sb`, non-`/dsp` cross-product) coverage — belongs in a separate `amazon-ads-mcp` package, not here.
+- Governed creates as a fleet-wide pattern (no precedent in repo today; out of scope for commitments).
+- Bulk `amazon_dsp_bulk_update_commitments` tool — only if perf becomes a real need.
