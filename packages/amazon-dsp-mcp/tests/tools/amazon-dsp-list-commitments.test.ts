@@ -42,14 +42,12 @@ const baseContext = { requestId: "test-req" } as never;
 const baseSdkContext = { sessionId: "test-session" } as never;
 
 describe("amazon_dsp_list_commitments", () => {
-  it("has the canonical tool name and read-side cesteral annotation", () => {
+  it("is a plain readOnly tool with no cesteral governance annotation (manifest-surface precedent)", () => {
     expect(listCommitmentsTool.name).toBe("amazon_dsp_list_commitments");
     expect(listCommitmentsTool.annotations.readOnlyHint).toBe(true);
-    expect(listCommitmentsTool.annotations.cesteral?.kind).toBe("read");
-    expect(listCommitmentsTool.annotations.cesteral?.contractToolSlug).toBe("list_commitments");
-    expect(listCommitmentsTool.annotations.cesteral?.contractId).toBe(
-      "amazon_dsp.list_commitments.v1",
-    );
+    expect(
+      (listCommitmentsTool.annotations as { cesteral?: unknown }).cesteral,
+    ).toBeUndefined();
   });
 
   it("input schema enforces maxResults in the 1..50 range", () => {

@@ -2,12 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import type {
-  RequestContext,
-  McpTextContent,
-  SdkContext,
-  CesteralReadToolAnnotations,
-} from "@cesteral/shared";
+import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   DSPCommitmentMultiStatusResponseSchema,
@@ -81,21 +76,16 @@ export const getCommitmentsTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: GetCommitmentsInputSchema,
   outputSchema: GetCommitmentsOutputSchema,
+  // No `cesteral` block: batch read endpoints are not attested in the
+  // governance manifest. The singular `amazon_dsp_get_commitment` carries
+  // the cesteral.kind="read" annotation as the read partner for
+  // `amazon_dsp_update_commitment`; this batch tool is a plain readOnly
+  // utility next to it.
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
-    cesteral: {
-      kind: "read",
-      platform: "amazon_dsp",
-      contractPlatformSlug: "amazon_dsp",
-      contractToolSlug: "get_commitments",
-      entityKinds: ["commitment"],
-      entityIdArgs: ["commitmentIds"],
-      schemaVersion: 1,
-      contractId: "amazon_dsp.get_commitments.v1",
-    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {

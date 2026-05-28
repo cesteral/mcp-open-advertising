@@ -2,12 +2,7 @@
 // See LICENSE.md in the project root for full license terms.
 
 import { z } from "zod";
-import type {
-  RequestContext,
-  McpTextContent,
-  SdkContext,
-  CesteralReadToolAnnotations,
-} from "@cesteral/shared";
+import type { RequestContext, McpTextContent, SdkContext } from "@cesteral/shared";
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   DSPCommitmentSchema,
@@ -94,24 +89,14 @@ export const listCommitmentsTool = {
   description: TOOL_DESCRIPTION,
   inputSchema: ListCommitmentsInputSchema,
   outputSchema: ListCommitmentsOutputSchema,
+  // No `cesteral` block: list endpoints are not attested in the governance
+  // manifest. Repo precedent reserves cesteral.kind="read" for singular
+  // read partners of governed writes (see get-entity.tool.ts → update_entity).
   annotations: {
     readOnlyHint: true,
     openWorldHint: false,
     idempotentHint: true,
     destructiveHint: false,
-    cesteral: {
-      kind: "read",
-      platform: "amazon_dsp",
-      contractPlatformSlug: "amazon_dsp",
-      contractToolSlug: "list_commitments",
-      // List endpoint, not a singular fetch. Declares the entity kind it returns
-      // so governance can wire it up alongside the singular `get_commitment`,
-      // but `entityIdArgs` is empty because the input is filter/pagination only.
-      entityKinds: ["commitment"],
-      entityIdArgs: [],
-      schemaVersion: 1,
-      contractId: "amazon_dsp.list_commitments.v1",
-    } satisfies CesteralReadToolAnnotations,
   },
   inputExamples: [
     {

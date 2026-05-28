@@ -54,14 +54,12 @@ const sampleCommitment = {
 };
 
 describe("amazon_dsp_get_commitments", () => {
-  it("has the canonical tool name and read-side cesteral annotation", () => {
+  it("is a plain readOnly tool with no cesteral governance annotation (manifest-surface precedent)", () => {
     expect(getCommitmentsTool.name).toBe("amazon_dsp_get_commitments");
     expect(getCommitmentsTool.annotations.readOnlyHint).toBe(true);
-    expect(getCommitmentsTool.annotations.cesteral?.kind).toBe("read");
-    expect(getCommitmentsTool.annotations.cesteral?.contractToolSlug).toBe("get_commitments");
-    expect(getCommitmentsTool.annotations.cesteral?.contractId).toBe(
-      "amazon_dsp.get_commitments.v1",
-    );
+    expect(
+      (getCommitmentsTool.annotations as { cesteral?: unknown }).cesteral,
+    ).toBeUndefined();
   });
 
   it("input schema enforces commitmentIds cardinality 1..1000", () => {
