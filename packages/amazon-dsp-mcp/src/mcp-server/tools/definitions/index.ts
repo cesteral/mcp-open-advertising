@@ -34,6 +34,7 @@ export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { listCommitmentsTool } from "./list-commitments.tool.js";
+export { getCommitmentsTool } from "./get-commitments.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -54,6 +55,7 @@ import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { listCommitmentsTool } from "./list-commitments.tool.js";
+import { getCommitmentsTool } from "./get-commitments.tool.js";
 import {
   conformanceTools,
   createToolSearchTool,
@@ -88,6 +90,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   validateEntityTool,
   // ── v1 Commitments ──
   listCommitmentsTool,
+  getCommitmentsTool,
   // ── Discovery ──
   createToolSearchTool({ platform: "amazon_dsp", getTools: () => allTools }),
 ];
