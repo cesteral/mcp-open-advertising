@@ -714,7 +714,14 @@
         "amazon_dsp_duplicate_entity",
         "amazon_dsp_get_ad_preview",
         "amazon_dsp_validate_entity",
-        "amazon_dsp_search_tools"
+        "amazon_dsp_search_tools",
+        "amazon_dsp_create_commitment",
+        "amazon_dsp_get_campaign_forecast",
+        "amazon_dsp_get_commitment",
+        "amazon_dsp_get_commitment_spend",
+        "amazon_dsp_get_commitments",
+        "amazon_dsp_list_commitments",
+        "amazon_dsp_update_commitment"
       ],
       "resources": [
         "entity-hierarchy://amazonDsp/all",
