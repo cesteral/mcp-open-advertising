@@ -21,7 +21,7 @@ import * as publicTestkit from "@cesteral/amazon-dsp-mcp/testkit";
 describe("amazon-dsp-mcp testkit conformance", () => {
   const fixtures = getFixtures();
 
-  it("ships at least one fixture per round-2 (operation, entityKind) pair", () => {
+  it("ships at least one fixture per governed (operation, entityKind) pair", () => {
     const pairs = new Set(fixtures.map((fx) => `${fx.operation}::${fx.entityKind}`));
     expect(pairs).toContain("update_budget::order");
     expect(pairs).toContain("update_budget::lineItem");
@@ -29,6 +29,7 @@ describe("amazon-dsp-mcp testkit conformance", () => {
     expect(pairs).toContain("pause::lineItem");
     expect(pairs).toContain("resume::order");
     expect(pairs).toContain("resume::lineItem");
+    expect(pairs).toContain("update::commitment");
   });
 
   it.each(fixtures.map((fx) => [fx.description, fx]))("assertContract green: %s", (_desc, fx) => {
