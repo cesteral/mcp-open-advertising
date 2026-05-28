@@ -45,20 +45,18 @@ describe("amazon_dsp_list_commitments", () => {
   it("is a plain readOnly tool with no cesteral governance annotation (manifest-surface precedent)", () => {
     expect(listCommitmentsTool.name).toBe("amazon_dsp_list_commitments");
     expect(listCommitmentsTool.annotations.readOnlyHint).toBe(true);
-    expect(
-      (listCommitmentsTool.annotations as { cesteral?: unknown }).cesteral,
-    ).toBeUndefined();
+    expect((listCommitmentsTool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
   });
 
   it("input schema enforces maxResults in the 1..50 range", () => {
     expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1", maxResults: 0 }).success).toBe(
-      false,
+      false
     );
     expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1", maxResults: 51 }).success).toBe(
-      false,
+      false
     );
     expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1", maxResults: 25 }).success).toBe(
-      true,
+      true
     );
     expect(ListCommitmentsInputSchema.safeParse({ profileId: "p1" }).success).toBe(true);
   });
@@ -82,12 +80,12 @@ describe("amazon_dsp_list_commitments", () => {
     const result = await listCommitmentsLogic(
       { profileId: "1234567890", maxResults: 25 },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(mockListCommitments).toHaveBeenCalledWith(
       { nextToken: undefined, maxResults: 25 },
-      baseContext,
+      baseContext
     );
     expect(result.commitments).toEqual([sampleCommitment]);
     expect(result.nextToken).toBe("tok-2");
@@ -99,7 +97,7 @@ describe("amazon_dsp_list_commitments", () => {
     const result = await listCommitmentsLogic(
       { profileId: "1234567890" },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     expect(result.commitments).toEqual([]);
     expect(result.nextToken).toBeUndefined();

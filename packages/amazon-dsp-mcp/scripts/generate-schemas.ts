@@ -25,7 +25,7 @@ async function main(): Promise<void> {
         `OpenAPI spec not found at ${cfg.inputSpecPath}.\n` +
           `This file is gitignored — place a copy of the Amazon Ads API v1 spec there before running this generator.\n` +
           `See docs/plans/2026-05-28-amazon-dsp-v1-commitments-design.md §5.\n` +
-          `Note: this generator is contributor-only and is NOT run by CI; CI builds against the committed src/generated/v1/* output.`,
+          `Note: this generator is contributor-only and is NOT run by CI; CI builds against the committed src/generated/v1/* output.`
       );
     }
     throw e;
@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   console.log(
     `Filtered spec: ${pathCount} paths, ${schemaCount} schemas (from ${
       Object.keys(fullSpec.components.schemas).length
-    })`,
+    })`
   );
 
   const typesAbs = path.resolve(PACKAGE_ROOT, cfg.output.typesPath);
@@ -56,10 +56,10 @@ async function main(): Promise<void> {
     stdio: "inherit",
   });
 
-  execSync(
-    `pnpm exec openapi-zod-client "${filteredAbs}" -o "${zodAbs}" --export-schemas`,
-    { cwd: PACKAGE_ROOT, stdio: "inherit" },
-  );
+  execSync(`pnpm exec openapi-zod-client "${filteredAbs}" -o "${zodAbs}" --export-schemas`, {
+    cwd: PACKAGE_ROOT,
+    stdio: "inherit",
+  });
 
   // Post-process the openapi-zod-client output. Three transforms:
   // 1. Drop the `@zodios/core` import — we are not shipping the Zodios runtime.
@@ -76,14 +76,14 @@ async function main(): Promise<void> {
 
   zodSource = zodSource.replace(
     /^import\s*\{\s*makeApi,\s*Zodios,\s*type\s+ZodiosOptions\s*\}\s*from\s*"@zodios\/core";\s*\n/m,
-    "",
+    ""
   );
 
   const endpointsIdx = zodSource.indexOf("\nconst endpoints = makeApi(");
   if (endpointsIdx === -1) {
     throw new Error(
       `Post-processing failed: could not locate \`const endpoints = makeApi(\` in ${cfg.output.zodPath}.\n` +
-        `openapi-zod-client output shape may have changed.`,
+        `openapi-zod-client output shape may have changed.`
     );
   }
   zodSource = `${zodSource.slice(0, endpointsIdx).trimEnd()}\n`;
@@ -92,7 +92,7 @@ async function main(): Promise<void> {
   if (!schemasBagMatch) {
     throw new Error(
       `Post-processing failed: could not locate \`export const schemas = { ... };\` bag in ${cfg.output.zodPath}.\n` +
-        `openapi-zod-client output shape may have changed.`,
+        `openapi-zod-client output shape may have changed.`
     );
   }
   zodSource = zodSource.slice(0, schemasBagMatch.index).trimEnd() + "\n";
@@ -107,13 +107,13 @@ async function main(): Promise<void> {
   // pair each schema with its openapi-typescript-emitted interface.
   zodSource = zodSource.replace(
     /^const ([A-Za-z_$][A-Za-z0-9_$]*) = /gm,
-    "export const $1: z.ZodTypeAny = ",
+    "export const $1: z.ZodTypeAny = "
   );
 
   await fs.writeFile(zodAbs, zodSource, "utf-8");
 
   console.log(
-    `Generated: ${cfg.output.typesPath}, ${cfg.output.zodPath} (zodios runtime stripped, per-schema exports)`,
+    `Generated: ${cfg.output.typesPath}, ${cfg.output.zodPath} (zodios runtime stripped, per-schema exports)`
   );
 }
 

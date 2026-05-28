@@ -32,6 +32,7 @@ ls -lh packages/amazon-dsp-mcp/docs/openapi.json
 ### Task 1: Add `commitment` to both the TS union and the Zod enum, extend parity test
 
 **Files:**
+
 - Modify: `packages/shared/src/types/normalized-entity-snapshot.ts:53` (the TypeScript `CanonicalEntityKind` union)
 - Modify: `packages/shared/src/schemas/dry-run-result.ts:50` (the Zod `CanonicalEntityKindSchema`)
 - Modify: `packages/shared/tests/types/governance-contract.test.ts` (existing parity test — locate line ~80 where the union is asserted)
@@ -150,6 +151,7 @@ git commit -m "feat(shared): add commitment canonical entity kind (TS + Zod + pa
 ### Task 2: Add codegen devDependencies
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/package.json`
 
 **Step 1: Add deps via pnpm**
@@ -178,6 +180,7 @@ git commit -m "chore(amazon-dsp-mcp): add codegen devDependencies for v1 schemas
 ### Task 3: Add v1 schema-extraction config
 
 **Files:**
+
 - Create: `packages/amazon-dsp-mcp/config/v1-schema-extraction.config.ts`
 
 **Step 1: Write the config**
@@ -228,6 +231,7 @@ git commit -m "feat(amazon-dsp-mcp): add v1 schema-extraction config"
 ### Task 4: Write the schema generator script
 
 **Files:**
+
 - Create: `packages/amazon-dsp-mcp/scripts/generate-schemas.ts`
 - Create: `packages/amazon-dsp-mcp/scripts/lib/filter-spec.ts`
 
@@ -282,10 +286,7 @@ function collectRefs(node: unknown, schemaRefs: Set<string>, paramRefs: Set<stri
   }
 }
 
-export function filterSpecByOperationIds(
-  spec: OpenApiDoc,
-  rootOperationIds: string[]
-): OpenApiDoc {
+export function filterSpecByOperationIds(spec: OpenApiDoc, rootOperationIds: string[]): OpenApiDoc {
   const wantedOps = new Set(rootOperationIds);
   const keptPaths: OpenApiDoc["paths"] = {};
 
@@ -425,10 +426,10 @@ async function main(): Promise<void> {
     stdio: "inherit",
   });
 
-  execSync(
-    `pnpm exec openapi-zod-client "${filteredAbs}" -o "${zodAbs}" --export-schemas`,
-    { cwd: PACKAGE_ROOT, stdio: "inherit" }
-  );
+  execSync(`pnpm exec openapi-zod-client "${filteredAbs}" -o "${zodAbs}" --export-schemas`, {
+    cwd: PACKAGE_ROOT,
+    stdio: "inherit",
+  });
 
   console.log(`Generated: ${cfg.output.typesPath}, ${cfg.output.zodPath}`);
 }
@@ -451,6 +452,7 @@ git commit -m "feat(amazon-dsp-mcp): add v1 schema generator script"
 ### Task 5: Wire `generate:schemas` into package.json (NOT prebuild)
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/package.json`
 
 **Step 1: Add the script**
@@ -481,6 +483,7 @@ git commit -m "chore(amazon-dsp-mcp): add generate:schemas script (contributor-o
 ### Task 6: Run the generator and commit the output
 
 **Files:**
+
 - Generated: `packages/amazon-dsp-mcp/src/generated/v1/types.ts`
 - Generated: `packages/amazon-dsp-mcp/src/generated/v1/zod.ts`
 
@@ -528,6 +531,7 @@ git commit -m "feat(amazon-dsp-mcp): generate v1 schemas (commitments, forecasts
 ### Task 7: Add v1 paths contract
 
 **Files:**
+
 - Create: `packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-v1-api-contract.ts`
 
 **Step 1: Write the constants module**
@@ -560,11 +564,13 @@ git commit -m "feat(amazon-dsp-mcp): add v1 paths contract"
 ### Task 8: Write failing service tests
 
 **Files:**
+
 - Create: `packages/amazon-dsp-mcp/tests/services/amazon-dsp-v1-service.test.ts`
 
 **Step 1: Write the test file**
 
 Cover:
+
 - list/retrieve calls hit the right path with `application/json` (NOT a vendor media type)
 - Batch reads (`retrieveCommitments`, `retrieveCampaignForecast`, `retrieveCommitmentSpend`) Zod-parse the multi-status response and return it
 - `createCommitment` wraps input into `{ commitments: [input] }` on send AND unwraps `success[0]` from the multi-status on response
@@ -603,7 +609,16 @@ describe("AmazonDspV1Service", () => {
   });
 
   it("getCommitment wraps the id into a 1-element batch and unwraps success[0]", async () => {
-    const found = { commitmentId: "c1", commitmentName: "X", committedSpend: 1, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" };
+    const found = {
+      commitmentId: "c1",
+      commitmentName: "X",
+      committedSpend: 1,
+      currencyCode: "USD",
+      endDateTime: "2027-01-01T00:00:00Z",
+      startDateTime: "2026-01-01T00:00:00Z",
+      fulfillmentLevel: "STRICT",
+      spendCalculationMode: "MEDIA",
+    };
     const client = makeClient({ success: [found], error: [] });
     const svc = new AmazonDspV1Service(client as never, logger);
     const result = await svc.getCommitment("c1");
@@ -616,13 +631,32 @@ describe("AmazonDspV1Service", () => {
   });
 
   it("getCommitment throws McpError when Amazon returns the id in error[]", async () => {
-    const client = makeClient({ success: [], error: [{ commitmentId: "missing", code: "NOT_FOUND", message: "not found" }] });
+    const client = makeClient({
+      success: [],
+      error: [{ commitmentId: "missing", code: "NOT_FOUND", message: "not found" }],
+    });
     const svc = new AmazonDspV1Service(client as never, logger);
-    await expect(svc.getCommitment("missing")).rejects.toMatchObject({ message: expect.stringContaining("not found") });
+    await expect(svc.getCommitment("missing")).rejects.toMatchObject({
+      message: expect.stringContaining("not found"),
+    });
   });
 
   it("retrieveCommitments posts to /adsApi/v1/retrieve/commitments/dsp and parses multi-status", async () => {
-    const body = { success: [{ commitmentId: "c1", commitmentName: "X", committedSpend: 1, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" }], error: [] };
+    const body = {
+      success: [
+        {
+          commitmentId: "c1",
+          commitmentName: "X",
+          committedSpend: 1,
+          currencyCode: "USD",
+          endDateTime: "2027-01-01T00:00:00Z",
+          startDateTime: "2026-01-01T00:00:00Z",
+          fulfillmentLevel: "STRICT",
+          spendCalculationMode: "MEDIA",
+        },
+      ],
+      error: [],
+    };
     const client = makeClient(body);
     const svc = new AmazonDspV1Service(client as never, logger);
     const result = await svc.retrieveCommitments({ commitmentIds: ["c1"] });
@@ -635,10 +669,27 @@ describe("AmazonDspV1Service", () => {
   });
 
   it("createCommitment wraps input into a 1-element batch and unwraps success[0]", async () => {
-    const created = { commitmentId: "c-new", commitmentName: "X", committedSpend: 100, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" };
+    const created = {
+      commitmentId: "c-new",
+      commitmentName: "X",
+      committedSpend: 100,
+      currencyCode: "USD",
+      endDateTime: "2027-01-01T00:00:00Z",
+      startDateTime: "2026-01-01T00:00:00Z",
+      fulfillmentLevel: "STRICT",
+      spendCalculationMode: "MEDIA",
+    };
     const client = makeClient({ success: [created], error: [] });
     const svc = new AmazonDspV1Service(client as never, logger);
-    const input = { commitmentName: "X", committedSpend: 100, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" } as never;
+    const input = {
+      commitmentName: "X",
+      committedSpend: 100,
+      currencyCode: "USD",
+      endDateTime: "2027-01-01T00:00:00Z",
+      startDateTime: "2026-01-01T00:00:00Z",
+      fulfillmentLevel: "STRICT",
+      spendCalculationMode: "MEDIA",
+    } as never;
     const result = await svc.createCommitment(input);
     expect(client.post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.createCommitments,
@@ -649,13 +700,27 @@ describe("AmazonDspV1Service", () => {
   });
 
   it("createCommitment throws McpError when Amazon returns the item in error[]", async () => {
-    const client = makeClient({ success: [], error: [{ commitmentId: null, code: "INVALID", message: "Overlapping dates" }] });
+    const client = makeClient({
+      success: [],
+      error: [{ commitmentId: null, code: "INVALID", message: "Overlapping dates" }],
+    });
     const svc = new AmazonDspV1Service(client as never, logger);
-    await expect(svc.createCommitment({} as never)).rejects.toMatchObject({ message: expect.stringContaining("Overlapping dates") });
+    await expect(svc.createCommitment({} as never)).rejects.toMatchObject({
+      message: expect.stringContaining("Overlapping dates"),
+    });
   });
 
   it("updateCommitment wraps + unwraps the same way", async () => {
-    const updated = { commitmentId: "c1", commitmentName: "X", committedSpend: 200, currencyCode: "USD", endDateTime: "2027-01-01T00:00:00Z", startDateTime: "2026-01-01T00:00:00Z", fulfillmentLevel: "STRICT", spendCalculationMode: "MEDIA" };
+    const updated = {
+      commitmentId: "c1",
+      commitmentName: "X",
+      committedSpend: 200,
+      currencyCode: "USD",
+      endDateTime: "2027-01-01T00:00:00Z",
+      startDateTime: "2026-01-01T00:00:00Z",
+      fulfillmentLevel: "STRICT",
+      spendCalculationMode: "MEDIA",
+    };
     const client = makeClient({ success: [updated], error: [] });
     const svc = new AmazonDspV1Service(client as never, logger);
     const input = { commitmentId: "c1", committedSpend: 200 } as never;
@@ -672,9 +737,17 @@ describe("AmazonDspV1Service", () => {
     const client = makeClient({ success: [], error: [] });
     const svc = new AmazonDspV1Service(client as never, logger);
     await svc.retrieveCampaignForecast({} as never);
-    expect(client.post).toHaveBeenCalledWith(AMAZON_DSP_V1_PATHS.retrieveCampaignForecast, expect.any(Object), undefined);
+    expect(client.post).toHaveBeenCalledWith(
+      AMAZON_DSP_V1_PATHS.retrieveCampaignForecast,
+      expect.any(Object),
+      undefined
+    );
     await svc.retrieveCommitmentSpend({} as never);
-    expect(client.post).toHaveBeenCalledWith(AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend, expect.any(Object), undefined);
+    expect(client.post).toHaveBeenCalledWith(
+      AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend,
+      expect.any(Object),
+      undefined
+    );
   });
 });
 ```
@@ -692,6 +765,7 @@ pnpm vitest run tests/services/amazon-dsp-v1-service.test.ts
 ### Task 9: Implement `AmazonDspV1Service`
 
 **Files:**
+
 - Create: `packages/amazon-dsp-mcp/src/services/amazon-dsp/amazon-dsp-v1-service.ts`
 
 **Step 1: Write the service**
@@ -758,7 +832,10 @@ export class AmazonDspV1Service {
     );
   }
 
-  async createCommitment(commitment: DSPCommitmentCreate, context?: RequestContext): Promise<DSPCommitment> {
+  async createCommitment(
+    commitment: DSPCommitmentCreate,
+    context?: RequestContext
+  ): Promise<DSPCommitment> {
     const raw = await this.client.post(
       AMAZON_DSP_V1_PATHS.createCommitments,
       { commitments: [commitment] },
@@ -767,7 +844,10 @@ export class AmazonDspV1Service {
     return this.unwrapSingleResult(raw, "create");
   }
 
-  async updateCommitment(commitment: DSPCommitmentUpdate, context?: RequestContext): Promise<DSPCommitment> {
+  async updateCommitment(
+    commitment: DSPCommitmentUpdate,
+    context?: RequestContext
+  ): Promise<DSPCommitment> {
     const raw = await this.client.post(
       AMAZON_DSP_V1_PATHS.updateCommitments,
       { commitments: [commitment] },
@@ -831,6 +911,7 @@ git commit -m "feat(amazon-dsp-mcp): add AmazonDspV1Service with wrap/unwrap for
 ### Task 10: Add `amazonDspV1Service` to `SessionServices`
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/src/services/session-services.ts`
 
 **Step 1: Read current shape**
@@ -886,6 +967,7 @@ Each follows: failing test → tool file → register → run tests → commit. 
 ### Task 11: `amazon_dsp_list_commitments`
 
 **Files:**
+
 - Create: `tests/tools/amazon-dsp-list-commitments.test.ts`
 - Create: `src/mcp-server/tools/definitions/list-commitments.tool.ts`
 - Modify: `src/mcp-server/tools/definitions/index.ts` (register tool)
@@ -933,6 +1015,7 @@ Commit: `feat(amazon-dsp-mcp): add amazon_dsp_get_commitment_spend tool`
 ### Task 15: `amazon_dsp_get_commitment` (single read — read partner for governed update)
 
 **Files:**
+
 - Create: `tests/tools/amazon-dsp-get-commitment.test.ts`
 - Create: `src/mcp-server/tools/definitions/get-commitment.tool.ts`
 - Modify: `src/mcp-server/tools/definitions/index.ts`
@@ -942,6 +1025,7 @@ Commit: `feat(amazon-dsp-mcp): add amazon_dsp_get_commitment_spend tool`
 **Step 1: Failing test**
 
 Mock `amazonDspV1Service.getCommitment` to return a `DSPCommitment`. Assert:
+
 - Tool name `amazon_dsp_get_commitment`
 - Input shape `{ profileId, commitmentId: string }`
 - Output `{ commitment: DSPCommitment, timestamp }`
@@ -977,6 +1061,7 @@ Logic: `await amazonDspV1Service.getCommitment(input.commitmentId, context)`.
 ### Task 16: `amazon_dsp_create_commitment` (ungoverned, single)
 
 **Files:**
+
 - Create: `tests/tools/amazon-dsp-create-commitment.test.ts`
 - Create: `src/mcp-server/tools/definitions/create-commitment.tool.ts`
 - Modify: `src/mcp-server/tools/definitions/index.ts`
@@ -984,6 +1069,7 @@ Logic: `await amazonDspV1Service.getCommitment(input.commitmentId, context)`.
 **Step 1: Failing test**
 
 Mock `amazonDspV1Service.createCommitment` to return a created `DSPCommitment`. Assert:
+
 - Tool name `amazon_dsp_create_commitment`
 - Input shape `{ profileId, data: <DSPCommitmentCreate fields> }`
 - Output includes the unwrapped `commitment` and a `timestamp`
@@ -1042,6 +1128,7 @@ annotations: {
 ### Task 17: `amazon_dsp_update_commitment` (governed, single)
 
 **Files:**
+
 - Create: `tests/tools/amazon-dsp-update-commitment.test.ts`
 - Create: `tests/tools/amazon-dsp-update-commitment-dry-run.test.ts`
 - Create: `src/mcp-server/tools/definitions/update-commitment.tool.ts`
@@ -1051,6 +1138,7 @@ annotations: {
 **Step 1: Failing tests**
 
 Wet-run test asserts:
+
 - Tool name `amazon_dsp_update_commitment`
 - Input shape `{ profileId, commitmentId, data: <DSPCommitmentUpdate fields>, dry_run? }`
 - Output includes `commitment`, `before`, `after`, `dispatchedCapability: { operation: "update", canonicalEntityKind: "commitment" }`, `timestamp`
@@ -1058,6 +1146,7 @@ Wet-run test asserts:
 - Service throw (per-item Amazon error) propagates
 
 Dry-run test asserts:
+
 - `dry_run: true` → no write HTTP call to `updateCommitment`
 - Service `getCommitment` IS called for current state (mock to return a `DSPCommitment` with the matching id)
 - Output `dryRun: { wouldSucceed, validationErrors, validationSource: "symbolic", expectedStateSource: "server_symbolic_apply", expectedPostState }`
@@ -1159,9 +1248,11 @@ pnpm vitest run tests/tools/amazon-dsp-update-commitment.test.ts tests/tools/ama
 ### Task 18: Extend `cesteral-annotations.test.ts`
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/tests/cesteral-annotations.test.ts`
 
 Add assertions:
+
 - 5 read tools (`list_commitments`, `get_commitments`, `get_commitment`, `get_campaign_forecast`, `get_commitment_spend`) have `cesteral.kind === "read"` (or no `cesteral` block — match what was actually written for each).
 - `amazon_dsp_create_commitment` has **no** `cesteral` block (matches `create-entity.tool.ts`).
 - `amazon_dsp_update_commitment` has the full governed-write block; specifically `readPartner.toolName === "amazon_dsp_get_commitment"` (singular) and `readPartner.argMap.commitmentId === "commitmentId"`. Annotation parses cleanly through `CesteralWriteToolAnnotationsSchema` / `DispatchedCapabilitySchema` from `@cesteral/shared`.
@@ -1173,6 +1264,7 @@ Run + commit: `test(amazon-dsp-mcp): assert v1 commitment-tool annotations`
 ### Task 19: Extend definitions-coverage test
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/tests/mcp-server/amazon-dsp-definitions-coverage.test.ts`
 
 Add assertion that the 7 new tool slugs are present and `update_commitment` carries `contractId: "amazon_dsp.update_commitment.v1"`. Bump any expected-count constant by 7.
@@ -1184,6 +1276,7 @@ Run + commit: `test(amazon-dsp-mcp): cover v1 commitment tools in definitions co
 ### Task 20: Extend `schema-size.test.ts`
 
 **Files:**
+
 - Modify: `packages/amazon-dsp-mcp/tests/schema-size.test.ts`
 
 Add assertions: `src/generated/v1/types.ts` < 200 KB, `src/generated/v1/zod.ts` < 200 KB. Trip = signal that root-set filter widened.

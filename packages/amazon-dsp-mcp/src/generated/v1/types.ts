@@ -4,3331 +4,3940 @@
  */
 
 export interface paths {
-    "/adsApi/v1/commitments/dsp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * @description List commitments
-         *
-         *     **Requires one of these permissions**:
-         *     []
-         */
-        get: operations["DSPListCommitment"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/adsApi/v1/commitments/dsp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/adsApi/v1/create/commitments/dsp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Create commitments
-         *
-         *     **Requires one of these permissions**:
-         *     []
-         */
-        post: operations["DSPCreateCommitment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * @description List commitments
+     *
+     *     **Requires one of these permissions**:
+     *     []
+     */
+    get: operations["DSPListCommitment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/adsApi/v1/create/commitments/dsp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/adsApi/v1/retrieve/campaignForecasts/dsp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Retrieve campaign forecast
-         *
-         *     **Requires one of these permissions**:
-         *     ["campaign_view", "advertiser_campaign_view"]
-         */
-        post: operations["DSPRetrieveCampaignForecast"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * @description Create commitments
+     *
+     *     **Requires one of these permissions**:
+     *     []
+     */
+    post: operations["DSPCreateCommitment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/adsApi/v1/retrieve/campaignForecasts/dsp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/adsApi/v1/retrieve/commitmentSpends/dsp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Retrieve commitment spend
-         *
-         *     **Requires one of these permissions**:
-         *     []
-         */
-        post: operations["DSPRetrieveCommitmentSpend"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * @description Retrieve campaign forecast
+     *
+     *     **Requires one of these permissions**:
+     *     ["campaign_view", "advertiser_campaign_view"]
+     */
+    post: operations["DSPRetrieveCampaignForecast"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/adsApi/v1/retrieve/commitmentSpends/dsp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/adsApi/v1/retrieve/commitments/dsp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Get Commitments
-         *
-         *     **Requires one of these permissions**:
-         *     []
-         */
-        post: operations["DSPRetrieveCommitment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * @description Retrieve commitment spend
+     *
+     *     **Requires one of these permissions**:
+     *     []
+     */
+    post: operations["DSPRetrieveCommitmentSpend"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/adsApi/v1/retrieve/commitments/dsp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/adsApi/v1/update/commitments/dsp": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * @description Update commitments
-         *
-         *     **Requires one of these permissions**:
-         *     []
-         */
-        post: operations["DSPUpdateCommitment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * @description Get Commitments
+     *
+     *     **Requires one of these permissions**:
+     *     []
+     */
+    post: operations["DSPRetrieveCommitment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/adsApi/v1/update/commitments/dsp": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put?: never;
+    /**
+     * @description Update commitments
+     *
+     *     **Requires one of these permissions**:
+     *     []
+     */
+    post: operations["DSPUpdateCommitment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        DSPCommitmentSuccessResponse: {
-            commitments?: components["schemas"]["DSPCommitment"][];
-            nextToken?: string;
-        };
-        BadRequestResponseContent: {
-            code: components["schemas"]["ErrorCode"];
-            message: string;
-        };
-        UnauthorizedResponseContent: {
-            code: components["schemas"]["ErrorCode"];
-            message: string;
-        };
-        ForbiddenResponseContent: {
-            code: components["schemas"]["ErrorCode"];
-            message: string;
-        };
-        NotFoundResponseContent: {
-            code: components["schemas"]["ErrorCode"];
-            message: string;
-        };
-        ContentTooLargeResponseContent: {
-            code: components["schemas"]["ErrorCode"];
-            message: string;
-        };
-        TooManyRequestsResponseContent: {
-            code: components["schemas"]["ErrorCode"];
-            message: string;
-        };
-        InternalServerErrorResponseContent: {
-            code: string;
-            message: string;
-        };
-        BadGatewayResponseContent: {
-            code: string;
-            message: string;
-        };
-        ServiceUnavailableErrorResponseContent: {
-            code: string;
-            message: string;
-        };
-        GatewayTimeoutResponseContent: {
-            code: string;
-            message: string;
-        };
-        DSPCreateCommitmentRequest: {
-            commitments?: components["schemas"]["DSPCommitmentCreate"][];
-        };
-        DSPCommitmentMultiStatusResponse: {
-            error?: components["schemas"]["ErrorsIndex"][];
-            success?: components["schemas"]["DSPCommitmentMultiStatusSuccess"][];
-        };
-        DSPRetrieveCampaignForecastRequest: {
-            campaignForecastDescriptions?: components["schemas"]["DSPCampaignForecastDescription"][];
-        };
-        DSPCampaignForecastMultiStatusResponse: {
-            error?: components["schemas"]["ErrorsIndex"][];
-            success?: components["schemas"]["DSPCampaignForecastMultiStatusSuccess"][];
-        };
-        DSPRetrieveCommitmentSpendRequest: {
-            commitmentIds?: components["schemas"]["DSPCommitmentSpendIdentifier"][];
-        };
-        DSPCommitmentSpendMultiStatusResponse: {
-            error?: components["schemas"]["ErrorsIndex"][];
-            success?: components["schemas"]["DSPCommitmentSpendMultiStatusSuccess"][];
-        };
-        DSPRetrieveCommitmentRequest: {
-            commitmentIds?: string[];
-        };
-        DSPUpdateCommitmentRequest: {
-            commitments?: components["schemas"]["DSPCommitmentUpdate"][];
-        };
-        DSPCommitment: {
-            /** @description Advertiser IDs associated with the commitment. */
-            advertiserIds?: string[];
-            /** @description Campaign IDs associated with the commitment. */
-            campaignIds?: string[];
-            /** @description A unique identifier for the commitment. */
-            commitmentId: string;
-            /** @description The name of the commitment. */
-            commitmentName: string;
-            /**
-             * Format: double
-             * @description The total committed spend for the commitment.
-             */
-            committedSpend: number;
-            currencyCode: components["schemas"]["DSPCurrencyCode"];
-            /** @description Deal IDs associated with the commitment. */
-            dealIds?: string[];
-            /**
-             * Format: date-time
-             * @description The end date and time of the commitment.
-             */
-            endDateTime: string;
-            fulfillmentLevel: components["schemas"]["DSPFulfillmentLevel"];
-            spendCalculationMode: components["schemas"]["DSPSpendCalculationMode"];
-            /**
-             * Format: date-time
-             * @description The start date and time of the commitment.
-             */
-            startDateTime: string;
-        };
-        /**
-         * @description | ErrorCode | Description |
-         *     |------|------|
-         *     | `ACTION_NOT_SUPPORTED` | The request is not supported. |
-         *     | `ACTIVE_RESOURCE_LIMIT_EXCEEDED` | Too many live resources. Remove resources and try again. |
-         *     | `ARCHIVED_PARENT_CANNOT_CREATE` | New resources cannot be created within an archived parent. |
-         *     | `ARCHIVED_PARENT_CANNOT_EDIT` | Resources within an archived parent cannot be edited. |
-         *     | `ARCHIVED_RESOURCE_CANNOT_EDIT` | Archived resources cannot be edited. |
-         *     | `ASSET_NOT_READY` | The provided asset is still being processed. |
-         *     | `AUTOCREATED_ENTITY_CANNOT_EDIT` | Autocreated entities cannot be edited. To complete this action, create the resource manually. |
-         *     | `BAD_REQUEST` | The request is not valid considering the documented schema. |
-         *     | `CONFLICT` | Operation could not be completed due to a conflict. Please retry your request. |
-         *     | `CONTENT_TOO_LARGE` | The request is too large. Consider splitting it into multiple requests. |
-         *     | `DATE_CANNOT_BE_IN_PAST` | Update the date to be in the future. |
-         *     | `DATE_CANNOT_BE_NULL` | Update the date. |
-         *     | `DATE_TOO_SOON` | Update the date to be further in the future. |
-         *     | `DUPLICATE_FIELD_VALUE_FOUND` | Multiple resources share the non-unique field values. Remove the non-unique field value. |
-         *     | `DUPLICATE_RESOURCE_ID_FOUND` | Multiple resources share the same ID. Remove the duplicate ID. |
-         *     | `DURATION_TOO_SHORT` | Update the length to be within the required range. |
-         *     | `FEATURE_DISCONTINUED` | Feature has been discontinued. |
-         *     | `FEATURE_NOT_AVAILABLE` | The requested feature is not available. |
-         *     | `FIELD_SIZE_IS_ABOVE_MAXIMUM_LIMIT` | Update the value to be within the required range. |
-         *     | `FIELD_SIZE_IS_BELOW_MINIMUM_LIMIT` | Update the value to be within the required range. |
-         *     | `FIELD_SIZE_IS_OUT_OF_RANGE` | Update the value to be within the required range. |
-         *     | `FIELD_VALUE_CANNOT_EDIT` | Field value cannot be edited. |
-         *     | `FIELD_VALUE_CONTAINS_BLOCKLISTED_WORDS` | Update the request with the required information for this resource. |
-         *     | `FIELD_VALUE_CONTAINS_INVALID_CHARACTERS` | Remove the invalid characters and try again. |
-         *     | `FIELD_VALUE_IS_ABOVE_MAXIMUM_LIMIT` | Update the value to be within the required range. |
-         *     | `FIELD_VALUE_IS_BELOW_MINIMUM_LIMIT` | Update the value to be within the required range. |
-         *     | `FIELD_VALUE_IS_EMPTY` | Update the request with the required information for this resource. |
-         *     | `FIELD_VALUE_IS_INVALID` | Update the request with the required information for this resource. |
-         *     | `FIELD_VALUE_IS_NULL` | Update the request with the required information for this resource. |
-         *     | `FIELD_VALUE_IS_OUT_OF_RANGE` | Update the value to be within the required range. |
-         *     | `FIELD_VALUE_MISMATCH` | Mismatch among resource field values. |
-         *     | `FIELD_VALUE_MUST_BE_EMPTY_OR_NULL` | Update the request with the required information for this resource. |
-         *     | `FIELD_VALUE_NOT_FOUND` | Resource specified in the field value not found. Try again with valid value. |
-         *     | `FIELD_VALUE_NOT_UNIQUE` | Resource field value conflicts with existing resource. Try again with an unique field value. |
-         *     | `FORBIDDEN` | The caller is not authorized to make the given request. |
-         *     | `GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_PORTFOLIO` | The campaign is associated with a global campaign. Portfolio association cannot be updated on a child campaign. Please perform operation on the global campaign. |
-         *     | `GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_STATE` | The campaign is associated with a global campaign. The state on child campaign cannot be set to archived. Please perform operation on global campaign. |
-         *     | `GLOBAL_CAMPAIGN_SINGLE_ADGROUP_LIMIT` | The campaign is associated with a global campaign. Only one ad group can be created under this campaign. |
-         *     | `INTERNAL_ERROR` | The server encountered an unexpected condition that prevented it from fulfilling the request. |
-         *     | `NOT_FOUND` | The requested resource does not exist. |
-         *     | `PAYMENT_ISSUE` | Payment failed. |
-         *     | `PRODUCT_INELIGIBLE` | Product is not eligible for advertising. Try again with a valid product. |
-         *     | `RESOURCE_DOES_NOT_BELONG_TO_PARENT` | Resource does not belong to the specified parent. Try again with a valid parent ID. |
-         *     | `RESOURCE_ID_NOT_FOUND` | Resource ID not found. Try again with valid ID. |
-         *     | `RESOURCE_IS_EMPTY` | Update the request with the required information for this resource. |
-         *     | `RESOURCE_IS_IN_TERMINAL_STATE` | Resource is in terminal state. |
-         *     | `RESOURCE_IS_NULL` | Update the request with the required information for this resource. |
-         *     | `TOO_MANY_REQUESTS` | There have been too many requests, please slow down your call rate. |
-         *     | `TOTAL_RESOURCE_LIMIT_EXCEEDED` | Too many resources. Remove resources and try again. |
-         *     | `UNAUTHORIZED` | The request lacks the necessary credentials. |
-         *     | `UNSUPPORTED_MARKETPLACE` | Marketplace not supported. Try again with a supported marketplace. |
-         * @enum {string}
-         */
-        ErrorCode: "ACTION_NOT_SUPPORTED" | "ACTIVE_RESOURCE_LIMIT_EXCEEDED" | "ARCHIVED_PARENT_CANNOT_CREATE" | "ARCHIVED_PARENT_CANNOT_EDIT" | "ARCHIVED_RESOURCE_CANNOT_EDIT" | "ASSET_NOT_READY" | "AUTOCREATED_ENTITY_CANNOT_EDIT" | "BAD_REQUEST" | "CONFLICT" | "CONTENT_TOO_LARGE" | "DATE_CANNOT_BE_IN_PAST" | "DATE_CANNOT_BE_NULL" | "DATE_TOO_SOON" | "DUPLICATE_FIELD_VALUE_FOUND" | "DUPLICATE_RESOURCE_ID_FOUND" | "DURATION_TOO_SHORT" | "FEATURE_DISCONTINUED" | "FEATURE_NOT_AVAILABLE" | "FIELD_SIZE_IS_ABOVE_MAXIMUM_LIMIT" | "FIELD_SIZE_IS_BELOW_MINIMUM_LIMIT" | "FIELD_SIZE_IS_OUT_OF_RANGE" | "FIELD_VALUE_CANNOT_EDIT" | "FIELD_VALUE_CONTAINS_BLOCKLISTED_WORDS" | "FIELD_VALUE_CONTAINS_INVALID_CHARACTERS" | "FIELD_VALUE_IS_ABOVE_MAXIMUM_LIMIT" | "FIELD_VALUE_IS_BELOW_MINIMUM_LIMIT" | "FIELD_VALUE_IS_EMPTY" | "FIELD_VALUE_IS_INVALID" | "FIELD_VALUE_IS_NULL" | "FIELD_VALUE_IS_OUT_OF_RANGE" | "FIELD_VALUE_MISMATCH" | "FIELD_VALUE_MUST_BE_EMPTY_OR_NULL" | "FIELD_VALUE_NOT_FOUND" | "FIELD_VALUE_NOT_UNIQUE" | "FORBIDDEN" | "GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_PORTFOLIO" | "GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_STATE" | "GLOBAL_CAMPAIGN_SINGLE_ADGROUP_LIMIT" | "INTERNAL_ERROR" | "NOT_FOUND" | "PAYMENT_ISSUE" | "PRODUCT_INELIGIBLE" | "RESOURCE_DOES_NOT_BELONG_TO_PARENT" | "RESOURCE_ID_NOT_FOUND" | "RESOURCE_IS_EMPTY" | "RESOURCE_IS_IN_TERMINAL_STATE" | "RESOURCE_IS_NULL" | "TOO_MANY_REQUESTS" | "TOTAL_RESOURCE_LIMIT_EXCEEDED" | "UNAUTHORIZED" | "UNSUPPORTED_MARKETPLACE";
-        DSPCommitmentCreate: {
-            /** @description Advertiser IDs associated with the commitment. */
-            advertiserIds?: string[];
-            /** @description Campaign IDs associated with the commitment. */
-            campaignIds?: string[];
-            /** @description The name of the commitment. */
-            commitmentName: string;
-            /**
-             * Format: double
-             * @description The total committed spend for the commitment.
-             */
-            committedSpend: number;
-            currencyCode: components["schemas"]["DSPCurrencyCode"];
-            /** @description Deal IDs associated with the commitment. */
-            dealIds?: string[];
-            /**
-             * Format: date-time
-             * @description The end date and time of the commitment.
-             */
-            endDateTime: string;
-            fulfillmentLevel: components["schemas"]["DSPFulfillmentLevel"];
-            spendCalculationMode: components["schemas"]["DSPSpendCalculationMode"];
-            /**
-             * Format: date-time
-             * @description The start date and time of the commitment.
-             */
-            startDateTime: string;
-        };
-        ErrorsIndex: {
-            errors: components["schemas"]["Error"][];
-            /** Format: int32 */
-            index: number;
-        };
-        DSPCommitmentMultiStatusSuccess: {
-            commitment: components["schemas"]["DSPCommitment"];
-            /** Format: int32 */
-            index: number;
-        };
-        /** @description The description of which campaign and what features are enabled for a forecast. */
-        DSPCampaignForecastDescription: {
-            /** @description The unique identifier of the campaign. */
-            campaignId: string;
-            enabledFeatures?: components["schemas"]["DSPEnabledFeaturesInCampaignForecast"];
-            /** @description The unique identifier of the flight. */
-            flightIds?: string[];
-            replanningSettings?: components["schemas"]["DSPReplanningSettings"];
-        };
-        DSPCampaignForecastMultiStatusSuccess: {
-            campaignForecast: components["schemas"]["DSPCampaignForecast"];
-            /** Format: int32 */
-            index: number;
-        };
-        DSPCommitmentSpendIdentifier: {
-            /** @description Commitment ID associated with the commitment. */
-            commitmentId: string;
-            spendDimension?: components["schemas"]["DSPSpendDimension"];
-        };
-        DSPCommitmentSpendMultiStatusSuccess: {
-            commitmentSpend: components["schemas"]["DSPCommitmentSpend"];
-            /** Format: int32 */
-            index: number;
-        };
-        DSPCommitmentUpdate: {
-            /** @description Advertiser IDs associated with the commitment. */
-            advertiserIds?: string[];
-            /** @description Campaign IDs associated with the commitment. */
-            campaignIds?: string[];
-            /** @description A unique identifier for the commitment. */
-            commitmentId: string;
-            /** @description The name of the commitment. */
-            commitmentName?: string;
-            /**
-             * Format: double
-             * @description The total committed spend for the commitment.
-             */
-            committedSpend?: number;
-            currencyCode?: components["schemas"]["DSPCurrencyCode"];
-            /** @description Deal IDs associated with the commitment. */
-            dealIds?: string[];
-            /**
-             * Format: date-time
-             * @description The end date and time of the commitment.
-             */
-            endDateTime?: string;
-            fulfillmentLevel?: components["schemas"]["DSPFulfillmentLevel"];
-            spendCalculationMode?: components["schemas"]["DSPSpendCalculationMode"];
-            /**
-             * Format: date-time
-             * @description The start date and time of the commitment.
-             */
-            startDateTime?: string;
-        };
-        /**
-         * @description | CurrencyCode | Description |
-         *     |------|------|
-         *     | `AED` | United Arab Emirates Dirham |
-         *     | `ARS` | Argentine Peso |
-         *     | `AUD` | Australian Dollar |
-         *     | `BGN` | Bulgarian Lev |
-         *     | `BHD` | Bahraini Dinar |
-         *     | `BOB` | Bolivian Boliviano |
-         *     | `BRL` | Brazilian Real |
-         *     | `CAD` | Canadian Dollar |
-         *     | `CHF` | Swiss Franc |
-         *     | `CLP` | Chilean Peso |
-         *     | `CNY` | Chinese Yuan |
-         *     | `COP` | Colombian Peso |
-         *     | `CRC` | Costa Rican Colón |
-         *     | `CZK` | Czech Koruna |
-         *     | `DKK` | Danish Krone |
-         *     | `DOP` | Dominican Peso |
-         *     | `DZD` | Algerian Dinar |
-         *     | `EUR` | Euro |
-         *     | `GBP` | British Pound Sterling |
-         *     | `GTQ` | Guatemalan Quetzal |
-         *     | `HKD` | Hong Kong Dollar |
-         *     | `HNL` | Honduran Lempira |
-         *     | `HRK` | Croatian Kuna |
-         *     | `HUF` | Hungarian Forint |
-         *     | `IDR` | Indonesian Rupiah |
-         *     | `ILS` | Israeli New Shekel |
-         *     | `INR` | Indian Rupee |
-         *     | `JMD` | Jamaican Dollar |
-         *     | `JPY` | Japanese Yen |
-         *     | `KRW` | South Korean Won |
-         *     | `KWD` | Kuwaiti Dinar |
-         *     | `MAD` | Moroccan Dirham |
-         *     | `MXN` | Mexican Peso |
-         *     | `MYR` | Malaysian Ringgit |
-         *     | `NOK` | Norwegian Krone |
-         *     | `NZD` | New Zealand Dollar |
-         *     | `PAB` | Panamanian Balboa |
-         *     | `PEN` | Peruvian Sol |
-         *     | `PHP` | Philippine Peso |
-         *     | `PKR` | Pakistani Rupee |
-         *     | `PYG` | Paraguayan Guaraní |
-         *     | `QAR` | Qatari Riyal |
-         *     | `RON` | Romanian Leu |
-         *     | `RSD` | Serbian Dinar |
-         *     | `RUB` | Russian Ruble |
-         *     | `SAR` | Saudi Riyal |
-         *     | `SEK` | Swedish Krona |
-         *     | `SGD` | Singapore Dollar |
-         *     | `THB` | Thai Baht |
-         *     | `TND` | Tunisian Dinar |
-         *     | `TRY` | Turkish Lira |
-         *     | `TWD` | New Taiwan Dollar |
-         *     | `UAH` | Ukrainian Hryvnia |
-         *     | `USD` | United States Dollar |
-         *     | `UYU` | Uruguayan Peso |
-         *     | `VND` | Vietnamese Đồng |
-         * @enum {string}
-         */
-        DSPCurrencyCode: "AED" | "ARS" | "AUD" | "BGN" | "BHD" | "BOB" | "BRL" | "CAD" | "CHF" | "CLP" | "CNY" | "COP" | "CRC" | "CZK" | "DKK" | "DOP" | "DZD" | "EUR" | "GBP" | "GTQ" | "HKD" | "HNL" | "HRK" | "HUF" | "IDR" | "ILS" | "INR" | "JMD" | "JPY" | "KRW" | "KWD" | "MAD" | "MXN" | "MYR" | "NOK" | "NZD" | "PAB" | "PEN" | "PHP" | "PKR" | "PYG" | "QAR" | "RON" | "RSD" | "RUB" | "SAR" | "SEK" | "SGD" | "THB" | "TND" | "TRY" | "TWD" | "UAH" | "USD" | "UYU" | "VND";
-        /**
-         * @description | FulfillmentLevel | Description |
-         *     |------|------|
-         *     | `LEVEL_0` | Tracking-only commitments |
-         *     | `LEVEL_5` | Prioritize commitment over campaign performance |
-         * @enum {string}
-         */
-        DSPFulfillmentLevel: "LEVEL_0" | "LEVEL_5";
-        /**
-         * @description | SpendCalculationMode | Description |
-         *     |------|------|
-         *     | `ADVERTISER_ACCOUNT` | Spend is aggregated at the advertiser account level |
-         *     | `CAMPAIGN` | Spend is aggregated at the campaign level |
-         *     | `MANAGER_ACCOUNT` | Spend is aggregated at the manager account level |
-         * @enum {string}
-         */
-        DSPSpendCalculationMode: "ADVERTISER_ACCOUNT" | "CAMPAIGN" | "MANAGER_ACCOUNT";
-        Error: {
-            code: components["schemas"]["ErrorCode"];
-            fieldLocation?: string;
-            message: string;
-        };
-        /** @description For the user to specify which features to enable in the forecast result. */
-        DSPEnabledFeaturesInCampaignForecast: {
-            /** @description Describe if the forecast will use cached settings of a campaign. */
-            campaignSettingsCache?: boolean;
-            /** @description Describe if the user want to see curve or not. */
-            curve?: boolean;
-            /** @description Describe if the user want to see detailed insights for leading drivers of forecast results. */
-            insights?: boolean;
-            metrics?: components["schemas"]["DSPForecastMetricsDescription"];
-            /** @description Describe if the forecast will show replanning recommendation. */
-            replanning?: boolean;
-        };
-        /** @description Forecast request of a campaign, adGroups, flights, and targets with adjusted settings. */
-        DSPReplanningSettings: {
-            adGroups?: components["schemas"]["DSPForecastAdGroup"][];
-            campaign?: components["schemas"]["DSPForecastCampaign"];
-            flights?: components["schemas"]["DSPForecastFlight"][];
-            targets?: components["schemas"]["DSPForecastTarget"][];
-        };
-        DSPCampaignForecast: {
-            /** @description The combination of existing flight settings and proposed flight settings based on forecasting. */
-            availableForecastFlights?: components["schemas"]["DSPForecastFlight"][];
-            /** @description The display name of the campaign used for the forecast. */
-            campaignDisplayName: string;
-            campaignForecastDescription: components["schemas"]["DSPCampaignForecastDescription"];
-            /**
-             * Format: date-time
-             * @description The creation date of the campaign forecast.
-             */
-            creationDateTime: string;
-            /** @description The forecast results of multiple flights of the campaign. */
-            flightForecasts?: components["schemas"]["DSPFlightForecast"][];
-            /** @description Indicates whether there are existing recommendations/guidance available for the campaign from the Noble ListGuidance API. */
-            hasExistingGuidance?: boolean;
-        };
-        /**
-         * @description | SpendDimension | Description |
-         *     | --- | --- |
-         *     | `advertiserAccountId` | Identifier for an advertising account. |
-         *     | `campaignId` | Identifier for campaign entity |
-         *     | `dealId` | Identifier for deal entity |
-         */
-        DSPSpendDimension: {
-            advertiserAccountId: string;
-        } | {
-            campaignId: string;
-        } | {
-            dealId: string;
-        };
-        DSPCommitmentSpend: {
-            /**
-             * Format: double
-             * @description Actual accrual spend amount in commitment currency.
-             */
-            accruedSpendValue?: number;
-            /**
-             * Format: date-time
-             * @description Timestamp for accrual spend.
-             */
-            accruedToDateTime: string;
-            commitmentId: components["schemas"]["DSPCommitmentSpendIdentifier"];
-            currencyCode: components["schemas"]["DSPCurrencyCode"];
-            /**
-             * Format: double
-             * @description Projected spend amount in commitment currency.
-             */
-            projectedSpendValue?: number;
-            /**
-             * Format: double
-             * @description Spend at risk amount in commitment currency.
-             */
-            spendAtRiskValue?: number;
-            spendDimensionType: components["schemas"]["DSPSpendDimensionType"];
-        };
-        /** @description Describe how user select to see all metrics or selected ones. */
-        DSPForecastMetricsDescription: {
-            /** @description If it is true, all the supported metrics would return. */
-            allMetrics: boolean;
-            /** @description The list of selected metrics in order. */
-            selectedMetrics?: components["schemas"]["DSPSelectedForecastMetric"][];
-        };
-        /** @description Ad group domain model */
-        DSPForecastAdGroup: {
-            /** @description The unique identifier of the ad group. */
-            adGroupId?: string;
-            adProduct?: components["schemas"]["DSPAdProduct"];
-            /** @description The array of identifiers of product categories associated with the ad group. For VIDEO ad group type only one parent product category or multiple sub-categories from one parent product category are allowed. */
-            advertisedProductCategoryIds?: string[];
-            bid?: components["schemas"]["DSPAdGroupBid"];
-            /** @description An object containing budget details for the ad group. */
-            budgets?: components["schemas"]["DSPBudget"][];
-            /** @description The unique identifier of the campaign the ad group belongs to. */
-            campaignId?: string;
-            /**
-             * Format: date-time
-             * @description The date time that the ad group was created.
-             */
-            creationDateTime?: string;
-            creativeRotationType?: components["schemas"]["DSPCreativeRotationType"];
-            /**
-             * Format: date-time
-             * @description The end date time for the ad group.
-             */
-            endDateTime?: string;
-            /** @description The fees associated with the ad group. */
-            fees?: components["schemas"]["DSPFee"][];
-            /** @description An object containing frequency details for the ad group. */
-            frequencies?: components["schemas"]["DSPFrequency"][];
-            /** @description The global adGroup identifier that manages this marketplace adGroup. */
-            globalAdGroupId?: string;
-            inventoryType?: components["schemas"]["DSPInventoryType"];
-            /**
-             * Format: date-time
-             * @description The date time that the ad group was last updated.
-             */
-            lastUpdatedDateTime?: string;
-            /** @description List of marketplace-specific configurations for a global ad group that enables overriding certain attributes at individual marketplace level. For example, if a global ad group state is ENABLED and needs to be PAUSED only in DE marketplace, you can specify: [{marketplace: DE, overrides: {state: PAUSED}}]. When a marketplace-specific override is not provided, ad group's global value is applied to that marketplace. */
-            marketplaceConfigurations?: components["schemas"]["DSPMarketplaceAdGroupConfigurations"][];
-            marketplaceScope?: components["schemas"]["DSPMarketplaceScope"];
-            /**
-             * @description A list of country codes representing Amazon marketplaces
-             *     | Marketplace | Description |
-             *     | --- | --- |
-             *     | `AE` |  |
-             *     | `AU` |  |
-             *     | `BR` |  |
-             *     | `CA` |  |
-             *     | `DE` |  |
-             *     | `ES` |  |
-             *     | `FR` |  |
-             *     | `GB` |  |
-             *     | `IN` |  |
-             *     | `IT` |  |
-             *     | `JP` |  |
-             *     | `MX` |  |
-             *     | `NL` |  |
-             *     | `SA` |  |
-             *     | `SE` |  |
-             *     | `TR` |  |
-             *     | `US` |  |
-             */
-            marketplaces?: components["schemas"]["DSPMarketplace"][];
-            /** @description The name of the ad group. */
-            name?: string;
-            optimization?: components["schemas"]["DSPOptimization"];
-            pacing?: components["schemas"]["DSPPacing"];
-            /** @description The purchase order number associated with the ad group. */
-            purchaseOrderNumber?: string;
-            /** @description Identifier for retailer associated with this ad group. */
-            retailerId?: string;
-            /**
-             * Format: date-time
-             * @description The start date time for the ad group.
-             */
-            startDateTime?: string;
-            state?: components["schemas"]["DSPState"];
-            status?: components["schemas"]["DSPStatus"];
-            /** @description Open ended labels with a key value pair applied to the ad group */
-            tags?: components["schemas"]["DSPTag"][];
-            targetingSettings?: components["schemas"]["DSPTargetingSettings"];
-        };
-        /** @description Campaign domain model */
-        DSPForecastCampaign: {
-            adProduct?: components["schemas"]["DSPAdProduct"];
-            /** @description OpenRTB standard naming meaning: Advertiser domain for block list checking. This can be an array of strings for the case of rotating creatives. Exchanges can mandate that only one domain is allowed. */
-            adomains?: string[];
-            autoCreationSettings?: components["schemas"]["DSPAutoCreationSettings"];
-            /** @description This is the ID of the brand that the campaign is associated with. */
-            brandId?: string;
-            /** @description The object containing budget details for the campaign (for campaigns that support multiple budgets). */
-            budgets?: components["schemas"]["DSPBudget"][];
-            /** @description A unique identifier for a campaign. */
-            campaignId?: string;
-            /** @description This is the ID of the originally generated campaign preset that the campaign is associated with. */
-            campaignPresetId?: string;
-            /** @description This field is used in Sponsored Ads and ADSP and impacts targeted supply. For Sponsored Ads, the campaign.countries field determines what Amazon retail supply (Amazon.com, Amazon.co.uk, Amazon.mx, etc) the campaign will serve in. Similarly in ADSP, this has an implicit filter on your inventory targets. If you choose an inventory target of AMAZON with campaign.countries set to US, this will target the retail supply of Amazon.com and non-retail Amazon properties. ADSP options include additional countries - for example, choosing Austria means targeting Austria eligible inventory and Amazon retail supply of Amazon.de. */
-            countries?: components["schemas"]["DSPCountryCode"][];
-            /**
-             * Format: date-time
-             * @description The date time that the campaign was created.
-             */
-            creationDateTime?: string;
-            /** @description List of tactic type and inventory type pairs that are eligible for use with this campaign */
-            eligibleAutomatedTargetingTactics?: components["schemas"]["DSPTacticKey"][];
-            /**
-             * Format: date
-             * @description The end date of the campaign.
-             */
-            endDate?: string;
-            /**
-             * Format: date-time
-             * @description The end date time for the campaign.
-             */
-            endDateTime?: string;
-            /** @description Any fees associated with the campaign. */
-            fees?: components["schemas"]["DSPCampaignFee"][];
-            /** @description Flight details associated with the campaign. */
-            flights?: components["schemas"]["DSPCampaignFlight"][];
-            /** @description Any frequency caps associated with the campaign. */
-            frequencies?: components["schemas"]["DSPFrequency"][];
-            /** @description The global campaign identifier that manages this marketplace campaign. */
-            globalCampaignId?: string;
-            /** @description List of tactic type and inventory type pairs that are ineligible for use with this campaign, along with reasons for ineligibility */
-            ineligibleAutomatedTargetingTactics?: components["schemas"]["DSPIneligibleAutomatedTargetingTactic"][];
-            /**
-             * Format: date-time
-             * @description The date time that the campaign was last updated.
-             */
-            lastUpdatedDateTime?: string;
-            /** @description List of marketplace-specific configurations for a global campaign that enables overriding certain attributes at individual marketplace level. For example, if a global campaign is ENABLED and startDate '2024-06-01' but needs to be PAUSED in DE with startDateTime '2024-06-02' marketplace, you can specify: [{marketplace: DE, overrides: {state: PAUSED, startDate: '2024-06-02'}}]. When a marketplace-specific override is not provided, the campaign's global value is applied to that marketplace. */
-            marketplaceConfigurations?: components["schemas"]["DSPMarketplaceCampaignConfigurations"][];
-            marketplaceScope?: components["schemas"]["DSPMarketplaceScope"];
-            /**
-             * @description A list of country codes representing Amazon marketplaces
-             *     | Marketplace | Description |
-             *     | --- | --- |
-             *     | `AE` |  |
-             *     | `AU` |  |
-             *     | `BR` |  |
-             *     | `CA` |  |
-             *     | `DE` |  |
-             *     | `ES` |  |
-             *     | `FR` |  |
-             *     | `GB` |  |
-             *     | `IN` |  |
-             *     | `IT` |  |
-             *     | `JP` |  |
-             *     | `MX` |  |
-             *     | `NL` |  |
-             *     | `SA` |  |
-             *     | `SE` |  |
-             *     | `TR` |  |
-             *     | `US` |  |
-             */
-            marketplaces?: components["schemas"]["DSPMarketplace"][];
-            /** @description The name of the campaign. */
-            name?: string;
-            optimizations?: components["schemas"]["DSPCampaignOptimizations"];
-            /** @description The ID of the portfolio associated with the campaign. */
-            portfolioId?: string;
-            /** @description This is the ID of the product category that the campaign is associated with. */
-            productCategoryId?: string;
-            /** @description The purchase order number associated with the campaign. */
-            purchaseOrderNumber?: string;
-            /** @description StoreKit AdNetwork application ID. Represents iTunes application ID with which SKAN-enabled campaigns are associated. */
-            skanAppId?: string;
-            /**
-             * Format: date
-             * @description The start date of the campaign.
-             */
-            startDate?: string;
-            /**
-             * Format: date-time
-             * @description The start date time for the campaign.
-             */
-            startDateTime?: string;
-            state?: components["schemas"]["DSPState"];
-            status?: components["schemas"]["DSPStatus"];
-            /** @description Open ended labels with a key value pair applied to the campaign */
-            tags?: components["schemas"]["DSPTag"][];
-            /** @description DealId associated with the campaign. */
-            targetedPGDealId?: string;
-            /** @description If the campaign is targeting an Amazon deal, the value will be true, and the campaign and ad group(s) will be read-only. */
-            targetsAmazonDeal?: boolean;
-        };
-        DSPForecastFlight: {
-            budget: components["schemas"]["DSPBudget"];
-            /** Format: date-time */
-            endDateTime: string;
-            /** @description The ID associated with the flight. */
-            flightId?: string;
-            /**
-             * Format: date-time
-             * @description The start date of the flight.
-             */
-            startDateTime: string;
-        };
-        DSPForecastTarget: {
-            /** @description A unique identifier for the ad group associated with the target. Only used for ad-group level targets. */
-            adGroupId?: string;
-            adProduct?: components["schemas"]["DSPAdProduct"];
-            bid?: components["schemas"]["DSPTargetBid"];
-            /** @description A unique identifier for the campaign associated with the target. Only used for campaign-level targets. */
-            campaignId?: string;
-            /**
-             * Format: date-time
-             * @description The date time the target was created.
-             */
-            creationDateTime?: string;
-            /** @description The global target identifier that manages this marketplace target. */
-            globalTargetId?: string;
-            /**
-             * Format: date-time
-             * @description The date time the target was last updated.
-             */
-            lastUpdatedDateTime?: string;
-            /** @description List of marketplace-specific configurations for a global target that enables overriding certain attributes at individual marketplace level. For example, if a global target is ENABLED but needs to be PAUSED in DE marketplace, you can specify: [{marketplace: DE, overrides: {state: PAUSED}}]. When a marketplace-specific override is not provided, the target's global value is applied to that marketplace. */
-            marketplaceConfigurations?: components["schemas"]["DSPMarketplaceTargetConfigurations"][];
-            marketplaceScope?: components["schemas"]["DSPMarketplaceScope"];
-            /**
-             * @description A list of country codes representing Amazon marketplaces
-             *     | Marketplace | Description |
-             *     | --- | --- |
-             *     | `AE` |  |
-             *     | `AU` |  |
-             *     | `BR` |  |
-             *     | `CA` |  |
-             *     | `DE` |  |
-             *     | `ES` |  |
-             *     | `FR` |  |
-             *     | `GB` |  |
-             *     | `IN` |  |
-             *     | `IT` |  |
-             *     | `JP` |  |
-             *     | `MX` |  |
-             *     | `NL` |  |
-             *     | `SA` |  |
-             *     | `SE` |  |
-             *     | `TR` |  |
-             *     | `US` |  |
-             */
-            marketplaces?: components["schemas"]["DSPMarketplace"][];
-            /** @description Indicates whether the target is negative or not. */
-            negative?: boolean;
-            state?: components["schemas"]["DSPState"];
-            status?: components["schemas"]["DSPStatus"];
-            /** @description Open ended labels with a key value pair applied to the target */
-            tags?: components["schemas"]["DSPTag"][];
-            targetDetails?: components["schemas"]["DSPTargetDetails"];
-            /** @description A unique identifier for the target. */
-            targetId?: string;
-            targetLevel?: components["schemas"]["DSPTargetLevel"];
-            targetType?: components["schemas"]["DSPTargetType"];
-        };
-        /** @description The forecast result of a specific flight. */
-        DSPFlightForecast: {
-            /** @description The forecasting curves of a flight based on different periodicities. */
-            curves?: components["schemas"]["DSPCurve"][];
-            deliverInFullConfidence?: components["schemas"]["DSPDeliverInFullConfidence"];
-            /** @description The flightId of the flight. */
-            flightId: string;
-            /**
-             * Format: date-time
-             * @description The endtime of the flight for forecasting.
-             */
-            forecastEndDateTime: string;
-            /**
-             * Format: date-time
-             * @description The starttime of the flight for forecasting.
-             */
-            forecastStartDateTime: string;
-            insights?: components["schemas"]["DSPFlightForecastInsights"];
-            /** @description The different metrics to measure the performance of the flight. */
-            metrics?: components["schemas"]["DSPForecastMetric"][];
-            /** @description The recommendation for replanning. */
-            replanning?: components["schemas"]["DSPReplanning"][];
-            /**
-             * Format: double
-             * @description The amount of money spend for this flight.
-             */
-            spend?: number;
-            totalBudget?: components["schemas"]["DSPMonetaryBudget"];
-            /** @description Warnings of the campaign forecast. */
-            warnings?: components["schemas"]["DSPWarning"][];
-        };
-        /**
-         * @description | SpendDimensionType | Description |
-         *     | --- | --- |
-         *     | `COMMITMENT` | Commitment Level Spend Detail |
-         *     | `ADVERTISER` | Advertiser Level Spend Detail |
-         *     | `CAMPAIGN` | Campaign Level Spend Detail |
-         *     | `DEAL` | Deal Level Spend Detail |
-         * @enum {string}
-         */
-        DSPSpendDimensionType: "ADVERTISER" | "CAMPAIGN" | "COMMITMENT" | "DEAL";
-        /**
-         * @description | SelectedForecastMetric | Description |
-         *     | --- | --- |
-         *     | `DC` | Delivery confidence. |
-         *     | `TAS` | Total available spend. |
-         *     | `AIMP` | Available impressions. |
-         *     | `AREA` | Available reach. |
-         *     | `EIMP` | Expected impressions. |
-         *     | `EREA` | Expected reach. |
-         *     | `CPC` | Cost per click. |
-         *     | `CPA` | Cost per action. |
-         *     | `CPM` | Cost per mille. |
-         *     | `ROAS` | Return on ad spend. |
-         *     | `CAS` | Capped available spend. |
-         *     | `IREA` | Incremental reach. |
-         * @enum {string}
-         */
-        DSPSelectedForecastMetric: "AIMP" | "AREA" | "CAS" | "CPA" | "CPC" | "CPM" | "DC" | "EIMP" | "EREA" | "IREA" | "ROAS" | "TAS";
-        /**
-         * @description | AdProduct | Description |
-         *     | --- | --- |
-         *     | `AMAZON_DSP` |  |
-         * @enum {string}
-         */
-        DSPAdProduct: "AMAZON_DSP";
-        DSPAdGroupBid: {
-            /**
-             * Format: double
-             * @description The lower bound bid used for the ads in the ad group.
-             */
-            baseBid?: number;
-            currencyCode: components["schemas"]["DSPCurrencyCode"];
-            /**
-             * Format: double
-             * @description The max average bid that will be targeted on the ad group across all of the bids (a single bid could be lower or higher that this number).
-             */
-            maxAverageBid?: number;
-        };
-        DSPBudget: {
-            budgetType: components["schemas"]["DSPBudgetType"];
-            budgetValue: components["schemas"]["DSPBudgetValue"];
-            recurrenceTimePeriod: components["schemas"]["DSPRecurrence"];
-        };
-        /**
-         * @description | CreativeRotationType | Description |
-         *     | --- | --- |
-         *     | `RANDOM` |  |
-         *     | `WEIGHTED` |  |
-         * @enum {string}
-         */
-        DSPCreativeRotationType: "RANDOM" | "WEIGHTED";
-        DSPFee: {
-            /** @description Applies only to THIRD_PARTY_APPLIED_FEE. When set to true, third-party applied fees are are added on top of the total ad group budget spent amount in reports. */
-            addToBudgetSpentAmount?: boolean;
-            currencyCode: components["schemas"]["DSPCurrencyCode"];
-            feeType: components["schemas"]["DSPFeeType"];
-            /**
-             * Format: double
-             * @description The fee amount expressed as the feeValueType. AMAZON_AUDIENCE_FEE AND THIRD_PARTY_AUDIENCE_FEE is in the currency of the marketplace. All other CPM based fees are in the currency of the advertiser. For percentages, 100 represents 100%.
-             */
-            feeValue: number;
-            feeValueType: components["schemas"]["DSPFeeValueType"];
-            thirdPartyProvider?: components["schemas"]["DSPFeesThirdPartyProvider"];
-        };
-        DSPFrequency: {
-            /**
-             * Format: int32
-             * @description The maximum number of times an EventType is served per user. For ADSP ad group, maximum supported value is 500.
-             */
-            eventMaxCount: number;
-            frequencyTargetingSetting: components["schemas"]["DSPFrequencyTargetingSetting"];
-            /**
-             * Format: int32
-             * @description The value associated with the time and unit of time for this frequency cap.
-             */
-            timeCount?: number;
-            timeUnit?: components["schemas"]["DSPTimeUnit"];
-        };
-        /**
-         * @description | InventoryType | Description |
-         *     | --- | --- |
-         *     | `STANDARD_DISPLAY` |  |
-         *     | `AMAZON_MOBILE_DISPLAY` |  |
-         *     | `AAP_MOBILE_APP` |  |
-         *     | `DISPLAY` |  |
-         *     | `VIDEO` |  |
-         *     | `STREAMING_TV` |  |
-         *     | `ONLINE_VIDEO` |  |
-         *     | `AUDIO` | Audio ads that serve on streaming audio inventory. |
-         *     | `PODCAST` | Podcast ads that serve on streaming podcast inventory. |
-         *     | `AUDIO_AMAZON_DEAL` |  |
-         *     | `STREAMING_TV_AMAZON_DEAL` |  |
-         *     | `LIVE_EVENTS` | Real-time broadcast inventory (sports, concerts, award shows) with audience volatility and concentrated traffic patterns requiring specialized pacing algorithms and event-specific metadata handling.  |
-         * @enum {string}
-         */
-        DSPInventoryType: "AAP_MOBILE_APP" | "AMAZON_MOBILE_DISPLAY" | "AUDIO" | "AUDIO_AMAZON_DEAL" | "DISPLAY" | "LIVE_EVENTS" | "ONLINE_VIDEO" | "PODCAST" | "STANDARD_DISPLAY" | "STREAMING_TV" | "STREAMING_TV_AMAZON_DEAL" | "VIDEO";
-        DSPMarketplaceAdGroupConfigurations: Record<string, never>;
-        /**
-         * @description | MarketplaceScope | Description |
-         *     | --- | --- |
-         *     | `SINGLE_MARKETPLACE` |  |
-         * @enum {string}
-         */
-        DSPMarketplaceScope: "SINGLE_MARKETPLACE";
-        /**
-         * @description A list of country codes representing Amazon marketplaces
-         *     | Marketplace | Description |
-         *     | --- | --- |
-         *     | `AE` |  |
-         *     | `AU` |  |
-         *     | `BR` |  |
-         *     | `CA` |  |
-         *     | `DE` |  |
-         *     | `ES` |  |
-         *     | `FR` |  |
-         *     | `GB` |  |
-         *     | `IN` |  |
-         *     | `IT` |  |
-         *     | `JP` |  |
-         *     | `MX` |  |
-         *     | `NL` |  |
-         *     | `SA` |  |
-         *     | `SE` |  |
-         *     | `TR` |  |
-         *     | `US` |  |
-         * @enum {string}
-         */
-        DSPMarketplace: "AE" | "AU" | "BR" | "CA" | "DE" | "ES" | "FR" | "GB" | "IN" | "IT" | "JP" | "MX" | "NL" | "SA" | "SE" | "TR" | "US";
-        DSPOptimization: {
-            bidStrategy?: components["schemas"]["DSPBidStrategy"];
-            budgetSettings?: components["schemas"]["DSPAdGroupBudgetSettings"];
-        };
-        DSPPacing: {
-            deliveryProfile?: components["schemas"]["DSPDeliveryProfile"];
-        };
-        /**
-         * @description The user defined state for the resource. For ADSP, campaign and ad group resources can only be created in the PAUSED state and must be updated to ENABLED to activate for delivery
-         *     | State | Description |
-         *     | --- | --- |
-         *     | `ENABLED` |  |
-         *     | `PAUSED` |  |
-         *     | `ARCHIVED` |  |
-         * @enum {string}
-         */
-        DSPState: "ARCHIVED" | "ENABLED" | "PAUSED";
-        DSPStatus: {
-            /** @description This is the list of reasons behind the delivery status. */
-            deliveryReasons?: components["schemas"]["DSPDeliveryReason"][];
-            deliveryStatus: components["schemas"]["DSPDeliveryStatus"];
-        };
-        DSPTag: {
-            /** @description A custom key value pair entered by the advertiser. */
-            key: string;
-            /** @description A custom key value pair entered by the advertiser. */
-            value: string;
-        };
-        DSPTargetingSettings: {
-            amazonViewability?: components["schemas"]["DSPAmazonViewability"];
-            automatedTargetingTactic?: components["schemas"]["DSPAutomatedTargetingTactic"];
-            defaultAudienceTargetingMatchType?: components["schemas"]["DSPDefaultAudienceTargetingMatchType"];
-            /** @description If set to true, creatives will only target supply where the content language matches the creative language. */
-            enableLanguageTargeting?: boolean;
-            siteLanguage?: components["schemas"]["DSPSiteLanguage"];
-            tacticsConvertersExclusionType?: components["schemas"]["DSPTacticsConvertersExclusionType"];
-            /** @description DealId to be targeted by the Ad Group being created. If you are creating an ad group targeting a programmatic guaranteed deal, the deal can be provided here. */
-            targetedPGDealId?: string;
-            timeZoneType?: components["schemas"]["DSPTimeZoneType"];
-            userLocationSignal?: components["schemas"]["DSPUserLocationSignal"];
-            videoCompletionTier?: components["schemas"]["DSPVideoCompletionTier"];
-        };
-        DSPAutoCreationSettings: Record<string, never>;
-        /**
-         * @description | CountryCode | Description |
-         *     | --- | --- |
-         *     | `AE` |  |
-         *     | `AT` |  |
-         *     | `AU` |  |
-         *     | `BE` |  |
-         *     | `BH` |  |
-         *     | `BR` |  |
-         *     | `CA` |  |
-         *     | `CH` |  |
-         *     | `DE` |  |
-         *     | `DK` |  |
-         *     | `EG` |  |
-         *     | `ES` |  |
-         *     | `FI` |  |
-         *     | `FR` |  |
-         *     | `GB` |  |
-         *     | `IE` |  |
-         *     | `IL` |  |
-         *     | `IN` |  |
-         *     | `IT` |  |
-         *     | `JO` |  |
-         *     | `JP` |  |
-         *     | `KW` |  |
-         *     | `LU` |  |
-         *     | `MA` |  |
-         *     | `MX` |  |
-         *     | `NL` |  |
-         *     | `NO` |  |
-         *     | `NZ` |  |
-         *     | `OM` |  |
-         *     | `QA` |  |
-         *     | `SA` |  |
-         *     | `SE` |  |
-         *     | `SG` |  |
-         *     | `TR` |  |
-         *     | `US` |  |
-         * @enum {string}
-         */
-        DSPCountryCode: "AE" | "AT" | "AU" | "BE" | "BH" | "BR" | "CA" | "CH" | "DE" | "DK" | "EG" | "ES" | "FI" | "FR" | "GB" | "IE" | "IL" | "IN" | "IT" | "JO" | "JP" | "KW" | "LU" | "MA" | "MX" | "NL" | "NO" | "NZ" | "OM" | "QA" | "SA" | "SE" | "SG" | "TR" | "US";
-        /** @description A tactic type paired with its compatible inventory type */
-        DSPTacticKey: Record<string, never>;
-        DSPCampaignFee: {
-            feeType: components["schemas"]["DSPCampaignFeeType"];
-            /**
-             * Format: double
-             * @description A service fee that is subtracted from the campaign budget as a percent of budget. This setting can’t be changed after an ad group has been added to a campaign.
-             */
-            feeValue: number;
-            feeValueType: components["schemas"]["DSPCampaignFeeValueType"];
-        };
-        DSPCampaignFlight: {
-            budget: components["schemas"]["DSPFlightBudget"];
-            /** Format: date-time */
-            endDateTime: string;
-            /** @description The ID associated with the flight. */
-            flightId?: string;
-            /** @description The name of the flight. */
-            name?: string;
-            /**
-             * Format: date-time
-             * @description The start date of the flight.
-             */
-            startDateTime: string;
-        };
-        /** @description Information about an ineligible tactic key and the reasons for ineligibility */
-        DSPIneligibleAutomatedTargetingTactic: Record<string, never>;
-        DSPMarketplaceCampaignConfigurations: Record<string, never>;
-        DSPCampaignOptimizations: {
-            bidSettings?: components["schemas"]["DSPBidSettings"];
-            budgetSettings?: components["schemas"]["DSPBudgetSettings"];
-            goalSettings?: components["schemas"]["DSPGoalSettings"];
-            /** @description Primary inventory type of the campaign for filtering KPIs and recommending tactics. */
-            primaryInventoryTypes?: components["schemas"]["DSPPrimaryInventoryType"][];
-        };
-        DSPTargetBid: Record<string, never>;
-        DSPMarketplaceTargetConfigurations: Record<string, never>;
-        DSPTargetDetails: {
-            keywordTarget: components["schemas"]["DSPKeywordTarget"];
-        } | {
-            productTarget: components["schemas"]["DSPProductTarget"];
-        } | {
-            productCategoryTarget: components["schemas"]["DSPProductCategoryTarget"];
-        } | {
-            audienceTarget: components["schemas"]["DSPAudienceTarget"];
-        } | {
-            locationTarget: components["schemas"]["DSPLocationTarget"];
-        } | {
-            domainTarget: components["schemas"]["DSPDomainTarget"];
-        } | {
-            appTarget: components["schemas"]["DSPAppTarget"];
-        } | {
-            deviceTarget: components["schemas"]["DSPDeviceTarget"];
-        } | {
-            dayPartTarget: components["schemas"]["DSPDayPartTarget"];
-        } | {
-            contentCategoryTarget: components["schemas"]["DSPContentCategoryTarget"];
-        } | {
-            contentGenreTarget: components["schemas"]["DSPContentGenreTarget"];
-        } | {
-            contentRatingTarget: components["schemas"]["DSPContentRatingTarget"];
-        } | {
-            brandSafetyTierTarget: components["schemas"]["DSPBrandSafetyTierTarget"];
-        } | {
-            brandSafetyCategoryTarget: components["schemas"]["DSPBrandSafetyCategoryTarget"];
-        } | {
-            inventorySourceTarget: components["schemas"]["DSPInventorySourceTarget"];
-        } | {
-            adInitiationTarget: components["schemas"]["DSPAdInitiationTarget"];
-        } | {
-            adPlayerSizeTarget: components["schemas"]["DSPAdPlayerSizeTarget"];
-        } | {
-            videoAdFormatTarget: components["schemas"]["DSPVideoAdFormatTarget"];
-        } | {
-            thirdPartyTarget: components["schemas"]["DSPThirdPartyTarget"];
-        } | {
-            themeTarget: components["schemas"]["DSPThemeTarget"];
-        } | {
-            contentInstreamPositionTarget: components["schemas"]["DSPContentInstreamPositionTarget"];
-        } | {
-            contentOutstreamPositionTarget: components["schemas"]["DSPContentOutstreamPositionTarget"];
-        } | {
-            videoContentDurationTarget: components["schemas"]["DSPVideoContentDurationTarget"];
-        } | {
-            foldPositionTarget: components["schemas"]["DSPFoldPositionTarget"];
-        } | {
-            nativeContentPositionTarget: components["schemas"]["DSPNativeContentPositionTarget"];
-        } | {
-            placementTypeTarget: components["schemas"]["DSPPlacementTypeTarget"];
-        };
-        /**
-         * @description | TargetLevel | Description |
-         *     | --- | --- |
-         *     | `AD_GROUP` |  |
-         * @enum {string}
-         */
-        DSPTargetLevel: "AD_GROUP";
-        /**
-         * @description | TargetType | Description |
-         *     | --- | --- |
-         *     | `KEYWORD` |  |
-         *     | `PRODUCT` |  |
-         *     | `PRODUCT_CATEGORY` |  |
-         *     | `AUDIENCE` |  |
-         *     | `LOCATION` |  |
-         *     | `DOMAIN` |  |
-         *     | `APP` |  |
-         *     | `DEVICE` |  |
-         *     | `DAYPART` |  |
-         *     | `CONTENT_CATEGORY` |  |
-         *     | `CONTENT_GENRE` |  |
-         *     | `CONTENT_RATING` |  |
-         *     | `BRAND_SAFETY_TIER` |  |
-         *     | `BRAND_SAFETY_CATEGORY` |  |
-         *     | `INVENTORY_SOURCE` |  |
-         *     | `AD_INITIATION` |  |
-         *     | `AD_PLAYER_SIZE` |  |
-         *     | `VIDEO_AD_FORMAT` |  |
-         *     | `THIRD_PARTY` |  |
-         *     | `THEME` |  |
-         *     | `CONTENT_INSTREAM_POSITION` |  |
-         *     | `CONTENT_OUTSTREAM_POSITION` |  |
-         *     | `VIDEO_CONTENT_DURATION` |  |
-         *     | `FOLD_POSITION` |  |
-         *     | `NATIVE_CONTENT_POSITION` |  |
-         *     | `PLACEMENT_TYPE` |  |
-         * @enum {string}
-         */
-        DSPTargetType: "AD_INITIATION" | "AD_PLAYER_SIZE" | "APP" | "AUDIENCE" | "BRAND_SAFETY_CATEGORY" | "BRAND_SAFETY_TIER" | "CONTENT_CATEGORY" | "CONTENT_GENRE" | "CONTENT_INSTREAM_POSITION" | "CONTENT_OUTSTREAM_POSITION" | "CONTENT_RATING" | "DAYPART" | "DEVICE" | "DOMAIN" | "FOLD_POSITION" | "INVENTORY_SOURCE" | "KEYWORD" | "LOCATION" | "NATIVE_CONTENT_POSITION" | "PLACEMENT_TYPE" | "PRODUCT" | "PRODUCT_CATEGORY" | "THEME" | "THIRD_PARTY" | "VIDEO_AD_FORMAT" | "VIDEO_CONTENT_DURATION";
-        /** @description The forecast curve of Bid/Spend vs the metric type based on periodicity. */
-        DSPCurve: {
-            focusPoint?: components["schemas"]["DSPPoint"][];
-            periodicity?: components["schemas"]["DSPForecastPeriodicity"];
-            points?: components["schemas"]["DSPPoint"][];
-        };
-        /** @description Description of how confident we delivery 100% of the ads for the specific metric. */
-        DSPDeliverInFullConfidence: {
-            value: components["schemas"]["DSPDeliverInFullConfidenceLevel"];
-        };
-        /** @description Collection of insights for a particular flight forecast. */
-        DSPFlightForecastInsights: {
-            /** @description Detailed insights explaining leading drivers of the flight forecast results, per entity (e.g. campaign or its line items). */
-            forecastExplainabilityInsights?: components["schemas"]["DSPForecastInsightsGroup"][];
-            /** @description Top factors affecting the forecast results, e.g. max bid, frequency cap, etc. */
-            topExplainabilityFactors?: components["schemas"]["DSPInsightFeature"][];
-        };
-        /** @description The forecast based on metric and periodicity. */
-        DSPForecastMetric: {
-            metric: components["schemas"]["DSPSelectedForecastMetric"];
-            periodicity?: components["schemas"]["DSPForecastPeriodicity"];
-            value: components["schemas"]["DSPForecastValue"];
-        };
-        /** @description Recommendation for replanning. */
-        DSPReplanning: {
-            content: string;
-            curves?: components["schemas"]["DSPCurve"][];
-            deliverInFullConfidence?: components["schemas"]["DSPDeliverInFullConfidence"];
-            metrics?: components["schemas"]["DSPForecastMetric"][];
-            scenarioFlight?: components["schemas"]["DSPForecastFlight"];
-            scenarioType?: string;
-            /**
-             * @description | SelectedForecastMetric | Description |
-             *     | --- | --- |
-             *     | `DC` | Delivery confidence. |
-             *     | `TAS` | Total available spend. |
-             *     | `AIMP` | Available impressions. |
-             *     | `AREA` | Available reach. |
-             *     | `EIMP` | Expected impressions. |
-             *     | `EREA` | Expected reach. |
-             *     | `CPC` | Cost per click. |
-             *     | `CPA` | Cost per action. |
-             *     | `CPM` | Cost per mille. |
-             *     | `ROAS` | Return on ad spend. |
-             *     | `CAS` | Capped available spend. |
-             *     | `IREA` | Incremental reach. |
-             */
-            selectedMetrics?: components["schemas"]["DSPSelectedForecastMetric"][];
-            title: string;
-        };
-        DSPMonetaryBudget: {
-            currencyCode: components["schemas"]["DSPCurrencyCode"];
-            /**
-             * Format: double
-             * @description The monetary amount of the budget cap in the given currency.
-             */
-            value: number;
-        };
-        /** @description The warning message of a forecast. */
-        DSPWarning: {
-            adGroupIds?: string[];
-            code: string;
-            message: string;
-            messageParameters?: string[];
-            /** Format: int32 */
-            warningLevel?: number;
-        };
-        /**
-         * @description | BudgetType | Description |
-         *     | --- | --- |
-         *     | `MONETARY` |  |
-         * @enum {string}
-         */
-        DSPBudgetType: "MONETARY";
-        DSPBudgetValue: {
-            monetaryBudgetValue: components["schemas"]["DSPMonetaryBudgetValue"];
-        };
-        /**
-         * @description | Recurrence | Description |
-         *     | --- | --- |
-         *     | `DAILY` |  |
-         *     | `MONTHLY` |  |
-         *     | `LIFETIME` |  |
-         * @enum {string}
-         */
-        DSPRecurrence: "DAILY" | "LIFETIME" | "MONTHLY";
-        /**
-         * @description | FeeType | Description |
-         *     | --- | --- |
-         *     | `AMAZON_DSP` | A service fee for using Amazon DSP and subtracted from the budget. This fee is applied as a percent of supply cost. |
-         *     | `AMAZON_AUDIENCE` | CPM fee for using Amazon audiences. |
-         *     | `THIRD_PARTY_AUDIENCE` | CPM fee for using a third party audience. |
-         *     | `OMNICHANNEL_METRICS` | Fee for using Amazon Omnichannel Metrics. |
-         *     | `THIRD_PARTY_APPLIED` | User added CPM fee for using third-party data to track CPM costs. This fee is applied as a percent of supply cost. |
-         *     | `THIRD_PARTY_TARGETING` | CPM fee for using targeting provided by a third-party data provider. |
-         *     | `MANAGED_SERVICE_FEE` | The percentage-based fee applied to the Supply Cost for Amazon programmatic managed service. |
-         * @enum {string}
-         */
-        DSPFeeType: "AMAZON_AUDIENCE" | "AMAZON_DSP" | "MANAGED_SERVICE_FEE" | "OMNICHANNEL_METRICS" | "THIRD_PARTY_APPLIED" | "THIRD_PARTY_AUDIENCE" | "THIRD_PARTY_TARGETING";
-        /**
-         * @description | FeeValueType | Description |
-         *     | --- | --- |
-         *     | `FIXED_CPM` | Charged based on a fixed CPM. The currency depends on the feeType. |
-         *     | `PERCENTAGE_OF_SUPPLY_COST` | Charged as a percent of supply (media) cost. Ranges from 0 to 1 where 0.15 represents 15%. |
-         *     | `PERCENTAGE_OF_BUDGET` | Subtracted from the campaign budget as a percent of budget |
-         * @enum {string}
-         */
-        DSPFeeValueType: "FIXED_CPM" | "PERCENTAGE_OF_BUDGET" | "PERCENTAGE_OF_SUPPLY_COST";
-        /**
-         * @description | FeesThirdPartyProvider | Description |
-         *     | --- | --- |
-         *     | `INTEGRAL_AD_SCIENCE` |  |
-         *     | `DOUBLE_VERIFY` |  |
-         *     | `DOUBLE_CLICK_CAMPAIGN_MANAGER` |  |
-         *     | `COM_SCORE` |  |
-         *     | `CPM_1` |  |
-         *     | `CPM_2` |  |
-         *     | `CPM_3` |  |
-         * @enum {string}
-         */
-        DSPFeesThirdPartyProvider: "COM_SCORE" | "CPM_1" | "CPM_2" | "CPM_3" | "DOUBLE_CLICK_CAMPAIGN_MANAGER" | "DOUBLE_VERIFY" | "INTEGRAL_AD_SCIENCE";
-        /**
-         * @description | FrequencyTargetingSetting | Description |
-         *     | --- | --- |
-         *     | `USER` | Control frequency an ad will be selected to a person. |
-         *     | `HOUSEHOLD` | Control frequency an ad will be selected across people within the same household. |
-         * @enum {string}
-         */
-        DSPFrequencyTargetingSetting: "HOUSEHOLD" | "USER";
-        /**
-         * @description | TimeUnit | Description |
-         *     | --- | --- |
-         *     | `DAYS` |  |
-         *     | `HOURS` |  |
-         *     | `MINUTES` |  |
-         * @enum {string}
-         */
-        DSPTimeUnit: "DAYS" | "HOURS" | "MINUTES";
-        /**
-         * @description | BidStrategy | Description |
-         *     | --- | --- |
-         *     | `SPEND_BUDGET_IN_FULL` | Prioritize spending full budget, while maximizing performance |
-         *     | `PRIORITIZE_KPI_TARGET` |  |
-         *     | `USE_CAMPAIGN_STRATEGY` |  |
-         * @enum {string}
-         */
-        DSPBidStrategy: "PRIORITIZE_KPI_TARGET" | "SPEND_BUDGET_IN_FULL" | "USE_CAMPAIGN_STRATEGY";
-        DSPAdGroupBudgetSettings: {
-            budgetAllocation?: components["schemas"]["DSPBudgetAllocation"];
-            /**
-             * Format: double
-             * @description Denotes the daily minimum spend on the ad group in local currency.
-             */
-            dailyMinSpendValue?: number;
-        };
-        /**
-         * @description | DeliveryProfile | Description |
-         *     | --- | --- |
-         *     | `EVEN` | Even pacing spends your budget consistently across the length of the campaign. |
-         *     | `PACE_AHEAD` | Pace Ahead can deliver up to 25% more than the daily Even pace targets. |
-         *     | `ASAP` | Makes your entire budget available to spend immediately. This is ideal for ad groups with limited inventory or when there's no requirement to spend throughout the length of the campaign.Warning: Selecting ASAP may result in your entire budget being spent immediately. |
-         * @enum {string}
-         */
-        DSPDeliveryProfile: "ASAP" | "EVEN" | "PACE_AHEAD";
-        /**
-         * @description | DeliveryReason | Description |
-         *     | --- | --- |
-         *     | `AD_CREATIVES_NOT_RUNNING` |  |
-         *     | `AD_GROUP_ARCHIVED` |  |
-         *     | `AD_GROUP_ENDED` |  |
-         *     | `AD_GROUP_INELIGIBLE_GOAL_KPI` | Indicates that the ad group is suspended because the campaign's goal KPI is not supported. |
-         *     | `AD_GROUP_MISSING_CONVERSION_TRACKING_SELECTIONS` | Indicates that the ad group is suspended because the campaign is missing conversion tracking selections. |
-         *     | `AD_GROUP_PAUSED` |  |
-         *     | `AD_GROUP_PENDING_START_DATE` |  |
-         *     | `AD_GROUP_POLICING_SUSPENDED` |  |
-         *     | `AD_GROUP_TOO_FEW_CONVERSION_TRACKING_SELECTIONS` | Indicates that the ad group is suspended because the campaign has an insufficient number of conversion tracking selections. |
-         *     | `AD_GROUP_TOO_MANY_CONVERSION_TRACKING_SELECTIONS` | Indicates that the ad group is suspended because the campaign exceeded the maximum number of conversion tracking selections. |
-         *     | `AD_GROUPS_NOT_RUNNING` |  |
-         *     | `AD_NOT_ASSOCIATED_WITH_AD_GROUP` |  |
-         *     | `AD_NOT_APPROVED_FOR_ALL_AD_GROUPS` |  |
-         *     | `AD_POLICING_PENDING_REVIEW` |  |
-         *     | `AD_POLICING_SUSPENDED` |  |
-         *     | `CAMPAIGN_ARCHIVED` |  |
-         *     | `CAMPAIGN_END_DATE_REACHED` |  |
-         *     | `CAMPAIGN_PAUSED` |  |
-         *     | `CAMPAIGN_PENDING_START_DATE` |  |
-         *     | `CAMPAIGN_POLICING_SUSPENDED` |  |
-         *     | `OTHER` |  |
-         * @enum {string}
-         */
-        DSPDeliveryReason: "AD_CREATIVES_NOT_RUNNING" | "AD_GROUPS_NOT_RUNNING" | "AD_GROUP_ARCHIVED" | "AD_GROUP_ENDED" | "AD_GROUP_INELIGIBLE_GOAL_KPI" | "AD_GROUP_MISSING_CONVERSION_TRACKING_SELECTIONS" | "AD_GROUP_PAUSED" | "AD_GROUP_PENDING_START_DATE" | "AD_GROUP_POLICING_SUSPENDED" | "AD_GROUP_TOO_FEW_CONVERSION_TRACKING_SELECTIONS" | "AD_GROUP_TOO_MANY_CONVERSION_TRACKING_SELECTIONS" | "AD_NOT_APPROVED_FOR_ALL_AD_GROUPS" | "AD_NOT_ASSOCIATED_WITH_AD_GROUP" | "AD_POLICING_PENDING_REVIEW" | "AD_POLICING_SUSPENDED" | "CAMPAIGN_ARCHIVED" | "CAMPAIGN_END_DATE_REACHED" | "CAMPAIGN_PAUSED" | "CAMPAIGN_PENDING_START_DATE" | "CAMPAIGN_POLICING_SUSPENDED" | "OTHER";
-        /**
-         * @description | DeliveryStatus | Description |
-         *     | --- | --- |
-         *     | `DELIVERING` | Represents the resource is delivering. For global, DELIVERING status indicates that the resource is delivering in all marketplaces |
-         *     | `NOT_DELIVERING` | Represents the resource is not delivering. For global, NOT_DELIVERING status indicates that the resource is NOT delivering in all marketplaces |
-         *     | `UNAVAILABLE` | Represents unavailable resource status. For global, UNAVAILABLE status indicates that the status is unavailable in all marketplaces |
-         *     | `LIMITED` | Represents partial delivery status, applicable to global resources that have different delivery status across marketplaces |
-         * @enum {string}
-         */
-        DSPDeliveryStatus: "DELIVERING" | "LIMITED" | "NOT_DELIVERING" | "UNAVAILABLE";
-        DSPAmazonViewability: {
-            /** @description Must be false if viewabilityTier is set to ALL_TIERS. You can set to true to include impressions that can not be measured when a viewabilityTier other than ALL_TIERS is selected. We recommend setting to false if high viewability is your goal. */
-            includeUnmeasurableImpressions: boolean;
-            viewabilityTier: components["schemas"]["DSPViewabilityTier"];
-        };
-        /**
-         * @description | AutomatedTargetingTactic | Description |
-         *     | --- | --- |
-         *     | `REMARKETING` | Ad Group Tactic (P+) that reaches shoppers who have viewed a product detail page, searched for your product, or visited your homepage |
-         *     | `RETENTION` | Ad Group Tactic (P+) that reaches shoppers who have purchased your product |
-         *     | `PROSPECTING` | Ad Group Tactic (B+) that reaches consumers who are highly likely to show interest and engage with your brand or product |
-         *     | `CUSTOMER_ACQUISITION` | Ad Group Tactic (P+) that reaches shoppers who are similar to past purchasers |
-         *     | `AWARENESS` | Ad Group tactic (Complete TV) that indicates that this line item drives awareness to your selected audience on publisher streaming TV for the linked deal while fulfilling your commitment. |
-         *     | `SEARCH` |  |
-         *     | `MAXIMIZE_PERFORMANCE` | Ad Group Tactic (P+) that reaches shoppers who are similar to past shoppers who viewed a product detail page |
-         * @enum {string}
-         */
-        DSPAutomatedTargetingTactic: "AWARENESS" | "CUSTOMER_ACQUISITION" | "MAXIMIZE_PERFORMANCE" | "PROSPECTING" | "REMARKETING" | "RETENTION" | "SEARCH";
-        /**
-         * @description Match type for audience targeting inclusion groups, if any. You can enhance your ad group’s reach to consumers with similar shopping, streaming, and browsing behaviors or interests as your selected audiences across all inventory sources, regardless of the presence of ad identifiers. Only applicable at the adGroup level, rather than at individual audience level. (Default: SIMILAR). Note, SIMILAR is not applicable to certain advertised product categories, [see here](https://advertising.amazon.com/help/GX8G7HNDS5RBX3EF) for more information.
-         *     | DefaultAudienceTargetingMatchType | Description |
-         *     | --- | --- |
-         *     | `SIMILAR` | Reach more audiences who are similar to your included audiences. |
-         *     | `EXACT` | Target the exact audiences specified in the ad group audience targeting. |
-         * @enum {string}
-         */
-        DSPDefaultAudienceTargetingMatchType: "EXACT" | "SIMILAR";
-        /**
-         * @description | SiteLanguage | Description |
-         *     | --- | --- |
-         *     | `AR` |  |
-         *     | `BN` |  |
-         *     | `CS` |  |
-         *     | `DA` |  |
-         *     | `DE` |  |
-         *     | `EN` |  |
-         *     | `ES` |  |
-         *     | `FI` |  |
-         *     | `FR` |  |
-         *     | `GU` |  |
-         *     | `HI` |  |
-         *     | `IT` |  |
-         *     | `JA` |  |
-         *     | `KN` |  |
-         *     | `ML` |  |
-         *     | `MR` |  |
-         *     | `NL` |  |
-         *     | `NO` |  |
-         *     | `PL` |  |
-         *     | `PT` |  |
-         *     | `PA` |  |
-         *     | `SV` |  |
-         *     | `TA` |  |
-         *     | `TE` |  |
-         *     | `TR` |  |
-         *     | `ZH` |  |
-         *     | `OTHER` |  |
-         * @enum {string}
-         */
-        DSPSiteLanguage: "AR" | "BN" | "CS" | "DA" | "DE" | "EN" | "ES" | "FI" | "FR" | "GU" | "HI" | "IT" | "JA" | "KN" | "ML" | "MR" | "NL" | "NO" | "OTHER" | "PA" | "PL" | "PT" | "SV" | "TA" | "TE" | "TR" | "ZH";
-        /**
-         * @description | TacticsConvertersExclusionType | Description |
-         *     | --- | --- |
-         *     | `NO_EXCLUSION` |  |
-         *     | `RECENT_CONVERTERS` |  |
-         * @enum {string}
-         */
-        DSPTacticsConvertersExclusionType: "NO_EXCLUSION" | "RECENT_CONVERTERS";
-        /**
-         * @description | TimeZoneType | Description |
-         *     | --- | --- |
-         *     | `VIEWER` |  |
-         *     | `ADVERTISER_REGION` |  |
-         * @enum {string}
-         */
-        DSPTimeZoneType: "ADVERTISER_REGION" | "VIEWER";
-        /**
-         * @description | UserLocationSignal | Description |
-         *     | --- | --- |
-         *     | `CURRENT` |  |
-         *     | `MULTIPLE_SIGNALS` |  |
-         * @enum {string}
-         */
-        DSPUserLocationSignal: "CURRENT" | "MULTIPLE_SIGNALS";
-        /**
-         * @description | VideoCompletionTier | Description |
-         *     | --- | --- |
-         *     | `ALL_TIERS` |  |
-         *     | `GREATER_THAN_10_PERCENT` |  |
-         *     | `GREATER_THAN_20_PERCENT` |  |
-         *     | `GREATER_THAN_30_PERCENT` |  |
-         *     | `GREATER_THAN_40_PERCENT` |  |
-         *     | `GREATER_THAN_50_PERCENT` |  |
-         *     | `GREATER_THAN_60_PERCENT` |  |
-         *     | `GREATER_THAN_70_PERCENT` |  |
-         *     | `GREATER_THAN_80_PERCENT` |  |
-         *     | `GREATER_THAN_90_PERCENT` |  |
-         * @enum {string}
-         */
-        DSPVideoCompletionTier: "ALL_TIERS" | "GREATER_THAN_10_PERCENT" | "GREATER_THAN_20_PERCENT" | "GREATER_THAN_30_PERCENT" | "GREATER_THAN_40_PERCENT" | "GREATER_THAN_50_PERCENT" | "GREATER_THAN_60_PERCENT" | "GREATER_THAN_70_PERCENT" | "GREATER_THAN_80_PERCENT" | "GREATER_THAN_90_PERCENT";
-        /**
-         * @description | CampaignFeeType | Description |
-         *     | --- | --- |
-         *     | `AGENCY` | A service fee that is subtracted from the campaign budget as a percent of budget. |
-         * @enum {string}
-         */
-        DSPCampaignFeeType: "AGENCY";
-        /**
-         * @description | CampaignFeeValueType | Description |
-         *     | --- | --- |
-         *     | `PERCENTAGE_OF_BUDGET` | Subtracted from the campaign budget as a percent of budget |
-         * @enum {string}
-         */
-        DSPCampaignFeeValueType: "PERCENTAGE_OF_BUDGET";
-        DSPFlightBudget: {
-            budgetType: components["schemas"]["DSPBudgetType"];
-            budgetValue: components["schemas"]["DSPBudgetValue"];
-        };
-        DSPBidSettings: {
-            bidStrategy?: components["schemas"]["DSPBidStrategy"];
-        };
-        DSPBudgetSettings: {
-            budgetAllocation?: components["schemas"]["DSPBudgetAllocation"];
-            flightBudgetRolloverStrategy?: components["schemas"]["DSPRolloverStrategy"];
-        };
-        DSPGoalSettings: {
-            currencyCode?: components["schemas"]["DSPCurrencyCode"];
-            goal: components["schemas"]["DSPGoal"];
-            kpi?: components["schemas"]["DSPKPI"];
-            /**
-             * Format: double
-             * @description The value of the KPI that the campaign is working to optimize.
-             */
-            kpiValue?: number;
-        };
-        /**
-         * @description | PrimaryInventoryType | Description |
-         *     | --- | --- |
-         *     | `DISPLAY` |  |
-         *     | `VIDEO_OLV` |  |
-         *     | `VIDEO_STV` |  |
-         *     | `AUDIO` |  |
-         * @enum {string}
-         */
-        DSPPrimaryInventoryType: "AUDIO" | "DISPLAY" | "VIDEO_OLV" | "VIDEO_STV";
-        /** @description Targets a specific customer search term. */
-        DSPKeywordTarget: {
-            /** @description The customer search term or text to target */
-            keyword: string;
-            matchType: components["schemas"]["DSPKeywordMatchType"];
-        };
-        /** @description Targets a specific product. */
-        DSPProductTarget: {
-            matchType: components["schemas"]["DSPProductMatchType"];
-            product: components["schemas"]["DSPProductValue"];
-            productIdType: components["schemas"]["DSPProductIdType"];
-        };
-        /** @description Targets a specific customer search term. */
-        DSPProductCategoryTarget: {
-            productCategoryRefinement: components["schemas"]["DSPProductCategoryRefinementValue"];
-        };
-        /** @description Target based on a specified audience ID. */
-        DSPAudienceTarget: {
-            acrossGroupOperator?: components["schemas"]["DSPAcrossGroupOperator"];
-            audienceId: components["schemas"]["DSPMarketplaceStringValue"];
-            /** @description The string identifying a group of audiences. Only numbers formatted as strings are accepted (e.g. '1'). To add audiences to a new group, choose any string not currently being used on this ad group. To add audiences to an existing group, use the existing groupId from this ad group. You may specify up to 10 include groups and 1 exclude group. */
-            groupId?: string;
-            inGroupOperator?: components["schemas"]["DSPInGroupOperator"];
-        };
-        /** @description Target based on geographic location. */
-        DSPLocationTarget: {
-            /** @description The ID of the geographic location to target. */
-            locationId: string;
-        };
-        /** @description Target based on a specified domain. */
-        DSPDomainTarget: {
-            domainTargetDetails: components["schemas"]["DSPDomainTargetDetails"];
-            domainTargetType: components["schemas"]["DSPDomainTargetTypes"];
-        };
-        /** @description Target based on user application. */
-        DSPAppTarget: {
-            /** @description The app identifier being targeted. */
-            appId: string;
-            appType: components["schemas"]["DSPAppType"];
-        };
-        /** @description Target based on user device. */
-        DSPDeviceTarget: {
-            deviceOrientation?: components["schemas"]["DSPDeviceOrientation"];
-            deviceType: components["schemas"]["DSPDeviceType"];
-            mobileDevice?: components["schemas"]["DSPMobileDevice"];
-            mobileEnvironment?: components["schemas"]["DSPMobileEnvironment"];
-            mobileOs?: components["schemas"]["DSPMobileOs"];
-        };
-        /** @description Target based on time of day. */
-        DSPDayPartTarget: {
-            dayOfWeek: components["schemas"]["DSPDayOfWeek"];
-            timeOfDay: components["schemas"]["DSPTimeOfDay"];
-        };
-        /** @description Target based on the category of content being viewed. */
-        DSPContentCategoryTarget: {
-            /** @description The content category being targeted. */
-            contentCategoryId: string;
-        };
-        /** @description Target based on the genre of content being viewed. */
-        DSPContentGenreTarget: {
-            contentGenre: components["schemas"]["DSPContentGenre"];
-        };
-        /** @description Target based on the rating of content being viewed. */
-        DSPContentRatingTarget: {
-            contentRatingType: components["schemas"]["DSPContentRatingTypes"];
-            contentRatingTypeDetails: components["schemas"]["DSPContentRating"];
-        };
-        /** @description Target based on the brand suitability risk levels of content being viewed. */
-        DSPBrandSafetyTierTarget: {
-            brandSafetyTier: components["schemas"]["DSPBrandSafetyTier"];
-        };
-        /** @description Target based on, if any, the classifications of unsuitable contexts that may pose a risk to a brand's reputation of content being viewed. */
-        DSPBrandSafetyCategoryTarget: {
-            brandSafetyCategory: components["schemas"]["DSPBrandSafetyCategory"];
-        };
-        /** @description Target based on the source of the inventory. */
-        DSPInventorySourceTarget: {
-            inventorySourceId: components["schemas"]["DSPMarketplaceStringValue"];
-            inventorySourceType: components["schemas"]["DSPInventorySourceType"];
-        };
-        /** @description Target based on how the video ad will be started. */
-        DSPAdInitiationTarget: {
-            videoInitiationType: components["schemas"]["DSPVideoInitiationType"];
-        };
-        /** @description Target based on the size of the ad player. */
-        DSPAdPlayerSizeTarget: {
-            adPlayerSize: components["schemas"]["DSPAdPlayerSize"];
-        };
-        /** @description Target based on the video ad format. */
-        DSPVideoAdFormatTarget: {
-            videoAdFormat: components["schemas"]["DSPVideoAdFormat"];
-        };
-        DSPThirdPartyTarget: {
-            thirdPartyTargetDetails: components["schemas"]["DSPThirdPartyTargetDetails"];
-            thirdPartyTargetType: components["schemas"]["DSPThirdPartyTargetType"];
-        };
-        /** @description Theme targets let advertisers select high-performing targets based on a common theme. */
-        DSPThemeTarget: {
-            matchType: components["schemas"]["DSPThemeMatchType"];
-        };
-        /** @description Targets ads in the specified content instream position */
-        DSPContentInstreamPositionTarget: {
-            instreamPosition: components["schemas"]["DSPContentInstreamPosition"];
-        };
-        /** @description Targets ads in the specified content outstream position */
-        DSPContentOutstreamPositionTarget: {
-            outstreamPosition: components["schemas"]["DSPContentOutstreamPosition"];
-        };
-        /** @description Targets ads to a specific video content duration */
-        DSPVideoContentDurationTarget: {
-            duration: components["schemas"]["DSPVideoContentDuration"];
-        };
-        /** @description Targets ads in the specified fold position */
-        DSPFoldPositionTarget: {
-            foldPosition: components["schemas"]["DSPFoldPosition"];
-        };
-        /** @description Targets ads to a specific native content position */
-        DSPNativeContentPositionTarget: {
-            nativePosition: components["schemas"]["DSPNativeContentPosition"];
-        };
-        /** @description Target based on the placement type. */
-        DSPPlacementTypeTarget: {
-            placementType: components["schemas"]["DSPPlacementType"];
-        };
-        DSPPoint: {
-            pointType?: string;
-            x: components["schemas"]["DSPXPoint"];
-            y?: components["schemas"]["DSPYPoint"][];
-        };
-        /**
-         * @description | ForecastPeriodicity | Description |
-         *     | --- | --- |
-         *     | `DAILY` | Forecast results are generated and presented for each individual day. |
-         *     | `LIFETIME` | Forecast results represent the total performance over the remaining entire campaign duration. |
-         *     | `MONTHLY` | Forecast results are aggregated and presented for each calendar month. |
-         *     | `WEEKLY` | Forecast results are aggregated and presented for each calendar week. |
-         * @enum {string}
-         */
-        DSPForecastPeriodicity: "DAILY" | "LIFETIME" | "MONTHLY" | "WEEKLY";
-        /**
-         * @description | DeliverInFullConfidenceLevel | Description |
-         *     | --- | --- |
-         *     | `HIGH` | There is a high level of confidence that the campaign or flight will fully deliver its planned budget or impressions. |
-         *     | `MEDIUM` | There is a moderate level of confidence that the campaign or flight will fully deliver its planned budget or impressions. |
-         *     | `LOW` | There is a low level of confidence that the campaign or flight will fully deliver its planned budget or impressions. |
-         *     | `UNAVAILABLE` | Confidence level cannot be determined due to insufficient or missing data. |
-         * @enum {string}
-         */
-        DSPDeliverInFullConfidenceLevel: "HIGH" | "LOW" | "MEDIUM" | "UNAVAILABLE";
-        /** @description Insights for leading drivers of forecast results for a specific entity, e.g. campaign frequency cap, line item max bid. */
-        DSPForecastInsightsGroup: {
-            /** @description The names of audience deals attached to the entity, that are newly created and may not be accurately incorporated into the forecast. */
-            coldStartDealNames?: string[];
-            /** @description The names of audience segments attached to the entity, that are newly created and may not be accurately incorporated into the forecast. */
-            coldStartSegmentNames?: string[];
-            /** @description The display name for the entity this insight is for, e.g. campaign/line item display name. */
-            displayName: string;
-            groupType: components["schemas"]["DSPRecommendedObjectType"];
-            /** @description The features corresponding to this group of insights, e.g. array of line item max bid, campaign frequency cap, etc. */
-            insightsFeatures: components["schemas"]["DSPInsightFeature"][];
-            /** @description The unique identifier for the entity this group of insights refers to, e.g. line item ID, campaign ID, etc. */
-            tag: string;
-        };
-        /**
-         * @description | InsightFeature | Description |
-         *     | --- | --- |
-         *     | `LINE_ITEM_FREQUENCY_CAP` | Insight associated with line item having restrictive frequency cap setting. |
-         *     | `LINE_ITEM_MAX_BID` | Insight associated with line item having inadequate max bid setting. |
-         *     | `LINE_ITEM_SIMILAR_AUDIENCES` | Insight associated with line item not presently reaching similar audiences. |
-         *     | `LINE_ITEM_COLD_START_DEALS` | Insight associated with line item having newly created deals present. |
-         *     | `LINE_ITEM_COLD_START_SEGMENTS` | Insight associated with line item having newly created behavioral segments present. |
-         *     | `LINE_ITEM_NARROW_SEGMENTS` | Insight associated with line item having narrowly targeted behavioral segments present. |
-         *     | `LINE_ITEM_LARGE_TARGETING` | Insight associated with line item having an excessive amount of behavioral segments targeted. |
-         *     | `LINE_ITEM_UNSUPPORTED_KEYWORD_TARGETING` | Insight associated with line item having unsupported keyword targeting settings present. |
-         *     | `LINE_ITEM_UNSUPPORTED_CONTEXTUAL_TARGETING` | Insight associated with line item having unsupported contextual targeting settings present. |
-         *     | `LINE_ITEM_GEO_TARGETING` | Insight associated with line item having restrictive geo-targeting present. |
-         *     | `LINE_ITEM_TOO_FAR_IN_FUTURE` | Insight associated with line item having end date too far in the future. |
-         *     | `LINE_ITEM_DOMAINLIST_TARGETING` | Insight associated with line item having restrictive domain list targeting. |
-         *     | `LINE_ITEM_APPBLOCKING_TARGETING` | Insight associated with line item having restrictive app blocking targeting. |
-         *     | `LINE_ITEM_MOBILE_DEVICES_TARGETING` | Insight associated with line item having restrictive mobile device targeting. |
-         *     | `LINE_ITEM_CONTEXTUAL_TARGETING` | Insight associated with line item having restrictive contextual targeting. |
-         *     | `CAMPAIGN_FREQUENCY_CAP` | Insight associated with restrictive campaign frequency cap setting. |
-         * @enum {string}
-         */
-        DSPInsightFeature: "CAMPAIGN_FREQUENCY_CAP" | "LINE_ITEM_APPBLOCKING_TARGETING" | "LINE_ITEM_COLD_START_DEALS" | "LINE_ITEM_COLD_START_SEGMENTS" | "LINE_ITEM_CONTEXTUAL_TARGETING" | "LINE_ITEM_DOMAINLIST_TARGETING" | "LINE_ITEM_FREQUENCY_CAP" | "LINE_ITEM_GEO_TARGETING" | "LINE_ITEM_LARGE_TARGETING" | "LINE_ITEM_MAX_BID" | "LINE_ITEM_MOBILE_DEVICES_TARGETING" | "LINE_ITEM_NARROW_SEGMENTS" | "LINE_ITEM_SIMILAR_AUDIENCES" | "LINE_ITEM_TOO_FAR_IN_FUTURE" | "LINE_ITEM_UNSUPPORTED_CONTEXTUAL_TARGETING" | "LINE_ITEM_UNSUPPORTED_KEYWORD_TARGETING";
-        DSPForecastValue: {
-            /** Format: double */
-            high: number;
-            /** Format: double */
-            low: number;
-            /** Format: double */
-            mean: number;
-        };
-        DSPMonetaryBudgetValue: {
-            monetaryBudget?: components["schemas"]["DSPMonetaryBudget"];
-        };
-        /**
-         * @description | BudgetAllocation | Description |
-         *     | --- | --- |
-         *     | `AUTO` |  |
-         *     | `MANUAL` |  |
-         * @enum {string}
-         */
-        DSPBudgetAllocation: "AUTO" | "MANUAL";
-        /**
-         * @description | ViewabilityTier | Description |
-         *     | --- | --- |
-         *     | `ALL_TIERS` |  |
-         *     | `LESS_THAN_40_PERCENT` |  |
-         *     | `GREATER_THAN_40_PERCENT` |  |
-         *     | `GREATER_THAN_50_PERCENT` |  |
-         *     | `GREATER_THAN_60_PERCENT` |  |
-         *     | `GREATER_THAN_70_PERCENT` |  |
-         * @enum {string}
-         */
-        DSPViewabilityTier: "ALL_TIERS" | "GREATER_THAN_40_PERCENT" | "GREATER_THAN_50_PERCENT" | "GREATER_THAN_60_PERCENT" | "GREATER_THAN_70_PERCENT" | "LESS_THAN_40_PERCENT";
-        /**
-         * @description | RolloverStrategy | Description |
-         *     | --- | --- |
-         *     | `NO_ROLLOVER` | Do not rollover flight budgets. |
-         *     | `PRIOR_BUDGET_ROLLOVER` | Rollover prior flight unused budget. |
-         *     | `CUMULATIVE_BUDGET_ROLLOVER` | Rollover cumulative unused budget. |
-         * @enum {string}
-         */
-        DSPRolloverStrategy: "CUMULATIVE_BUDGET_ROLLOVER" | "NO_ROLLOVER" | "PRIOR_BUDGET_ROLLOVER";
-        /**
-         * @description | Goal | Description |
-         *     | --- | --- |
-         *     | `AWARENESS` | Indicates a goal of driving awareness. |
-         *     | `CONSIDERATION` | Indicates a goal of driving consideration. |
-         *     | `CONVERSIONS` | Indicates a goal of driving conversions. |
-         * @enum {string}
-         */
-        DSPGoal: "AWARENESS" | "CONSIDERATION" | "CONVERSIONS";
-        /**
-         * @description | KPI | Description |
-         *     | --- | --- |
-         *     | `CLICK_THROUGH_RATE` | Indicates a goal of driving clickthrough rate. |
-         *     | `COMBINED_RETURN_ON_AD_SPEND` | Deprecated. Please use ROAS_COMBINED. |
-         *     | `COST_PER_ACTION` | Deprecated. Please use COST_PER_CONVERSION_OFF_AMAZON. |
-         *     | `COST_PER_CLICK` | Indicates a goal of driving improved cost per click. |
-         *     | `COST_PER_CONVERSION_OFF_AMAZON` | Indicates a goal of driving improved cost per conversion off Amazon. |
-         *     | `COST_PER_DETAIL_PAGE_VIEW` | Indicates a goal of driving improved cost per detail page view. |
-         *     | `COST_PER_FIRST_APP_OPEN` | Indicates a goal of improved cost per first app open. |
-         *     | `COST_PER_INSTALL` | Indicates a goal of driving improved cost per app install. |
-         *     | `COST_PER_SIGN_UP` | Indicates a goal of driving improved cost per sign up. |
-         *     | `COST_PER_VIDEO_COMPLETION` | Indicates a goal of driving improved cost per video completion. |
-         *     | `DETAIL_PAGE_VIEW_RATE` | Indicates a goal of driving improved detail page view rate. |
-         *     | `FREQUENCY_AVERAGE` | Indicates a goal of driving to a target frequency. |
-         *     | `REACH` | Indicates a goal of driving improved reach. |
-         *     | `RETURN_ON_AD_SPEND` | Deprecated. Please use ROAS_PROMOTED. |
-         *     | `ROAS` | Indicates a goal of driving improved return of ad spend. |
-         *     | `ROAS_COMBINED` | Indicates a goal of driving improved return of ad spend (combined). |
-         *     | `ROAS_PROMOTED` | Indicates a goal of driving improved return of ad spend (promoted). |
-         *     | `TOTAL_RETURN_ON_AD_SPEND` | Deprecated. Please use ROAS. |
-         *     | `VIDEO_COMPLETION_RATE` | Indicates a goal of driving improved video completion rate. |
-         * @enum {string}
-         */
-        DSPKPI: "CLICK_THROUGH_RATE" | "COMBINED_RETURN_ON_AD_SPEND" | "COST_PER_ACTION" | "COST_PER_CLICK" | "COST_PER_CONVERSION_OFF_AMAZON" | "COST_PER_DETAIL_PAGE_VIEW" | "COST_PER_FIRST_APP_OPEN" | "COST_PER_INSTALL" | "COST_PER_SIGN_UP" | "COST_PER_VIDEO_COMPLETION" | "DETAIL_PAGE_VIEW_RATE" | "FREQUENCY_AVERAGE" | "REACH" | "RETURN_ON_AD_SPEND" | "ROAS" | "ROAS_COMBINED" | "ROAS_PROMOTED" | "TOTAL_RETURN_ON_AD_SPEND" | "VIDEO_COMPLETION_RATE";
-        /**
-         * @description | KeywordMatchType | Description |
-         *     | --- | --- |
-         *     | `BROAD` | Broad match search terms. This expands matching on user intent beyond PHRASE.  |
-         * @enum {string}
-         */
-        DSPKeywordMatchType: "BROAD";
-        /**
-         * @description | ProductMatchType | Description |
-         *     | --- | --- |
-         *     | `PRODUCT_EXACT` | Products exactly matching the specified product. |
-         * @enum {string}
-         */
-        DSPProductMatchType: "PRODUCT_EXACT";
-        DSPProductValue: {
-            /** @description The product ids at specific marketplace level. Either the product id or the marketplace settings should always be specified */
-            marketplaceSettings?: components["schemas"]["DSPProductMarketplaceSetting"][];
-            /** @description The product identifier. Either the product id or the marketplace settings should always be specified */
-            productId?: string;
-        };
-        /**
-         * @description | ProductIdType | Description |
-         *     | --- | --- |
-         *     | `ASIN` | ASIN identifier type. |
-         * @enum {string}
-         */
-        DSPProductIdType: "ASIN";
-        DSPProductCategoryRefinementValue: {
-            productCategoryRefinement?: components["schemas"]["DSPProductCategoryRefinement"];
-        };
-        /**
-         * @description | AcrossGroupOperator | Description |
-         *     | --- | --- |
-         *     | `ANY` |  |
-         *     | `ALL` |  |
-         * @enum {string}
-         */
-        DSPAcrossGroupOperator: "ALL" | "ANY";
-        DSPMarketplaceStringValue: {
-            /** @description The default value. Either the default value or the marketplace settings should always be specified */
-            defaultValue?: string;
-        };
-        /**
-         * @description | InGroupOperator | Description |
-         *     | --- | --- |
-         *     | `ANY` |  |
-         *     | `ALL` |  |
-         * @enum {string}
-         */
-        DSPInGroupOperator: "ALL" | "ANY";
-        DSPDomainTargetDetails: {
-            domainListTarget: components["schemas"]["DSPDomainListTarget"];
-        } | {
-            domainNameTarget: components["schemas"]["DSPDomainNameTarget"];
-        } | {
-            domainFileTarget: components["schemas"]["DSPDomainFileTarget"];
-        } | {
-            advertiserDomainList: components["schemas"]["DSPAdvertiserDomainList"];
-        };
-        /**
-         * @description | DomainTargetTypes | Description |
-         *     | --- | --- |
-         *     | `DOMAIN_LIST` |  |
-         *     | `DOMAIN_NAME` |  |
-         *     | `DOMAIN_FILE` |  |
-         *     | `ADVERTISER_DOMAIN_LIST` |  |
-         * @enum {string}
-         */
-        DSPDomainTargetTypes: "ADVERTISER_DOMAIN_LIST" | "DOMAIN_FILE" | "DOMAIN_LIST" | "DOMAIN_NAME";
-        /**
-         * @description | AppType | Description |
-         *     | --- | --- |
-         *     | `MOBILE` |  |
-         *     | `STREAMING_TV` |  |
-         * @enum {string}
-         */
-        DSPAppType: "MOBILE" | "STREAMING_TV";
-        /**
-         * @description | DeviceOrientation | Description |
-         *     | --- | --- |
-         *     | `PORTRAIT` |  |
-         *     | `LANDSCAPE` |  |
-         * @enum {string}
-         */
-        DSPDeviceOrientation: "LANDSCAPE" | "PORTRAIT";
-        /**
-         * @description | DeviceType | Description |
-         *     | --- | --- |
-         *     | `DESKTOP` |  |
-         *     | `MOBILE` |  |
-         *     | `CONNECTED_TV` |  |
-         *     | `CONNECTED_DEVICE` | Connected TV, smart speakers. Used for audio AdGroup type. |
-         * @enum {string}
-         */
-        DSPDeviceType: "CONNECTED_DEVICE" | "CONNECTED_TV" | "DESKTOP" | "MOBILE";
-        /**
-         * @description | MobileDevice | Description |
-         *     | --- | --- |
-         *     | `IPHONE` |  |
-         *     | `IPAD` |  |
-         *     | `ANDROID` |  |
-         *     | `KINDLE_FIRE` |  |
-         *     | `KINDLE_FIRE_HD` |  |
-         * @enum {string}
-         */
-        DSPMobileDevice: "ANDROID" | "IPAD" | "IPHONE" | "KINDLE_FIRE" | "KINDLE_FIRE_HD";
-        /**
-         * @description | MobileEnvironment | Description |
-         *     | --- | --- |
-         *     | `WEB` |  |
-         *     | `APP` |  |
-         * @enum {string}
-         */
-        DSPMobileEnvironment: "APP" | "WEB";
-        /**
-         * @description | MobileOs | Description |
-         *     | --- | --- |
-         *     | `IOS` |  |
-         *     | `ANDROID` |  |
-         * @enum {string}
-         */
-        DSPMobileOs: "ANDROID" | "IOS";
-        /**
-         * @description | DayOfWeek | Description |
-         *     | --- | --- |
-         *     | `MONDAY` |  |
-         *     | `TUESDAY` |  |
-         *     | `WEDNESDAY` |  |
-         *     | `THURSDAY` |  |
-         *     | `FRIDAY` |  |
-         *     | `SATURDAY` |  |
-         *     | `SUNDAY` |  |
-         * @enum {string}
-         */
-        DSPDayOfWeek: "FRIDAY" | "MONDAY" | "SATURDAY" | "SUNDAY" | "THURSDAY" | "TUESDAY" | "WEDNESDAY";
-        DSPTimeOfDay: {
-            /** @description Selected end time */
-            endTime: string;
-            /** @description Selected start time */
-            startTime: string;
-        };
-        /**
-         * @description | ContentGenre | Description |
-         *     | --- | --- |
-         *     | `ACTION` |  |
-         *     | `ADVENTURE` |  |
-         *     | `ALTERNATIVE_ROCK` |  |
-         *     | `ANIMATION` |  |
-         *     | `ARTS` |  |
-         *     | `BIOGRAPHY` |  |
-         *     | `BLUES` |  |
-         *     | `BUSINESS` |  |
-         *     | `CHILDRENS_MUSIC` |  |
-         *     | `CHRISTIAN_GOSPEL` |  |
-         *     | `CHRISTMAS_HOLIDAY` |  |
-         *     | `CLASSIC_ROCK` |  |
-         *     | `CLASSICAL` |  |
-         *     | `COMEDY` |  |
-         *     | `COLLEGE_RADIO` |  |
-         *     | `COUNTRY` |  |
-         *     | `CRIME` |  |
-         *     | `DANCE_DJ` |  |
-         *     | `DOCUMENTARY` |  |
-         *     | `DRAMA` |  |
-         *     | `EASY_LISTENING` |  |
-         *     | `EDUCATION` |  |
-         *     | `EUROPEAN_POP_FOLK` |  |
-         *     | `FAMILY` |  |
-         *     | `FANTASY` |  |
-         *     | `FICTION` |  |
-         *     | `FILM_NOIR` |  |
-         *     | `FOLK` |  |
-         *     | `FRENCH_VARIETY` |  |
-         *     | `GAME_SHOW` |  |
-         *     | `GERMAN_ROCK_POP` |  |
-         *     | `GOVERNMENT` |  |
-         *     | `HARD_ROCK_METAL` |  |
-         *     | `HEALTH_AND_FITNESS` |  |
-         *     | `HISTORY` |  |
-         *     | `HORROR` |  |
-         *     | `INTERNATIONAL` |  |
-         *     | `JAPANESE` |  |
-         *     | `JAZZ` |  |
-         *     | `KIDS_AND_FAMILY` |  |
-         *     | `LATIN_MUSIC` |  |
-         *     | `LEISURE` |  |
-         *     | `MISCELLANEOUS` |  |
-         *     | `MUSIC` |  |
-         *     | `MUSICAL` |  |
-         *     | `MUSICALS_CABARET` |  |
-         *     | `MYSTERY` |  |
-         *     | `NEWS` |  |
-         *     | `NEW_AGE` |  |
-         *     | `OLDIES_ADULT_STANDARDS` |  |
-         *     | `POP` |  |
-         *     | `RAP_HIP_HOP` |  |
-         *     | `RB` |  |
-         *     | `REALITY_TV` |  |
-         *     | `REGGAE_ISLAND` |  |
-         *     | `RELIGION_AND_SPIRITUALITY` |  |
-         *     | `ROCK` |  |
-         *     | `ROMANCE` |  |
-         *     | `SCIENCE` |  |
-         *     | `SCIENCE_FICTION` |  |
-         *     | `SHORT` |  |
-         *     | `SOCIETY_AND_CULTURE` |  |
-         *     | `SOUNDTRACKS` |  |
-         *     | `SPORT` |  |
-         *     | `SUPER_HERO` |  |
-         *     | `TALK_SHOW` |  |
-         *     | `TECHNOLOGY` |  |
-         *     | `THRILLER` |  |
-         *     | `TRUE_CRIME` |  |
-         *     | `TV_AND_FILM` |  |
-         *     | `WAR` |  |
-         *     | `WESTERN` |  |
-         *     | `GENRE_NOT_AVAILABLE` |  |
-         * @enum {string}
-         */
-        DSPContentGenre: "ACTION" | "ADVENTURE" | "ALTERNATIVE_ROCK" | "ANIMATION" | "ARTS" | "BIOGRAPHY" | "BLUES" | "BUSINESS" | "CHILDRENS_MUSIC" | "CHRISTIAN_GOSPEL" | "CHRISTMAS_HOLIDAY" | "CLASSICAL" | "CLASSIC_ROCK" | "COLLEGE_RADIO" | "COMEDY" | "COUNTRY" | "CRIME" | "DANCE_DJ" | "DOCUMENTARY" | "DRAMA" | "EASY_LISTENING" | "EDUCATION" | "EUROPEAN_POP_FOLK" | "FAMILY" | "FANTASY" | "FICTION" | "FILM_NOIR" | "FOLK" | "FRENCH_VARIETY" | "GAME_SHOW" | "GENRE_NOT_AVAILABLE" | "GERMAN_ROCK_POP" | "GOVERNMENT" | "HARD_ROCK_METAL" | "HEALTH_AND_FITNESS" | "HISTORY" | "HORROR" | "INTERNATIONAL" | "JAPANESE" | "JAZZ" | "KIDS_AND_FAMILY" | "LATIN_MUSIC" | "LEISURE" | "MISCELLANEOUS" | "MUSIC" | "MUSICAL" | "MUSICALS_CABARET" | "MYSTERY" | "NEWS" | "NEW_AGE" | "OLDIES_ADULT_STANDARDS" | "POP" | "RAP_HIP_HOP" | "RB" | "REALITY_TV" | "REGGAE_ISLAND" | "RELIGION_AND_SPIRITUALITY" | "ROCK" | "ROMANCE" | "SCIENCE" | "SCIENCE_FICTION" | "SHORT" | "SOCIETY_AND_CULTURE" | "SOUNDTRACKS" | "SPORT" | "SUPER_HERO" | "TALK_SHOW" | "TECHNOLOGY" | "THRILLER" | "TRUE_CRIME" | "TV_AND_FILM" | "WAR" | "WESTERN";
-        /**
-         * @description | ContentRatingTypes | Description |
-         *     | --- | --- |
-         *     | `DSP_CONTENT_RATING` |  |
-         *     | `TWITCH_CONTENT_RATING` |  |
-         * @enum {string}
-         */
-        DSPContentRatingTypes: "DSP_CONTENT_RATING" | "TWITCH_CONTENT_RATING";
-        DSPContentRating: {
-            dspContentRating: components["schemas"]["DSPDspContentRating"];
-        } | {
-            twitchContentRating: components["schemas"]["DSPTwitchContentRating"];
-        };
-        /**
-         * @description | BrandSafetyTier | Description |
-         *     | --- | --- |
-         *     | `EXPANDED` | Tier that maximizes reach across all ad-eligible inventory. This tier is suitable for brands with a greater risk tolerance for advertising alongside a wide variety of content. |
-         *     | `STANDARD` | Tier that offers broad reach and is the default for all campaigns. This tier is suitable for brands with a moderate risk tolerance for advertising alongside a wide variety of content. |
-         *     | `RESTRICTIVE` | Tier that prioritizes brand suitability over reach. This tier is suitable for brands with the lowest risk tolerance for advertising alongside a wide variety of content. |
-         * @enum {string}
-         */
-        DSPBrandSafetyTier: "EXPANDED" | "RESTRICTIVE" | "STANDARD";
-        /**
-         * @description | BrandSafetyCategory | Description |
-         *     | --- | --- |
-         *     | `ACCIDENTS_DISASTERS_AND_TRAGEDIES` | Content related to sensitive tragedies, man-made or natural disasters and calamities, including content that graphically depicts such events. |
-         *     | `WEAPONS` | Content related to realistic weapons, such as firearms, bladed weapons, bows and arrows, and military equipment and vehicles. |
-         *     | `GAMBLING` | Content related to gambling, such as instructions on how to play, accessories like home poker sets, and industry news. It does not include online gambling services where money or items of value can be wagered in exchange for the opportunity to win prizes with real-world value. |
-         *     | `BLOOD_GORE_VIOLENCE` | Content in a fictional entertainment context that contains blood, gore or acts of violence. |
-         *     | `CRIME` | Content related to crime, such as law enforcement efforts, criminal behavior, crime prevention, and justice systems. |
-         *     | `SHOCK_AND_HORROR` | Content that may cause shock, fear, or unease. It includes supernatural, disturbing elements, and horror themes. |
-         *     | `PROFANITY` | Content containing excessive use of strong language, explicit, offensive, or sensitive words and expressions. |
-         *     | `HIGHLY_DEBATED_SOCIAL_ISSUES` | Content related to highly debated and politically or socially divisive topics, which is reasonably likely to cause offense to the average person with opposing views. |
-         *     | `POLITICS` | Content related to politics, governments, political science, political parties, elections, and political issues of public debate. |
-         *     | `SEXUAL_REFERENCES_AND_SUGGESTIVE` | Content that contains references or depictions that are mildly provocative, or mature in nature, whether real, simulated or animated. It does not contain sexually explicit content. |
-         *     | `ALCOHOL_AND_RELATED_PRODUCTS` | Content related to the general consumption of alcohol. |
-         *     | `TOBACCO_AND_RELATED_PRODUCTS` | Content related to the smoking of cigarettes, cigars, pipe tobacco, smokeless tobacco, and other tobacco or nicotine products. |
-         *     | `DRUG_REFERENCES_OR_USE` | Content related to substance use, drugs, and other mind-altering substances. |
-         *     | `RELIGIOUS_CONTENT` | Content related to religious and spiritual beliefs. |
-         *     | `UNRATED_MEDIA_CONTENT` | Content that has not been classified. This covers games on Twitch not rated by ESRB. |
-         * @enum {string}
-         */
-        DSPBrandSafetyCategory: "ACCIDENTS_DISASTERS_AND_TRAGEDIES" | "ALCOHOL_AND_RELATED_PRODUCTS" | "BLOOD_GORE_VIOLENCE" | "CRIME" | "DRUG_REFERENCES_OR_USE" | "GAMBLING" | "HIGHLY_DEBATED_SOCIAL_ISSUES" | "POLITICS" | "PROFANITY" | "RELIGIOUS_CONTENT" | "SEXUAL_REFERENCES_AND_SUGGESTIVE" | "SHOCK_AND_HORROR" | "TOBACCO_AND_RELATED_PRODUCTS" | "UNRATED_MEDIA_CONTENT" | "WEAPONS";
-        /**
-         * @description | InventorySourceType | Description |
-         *     | --- | --- |
-         *     | `AMAZON` |  |
-         *     | `APD` |  |
-         *     | `THIRD_PARTY_EXCHANGE` |  |
-         *     | `DEAL` |  |
-         *     | `INVENTORY_GROUP` |  |
-         * @enum {string}
-         */
-        DSPInventorySourceType: "AMAZON" | "APD" | "DEAL" | "INVENTORY_GROUP" | "THIRD_PARTY_EXCHANGE";
-        /**
-         * @description | VideoInitiationType | Description |
-         *     | --- | --- |
-         *     | `USER_INITIATED` |  |
-         *     | `AUTOPLAY` |  |
-         *     | `UNKNOWN` |  |
-         * @enum {string}
-         */
-        DSPVideoInitiationType: "AUTOPLAY" | "UNKNOWN" | "USER_INITIATED";
-        /**
-         * @description | AdPlayerSize | Description |
-         *     | --- | --- |
-         *     | `SMALL` |  |
-         *     | `MEDIUM` |  |
-         *     | `LARGE` |  |
-         *     | `UNKNOWN` |  |
-         * @enum {string}
-         */
-        DSPAdPlayerSize: "LARGE" | "MEDIUM" | "SMALL" | "UNKNOWN";
-        /**
-         * @description | VideoAdFormat | Description |
-         *     | --- | --- |
-         *     | `INSTREAM` |  |
-         *     | `FULL_EPISODE_PLAYER` |  |
-         *     | `OUTSTREAM` |  |
-         * @enum {string}
-         */
-        DSPVideoAdFormat: "FULL_EPISODE_PLAYER" | "INSTREAM" | "OUTSTREAM";
-        DSPThirdPartyTargetDetails: {
-            doubleVerifyFraudInvalidTraffic: components["schemas"]["DSPDoubleVerifyFraudInvalidTraffic"];
-        } | {
-            doubleVerifyStandardDisplayBrandSafety: components["schemas"]["DSPDoubleVerifyStandardDisplayBrandSafety"];
-        } | {
-            doubleVerifyBrandSafety: components["schemas"]["DSPDoubleVerifyBrandSafety"];
-        } | {
-            doubleVerifyViewability: components["schemas"]["DSPDoubleVerifyViewability"];
-        } | {
-            doubleVerifyAuthenticBrandSafety: components["schemas"]["DSPDoubleVerifyAuthenticBrandSafety"];
-        } | {
-            doubleVerifyCustomContextualSegmentId: components["schemas"]["DSPDoubleVerifyCustomContextualSegmentId"];
-        } | {
-            doubleVerifyAuthenticAttention: components["schemas"]["DSPDoubleVerifyAuthenticAttention"];
-        } | {
-            integralAdScienceFraudInvalidTraffic: components["schemas"]["DSPIntegralAdScienceFraudInvalidTraffic"];
-        } | {
-            integralAdScienceBrandSafety: components["schemas"]["DSPIntegralAdScienceBrandSafety"];
-        } | {
-            integralAdScienceViewability: components["schemas"]["DSPIntegralAdScienceViewability"];
-        } | {
-            integralAdScienceContextualTargeting: components["schemas"]["DSPIntegralAdScienceContextualTargeting"];
-        } | {
-            integralAdScienceContextualAvoidance: components["schemas"]["DSPIntegralAdScienceContextualAvoidance"];
-        } | {
-            pixalateFraudInvalidTraffic: components["schemas"]["DSPPixalateFraudInvalidTraffic"];
-        } | {
-            integralAdScienceQualitySync: components["schemas"]["DSPIntegralAdScienceQualitySync"];
-        } | {
-            newsGuardBrandGuardTrustedNewsTargeting: components["schemas"]["DSPNewsGuardBrandGuardTrustedNewsTargeting"];
-        } | {
-            newsGuardBrandGuardMisinformationSafety: components["schemas"]["DSPNewsGuardBrandGuardMisinformationSafety"];
-        };
-        /**
-         * @description | ThirdPartyTargetType | Description |
-         *     | --- | --- |
-         *     | `DOUBLE_VERIFY_FRAUD_INVALID_TRAFFIC` |  |
-         *     | `DOUBLE_VERIFY_STANDARD_DISPLAY_BRAND_SAFETY` |  |
-         *     | `DOUBLE_VERIFY_BRAND_SAFETY` |  |
-         *     | `DOUBLE_VERIFY_VIEWABILITY` |  |
-         *     | `DOUBLE_VERIFY_AUTHENTIC_BRAND_SAFETY` |  |
-         *     | `DOUBLE_VERIFY_CUSTOM_CONTEXTUAL_SEGMENT_ID` |  |
-         *     | `DOUBLE_VERIFY_AUTHENTIC_ATTENTION` |  |
-         *     | `INTEGRAL_AD_SCIENCE_FRAUD_INVALID_TRAFFIC` |  |
-         *     | `INTEGRAL_AD_SCIENCE_BRAND_SAFETY` |  |
-         *     | `INTEGRAL_AD_SCIENCE_VIEWABILITY` |  |
-         *     | `INTEGRAL_AD_SCIENCE_CONTEXTUAL_TARGETING` |  |
-         *     | `INTEGRAL_AD_SCIENCE_CONTEXTUAL_AVOIDANCE` |  |
-         *     | `PIXALATE_FRAUD_INVALID_TRAFFIC` |  |
-         *     | `INTEGRAL_AD_SCIENCE_QUALITY_SYNC` | Integral Ad Science (IAS) Quality |
-         *     | `NEWS_GUARD_BRAND_GUARD_TRUSTED_NEWS_TARGETING` | NewsGuard Trusted News Targeting. NewsGuard is a rating system for news and information websites. |
-         *     | `NEWS_GUARD_BRAND_GUARD_MISINFORMATION_SAFETY` | NewsGuard Misinformation Safety. NewsGuard is a rating system for news and information websites. |
-         * @enum {string}
-         */
-        DSPThirdPartyTargetType: "DOUBLE_VERIFY_AUTHENTIC_ATTENTION" | "DOUBLE_VERIFY_AUTHENTIC_BRAND_SAFETY" | "DOUBLE_VERIFY_BRAND_SAFETY" | "DOUBLE_VERIFY_CUSTOM_CONTEXTUAL_SEGMENT_ID" | "DOUBLE_VERIFY_FRAUD_INVALID_TRAFFIC" | "DOUBLE_VERIFY_STANDARD_DISPLAY_BRAND_SAFETY" | "DOUBLE_VERIFY_VIEWABILITY" | "INTEGRAL_AD_SCIENCE_BRAND_SAFETY" | "INTEGRAL_AD_SCIENCE_CONTEXTUAL_AVOIDANCE" | "INTEGRAL_AD_SCIENCE_CONTEXTUAL_TARGETING" | "INTEGRAL_AD_SCIENCE_FRAUD_INVALID_TRAFFIC" | "INTEGRAL_AD_SCIENCE_QUALITY_SYNC" | "INTEGRAL_AD_SCIENCE_VIEWABILITY" | "NEWS_GUARD_BRAND_GUARD_MISINFORMATION_SAFETY" | "NEWS_GUARD_BRAND_GUARD_TRUSTED_NEWS_TARGETING" | "PIXALATE_FRAUD_INVALID_TRAFFIC";
-        /**
-         * @description | ThemeMatchType | Description |
-         *     | --- | --- |
-         *     | `PRODUCTS_SIMILAR_TO_ADVERTISED_PRODUCTS` | Products similar to products advertised as part of the ad group. |
-         * @enum {string}
-         */
-        DSPThemeMatchType: "PRODUCTS_SIMILAR_TO_ADVERTISED_PRODUCTS";
-        /**
-         * @description | ContentInstreamPosition | Description |
-         *     | --- | --- |
-         *     | `PRE_ROLL` |  |
-         *     | `MID_ROLL` |  |
-         *     | `POST_ROLL` |  |
-         *     | `UNKNOWN` |  |
-         * @enum {string}
-         */
-        DSPContentInstreamPosition: "MID_ROLL" | "POST_ROLL" | "PRE_ROLL" | "UNKNOWN";
-        /**
-         * @description | ContentOutstreamPosition | Description |
-         *     | --- | --- |
-         *     | `STANDALONE` |  |
-         *     | `ACCOMPANYING_CONTENT` |  |
-         *     | `INTERSTITIAL` |  |
-         *     | `UNKNOWN` |  |
-         * @enum {string}
-         */
-        DSPContentOutstreamPosition: "ACCOMPANYING_CONTENT" | "INTERSTITIAL" | "STANDALONE" | "UNKNOWN";
-        /**
-         * @description | VideoContentDuration | Description |
-         *     | --- | --- |
-         *     | `SHORT` | Video content duration of 0 to 10 minutes |
-         *     | `MEDIUM` | Video content duration of 10 to 30 minutes |
-         *     | `LONG` | Video content duration of 30 to 60 minutes |
-         *     | `EXTENDED` | Video content duration of 60+ minutes |
-         *     | `UNKNOWN` | Unknown video content duration |
-         * @enum {string}
-         */
-        DSPVideoContentDuration: "EXTENDED" | "LONG" | "MEDIUM" | "SHORT" | "UNKNOWN";
-        /**
-         * @description | FoldPosition | Description |
-         *     | --- | --- |
-         *     | `ABOVE_THE_FOLD` |  |
-         *     | `BELOW_THE_FOLD` |  |
-         *     | `UNKNOWN` |  |
-         * @enum {string}
-         */
-        DSPFoldPosition: "ABOVE_THE_FOLD" | "BELOW_THE_FOLD" | "UNKNOWN";
-        /**
-         * @description | NativeContentPosition | Description |
-         *     | --- | --- |
-         *     | `IN_ARTICLE` | Positioned in the atomic unit of the content (e.g., in the article page or single image page). |
-         *     | `IN_FEED` | Positioned in the feed of content (e.g., as an item inside the organic feed, grid, listing, carousel, etc.). |
-         *     | `PERIPHERAL` | Positioned utside the core content (e.g., in the ads section on the right rail, as a banner-style placement near the content, etc.). |
-         *     | `RECOMMENDATION` | Positioned in recommendation widget; most commonly presented below article content. |
-         *     | `UNKNOWN` | Unknown position. |
-         * @enum {string}
-         */
-        DSPNativeContentPosition: "IN_ARTICLE" | "IN_FEED" | "PERIPHERAL" | "RECOMMENDATION" | "UNKNOWN";
-        /**
-         * @description | PlacementType | Description |
-         *     | --- | --- |
-         *     | `REWARDED` | Rewarded video type where users receive rewards from the publisher for watching ads. |
-         * @enum {string}
-         */
-        DSPPlacementType: "REWARDED";
-        /** @description The label and value on X axis of the curve. */
-        DSPXPoint: {
-            label: components["schemas"]["DSPPointLabel"];
-            /** Format: double */
-            value: number;
-        };
-        /** @description The label and value on Y axis of the curve. */
-        DSPYPoint: {
-            label: components["schemas"]["DSPPointLabel"];
-            value: components["schemas"]["DSPForecastValue"];
-        };
-        /**
-         * @description | RecommendedObjectType | Description |
-         *     | --- | --- |
-         *     | `CAMPAIGN` | An advertising campaign that groups together ad groups and ads |
-         *     | `ADGROUP` | A group of ads within a campaign that share similar targeting |
-         * @enum {string}
-         */
-        DSPRecommendedObjectType: "ADGROUP" | "CAMPAIGN";
-        DSPProductMarketplaceSetting: {
-            marketplace: components["schemas"]["DSPMarketplace"];
-            /** @description The product id applicable at the specified marketplace. */
-            productId: string;
-        };
-        DSPProductCategoryRefinement: {
-            /** @description The product category ID to target. */
-            productCategoryId?: string;
-        };
-        /** @description Targets domains based on an existing domain list. */
-        DSPDomainListTarget: {
-            /** @description The ID of the domain list to target. */
-            domainListId: string;
-        };
-        /** @description Targets domains based on URL. */
-        DSPDomainNameTarget: {
-            /** @description The URL of the domain to target. */
-            domainName: string;
-        };
-        /** @description Targets domains based on list provided via file upload. */
-        DSPDomainFileTarget: {
-            /** @description The ID associated to the domain file to target. Read-only and created based on the inputted domainFileKey. */
-            domainFileId?: string;
-            /** @description The S3 key of the uploaded file which can be obtained from the file upload policy endpoint. A max of 10 files may be associated to one ad group. */
-            domainFileKey?: string;
-            /** @description The name of the file. */
-            domainFileName?: string;
-            /** @description The file containing the domains uploaded. It expires in one hour. */
-            domainFileUrl?: string;
-        };
-        /** @description Targets domains based on list inherited from the advertiser. */
-        DSPAdvertiserDomainList: {
-            /** @description Set to TRUE to inherit domain list from advertiser. */
-            inheritFromAdvertiser: boolean;
-        };
-        DSPDspContentRating: {
-            dspContentRating: components["schemas"]["DSPDspContentRatingEnum"];
-        };
-        DSPTwitchContentRating: {
-            twitchContentRating: components["schemas"]["DSPTwitchContentRatingEnum"];
-        };
-        DSPDoubleVerifyFraudInvalidTraffic: {
-            /** @description Set to true to block applications and sites with insufficient historical fraud and invalid traffic statistics. This will not be applicable if ALLOW_ALL is chosen. */
-            blockAppAndSites?: boolean;
-            excludeAppsAndSites?: components["schemas"]["DSPExcludeAppsAndSitesType"];
-            /** @description Set to true to exclude impressions delivered to devices identified to be fraudulent or invalid. */
-            excludeImpressions?: boolean;
-        };
-        DSPDoubleVerifyStandardDisplayBrandSafety: {
-            /** @description A list of content categories to exclude from targeting. */
-            contentCategories?: components["schemas"]["DSPDVBrandSafetyContentCategoryType"][];
-            contentCategoriesWithRisk?: components["schemas"]["DSPDVBrandSafetyContentCategoriesWithRiskMap"][];
-            /** @description Set to true to exclude unknown content. */
-            unknownContent?: boolean;
-        };
-        DSPDoubleVerifyBrandSafety: {
-            /** @description A list of app age ratings to be used for excluding apps. For example, TEENS_12_PLUS will only exclude apps with content rated for everyone ages 12 and over. UNKNOWN will exclude apps with content unrated or unknown to Double Verify. */
-            appAgeRating?: components["schemas"]["DSPDVBrandSafetyAppAgeRatingType"][];
-            appStarRating?: components["schemas"]["DSPDVBrandSafetyAppStarRatingType"];
-            /** @description A list of content categories to exclude from targeting. */
-            contentCategories?: components["schemas"]["DSPDVBrandSafetyContentCategoryType"][];
-            contentCategoriesWithRisk?: components["schemas"]["DSPDVBrandSafetyContentCategoriesWithRiskMap"][];
-            /** @description Set to true to exclude unofficial apps or apps with insufficient user ratings (<100 lifetime). */
-            excludeAppsWithInsufficientRating?: boolean;
-            /** @description Set to true to exclude unknown content. */
-            unknownContent?: boolean;
-        };
-        DSPDoubleVerifyViewability: {
-            averageCompletionAndFullyViewableRateTargeting?: components["schemas"]["DSPAverageCompletionAndFullyViewableRateTargetingType"];
-            brandExposureViewabilityTargeting?: components["schemas"]["DSPBrandExposureViewabilityTargetingType"];
-            /** @description Set to true to include impressions where impressions can't be measured. */
-            includeUnmeasurableImpressions?: boolean;
-            mrcViewabilityTargeting?: components["schemas"]["DSPMrcViewabilityTargetingType"];
-        };
-        DSPDoubleVerifyAuthenticBrandSafety: {
-            doubleVerifySegmentId?: string;
-        };
-        DSPDoubleVerifyCustomContextualSegmentId: {
-            doubleVerifySegmentId?: string;
-        };
-        DSPDoubleVerifyAuthenticAttention: {
-            /** @description One omni-channel segment that is informed by data from all DV campaigns to help avoid serving ads on generally poor performing apps and domains. */
-            universalAttention: boolean;
-        };
-        DSPIntegralAdScienceFraudInvalidTraffic: {
-            targetSetting?: components["schemas"]["DSPIASFraudInvalidTrafficType"];
-        };
-        DSPIntegralAdScienceBrandSafety: {
-            /** @description Set to true to exclude content that Integral Ad Science is not able to rate. */
-            excludeContent?: boolean;
-            iasBrandSafetyAdult?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-            iasBrandSafetyAlcohol?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-            iasBrandSafetyGambling?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-            iasBrandSafetyHateSpeech?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-            iasBrandSafetyIllegalDownloads?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-            iasBrandSafetyIllegalDrugs?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-            iasBrandSafetyOffensiveLanguage?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-            iasBrandSafetyViolence?: components["schemas"]["DSPIASBrandSafetyLevelType"];
-        };
-        /** @description The IAS viewability standard. */
-        DSPIntegralAdScienceViewability: {
-            standard: components["schemas"]["DSPIASViewabilityStandardType"];
-            viewabilityTargeting?: components["schemas"]["DSPViewabilityTierType"];
-        };
-        DSPIntegralAdScienceContextualTargeting: {
-            /** @description The unique identifier of the IAS contextual topical targeting segment */
-            topicalSegments?: string[];
-            /** @description The unique identifier of the IAS contextual vertical targeting segment */
-            verticalSegments?: string[];
-        };
-        DSPIntegralAdScienceContextualAvoidance: {
-            /** @description The unique identifier of the IAS contextual avoidance segment */
-            avoidanceSegments?: string[];
-        };
-        DSPPixalateFraudInvalidTraffic: {
-            /** @description Set to true to exclude traffic from Apps and Domains identified to be fraudulent or invalid. */
-            excludeAppsAndDomains?: boolean;
-            /** @description Set to true to exclude traffic from IPV4 and IPV6 addresses and user agents identified to be fraudulent or invalid. */
-            excludeIpAddressAndUserAgents?: boolean;
-            /** @description Set to true to exclude traffic from OTT and Mobile devices identified to be fraudulent or invalid. */
-            excludeOttAndMobileDevices?: boolean;
-            /** @description Set to true to exlude traffic from Apps that have been removed from the google play and apple app stores in the last 6 months. */
-            excludeRemovedAppsFromAppStores?: boolean;
-        };
-        DSPIntegralAdScienceQualitySync: {
-            segmentId?: string;
-        };
-        /** @description Only applicable for Web supply. */
-        DSPNewsGuardBrandGuardTrustedNewsTargeting: {
-            /** @description The unique identifiers of trusted news targets */
-            targetingList?: components["schemas"]["DSPNewsGuardBrandGuardTrustedNewsTargetingType"][];
-        };
-        DSPNewsGuardBrandGuardMisinformationSafety: {
-            /** @description The unique identifiers of misinformation targets */
-            avoidanceList?: components["schemas"]["DSPNewsGuardBrandGuardMisinformationSafetyType"][];
-        };
-        /**
-         * @description | PointLabel | Description |
-         *     | --- | --- |
-         *     | `SPEND` | Spend in monetary value. |
-         *     | `BID` | Bid in monetary value. |
-         *     | `DC` | Delivery confidence. |
-         *     | `TAS` | Total available spend. |
-         *     | `AIMP` | Available impressions. |
-         *     | `AREA` | Available reach. |
-         *     | `EIMP` | Expected impressions. |
-         *     | `EREA` | Expected reach. |
-         *     | `CPC` | Cost per click. |
-         *     | `CPA` | Cost per action. |
-         *     | `CPM` | Cost per mille. |
-         *     | `ROAS` | Return on ad spend. |
-         *     | `CAS` | Capped available spend. |
-         * @enum {string}
-         */
-        DSPPointLabel: "AIMP" | "AREA" | "BID" | "CAS" | "CPA" | "CPC" | "CPM" | "DC" | "EIMP" | "EREA" | "ROAS" | "SPEND" | "TAS";
-        /**
-         * @description | DspContentRatingEnum | Description |
-         *     | --- | --- |
-         *     | `SUITABLE_FOR_ALL_AUDIENCES` | Equivalent to content that is rated G (film), TV-Y (TV), TV-Y7 (TV), TV-G (TV), EC (game), or E (game). |
-         *     | `SUITABLE_FOR_MOST_AUDIENCES_WITH_PARENTAL_GUIDANCE` | Equivalent to content that is rated PG (film), TV-PG (TV), or E-10+ (game). |
-         *     | `SUITABLE_FOR_TEEN_AND_OLDER_AUDIENCES` | Equivalent to content that is rated PG-13 (film), TV-14 (TV), or T (game). |
-         *     | `SUITABLE_FOR_MATURE_AUDIENCES` | Ages 17+. Equivalent to content that is rated R (film), TV-MA (TV), or M (game). |
-         *     | `SUITABLE_FOR_ADULTS` | Ages 18+. Equivalent to content that is rated NC-17 (film). |
-         *     | `RATING_NOT_AVAILABLE` | Content where rating isn't available from the publisher. |
-         * @enum {string}
-         */
-        DSPDspContentRatingEnum: "RATING_NOT_AVAILABLE" | "SUITABLE_FOR_ADULTS" | "SUITABLE_FOR_ALL_AUDIENCES" | "SUITABLE_FOR_MATURE_AUDIENCES" | "SUITABLE_FOR_MOST_AUDIENCES_WITH_PARENTAL_GUIDANCE" | "SUITABLE_FOR_TEEN_AND_OLDER_AUDIENCES";
-        /**
-         * @description | TwitchContentRatingEnum | Description |
-         *     | --- | --- |
-         *     | `TWITCH_MODERATE` | Twitch Content with moderate content exclusions based on content classification labels received from Twitch. |
-         *     | `TWITCH_RESTRICTIVE` | Twitch Content with restrictive content exlcusions based on content classification labels received from Twitch. |
-         * @enum {string}
-         */
-        DSPTwitchContentRatingEnum: "TWITCH_MODERATE" | "TWITCH_RESTRICTIVE";
-        /**
-         * @description | ExcludeAppsAndSitesType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_100` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_50` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_25` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_10` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_08` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_06` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_04` |  |
-         *     | `FRAUD_TRAFFIC_LEVEL_GTE_02` |  |
-         * @enum {string}
-         */
-        DSPExcludeAppsAndSitesType: "ALLOW_ALL" | "FRAUD_TRAFFIC_LEVEL_GTE_02" | "FRAUD_TRAFFIC_LEVEL_GTE_04" | "FRAUD_TRAFFIC_LEVEL_GTE_06" | "FRAUD_TRAFFIC_LEVEL_GTE_08" | "FRAUD_TRAFFIC_LEVEL_GTE_10" | "FRAUD_TRAFFIC_LEVEL_GTE_100" | "FRAUD_TRAFFIC_LEVEL_GTE_25" | "FRAUD_TRAFFIC_LEVEL_GTE_50";
-        /**
-         * @description | DVBrandSafetyContentCategoryType | Description |
-         *     | --- | --- |
-         *     | `AD_SERVER` |  |
-         *     | `CELEBRITY_GOSSIP` |  |
-         *     | `CULTS_SURVIVALISM` |  |
-         *     | `GAMBLING` |  |
-         *     | `INCENTIVIZED_MALWARE_CLUTTER` |  |
-         *     | `INFLAMMATORY_POLITICS_NEWS` |  |
-         *     | `NEGATIVE_NEWS_FINANCIAL` |  |
-         *     | `NEGATIVE_NEWS_PHARMACEUTICAL` |  |
-         *     | `NON_STANDARD_CONTENT_NON_ENGLISH` |  |
-         *     | `NON_STANDARD_CONTENT_PARKING_PAGE` |  |
-         *     | `OCCULT` |  |
-         *     | `PIRACY_COPYRIGHT_INFRINGEMENT` |  |
-         *     | `UNMODERATED_UGC_FORUMS_IMAGES_VIDEO` |  |
-         *     | `EXTREME_GRAPHIC` |  |
-         * @enum {string}
-         */
-        DSPDVBrandSafetyContentCategoryType: "AD_SERVER" | "CELEBRITY_GOSSIP" | "CULTS_SURVIVALISM" | "EXTREME_GRAPHIC" | "GAMBLING" | "INCENTIVIZED_MALWARE_CLUTTER" | "INFLAMMATORY_POLITICS_NEWS" | "NEGATIVE_NEWS_FINANCIAL" | "NEGATIVE_NEWS_PHARMACEUTICAL" | "NON_STANDARD_CONTENT_NON_ENGLISH" | "NON_STANDARD_CONTENT_PARKING_PAGE" | "OCCULT" | "PIRACY_COPYRIGHT_INFRINGEMENT" | "UNMODERATED_UGC_FORUMS_IMAGES_VIDEO";
-        /** @description A map from content categories to risk level to exclude from targeting. Available keys are: [ADULT_CONTENT, ALCOHOL, CRIME, DEATH_INJURIES, DISASTER_AVIATION, DISASTER_MAN_MADE, DISASTER_NATURAL, DISASTER_TERRORIST_EVENTS, DISASTER_VEHICLE, HATE_SPEECH, PROFANITY, SUBSTANCE_ABUSE, TOBACCO_ECIGARETTES, VIOLENCE_EXTREME_GRAPHIC]. */
-        DSPDVBrandSafetyContentCategoriesWithRiskMap: {
-            /** @description Available keys are: [ADULT_CONTENT, ALCOHOL, CRIME, DEATH_INJURIES, DISASTER_AVIATION, DISASTER_MAN_MADE, DISASTER_NATURAL, DISASTER_TERRORIST_EVENTS, DISASTER_VEHICLE, HATE_SPEECH, PROFANITY, SUBSTANCE_ABUSE, TOBACCO_ECIGARETTES, VIOLENCE_EXTREME_GRAPHIC]. */
-            key: string;
-            value: components["schemas"]["DSPBrandSuitabilityRiskLevelType"];
-        };
-        /**
-         * @description | DVBrandSafetyAppAgeRatingType | Description |
-         *     | --- | --- |
-         *     | `EVERYONE_4_PLUS` |  |
-         *     | `TWEENS_9_PLUS` |  |
-         *     | `TEENS_12_PLUS` |  |
-         *     | `MATURE_17_PLUS` |  |
-         *     | `ADULTS_ONLY_18_PLUS` |  |
-         *     | `UNKNOWN` |  |
-         * @enum {string}
-         */
-        DSPDVBrandSafetyAppAgeRatingType: "ADULTS_ONLY_18_PLUS" | "EVERYONE_4_PLUS" | "MATURE_17_PLUS" | "TEENS_12_PLUS" | "TWEENS_9_PLUS" | "UNKNOWN";
-        /**
-         * @description App star rating to be used for excluding apps.
-         *     | DVBrandSafetyAppStarRatingType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `APP_STAR_RATING_LT_1_POINT_5_STARS` |  |
-         *     | `APP_STAR_RATING_LT_2_STARS` |  |
-         *     | `APP_STAR_RATING_LT_2_POINT_5_STARS` |  |
-         *     | `APP_STAR_RATING_LT_3_STARS` |  |
-         *     | `APP_STAR_RATING_LT_3_POINT_5_STARS` |  |
-         *     | `APP_STAR_RATING_LT_4_STARS` |  |
-         *     | `APP_STAR_RATING_LT_4_POINT_5_STARS` |  |
-         * @enum {string}
-         */
-        DSPDVBrandSafetyAppStarRatingType: "ALLOW_ALL" | "APP_STAR_RATING_LT_1_POINT_5_STARS" | "APP_STAR_RATING_LT_2_POINT_5_STARS" | "APP_STAR_RATING_LT_2_STARS" | "APP_STAR_RATING_LT_3_POINT_5_STARS" | "APP_STAR_RATING_LT_3_STARS" | "APP_STAR_RATING_LT_4_POINT_5_STARS" | "APP_STAR_RATING_LT_4_STARS";
-        /**
-         * @description The type of average completion and fully viewable rate targeting.
-         *     | AverageCompletionAndFullyViewableRateTargetingType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_10` |  |
-         *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_20` |  |
-         *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_25` |  |
-         *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_30` |  |
-         *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_35` |  |
-         *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_40` |  |
-         * @enum {string}
-         */
-        DSPAverageCompletionAndFullyViewableRateTargetingType: "ALLOW_ALL" | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_10" | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_20" | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_25" | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_30" | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_35" | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_40";
-        /**
-         * @description The type of brand exposure viewability targeting.
-         *     | BrandExposureViewabilityTargetingType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `BRAND_EXPOSURE_VIEWABILITY_GTE_15_SEC_AVG_DURATION` |  |
-         *     | `BRAND_EXPOSURE_VIEWABILITY_GTE_10_SEC_AVG_DURATION` |  |
-         *     | `BRAND_EXPOSURE_VIEWABILITY_GTE_5_SEC_AVG_DURATION` |  |
-         * @enum {string}
-         */
-        DSPBrandExposureViewabilityTargetingType: "ALLOW_ALL" | "BRAND_EXPOSURE_VIEWABILITY_GTE_10_SEC_AVG_DURATION" | "BRAND_EXPOSURE_VIEWABILITY_GTE_15_SEC_AVG_DURATION" | "BRAND_EXPOSURE_VIEWABILITY_GTE_5_SEC_AVG_DURATION";
-        /**
-         * @description The type of MRC viewability targeting.
-         *     | MrcViewabilityTargetingType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `MRC_VIEWABILITY_GTE_80` |  |
-         *     | `MRC_VIEWABILITY_GTE_75` |  |
-         *     | `MRC_VIEWABILITY_GTE_70` |  |
-         *     | `MRC_VIEWABILITY_GTE_65` |  |
-         *     | `MRC_VIEWABILITY_GTE_60` |  |
-         *     | `MRC_VIEWABILITY_GTE_55` |  |
-         *     | `MRC_VIEWABILITY_GTE_50` |  |
-         *     | `MRC_VIEWABILITY_GTE_40` |  |
-         *     | `MRC_VIEWABILITY_GTE_30` |  |
-         * @enum {string}
-         */
-        DSPMrcViewabilityTargetingType: "ALLOW_ALL" | "MRC_VIEWABILITY_GTE_30" | "MRC_VIEWABILITY_GTE_40" | "MRC_VIEWABILITY_GTE_50" | "MRC_VIEWABILITY_GTE_55" | "MRC_VIEWABILITY_GTE_60" | "MRC_VIEWABILITY_GTE_65" | "MRC_VIEWABILITY_GTE_70" | "MRC_VIEWABILITY_GTE_75" | "MRC_VIEWABILITY_GTE_80";
-        /**
-         * @description The type of fraud invalid traffic.
-         *     | IASFraudInvalidTrafficType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_RISK` |  |
-         *     | `FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_MODERATE_RISK` |  |
-         * @enum {string}
-         */
-        DSPIASFraudInvalidTrafficType: "ALLOW_ALL" | "FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_MODERATE_RISK" | "FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_RISK";
-        /**
-         * @description The IAS brand safety risk level.
-         *     | IASBrandSafetyLevelType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `BRAND_SAFETY_EXCLUDE_HIGH_RISK` |  |
-         *     | `BRAND_SAFETY_EXCLUDE_HIGH_AND_MODERATE_RISK` |  |
-         * @enum {string}
-         */
-        DSPIASBrandSafetyLevelType: "ALLOW_ALL" | "BRAND_SAFETY_EXCLUDE_HIGH_AND_MODERATE_RISK" | "BRAND_SAFETY_EXCLUDE_HIGH_RISK";
-        /**
-         * @description The viewability standard.
-         *     | IASViewabilityStandardType | Description |
-         *     | --- | --- |
-         *     | `NONE` |  |
-         *     | `MRC` |  |
-         *     | `GROUPM` |  |
-         *     | `PUBLICIS` |  |
-         * @enum {string}
-         */
-        DSPIASViewabilityStandardType: "GROUPM" | "MRC" | "NONE" | "PUBLICIS";
-        /**
-         * @description The type of viewability tier.
-         *     | ViewabilityTierType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `VIEWABILITY_TIER_GT_70` |  |
-         *     | `VIEWABILITY_TIER_GT_60` |  |
-         *     | `VIEWABILITY_TIER_GT_50` |  |
-         *     | `VIEWABILITY_TIER_GT_40` |  |
-         *     | `VIEWABILITY_TIER_LT_40` |  |
-         * @enum {string}
-         */
-        DSPViewabilityTierType: "ALLOW_ALL" | "VIEWABILITY_TIER_GT_40" | "VIEWABILITY_TIER_GT_50" | "VIEWABILITY_TIER_GT_60" | "VIEWABILITY_TIER_GT_70" | "VIEWABILITY_TIER_LT_40";
-        /**
-         * @description | NewsGuardBrandGuardTrustedNewsTargetingType | Description |
-         *     | --- | --- |
-         *     | `MAX_INCLUDE` |  |
-         *     | `HIGH_INCLUDE` |  |
-         *     | `BASIC_INCLUDE` |  |
-         *     | `LOCAL_INCLUDE` |  |
-         *     | `POLITICS_INCLUDE` |  |
-         *     | `HEALTH_INCLUDE` |  |
-         *     | `BUSINESS_INCLUDE` |  |
-         *     | `COMMUNITY_INCLUDE` |  |
-         *     | `LIFESTYLE_INCLUDE` |  |
-         *     | `TECH_INCLUDE` |  |
-         * @enum {string}
-         */
-        DSPNewsGuardBrandGuardTrustedNewsTargetingType: "BASIC_INCLUDE" | "BUSINESS_INCLUDE" | "COMMUNITY_INCLUDE" | "HEALTH_INCLUDE" | "HIGH_INCLUDE" | "LIFESTYLE_INCLUDE" | "LOCAL_INCLUDE" | "MAX_INCLUDE" | "POLITICS_INCLUDE" | "TECH_INCLUDE";
-        /**
-         * @description | NewsGuardBrandGuardMisinformationSafetyType | Description |
-         *     | --- | --- |
-         *     | `MAX_EXCLUDE` |  |
-         *     | `HIGH_EXCLUDE` |  |
-         *     | `BASIC_EXCLUDE` |  |
-         *     | `OPINIONATED_NEWS` |  |
-         *     | `MISINFORMATION_SITES` |  |
-         *     | `ELECTION_MISINFORMATION` |  |
-         *     | `HEALTH_MISINFORMATION` |  |
-         *     | `VACCINE_MISINFORMATION` |  |
-         *     | `COVID_MISINFORMATION` |  |
-         *     | `QANON_MISINFORMATION` |  |
-         *     | `CLIMATE_MISINFORMATION` |  |
-         *     | `UKRAINE_MISINFORMATION` |  |
-         *     | `ISRAEL_HAMAS_MISINFORMATION` |  |
-         *     | `AI_GENERATED_MFA` |  |
-         * @enum {string}
-         */
-        DSPNewsGuardBrandGuardMisinformationSafetyType: "AI_GENERATED_MFA" | "BASIC_EXCLUDE" | "CLIMATE_MISINFORMATION" | "COVID_MISINFORMATION" | "ELECTION_MISINFORMATION" | "HEALTH_MISINFORMATION" | "HIGH_EXCLUDE" | "ISRAEL_HAMAS_MISINFORMATION" | "MAX_EXCLUDE" | "MISINFORMATION_SITES" | "OPINIONATED_NEWS" | "QANON_MISINFORMATION" | "UKRAINE_MISINFORMATION" | "VACCINE_MISINFORMATION";
-        /**
-         * @description The Double Verify brand suitability risk level.
-         *     | BrandSuitabilityRiskLevelType | Description |
-         *     | --- | --- |
-         *     | `ALLOW_ALL` |  |
-         *     | `HIGH` |  |
-         *     | `HIGH_MEDIUM` |  |
-         *     | `HIGH_MEDIUM_LOW` |  |
-         * @enum {string}
-         */
-        DSPBrandSuitabilityRiskLevelType: "ALLOW_ALL" | "HIGH" | "HIGH_MEDIUM" | "HIGH_MEDIUM_LOW";
+  schemas: {
+    DSPCommitmentSuccessResponse: {
+      commitments?: components["schemas"]["DSPCommitment"][];
+      nextToken?: string;
     };
-    responses: never;
-    parameters: {
-        NextTokenQuery: string;
-        MaxResultsQuery: number;
-        /** @description The identifier of a client associated with a 'Login with Amazon' account. */
-        ClientIdHeader: string;
-        /** @description The identifier of an Amazon Ads Advertiser Account. */
-        AccountIdHeader: string;
+    BadRequestResponseContent: {
+      code: components["schemas"]["ErrorCode"];
+      message: string;
     };
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    UnauthorizedResponseContent: {
+      code: components["schemas"]["ErrorCode"];
+      message: string;
+    };
+    ForbiddenResponseContent: {
+      code: components["schemas"]["ErrorCode"];
+      message: string;
+    };
+    NotFoundResponseContent: {
+      code: components["schemas"]["ErrorCode"];
+      message: string;
+    };
+    ContentTooLargeResponseContent: {
+      code: components["schemas"]["ErrorCode"];
+      message: string;
+    };
+    TooManyRequestsResponseContent: {
+      code: components["schemas"]["ErrorCode"];
+      message: string;
+    };
+    InternalServerErrorResponseContent: {
+      code: string;
+      message: string;
+    };
+    BadGatewayResponseContent: {
+      code: string;
+      message: string;
+    };
+    ServiceUnavailableErrorResponseContent: {
+      code: string;
+      message: string;
+    };
+    GatewayTimeoutResponseContent: {
+      code: string;
+      message: string;
+    };
+    DSPCreateCommitmentRequest: {
+      commitments?: components["schemas"]["DSPCommitmentCreate"][];
+    };
+    DSPCommitmentMultiStatusResponse: {
+      error?: components["schemas"]["ErrorsIndex"][];
+      success?: components["schemas"]["DSPCommitmentMultiStatusSuccess"][];
+    };
+    DSPRetrieveCampaignForecastRequest: {
+      campaignForecastDescriptions?: components["schemas"]["DSPCampaignForecastDescription"][];
+    };
+    DSPCampaignForecastMultiStatusResponse: {
+      error?: components["schemas"]["ErrorsIndex"][];
+      success?: components["schemas"]["DSPCampaignForecastMultiStatusSuccess"][];
+    };
+    DSPRetrieveCommitmentSpendRequest: {
+      commitmentIds?: components["schemas"]["DSPCommitmentSpendIdentifier"][];
+    };
+    DSPCommitmentSpendMultiStatusResponse: {
+      error?: components["schemas"]["ErrorsIndex"][];
+      success?: components["schemas"]["DSPCommitmentSpendMultiStatusSuccess"][];
+    };
+    DSPRetrieveCommitmentRequest: {
+      commitmentIds?: string[];
+    };
+    DSPUpdateCommitmentRequest: {
+      commitments?: components["schemas"]["DSPCommitmentUpdate"][];
+    };
+    DSPCommitment: {
+      /** @description Advertiser IDs associated with the commitment. */
+      advertiserIds?: string[];
+      /** @description Campaign IDs associated with the commitment. */
+      campaignIds?: string[];
+      /** @description A unique identifier for the commitment. */
+      commitmentId: string;
+      /** @description The name of the commitment. */
+      commitmentName: string;
+      /**
+       * Format: double
+       * @description The total committed spend for the commitment.
+       */
+      committedSpend: number;
+      currencyCode: components["schemas"]["DSPCurrencyCode"];
+      /** @description Deal IDs associated with the commitment. */
+      dealIds?: string[];
+      /**
+       * Format: date-time
+       * @description The end date and time of the commitment.
+       */
+      endDateTime: string;
+      fulfillmentLevel: components["schemas"]["DSPFulfillmentLevel"];
+      spendCalculationMode: components["schemas"]["DSPSpendCalculationMode"];
+      /**
+       * Format: date-time
+       * @description The start date and time of the commitment.
+       */
+      startDateTime: string;
+    };
+    /**
+     * @description | ErrorCode | Description |
+     *     |------|------|
+     *     | `ACTION_NOT_SUPPORTED` | The request is not supported. |
+     *     | `ACTIVE_RESOURCE_LIMIT_EXCEEDED` | Too many live resources. Remove resources and try again. |
+     *     | `ARCHIVED_PARENT_CANNOT_CREATE` | New resources cannot be created within an archived parent. |
+     *     | `ARCHIVED_PARENT_CANNOT_EDIT` | Resources within an archived parent cannot be edited. |
+     *     | `ARCHIVED_RESOURCE_CANNOT_EDIT` | Archived resources cannot be edited. |
+     *     | `ASSET_NOT_READY` | The provided asset is still being processed. |
+     *     | `AUTOCREATED_ENTITY_CANNOT_EDIT` | Autocreated entities cannot be edited. To complete this action, create the resource manually. |
+     *     | `BAD_REQUEST` | The request is not valid considering the documented schema. |
+     *     | `CONFLICT` | Operation could not be completed due to a conflict. Please retry your request. |
+     *     | `CONTENT_TOO_LARGE` | The request is too large. Consider splitting it into multiple requests. |
+     *     | `DATE_CANNOT_BE_IN_PAST` | Update the date to be in the future. |
+     *     | `DATE_CANNOT_BE_NULL` | Update the date. |
+     *     | `DATE_TOO_SOON` | Update the date to be further in the future. |
+     *     | `DUPLICATE_FIELD_VALUE_FOUND` | Multiple resources share the non-unique field values. Remove the non-unique field value. |
+     *     | `DUPLICATE_RESOURCE_ID_FOUND` | Multiple resources share the same ID. Remove the duplicate ID. |
+     *     | `DURATION_TOO_SHORT` | Update the length to be within the required range. |
+     *     | `FEATURE_DISCONTINUED` | Feature has been discontinued. |
+     *     | `FEATURE_NOT_AVAILABLE` | The requested feature is not available. |
+     *     | `FIELD_SIZE_IS_ABOVE_MAXIMUM_LIMIT` | Update the value to be within the required range. |
+     *     | `FIELD_SIZE_IS_BELOW_MINIMUM_LIMIT` | Update the value to be within the required range. |
+     *     | `FIELD_SIZE_IS_OUT_OF_RANGE` | Update the value to be within the required range. |
+     *     | `FIELD_VALUE_CANNOT_EDIT` | Field value cannot be edited. |
+     *     | `FIELD_VALUE_CONTAINS_BLOCKLISTED_WORDS` | Update the request with the required information for this resource. |
+     *     | `FIELD_VALUE_CONTAINS_INVALID_CHARACTERS` | Remove the invalid characters and try again. |
+     *     | `FIELD_VALUE_IS_ABOVE_MAXIMUM_LIMIT` | Update the value to be within the required range. |
+     *     | `FIELD_VALUE_IS_BELOW_MINIMUM_LIMIT` | Update the value to be within the required range. |
+     *     | `FIELD_VALUE_IS_EMPTY` | Update the request with the required information for this resource. |
+     *     | `FIELD_VALUE_IS_INVALID` | Update the request with the required information for this resource. |
+     *     | `FIELD_VALUE_IS_NULL` | Update the request with the required information for this resource. |
+     *     | `FIELD_VALUE_IS_OUT_OF_RANGE` | Update the value to be within the required range. |
+     *     | `FIELD_VALUE_MISMATCH` | Mismatch among resource field values. |
+     *     | `FIELD_VALUE_MUST_BE_EMPTY_OR_NULL` | Update the request with the required information for this resource. |
+     *     | `FIELD_VALUE_NOT_FOUND` | Resource specified in the field value not found. Try again with valid value. |
+     *     | `FIELD_VALUE_NOT_UNIQUE` | Resource field value conflicts with existing resource. Try again with an unique field value. |
+     *     | `FORBIDDEN` | The caller is not authorized to make the given request. |
+     *     | `GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_PORTFOLIO` | The campaign is associated with a global campaign. Portfolio association cannot be updated on a child campaign. Please perform operation on the global campaign. |
+     *     | `GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_STATE` | The campaign is associated with a global campaign. The state on child campaign cannot be set to archived. Please perform operation on global campaign. |
+     *     | `GLOBAL_CAMPAIGN_SINGLE_ADGROUP_LIMIT` | The campaign is associated with a global campaign. Only one ad group can be created under this campaign. |
+     *     | `INTERNAL_ERROR` | The server encountered an unexpected condition that prevented it from fulfilling the request. |
+     *     | `NOT_FOUND` | The requested resource does not exist. |
+     *     | `PAYMENT_ISSUE` | Payment failed. |
+     *     | `PRODUCT_INELIGIBLE` | Product is not eligible for advertising. Try again with a valid product. |
+     *     | `RESOURCE_DOES_NOT_BELONG_TO_PARENT` | Resource does not belong to the specified parent. Try again with a valid parent ID. |
+     *     | `RESOURCE_ID_NOT_FOUND` | Resource ID not found. Try again with valid ID. |
+     *     | `RESOURCE_IS_EMPTY` | Update the request with the required information for this resource. |
+     *     | `RESOURCE_IS_IN_TERMINAL_STATE` | Resource is in terminal state. |
+     *     | `RESOURCE_IS_NULL` | Update the request with the required information for this resource. |
+     *     | `TOO_MANY_REQUESTS` | There have been too many requests, please slow down your call rate. |
+     *     | `TOTAL_RESOURCE_LIMIT_EXCEEDED` | Too many resources. Remove resources and try again. |
+     *     | `UNAUTHORIZED` | The request lacks the necessary credentials. |
+     *     | `UNSUPPORTED_MARKETPLACE` | Marketplace not supported. Try again with a supported marketplace. |
+     * @enum {string}
+     */
+    ErrorCode:
+      | "ACTION_NOT_SUPPORTED"
+      | "ACTIVE_RESOURCE_LIMIT_EXCEEDED"
+      | "ARCHIVED_PARENT_CANNOT_CREATE"
+      | "ARCHIVED_PARENT_CANNOT_EDIT"
+      | "ARCHIVED_RESOURCE_CANNOT_EDIT"
+      | "ASSET_NOT_READY"
+      | "AUTOCREATED_ENTITY_CANNOT_EDIT"
+      | "BAD_REQUEST"
+      | "CONFLICT"
+      | "CONTENT_TOO_LARGE"
+      | "DATE_CANNOT_BE_IN_PAST"
+      | "DATE_CANNOT_BE_NULL"
+      | "DATE_TOO_SOON"
+      | "DUPLICATE_FIELD_VALUE_FOUND"
+      | "DUPLICATE_RESOURCE_ID_FOUND"
+      | "DURATION_TOO_SHORT"
+      | "FEATURE_DISCONTINUED"
+      | "FEATURE_NOT_AVAILABLE"
+      | "FIELD_SIZE_IS_ABOVE_MAXIMUM_LIMIT"
+      | "FIELD_SIZE_IS_BELOW_MINIMUM_LIMIT"
+      | "FIELD_SIZE_IS_OUT_OF_RANGE"
+      | "FIELD_VALUE_CANNOT_EDIT"
+      | "FIELD_VALUE_CONTAINS_BLOCKLISTED_WORDS"
+      | "FIELD_VALUE_CONTAINS_INVALID_CHARACTERS"
+      | "FIELD_VALUE_IS_ABOVE_MAXIMUM_LIMIT"
+      | "FIELD_VALUE_IS_BELOW_MINIMUM_LIMIT"
+      | "FIELD_VALUE_IS_EMPTY"
+      | "FIELD_VALUE_IS_INVALID"
+      | "FIELD_VALUE_IS_NULL"
+      | "FIELD_VALUE_IS_OUT_OF_RANGE"
+      | "FIELD_VALUE_MISMATCH"
+      | "FIELD_VALUE_MUST_BE_EMPTY_OR_NULL"
+      | "FIELD_VALUE_NOT_FOUND"
+      | "FIELD_VALUE_NOT_UNIQUE"
+      | "FORBIDDEN"
+      | "GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_PORTFOLIO"
+      | "GLOBAL_ATTRIBUTE_UPDATE_RESTRICTED_STATE"
+      | "GLOBAL_CAMPAIGN_SINGLE_ADGROUP_LIMIT"
+      | "INTERNAL_ERROR"
+      | "NOT_FOUND"
+      | "PAYMENT_ISSUE"
+      | "PRODUCT_INELIGIBLE"
+      | "RESOURCE_DOES_NOT_BELONG_TO_PARENT"
+      | "RESOURCE_ID_NOT_FOUND"
+      | "RESOURCE_IS_EMPTY"
+      | "RESOURCE_IS_IN_TERMINAL_STATE"
+      | "RESOURCE_IS_NULL"
+      | "TOO_MANY_REQUESTS"
+      | "TOTAL_RESOURCE_LIMIT_EXCEEDED"
+      | "UNAUTHORIZED"
+      | "UNSUPPORTED_MARKETPLACE";
+    DSPCommitmentCreate: {
+      /** @description Advertiser IDs associated with the commitment. */
+      advertiserIds?: string[];
+      /** @description Campaign IDs associated with the commitment. */
+      campaignIds?: string[];
+      /** @description The name of the commitment. */
+      commitmentName: string;
+      /**
+       * Format: double
+       * @description The total committed spend for the commitment.
+       */
+      committedSpend: number;
+      currencyCode: components["schemas"]["DSPCurrencyCode"];
+      /** @description Deal IDs associated with the commitment. */
+      dealIds?: string[];
+      /**
+       * Format: date-time
+       * @description The end date and time of the commitment.
+       */
+      endDateTime: string;
+      fulfillmentLevel: components["schemas"]["DSPFulfillmentLevel"];
+      spendCalculationMode: components["schemas"]["DSPSpendCalculationMode"];
+      /**
+       * Format: date-time
+       * @description The start date and time of the commitment.
+       */
+      startDateTime: string;
+    };
+    ErrorsIndex: {
+      errors: components["schemas"]["Error"][];
+      /** Format: int32 */
+      index: number;
+    };
+    DSPCommitmentMultiStatusSuccess: {
+      commitment: components["schemas"]["DSPCommitment"];
+      /** Format: int32 */
+      index: number;
+    };
+    /** @description The description of which campaign and what features are enabled for a forecast. */
+    DSPCampaignForecastDescription: {
+      /** @description The unique identifier of the campaign. */
+      campaignId: string;
+      enabledFeatures?: components["schemas"]["DSPEnabledFeaturesInCampaignForecast"];
+      /** @description The unique identifier of the flight. */
+      flightIds?: string[];
+      replanningSettings?: components["schemas"]["DSPReplanningSettings"];
+    };
+    DSPCampaignForecastMultiStatusSuccess: {
+      campaignForecast: components["schemas"]["DSPCampaignForecast"];
+      /** Format: int32 */
+      index: number;
+    };
+    DSPCommitmentSpendIdentifier: {
+      /** @description Commitment ID associated with the commitment. */
+      commitmentId: string;
+      spendDimension?: components["schemas"]["DSPSpendDimension"];
+    };
+    DSPCommitmentSpendMultiStatusSuccess: {
+      commitmentSpend: components["schemas"]["DSPCommitmentSpend"];
+      /** Format: int32 */
+      index: number;
+    };
+    DSPCommitmentUpdate: {
+      /** @description Advertiser IDs associated with the commitment. */
+      advertiserIds?: string[];
+      /** @description Campaign IDs associated with the commitment. */
+      campaignIds?: string[];
+      /** @description A unique identifier for the commitment. */
+      commitmentId: string;
+      /** @description The name of the commitment. */
+      commitmentName?: string;
+      /**
+       * Format: double
+       * @description The total committed spend for the commitment.
+       */
+      committedSpend?: number;
+      currencyCode?: components["schemas"]["DSPCurrencyCode"];
+      /** @description Deal IDs associated with the commitment. */
+      dealIds?: string[];
+      /**
+       * Format: date-time
+       * @description The end date and time of the commitment.
+       */
+      endDateTime?: string;
+      fulfillmentLevel?: components["schemas"]["DSPFulfillmentLevel"];
+      spendCalculationMode?: components["schemas"]["DSPSpendCalculationMode"];
+      /**
+       * Format: date-time
+       * @description The start date and time of the commitment.
+       */
+      startDateTime?: string;
+    };
+    /**
+     * @description | CurrencyCode | Description |
+     *     |------|------|
+     *     | `AED` | United Arab Emirates Dirham |
+     *     | `ARS` | Argentine Peso |
+     *     | `AUD` | Australian Dollar |
+     *     | `BGN` | Bulgarian Lev |
+     *     | `BHD` | Bahraini Dinar |
+     *     | `BOB` | Bolivian Boliviano |
+     *     | `BRL` | Brazilian Real |
+     *     | `CAD` | Canadian Dollar |
+     *     | `CHF` | Swiss Franc |
+     *     | `CLP` | Chilean Peso |
+     *     | `CNY` | Chinese Yuan |
+     *     | `COP` | Colombian Peso |
+     *     | `CRC` | Costa Rican Colón |
+     *     | `CZK` | Czech Koruna |
+     *     | `DKK` | Danish Krone |
+     *     | `DOP` | Dominican Peso |
+     *     | `DZD` | Algerian Dinar |
+     *     | `EUR` | Euro |
+     *     | `GBP` | British Pound Sterling |
+     *     | `GTQ` | Guatemalan Quetzal |
+     *     | `HKD` | Hong Kong Dollar |
+     *     | `HNL` | Honduran Lempira |
+     *     | `HRK` | Croatian Kuna |
+     *     | `HUF` | Hungarian Forint |
+     *     | `IDR` | Indonesian Rupiah |
+     *     | `ILS` | Israeli New Shekel |
+     *     | `INR` | Indian Rupee |
+     *     | `JMD` | Jamaican Dollar |
+     *     | `JPY` | Japanese Yen |
+     *     | `KRW` | South Korean Won |
+     *     | `KWD` | Kuwaiti Dinar |
+     *     | `MAD` | Moroccan Dirham |
+     *     | `MXN` | Mexican Peso |
+     *     | `MYR` | Malaysian Ringgit |
+     *     | `NOK` | Norwegian Krone |
+     *     | `NZD` | New Zealand Dollar |
+     *     | `PAB` | Panamanian Balboa |
+     *     | `PEN` | Peruvian Sol |
+     *     | `PHP` | Philippine Peso |
+     *     | `PKR` | Pakistani Rupee |
+     *     | `PYG` | Paraguayan Guaraní |
+     *     | `QAR` | Qatari Riyal |
+     *     | `RON` | Romanian Leu |
+     *     | `RSD` | Serbian Dinar |
+     *     | `RUB` | Russian Ruble |
+     *     | `SAR` | Saudi Riyal |
+     *     | `SEK` | Swedish Krona |
+     *     | `SGD` | Singapore Dollar |
+     *     | `THB` | Thai Baht |
+     *     | `TND` | Tunisian Dinar |
+     *     | `TRY` | Turkish Lira |
+     *     | `TWD` | New Taiwan Dollar |
+     *     | `UAH` | Ukrainian Hryvnia |
+     *     | `USD` | United States Dollar |
+     *     | `UYU` | Uruguayan Peso |
+     *     | `VND` | Vietnamese Đồng |
+     * @enum {string}
+     */
+    DSPCurrencyCode:
+      | "AED"
+      | "ARS"
+      | "AUD"
+      | "BGN"
+      | "BHD"
+      | "BOB"
+      | "BRL"
+      | "CAD"
+      | "CHF"
+      | "CLP"
+      | "CNY"
+      | "COP"
+      | "CRC"
+      | "CZK"
+      | "DKK"
+      | "DOP"
+      | "DZD"
+      | "EUR"
+      | "GBP"
+      | "GTQ"
+      | "HKD"
+      | "HNL"
+      | "HRK"
+      | "HUF"
+      | "IDR"
+      | "ILS"
+      | "INR"
+      | "JMD"
+      | "JPY"
+      | "KRW"
+      | "KWD"
+      | "MAD"
+      | "MXN"
+      | "MYR"
+      | "NOK"
+      | "NZD"
+      | "PAB"
+      | "PEN"
+      | "PHP"
+      | "PKR"
+      | "PYG"
+      | "QAR"
+      | "RON"
+      | "RSD"
+      | "RUB"
+      | "SAR"
+      | "SEK"
+      | "SGD"
+      | "THB"
+      | "TND"
+      | "TRY"
+      | "TWD"
+      | "UAH"
+      | "USD"
+      | "UYU"
+      | "VND";
+    /**
+     * @description | FulfillmentLevel | Description |
+     *     |------|------|
+     *     | `LEVEL_0` | Tracking-only commitments |
+     *     | `LEVEL_5` | Prioritize commitment over campaign performance |
+     * @enum {string}
+     */
+    DSPFulfillmentLevel: "LEVEL_0" | "LEVEL_5";
+    /**
+     * @description | SpendCalculationMode | Description |
+     *     |------|------|
+     *     | `ADVERTISER_ACCOUNT` | Spend is aggregated at the advertiser account level |
+     *     | `CAMPAIGN` | Spend is aggregated at the campaign level |
+     *     | `MANAGER_ACCOUNT` | Spend is aggregated at the manager account level |
+     * @enum {string}
+     */
+    DSPSpendCalculationMode: "ADVERTISER_ACCOUNT" | "CAMPAIGN" | "MANAGER_ACCOUNT";
+    Error: {
+      code: components["schemas"]["ErrorCode"];
+      fieldLocation?: string;
+      message: string;
+    };
+    /** @description For the user to specify which features to enable in the forecast result. */
+    DSPEnabledFeaturesInCampaignForecast: {
+      /** @description Describe if the forecast will use cached settings of a campaign. */
+      campaignSettingsCache?: boolean;
+      /** @description Describe if the user want to see curve or not. */
+      curve?: boolean;
+      /** @description Describe if the user want to see detailed insights for leading drivers of forecast results. */
+      insights?: boolean;
+      metrics?: components["schemas"]["DSPForecastMetricsDescription"];
+      /** @description Describe if the forecast will show replanning recommendation. */
+      replanning?: boolean;
+    };
+    /** @description Forecast request of a campaign, adGroups, flights, and targets with adjusted settings. */
+    DSPReplanningSettings: {
+      adGroups?: components["schemas"]["DSPForecastAdGroup"][];
+      campaign?: components["schemas"]["DSPForecastCampaign"];
+      flights?: components["schemas"]["DSPForecastFlight"][];
+      targets?: components["schemas"]["DSPForecastTarget"][];
+    };
+    DSPCampaignForecast: {
+      /** @description The combination of existing flight settings and proposed flight settings based on forecasting. */
+      availableForecastFlights?: components["schemas"]["DSPForecastFlight"][];
+      /** @description The display name of the campaign used for the forecast. */
+      campaignDisplayName: string;
+      campaignForecastDescription: components["schemas"]["DSPCampaignForecastDescription"];
+      /**
+       * Format: date-time
+       * @description The creation date of the campaign forecast.
+       */
+      creationDateTime: string;
+      /** @description The forecast results of multiple flights of the campaign. */
+      flightForecasts?: components["schemas"]["DSPFlightForecast"][];
+      /** @description Indicates whether there are existing recommendations/guidance available for the campaign from the Noble ListGuidance API. */
+      hasExistingGuidance?: boolean;
+    };
+    /**
+     * @description | SpendDimension | Description |
+     *     | --- | --- |
+     *     | `advertiserAccountId` | Identifier for an advertising account. |
+     *     | `campaignId` | Identifier for campaign entity |
+     *     | `dealId` | Identifier for deal entity |
+     */
+    DSPSpendDimension:
+      | {
+          advertiserAccountId: string;
+        }
+      | {
+          campaignId: string;
+        }
+      | {
+          dealId: string;
+        };
+    DSPCommitmentSpend: {
+      /**
+       * Format: double
+       * @description Actual accrual spend amount in commitment currency.
+       */
+      accruedSpendValue?: number;
+      /**
+       * Format: date-time
+       * @description Timestamp for accrual spend.
+       */
+      accruedToDateTime: string;
+      commitmentId: components["schemas"]["DSPCommitmentSpendIdentifier"];
+      currencyCode: components["schemas"]["DSPCurrencyCode"];
+      /**
+       * Format: double
+       * @description Projected spend amount in commitment currency.
+       */
+      projectedSpendValue?: number;
+      /**
+       * Format: double
+       * @description Spend at risk amount in commitment currency.
+       */
+      spendAtRiskValue?: number;
+      spendDimensionType: components["schemas"]["DSPSpendDimensionType"];
+    };
+    /** @description Describe how user select to see all metrics or selected ones. */
+    DSPForecastMetricsDescription: {
+      /** @description If it is true, all the supported metrics would return. */
+      allMetrics: boolean;
+      /** @description The list of selected metrics in order. */
+      selectedMetrics?: components["schemas"]["DSPSelectedForecastMetric"][];
+    };
+    /** @description Ad group domain model */
+    DSPForecastAdGroup: {
+      /** @description The unique identifier of the ad group. */
+      adGroupId?: string;
+      adProduct?: components["schemas"]["DSPAdProduct"];
+      /** @description The array of identifiers of product categories associated with the ad group. For VIDEO ad group type only one parent product category or multiple sub-categories from one parent product category are allowed. */
+      advertisedProductCategoryIds?: string[];
+      bid?: components["schemas"]["DSPAdGroupBid"];
+      /** @description An object containing budget details for the ad group. */
+      budgets?: components["schemas"]["DSPBudget"][];
+      /** @description The unique identifier of the campaign the ad group belongs to. */
+      campaignId?: string;
+      /**
+       * Format: date-time
+       * @description The date time that the ad group was created.
+       */
+      creationDateTime?: string;
+      creativeRotationType?: components["schemas"]["DSPCreativeRotationType"];
+      /**
+       * Format: date-time
+       * @description The end date time for the ad group.
+       */
+      endDateTime?: string;
+      /** @description The fees associated with the ad group. */
+      fees?: components["schemas"]["DSPFee"][];
+      /** @description An object containing frequency details for the ad group. */
+      frequencies?: components["schemas"]["DSPFrequency"][];
+      /** @description The global adGroup identifier that manages this marketplace adGroup. */
+      globalAdGroupId?: string;
+      inventoryType?: components["schemas"]["DSPInventoryType"];
+      /**
+       * Format: date-time
+       * @description The date time that the ad group was last updated.
+       */
+      lastUpdatedDateTime?: string;
+      /** @description List of marketplace-specific configurations for a global ad group that enables overriding certain attributes at individual marketplace level. For example, if a global ad group state is ENABLED and needs to be PAUSED only in DE marketplace, you can specify: [{marketplace: DE, overrides: {state: PAUSED}}]. When a marketplace-specific override is not provided, ad group's global value is applied to that marketplace. */
+      marketplaceConfigurations?: components["schemas"]["DSPMarketplaceAdGroupConfigurations"][];
+      marketplaceScope?: components["schemas"]["DSPMarketplaceScope"];
+      /**
+       * @description A list of country codes representing Amazon marketplaces
+       *     | Marketplace | Description |
+       *     | --- | --- |
+       *     | `AE` |  |
+       *     | `AU` |  |
+       *     | `BR` |  |
+       *     | `CA` |  |
+       *     | `DE` |  |
+       *     | `ES` |  |
+       *     | `FR` |  |
+       *     | `GB` |  |
+       *     | `IN` |  |
+       *     | `IT` |  |
+       *     | `JP` |  |
+       *     | `MX` |  |
+       *     | `NL` |  |
+       *     | `SA` |  |
+       *     | `SE` |  |
+       *     | `TR` |  |
+       *     | `US` |  |
+       */
+      marketplaces?: components["schemas"]["DSPMarketplace"][];
+      /** @description The name of the ad group. */
+      name?: string;
+      optimization?: components["schemas"]["DSPOptimization"];
+      pacing?: components["schemas"]["DSPPacing"];
+      /** @description The purchase order number associated with the ad group. */
+      purchaseOrderNumber?: string;
+      /** @description Identifier for retailer associated with this ad group. */
+      retailerId?: string;
+      /**
+       * Format: date-time
+       * @description The start date time for the ad group.
+       */
+      startDateTime?: string;
+      state?: components["schemas"]["DSPState"];
+      status?: components["schemas"]["DSPStatus"];
+      /** @description Open ended labels with a key value pair applied to the ad group */
+      tags?: components["schemas"]["DSPTag"][];
+      targetingSettings?: components["schemas"]["DSPTargetingSettings"];
+    };
+    /** @description Campaign domain model */
+    DSPForecastCampaign: {
+      adProduct?: components["schemas"]["DSPAdProduct"];
+      /** @description OpenRTB standard naming meaning: Advertiser domain for block list checking. This can be an array of strings for the case of rotating creatives. Exchanges can mandate that only one domain is allowed. */
+      adomains?: string[];
+      autoCreationSettings?: components["schemas"]["DSPAutoCreationSettings"];
+      /** @description This is the ID of the brand that the campaign is associated with. */
+      brandId?: string;
+      /** @description The object containing budget details for the campaign (for campaigns that support multiple budgets). */
+      budgets?: components["schemas"]["DSPBudget"][];
+      /** @description A unique identifier for a campaign. */
+      campaignId?: string;
+      /** @description This is the ID of the originally generated campaign preset that the campaign is associated with. */
+      campaignPresetId?: string;
+      /** @description This field is used in Sponsored Ads and ADSP and impacts targeted supply. For Sponsored Ads, the campaign.countries field determines what Amazon retail supply (Amazon.com, Amazon.co.uk, Amazon.mx, etc) the campaign will serve in. Similarly in ADSP, this has an implicit filter on your inventory targets. If you choose an inventory target of AMAZON with campaign.countries set to US, this will target the retail supply of Amazon.com and non-retail Amazon properties. ADSP options include additional countries - for example, choosing Austria means targeting Austria eligible inventory and Amazon retail supply of Amazon.de. */
+      countries?: components["schemas"]["DSPCountryCode"][];
+      /**
+       * Format: date-time
+       * @description The date time that the campaign was created.
+       */
+      creationDateTime?: string;
+      /** @description List of tactic type and inventory type pairs that are eligible for use with this campaign */
+      eligibleAutomatedTargetingTactics?: components["schemas"]["DSPTacticKey"][];
+      /**
+       * Format: date
+       * @description The end date of the campaign.
+       */
+      endDate?: string;
+      /**
+       * Format: date-time
+       * @description The end date time for the campaign.
+       */
+      endDateTime?: string;
+      /** @description Any fees associated with the campaign. */
+      fees?: components["schemas"]["DSPCampaignFee"][];
+      /** @description Flight details associated with the campaign. */
+      flights?: components["schemas"]["DSPCampaignFlight"][];
+      /** @description Any frequency caps associated with the campaign. */
+      frequencies?: components["schemas"]["DSPFrequency"][];
+      /** @description The global campaign identifier that manages this marketplace campaign. */
+      globalCampaignId?: string;
+      /** @description List of tactic type and inventory type pairs that are ineligible for use with this campaign, along with reasons for ineligibility */
+      ineligibleAutomatedTargetingTactics?: components["schemas"]["DSPIneligibleAutomatedTargetingTactic"][];
+      /**
+       * Format: date-time
+       * @description The date time that the campaign was last updated.
+       */
+      lastUpdatedDateTime?: string;
+      /** @description List of marketplace-specific configurations for a global campaign that enables overriding certain attributes at individual marketplace level. For example, if a global campaign is ENABLED and startDate '2024-06-01' but needs to be PAUSED in DE with startDateTime '2024-06-02' marketplace, you can specify: [{marketplace: DE, overrides: {state: PAUSED, startDate: '2024-06-02'}}]. When a marketplace-specific override is not provided, the campaign's global value is applied to that marketplace. */
+      marketplaceConfigurations?: components["schemas"]["DSPMarketplaceCampaignConfigurations"][];
+      marketplaceScope?: components["schemas"]["DSPMarketplaceScope"];
+      /**
+       * @description A list of country codes representing Amazon marketplaces
+       *     | Marketplace | Description |
+       *     | --- | --- |
+       *     | `AE` |  |
+       *     | `AU` |  |
+       *     | `BR` |  |
+       *     | `CA` |  |
+       *     | `DE` |  |
+       *     | `ES` |  |
+       *     | `FR` |  |
+       *     | `GB` |  |
+       *     | `IN` |  |
+       *     | `IT` |  |
+       *     | `JP` |  |
+       *     | `MX` |  |
+       *     | `NL` |  |
+       *     | `SA` |  |
+       *     | `SE` |  |
+       *     | `TR` |  |
+       *     | `US` |  |
+       */
+      marketplaces?: components["schemas"]["DSPMarketplace"][];
+      /** @description The name of the campaign. */
+      name?: string;
+      optimizations?: components["schemas"]["DSPCampaignOptimizations"];
+      /** @description The ID of the portfolio associated with the campaign. */
+      portfolioId?: string;
+      /** @description This is the ID of the product category that the campaign is associated with. */
+      productCategoryId?: string;
+      /** @description The purchase order number associated with the campaign. */
+      purchaseOrderNumber?: string;
+      /** @description StoreKit AdNetwork application ID. Represents iTunes application ID with which SKAN-enabled campaigns are associated. */
+      skanAppId?: string;
+      /**
+       * Format: date
+       * @description The start date of the campaign.
+       */
+      startDate?: string;
+      /**
+       * Format: date-time
+       * @description The start date time for the campaign.
+       */
+      startDateTime?: string;
+      state?: components["schemas"]["DSPState"];
+      status?: components["schemas"]["DSPStatus"];
+      /** @description Open ended labels with a key value pair applied to the campaign */
+      tags?: components["schemas"]["DSPTag"][];
+      /** @description DealId associated with the campaign. */
+      targetedPGDealId?: string;
+      /** @description If the campaign is targeting an Amazon deal, the value will be true, and the campaign and ad group(s) will be read-only. */
+      targetsAmazonDeal?: boolean;
+    };
+    DSPForecastFlight: {
+      budget: components["schemas"]["DSPBudget"];
+      /** Format: date-time */
+      endDateTime: string;
+      /** @description The ID associated with the flight. */
+      flightId?: string;
+      /**
+       * Format: date-time
+       * @description The start date of the flight.
+       */
+      startDateTime: string;
+    };
+    DSPForecastTarget: {
+      /** @description A unique identifier for the ad group associated with the target. Only used for ad-group level targets. */
+      adGroupId?: string;
+      adProduct?: components["schemas"]["DSPAdProduct"];
+      bid?: components["schemas"]["DSPTargetBid"];
+      /** @description A unique identifier for the campaign associated with the target. Only used for campaign-level targets. */
+      campaignId?: string;
+      /**
+       * Format: date-time
+       * @description The date time the target was created.
+       */
+      creationDateTime?: string;
+      /** @description The global target identifier that manages this marketplace target. */
+      globalTargetId?: string;
+      /**
+       * Format: date-time
+       * @description The date time the target was last updated.
+       */
+      lastUpdatedDateTime?: string;
+      /** @description List of marketplace-specific configurations for a global target that enables overriding certain attributes at individual marketplace level. For example, if a global target is ENABLED but needs to be PAUSED in DE marketplace, you can specify: [{marketplace: DE, overrides: {state: PAUSED}}]. When a marketplace-specific override is not provided, the target's global value is applied to that marketplace. */
+      marketplaceConfigurations?: components["schemas"]["DSPMarketplaceTargetConfigurations"][];
+      marketplaceScope?: components["schemas"]["DSPMarketplaceScope"];
+      /**
+       * @description A list of country codes representing Amazon marketplaces
+       *     | Marketplace | Description |
+       *     | --- | --- |
+       *     | `AE` |  |
+       *     | `AU` |  |
+       *     | `BR` |  |
+       *     | `CA` |  |
+       *     | `DE` |  |
+       *     | `ES` |  |
+       *     | `FR` |  |
+       *     | `GB` |  |
+       *     | `IN` |  |
+       *     | `IT` |  |
+       *     | `JP` |  |
+       *     | `MX` |  |
+       *     | `NL` |  |
+       *     | `SA` |  |
+       *     | `SE` |  |
+       *     | `TR` |  |
+       *     | `US` |  |
+       */
+      marketplaces?: components["schemas"]["DSPMarketplace"][];
+      /** @description Indicates whether the target is negative or not. */
+      negative?: boolean;
+      state?: components["schemas"]["DSPState"];
+      status?: components["schemas"]["DSPStatus"];
+      /** @description Open ended labels with a key value pair applied to the target */
+      tags?: components["schemas"]["DSPTag"][];
+      targetDetails?: components["schemas"]["DSPTargetDetails"];
+      /** @description A unique identifier for the target. */
+      targetId?: string;
+      targetLevel?: components["schemas"]["DSPTargetLevel"];
+      targetType?: components["schemas"]["DSPTargetType"];
+    };
+    /** @description The forecast result of a specific flight. */
+    DSPFlightForecast: {
+      /** @description The forecasting curves of a flight based on different periodicities. */
+      curves?: components["schemas"]["DSPCurve"][];
+      deliverInFullConfidence?: components["schemas"]["DSPDeliverInFullConfidence"];
+      /** @description The flightId of the flight. */
+      flightId: string;
+      /**
+       * Format: date-time
+       * @description The endtime of the flight for forecasting.
+       */
+      forecastEndDateTime: string;
+      /**
+       * Format: date-time
+       * @description The starttime of the flight for forecasting.
+       */
+      forecastStartDateTime: string;
+      insights?: components["schemas"]["DSPFlightForecastInsights"];
+      /** @description The different metrics to measure the performance of the flight. */
+      metrics?: components["schemas"]["DSPForecastMetric"][];
+      /** @description The recommendation for replanning. */
+      replanning?: components["schemas"]["DSPReplanning"][];
+      /**
+       * Format: double
+       * @description The amount of money spend for this flight.
+       */
+      spend?: number;
+      totalBudget?: components["schemas"]["DSPMonetaryBudget"];
+      /** @description Warnings of the campaign forecast. */
+      warnings?: components["schemas"]["DSPWarning"][];
+    };
+    /**
+     * @description | SpendDimensionType | Description |
+     *     | --- | --- |
+     *     | `COMMITMENT` | Commitment Level Spend Detail |
+     *     | `ADVERTISER` | Advertiser Level Spend Detail |
+     *     | `CAMPAIGN` | Campaign Level Spend Detail |
+     *     | `DEAL` | Deal Level Spend Detail |
+     * @enum {string}
+     */
+    DSPSpendDimensionType: "ADVERTISER" | "CAMPAIGN" | "COMMITMENT" | "DEAL";
+    /**
+     * @description | SelectedForecastMetric | Description |
+     *     | --- | --- |
+     *     | `DC` | Delivery confidence. |
+     *     | `TAS` | Total available spend. |
+     *     | `AIMP` | Available impressions. |
+     *     | `AREA` | Available reach. |
+     *     | `EIMP` | Expected impressions. |
+     *     | `EREA` | Expected reach. |
+     *     | `CPC` | Cost per click. |
+     *     | `CPA` | Cost per action. |
+     *     | `CPM` | Cost per mille. |
+     *     | `ROAS` | Return on ad spend. |
+     *     | `CAS` | Capped available spend. |
+     *     | `IREA` | Incremental reach. |
+     * @enum {string}
+     */
+    DSPSelectedForecastMetric:
+      | "AIMP"
+      | "AREA"
+      | "CAS"
+      | "CPA"
+      | "CPC"
+      | "CPM"
+      | "DC"
+      | "EIMP"
+      | "EREA"
+      | "IREA"
+      | "ROAS"
+      | "TAS";
+    /**
+     * @description | AdProduct | Description |
+     *     | --- | --- |
+     *     | `AMAZON_DSP` |  |
+     * @enum {string}
+     */
+    DSPAdProduct: "AMAZON_DSP";
+    DSPAdGroupBid: {
+      /**
+       * Format: double
+       * @description The lower bound bid used for the ads in the ad group.
+       */
+      baseBid?: number;
+      currencyCode: components["schemas"]["DSPCurrencyCode"];
+      /**
+       * Format: double
+       * @description The max average bid that will be targeted on the ad group across all of the bids (a single bid could be lower or higher that this number).
+       */
+      maxAverageBid?: number;
+    };
+    DSPBudget: {
+      budgetType: components["schemas"]["DSPBudgetType"];
+      budgetValue: components["schemas"]["DSPBudgetValue"];
+      recurrenceTimePeriod: components["schemas"]["DSPRecurrence"];
+    };
+    /**
+     * @description | CreativeRotationType | Description |
+     *     | --- | --- |
+     *     | `RANDOM` |  |
+     *     | `WEIGHTED` |  |
+     * @enum {string}
+     */
+    DSPCreativeRotationType: "RANDOM" | "WEIGHTED";
+    DSPFee: {
+      /** @description Applies only to THIRD_PARTY_APPLIED_FEE. When set to true, third-party applied fees are are added on top of the total ad group budget spent amount in reports. */
+      addToBudgetSpentAmount?: boolean;
+      currencyCode: components["schemas"]["DSPCurrencyCode"];
+      feeType: components["schemas"]["DSPFeeType"];
+      /**
+       * Format: double
+       * @description The fee amount expressed as the feeValueType. AMAZON_AUDIENCE_FEE AND THIRD_PARTY_AUDIENCE_FEE is in the currency of the marketplace. All other CPM based fees are in the currency of the advertiser. For percentages, 100 represents 100%.
+       */
+      feeValue: number;
+      feeValueType: components["schemas"]["DSPFeeValueType"];
+      thirdPartyProvider?: components["schemas"]["DSPFeesThirdPartyProvider"];
+    };
+    DSPFrequency: {
+      /**
+       * Format: int32
+       * @description The maximum number of times an EventType is served per user. For ADSP ad group, maximum supported value is 500.
+       */
+      eventMaxCount: number;
+      frequencyTargetingSetting: components["schemas"]["DSPFrequencyTargetingSetting"];
+      /**
+       * Format: int32
+       * @description The value associated with the time and unit of time for this frequency cap.
+       */
+      timeCount?: number;
+      timeUnit?: components["schemas"]["DSPTimeUnit"];
+    };
+    /**
+     * @description | InventoryType | Description |
+     *     | --- | --- |
+     *     | `STANDARD_DISPLAY` |  |
+     *     | `AMAZON_MOBILE_DISPLAY` |  |
+     *     | `AAP_MOBILE_APP` |  |
+     *     | `DISPLAY` |  |
+     *     | `VIDEO` |  |
+     *     | `STREAMING_TV` |  |
+     *     | `ONLINE_VIDEO` |  |
+     *     | `AUDIO` | Audio ads that serve on streaming audio inventory. |
+     *     | `PODCAST` | Podcast ads that serve on streaming podcast inventory. |
+     *     | `AUDIO_AMAZON_DEAL` |  |
+     *     | `STREAMING_TV_AMAZON_DEAL` |  |
+     *     | `LIVE_EVENTS` | Real-time broadcast inventory (sports, concerts, award shows) with audience volatility and concentrated traffic patterns requiring specialized pacing algorithms and event-specific metadata handling.  |
+     * @enum {string}
+     */
+    DSPInventoryType:
+      | "AAP_MOBILE_APP"
+      | "AMAZON_MOBILE_DISPLAY"
+      | "AUDIO"
+      | "AUDIO_AMAZON_DEAL"
+      | "DISPLAY"
+      | "LIVE_EVENTS"
+      | "ONLINE_VIDEO"
+      | "PODCAST"
+      | "STANDARD_DISPLAY"
+      | "STREAMING_TV"
+      | "STREAMING_TV_AMAZON_DEAL"
+      | "VIDEO";
+    DSPMarketplaceAdGroupConfigurations: Record<string, never>;
+    /**
+     * @description | MarketplaceScope | Description |
+     *     | --- | --- |
+     *     | `SINGLE_MARKETPLACE` |  |
+     * @enum {string}
+     */
+    DSPMarketplaceScope: "SINGLE_MARKETPLACE";
+    /**
+     * @description A list of country codes representing Amazon marketplaces
+     *     | Marketplace | Description |
+     *     | --- | --- |
+     *     | `AE` |  |
+     *     | `AU` |  |
+     *     | `BR` |  |
+     *     | `CA` |  |
+     *     | `DE` |  |
+     *     | `ES` |  |
+     *     | `FR` |  |
+     *     | `GB` |  |
+     *     | `IN` |  |
+     *     | `IT` |  |
+     *     | `JP` |  |
+     *     | `MX` |  |
+     *     | `NL` |  |
+     *     | `SA` |  |
+     *     | `SE` |  |
+     *     | `TR` |  |
+     *     | `US` |  |
+     * @enum {string}
+     */
+    DSPMarketplace:
+      | "AE"
+      | "AU"
+      | "BR"
+      | "CA"
+      | "DE"
+      | "ES"
+      | "FR"
+      | "GB"
+      | "IN"
+      | "IT"
+      | "JP"
+      | "MX"
+      | "NL"
+      | "SA"
+      | "SE"
+      | "TR"
+      | "US";
+    DSPOptimization: {
+      bidStrategy?: components["schemas"]["DSPBidStrategy"];
+      budgetSettings?: components["schemas"]["DSPAdGroupBudgetSettings"];
+    };
+    DSPPacing: {
+      deliveryProfile?: components["schemas"]["DSPDeliveryProfile"];
+    };
+    /**
+     * @description The user defined state for the resource. For ADSP, campaign and ad group resources can only be created in the PAUSED state and must be updated to ENABLED to activate for delivery
+     *     | State | Description |
+     *     | --- | --- |
+     *     | `ENABLED` |  |
+     *     | `PAUSED` |  |
+     *     | `ARCHIVED` |  |
+     * @enum {string}
+     */
+    DSPState: "ARCHIVED" | "ENABLED" | "PAUSED";
+    DSPStatus: {
+      /** @description This is the list of reasons behind the delivery status. */
+      deliveryReasons?: components["schemas"]["DSPDeliveryReason"][];
+      deliveryStatus: components["schemas"]["DSPDeliveryStatus"];
+    };
+    DSPTag: {
+      /** @description A custom key value pair entered by the advertiser. */
+      key: string;
+      /** @description A custom key value pair entered by the advertiser. */
+      value: string;
+    };
+    DSPTargetingSettings: {
+      amazonViewability?: components["schemas"]["DSPAmazonViewability"];
+      automatedTargetingTactic?: components["schemas"]["DSPAutomatedTargetingTactic"];
+      defaultAudienceTargetingMatchType?: components["schemas"]["DSPDefaultAudienceTargetingMatchType"];
+      /** @description If set to true, creatives will only target supply where the content language matches the creative language. */
+      enableLanguageTargeting?: boolean;
+      siteLanguage?: components["schemas"]["DSPSiteLanguage"];
+      tacticsConvertersExclusionType?: components["schemas"]["DSPTacticsConvertersExclusionType"];
+      /** @description DealId to be targeted by the Ad Group being created. If you are creating an ad group targeting a programmatic guaranteed deal, the deal can be provided here. */
+      targetedPGDealId?: string;
+      timeZoneType?: components["schemas"]["DSPTimeZoneType"];
+      userLocationSignal?: components["schemas"]["DSPUserLocationSignal"];
+      videoCompletionTier?: components["schemas"]["DSPVideoCompletionTier"];
+    };
+    DSPAutoCreationSettings: Record<string, never>;
+    /**
+     * @description | CountryCode | Description |
+     *     | --- | --- |
+     *     | `AE` |  |
+     *     | `AT` |  |
+     *     | `AU` |  |
+     *     | `BE` |  |
+     *     | `BH` |  |
+     *     | `BR` |  |
+     *     | `CA` |  |
+     *     | `CH` |  |
+     *     | `DE` |  |
+     *     | `DK` |  |
+     *     | `EG` |  |
+     *     | `ES` |  |
+     *     | `FI` |  |
+     *     | `FR` |  |
+     *     | `GB` |  |
+     *     | `IE` |  |
+     *     | `IL` |  |
+     *     | `IN` |  |
+     *     | `IT` |  |
+     *     | `JO` |  |
+     *     | `JP` |  |
+     *     | `KW` |  |
+     *     | `LU` |  |
+     *     | `MA` |  |
+     *     | `MX` |  |
+     *     | `NL` |  |
+     *     | `NO` |  |
+     *     | `NZ` |  |
+     *     | `OM` |  |
+     *     | `QA` |  |
+     *     | `SA` |  |
+     *     | `SE` |  |
+     *     | `SG` |  |
+     *     | `TR` |  |
+     *     | `US` |  |
+     * @enum {string}
+     */
+    DSPCountryCode:
+      | "AE"
+      | "AT"
+      | "AU"
+      | "BE"
+      | "BH"
+      | "BR"
+      | "CA"
+      | "CH"
+      | "DE"
+      | "DK"
+      | "EG"
+      | "ES"
+      | "FI"
+      | "FR"
+      | "GB"
+      | "IE"
+      | "IL"
+      | "IN"
+      | "IT"
+      | "JO"
+      | "JP"
+      | "KW"
+      | "LU"
+      | "MA"
+      | "MX"
+      | "NL"
+      | "NO"
+      | "NZ"
+      | "OM"
+      | "QA"
+      | "SA"
+      | "SE"
+      | "SG"
+      | "TR"
+      | "US";
+    /** @description A tactic type paired with its compatible inventory type */
+    DSPTacticKey: Record<string, never>;
+    DSPCampaignFee: {
+      feeType: components["schemas"]["DSPCampaignFeeType"];
+      /**
+       * Format: double
+       * @description A service fee that is subtracted from the campaign budget as a percent of budget. This setting can’t be changed after an ad group has been added to a campaign.
+       */
+      feeValue: number;
+      feeValueType: components["schemas"]["DSPCampaignFeeValueType"];
+    };
+    DSPCampaignFlight: {
+      budget: components["schemas"]["DSPFlightBudget"];
+      /** Format: date-time */
+      endDateTime: string;
+      /** @description The ID associated with the flight. */
+      flightId?: string;
+      /** @description The name of the flight. */
+      name?: string;
+      /**
+       * Format: date-time
+       * @description The start date of the flight.
+       */
+      startDateTime: string;
+    };
+    /** @description Information about an ineligible tactic key and the reasons for ineligibility */
+    DSPIneligibleAutomatedTargetingTactic: Record<string, never>;
+    DSPMarketplaceCampaignConfigurations: Record<string, never>;
+    DSPCampaignOptimizations: {
+      bidSettings?: components["schemas"]["DSPBidSettings"];
+      budgetSettings?: components["schemas"]["DSPBudgetSettings"];
+      goalSettings?: components["schemas"]["DSPGoalSettings"];
+      /** @description Primary inventory type of the campaign for filtering KPIs and recommending tactics. */
+      primaryInventoryTypes?: components["schemas"]["DSPPrimaryInventoryType"][];
+    };
+    DSPTargetBid: Record<string, never>;
+    DSPMarketplaceTargetConfigurations: Record<string, never>;
+    DSPTargetDetails:
+      | {
+          keywordTarget: components["schemas"]["DSPKeywordTarget"];
+        }
+      | {
+          productTarget: components["schemas"]["DSPProductTarget"];
+        }
+      | {
+          productCategoryTarget: components["schemas"]["DSPProductCategoryTarget"];
+        }
+      | {
+          audienceTarget: components["schemas"]["DSPAudienceTarget"];
+        }
+      | {
+          locationTarget: components["schemas"]["DSPLocationTarget"];
+        }
+      | {
+          domainTarget: components["schemas"]["DSPDomainTarget"];
+        }
+      | {
+          appTarget: components["schemas"]["DSPAppTarget"];
+        }
+      | {
+          deviceTarget: components["schemas"]["DSPDeviceTarget"];
+        }
+      | {
+          dayPartTarget: components["schemas"]["DSPDayPartTarget"];
+        }
+      | {
+          contentCategoryTarget: components["schemas"]["DSPContentCategoryTarget"];
+        }
+      | {
+          contentGenreTarget: components["schemas"]["DSPContentGenreTarget"];
+        }
+      | {
+          contentRatingTarget: components["schemas"]["DSPContentRatingTarget"];
+        }
+      | {
+          brandSafetyTierTarget: components["schemas"]["DSPBrandSafetyTierTarget"];
+        }
+      | {
+          brandSafetyCategoryTarget: components["schemas"]["DSPBrandSafetyCategoryTarget"];
+        }
+      | {
+          inventorySourceTarget: components["schemas"]["DSPInventorySourceTarget"];
+        }
+      | {
+          adInitiationTarget: components["schemas"]["DSPAdInitiationTarget"];
+        }
+      | {
+          adPlayerSizeTarget: components["schemas"]["DSPAdPlayerSizeTarget"];
+        }
+      | {
+          videoAdFormatTarget: components["schemas"]["DSPVideoAdFormatTarget"];
+        }
+      | {
+          thirdPartyTarget: components["schemas"]["DSPThirdPartyTarget"];
+        }
+      | {
+          themeTarget: components["schemas"]["DSPThemeTarget"];
+        }
+      | {
+          contentInstreamPositionTarget: components["schemas"]["DSPContentInstreamPositionTarget"];
+        }
+      | {
+          contentOutstreamPositionTarget: components["schemas"]["DSPContentOutstreamPositionTarget"];
+        }
+      | {
+          videoContentDurationTarget: components["schemas"]["DSPVideoContentDurationTarget"];
+        }
+      | {
+          foldPositionTarget: components["schemas"]["DSPFoldPositionTarget"];
+        }
+      | {
+          nativeContentPositionTarget: components["schemas"]["DSPNativeContentPositionTarget"];
+        }
+      | {
+          placementTypeTarget: components["schemas"]["DSPPlacementTypeTarget"];
+        };
+    /**
+     * @description | TargetLevel | Description |
+     *     | --- | --- |
+     *     | `AD_GROUP` |  |
+     * @enum {string}
+     */
+    DSPTargetLevel: "AD_GROUP";
+    /**
+     * @description | TargetType | Description |
+     *     | --- | --- |
+     *     | `KEYWORD` |  |
+     *     | `PRODUCT` |  |
+     *     | `PRODUCT_CATEGORY` |  |
+     *     | `AUDIENCE` |  |
+     *     | `LOCATION` |  |
+     *     | `DOMAIN` |  |
+     *     | `APP` |  |
+     *     | `DEVICE` |  |
+     *     | `DAYPART` |  |
+     *     | `CONTENT_CATEGORY` |  |
+     *     | `CONTENT_GENRE` |  |
+     *     | `CONTENT_RATING` |  |
+     *     | `BRAND_SAFETY_TIER` |  |
+     *     | `BRAND_SAFETY_CATEGORY` |  |
+     *     | `INVENTORY_SOURCE` |  |
+     *     | `AD_INITIATION` |  |
+     *     | `AD_PLAYER_SIZE` |  |
+     *     | `VIDEO_AD_FORMAT` |  |
+     *     | `THIRD_PARTY` |  |
+     *     | `THEME` |  |
+     *     | `CONTENT_INSTREAM_POSITION` |  |
+     *     | `CONTENT_OUTSTREAM_POSITION` |  |
+     *     | `VIDEO_CONTENT_DURATION` |  |
+     *     | `FOLD_POSITION` |  |
+     *     | `NATIVE_CONTENT_POSITION` |  |
+     *     | `PLACEMENT_TYPE` |  |
+     * @enum {string}
+     */
+    DSPTargetType:
+      | "AD_INITIATION"
+      | "AD_PLAYER_SIZE"
+      | "APP"
+      | "AUDIENCE"
+      | "BRAND_SAFETY_CATEGORY"
+      | "BRAND_SAFETY_TIER"
+      | "CONTENT_CATEGORY"
+      | "CONTENT_GENRE"
+      | "CONTENT_INSTREAM_POSITION"
+      | "CONTENT_OUTSTREAM_POSITION"
+      | "CONTENT_RATING"
+      | "DAYPART"
+      | "DEVICE"
+      | "DOMAIN"
+      | "FOLD_POSITION"
+      | "INVENTORY_SOURCE"
+      | "KEYWORD"
+      | "LOCATION"
+      | "NATIVE_CONTENT_POSITION"
+      | "PLACEMENT_TYPE"
+      | "PRODUCT"
+      | "PRODUCT_CATEGORY"
+      | "THEME"
+      | "THIRD_PARTY"
+      | "VIDEO_AD_FORMAT"
+      | "VIDEO_CONTENT_DURATION";
+    /** @description The forecast curve of Bid/Spend vs the metric type based on periodicity. */
+    DSPCurve: {
+      focusPoint?: components["schemas"]["DSPPoint"][];
+      periodicity?: components["schemas"]["DSPForecastPeriodicity"];
+      points?: components["schemas"]["DSPPoint"][];
+    };
+    /** @description Description of how confident we delivery 100% of the ads for the specific metric. */
+    DSPDeliverInFullConfidence: {
+      value: components["schemas"]["DSPDeliverInFullConfidenceLevel"];
+    };
+    /** @description Collection of insights for a particular flight forecast. */
+    DSPFlightForecastInsights: {
+      /** @description Detailed insights explaining leading drivers of the flight forecast results, per entity (e.g. campaign or its line items). */
+      forecastExplainabilityInsights?: components["schemas"]["DSPForecastInsightsGroup"][];
+      /** @description Top factors affecting the forecast results, e.g. max bid, frequency cap, etc. */
+      topExplainabilityFactors?: components["schemas"]["DSPInsightFeature"][];
+    };
+    /** @description The forecast based on metric and periodicity. */
+    DSPForecastMetric: {
+      metric: components["schemas"]["DSPSelectedForecastMetric"];
+      periodicity?: components["schemas"]["DSPForecastPeriodicity"];
+      value: components["schemas"]["DSPForecastValue"];
+    };
+    /** @description Recommendation for replanning. */
+    DSPReplanning: {
+      content: string;
+      curves?: components["schemas"]["DSPCurve"][];
+      deliverInFullConfidence?: components["schemas"]["DSPDeliverInFullConfidence"];
+      metrics?: components["schemas"]["DSPForecastMetric"][];
+      scenarioFlight?: components["schemas"]["DSPForecastFlight"];
+      scenarioType?: string;
+      /**
+       * @description | SelectedForecastMetric | Description |
+       *     | --- | --- |
+       *     | `DC` | Delivery confidence. |
+       *     | `TAS` | Total available spend. |
+       *     | `AIMP` | Available impressions. |
+       *     | `AREA` | Available reach. |
+       *     | `EIMP` | Expected impressions. |
+       *     | `EREA` | Expected reach. |
+       *     | `CPC` | Cost per click. |
+       *     | `CPA` | Cost per action. |
+       *     | `CPM` | Cost per mille. |
+       *     | `ROAS` | Return on ad spend. |
+       *     | `CAS` | Capped available spend. |
+       *     | `IREA` | Incremental reach. |
+       */
+      selectedMetrics?: components["schemas"]["DSPSelectedForecastMetric"][];
+      title: string;
+    };
+    DSPMonetaryBudget: {
+      currencyCode: components["schemas"]["DSPCurrencyCode"];
+      /**
+       * Format: double
+       * @description The monetary amount of the budget cap in the given currency.
+       */
+      value: number;
+    };
+    /** @description The warning message of a forecast. */
+    DSPWarning: {
+      adGroupIds?: string[];
+      code: string;
+      message: string;
+      messageParameters?: string[];
+      /** Format: int32 */
+      warningLevel?: number;
+    };
+    /**
+     * @description | BudgetType | Description |
+     *     | --- | --- |
+     *     | `MONETARY` |  |
+     * @enum {string}
+     */
+    DSPBudgetType: "MONETARY";
+    DSPBudgetValue: {
+      monetaryBudgetValue: components["schemas"]["DSPMonetaryBudgetValue"];
+    };
+    /**
+     * @description | Recurrence | Description |
+     *     | --- | --- |
+     *     | `DAILY` |  |
+     *     | `MONTHLY` |  |
+     *     | `LIFETIME` |  |
+     * @enum {string}
+     */
+    DSPRecurrence: "DAILY" | "LIFETIME" | "MONTHLY";
+    /**
+     * @description | FeeType | Description |
+     *     | --- | --- |
+     *     | `AMAZON_DSP` | A service fee for using Amazon DSP and subtracted from the budget. This fee is applied as a percent of supply cost. |
+     *     | `AMAZON_AUDIENCE` | CPM fee for using Amazon audiences. |
+     *     | `THIRD_PARTY_AUDIENCE` | CPM fee for using a third party audience. |
+     *     | `OMNICHANNEL_METRICS` | Fee for using Amazon Omnichannel Metrics. |
+     *     | `THIRD_PARTY_APPLIED` | User added CPM fee for using third-party data to track CPM costs. This fee is applied as a percent of supply cost. |
+     *     | `THIRD_PARTY_TARGETING` | CPM fee for using targeting provided by a third-party data provider. |
+     *     | `MANAGED_SERVICE_FEE` | The percentage-based fee applied to the Supply Cost for Amazon programmatic managed service. |
+     * @enum {string}
+     */
+    DSPFeeType:
+      | "AMAZON_AUDIENCE"
+      | "AMAZON_DSP"
+      | "MANAGED_SERVICE_FEE"
+      | "OMNICHANNEL_METRICS"
+      | "THIRD_PARTY_APPLIED"
+      | "THIRD_PARTY_AUDIENCE"
+      | "THIRD_PARTY_TARGETING";
+    /**
+     * @description | FeeValueType | Description |
+     *     | --- | --- |
+     *     | `FIXED_CPM` | Charged based on a fixed CPM. The currency depends on the feeType. |
+     *     | `PERCENTAGE_OF_SUPPLY_COST` | Charged as a percent of supply (media) cost. Ranges from 0 to 1 where 0.15 represents 15%. |
+     *     | `PERCENTAGE_OF_BUDGET` | Subtracted from the campaign budget as a percent of budget |
+     * @enum {string}
+     */
+    DSPFeeValueType: "FIXED_CPM" | "PERCENTAGE_OF_BUDGET" | "PERCENTAGE_OF_SUPPLY_COST";
+    /**
+     * @description | FeesThirdPartyProvider | Description |
+     *     | --- | --- |
+     *     | `INTEGRAL_AD_SCIENCE` |  |
+     *     | `DOUBLE_VERIFY` |  |
+     *     | `DOUBLE_CLICK_CAMPAIGN_MANAGER` |  |
+     *     | `COM_SCORE` |  |
+     *     | `CPM_1` |  |
+     *     | `CPM_2` |  |
+     *     | `CPM_3` |  |
+     * @enum {string}
+     */
+    DSPFeesThirdPartyProvider:
+      | "COM_SCORE"
+      | "CPM_1"
+      | "CPM_2"
+      | "CPM_3"
+      | "DOUBLE_CLICK_CAMPAIGN_MANAGER"
+      | "DOUBLE_VERIFY"
+      | "INTEGRAL_AD_SCIENCE";
+    /**
+     * @description | FrequencyTargetingSetting | Description |
+     *     | --- | --- |
+     *     | `USER` | Control frequency an ad will be selected to a person. |
+     *     | `HOUSEHOLD` | Control frequency an ad will be selected across people within the same household. |
+     * @enum {string}
+     */
+    DSPFrequencyTargetingSetting: "HOUSEHOLD" | "USER";
+    /**
+     * @description | TimeUnit | Description |
+     *     | --- | --- |
+     *     | `DAYS` |  |
+     *     | `HOURS` |  |
+     *     | `MINUTES` |  |
+     * @enum {string}
+     */
+    DSPTimeUnit: "DAYS" | "HOURS" | "MINUTES";
+    /**
+     * @description | BidStrategy | Description |
+     *     | --- | --- |
+     *     | `SPEND_BUDGET_IN_FULL` | Prioritize spending full budget, while maximizing performance |
+     *     | `PRIORITIZE_KPI_TARGET` |  |
+     *     | `USE_CAMPAIGN_STRATEGY` |  |
+     * @enum {string}
+     */
+    DSPBidStrategy: "PRIORITIZE_KPI_TARGET" | "SPEND_BUDGET_IN_FULL" | "USE_CAMPAIGN_STRATEGY";
+    DSPAdGroupBudgetSettings: {
+      budgetAllocation?: components["schemas"]["DSPBudgetAllocation"];
+      /**
+       * Format: double
+       * @description Denotes the daily minimum spend on the ad group in local currency.
+       */
+      dailyMinSpendValue?: number;
+    };
+    /**
+     * @description | DeliveryProfile | Description |
+     *     | --- | --- |
+     *     | `EVEN` | Even pacing spends your budget consistently across the length of the campaign. |
+     *     | `PACE_AHEAD` | Pace Ahead can deliver up to 25% more than the daily Even pace targets. |
+     *     | `ASAP` | Makes your entire budget available to spend immediately. This is ideal for ad groups with limited inventory or when there's no requirement to spend throughout the length of the campaign.Warning: Selecting ASAP may result in your entire budget being spent immediately. |
+     * @enum {string}
+     */
+    DSPDeliveryProfile: "ASAP" | "EVEN" | "PACE_AHEAD";
+    /**
+     * @description | DeliveryReason | Description |
+     *     | --- | --- |
+     *     | `AD_CREATIVES_NOT_RUNNING` |  |
+     *     | `AD_GROUP_ARCHIVED` |  |
+     *     | `AD_GROUP_ENDED` |  |
+     *     | `AD_GROUP_INELIGIBLE_GOAL_KPI` | Indicates that the ad group is suspended because the campaign's goal KPI is not supported. |
+     *     | `AD_GROUP_MISSING_CONVERSION_TRACKING_SELECTIONS` | Indicates that the ad group is suspended because the campaign is missing conversion tracking selections. |
+     *     | `AD_GROUP_PAUSED` |  |
+     *     | `AD_GROUP_PENDING_START_DATE` |  |
+     *     | `AD_GROUP_POLICING_SUSPENDED` |  |
+     *     | `AD_GROUP_TOO_FEW_CONVERSION_TRACKING_SELECTIONS` | Indicates that the ad group is suspended because the campaign has an insufficient number of conversion tracking selections. |
+     *     | `AD_GROUP_TOO_MANY_CONVERSION_TRACKING_SELECTIONS` | Indicates that the ad group is suspended because the campaign exceeded the maximum number of conversion tracking selections. |
+     *     | `AD_GROUPS_NOT_RUNNING` |  |
+     *     | `AD_NOT_ASSOCIATED_WITH_AD_GROUP` |  |
+     *     | `AD_NOT_APPROVED_FOR_ALL_AD_GROUPS` |  |
+     *     | `AD_POLICING_PENDING_REVIEW` |  |
+     *     | `AD_POLICING_SUSPENDED` |  |
+     *     | `CAMPAIGN_ARCHIVED` |  |
+     *     | `CAMPAIGN_END_DATE_REACHED` |  |
+     *     | `CAMPAIGN_PAUSED` |  |
+     *     | `CAMPAIGN_PENDING_START_DATE` |  |
+     *     | `CAMPAIGN_POLICING_SUSPENDED` |  |
+     *     | `OTHER` |  |
+     * @enum {string}
+     */
+    DSPDeliveryReason:
+      | "AD_CREATIVES_NOT_RUNNING"
+      | "AD_GROUPS_NOT_RUNNING"
+      | "AD_GROUP_ARCHIVED"
+      | "AD_GROUP_ENDED"
+      | "AD_GROUP_INELIGIBLE_GOAL_KPI"
+      | "AD_GROUP_MISSING_CONVERSION_TRACKING_SELECTIONS"
+      | "AD_GROUP_PAUSED"
+      | "AD_GROUP_PENDING_START_DATE"
+      | "AD_GROUP_POLICING_SUSPENDED"
+      | "AD_GROUP_TOO_FEW_CONVERSION_TRACKING_SELECTIONS"
+      | "AD_GROUP_TOO_MANY_CONVERSION_TRACKING_SELECTIONS"
+      | "AD_NOT_APPROVED_FOR_ALL_AD_GROUPS"
+      | "AD_NOT_ASSOCIATED_WITH_AD_GROUP"
+      | "AD_POLICING_PENDING_REVIEW"
+      | "AD_POLICING_SUSPENDED"
+      | "CAMPAIGN_ARCHIVED"
+      | "CAMPAIGN_END_DATE_REACHED"
+      | "CAMPAIGN_PAUSED"
+      | "CAMPAIGN_PENDING_START_DATE"
+      | "CAMPAIGN_POLICING_SUSPENDED"
+      | "OTHER";
+    /**
+     * @description | DeliveryStatus | Description |
+     *     | --- | --- |
+     *     | `DELIVERING` | Represents the resource is delivering. For global, DELIVERING status indicates that the resource is delivering in all marketplaces |
+     *     | `NOT_DELIVERING` | Represents the resource is not delivering. For global, NOT_DELIVERING status indicates that the resource is NOT delivering in all marketplaces |
+     *     | `UNAVAILABLE` | Represents unavailable resource status. For global, UNAVAILABLE status indicates that the status is unavailable in all marketplaces |
+     *     | `LIMITED` | Represents partial delivery status, applicable to global resources that have different delivery status across marketplaces |
+     * @enum {string}
+     */
+    DSPDeliveryStatus: "DELIVERING" | "LIMITED" | "NOT_DELIVERING" | "UNAVAILABLE";
+    DSPAmazonViewability: {
+      /** @description Must be false if viewabilityTier is set to ALL_TIERS. You can set to true to include impressions that can not be measured when a viewabilityTier other than ALL_TIERS is selected. We recommend setting to false if high viewability is your goal. */
+      includeUnmeasurableImpressions: boolean;
+      viewabilityTier: components["schemas"]["DSPViewabilityTier"];
+    };
+    /**
+     * @description | AutomatedTargetingTactic | Description |
+     *     | --- | --- |
+     *     | `REMARKETING` | Ad Group Tactic (P+) that reaches shoppers who have viewed a product detail page, searched for your product, or visited your homepage |
+     *     | `RETENTION` | Ad Group Tactic (P+) that reaches shoppers who have purchased your product |
+     *     | `PROSPECTING` | Ad Group Tactic (B+) that reaches consumers who are highly likely to show interest and engage with your brand or product |
+     *     | `CUSTOMER_ACQUISITION` | Ad Group Tactic (P+) that reaches shoppers who are similar to past purchasers |
+     *     | `AWARENESS` | Ad Group tactic (Complete TV) that indicates that this line item drives awareness to your selected audience on publisher streaming TV for the linked deal while fulfilling your commitment. |
+     *     | `SEARCH` |  |
+     *     | `MAXIMIZE_PERFORMANCE` | Ad Group Tactic (P+) that reaches shoppers who are similar to past shoppers who viewed a product detail page |
+     * @enum {string}
+     */
+    DSPAutomatedTargetingTactic:
+      | "AWARENESS"
+      | "CUSTOMER_ACQUISITION"
+      | "MAXIMIZE_PERFORMANCE"
+      | "PROSPECTING"
+      | "REMARKETING"
+      | "RETENTION"
+      | "SEARCH";
+    /**
+     * @description Match type for audience targeting inclusion groups, if any. You can enhance your ad group’s reach to consumers with similar shopping, streaming, and browsing behaviors or interests as your selected audiences across all inventory sources, regardless of the presence of ad identifiers. Only applicable at the adGroup level, rather than at individual audience level. (Default: SIMILAR). Note, SIMILAR is not applicable to certain advertised product categories, [see here](https://advertising.amazon.com/help/GX8G7HNDS5RBX3EF) for more information.
+     *     | DefaultAudienceTargetingMatchType | Description |
+     *     | --- | --- |
+     *     | `SIMILAR` | Reach more audiences who are similar to your included audiences. |
+     *     | `EXACT` | Target the exact audiences specified in the ad group audience targeting. |
+     * @enum {string}
+     */
+    DSPDefaultAudienceTargetingMatchType: "EXACT" | "SIMILAR";
+    /**
+     * @description | SiteLanguage | Description |
+     *     | --- | --- |
+     *     | `AR` |  |
+     *     | `BN` |  |
+     *     | `CS` |  |
+     *     | `DA` |  |
+     *     | `DE` |  |
+     *     | `EN` |  |
+     *     | `ES` |  |
+     *     | `FI` |  |
+     *     | `FR` |  |
+     *     | `GU` |  |
+     *     | `HI` |  |
+     *     | `IT` |  |
+     *     | `JA` |  |
+     *     | `KN` |  |
+     *     | `ML` |  |
+     *     | `MR` |  |
+     *     | `NL` |  |
+     *     | `NO` |  |
+     *     | `PL` |  |
+     *     | `PT` |  |
+     *     | `PA` |  |
+     *     | `SV` |  |
+     *     | `TA` |  |
+     *     | `TE` |  |
+     *     | `TR` |  |
+     *     | `ZH` |  |
+     *     | `OTHER` |  |
+     * @enum {string}
+     */
+    DSPSiteLanguage:
+      | "AR"
+      | "BN"
+      | "CS"
+      | "DA"
+      | "DE"
+      | "EN"
+      | "ES"
+      | "FI"
+      | "FR"
+      | "GU"
+      | "HI"
+      | "IT"
+      | "JA"
+      | "KN"
+      | "ML"
+      | "MR"
+      | "NL"
+      | "NO"
+      | "OTHER"
+      | "PA"
+      | "PL"
+      | "PT"
+      | "SV"
+      | "TA"
+      | "TE"
+      | "TR"
+      | "ZH";
+    /**
+     * @description | TacticsConvertersExclusionType | Description |
+     *     | --- | --- |
+     *     | `NO_EXCLUSION` |  |
+     *     | `RECENT_CONVERTERS` |  |
+     * @enum {string}
+     */
+    DSPTacticsConvertersExclusionType: "NO_EXCLUSION" | "RECENT_CONVERTERS";
+    /**
+     * @description | TimeZoneType | Description |
+     *     | --- | --- |
+     *     | `VIEWER` |  |
+     *     | `ADVERTISER_REGION` |  |
+     * @enum {string}
+     */
+    DSPTimeZoneType: "ADVERTISER_REGION" | "VIEWER";
+    /**
+     * @description | UserLocationSignal | Description |
+     *     | --- | --- |
+     *     | `CURRENT` |  |
+     *     | `MULTIPLE_SIGNALS` |  |
+     * @enum {string}
+     */
+    DSPUserLocationSignal: "CURRENT" | "MULTIPLE_SIGNALS";
+    /**
+     * @description | VideoCompletionTier | Description |
+     *     | --- | --- |
+     *     | `ALL_TIERS` |  |
+     *     | `GREATER_THAN_10_PERCENT` |  |
+     *     | `GREATER_THAN_20_PERCENT` |  |
+     *     | `GREATER_THAN_30_PERCENT` |  |
+     *     | `GREATER_THAN_40_PERCENT` |  |
+     *     | `GREATER_THAN_50_PERCENT` |  |
+     *     | `GREATER_THAN_60_PERCENT` |  |
+     *     | `GREATER_THAN_70_PERCENT` |  |
+     *     | `GREATER_THAN_80_PERCENT` |  |
+     *     | `GREATER_THAN_90_PERCENT` |  |
+     * @enum {string}
+     */
+    DSPVideoCompletionTier:
+      | "ALL_TIERS"
+      | "GREATER_THAN_10_PERCENT"
+      | "GREATER_THAN_20_PERCENT"
+      | "GREATER_THAN_30_PERCENT"
+      | "GREATER_THAN_40_PERCENT"
+      | "GREATER_THAN_50_PERCENT"
+      | "GREATER_THAN_60_PERCENT"
+      | "GREATER_THAN_70_PERCENT"
+      | "GREATER_THAN_80_PERCENT"
+      | "GREATER_THAN_90_PERCENT";
+    /**
+     * @description | CampaignFeeType | Description |
+     *     | --- | --- |
+     *     | `AGENCY` | A service fee that is subtracted from the campaign budget as a percent of budget. |
+     * @enum {string}
+     */
+    DSPCampaignFeeType: "AGENCY";
+    /**
+     * @description | CampaignFeeValueType | Description |
+     *     | --- | --- |
+     *     | `PERCENTAGE_OF_BUDGET` | Subtracted from the campaign budget as a percent of budget |
+     * @enum {string}
+     */
+    DSPCampaignFeeValueType: "PERCENTAGE_OF_BUDGET";
+    DSPFlightBudget: {
+      budgetType: components["schemas"]["DSPBudgetType"];
+      budgetValue: components["schemas"]["DSPBudgetValue"];
+    };
+    DSPBidSettings: {
+      bidStrategy?: components["schemas"]["DSPBidStrategy"];
+    };
+    DSPBudgetSettings: {
+      budgetAllocation?: components["schemas"]["DSPBudgetAllocation"];
+      flightBudgetRolloverStrategy?: components["schemas"]["DSPRolloverStrategy"];
+    };
+    DSPGoalSettings: {
+      currencyCode?: components["schemas"]["DSPCurrencyCode"];
+      goal: components["schemas"]["DSPGoal"];
+      kpi?: components["schemas"]["DSPKPI"];
+      /**
+       * Format: double
+       * @description The value of the KPI that the campaign is working to optimize.
+       */
+      kpiValue?: number;
+    };
+    /**
+     * @description | PrimaryInventoryType | Description |
+     *     | --- | --- |
+     *     | `DISPLAY` |  |
+     *     | `VIDEO_OLV` |  |
+     *     | `VIDEO_STV` |  |
+     *     | `AUDIO` |  |
+     * @enum {string}
+     */
+    DSPPrimaryInventoryType: "AUDIO" | "DISPLAY" | "VIDEO_OLV" | "VIDEO_STV";
+    /** @description Targets a specific customer search term. */
+    DSPKeywordTarget: {
+      /** @description The customer search term or text to target */
+      keyword: string;
+      matchType: components["schemas"]["DSPKeywordMatchType"];
+    };
+    /** @description Targets a specific product. */
+    DSPProductTarget: {
+      matchType: components["schemas"]["DSPProductMatchType"];
+      product: components["schemas"]["DSPProductValue"];
+      productIdType: components["schemas"]["DSPProductIdType"];
+    };
+    /** @description Targets a specific customer search term. */
+    DSPProductCategoryTarget: {
+      productCategoryRefinement: components["schemas"]["DSPProductCategoryRefinementValue"];
+    };
+    /** @description Target based on a specified audience ID. */
+    DSPAudienceTarget: {
+      acrossGroupOperator?: components["schemas"]["DSPAcrossGroupOperator"];
+      audienceId: components["schemas"]["DSPMarketplaceStringValue"];
+      /** @description The string identifying a group of audiences. Only numbers formatted as strings are accepted (e.g. '1'). To add audiences to a new group, choose any string not currently being used on this ad group. To add audiences to an existing group, use the existing groupId from this ad group. You may specify up to 10 include groups and 1 exclude group. */
+      groupId?: string;
+      inGroupOperator?: components["schemas"]["DSPInGroupOperator"];
+    };
+    /** @description Target based on geographic location. */
+    DSPLocationTarget: {
+      /** @description The ID of the geographic location to target. */
+      locationId: string;
+    };
+    /** @description Target based on a specified domain. */
+    DSPDomainTarget: {
+      domainTargetDetails: components["schemas"]["DSPDomainTargetDetails"];
+      domainTargetType: components["schemas"]["DSPDomainTargetTypes"];
+    };
+    /** @description Target based on user application. */
+    DSPAppTarget: {
+      /** @description The app identifier being targeted. */
+      appId: string;
+      appType: components["schemas"]["DSPAppType"];
+    };
+    /** @description Target based on user device. */
+    DSPDeviceTarget: {
+      deviceOrientation?: components["schemas"]["DSPDeviceOrientation"];
+      deviceType: components["schemas"]["DSPDeviceType"];
+      mobileDevice?: components["schemas"]["DSPMobileDevice"];
+      mobileEnvironment?: components["schemas"]["DSPMobileEnvironment"];
+      mobileOs?: components["schemas"]["DSPMobileOs"];
+    };
+    /** @description Target based on time of day. */
+    DSPDayPartTarget: {
+      dayOfWeek: components["schemas"]["DSPDayOfWeek"];
+      timeOfDay: components["schemas"]["DSPTimeOfDay"];
+    };
+    /** @description Target based on the category of content being viewed. */
+    DSPContentCategoryTarget: {
+      /** @description The content category being targeted. */
+      contentCategoryId: string;
+    };
+    /** @description Target based on the genre of content being viewed. */
+    DSPContentGenreTarget: {
+      contentGenre: components["schemas"]["DSPContentGenre"];
+    };
+    /** @description Target based on the rating of content being viewed. */
+    DSPContentRatingTarget: {
+      contentRatingType: components["schemas"]["DSPContentRatingTypes"];
+      contentRatingTypeDetails: components["schemas"]["DSPContentRating"];
+    };
+    /** @description Target based on the brand suitability risk levels of content being viewed. */
+    DSPBrandSafetyTierTarget: {
+      brandSafetyTier: components["schemas"]["DSPBrandSafetyTier"];
+    };
+    /** @description Target based on, if any, the classifications of unsuitable contexts that may pose a risk to a brand's reputation of content being viewed. */
+    DSPBrandSafetyCategoryTarget: {
+      brandSafetyCategory: components["schemas"]["DSPBrandSafetyCategory"];
+    };
+    /** @description Target based on the source of the inventory. */
+    DSPInventorySourceTarget: {
+      inventorySourceId: components["schemas"]["DSPMarketplaceStringValue"];
+      inventorySourceType: components["schemas"]["DSPInventorySourceType"];
+    };
+    /** @description Target based on how the video ad will be started. */
+    DSPAdInitiationTarget: {
+      videoInitiationType: components["schemas"]["DSPVideoInitiationType"];
+    };
+    /** @description Target based on the size of the ad player. */
+    DSPAdPlayerSizeTarget: {
+      adPlayerSize: components["schemas"]["DSPAdPlayerSize"];
+    };
+    /** @description Target based on the video ad format. */
+    DSPVideoAdFormatTarget: {
+      videoAdFormat: components["schemas"]["DSPVideoAdFormat"];
+    };
+    DSPThirdPartyTarget: {
+      thirdPartyTargetDetails: components["schemas"]["DSPThirdPartyTargetDetails"];
+      thirdPartyTargetType: components["schemas"]["DSPThirdPartyTargetType"];
+    };
+    /** @description Theme targets let advertisers select high-performing targets based on a common theme. */
+    DSPThemeTarget: {
+      matchType: components["schemas"]["DSPThemeMatchType"];
+    };
+    /** @description Targets ads in the specified content instream position */
+    DSPContentInstreamPositionTarget: {
+      instreamPosition: components["schemas"]["DSPContentInstreamPosition"];
+    };
+    /** @description Targets ads in the specified content outstream position */
+    DSPContentOutstreamPositionTarget: {
+      outstreamPosition: components["schemas"]["DSPContentOutstreamPosition"];
+    };
+    /** @description Targets ads to a specific video content duration */
+    DSPVideoContentDurationTarget: {
+      duration: components["schemas"]["DSPVideoContentDuration"];
+    };
+    /** @description Targets ads in the specified fold position */
+    DSPFoldPositionTarget: {
+      foldPosition: components["schemas"]["DSPFoldPosition"];
+    };
+    /** @description Targets ads to a specific native content position */
+    DSPNativeContentPositionTarget: {
+      nativePosition: components["schemas"]["DSPNativeContentPosition"];
+    };
+    /** @description Target based on the placement type. */
+    DSPPlacementTypeTarget: {
+      placementType: components["schemas"]["DSPPlacementType"];
+    };
+    DSPPoint: {
+      pointType?: string;
+      x: components["schemas"]["DSPXPoint"];
+      y?: components["schemas"]["DSPYPoint"][];
+    };
+    /**
+     * @description | ForecastPeriodicity | Description |
+     *     | --- | --- |
+     *     | `DAILY` | Forecast results are generated and presented for each individual day. |
+     *     | `LIFETIME` | Forecast results represent the total performance over the remaining entire campaign duration. |
+     *     | `MONTHLY` | Forecast results are aggregated and presented for each calendar month. |
+     *     | `WEEKLY` | Forecast results are aggregated and presented for each calendar week. |
+     * @enum {string}
+     */
+    DSPForecastPeriodicity: "DAILY" | "LIFETIME" | "MONTHLY" | "WEEKLY";
+    /**
+     * @description | DeliverInFullConfidenceLevel | Description |
+     *     | --- | --- |
+     *     | `HIGH` | There is a high level of confidence that the campaign or flight will fully deliver its planned budget or impressions. |
+     *     | `MEDIUM` | There is a moderate level of confidence that the campaign or flight will fully deliver its planned budget or impressions. |
+     *     | `LOW` | There is a low level of confidence that the campaign or flight will fully deliver its planned budget or impressions. |
+     *     | `UNAVAILABLE` | Confidence level cannot be determined due to insufficient or missing data. |
+     * @enum {string}
+     */
+    DSPDeliverInFullConfidenceLevel: "HIGH" | "LOW" | "MEDIUM" | "UNAVAILABLE";
+    /** @description Insights for leading drivers of forecast results for a specific entity, e.g. campaign frequency cap, line item max bid. */
+    DSPForecastInsightsGroup: {
+      /** @description The names of audience deals attached to the entity, that are newly created and may not be accurately incorporated into the forecast. */
+      coldStartDealNames?: string[];
+      /** @description The names of audience segments attached to the entity, that are newly created and may not be accurately incorporated into the forecast. */
+      coldStartSegmentNames?: string[];
+      /** @description The display name for the entity this insight is for, e.g. campaign/line item display name. */
+      displayName: string;
+      groupType: components["schemas"]["DSPRecommendedObjectType"];
+      /** @description The features corresponding to this group of insights, e.g. array of line item max bid, campaign frequency cap, etc. */
+      insightsFeatures: components["schemas"]["DSPInsightFeature"][];
+      /** @description The unique identifier for the entity this group of insights refers to, e.g. line item ID, campaign ID, etc. */
+      tag: string;
+    };
+    /**
+     * @description | InsightFeature | Description |
+     *     | --- | --- |
+     *     | `LINE_ITEM_FREQUENCY_CAP` | Insight associated with line item having restrictive frequency cap setting. |
+     *     | `LINE_ITEM_MAX_BID` | Insight associated with line item having inadequate max bid setting. |
+     *     | `LINE_ITEM_SIMILAR_AUDIENCES` | Insight associated with line item not presently reaching similar audiences. |
+     *     | `LINE_ITEM_COLD_START_DEALS` | Insight associated with line item having newly created deals present. |
+     *     | `LINE_ITEM_COLD_START_SEGMENTS` | Insight associated with line item having newly created behavioral segments present. |
+     *     | `LINE_ITEM_NARROW_SEGMENTS` | Insight associated with line item having narrowly targeted behavioral segments present. |
+     *     | `LINE_ITEM_LARGE_TARGETING` | Insight associated with line item having an excessive amount of behavioral segments targeted. |
+     *     | `LINE_ITEM_UNSUPPORTED_KEYWORD_TARGETING` | Insight associated with line item having unsupported keyword targeting settings present. |
+     *     | `LINE_ITEM_UNSUPPORTED_CONTEXTUAL_TARGETING` | Insight associated with line item having unsupported contextual targeting settings present. |
+     *     | `LINE_ITEM_GEO_TARGETING` | Insight associated with line item having restrictive geo-targeting present. |
+     *     | `LINE_ITEM_TOO_FAR_IN_FUTURE` | Insight associated with line item having end date too far in the future. |
+     *     | `LINE_ITEM_DOMAINLIST_TARGETING` | Insight associated with line item having restrictive domain list targeting. |
+     *     | `LINE_ITEM_APPBLOCKING_TARGETING` | Insight associated with line item having restrictive app blocking targeting. |
+     *     | `LINE_ITEM_MOBILE_DEVICES_TARGETING` | Insight associated with line item having restrictive mobile device targeting. |
+     *     | `LINE_ITEM_CONTEXTUAL_TARGETING` | Insight associated with line item having restrictive contextual targeting. |
+     *     | `CAMPAIGN_FREQUENCY_CAP` | Insight associated with restrictive campaign frequency cap setting. |
+     * @enum {string}
+     */
+    DSPInsightFeature:
+      | "CAMPAIGN_FREQUENCY_CAP"
+      | "LINE_ITEM_APPBLOCKING_TARGETING"
+      | "LINE_ITEM_COLD_START_DEALS"
+      | "LINE_ITEM_COLD_START_SEGMENTS"
+      | "LINE_ITEM_CONTEXTUAL_TARGETING"
+      | "LINE_ITEM_DOMAINLIST_TARGETING"
+      | "LINE_ITEM_FREQUENCY_CAP"
+      | "LINE_ITEM_GEO_TARGETING"
+      | "LINE_ITEM_LARGE_TARGETING"
+      | "LINE_ITEM_MAX_BID"
+      | "LINE_ITEM_MOBILE_DEVICES_TARGETING"
+      | "LINE_ITEM_NARROW_SEGMENTS"
+      | "LINE_ITEM_SIMILAR_AUDIENCES"
+      | "LINE_ITEM_TOO_FAR_IN_FUTURE"
+      | "LINE_ITEM_UNSUPPORTED_CONTEXTUAL_TARGETING"
+      | "LINE_ITEM_UNSUPPORTED_KEYWORD_TARGETING";
+    DSPForecastValue: {
+      /** Format: double */
+      high: number;
+      /** Format: double */
+      low: number;
+      /** Format: double */
+      mean: number;
+    };
+    DSPMonetaryBudgetValue: {
+      monetaryBudget?: components["schemas"]["DSPMonetaryBudget"];
+    };
+    /**
+     * @description | BudgetAllocation | Description |
+     *     | --- | --- |
+     *     | `AUTO` |  |
+     *     | `MANUAL` |  |
+     * @enum {string}
+     */
+    DSPBudgetAllocation: "AUTO" | "MANUAL";
+    /**
+     * @description | ViewabilityTier | Description |
+     *     | --- | --- |
+     *     | `ALL_TIERS` |  |
+     *     | `LESS_THAN_40_PERCENT` |  |
+     *     | `GREATER_THAN_40_PERCENT` |  |
+     *     | `GREATER_THAN_50_PERCENT` |  |
+     *     | `GREATER_THAN_60_PERCENT` |  |
+     *     | `GREATER_THAN_70_PERCENT` |  |
+     * @enum {string}
+     */
+    DSPViewabilityTier:
+      | "ALL_TIERS"
+      | "GREATER_THAN_40_PERCENT"
+      | "GREATER_THAN_50_PERCENT"
+      | "GREATER_THAN_60_PERCENT"
+      | "GREATER_THAN_70_PERCENT"
+      | "LESS_THAN_40_PERCENT";
+    /**
+     * @description | RolloverStrategy | Description |
+     *     | --- | --- |
+     *     | `NO_ROLLOVER` | Do not rollover flight budgets. |
+     *     | `PRIOR_BUDGET_ROLLOVER` | Rollover prior flight unused budget. |
+     *     | `CUMULATIVE_BUDGET_ROLLOVER` | Rollover cumulative unused budget. |
+     * @enum {string}
+     */
+    DSPRolloverStrategy: "CUMULATIVE_BUDGET_ROLLOVER" | "NO_ROLLOVER" | "PRIOR_BUDGET_ROLLOVER";
+    /**
+     * @description | Goal | Description |
+     *     | --- | --- |
+     *     | `AWARENESS` | Indicates a goal of driving awareness. |
+     *     | `CONSIDERATION` | Indicates a goal of driving consideration. |
+     *     | `CONVERSIONS` | Indicates a goal of driving conversions. |
+     * @enum {string}
+     */
+    DSPGoal: "AWARENESS" | "CONSIDERATION" | "CONVERSIONS";
+    /**
+     * @description | KPI | Description |
+     *     | --- | --- |
+     *     | `CLICK_THROUGH_RATE` | Indicates a goal of driving clickthrough rate. |
+     *     | `COMBINED_RETURN_ON_AD_SPEND` | Deprecated. Please use ROAS_COMBINED. |
+     *     | `COST_PER_ACTION` | Deprecated. Please use COST_PER_CONVERSION_OFF_AMAZON. |
+     *     | `COST_PER_CLICK` | Indicates a goal of driving improved cost per click. |
+     *     | `COST_PER_CONVERSION_OFF_AMAZON` | Indicates a goal of driving improved cost per conversion off Amazon. |
+     *     | `COST_PER_DETAIL_PAGE_VIEW` | Indicates a goal of driving improved cost per detail page view. |
+     *     | `COST_PER_FIRST_APP_OPEN` | Indicates a goal of improved cost per first app open. |
+     *     | `COST_PER_INSTALL` | Indicates a goal of driving improved cost per app install. |
+     *     | `COST_PER_SIGN_UP` | Indicates a goal of driving improved cost per sign up. |
+     *     | `COST_PER_VIDEO_COMPLETION` | Indicates a goal of driving improved cost per video completion. |
+     *     | `DETAIL_PAGE_VIEW_RATE` | Indicates a goal of driving improved detail page view rate. |
+     *     | `FREQUENCY_AVERAGE` | Indicates a goal of driving to a target frequency. |
+     *     | `REACH` | Indicates a goal of driving improved reach. |
+     *     | `RETURN_ON_AD_SPEND` | Deprecated. Please use ROAS_PROMOTED. |
+     *     | `ROAS` | Indicates a goal of driving improved return of ad spend. |
+     *     | `ROAS_COMBINED` | Indicates a goal of driving improved return of ad spend (combined). |
+     *     | `ROAS_PROMOTED` | Indicates a goal of driving improved return of ad spend (promoted). |
+     *     | `TOTAL_RETURN_ON_AD_SPEND` | Deprecated. Please use ROAS. |
+     *     | `VIDEO_COMPLETION_RATE` | Indicates a goal of driving improved video completion rate. |
+     * @enum {string}
+     */
+    DSPKPI:
+      | "CLICK_THROUGH_RATE"
+      | "COMBINED_RETURN_ON_AD_SPEND"
+      | "COST_PER_ACTION"
+      | "COST_PER_CLICK"
+      | "COST_PER_CONVERSION_OFF_AMAZON"
+      | "COST_PER_DETAIL_PAGE_VIEW"
+      | "COST_PER_FIRST_APP_OPEN"
+      | "COST_PER_INSTALL"
+      | "COST_PER_SIGN_UP"
+      | "COST_PER_VIDEO_COMPLETION"
+      | "DETAIL_PAGE_VIEW_RATE"
+      | "FREQUENCY_AVERAGE"
+      | "REACH"
+      | "RETURN_ON_AD_SPEND"
+      | "ROAS"
+      | "ROAS_COMBINED"
+      | "ROAS_PROMOTED"
+      | "TOTAL_RETURN_ON_AD_SPEND"
+      | "VIDEO_COMPLETION_RATE";
+    /**
+     * @description | KeywordMatchType | Description |
+     *     | --- | --- |
+     *     | `BROAD` | Broad match search terms. This expands matching on user intent beyond PHRASE.  |
+     * @enum {string}
+     */
+    DSPKeywordMatchType: "BROAD";
+    /**
+     * @description | ProductMatchType | Description |
+     *     | --- | --- |
+     *     | `PRODUCT_EXACT` | Products exactly matching the specified product. |
+     * @enum {string}
+     */
+    DSPProductMatchType: "PRODUCT_EXACT";
+    DSPProductValue: {
+      /** @description The product ids at specific marketplace level. Either the product id or the marketplace settings should always be specified */
+      marketplaceSettings?: components["schemas"]["DSPProductMarketplaceSetting"][];
+      /** @description The product identifier. Either the product id or the marketplace settings should always be specified */
+      productId?: string;
+    };
+    /**
+     * @description | ProductIdType | Description |
+     *     | --- | --- |
+     *     | `ASIN` | ASIN identifier type. |
+     * @enum {string}
+     */
+    DSPProductIdType: "ASIN";
+    DSPProductCategoryRefinementValue: {
+      productCategoryRefinement?: components["schemas"]["DSPProductCategoryRefinement"];
+    };
+    /**
+     * @description | AcrossGroupOperator | Description |
+     *     | --- | --- |
+     *     | `ANY` |  |
+     *     | `ALL` |  |
+     * @enum {string}
+     */
+    DSPAcrossGroupOperator: "ALL" | "ANY";
+    DSPMarketplaceStringValue: {
+      /** @description The default value. Either the default value or the marketplace settings should always be specified */
+      defaultValue?: string;
+    };
+    /**
+     * @description | InGroupOperator | Description |
+     *     | --- | --- |
+     *     | `ANY` |  |
+     *     | `ALL` |  |
+     * @enum {string}
+     */
+    DSPInGroupOperator: "ALL" | "ANY";
+    DSPDomainTargetDetails:
+      | {
+          domainListTarget: components["schemas"]["DSPDomainListTarget"];
+        }
+      | {
+          domainNameTarget: components["schemas"]["DSPDomainNameTarget"];
+        }
+      | {
+          domainFileTarget: components["schemas"]["DSPDomainFileTarget"];
+        }
+      | {
+          advertiserDomainList: components["schemas"]["DSPAdvertiserDomainList"];
+        };
+    /**
+     * @description | DomainTargetTypes | Description |
+     *     | --- | --- |
+     *     | `DOMAIN_LIST` |  |
+     *     | `DOMAIN_NAME` |  |
+     *     | `DOMAIN_FILE` |  |
+     *     | `ADVERTISER_DOMAIN_LIST` |  |
+     * @enum {string}
+     */
+    DSPDomainTargetTypes: "ADVERTISER_DOMAIN_LIST" | "DOMAIN_FILE" | "DOMAIN_LIST" | "DOMAIN_NAME";
+    /**
+     * @description | AppType | Description |
+     *     | --- | --- |
+     *     | `MOBILE` |  |
+     *     | `STREAMING_TV` |  |
+     * @enum {string}
+     */
+    DSPAppType: "MOBILE" | "STREAMING_TV";
+    /**
+     * @description | DeviceOrientation | Description |
+     *     | --- | --- |
+     *     | `PORTRAIT` |  |
+     *     | `LANDSCAPE` |  |
+     * @enum {string}
+     */
+    DSPDeviceOrientation: "LANDSCAPE" | "PORTRAIT";
+    /**
+     * @description | DeviceType | Description |
+     *     | --- | --- |
+     *     | `DESKTOP` |  |
+     *     | `MOBILE` |  |
+     *     | `CONNECTED_TV` |  |
+     *     | `CONNECTED_DEVICE` | Connected TV, smart speakers. Used for audio AdGroup type. |
+     * @enum {string}
+     */
+    DSPDeviceType: "CONNECTED_DEVICE" | "CONNECTED_TV" | "DESKTOP" | "MOBILE";
+    /**
+     * @description | MobileDevice | Description |
+     *     | --- | --- |
+     *     | `IPHONE` |  |
+     *     | `IPAD` |  |
+     *     | `ANDROID` |  |
+     *     | `KINDLE_FIRE` |  |
+     *     | `KINDLE_FIRE_HD` |  |
+     * @enum {string}
+     */
+    DSPMobileDevice: "ANDROID" | "IPAD" | "IPHONE" | "KINDLE_FIRE" | "KINDLE_FIRE_HD";
+    /**
+     * @description | MobileEnvironment | Description |
+     *     | --- | --- |
+     *     | `WEB` |  |
+     *     | `APP` |  |
+     * @enum {string}
+     */
+    DSPMobileEnvironment: "APP" | "WEB";
+    /**
+     * @description | MobileOs | Description |
+     *     | --- | --- |
+     *     | `IOS` |  |
+     *     | `ANDROID` |  |
+     * @enum {string}
+     */
+    DSPMobileOs: "ANDROID" | "IOS";
+    /**
+     * @description | DayOfWeek | Description |
+     *     | --- | --- |
+     *     | `MONDAY` |  |
+     *     | `TUESDAY` |  |
+     *     | `WEDNESDAY` |  |
+     *     | `THURSDAY` |  |
+     *     | `FRIDAY` |  |
+     *     | `SATURDAY` |  |
+     *     | `SUNDAY` |  |
+     * @enum {string}
+     */
+    DSPDayOfWeek:
+      | "FRIDAY"
+      | "MONDAY"
+      | "SATURDAY"
+      | "SUNDAY"
+      | "THURSDAY"
+      | "TUESDAY"
+      | "WEDNESDAY";
+    DSPTimeOfDay: {
+      /** @description Selected end time */
+      endTime: string;
+      /** @description Selected start time */
+      startTime: string;
+    };
+    /**
+     * @description | ContentGenre | Description |
+     *     | --- | --- |
+     *     | `ACTION` |  |
+     *     | `ADVENTURE` |  |
+     *     | `ALTERNATIVE_ROCK` |  |
+     *     | `ANIMATION` |  |
+     *     | `ARTS` |  |
+     *     | `BIOGRAPHY` |  |
+     *     | `BLUES` |  |
+     *     | `BUSINESS` |  |
+     *     | `CHILDRENS_MUSIC` |  |
+     *     | `CHRISTIAN_GOSPEL` |  |
+     *     | `CHRISTMAS_HOLIDAY` |  |
+     *     | `CLASSIC_ROCK` |  |
+     *     | `CLASSICAL` |  |
+     *     | `COMEDY` |  |
+     *     | `COLLEGE_RADIO` |  |
+     *     | `COUNTRY` |  |
+     *     | `CRIME` |  |
+     *     | `DANCE_DJ` |  |
+     *     | `DOCUMENTARY` |  |
+     *     | `DRAMA` |  |
+     *     | `EASY_LISTENING` |  |
+     *     | `EDUCATION` |  |
+     *     | `EUROPEAN_POP_FOLK` |  |
+     *     | `FAMILY` |  |
+     *     | `FANTASY` |  |
+     *     | `FICTION` |  |
+     *     | `FILM_NOIR` |  |
+     *     | `FOLK` |  |
+     *     | `FRENCH_VARIETY` |  |
+     *     | `GAME_SHOW` |  |
+     *     | `GERMAN_ROCK_POP` |  |
+     *     | `GOVERNMENT` |  |
+     *     | `HARD_ROCK_METAL` |  |
+     *     | `HEALTH_AND_FITNESS` |  |
+     *     | `HISTORY` |  |
+     *     | `HORROR` |  |
+     *     | `INTERNATIONAL` |  |
+     *     | `JAPANESE` |  |
+     *     | `JAZZ` |  |
+     *     | `KIDS_AND_FAMILY` |  |
+     *     | `LATIN_MUSIC` |  |
+     *     | `LEISURE` |  |
+     *     | `MISCELLANEOUS` |  |
+     *     | `MUSIC` |  |
+     *     | `MUSICAL` |  |
+     *     | `MUSICALS_CABARET` |  |
+     *     | `MYSTERY` |  |
+     *     | `NEWS` |  |
+     *     | `NEW_AGE` |  |
+     *     | `OLDIES_ADULT_STANDARDS` |  |
+     *     | `POP` |  |
+     *     | `RAP_HIP_HOP` |  |
+     *     | `RB` |  |
+     *     | `REALITY_TV` |  |
+     *     | `REGGAE_ISLAND` |  |
+     *     | `RELIGION_AND_SPIRITUALITY` |  |
+     *     | `ROCK` |  |
+     *     | `ROMANCE` |  |
+     *     | `SCIENCE` |  |
+     *     | `SCIENCE_FICTION` |  |
+     *     | `SHORT` |  |
+     *     | `SOCIETY_AND_CULTURE` |  |
+     *     | `SOUNDTRACKS` |  |
+     *     | `SPORT` |  |
+     *     | `SUPER_HERO` |  |
+     *     | `TALK_SHOW` |  |
+     *     | `TECHNOLOGY` |  |
+     *     | `THRILLER` |  |
+     *     | `TRUE_CRIME` |  |
+     *     | `TV_AND_FILM` |  |
+     *     | `WAR` |  |
+     *     | `WESTERN` |  |
+     *     | `GENRE_NOT_AVAILABLE` |  |
+     * @enum {string}
+     */
+    DSPContentGenre:
+      | "ACTION"
+      | "ADVENTURE"
+      | "ALTERNATIVE_ROCK"
+      | "ANIMATION"
+      | "ARTS"
+      | "BIOGRAPHY"
+      | "BLUES"
+      | "BUSINESS"
+      | "CHILDRENS_MUSIC"
+      | "CHRISTIAN_GOSPEL"
+      | "CHRISTMAS_HOLIDAY"
+      | "CLASSICAL"
+      | "CLASSIC_ROCK"
+      | "COLLEGE_RADIO"
+      | "COMEDY"
+      | "COUNTRY"
+      | "CRIME"
+      | "DANCE_DJ"
+      | "DOCUMENTARY"
+      | "DRAMA"
+      | "EASY_LISTENING"
+      | "EDUCATION"
+      | "EUROPEAN_POP_FOLK"
+      | "FAMILY"
+      | "FANTASY"
+      | "FICTION"
+      | "FILM_NOIR"
+      | "FOLK"
+      | "FRENCH_VARIETY"
+      | "GAME_SHOW"
+      | "GENRE_NOT_AVAILABLE"
+      | "GERMAN_ROCK_POP"
+      | "GOVERNMENT"
+      | "HARD_ROCK_METAL"
+      | "HEALTH_AND_FITNESS"
+      | "HISTORY"
+      | "HORROR"
+      | "INTERNATIONAL"
+      | "JAPANESE"
+      | "JAZZ"
+      | "KIDS_AND_FAMILY"
+      | "LATIN_MUSIC"
+      | "LEISURE"
+      | "MISCELLANEOUS"
+      | "MUSIC"
+      | "MUSICAL"
+      | "MUSICALS_CABARET"
+      | "MYSTERY"
+      | "NEWS"
+      | "NEW_AGE"
+      | "OLDIES_ADULT_STANDARDS"
+      | "POP"
+      | "RAP_HIP_HOP"
+      | "RB"
+      | "REALITY_TV"
+      | "REGGAE_ISLAND"
+      | "RELIGION_AND_SPIRITUALITY"
+      | "ROCK"
+      | "ROMANCE"
+      | "SCIENCE"
+      | "SCIENCE_FICTION"
+      | "SHORT"
+      | "SOCIETY_AND_CULTURE"
+      | "SOUNDTRACKS"
+      | "SPORT"
+      | "SUPER_HERO"
+      | "TALK_SHOW"
+      | "TECHNOLOGY"
+      | "THRILLER"
+      | "TRUE_CRIME"
+      | "TV_AND_FILM"
+      | "WAR"
+      | "WESTERN";
+    /**
+     * @description | ContentRatingTypes | Description |
+     *     | --- | --- |
+     *     | `DSP_CONTENT_RATING` |  |
+     *     | `TWITCH_CONTENT_RATING` |  |
+     * @enum {string}
+     */
+    DSPContentRatingTypes: "DSP_CONTENT_RATING" | "TWITCH_CONTENT_RATING";
+    DSPContentRating:
+      | {
+          dspContentRating: components["schemas"]["DSPDspContentRating"];
+        }
+      | {
+          twitchContentRating: components["schemas"]["DSPTwitchContentRating"];
+        };
+    /**
+     * @description | BrandSafetyTier | Description |
+     *     | --- | --- |
+     *     | `EXPANDED` | Tier that maximizes reach across all ad-eligible inventory. This tier is suitable for brands with a greater risk tolerance for advertising alongside a wide variety of content. |
+     *     | `STANDARD` | Tier that offers broad reach and is the default for all campaigns. This tier is suitable for brands with a moderate risk tolerance for advertising alongside a wide variety of content. |
+     *     | `RESTRICTIVE` | Tier that prioritizes brand suitability over reach. This tier is suitable for brands with the lowest risk tolerance for advertising alongside a wide variety of content. |
+     * @enum {string}
+     */
+    DSPBrandSafetyTier: "EXPANDED" | "RESTRICTIVE" | "STANDARD";
+    /**
+     * @description | BrandSafetyCategory | Description |
+     *     | --- | --- |
+     *     | `ACCIDENTS_DISASTERS_AND_TRAGEDIES` | Content related to sensitive tragedies, man-made or natural disasters and calamities, including content that graphically depicts such events. |
+     *     | `WEAPONS` | Content related to realistic weapons, such as firearms, bladed weapons, bows and arrows, and military equipment and vehicles. |
+     *     | `GAMBLING` | Content related to gambling, such as instructions on how to play, accessories like home poker sets, and industry news. It does not include online gambling services where money or items of value can be wagered in exchange for the opportunity to win prizes with real-world value. |
+     *     | `BLOOD_GORE_VIOLENCE` | Content in a fictional entertainment context that contains blood, gore or acts of violence. |
+     *     | `CRIME` | Content related to crime, such as law enforcement efforts, criminal behavior, crime prevention, and justice systems. |
+     *     | `SHOCK_AND_HORROR` | Content that may cause shock, fear, or unease. It includes supernatural, disturbing elements, and horror themes. |
+     *     | `PROFANITY` | Content containing excessive use of strong language, explicit, offensive, or sensitive words and expressions. |
+     *     | `HIGHLY_DEBATED_SOCIAL_ISSUES` | Content related to highly debated and politically or socially divisive topics, which is reasonably likely to cause offense to the average person with opposing views. |
+     *     | `POLITICS` | Content related to politics, governments, political science, political parties, elections, and political issues of public debate. |
+     *     | `SEXUAL_REFERENCES_AND_SUGGESTIVE` | Content that contains references or depictions that are mildly provocative, or mature in nature, whether real, simulated or animated. It does not contain sexually explicit content. |
+     *     | `ALCOHOL_AND_RELATED_PRODUCTS` | Content related to the general consumption of alcohol. |
+     *     | `TOBACCO_AND_RELATED_PRODUCTS` | Content related to the smoking of cigarettes, cigars, pipe tobacco, smokeless tobacco, and other tobacco or nicotine products. |
+     *     | `DRUG_REFERENCES_OR_USE` | Content related to substance use, drugs, and other mind-altering substances. |
+     *     | `RELIGIOUS_CONTENT` | Content related to religious and spiritual beliefs. |
+     *     | `UNRATED_MEDIA_CONTENT` | Content that has not been classified. This covers games on Twitch not rated by ESRB. |
+     * @enum {string}
+     */
+    DSPBrandSafetyCategory:
+      | "ACCIDENTS_DISASTERS_AND_TRAGEDIES"
+      | "ALCOHOL_AND_RELATED_PRODUCTS"
+      | "BLOOD_GORE_VIOLENCE"
+      | "CRIME"
+      | "DRUG_REFERENCES_OR_USE"
+      | "GAMBLING"
+      | "HIGHLY_DEBATED_SOCIAL_ISSUES"
+      | "POLITICS"
+      | "PROFANITY"
+      | "RELIGIOUS_CONTENT"
+      | "SEXUAL_REFERENCES_AND_SUGGESTIVE"
+      | "SHOCK_AND_HORROR"
+      | "TOBACCO_AND_RELATED_PRODUCTS"
+      | "UNRATED_MEDIA_CONTENT"
+      | "WEAPONS";
+    /**
+     * @description | InventorySourceType | Description |
+     *     | --- | --- |
+     *     | `AMAZON` |  |
+     *     | `APD` |  |
+     *     | `THIRD_PARTY_EXCHANGE` |  |
+     *     | `DEAL` |  |
+     *     | `INVENTORY_GROUP` |  |
+     * @enum {string}
+     */
+    DSPInventorySourceType: "AMAZON" | "APD" | "DEAL" | "INVENTORY_GROUP" | "THIRD_PARTY_EXCHANGE";
+    /**
+     * @description | VideoInitiationType | Description |
+     *     | --- | --- |
+     *     | `USER_INITIATED` |  |
+     *     | `AUTOPLAY` |  |
+     *     | `UNKNOWN` |  |
+     * @enum {string}
+     */
+    DSPVideoInitiationType: "AUTOPLAY" | "UNKNOWN" | "USER_INITIATED";
+    /**
+     * @description | AdPlayerSize | Description |
+     *     | --- | --- |
+     *     | `SMALL` |  |
+     *     | `MEDIUM` |  |
+     *     | `LARGE` |  |
+     *     | `UNKNOWN` |  |
+     * @enum {string}
+     */
+    DSPAdPlayerSize: "LARGE" | "MEDIUM" | "SMALL" | "UNKNOWN";
+    /**
+     * @description | VideoAdFormat | Description |
+     *     | --- | --- |
+     *     | `INSTREAM` |  |
+     *     | `FULL_EPISODE_PLAYER` |  |
+     *     | `OUTSTREAM` |  |
+     * @enum {string}
+     */
+    DSPVideoAdFormat: "FULL_EPISODE_PLAYER" | "INSTREAM" | "OUTSTREAM";
+    DSPThirdPartyTargetDetails:
+      | {
+          doubleVerifyFraudInvalidTraffic: components["schemas"]["DSPDoubleVerifyFraudInvalidTraffic"];
+        }
+      | {
+          doubleVerifyStandardDisplayBrandSafety: components["schemas"]["DSPDoubleVerifyStandardDisplayBrandSafety"];
+        }
+      | {
+          doubleVerifyBrandSafety: components["schemas"]["DSPDoubleVerifyBrandSafety"];
+        }
+      | {
+          doubleVerifyViewability: components["schemas"]["DSPDoubleVerifyViewability"];
+        }
+      | {
+          doubleVerifyAuthenticBrandSafety: components["schemas"]["DSPDoubleVerifyAuthenticBrandSafety"];
+        }
+      | {
+          doubleVerifyCustomContextualSegmentId: components["schemas"]["DSPDoubleVerifyCustomContextualSegmentId"];
+        }
+      | {
+          doubleVerifyAuthenticAttention: components["schemas"]["DSPDoubleVerifyAuthenticAttention"];
+        }
+      | {
+          integralAdScienceFraudInvalidTraffic: components["schemas"]["DSPIntegralAdScienceFraudInvalidTraffic"];
+        }
+      | {
+          integralAdScienceBrandSafety: components["schemas"]["DSPIntegralAdScienceBrandSafety"];
+        }
+      | {
+          integralAdScienceViewability: components["schemas"]["DSPIntegralAdScienceViewability"];
+        }
+      | {
+          integralAdScienceContextualTargeting: components["schemas"]["DSPIntegralAdScienceContextualTargeting"];
+        }
+      | {
+          integralAdScienceContextualAvoidance: components["schemas"]["DSPIntegralAdScienceContextualAvoidance"];
+        }
+      | {
+          pixalateFraudInvalidTraffic: components["schemas"]["DSPPixalateFraudInvalidTraffic"];
+        }
+      | {
+          integralAdScienceQualitySync: components["schemas"]["DSPIntegralAdScienceQualitySync"];
+        }
+      | {
+          newsGuardBrandGuardTrustedNewsTargeting: components["schemas"]["DSPNewsGuardBrandGuardTrustedNewsTargeting"];
+        }
+      | {
+          newsGuardBrandGuardMisinformationSafety: components["schemas"]["DSPNewsGuardBrandGuardMisinformationSafety"];
+        };
+    /**
+     * @description | ThirdPartyTargetType | Description |
+     *     | --- | --- |
+     *     | `DOUBLE_VERIFY_FRAUD_INVALID_TRAFFIC` |  |
+     *     | `DOUBLE_VERIFY_STANDARD_DISPLAY_BRAND_SAFETY` |  |
+     *     | `DOUBLE_VERIFY_BRAND_SAFETY` |  |
+     *     | `DOUBLE_VERIFY_VIEWABILITY` |  |
+     *     | `DOUBLE_VERIFY_AUTHENTIC_BRAND_SAFETY` |  |
+     *     | `DOUBLE_VERIFY_CUSTOM_CONTEXTUAL_SEGMENT_ID` |  |
+     *     | `DOUBLE_VERIFY_AUTHENTIC_ATTENTION` |  |
+     *     | `INTEGRAL_AD_SCIENCE_FRAUD_INVALID_TRAFFIC` |  |
+     *     | `INTEGRAL_AD_SCIENCE_BRAND_SAFETY` |  |
+     *     | `INTEGRAL_AD_SCIENCE_VIEWABILITY` |  |
+     *     | `INTEGRAL_AD_SCIENCE_CONTEXTUAL_TARGETING` |  |
+     *     | `INTEGRAL_AD_SCIENCE_CONTEXTUAL_AVOIDANCE` |  |
+     *     | `PIXALATE_FRAUD_INVALID_TRAFFIC` |  |
+     *     | `INTEGRAL_AD_SCIENCE_QUALITY_SYNC` | Integral Ad Science (IAS) Quality |
+     *     | `NEWS_GUARD_BRAND_GUARD_TRUSTED_NEWS_TARGETING` | NewsGuard Trusted News Targeting. NewsGuard is a rating system for news and information websites. |
+     *     | `NEWS_GUARD_BRAND_GUARD_MISINFORMATION_SAFETY` | NewsGuard Misinformation Safety. NewsGuard is a rating system for news and information websites. |
+     * @enum {string}
+     */
+    DSPThirdPartyTargetType:
+      | "DOUBLE_VERIFY_AUTHENTIC_ATTENTION"
+      | "DOUBLE_VERIFY_AUTHENTIC_BRAND_SAFETY"
+      | "DOUBLE_VERIFY_BRAND_SAFETY"
+      | "DOUBLE_VERIFY_CUSTOM_CONTEXTUAL_SEGMENT_ID"
+      | "DOUBLE_VERIFY_FRAUD_INVALID_TRAFFIC"
+      | "DOUBLE_VERIFY_STANDARD_DISPLAY_BRAND_SAFETY"
+      | "DOUBLE_VERIFY_VIEWABILITY"
+      | "INTEGRAL_AD_SCIENCE_BRAND_SAFETY"
+      | "INTEGRAL_AD_SCIENCE_CONTEXTUAL_AVOIDANCE"
+      | "INTEGRAL_AD_SCIENCE_CONTEXTUAL_TARGETING"
+      | "INTEGRAL_AD_SCIENCE_FRAUD_INVALID_TRAFFIC"
+      | "INTEGRAL_AD_SCIENCE_QUALITY_SYNC"
+      | "INTEGRAL_AD_SCIENCE_VIEWABILITY"
+      | "NEWS_GUARD_BRAND_GUARD_MISINFORMATION_SAFETY"
+      | "NEWS_GUARD_BRAND_GUARD_TRUSTED_NEWS_TARGETING"
+      | "PIXALATE_FRAUD_INVALID_TRAFFIC";
+    /**
+     * @description | ThemeMatchType | Description |
+     *     | --- | --- |
+     *     | `PRODUCTS_SIMILAR_TO_ADVERTISED_PRODUCTS` | Products similar to products advertised as part of the ad group. |
+     * @enum {string}
+     */
+    DSPThemeMatchType: "PRODUCTS_SIMILAR_TO_ADVERTISED_PRODUCTS";
+    /**
+     * @description | ContentInstreamPosition | Description |
+     *     | --- | --- |
+     *     | `PRE_ROLL` |  |
+     *     | `MID_ROLL` |  |
+     *     | `POST_ROLL` |  |
+     *     | `UNKNOWN` |  |
+     * @enum {string}
+     */
+    DSPContentInstreamPosition: "MID_ROLL" | "POST_ROLL" | "PRE_ROLL" | "UNKNOWN";
+    /**
+     * @description | ContentOutstreamPosition | Description |
+     *     | --- | --- |
+     *     | `STANDALONE` |  |
+     *     | `ACCOMPANYING_CONTENT` |  |
+     *     | `INTERSTITIAL` |  |
+     *     | `UNKNOWN` |  |
+     * @enum {string}
+     */
+    DSPContentOutstreamPosition: "ACCOMPANYING_CONTENT" | "INTERSTITIAL" | "STANDALONE" | "UNKNOWN";
+    /**
+     * @description | VideoContentDuration | Description |
+     *     | --- | --- |
+     *     | `SHORT` | Video content duration of 0 to 10 minutes |
+     *     | `MEDIUM` | Video content duration of 10 to 30 minutes |
+     *     | `LONG` | Video content duration of 30 to 60 minutes |
+     *     | `EXTENDED` | Video content duration of 60+ minutes |
+     *     | `UNKNOWN` | Unknown video content duration |
+     * @enum {string}
+     */
+    DSPVideoContentDuration: "EXTENDED" | "LONG" | "MEDIUM" | "SHORT" | "UNKNOWN";
+    /**
+     * @description | FoldPosition | Description |
+     *     | --- | --- |
+     *     | `ABOVE_THE_FOLD` |  |
+     *     | `BELOW_THE_FOLD` |  |
+     *     | `UNKNOWN` |  |
+     * @enum {string}
+     */
+    DSPFoldPosition: "ABOVE_THE_FOLD" | "BELOW_THE_FOLD" | "UNKNOWN";
+    /**
+     * @description | NativeContentPosition | Description |
+     *     | --- | --- |
+     *     | `IN_ARTICLE` | Positioned in the atomic unit of the content (e.g., in the article page or single image page). |
+     *     | `IN_FEED` | Positioned in the feed of content (e.g., as an item inside the organic feed, grid, listing, carousel, etc.). |
+     *     | `PERIPHERAL` | Positioned utside the core content (e.g., in the ads section on the right rail, as a banner-style placement near the content, etc.). |
+     *     | `RECOMMENDATION` | Positioned in recommendation widget; most commonly presented below article content. |
+     *     | `UNKNOWN` | Unknown position. |
+     * @enum {string}
+     */
+    DSPNativeContentPosition:
+      | "IN_ARTICLE"
+      | "IN_FEED"
+      | "PERIPHERAL"
+      | "RECOMMENDATION"
+      | "UNKNOWN";
+    /**
+     * @description | PlacementType | Description |
+     *     | --- | --- |
+     *     | `REWARDED` | Rewarded video type where users receive rewards from the publisher for watching ads. |
+     * @enum {string}
+     */
+    DSPPlacementType: "REWARDED";
+    /** @description The label and value on X axis of the curve. */
+    DSPXPoint: {
+      label: components["schemas"]["DSPPointLabel"];
+      /** Format: double */
+      value: number;
+    };
+    /** @description The label and value on Y axis of the curve. */
+    DSPYPoint: {
+      label: components["schemas"]["DSPPointLabel"];
+      value: components["schemas"]["DSPForecastValue"];
+    };
+    /**
+     * @description | RecommendedObjectType | Description |
+     *     | --- | --- |
+     *     | `CAMPAIGN` | An advertising campaign that groups together ad groups and ads |
+     *     | `ADGROUP` | A group of ads within a campaign that share similar targeting |
+     * @enum {string}
+     */
+    DSPRecommendedObjectType: "ADGROUP" | "CAMPAIGN";
+    DSPProductMarketplaceSetting: {
+      marketplace: components["schemas"]["DSPMarketplace"];
+      /** @description The product id applicable at the specified marketplace. */
+      productId: string;
+    };
+    DSPProductCategoryRefinement: {
+      /** @description The product category ID to target. */
+      productCategoryId?: string;
+    };
+    /** @description Targets domains based on an existing domain list. */
+    DSPDomainListTarget: {
+      /** @description The ID of the domain list to target. */
+      domainListId: string;
+    };
+    /** @description Targets domains based on URL. */
+    DSPDomainNameTarget: {
+      /** @description The URL of the domain to target. */
+      domainName: string;
+    };
+    /** @description Targets domains based on list provided via file upload. */
+    DSPDomainFileTarget: {
+      /** @description The ID associated to the domain file to target. Read-only and created based on the inputted domainFileKey. */
+      domainFileId?: string;
+      /** @description The S3 key of the uploaded file which can be obtained from the file upload policy endpoint. A max of 10 files may be associated to one ad group. */
+      domainFileKey?: string;
+      /** @description The name of the file. */
+      domainFileName?: string;
+      /** @description The file containing the domains uploaded. It expires in one hour. */
+      domainFileUrl?: string;
+    };
+    /** @description Targets domains based on list inherited from the advertiser. */
+    DSPAdvertiserDomainList: {
+      /** @description Set to TRUE to inherit domain list from advertiser. */
+      inheritFromAdvertiser: boolean;
+    };
+    DSPDspContentRating: {
+      dspContentRating: components["schemas"]["DSPDspContentRatingEnum"];
+    };
+    DSPTwitchContentRating: {
+      twitchContentRating: components["schemas"]["DSPTwitchContentRatingEnum"];
+    };
+    DSPDoubleVerifyFraudInvalidTraffic: {
+      /** @description Set to true to block applications and sites with insufficient historical fraud and invalid traffic statistics. This will not be applicable if ALLOW_ALL is chosen. */
+      blockAppAndSites?: boolean;
+      excludeAppsAndSites?: components["schemas"]["DSPExcludeAppsAndSitesType"];
+      /** @description Set to true to exclude impressions delivered to devices identified to be fraudulent or invalid. */
+      excludeImpressions?: boolean;
+    };
+    DSPDoubleVerifyStandardDisplayBrandSafety: {
+      /** @description A list of content categories to exclude from targeting. */
+      contentCategories?: components["schemas"]["DSPDVBrandSafetyContentCategoryType"][];
+      contentCategoriesWithRisk?: components["schemas"]["DSPDVBrandSafetyContentCategoriesWithRiskMap"][];
+      /** @description Set to true to exclude unknown content. */
+      unknownContent?: boolean;
+    };
+    DSPDoubleVerifyBrandSafety: {
+      /** @description A list of app age ratings to be used for excluding apps. For example, TEENS_12_PLUS will only exclude apps with content rated for everyone ages 12 and over. UNKNOWN will exclude apps with content unrated or unknown to Double Verify. */
+      appAgeRating?: components["schemas"]["DSPDVBrandSafetyAppAgeRatingType"][];
+      appStarRating?: components["schemas"]["DSPDVBrandSafetyAppStarRatingType"];
+      /** @description A list of content categories to exclude from targeting. */
+      contentCategories?: components["schemas"]["DSPDVBrandSafetyContentCategoryType"][];
+      contentCategoriesWithRisk?: components["schemas"]["DSPDVBrandSafetyContentCategoriesWithRiskMap"][];
+      /** @description Set to true to exclude unofficial apps or apps with insufficient user ratings (<100 lifetime). */
+      excludeAppsWithInsufficientRating?: boolean;
+      /** @description Set to true to exclude unknown content. */
+      unknownContent?: boolean;
+    };
+    DSPDoubleVerifyViewability: {
+      averageCompletionAndFullyViewableRateTargeting?: components["schemas"]["DSPAverageCompletionAndFullyViewableRateTargetingType"];
+      brandExposureViewabilityTargeting?: components["schemas"]["DSPBrandExposureViewabilityTargetingType"];
+      /** @description Set to true to include impressions where impressions can't be measured. */
+      includeUnmeasurableImpressions?: boolean;
+      mrcViewabilityTargeting?: components["schemas"]["DSPMrcViewabilityTargetingType"];
+    };
+    DSPDoubleVerifyAuthenticBrandSafety: {
+      doubleVerifySegmentId?: string;
+    };
+    DSPDoubleVerifyCustomContextualSegmentId: {
+      doubleVerifySegmentId?: string;
+    };
+    DSPDoubleVerifyAuthenticAttention: {
+      /** @description One omni-channel segment that is informed by data from all DV campaigns to help avoid serving ads on generally poor performing apps and domains. */
+      universalAttention: boolean;
+    };
+    DSPIntegralAdScienceFraudInvalidTraffic: {
+      targetSetting?: components["schemas"]["DSPIASFraudInvalidTrafficType"];
+    };
+    DSPIntegralAdScienceBrandSafety: {
+      /** @description Set to true to exclude content that Integral Ad Science is not able to rate. */
+      excludeContent?: boolean;
+      iasBrandSafetyAdult?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+      iasBrandSafetyAlcohol?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+      iasBrandSafetyGambling?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+      iasBrandSafetyHateSpeech?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+      iasBrandSafetyIllegalDownloads?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+      iasBrandSafetyIllegalDrugs?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+      iasBrandSafetyOffensiveLanguage?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+      iasBrandSafetyViolence?: components["schemas"]["DSPIASBrandSafetyLevelType"];
+    };
+    /** @description The IAS viewability standard. */
+    DSPIntegralAdScienceViewability: {
+      standard: components["schemas"]["DSPIASViewabilityStandardType"];
+      viewabilityTargeting?: components["schemas"]["DSPViewabilityTierType"];
+    };
+    DSPIntegralAdScienceContextualTargeting: {
+      /** @description The unique identifier of the IAS contextual topical targeting segment */
+      topicalSegments?: string[];
+      /** @description The unique identifier of the IAS contextual vertical targeting segment */
+      verticalSegments?: string[];
+    };
+    DSPIntegralAdScienceContextualAvoidance: {
+      /** @description The unique identifier of the IAS contextual avoidance segment */
+      avoidanceSegments?: string[];
+    };
+    DSPPixalateFraudInvalidTraffic: {
+      /** @description Set to true to exclude traffic from Apps and Domains identified to be fraudulent or invalid. */
+      excludeAppsAndDomains?: boolean;
+      /** @description Set to true to exclude traffic from IPV4 and IPV6 addresses and user agents identified to be fraudulent or invalid. */
+      excludeIpAddressAndUserAgents?: boolean;
+      /** @description Set to true to exclude traffic from OTT and Mobile devices identified to be fraudulent or invalid. */
+      excludeOttAndMobileDevices?: boolean;
+      /** @description Set to true to exlude traffic from Apps that have been removed from the google play and apple app stores in the last 6 months. */
+      excludeRemovedAppsFromAppStores?: boolean;
+    };
+    DSPIntegralAdScienceQualitySync: {
+      segmentId?: string;
+    };
+    /** @description Only applicable for Web supply. */
+    DSPNewsGuardBrandGuardTrustedNewsTargeting: {
+      /** @description The unique identifiers of trusted news targets */
+      targetingList?: components["schemas"]["DSPNewsGuardBrandGuardTrustedNewsTargetingType"][];
+    };
+    DSPNewsGuardBrandGuardMisinformationSafety: {
+      /** @description The unique identifiers of misinformation targets */
+      avoidanceList?: components["schemas"]["DSPNewsGuardBrandGuardMisinformationSafetyType"][];
+    };
+    /**
+     * @description | PointLabel | Description |
+     *     | --- | --- |
+     *     | `SPEND` | Spend in monetary value. |
+     *     | `BID` | Bid in monetary value. |
+     *     | `DC` | Delivery confidence. |
+     *     | `TAS` | Total available spend. |
+     *     | `AIMP` | Available impressions. |
+     *     | `AREA` | Available reach. |
+     *     | `EIMP` | Expected impressions. |
+     *     | `EREA` | Expected reach. |
+     *     | `CPC` | Cost per click. |
+     *     | `CPA` | Cost per action. |
+     *     | `CPM` | Cost per mille. |
+     *     | `ROAS` | Return on ad spend. |
+     *     | `CAS` | Capped available spend. |
+     * @enum {string}
+     */
+    DSPPointLabel:
+      | "AIMP"
+      | "AREA"
+      | "BID"
+      | "CAS"
+      | "CPA"
+      | "CPC"
+      | "CPM"
+      | "DC"
+      | "EIMP"
+      | "EREA"
+      | "ROAS"
+      | "SPEND"
+      | "TAS";
+    /**
+     * @description | DspContentRatingEnum | Description |
+     *     | --- | --- |
+     *     | `SUITABLE_FOR_ALL_AUDIENCES` | Equivalent to content that is rated G (film), TV-Y (TV), TV-Y7 (TV), TV-G (TV), EC (game), or E (game). |
+     *     | `SUITABLE_FOR_MOST_AUDIENCES_WITH_PARENTAL_GUIDANCE` | Equivalent to content that is rated PG (film), TV-PG (TV), or E-10+ (game). |
+     *     | `SUITABLE_FOR_TEEN_AND_OLDER_AUDIENCES` | Equivalent to content that is rated PG-13 (film), TV-14 (TV), or T (game). |
+     *     | `SUITABLE_FOR_MATURE_AUDIENCES` | Ages 17+. Equivalent to content that is rated R (film), TV-MA (TV), or M (game). |
+     *     | `SUITABLE_FOR_ADULTS` | Ages 18+. Equivalent to content that is rated NC-17 (film). |
+     *     | `RATING_NOT_AVAILABLE` | Content where rating isn't available from the publisher. |
+     * @enum {string}
+     */
+    DSPDspContentRatingEnum:
+      | "RATING_NOT_AVAILABLE"
+      | "SUITABLE_FOR_ADULTS"
+      | "SUITABLE_FOR_ALL_AUDIENCES"
+      | "SUITABLE_FOR_MATURE_AUDIENCES"
+      | "SUITABLE_FOR_MOST_AUDIENCES_WITH_PARENTAL_GUIDANCE"
+      | "SUITABLE_FOR_TEEN_AND_OLDER_AUDIENCES";
+    /**
+     * @description | TwitchContentRatingEnum | Description |
+     *     | --- | --- |
+     *     | `TWITCH_MODERATE` | Twitch Content with moderate content exclusions based on content classification labels received from Twitch. |
+     *     | `TWITCH_RESTRICTIVE` | Twitch Content with restrictive content exlcusions based on content classification labels received from Twitch. |
+     * @enum {string}
+     */
+    DSPTwitchContentRatingEnum: "TWITCH_MODERATE" | "TWITCH_RESTRICTIVE";
+    /**
+     * @description | ExcludeAppsAndSitesType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_100` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_50` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_25` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_10` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_08` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_06` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_04` |  |
+     *     | `FRAUD_TRAFFIC_LEVEL_GTE_02` |  |
+     * @enum {string}
+     */
+    DSPExcludeAppsAndSitesType:
+      | "ALLOW_ALL"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_02"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_04"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_06"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_08"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_10"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_100"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_25"
+      | "FRAUD_TRAFFIC_LEVEL_GTE_50";
+    /**
+     * @description | DVBrandSafetyContentCategoryType | Description |
+     *     | --- | --- |
+     *     | `AD_SERVER` |  |
+     *     | `CELEBRITY_GOSSIP` |  |
+     *     | `CULTS_SURVIVALISM` |  |
+     *     | `GAMBLING` |  |
+     *     | `INCENTIVIZED_MALWARE_CLUTTER` |  |
+     *     | `INFLAMMATORY_POLITICS_NEWS` |  |
+     *     | `NEGATIVE_NEWS_FINANCIAL` |  |
+     *     | `NEGATIVE_NEWS_PHARMACEUTICAL` |  |
+     *     | `NON_STANDARD_CONTENT_NON_ENGLISH` |  |
+     *     | `NON_STANDARD_CONTENT_PARKING_PAGE` |  |
+     *     | `OCCULT` |  |
+     *     | `PIRACY_COPYRIGHT_INFRINGEMENT` |  |
+     *     | `UNMODERATED_UGC_FORUMS_IMAGES_VIDEO` |  |
+     *     | `EXTREME_GRAPHIC` |  |
+     * @enum {string}
+     */
+    DSPDVBrandSafetyContentCategoryType:
+      | "AD_SERVER"
+      | "CELEBRITY_GOSSIP"
+      | "CULTS_SURVIVALISM"
+      | "EXTREME_GRAPHIC"
+      | "GAMBLING"
+      | "INCENTIVIZED_MALWARE_CLUTTER"
+      | "INFLAMMATORY_POLITICS_NEWS"
+      | "NEGATIVE_NEWS_FINANCIAL"
+      | "NEGATIVE_NEWS_PHARMACEUTICAL"
+      | "NON_STANDARD_CONTENT_NON_ENGLISH"
+      | "NON_STANDARD_CONTENT_PARKING_PAGE"
+      | "OCCULT"
+      | "PIRACY_COPYRIGHT_INFRINGEMENT"
+      | "UNMODERATED_UGC_FORUMS_IMAGES_VIDEO";
+    /** @description A map from content categories to risk level to exclude from targeting. Available keys are: [ADULT_CONTENT, ALCOHOL, CRIME, DEATH_INJURIES, DISASTER_AVIATION, DISASTER_MAN_MADE, DISASTER_NATURAL, DISASTER_TERRORIST_EVENTS, DISASTER_VEHICLE, HATE_SPEECH, PROFANITY, SUBSTANCE_ABUSE, TOBACCO_ECIGARETTES, VIOLENCE_EXTREME_GRAPHIC]. */
+    DSPDVBrandSafetyContentCategoriesWithRiskMap: {
+      /** @description Available keys are: [ADULT_CONTENT, ALCOHOL, CRIME, DEATH_INJURIES, DISASTER_AVIATION, DISASTER_MAN_MADE, DISASTER_NATURAL, DISASTER_TERRORIST_EVENTS, DISASTER_VEHICLE, HATE_SPEECH, PROFANITY, SUBSTANCE_ABUSE, TOBACCO_ECIGARETTES, VIOLENCE_EXTREME_GRAPHIC]. */
+      key: string;
+      value: components["schemas"]["DSPBrandSuitabilityRiskLevelType"];
+    };
+    /**
+     * @description | DVBrandSafetyAppAgeRatingType | Description |
+     *     | --- | --- |
+     *     | `EVERYONE_4_PLUS` |  |
+     *     | `TWEENS_9_PLUS` |  |
+     *     | `TEENS_12_PLUS` |  |
+     *     | `MATURE_17_PLUS` |  |
+     *     | `ADULTS_ONLY_18_PLUS` |  |
+     *     | `UNKNOWN` |  |
+     * @enum {string}
+     */
+    DSPDVBrandSafetyAppAgeRatingType:
+      | "ADULTS_ONLY_18_PLUS"
+      | "EVERYONE_4_PLUS"
+      | "MATURE_17_PLUS"
+      | "TEENS_12_PLUS"
+      | "TWEENS_9_PLUS"
+      | "UNKNOWN";
+    /**
+     * @description App star rating to be used for excluding apps.
+     *     | DVBrandSafetyAppStarRatingType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `APP_STAR_RATING_LT_1_POINT_5_STARS` |  |
+     *     | `APP_STAR_RATING_LT_2_STARS` |  |
+     *     | `APP_STAR_RATING_LT_2_POINT_5_STARS` |  |
+     *     | `APP_STAR_RATING_LT_3_STARS` |  |
+     *     | `APP_STAR_RATING_LT_3_POINT_5_STARS` |  |
+     *     | `APP_STAR_RATING_LT_4_STARS` |  |
+     *     | `APP_STAR_RATING_LT_4_POINT_5_STARS` |  |
+     * @enum {string}
+     */
+    DSPDVBrandSafetyAppStarRatingType:
+      | "ALLOW_ALL"
+      | "APP_STAR_RATING_LT_1_POINT_5_STARS"
+      | "APP_STAR_RATING_LT_2_POINT_5_STARS"
+      | "APP_STAR_RATING_LT_2_STARS"
+      | "APP_STAR_RATING_LT_3_POINT_5_STARS"
+      | "APP_STAR_RATING_LT_3_STARS"
+      | "APP_STAR_RATING_LT_4_POINT_5_STARS"
+      | "APP_STAR_RATING_LT_4_STARS";
+    /**
+     * @description The type of average completion and fully viewable rate targeting.
+     *     | AverageCompletionAndFullyViewableRateTargetingType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_10` |  |
+     *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_20` |  |
+     *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_25` |  |
+     *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_30` |  |
+     *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_35` |  |
+     *     | `AVG_COMPLETION_FULLY_VIEWABLE_GTE_40` |  |
+     * @enum {string}
+     */
+    DSPAverageCompletionAndFullyViewableRateTargetingType:
+      | "ALLOW_ALL"
+      | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_10"
+      | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_20"
+      | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_25"
+      | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_30"
+      | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_35"
+      | "AVG_COMPLETION_FULLY_VIEWABLE_GTE_40";
+    /**
+     * @description The type of brand exposure viewability targeting.
+     *     | BrandExposureViewabilityTargetingType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `BRAND_EXPOSURE_VIEWABILITY_GTE_15_SEC_AVG_DURATION` |  |
+     *     | `BRAND_EXPOSURE_VIEWABILITY_GTE_10_SEC_AVG_DURATION` |  |
+     *     | `BRAND_EXPOSURE_VIEWABILITY_GTE_5_SEC_AVG_DURATION` |  |
+     * @enum {string}
+     */
+    DSPBrandExposureViewabilityTargetingType:
+      | "ALLOW_ALL"
+      | "BRAND_EXPOSURE_VIEWABILITY_GTE_10_SEC_AVG_DURATION"
+      | "BRAND_EXPOSURE_VIEWABILITY_GTE_15_SEC_AVG_DURATION"
+      | "BRAND_EXPOSURE_VIEWABILITY_GTE_5_SEC_AVG_DURATION";
+    /**
+     * @description The type of MRC viewability targeting.
+     *     | MrcViewabilityTargetingType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `MRC_VIEWABILITY_GTE_80` |  |
+     *     | `MRC_VIEWABILITY_GTE_75` |  |
+     *     | `MRC_VIEWABILITY_GTE_70` |  |
+     *     | `MRC_VIEWABILITY_GTE_65` |  |
+     *     | `MRC_VIEWABILITY_GTE_60` |  |
+     *     | `MRC_VIEWABILITY_GTE_55` |  |
+     *     | `MRC_VIEWABILITY_GTE_50` |  |
+     *     | `MRC_VIEWABILITY_GTE_40` |  |
+     *     | `MRC_VIEWABILITY_GTE_30` |  |
+     * @enum {string}
+     */
+    DSPMrcViewabilityTargetingType:
+      | "ALLOW_ALL"
+      | "MRC_VIEWABILITY_GTE_30"
+      | "MRC_VIEWABILITY_GTE_40"
+      | "MRC_VIEWABILITY_GTE_50"
+      | "MRC_VIEWABILITY_GTE_55"
+      | "MRC_VIEWABILITY_GTE_60"
+      | "MRC_VIEWABILITY_GTE_65"
+      | "MRC_VIEWABILITY_GTE_70"
+      | "MRC_VIEWABILITY_GTE_75"
+      | "MRC_VIEWABILITY_GTE_80";
+    /**
+     * @description The type of fraud invalid traffic.
+     *     | IASFraudInvalidTrafficType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_RISK` |  |
+     *     | `FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_MODERATE_RISK` |  |
+     * @enum {string}
+     */
+    DSPIASFraudInvalidTrafficType:
+      | "ALLOW_ALL"
+      | "FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_MODERATE_RISK"
+      | "FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_RISK";
+    /**
+     * @description The IAS brand safety risk level.
+     *     | IASBrandSafetyLevelType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `BRAND_SAFETY_EXCLUDE_HIGH_RISK` |  |
+     *     | `BRAND_SAFETY_EXCLUDE_HIGH_AND_MODERATE_RISK` |  |
+     * @enum {string}
+     */
+    DSPIASBrandSafetyLevelType:
+      | "ALLOW_ALL"
+      | "BRAND_SAFETY_EXCLUDE_HIGH_AND_MODERATE_RISK"
+      | "BRAND_SAFETY_EXCLUDE_HIGH_RISK";
+    /**
+     * @description The viewability standard.
+     *     | IASViewabilityStandardType | Description |
+     *     | --- | --- |
+     *     | `NONE` |  |
+     *     | `MRC` |  |
+     *     | `GROUPM` |  |
+     *     | `PUBLICIS` |  |
+     * @enum {string}
+     */
+    DSPIASViewabilityStandardType: "GROUPM" | "MRC" | "NONE" | "PUBLICIS";
+    /**
+     * @description The type of viewability tier.
+     *     | ViewabilityTierType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `VIEWABILITY_TIER_GT_70` |  |
+     *     | `VIEWABILITY_TIER_GT_60` |  |
+     *     | `VIEWABILITY_TIER_GT_50` |  |
+     *     | `VIEWABILITY_TIER_GT_40` |  |
+     *     | `VIEWABILITY_TIER_LT_40` |  |
+     * @enum {string}
+     */
+    DSPViewabilityTierType:
+      | "ALLOW_ALL"
+      | "VIEWABILITY_TIER_GT_40"
+      | "VIEWABILITY_TIER_GT_50"
+      | "VIEWABILITY_TIER_GT_60"
+      | "VIEWABILITY_TIER_GT_70"
+      | "VIEWABILITY_TIER_LT_40";
+    /**
+     * @description | NewsGuardBrandGuardTrustedNewsTargetingType | Description |
+     *     | --- | --- |
+     *     | `MAX_INCLUDE` |  |
+     *     | `HIGH_INCLUDE` |  |
+     *     | `BASIC_INCLUDE` |  |
+     *     | `LOCAL_INCLUDE` |  |
+     *     | `POLITICS_INCLUDE` |  |
+     *     | `HEALTH_INCLUDE` |  |
+     *     | `BUSINESS_INCLUDE` |  |
+     *     | `COMMUNITY_INCLUDE` |  |
+     *     | `LIFESTYLE_INCLUDE` |  |
+     *     | `TECH_INCLUDE` |  |
+     * @enum {string}
+     */
+    DSPNewsGuardBrandGuardTrustedNewsTargetingType:
+      | "BASIC_INCLUDE"
+      | "BUSINESS_INCLUDE"
+      | "COMMUNITY_INCLUDE"
+      | "HEALTH_INCLUDE"
+      | "HIGH_INCLUDE"
+      | "LIFESTYLE_INCLUDE"
+      | "LOCAL_INCLUDE"
+      | "MAX_INCLUDE"
+      | "POLITICS_INCLUDE"
+      | "TECH_INCLUDE";
+    /**
+     * @description | NewsGuardBrandGuardMisinformationSafetyType | Description |
+     *     | --- | --- |
+     *     | `MAX_EXCLUDE` |  |
+     *     | `HIGH_EXCLUDE` |  |
+     *     | `BASIC_EXCLUDE` |  |
+     *     | `OPINIONATED_NEWS` |  |
+     *     | `MISINFORMATION_SITES` |  |
+     *     | `ELECTION_MISINFORMATION` |  |
+     *     | `HEALTH_MISINFORMATION` |  |
+     *     | `VACCINE_MISINFORMATION` |  |
+     *     | `COVID_MISINFORMATION` |  |
+     *     | `QANON_MISINFORMATION` |  |
+     *     | `CLIMATE_MISINFORMATION` |  |
+     *     | `UKRAINE_MISINFORMATION` |  |
+     *     | `ISRAEL_HAMAS_MISINFORMATION` |  |
+     *     | `AI_GENERATED_MFA` |  |
+     * @enum {string}
+     */
+    DSPNewsGuardBrandGuardMisinformationSafetyType:
+      | "AI_GENERATED_MFA"
+      | "BASIC_EXCLUDE"
+      | "CLIMATE_MISINFORMATION"
+      | "COVID_MISINFORMATION"
+      | "ELECTION_MISINFORMATION"
+      | "HEALTH_MISINFORMATION"
+      | "HIGH_EXCLUDE"
+      | "ISRAEL_HAMAS_MISINFORMATION"
+      | "MAX_EXCLUDE"
+      | "MISINFORMATION_SITES"
+      | "OPINIONATED_NEWS"
+      | "QANON_MISINFORMATION"
+      | "UKRAINE_MISINFORMATION"
+      | "VACCINE_MISINFORMATION";
+    /**
+     * @description The Double Verify brand suitability risk level.
+     *     | BrandSuitabilityRiskLevelType | Description |
+     *     | --- | --- |
+     *     | `ALLOW_ALL` |  |
+     *     | `HIGH` |  |
+     *     | `HIGH_MEDIUM` |  |
+     *     | `HIGH_MEDIUM_LOW` |  |
+     * @enum {string}
+     */
+    DSPBrandSuitabilityRiskLevelType: "ALLOW_ALL" | "HIGH" | "HIGH_MEDIUM" | "HIGH_MEDIUM_LOW";
+  };
+  responses: never;
+  parameters: {
+    NextTokenQuery: string;
+    MaxResultsQuery: number;
+    /** @description The identifier of a client associated with a 'Login with Amazon' account. */
+    ClientIdHeader: string;
+    /** @description The identifier of an Amazon Ads Advertiser Account. */
+    AccountIdHeader: string;
+  };
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    DSPListCommitment: {
-        parameters: {
-            query?: {
-                nextToken?: components["parameters"]["NextTokenQuery"];
-                maxResults?: components["parameters"]["MaxResultsQuery"];
-            };
-            header: {
-                /** @description The identifier of a client associated with a 'Login with Amazon' account. */
-                "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description DSPListCommitment 200 response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DSPCommitmentSuccessResponse"];
-                };
-            };
-            /** @description BadRequest 400 response */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadRequestResponseContent"];
-                };
-            };
-            /** @description Unauthorized 401 response */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnauthorizedResponseContent"];
-                };
-            };
-            /** @description Forbidden 403 response */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForbiddenResponseContent"];
-                };
-            };
-            /** @description NotFound 404 response */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFoundResponseContent"];
-                };
-            };
-            /** @description ContentTooLarge 413 response */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContentTooLargeResponseContent"];
-                };
-            };
-            /** @description TooManyRequests 429 response */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TooManyRequestsResponseContent"];
-                };
-            };
-            /** @description InternalServerError 500 response */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InternalServerErrorResponseContent"];
-                };
-            };
-            /** @description BadGateway 502 response */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadGatewayResponseContent"];
-                };
-            };
-            /** @description ServiceUnavailableError 503 response */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
-                };
-            };
-            /** @description GatewayTimeout 504 response */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
-                };
-            };
-        };
+  DSPListCommitment: {
+    parameters: {
+      query?: {
+        nextToken?: components["parameters"]["NextTokenQuery"];
+        maxResults?: components["parameters"]["MaxResultsQuery"];
+      };
+      header: {
+        /** @description The identifier of a client associated with a 'Login with Amazon' account. */
+        "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    DSPCreateCommitment: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description The identifier of a client associated with a 'Login with Amazon' account. */
-                "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
-            };
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description DSPListCommitment 200 response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DSPCreateCommitmentRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["DSPCommitmentSuccessResponse"];
         };
-        responses: {
-            /** @description DSPCreateCommitment 207 response */
-            207: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DSPCommitmentMultiStatusResponse"];
-                };
-            };
-            /** @description BadRequest 400 response */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadRequestResponseContent"];
-                };
-            };
-            /** @description Unauthorized 401 response */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnauthorizedResponseContent"];
-                };
-            };
-            /** @description Forbidden 403 response */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForbiddenResponseContent"];
-                };
-            };
-            /** @description NotFound 404 response */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFoundResponseContent"];
-                };
-            };
-            /** @description ContentTooLarge 413 response */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContentTooLargeResponseContent"];
-                };
-            };
-            /** @description TooManyRequests 429 response */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TooManyRequestsResponseContent"];
-                };
-            };
-            /** @description InternalServerError 500 response */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InternalServerErrorResponseContent"];
-                };
-            };
-            /** @description BadGateway 502 response */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadGatewayResponseContent"];
-                };
-            };
-            /** @description ServiceUnavailableError 503 response */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
-                };
-            };
-            /** @description GatewayTimeout 504 response */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
-                };
-            };
+      };
+      /** @description BadRequest 400 response */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["BadRequestResponseContent"];
+        };
+      };
+      /** @description Unauthorized 401 response */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnauthorizedResponseContent"];
+        };
+      };
+      /** @description Forbidden 403 response */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponseContent"];
+        };
+      };
+      /** @description NotFound 404 response */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotFoundResponseContent"];
+        };
+      };
+      /** @description ContentTooLarge 413 response */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContentTooLargeResponseContent"];
+        };
+      };
+      /** @description TooManyRequests 429 response */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TooManyRequestsResponseContent"];
+        };
+      };
+      /** @description InternalServerError 500 response */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InternalServerErrorResponseContent"];
+        };
+      };
+      /** @description BadGateway 502 response */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadGatewayResponseContent"];
+        };
+      };
+      /** @description ServiceUnavailableError 503 response */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
+        };
+      };
+      /** @description GatewayTimeout 504 response */
+      504: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
+        };
+      };
     };
-    DSPRetrieveCampaignForecast: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description The identifier of an Amazon Ads Advertiser Account. */
-                "Amazon-Ads-AccountId": components["parameters"]["AccountIdHeader"];
-                /** @description The identifier of a client associated with a 'Login with Amazon' account. */
-                "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DSPRetrieveCampaignForecastRequest"];
-            };
-        };
-        responses: {
-            /** @description DSPRetrieveCampaignForecast 207 response */
-            207: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DSPCampaignForecastMultiStatusResponse"];
-                };
-            };
-            /** @description BadRequest 400 response */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadRequestResponseContent"];
-                };
-            };
-            /** @description Unauthorized 401 response */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnauthorizedResponseContent"];
-                };
-            };
-            /** @description Forbidden 403 response */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForbiddenResponseContent"];
-                };
-            };
-            /** @description NotFound 404 response */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFoundResponseContent"];
-                };
-            };
-            /** @description ContentTooLarge 413 response */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContentTooLargeResponseContent"];
-                };
-            };
-            /** @description TooManyRequests 429 response */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TooManyRequestsResponseContent"];
-                };
-            };
-            /** @description InternalServerError 500 response */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InternalServerErrorResponseContent"];
-                };
-            };
-            /** @description BadGateway 502 response */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadGatewayResponseContent"];
-                };
-            };
-            /** @description ServiceUnavailableError 503 response */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
-                };
-            };
-            /** @description GatewayTimeout 504 response */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
-                };
-            };
-        };
+  };
+  DSPCreateCommitment: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The identifier of a client associated with a 'Login with Amazon' account. */
+        "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    DSPRetrieveCommitmentSpend: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description The identifier of a client associated with a 'Login with Amazon' account. */
-                "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DSPRetrieveCommitmentSpendRequest"];
-            };
-        };
-        responses: {
-            /** @description DSPRetrieveCommitmentSpend 207 response */
-            207: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DSPCommitmentSpendMultiStatusResponse"];
-                };
-            };
-            /** @description BadRequest 400 response */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadRequestResponseContent"];
-                };
-            };
-            /** @description Unauthorized 401 response */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnauthorizedResponseContent"];
-                };
-            };
-            /** @description Forbidden 403 response */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForbiddenResponseContent"];
-                };
-            };
-            /** @description NotFound 404 response */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFoundResponseContent"];
-                };
-            };
-            /** @description ContentTooLarge 413 response */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContentTooLargeResponseContent"];
-                };
-            };
-            /** @description TooManyRequests 429 response */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TooManyRequestsResponseContent"];
-                };
-            };
-            /** @description InternalServerError 500 response */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InternalServerErrorResponseContent"];
-                };
-            };
-            /** @description BadGateway 502 response */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadGatewayResponseContent"];
-                };
-            };
-            /** @description ServiceUnavailableError 503 response */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
-                };
-            };
-            /** @description GatewayTimeout 504 response */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
-                };
-            };
-        };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DSPCreateCommitmentRequest"];
+      };
     };
-    DSPRetrieveCommitment: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description The identifier of a client associated with a 'Login with Amazon' account. */
-                "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description DSPCreateCommitment 207 response */
+      207: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DSPRetrieveCommitmentRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["DSPCommitmentMultiStatusResponse"];
         };
-        responses: {
-            /** @description DSPRetrieveCommitment 207 response */
-            207: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DSPCommitmentMultiStatusResponse"];
-                };
-            };
-            /** @description BadRequest 400 response */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadRequestResponseContent"];
-                };
-            };
-            /** @description Unauthorized 401 response */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnauthorizedResponseContent"];
-                };
-            };
-            /** @description Forbidden 403 response */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForbiddenResponseContent"];
-                };
-            };
-            /** @description NotFound 404 response */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFoundResponseContent"];
-                };
-            };
-            /** @description ContentTooLarge 413 response */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContentTooLargeResponseContent"];
-                };
-            };
-            /** @description TooManyRequests 429 response */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TooManyRequestsResponseContent"];
-                };
-            };
-            /** @description InternalServerError 500 response */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InternalServerErrorResponseContent"];
-                };
-            };
-            /** @description BadGateway 502 response */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadGatewayResponseContent"];
-                };
-            };
-            /** @description ServiceUnavailableError 503 response */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
-                };
-            };
-            /** @description GatewayTimeout 504 response */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
-                };
-            };
+      };
+      /** @description BadRequest 400 response */
+      400: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["BadRequestResponseContent"];
+        };
+      };
+      /** @description Unauthorized 401 response */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnauthorizedResponseContent"];
+        };
+      };
+      /** @description Forbidden 403 response */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponseContent"];
+        };
+      };
+      /** @description NotFound 404 response */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotFoundResponseContent"];
+        };
+      };
+      /** @description ContentTooLarge 413 response */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContentTooLargeResponseContent"];
+        };
+      };
+      /** @description TooManyRequests 429 response */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TooManyRequestsResponseContent"];
+        };
+      };
+      /** @description InternalServerError 500 response */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InternalServerErrorResponseContent"];
+        };
+      };
+      /** @description BadGateway 502 response */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadGatewayResponseContent"];
+        };
+      };
+      /** @description ServiceUnavailableError 503 response */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
+        };
+      };
+      /** @description GatewayTimeout 504 response */
+      504: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
+        };
+      };
     };
-    DSPUpdateCommitment: {
-        parameters: {
-            query?: never;
-            header: {
-                /** @description The identifier of a client associated with a 'Login with Amazon' account. */
-                "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DSPUpdateCommitmentRequest"];
-            };
-        };
-        responses: {
-            /** @description DSPUpdateCommitment 207 response */
-            207: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DSPCommitmentMultiStatusResponse"];
-                };
-            };
-            /** @description BadRequest 400 response */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadRequestResponseContent"];
-                };
-            };
-            /** @description Unauthorized 401 response */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UnauthorizedResponseContent"];
-                };
-            };
-            /** @description Forbidden 403 response */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ForbiddenResponseContent"];
-                };
-            };
-            /** @description NotFound 404 response */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFoundResponseContent"];
-                };
-            };
-            /** @description ContentTooLarge 413 response */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ContentTooLargeResponseContent"];
-                };
-            };
-            /** @description TooManyRequests 429 response */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TooManyRequestsResponseContent"];
-                };
-            };
-            /** @description InternalServerError 500 response */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["InternalServerErrorResponseContent"];
-                };
-            };
-            /** @description BadGateway 502 response */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BadGatewayResponseContent"];
-                };
-            };
-            /** @description ServiceUnavailableError 503 response */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
-                };
-            };
-            /** @description GatewayTimeout 504 response */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
-                };
-            };
-        };
+  };
+  DSPRetrieveCampaignForecast: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The identifier of an Amazon Ads Advertiser Account. */
+        "Amazon-Ads-AccountId": components["parameters"]["AccountIdHeader"];
+        /** @description The identifier of a client associated with a 'Login with Amazon' account. */
+        "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
+      };
+      path?: never;
+      cookie?: never;
     };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DSPRetrieveCampaignForecastRequest"];
+      };
+    };
+    responses: {
+      /** @description DSPRetrieveCampaignForecast 207 response */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DSPCampaignForecastMultiStatusResponse"];
+        };
+      };
+      /** @description BadRequest 400 response */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadRequestResponseContent"];
+        };
+      };
+      /** @description Unauthorized 401 response */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnauthorizedResponseContent"];
+        };
+      };
+      /** @description Forbidden 403 response */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponseContent"];
+        };
+      };
+      /** @description NotFound 404 response */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotFoundResponseContent"];
+        };
+      };
+      /** @description ContentTooLarge 413 response */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContentTooLargeResponseContent"];
+        };
+      };
+      /** @description TooManyRequests 429 response */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TooManyRequestsResponseContent"];
+        };
+      };
+      /** @description InternalServerError 500 response */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InternalServerErrorResponseContent"];
+        };
+      };
+      /** @description BadGateway 502 response */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadGatewayResponseContent"];
+        };
+      };
+      /** @description ServiceUnavailableError 503 response */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
+        };
+      };
+      /** @description GatewayTimeout 504 response */
+      504: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
+        };
+      };
+    };
+  };
+  DSPRetrieveCommitmentSpend: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The identifier of a client associated with a 'Login with Amazon' account. */
+        "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DSPRetrieveCommitmentSpendRequest"];
+      };
+    };
+    responses: {
+      /** @description DSPRetrieveCommitmentSpend 207 response */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DSPCommitmentSpendMultiStatusResponse"];
+        };
+      };
+      /** @description BadRequest 400 response */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadRequestResponseContent"];
+        };
+      };
+      /** @description Unauthorized 401 response */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnauthorizedResponseContent"];
+        };
+      };
+      /** @description Forbidden 403 response */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponseContent"];
+        };
+      };
+      /** @description NotFound 404 response */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotFoundResponseContent"];
+        };
+      };
+      /** @description ContentTooLarge 413 response */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContentTooLargeResponseContent"];
+        };
+      };
+      /** @description TooManyRequests 429 response */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TooManyRequestsResponseContent"];
+        };
+      };
+      /** @description InternalServerError 500 response */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InternalServerErrorResponseContent"];
+        };
+      };
+      /** @description BadGateway 502 response */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadGatewayResponseContent"];
+        };
+      };
+      /** @description ServiceUnavailableError 503 response */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
+        };
+      };
+      /** @description GatewayTimeout 504 response */
+      504: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
+        };
+      };
+    };
+  };
+  DSPRetrieveCommitment: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The identifier of a client associated with a 'Login with Amazon' account. */
+        "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DSPRetrieveCommitmentRequest"];
+      };
+    };
+    responses: {
+      /** @description DSPRetrieveCommitment 207 response */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DSPCommitmentMultiStatusResponse"];
+        };
+      };
+      /** @description BadRequest 400 response */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadRequestResponseContent"];
+        };
+      };
+      /** @description Unauthorized 401 response */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnauthorizedResponseContent"];
+        };
+      };
+      /** @description Forbidden 403 response */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponseContent"];
+        };
+      };
+      /** @description NotFound 404 response */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotFoundResponseContent"];
+        };
+      };
+      /** @description ContentTooLarge 413 response */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContentTooLargeResponseContent"];
+        };
+      };
+      /** @description TooManyRequests 429 response */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TooManyRequestsResponseContent"];
+        };
+      };
+      /** @description InternalServerError 500 response */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InternalServerErrorResponseContent"];
+        };
+      };
+      /** @description BadGateway 502 response */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadGatewayResponseContent"];
+        };
+      };
+      /** @description ServiceUnavailableError 503 response */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
+        };
+      };
+      /** @description GatewayTimeout 504 response */
+      504: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
+        };
+      };
+    };
+  };
+  DSPUpdateCommitment: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description The identifier of a client associated with a 'Login with Amazon' account. */
+        "Amazon-Ads-ClientId": components["parameters"]["ClientIdHeader"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DSPUpdateCommitmentRequest"];
+      };
+    };
+    responses: {
+      /** @description DSPUpdateCommitment 207 response */
+      207: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DSPCommitmentMultiStatusResponse"];
+        };
+      };
+      /** @description BadRequest 400 response */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadRequestResponseContent"];
+        };
+      };
+      /** @description Unauthorized 401 response */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["UnauthorizedResponseContent"];
+        };
+      };
+      /** @description Forbidden 403 response */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForbiddenResponseContent"];
+        };
+      };
+      /** @description NotFound 404 response */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotFoundResponseContent"];
+        };
+      };
+      /** @description ContentTooLarge 413 response */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ContentTooLargeResponseContent"];
+        };
+      };
+      /** @description TooManyRequests 429 response */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TooManyRequestsResponseContent"];
+        };
+      };
+      /** @description InternalServerError 500 response */
+      500: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InternalServerErrorResponseContent"];
+        };
+      };
+      /** @description BadGateway 502 response */
+      502: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BadGatewayResponseContent"];
+        };
+      };
+      /** @description ServiceUnavailableError 503 response */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceUnavailableErrorResponseContent"];
+        };
+      };
+      /** @description GatewayTimeout 504 response */
+      504: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["GatewayTimeoutResponseContent"];
+        };
+      };
+    };
+  };
 }

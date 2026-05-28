@@ -147,13 +147,13 @@ describe("amazon_dsp_update_commitment — wet run", () => {
         data: { committedSpend: 200 },
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(mockGetCommitment).toHaveBeenCalledWith("c1", baseContext);
     expect(mockUpdateCommitment).toHaveBeenCalledWith(
       { commitmentId: "c1", committedSpend: 200 },
-      baseContext,
+      baseContext
     );
 
     expect(result.updated).toBe(true);
@@ -176,8 +176,8 @@ describe("amazon_dsp_update_commitment — wet run", () => {
       new McpError(
         JsonRpcErrorCode.InvalidParams,
         "Amazon DSP rejected the update commitment request: Overlapping dates",
-        { code: "FIELD_VALUE_IS_INVALID", fieldLocation: "endDateTime" },
-      ),
+        { code: "FIELD_VALUE_IS_INVALID", fieldLocation: "endDateTime" }
+      )
     );
     await expect(
       updateCommitmentLogic(
@@ -187,8 +187,8 @@ describe("amazon_dsp_update_commitment — wet run", () => {
           data: { endDateTime: "2025-01-01T00:00:00+00:00" },
         },
         baseContext,
-        baseSdkContext,
-      ),
+        baseSdkContext
+      )
     ).rejects.toMatchObject({
       message: expect.stringContaining("Overlapping dates"),
       code: JsonRpcErrorCode.InvalidParams,
@@ -207,7 +207,7 @@ describe("amazon_dsp_update_commitment — wet run", () => {
         data: { committedSpend: 200 },
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(result.before).toBeUndefined();

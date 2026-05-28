@@ -27,7 +27,9 @@ existing repo precedent treats single creates as ungoverned, since the
 export const CreateCommitmentInputSchema = z
   .object({
     profileId: z.string().min(1).describe("Amazon DSP Profile ID"),
-    data: DSPCommitmentCreateSchema.describe("Commitment definition (required fields per the DSP spec)"),
+    data: DSPCommitmentCreateSchema.describe(
+      "Commitment definition (required fields per the DSP spec)"
+    ),
   })
   .describe("Parameters for creating an Amazon DSP commitment");
 
@@ -44,18 +46,18 @@ type CreateCommitmentOutput = z.infer<typeof CreateCommitmentOutputSchema>;
 export async function createCommitmentLogic(
   input: CreateCommitmentInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<CreateCommitmentOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   const commitment = (await amazonDspV1Service.createCommitment(
     input.data as DSPCommitmentCreateT,
-    context,
+    context
   )) as DSPCommitmentT;
   return { commitment, timestamp: new Date().toISOString() };
 }
 
 export function createCommitmentResponseFormatter(
-  result: CreateCommitmentOutput,
+  result: CreateCommitmentOutput
 ): McpTextContent[] {
   return [
     {

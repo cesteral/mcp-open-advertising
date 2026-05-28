@@ -57,21 +57,19 @@ describe("amazon_dsp_get_commitments", () => {
   it("is a plain readOnly tool with no cesteral governance annotation (manifest-surface precedent)", () => {
     expect(getCommitmentsTool.name).toBe("amazon_dsp_get_commitments");
     expect(getCommitmentsTool.annotations.readOnlyHint).toBe(true);
-    expect(
-      (getCommitmentsTool.annotations as { cesteral?: unknown }).cesteral,
-    ).toBeUndefined();
+    expect((getCommitmentsTool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
   });
 
   it("input schema enforces commitmentIds cardinality 1..1000", () => {
     expect(
-      GetCommitmentsInputSchema.safeParse({ profileId: "p1", commitmentIds: [] }).success,
+      GetCommitmentsInputSchema.safeParse({ profileId: "p1", commitmentIds: [] }).success
     ).toBe(false);
     const tooMany = Array.from({ length: 1001 }, (_, i) => `c${i}`);
     expect(
-      GetCommitmentsInputSchema.safeParse({ profileId: "p1", commitmentIds: tooMany }).success,
+      GetCommitmentsInputSchema.safeParse({ profileId: "p1", commitmentIds: tooMany }).success
     ).toBe(false);
     expect(
-      GetCommitmentsInputSchema.safeParse({ profileId: "p1", commitmentIds: ["c1"] }).success,
+      GetCommitmentsInputSchema.safeParse({ profileId: "p1", commitmentIds: ["c1"] }).success
     ).toBe(true);
   });
 
@@ -79,21 +77,19 @@ describe("amazon_dsp_get_commitments", () => {
     const body = {
       success: [{ commitment: sampleCommitment, index: 0 }],
       // ErrorsIndex.index is locked to 0..0 in the spec — use index: 0 here.
-      error: [
-        { errors: [{ code: "NOT_FOUND", message: "Commitment missing" }], index: 0 },
-      ],
+      error: [{ errors: [{ code: "NOT_FOUND", message: "Commitment missing" }], index: 0 }],
     };
     mockRetrieveCommitments.mockResolvedValueOnce(body);
 
     const result = await getCommitmentsLogic(
       { profileId: "1234567890", commitmentIds: ["c1", "missing"] },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(mockRetrieveCommitments).toHaveBeenCalledWith(
       { commitmentIds: ["c1", "missing"] },
-      baseContext,
+      baseContext
     );
     expect(result.response).toEqual(body);
     expect(result.timestamp).toBeDefined();

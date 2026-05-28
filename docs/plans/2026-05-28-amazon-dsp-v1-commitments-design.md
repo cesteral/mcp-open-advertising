@@ -13,15 +13,15 @@ The merged OAS spec covers 50 paths and 1101 schemas across all Amazon advertisi
 
 The 6 endpoints:
 
-| Endpoint | Method | Tool |
-|---|---|---|
-| `/adsApi/v1/commitments/dsp` | GET | `amazon_dsp_list_commitments` |
-| `/adsApi/v1/retrieve/commitments/dsp` | POST | `amazon_dsp_get_commitments` (batch read) |
-| `/adsApi/v1/retrieve/commitments/dsp` | POST | `amazon_dsp_get_commitment` (single read — read partner for the governed update) |
-| `/adsApi/v1/create/commitments/dsp` | POST | `amazon_dsp_create_commitment` (single, ungoverned) |
-| `/adsApi/v1/update/commitments/dsp` | POST | `amazon_dsp_update_commitment` (single, governed write) |
-| `/adsApi/v1/retrieve/campaignForecasts/dsp` | POST | `amazon_dsp_get_campaign_forecast` |
-| `/adsApi/v1/retrieve/commitmentSpends/dsp` | POST | `amazon_dsp_get_commitment_spend` |
+| Endpoint                                    | Method | Tool                                                                             |
+| ------------------------------------------- | ------ | -------------------------------------------------------------------------------- |
+| `/adsApi/v1/commitments/dsp`                | GET    | `amazon_dsp_list_commitments`                                                    |
+| `/adsApi/v1/retrieve/commitments/dsp`       | POST   | `amazon_dsp_get_commitments` (batch read)                                        |
+| `/adsApi/v1/retrieve/commitments/dsp`       | POST   | `amazon_dsp_get_commitment` (single read — read partner for the governed update) |
+| `/adsApi/v1/create/commitments/dsp`         | POST   | `amazon_dsp_create_commitment` (single, ungoverned)                              |
+| `/adsApi/v1/update/commitments/dsp`         | POST   | `amazon_dsp_update_commitment` (single, governed write)                          |
+| `/adsApi/v1/retrieve/campaignForecasts/dsp` | POST   | `amazon_dsp_get_campaign_forecast`                                               |
+| `/adsApi/v1/retrieve/commitmentSpends/dsp`  | POST   | `amazon_dsp_get_commitment_spend`                                                |
 
 **Naming convention.** Tools take singular nouns when the input is a single entity (`get_commitment`, `create_commitment`, `update_commitment`), plural when the input is genuinely batch (`get_commitments` takes `commitmentIds: string[]`, `list_commitments`). The singular `get_commitment` exists specifically so the governed `update_commitment` has a clean 1:1 `readPartner.argMap` — the contract's `argMap` maps top-level argument names, not nested paths, so the read partner must accept the same `commitmentId` top-level arg the write tool emits. Amazon's underlying endpoints are batch-only; the singular tools wrap a 1-element array internally.
 
@@ -63,15 +63,15 @@ config/
 
 Six tool files, each following the existing `*.tool.ts` shape (`name / title / description / inputSchema / outputSchema / annotations / inputExamples / logic / responseFormatter`).
 
-| Tool | Endpoint | Posture | Notable inputs | Output |
-|---|---|---|---|---|
-| `amazon_dsp_list_commitments` | `GET /adsApi/v1/commitments/dsp` | read (ungoverned) | `nextToken?`, `maxResults?` (11–50, default 50) | `{ commitments: DSPCommitment[], nextToken?: string }` |
-| `amazon_dsp_get_commitments` | `POST /adsApi/v1/retrieve/commitments/dsp` | read (ungoverned, batch) | `commitmentIds: string[1..N]` | Verbatim `DSPCommitmentMultiStatusResponse` |
-| `amazon_dsp_get_commitment` | `POST /adsApi/v1/retrieve/commitments/dsp` | read (ungoverned, single — read partner for `update_commitment`) | `commitmentId: string` | Unwrapped `DSPCommitment` (or throws `McpError` not-found) |
-| `amazon_dsp_create_commitment` | `POST /adsApi/v1/create/commitments/dsp` | write (ungoverned, single) | `data: DSPCommitmentCreate` | Unwrapped `DSPCommitment` (1-element batch internally) |
-| `amazon_dsp_update_commitment` | `POST /adsApi/v1/update/commitments/dsp` | write (governed, single) | `commitmentId: string`, `data: Partial<DSPCommitmentUpdate>`, `dry_run?: boolean` | Unwrapped `DSPCommitment` + `dispatchedCapability` |
-| `amazon_dsp_get_campaign_forecast` | `POST /adsApi/v1/retrieve/campaignForecasts/dsp` | read (ungoverned, batch) | `DSPRetrieveCampaignForecastRequest` | Verbatim `DSPCampaignForecastMultiStatusResponse` |
-| `amazon_dsp_get_commitment_spend` | `POST /adsApi/v1/retrieve/commitmentSpends/dsp` | read (ungoverned, batch) | `DSPRetrieveCommitmentSpendRequest` | Verbatim `DSPCommitmentSpendMultiStatusResponse` |
+| Tool                               | Endpoint                                         | Posture                                                          | Notable inputs                                                                    | Output                                                     |
+| ---------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `amazon_dsp_list_commitments`      | `GET /adsApi/v1/commitments/dsp`                 | read (ungoverned)                                                | `nextToken?`, `maxResults?` (11–50, default 50)                                   | `{ commitments: DSPCommitment[], nextToken?: string }`     |
+| `amazon_dsp_get_commitments`       | `POST /adsApi/v1/retrieve/commitments/dsp`       | read (ungoverned, batch)                                         | `commitmentIds: string[1..N]`                                                     | Verbatim `DSPCommitmentMultiStatusResponse`                |
+| `amazon_dsp_get_commitment`        | `POST /adsApi/v1/retrieve/commitments/dsp`       | read (ungoverned, single — read partner for `update_commitment`) | `commitmentId: string`                                                            | Unwrapped `DSPCommitment` (or throws `McpError` not-found) |
+| `amazon_dsp_create_commitment`     | `POST /adsApi/v1/create/commitments/dsp`         | write (ungoverned, single)                                       | `data: DSPCommitmentCreate`                                                       | Unwrapped `DSPCommitment` (1-element batch internally)     |
+| `amazon_dsp_update_commitment`     | `POST /adsApi/v1/update/commitments/dsp`         | write (governed, single)                                         | `commitmentId: string`, `data: Partial<DSPCommitmentUpdate>`, `dry_run?: boolean` | Unwrapped `DSPCommitment` + `dispatchedCapability`         |
+| `amazon_dsp_get_campaign_forecast` | `POST /adsApi/v1/retrieve/campaignForecasts/dsp` | read (ungoverned, batch)                                         | `DSPRetrieveCampaignForecastRequest`                                              | Verbatim `DSPCampaignForecastMultiStatusResponse`          |
+| `amazon_dsp_get_commitment_spend`  | `POST /adsApi/v1/retrieve/commitmentSpends/dsp`  | read (ungoverned, batch)                                         | `DSPRetrieveCommitmentSpendRequest`                                               | Verbatim `DSPCommitmentSpendMultiStatusResponse`           |
 
 **Multi-status handling — split by tool category:**
 
@@ -193,12 +193,12 @@ Each batch-read method is ~5 lines: build URL, call `client.get/post(...)`, pars
 
 ```ts
 export const AMAZON_DSP_V1_PATHS = {
-  listCommitments:           "/adsApi/v1/commitments/dsp",
-  retrieveCommitments:       "/adsApi/v1/retrieve/commitments/dsp",
-  createCommitments:         "/adsApi/v1/create/commitments/dsp",
-  updateCommitments:         "/adsApi/v1/update/commitments/dsp",
-  retrieveCampaignForecast:  "/adsApi/v1/retrieve/campaignForecasts/dsp",
-  retrieveCommitmentSpend:   "/adsApi/v1/retrieve/commitmentSpends/dsp",
+  listCommitments: "/adsApi/v1/commitments/dsp",
+  retrieveCommitments: "/adsApi/v1/retrieve/commitments/dsp",
+  createCommitments: "/adsApi/v1/create/commitments/dsp",
+  updateCommitments: "/adsApi/v1/update/commitments/dsp",
+  retrieveCampaignForecast: "/adsApi/v1/retrieve/campaignForecasts/dsp",
+  retrieveCommitmentSpend: "/adsApi/v1/retrieve/commitmentSpends/dsp",
 } as const;
 ```
 
@@ -210,7 +210,7 @@ No entity-contract record (unlike the v2 file) — v1 isn't entity-centric; it's
 export interface SessionServices {
   amazonDspService: AmazonDspService;
   amazonDspReportingService: AmazonDspReportingService;
-  amazonDspV1Service: AmazonDspV1Service;   // NEW — only addition
+  amazonDspV1Service: AmazonDspV1Service; // NEW — only addition
 }
 ```
 

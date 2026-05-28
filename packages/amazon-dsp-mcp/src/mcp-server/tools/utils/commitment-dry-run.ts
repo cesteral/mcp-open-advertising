@@ -26,7 +26,10 @@ import type {
   NormalizedEntitySnapshot,
   RequestContext,
 } from "@cesteral/shared";
-import type { DSPCommitmentT, DSPCommitmentUpdateT } from "../../../services/amazon-dsp/v1-schemas.js";
+import type {
+  DSPCommitmentT,
+  DSPCommitmentUpdateT,
+} from "../../../services/amazon-dsp/v1-schemas.js";
 
 /**
  * Loose service surface accepted by these helpers — tests mock with a minimal
@@ -120,7 +123,7 @@ export function buildCommitmentSnapshot(
   commitmentId: string,
   profileId: string,
   current: Partial<DSPCommitmentT>,
-  patch: Partial<DSPCommitmentUpdateT>,
+  patch: Partial<DSPCommitmentUpdateT>
 ): NormalizedEntitySnapshot {
   const merged = { ...current, ...patch } as Partial<DSPCommitmentT>;
 
@@ -159,7 +162,7 @@ export async function captureCommitmentSnapshot(
   service: AmazonDspV1ServiceLike,
   commitmentId: string,
   profileId: string,
-  context: RequestContext,
+  context: RequestContext
 ): Promise<NormalizedEntitySnapshot | undefined> {
   if (!service.getCommitment) return undefined;
   try {
@@ -175,7 +178,7 @@ export async function captureCommitmentSnapshot(
 export function snapshotFromCommitment(
   commitmentId: string,
   profileId: string,
-  entity: Partial<DSPCommitmentT>,
+  entity: Partial<DSPCommitmentT>
 ): NormalizedEntitySnapshot | undefined {
   if (!entity || typeof entity !== "object") return undefined;
   return buildCommitmentSnapshot(commitmentId, profileId, entity, {});
@@ -202,7 +205,7 @@ export interface CommitmentUpdateDryRunArgs {
 export async function runCommitmentUpdateDryRun(
   input: CommitmentUpdateDryRunArgs,
   service: AmazonDspV1ServiceLike,
-  context: RequestContext,
+  context: RequestContext
 ): Promise<DryRunResult> {
   const validationErrors = symbolicValidate(input.data);
 
@@ -219,7 +222,7 @@ export async function runCommitmentUpdateDryRun(
         input.commitmentId,
         input.profileId,
         current,
-        input.data,
+        input.data
       );
       expectedStateSource = "server_symbolic_apply";
     }
@@ -233,6 +236,6 @@ export async function runCommitmentUpdateDryRun(
       expectedStateSource,
       ...(expectedPostState ? { expectedPostState } : {}),
     },
-    "amazon_dsp_update_commitment",
+    "amazon_dsp_update_commitment"
   );
 }

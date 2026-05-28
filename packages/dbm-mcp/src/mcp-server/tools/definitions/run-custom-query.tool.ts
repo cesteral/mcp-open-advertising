@@ -97,7 +97,6 @@ export const RunCustomQueryInputSchema = z
       .describe(
         "If true (default), reject unknown filters/metrics. If false, pass through to API."
       ),
-
   })
   .merge(ReportViewInputSchema)
   .superRefine((input, ctx) => {

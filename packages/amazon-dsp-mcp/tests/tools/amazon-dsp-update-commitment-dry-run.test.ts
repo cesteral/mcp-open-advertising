@@ -66,7 +66,7 @@ describe("amazon_dsp_update_commitment — dry run", () => {
         dry_run: true,
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(mockGetCommitment).toHaveBeenCalledTimes(1);
@@ -95,7 +95,7 @@ describe("amazon_dsp_update_commitment — dry run", () => {
         dry_run: true,
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     const post = result.dryRun!.expectedPostState!;
@@ -122,7 +122,7 @@ describe("amazon_dsp_update_commitment — dry run", () => {
         dry_run: true,
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(mockUpdateCommitment).not.toHaveBeenCalled();
@@ -133,7 +133,7 @@ describe("amazon_dsp_update_commitment — dry run", () => {
           code: "INVALID_COMMITTED_SPEND",
           field: "data.committedSpend",
         }),
-      ]),
+      ])
     );
   });
 
@@ -151,14 +151,12 @@ describe("amazon_dsp_update_commitment — dry run", () => {
         dry_run: true,
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(result.dryRun!.wouldSucceed).toBe(false);
     expect(result.dryRun!.validationErrors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "INVALID_SCHEDULE" }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ code: "INVALID_SCHEDULE" })])
     );
   });
 });

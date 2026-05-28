@@ -66,7 +66,10 @@ export const CommitmentUpdatePatchSchema = z
   })
   .passthrough()
   .superRefine((value, ctx) => {
-    if ("commitmentId" in value && (value as { commitmentId?: unknown }).commitmentId !== undefined) {
+    if (
+      "commitmentId" in value &&
+      (value as { commitmentId?: unknown }).commitmentId !== undefined
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message:
@@ -76,7 +79,7 @@ export const CommitmentUpdatePatchSchema = z
     }
   })
   .describe(
-    "Fields to update (partial). All keys are optional. Pass `commitmentId` at the top level, not here.",
+    "Fields to update (partial). All keys are optional. Pass `commitmentId` at the top level, not here."
   );
 
 export const UpdateCommitmentInputSchema = z
@@ -89,7 +92,7 @@ export const UpdateCommitmentInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, validates the proposed mutation and returns a DryRunResult under `dryRun` without invoking the Amazon DSP API. The underlying commitment is never modified.",
+        "When true, validates the proposed mutation and returns a DryRunResult under `dryRun` without invoking the Amazon DSP API. The underlying commitment is never modified."
       ),
   })
   .describe("Parameters for updating an Amazon DSP commitment");
@@ -100,19 +103,19 @@ export const UpdateCommitmentOutputSchema = z
     updated: z.boolean(),
     timestamp: z.string().datetime(),
     commitment: DSPCommitmentSchema.optional().describe(
-      "Updated commitment as returned by Amazon (real writes only)",
+      "Updated commitment as returned by Amazon (real writes only)"
     ),
     dryRun: DryRunResultSchema.optional().describe(
-      "Present only when the request was made with `dry_run: true`. The mutation was NOT applied.",
+      "Present only when the request was made with `dry_run: true`. The mutation was NOT applied."
     ),
     before: NormalizedEntitySnapshotSchema.optional().describe(
-      "Pre-write canonical snapshot, captured via the read partner. Undefined when the pre-read fails.",
+      "Pre-write canonical snapshot, captured via the read partner. Undefined when the pre-read fails."
     ),
     after: NormalizedEntitySnapshotSchema.optional().describe(
-      "Post-write canonical snapshot, normalised from the commitment returned by the update endpoint.",
+      "Post-write canonical snapshot, normalised from the commitment returned by the update endpoint."
     ),
     dispatchedCapability: DispatchedCapabilitySchema.describe(
-      "The (operation, entityKind) this call resolved to. Present on every response — dry-run and real write alike.",
+      "The (operation, entityKind) this call resolved to. Present on every response — dry-run and real write alike."
     ),
   })
   .describe("Commitment update result");
@@ -123,7 +126,7 @@ type UpdateCommitmentOutput = z.infer<typeof UpdateCommitmentOutputSchema>;
 export async function updateCommitmentLogic(
   input: UpdateCommitmentInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<UpdateCommitmentOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
 
@@ -137,7 +140,7 @@ export async function updateCommitmentLogic(
         data: input.data as DSPCommitmentUpdateT,
       },
       amazonDspV1Service,
-      context,
+      context
     );
     return {
       commitmentId: input.commitmentId,
@@ -155,7 +158,7 @@ export async function updateCommitmentLogic(
     amazonDspV1Service,
     input.commitmentId,
     input.profileId,
-    context,
+    context
   );
 
   // Spread `data` first, then pin commitmentId from the top-level input —
@@ -163,7 +166,7 @@ export async function updateCommitmentLogic(
   // `data.commitmentId` is ignored.
   const updated = (await amazonDspV1Service.updateCommitment(
     { ...input.data, commitmentId: input.commitmentId } as DSPCommitmentUpdateT,
-    context,
+    context
   )) as DSPCommitmentT;
 
   // The Amazon DSP update endpoint returns the full updated commitment in
@@ -183,7 +186,7 @@ export async function updateCommitmentLogic(
 }
 
 export function updateCommitmentResponseFormatter(
-  result: UpdateCommitmentOutput,
+  result: UpdateCommitmentOutput
 ): McpTextContent[] {
   if (result.dryRun) {
     const { wouldSucceed, validationErrors, validationSource, expectedStateSource } = result.dryRun;

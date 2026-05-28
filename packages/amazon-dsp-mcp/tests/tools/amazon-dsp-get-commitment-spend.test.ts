@@ -46,26 +46,24 @@ describe("amazon_dsp_get_commitment_spend", () => {
   it("is a plain readOnly tool with no cesteral governance annotation", () => {
     expect(getCommitmentSpendTool.name).toBe("amazon_dsp_get_commitment_spend");
     expect(getCommitmentSpendTool.annotations.readOnlyHint).toBe(true);
-    expect(
-      (getCommitmentSpendTool.annotations as { cesteral?: unknown }).cesteral,
-    ).toBeUndefined();
+    expect((getCommitmentSpendTool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
   });
 
   it("requires exactly one commitmentIds entry with a commitmentId", () => {
     expect(
-      GetCommitmentSpendInputSchema.safeParse({ profileId: "p1", commitmentIds: [] }).success,
+      GetCommitmentSpendInputSchema.safeParse({ profileId: "p1", commitmentIds: [] }).success
     ).toBe(false);
     expect(
       GetCommitmentSpendInputSchema.safeParse({
         profileId: "p1",
         commitmentIds: [{ commitmentId: "c1" }, { commitmentId: "c2" }],
-      }).success,
+      }).success
     ).toBe(false);
     expect(
       GetCommitmentSpendInputSchema.safeParse({
         profileId: "p1",
         commitmentIds: [{ commitmentId: "c1" }],
-      }).success,
+      }).success
     ).toBe(true);
   });
 
@@ -73,10 +71,8 @@ describe("amazon_dsp_get_commitment_spend", () => {
     expect(
       GetCommitmentSpendInputSchema.safeParse({
         profileId: "p1",
-        commitmentIds: [
-          { commitmentId: "c1", spendDimension: { campaignId: "cmp-1" } },
-        ],
-      }).success,
+        commitmentIds: [{ commitmentId: "c1", spendDimension: { campaignId: "cmp-1" } }],
+      }).success
     ).toBe(true);
   });
 
@@ -125,12 +121,12 @@ describe("amazon_dsp_get_commitment_spend", () => {
         commitmentIds: [{ commitmentId: "c1" }],
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(mockRetrieveSpend).toHaveBeenCalledWith(
       { commitmentIds: [{ commitmentId: "c1" }] },
-      baseContext,
+      baseContext
     );
   });
 

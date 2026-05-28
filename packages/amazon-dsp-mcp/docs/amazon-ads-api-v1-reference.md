@@ -2,6 +2,7 @@
 
 > **Source:** Amazon Ads Advanced Tools Center  
 > **URLs:**
+>
 > - https://advertising.amazon.com/API/docs/en-us/reference/amazon-ads/overview
 > - https://advertising.amazon.com/API/docs/en-us/reference/amazon-ads/getting-started
 > - https://advertising.amazon.com/API/docs/en-us/guides/get-started/generate-sdk
@@ -86,11 +87,11 @@ Just as for other Amazon Ads APIs, Ads API v1 requests must provide `Amazon-Ads-
 
 Additional headers may be required depending on the functionality and ad product:
 
-| Header | Required For | Description |
-|--------|-------------|-------------|
-| `Amazon-Advertising-API-Scope` | Most sponsored ads requests | Profile ID of the desired advertiser and marketplace. Retrieve using the Profiles API or Manager Accounts API. |
-| `Amazon-Ads-AccountId` | ADSP and cross-product requests | For ADSP: use DSP Advertisers API `advertiserId` or Manager Accounts API `dspAdvertiserId`. |
-| `Amazon-Ads-Manager-AccountId` | Manager account operations | Manager account ID. |
+| Header                         | Required For                    | Description                                                                                                    |
+| ------------------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `Amazon-Advertising-API-Scope` | Most sponsored ads requests     | Profile ID of the desired advertiser and marketplace. Retrieve using the Profiles API or Manager Accounts API. |
+| `Amazon-Ads-AccountId`         | ADSP and cross-product requests | For ADSP: use DSP Advertisers API `advertiserId` or Manager Accounts API `dspAdvertiserId`.                    |
+| `Amazon-Ads-Manager-AccountId` | Manager account operations      | Manager account ID.                                                                                            |
 
 ### Understanding Advertising Accounts
 
@@ -98,11 +99,11 @@ Amazon Ads API v1 uses a unified account model that works across headers and req
 
 #### Account Types and Relationships
 
-| Concept | Description |
-|---------|-------------|
-| **Advertising Account** | The primary account entity containing campaigns and data across all ad products. |
-| **Profile ID** | Identifier used for sponsored ads operations (`Amazon-Advertising-API-Scope` header). |
-| **Account ID** | Identifier used for cross-product operations (`Amazon-Ads-AccountId` header). |
+| Concept                 | Description                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------- |
+| **Advertising Account** | The primary account entity containing campaigns and data across all ad products.      |
+| **Profile ID**          | Identifier used for sponsored ads operations (`Amazon-Advertising-API-Scope` header). |
+| **Account ID**          | Identifier used for cross-product operations (`Amazon-Ads-AccountId` header).         |
 
 #### Header vs. Body Field Usage
 
@@ -190,9 +191,7 @@ Create a `package.json` in the workspace root to add scripts that build each pac
 {
   "name": "amazon-ads-workspace",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
     "build": "npm run build --workspaces",
     "build:sdk": "npm run build -w amazon-ads-library-demo",
@@ -217,14 +216,14 @@ mkdir scripts
 
 Download the OpenAPI specification files for Ads API v1 campaign management. Available specifications:
 
-| Specification | Filename |
-|--------------|----------|
+| Specification         | Filename                       |
+| --------------------- | ------------------------------ |
 | Common (all products) | `AmazonAdsAPIALL_prod_3p.json` |
-| Sponsored Products | `AmazonAdsAPISP_prod_3p.json` |
-| Sponsored Brands | `AmazonAdsAPISB_prod_3p.json` |
-| Amazon DSP | `AmazonAdsAPIDSP_prod_3p.json` |
-| Sponsored Display | `AmazonAdsAPIDSD_prod_3p.json` |
-| Sponsored Television | `AmazonAdsAPIST_prod_3p.json` |
+| Sponsored Products    | `AmazonAdsAPISP_prod_3p.json`  |
+| Sponsored Brands      | `AmazonAdsAPISB_prod_3p.json`  |
+| Amazon DSP            | `AmazonAdsAPIDSP_prod_3p.json` |
+| Sponsored Display     | `AmazonAdsAPIDSD_prod_3p.json` |
+| Sponsored Television  | `AmazonAdsAPIST_prod_3p.json`  |
 
 > The common specification, Sponsored Products specification, and Sponsored Brands specification are required for the code examples in the client demo below.
 
@@ -253,31 +252,31 @@ Create `scripts/processSpecs.cjs`. This script prunes the OAS contracts (removes
 
 ```javascript
 // amazon-ads-workspace/packages/amazon-ads-library-demo/scripts/processSpecs.cjs
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
+const fs = require("fs");
+const path = require("path");
+const { execSync } = require("child_process");
 
 // Directory paths
-const INPUT_DIR = path.resolve('./input');
-const PRUNED_DIR = path.resolve('./pruned');
-const GENERATED_DIR = path.resolve('./generated');
-const V1_DIR = path.resolve(GENERATED_DIR, 'v1');
+const INPUT_DIR = path.resolve("./input");
+const PRUNED_DIR = path.resolve("./pruned");
+const GENERATED_DIR = path.resolve("./generated");
+const V1_DIR = path.resolve(GENERATED_DIR, "v1");
 
 // Ensure directories exist
-[PRUNED_DIR, GENERATED_DIR, V1_DIR].forEach(dir => {
+[PRUNED_DIR, GENERATED_DIR, V1_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 });
 
 function removePolymorphism(obj) {
-  if (typeof obj !== 'object' || obj === null) return obj;
-  if (Array.isArray(obj)) return obj.map(item => removePolymorphism(item));
+  if (typeof obj !== "object" || obj === null) return obj;
+  if (Array.isArray(obj)) return obj.map((item) => removePolymorphism(item));
 
   const newObj = {};
   for (const [key, value] of Object.entries(obj)) {
     newObj[key] = removePolymorphism(value);
-    if (key === 'oneOf') {
+    if (key === "oneOf") {
       const unionedProps = {};
       for (const polyObj of value || []) {
         if (!polyObj.properties) {
@@ -294,22 +293,22 @@ function removePolymorphism(obj) {
           Object.assign(unionedProps, polyObj.properties);
         }
       }
-      if ('properties' in obj) throw new Error('Polymorphic object already has properties field.');
+      if ("properties" in obj) throw new Error("Polymorphic object already has properties field.");
       newObj.properties = unionedProps;
       delete newObj[key];
     }
-    if (key === 'discriminator') delete newObj[key];
+    if (key === "discriminator") delete newObj[key];
   }
   return newObj;
 }
 
 function renameError(obj) {
-  if (typeof obj !== 'object' || obj === null) return obj;
-  const problemErrorName = 'Error';
-  const modelErrorName = 'ModelError';
+  if (typeof obj !== "object" || obj === null) return obj;
+  const problemErrorName = "Error";
+  const modelErrorName = "ModelError";
   obj = replaceErrorSchemaReferences(obj, problemErrorName, modelErrorName);
   const components = obj.components;
-  if (components && typeof components.schemas == 'object') {
+  if (components && typeof components.schemas == "object") {
     const schemas = components.schemas;
     if (schemas[problemErrorName] != null) {
       schemas[modelErrorName] = schemas[problemErrorName];
@@ -320,12 +319,13 @@ function renameError(obj) {
 }
 
 function replaceErrorSchemaReferences(obj, problemErrorName, modelErrorName) {
-  if (typeof obj !== 'object' || obj === null) return obj;
-  if (Array.isArray(obj)) return obj.map(item => replaceErrorSchemaReferences(item, problemErrorName, modelErrorName));
+  if (typeof obj !== "object" || obj === null) return obj;
+  if (Array.isArray(obj))
+    return obj.map((item) => replaceErrorSchemaReferences(item, problemErrorName, modelErrorName));
   const newObj = {};
   for (const [key, value] of Object.entries(obj)) {
     newObj[key] = replaceErrorSchemaReferences(value, problemErrorName, modelErrorName);
-    if (key === '$ref' && value === `#/components/schemas/${problemErrorName}`) {
+    if (key === "$ref" && value === `#/components/schemas/${problemErrorName}`) {
       newObj[key] = `#/components/schemas/${modelErrorName}`;
     }
   }
@@ -334,24 +334,24 @@ function replaceErrorSchemaReferences(obj, problemErrorName, modelErrorName) {
 
 function findInputFiles() {
   const files = fs.readdirSync(INPUT_DIR);
-  return files.filter(file => file.match(/AmazonAdsAPI.*_prod_3p\.json/));
+  return files.filter((file) => file.match(/AmazonAdsAPI.*_prod_3p\.json/));
 }
 
 function getAdProduct(filename) {
   const match = filename.match(/AmazonAdsAPI(.*)_prod_3p\.json/);
-  if (!match || !match[1]) return 'ALL';
+  if (!match || !match[1]) return "ALL";
   return match[1].toLowerCase();
 }
 
 async function removeRuntimeExports(directory) {
   const files = fs.readdirSync(directory);
   for (const file of files) {
-    if (file.endsWith('.ts')) {
+    if (file.endsWith(".ts")) {
       const filePath = path.join(directory, file);
-      let content = fs.readFileSync(filePath, 'utf8');
-      content = content.replace(/export \* from ['"]\.\/.runtime\.js['"];?\n?/g, '');
-      content = content.replace(/import \{[^}]*\} from ['"]\.\/.runtime\.js['"];?\n?/g, '');
-      content = content.replace(/import \* as runtime from ['"]\.\/.runtime\.js['"];?\n?/g, '');
+      let content = fs.readFileSync(filePath, "utf8");
+      content = content.replace(/export \* from ['"]\.\/.runtime\.js['"];?\n?/g, "");
+      content = content.replace(/import \{[^}]*\} from ['"]\.\/.runtime\.js['"];?\n?/g, "");
+      content = content.replace(/import \* as runtime from ['"]\.\/.runtime\.js['"];?\n?/g, "");
       fs.writeFileSync(filePath, content);
     }
   }
@@ -360,17 +360,23 @@ async function removeRuntimeExports(directory) {
 function updateRuntimeImports(directory, isAllProduct) {
   const processDirectory = (dir) => {
     const files = fs.readdirSync(dir);
-    files.forEach(file => {
+    files.forEach((file) => {
       const fullPath = path.join(dir, file);
       const stat = fs.statSync(fullPath);
       if (stat.isDirectory()) {
         processDirectory(fullPath);
-      } else if (file.endsWith('.ts')) {
-        let content = fs.readFileSync(fullPath, 'utf8');
+      } else if (file.endsWith(".ts")) {
+        let content = fs.readFileSync(fullPath, "utf8");
         if (isAllProduct) {
-          content = content.replace(/from ['"]\.\.\/.runtime\.js['"];/g, "from '../../runtime.js';");
+          content = content.replace(
+            /from ['"]\.\.\/.runtime\.js['"];/g,
+            "from '../../runtime.js';"
+          );
         } else {
-          content = content.replace(/from ['"]\.\.\/.runtime\.js['"];/g, "from '../../../runtime.js';");
+          content = content.replace(
+            /from ['"]\.\.\/.runtime\.js['"];/g,
+            "from '../../../runtime.js';"
+          );
         }
         fs.writeFileSync(fullPath, content);
       }
@@ -382,7 +388,7 @@ function updateRuntimeImports(directory, isAllProduct) {
 function processSpecFile(filename) {
   const adProduct = getAdProduct(filename);
   const inputPath = path.join(INPUT_DIR, filename);
-  const inputSpec = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
+  const inputSpec = JSON.parse(fs.readFileSync(inputPath, "utf8"));
 
   let processedSpec = removePolymorphism(inputSpec);
   processedSpec = renameError(processedSpec);
@@ -391,8 +397,8 @@ function processSpecFile(filename) {
   const prunedPath = path.join(PRUNED_DIR, prunedFilename);
   fs.writeFileSync(prunedPath, JSON.stringify(processedSpec, null, 2));
 
-  let outputDir = adProduct.toLowerCase() === 'all' ? V1_DIR : path.join(V1_DIR, adProduct);
-  if (adProduct.toLowerCase() !== 'all' && !fs.existsSync(outputDir)) {
+  let outputDir = adProduct.toLowerCase() === "all" ? V1_DIR : path.join(V1_DIR, adProduct);
+  if (adProduct.toLowerCase() !== "all" && !fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
@@ -414,13 +420,13 @@ function processSpecFile(filename) {
     --additional-properties="sortModelPropertiesByRequiredFlag=false"`;
 
   try {
-    execSync(generatorCommand, { stdio: 'inherit' });
-    if (adProduct.toLowerCase() !== 'all') {
+    execSync(generatorCommand, { stdio: "inherit" });
+    if (adProduct.toLowerCase() !== "all") {
       removeRuntimeExports(outputDir);
       updateRuntimeImports(outputDir, false);
     } else {
-      updateRuntimeImports(path.join(V1_DIR, 'apis'), true);
-      updateRuntimeImports(path.join(V1_DIR, 'models'), true);
+      updateRuntimeImports(path.join(V1_DIR, "apis"), true);
+      updateRuntimeImports(path.join(V1_DIR, "models"), true);
     }
     return adProduct;
   } catch (error) {
@@ -430,13 +436,13 @@ function processSpecFile(filename) {
 }
 
 function generateIndexFile(adProducts) {
-  const indexPath = path.join(V1_DIR, 'index.ts');
+  const indexPath = path.join(V1_DIR, "index.ts");
   let indexContent = `// Auto-generated index file\n\n`;
-  if (adProducts.includes('ALL')) {
+  if (adProducts.includes("ALL")) {
     indexContent += `export * from './runtime.js';\n`;
   }
-  adProducts.forEach(product => {
-    if (product.toLowerCase() === 'all') {
+  adProducts.forEach((product) => {
+    if (product.toLowerCase() === "all") {
       indexContent += `export * from './models/index.js';\nexport * from './apis/index.js';\n`;
     } else {
       indexContent += `export * as v1_${product.toLowerCase()} from './${product.toLowerCase()}/index.js';\n`;
@@ -446,21 +452,21 @@ function generateIndexFile(adProducts) {
 }
 
 function setupRootFiles(adProducts) {
-  const v1RuntimePath = path.join(V1_DIR, 'runtime.ts');
-  const rootRuntimePath = path.join(GENERATED_DIR, 'runtime.ts');
+  const v1RuntimePath = path.join(V1_DIR, "runtime.ts");
+  const rootRuntimePath = path.join(GENERATED_DIR, "runtime.ts");
   if (fs.existsSync(v1RuntimePath)) {
     fs.copyFileSync(v1RuntimePath, rootRuntimePath);
   }
 
-  const rootIndexPath = path.join(GENERATED_DIR, 'index.ts');
+  const rootIndexPath = path.join(GENERATED_DIR, "index.ts");
   let rootIndexContent = `// Auto-generated root index file\n\nexport * from './runtime.js';\n`;
   const sortedProducts = [...adProducts].sort((a, b) => {
-    if (a.toLowerCase() === 'all') return 1;
-    if (b.toLowerCase() === 'all') return -1;
+    if (a.toLowerCase() === "all") return 1;
+    if (b.toLowerCase() === "all") return -1;
     return a.localeCompare(b);
   });
-  sortedProducts.forEach(product => {
-    if (product.toLowerCase() === 'all') {
+  sortedProducts.forEach((product) => {
+    if (product.toLowerCase() === "all") {
       rootIndexContent += `export * as v1 from './v1/index.js';\n`;
     } else {
       rootIndexContent += `export * as v1_${product.toLowerCase()} from './v1/${product.toLowerCase()}/index.js';\n`;
@@ -468,20 +474,23 @@ function setupRootFiles(adProducts) {
   });
   fs.writeFileSync(rootIndexPath, rootIndexContent);
 
-  const v1IndexPath = path.join(V1_DIR, 'index.ts');
-  fs.writeFileSync(v1IndexPath, `// Auto-generated v1 index file\n\nexport * from './models/index.js';\nexport * from './apis/index.js';\n`);
+  const v1IndexPath = path.join(V1_DIR, "index.ts");
+  fs.writeFileSync(
+    v1IndexPath,
+    `// Auto-generated v1 index file\n\nexport * from './models/index.js';\nexport * from './apis/index.js';\n`
+  );
 }
 
 function main() {
   const inputFiles = findInputFiles();
   if (inputFiles.length === 0) {
-    console.error('No input files found');
+    console.error("No input files found");
     process.exit(1);
   }
-  const adProducts = inputFiles.map(processSpecFile).filter(p => p !== null);
+  const adProducts = inputFiles.map(processSpecFile).filter((p) => p !== null);
   generateIndexFile(adProducts);
   setupRootFiles(adProducts);
-  console.log('Processing complete!');
+  console.log("Processing complete!");
 }
 
 main();
@@ -594,32 +603,32 @@ Create `src/auth_config.ts` and replace the placeholder values with your credent
 
 ```typescript
 // amazon-ads-workspace/packages/amazon-ads-client-demo/src/auth_config.ts
-import axios from 'axios';
+import axios from "axios";
 
-export const CLIENT_ID = 'INSERT_CLIENT_ID';
-export const CLIENT_SECRET = 'INSERT_CLIENT_SECRET';
-export const REFRESH_TOKEN = 'INSERT_REFRESH_TOKEN';
-export const PROFILE_ID = 'INSERT_PROFILE_ID';
+export const CLIENT_ID = "INSERT_CLIENT_ID";
+export const CLIENT_SECRET = "INSERT_CLIENT_SECRET";
+export const REFRESH_TOKEN = "INSERT_REFRESH_TOKEN";
+export const PROFILE_ID = "INSERT_PROFILE_ID";
 
 export async function getAccessToken(): Promise<string> {
   try {
     const response = await axios.post(
-      'https://api.amazon.com/auth/o2/token',
+      "https://api.amazon.com/auth/o2/token",
       new URLSearchParams({
-        grant_type: 'refresh_token',
+        grant_type: "refresh_token",
         client_id: CLIENT_ID,
         refresh_token: REFRESH_TOKEN,
-        client_secret: CLIENT_SECRET
+        client_secret: CLIENT_SECRET,
       }).toString(),
       {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-        }
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
       }
     );
     return response.data.access_token;
   } catch (error) {
-    console.error('Error getting access token:', error);
+    console.error("Error getting access token:", error);
     throw error;
   }
 }
@@ -628,6 +637,7 @@ export async function getAccessToken(): Promise<string> {
 #### Step 3b: Create the Client Application
 
 Create `src/client.ts`. This demonstrates three operations:
+
 1. Create a Sponsored Products campaign using the common `CampaignCreate` model
 2. Create a Sponsored Brands campaign using the `SBCampaignCreate` model
 3. Create a Sponsored Products campaign using the `SPCampaignCreate` model
@@ -636,12 +646,12 @@ Create `src/client.ts`. This demonstrates three operations:
 
 ```typescript
 // amazon-ads-workspace/packages/amazon-ads-client-demo/src/client.ts
-import {v1, v1_sb, v1_sp, ResponseError, Configuration} from "amazon-ads-library-demo";
-import { CLIENT_ID, PROFILE_ID, getAccessToken } from './auth_config.js';
+import { v1, v1_sb, v1_sp, ResponseError, Configuration } from "amazon-ads-library-demo";
+import { CLIENT_ID, PROFILE_ID, getAccessToken } from "./auth_config.js";
 
 async function createAdClient() {
   const baseConfig = new Configuration({
-    basePath: 'https://advertising-api.amazon.com',
+    basePath: "https://advertising-api.amazon.com",
     accessToken: getAccessToken,
   });
   return {
@@ -659,107 +669,118 @@ async function main() {
     const baseCampaign: v1.CampaignCreate = {
       name: `Base Campaign + ${unique}`,
       adProduct: v1.AdProduct.SponsoredProducts,
-      state: 'PAUSED',
+      state: "PAUSED",
       marketplaceScope: v1.MarketplaceScope.SingleMarketplace,
       marketplaces: [v1.Marketplace.Us],
       autoCreationSettings: { autoCreateTargets: true },
       startDateTime: new Date(),
-      budgets: [{
-        budgetType: v1.BudgetType.Monetary,
-        recurrenceTimePeriod: v1.Recurrence.Daily,
-        budgetValue: {
-          monetaryBudgetValue: {
-            monetaryBudget: { value: 1000 },
+      budgets: [
+        {
+          budgetType: v1.BudgetType.Monetary,
+          recurrenceTimePeriod: v1.Recurrence.Daily,
+          budgetValue: {
+            monetaryBudgetValue: {
+              monetaryBudget: { value: 1000 },
+            },
           },
-        }
-      }],
+        },
+      ],
     };
-    const baseResponse = await client.campaigns.createCampaign({
-      amazonAdsClientId: CLIENT_ID,
-      amazonAdvertisingAPIScope: PROFILE_ID,
-      createCampaignRequest: { campaigns: [baseCampaign] }
-    }).catch(e => {
-      if (e.response) {
-        console.log("Status: " + e.response.status);
-        e.response.json().then((err: ResponseError) => {
-          console.log("Message: " + err.message);
-        });
-      }
-    });
-    console.log('\n\nBase Campaign Response:\n', JSON.stringify(baseResponse, null, 2));
+    const baseResponse = await client.campaigns
+      .createCampaign({
+        amazonAdsClientId: CLIENT_ID,
+        amazonAdvertisingAPIScope: PROFILE_ID,
+        createCampaignRequest: { campaigns: [baseCampaign] },
+      })
+      .catch((e) => {
+        if (e.response) {
+          console.log("Status: " + e.response.status);
+          e.response.json().then((err: ResponseError) => {
+            console.log("Message: " + err.message);
+          });
+        }
+      });
+    console.log("\n\nBase Campaign Response:\n", JSON.stringify(baseResponse, null, 2));
 
     // 2. Create campaign using SB Campaign model
     const sbCampaign: v1_sb.SBCampaignCreate = {
       name: `Sponsored Brands Campaign + ${unique}`,
       adProduct: v1_sb.SBAdProduct.SponsoredBrands,
-      state: 'PAUSED',
+      state: "PAUSED",
       startDateTime: new Date(),
-      budgets: [{
-        budgetType: v1_sb.SBBudgetType.Monetary,
-        recurrenceTimePeriod: v1_sb.SBRecurrence.Daily,
-        budgetValue: {
-          monetaryBudgetValue: {
-            monetaryBudget: { value: 1000 },
+      budgets: [
+        {
+          budgetType: v1_sb.SBBudgetType.Monetary,
+          recurrenceTimePeriod: v1_sb.SBRecurrence.Daily,
+          budgetValue: {
+            monetaryBudgetValue: {
+              monetaryBudget: { value: 1000 },
+            },
           },
-        }
-      }],
-      costType: 'CPC',
+        },
+      ],
+      costType: "CPC",
       marketplaceScope: v1_sb.SBMarketplaceScope.SingleMarketplace,
       marketplaces: [v1_sb.SBMarketplace.Us],
       brandId: "A1QZPEZHREUOON",
       optimizations: {
-        goalSettings: { kpi: v1_sb.SBKPI.Clicks }
-      }
+        goalSettings: { kpi: v1_sb.SBKPI.Clicks },
+      },
     };
-    const sbResponse = await client.campaigns.createCampaign({
-      amazonAdsClientId: CLIENT_ID,
-      amazonAdvertisingAPIScope: PROFILE_ID,
-      createCampaignRequest: { campaigns: [sbCampaign] }
-    }).catch(e => {
-      if (e.response) {
-        console.log("Status: " + e.response.status);
-        e.response.json().then((err: ResponseError) => {
-          console.log("Message: " + err.message);
-        });
-      }
-    });
-    console.log('\n\nSB Campaign Response:\n', JSON.stringify(sbResponse, null, 2));
+    const sbResponse = await client.campaigns
+      .createCampaign({
+        amazonAdsClientId: CLIENT_ID,
+        amazonAdvertisingAPIScope: PROFILE_ID,
+        createCampaignRequest: { campaigns: [sbCampaign] },
+      })
+      .catch((e) => {
+        if (e.response) {
+          console.log("Status: " + e.response.status);
+          e.response.json().then((err: ResponseError) => {
+            console.log("Message: " + err.message);
+          });
+        }
+      });
+    console.log("\n\nSB Campaign Response:\n", JSON.stringify(sbResponse, null, 2));
 
     // 3. Create campaign using SP Campaign model
     const spCampaign: v1_sp.SPCampaignCreate = {
       name: `Sponsored Products Campaign + ${unique}`,
       adProduct: v1_sp.SPAdProduct.SponsoredProducts,
-      state: 'PAUSED',
+      state: "PAUSED",
       startDateTime: new Date(),
-      budgets: [{
-        budgetType: v1_sp.SPBudgetType.Monetary,
-        recurrenceTimePeriod: v1_sp.SPRecurrence.Daily,
-        budgetValue: {
-          monetaryBudgetValue: {
-            monetaryBudget: { value: 1000 },
+      budgets: [
+        {
+          budgetType: v1_sp.SPBudgetType.Monetary,
+          recurrenceTimePeriod: v1_sp.SPRecurrence.Daily,
+          budgetValue: {
+            monetaryBudgetValue: {
+              monetaryBudget: { value: 1000 },
+            },
           },
-        }
-      }],
+        },
+      ],
       marketplaceScope: v1_sp.SPMarketplaceScope.SingleMarketplace,
       marketplaces: [v1_sp.SPMarketplace.Us],
       autoCreationSettings: { autoCreateTargets: true },
     };
-    const spResponse = await client.campaigns.createCampaign({
-      amazonAdsClientId: CLIENT_ID,
-      amazonAdvertisingAPIScope: PROFILE_ID,
-      createCampaignRequest: { campaigns: [spCampaign] }
-    }).catch(e => {
-      if (e.response) {
-        console.log("Status: " + e.response.status);
-        e.response.json().then((err: ResponseError) => {
-          console.log("Message: " + err.message);
-        });
-      }
-    });
-    console.log('\n\nSP Campaign Response:\n', JSON.stringify(spResponse, null, 2));
-
+    const spResponse = await client.campaigns
+      .createCampaign({
+        amazonAdsClientId: CLIENT_ID,
+        amazonAdvertisingAPIScope: PROFILE_ID,
+        createCampaignRequest: { campaigns: [spCampaign] },
+      })
+      .catch((e) => {
+        if (e.response) {
+          console.log("Status: " + e.response.status);
+          e.response.json().then((err: ResponseError) => {
+            console.log("Message: " + err.message);
+          });
+        }
+      });
+    console.log("\n\nSP Campaign Response:\n", JSON.stringify(spResponse, null, 2));
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
   }
 }
 
@@ -855,15 +876,17 @@ A successful run produces output similar to the following:
         "campaignId": "449940118618577",
         "name": "Base Campaign",
         "marketplaceScope": "SINGLE_MARKETPLACE",
-        "budgets": [{
-          "budgetType": "MONETARY",
-          "recurrenceTimePeriod": "DAILY",
-          "budgetValue": {
-            "monetaryBudgetValue": {
-              "monetaryBudget": { "currencyCode": "USD", "value": 1000 }
+        "budgets": [
+          {
+            "budgetType": "MONETARY",
+            "recurrenceTimePeriod": "DAILY",
+            "budgetValue": {
+              "monetaryBudgetValue": {
+                "monetaryBudget": { "currencyCode": "USD", "value": 1000 }
+              }
             }
           }
-        }]
+        ]
       }
     }
   ],
@@ -879,6 +902,7 @@ A successful run produces output similar to the following:
 For each OpenAPI specification input, the generated client library exports an object containing both appropriate models and a set of API classes corresponding to resources in the specification. Each API class includes methods corresponding to available operations in the API.
 
 For example:
+
 - `v1.CampaignsApi` → `.createCampaign()`, `.queryCampaign()`, `.updateCampaign()`, etc.
 - `v1.AdGroupsApi` → `.createAdGroup()`, `.queryAdGroup()`, `.updateAdGroup()`, etc.
 
@@ -886,5 +910,5 @@ You can adjust `client.ts` to experiment with other resources and operations, th
 
 ---
 
-*Documentation sourced from Amazon Ads Advanced Tools Center.*  
-*© 2023 Amazon.com, Inc. or its affiliates.*
+_Documentation sourced from Amazon Ads Advanced Tools Center._  
+_© 2023 Amazon.com, Inc. or its affiliates._

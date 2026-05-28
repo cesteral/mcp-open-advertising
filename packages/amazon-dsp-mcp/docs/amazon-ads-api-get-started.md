@@ -106,11 +106,11 @@ From the Web Settings panel, click **Edit**. Add a valid address in the **Allowe
 
 #### 2. Determine the URL Prefix for Your Region
 
-| Region | URL Prefix |
-|--------|-----------|
-| North America (NA) | `https://www.amazon.com/ap/oa` |
-| Europe (EU) | `https://eu.account.amazon.com/ap/oa` |
-| Far East (FE) | `https://apac.account.amazon.com/ap/oa` |
+| Region             | URL Prefix                              |
+| ------------------ | --------------------------------------- |
+| North America (NA) | `https://www.amazon.com/ap/oa`          |
+| Europe (EU)        | `https://eu.account.amazon.com/ap/oa`   |
+| Far East (FE)      | `https://apac.account.amazon.com/ap/oa` |
 
 > **Note:** An authorization code retrieved from any of these URLs can be used to access the advertising API in any region.
 
@@ -118,12 +118,12 @@ From the Web Settings panel, click **Edit**. Add a valid address in the **Allowe
 
 #### 3. Determine the Values for the Required Query Parameters
 
-| Parameter | Description |
-|-----------|-------------|
-| `client_id` | The Client ID associated with your Login with Amazon client application. |
-| `scope` | The OAuth 2.0 permission scope. For DSP, Sponsored Brands, Sponsored Display, Sponsored Products, and Amazon Attribution APIs, set to `advertising::campaign_management`. For the Data Provider API, set to `advertising::audiences`. |
-| `response_type` | The type of response. Always set to `code`. |
-| `redirect_uri` | The value from the Allowed Return URLs field of your Login with Amazon security profile. |
+| Parameter       | Description                                                                                                                                                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client_id`     | The Client ID associated with your Login with Amazon client application.                                                                                                                                                              |
+| `scope`         | The OAuth 2.0 permission scope. For DSP, Sponsored Brands, Sponsored Display, Sponsored Products, and Amazon Attribution APIs, set to `advertising::campaign_management`. For the Data Provider API, set to `advertising::audiences`. |
+| `response_type` | The type of response. Always set to `code`.                                                                                                                                                                                           |
+| `redirect_uri`  | The value from the Allowed Return URLs field of your Login with Amazon security profile.                                                                                                                                              |
 
 **Example authorization URL (NA region):**
 
@@ -178,21 +178,21 @@ Sign in to Amazon Developer with the Amazon account you used to create your Logi
 
 Select the authorization URL for your region:
 
-| Region | Authorization URL |
-|--------|------------------|
-| North America (NA) | `https://api.amazon.com/auth/o2/token` |
-| Europe (EU) | `https://api.amazon.co.uk/auth/o2/token` |
-| Far East (FE) | `https://api.amazon.co.jp/auth/o2/token` |
+| Region             | Authorization URL                        |
+| ------------------ | ---------------------------------------- |
+| North America (NA) | `https://api.amazon.com/auth/o2/token`   |
+| Europe (EU)        | `https://api.amazon.co.uk/auth/o2/token` |
+| Far East (FE)      | `https://api.amazon.co.jp/auth/o2/token` |
 
 Construct a **POST** request with the following parameters:
 
-| Parameter | Description |
-|-----------|-------------|
-| `grant_type` | Must be `authorization_code`. |
-| `code` | The authorization code retrieved in step 1. Expires after 5 minutes. |
-| `redirect_uri` | One of the values in the Allowed Return URLs field in your Login with Amazon account. |
-| `client_id` | The Client ID of your Login with Amazon account. |
-| `client_secret` | The Client Secret of your Login with Amazon account. |
+| Parameter       | Description                                                                           |
+| --------------- | ------------------------------------------------------------------------------------- |
+| `grant_type`    | Must be `authorization_code`.                                                         |
+| `code`          | The authorization code retrieved in step 1. Expires after 5 minutes.                  |
+| `redirect_uri`  | One of the values in the Allowed Return URLs field in your Login with Amazon account. |
+| `client_id`     | The Client ID of your Login with Amazon account.                                      |
+| `client_secret` | The Client Secret of your Login with Amazon account.                                  |
 
 **Example cURL request:**
 
@@ -207,12 +207,12 @@ curl \
 
 A successful response returns a JSON object:
 
-| Field | Description |
-|-------|-------------|
-| `access_token` | The access token. |
-| `token_type` | Always `bearer`. |
-| `expires_in` | Time until the access token expires, in seconds. |
-| `refresh_token` | The refresh token. |
+| Field           | Description                                      |
+| --------------- | ------------------------------------------------ |
+| `access_token`  | The access token.                                |
+| `token_type`    | Always `bearer`.                                 |
+| `expires_in`    | Time until the access token expires, in seconds. |
+| `refresh_token` | The refresh token.                               |
 
 **Example response:**
 
@@ -256,10 +256,10 @@ To retrieve a list of available profiles, make a **GET** request to the `/v2/pro
 
 **Required headers:**
 
-| Header | Value |
-|--------|-------|
+| Header                            | Value                                                |
+| --------------------------------- | ---------------------------------------------------- |
 | `Amazon-Advertising-API-ClientId` | The client identifier of the LwA client application. |
-| `Authorization` | The string `Bearer` prepended to the access token. |
+| `Authorization`                   | The string `Bearer` prepended to the access token.   |
 
 **Example cURL request (North America):**
 
@@ -306,11 +306,11 @@ A successful response includes a list of profiles associated with the user accou
 
 Aside from the `/v2/profiles` endpoint, requests to the Amazon Ads API can access resources for only one profile at a time. Pass three required headers:
 
-| Header | Value |
-|--------|-------|
-| `Amazon-Advertising-API-ClientID` | Your client ID. |
-| `Authorization` | `Bearer` + access token. |
-| `Amazon-Advertising-API-Scope` | The profile ID for an advertising account in a specific marketplace. |
+| Header                            | Value                                                                |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `Amazon-Advertising-API-ClientID` | Your client ID.                                                      |
+| `Authorization`                   | `Bearer` + access token.                                             |
+| `Amazon-Advertising-API-Scope`    | The profile ID for an advertising account in a specific marketplace. |
 
 > **Note:** Access tokens expire after 60 minutes. To generate a new token, use the refresh token.
 
@@ -346,11 +346,11 @@ The Amazon Ads API Postman collection includes scripts to ease the management of
 
 From the left sidebar, select **Environments**, then select the **Amazon Ads API Environment**. Manually set the **Current Value** for the following variables:
 
-| Variable | Description |
-|----------|-------------|
-| `client_id` | The client ID of the Login with Amazon client application. |
-| `client_secret` | The client secret of the Login with Amazon client application. |
-| `redirect_uri` | A URL included in the "Allowed Return URLs" configuration of your Login with Amazon application (defaults to `https://amazon.com`). |
+| Variable        | Description                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `client_id`     | The client ID of the Login with Amazon client application.                                                                          |
+| `client_secret` | The client secret of the Login with Amazon client application.                                                                      |
+| `redirect_uri`  | A URL included in the "Allowed Return URLs" configuration of your Login with Amazon application (defaults to `https://amazon.com`). |
 
 > **Note:** The default environment accesses the North American host. For other regions, see the [Regions](#regions) section below.
 
@@ -402,11 +402,11 @@ The Postman collection is configured to include these values in the headers for 
 
 The provided environment is configured for the North American host. To access other regions, change the `api_url`, `auth_grant_url`, and `token_url` variables:
 
-| Region | `api_url` | `auth_grant_url` | `token_url` |
-|--------|-----------|-----------------|------------|
-| NA | `https://advertising-api.amazon.com` | `https://www.amazon.com/ap/oa` | `https://api.amazon.com/auth/o2/token` |
-| EU | `https://advertising-api-eu.amazon.com` | `https://eu.account.amazon.com/ap/oa` | `https://api.amazon.co.uk/auth/o2/token` |
-| FE | `https://advertising-api-fe.amazon.com` | `https://apac.account.amazon.com/ap/oa` | `https://api.amazon.co.jp/auth/o2/token` |
+| Region | `api_url`                               | `auth_grant_url`                        | `token_url`                              |
+| ------ | --------------------------------------- | --------------------------------------- | ---------------------------------------- |
+| NA     | `https://advertising-api.amazon.com`    | `https://www.amazon.com/ap/oa`          | `https://api.amazon.com/auth/o2/token`   |
+| EU     | `https://advertising-api-eu.amazon.com` | `https://eu.account.amazon.com/ap/oa`   | `https://api.amazon.co.uk/auth/o2/token` |
+| FE     | `https://advertising-api-fe.amazon.com` | `https://apac.account.amazon.com/ap/oa` | `https://api.amazon.co.jp/auth/o2/token` |
 
 ---
 
@@ -428,21 +428,21 @@ Make sure you have:
 
 ### Request URL Prefixes
 
-| URL | Region & Marketplaces |
-|-----|-----------------------|
-| `https://advertising-api.amazon.com` | North America (NA): US, CA, MX, BR |
+| URL                                     | Region & Marketplaces                                                   |
+| --------------------------------------- | ----------------------------------------------------------------------- |
+| `https://advertising-api.amazon.com`    | North America (NA): US, CA, MX, BR                                      |
 | `https://advertising-api-eu.amazon.com` | Europe (EU): UK, FR, IT, ES, DE, NL, SE, PL, BE, ZA, EG, AE, SA, TR, IN |
-| `https://advertising-api-fe.amazon.com` | Far East (FE): JP, AU, SG |
+| `https://advertising-api-fe.amazon.com` | Far East (FE): JP, AU, SG                                               |
 
 ### Common Headers
 
-| Header | Required? | Description |
-|--------|-----------|-------------|
-| `Amazon-Ads-ClientId` | Yes | The client ID related to a Login with Amazon application. |
-| `Authorization` | Yes | A valid API access token in the format `Bearer access_token`. Valid for one hour. |
-| `Amazon-Advertising-API-Scope` | Campaign management | Amazon Ads profile ID. Required for campaign management operations. |
-| `Amazon-Ads-AccountId` | Reporting | Advertising account ID. Required for reporting and cross-product operations. |
-| `Accept` | No | Specifies the version. Defaults to `application/json` if not specified. |
+| Header                         | Required?           | Description                                                                       |
+| ------------------------------ | ------------------- | --------------------------------------------------------------------------------- |
+| `Amazon-Ads-ClientId`          | Yes                 | The client ID related to a Login with Amazon application.                         |
+| `Authorization`                | Yes                 | A valid API access token in the format `Bearer access_token`. Valid for one hour. |
+| `Amazon-Advertising-API-Scope` | Campaign management | Amazon Ads profile ID. Required for campaign management operations.               |
+| `Amazon-Ads-AccountId`         | Reporting           | Advertising account ID. Required for reporting and cross-product operations.      |
+| `Accept`                       | No                  | Specifies the version. Defaults to `application/json` if not specified.           |
 
 ### Sample Requests
 
@@ -546,4 +546,4 @@ To learn more about the dashboard, click **Dashboard help** from within the dash
 
 ---
 
-*Documentation sourced from the [Amazon Ads Advanced Tools Center](https://advertising.amazon.com/API/docs/en-us/guides/get-started/overview). All content is the property of Amazon.com, Inc. or its affiliates.*
+_Documentation sourced from the [Amazon Ads Advanced Tools Center](https://advertising.amazon.com/API/docs/en-us/guides/get-started/overview). All content is the property of Amazon.com, Inc. or its affiliates._

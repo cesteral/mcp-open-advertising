@@ -44,10 +44,7 @@ function collectRefs(node: unknown, schemaRefs: Set<string>, paramRefs: Set<stri
   }
 }
 
-export function filterSpecByOperationIds(
-  spec: OpenApiDoc,
-  rootOperationIds: string[],
-): OpenApiDoc {
+export function filterSpecByOperationIds(spec: OpenApiDoc, rootOperationIds: string[]): OpenApiDoc {
   const wantedOps = new Set(rootOperationIds);
   const keptPaths: OpenApiDoc["paths"] = {};
 

@@ -64,9 +64,7 @@ describe("amazon_dsp_create_commitment", () => {
     expect(createCommitmentTool.annotations.readOnlyHint).toBe(false);
     expect(createCommitmentTool.annotations.destructiveHint).toBe(true);
     expect(createCommitmentTool.annotations.openWorldHint).toBe(false);
-    expect(
-      (createCommitmentTool.annotations as { cesteral?: unknown }).cesteral,
-    ).toBeUndefined();
+    expect((createCommitmentTool.annotations as { cesteral?: unknown }).cesteral).toBeUndefined();
   });
 
   it("forwards input.data to amazonDspV1Service.createCommitment and returns the created commitment", async () => {
@@ -84,14 +82,14 @@ describe("amazon_dsp_create_commitment", () => {
       new McpError(
         JsonRpcErrorCode.InvalidParams,
         "Amazon DSP rejected the create commitment request: Overlapping dates",
-        { code: "FIELD_VALUE_IS_INVALID", fieldLocation: "startDateTime" },
-      ),
+        { code: "FIELD_VALUE_IS_INVALID", fieldLocation: "startDateTime" }
+      )
     );
-    await expect(createCommitmentLogic(validInput, baseContext, baseSdkContext)).rejects.toMatchObject(
-      {
-        message: expect.stringContaining("Overlapping dates"),
-        code: JsonRpcErrorCode.InvalidParams,
-      },
-    );
+    await expect(
+      createCommitmentLogic(validInput, baseContext, baseSdkContext)
+    ).rejects.toMatchObject({
+      message: expect.stringContaining("Overlapping dates"),
+      code: JsonRpcErrorCode.InvalidParams,
+    });
   });
 });

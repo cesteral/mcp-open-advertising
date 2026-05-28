@@ -56,16 +56,14 @@ export const GetCampaignForecastInputSchema = z
     campaignForecastDescriptions: z
       .array(CampaignForecastDescriptionSchema)
       .length(1)
-      .describe(
-        "Forecast descriptions. Amazon's endpoint accepts exactly 1 entry per call.",
-      ),
+      .describe("Forecast descriptions. Amazon's endpoint accepts exactly 1 entry per call."),
   })
   .describe("Parameters for retrieving a campaign forecast");
 
 export const GetCampaignForecastOutputSchema = z
   .object({
     response: DSPCampaignForecastMultiStatusResponseSchema.describe(
-      "Multi-status response (success[].campaignForecast + error[].errors[])",
+      "Multi-status response (success[].campaignForecast + error[].errors[])"
     ),
     timestamp: z.string().datetime(),
   })
@@ -77,12 +75,12 @@ type GetCampaignForecastOutput = z.infer<typeof GetCampaignForecastOutputSchema>
 export async function getCampaignForecastLogic(
   input: GetCampaignForecastInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<GetCampaignForecastOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   const response = await amazonDspV1Service.retrieveCampaignForecast(
     { campaignForecastDescriptions: input.campaignForecastDescriptions },
-    context,
+    context
   );
   return { response, timestamp: new Date().toISOString() };
 }
@@ -101,7 +99,7 @@ interface SuccessEntry {
 }
 
 export function getCampaignForecastResponseFormatter(
-  result: GetCampaignForecastOutput,
+  result: GetCampaignForecastOutput
 ): McpTextContent[] {
   const response = result.response as DSPCampaignForecastMultiStatusResponseT;
   const successCount = response.success?.length ?? 0;
@@ -111,10 +109,7 @@ export function getCampaignForecastResponseFormatter(
   let withWarnings = 0;
   for (const entry of (response.success ?? []) as SuccessEntry[]) {
     const flights = entry.campaignForecast?.flightForecasts ?? [];
-    const entryWarnings = flights.reduce(
-      (acc, fl) => acc + (fl.warnings?.length ?? 0),
-      0,
-    );
+    const entryWarnings = flights.reduce((acc, fl) => acc + (fl.warnings?.length ?? 0), 0);
     if (entryWarnings > 0) withWarnings += 1;
     totalWarnings += entryWarnings;
   }

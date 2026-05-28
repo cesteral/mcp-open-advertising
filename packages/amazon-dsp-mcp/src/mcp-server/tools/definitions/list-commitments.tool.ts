@@ -50,12 +50,12 @@ type ListCommitmentsOutput = z.infer<typeof ListCommitmentsOutputSchema>;
 export async function listCommitmentsLogic(
   input: ListCommitmentsInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<ListCommitmentsOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   const result = await amazonDspV1Service.listCommitments(
     { nextToken: input.nextToken, maxResults: input.maxResults },
-    context,
+    context
   );
   return {
     commitments: (result.commitments ?? []) as DSPCommitmentT[],
@@ -64,9 +64,7 @@ export async function listCommitmentsLogic(
   };
 }
 
-export function listCommitmentsResponseFormatter(
-  result: ListCommitmentsOutput,
-): McpTextContent[] {
+export function listCommitmentsResponseFormatter(result: ListCommitmentsOutput): McpTextContent[] {
   const count = result.commitments.length;
   const summary = `Found ${count} commitment${count === 1 ? "" : "s"}${
     result.nextToken ? ` (more available — pass nextToken to continue)` : ""

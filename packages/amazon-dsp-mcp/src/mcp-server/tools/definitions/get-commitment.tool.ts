@@ -45,12 +45,12 @@ type GetCommitmentOutput = z.infer<typeof GetCommitmentOutputSchema>;
 export async function getCommitmentLogic(
   input: GetCommitmentInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<GetCommitmentOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   const commitment = (await amazonDspV1Service.getCommitment(
     input.commitmentId,
-    context,
+    context
   )) as DSPCommitmentT;
   return { commitment, timestamp: new Date().toISOString() };
 }

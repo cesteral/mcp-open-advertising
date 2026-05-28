@@ -45,10 +45,7 @@ export interface ParsedRow {
  *
  * Bid Manager reports are always comma-delimited, matching the shared parser.
  */
-export function csvToJson(
-  csv: string,
-  nullableFields: string[] = []
-): Record<string, string>[] {
+export function csvToJson(csv: string, nullableFields: string[] = []): Record<string, string>[] {
   const { headers, rows } = sharedParseCSV(csv);
   if (headers.length === 0) return [];
 

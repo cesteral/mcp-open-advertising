@@ -108,7 +108,7 @@ describe("amazon-dsp-mcp cesteral.* annotations (v1 commitments)", () => {
     expect(cesteral!.contractToolSlug).toBe("get_commitment");
     expect(cesteral!.contractId).toBe("amazon_dsp.get_commitment.v1");
     expect(cesteral!.contractId).toBe(
-      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`,
+      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`
     );
     expect(cesteral!.schemaVersion).toBe(1);
     expect(cesteral!.entityKinds).toEqual(["commitment"]);
@@ -126,7 +126,7 @@ describe("amazon-dsp-mcp cesteral.* annotations (v1 commitments)", () => {
     expect(cesteral!.contractToolSlug).toBe("update_commitment");
     expect(cesteral!.contractId).toBe("amazon_dsp.update_commitment.v1");
     expect(cesteral!.contractId).toBe(
-      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`,
+      `${cesteral!.contractPlatformSlug}.${cesteral!.contractToolSlug}.v${cesteral!.schemaVersion}`
     );
     expect(cesteral!.schemaVersion).toBe(1);
     if (cesteral!.kind !== "write") throw new Error("expected write kind");

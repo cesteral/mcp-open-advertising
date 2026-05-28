@@ -71,7 +71,7 @@ describe("amazon_dsp_get_commitment", () => {
     const result = await getCommitmentLogic(
       { profileId: "1234567890", commitmentId: "c1" },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
     expect(mockGetCommitment).toHaveBeenCalledWith("c1", baseContext);
     expect(result.commitment).toEqual(sampleCommitment);
@@ -83,15 +83,15 @@ describe("amazon_dsp_get_commitment", () => {
       new McpError(
         JsonRpcErrorCode.InvalidParams,
         "Amazon DSP could not retrieve commitment missing: not found",
-        { code: "NOT_FOUND" },
-      ),
+        { code: "NOT_FOUND" }
+      )
     );
     await expect(
       getCommitmentLogic(
         { profileId: "1234567890", commitmentId: "missing" },
         baseContext,
-        baseSdkContext,
-      ),
+        baseSdkContext
+      )
     ).rejects.toMatchObject({
       message: expect.stringContaining("not found"),
     });

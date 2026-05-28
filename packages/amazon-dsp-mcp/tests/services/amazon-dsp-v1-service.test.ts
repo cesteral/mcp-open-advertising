@@ -42,7 +42,7 @@ describe("AmazonDspV1Service", () => {
     expect(get).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.listCommitments,
       expect.objectContaining({ maxResults: "25" }),
-      undefined,
+      undefined
     );
     // Confirm no vendor Accept header was passed (4th arg should be undefined).
     expect(get.mock.calls[0][3]).toBeUndefined();
@@ -60,7 +60,7 @@ describe("AmazonDspV1Service", () => {
     expect(post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.retrieveCommitments,
       { commitmentIds: ["c1"] },
-      undefined,
+      undefined
     );
     expect(result).toEqual(body);
   });
@@ -76,7 +76,7 @@ describe("AmazonDspV1Service", () => {
     expect(post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.retrieveCommitments,
       { commitmentIds: ["c1"] },
-      undefined,
+      undefined
     );
     expect(result).toEqual(sampleCommitment);
   });
@@ -116,7 +116,7 @@ describe("AmazonDspV1Service", () => {
     expect(post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.createCommitments,
       { commitments: [input] },
-      undefined,
+      undefined
     );
     expect(result).toEqual(created);
   });
@@ -163,7 +163,7 @@ describe("AmazonDspV1Service", () => {
     expect(post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.updateCommitments,
       { commitments: [input] },
-      undefined,
+      undefined
     );
     expect(result).toEqual(updated);
   });
@@ -176,7 +176,7 @@ describe("AmazonDspV1Service", () => {
     expect(post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.retrieveCampaignForecast,
       expect.objectContaining({ campaignForecastDescriptions: [] }),
-      undefined,
+      undefined
     );
   });
 
@@ -188,7 +188,7 @@ describe("AmazonDspV1Service", () => {
     expect(post).toHaveBeenCalledWith(
       AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend,
       expect.objectContaining({ commitmentIds: [] }),
-      undefined,
+      undefined
     );
   });
 });

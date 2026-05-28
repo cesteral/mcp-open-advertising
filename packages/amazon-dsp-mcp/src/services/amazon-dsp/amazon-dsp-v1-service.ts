@@ -38,12 +38,12 @@ export interface ListCommitmentsParams {
 export class AmazonDspV1Service {
   constructor(
     private readonly client: AmazonDspHttpClient,
-    private readonly logger: Logger,
+    private readonly logger: Logger
   ) {}
 
   async listCommitments(
     params: ListCommitmentsParams,
-    context?: RequestContext,
+    context?: RequestContext
   ): Promise<DSPCommitmentSuccessResponseT> {
     const query: Record<string, string> = {};
     if (params.nextToken !== undefined) query.nextToken = params.nextToken;
@@ -55,7 +55,7 @@ export class AmazonDspV1Service {
 
   async retrieveCommitments(
     body: { commitmentIds: string[] },
-    context?: RequestContext,
+    context?: RequestContext
   ): Promise<DSPCommitmentMultiStatusResponseT> {
     const raw = await this.client.post(AMAZON_DSP_V1_PATHS.retrieveCommitments, body, context);
     return DSPCommitmentMultiStatusResponseSchema.parse(raw);
@@ -82,60 +82,60 @@ export class AmazonDspV1Service {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
         `Amazon DSP could not retrieve commitment ${commitmentId}: ${firstErr?.message ?? "not found"}`,
-        { code: firstErr?.code, raw: errEntry },
+        { code: firstErr?.code, raw: errEntry }
       );
     }
     throw new McpError(
       JsonRpcErrorCode.InternalError,
       `Amazon DSP returned unexpected multi-status shape for single getCommitment: success=${parsed.success?.length ?? 0}, error=${parsed.error?.length ?? 0}`,
-      { raw: parsed },
+      { raw: parsed }
     );
   }
 
   async createCommitment(
     commitment: DSPCommitmentCreateT,
-    context?: RequestContext,
+    context?: RequestContext
   ): Promise<DSPCommitmentT> {
     const raw = await this.client.post(
       AMAZON_DSP_V1_PATHS.createCommitments,
       { commitments: [commitment] },
-      context,
+      context
     );
     return this.unwrapSingleCommitmentResult(raw, "create");
   }
 
   async updateCommitment(
     commitment: DSPCommitmentUpdateT,
-    context?: RequestContext,
+    context?: RequestContext
   ): Promise<DSPCommitmentT> {
     const raw = await this.client.post(
       AMAZON_DSP_V1_PATHS.updateCommitments,
       { commitments: [commitment] },
-      context,
+      context
     );
     return this.unwrapSingleCommitmentResult(raw, "update");
   }
 
   async retrieveCampaignForecast(
     body: DSPRetrieveCampaignForecastRequestT,
-    context?: RequestContext,
+    context?: RequestContext
   ): Promise<DSPCampaignForecastMultiStatusResponseT> {
     const raw = await this.client.post(
       AMAZON_DSP_V1_PATHS.retrieveCampaignForecast,
       body as unknown as Record<string, unknown>,
-      context,
+      context
     );
     return DSPCampaignForecastMultiStatusResponseSchema.parse(raw);
   }
 
   async retrieveCommitmentSpend(
     body: DSPRetrieveCommitmentSpendRequestT,
-    context?: RequestContext,
+    context?: RequestContext
   ): Promise<DSPCommitmentSpendMultiStatusResponseT> {
     const raw = await this.client.post(
       AMAZON_DSP_V1_PATHS.retrieveCommitmentSpend,
       body as unknown as Record<string, unknown>,
-      context,
+      context
     );
     return DSPCommitmentSpendMultiStatusResponseSchema.parse(raw);
   }
@@ -155,13 +155,13 @@ export class AmazonDspV1Service {
       throw new McpError(
         JsonRpcErrorCode.InvalidParams,
         `Amazon DSP rejected the ${op} commitment request: ${firstErr?.message ?? "unknown"}`,
-        { code: firstErr?.code, fieldLocation: firstErr?.fieldLocation, raw: errEntry },
+        { code: firstErr?.code, fieldLocation: firstErr?.fieldLocation, raw: errEntry }
       );
     }
     throw new McpError(
       JsonRpcErrorCode.InternalError,
       `Amazon DSP returned unexpected multi-status shape for single-item ${op}: success=${parsed.success?.length ?? 0}, error=${parsed.error?.length ?? 0}`,
-      { raw },
+      { raw }
     );
   }
 }

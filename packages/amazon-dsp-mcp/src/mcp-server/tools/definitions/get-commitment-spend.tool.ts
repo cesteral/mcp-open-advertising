@@ -35,9 +35,7 @@ const SpendDimensionSchema = z
   })
   .strict()
   .superRefine((value, ctx) => {
-    const present = SPEND_DIMENSION_KEYS.filter(
-      (key) => value[key] !== undefined,
-    ).length;
+    const present = SPEND_DIMENSION_KEYS.filter((key) => value[key] !== undefined).length;
     if (present !== 1) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -47,7 +45,7 @@ const SpendDimensionSchema = z
     }
   })
   .describe(
-    "Optional breakdown dimension. Pick exactly one of advertiserAccountId / campaignId / dealId.",
+    "Optional breakdown dimension. Pick exactly one of advertiserAccountId / campaignId / dealId."
   );
 
 const CommitmentSpendIdentifierSchema = z
@@ -70,7 +68,7 @@ export const GetCommitmentSpendInputSchema = z
 export const GetCommitmentSpendOutputSchema = z
   .object({
     response: DSPCommitmentSpendMultiStatusResponseSchema.describe(
-      "Multi-status response (success[].commitmentSpend + error[].errors[])",
+      "Multi-status response (success[].commitmentSpend + error[].errors[])"
     ),
     timestamp: z.string().datetime(),
   })
@@ -82,7 +80,7 @@ type GetCommitmentSpendOutput = z.infer<typeof GetCommitmentSpendOutputSchema>;
 export async function getCommitmentSpendLogic(
   input: GetCommitmentSpendInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<GetCommitmentSpendOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   // superRefine above guarantees `spendDimension` has exactly one key set
@@ -92,13 +90,13 @@ export async function getCommitmentSpendLogic(
     {
       commitmentIds: input.commitmentIds,
     } as DSPRetrieveCommitmentSpendRequestT,
-    context,
+    context
   );
   return { response, timestamp: new Date().toISOString() };
 }
 
 export function getCommitmentSpendResponseFormatter(
-  result: GetCommitmentSpendOutput,
+  result: GetCommitmentSpendOutput
 ): McpTextContent[] {
   const response = result.response as DSPCommitmentSpendMultiStatusResponseT;
   const successCount = response.success?.length ?? 0;
@@ -135,9 +133,7 @@ export const getCommitmentSpendTool = {
       label: "Spend broken down by campaign",
       input: {
         profileId: "1234567890",
-        commitmentIds: [
-          { commitmentId: "c-001", spendDimension: { campaignId: "cmp-abc" } },
-        ],
+        commitmentIds: [{ commitmentId: "c-001", spendDimension: { campaignId: "cmp-abc" } }],
       },
     },
   ],

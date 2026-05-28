@@ -33,7 +33,7 @@ export const GetCommitmentsInputSchema = z
 export const GetCommitmentsOutputSchema = z
   .object({
     response: DSPCommitmentMultiStatusResponseSchema.describe(
-      "Amazon multi-status response (success[].commitment + error[].errors[])",
+      "Amazon multi-status response (success[].commitment + error[].errors[])"
     ),
     timestamp: z.string().datetime(),
   })
@@ -45,12 +45,12 @@ type GetCommitmentsOutput = z.infer<typeof GetCommitmentsOutputSchema>;
 export async function getCommitmentsLogic(
   input: GetCommitmentsInput,
   context: RequestContext,
-  sdkContext?: SdkContext,
+  sdkContext?: SdkContext
 ): Promise<GetCommitmentsOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
   const response = await amazonDspV1Service.retrieveCommitments(
     { commitmentIds: input.commitmentIds },
-    context,
+    context
   );
   return {
     response,

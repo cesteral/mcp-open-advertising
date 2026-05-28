@@ -47,7 +47,7 @@ describe("amazon_dsp_get_campaign_forecast", () => {
     expect(getCampaignForecastTool.name).toBe("amazon_dsp_get_campaign_forecast");
     expect(getCampaignForecastTool.annotations.readOnlyHint).toBe(true);
     expect(
-      (getCampaignForecastTool.annotations as { cesteral?: unknown }).cesteral,
+      (getCampaignForecastTool.annotations as { cesteral?: unknown }).cesteral
     ).toBeUndefined();
   });
 
@@ -56,22 +56,19 @@ describe("amazon_dsp_get_campaign_forecast", () => {
       GetCampaignForecastInputSchema.safeParse({
         profileId: "p1",
         campaignForecastDescriptions: [],
-      }).success,
+      }).success
     ).toBe(false);
     expect(
       GetCampaignForecastInputSchema.safeParse({
         profileId: "p1",
-        campaignForecastDescriptions: [
-          { campaignId: "cmp-1" },
-          { campaignId: "cmp-2" },
-        ],
-      }).success,
+        campaignForecastDescriptions: [{ campaignId: "cmp-1" }, { campaignId: "cmp-2" }],
+      }).success
     ).toBe(false);
     expect(
       GetCampaignForecastInputSchema.safeParse({
         profileId: "p1",
         campaignForecastDescriptions: [{ campaignId: "cmp-1" }],
-      }).success,
+      }).success
     ).toBe(true);
   });
 
@@ -85,14 +82,14 @@ describe("amazon_dsp_get_campaign_forecast", () => {
         campaignForecastDescriptions: [{ campaignId: "cmp-1", flightIds: ["fl-1"] }],
       },
       baseContext,
-      baseSdkContext,
+      baseSdkContext
     );
 
     expect(mockRetrieveForecast).toHaveBeenCalledWith(
       {
         campaignForecastDescriptions: [{ campaignId: "cmp-1", flightIds: ["fl-1"] }],
       },
-      baseContext,
+      baseContext
     );
   });
 
