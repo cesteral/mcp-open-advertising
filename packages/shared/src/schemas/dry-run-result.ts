@@ -56,6 +56,7 @@ const CanonicalEntityKindSchema = z.enum([
   "ad",
   "campaign_budget",
   "order",
+  "commitment",
 ]);
 
 export const NormalizedEntitySnapshotSchema = z.object({
