@@ -80,7 +80,7 @@ export class AmazonDspV1Service {
       const errEntry = parsed.error[0] as ErrorsIndexT;
       const firstErr = errEntry.errors[0];
       throw new McpError(
-        JsonRpcErrorCode.InvalidRequest,
+        JsonRpcErrorCode.InvalidParams,
         `Amazon DSP could not retrieve commitment ${commitmentId}: ${firstErr?.message ?? "not found"}`,
         { code: firstErr?.code, raw: errEntry },
       );
@@ -153,7 +153,7 @@ export class AmazonDspV1Service {
       const errEntry = parsed.error[0] as ErrorsIndexT;
       const firstErr = errEntry.errors[0];
       throw new McpError(
-        JsonRpcErrorCode.InvalidRequest,
+        JsonRpcErrorCode.InvalidParams,
         `Amazon DSP rejected the ${op} commitment request: ${firstErr?.message ?? "unknown"}`,
         { code: firstErr?.code, fieldLocation: firstErr?.fieldLocation, raw: errEntry },
       );

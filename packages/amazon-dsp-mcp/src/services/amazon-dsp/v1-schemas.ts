@@ -12,6 +12,20 @@
  * precise types by casting each schema to `z.ZodType<components[...]>`
  * against the interfaces emitted by openapi-typescript.
  *
+ * IMPORTANT: the `as z.ZodType<X>` casts only recover the TypeScript
+ * inference. Runtime validation behavior is unchanged — it still comes from
+ * the original generated Zod schema (`.parse(...)` still runs the same
+ * checks). Treat the casts as type-system bookkeeping, not as a way to
+ * relax or strengthen runtime validation.
+ *
+ * Spec quirk worth knowing: `ErrorsIndex.index` is declared `minimum: 0,
+ * maximum: 0` in the Amazon spec, while `DSPCommitmentMultiStatusSuccess.index`
+ * allows 0..999. That means the generated `DSPCommitmentMultiStatusResponseSchema`
+ * will reject any per-item error entry with `index > 0`, even though the
+ * retrieve endpoint accepts up to 1000 IDs. If live API responses show
+ * `error[].index > 0`, the fix is a small override here (e.g. replace the
+ * ErrorsIndex schema with one allowing 0..1000) or in the post-processor.
+ *
  * If the generator's emitted names ever change, only this shim needs to be
  * updated — consumers (service, tools, tests) never reach into the generated
  * module directly.
