@@ -7,6 +7,7 @@ import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   DSPCommitmentSpendMultiStatusResponseSchema,
   type DSPCommitmentSpendMultiStatusResponseT,
+  type DSPRetrieveCommitmentSpendRequestT,
 } from "../../../services/amazon-dsp/v1-schemas.js";
 
 const TOOL_NAME = "amazon_dsp_get_commitment_spend";
@@ -19,16 +20,35 @@ Returns: \`accruedSpendValue\`, \`accruedToDateTime\`, \`projectedSpendValue\`,
 \`spendAtRiskValue\`, \`currencyCode\`, and the \`spendDimensionType\`
 (ADVERTISER / CAMPAIGN / COMMITMENT / DEAL).`;
 
-// Mirrors DSPSpendDimension union from the spec: exactly one of advertiserAccountId,
-// campaignId, or dealId may be set. Encoded as an optional field on the identifier;
-// the API rejects multiple keys.
+// Mirrors DSPSpendDimension union from the spec: exactly one of
+// advertiserAccountId, campaignId, or dealId may be set. Encoded as an
+// object whose three keys are all optional, with `.strict()` to reject
+// unknown keys and a `superRefine` to count present keys — `z.union` of
+// stripping object schemas would have admitted `{ campaignId, dealId }`
+// because the first matching branch silently drops the extras.
+const SPEND_DIMENSION_KEYS = ["advertiserAccountId", "campaignId", "dealId"] as const;
 const SpendDimensionSchema = z
-  .union([
-    z.object({ advertiserAccountId: z.string().min(1) }),
-    z.object({ campaignId: z.string().min(1) }),
-    z.object({ dealId: z.string().min(1) }),
-  ])
-  .describe("Optional breakdown dimension (pick exactly one of advertiserAccountId / campaignId / dealId)");
+  .object({
+    advertiserAccountId: z.string().min(1).optional(),
+    campaignId: z.string().min(1).optional(),
+    dealId: z.string().min(1).optional(),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    const present = SPEND_DIMENSION_KEYS.filter(
+      (key) => value[key] !== undefined,
+    ).length;
+    if (present !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "spendDimension must include exactly one of advertiserAccountId, campaignId, or dealId",
+      });
+    }
+  })
+  .describe(
+    "Optional breakdown dimension. Pick exactly one of advertiserAccountId / campaignId / dealId.",
+  );
 
 const CommitmentSpendIdentifierSchema = z
   .object({
@@ -65,8 +85,13 @@ export async function getCommitmentSpendLogic(
   sdkContext?: SdkContext,
 ): Promise<GetCommitmentSpendOutput> {
   const { amazonDspV1Service } = resolveSessionServices(sdkContext);
+  // superRefine above guarantees `spendDimension` has exactly one key set
+  // when present, so the wider `{a?,b?,c?}` shape narrows safely to the
+  // OpenAPI-typed `{a}|{b}|{c}` union on its way to the service.
   const response = await amazonDspV1Service.retrieveCommitmentSpend(
-    { commitmentIds: input.commitmentIds },
+    {
+      commitmentIds: input.commitmentIds,
+    } as DSPRetrieveCommitmentSpendRequestT,
     context,
   );
   return { response, timestamp: new Date().toISOString() };

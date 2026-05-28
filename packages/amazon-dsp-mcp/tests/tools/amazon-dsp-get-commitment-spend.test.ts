@@ -80,6 +80,41 @@ describe("amazon_dsp_get_commitment_spend", () => {
     ).toBe(true);
   });
 
+  it("rejects spendDimension with multiple keys set (exact-one enforcement)", () => {
+    const r = GetCommitmentSpendInputSchema.safeParse({
+      profileId: "p1",
+      commitmentIds: [
+        {
+          commitmentId: "c1",
+          spendDimension: { campaignId: "cmp-1", dealId: "d-2" },
+        },
+      ],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects spendDimension with zero keys set", () => {
+    const r = GetCommitmentSpendInputSchema.safeParse({
+      profileId: "p1",
+      commitmentIds: [{ commitmentId: "c1", spendDimension: {} }],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects spendDimension with an unknown key (strict mode)", () => {
+    const r = GetCommitmentSpendInputSchema.safeParse({
+      profileId: "p1",
+      commitmentIds: [
+        {
+          commitmentId: "c1",
+          // bogusKey is not in the union; .strict() should reject it.
+          spendDimension: { campaignId: "cmp-1", bogusKey: "x" },
+        },
+      ],
+    });
+    expect(r.success).toBe(false);
+  });
+
   it("calls retrieveCommitmentSpend with the wrapped request body", async () => {
     const body = { success: [], error: [] };
     mockRetrieveSpend.mockResolvedValueOnce(body);
