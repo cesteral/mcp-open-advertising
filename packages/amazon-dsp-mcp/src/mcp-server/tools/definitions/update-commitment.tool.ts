@@ -16,7 +16,6 @@ import {
 import { resolveSessionServices } from "../utils/resolve-session.js";
 import {
   DSPCommitmentSchema,
-  DSPCommitmentUpdateSchema,
   type DSPCommitmentT,
   type DSPCommitmentUpdateT,
 } from "../../../services/amazon-dsp/v1-schemas.js";
@@ -42,11 +41,49 @@ the change without an out-of-band pairing.
 When \`dry_run: true\` the call returns a \`dryRun\` payload (symbolic
 validation + symbolic post-state) without touching the commitment.`;
 
+/**
+ * Patch shape for the `data` field. Mirrors DSPCommitmentUpdate from the spec
+ * but explicitly drops the required `commitmentId` — that field is sourced
+ * from the top-level input arg so callers cannot smuggle a conflicting ID.
+ *
+ * `.passthrough()` accepts forward-compatible fields Amazon may add without
+ * us regenerating. The `superRefine` forbids `commitmentId` in `data`
+ * explicitly so a stale caller is surfaced with a clear error instead of
+ * silently overwritten.
+ */
+export const CommitmentUpdatePatchSchema = z
+  .object({
+    advertiserIds: z.array(z.string().min(1)).max(1000).optional(),
+    campaignIds: z.array(z.string().min(1)).max(1000).optional(),
+    commitmentName: z.string().min(1).optional(),
+    committedSpend: z.number().optional(),
+    currencyCode: z.string().min(1).optional(),
+    dealIds: z.array(z.string().min(1)).max(1000).optional(),
+    endDateTime: z.string().datetime({ offset: true }).optional(),
+    fulfillmentLevel: z.enum(["LEVEL_0", "LEVEL_5"]).optional(),
+    spendCalculationMode: z.enum(["ADVERTISER_ACCOUNT", "CAMPAIGN", "MANAGER_ACCOUNT"]).optional(),
+    startDateTime: z.string().datetime({ offset: true }).optional(),
+  })
+  .passthrough()
+  .superRefine((value, ctx) => {
+    if ("commitmentId" in value && (value as { commitmentId?: unknown }).commitmentId !== undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "data.commitmentId is forbidden — pass `commitmentId` at the top level of the tool input instead.",
+        path: ["commitmentId"],
+      });
+    }
+  })
+  .describe(
+    "Fields to update (partial). All keys are optional. Pass `commitmentId` at the top level, not here.",
+  );
+
 export const UpdateCommitmentInputSchema = z
   .object({
     profileId: z.string().min(1).describe("Amazon DSP Profile ID"),
     commitmentId: z.string().min(1).describe("The commitment ID to update"),
-    data: DSPCommitmentUpdateSchema.describe("Fields to update (partial)"),
+    data: CommitmentUpdatePatchSchema,
     dry_run: z
       .boolean()
       .optional()

@@ -26,6 +26,7 @@ const mockResolveSession = vi.mocked(resolveSessionServicesFromStore);
 import {
   updateCommitmentLogic,
   updateCommitmentTool,
+  UpdateCommitmentInputSchema,
 } from "../../src/mcp-server/tools/definitions/update-commitment.tool.js";
 
 const mockGetCommitment = vi.fn();
@@ -79,6 +80,57 @@ describe("amazon_dsp_update_commitment — governed write annotation", () => {
     expect(cesteral!.supportsBeforeAfterSnapshot).toBe(true);
     expect(updateCommitmentTool.annotations.destructiveHint).toBe(false);
     expect(updateCommitmentTool.annotations.idempotentHint).toBe(true);
+  });
+});
+
+describe("amazon_dsp_update_commitment — input schema parse", () => {
+  it("accepts the documented input shape with only patched fields in data", () => {
+    const r = UpdateCommitmentInputSchema.safeParse({
+      profileId: "1234567890",
+      commitmentId: "c-001",
+      data: { committedSpend: 150000 },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("accepts an empty data patch (no-op update is still well-formed input)", () => {
+    const r = UpdateCommitmentInputSchema.safeParse({
+      profileId: "1234567890",
+      commitmentId: "c-001",
+      data: {},
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("REJECTS a smuggled data.commitmentId — top-level is the only authoritative source", () => {
+    const r = UpdateCommitmentInputSchema.safeParse({
+      profileId: "1234567890",
+      commitmentId: "c-001",
+      data: { commitmentId: "different-id", committedSpend: 150000 },
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      const msg = r.error.issues.map((i) => i.message).join(" | ");
+      expect(msg).toMatch(/data\.commitmentId is forbidden/);
+    }
+  });
+
+  it("accepts forward-compatible passthrough fields in data (Amazon may add new ones)", () => {
+    const r = UpdateCommitmentInputSchema.safeParse({
+      profileId: "1234567890",
+      commitmentId: "c-001",
+      data: { committedSpend: 200, someFutureField: "x" },
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects an out-of-enum fulfillmentLevel before the wire", () => {
+    const r = UpdateCommitmentInputSchema.safeParse({
+      profileId: "1234567890",
+      commitmentId: "c-001",
+      data: { fulfillmentLevel: "LEVEL_99" },
+    });
+    expect(r.success).toBe(false);
   });
 });
 
