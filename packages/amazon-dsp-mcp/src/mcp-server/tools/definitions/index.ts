@@ -4,7 +4,8 @@
 /**
  * Tool definitions barrel export
  *
- * 18 tools total:
+ * 25 business tools total (26 once the auto-generated tool-search tool joins via
+ * createToolSearchTool below):
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
@@ -13,6 +14,8 @@
  *   1 specialized: get ad preview
  *   1 duplication: duplicate entity (manual read-strip-create)
  *   1 validation: validate entity (client-side)
+ *   7 v1 commitments: list, get-batch, get-singular, create, update (governed),
+ *                     get-campaign-forecast, get-commitment-spend
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
