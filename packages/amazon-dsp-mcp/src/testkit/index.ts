@@ -16,6 +16,7 @@
  */
 
 import { applyAmazonDspPatch } from "../mcp-server/tools/utils/dry-run.js";
+import { applyCommitmentPatch } from "../mcp-server/tools/utils/commitment-dry-run.js";
 import type { AmazonDspEntityKindKey, AmazonDspOperation, AmazonDspWriteFixture } from "./types.js";
 import { allFixtures } from "./fixtures/index.js";
 
@@ -27,6 +28,7 @@ export type {
 } from "./types.js";
 
 export { applyAmazonDspPatch } from "../mcp-server/tools/utils/dry-run.js";
+export { applyCommitmentPatch } from "../mcp-server/tools/utils/commitment-dry-run.js";
 
 /**
  * Return fixtures matching the given filters. Both args are optional —
@@ -62,12 +64,20 @@ export function assertContract(
       `assertContract: fixture.entityKind=${fixture.entityKind} does not match expected ${entityKind}`
     );
   }
-  const got = applyAmazonDspPatch(
-    fixture.args.entityType,
-    fixture.args.entityId,
-    fixture.preState,
-    fixture.args.data
-  );
+  const got =
+    fixture.entityKind === "commitment"
+      ? applyCommitmentPatch(
+          fixture.args.entityId,
+          fixture.args.profileId,
+          fixture.preState,
+          fixture.args.data
+        )
+      : applyAmazonDspPatch(
+          fixture.args.entityType,
+          fixture.args.entityId,
+          fixture.preState,
+          fixture.args.data
+        );
   if (got == null) {
     throw new Error(`assertContract(${fixture.description}): symbolic apply returned undefined`);
   }
