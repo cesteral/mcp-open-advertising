@@ -1,7 +1,7 @@
 // Copyright (c) Cesteral AB. Licensed under the Apache License, Version 2.0.
 // See LICENSE.md in the project root for full license terms.
 
-import { describe, it, expectTypeOf } from "vitest";
+import { describe, it, expect, expectTypeOf } from "vitest";
 import { z } from "zod";
 import type {
   CesteralToolAnnotations,
@@ -12,6 +12,7 @@ import type {
   DryRunResult,
   ToolDefinition,
 } from "../../src/index.js";
+import { NormalizedEntitySnapshotSchema } from "../../src/schemas/dry-run-result.js";
 
 describe("CesteralToolAnnotations", () => {
   it("accepts a minimal valid write value with only required fields", () => {
@@ -108,6 +109,27 @@ describe("CesteralToolAnnotations", () => {
     };
     expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
   });
+
+  it("accepts commitment so Amazon DSP commitment writes can be annotated and snapshotted", () => {
+    const value: CesteralToolAnnotations = {
+      kind: "write",
+      platform: "amazon_dsp",
+      contractPlatformSlug: "amazon_dsp",
+      contractToolSlug: "update_commitment",
+      operation: ["update"],
+      entityKinds: ["commitment"],
+      entityIdArgs: ["commitmentId"],
+      readPartner: {
+        toolName: "amazon_dsp_get_commitment",
+        argMap: { commitmentId: "commitmentId" },
+      },
+      schemaVersion: 1,
+      contractId: "amazon_dsp.update_commitment.v1",
+      requiresValidation: true,
+      requiresSimulation: true,
+    };
+    expectTypeOf(value).toMatchTypeOf<CesteralToolAnnotations>();
+  });
 });
 
 describe("NormalizedEntitySnapshot", () => {
@@ -131,6 +153,21 @@ describe("NormalizedEntitySnapshot", () => {
       schedule: { startAt: "2026-05-01T00:00:00Z", endAt: null },
     };
     expectTypeOf(snap).toMatchTypeOf<NormalizedEntitySnapshot>();
+  });
+
+  it("accepts a commitment snapshot at the schema level (Zod parity with TS union)", () => {
+    const snap: NormalizedEntitySnapshot = {
+      schemaVersion: 1,
+      platform: "amazon_dsp",
+      entityKind: "commitment",
+      platformEntityId: "c-1",
+      displayName: "Q3 Upfront",
+      accountId: "profile-1",
+      status: { canonical: "active", platformRaw: "ACTIVE" },
+      budget: {},
+      schedule: { startAt: null, endAt: null },
+    };
+    expect(() => NormalizedEntitySnapshotSchema.parse(snap)).not.toThrow();
   });
 
   it("accepts a DV360 insertion order with flighted budget segments", () => {

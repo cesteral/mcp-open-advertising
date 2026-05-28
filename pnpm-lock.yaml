@@ -72,6 +72,12 @@ importers:
       '@types/node':
         specifier: ^20.17.6
         version: 20.19.24
+      openapi-typescript:
+        specifier: ^7.10.1
+        version: 7.10.1(typescript@5.9.3)
+      openapi-zod-client:
+        specifier: ^1.18.3
+        version: 1.18.3
       tsx:
         specifier: ^4.20.6
         version: 4.20.6
@@ -5351,7 +5357,7 @@ packages:
   /openapi3-ts@3.1.0:
     resolution: {integrity: sha512-1qKTvCCVoV0rkwUh1zq5o8QyghmwYPuhdvtjv1rFjuOnJToXhQyF8eGjNETQ8QmGjr9Jz/tkAKLITIl2s7dw3A==}
     dependencies:
-      yaml: 2.8.1
+      yaml: 2.8.2
     dev: true
 
   /optionator@0.9.4:
@@ -6482,12 +6488,6 @@ packages:
 
   /yaml-ast-parser@0.0.43:
     resolution: {integrity: sha512-2PTINUwsRqSd+s8XxKaJWQlUuEMHJQyEuh2edBbW8KNJz0SJPwUSD2zRWqezFEdN7IzAgeuYHFUCF7o8zRdZ0A==}
-    dev: true
-
-  /yaml@2.8.1:
-    resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
-    engines: {node: '>= 14.6'}
-    hasBin: true
     dev: true
 
   /yaml@2.8.2:

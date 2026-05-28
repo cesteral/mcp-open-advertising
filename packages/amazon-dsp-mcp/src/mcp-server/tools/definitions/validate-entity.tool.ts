@@ -29,10 +29,7 @@ Checks required fields, data types, and common configuration mistakes.
 This is a pure client-side check — it catches missing required fields and
 obvious type errors. The AmazonDsp API may still reject payloads for business-rule
 reasons (e.g., invalid objective/placement combinations).`,
-  entityTypeEnum: getEntityTypeEnum() as readonly [
-    AmazonDspEntityType,
-    ...AmazonDspEntityType[],
-  ],
+  entityTypeEnum: getEntityTypeEnum() as readonly [AmazonDspEntityType, ...AmazonDspEntityType[]],
   getRules: (entityType) => getEntityContract(entityType).requiredOnCreate as FieldRule[],
   getReadOnlyFields: (entityType) => getEntityContract(entityType).readOnlyFields,
   extraInputSchema: {

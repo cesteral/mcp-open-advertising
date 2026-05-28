@@ -62,6 +62,33 @@ const amazonDspService = {
   },
 };
 
+const sampleV1Commitment = {
+  commitmentId: "c-001",
+  commitmentName: "Q3 Upfront",
+  committedSpend: 100000,
+  currencyCode: "USD",
+  endDateTime: "2027-01-01T00:00:00+00:00",
+  fulfillmentLevel: "LEVEL_5" as const,
+  spendCalculationMode: "CAMPAIGN" as const,
+  startDateTime: "2026-01-01T00:00:00+00:00",
+};
+
+const amazonDspV1Service = {
+  listCommitments: vi.fn(async () => ({
+    commitments: [sampleV1Commitment],
+    nextToken: undefined,
+  })),
+  retrieveCommitments: vi.fn(async () => ({
+    success: [{ commitment: sampleV1Commitment, index: 0 }],
+    error: [],
+  })),
+  getCommitment: vi.fn(async () => sampleV1Commitment),
+  createCommitment: vi.fn(async () => sampleV1Commitment),
+  updateCommitment: vi.fn(async () => ({ ...sampleV1Commitment, committedSpend: 150000 })),
+  retrieveCampaignForecast: vi.fn(async () => ({ success: [], error: [] })),
+  retrieveCommitmentSpend: vi.fn(async () => ({ success: [], error: [] })),
+};
+
 const amazonDspReportingService = {
   getReport: vi.fn(async () => ({
     headers: ["date", "impressions"],
@@ -89,7 +116,11 @@ const amazonDspReportingService = {
 };
 
 vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
-  resolveSessionServices: () => ({ amazonDspService, amazonDspReportingService }),
+  resolveSessionServices: () => ({
+    amazonDspService,
+    amazonDspReportingService,
+    amazonDspV1Service,
+  }),
 }));
 
 import { allTools } from "../../src/mcp-server/tools/definitions/index.js";
@@ -112,11 +143,33 @@ describe("Amazon DSP MCP definitions coverage", () => {
 
   it("exposes expected definitions", () => {
     const conformanceEnabled = process.env.MCP_INCLUDE_CONFORMANCE_TOOLS === "true";
-    expect(allTools).toHaveLength(conformanceEnabled ? 25 : 19); // 19 business (18 + amazon_dsp_search_tools) + 6 conformance when enabled
+    // 26 business = 18 entity tools + amazon_dsp_search_tools + 7 v1 commitment tools
+    // (list/get-batch/get-singular/create/update + get-campaign-forecast + get-commitment-spend).
+    // +6 conformance when MCP_INCLUDE_CONFORMANCE_TOOLS=true.
+    expect(allTools).toHaveLength(conformanceEnabled ? 32 : 26);
     expect(allResources.length).toBeGreaterThan(4);
     expect(getAllPrompts()).toHaveLength(11);
     expect(promptRegistry.size).toBe(11);
     expect(getPromptDefinition("amazon_dsp_campaign_setup_workflow")).toBeDefined();
+  });
+
+  it("registers the 7 v1 commitment tools and update_commitment carries its contractId", () => {
+    const v1ToolNames = [
+      "amazon_dsp_list_commitments",
+      "amazon_dsp_get_commitments",
+      "amazon_dsp_get_commitment",
+      "amazon_dsp_create_commitment",
+      "amazon_dsp_update_commitment",
+      "amazon_dsp_get_campaign_forecast",
+      "amazon_dsp_get_commitment_spend",
+    ];
+    for (const name of v1ToolNames) {
+      const tool = allTools.find((t) => t.name === name);
+      expect(tool, `${name} should be registered`).toBeDefined();
+    }
+    const update = allTools.find((t) => t.name === "amazon_dsp_update_commitment");
+    const cesteral = (update?.annotations as { cesteral?: { contractId?: string } }).cesteral;
+    expect(cesteral?.contractId).toBe("amazon_dsp.update_commitment.v1");
   });
 
   it("publishes contract-backed resources for new DSP entities and reporting v3", () => {

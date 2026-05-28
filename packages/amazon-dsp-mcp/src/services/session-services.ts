@@ -13,10 +13,12 @@ export { SessionServiceStore } from "@cesteral/shared";
 import { AmazonDspHttpClient } from "./amazon-dsp/amazon-dsp-http-client.js";
 import { AmazonDspService } from "./amazon-dsp/amazon-dsp-service.js";
 import { AmazonDspReportingService } from "./amazon-dsp/amazon-dsp-reporting-service.js";
+import { AmazonDspV1Service } from "./amazon-dsp/amazon-dsp-v1-service.js";
 
 export interface SessionServices {
   amazonDspService: AmazonDspService;
   amazonDspReportingService: AmazonDspReportingService;
+  amazonDspV1Service: AmazonDspV1Service;
 }
 
 export interface AmazonDspSessionConfig {
@@ -45,10 +47,12 @@ export function createSessionServices(
     config.reportPollIntervalMs,
     config.reportMaxPollAttempts
   );
+  const amazonDspV1Service = new AmazonDspV1Service(httpClient, logger);
 
   return {
     amazonDspService,
     amazonDspReportingService,
+    amazonDspV1Service,
   };
 }
 

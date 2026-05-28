@@ -4,7 +4,8 @@
 /**
  * Tool definitions barrel export
  *
- * 18 tools total:
+ * 25 business tools total (26 once the auto-generated tool-search tool joins via
+ * createToolSearchTool below):
  *   5 core: list entities, get entity, create entity, update entity, delete entity
  *   1 account: list advertisers
  *   5 reporting: get report, get report breakdowns, submit report, check report status, download report
@@ -13,6 +14,8 @@
  *   1 specialized: get ad preview
  *   1 duplication: duplicate entity (manual read-strip-create)
  *   1 validation: validate entity (client-side)
+ *   7 v1 commitments: list, get-batch, get-singular, create, update (governed),
+ *                     get-campaign-forecast, get-commitment-spend
  */
 
 export { listEntitiesTool } from "./list-entities.tool.js";
@@ -33,6 +36,13 @@ export { adjustBidsTool } from "./adjust-bids.tool.js";
 export { getAdPreviewTool } from "./get-ad-preview.tool.js";
 export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
+export { listCommitmentsTool } from "./list-commitments.tool.js";
+export { getCommitmentsTool } from "./get-commitments.tool.js";
+export { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
+export { getCommitmentSpendTool } from "./get-commitment-spend.tool.js";
+export { getCommitmentTool } from "./get-commitment.tool.js";
+export { createCommitmentTool } from "./create-commitment.tool.js";
+export { updateCommitmentTool } from "./update-commitment.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -52,6 +62,13 @@ import { adjustBidsTool } from "./adjust-bids.tool.js";
 import { getAdPreviewTool } from "./get-ad-preview.tool.js";
 import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
+import { listCommitmentsTool } from "./list-commitments.tool.js";
+import { getCommitmentsTool } from "./get-commitments.tool.js";
+import { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
+import { getCommitmentSpendTool } from "./get-commitment-spend.tool.js";
+import { getCommitmentTool } from "./get-commitment.tool.js";
+import { createCommitmentTool } from "./create-commitment.tool.js";
+import { updateCommitmentTool } from "./update-commitment.tool.js";
 import {
   conformanceTools,
   createToolSearchTool,
@@ -84,6 +101,14 @@ const productionTools: ToolDefinitionForFactory[] = [
   duplicateEntityTool,
   // ── Validation ──
   validateEntityTool,
+  // ── v1 Commitments ──
+  listCommitmentsTool,
+  getCommitmentsTool,
+  getCommitmentTool,
+  createCommitmentTool,
+  updateCommitmentTool,
+  getCampaignForecastTool,
+  getCommitmentSpendTool,
   // ── Discovery ──
   createToolSearchTool({ platform: "amazon_dsp", getTools: () => allTools }),
 ];

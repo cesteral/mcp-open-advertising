@@ -105,7 +105,7 @@ Intelligence layers governance and orchestration on top:
 | [sa360-mcp](packages/sa360-mcp)           | SA360 Reporting API v0 + DS v2    | 16    | OAuth2 refresh token            |
 | [pinterest-mcp](packages/pinterest-mcp)   | Pinterest Ads API v5              | 23    | Bearer token                    |
 | [snapchat-mcp](packages/snapchat-mcp)     | Snapchat Ads API v1               | 23    | Bearer token                    |
-| [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API                    | 19    | Bearer token                    |
+| [amazon-dsp-mcp](packages/amazon-dsp-mcp) | Amazon DSP API                    | 26    | Bearer token                    |
 | [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 25    | Access token + developer token  |
 | [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 6     | Google OAuth2                   |
 

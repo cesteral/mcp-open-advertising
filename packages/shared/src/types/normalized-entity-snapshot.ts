@@ -58,7 +58,8 @@ export type CanonicalEntityKind =
   | "ad_group"
   | "ad"
   | "campaign_budget"
-  | "order";
+  | "order"
+  | "commitment";
 
 export interface NormalizedEntitySnapshot {
   /** Pinned at 1 so consumers can detect drift in the canonical state shape. */

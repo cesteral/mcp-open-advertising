@@ -85,6 +85,10 @@ credentials.json
 # DO NOT ignore generated schemas (these are committed)
 # src/generated/schemas/
 
+# Amazon DSP MCP — vendored OpenAPI spec (locally placed, not tracked)
+# See packages/amazon-dsp-mcp/docs/README.md for how to obtain a copy.
+packages/amazon-dsp-mcp/docs/openapi.json
+
 # Terraform local config (use *.example files as templates)
 terraform/*.tfvars
 terraform/backend-*.conf
