@@ -13,18 +13,23 @@
 import type { NormalizedEntitySnapshot } from "@cesteral/shared";
 
 /**
- * Canonical operation labels for round-2 governance. The Amazon DSP
- * `update_entity` tool dispatches to these via the `data` payload (no separate
- * operation input). Fixtures pin one operation per fixture so consumers can
- * filter.
+ * Canonical operation labels across governed Amazon DSP write surfaces.
+ * `update_budget` / `pause` / `resume` belong to `amazon_dsp_update_entity`
+ * (order + lineItem). `update` is the commitment surface's single operation
+ * and matches `resolveCommitmentDispatchedCapability()` in commitment-dry-run.ts.
+ * Fixtures pin one operation each so consumers can filter.
  */
-export type AmazonDspOperation = "update_budget" | "pause" | "resume";
+export type AmazonDspOperation = "update_budget" | "pause" | "resume" | "update";
 
 /**
- * Governed entity kinds, labelled with the upstream `entityType` input key.
- * `order` is the campaign-level object, `lineItem` the ad-group-level object.
+ * Governed entity kinds, labelled with the upstream input key. `order` is the
+ * campaign-level object and `lineItem` the ad-group-level object (both via
+ * `amazon_dsp_update_entity`'s `entityType` input). `commitment` is the v1
+ * commitment surface (via `amazon_dsp_update_commitment`'s `commitmentId` input);
+ * commitment fixtures stash the commitment ID in `AmazonDspFixtureArgs.entityId`
+ * so the fixture-args shape stays uniform.
  */
-export type AmazonDspEntityKindKey = "order" | "lineItem";
+export type AmazonDspEntityKindKey = "order" | "lineItem" | "commitment";
 
 export interface AmazonDspFixtureArgs {
   /** Mirrors the `entityType` input on `amazon_dsp_update_entity`. */
