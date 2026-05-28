@@ -154,6 +154,23 @@ export function buildCommitmentSnapshot(
 }
 
 /**
+ * Symbolic-apply entry point for testkit fixtures. Thin wrapper over
+ * `buildCommitmentSnapshot`, parallel in shape to `applyAmazonDspPatch` in
+ * `dry-run.ts`. Re-exported from `@cesteral/amazon-dsp-mcp/testkit`.
+ *
+ * Pure: no I/O, no upstream calls. Used by `assertContract` when
+ * `fixture.entityKind === "commitment"`.
+ */
+export function applyCommitmentPatch(
+  commitmentId: string,
+  profileId: string,
+  preState: Partial<DSPCommitmentT>,
+  data: Partial<DSPCommitmentUpdateT>
+): NormalizedEntitySnapshot {
+  return buildCommitmentSnapshot(commitmentId, profileId, preState, data);
+}
+
+/**
  * Read the commitment through the service layer and normalise. Returns
  * `undefined` if the read fails — callers leave `before` / `after`
  * undefined rather than throwing.
