@@ -46,6 +46,7 @@ import {
   DSPCampaignForecastMultiStatusResponse,
   DSPRetrieveCommitmentSpendRequest,
   DSPCommitmentSpendMultiStatusResponse,
+  DSPSelectedForecastMetric,
   ErrorsIndex,
 } from "../../generated/v1/zod.js";
 import type { components } from "../../generated/v1/types.js";
@@ -68,6 +69,7 @@ export type DSPRetrieveCommitmentSpendRequestT = Schemas["DSPRetrieveCommitmentS
 export type DSPCommitmentSpendMultiStatusResponseT =
   Schemas["DSPCommitmentSpendMultiStatusResponse"];
 export type ErrorsIndexT = Schemas["ErrorsIndex"];
+export type DSPSelectedForecastMetricT = Schemas["DSPSelectedForecastMetric"];
 
 export const DSPCommitmentSchema = DSPCommitment as z.ZodType<DSPCommitmentT>;
 export const DSPCommitmentCreateSchema = DSPCommitmentCreate as z.ZodType<DSPCommitmentCreateT>;
@@ -93,3 +95,5 @@ export const DSPRetrieveCommitmentSpendRequestSchema =
 export const DSPCommitmentSpendMultiStatusResponseSchema =
   DSPCommitmentSpendMultiStatusResponse as z.ZodType<DSPCommitmentSpendMultiStatusResponseT>;
 export const ErrorsIndexSchema = ErrorsIndex as z.ZodType<ErrorsIndexT>;
+export const DSPSelectedForecastMetricSchema =
+  DSPSelectedForecastMetric as z.ZodType<DSPSelectedForecastMetricT>;

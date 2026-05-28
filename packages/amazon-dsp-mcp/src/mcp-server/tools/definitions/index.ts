@@ -35,6 +35,7 @@ export { duplicateEntityTool } from "./duplicate-entity.tool.js";
 export { validateEntityTool } from "./validate-entity.tool.js";
 export { listCommitmentsTool } from "./list-commitments.tool.js";
 export { getCommitmentsTool } from "./get-commitments.tool.js";
+export { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
 
 import { listEntitiesTool } from "./list-entities.tool.js";
 import { getEntityTool } from "./get-entity.tool.js";
@@ -56,6 +57,7 @@ import { duplicateEntityTool } from "./duplicate-entity.tool.js";
 import { validateEntityTool } from "./validate-entity.tool.js";
 import { listCommitmentsTool } from "./list-commitments.tool.js";
 import { getCommitmentsTool } from "./get-commitments.tool.js";
+import { getCampaignForecastTool } from "./get-campaign-forecast.tool.js";
 import {
   conformanceTools,
   createToolSearchTool,
@@ -91,6 +93,7 @@ const productionTools: ToolDefinitionForFactory[] = [
   // ── v1 Commitments ──
   listCommitmentsTool,
   getCommitmentsTool,
+  getCampaignForecastTool,
   // ── Discovery ──
   createToolSearchTool({ platform: "amazon_dsp", getTools: () => allTools }),
 ];
