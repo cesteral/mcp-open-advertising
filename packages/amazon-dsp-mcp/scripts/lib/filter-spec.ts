@@ -91,9 +91,16 @@ export function filterSpecByOperationIds(
     for (const name of [...schemaRefs]) {
       const schema = spec.components.schemas[name];
       if (!schema) continue;
-      const before = schemaRefs.size;
+      const before = { s: schemaRefs.size, p: paramRefs.size };
       collectRefs(schema, schemaRefs, paramRefs);
-      if (schemaRefs.size > before) added = true;
+      if (schemaRefs.size > before.s || paramRefs.size > before.p) added = true;
+    }
+    for (const name of [...paramRefs]) {
+      const param = spec.components.parameters?.[name];
+      if (!param) continue;
+      const before = { s: schemaRefs.size, p: paramRefs.size };
+      collectRefs(param, schemaRefs, paramRefs);
+      if (schemaRefs.size > before.s || paramRefs.size > before.p) added = true;
     }
   }
 

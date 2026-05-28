@@ -1,7 +1,6 @@
-import { makeApi, Zodios, type ZodiosOptions } from "@zodios/core";
 import { z } from "zod";
 
-const DSPCurrencyCode = z.enum([
+export const DSPCurrencyCode: z.ZodTypeAny = z.enum([
   "AED",
   "ARS",
   "AUD",
@@ -59,9 +58,9 @@ const DSPCurrencyCode = z.enum([
   "UYU",
   "VND",
 ]);
-const DSPFulfillmentLevel = z.enum(["LEVEL_0", "LEVEL_5"]);
-const DSPSpendCalculationMode = z.enum(["ADVERTISER_ACCOUNT", "CAMPAIGN", "MANAGER_ACCOUNT"]);
-const DSPCommitment = z
+export const DSPFulfillmentLevel: z.ZodTypeAny = z.enum(["LEVEL_0", "LEVEL_5"]);
+export const DSPSpendCalculationMode: z.ZodTypeAny = z.enum(["ADVERTISER_ACCOUNT", "CAMPAIGN", "MANAGER_ACCOUNT"]);
+export const DSPCommitment: z.ZodTypeAny = z
   .object({
     advertiserIds: z.array(z.string()).max(1000).optional(),
     campaignIds: z.array(z.string()).max(1000).optional(),
@@ -76,11 +75,11 @@ const DSPCommitment = z
     startDateTime: z.string().datetime({ offset: true }),
   })
   .passthrough();
-const DSPCommitmentSuccessResponse = z
+export const DSPCommitmentSuccessResponse: z.ZodTypeAny = z
   .object({ commitments: z.array(DSPCommitment).max(1000), nextToken: z.string() })
   .partial()
   .passthrough();
-const ErrorCode = z.enum([
+export const ErrorCode: z.ZodTypeAny = z.enum([
   "ACTION_NOT_SUPPORTED",
   "ACTIVE_RESOURCE_LIMIT_EXCEEDED",
   "ARCHIVED_PARENT_CANNOT_CREATE",
@@ -133,29 +132,29 @@ const ErrorCode = z.enum([
   "UNAUTHORIZED",
   "UNSUPPORTED_MARKETPLACE",
 ]);
-const BadRequestResponseContent = z.object({ code: ErrorCode, message: z.string() }).passthrough();
-const UnauthorizedResponseContent = z
+export const BadRequestResponseContent: z.ZodTypeAny = z.object({ code: ErrorCode, message: z.string() }).passthrough();
+export const UnauthorizedResponseContent: z.ZodTypeAny = z
   .object({ code: ErrorCode, message: z.string() })
   .passthrough();
-const ForbiddenResponseContent = z.object({ code: ErrorCode, message: z.string() }).passthrough();
-const NotFoundResponseContent = z.object({ code: ErrorCode, message: z.string() }).passthrough();
-const ContentTooLargeResponseContent = z
+export const ForbiddenResponseContent: z.ZodTypeAny = z.object({ code: ErrorCode, message: z.string() }).passthrough();
+export const NotFoundResponseContent: z.ZodTypeAny = z.object({ code: ErrorCode, message: z.string() }).passthrough();
+export const ContentTooLargeResponseContent: z.ZodTypeAny = z
   .object({ code: ErrorCode, message: z.string() })
   .passthrough();
-const TooManyRequestsResponseContent = z
+export const TooManyRequestsResponseContent: z.ZodTypeAny = z
   .object({ code: ErrorCode, message: z.string() })
   .passthrough();
-const InternalServerErrorResponseContent = z
+export const InternalServerErrorResponseContent: z.ZodTypeAny = z
   .object({ code: z.string(), message: z.string() })
   .passthrough();
-const BadGatewayResponseContent = z.object({ code: z.string(), message: z.string() }).passthrough();
-const ServiceUnavailableErrorResponseContent = z
+export const BadGatewayResponseContent: z.ZodTypeAny = z.object({ code: z.string(), message: z.string() }).passthrough();
+export const ServiceUnavailableErrorResponseContent: z.ZodTypeAny = z
   .object({ code: z.string(), message: z.string() })
   .passthrough();
-const GatewayTimeoutResponseContent = z
+export const GatewayTimeoutResponseContent: z.ZodTypeAny = z
   .object({ code: z.string(), message: z.string() })
   .passthrough();
-const DSPCommitmentCreate = z
+export const DSPCommitmentCreate: z.ZodTypeAny = z
   .object({
     advertiserIds: z.array(z.string()).max(1000).optional(),
     campaignIds: z.array(z.string()).max(1000).optional(),
@@ -169,27 +168,27 @@ const DSPCommitmentCreate = z
     startDateTime: z.string().datetime({ offset: true }),
   })
   .passthrough();
-const DSPCreateCommitmentRequest = z
+export const DSPCreateCommitmentRequest: z.ZodTypeAny = z
   .object({ commitments: z.array(DSPCommitmentCreate).min(1).max(1000) })
   .partial()
   .passthrough();
-const Error = z
+export const Error: z.ZodTypeAny = z
   .object({ code: ErrorCode, fieldLocation: z.string().optional(), message: z.string() })
   .passthrough();
-const ErrorsIndex = z
+export const ErrorsIndex: z.ZodTypeAny = z
   .object({ errors: z.array(Error).min(1).max(20), index: z.number().int().gte(0).lte(0) })
   .passthrough();
-const DSPCommitmentMultiStatusSuccess = z
+export const DSPCommitmentMultiStatusSuccess: z.ZodTypeAny = z
   .object({ commitment: DSPCommitment, index: z.number().int().gte(0).lte(999) })
   .passthrough();
-const DSPCommitmentMultiStatusResponse = z
+export const DSPCommitmentMultiStatusResponse: z.ZodTypeAny = z
   .object({
     error: z.array(ErrorsIndex).max(1000),
     success: z.array(DSPCommitmentMultiStatusSuccess).max(1000),
   })
   .partial()
   .passthrough();
-const DSPSelectedForecastMetric = z.enum([
+export const DSPSelectedForecastMetric: z.ZodTypeAny = z.enum([
   "AIMP",
   "AREA",
   "CAS",
@@ -203,13 +202,13 @@ const DSPSelectedForecastMetric = z.enum([
   "ROAS",
   "TAS",
 ]);
-const DSPForecastMetricsDescription = z
+export const DSPForecastMetricsDescription: z.ZodTypeAny = z
   .object({
     allMetrics: z.boolean(),
     selectedMetrics: z.array(DSPSelectedForecastMetric).max(20).optional(),
   })
   .passthrough();
-const DSPEnabledFeaturesInCampaignForecast = z
+export const DSPEnabledFeaturesInCampaignForecast: z.ZodTypeAny = z
   .object({
     campaignSettingsCache: z.boolean(),
     curve: z.boolean(),
@@ -219,33 +218,33 @@ const DSPEnabledFeaturesInCampaignForecast = z
   })
   .partial()
   .passthrough();
-const DSPAdProduct = z.literal("AMAZON_DSP");
-const DSPAdGroupBid = z
+export const DSPAdProduct: z.ZodTypeAny = z.literal("AMAZON_DSP");
+export const DSPAdGroupBid: z.ZodTypeAny = z
   .object({
     baseBid: z.number().optional(),
     currencyCode: DSPCurrencyCode,
     maxAverageBid: z.number().optional(),
   })
   .passthrough();
-const DSPBudgetType = z.literal("MONETARY");
-const DSPMonetaryBudget = z
+export const DSPBudgetType: z.ZodTypeAny = z.literal("MONETARY");
+export const DSPMonetaryBudget: z.ZodTypeAny = z
   .object({ currencyCode: DSPCurrencyCode, value: z.number() })
   .passthrough();
-const DSPMonetaryBudgetValue = z
+export const DSPMonetaryBudgetValue: z.ZodTypeAny = z
   .object({ monetaryBudget: DSPMonetaryBudget })
   .partial()
   .passthrough();
-const DSPBudgetValue = z.object({ monetaryBudgetValue: DSPMonetaryBudgetValue }).passthrough();
-const DSPRecurrence = z.enum(["DAILY", "LIFETIME", "MONTHLY"]);
-const DSPBudget = z
+export const DSPBudgetValue: z.ZodTypeAny = z.object({ monetaryBudgetValue: DSPMonetaryBudgetValue }).passthrough();
+export const DSPRecurrence: z.ZodTypeAny = z.enum(["DAILY", "LIFETIME", "MONTHLY"]);
+export const DSPBudget: z.ZodTypeAny = z
   .object({
     budgetType: DSPBudgetType,
     budgetValue: DSPBudgetValue,
     recurrenceTimePeriod: DSPRecurrence,
   })
   .passthrough();
-const DSPCreativeRotationType = z.enum(["RANDOM", "WEIGHTED"]);
-const DSPFeeType = z.enum([
+export const DSPCreativeRotationType: z.ZodTypeAny = z.enum(["RANDOM", "WEIGHTED"]);
+export const DSPFeeType: z.ZodTypeAny = z.enum([
   "AMAZON_AUDIENCE",
   "AMAZON_DSP",
   "MANAGED_SERVICE_FEE",
@@ -254,8 +253,8 @@ const DSPFeeType = z.enum([
   "THIRD_PARTY_AUDIENCE",
   "THIRD_PARTY_TARGETING",
 ]);
-const DSPFeeValueType = z.enum(["FIXED_CPM", "PERCENTAGE_OF_BUDGET", "PERCENTAGE_OF_SUPPLY_COST"]);
-const DSPFeesThirdPartyProvider = z.enum([
+export const DSPFeeValueType: z.ZodTypeAny = z.enum(["FIXED_CPM", "PERCENTAGE_OF_BUDGET", "PERCENTAGE_OF_SUPPLY_COST"]);
+export const DSPFeesThirdPartyProvider: z.ZodTypeAny = z.enum([
   "COM_SCORE",
   "CPM_1",
   "CPM_2",
@@ -264,7 +263,7 @@ const DSPFeesThirdPartyProvider = z.enum([
   "DOUBLE_VERIFY",
   "INTEGRAL_AD_SCIENCE",
 ]);
-const DSPFee = z
+export const DSPFee: z.ZodTypeAny = z
   .object({
     addToBudgetSpentAmount: z.boolean().optional(),
     currencyCode: DSPCurrencyCode,
@@ -274,9 +273,9 @@ const DSPFee = z
     thirdPartyProvider: DSPFeesThirdPartyProvider.optional(),
   })
   .passthrough();
-const DSPFrequencyTargetingSetting = z.enum(["HOUSEHOLD", "USER"]);
-const DSPTimeUnit = z.enum(["DAYS", "HOURS", "MINUTES"]);
-const DSPFrequency = z
+export const DSPFrequencyTargetingSetting: z.ZodTypeAny = z.enum(["HOUSEHOLD", "USER"]);
+export const DSPTimeUnit: z.ZodTypeAny = z.enum(["DAYS", "HOURS", "MINUTES"]);
+export const DSPFrequency: z.ZodTypeAny = z
   .object({
     eventMaxCount: z.number().int().gte(1).lte(99000),
     frequencyTargetingSetting: DSPFrequencyTargetingSetting,
@@ -284,7 +283,7 @@ const DSPFrequency = z
     timeUnit: DSPTimeUnit.optional(),
   })
   .passthrough();
-const DSPInventoryType = z.enum([
+export const DSPInventoryType: z.ZodTypeAny = z.enum([
   "AAP_MOBILE_APP",
   "AMAZON_MOBILE_DISPLAY",
   "AUDIO",
@@ -298,9 +297,9 @@ const DSPInventoryType = z.enum([
   "STREAMING_TV_AMAZON_DEAL",
   "VIDEO",
 ]);
-const DSPMarketplaceAdGroupConfigurations = z.object({}).partial().passthrough();
-const DSPMarketplaceScope = z.literal("SINGLE_MARKETPLACE");
-const DSPMarketplace = z.enum([
+export const DSPMarketplaceAdGroupConfigurations: z.ZodTypeAny = z.object({}).partial().passthrough();
+export const DSPMarketplaceScope: z.ZodTypeAny = z.literal("SINGLE_MARKETPLACE");
+export const DSPMarketplace: z.ZodTypeAny = z.enum([
   "AE",
   "AU",
   "BR",
@@ -319,24 +318,24 @@ const DSPMarketplace = z.enum([
   "TR",
   "US",
 ]);
-const DSPBidStrategy = z.enum([
+export const DSPBidStrategy: z.ZodTypeAny = z.enum([
   "PRIORITIZE_KPI_TARGET",
   "SPEND_BUDGET_IN_FULL",
   "USE_CAMPAIGN_STRATEGY",
 ]);
-const DSPBudgetAllocation = z.enum(["AUTO", "MANUAL"]);
-const DSPAdGroupBudgetSettings = z
+export const DSPBudgetAllocation: z.ZodTypeAny = z.enum(["AUTO", "MANUAL"]);
+export const DSPAdGroupBudgetSettings: z.ZodTypeAny = z
   .object({ budgetAllocation: DSPBudgetAllocation, dailyMinSpendValue: z.number() })
   .partial()
   .passthrough();
-const DSPOptimization = z
+export const DSPOptimization: z.ZodTypeAny = z
   .object({ bidStrategy: DSPBidStrategy, budgetSettings: DSPAdGroupBudgetSettings })
   .partial()
   .passthrough();
-const DSPDeliveryProfile = z.enum(["ASAP", "EVEN", "PACE_AHEAD"]);
-const DSPPacing = z.object({ deliveryProfile: DSPDeliveryProfile }).partial().passthrough();
-const DSPState = z.enum(["ARCHIVED", "ENABLED", "PAUSED"]);
-const DSPDeliveryReason = z.enum([
+export const DSPDeliveryProfile: z.ZodTypeAny = z.enum(["ASAP", "EVEN", "PACE_AHEAD"]);
+export const DSPPacing: z.ZodTypeAny = z.object({ deliveryProfile: DSPDeliveryProfile }).partial().passthrough();
+export const DSPState: z.ZodTypeAny = z.enum(["ARCHIVED", "ENABLED", "PAUSED"]);
+export const DSPDeliveryReason: z.ZodTypeAny = z.enum([
   "AD_CREATIVES_NOT_RUNNING",
   "AD_GROUPS_NOT_RUNNING",
   "AD_GROUP_ARCHIVED",
@@ -359,15 +358,15 @@ const DSPDeliveryReason = z.enum([
   "CAMPAIGN_POLICING_SUSPENDED",
   "OTHER",
 ]);
-const DSPDeliveryStatus = z.enum(["DELIVERING", "LIMITED", "NOT_DELIVERING", "UNAVAILABLE"]);
-const DSPStatus = z
+export const DSPDeliveryStatus: z.ZodTypeAny = z.enum(["DELIVERING", "LIMITED", "NOT_DELIVERING", "UNAVAILABLE"]);
+export const DSPStatus: z.ZodTypeAny = z
   .object({
     deliveryReasons: z.array(DSPDeliveryReason).max(50).optional(),
     deliveryStatus: DSPDeliveryStatus,
   })
   .passthrough();
-const DSPTag = z.object({ key: z.string(), value: z.string() }).passthrough();
-const DSPViewabilityTier = z.enum([
+export const DSPTag: z.ZodTypeAny = z.object({ key: z.string(), value: z.string() }).passthrough();
+export const DSPViewabilityTier: z.ZodTypeAny = z.enum([
   "ALL_TIERS",
   "GREATER_THAN_40_PERCENT",
   "GREATER_THAN_50_PERCENT",
@@ -375,10 +374,10 @@ const DSPViewabilityTier = z.enum([
   "GREATER_THAN_70_PERCENT",
   "LESS_THAN_40_PERCENT",
 ]);
-const DSPAmazonViewability = z
+export const DSPAmazonViewability: z.ZodTypeAny = z
   .object({ includeUnmeasurableImpressions: z.boolean(), viewabilityTier: DSPViewabilityTier })
   .passthrough();
-const DSPAutomatedTargetingTactic = z.enum([
+export const DSPAutomatedTargetingTactic: z.ZodTypeAny = z.enum([
   "AWARENESS",
   "CUSTOMER_ACQUISITION",
   "MAXIMIZE_PERFORMANCE",
@@ -387,8 +386,8 @@ const DSPAutomatedTargetingTactic = z.enum([
   "RETENTION",
   "SEARCH",
 ]);
-const DSPDefaultAudienceTargetingMatchType = z.enum(["EXACT", "SIMILAR"]);
-const DSPSiteLanguage = z.enum([
+export const DSPDefaultAudienceTargetingMatchType: z.ZodTypeAny = z.enum(["EXACT", "SIMILAR"]);
+export const DSPSiteLanguage: z.ZodTypeAny = z.enum([
   "AR",
   "BN",
   "CS",
@@ -417,10 +416,10 @@ const DSPSiteLanguage = z.enum([
   "TR",
   "ZH",
 ]);
-const DSPTacticsConvertersExclusionType = z.enum(["NO_EXCLUSION", "RECENT_CONVERTERS"]);
-const DSPTimeZoneType = z.enum(["ADVERTISER_REGION", "VIEWER"]);
-const DSPUserLocationSignal = z.enum(["CURRENT", "MULTIPLE_SIGNALS"]);
-const DSPVideoCompletionTier = z.enum([
+export const DSPTacticsConvertersExclusionType: z.ZodTypeAny = z.enum(["NO_EXCLUSION", "RECENT_CONVERTERS"]);
+export const DSPTimeZoneType: z.ZodTypeAny = z.enum(["ADVERTISER_REGION", "VIEWER"]);
+export const DSPUserLocationSignal: z.ZodTypeAny = z.enum(["CURRENT", "MULTIPLE_SIGNALS"]);
+export const DSPVideoCompletionTier: z.ZodTypeAny = z.enum([
   "ALL_TIERS",
   "GREATER_THAN_10_PERCENT",
   "GREATER_THAN_20_PERCENT",
@@ -432,7 +431,7 @@ const DSPVideoCompletionTier = z.enum([
   "GREATER_THAN_80_PERCENT",
   "GREATER_THAN_90_PERCENT",
 ]);
-const DSPTargetingSettings = z
+export const DSPTargetingSettings: z.ZodTypeAny = z
   .object({
     amazonViewability: DSPAmazonViewability,
     automatedTargetingTactic: DSPAutomatedTargetingTactic,
@@ -447,7 +446,7 @@ const DSPTargetingSettings = z
   })
   .partial()
   .passthrough();
-const DSPForecastAdGroup = z
+export const DSPForecastAdGroup: z.ZodTypeAny = z
   .object({
     adGroupId: z.string(),
     adProduct: DSPAdProduct,
@@ -479,8 +478,8 @@ const DSPForecastAdGroup = z
   })
   .partial()
   .passthrough();
-const DSPAutoCreationSettings = z.object({}).partial().passthrough();
-const DSPCountryCode = z.enum([
+export const DSPAutoCreationSettings: z.ZodTypeAny = z.object({}).partial().passthrough();
+export const DSPCountryCode: z.ZodTypeAny = z.enum([
   "AE",
   "AT",
   "AU",
@@ -517,20 +516,20 @@ const DSPCountryCode = z.enum([
   "TR",
   "US",
 ]);
-const DSPTacticKey = z.object({}).partial().passthrough();
-const DSPCampaignFeeType = z.literal("AGENCY");
-const DSPCampaignFeeValueType = z.literal("PERCENTAGE_OF_BUDGET");
-const DSPCampaignFee = z
+export const DSPTacticKey: z.ZodTypeAny = z.object({}).partial().passthrough();
+export const DSPCampaignFeeType: z.ZodTypeAny = z.literal("AGENCY");
+export const DSPCampaignFeeValueType: z.ZodTypeAny = z.literal("PERCENTAGE_OF_BUDGET");
+export const DSPCampaignFee: z.ZodTypeAny = z
   .object({
     feeType: DSPCampaignFeeType,
     feeValue: z.number(),
     feeValueType: DSPCampaignFeeValueType,
   })
   .passthrough();
-const DSPFlightBudget = z
+export const DSPFlightBudget: z.ZodTypeAny = z
   .object({ budgetType: DSPBudgetType, budgetValue: DSPBudgetValue })
   .passthrough();
-const DSPCampaignFlight = z
+export const DSPCampaignFlight: z.ZodTypeAny = z
   .object({
     budget: DSPFlightBudget,
     endDateTime: z.string().datetime({ offset: true }),
@@ -539,23 +538,23 @@ const DSPCampaignFlight = z
     startDateTime: z.string().datetime({ offset: true }),
   })
   .passthrough();
-const DSPIneligibleAutomatedTargetingTactic = z.object({}).partial().passthrough();
-const DSPMarketplaceCampaignConfigurations = z.object({}).partial().passthrough();
-const DSPBidSettings = z.object({ bidStrategy: DSPBidStrategy }).partial().passthrough();
-const DSPRolloverStrategy = z.enum([
+export const DSPIneligibleAutomatedTargetingTactic: z.ZodTypeAny = z.object({}).partial().passthrough();
+export const DSPMarketplaceCampaignConfigurations: z.ZodTypeAny = z.object({}).partial().passthrough();
+export const DSPBidSettings: z.ZodTypeAny = z.object({ bidStrategy: DSPBidStrategy }).partial().passthrough();
+export const DSPRolloverStrategy: z.ZodTypeAny = z.enum([
   "CUMULATIVE_BUDGET_ROLLOVER",
   "NO_ROLLOVER",
   "PRIOR_BUDGET_ROLLOVER",
 ]);
-const DSPBudgetSettings = z
+export const DSPBudgetSettings: z.ZodTypeAny = z
   .object({
     budgetAllocation: DSPBudgetAllocation,
     flightBudgetRolloverStrategy: DSPRolloverStrategy,
   })
   .partial()
   .passthrough();
-const DSPGoal = z.enum(["AWARENESS", "CONSIDERATION", "CONVERSIONS"]);
-const DSPKPI = z.enum([
+export const DSPGoal: z.ZodTypeAny = z.enum(["AWARENESS", "CONSIDERATION", "CONVERSIONS"]);
+export const DSPKPI: z.ZodTypeAny = z.enum([
   "CLICK_THROUGH_RATE",
   "COMBINED_RETURN_ON_AD_SPEND",
   "COST_PER_ACTION",
@@ -576,7 +575,7 @@ const DSPKPI = z.enum([
   "TOTAL_RETURN_ON_AD_SPEND",
   "VIDEO_COMPLETION_RATE",
 ]);
-const DSPGoalSettings = z
+export const DSPGoalSettings: z.ZodTypeAny = z
   .object({
     currencyCode: DSPCurrencyCode.optional(),
     goal: DSPGoal,
@@ -584,8 +583,8 @@ const DSPGoalSettings = z
     kpiValue: z.number().optional(),
   })
   .passthrough();
-const DSPPrimaryInventoryType = z.enum(["AUDIO", "DISPLAY", "VIDEO_OLV", "VIDEO_STV"]);
-const DSPCampaignOptimizations = z
+export const DSPPrimaryInventoryType: z.ZodTypeAny = z.enum(["AUDIO", "DISPLAY", "VIDEO_OLV", "VIDEO_STV"]);
+export const DSPCampaignOptimizations: z.ZodTypeAny = z
   .object({
     bidSettings: DSPBidSettings,
     budgetSettings: DSPBudgetSettings,
@@ -594,7 +593,7 @@ const DSPCampaignOptimizations = z
   })
   .partial()
   .passthrough();
-const DSPForecastCampaign = z
+export const DSPForecastCampaign: z.ZodTypeAny = z
   .object({
     adProduct: DSPAdProduct,
     adomains: z.array(z.string()).max(2),
@@ -633,7 +632,7 @@ const DSPForecastCampaign = z
   })
   .partial()
   .passthrough();
-const DSPForecastFlight = z
+export const DSPForecastFlight: z.ZodTypeAny = z
   .object({
     budget: DSPBudget,
     endDateTime: z.string().datetime({ offset: true }),
@@ -641,46 +640,46 @@ const DSPForecastFlight = z
     startDateTime: z.string().datetime({ offset: true }),
   })
   .passthrough();
-const DSPTargetBid = z.object({}).partial().passthrough();
-const DSPMarketplaceTargetConfigurations = z.object({}).partial().passthrough();
-const DSPKeywordMatchType = z.literal("BROAD");
-const DSPKeywordTarget = z
+export const DSPTargetBid: z.ZodTypeAny = z.object({}).partial().passthrough();
+export const DSPMarketplaceTargetConfigurations: z.ZodTypeAny = z.object({}).partial().passthrough();
+export const DSPKeywordMatchType: z.ZodTypeAny = z.literal("BROAD");
+export const DSPKeywordTarget: z.ZodTypeAny = z
   .object({ keyword: z.string(), matchType: DSPKeywordMatchType })
   .passthrough();
-const DSPProductMatchType = z.literal("PRODUCT_EXACT");
-const DSPProductMarketplaceSetting = z
+export const DSPProductMatchType: z.ZodTypeAny = z.literal("PRODUCT_EXACT");
+export const DSPProductMarketplaceSetting: z.ZodTypeAny = z
   .object({ marketplace: DSPMarketplace, productId: z.string() })
   .passthrough();
-const DSPProductValue = z
+export const DSPProductValue: z.ZodTypeAny = z
   .object({
     marketplaceSettings: z.array(DSPProductMarketplaceSetting).max(30),
     productId: z.string(),
   })
   .partial()
   .passthrough();
-const DSPProductIdType = z.literal("ASIN");
-const DSPProductTarget = z
+export const DSPProductIdType: z.ZodTypeAny = z.literal("ASIN");
+export const DSPProductTarget: z.ZodTypeAny = z
   .object({
     matchType: DSPProductMatchType,
     product: DSPProductValue,
     productIdType: DSPProductIdType,
   })
   .passthrough();
-const DSPProductCategoryRefinement = z
+export const DSPProductCategoryRefinement: z.ZodTypeAny = z
   .object({ productCategoryId: z.string() })
   .partial()
   .passthrough();
-const DSPProductCategoryRefinementValue = z
+export const DSPProductCategoryRefinementValue: z.ZodTypeAny = z
   .object({ productCategoryRefinement: DSPProductCategoryRefinement })
   .partial()
   .passthrough();
-const DSPProductCategoryTarget = z
+export const DSPProductCategoryTarget: z.ZodTypeAny = z
   .object({ productCategoryRefinement: DSPProductCategoryRefinementValue })
   .passthrough();
-const DSPAcrossGroupOperator = z.enum(["ALL", "ANY"]);
-const DSPMarketplaceStringValue = z.object({ defaultValue: z.string() }).partial().passthrough();
-const DSPInGroupOperator = z.enum(["ALL", "ANY"]);
-const DSPAudienceTarget = z
+export const DSPAcrossGroupOperator: z.ZodTypeAny = z.enum(["ALL", "ANY"]);
+export const DSPMarketplaceStringValue: z.ZodTypeAny = z.object({ defaultValue: z.string() }).partial().passthrough();
+export const DSPInGroupOperator: z.ZodTypeAny = z.enum(["ALL", "ANY"]);
+export const DSPAudienceTarget: z.ZodTypeAny = z
   .object({
     acrossGroupOperator: DSPAcrossGroupOperator.optional(),
     audienceId: DSPMarketplaceStringValue,
@@ -688,10 +687,10 @@ const DSPAudienceTarget = z
     inGroupOperator: DSPInGroupOperator.optional(),
   })
   .passthrough();
-const DSPLocationTarget = z.object({ locationId: z.string() }).passthrough();
-const DSPDomainListTarget = z.object({ domainListId: z.string() }).passthrough();
-const DSPDomainNameTarget = z.object({ domainName: z.string() }).passthrough();
-const DSPDomainFileTarget = z
+export const DSPLocationTarget: z.ZodTypeAny = z.object({ locationId: z.string() }).passthrough();
+export const DSPDomainListTarget: z.ZodTypeAny = z.object({ domainListId: z.string() }).passthrough();
+export const DSPDomainNameTarget: z.ZodTypeAny = z.object({ domainName: z.string() }).passthrough();
+export const DSPDomainFileTarget: z.ZodTypeAny = z
   .object({
     domainFileId: z.string(),
     domainFileKey: z.string(),
@@ -700,30 +699,30 @@ const DSPDomainFileTarget = z
   })
   .partial()
   .passthrough();
-const DSPAdvertiserDomainList = z.object({ inheritFromAdvertiser: z.boolean() }).passthrough();
-const DSPDomainTargetDetails = z.union([
+export const DSPAdvertiserDomainList: z.ZodTypeAny = z.object({ inheritFromAdvertiser: z.boolean() }).passthrough();
+export const DSPDomainTargetDetails: z.ZodTypeAny = z.union([
   z.object({ domainListTarget: DSPDomainListTarget }).passthrough(),
   z.object({ domainNameTarget: DSPDomainNameTarget }).passthrough(),
   z.object({ domainFileTarget: DSPDomainFileTarget }).passthrough(),
   z.object({ advertiserDomainList: DSPAdvertiserDomainList }).passthrough(),
 ]);
-const DSPDomainTargetTypes = z.enum([
+export const DSPDomainTargetTypes: z.ZodTypeAny = z.enum([
   "ADVERTISER_DOMAIN_LIST",
   "DOMAIN_FILE",
   "DOMAIN_LIST",
   "DOMAIN_NAME",
 ]);
-const DSPDomainTarget = z
+export const DSPDomainTarget: z.ZodTypeAny = z
   .object({ domainTargetDetails: DSPDomainTargetDetails, domainTargetType: DSPDomainTargetTypes })
   .passthrough();
-const DSPAppType = z.enum(["MOBILE", "STREAMING_TV"]);
-const DSPAppTarget = z.object({ appId: z.string(), appType: DSPAppType }).passthrough();
-const DSPDeviceOrientation = z.enum(["LANDSCAPE", "PORTRAIT"]);
-const DSPDeviceType = z.enum(["CONNECTED_DEVICE", "CONNECTED_TV", "DESKTOP", "MOBILE"]);
-const DSPMobileDevice = z.enum(["ANDROID", "IPAD", "IPHONE", "KINDLE_FIRE", "KINDLE_FIRE_HD"]);
-const DSPMobileEnvironment = z.enum(["APP", "WEB"]);
-const DSPMobileOs = z.enum(["ANDROID", "IOS"]);
-const DSPDeviceTarget = z
+export const DSPAppType: z.ZodTypeAny = z.enum(["MOBILE", "STREAMING_TV"]);
+export const DSPAppTarget: z.ZodTypeAny = z.object({ appId: z.string(), appType: DSPAppType }).passthrough();
+export const DSPDeviceOrientation: z.ZodTypeAny = z.enum(["LANDSCAPE", "PORTRAIT"]);
+export const DSPDeviceType: z.ZodTypeAny = z.enum(["CONNECTED_DEVICE", "CONNECTED_TV", "DESKTOP", "MOBILE"]);
+export const DSPMobileDevice: z.ZodTypeAny = z.enum(["ANDROID", "IPAD", "IPHONE", "KINDLE_FIRE", "KINDLE_FIRE_HD"]);
+export const DSPMobileEnvironment: z.ZodTypeAny = z.enum(["APP", "WEB"]);
+export const DSPMobileOs: z.ZodTypeAny = z.enum(["ANDROID", "IOS"]);
+export const DSPDeviceTarget: z.ZodTypeAny = z
   .object({
     deviceOrientation: DSPDeviceOrientation.optional(),
     deviceType: DSPDeviceType,
@@ -732,7 +731,7 @@ const DSPDeviceTarget = z
     mobileOs: DSPMobileOs.optional(),
   })
   .passthrough();
-const DSPDayOfWeek = z.enum([
+export const DSPDayOfWeek: z.ZodTypeAny = z.enum([
   "FRIDAY",
   "MONDAY",
   "SATURDAY",
@@ -741,17 +740,17 @@ const DSPDayOfWeek = z.enum([
   "TUESDAY",
   "WEDNESDAY",
 ]);
-const DSPTimeOfDay = z
+export const DSPTimeOfDay: z.ZodTypeAny = z
   .object({
     endTime: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]Z$/),
     startTime: z.string().regex(/^([01][0-9]|2[0-3]):[0-5][0-9]Z$/),
   })
   .passthrough();
-const DSPDayPartTarget = z
+export const DSPDayPartTarget: z.ZodTypeAny = z
   .object({ dayOfWeek: DSPDayOfWeek, timeOfDay: DSPTimeOfDay })
   .passthrough();
-const DSPContentCategoryTarget = z.object({ contentCategoryId: z.string() }).passthrough();
-const DSPContentGenre = z.enum([
+export const DSPContentCategoryTarget: z.ZodTypeAny = z.object({ contentCategoryId: z.string() }).passthrough();
+export const DSPContentGenre: z.ZodTypeAny = z.enum([
   "ACTION",
   "ADVENTURE",
   "ALTERNATIVE_ROCK",
@@ -826,9 +825,9 @@ const DSPContentGenre = z.enum([
   "WAR",
   "WESTERN",
 ]);
-const DSPContentGenreTarget = z.object({ contentGenre: DSPContentGenre }).passthrough();
-const DSPContentRatingTypes = z.enum(["DSP_CONTENT_RATING", "TWITCH_CONTENT_RATING"]);
-const DSPDspContentRatingEnum = z.enum([
+export const DSPContentGenreTarget: z.ZodTypeAny = z.object({ contentGenre: DSPContentGenre }).passthrough();
+export const DSPContentRatingTypes: z.ZodTypeAny = z.enum(["DSP_CONTENT_RATING", "TWITCH_CONTENT_RATING"]);
+export const DSPDspContentRatingEnum: z.ZodTypeAny = z.enum([
   "RATING_NOT_AVAILABLE",
   "SUITABLE_FOR_ADULTS",
   "SUITABLE_FOR_ALL_AUDIENCES",
@@ -836,21 +835,21 @@ const DSPDspContentRatingEnum = z.enum([
   "SUITABLE_FOR_MOST_AUDIENCES_WITH_PARENTAL_GUIDANCE",
   "SUITABLE_FOR_TEEN_AND_OLDER_AUDIENCES",
 ]);
-const DSPDspContentRating = z.object({ dspContentRating: DSPDspContentRatingEnum }).passthrough();
-const DSPTwitchContentRatingEnum = z.enum(["TWITCH_MODERATE", "TWITCH_RESTRICTIVE"]);
-const DSPTwitchContentRating = z
+export const DSPDspContentRating: z.ZodTypeAny = z.object({ dspContentRating: DSPDspContentRatingEnum }).passthrough();
+export const DSPTwitchContentRatingEnum: z.ZodTypeAny = z.enum(["TWITCH_MODERATE", "TWITCH_RESTRICTIVE"]);
+export const DSPTwitchContentRating: z.ZodTypeAny = z
   .object({ twitchContentRating: DSPTwitchContentRatingEnum })
   .passthrough();
-const DSPContentRating = z.union([
+export const DSPContentRating: z.ZodTypeAny = z.union([
   z.object({ dspContentRating: DSPDspContentRating }).passthrough(),
   z.object({ twitchContentRating: DSPTwitchContentRating }).passthrough(),
 ]);
-const DSPContentRatingTarget = z
+export const DSPContentRatingTarget: z.ZodTypeAny = z
   .object({ contentRatingType: DSPContentRatingTypes, contentRatingTypeDetails: DSPContentRating })
   .passthrough();
-const DSPBrandSafetyTier = z.enum(["EXPANDED", "RESTRICTIVE", "STANDARD"]);
-const DSPBrandSafetyTierTarget = z.object({ brandSafetyTier: DSPBrandSafetyTier }).passthrough();
-const DSPBrandSafetyCategory = z.enum([
+export const DSPBrandSafetyTier: z.ZodTypeAny = z.enum(["EXPANDED", "RESTRICTIVE", "STANDARD"]);
+export const DSPBrandSafetyTierTarget: z.ZodTypeAny = z.object({ brandSafetyTier: DSPBrandSafetyTier }).passthrough();
+export const DSPBrandSafetyCategory: z.ZodTypeAny = z.enum([
   "ACCIDENTS_DISASTERS_AND_TRAGEDIES",
   "ALCOHOL_AND_RELATED_PRODUCTS",
   "BLOOD_GORE_VIOLENCE",
@@ -867,31 +866,31 @@ const DSPBrandSafetyCategory = z.enum([
   "UNRATED_MEDIA_CONTENT",
   "WEAPONS",
 ]);
-const DSPBrandSafetyCategoryTarget = z
+export const DSPBrandSafetyCategoryTarget: z.ZodTypeAny = z
   .object({ brandSafetyCategory: DSPBrandSafetyCategory })
   .passthrough();
-const DSPInventorySourceType = z.enum([
+export const DSPInventorySourceType: z.ZodTypeAny = z.enum([
   "AMAZON",
   "APD",
   "DEAL",
   "INVENTORY_GROUP",
   "THIRD_PARTY_EXCHANGE",
 ]);
-const DSPInventorySourceTarget = z
+export const DSPInventorySourceTarget: z.ZodTypeAny = z
   .object({
     inventorySourceId: DSPMarketplaceStringValue,
     inventorySourceType: DSPInventorySourceType,
   })
   .passthrough();
-const DSPVideoInitiationType = z.enum(["AUTOPLAY", "UNKNOWN", "USER_INITIATED"]);
-const DSPAdInitiationTarget = z
+export const DSPVideoInitiationType: z.ZodTypeAny = z.enum(["AUTOPLAY", "UNKNOWN", "USER_INITIATED"]);
+export const DSPAdInitiationTarget: z.ZodTypeAny = z
   .object({ videoInitiationType: DSPVideoInitiationType })
   .passthrough();
-const DSPAdPlayerSize = z.enum(["LARGE", "MEDIUM", "SMALL", "UNKNOWN"]);
-const DSPAdPlayerSizeTarget = z.object({ adPlayerSize: DSPAdPlayerSize }).passthrough();
-const DSPVideoAdFormat = z.enum(["FULL_EPISODE_PLAYER", "INSTREAM", "OUTSTREAM"]);
-const DSPVideoAdFormatTarget = z.object({ videoAdFormat: DSPVideoAdFormat }).passthrough();
-const DSPExcludeAppsAndSitesType = z.enum([
+export const DSPAdPlayerSize: z.ZodTypeAny = z.enum(["LARGE", "MEDIUM", "SMALL", "UNKNOWN"]);
+export const DSPAdPlayerSizeTarget: z.ZodTypeAny = z.object({ adPlayerSize: DSPAdPlayerSize }).passthrough();
+export const DSPVideoAdFormat: z.ZodTypeAny = z.enum(["FULL_EPISODE_PLAYER", "INSTREAM", "OUTSTREAM"]);
+export const DSPVideoAdFormatTarget: z.ZodTypeAny = z.object({ videoAdFormat: DSPVideoAdFormat }).passthrough();
+export const DSPExcludeAppsAndSitesType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "FRAUD_TRAFFIC_LEVEL_GTE_02",
   "FRAUD_TRAFFIC_LEVEL_GTE_04",
@@ -902,7 +901,7 @@ const DSPExcludeAppsAndSitesType = z.enum([
   "FRAUD_TRAFFIC_LEVEL_GTE_25",
   "FRAUD_TRAFFIC_LEVEL_GTE_50",
 ]);
-const DSPDoubleVerifyFraudInvalidTraffic = z
+export const DSPDoubleVerifyFraudInvalidTraffic: z.ZodTypeAny = z
   .object({
     blockAppAndSites: z.boolean(),
     excludeAppsAndSites: DSPExcludeAppsAndSitesType,
@@ -910,7 +909,7 @@ const DSPDoubleVerifyFraudInvalidTraffic = z
   })
   .partial()
   .passthrough();
-const DSPDVBrandSafetyContentCategoryType = z.enum([
+export const DSPDVBrandSafetyContentCategoryType: z.ZodTypeAny = z.enum([
   "AD_SERVER",
   "CELEBRITY_GOSSIP",
   "CULTS_SURVIVALISM",
@@ -926,16 +925,16 @@ const DSPDVBrandSafetyContentCategoryType = z.enum([
   "PIRACY_COPYRIGHT_INFRINGEMENT",
   "UNMODERATED_UGC_FORUMS_IMAGES_VIDEO",
 ]);
-const DSPBrandSuitabilityRiskLevelType = z.enum([
+export const DSPBrandSuitabilityRiskLevelType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "HIGH",
   "HIGH_MEDIUM",
   "HIGH_MEDIUM_LOW",
 ]);
-const DSPDVBrandSafetyContentCategoriesWithRiskMap = z
+export const DSPDVBrandSafetyContentCategoriesWithRiskMap: z.ZodTypeAny = z
   .object({ key: z.string(), value: DSPBrandSuitabilityRiskLevelType })
   .passthrough();
-const DSPDoubleVerifyStandardDisplayBrandSafety = z
+export const DSPDoubleVerifyStandardDisplayBrandSafety: z.ZodTypeAny = z
   .object({
     contentCategories: z.array(DSPDVBrandSafetyContentCategoryType).max(50),
     contentCategoriesWithRisk: z.array(DSPDVBrandSafetyContentCategoriesWithRiskMap).max(50),
@@ -943,7 +942,7 @@ const DSPDoubleVerifyStandardDisplayBrandSafety = z
   })
   .partial()
   .passthrough();
-const DSPDVBrandSafetyAppAgeRatingType = z.enum([
+export const DSPDVBrandSafetyAppAgeRatingType: z.ZodTypeAny = z.enum([
   "ADULTS_ONLY_18_PLUS",
   "EVERYONE_4_PLUS",
   "MATURE_17_PLUS",
@@ -951,7 +950,7 @@ const DSPDVBrandSafetyAppAgeRatingType = z.enum([
   "TWEENS_9_PLUS",
   "UNKNOWN",
 ]);
-const DSPDVBrandSafetyAppStarRatingType = z.enum([
+export const DSPDVBrandSafetyAppStarRatingType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "APP_STAR_RATING_LT_1_POINT_5_STARS",
   "APP_STAR_RATING_LT_2_POINT_5_STARS",
@@ -961,7 +960,7 @@ const DSPDVBrandSafetyAppStarRatingType = z.enum([
   "APP_STAR_RATING_LT_4_POINT_5_STARS",
   "APP_STAR_RATING_LT_4_STARS",
 ]);
-const DSPDoubleVerifyBrandSafety = z
+export const DSPDoubleVerifyBrandSafety: z.ZodTypeAny = z
   .object({
     appAgeRating: z.array(DSPDVBrandSafetyAppAgeRatingType).max(50),
     appStarRating: DSPDVBrandSafetyAppStarRatingType,
@@ -972,7 +971,7 @@ const DSPDoubleVerifyBrandSafety = z
   })
   .partial()
   .passthrough();
-const DSPAverageCompletionAndFullyViewableRateTargetingType = z.enum([
+export const DSPAverageCompletionAndFullyViewableRateTargetingType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "AVG_COMPLETION_FULLY_VIEWABLE_GTE_10",
   "AVG_COMPLETION_FULLY_VIEWABLE_GTE_20",
@@ -981,13 +980,13 @@ const DSPAverageCompletionAndFullyViewableRateTargetingType = z.enum([
   "AVG_COMPLETION_FULLY_VIEWABLE_GTE_35",
   "AVG_COMPLETION_FULLY_VIEWABLE_GTE_40",
 ]);
-const DSPBrandExposureViewabilityTargetingType = z.enum([
+export const DSPBrandExposureViewabilityTargetingType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "BRAND_EXPOSURE_VIEWABILITY_GTE_10_SEC_AVG_DURATION",
   "BRAND_EXPOSURE_VIEWABILITY_GTE_15_SEC_AVG_DURATION",
   "BRAND_EXPOSURE_VIEWABILITY_GTE_5_SEC_AVG_DURATION",
 ]);
-const DSPMrcViewabilityTargetingType = z.enum([
+export const DSPMrcViewabilityTargetingType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "MRC_VIEWABILITY_GTE_30",
   "MRC_VIEWABILITY_GTE_40",
@@ -999,7 +998,7 @@ const DSPMrcViewabilityTargetingType = z.enum([
   "MRC_VIEWABILITY_GTE_75",
   "MRC_VIEWABILITY_GTE_80",
 ]);
-const DSPDoubleVerifyViewability = z
+export const DSPDoubleVerifyViewability: z.ZodTypeAny = z
   .object({
     averageCompletionAndFullyViewableRateTargeting:
       DSPAverageCompletionAndFullyViewableRateTargetingType,
@@ -1009,32 +1008,32 @@ const DSPDoubleVerifyViewability = z
   })
   .partial()
   .passthrough();
-const DSPDoubleVerifyAuthenticBrandSafety = z
+export const DSPDoubleVerifyAuthenticBrandSafety: z.ZodTypeAny = z
   .object({ doubleVerifySegmentId: z.string().regex(/^51[0-9]{6}$/) })
   .partial()
   .passthrough();
-const DSPDoubleVerifyCustomContextualSegmentId = z
+export const DSPDoubleVerifyCustomContextualSegmentId: z.ZodTypeAny = z
   .object({ doubleVerifySegmentId: z.string().regex(/^52[0-9]{6}$/) })
   .partial()
   .passthrough();
-const DSPDoubleVerifyAuthenticAttention = z
+export const DSPDoubleVerifyAuthenticAttention: z.ZodTypeAny = z
   .object({ universalAttention: z.boolean() })
   .passthrough();
-const DSPIASFraudInvalidTrafficType = z.enum([
+export const DSPIASFraudInvalidTrafficType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_MODERATE_RISK",
   "FRAUD_INVALID_TRAFFIC_EXCLUDE_HIGH_RISK",
 ]);
-const DSPIntegralAdScienceFraudInvalidTraffic = z
+export const DSPIntegralAdScienceFraudInvalidTraffic: z.ZodTypeAny = z
   .object({ targetSetting: DSPIASFraudInvalidTrafficType })
   .partial()
   .passthrough();
-const DSPIASBrandSafetyLevelType = z.enum([
+export const DSPIASBrandSafetyLevelType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "BRAND_SAFETY_EXCLUDE_HIGH_AND_MODERATE_RISK",
   "BRAND_SAFETY_EXCLUDE_HIGH_RISK",
 ]);
-const DSPIntegralAdScienceBrandSafety = z
+export const DSPIntegralAdScienceBrandSafety: z.ZodTypeAny = z
   .object({
     excludeContent: z.boolean(),
     iasBrandSafetyAdult: DSPIASBrandSafetyLevelType,
@@ -1048,8 +1047,8 @@ const DSPIntegralAdScienceBrandSafety = z
   })
   .partial()
   .passthrough();
-const DSPIASViewabilityStandardType = z.enum(["GROUPM", "MRC", "NONE", "PUBLICIS"]);
-const DSPViewabilityTierType = z.enum([
+export const DSPIASViewabilityStandardType: z.ZodTypeAny = z.enum(["GROUPM", "MRC", "NONE", "PUBLICIS"]);
+export const DSPViewabilityTierType: z.ZodTypeAny = z.enum([
   "ALLOW_ALL",
   "VIEWABILITY_TIER_GT_40",
   "VIEWABILITY_TIER_GT_50",
@@ -1057,24 +1056,24 @@ const DSPViewabilityTierType = z.enum([
   "VIEWABILITY_TIER_GT_70",
   "VIEWABILITY_TIER_LT_40",
 ]);
-const DSPIntegralAdScienceViewability = z
+export const DSPIntegralAdScienceViewability: z.ZodTypeAny = z
   .object({
     standard: DSPIASViewabilityStandardType,
     viewabilityTargeting: DSPViewabilityTierType.optional(),
   })
   .passthrough();
-const DSPIntegralAdScienceContextualTargeting = z
+export const DSPIntegralAdScienceContextualTargeting: z.ZodTypeAny = z
   .object({
     topicalSegments: z.array(z.string()).max(200),
     verticalSegments: z.array(z.string()).max(200),
   })
   .partial()
   .passthrough();
-const DSPIntegralAdScienceContextualAvoidance = z
+export const DSPIntegralAdScienceContextualAvoidance: z.ZodTypeAny = z
   .object({ avoidanceSegments: z.array(z.string()).max(200) })
   .partial()
   .passthrough();
-const DSPPixalateFraudInvalidTraffic = z
+export const DSPPixalateFraudInvalidTraffic: z.ZodTypeAny = z
   .object({
     excludeAppsAndDomains: z.boolean(),
     excludeIpAddressAndUserAgents: z.boolean(),
@@ -1083,11 +1082,11 @@ const DSPPixalateFraudInvalidTraffic = z
   })
   .partial()
   .passthrough();
-const DSPIntegralAdScienceQualitySync = z
+export const DSPIntegralAdScienceQualitySync: z.ZodTypeAny = z
   .object({ segmentId: z.string().regex(/^4[0-9]{6}$/) })
   .partial()
   .passthrough();
-const DSPNewsGuardBrandGuardTrustedNewsTargetingType = z.enum([
+export const DSPNewsGuardBrandGuardTrustedNewsTargetingType: z.ZodTypeAny = z.enum([
   "BASIC_INCLUDE",
   "BUSINESS_INCLUDE",
   "COMMUNITY_INCLUDE",
@@ -1099,11 +1098,11 @@ const DSPNewsGuardBrandGuardTrustedNewsTargetingType = z.enum([
   "POLITICS_INCLUDE",
   "TECH_INCLUDE",
 ]);
-const DSPNewsGuardBrandGuardTrustedNewsTargeting = z
+export const DSPNewsGuardBrandGuardTrustedNewsTargeting: z.ZodTypeAny = z
   .object({ targetingList: z.array(DSPNewsGuardBrandGuardTrustedNewsTargetingType).max(15) })
   .partial()
   .passthrough();
-const DSPNewsGuardBrandGuardMisinformationSafetyType = z.enum([
+export const DSPNewsGuardBrandGuardMisinformationSafetyType: z.ZodTypeAny = z.enum([
   "AI_GENERATED_MFA",
   "BASIC_EXCLUDE",
   "CLIMATE_MISINFORMATION",
@@ -1119,11 +1118,11 @@ const DSPNewsGuardBrandGuardMisinformationSafetyType = z.enum([
   "UKRAINE_MISINFORMATION",
   "VACCINE_MISINFORMATION",
 ]);
-const DSPNewsGuardBrandGuardMisinformationSafety = z
+export const DSPNewsGuardBrandGuardMisinformationSafety: z.ZodTypeAny = z
   .object({ avoidanceList: z.array(DSPNewsGuardBrandGuardMisinformationSafetyType).max(20) })
   .partial()
   .passthrough();
-const DSPThirdPartyTargetDetails = z.union([
+export const DSPThirdPartyTargetDetails: z.ZodTypeAny = z.union([
   z.object({ doubleVerifyFraudInvalidTraffic: DSPDoubleVerifyFraudInvalidTraffic }).passthrough(),
   z
     .object({ doubleVerifyStandardDisplayBrandSafety: DSPDoubleVerifyStandardDisplayBrandSafety })
@@ -1155,7 +1154,7 @@ const DSPThirdPartyTargetDetails = z.union([
     .object({ newsGuardBrandGuardMisinformationSafety: DSPNewsGuardBrandGuardMisinformationSafety })
     .passthrough(),
 ]);
-const DSPThirdPartyTargetType = z.enum([
+export const DSPThirdPartyTargetType: z.ZodTypeAny = z.enum([
   "DOUBLE_VERIFY_AUTHENTIC_ATTENTION",
   "DOUBLE_VERIFY_AUTHENTIC_BRAND_SAFETY",
   "DOUBLE_VERIFY_BRAND_SAFETY",
@@ -1173,44 +1172,44 @@ const DSPThirdPartyTargetType = z.enum([
   "NEWS_GUARD_BRAND_GUARD_TRUSTED_NEWS_TARGETING",
   "PIXALATE_FRAUD_INVALID_TRAFFIC",
 ]);
-const DSPThirdPartyTarget = z
+export const DSPThirdPartyTarget: z.ZodTypeAny = z
   .object({
     thirdPartyTargetDetails: DSPThirdPartyTargetDetails,
     thirdPartyTargetType: DSPThirdPartyTargetType,
   })
   .passthrough();
-const DSPThemeMatchType = z.literal("PRODUCTS_SIMILAR_TO_ADVERTISED_PRODUCTS");
-const DSPThemeTarget = z.object({ matchType: DSPThemeMatchType }).passthrough();
-const DSPContentInstreamPosition = z.enum(["MID_ROLL", "POST_ROLL", "PRE_ROLL", "UNKNOWN"]);
-const DSPContentInstreamPositionTarget = z
+export const DSPThemeMatchType: z.ZodTypeAny = z.literal("PRODUCTS_SIMILAR_TO_ADVERTISED_PRODUCTS");
+export const DSPThemeTarget: z.ZodTypeAny = z.object({ matchType: DSPThemeMatchType }).passthrough();
+export const DSPContentInstreamPosition: z.ZodTypeAny = z.enum(["MID_ROLL", "POST_ROLL", "PRE_ROLL", "UNKNOWN"]);
+export const DSPContentInstreamPositionTarget: z.ZodTypeAny = z
   .object({ instreamPosition: DSPContentInstreamPosition })
   .passthrough();
-const DSPContentOutstreamPosition = z.enum([
+export const DSPContentOutstreamPosition: z.ZodTypeAny = z.enum([
   "ACCOMPANYING_CONTENT",
   "INTERSTITIAL",
   "STANDALONE",
   "UNKNOWN",
 ]);
-const DSPContentOutstreamPositionTarget = z
+export const DSPContentOutstreamPositionTarget: z.ZodTypeAny = z
   .object({ outstreamPosition: DSPContentOutstreamPosition })
   .passthrough();
-const DSPVideoContentDuration = z.enum(["EXTENDED", "LONG", "MEDIUM", "SHORT", "UNKNOWN"]);
-const DSPVideoContentDurationTarget = z.object({ duration: DSPVideoContentDuration }).passthrough();
-const DSPFoldPosition = z.enum(["ABOVE_THE_FOLD", "BELOW_THE_FOLD", "UNKNOWN"]);
-const DSPFoldPositionTarget = z.object({ foldPosition: DSPFoldPosition }).passthrough();
-const DSPNativeContentPosition = z.enum([
+export const DSPVideoContentDuration: z.ZodTypeAny = z.enum(["EXTENDED", "LONG", "MEDIUM", "SHORT", "UNKNOWN"]);
+export const DSPVideoContentDurationTarget: z.ZodTypeAny = z.object({ duration: DSPVideoContentDuration }).passthrough();
+export const DSPFoldPosition: z.ZodTypeAny = z.enum(["ABOVE_THE_FOLD", "BELOW_THE_FOLD", "UNKNOWN"]);
+export const DSPFoldPositionTarget: z.ZodTypeAny = z.object({ foldPosition: DSPFoldPosition }).passthrough();
+export const DSPNativeContentPosition: z.ZodTypeAny = z.enum([
   "IN_ARTICLE",
   "IN_FEED",
   "PERIPHERAL",
   "RECOMMENDATION",
   "UNKNOWN",
 ]);
-const DSPNativeContentPositionTarget = z
+export const DSPNativeContentPositionTarget: z.ZodTypeAny = z
   .object({ nativePosition: DSPNativeContentPosition })
   .passthrough();
-const DSPPlacementType = z.literal("REWARDED");
-const DSPPlacementTypeTarget = z.object({ placementType: DSPPlacementType }).passthrough();
-const DSPTargetDetails = z.union([
+export const DSPPlacementType: z.ZodTypeAny = z.literal("REWARDED");
+export const DSPPlacementTypeTarget: z.ZodTypeAny = z.object({ placementType: DSPPlacementType }).passthrough();
+export const DSPTargetDetails: z.ZodTypeAny = z.union([
   z.object({ keywordTarget: DSPKeywordTarget }).passthrough(),
   z.object({ productTarget: DSPProductTarget }).passthrough(),
   z.object({ productCategoryTarget: DSPProductCategoryTarget }).passthrough(),
@@ -1238,8 +1237,8 @@ const DSPTargetDetails = z.union([
   z.object({ nativeContentPositionTarget: DSPNativeContentPositionTarget }).passthrough(),
   z.object({ placementTypeTarget: DSPPlacementTypeTarget }).passthrough(),
 ]);
-const DSPTargetLevel = z.literal("AD_GROUP");
-const DSPTargetType = z.enum([
+export const DSPTargetLevel: z.ZodTypeAny = z.literal("AD_GROUP");
+export const DSPTargetType: z.ZodTypeAny = z.enum([
   "AD_INITIATION",
   "AD_PLAYER_SIZE",
   "APP",
@@ -1267,7 +1266,7 @@ const DSPTargetType = z.enum([
   "VIDEO_AD_FORMAT",
   "VIDEO_CONTENT_DURATION",
 ]);
-const DSPForecastTarget = z
+export const DSPForecastTarget: z.ZodTypeAny = z
   .object({
     adGroupId: z.string(),
     adProduct: DSPAdProduct,
@@ -1290,7 +1289,7 @@ const DSPForecastTarget = z
   })
   .partial()
   .passthrough();
-const DSPReplanningSettings = z
+export const DSPReplanningSettings: z.ZodTypeAny = z
   .object({
     adGroups: z.array(DSPForecastAdGroup).max(10),
     campaign: DSPForecastCampaign,
@@ -1299,7 +1298,7 @@ const DSPReplanningSettings = z
   })
   .partial()
   .passthrough();
-const DSPCampaignForecastDescription = z
+export const DSPCampaignForecastDescription: z.ZodTypeAny = z
   .object({
     campaignId: z.string(),
     enabledFeatures: DSPEnabledFeaturesInCampaignForecast.optional(),
@@ -1307,11 +1306,11 @@ const DSPCampaignForecastDescription = z
     replanningSettings: DSPReplanningSettings.optional(),
   })
   .passthrough();
-const DSPRetrieveCampaignForecastRequest = z
+export const DSPRetrieveCampaignForecastRequest: z.ZodTypeAny = z
   .object({ campaignForecastDescriptions: z.array(DSPCampaignForecastDescription).min(1).max(1) })
   .partial()
   .passthrough();
-const DSPPointLabel = z.enum([
+export const DSPPointLabel: z.ZodTypeAny = z.enum([
   "AIMP",
   "AREA",
   "BID",
@@ -1326,20 +1325,20 @@ const DSPPointLabel = z.enum([
   "SPEND",
   "TAS",
 ]);
-const DSPXPoint = z.object({ label: DSPPointLabel, value: z.number() }).passthrough();
-const DSPForecastValue = z
+export const DSPXPoint: z.ZodTypeAny = z.object({ label: DSPPointLabel, value: z.number() }).passthrough();
+export const DSPForecastValue: z.ZodTypeAny = z
   .object({ high: z.number(), low: z.number(), mean: z.number() })
   .passthrough();
-const DSPYPoint = z.object({ label: DSPPointLabel, value: DSPForecastValue }).passthrough();
-const DSPPoint = z
+export const DSPYPoint: z.ZodTypeAny = z.object({ label: DSPPointLabel, value: DSPForecastValue }).passthrough();
+export const DSPPoint: z.ZodTypeAny = z
   .object({
     pointType: z.string().optional(),
     x: DSPXPoint,
     y: z.array(DSPYPoint).max(1000).optional(),
   })
   .passthrough();
-const DSPForecastPeriodicity = z.enum(["DAILY", "LIFETIME", "MONTHLY", "WEEKLY"]);
-const DSPCurve = z
+export const DSPForecastPeriodicity: z.ZodTypeAny = z.enum(["DAILY", "LIFETIME", "MONTHLY", "WEEKLY"]);
+export const DSPCurve: z.ZodTypeAny = z
   .object({
     focusPoint: z.array(DSPPoint).max(10),
     periodicity: DSPForecastPeriodicity,
@@ -1347,12 +1346,12 @@ const DSPCurve = z
   })
   .partial()
   .passthrough();
-const DSPDeliverInFullConfidenceLevel = z.enum(["HIGH", "LOW", "MEDIUM", "UNAVAILABLE"]);
-const DSPDeliverInFullConfidence = z
+export const DSPDeliverInFullConfidenceLevel: z.ZodTypeAny = z.enum(["HIGH", "LOW", "MEDIUM", "UNAVAILABLE"]);
+export const DSPDeliverInFullConfidence: z.ZodTypeAny = z
   .object({ value: DSPDeliverInFullConfidenceLevel })
   .passthrough();
-const DSPRecommendedObjectType = z.enum(["ADGROUP", "CAMPAIGN"]);
-const DSPInsightFeature = z.enum([
+export const DSPRecommendedObjectType: z.ZodTypeAny = z.enum(["ADGROUP", "CAMPAIGN"]);
+export const DSPInsightFeature: z.ZodTypeAny = z.enum([
   "CAMPAIGN_FREQUENCY_CAP",
   "LINE_ITEM_APPBLOCKING_TARGETING",
   "LINE_ITEM_COLD_START_DEALS",
@@ -1370,7 +1369,7 @@ const DSPInsightFeature = z.enum([
   "LINE_ITEM_UNSUPPORTED_CONTEXTUAL_TARGETING",
   "LINE_ITEM_UNSUPPORTED_KEYWORD_TARGETING",
 ]);
-const DSPForecastInsightsGroup = z
+export const DSPForecastInsightsGroup: z.ZodTypeAny = z
   .object({
     coldStartDealNames: z.array(z.string()).max(99).optional(),
     coldStartSegmentNames: z.array(z.string()).max(99).optional(),
@@ -1380,21 +1379,21 @@ const DSPForecastInsightsGroup = z
     tag: z.string(),
   })
   .passthrough();
-const DSPFlightForecastInsights = z
+export const DSPFlightForecastInsights: z.ZodTypeAny = z
   .object({
     forecastExplainabilityInsights: z.array(DSPForecastInsightsGroup).max(49),
     topExplainabilityFactors: z.array(DSPInsightFeature).max(4),
   })
   .partial()
   .passthrough();
-const DSPForecastMetric = z
+export const DSPForecastMetric: z.ZodTypeAny = z
   .object({
     metric: DSPSelectedForecastMetric,
     periodicity: DSPForecastPeriodicity.optional(),
     value: DSPForecastValue,
   })
   .passthrough();
-const DSPReplanning = z
+export const DSPReplanning: z.ZodTypeAny = z
   .object({
     content: z.string(),
     curves: z.array(DSPCurve).max(4).optional(),
@@ -1406,7 +1405,7 @@ const DSPReplanning = z
     title: z.string(),
   })
   .passthrough();
-const DSPWarning = z
+export const DSPWarning: z.ZodTypeAny = z
   .object({
     adGroupIds: z.array(z.string()).max(50).optional(),
     code: z.string(),
@@ -1415,7 +1414,7 @@ const DSPWarning = z
     warningLevel: z.number().int().optional(),
   })
   .passthrough();
-const DSPFlightForecast = z
+export const DSPFlightForecast: z.ZodTypeAny = z
   .object({
     curves: z.array(DSPCurve).max(4).optional(),
     deliverInFullConfidence: DSPDeliverInFullConfidence.optional(),
@@ -1430,7 +1429,7 @@ const DSPFlightForecast = z
     warnings: z.array(DSPWarning).max(10).optional(),
   })
   .passthrough();
-const DSPCampaignForecast = z
+export const DSPCampaignForecast: z.ZodTypeAny = z
   .object({
     availableForecastFlights: z.array(DSPForecastFlight).max(100).optional(),
     campaignDisplayName: z.string(),
@@ -1440,30 +1439,30 @@ const DSPCampaignForecast = z
     hasExistingGuidance: z.boolean().optional(),
   })
   .passthrough();
-const DSPCampaignForecastMultiStatusSuccess = z
+export const DSPCampaignForecastMultiStatusSuccess: z.ZodTypeAny = z
   .object({ campaignForecast: DSPCampaignForecast, index: z.number().int().gte(0).lte(0) })
   .passthrough();
-const DSPCampaignForecastMultiStatusResponse = z
+export const DSPCampaignForecastMultiStatusResponse: z.ZodTypeAny = z
   .object({
     error: z.array(ErrorsIndex).max(1),
     success: z.array(DSPCampaignForecastMultiStatusSuccess).max(1),
   })
   .partial()
   .passthrough();
-const DSPSpendDimension = z.union([
+export const DSPSpendDimension: z.ZodTypeAny = z.union([
   z.object({ advertiserAccountId: z.string() }).passthrough(),
   z.object({ campaignId: z.string() }).passthrough(),
   z.object({ dealId: z.string() }).passthrough(),
 ]);
-const DSPCommitmentSpendIdentifier = z
+export const DSPCommitmentSpendIdentifier: z.ZodTypeAny = z
   .object({ commitmentId: z.string(), spendDimension: DSPSpendDimension.optional() })
   .passthrough();
-const DSPRetrieveCommitmentSpendRequest = z
+export const DSPRetrieveCommitmentSpendRequest: z.ZodTypeAny = z
   .object({ commitmentIds: z.array(DSPCommitmentSpendIdentifier).min(1).max(1) })
   .partial()
   .passthrough();
-const DSPSpendDimensionType = z.enum(["ADVERTISER", "CAMPAIGN", "COMMITMENT", "DEAL"]);
-const DSPCommitmentSpend = z
+export const DSPSpendDimensionType: z.ZodTypeAny = z.enum(["ADVERTISER", "CAMPAIGN", "COMMITMENT", "DEAL"]);
+export const DSPCommitmentSpend: z.ZodTypeAny = z
   .object({
     accruedSpendValue: z.number().optional(),
     accruedToDateTime: z.string().datetime({ offset: true }),
@@ -1474,21 +1473,21 @@ const DSPCommitmentSpend = z
     spendDimensionType: DSPSpendDimensionType,
   })
   .passthrough();
-const DSPCommitmentSpendMultiStatusSuccess = z
+export const DSPCommitmentSpendMultiStatusSuccess: z.ZodTypeAny = z
   .object({ commitmentSpend: DSPCommitmentSpend, index: z.number().int().gte(0).lte(0) })
   .passthrough();
-const DSPCommitmentSpendMultiStatusResponse = z
+export const DSPCommitmentSpendMultiStatusResponse: z.ZodTypeAny = z
   .object({
     error: z.array(ErrorsIndex).max(1),
     success: z.array(DSPCommitmentSpendMultiStatusSuccess).max(1),
   })
   .partial()
   .passthrough();
-const DSPRetrieveCommitmentRequest = z
+export const DSPRetrieveCommitmentRequest: z.ZodTypeAny = z
   .object({ commitmentIds: z.array(z.string()).min(1).max(1000) })
   .partial()
   .passthrough();
-const DSPCommitmentUpdate = z
+export const DSPCommitmentUpdate: z.ZodTypeAny = z
   .object({
     advertiserIds: z.array(z.string()).max(1000).optional(),
     campaignIds: z.array(z.string()).max(1000).optional(),
@@ -1503,708 +1502,7 @@ const DSPCommitmentUpdate = z
     startDateTime: z.string().datetime({ offset: true }).optional(),
   })
   .passthrough();
-const DSPUpdateCommitmentRequest = z
+export const DSPUpdateCommitmentRequest: z.ZodTypeAny = z
   .object({ commitments: z.array(DSPCommitmentUpdate).min(1).max(1000) })
   .partial()
   .passthrough();
-
-export const schemas = {
-  DSPCurrencyCode,
-  DSPFulfillmentLevel,
-  DSPSpendCalculationMode,
-  DSPCommitment,
-  DSPCommitmentSuccessResponse,
-  ErrorCode,
-  BadRequestResponseContent,
-  UnauthorizedResponseContent,
-  ForbiddenResponseContent,
-  NotFoundResponseContent,
-  ContentTooLargeResponseContent,
-  TooManyRequestsResponseContent,
-  InternalServerErrorResponseContent,
-  BadGatewayResponseContent,
-  ServiceUnavailableErrorResponseContent,
-  GatewayTimeoutResponseContent,
-  DSPCommitmentCreate,
-  DSPCreateCommitmentRequest,
-  Error,
-  ErrorsIndex,
-  DSPCommitmentMultiStatusSuccess,
-  DSPCommitmentMultiStatusResponse,
-  DSPSelectedForecastMetric,
-  DSPForecastMetricsDescription,
-  DSPEnabledFeaturesInCampaignForecast,
-  DSPAdProduct,
-  DSPAdGroupBid,
-  DSPBudgetType,
-  DSPMonetaryBudget,
-  DSPMonetaryBudgetValue,
-  DSPBudgetValue,
-  DSPRecurrence,
-  DSPBudget,
-  DSPCreativeRotationType,
-  DSPFeeType,
-  DSPFeeValueType,
-  DSPFeesThirdPartyProvider,
-  DSPFee,
-  DSPFrequencyTargetingSetting,
-  DSPTimeUnit,
-  DSPFrequency,
-  DSPInventoryType,
-  DSPMarketplaceAdGroupConfigurations,
-  DSPMarketplaceScope,
-  DSPMarketplace,
-  DSPBidStrategy,
-  DSPBudgetAllocation,
-  DSPAdGroupBudgetSettings,
-  DSPOptimization,
-  DSPDeliveryProfile,
-  DSPPacing,
-  DSPState,
-  DSPDeliveryReason,
-  DSPDeliveryStatus,
-  DSPStatus,
-  DSPTag,
-  DSPViewabilityTier,
-  DSPAmazonViewability,
-  DSPAutomatedTargetingTactic,
-  DSPDefaultAudienceTargetingMatchType,
-  DSPSiteLanguage,
-  DSPTacticsConvertersExclusionType,
-  DSPTimeZoneType,
-  DSPUserLocationSignal,
-  DSPVideoCompletionTier,
-  DSPTargetingSettings,
-  DSPForecastAdGroup,
-  DSPAutoCreationSettings,
-  DSPCountryCode,
-  DSPTacticKey,
-  DSPCampaignFeeType,
-  DSPCampaignFeeValueType,
-  DSPCampaignFee,
-  DSPFlightBudget,
-  DSPCampaignFlight,
-  DSPIneligibleAutomatedTargetingTactic,
-  DSPMarketplaceCampaignConfigurations,
-  DSPBidSettings,
-  DSPRolloverStrategy,
-  DSPBudgetSettings,
-  DSPGoal,
-  DSPKPI,
-  DSPGoalSettings,
-  DSPPrimaryInventoryType,
-  DSPCampaignOptimizations,
-  DSPForecastCampaign,
-  DSPForecastFlight,
-  DSPTargetBid,
-  DSPMarketplaceTargetConfigurations,
-  DSPKeywordMatchType,
-  DSPKeywordTarget,
-  DSPProductMatchType,
-  DSPProductMarketplaceSetting,
-  DSPProductValue,
-  DSPProductIdType,
-  DSPProductTarget,
-  DSPProductCategoryRefinement,
-  DSPProductCategoryRefinementValue,
-  DSPProductCategoryTarget,
-  DSPAcrossGroupOperator,
-  DSPMarketplaceStringValue,
-  DSPInGroupOperator,
-  DSPAudienceTarget,
-  DSPLocationTarget,
-  DSPDomainListTarget,
-  DSPDomainNameTarget,
-  DSPDomainFileTarget,
-  DSPAdvertiserDomainList,
-  DSPDomainTargetDetails,
-  DSPDomainTargetTypes,
-  DSPDomainTarget,
-  DSPAppType,
-  DSPAppTarget,
-  DSPDeviceOrientation,
-  DSPDeviceType,
-  DSPMobileDevice,
-  DSPMobileEnvironment,
-  DSPMobileOs,
-  DSPDeviceTarget,
-  DSPDayOfWeek,
-  DSPTimeOfDay,
-  DSPDayPartTarget,
-  DSPContentCategoryTarget,
-  DSPContentGenre,
-  DSPContentGenreTarget,
-  DSPContentRatingTypes,
-  DSPDspContentRatingEnum,
-  DSPDspContentRating,
-  DSPTwitchContentRatingEnum,
-  DSPTwitchContentRating,
-  DSPContentRating,
-  DSPContentRatingTarget,
-  DSPBrandSafetyTier,
-  DSPBrandSafetyTierTarget,
-  DSPBrandSafetyCategory,
-  DSPBrandSafetyCategoryTarget,
-  DSPInventorySourceType,
-  DSPInventorySourceTarget,
-  DSPVideoInitiationType,
-  DSPAdInitiationTarget,
-  DSPAdPlayerSize,
-  DSPAdPlayerSizeTarget,
-  DSPVideoAdFormat,
-  DSPVideoAdFormatTarget,
-  DSPExcludeAppsAndSitesType,
-  DSPDoubleVerifyFraudInvalidTraffic,
-  DSPDVBrandSafetyContentCategoryType,
-  DSPBrandSuitabilityRiskLevelType,
-  DSPDVBrandSafetyContentCategoriesWithRiskMap,
-  DSPDoubleVerifyStandardDisplayBrandSafety,
-  DSPDVBrandSafetyAppAgeRatingType,
-  DSPDVBrandSafetyAppStarRatingType,
-  DSPDoubleVerifyBrandSafety,
-  DSPAverageCompletionAndFullyViewableRateTargetingType,
-  DSPBrandExposureViewabilityTargetingType,
-  DSPMrcViewabilityTargetingType,
-  DSPDoubleVerifyViewability,
-  DSPDoubleVerifyAuthenticBrandSafety,
-  DSPDoubleVerifyCustomContextualSegmentId,
-  DSPDoubleVerifyAuthenticAttention,
-  DSPIASFraudInvalidTrafficType,
-  DSPIntegralAdScienceFraudInvalidTraffic,
-  DSPIASBrandSafetyLevelType,
-  DSPIntegralAdScienceBrandSafety,
-  DSPIASViewabilityStandardType,
-  DSPViewabilityTierType,
-  DSPIntegralAdScienceViewability,
-  DSPIntegralAdScienceContextualTargeting,
-  DSPIntegralAdScienceContextualAvoidance,
-  DSPPixalateFraudInvalidTraffic,
-  DSPIntegralAdScienceQualitySync,
-  DSPNewsGuardBrandGuardTrustedNewsTargetingType,
-  DSPNewsGuardBrandGuardTrustedNewsTargeting,
-  DSPNewsGuardBrandGuardMisinformationSafetyType,
-  DSPNewsGuardBrandGuardMisinformationSafety,
-  DSPThirdPartyTargetDetails,
-  DSPThirdPartyTargetType,
-  DSPThirdPartyTarget,
-  DSPThemeMatchType,
-  DSPThemeTarget,
-  DSPContentInstreamPosition,
-  DSPContentInstreamPositionTarget,
-  DSPContentOutstreamPosition,
-  DSPContentOutstreamPositionTarget,
-  DSPVideoContentDuration,
-  DSPVideoContentDurationTarget,
-  DSPFoldPosition,
-  DSPFoldPositionTarget,
-  DSPNativeContentPosition,
-  DSPNativeContentPositionTarget,
-  DSPPlacementType,
-  DSPPlacementTypeTarget,
-  DSPTargetDetails,
-  DSPTargetLevel,
-  DSPTargetType,
-  DSPForecastTarget,
-  DSPReplanningSettings,
-  DSPCampaignForecastDescription,
-  DSPRetrieveCampaignForecastRequest,
-  DSPPointLabel,
-  DSPXPoint,
-  DSPForecastValue,
-  DSPYPoint,
-  DSPPoint,
-  DSPForecastPeriodicity,
-  DSPCurve,
-  DSPDeliverInFullConfidenceLevel,
-  DSPDeliverInFullConfidence,
-  DSPRecommendedObjectType,
-  DSPInsightFeature,
-  DSPForecastInsightsGroup,
-  DSPFlightForecastInsights,
-  DSPForecastMetric,
-  DSPReplanning,
-  DSPWarning,
-  DSPFlightForecast,
-  DSPCampaignForecast,
-  DSPCampaignForecastMultiStatusSuccess,
-  DSPCampaignForecastMultiStatusResponse,
-  DSPSpendDimension,
-  DSPCommitmentSpendIdentifier,
-  DSPRetrieveCommitmentSpendRequest,
-  DSPSpendDimensionType,
-  DSPCommitmentSpend,
-  DSPCommitmentSpendMultiStatusSuccess,
-  DSPCommitmentSpendMultiStatusResponse,
-  DSPRetrieveCommitmentRequest,
-  DSPCommitmentUpdate,
-  DSPUpdateCommitmentRequest,
-};
-
-const endpoints = makeApi([
-  {
-    method: "get",
-    path: "/adsApi/v1/commitments/dsp",
-    alias: "DSPListCommitment",
-    description: `List commitments
-
-**Requires one of these permissions**:
-[]`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "nextToken",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
-        name: "maxResults",
-        type: "Query",
-        schema: z.number().int().gte(11).lte(50).optional().default(50),
-      },
-      {
-        name: "Amazon-Ads-ClientId",
-        type: "Header",
-        schema: z.string(),
-      },
-    ],
-    response: DSPCommitmentSuccessResponse,
-    errors: [
-      {
-        status: 400,
-        description: `BadRequest 400 response`,
-        schema: BadRequestResponseContent,
-      },
-      {
-        status: 401,
-        description: `Unauthorized 401 response`,
-        schema: UnauthorizedResponseContent,
-      },
-      {
-        status: 403,
-        description: `Forbidden 403 response`,
-        schema: ForbiddenResponseContent,
-      },
-      {
-        status: 404,
-        description: `NotFound 404 response`,
-        schema: NotFoundResponseContent,
-      },
-      {
-        status: 413,
-        description: `ContentTooLarge 413 response`,
-        schema: ContentTooLargeResponseContent,
-      },
-      {
-        status: 429,
-        description: `TooManyRequests 429 response`,
-        schema: TooManyRequestsResponseContent,
-      },
-      {
-        status: 500,
-        description: `InternalServerError 500 response`,
-        schema: InternalServerErrorResponseContent,
-      },
-      {
-        status: 502,
-        description: `BadGateway 502 response`,
-        schema: BadGatewayResponseContent,
-      },
-      {
-        status: 503,
-        description: `ServiceUnavailableError 503 response`,
-        schema: ServiceUnavailableErrorResponseContent,
-      },
-      {
-        status: 504,
-        description: `GatewayTimeout 504 response`,
-        schema: GatewayTimeoutResponseContent,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/adsApi/v1/create/commitments/dsp",
-    alias: "DSPCreateCommitment",
-    description: `Create commitments
-
-**Requires one of these permissions**:
-[]`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: DSPCreateCommitmentRequest,
-      },
-      {
-        name: "Amazon-Ads-ClientId",
-        type: "Header",
-        schema: z.string(),
-      },
-    ],
-    response: DSPCommitmentMultiStatusResponse,
-    errors: [
-      {
-        status: 400,
-        description: `BadRequest 400 response`,
-        schema: BadRequestResponseContent,
-      },
-      {
-        status: 401,
-        description: `Unauthorized 401 response`,
-        schema: UnauthorizedResponseContent,
-      },
-      {
-        status: 403,
-        description: `Forbidden 403 response`,
-        schema: ForbiddenResponseContent,
-      },
-      {
-        status: 404,
-        description: `NotFound 404 response`,
-        schema: NotFoundResponseContent,
-      },
-      {
-        status: 413,
-        description: `ContentTooLarge 413 response`,
-        schema: ContentTooLargeResponseContent,
-      },
-      {
-        status: 429,
-        description: `TooManyRequests 429 response`,
-        schema: TooManyRequestsResponseContent,
-      },
-      {
-        status: 500,
-        description: `InternalServerError 500 response`,
-        schema: InternalServerErrorResponseContent,
-      },
-      {
-        status: 502,
-        description: `BadGateway 502 response`,
-        schema: BadGatewayResponseContent,
-      },
-      {
-        status: 503,
-        description: `ServiceUnavailableError 503 response`,
-        schema: ServiceUnavailableErrorResponseContent,
-      },
-      {
-        status: 504,
-        description: `GatewayTimeout 504 response`,
-        schema: GatewayTimeoutResponseContent,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/adsApi/v1/retrieve/campaignForecasts/dsp",
-    alias: "DSPRetrieveCampaignForecast",
-    description: `Retrieve campaign forecast
-
-**Requires one of these permissions**:
-[&quot;campaign_view&quot;, &quot;advertiser_campaign_view&quot;]`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: DSPRetrieveCampaignForecastRequest,
-      },
-      {
-        name: "Amazon-Ads-AccountId",
-        type: "Header",
-        schema: z.string(),
-      },
-      {
-        name: "Amazon-Ads-ClientId",
-        type: "Header",
-        schema: z.string(),
-      },
-    ],
-    response: DSPCampaignForecastMultiStatusResponse,
-    errors: [
-      {
-        status: 400,
-        description: `BadRequest 400 response`,
-        schema: BadRequestResponseContent,
-      },
-      {
-        status: 401,
-        description: `Unauthorized 401 response`,
-        schema: UnauthorizedResponseContent,
-      },
-      {
-        status: 403,
-        description: `Forbidden 403 response`,
-        schema: ForbiddenResponseContent,
-      },
-      {
-        status: 404,
-        description: `NotFound 404 response`,
-        schema: NotFoundResponseContent,
-      },
-      {
-        status: 413,
-        description: `ContentTooLarge 413 response`,
-        schema: ContentTooLargeResponseContent,
-      },
-      {
-        status: 429,
-        description: `TooManyRequests 429 response`,
-        schema: TooManyRequestsResponseContent,
-      },
-      {
-        status: 500,
-        description: `InternalServerError 500 response`,
-        schema: InternalServerErrorResponseContent,
-      },
-      {
-        status: 502,
-        description: `BadGateway 502 response`,
-        schema: BadGatewayResponseContent,
-      },
-      {
-        status: 503,
-        description: `ServiceUnavailableError 503 response`,
-        schema: ServiceUnavailableErrorResponseContent,
-      },
-      {
-        status: 504,
-        description: `GatewayTimeout 504 response`,
-        schema: GatewayTimeoutResponseContent,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/adsApi/v1/retrieve/commitments/dsp",
-    alias: "DSPRetrieveCommitment",
-    description: `Get Commitments
-
-**Requires one of these permissions**:
-[]`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: DSPRetrieveCommitmentRequest,
-      },
-      {
-        name: "Amazon-Ads-ClientId",
-        type: "Header",
-        schema: z.string(),
-      },
-    ],
-    response: DSPCommitmentMultiStatusResponse,
-    errors: [
-      {
-        status: 400,
-        description: `BadRequest 400 response`,
-        schema: BadRequestResponseContent,
-      },
-      {
-        status: 401,
-        description: `Unauthorized 401 response`,
-        schema: UnauthorizedResponseContent,
-      },
-      {
-        status: 403,
-        description: `Forbidden 403 response`,
-        schema: ForbiddenResponseContent,
-      },
-      {
-        status: 404,
-        description: `NotFound 404 response`,
-        schema: NotFoundResponseContent,
-      },
-      {
-        status: 413,
-        description: `ContentTooLarge 413 response`,
-        schema: ContentTooLargeResponseContent,
-      },
-      {
-        status: 429,
-        description: `TooManyRequests 429 response`,
-        schema: TooManyRequestsResponseContent,
-      },
-      {
-        status: 500,
-        description: `InternalServerError 500 response`,
-        schema: InternalServerErrorResponseContent,
-      },
-      {
-        status: 502,
-        description: `BadGateway 502 response`,
-        schema: BadGatewayResponseContent,
-      },
-      {
-        status: 503,
-        description: `ServiceUnavailableError 503 response`,
-        schema: ServiceUnavailableErrorResponseContent,
-      },
-      {
-        status: 504,
-        description: `GatewayTimeout 504 response`,
-        schema: GatewayTimeoutResponseContent,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/adsApi/v1/retrieve/commitmentSpends/dsp",
-    alias: "DSPRetrieveCommitmentSpend",
-    description: `Retrieve commitment spend
-
-**Requires one of these permissions**:
-[]`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: DSPRetrieveCommitmentSpendRequest,
-      },
-      {
-        name: "Amazon-Ads-ClientId",
-        type: "Header",
-        schema: z.string(),
-      },
-    ],
-    response: DSPCommitmentSpendMultiStatusResponse,
-    errors: [
-      {
-        status: 400,
-        description: `BadRequest 400 response`,
-        schema: BadRequestResponseContent,
-      },
-      {
-        status: 401,
-        description: `Unauthorized 401 response`,
-        schema: UnauthorizedResponseContent,
-      },
-      {
-        status: 403,
-        description: `Forbidden 403 response`,
-        schema: ForbiddenResponseContent,
-      },
-      {
-        status: 404,
-        description: `NotFound 404 response`,
-        schema: NotFoundResponseContent,
-      },
-      {
-        status: 413,
-        description: `ContentTooLarge 413 response`,
-        schema: ContentTooLargeResponseContent,
-      },
-      {
-        status: 429,
-        description: `TooManyRequests 429 response`,
-        schema: TooManyRequestsResponseContent,
-      },
-      {
-        status: 500,
-        description: `InternalServerError 500 response`,
-        schema: InternalServerErrorResponseContent,
-      },
-      {
-        status: 502,
-        description: `BadGateway 502 response`,
-        schema: BadGatewayResponseContent,
-      },
-      {
-        status: 503,
-        description: `ServiceUnavailableError 503 response`,
-        schema: ServiceUnavailableErrorResponseContent,
-      },
-      {
-        status: 504,
-        description: `GatewayTimeout 504 response`,
-        schema: GatewayTimeoutResponseContent,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/adsApi/v1/update/commitments/dsp",
-    alias: "DSPUpdateCommitment",
-    description: `Update commitments
-
-**Requires one of these permissions**:
-[]`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: DSPUpdateCommitmentRequest,
-      },
-      {
-        name: "Amazon-Ads-ClientId",
-        type: "Header",
-        schema: z.string(),
-      },
-    ],
-    response: DSPCommitmentMultiStatusResponse,
-    errors: [
-      {
-        status: 400,
-        description: `BadRequest 400 response`,
-        schema: BadRequestResponseContent,
-      },
-      {
-        status: 401,
-        description: `Unauthorized 401 response`,
-        schema: UnauthorizedResponseContent,
-      },
-      {
-        status: 403,
-        description: `Forbidden 403 response`,
-        schema: ForbiddenResponseContent,
-      },
-      {
-        status: 404,
-        description: `NotFound 404 response`,
-        schema: NotFoundResponseContent,
-      },
-      {
-        status: 413,
-        description: `ContentTooLarge 413 response`,
-        schema: ContentTooLargeResponseContent,
-      },
-      {
-        status: 429,
-        description: `TooManyRequests 429 response`,
-        schema: TooManyRequestsResponseContent,
-      },
-      {
-        status: 500,
-        description: `InternalServerError 500 response`,
-        schema: InternalServerErrorResponseContent,
-      },
-      {
-        status: 502,
-        description: `BadGateway 502 response`,
-        schema: BadGatewayResponseContent,
-      },
-      {
-        status: 503,
-        description: `ServiceUnavailableError 503 response`,
-        schema: ServiceUnavailableErrorResponseContent,
-      },
-      {
-        status: 504,
-        description: `GatewayTimeout 504 response`,
-        schema: GatewayTimeoutResponseContent,
-      },
-    ],
-  },
-]);
-
-export const api = new Zodios(endpoints);
-
-export function createApiClient(baseUrl: string, options?: ZodiosOptions) {
-  return new Zodios(baseUrl, endpoints, options);
-}
