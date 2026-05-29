@@ -6,8 +6,8 @@
  * write surface (order + lineItem).
  *
  * Every fixture is hand-authored against scrubbed advertiser/entity IDs. A
- * live capture + scrub script is deferred — round 2 covers one fixture per
- * governed (operation, entityKind) pair.
+ * live capture + scrub script is deferred — this surface covers one fixture
+ * per governed (operation, entityKind) pair within order + lineItem.
  *
  * `expectedPostState` is the canonical snapshot that
  * `applyAmazonDspPatch(entityType, entityId, preState, data)` must produce.

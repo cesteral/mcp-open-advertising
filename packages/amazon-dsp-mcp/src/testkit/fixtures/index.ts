@@ -15,8 +15,10 @@ import {
   resumeOrder,
   resumeLineItem,
 } from "./entity.js";
+import { allCommitmentFixtures } from "./commitment.js";
 
 export * from "./entity.js";
+export * from "./commitment.js";
 
 export const allFixtures: readonly AmazonDspWriteFixture[] = [
   updateBudgetOrder,
@@ -25,4 +27,5 @@ export const allFixtures: readonly AmazonDspWriteFixture[] = [
   pauseLineItem,
   resumeOrder,
   resumeLineItem,
+  ...allCommitmentFixtures,
 ];
