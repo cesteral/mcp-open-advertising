@@ -241,3 +241,12 @@ export const resumeLineItem: AmazonDspWriteFixture = {
   },
   description: "resume: line-item transition PAUSED → ENABLED (budget preserved)",
 };
+
+export const allEntityFixtures: readonly AmazonDspWriteFixture[] = [
+  updateBudgetOrder,
+  updateBudgetLineItem,
+  pauseOrder,
+  pauseLineItem,
+  resumeOrder,
+  resumeLineItem,
+];

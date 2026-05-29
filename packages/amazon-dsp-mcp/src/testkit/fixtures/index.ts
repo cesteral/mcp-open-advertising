@@ -7,25 +7,13 @@
  */
 
 import type { AmazonDspWriteFixture } from "../types.js";
-import {
-  updateBudgetOrder,
-  updateBudgetLineItem,
-  pauseOrder,
-  pauseLineItem,
-  resumeOrder,
-  resumeLineItem,
-} from "./entity.js";
+import { allEntityFixtures } from "./entity.js";
 import { allCommitmentFixtures } from "./commitment.js";
 
 export * from "./entity.js";
 export * from "./commitment.js";
 
 export const allFixtures: readonly AmazonDspWriteFixture[] = [
-  updateBudgetOrder,
-  updateBudgetLineItem,
-  pauseOrder,
-  pauseLineItem,
-  resumeOrder,
-  resumeLineItem,
+  ...allEntityFixtures,
   ...allCommitmentFixtures,
 ];
