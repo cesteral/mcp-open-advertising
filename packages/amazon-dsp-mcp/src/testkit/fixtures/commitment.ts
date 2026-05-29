@@ -138,8 +138,46 @@ export const updateSpendCalculationMode: AmazonDspWriteFixture = {
   description: "update: commitment spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN (snapshot-invariant)",
 };
 
+/** update: commitment endDateTime extend 2026-06-30 → 2026-12-31. */
+export const updateEndDateTime: AmazonDspWriteFixture = {
+  operation: "update",
+  entityKind: "commitment",
+  args: {
+    entityType: "commitment",
+    profileId,
+    entityId: "cmt-REDACTED-4",
+    data: { endDateTime: "2026-12-31T23:59:59Z" },
+  },
+  preState: {
+    commitmentId: "cmt-REDACTED-4",
+    commitmentName: "Sample Commitment 4",
+    committedSpend: 750_000,
+    currencyCode: "USD",
+    startDateTime: "2026-01-01T00:00:00Z",
+    endDateTime: "2026-06-30T23:59:59Z",
+    fulfillmentLevel: "LEVEL_0",
+    spendCalculationMode: "ADVERTISER_ACCOUNT",
+  },
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "amazon_dsp",
+    entityKind: "commitment",
+    platformEntityId: "cmt-REDACTED-4",
+    displayName: "Sample Commitment 4",
+    accountId: profileId,
+    status: { canonical: "active", platformRaw: "ACTIVE" },
+    budget: {
+      daily: null,
+      lifetime: { amountMinor: 75_000_000, currency: "USD" },
+    },
+    schedule: { startAt: "2026-01-01T00:00:00Z", endAt: "2026-12-31T23:59:59Z" },
+  },
+  description: "update: commitment endDateTime extend 2026-06-30 → 2026-12-31",
+};
+
 export const allCommitmentFixtures: readonly AmazonDspWriteFixture[] = [
   updateCommittedSpend,
   updateFulfillmentLevel,
   updateSpendCalculationMode,
+  updateEndDateTime,
 ];
