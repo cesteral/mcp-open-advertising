@@ -25,6 +25,7 @@ const advertiserId = "advertiser-REDACTED-001";
 
 /** update_budget: order lifetime budget increase ($50,000 → $75,000). */
 export const updateBudgetOrder: AmazonDspWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "order",
   args: {
@@ -63,6 +64,7 @@ export const updateBudgetOrder: AmazonDspWriteFixture = {
 
 /** update_budget: line-item daily budget increase ($5 → $10). */
 export const updateBudgetLineItem: AmazonDspWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "lineItem",
   args: {
@@ -98,6 +100,7 @@ export const updateBudgetLineItem: AmazonDspWriteFixture = {
 
 /** pause: order ENABLED → PAUSED (budget preserved). */
 export const pauseOrder: AmazonDspWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "order",
   args: {
@@ -136,6 +139,7 @@ export const pauseOrder: AmazonDspWriteFixture = {
 
 /** pause: line-item ENABLED → PAUSED (budget preserved). */
 export const pauseLineItem: AmazonDspWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "lineItem",
   args: {
@@ -171,6 +175,7 @@ export const pauseLineItem: AmazonDspWriteFixture = {
 
 /** resume: order PAUSED → ENABLED (budget preserved). */
 export const resumeOrder: AmazonDspWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "order",
   args: {
@@ -209,6 +214,7 @@ export const resumeOrder: AmazonDspWriteFixture = {
 
 /** resume: line-item PAUSED → ENABLED (budget preserved). */
 export const resumeLineItem: AmazonDspWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "lineItem",
   args: {

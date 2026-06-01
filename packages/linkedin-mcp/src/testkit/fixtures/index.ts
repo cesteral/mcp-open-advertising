@@ -32,6 +32,7 @@ const RUN_END = 1798675200000;
 
 /** update_budget: campaign daily budget increase ($50.00 → $100.00). */
 export const updateBudgetCampaign: LinkedInWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaign",
   args: {
@@ -67,6 +68,7 @@ export const updateBudgetCampaign: LinkedInWriteFixture = {
 
 /** pause: campaign ACTIVE → PAUSED (budget preserved). */
 export const pauseCampaign: LinkedInWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -102,6 +104,7 @@ export const pauseCampaign: LinkedInWriteFixture = {
 
 /** resume: campaign PAUSED → ACTIVE (budget preserved). */
 export const resumeCampaign: LinkedInWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {

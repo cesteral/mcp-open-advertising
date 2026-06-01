@@ -45,6 +45,8 @@ export interface Cm360FixtureArgs {
  * yields `expectedPostState`. `assertContract` runs that check.
  */
 export interface Cm360WriteFixture {
+  /** Governed write contract this fixture proves. */
+  contractToolSlug: "update_entity";
   /** Canonical operation this fixture exercises. */
   operation: Cm360Operation;
   /** Upstream entity-kind key. */

@@ -28,6 +28,7 @@ const advertiserId = "advertiser-REDACTED-001";
 
 /** update_budget: campaign daily budget increase ($100 → $200). */
 export const updateBudgetCampaign: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaign",
   args: {
@@ -64,6 +65,7 @@ export const updateBudgetCampaign: TiktokWriteFixture = {
 
 /** update_budget: ad-group lifetime budget increase ($500 → $1,000). */
 export const updateBudgetAdGroup: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "adGroup",
   args: {
@@ -102,6 +104,7 @@ export const updateBudgetAdGroup: TiktokWriteFixture = {
 
 /** pause: campaign DISABLE (read status unchanged by symbolic merge). */
 export const pauseCampaign: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -138,6 +141,7 @@ export const pauseCampaign: TiktokWriteFixture = {
 
 /** pause: ad-group DISABLE (read status unchanged by symbolic merge). */
 export const pauseAdGroup: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "adGroup",
   args: {
@@ -174,6 +178,7 @@ export const pauseAdGroup: TiktokWriteFixture = {
 
 /** pause: ad DISABLE (read status unchanged by symbolic merge; no budget). */
 export const pauseAd: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "ad",
   args: {
@@ -207,6 +212,7 @@ export const pauseAd: TiktokWriteFixture = {
 
 /** resume: campaign ENABLE (read status unchanged by symbolic merge). */
 export const resumeCampaign: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {
@@ -243,6 +249,7 @@ export const resumeCampaign: TiktokWriteFixture = {
 
 /** resume: ad-group ENABLE (read status unchanged by symbolic merge). */
 export const resumeAdGroup: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "adGroup",
   args: {
@@ -279,6 +286,7 @@ export const resumeAdGroup: TiktokWriteFixture = {
 
 /** resume: ad ENABLE (read status unchanged by symbolic merge; no budget). */
 export const resumeAd: TiktokWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "ad",
   args: {

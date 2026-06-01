@@ -67,7 +67,7 @@ export function assertContract(
   const got =
     fixture.entityKind === "commitment"
       ? applyCommitmentPatch(
-          fixture.args.entityId,
+          fixture.args.commitmentId,
           fixture.args.profileId,
           fixture.preState,
           fixture.args.data

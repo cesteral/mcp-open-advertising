@@ -27,6 +27,7 @@ const accountId = "account-REDACTED-001";
 
 /** update_budget: campaign daily budget increase ($50 → $75). */
 export const updateBudgetCampaign: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaign",
   args: {
@@ -61,6 +62,7 @@ export const updateBudgetCampaign: MsAdsWriteFixture = {
 
 /** update_budget: shared budget amount increase ($200 → $250). */
 export const updateBudgetBudget: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "budget",
   args: {
@@ -93,6 +95,7 @@ export const updateBudgetBudget: MsAdsWriteFixture = {
 
 /** pause: campaign Active → Paused (budget preserved). */
 export const pauseCampaign: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -127,6 +130,7 @@ export const pauseCampaign: MsAdsWriteFixture = {
 
 /** pause: ad group Active → Paused (schedule preserved). */
 export const pauseAdGroup: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "adGroup",
   args: {
@@ -157,6 +161,7 @@ export const pauseAdGroup: MsAdsWriteFixture = {
 
 /** pause: ad Active → Paused. */
 export const pauseAd: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "ad",
   args: {
@@ -185,6 +190,7 @@ export const pauseAd: MsAdsWriteFixture = {
 
 /** resume: campaign Paused → Active (budget preserved). */
 export const resumeCampaign: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {
@@ -219,6 +225,7 @@ export const resumeCampaign: MsAdsWriteFixture = {
 
 /** resume: ad group Paused → Active (schedule preserved). */
 export const resumeAdGroup: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "adGroup",
   args: {
@@ -249,6 +256,7 @@ export const resumeAdGroup: MsAdsWriteFixture = {
 
 /** resume: ad Paused → Active. */
 export const resumeAd: MsAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "ad",
   args: {

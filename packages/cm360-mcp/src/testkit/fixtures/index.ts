@@ -26,6 +26,7 @@ const profileId = "profile-REDACTED-001";
 
 /** update_status: campaign archive (archived false → true). */
 export const archiveCampaign: Cm360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_status",
   entityKind: "campaign",
   args: {
@@ -60,6 +61,7 @@ export const archiveCampaign: Cm360WriteFixture = {
 
 /** pause: ad active → paused (active true → false). */
 export const pauseAd: Cm360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "ad",
   args: {
@@ -96,6 +98,7 @@ export const pauseAd: Cm360WriteFixture = {
 
 /** resume: ad paused → active (active false → true). */
 export const resumeAd: Cm360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "ad",
   args: {
@@ -132,6 +135,7 @@ export const resumeAd: Cm360WriteFixture = {
 
 /** update_status: ad archive (archived false → true; active forced false). */
 export const archiveAd: Cm360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_status",
   entityKind: "ad",
   args: {

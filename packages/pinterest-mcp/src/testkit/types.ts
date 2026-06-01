@@ -43,6 +43,8 @@ export interface PinterestFixtureArgs {
  * yields `expectedPostState`. `assertContract` runs that check.
  */
 export interface PinterestWriteFixture {
+  /** Governed write contract this fixture proves. */
+  contractToolSlug: "update_entity";
   /** Canonical operation this fixture exercises. */
   operation: PinterestOperation;
   /** Upstream entity-kind key. */
