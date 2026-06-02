@@ -27,6 +27,7 @@ import type {
 } from "@cesteral/shared";
 import {
   buildGAdsSnapshot,
+  captureGAdsSnapshot,
   ENTITY_KIND_MAP,
   unwrapResource,
   type GAdsServiceLike,
@@ -109,6 +110,58 @@ export function resolveGAdsDispatchedCapability(
     operation,
     canonicalEntityKind: ENTITY_KIND_MAP[entityType] || entityType || "unknown",
   };
+}
+
+/**
+ * Resolve the `(operation, entityKind)` for a `gads_remove_entity` call.
+ * Out-of-scope types (ad, keyword) resolve to `canonicalEntityKind: null` —
+ * still token-gated under enforce, no canonical snapshot. Pure.
+ */
+export function resolveGAdsRemoveCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "delete",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface GAdsRemoveDryRunArgs {
+  entityType: string;
+  customerId: string;
+  entityId: string;
+}
+
+/**
+ * Symbolic dry-run for `gads_remove_entity`. Google Ads "remove" sets status to
+ * `REMOVED` (permanent; canonical `deleted`). The expected post-state is the
+ * current entity with canonical status `deleted`. Out-of-scope types / read
+ * failures fail the governed dry-run via `assertGovernedDryRunResult`.
+ */
+export async function runGAdsRemoveDryRun(
+  args: GAdsRemoveDryRunArgs,
+  gadsService: GAdsServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const before = await captureGAdsSnapshot(
+    gadsService,
+    args.entityType,
+    args.customerId,
+    args.entityId,
+    context
+  );
+  const expectedPostState: NormalizedEntitySnapshot | undefined = before
+    ? { ...before, status: { canonical: "deleted", platformRaw: "REMOVED" } }
+    : undefined;
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: expectedPostState !== undefined,
+      validationErrors: [],
+      validationSource: "symbolic",
+      expectedStateSource: expectedPostState ? "server_symbolic_apply" : "none",
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "gads_remove_entity"
+  );
 }
 
 export interface GAdsDryRunArgs {

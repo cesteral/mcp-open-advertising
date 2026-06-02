@@ -1,5 +1,19 @@
-import { describe, it, expect } from "vitest";
-import { RemoveEntityInputSchema } from "../../src/mcp-server/tools/definitions/remove-entity.tool.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("../../src/mcp-server/tools/utils/resolve-session.js", () => ({
+  resolveSessionServices: vi.fn(),
+}));
+
+import { resolveSessionServices } from "../../src/mcp-server/tools/utils/resolve-session.js";
+const mockResolveSessionServices = vi.mocked(resolveSessionServices);
+
+import {
+  RemoveEntityInputSchema,
+  removeEntityLogic,
+} from "../../src/mcp-server/tools/definitions/remove-entity.tool.js";
+
+const ctx = { requestId: "r", timestamp: new Date().toISOString(), operation: "t" } as any;
+const sdk = { sessionId: "s" } as any;
 
 describe("RemoveEntityInputSchema", () => {
   it("accepts valid remove input", () => {
@@ -65,5 +79,63 @@ describe("RemoveEntityInputSchema", () => {
       });
       expect(result.success, `expected "${id}" to be rejected`).toBe(false);
     }
+  });
+});
+
+describe("removeEntityLogic governance contract", () => {
+  let svc: { getEntity: ReturnType<typeof vi.fn>; removeEntity: ReturnType<typeof vi.fn> };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    svc = {
+      getEntity: vi
+        .fn()
+        .mockResolvedValue({ status: "PAUSED", resourceName: "customers/1/campaigns/456" }),
+      removeEntity: vi
+        .fn()
+        .mockResolvedValue({ results: [{ resourceName: "customers/1/campaigns/456" }] }),
+    };
+    mockResolveSessionServices.mockReturnValue({ gadsService: svc } as any);
+  });
+
+  it("dry_run returns a deleted expected post-state and does not remove", async () => {
+    const result = await removeEntityLogic(
+      { entityType: "campaign", customerId: "1", entityId: "456", dry_run: true } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.removeEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("deleted");
+    expect(result.dispatchedCapability).toEqual({
+      operation: "delete",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute captures before (live) and after (REMOVED→deleted) snapshots", async () => {
+    svc.getEntity
+      .mockResolvedValueOnce({ status: "PAUSED", resourceName: "customers/1/campaigns/456" })
+      .mockResolvedValueOnce({ status: "REMOVED", resourceName: "customers/1/campaigns/456" });
+    const result = await removeEntityLogic(
+      { entityType: "campaign", customerId: "1", entityId: "456" } as any,
+      ctx,
+      sdk
+    );
+    expect(svc.removeEntity).toHaveBeenCalledOnce();
+    expect(result.before?.status.canonical).toBe("paused");
+    expect(result.after?.status.canonical).toBe("deleted");
+    expect(result.dispatchedCapability.canonicalEntityKind).toBe("campaign");
+  });
+
+  it("out-of-scope kind (ad) resolves canonicalEntityKind:null", async () => {
+    const result = await removeEntityLogic(
+      { entityType: "ad", customerId: "1", entityId: "789~456" } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "delete", canonicalEntityKind: null });
+    expect(result.before).toBeUndefined();
+    expect(result.after).toBeUndefined();
+    expect(svc.removeEntity).toHaveBeenCalledOnce();
   });
 });

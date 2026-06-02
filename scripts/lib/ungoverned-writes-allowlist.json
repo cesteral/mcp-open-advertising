@@ -42,8 +42,7 @@
       "gads_bulk_create_entities",
       "gads_bulk_mutate",
       "gads_bulk_update_status",
-      "gads_create_entity",
-      "gads_remove_entity"
+      "gads_create_entity"
     ],
     "linkedin-mcp": [
       "linkedin_adjust_bids",
