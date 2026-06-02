@@ -72,11 +72,35 @@ describe("tiktok_duplicate_entity governance contract", () => {
       canonical: "paused",
       platformRaw: "CAMPAIGN_STATUS_DISABLE",
     });
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Source Campaign");
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
     expect(result.dispatchedCapability).toEqual({
       operation: "duplicate",
       canonicalEntityKind: "campaign",
     });
+  });
+
+  it("dry_run applies options (rename) but keeps the TikTok-forced disabled status", async () => {
+    svc.getEntity.mockResolvedValue({
+      campaign_id: "camp-SRC-1",
+      campaign_name: "Source Campaign",
+      status: "CAMPAIGN_STATUS_ENABLE",
+      advertiser_id: "adv-1",
+    });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        advertiserId: "adv-1",
+        entityId: "camp-SRC-1",
+        options: { campaign_name: "Copy of Source", status: "CAMPAIGN_STATUS_ENABLE" },
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Copy of Source");
+    // TikTok controls the copy status server-side → stays disabled/paused.
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
   });
 
   it("execute normalizes the returned new entity into after (no before)", async () => {

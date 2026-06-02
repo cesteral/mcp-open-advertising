@@ -114,7 +114,11 @@ export async function duplicateEntityLogic(
   const dispatchedCapability = resolveDv360DuplicateCapability(entityType);
 
   if (input.dry_run === true) {
-    const dryRun = await runDv360DuplicateDryRun({ entityType, ids }, dv360Service, context);
+    const dryRun = await runDv360DuplicateDryRun(
+      { entityType, ids, displayName: input.displayName },
+      dv360Service,
+      context
+    );
     return {
       duplicatedEntity: {},
       sourceEntityId: entityId,

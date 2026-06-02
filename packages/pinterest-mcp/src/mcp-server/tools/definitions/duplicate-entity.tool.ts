@@ -28,8 +28,9 @@ const TOOL_DESCRIPTION = `Duplicate a Pinterest Ads entity (copy it).
 
 **Supported entity types:** ${getDuplicateEntityTypeEnum().join(", ")}
 
-Creates a copy of the entity. The copy is created in DISABLED status by default.
-Use the returned entity ID to make modifications before enabling.`;
+Creates a copy of the entity (clone via read + create — Pinterest has no native copy API).
+The copy preserves the source's settings, including its status, unless overridden via \`options\`.
+Use \`options\` (e.g. \`{ "name": "Copy of …" }\`) to rename or re-state the copy.`;
 
 export const DuplicateEntityInputSchema = z
   .object({
@@ -45,7 +46,7 @@ export const DuplicateEntityInputSchema = z
       .optional()
       .default(false)
       .describe(
-        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy in a non-running state, projected from the source) without calling the Pinterest API. No copy is created."
+        "When true, validates the duplication and returns a DryRunResult under `dryRun` (expected post-state = the would-be-created copy — the source with any `options` applied) without calling the Pinterest API. No copy is created."
       ),
   })
   .describe("Parameters for duplicating a Pinterest Ads entity");
@@ -81,7 +82,12 @@ export async function duplicateEntityLogic(
 
   if (input.dry_run === true) {
     const dryRun = await runPinterestDuplicateDryRun(
-      { entityType: input.entityType, adAccountId: input.adAccountId, entityId: input.entityId },
+      {
+        entityType: input.entityType,
+        adAccountId: input.adAccountId,
+        entityId: input.entityId,
+        options: input.options,
+      },
       pinterestService,
       context
     );
@@ -194,13 +200,13 @@ export const duplicateEntityTool = {
       },
     },
     {
-      label: "Duplicate an ad group with new name",
+      label: "Duplicate a campaign with a new name",
       input: {
-        entityType: "adGroup",
+        entityType: "campaign",
         adAccountId: "1234567890",
-        entityId: "1700123456789",
+        entityId: "1800123456789",
         options: {
-          adgroup_name: "Copy of Ad Group A",
+          name: "Copy of Summer Campaign",
         },
       },
     },

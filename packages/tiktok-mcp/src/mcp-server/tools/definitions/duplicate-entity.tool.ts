@@ -78,7 +78,7 @@ export async function duplicateEntityLogic(
 
   if (input.dry_run === true) {
     const dryRun = await runTiktokDuplicateDryRun(
-      { entityType: input.entityType, entityId: input.entityId },
+      { entityType: input.entityType, entityId: input.entityId, options: input.options },
       tiktokService,
       context
     );

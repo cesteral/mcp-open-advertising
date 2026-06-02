@@ -48,7 +48,7 @@ describe("pinterest_duplicate_entity governance contract", () => {
     mockResolveSession.mockReturnValue({ pinterestService: svc } as any);
   });
 
-  it("dry_run reads the source and projects the PAUSED copy, no API call", async () => {
+  it("dry_run clones the source (no forced pause) when no options given", async () => {
     svc.getEntity.mockResolvedValue({
       id: "campaign-SRC-1",
       name: "Source Campaign",
@@ -74,12 +74,38 @@ describe("pinterest_duplicate_entity governance contract", () => {
       "campaign-SRC-1",
       expect.any(Object)
     );
-    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    // Pinterest does not force a pause — the copy keeps the source's status.
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("active");
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Source Campaign");
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
     expect(result.dispatchedCapability).toEqual({
       operation: "duplicate",
       canonicalEntityKind: "campaign",
     });
+  });
+
+  it("dry_run applies options (rename + re-state) to the projected copy", async () => {
+    svc.getEntity.mockResolvedValue({
+      id: "campaign-SRC-1",
+      name: "Source Campaign",
+      status: "ACTIVE",
+      ad_account_id: "act-1",
+    });
+
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "campaign",
+        adAccountId: "act-1",
+        entityId: "campaign-SRC-1",
+        options: { name: "Copy of Source Campaign", status: "PAUSED" },
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Copy of Source Campaign");
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
   });
 
   it("execute normalizes the returned new entity into after (no before)", async () => {

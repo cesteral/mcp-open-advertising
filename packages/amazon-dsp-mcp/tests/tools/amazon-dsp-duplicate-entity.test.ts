@@ -64,11 +64,35 @@ describe("amazon_dsp_duplicate_entity governance contract", () => {
 
     expect(svc.duplicateEntity).not.toHaveBeenCalled();
     expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Source Order");
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
     expect(result.dispatchedCapability).toEqual({
       operation: "duplicate",
       canonicalEntityKind: "order",
     });
+  });
+
+  it("dry_run applies options (rename + re-state) to the projected copy", async () => {
+    svc.getEntity.mockResolvedValue({
+      orderId: "ord-SRC-1",
+      name: "Source Order",
+      state: "ENABLED",
+      advertiserId: "adv-1",
+    });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "order",
+        profileId: "1",
+        entityId: "ord-SRC-1",
+        // options spread last on execute → can override the default PAUSED + rename.
+        options: { name: "Custom Copy", state: "ENABLED" },
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Custom Copy");
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("active");
   });
 
   it("execute normalizes the returned new entity into after (no before)", async () => {

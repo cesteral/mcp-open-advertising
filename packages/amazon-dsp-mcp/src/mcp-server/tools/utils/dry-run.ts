@@ -178,14 +178,17 @@ export interface AmazonDspDuplicateDryRunArgs {
   entityType: string;
   /** ID of the SOURCE entity being duplicated. */
   entityId: string;
+  /** Copy overrides forwarded to the create call (may rename or re-state the copy). */
+  options?: Record<string, unknown>;
 }
 
 /**
  * Symbolic dry-run for `amazon_dsp_duplicate_entity`. The copy does not exist
- * yet (no `before`). The copy lands in a non-running state, so the expected
- * post-state is the SOURCE re-projected as the copy: read the source, overlay
- * `state: "PAUSED"`, and emit it with an empty `platformEntityId` (the new ID
- * is assigned on execute). Out-of-scope kinds are token-gated but not
+ * yet (no `before`). The service builds the copy as `{ ...source, state:
+ * "PAUSED", ...options }` — so the expected post-state reads the source, forces
+ * the non-running `state: "PAUSED"`, then applies the caller's `options` last
+ * (matching execute: options may rename or override the state), and emits it
+ * with an empty `platformEntityId`. Out-of-scope kinds are token-gated but not
  * snapshot-governed.
  */
 export async function runAmazonDspDuplicateDryRun(
@@ -203,7 +206,10 @@ export async function runAmazonDspDuplicateDryRun(
       | Record<string, unknown>
       | undefined;
     if (source && typeof source === "object") {
-      const snapshot = buildAmazonDspSnapshot(args.entityType, "", source, { state: "PAUSED" });
+      const snapshot = buildAmazonDspSnapshot(args.entityType, "", source, {
+        state: "PAUSED",
+        ...(args.options ?? {}),
+      });
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

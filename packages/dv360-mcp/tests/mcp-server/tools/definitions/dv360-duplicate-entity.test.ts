@@ -62,10 +62,32 @@ describe("dv360_duplicate_entity governance contract", () => {
     expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
     // The copy has no entity ID yet pre-duplicate.
     expect(result.dryRun?.expectedPostState?.platformEntityId).toBe("");
+    // The service renames the copy `Copy of {source}` by default.
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Copy of Source IO");
     expect(result.dispatchedCapability).toEqual({
       operation: "duplicate",
       canonicalEntityKind: "insertion_order",
     });
+  });
+
+  it("dry_run honors an explicit displayName for the copy", async () => {
+    svc.getEntity.mockResolvedValue({
+      insertionOrderId: "io-SRC-1",
+      displayName: "Source IO",
+      entityStatus: "ENTITY_STATUS_ACTIVE",
+    });
+    const result = await duplicateEntityLogic(
+      {
+        entityType: "insertionOrder",
+        advertiserId: "adv-1",
+        insertionOrderId: "io-SRC-1",
+        displayName: "Q2 IO (Copy)",
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dryRun?.expectedPostState?.displayName).toBe("Q2 IO (Copy)");
   });
 
   it("dry_run projects a DRAFT copy for line items (DV360 forces DRAFT)", async () => {

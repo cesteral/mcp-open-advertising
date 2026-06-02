@@ -282,6 +282,8 @@ export interface Dv360DuplicateDryRunArgs {
   entityType: string;
   /** Parent + source-entity IDs (advertiserId + `<entityType>Id`). */
   ids: Record<string, string>;
+  /** Custom name for the copy; defaults to `Copy of {source displayName}`. */
+  displayName?: string;
 }
 
 /**
@@ -313,7 +315,16 @@ export async function runDv360DuplicateDryRun(
       // PAUSED (line items must start as DRAFT) — mirror that per entity type.
       const landingStatus =
         args.entityType === "lineItem" ? "ENTITY_STATUS_DRAFT" : "ENTITY_STATUS_PAUSED";
-      const applied = { ...source, entityStatus: landingStatus };
+      // The service renames the copy: `displayName` if supplied, else
+      // `Copy of {source displayName}`.
+      const sourceName = typeof source.displayName === "string" ? source.displayName : undefined;
+      const copyName =
+        args.displayName ?? (sourceName != null ? `Copy of ${sourceName}` : undefined);
+      const applied = {
+        ...source,
+        entityStatus: landingStatus,
+        ...(copyName != null ? { displayName: copyName } : {}),
+      };
       const snapshot = buildDv360Snapshot(args.entityType, args.ids, source, applied);
       if (snapshot) {
         // The copy has no entity ID yet pre-duplicate; the parent IDs would

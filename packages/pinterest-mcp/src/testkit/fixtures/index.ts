@@ -325,9 +325,11 @@ export const resumeAd: PinterestWriteFixture = {
 };
 
 /**
- * duplicate fixtures. The copy does not exist yet, so `entityId` is the empty
- * placeholder and `data` is the landing-status overlay (the copy lands PAUSED)
- * the dry-run applies to the SOURCE (`preState`).
+ * duplicate fixture. Pinterest has no native copy API — the service re-creates
+ * the entity as `{ ...source, ...options }`, so with no `options` the copy is a
+ * faithful clone of the source (status preserved; Pinterest does not force a
+ * pause). `entityId` is the empty placeholder and `data` is the `options`
+ * overlay (empty here) the dry-run applies to the SOURCE (`preState`).
  */
 export const duplicateCampaign: PinterestWriteFixture = {
   contractToolSlug: "duplicate_entity",
@@ -337,7 +339,7 @@ export const duplicateCampaign: PinterestWriteFixture = {
     entityType: "campaign",
     adAccountId,
     entityId: "",
-    data: { status: "PAUSED" },
+    data: {},
   },
   preState: {
     id: "campaign-REDACTED-9",
@@ -355,11 +357,11 @@ export const duplicateCampaign: PinterestWriteFixture = {
     platformEntityId: "",
     displayName: "Source Campaign",
     accountId: adAccountId,
-    status: { canonical: "paused", platformRaw: "PAUSED" },
+    status: { canonical: "active", platformRaw: "ACTIVE" },
     budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
     schedule: { startAt: "2026-01-01T00:00:00.000Z", endAt: "2026-12-31T00:00:00.000Z" },
   },
-  description: "duplicate: campaign copy lands PAUSED (projected from source)",
+  description: "duplicate: campaign copy clones the source (no options; status preserved)",
 };
 
 export const allFixtures: readonly PinterestWriteFixture[] = [

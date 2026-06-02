@@ -188,15 +188,18 @@ export interface PinterestDuplicateDryRunArgs {
   adAccountId: string;
   /** ID of the SOURCE entity being duplicated. */
   entityId: string;
+  /** Copy overrides forwarded to the create call (may rename or re-state the copy). */
+  options?: Record<string, unknown>;
 }
 
 /**
  * Symbolic dry-run for `pinterest_duplicate_entity`. The copy does not exist
- * yet (no `before`). The copy lands in a non-running state, so the expected
- * post-state is the SOURCE re-projected as the copy: read the source, overlay
- * `status: "PAUSED"`, and emit it with an empty `platformEntityId` (the new ID
- * is assigned on execute). Out-of-scope kinds are token-gated but not
- * snapshot-governed.
+ * yet (no `before`). Pinterest has no native copy API — the service re-creates
+ * the entity as `{ ...source(minus system fields), ...options }`, so the copy
+ * KEEPS the source status unless the caller overrides it via `options` (there
+ * is no forced pause). The expected post-state reads the source, applies the
+ * caller's `options` overlay, and emits it with an empty `platformEntityId`.
+ * Out-of-scope kinds are token-gated but not snapshot-governed.
  */
 export async function runPinterestDuplicateDryRun(
   args: PinterestDuplicateDryRunArgs,
@@ -216,7 +219,7 @@ export async function runPinterestDuplicateDryRun(
       context
     )) as Record<string, unknown> | undefined;
     if (source && typeof source === "object") {
-      const snapshot = buildPinterestSnapshot(args.entityType, "", source, { status: "PAUSED" });
+      const snapshot = buildPinterestSnapshot(args.entityType, "", source, args.options ?? {});
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

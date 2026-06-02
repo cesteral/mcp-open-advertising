@@ -191,15 +191,18 @@ export interface TiktokDuplicateDryRunArgs {
   entityType: string;
   /** ID of the SOURCE entity being duplicated. */
   entityId: string;
+  /** Copy overrides forwarded to the /copy/ call (may rename the copy). */
+  options?: Record<string, unknown>;
 }
 
 /**
  * Symbolic dry-run for `tiktok_duplicate_entity`. The copy does not exist yet
- * (no `before`). The copy lands in a disabled (paused) state, so the expected
- * post-state is the SOURCE re-projected as the copy: read the source, overlay
- * the disabled `status`, and emit it with an empty `platformEntityId` (the new
- * ID is assigned on execute). Out-of-scope kinds are token-gated but not
- * snapshot-governed.
+ * (no `before`). TikTok's `/copy/` endpoint copies the source and lands the
+ * copy in a disabled (paused) state server-side; the caller's `options` (e.g.
+ * a new name) are forwarded. The expected post-state reads the source, applies
+ * `options`, then forces the disabled `status` (TikTok controls it regardless
+ * of options), and emits it with an empty `platformEntityId`. Out-of-scope
+ * kinds are token-gated but not snapshot-governed.
  */
 export async function runTiktokDuplicateDryRun(
   args: TiktokDuplicateDryRunArgs,
@@ -217,7 +220,10 @@ export async function runTiktokDuplicateDryRun(
       | undefined;
     if (source && typeof source === "object") {
       const landing = DUPLICATE_LANDING_STATUS[args.entityType] ?? "CAMPAIGN_STATUS_DISABLE";
-      const snapshot = buildTiktokSnapshot(args.entityType, "", source, { status: landing });
+      const snapshot = buildTiktokSnapshot(args.entityType, "", source, {
+        ...(args.options ?? {}),
+        status: landing,
+      });
       if (snapshot) {
         expectedPostState = snapshot;
         expectedStateSource = "server_symbolic_apply";

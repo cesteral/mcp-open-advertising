@@ -421,8 +421,9 @@ export const duplicateInsertionOrder: Dv360WriteFixture = {
   args: {
     entityType: "insertionOrder",
     ids: { advertiserId, insertionOrderId: "io-REDACTED-NEW" },
-    data: { entityStatus: "ENTITY_STATUS_PAUSED" },
-    updateMask: "entityStatus",
+    // The copy is forced to PAUSED and renamed `Copy of {source}`.
+    data: { entityStatus: "ENTITY_STATUS_PAUSED", displayName: "Copy of Source Insertion Order" },
+    updateMask: "entityStatus,displayName",
   },
   preState: {
     name: `advertisers/${advertiserId}/insertionOrders/io-REDACTED-1`,
@@ -440,7 +441,7 @@ export const duplicateInsertionOrder: Dv360WriteFixture = {
     platform: "dv360",
     entityKind: "insertion_order",
     platformEntityId: "io-REDACTED-NEW",
-    displayName: "Source Insertion Order",
+    displayName: "Copy of Source Insertion Order",
     accountId: advertiserId,
     status: { canonical: "paused", platformRaw: "ENTITY_STATUS_PAUSED" },
     budget: {
@@ -468,9 +469,10 @@ export const duplicateLineItem: Dv360WriteFixture = {
   args: {
     entityType: "lineItem",
     ids: { advertiserId, lineItemId: "li-REDACTED-NEW" },
-    // DV360 forces line-item copies to DRAFT (must start as DRAFT).
-    data: { entityStatus: "ENTITY_STATUS_DRAFT" },
-    updateMask: "entityStatus",
+    // DV360 forces line-item copies to DRAFT (must start as DRAFT) and renames
+    // the copy `Copy of {source}`.
+    data: { entityStatus: "ENTITY_STATUS_DRAFT", displayName: "Copy of Source Line Item" },
+    updateMask: "entityStatus,displayName",
   },
   preState: {
     name: `advertisers/${advertiserId}/lineItems/li-REDACTED-1`,
@@ -483,7 +485,7 @@ export const duplicateLineItem: Dv360WriteFixture = {
     platform: "dv360",
     entityKind: "line_item",
     platformEntityId: "li-REDACTED-NEW",
-    displayName: "Source Line Item",
+    displayName: "Copy of Source Line Item",
     accountId: advertiserId,
     status: { canonical: "unknown", platformRaw: "ENTITY_STATUS_DRAFT" },
     budget: { daily: null, lifetime: null, segments: null },
