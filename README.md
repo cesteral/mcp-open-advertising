@@ -11,7 +11,7 @@ cross-platform execution from one governed environment.
 
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
-[![MCP](https://img.shields.io/badge/MCP-2024--11--05-green)](https://modelcontextprotocol.io/)
+[![MCP](https://img.shields.io/badge/MCP-2025--11--25-green)](https://modelcontextprotocol.io/)
 
 <p align="center">
   <img src="docs/logos/dv360.svg" width="32" height="32" alt="DV360" title="DV360">&nbsp;&nbsp;
@@ -109,6 +109,51 @@ Intelligence layers governance and orchestration on top:
 | [msads-mcp](packages/msads-mcp)           | Microsoft Advertising API v13     | 25    | Access token + developer token  |
 | [dbm-mcp](packages/dbm-mcp)               | Bid Manager API v2                | 6     | Google OAuth2                   |
 
+Thirteen servers, 280+ tools. Tool counts are the live registered total per
+server, including the `*_search_tools` discovery tool where present.
+
+### What Every Server Ships
+
+These connectors have grown past "thin REST wrappers." Beyond raw tool calls,
+every server in the fleet exposes the full surface of the modern MCP spec
+(protocol revisions `2025-03-26` through `2025-11-25`):
+
+- **MCP Prompts** — on-demand, multi-step workflow guidance (campaign launch,
+  reporting, troubleshooting) so agents don't have to rediscover each
+  platform's sequencing. Present on all 13 servers.
+- **MCP Resources** — structured, addressable context (schemas, field catalogs,
+  examples, enums) fetched on demand instead of bloating every tool schema.
+  Present on all 13 servers. DV360 uses these to keep its >1 MB discriminated
+  unions off the wire (`entity-schema://`, `entity-fields://`, `entity-examples://`).
+- **Tool discovery** — a `<platform>_search_tools` tool that lets an agent
+  search the server's own catalog by intent instead of paging the full list.
+  On 11 servers (all except the small `gads-mcp` and `sa360-mcp` / reporting-only
+  `dbm-mcp`).
+- **Server discovery cards** — SEP-2127 metadata at
+  `/.well-known/mcp/server-card.json` (name, version, transports, auth modes,
+  capabilities) on every server, in every auth mode.
+- **OAuth resource discovery** — in `jwt` auth mode, the RFC 9728 endpoint at
+  `/.well-known/oauth-protected-resource`.
+- **Report CSV spill** — large report bodies spill to GCS behind a signed URL
+  so responses stay bounded. On the six reporting-heavy servers: `ttd-mcp`,
+  `tiktok-mcp`, `snapchat-mcp`, `amazon-dsp-mcp`, `pinterest-mcp`, `msads-mcp`.
+
+| Server         | Discovery | Prompts | Resources | CSV spill |
+| -------------- | :-------: | :-----: | :-------: | :-------: |
+| gads-mcp       |           |    ✅    |     ✅     |           |
+| meta-mcp       |     ✅     |    ✅    |     ✅     |           |
+| dv360-mcp      |     ✅     |    ✅    |     ✅     |           |
+| ttd-mcp        |     ✅     |    ✅    |     ✅     |     ✅     |
+| linkedin-mcp   |     ✅     |    ✅    |     ✅     |           |
+| tiktok-mcp     |     ✅     |    ✅    |     ✅     |     ✅     |
+| cm360-mcp      |     ✅     |    ✅    |     ✅     |           |
+| sa360-mcp      |           |    ✅    |     ✅     |           |
+| pinterest-mcp  |     ✅     |    ✅    |     ✅     |     ✅     |
+| snapchat-mcp   |     ✅     |    ✅    |     ✅     |     ✅     |
+| amazon-dsp-mcp |     ✅     |    ✅    |     ✅     |     ✅     |
+| msads-mcp      |     ✅     |    ✅    |     ✅     |     ✅     |
+| dbm-mcp        |           |    ✅    |     ✅     |           |
+
 ---
 
 ## Built for Production
@@ -123,15 +168,23 @@ production without hand-rolling guardrails:
   Query it directly in BigQuery for hosted deployments, or pipe stdout to
   your existing log stack for self-host.
   [Read the observability guide](docs/guides/observability.md).
-- **Destructive-action elicitation gates**. 53 destructive tools across all
-  13 servers prompt the user before deletes, bulk status changes, bid
-  adjustments, budget changes, conversion uploads, and async Workflows
-  batch jobs. Stdio and clients without elicitation support fall back to a
-  documented non-interactive contract. Bulk mutations under 10 items skip
-  the prompt unless they touch a sensitive field (status / budget / bid).
+- **Destructive-action elicitation gates**. 51 destructive tools across the
+  twelve write-capable servers (`dbm-mcp` is reporting-only) prompt the user
+  before deletes, bulk status changes, bid adjustments, budget changes,
+  conversion uploads, and async Workflows batch jobs. Stdio and clients
+  without elicitation support fall back to a documented non-interactive
+  contract. Bulk mutations under 10 items skip the prompt unless they touch a
+  sensitive field (status / budget / bid).
+- **Verifiable release provenance**. Governed tools carry a canonical
+  SHA-256 `definitionHash` (from `@cesteral/contract-hash`) emitted into a
+  per-package `cesteral-manifest.json`. Tagged releases publish to npm with
+  build provenance, signing the manifest transitively inside the tarball, so a
+  downstream governance system can verify exactly which tool definitions
+  shipped and promote matching tools to `attested` trust.
 
 If your security review needs evidence — the redaction list, the field
-schema, the upstream capture path — all of it is in this repository.
+schema, the upstream capture path, the contract hash — all of it is in this
+repository.
 
 ---
 
