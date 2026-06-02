@@ -89,7 +89,6 @@
       "tiktok_upload_video"
     ],
     "ttd-mcp": [
-      "ttd_adjust_bids",
       "ttd_archive_entities",
       "ttd_bulk_create_entities",
       "ttd_bulk_manage_bid_lists",

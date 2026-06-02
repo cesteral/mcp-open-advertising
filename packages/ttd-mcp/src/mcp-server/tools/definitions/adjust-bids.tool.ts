@@ -3,9 +3,23 @@
 
 import { z } from "zod";
 import { resolveSessionServices } from "../utils/resolve-session.js";
-import { elicitBidChangeConfirmation } from "@cesteral/shared";
-import type { McpTextContent, RequestContext } from "@cesteral/shared";
-import type { SdkContext } from "@cesteral/shared";
+import {
+  elicitBidChangeConfirmation,
+  assertGovernedEffectDryRun,
+  EffectResultSchema,
+  EffectDryRunResultSchema,
+  DispatchedCapabilitySchema,
+} from "@cesteral/shared";
+import type {
+  McpTextContent,
+  RequestContext,
+  SdkContext,
+  EffectResult,
+  EffectDryRunResult,
+  DispatchedCapability,
+  DryRunValidationError,
+  CesteralWriteToolAnnotations,
+} from "@cesteral/shared";
 
 const TOOL_NAME = "ttd_adjust_bids";
 const TOOL_TITLE = "Adjust TTD Ad Group Bids";
@@ -38,6 +52,13 @@ export const AdjustBidsInputSchema = z
       .min(1)
       .max(50)
       .describe("Array of bid adjustments (max 50)"),
+    dry_run: z
+      .boolean()
+      .optional()
+      .default(false)
+      .describe(
+        "When true, validates the bid adjustments and returns an EffectDryRunResult under `dryRun` (expected effect = the would-be bid-adjustment batch) without calling the TTD API or prompting for confirmation. No bids are changed."
+      ),
   })
   .describe("Parameters for batch bid adjustment");
 
@@ -80,6 +101,15 @@ export const AdjustBidsOutputSchema = z
       })
     ),
     timestamp: z.string().datetime(),
+    dryRun: EffectDryRunResultSchema.optional().describe(
+      "Present only when the request was made with `dry_run: true`. No bids were changed."
+    ),
+    effect: EffectResultSchema.optional().describe(
+      "Effect-class result identity (effectKind `bids_adjusted` + scalar audit summary). Present on a confirmed execute."
+    ),
+    dispatchedCapability: DispatchedCapabilitySchema.describe(
+      "The concrete (operation, entityKind) this call resolved to — `adjust_bids` with `canonicalEntityKind: null` (effect class). Present on every response."
+    ),
   })
   .describe("Bid adjustment results");
 
@@ -91,6 +121,27 @@ export async function adjustBidsLogic(
   context: RequestContext,
   sdkContext?: SdkContext
 ): Promise<AdjustBidsOutput> {
+  // Effect-class write: no canonical entity snapshot. Capability is
+  // `adjust_bids` with a null entity kind on every response.
+  const dispatchedCapability: DispatchedCapability = {
+    operation: "adjust_bids",
+    canonicalEntityKind: null,
+  };
+
+  if (input.dry_run === true) {
+    const dryRun = buildAdjustBidsEffectDryRun(input.adjustments);
+    return {
+      confirmed: true,
+      totalRequested: input.adjustments.length,
+      totalSucceeded: 0,
+      totalFailed: 0,
+      results: [],
+      timestamp: new Date().toISOString(),
+      dryRun,
+      dispatchedCapability,
+    };
+  }
+
   const confirmed = await elicitBidChangeConfirmation({
     count: input.adjustments.length,
     entityLabel: "ad group",
@@ -107,6 +158,7 @@ export async function adjustBidsLogic(
       totalFailed: 0,
       results: [],
       timestamp: new Date().toISOString(),
+      dispatchedCapability,
     };
   }
 
@@ -115,6 +167,16 @@ export async function adjustBidsLogic(
   const { results } = await ttdService.adjustBids(input.adjustments, context);
 
   const succeeded = results.filter((r) => r.success).length;
+
+  const effect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: {
+      entity_label: "ad_group",
+      requested: input.adjustments.length,
+      succeeded,
+      failed: input.adjustments.length - succeeded,
+    },
+  };
 
   return {
     confirmed: true,
@@ -128,10 +190,71 @@ export async function adjustBidsLogic(
       error: r.error,
     })),
     timestamp: new Date().toISOString(),
+    effect,
+    dispatchedCapability,
   };
 }
 
+/**
+ * Symbolic effect dry-run for `adjust_bids`. Validates the batch (each present
+ * BaseBidCPM/MaxBidCPM is a positive number) and projects the would-be effect —
+ * a bid adjustment over N ad groups. TTD has no native bid validate/preview, so
+ * both axes are symbolic. Pure (no I/O).
+ */
+function buildAdjustBidsEffectDryRun(
+  adjustments: AdjustBidsInput["adjustments"]
+): EffectDryRunResult {
+  const validationErrors: DryRunValidationError[] = [];
+  adjustments.forEach((a, i) => {
+    for (const [field, value] of [
+      ["baseBidCpm", a.baseBidCpm],
+      ["maxBidCpm", a.maxBidCpm],
+    ] as const) {
+      if (value !== undefined && (!Number.isFinite(value) || value <= 0)) {
+        validationErrors.push({
+          code: "INVALID_BID_CPM",
+          message: `${field} must be a positive number — got ${String(value)}`,
+          field: `adjustments.${i}.${field}`,
+        });
+      }
+    }
+  });
+
+  const expectedEffect: EffectResult = {
+    effectKind: "bids_adjusted",
+    summary: { entity_label: "ad_group", requested: adjustments.length },
+  };
+
+  return assertGovernedEffectDryRun(
+    {
+      wouldSucceed: validationErrors.length === 0,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedEffectSource: "symbolic",
+      expectedEffect,
+    },
+    "ttd_adjust_bids",
+    { requiresValidation: true, requiresSimulation: true }
+  );
+}
+
 export function adjustBidsResponseFormatter(result: AdjustBidsOutput): McpTextContent[] {
+  if (result.dryRun) {
+    const { wouldSucceed, validationErrors, validationSource, expectedEffectSource } =
+      result.dryRun;
+    const verdict = wouldSucceed ? "would succeed" : "would FAIL";
+    const errs = validationErrors.map((e) => `  - [${e.code}] ${e.message}`).join("\n");
+    const n = result.dryRun.expectedEffect?.summary.requested ?? result.totalRequested;
+    return [
+      {
+        type: "text" as const,
+        text:
+          `Dry run: adjusting bids on ${n} ad group(s) ${verdict} (validation: ${validationSource}, expected-effect: ${expectedEffectSource}). No bids were changed.` +
+          (errs ? `\n${errs}` : "") +
+          `\n\nTimestamp: ${result.timestamp}`,
+      },
+    ];
+  }
   if (!result.confirmed) {
     return [
       {
@@ -171,6 +294,23 @@ export const adjustBidsTool = {
     openWorldHint: false,
     destructiveHint: true,
     idempotentHint: false,
+    cesteral: {
+      kind: "write",
+      writeClass: "effect",
+      executableArgsExclude: ["dry_run"],
+      platform: "ttd",
+      contractPlatformSlug: "ttd",
+      contractToolSlug: "adjust_bids",
+      operation: ["adjust_bids"],
+      entityKinds: [],
+      entityIdArgs: [],
+      schemaVersion: 1,
+      contractId: "ttd.adjust_bids.v1",
+      supportsDryRun: true,
+      supportsBeforeAfterSnapshot: false,
+      requiresValidation: true,
+      requiresSimulation: true,
+    } satisfies CesteralWriteToolAnnotations,
   },
   inputExamples: [
     {
