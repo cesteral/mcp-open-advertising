@@ -9,7 +9,6 @@
       "amazon_dsp_create_commitment",
       "amazon_dsp_create_entity",
       "amazon_dsp_delete_entity",
-      "amazon_dsp_duplicate_entity",
       "amazon_dsp_submit_report"
     ],
     "cm360-mcp": [

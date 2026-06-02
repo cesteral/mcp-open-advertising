@@ -161,3 +161,64 @@ export async function runAmazonDspUpdateDryRun(
     "amazon_dsp_update_entity"
   );
 }
+
+/**
+ * Resolve the `(duplicate, entityKind)` for an `amazon_dsp_duplicate_entity`
+ * call. Out-of-scope types (creative / target / creativeAssociation) resolve to
+ * `canonicalEntityKind: null` — token-gated, no canonical snapshot. Pure.
+ */
+export function resolveAmazonDspDuplicateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "duplicate",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface AmazonDspDuplicateDryRunArgs {
+  entityType: string;
+  /** ID of the SOURCE entity being duplicated. */
+  entityId: string;
+}
+
+/**
+ * Symbolic dry-run for `amazon_dsp_duplicate_entity`. The copy does not exist
+ * yet (no `before`). The copy lands in a non-running state, so the expected
+ * post-state is the SOURCE re-projected as the copy: read the source, overlay
+ * `state: "PAUSED"`, and emit it with an empty `platformEntityId` (the new ID
+ * is assigned on execute). Out-of-scope kinds are token-gated but not
+ * snapshot-governed.
+ */
+export async function runAmazonDspDuplicateDryRun(
+  args: AmazonDspDuplicateDryRunArgs,
+  service: AmazonDspServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  const inScope = Boolean(ENTITY_KIND_MAP[args.entityType]);
+  if (inScope && service.getEntity) {
+    const source = (await service.getEntity(args.entityType, args.entityId, context)) as
+      | Record<string, unknown>
+      | undefined;
+    if (source && typeof source === "object") {
+      const snapshot = buildAmazonDspSnapshot(args.entityType, "", source, { state: "PAUSED" });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  // Out-of-scope kinds are token-gated but NOT snapshot-governed (plan
+  // §Template A): skip the in-scope simulation guard for them.
+  const result: DryRunResult = {
+    wouldSucceed: validationErrors.length === 0 && (!inScope || expectedPostState !== undefined),
+    validationErrors,
+    validationSource: "symbolic",
+    expectedStateSource,
+    ...(expectedPostState ? { expectedPostState } : {}),
+  };
+  return inScope ? assertGovernedDryRunResult(result, "amazon_dsp_duplicate_entity") : result;
+}
