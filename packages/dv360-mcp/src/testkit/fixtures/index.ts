@@ -31,6 +31,7 @@ const advertiserId = "advertiser-REDACTED-001";
 
 /** update_budget: insertion-order budget increase (one segment, $50 → $75). */
 export const updateBudgetIncreaseInsertionOrder: Dv360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "insertionOrder",
   args: {
@@ -89,6 +90,7 @@ export const updateBudgetIncreaseInsertionOrder: Dv360WriteFixture = {
 
 /** update_budget: line-item budget decrease ($50 → $30). */
 export const updateBudgetDecreaseLineItem: Dv360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "lineItem",
   args: {
@@ -145,6 +147,7 @@ export const updateBudgetDecreaseLineItem: Dv360WriteFixture = {
 
 /** pause: line-item ACTIVE → PAUSED. */
 export const pauseLineItemFromActive: Dv360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "lineItem",
   args: {
@@ -180,6 +183,7 @@ export const pauseLineItemFromActive: Dv360WriteFixture = {
 
 /** pause: insertion-order ACTIVE → PAUSED (preserves budget shape). */
 export const pauseInsertionOrderFromActive: Dv360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "insertionOrder",
   args: {
@@ -226,6 +230,7 @@ export const pauseInsertionOrderFromActive: Dv360WriteFixture = {
 
 /** resume: line-item PAUSED → ACTIVE. */
 export const resumeLineItemFromPaused: Dv360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "lineItem",
   args: {
@@ -261,6 +266,7 @@ export const resumeLineItemFromPaused: Dv360WriteFixture = {
 
 /** resume: insertion-order PAUSED → ACTIVE. */
 export const resumeInsertionOrderFromPaused: Dv360WriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "insertionOrder",
   args: {

@@ -41,6 +41,8 @@ export interface TtdFixtureArgs {
  * yields `expectedPostState`. `assertContract` runs that check.
  */
 export interface TtdWriteFixture {
+  /** Governed write contract this fixture proves. */
+  contractToolSlug: "update_entity";
   /** Canonical operation this fixture exercises. */
   operation: TtdOperation;
   /** Upstream entity-kind key. */

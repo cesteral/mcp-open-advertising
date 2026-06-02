@@ -29,6 +29,8 @@ export interface Dv360FixtureArgs {
 }
 
 export interface Dv360WriteFixture {
+  /** Governed write contract this fixture proves. */
+  contractToolSlug: "update_entity";
   operation: Dv360Operation;
   entityKind: Dv360EntityKindKey;
   args: Dv360FixtureArgs;

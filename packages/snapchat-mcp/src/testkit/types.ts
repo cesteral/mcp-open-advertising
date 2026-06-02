@@ -43,6 +43,8 @@ export interface SnapchatFixtureArgs {
  * yields `expectedPostState`. `assertContract` runs that check.
  */
 export interface SnapchatWriteFixture {
+  /** Governed write contract this fixture proves. */
+  contractToolSlug: "update_entity";
   /** Canonical operation this fixture exercises. */
   operation: SnapchatOperation;
   /** Upstream entity-kind key. */

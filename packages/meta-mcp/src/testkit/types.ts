@@ -37,6 +37,8 @@ export interface MetaFixtureArgs {
  * yields `expectedPostState`. `assertContract` runs that check.
  */
 export interface MetaWriteFixture {
+  /** Governed write contract this fixture proves. */
+  contractToolSlug: "update_entity";
   /** Canonical operation this fixture exercises. */
   operation: MetaOperation;
   /** Canonical entity kind. */

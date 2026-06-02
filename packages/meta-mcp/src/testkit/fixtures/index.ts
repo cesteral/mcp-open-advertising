@@ -21,6 +21,7 @@ import type { MetaWriteFixture } from "../types.js";
  * Daily-budget increase on a campaign. Cents → cents.
  */
 export const updateBudgetIncreaseCampaign: MetaWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaign",
   args: {
@@ -57,6 +58,7 @@ export const updateBudgetIncreaseCampaign: MetaWriteFixture = {
  * Daily-budget decrease on an ad set.
  */
 export const updateBudgetDecreaseAdSet: MetaWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "adSet",
   args: {
@@ -93,6 +95,7 @@ export const updateBudgetDecreaseAdSet: MetaWriteFixture = {
  * Pause from active on a campaign.
  */
 export const pauseCampaignFromActive: MetaWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -129,6 +132,7 @@ export const pauseCampaignFromActive: MetaWriteFixture = {
  * Pause from active on an ad set.
  */
 export const pauseAdSetFromActive: MetaWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "adSet",
   args: {
@@ -165,6 +169,7 @@ export const pauseAdSetFromActive: MetaWriteFixture = {
  * Resume from paused on a campaign.
  */
 export const resumeCampaignFromPaused: MetaWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {
@@ -201,6 +206,7 @@ export const resumeCampaignFromPaused: MetaWriteFixture = {
  * Resume from paused on an ad set.
  */
 export const resumeAdSetFromPaused: MetaWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "adSet",
   args: {

@@ -31,6 +31,7 @@ const adAccountId = "adaccount-REDACTED-001";
 
 /** update_budget: campaign daily spend cap increase ($100 → $200). */
 export const updateBudgetCampaign: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaign",
   args: {
@@ -70,6 +71,7 @@ export const updateBudgetCampaign: PinterestWriteFixture = {
 
 /** update_budget: ad-group budget increase ($50 → $80). */
 export const updateBudgetAdGroup: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "adGroup",
   args: {
@@ -106,6 +108,7 @@ export const updateBudgetAdGroup: PinterestWriteFixture = {
 
 /** pause: campaign ACTIVE → PAUSED (budget preserved). */
 export const pauseCampaign: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -145,6 +148,7 @@ export const pauseCampaign: PinterestWriteFixture = {
 
 /** pause: ad-group ACTIVE → PAUSED (budget preserved). */
 export const pauseAdGroup: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "adGroup",
   args: {
@@ -181,6 +185,7 @@ export const pauseAdGroup: PinterestWriteFixture = {
 
 /** pause: ad ACTIVE → PAUSED (ads carry no budget). */
 export const pauseAd: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "ad",
   args: {
@@ -212,6 +217,7 @@ export const pauseAd: PinterestWriteFixture = {
 
 /** resume: campaign PAUSED → ACTIVE (budget preserved). */
 export const resumeCampaign: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {
@@ -251,6 +257,7 @@ export const resumeCampaign: PinterestWriteFixture = {
 
 /** resume: ad-group PAUSED → ACTIVE (budget preserved). */
 export const resumeAdGroup: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "adGroup",
   args: {
@@ -287,6 +294,7 @@ export const resumeAdGroup: PinterestWriteFixture = {
 
 /** resume: ad PAUSED → ACTIVE (ads carry no budget). */
 export const resumeAd: PinterestWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "ad",
   args: {

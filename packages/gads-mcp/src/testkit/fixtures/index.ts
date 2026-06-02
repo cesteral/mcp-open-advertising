@@ -24,6 +24,7 @@ const customerId = "customer-REDACTED-001";
 
 /** pause: campaign ENABLED → PAUSED. */
 export const pauseCampaign: GAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -56,6 +57,7 @@ export const pauseCampaign: GAdsWriteFixture = {
 
 /** resume: campaign PAUSED → ENABLED. */
 export const resumeCampaign: GAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {
@@ -88,6 +90,7 @@ export const resumeCampaign: GAdsWriteFixture = {
 
 /** pause: ad group ENABLED → PAUSED. */
 export const pauseAdGroup: GAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "adGroup",
   args: {
@@ -118,6 +121,7 @@ export const pauseAdGroup: GAdsWriteFixture = {
 
 /** resume: ad group PAUSED → ENABLED. */
 export const resumeAdGroup: GAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "adGroup",
   args: {
@@ -151,6 +155,7 @@ export const resumeAdGroup: GAdsWriteFixture = {
  * Google Ads budget amounts are micros; 1,000,000 micros = $1.00.
  */
 export const updateBudgetCampaignBudget: GAdsWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaignBudget",
   args: {

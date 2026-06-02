@@ -26,6 +26,7 @@ const advertiserId = "advertiser-REDACTED-001";
 
 /** update_budget: campaign lifetime budget increase ($50,000 → $75,000). */
 export const updateBudgetCampaign: TtdWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaign",
   args: {
@@ -63,6 +64,7 @@ export const updateBudgetCampaign: TtdWriteFixture = {
 
 /** pause: campaign Available → Paused (budget preserved). */
 export const pauseCampaign: TtdWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -100,6 +102,7 @@ export const pauseCampaign: TtdWriteFixture = {
 
 /** resume: campaign Paused → Available (budget preserved). */
 export const resumeCampaign: TtdWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {
@@ -141,6 +144,7 @@ export const resumeCampaign: TtdWriteFixture = {
  * canonical snapshot carries no budget (both daily and lifetime null).
  */
 export const pauseAdGroup: TtdWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "adGroup",
   args: {
@@ -178,6 +182,7 @@ export const pauseAdGroup: TtdWriteFixture = {
  * is out of round-3 scope, so the canonical snapshot carries no budget.
  */
 export const resumeAdGroup: TtdWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "adGroup",
   args: {

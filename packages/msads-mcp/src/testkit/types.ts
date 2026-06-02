@@ -40,6 +40,8 @@ export interface MsAdsFixtureArgs {
  * yields `expectedPostState`. `assertContract` runs that check.
  */
 export interface MsAdsWriteFixture {
+  /** Governed write contract this fixture proves. */
+  contractToolSlug: "update_entity";
   /** Canonical operation this fixture exercises. */
   operation: MsAdsOperation;
   /** Upstream entity-kind key. */

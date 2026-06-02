@@ -12,11 +12,8 @@
  * currency major units; the canonical snapshot's `budget.lifetime.amountMinor`
  * is ×100.
  *
- * `AmazonDspFixtureArgs.profileId` carries the advertiser/DSP profile ID for
- * order/lineItem fixtures; commitment fixtures repurpose it as a scrubbed
- * placeholder — `update_commitment` is keyed only by `commitmentId` (stored in
- * `args.entityId`), so `profileId` is round-tripped into the snapshot's
- * `accountId` field by `buildCommitmentSnapshot`.
+ * `profileId` carries the advertiser/DSP profile ID and is round-tripped into
+ * the snapshot's `accountId` field by `buildCommitmentSnapshot`.
  *
  * Coverage axes (one fixture each across this surface):
  * (1) committedSpend, (2) fulfillmentLevel, (3) spendCalculationMode,
@@ -29,12 +26,12 @@ const profileId = "advertiser-REDACTED-001";
 
 /** update: commitment committedSpend increase ($1,000,000 → $1,500,000). */
 export const updateCommittedSpend: AmazonDspWriteFixture = {
+  contractToolSlug: "update_commitment",
   operation: "update",
   entityKind: "commitment",
   args: {
-    entityType: "commitment",
     profileId,
-    entityId: "cmt-REDACTED-1",
+    commitmentId: "cmt-REDACTED-1",
     data: { committedSpend: 1_500_000 },
   },
   preState: {
@@ -66,12 +63,12 @@ export const updateCommittedSpend: AmazonDspWriteFixture = {
 
 /** update: commitment fulfillmentLevel LEVEL_0 → LEVEL_5 (snapshot-invariant). */
 export const updateFulfillmentLevel: AmazonDspWriteFixture = {
+  contractToolSlug: "update_commitment",
   operation: "update",
   entityKind: "commitment",
   args: {
-    entityType: "commitment",
     profileId,
-    entityId: "cmt-REDACTED-2",
+    commitmentId: "cmt-REDACTED-2",
     data: { fulfillmentLevel: "LEVEL_5" },
   },
   preState: {
@@ -103,12 +100,12 @@ export const updateFulfillmentLevel: AmazonDspWriteFixture = {
 
 /** update: commitment spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN (snapshot-invariant). */
 export const updateSpendCalculationMode: AmazonDspWriteFixture = {
+  contractToolSlug: "update_commitment",
   operation: "update",
   entityKind: "commitment",
   args: {
-    entityType: "commitment",
     profileId,
-    entityId: "cmt-REDACTED-3",
+    commitmentId: "cmt-REDACTED-3",
     data: { spendCalculationMode: "CAMPAIGN" },
   },
   preState: {
@@ -135,17 +132,18 @@ export const updateSpendCalculationMode: AmazonDspWriteFixture = {
     },
     schedule: { startAt: "2026-02-01T00:00:00Z", endAt: "2026-08-31T23:59:59Z" },
   },
-  description: "update: commitment spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN (snapshot-invariant)",
+  description:
+    "update: commitment spendCalculationMode ADVERTISER_ACCOUNT → CAMPAIGN (snapshot-invariant)",
 };
 
 /** update: commitment endDateTime extend 2026-06-30 → 2026-12-31. */
 export const updateEndDateTime: AmazonDspWriteFixture = {
+  contractToolSlug: "update_commitment",
   operation: "update",
   entityKind: "commitment",
   args: {
-    entityType: "commitment",
     profileId,
-    entityId: "cmt-REDACTED-4",
+    commitmentId: "cmt-REDACTED-4",
     data: { endDateTime: "2026-12-31T23:59:59Z" },
   },
   preState: {

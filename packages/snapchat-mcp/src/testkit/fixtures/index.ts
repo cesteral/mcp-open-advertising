@@ -26,6 +26,7 @@ const adAccountId = "adaccount-REDACTED-001";
 
 /** update_budget: campaign daily budget increase ($150 → $200). */
 export const updateBudgetCampaign: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "campaign",
   args: {
@@ -66,6 +67,7 @@ export const updateBudgetCampaign: SnapchatWriteFixture = {
 
 /** update_budget: ad squad daily budget increase ($50 → $75). */
 export const updateBudgetAdGroup: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "update_budget",
   entityKind: "adGroup",
   args: {
@@ -104,6 +106,7 @@ export const updateBudgetAdGroup: SnapchatWriteFixture = {
 
 /** pause: campaign ACTIVE → PAUSED (budget preserved). */
 export const pauseCampaign: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "campaign",
   args: {
@@ -144,6 +147,7 @@ export const pauseCampaign: SnapchatWriteFixture = {
 
 /** pause: ad squad ACTIVE → PAUSED (budget preserved). */
 export const pauseAdGroup: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "adGroup",
   args: {
@@ -181,6 +185,7 @@ export const pauseAdGroup: SnapchatWriteFixture = {
 
 /** pause: ad ACTIVE → PAUSED (ads carry no budget). */
 export const pauseAd: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "pause",
   entityKind: "ad",
   args: {
@@ -212,6 +217,7 @@ export const pauseAd: SnapchatWriteFixture = {
 
 /** resume: campaign PAUSED → ACTIVE (budget preserved). */
 export const resumeCampaign: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "campaign",
   args: {
@@ -252,6 +258,7 @@ export const resumeCampaign: SnapchatWriteFixture = {
 
 /** resume: ad squad PAUSED → ACTIVE (budget preserved). */
 export const resumeAdGroup: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "adGroup",
   args: {
@@ -289,6 +296,7 @@ export const resumeAdGroup: SnapchatWriteFixture = {
 
 /** resume: ad PAUSED → ACTIVE (ads carry no budget). */
 export const resumeAd: SnapchatWriteFixture = {
+  contractToolSlug: "update_entity",
   operation: "resume",
   entityKind: "ad",
   args: {
