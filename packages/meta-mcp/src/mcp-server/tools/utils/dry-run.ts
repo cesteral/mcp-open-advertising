@@ -158,3 +158,80 @@ export async function runMetaUpdateDryRun(
     "meta_update_entity"
   );
 }
+
+/**
+ * Resolve the `(operation, entityKind)` for a `meta_delete_entity` call. Delete
+ * is single-operation; the entity kind comes from the target `entityType`.
+ *
+ * Out-of-scope types (adCreative, customAudience, …) resolve to
+ * `canonicalEntityKind: null` — honest "no canonical entity" rather than a fake
+ * kind. Such deletes still execute and are still token-gated under enforce
+ * (the tool is `kind:"write"`); they simply carry no canonical snapshot. Pure.
+ */
+export function resolveMetaDeleteCapability(entityType: string | undefined): DispatchedCapability {
+  return {
+    operation: "delete",
+    canonicalEntityKind: (entityType && ENTITY_KIND_MAP[entityType]) || null,
+  };
+}
+
+export interface MetaDeleteDryRunArgs {
+  entityType: string | undefined;
+  entityId: string;
+}
+
+/**
+ * Symbolic dry-run for `meta_delete_entity`. Validation is symbolic (Meta has
+ * no validate-only delete); the expected post-state is the current entity with
+ * canonical status `deleted`, produced by reading the entity and overlaying a
+ * `DELETED` status. As with update, a governed dry-run that cannot simulate
+ * (out-of-scope entity type / read failure) fails the call via
+ * `assertGovernedDryRunResult` rather than returning an incomplete payload.
+ */
+export async function runMetaDeleteDryRun(
+  args: MetaDeleteDryRunArgs,
+  metaService: MetaServiceLike,
+  context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors: DryRunValidationError[] = [];
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+
+  if (args.entityType && ENTITY_KIND_MAP[args.entityType] && metaService.getEntity) {
+    const current = (await metaService.getEntity(
+      args.entityType,
+      args.entityId,
+      undefined,
+      context
+    )) as Record<string, unknown> | undefined;
+    if (current && typeof current === "object") {
+      // Meta rejects deletion of ACTIVE entities (must be paused first). A
+      // governed dry-run must not approve a delete the real API will reject.
+      if (current.status === "ACTIVE") {
+        validationErrors.push({
+          code: "ACTIVE_NOT_DELETABLE",
+          message: "ACTIVE entities must be paused before deletion",
+          field: "entityId",
+        });
+      }
+      const snapshot = buildMetaSnapshot(args.entityType, args.entityId, current, {
+        status: "DELETED",
+      });
+      if (snapshot) {
+        expectedPostState = snapshot;
+        expectedStateSource = "server_symbolic_apply";
+      }
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "meta_delete_entity"
+  );
+}

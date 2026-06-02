@@ -12,6 +12,7 @@ import {
   extractZodShape,
   registerReportCsvResource,
   registerToolsFromDefinitions,
+  createDefinitionHashResolver,
   registerPromptsFromDefinitions,
   registerStaticResourcesFromDefinitions,
   InteractionLogger,
@@ -96,6 +97,9 @@ export async function createMcpServer(
     logger,
     sessionId,
     transformSchema: (schema) => extractZodShape(schema),
+    resolveDefinitionHash: createDefinitionHashResolver(
+      new URL("../cesteral-manifest.json", import.meta.url)
+    ),
     createRequestContext: (params) =>
       createOperationContext({
         operation: params.operation,

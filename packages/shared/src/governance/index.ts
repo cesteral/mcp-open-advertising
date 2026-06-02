@@ -5,3 +5,4 @@ export * from "./config.js";
 export * from "./jti-store.js";
 export * from "./decision-token.js";
 export * from "./audit.js";
+export * from "./manifest-resolver.js";
