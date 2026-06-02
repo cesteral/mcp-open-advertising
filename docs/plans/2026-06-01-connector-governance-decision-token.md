@@ -738,6 +738,18 @@ Export: `verifyDecisionToken`, `DecisionTokenVerdict`, `JtiStore`, `InMemoryJtiS
 
 Each governed write tool follows ONE of two templates. Batch by operation family; one PR per family per ~2-3 servers; **every batch stays warn-only** and carries a downstream-governance checklist.
 
+### HARD ROLLOUT BLOCKER — wire definitionHash resolution before any warn enrollment
+
+> **Before moving any contract to `warn`, wire manifest-backed `definitionHash` resolution for that server and verify `definitionHashVerified: true` in the governance audit log for that contract.**
+
+PR 1 ships with `resolveDefinitionHash` un-wired (default `off`, so inert). But a warn rollout with no resolver verifies every binding *except* the definition hash (the verdict carries `definitionHashVerified: false`). That is a weak rollout that must not be normalized. Therefore, as the first step of PR 2 / first warn enrollment:
+
+1. Add a shared helper `loadManifestDefinitionHashes(manifestPath): Map<toolName, definitionHash>` reading the package's attested `dist/cesteral-manifest.json` (the same artifact governance reads).
+2. Wire `resolveDefinitionHash` into each enrolled server's `registerToolsFromDefinitions(...)` call from that map.
+3. Enroll the contract in `GOVERNANCE_TOKEN_MODE_WARN_CONTRACTS` and confirm the audit log shows `definitionHashVerified: true` (and `DEFINITION_HASH_MISMATCH` correctly fires for a tampered definition). Only then is the warn signal trustworthy.
+
+`enforce` already fails closed when the hash is unresolved, so this blocker specifically protects the **warn** phase from silently skipping the definition-hash binding.
+
 ### Template A — `entity` write (create / delete / bulk_update_status on canonical kinds)
 
 For tool file `packages/<server>/src/mcp-server/tools/definitions/<op>.tool.ts`:
