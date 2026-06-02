@@ -135,6 +135,61 @@ export function resolveMsAdsDispatchedCapability(
   };
 }
 
+/**
+ * Resolve the `(create, entityKind)` capability for `msads_create_entity`.
+ * Out-of-scope kinds (keyword / adExtension / audience / label) resolve to
+ * `canonicalEntityKind: null` — the call is still token-gated but emits no
+ * snapshot. Pure (no I/O).
+ */
+export function resolveMsAdsCreateCapability(entityType: string): DispatchedCapability {
+  return {
+    operation: "create",
+    canonicalEntityKind: ENTITY_KIND_MAP[entityType] ?? null,
+  };
+}
+
+export interface MsAdsCreateDryRunArgs {
+  entityType: string;
+  /** The single entity item, already unwrapped from its plural collection key. */
+  data: Record<string, unknown>;
+}
+
+/**
+ * Symbolic create dry-run. Microsoft Ads exposes no native validate mode for
+ * Add operations, so both axes are symbolic: validation runs the same business
+ * rules as update; the expected post-state is the would-be-created entity
+ * (symbolic apply of the create payload over an empty base — create has no
+ * `before`). Pure (no I/O).
+ */
+export async function runMsAdsCreateDryRun(
+  input: MsAdsCreateDryRunArgs,
+  _service: MsAdsServiceLike,
+  _context: RequestContext
+): Promise<DryRunResult> {
+  const validationErrors = symbolicValidate(input.data);
+
+  let expectedPostState: NormalizedEntitySnapshot | undefined;
+  let expectedStateSource: DryRunResult["expectedStateSource"] = "none";
+  if (ENTITY_KIND_MAP[input.entityType]) {
+    const snapshot = buildMsAdsSnapshot(input.entityType, "", {}, input.data);
+    if (snapshot) {
+      expectedPostState = snapshot;
+      expectedStateSource = "server_symbolic_apply";
+    }
+  }
+
+  return assertGovernedDryRunResult(
+    {
+      wouldSucceed: validationErrors.length === 0 && expectedPostState !== undefined,
+      validationErrors,
+      validationSource: "symbolic",
+      expectedStateSource,
+      ...(expectedPostState ? { expectedPostState } : {}),
+    },
+    "msads_create_entity"
+  );
+}
+
 export interface MsAdsDryRunArgs {
   entityType: string;
   entityId: string;

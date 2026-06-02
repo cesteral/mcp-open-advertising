@@ -69,11 +69,80 @@ describe("msads_create_entity", () => {
       result: { CampaignIds: [111] },
       entityType: "campaign",
       timestamp: new Date().toISOString(),
+      dispatchedCapability: { operation: "create", canonicalEntityKind: "campaign" },
     };
 
     const formatted = createEntityResponseFormatter(output);
     expect(formatted).toHaveLength(1);
     expect(formatted[0]!.text).toContain("Created campaign entity");
     expect(formatted[0]!.text).toContain("111");
+  });
+});
+
+describe("msads_create_entity governance contract", () => {
+  let mockServices: SessionServices;
+  const ctx = { requestId: "r" } as any;
+  const sdk = { sessionId: "s" } as any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockServices = createMockServices();
+    mockResolveSession.mockReturnValue(mockServices);
+  });
+
+  it("dry_run returns a symbolic post-state and does not create", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign",
+        data: {
+          Campaigns: [
+            {
+              Name: "New Campaign",
+              Status: "Paused",
+              BudgetType: "DailyBudgetStandard",
+              DailyBudget: 100,
+            },
+          ],
+        },
+        dry_run: true,
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(mockServices.msadsService.createEntity).not.toHaveBeenCalled();
+    expect(result.dryRun?.expectedPostState?.status.canonical).toBe("paused");
+    expect(result.dryRun?.expectedPostState?.budget.daily?.amountMinor).toBe(10_000);
+    expect(result.dispatchedCapability).toEqual({
+      operation: "create",
+      canonicalEntityKind: "campaign",
+    });
+  });
+
+  it("execute normalizes the submitted payload into the after snapshot (no before)", async () => {
+    const result = await createEntityLogic(
+      {
+        entityType: "campaign",
+        data: {
+          Campaigns: [{ Name: "New Campaign", Status: "Paused", AccountId: 789 }],
+        },
+      } as any,
+      ctx,
+      sdk
+    );
+    expect(mockServices.msadsService.createEntity).toHaveBeenCalledOnce();
+    expect(result.after?.status.canonical).toBe("paused");
+    expect(result.after?.platformEntityId).toBe("111");
+    expect((result as any).before).toBeUndefined();
+  });
+
+  it("out-of-scope kind resolves canonicalEntityKind:null", async () => {
+    (mockServices.msadsService.createEntity as any).mockResolvedValue({ KeywordIds: [9] });
+    const result = await createEntityLogic(
+      { entityType: "keyword", data: { Keywords: [{ Text: "shoes" }] } } as any,
+      ctx,
+      sdk
+    );
+    expect(result.dispatchedCapability).toEqual({ operation: "create", canonicalEntityKind: null });
+    expect(result.after).toBeUndefined();
   });
 });

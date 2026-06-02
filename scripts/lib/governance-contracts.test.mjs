@@ -228,6 +228,15 @@ const extraGovernedSurfaces = [
     readContractToolSlug: "get_entity",
     pairs: { create: ["campaign", "ad_group", "ad"] },
   },
+  {
+    packageDir: "msads-mcp",
+    platformSlug: "msads",
+    writeTool: "msads_create_entity",
+    readTool: "msads_get_entity",
+    contractToolSlug: "create_entity",
+    readContractToolSlug: "get_entity",
+    pairs: { create: ["campaign", "ad_group", "ad", "campaign_budget"] },
+  },
 ];
 
 const entityKindAliases = {

@@ -68,7 +68,6 @@
       "msads_bulk_create_entities",
       "msads_bulk_update_entities",
       "msads_bulk_update_status",
-      "msads_create_entity",
       "msads_create_report_schedule",
       "msads_delete_entity",
       "msads_delete_report_schedule",

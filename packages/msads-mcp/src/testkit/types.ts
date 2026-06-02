@@ -18,7 +18,7 @@ import type { NormalizedEntitySnapshot } from "@cesteral/shared";
  * separate operation input). Fixtures pin one operation per fixture so
  * consumers can filter.
  */
-export type MsAdsOperation = "update_budget" | "pause" | "resume";
+export type MsAdsOperation = "update_budget" | "pause" | "resume" | "create";
 
 /**
  * Governed entity kinds, labelled with the upstream `entityType` input key.
@@ -41,7 +41,7 @@ export interface MsAdsFixtureArgs {
  */
 export interface MsAdsWriteFixture {
   /** Governed write contract this fixture proves. */
-  contractToolSlug: "update_entity";
+  contractToolSlug: "update_entity" | "create_entity";
   /** Canonical operation this fixture exercises. */
   operation: MsAdsOperation;
   /** Upstream entity-kind key. */

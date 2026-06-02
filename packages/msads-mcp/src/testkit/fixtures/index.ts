@@ -283,6 +283,112 @@ export const resumeAd: MsAdsWriteFixture = {
   description: "resume: ad transition Paused → Active",
 };
 
+/** create: campaign (would-be-created, $100 daily). */
+export const createCampaign: MsAdsWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "campaign",
+  args: {
+    entityType: "campaign",
+    entityId: "",
+    data: {
+      Name: "New Campaign",
+      Status: "Paused",
+      AccountId: accountId,
+      BudgetType: "DailyBudgetStandard",
+      DailyBudget: 100,
+    },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "msads",
+    entityKind: "campaign",
+    platformEntityId: "",
+    displayName: "New Campaign",
+    accountId,
+    status: { canonical: "paused", platformRaw: "Paused" },
+    budget: { daily: { amountMinor: 10_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: campaign (would-be-created, $100 daily)",
+};
+
+/** create: ad group (would-be-created, no inline budget). */
+export const createAdGroup: MsAdsWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "adGroup",
+  args: {
+    entityType: "adGroup",
+    entityId: "",
+    data: { Name: "New Ad Group", Status: "Paused" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "msads",
+    entityKind: "ad_group",
+    platformEntityId: "",
+    displayName: "New Ad Group",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "Paused" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: adGroup (would-be-created, no inline budget)",
+};
+
+/** create: ad (would-be-created, no budget). */
+export const createAd: MsAdsWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "ad",
+  args: {
+    entityType: "ad",
+    entityId: "",
+    data: { Name: "New Ad", Status: "Paused" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "msads",
+    entityKind: "ad",
+    platformEntityId: "",
+    displayName: "New Ad",
+    accountId: null,
+    status: { canonical: "paused", platformRaw: "Paused" },
+    budget: { daily: null, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: ad (would-be-created, no budget)",
+};
+
+/** create: shared budget (would-be-created, $300 daily, no status). */
+export const createBudget: MsAdsWriteFixture = {
+  contractToolSlug: "create_entity",
+  operation: "create",
+  entityKind: "budget",
+  args: {
+    entityType: "budget",
+    entityId: "",
+    data: { Name: "New Shared Budget", Amount: 300, BudgetType: "DailyBudgetStandard" },
+  },
+  preState: {},
+  expectedPostState: {
+    schemaVersion: 1,
+    platform: "msads",
+    entityKind: "campaign_budget",
+    platformEntityId: "",
+    displayName: "New Shared Budget",
+    accountId: null,
+    status: { canonical: "unknown", platformRaw: "" },
+    budget: { daily: { amountMinor: 30_000, currency: "USD" }, lifetime: null },
+    schedule: { startAt: null, endAt: null },
+  },
+  description: "create: budget (would-be-created, $300 daily)",
+};
+
 export const allFixtures: readonly MsAdsWriteFixture[] = [
   updateBudgetCampaign,
   updateBudgetBudget,
@@ -292,4 +398,8 @@ export const allFixtures: readonly MsAdsWriteFixture[] = [
   resumeCampaign,
   resumeAdGroup,
   resumeAd,
+  createCampaign,
+  createAdGroup,
+  createAd,
+  createBudget,
 ];
